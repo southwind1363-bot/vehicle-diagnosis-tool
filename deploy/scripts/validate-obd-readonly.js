@@ -29,6 +29,10 @@ const syncVehicleInputSource = appSource.slice(appSource.indexOf("function syncV
 const dtcDefinitionApplicabilitySource = appSource.slice(appSource.indexOf("function findDtcDefinitionCandidates"), appSource.indexOf("function findById"));
 const modernGenericMatchSource = appSource.slice(appSource.indexOf("function codeMatchesModern"), appSource.indexOf("function getDiagnosticWorkflowMatches"));
 const dtcInputReferenceFunctionSource = appSource.match(/function normalizeDtcInputReference\(value\) \{[\s\S]*?\r?\n\}/);
+const concurrentDtcRequirementsSource = appSource.slice(
+  appSource.indexOf("const SOURCE_SCOPED_CONCURRENT_DTC_REQUIREMENTS"),
+  appSource.indexOf("function findDtcDefinitionCandidates")
+);
 const developerSessionSummarySource = appSource.slice(
   appSource.indexOf("function renderObdDeveloperSessionSummary(session = null)"),
   appSource.indexOf("function renderObdOperationPlan(items)")
@@ -88,6 +92,20 @@ if (dtcInputReferenceFunctionSource) {
   vm.runInContext(dtcInputReferenceFunctionSource[0], dtcInputReferenceContext);
   const normalizeDtcInputReference = dtcInputReferenceContext.normalizeDtcInputReference;
   check(typeof normalizeDtcInputReference === "function" && normalizeDtcInputReference("B130474").code === "B1304" && normalizeDtcInputReference("B130474").subcode === "74" && normalizeDtcInputReference("B1304:74").code === "B1304" && normalizeDtcInputReference("B1304:74").subcode === "74" && normalizeDtcInputReference("P07407F").code === "P0740" && normalizeDtcInputReference("P07407F").subcode === "7F" && normalizeDtcInputReference("P0128").code === "P0128" && normalizeDtcInputReference("P0128").subcode === null && normalizeDtcInputReference("B1304740").code === "B1304740" && normalizeDtcInputReference("B1304740").subcode === null, "DTC input normalization must accept only two-digit concatenated subcodes while retaining standard and overlong inputs");
+}
+check(concurrentDtcRequirementsSource.includes("MC-11030186-0001.pdf") && concurrentDtcRequirementsSource.includes('["C1110:13", "C1100:94"]') && concurrentDtcRequirementsSource.includes("function evaluateDtcConcurrentRequirements"), "Honda EPB source-scoped concurrent DTC requirements are missing from script.js");
+if (concurrentDtcRequirementsSource.includes("function evaluateDtcConcurrentRequirements")) {
+  const concurrentDtcRequirementsContext = {
+    normalizeCode: (value) => String(value || "").trim().toUpperCase().replace(/\s+/g, "")
+  };
+  vm.createContext(concurrentDtcRequirementsContext);
+  vm.runInContext(`${dtcInputReferenceFunctionSource?.[0] || ""}\nfunction formatDtcReference(code, subcode = null) { return subcode ? code + ":" + subcode : code; }\n${concurrentDtcRequirementsSource}`, concurrentDtcRequirementsContext);
+  const evaluateDtcConcurrentRequirements = concurrentDtcRequirementsContext.evaluateDtcConcurrentRequirements;
+  const sourceUrl = "https://static.nhtsa.gov/odi/tsbs/2026/MC-11030186-0001.pdf";
+  const paired = evaluateDtcConcurrentRequirements?.({ source_url: sourceUrl }, [{ code: "C1110", subcode: "13" }, "C1100:94"]);
+  const partial = evaluateDtcConcurrentRequirements?.({ source_url: sourceUrl }, ["C1110:13"]);
+  const unrelated = evaluateDtcConcurrentRequirements?.({ source_url: "https://example.invalid/other.pdf" }, ["C1110:13"]);
+  check(typeof evaluateDtcConcurrentRequirements === "function" && paired?.missing.length === 0 && partial?.missing.join("|") === "C1100:94" && unrelated?.required.length === 0, "Concurrent DTC requirements must retain paired, partial, and unrelated-source behavior");
 }
 check(Boolean(elmDeveloperCommandGuardSource), "isAllowedObdDeveloperCommand is missing from script.js");
 if (elmDeveloperCommandGuardSource) {
@@ -18608,6 +18626,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2767");
+  console.log("OBD read-only safety checks: 2769");
   console.log("Errors: 0");
 }
