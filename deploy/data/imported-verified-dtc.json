@@ -1347,6 +1347,27 @@
     "imported_definition_only": true
   },
   {
+    "id": "verified-import-p0767-ford-8f35-2023-2025",
+    "code": "P0767",
+    "title": "P0767 reported with intermittent/permanent no reverse engagement",
+    "system": "Powertrain / 8F35 transmission reverse engagement (source-specific)",
+    "applicability_note": "Ford TSB 26-2058 identifies P0767 stored in the PCM only for 2023-2025 Bronco Sport and Maverick vehicles with the 8F35 transmission in North American markets. Intermittent or permanent no reverse engagement is required by the bulletin; P0766 and/or P2703 may also be stored but are not required by this definition. Confirm VIN, market, 8F35 transmission, reporting PCM, stored status, and bulletin applicability before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Ford"], "models": ["Bronco Sport", "Maverick"], "year_from": 2023, "year_to": 2025, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all PCM DTCs, freeze-frame, transmission data, symptom conditions, and reverse-engagement history before inspection.", "Do not clear DTCs, command transmission actuators, perform adaptations, or start active tests from this tool; confirm VIN, North American market, 8F35 transmission, reporting PCM, stored P0767, and bulletin applicability.", "Use Ford service information and qualified transmission procedures for diagnosis, repair, recovery, and post-repair verification."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to another Ford model, model year, market, transmission, PCM, or a vehicle without the documented no-reverse symptom.", "Do not treat P0766 or P2703 as a required concurrent DTC, and do not infer a solenoid, clutch, harness, or PCM failure from P0767 alone."],
+    "required_tools": ["Compatible scan tool", "Ford service information", "Qualified transmission service equipment"],
+    "safety_notes": ["Transmission diagnosis and any service that can affect vehicle movement require manufacturer procedures, secure vehicle support, and a recovery plan. This tool records read-only evidence only and must not command transmission functions or clear DTCs."],
+    "confidence": "Ford source-specific DTC and symptom condition; VIN, North American market, 8F35 transmission, reporting PCM, stored status, and manufacturer procedure confirmation required.",
+    "source": "Ford Technical Service Bulletin 26-2058 / NHTSA MC-11029049",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2026/MC-11029049-0001.pdf",
+    "source_date": "2026-02-20",
+    "last_verified_date": "2026-08-04",
+    "service_manual_required": true,
+    "imported_definition_only": true
+  },
+  {
     "id": "verified-import-b0020-13-fca-chrysler-200-2015-2017",
     "code": "B0020",
     "subcode": "13",

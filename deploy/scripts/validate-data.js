@@ -95,6 +95,18 @@ function hasDisjointSourceSpecificDtcDefinitions(rows) {
   return rows.every((row, index) => rows.slice(index + 1).every((other) => !dtcVehicleFiltersOverlap(row.vehicle_filter, other.vehicle_filter)));
 }
 
+function hasScopedGenericSourceSpecificDtcDefinitions(rows) {
+  if (!Array.isArray(rows) || rows.length < 2) return false;
+  const genericRows = rows.filter((row) => /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(row.file));
+  const sourceSpecificRows = rows.filter((row) => row.file === "imported-verified-dtc.json"
+    && row.imported_definition_only === true
+    && isDtcVehicleFilter(row.vehicle_filter)
+    && row.vehicle_filter.scope_confirmation_required === true);
+  return genericRows.length === 1
+    && sourceSpecificRows.length === rows.length - 1
+    && sourceSpecificRows.every((row, index) => sourceSpecificRows.slice(index + 1).every((other) => !dtcVehicleFiltersOverlap(row.vehicle_filter, other.vehicle_filter)));
+}
+
 function isSourceUrl(value) {
   return isNonEmptyString(value) || isNonEmptyStringArray(value);
 }
@@ -427,7 +439,7 @@ for (const [code, rows] of codeLocations.entries()) {
     && rows.length === 2
     && files.has("obd-codes.json")
     && [...files].some((file) => /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(file));
-  if (!allowedLegacyOverlap && !hasDisjointSourceSpecificDtcDefinitions(rows)) {
+  if (!allowedLegacyOverlap && !hasDisjointSourceSpecificDtcDefinitions(rows) && !hasScopedGenericSourceSpecificDtcDefinitions(rows)) {
     reportError(`${code}: 同一DTCとサブコードの定義が重複しています: ${rows.map((row) => `${row.file}:${row.id}`).join(", ")}`);
   }
 }
