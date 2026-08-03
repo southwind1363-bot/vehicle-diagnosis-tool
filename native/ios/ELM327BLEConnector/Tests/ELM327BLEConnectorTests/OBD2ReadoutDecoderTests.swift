@@ -157,6 +157,10 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         ])
         let fuel = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelType, response: "41 51 04").get()
         XCTAssertEqual(fuel.map(\.value), [OBD2TextMonitorValue(id: "fuel_type", pid: "51", value: "diesel", unit: "")])
+        let oxygenSensors = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .oxygenSensorLocations, response: "41 1D 05").get()
+        XCTAssertEqual(oxygenSensors.map(\.value), [OBD2TextMonitorValue(id: "oxygen_sensors_present_4banks", pid: "1D", value: "b1s1,b2s1", unit: "")])
+        let auxiliaryInput = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .auxiliaryInputStatus, response: "41 1E 01").get()
+        XCTAssertEqual(auxiliaryInput.map(\.value), [OBD2TextMonitorValue(id: "auxiliary_input_status", pid: "1E", value: "pto_active", unit: "")])
         switch OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelType, response: "41 51") {
         case .failure: break
         case .success: XCTFail("Text PID requires exactly one data byte")

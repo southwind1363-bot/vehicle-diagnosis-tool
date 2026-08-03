@@ -663,6 +663,14 @@ public enum OBD2ReadoutDecoder {
                 0x09: "eobd_obd_and_obd_ii", 0x0A: "jobd", 0x0B: "jobd_and_obd_ii", 0x0C: "jobd_and_eobd",
                 0x0D: "jobd_eobd_and_obd_ii", 0x11: "engine_manufacturer_diagnostics", 0x13: "heavy_duty_obd", 0x14: "wwh_obd"
             ][byte] ?? unknownTextPIDValue(byte)
+        case .oxygenSensorLocations:
+            id = "oxygen_sensors_present_4banks"
+            pid = "1D"
+            value = oxygenSensorLocationsFourBanks(byte)
+        case .auxiliaryInputStatus:
+            id = "auxiliary_input_status"
+            pid = "1E"
+            value = byte & 0x01 == 0x01 ? "pto_active" : "pto_inactive"
         case .fuelType:
             id = "fuel_type"
             pid = "51"
@@ -681,6 +689,12 @@ public enum OBD2ReadoutDecoder {
 
     private static func unknownTextPIDValue(_ byte: UInt8) -> String {
         String(format: "unknown_0x%02X", byte)
+    }
+
+    private static func oxygenSensorLocationsFourBanks(_ byte: UInt8) -> String {
+        let labels = ["b1s1", "b1s2", "b2s1", "b2s2", "b3s1", "b3s2", "b4s1", "b4s2"]
+        let present = labels.enumerated().compactMap { index, label in byte & UInt8(1 << index) == 0 ? nil : label }
+        return present.isEmpty ? "none_reported" : present.joined(separator: ",")
     }
 
     private static func oxygenSensorValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {
