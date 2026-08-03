@@ -205,11 +205,11 @@ public enum OBD2ReadoutDecoder {
             var decoded: [(scopeID: String?, value: OBD2TextMonitorValue)] = []
             for packet in packets {
                 let payload = packet.payload
-                guard payload.count == 3, payload[0] == 0x41, payload[1] == expectedPIDByte,
-                      let value = liveTextPIDValue(command: command, byte: payload[2]) else {
+                guard payload.count >= 3, payload[0] == 0x41, payload[1] == expectedPIDByte,
+                      let values = liveTextPIDValues(command: command, bytes: Array(payload.dropFirst(2))) else {
                     return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
                 }
-                decoded.append((scopeID: packet.scopeID, value: value))
+                decoded.append(contentsOf: values.map { (scopeID: packet.scopeID, value: $0) })
             }
             return .success(decoded)
         }
@@ -649,22 +649,28 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
-    private static func liveTextPIDValue(command: ELMReadCommand, byte: UInt8) -> OBD2TextMonitorValue? {
+    private static func liveTextPIDValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2TextMonitorValue]? {
+        guard let byte = bytes.first else { return nil }
         let value: String
         let id: String
         let pid: String
         switch command {
+        case .fuelSystemStatus:
+            return fuelSystemStatusValues(bytes)
         case .secondaryAirStatus:
+            guard bytes.count == 1 else { return nil }
             id = "secondary_air_status"
             pid = "12"
             value = [
                 0x01: "upstream", 0x02: "downstream_of_catalytic_converter", 0x04: "from_outside_or_off", 0x08: "pump_commanded_on_for_diagnostics"
             ][byte] ?? unknownTextPIDValue(byte)
         case .oxygenSensorLocationsTwoBanks:
+            guard bytes.count == 1 else { return nil }
             id = "oxygen_sensors_present"
             pid = "13"
             value = oxygenSensorLocationsTwoBanks(byte)
         case .obdStandard:
+            guard bytes.count == 1 else { return nil }
             id = "obd_standard"
             pid = "1C"
             value = [
@@ -674,14 +680,17 @@ public enum OBD2ReadoutDecoder {
                 0x0D: "jobd_eobd_and_obd_ii", 0x11: "engine_manufacturer_diagnostics", 0x13: "heavy_duty_obd", 0x14: "wwh_obd"
             ][byte] ?? unknownTextPIDValue(byte)
         case .oxygenSensorLocations:
+            guard bytes.count == 1 else { return nil }
             id = "oxygen_sensors_present_4banks"
             pid = "1D"
             value = oxygenSensorLocationsFourBanks(byte)
         case .auxiliaryInputStatus:
+            guard bytes.count == 1 else { return nil }
             id = "auxiliary_input_status"
             pid = "1E"
             value = byte & 0x01 == 0x01 ? "pto_active" : "pto_inactive"
         case .fuelType:
+            guard bytes.count == 1 else { return nil }
             id = "fuel_type"
             pid = "51"
             value = [
@@ -694,11 +703,32 @@ public enum OBD2ReadoutDecoder {
         default:
             return nil
         }
-        return OBD2TextMonitorValue(id: id, pid: pid, value: value, unit: "")
+        return [OBD2TextMonitorValue(id: id, pid: pid, value: value, unit: "")]
     }
 
     private static func unknownTextPIDValue(_ byte: UInt8) -> String {
         String(format: "unknown_0x%02X", byte)
+    }
+
+    private static func fuelSystemStatusValues(_ bytes: [UInt8]) -> [OBD2TextMonitorValue]? {
+        guard bytes.count == 2 else { return nil }
+        let bank1 = fuelSystemStatus(bytes[0])
+        let bank2 = bytes[1] == 0 ? nil : fuelSystemStatus(bytes[1])
+        var values = [
+            OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: bank2.map { "\(bank1);\($0)" } ?? bank1, unit: ""),
+            OBD2TextMonitorValue(id: "fuel_system_status_bank1", pid: "03", value: bank1, unit: "")
+        ]
+        if let bank2 {
+            values.append(OBD2TextMonitorValue(id: "fuel_system_status_bank2", pid: "03", value: bank2, unit: ""))
+        }
+        return values
+    }
+
+    private static func fuelSystemStatus(_ byte: UInt8) -> String {
+        [
+            0x00: "open_loop_not_ready", 0x01: "closed_loop_using_oxygen_sensor", 0x02: "open_loop_due_to_engine_load_or_deceleration",
+            0x04: "open_loop_due_to_system_failure", 0x08: "closed_loop_with_oxygen_sensor_fault", 0x10: "open_loop_due_to_insufficient_temperature"
+        ][byte] ?? unknownTextPIDValue(byte)
     }
 
     private static func oxygenSensorLocationsFourBanks(_ byte: UInt8) -> String {

@@ -165,6 +165,21 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(oxygenSensors.map(\.value), [OBD2TextMonitorValue(id: "oxygen_sensors_present_4banks", pid: "1D", value: "b1s1,b2s1", unit: "")])
         let auxiliaryInput = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .auxiliaryInputStatus, response: "41 1E 01").get()
         XCTAssertEqual(auxiliaryInput.map(\.value), [OBD2TextMonitorValue(id: "auxiliary_input_status", pid: "1E", value: "pto_active", unit: "")])
+        let fuelSystem = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelSystemStatus, response: "41 03 01 08").get()
+        XCTAssertEqual(fuelSystem.map(\.value), [
+            OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor;closed_loop_with_oxygen_sensor_fault", unit: ""),
+            OBD2TextMonitorValue(id: "fuel_system_status_bank1", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: ""),
+            OBD2TextMonitorValue(id: "fuel_system_status_bank2", pid: "03", value: "closed_loop_with_oxygen_sensor_fault", unit: "")
+        ])
+        let singleBankFuelSystem = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelSystemStatus, response: "41 03 01 00").get()
+        XCTAssertEqual(singleBankFuelSystem.map(\.value), [
+            OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: ""),
+            OBD2TextMonitorValue(id: "fuel_system_status_bank1", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: "")
+        ])
+        switch OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelSystemStatus, response: "41 03 01") {
+        case .failure: break
+        case .success: XCTFail("Fuel-system status requires two data bytes")
+        }
         switch OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelType, response: "41 51") {
         case .failure: break
         case .success: XCTFail("Text PID requires exactly one data byte")
