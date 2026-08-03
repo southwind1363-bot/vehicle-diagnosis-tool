@@ -62,6 +62,14 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(allowsELMScanStart(state: .scanning))
     }
 
+    func testConnectionLifecycleTimeoutOnlyInterruptsItsExpectedStage() {
+        XCTAssertTrue(shouldInterruptELMConnectionLifecycle(state: .connecting, expectedState: .connecting))
+        XCTAssertTrue(shouldInterruptELMConnectionLifecycle(state: .discovering, expectedState: .discovering))
+        XCTAssertTrue(shouldInterruptELMConnectionLifecycle(state: .subscribing, expectedState: .subscribing))
+        XCTAssertFalse(shouldInterruptELMConnectionLifecycle(state: .ready, expectedState: .subscribing))
+        XCTAssertFalse(shouldInterruptELMConnectionLifecycle(state: .awaitingPrompt, expectedState: .connecting))
+    }
+
     func testSupportedPIDFollowUpsKeepReadinessAheadOfLiveValues() {
         XCTAssertEqual(
             enqueueSupportedPIDFollowUps(

@@ -60,6 +60,13 @@ func allowsELMScanStart(state: ELMConnectorState) -> Bool {
     state == .idle || state == .interrupted || state == .scanComplete
 }
 
+func shouldInterruptELMConnectionLifecycle(
+    state: ELMConnectorState,
+    expectedState: ELMConnectorState
+) -> Bool {
+    state == expectedState
+}
+
 func enqueueSupportedPIDFollowUps(
     pendingCommands: [ELMReadCommand],
     liveCommands: [ELMReadCommand],
@@ -162,6 +169,7 @@ public final class ELM327BLEConnector: NSObject {
     private var promptDecoder = ELMPromptDecoder()
     private var timeoutWorkItem: DispatchWorkItem?
     private var scanTimeoutWorkItem: DispatchWorkItem?
+    private var connectionTimeoutWorkItem: DispatchWorkItem?
     private var sequence = 0
     private var sessionContext: NativeConnectorSessionContext?
     private var adapterName: String?
@@ -199,6 +207,7 @@ public final class ELM327BLEConnector: NSObject {
         transmitCharacteristic = nil
         receiveCharacteristic = nil
         pendingServiceIDs.removeAll()
+        cancelConnectionLifecycleTimeout()
         promptDecoder.reset()
         central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
         state = .scanning
@@ -224,6 +233,7 @@ public final class ELM327BLEConnector: NSObject {
     public func connectSelected() {
         guard state == .selected, let peripheral = selectedPeripheral else { return fail(.peripheralNotSelected) }
         state = .connecting
+        beginConnectionLifecycleTimeout(expectedState: .connecting)
         central.connect(peripheral, options: nil)
     }
 
@@ -244,6 +254,7 @@ public final class ELM327BLEConnector: NSObject {
         transmitCharacteristic = transmit
         receiveCharacteristic = receive
         state = .subscribing
+        beginConnectionLifecycleTimeout(expectedState: .subscribing)
         peripheral.setNotifyValue(true, for: receive)
     }
 
@@ -280,6 +291,7 @@ public final class ELM327BLEConnector: NSObject {
         scanTimeoutWorkItem = nil
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
+        cancelConnectionLifecycleTimeout()
         if sessionContext != nil && !didEmitTerminalManifest { emitCompletionManifest(state: .interrupted, interruptionCode: "transport:user_disconnected") }
         pendingCommands.removeAll()
         activeCommand = nil
@@ -322,6 +334,24 @@ public final class ELM327BLEConnector: NSObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + command.timeout, execute: timeout)
     }
 
+    private func beginConnectionLifecycleTimeout(expectedState: ELMConnectorState) {
+        cancelConnectionLifecycleTimeout()
+        let timeout = DispatchWorkItem { [weak self] in
+            guard let self,
+                  shouldInterruptELMConnectionLifecycle(state: self.state, expectedState: expectedState)
+            else { return }
+            self.connectionTimeoutWorkItem = nil
+            self.fail(.connectionTimeout)
+        }
+        connectionTimeoutWorkItem = timeout
+        DispatchQueue.main.asyncAfter(deadline: .now() + 15, execute: timeout)
+    }
+
+    private func cancelConnectionLifecycleTimeout() {
+        connectionTimeoutWorkItem?.cancel()
+        connectionTimeoutWorkItem = nil
+    }
+
     private func send(
         _ command: ELMReadCommand,
         request: Data,
@@ -347,6 +377,7 @@ public final class ELM327BLEConnector: NSObject {
         guard let command = activeCommand, let context = sessionContext else { return }
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
+        cancelConnectionLifecycleTimeout()
         activeCommand = nil
         state = .ready
         switch classifyELMReadResponse(response) {
@@ -702,6 +733,7 @@ public final class ELM327BLEConnector: NSObject {
         scanTimeoutWorkItem = nil
         timeoutWorkItem?.cancel()
         timeoutWorkItem = nil
+        cancelConnectionLifecycleTimeout()
         emitCompletionManifest(state: .interrupted, interruptionCode: interruptionCode(for: error))
         pendingCommands.removeAll()
         activeCommand = nil
@@ -718,6 +750,7 @@ public final class ELM327BLEConnector: NSObject {
         case .peripheralNotSelected: return "connector:peripheral_not_selected"
         case .characteristicNotReady: return "connector:characteristic_not_ready"
         case .responseTooLarge: return "transport:response_too_large"
+        case .connectionTimeout: return "transport:connection_timeout"
         case .writeCapacityTimeout: return "transport:write_capacity_timeout"
         case .writeFailed: return "transport:write_failed"
         case .responseTimeout: return "transport:response_timeout"
@@ -756,8 +789,10 @@ extension ELM327BLEConnector: CBCentralManagerDelegate {
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         guard peripheral.identifier == selectedPeripheral?.identifier else { return }
+        cancelConnectionLifecycleTimeout()
         peripheral.delegate = self
         state = .discovering
+        beginConnectionLifecycleTimeout(expectedState: .discovering)
         peripheral.discoverServices(nil)
     }
 
@@ -796,6 +831,7 @@ extension ELM327BLEConnector: CBPeripheralDelegate {
         }
         pendingServiceIDs.remove(service.uuid)
         guard pendingServiceIDs.isEmpty else { return }
+        cancelConnectionLifecycleTimeout()
         let candidates = characteristics.values.compactMap { characteristic -> BLECharacteristicCandidate? in
             guard let service = characteristic.service else { return nil }
             return BLECharacteristicCandidate(
@@ -815,6 +851,7 @@ extension ELM327BLEConnector: CBPeripheralDelegate {
             subscribing: state == .subscribing
         ) else { return }
         guard error == nil, characteristic === receiveCharacteristic, characteristic.isNotifying else { return fail(.characteristicNotReady) }
+        cancelConnectionLifecycleTimeout()
         state = .ready
     }
 

@@ -6,6 +6,7 @@ public enum ELMConnectorError: Error, Equatable, Sendable {
     case peripheralNotSelected
     case characteristicNotReady
     case responseTooLarge
+    case connectionTimeout
     case writeCapacityTimeout
     case writeFailed
     case responseTimeout
