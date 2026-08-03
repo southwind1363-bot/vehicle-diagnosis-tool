@@ -49,7 +49,7 @@
     "progress_percent": 16,
     "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
     "priority": 3,
-    "current_count_note": "B系親DTC 26件 / 出典定義42件・一意サブコード定義34件 (Mazda 2013-15 CX-5・Mazda 2019-20/2020 Mazda3/CX-30 telematics、Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Subaru 2010-14 Legacy/Outback・2012 Impreza、Jeep 2019-20・2022-23 Renegade・2024-25 Wagoneer S、Bentley 2018-22 Continental GT/Flying Spur、Audi 2020-21 ADAS、出典限定)",
+    "current_count_note": "B系親DTC 28件 / 出典定義47件・一意サブコード定義37件 (Mazda 2013-15 CX-5・Mazda 2019-20/2020 Mazda3/CX-30 telematics、Honda 2015-16、2017、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Subaru 2010-14 Legacy/Outback・2012 Impreza、Jeep 2014-17 Cherokee・2019-20・2022-23 Renegade・2024-25 Wagoneer S、Chrysler 2015-17 200、GM 2014 SRS、Bentley 2018-22 Continental GT/Flying Spur、Audi 2020-21 ADAS、出典限定)",
     "next_actions": [
       "汎用/メーカー別のB系コード収録可否をソース別に分ける",
       "SRS、ブレーキ、盗難防止など安全系は強い注意と整備書必須を付ける",
@@ -58,7 +58,7 @@
     "blocked_until": ["公式またはメーカー診断機表示に基づく定義ソース確認"],
     "safety_note": "SRSや盗難防止系は誤作動・復旧不能リスクがあるため、読取整理だけから始める。",
     "source": "ローカル検証集計",
-    "source_date": "2026-08-01",
+    "source_date": "2026-08-03",
     "eta_target": "2026-Q4 見込み",
     "service_manual_required": true
   },
