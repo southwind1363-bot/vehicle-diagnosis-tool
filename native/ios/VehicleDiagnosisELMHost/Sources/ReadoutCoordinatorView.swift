@@ -118,6 +118,14 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.freezeFrameTextValues.isEmpty {
+                    Section("Freeze frame status") {
+                        ForEach(viewModel.readoutPreview.freezeFrameTextValues) { value in
+                            LabeledContent("\(value.monitorID) / PID \(value.pid)", value: "\(value.displayValue) / \(value.sourceScopeID)")
+                        }
+                    }
+                }
+
                 if !viewModel.readoutPreview.freezeFrameTriggerDTCs.isEmpty {
                     Section("Freeze frame trigger") {
                         ForEach(viewModel.readoutPreview.freezeFrameTriggerDTCs) { dtc in

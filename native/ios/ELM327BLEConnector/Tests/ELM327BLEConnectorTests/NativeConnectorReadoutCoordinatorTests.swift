@@ -152,6 +152,12 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
                 "vehicle_command_enabled": .bool(false)
             ]
         )
+        let freezeFrameFuelStatus = NativeConnectorEnvelopeFactory.freezeFrameValue(
+            context: context,
+            sequence: 12,
+            scopeID: "7E8",
+            value: OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: "")
+        )
 
         coordinator.connector(coordinator.connector, didEmit: dtc)
         coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
@@ -164,6 +170,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         coordinator.connector(coordinator.connector, didEmit: permanentDTCFailure)
         coordinator.connector(coordinator.connector, didEmit: freezeFrameTrigger)
         coordinator.connector(coordinator.connector, didEmit: fallbackFreezeFrameTrigger)
+        coordinator.connector(coordinator.connector, didEmit: freezeFrameFuelStatus)
 
         XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
@@ -171,6 +178,9 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.readoutPreview.freezeFrameTriggerDTCs, [
             NativeConnectorReadoutPreview.DTC(code: "P0171", status: "freeze_frame", sourceScopeID: "7E8"),
             NativeConnectorReadoutPreview.DTC(code: "P0300", status: "freeze_frame", sourceScopeID: "7E8")
+        ])
+        XCTAssertEqual(coordinator.readoutPreview.freezeFrameTextValues, [
+            NativeConnectorReadoutPreview.TextMonitorValue(monitorID: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: "", sourceScopeID: "7E8")
         ])
         XCTAssertEqual(coordinator.readoutPreview.readiness, [NativeConnectorReadoutPreview.Readiness(sourceScopeID: "7E8", milOn: false, dtcCount: 1, ignitionType: "spark", supportedMonitorCount: 1, incompleteMonitorCount: 0)])
         XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8")])

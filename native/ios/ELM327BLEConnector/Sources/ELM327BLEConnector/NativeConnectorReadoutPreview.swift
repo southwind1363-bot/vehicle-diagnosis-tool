@@ -98,6 +98,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     public let liveValues: [MonitorValue]
     public let liveTextValues: [TextMonitorValue]
     public let freezeFrameValues: [MonitorValue]
+    public let freezeFrameTextValues: [TextMonitorValue]
     public let readiness: [Readiness]
     public let ecuInfo: [ECUInfo]
     public let onboardMonitors: [OnboardMonitor]
@@ -112,6 +113,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         liveValues: [MonitorValue],
         liveTextValues: [TextMonitorValue],
         freezeFrameValues: [MonitorValue],
+        freezeFrameTextValues: [TextMonitorValue],
         readiness: [Readiness],
         ecuInfo: [ECUInfo],
         onboardMonitors: [OnboardMonitor],
@@ -125,6 +127,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.liveValues = liveValues
         self.liveTextValues = liveTextValues
         self.freezeFrameValues = freezeFrameValues
+        self.freezeFrameTextValues = freezeFrameTextValues
         self.readiness = readiness
         self.ecuInfo = ecuInfo
         self.onboardMonitors = onboardMonitors
@@ -140,6 +143,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         liveValues: [],
         liveTextValues: [],
         freezeFrameValues: [],
+        freezeFrameTextValues: [],
         readiness: [],
         ecuInfo: [],
         onboardMonitors: [],
@@ -155,6 +159,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var liveValues: [String: MonitorValue] = [:]
         var liveTextValues: [String: TextMonitorValue] = [:]
         var freezeFrameValues: [String: MonitorValue] = [:]
+        var freezeFrameTextValues: [String: TextMonitorValue] = [:]
         var readiness: [String: Readiness] = [:]
         var ecuInfo: [String: ECUInfo] = [:]
         var onboardMonitors: [String: OnboardMonitor] = [:]
@@ -189,6 +194,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
             case "read_freeze_frame":
                 Self.freezeFrameTriggerDTCs(in: envelope.data, scopeID: scopeID).forEach { freezeFrameTriggerDTCs[$0.id] = $0 }
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameValues[$0.id] = $0 }
+                Self.textMonitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameTextValues[$0.id] = $0 }
             case "read_ecu_info":
                 Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo[$0.id] = $0 }
             case "read_onboard_monitor":
@@ -207,6 +213,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.liveValues = Self.sortedMonitorValues(liveValues.values)
         self.liveTextValues = Self.sortedTextMonitorValues(liveTextValues.values)
         self.freezeFrameValues = Self.sortedMonitorValues(freezeFrameValues.values)
+        self.freezeFrameTextValues = Self.sortedTextMonitorValues(freezeFrameTextValues.values)
         self.readiness = readiness.values.sorted { $0.sourceScopeID < $1.sourceScopeID }
         self.ecuInfo = ecuInfo.values.sorted { lhs, rhs in
             lhs.sourceScopeID == rhs.sourceScopeID ? lhs.infoID < rhs.infoID : lhs.sourceScopeID < rhs.sourceScopeID
