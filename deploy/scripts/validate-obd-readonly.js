@@ -3581,6 +3581,16 @@ const nativeCompletionManifest = Object.freeze({
 });
 const manifestNativeScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest });
 check(nativeConnectorContract.completionManifestSchemaVersion === "native_connector_completion_manifest_v1" && nativeConnectorContract.completionManifestRecordType === "completion_manifest" && manifestNativeScanSession.ok === true && manifestNativeScanSession.scanState === "completed" && manifestNativeScanSession.partial === false && manifestNativeScanSession.completionManifest?.recordType === "completion_manifest" && manifestNativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && manifestNativeScanSession.vehicleCommandEnabled === false, "Native connector terminal manifest did not produce a complete read-only session");
+const partialNativeCompletionBatch = nativeScanBatch.map((envelope) => envelope.intent === "read_permanent_dtc" ? {
+  ...envelope,
+  readout_id: "permanent_dtc_snapshot",
+  ok: false,
+  blocked: false,
+  errors: ["readout_not_available"],
+  data: { adapter_family: "ELM327", readout_id: "permanent_dtc_snapshot", vehicle_command_enabled: false }
+} : envelope);
+const partialNativeCompletionSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: partialNativeCompletionBatch, completion_manifest: nativeCompletionManifest });
+check(partialNativeCompletionSession.ok === true && partialNativeCompletionSession.scanState === "interrupted" && partialNativeCompletionSession.partial === true && partialNativeCompletionSession.failedReadouts.includes("permanent_dtc_snapshot") && partialNativeCompletionSession.session?.dtcSnapshot?.codes?.includes("P0300") && partialNativeCompletionSession.session?.dtcSnapshot?.codes?.includes("P0420") && !partialNativeCompletionSession.session?.dtcSnapshot?.codes?.includes("P0606") && partialNativeCompletionSession.session?.warnings?.includes("native_connector_readout_failed") && partialNativeCompletionSession.vehicleCommandEnabled === false && partialNativeCompletionSession.wouldTransmit === false, "Partial native completion did not retain successful readouts or safely mark the failed readout");
 const nativeArchiveJsonImport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest }));
 check(nativeArchiveJsonImport?.source === "native_connector" && nativeArchiveJsonImport?.nativeConnectorScanLifecycle?.scanState === "completed" && nativeArchiveJsonImport?.dtcSnapshot?.codes?.includes("P0300") && nativeArchiveJsonImport?.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.code === "P0300" && item.frameNumber === 0 && item.sourceEcu === "7E8") && nativeArchiveJsonImport?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed") && nativeArchiveJsonImport?.vehicleCommandEnabled === false && !Object.hasOwn(nativeArchiveJsonImport || {}, "envelopes"), "Native connector archive JSON did not import through the diagnostic-session path");
 const largeNativeArchiveJsonImport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ native_connector_archive: { envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest }, padding: "x".repeat(600000) }));
