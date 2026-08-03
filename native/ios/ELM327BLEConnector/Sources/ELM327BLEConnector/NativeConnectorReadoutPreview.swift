@@ -193,8 +193,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 }
             case "read_freeze_frame":
                 Self.freezeFrameTriggerDTCs(in: envelope.data, scopeID: scopeID).forEach { freezeFrameTriggerDTCs[$0.id] = $0 }
-                Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameValues[$0.id] = $0 }
-                Self.textMonitorValues(in: envelope.data, scopeID: scopeID).forEach { freezeFrameTextValues[$0.id] = $0 }
+                Self.monitorValues(in: envelope.data, scopeID: scopeID, keys: ["values", "monitor_values"]).forEach { freezeFrameValues[$0.id] = $0 }
+                Self.textMonitorValues(in: envelope.data, scopeID: scopeID, keys: ["values", "monitor_values"]).forEach { freezeFrameTextValues[$0.id] = $0 }
             case "read_ecu_info":
                 Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo[$0.id] = $0 }
             case "read_onboard_monitor":
@@ -269,8 +269,11 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         }
     }
 
-    private static func monitorValues(in data: [String: NativeConnectorJSONValue], scopeID: String) -> [MonitorValue] {
-        guard case .array(let values)? = data["monitor_values"] else { return [] }
+    private static func monitorValues(in data: [String: NativeConnectorJSONValue], scopeID: String, keys: [String] = ["monitor_values"]) -> [MonitorValue] {
+        guard let values = keys.compactMap({ key -> [NativeConnectorJSONValue]? in
+            guard case .array(let items)? = data[key] else { return nil }
+            return items
+        }).first else { return [] }
         return values.compactMap { value in
             guard case .object(let object) = value,
                   case .string(let id)? = object["id"],
@@ -288,8 +291,11 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         }
     }
 
-    private static func textMonitorValues(in data: [String: NativeConnectorJSONValue], scopeID: String) -> [TextMonitorValue] {
-        guard case .array(let values)? = data["monitor_values"] else { return [] }
+    private static func textMonitorValues(in data: [String: NativeConnectorJSONValue], scopeID: String, keys: [String] = ["monitor_values"]) -> [TextMonitorValue] {
+        guard let values = keys.compactMap({ key -> [NativeConnectorJSONValue]? in
+            guard case .array(let items)? = data[key] else { return nil }
+            return items
+        }).first else { return [] }
         return values.compactMap { value in
             guard case .object(let object) = value,
                   case .string(let rawID)? = object["id"],
