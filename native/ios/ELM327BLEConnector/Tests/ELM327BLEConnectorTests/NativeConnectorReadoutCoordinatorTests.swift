@@ -127,6 +127,31 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             scopeID: "7E8",
             code: "P0171"
         )
+        let fallbackFreezeFrameTrigger = NativeConnectorEnvelope(
+            schemaVersion: "native_connector_contract_v1",
+            interfaceID: "user-vci-elm327",
+            platform: "ios",
+            intent: "read_freeze_frame",
+            capturedAt: "2026-07-22T00:00:00Z",
+            scanID: context.scanID,
+            connectionID: context.connectionID,
+            vehicleContextID: context.vehicleContextID,
+            sequence: 11,
+            readoutID: "freeze_frame_snapshot",
+            readoutScopeID: "7E8",
+            readoutAttempt: 0,
+            ok: true,
+            blocked: false,
+            wouldTransmit: false,
+            errors: [],
+            data: [
+                "trigger_dtc": .string("P0300"),
+                "trigger_dtc_entries": .array([]),
+                "values": .array([]),
+                "freeze_frame_readout_status": .string("reported"),
+                "vehicle_command_enabled": .bool(false)
+            ]
+        )
 
         coordinator.connector(coordinator.connector, didEmit: dtc)
         coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
@@ -138,11 +163,15 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         coordinator.connector(coordinator.connector, didEmit: supportedPIDs)
         coordinator.connector(coordinator.connector, didEmit: permanentDTCFailure)
         coordinator.connector(coordinator.connector, didEmit: freezeFrameTrigger)
+        coordinator.connector(coordinator.connector, didEmit: fallbackFreezeFrameTrigger)
 
         XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.liveTextValues, [NativeConnectorReadoutPreview.TextMonitorValue(monitorID: "obd_standard", pid: "1C", value: "eobd", unit: "", sourceScopeID: "7E8")])
-        XCTAssertEqual(coordinator.readoutPreview.freezeFrameTriggerDTCs, [NativeConnectorReadoutPreview.DTC(code: "P0171", status: "freeze_frame", sourceScopeID: "7E8")])
+        XCTAssertEqual(coordinator.readoutPreview.freezeFrameTriggerDTCs, [
+            NativeConnectorReadoutPreview.DTC(code: "P0171", status: "freeze_frame", sourceScopeID: "7E8"),
+            NativeConnectorReadoutPreview.DTC(code: "P0300", status: "freeze_frame", sourceScopeID: "7E8")
+        ])
         XCTAssertEqual(coordinator.readoutPreview.readiness, [NativeConnectorReadoutPreview.Readiness(sourceScopeID: "7E8", milOn: false, dtcCount: 1, ignitionType: "spark", supportedMonitorCount: 1, incompleteMonitorCount: 0)])
         XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.onboardMonitors, [NativeConnectorReadoutPreview.OnboardMonitor(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5, sourceScopeID: "7E8")])

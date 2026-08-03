@@ -243,18 +243,17 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     }
 
     private static func freezeFrameTriggerDTCs(in data: [String: NativeConnectorJSONValue], scopeID: String) -> [DTC] {
-        let rawCodes: [String]
+        var rawCodes: [String] = []
         if case .array(let values)? = data["trigger_dtc_entries"] {
-            rawCodes = values.compactMap { value in
+            rawCodes.append(contentsOf: values.compactMap { value in
                 guard case .object(let object) = value,
                       case .string(let code)? = object["code"]
                 else { return nil }
                 return code
-            }
-        } else if case .string(let code)? = data["trigger_dtc"] {
-            rawCodes = [code]
-        } else {
-            rawCodes = []
+            })
+        }
+        if case .string(let code)? = data["trigger_dtc"] {
+            rawCodes.append(code)
         }
         return rawCodes.compactMap { rawCode in
             let code = rawCode.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
