@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.52";
+const APP_VERSION = "3.5.53";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4970,10 +4970,10 @@ function classifyWebSerialCommandResponse(command, response) {
   if (lines.some((line) => line === "NO DATA")) {
     return { commandStatus: "incomplete", noDataCount: 1, stopScope: "none", stopReason: null };
   }
-  if (positiveResponse && (negativeResponseCount || pendingNegativeResponseCount)) {
+  if (positiveResponse && negativeResponseCount) {
     return { commandStatus: "partial", positiveResponseCount: 1, negativeResponseCount, pendingNegativeResponseCount, stopScope: "none", stopReason: null };
   }
-  if (positiveResponse) return { commandStatus: "completed", positiveResponseCount: 1, stopScope: "none", stopReason: null };
+  if (positiveResponse) return { commandStatus: "completed", positiveResponseCount: 1, negativeResponseCount, pendingNegativeResponseCount, stopScope: "none", stopReason: null };
   if (negativeResponseCount || pendingNegativeResponseCount) {
     return { commandStatus: "incomplete", negativeResponseCount, pendingNegativeResponseCount, stopScope: "none", stopReason: null };
   }
