@@ -320,6 +320,12 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(timingAdvance[0].value, OBD2MonitorValue(id: "timing_advance", pid: "0E", value: 0, unit: "deg"))
         let massAirFlow = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameMassAirFlow, response: "7E8 05 42 10 00 01 F4").get()
         XCTAssertEqual(massAirFlow[0].value, OBD2MonitorValue(id: "maf", pid: "10", value: 5, unit: "g/s"))
+        let fuelSystem = try OBD2ReadoutDecoder.decodeFreezeFrameTextValue(command: .freezeFrameFuelSystemStatus, response: "7E8 05 42 03 00 01 08").get()
+        XCTAssertEqual(fuelSystem.map(\.value), [
+            OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor;closed_loop_with_oxygen_sensor_fault", unit: ""),
+            OBD2TextMonitorValue(id: "fuel_system_status_bank1", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: ""),
+            OBD2TextMonitorValue(id: "fuel_system_status_bank2", pid: "03", value: "closed_loop_with_oxygen_sensor_fault", unit: "")
+        ])
         switch OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameVehicleSpeed, response: "42 0C 00 00") {
         case .failure(let error): XCTAssertEqual(error, .malformedResponse)
         case .success: XCTFail("Expected mismatched PID rejection")

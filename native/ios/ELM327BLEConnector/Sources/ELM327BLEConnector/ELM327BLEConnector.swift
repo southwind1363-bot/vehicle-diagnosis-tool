@@ -368,7 +368,7 @@ public final class ELM327BLEConnector: NSObject {
                 }
             case .freezeFrameCapabilities:
                 freezeFrameSupportedPIDs = OBD2ReadoutDecoder.freezeFrameSupportedPIDs(response: response)
-                let candidates: [ELMReadCommand] = [.freezeFrameTriggerDTC, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage]
+                let candidates: [ELMReadCommand] = [.freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage]
                 let supported = candidates.filter { command in
                     command.freezeFramePID.map(freezeFrameSupportedPIDs.contains) ?? false
                 }
@@ -384,6 +384,16 @@ public final class ELM327BLEConnector: NSObject {
                     results.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: result.scopeID, code: result.code))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
+            case .freezeFrameFuelSystemStatus:
+                switch OBD2ReadoutDecoder.decodeFreezeFrameTextValue(command: command, response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.freezeFrameValue(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)

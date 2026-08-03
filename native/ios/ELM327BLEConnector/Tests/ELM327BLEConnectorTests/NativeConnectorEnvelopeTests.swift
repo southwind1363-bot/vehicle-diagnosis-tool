@@ -112,6 +112,23 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"would_transmit\":false"))
     }
 
+    func testFreezeFrameTextValueUsesTheReadOnlyArchiveShape() throws {
+        let envelope = NativeConnectorEnvelopeFactory.freezeFrameValue(
+            context: NativeConnectorSessionContext(),
+            sequence: 3,
+            scopeID: "7E8",
+            value: OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: "")
+        )
+
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"readout_id\":\"freeze_frame_snapshot\""))
+        XCTAssertTrue(json.contains("\"id\":\"fuel_system_status\""))
+        XCTAssertTrue(json.contains("\"value\":\"closed_loop_using_oxygen_sensor\""))
+        XCTAssertTrue(json.contains("\"freeze_frame_number\":0"))
+        XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
+        XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
+
     func testReadinessEnvelopeCarriesThePid01ScopeAndStatusBytes() throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,

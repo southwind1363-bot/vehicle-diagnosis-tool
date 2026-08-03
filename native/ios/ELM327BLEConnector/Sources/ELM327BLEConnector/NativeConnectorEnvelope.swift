@@ -274,6 +274,13 @@ public enum NativeConnectorEnvelopeFactory {
         ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
+    public static func freezeFrameValue(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, value: OBD2TextMonitorValue) -> NativeConnectorEnvelope {
+        make(context: context, sequence: sequence, intent: "read_freeze_frame", data: [
+            "values": .array([.object(["id": .string(value.id), "pid": .string(value.pid), "value": .string(value.value), "unit": .string(value.unit), "freeze_frame_number": .number(0)])]),
+            "freeze_frame_readout_status": .string("reported")
+        ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
+    }
+
     public static func ecuInfo(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, id: String, infoType: String, value: String) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_ecu_info", data: [
             "items": .array([.object(["id": .string(id), "service": .string("09"), "info_type": .string(infoType), "value": .string(value), "source_ecu": scopeID.map { .string($0) } ?? .null])]),

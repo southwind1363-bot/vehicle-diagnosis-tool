@@ -206,7 +206,7 @@ public enum OBD2ReadoutDecoder {
             for packet in packets {
                 let payload = packet.payload
                 guard payload.count >= 3, payload[0] == 0x41, payload[1] == expectedPIDByte,
-                      let values = liveTextPIDValues(command: command, bytes: Array(payload.dropFirst(2))) else {
+                      let values = textPIDValues(command: command, bytes: Array(payload.dropFirst(2))) else {
                     return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
                 }
                 decoded.append(contentsOf: values.map { (scopeID: packet.scopeID, value: $0) })
@@ -278,6 +278,22 @@ public enum OBD2ReadoutDecoder {
                 }
                 guard let value else { return .failure(.malformedResponse) }
                 values.append((scopeID: packet.scopeID, value: value))
+            }
+            return .success(values)
+        }
+    }
+
+    public static func decodeFreezeFrameTextValue(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2TextMonitorValue)], OBD2ReadoutDecodeFailure> {
+        guard let pid = command.freezeFramePID, let expectedPID = UInt8(pid, radix: 16) else { return .failure(.malformedResponse) }
+        return packets(in: response).flatMap { packets in
+            var values: [(scopeID: String?, value: OBD2TextMonitorValue)] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count >= 4, payload[0] == 0x42, payload[1] == expectedPID, payload[2] == 0x00,
+                      let decoded = textPIDValues(command: command, bytes: Array(payload.dropFirst(3))) else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                values.append(contentsOf: decoded.map { (scopeID: packet.scopeID, value: $0) })
             }
             return .success(values)
         }
@@ -651,13 +667,13 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
-    private static func liveTextPIDValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2TextMonitorValue]? {
+    private static func textPIDValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2TextMonitorValue]? {
         guard let byte = bytes.first else { return nil }
         let value: String
         let id: String
         let pid: String
         switch command {
-        case .fuelSystemStatus:
+        case .fuelSystemStatus, .freezeFrameFuelSystemStatus:
             return fuelSystemStatusValues(bytes)
         case .secondaryAirStatus:
             guard bytes.count == 1 else { return nil }
