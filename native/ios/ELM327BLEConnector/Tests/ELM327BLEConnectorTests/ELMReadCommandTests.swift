@@ -103,6 +103,9 @@ final class ELMReadCommandTests: XCTestCase {
             freezeFrameSupportedPIDsForTriggerScopes(triggerScopeIDs: ["7E9"], supportedPIDsByScope: scopedSupport),
             Set(["02", "0C"])
         )
+        XCTAssertTrue(isReportedFreezeFrameTriggerScope("7E8", triggerScopeIDs: ["7E8"]))
+        XCTAssertFalse(isReportedFreezeFrameTriggerScope("7E9", triggerScopeIDs: ["7E8"]))
+        XCTAssertTrue(isReportedFreezeFrameTriggerScope(nil, triggerScopeIDs: ["LEGACY"]))
     }
 
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {

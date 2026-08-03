@@ -102,6 +102,10 @@ func freezeFrameSupportedPIDsForTriggerScopes(
     }
 }
 
+func isReportedFreezeFrameTriggerScope(_ scopeID: String?, triggerScopeIDs: Set<String>) -> Bool {
+    triggerScopeIDs.contains(scopeID ?? "LEGACY")
+}
+
 public struct BLEPeripheralCandidate: Identifiable, Sendable {
     public let id: UUID
     public let displayName: String
@@ -164,6 +168,7 @@ public final class ELM327BLEConnector: NSObject {
     private var protocolHint: String?
     private var freezeFrameSupportedPIDs = Set<String>()
     private var freezeFrameSupportedPIDsByScope: [String: Set<String>] = [:]
+    private var freezeFrameTriggerScopeIDs = Set<String>()
     private var liveSupportedPIDs = Set<String>()
     private var scheduledLivePIDCommands = Set<ELMReadCommand>()
     private var scheduledSupportedPIDPages = Set<ELMReadCommand>()
@@ -250,6 +255,7 @@ public final class ELM327BLEConnector: NSObject {
         protocolHint = nil
         freezeFrameSupportedPIDs.removeAll()
         freezeFrameSupportedPIDsByScope.removeAll()
+        freezeFrameTriggerScopeIDs.removeAll()
         liveSupportedPIDs.removeAll()
         scheduledLivePIDCommands.removeAll()
         scheduledSupportedPIDPages = [.supportedPIDs]
@@ -419,6 +425,7 @@ public final class ELM327BLEConnector: NSObject {
                         guard result.code != nil else { return nil }
                         return result.scopeID ?? "LEGACY"
                     })
+                    freezeFrameTriggerScopeIDs = triggerScopeIDs
                     results.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: result.scopeID, code: result.code))
@@ -440,7 +447,10 @@ public final class ELM327BLEConnector: NSObject {
             case .freezeFrameFuelSystemStatus:
                 switch OBD2ReadoutDecoder.decodeFreezeFrameTextValue(command: command, response: response) {
                 case .success(let results):
-                    results.forEach { result in
+                    let triggerScopedResults = results.filter {
+                        isReportedFreezeFrameTriggerScope($0.scopeID, triggerScopeIDs: freezeFrameTriggerScopeIDs)
+                    }
+                    triggerScopedResults.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.freezeFrameValue(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
                     }
@@ -450,7 +460,10 @@ public final class ELM327BLEConnector: NSObject {
             case .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage:
                 switch OBD2ReadoutDecoder.decodeFreezeFrameValue(command: command, response: response) {
                 case .success(let results):
-                    results.forEach { result in
+                    let triggerScopedResults = results.filter {
+                        isReportedFreezeFrameTriggerScope($0.scopeID, triggerScopeIDs: freezeFrameTriggerScopeIDs)
+                    }
+                    triggerScopedResults.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.freezeFrameValue(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
                     }
