@@ -172,6 +172,7 @@ export function createLocalBridgeApp(options = {}) {
     enabled: j2534DiscoveryRequested,
     inspectLibraries: j2534DiscoveryRequested
   });
+  const j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices);
 
   return http.createServer(async (request, response) => {
     setCorsHeaders(request, response);
@@ -191,7 +192,11 @@ export function createLocalBridgeApp(options = {}) {
         sample_mode: !replayMode && !j2534DiscoveryRequested,
         replay_mode: replayMode,
         j2534_discovery_requested: j2534DiscoveryRequested,
-        vci_detected_count: discoveredVciDevices.length
+        vci_detected_count: discoveredVciDevices.length,
+        ...(j2534DiscoveryRequested ? {
+          driver_readiness_status: j2534DiscoveryEnvironment.driver_readiness_status,
+          next_check: j2534DiscoveryEnvironment.next_check
+        } : {})
       });
       return;
     }
@@ -208,7 +213,7 @@ export function createLocalBridgeApp(options = {}) {
       return;
     }
 
-    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested));
+    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment));
   });
 }
 
@@ -233,10 +238,14 @@ function isReadinessSnapshotRequest(request = {}) {
   return readoutId === "readiness_snapshot" || requestedPid === "01";
 }
 
-function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false) {
+function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices)) {
   const replayMode = Boolean(replaySnapshot);
   const discoveryMode = !replayMode && j2534DiscoveryRequested;
   const driverDetected = discoveryMode && discoveredVciDevices.length > 0;
+  const j2534StatusData = discoveryMode ? {
+    driver_readiness_status: j2534DiscoveryEnvironment.driver_readiness_status,
+    next_check: j2534DiscoveryEnvironment.next_check
+  } : {};
   const base = {
     request_id: request.request_id,
     ok: true,
@@ -261,7 +270,8 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
         replay_mode: replayMode,
         replay_loaded: replayMode,
         j2534_discovery_requested: discoveryMode,
-        vci_detected_count: discoveredVciDevices.length
+        vci_detected_count: discoveredVciDevices.length,
+        ...j2534StatusData
       }
     };
   }
@@ -272,6 +282,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
       data: {
         selected_device_id: replayMode ? "replay-readonly-input" : driverDetected ? discoveredVciDevices[0].id : discoveryMode ? null : "sample-readonly-vci",
         driver_status: replayMode ? "replay_mode" : driverDetected ? "j2534_registry_detected" : discoveryMode ? "j2534_driver_not_detected" : "sample_mode",
+        ...j2534StatusData,
         devices: replayMode ? [
           {
             id: "replay-readonly-input",
@@ -308,6 +319,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
         replay_mode: replayMode,
         driver_status: replayMode ? "replay_mode" : driverDetected ? "j2534_registry_detected" : discoveryMode ? "j2534_driver_not_detected" : "sample_mode",
         connection_status: driverDetected ? "driver_detected_not_opened" : discoveryMode ? "driver_not_detected" : null,
+        ...j2534StatusData,
         vehicle_command_enabled: false
       }
     };
@@ -323,6 +335,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
         adapter_family: "j2534_passthru",
         driver_status: driverDetected ? "j2534_registry_detected" : "j2534_driver_not_detected",
         connection_status: driverDetected ? "driver_detected_not_opened" : "driver_not_detected",
+        ...j2534StatusData,
         vehicle_command_enabled: false
       }
     };

@@ -4231,6 +4231,8 @@ const bridgeJ2534VciList = obd.normalizeBridgeVciList({
   data: {
     selected_device_id: "j2534-registry-1",
     driver_status: "j2534_registry_detected",
+    driver_readiness_status: "runtime_architecture_mismatch",
+    next_check: "install_matching_j2534_driver_architecture",
     devices: [{
       id: "j2534-registry-1",
       name: "Example J2534 VCI",
@@ -4245,10 +4247,14 @@ const bridgeJ2534VciList = obd.normalizeBridgeVciList({
       bridge_runtime_bitness: 64,
       driver_runtime_compatible: false,
       driver_runtime_compatibility_status: "architecture_mismatch",
-      driver_required_api_count: 14,
-      driver_detected_required_api_count: 13,
-      driver_missing_required_apis: ["PassThruConnect", "C:\\private\\driver.dll"],
-      driver_required_api_ready: false,
+    driver_required_api_count: 14,
+    driver_detected_required_api_count: 13,
+    driver_missing_required_apis: ["PassThruConnect", "C:\\private\\driver.dll"],
+    driver_required_api_ready: false,
+    driver_readonly_required_api_count: 10,
+    driver_detected_readonly_api_count: 9,
+    driver_missing_readonly_apis: ["PassThruConnect", "C:\\private\\driver.dll"],
+    driver_readonly_api_ready: false,
       connection_status: "driver_detected_not_opened",
       connected: false,
       vehicle_command_enabled: true,
@@ -4256,7 +4262,7 @@ const bridgeJ2534VciList = obd.normalizeBridgeVciList({
     }]
   }
 });
-check(bridgeJ2534VciList.devices[0]?.adapterFamily === "j2534_passthru" && bridgeJ2534VciList.devices[0]?.driverLibraryDetected === true && bridgeJ2534VciList.devices[0]?.driverLibraryInspectionStatus === "inspected" && bridgeJ2534VciList.devices[0]?.driverLibraryArchitecture === "x86" && bridgeJ2534VciList.devices[0]?.driverLibraryBitness === 32 && bridgeJ2534VciList.devices[0]?.bridgeRuntimeArchitecture === "x64" && bridgeJ2534VciList.devices[0]?.bridgeRuntimeBitness === 64 && bridgeJ2534VciList.devices[0]?.driverRuntimeCompatible === false && bridgeJ2534VciList.devices[0]?.driverRuntimeCompatibilityStatus === "architecture_mismatch" && bridgeJ2534VciList.devices[0]?.driverRequiredApiCount === 14 && bridgeJ2534VciList.devices[0]?.driverDetectedRequiredApiCount === 13 && bridgeJ2534VciList.devices[0]?.driverMissingRequiredApis?.join(",") === "PassThruConnect" && bridgeJ2534VciList.devices[0]?.driverRequiredApiReady === false && bridgeJ2534VciList.devices[0]?.connectionStatus === "driver_detected_not_opened" && bridgeJ2534VciList.devices[0]?.vehicleCommandEnabled === false, "J2534 VCI discovery and DLL compatibility metadata was not normalized with read-only safety");
+check(bridgeJ2534VciList.driverReadinessStatus === "runtime_architecture_mismatch" && bridgeJ2534VciList.nextCheck === "install_matching_j2534_driver_architecture" && bridgeJ2534VciList.devices[0]?.adapterFamily === "j2534_passthru" && bridgeJ2534VciList.devices[0]?.driverLibraryDetected === true && bridgeJ2534VciList.devices[0]?.driverLibraryInspectionStatus === "inspected" && bridgeJ2534VciList.devices[0]?.driverLibraryArchitecture === "x86" && bridgeJ2534VciList.devices[0]?.driverLibraryBitness === 32 && bridgeJ2534VciList.devices[0]?.bridgeRuntimeArchitecture === "x64" && bridgeJ2534VciList.devices[0]?.bridgeRuntimeBitness === 64 && bridgeJ2534VciList.devices[0]?.driverRuntimeCompatible === false && bridgeJ2534VciList.devices[0]?.driverRuntimeCompatibilityStatus === "architecture_mismatch" && bridgeJ2534VciList.devices[0]?.driverRequiredApiCount === 14 && bridgeJ2534VciList.devices[0]?.driverDetectedRequiredApiCount === 13 && bridgeJ2534VciList.devices[0]?.driverMissingRequiredApis?.join(",") === "PassThruConnect" && bridgeJ2534VciList.devices[0]?.driverRequiredApiReady === false && bridgeJ2534VciList.devices[0]?.driverReadonlyApiCount === 10 && bridgeJ2534VciList.devices[0]?.driverDetectedReadonlyApiCount === 9 && bridgeJ2534VciList.devices[0]?.driverMissingReadonlyApis?.join(",") === "PassThruConnect" && bridgeJ2534VciList.devices[0]?.driverReadonlyApiReady === false && bridgeJ2534VciList.devices[0]?.connectionStatus === "driver_detected_not_opened" && bridgeJ2534VciList.devices[0]?.vehicleCommandEnabled === false, "J2534 VCI discovery and DLL compatibility metadata was not normalized with read-only safety");
 check(!JSON.stringify(bridgeJ2534VciList).includes("C:\\Program Files"), "J2534 VCI normalization retained a local driver path");
 const j2534VciSession = obd.buildDiagnosticScanSession({ vciDevices: bridgeJ2534VciList });
 const reimportedJ2534VciSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(j2534VciSession) }));

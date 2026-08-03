@@ -236,8 +236,8 @@ try {
     const j2534Status = await post(j2534DiscoveryPort, "bridge_status");
     const j2534Vci = await post(j2534DiscoveryPort, "list_vci");
     const j2534Identity = await post(j2534DiscoveryPort, "adapter_identity");
-    check(j2534Status.data.sample_mode === false && j2534Status.data.vci_detected_count === 2 && j2534Vci.data.driver_status === "j2534_registry_detected" && j2534Vci.data.devices.length === 2 && j2534Vci.data.devices.every((item) => item.connected === false), "J2534 registry discovery did not expose detected drivers without opening a VCI");
-    check(j2534Identity.data.adapter_family === "j2534_passthru" && j2534Identity.data.driver_status === "j2534_registry_detected" && j2534Identity.data.vehicle_command_enabled === false, "J2534 registry discovery did not preserve adapter identity read-only safety");
+    check(j2534Status.data.sample_mode === false && j2534Status.data.vci_detected_count === 2 && j2534Status.data.driver_readiness_status === "static_inspection_pending" && j2534Status.data.next_check === "verify_driver_library_path" && j2534Vci.data.driver_status === "j2534_registry_detected" && j2534Vci.data.driver_readiness_status === "static_inspection_pending" && j2534Vci.data.devices.length === 2 && j2534Vci.data.devices.every((item) => item.connected === false), "J2534 registry discovery did not expose detected drivers without opening a VCI");
+    check(j2534Identity.data.adapter_family === "j2534_passthru" && j2534Identity.data.driver_status === "j2534_registry_detected" && j2534Identity.data.driver_readiness_status === "static_inspection_pending" && j2534Identity.data.vehicle_command_enabled === false, "J2534 registry discovery did not preserve adapter identity read-only safety");
     for (const intent of j2534UnavailableReadIntents) {
       const unavailableReadout = await post(j2534DiscoveryPort, intent);
       check(unavailableReadout.ok === false && unavailableReadout.blocked === false && unavailableReadout.would_transmit === false && unavailableReadout.errors.includes("vci_not_connected"), `J2534 discovery ${intent} did not stop before an unopened VCI readout`);
@@ -257,9 +257,9 @@ try {
     const missingDriverStatus = await post(j2534MissingDriverPort, "bridge_status");
     const missingDriverVci = await post(j2534MissingDriverPort, "list_vci");
     const missingDriverIdentity = await post(j2534MissingDriverPort, "adapter_identity");
-    check(missingDriverHealth.sample_mode === false && missingDriverHealth.j2534_discovery_requested === true && missingDriverHealth.vci_detected_count === 0, "Empty J2534 discovery incorrectly fell back to sample health mode");
-    check(missingDriverStatus.data.status === "driver_not_detected" && missingDriverStatus.data.sample_mode === false && missingDriverStatus.data.vci_detected_count === 0, "Empty J2534 discovery did not expose a distinct bridge status");
-    check(missingDriverVci.data.devices.length === 0 && missingDriverVci.data.selected_device_id === null && missingDriverVci.data.driver_status === "j2534_driver_not_detected", "Empty J2534 discovery exposed a sample VCI");
+    check(missingDriverHealth.sample_mode === false && missingDriverHealth.j2534_discovery_requested === true && missingDriverHealth.vci_detected_count === 0 && missingDriverHealth.driver_readiness_status === "no_registered_driver" && missingDriverHealth.next_check === "install_or_repair_j2534_driver_registration", "Empty J2534 discovery incorrectly fell back to sample health mode");
+    check(missingDriverStatus.data.status === "driver_not_detected" && missingDriverStatus.data.sample_mode === false && missingDriverStatus.data.vci_detected_count === 0 && missingDriverStatus.data.driver_readiness_status === "no_registered_driver", "Empty J2534 discovery did not expose a distinct bridge status");
+    check(missingDriverVci.data.devices.length === 0 && missingDriverVci.data.selected_device_id === null && missingDriverVci.data.driver_status === "j2534_driver_not_detected" && missingDriverVci.data.next_check === "install_or_repair_j2534_driver_registration", "Empty J2534 discovery exposed a sample VCI");
     check(missingDriverIdentity.data.adapter_name === null && missingDriverIdentity.data.connection_status === "driver_not_detected" && missingDriverIdentity.data.vehicle_command_enabled === false, "Empty J2534 discovery exposed a sample adapter identity");
     for (const intent of j2534UnavailableReadIntents) {
       const unavailableReadout = await post(j2534MissingDriverPort, intent);

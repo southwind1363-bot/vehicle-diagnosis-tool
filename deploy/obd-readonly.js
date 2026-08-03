@@ -3231,9 +3231,34 @@
     };
   }
 
+  function normalizeBridgeDriverReadiness(data = {}) {
+    const readinessValue = String(data.driver_readiness_status || data.driverReadinessStatus || "").trim().toLowerCase();
+    const nextCheckValue = String(data.next_check || data.nextCheck || "").trim().toLowerCase();
+    const driverReadinessStatus = [
+      "no_registered_driver",
+      "static_inspection_pending",
+      "runtime_architecture_mismatch",
+      "readonly_api_incomplete",
+      "readonly_static_check_complete"
+    ].includes(readinessValue) ? readinessValue : "not_checked";
+    const nextCheck = [
+      "install_or_repair_j2534_driver_registration",
+      "verify_driver_library_path",
+      "install_matching_j2534_driver_architecture",
+      "verify_driver_readonly_exports",
+      "manual_vci_connection_review"
+    ].includes(nextCheckValue) ? nextCheckValue : null;
+    return {
+      driverReadinessStatus,
+      driver_readiness_status: driverReadinessStatus,
+      nextCheck,
+      next_check: nextCheck
+    };
+  }
+
   function normalizeBridgeConnectionStatus(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected"];
+    const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck"];
     const hasConnectionStatusData = connectionStatusKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedConnectionStatus = connectionStatusKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasConnectionStatusData);
@@ -3250,6 +3275,7 @@
     const vehicleConnected = data.vehicle_connected === true || data.vehicleConnected === true || data.car_connected === true || data.carConnected === true;
     const replayMode = data.replay_mode === true || data.replayMode === true;
     const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
+    const driverReadiness = normalizeBridgeDriverReadiness(data);
     const readoutSourceMode = replayMode ? "replay" : sampleMode ? "sample" : "unspecified";
     let displayStatus = "準備中";
     let nextAction = "ローカルブリッジを起動しても、この画面からはまだ車両へ送信しません。";
@@ -3294,6 +3320,7 @@
       sample_mode: sampleMode,
       replayMode,
       replay_mode: replayMode,
+      ...driverReadiness,
       readoutSourceMode,
       readout_source_mode: readoutSourceMode,
       connectionEnabled: localBridgeContract.connectionEnabled,
@@ -3327,6 +3354,7 @@
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
     const replayMode = data.replay_mode === true || data.replayMode === true;
     const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
+    const driverReadiness = normalizeBridgeDriverReadiness(data);
     const normalizedDevices = (malformedVciDeviceRow ? [] : devices).map((device, index) => {
       const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
       const deviceReplayMode = device?.replay_mode === true || device?.replayMode === true || replayMode;
@@ -3370,6 +3398,17 @@
         .filter((value) => /^PassThru[A-Za-z0-9_]{1,80}$/.test(value))
         .slice(0, 32))];
       const driverRequiredApiReady = device?.driver_required_api_ready === true || device?.driverRequiredApiReady === true;
+      const driverReadonlyApiCount = readDriverCount(device?.driver_readonly_required_api_count, device?.driverReadonlyRequiredApiCount);
+      const driverDetectedReadonlyApiCount = readDriverCount(device?.driver_detected_readonly_api_count, device?.driverDetectedReadonlyApiCount);
+      const driverMissingReadonlyApis = [...new Set((Array.isArray(device?.driver_missing_readonly_apis)
+        ? device.driver_missing_readonly_apis
+        : Array.isArray(device?.driverMissingReadonlyApis)
+          ? device.driverMissingReadonlyApis
+          : [])
+        .map((value) => String(value || "").trim())
+        .filter((value) => /^PassThru[A-Za-z0-9_]{1,80}$/.test(value))
+        .slice(0, 32))];
+      const driverReadonlyApiReady = device?.driver_readonly_api_ready === true || device?.driverReadonlyApiReady === true;
       return {
         id,
         label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
@@ -3404,6 +3443,14 @@
         driver_missing_required_apis: [...driverMissingRequiredApis],
         driverRequiredApiReady,
         driver_required_api_ready: driverRequiredApiReady,
+        driverReadonlyApiCount,
+        driver_readonly_required_api_count: driverReadonlyApiCount,
+        driverDetectedReadonlyApiCount,
+        driver_detected_readonly_api_count: driverDetectedReadonlyApiCount,
+        driverMissingReadonlyApis,
+        driver_missing_readonly_apis: [...driverMissingReadonlyApis],
+        driverReadonlyApiReady,
+        driver_readonly_api_ready: driverReadonlyApiReady,
         connectionStatus: connectionStatus ? String(connectionStatus).slice(0, 80) : null,
         connection_status: connectionStatus ? String(connectionStatus).slice(0, 80) : null,
         connected: device?.connected === true || device?.is_connected === true || device?.isConnected === true,
@@ -3429,6 +3476,7 @@
       sample_mode: sampleMode,
       replayMode,
       replay_mode: replayMode,
+      ...driverReadiness,
       selectedDeviceId,
       devices: normalizedDevices,
       deviceCount: normalizedDevices.length,
