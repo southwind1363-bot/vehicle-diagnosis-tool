@@ -3332,6 +3332,17 @@ const nativeElmLivePidGoldenImport = obd.buildNativeConnectorDiagnosticImport(na
 const nativeElmReadinessGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmReadinessGoldenEnvelope);
 const nativeElmReadinessGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmReadinessGoldenEnvelope);
 const nativeElmEcuInfoGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmEcuInfoGoldenEnvelope);
+const nativeElmPerformanceCounterImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEcuInfoGoldenEnvelope,
+  data: {
+    ...nativeElmEcuInfoGoldenEnvelope.data,
+    items: [
+      ...nativeElmEcuInfoGoldenEnvelope.data.items,
+      { id: "in_use_performance_tracking_spark", service: "09", info_type: "08", value: "00 00 00 01", source_ecu: "7E8" },
+      { id: "in_use_performance_tracking_compression", service: "09", info_type: "0B", value: "00 00 00 02", source_ecu: "7E8" }
+    ]
+  }
+});
 const nativeElmScanArchiveGoldenImport = obd.buildNativeConnectorScanSessionFromCompletionManifest(nativeElmScanArchiveGolden);
 check(
   nativeElmLivePidGoldenEvaluation.accepted === true
@@ -3430,6 +3441,13 @@ check(
     && nativeElmEcuInfoGoldenImport.session?.ecuInfoSnapshot?.items?.some((item) => item.id === "ecu_name" && item.value === "ENGINE")
     && !JSON.stringify(nativeElmEcuInfoGoldenImport).includes("0902"),
   "iPhone ELM327 Mode 09 ECU information envelope did not preserve scoped ECU name safely"
+);
+check(
+  nativeElmPerformanceCounterImport.accepted === true
+    && nativeElmPerformanceCounterImport.session?.ecuInfoSnapshot?.items?.some((item) => item.id === "in_use_performance_tracking_spark" && item.value === "00 00 00 01" && item.sourceEcu === "7E8")
+    && nativeElmPerformanceCounterImport.session?.ecuInfoSnapshot?.items?.some((item) => item.id === "in_use_performance_tracking_compression" && item.value === "00 00 00 02" && item.sourceEcu === "7E8")
+    && nativeElmPerformanceCounterImport.session?.vehicleCommandEnabled === false,
+  "iPhone Mode 09 performance-counter values did not remain raw, scoped, and read-only after import"
 );
 check(
   nativeElmScanArchiveGoldenImport.ok === true
