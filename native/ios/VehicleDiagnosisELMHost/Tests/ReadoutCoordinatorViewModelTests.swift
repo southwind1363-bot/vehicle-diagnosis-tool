@@ -32,6 +32,14 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
             supportsWriteWithoutResponse: true
         )
         XCTAssertNil(ReadoutCoordinatorViewModel.suggestedCharacteristicIDs(from: [transmit, receive, alternateTransmit]))
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.transmitCharacteristicCandidates(from: [transmit, receive, alternateTransmit]).map(\.characteristicUUID),
+            ["FFF1", "FFF3"]
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.receiveCharacteristicCandidates(from: [transmit, receive, alternateTransmit]).map(\.characteristicUUID),
+            ["FFF2"]
+        )
     }
 
     @MainActor

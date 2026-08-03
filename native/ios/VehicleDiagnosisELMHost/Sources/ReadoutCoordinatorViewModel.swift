@@ -70,6 +70,14 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         connectorState == .ready
     }
 
+    var transmitCharacteristicChoices: [CharacteristicChoice] {
+        Self.transmitCharacteristicCandidates(from: coordinator.characteristicCandidates).map(CharacteristicChoice.init(candidate:))
+    }
+
+    var receiveCharacteristicChoices: [CharacteristicChoice] {
+        Self.receiveCharacteristicCandidates(from: coordinator.characteristicCandidates).map(CharacteristicChoice.init(candidate:))
+    }
+
     var archiveStateLabel: String {
         switch archiveState {
         case "Complete": return "完了"
@@ -138,13 +146,21 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     }
 
     static func suggestedCharacteristicIDs(from candidates: [BLECharacteristicCandidate]) -> (transmitID: String, receiveID: String)? {
-        let transmitCandidates = candidates.filter { $0.supportsWrite || $0.supportsWriteWithoutResponse }
-        let receiveCandidates = candidates.filter(\.supportsNotify)
+        let transmitCandidates = transmitCharacteristicCandidates(from: candidates)
+        let receiveCandidates = receiveCharacteristicCandidates(from: candidates)
         guard transmitCandidates.count == 1, receiveCandidates.count == 1 else { return nil }
         return (
             "\(transmitCandidates[0].serviceUUID)/\(transmitCandidates[0].characteristicUUID)",
             "\(receiveCandidates[0].serviceUUID)/\(receiveCandidates[0].characteristicUUID)"
         )
+    }
+
+    static func transmitCharacteristicCandidates(from candidates: [BLECharacteristicCandidate]) -> [BLECharacteristicCandidate] {
+        candidates.filter { $0.supportsWrite || $0.supportsWriteWithoutResponse }
+    }
+
+    static func receiveCharacteristicCandidates(from candidates: [BLECharacteristicCandidate]) -> [BLECharacteristicCandidate] {
+        candidates.filter(\.supportsNotify)
     }
 
     func startPeripheralScan() {

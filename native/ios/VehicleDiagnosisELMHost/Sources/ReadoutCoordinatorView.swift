@@ -51,13 +51,13 @@ struct ReadoutCoordinatorView: View {
                         .foregroundStyle(.secondary)
                     Picker("送信", selection: $viewModel.selectedTransmitID) {
                         Text("選択してください").tag("")
-                        ForEach(viewModel.characteristicChoices) { choice in
+                        ForEach(viewModel.transmitCharacteristicChoices) { choice in
                             Text(choice.label).tag(choice.id)
                         }
                     }
                     Picker("受信", selection: $viewModel.selectedReceiveID) {
                         Text("選択してください").tag("")
-                        ForEach(viewModel.characteristicChoices) { choice in
+                        ForEach(viewModel.receiveCharacteristicChoices) { choice in
                             Text(choice.label).tag(choice.id)
                         }
                     }
