@@ -330,7 +330,8 @@
       adapterTransport: "ble-gatt-or-classic",
       route: "native_connector_required",
       currentAvailability: "iPhone native BLE host implemented; app distribution and adapter verification pending",
-      requiresCompanionBridge: true,
+      requiresCompanionBridge: false,
+      requiresNativeHost: true,
       requiredBeforeReadout: Object.freeze(["iPhone BLEホストのアプリ配布", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
     })
   ]);
@@ -1200,6 +1201,8 @@
       currentAvailability: route?.currentAvailability || "端末とVCI方式の確認待ち",
       requiresCompanionBridge: route?.requiresCompanionBridge !== false,
       requires_companion_bridge: route?.requiresCompanionBridge !== false,
+      requiresNativeHost: route?.requiresNativeHost === true,
+      requires_native_host: route?.requiresNativeHost === true,
       requiredBeforeReadout: route ? [...route.requiredBeforeReadout] : ["端末・ブラウザ・VCI接続方式の確認"],
       required_before_readout: route ? [...route.requiredBeforeReadout] : ["端末・ブラウザ・VCI接続方式の確認"],
       directBrowserReadoutEnabled: false,

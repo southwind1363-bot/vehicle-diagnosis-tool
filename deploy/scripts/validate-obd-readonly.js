@@ -3268,7 +3268,7 @@ check(incompleteClearDtcReadiness.missing_requirement_ids.includes("freeze_frame
 const androidBleRoute = obd.evaluateMobileReadoutTransport({ platform: "android", adapter_transport: "ble-gatt" });
 check(androidBleRoute.schemaVersion === "mobile_readout_transport_v1" && androidBleRoute.route === "direct_browser_candidate" && androidBleRoute.requiresCompanionBridge === false, "Android BLE読取経路を判定できません");
 const iosRoute = obd.evaluateMobileReadoutTransport({ platform: "ios", adapterTransport: "ble-gatt-or-classic" });
-check(iosRoute.route === "native_connector_required" && iosRoute.requires_companion_bridge === true && iosRoute.required_before_readout.some((item) => item.includes("アプリ配布")), "iOS読取経路を安全に分離できません");
+check(iosRoute.route === "native_connector_required" && iosRoute.requires_companion_bridge === false && iosRoute.requires_native_host === true && iosRoute.required_before_readout.some((item) => item.includes("アプリ配布")), "iOS読取経路を安全に分離できません");
 check(androidBleRoute.directBrowserReadoutEnabled === false && androidBleRoute.vehicleCommandEnabled === false && androidBleRoute.wouldTransmit === false && iosRoute.direct_browser_readout_enabled === false, "モバイル経路モデルが接続または車両送信を有効にしています");
 const iphoneThinkcarRoute = obd.evaluateInterfaceReadoutRoute({ interface_id: "user-vci-thinkcar-bluetooth", platform: "ios" });
 const iphoneElmRoute = obd.evaluateInterfaceReadoutRoute({ interfaceId: "user-vci-elm327", platform: "ios" });
