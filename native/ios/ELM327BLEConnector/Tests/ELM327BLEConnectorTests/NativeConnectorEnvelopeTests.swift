@@ -93,6 +93,25 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"would_transmit\":false"))
     }
 
+    func testFreezeFrameTriggerDTCUsesStructuredReadOnlyData() throws {
+        let envelope = NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(
+            context: NativeConnectorSessionContext(),
+            sequence: 2,
+            scopeID: "7E8",
+            code: "P0300"
+        )
+
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"intent\":\"read_freeze_frame\""))
+        XCTAssertTrue(json.contains("\"readout_id\":\"freeze_frame_snapshot\""))
+        XCTAssertTrue(json.contains("\"trigger_dtc\":\"P0300\""))
+        XCTAssertTrue(json.contains("\"trigger_dtc_entries\":[{\"code\":\"P0300\"}]"))
+        XCTAssertTrue(json.contains("\"values\":[]"))
+        XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))
+        XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
+        XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
+
     func testReadinessEnvelopeCarriesThePid01ScopeAndStatusBytes() throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,
