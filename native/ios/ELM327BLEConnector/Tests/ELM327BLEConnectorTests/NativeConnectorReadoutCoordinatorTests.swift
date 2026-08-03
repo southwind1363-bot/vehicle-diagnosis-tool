@@ -74,6 +74,12 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             scopeID: "7E8",
             value: OBD2MonitorValue(id: "engine_speed", pid: "0C", value: 1726, unit: "rpm")
         )
+        let textMonitor = NativeConnectorEnvelopeFactory.livePID(
+            context: context,
+            sequence: 4,
+            scopeID: "7E8",
+            value: OBD2TextMonitorValue(id: "obd_standard", pid: "1C", value: "eobd", unit: "")
+        )
         let readiness = NativeConnectorEnvelopeFactory.readiness(
             context: context,
             sequence: 4,
@@ -119,6 +125,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         coordinator.connector(coordinator.connector, didEmit: dtc)
         coordinator.connector(coordinator.connector, didEmit: duplicateDTC)
         coordinator.connector(coordinator.connector, didEmit: monitor)
+        coordinator.connector(coordinator.connector, didEmit: textMonitor)
         coordinator.connector(coordinator.connector, didEmit: readiness)
         coordinator.connector(coordinator.connector, didEmit: ecuInfo)
         coordinator.connector(coordinator.connector, didEmit: onboardMonitor)
@@ -127,6 +134,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertEqual(coordinator.readoutPreview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
+        XCTAssertEqual(coordinator.readoutPreview.liveTextValues, [NativeConnectorReadoutPreview.TextMonitorValue(monitorID: "obd_standard", pid: "1C", value: "eobd", unit: "", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.readiness, [NativeConnectorReadoutPreview.Readiness(sourceScopeID: "7E8", milOn: false, dtcCount: 1, ignitionType: "spark", supportedMonitorCount: 1, incompleteMonitorCount: 0)])
         XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.onboardMonitors, [NativeConnectorReadoutPreview.OnboardMonitor(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5, sourceScopeID: "7E8")])

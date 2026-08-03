@@ -497,6 +497,16 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
+            case .obdStandard, .fuelType:
+                switch OBD2ReadoutDecoder.decodeLiveTextPID(command: command, response: response) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.livePID(context: context, sequence: sequence, scopeID: result.scopeID, value: result.value))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
             case .odometer:
                 switch OBD2ReadoutDecoder.decodeLivePID(command: command, response: response) {
                 case .success(let results):

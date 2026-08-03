@@ -145,6 +145,24 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         }
     }
 
+    func testTextLivePidsPreserveScopeAndRejectIncompleteResponses() throws {
+        let standards = try OBD2ReadoutDecoder.decodeLiveTextPID(
+            command: .obdStandard,
+            response: "7E8 03 41 1C 06\n7E9 03 41 1C 0A"
+        ).get()
+        XCTAssertEqual(standards.map(\.scopeID), ["7E8", "7E9"])
+        XCTAssertEqual(standards.map(\.value), [
+            OBD2TextMonitorValue(id: "obd_standard", pid: "1C", value: "eobd", unit: ""),
+            OBD2TextMonitorValue(id: "obd_standard", pid: "1C", value: "jobd", unit: "")
+        ])
+        let fuel = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelType, response: "41 51 04").get()
+        XCTAssertEqual(fuel.map(\.value), [OBD2TextMonitorValue(id: "fuel_type", pid: "51", value: "diesel", unit: "")])
+        switch OBD2ReadoutDecoder.decodeLiveTextPID(command: .fuelType, response: "41 51") {
+        case .failure: break
+        case .success: XCTFail("Text PID requires exactly one data byte")
+        }
+    }
+
     func testOxygenSensorPidProducesVoltageAndShortTermFuelTrimForEveryEcuScope() throws {
         let result = try OBD2ReadoutDecoder.decodeLivePID(
             command: .oxygenSensorB1S1,

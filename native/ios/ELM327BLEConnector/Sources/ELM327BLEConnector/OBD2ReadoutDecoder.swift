@@ -199,6 +199,22 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
+    public static func decodeLiveTextPID(command: ELMReadCommand, response: String) -> Result<[(scopeID: String?, value: OBD2TextMonitorValue)], OBD2ReadoutDecodeFailure> {
+        guard let expectedPID = command.livePID, let expectedPIDByte = UInt8(expectedPID, radix: 16) else { return .failure(.malformedResponse) }
+        return packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, value: OBD2TextMonitorValue)] = []
+            for packet in packets {
+                let payload = packet.payload
+                guard payload.count == 3, payload[0] == 0x41, payload[1] == expectedPIDByte,
+                      let value = liveTextPIDValue(command: command, byte: payload[2]) else {
+                    return payload.first == 0x7F ? .failure(.negativeResponse) : .failure(.malformedResponse)
+                }
+                decoded.append((scopeID: packet.scopeID, value: value))
+            }
+            return .success(decoded)
+        }
+    }
+
     public static func decodeFreezeFrameTriggerDTC(response: String) -> Result<[(scopeID: String?, code: String?)], OBD2ReadoutDecodeFailure> {
         packets(in: response).flatMap { packets in
             var decoded: [(scopeID: String?, code: String?)] = []
@@ -631,6 +647,40 @@ public enum OBD2ReadoutDecoder {
         default:
             return nil
         }
+    }
+
+    private static func liveTextPIDValue(command: ELMReadCommand, byte: UInt8) -> OBD2TextMonitorValue? {
+        let value: String
+        let id: String
+        let pid: String
+        switch command {
+        case .obdStandard:
+            id = "obd_standard"
+            pid = "1C"
+            value = [
+                0x01: "obd_ii_california_arb", 0x02: "obd_federal_epa", 0x03: "obd_and_obd_ii", 0x04: "obd_i",
+                0x05: "not_obd_compliant", 0x06: "eobd", 0x07: "eobd_and_obd_ii", 0x08: "eobd_and_obd",
+                0x09: "eobd_obd_and_obd_ii", 0x0A: "jobd", 0x0B: "jobd_and_obd_ii", 0x0C: "jobd_and_eobd",
+                0x0D: "jobd_eobd_and_obd_ii", 0x11: "engine_manufacturer_diagnostics", 0x13: "heavy_duty_obd", 0x14: "wwh_obd"
+            ][byte] ?? unknownTextPIDValue(byte)
+        case .fuelType:
+            id = "fuel_type"
+            pid = "51"
+            value = [
+                0x01: "gasoline", 0x02: "methanol", 0x03: "ethanol", 0x04: "diesel", 0x05: "lpg", 0x06: "cng",
+                0x07: "propane", 0x08: "electric", 0x09: "bifuel_gasoline", 0x0A: "bifuel_methanol", 0x0B: "bifuel_ethanol",
+                0x0C: "bifuel_lpg", 0x0D: "bifuel_cng", 0x0E: "bifuel_propane", 0x0F: "bifuel_electric",
+                0x10: "bifuel_electric_combustion", 0x11: "hybrid_gasoline", 0x12: "hybrid_ethanol", 0x13: "hybrid_diesel",
+                0x14: "hybrid_electric", 0x15: "hybrid_mixed_fuel", 0x16: "hybrid_regenerative", 0x17: "bifuel_diesel"
+            ][byte] ?? unknownTextPIDValue(byte)
+        default:
+            return nil
+        }
+        return OBD2TextMonitorValue(id: id, pid: pid, value: value, unit: "")
+    }
+
+    private static func unknownTextPIDValue(_ byte: UInt8) -> String {
+        String(format: "unknown_0x%02X", byte)
     }
 
     private static func oxygenSensorValues(command: ELMReadCommand, bytes: [UInt8]) -> [OBD2MonitorValue]? {

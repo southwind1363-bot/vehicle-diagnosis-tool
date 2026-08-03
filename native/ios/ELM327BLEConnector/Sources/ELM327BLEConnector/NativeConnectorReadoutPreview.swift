@@ -24,6 +24,18 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         }
     }
 
+    public struct TextMonitorValue: Identifiable, Sendable, Equatable {
+        public let monitorID: String
+        public let pid: String
+        public let value: String
+        public let unit: String
+        public let sourceScopeID: String
+
+        public var id: String { "\(monitorID):\(pid):\(sourceScopeID)" }
+
+        public var displayValue: String { unit.isEmpty ? value : "\(value) \(unit)" }
+    }
+
     public struct Readiness: Identifiable, Sendable, Equatable {
         public let sourceScopeID: String
         public let milOn: Bool
@@ -83,6 +95,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
     public let liveValues: [MonitorValue]
+    public let liveTextValues: [TextMonitorValue]
     public let freezeFrameValues: [MonitorValue]
     public let readiness: [Readiness]
     public let ecuInfo: [ECUInfo]
@@ -95,6 +108,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         pendingDTCs: [DTC],
         permanentDTCs: [DTC],
         liveValues: [MonitorValue],
+        liveTextValues: [TextMonitorValue],
         freezeFrameValues: [MonitorValue],
         readiness: [Readiness],
         ecuInfo: [ECUInfo],
@@ -106,6 +120,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.pendingDTCs = pendingDTCs
         self.permanentDTCs = permanentDTCs
         self.liveValues = liveValues
+        self.liveTextValues = liveTextValues
         self.freezeFrameValues = freezeFrameValues
         self.readiness = readiness
         self.ecuInfo = ecuInfo
@@ -119,6 +134,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         pendingDTCs: [],
         permanentDTCs: [],
         liveValues: [],
+        liveTextValues: [],
         freezeFrameValues: [],
         readiness: [],
         ecuInfo: [],
@@ -132,6 +148,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var pendingDTCs: [String: DTC] = [:]
         var permanentDTCs: [String: DTC] = [:]
         var liveValues: [String: MonitorValue] = [:]
+        var liveTextValues: [String: TextMonitorValue] = [:]
         var freezeFrameValues: [String: MonitorValue] = [:]
         var readiness: [String: Readiness] = [:]
         var ecuInfo: [String: ECUInfo] = [:]
@@ -160,6 +177,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 }
             case "read_live_pid_snapshot":
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { liveValues[$0.id] = $0 }
+                Self.textMonitorValues(in: envelope.data, scopeID: scopeID).forEach { liveTextValues[$0.id] = $0 }
                 if let snapshot = Self.readiness(in: envelope.data, scopeID: scopeID) {
                     readiness[snapshot.id] = snapshot
                 }
@@ -180,6 +198,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.pendingDTCs = Self.sortedDTCs(pendingDTCs.values)
         self.permanentDTCs = Self.sortedDTCs(permanentDTCs.values)
         self.liveValues = Self.sortedMonitorValues(liveValues.values)
+        self.liveTextValues = Self.sortedTextMonitorValues(liveTextValues.values)
         self.freezeFrameValues = Self.sortedMonitorValues(freezeFrameValues.values)
         self.readiness = readiness.values.sorted { $0.sourceScopeID < $1.sourceScopeID }
         self.ecuInfo = ecuInfo.values.sorted { lhs, rhs in
@@ -232,6 +251,28 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 unit = ""
             }
             return MonitorValue(monitorID: id, pid: pid, value: numericValue, unit: unit, sourceScopeID: scopeID)
+        }
+    }
+
+    private static func textMonitorValues(in data: [String: NativeConnectorJSONValue], scopeID: String) -> [TextMonitorValue] {
+        guard case .array(let values)? = data["monitor_values"] else { return [] }
+        return values.compactMap { value in
+            guard case .object(let object) = value,
+                  case .string(let rawID)? = object["id"],
+                  case .string(let rawPID)? = object["pid"],
+                  case .string(let rawValue)? = object["value"]
+            else { return nil }
+            let monitorID = rawID.trimmingCharacters(in: .whitespacesAndNewlines)
+            let pid = rawPID.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+            let textValue = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !monitorID.isEmpty, pid.range(of: "^[0-9A-F]{2}$", options: .regularExpression) != nil, !textValue.isEmpty else { return nil }
+            let unit: String
+            if case .string(let rawUnit)? = object["unit"] {
+                unit = rawUnit.trimmingCharacters(in: .whitespacesAndNewlines)
+            } else {
+                unit = ""
+            }
+            return TextMonitorValue(monitorID: monitorID, pid: pid, value: textValue, unit: unit, sourceScopeID: scopeID)
         }
     }
 
@@ -321,6 +362,12 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     }
 
     private static func sortedMonitorValues(_ values: Dictionary<String, MonitorValue>.Values) -> [MonitorValue] {
+        values.sorted { lhs, rhs in
+            lhs.sourceScopeID == rhs.sourceScopeID ? lhs.pid < rhs.pid : lhs.sourceScopeID < rhs.sourceScopeID
+        }
+    }
+
+    private static func sortedTextMonitorValues(_ values: Dictionary<String, TextMonitorValue>.Values) -> [TextMonitorValue] {
         values.sorted { lhs, rhs in
             lhs.sourceScopeID == rhs.sourceScopeID ? lhs.pid < rhs.pid : lhs.sourceScopeID < rhs.sourceScopeID
         }

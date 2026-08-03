@@ -38,6 +38,19 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
     }
 
+    func testTextLivePidEnvelopeKeepsStringValueAndReadOnlyContract() throws {
+        let envelope = NativeConnectorEnvelopeFactory.livePID(
+            context: NativeConnectorSessionContext(),
+            sequence: 4,
+            scopeID: "7E8",
+            value: OBD2TextMonitorValue(id: "obd_standard", pid: "1C", value: "eobd", unit: "")
+        )
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"value\":\"eobd\""))
+        XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))
+        XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
+
     func testEmptyDTCEnvelopeExplicitlyMarksTheReadoutAsReported() throws {
         let envelope = NativeConnectorEnvelopeFactory.dtcs(
             context: NativeConnectorSessionContext(),

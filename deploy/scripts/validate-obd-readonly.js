@@ -11,8 +11,10 @@ const cacheVersion = serviceWorkerSource.match(/const CACHE_VERSION = "([^"\\r\\
 const nativeArchiveExportSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/NativeConnectorArchiveExport.swift", import.meta.url), "utf8");
 const nativeReadCommandSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/ELMReadCommand.swift", import.meta.url), "utf8");
 const nativeReadoutDecoderTestSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Tests/ELM327BLEConnectorTests/OBD2ReadoutDecoderTests.swift", import.meta.url), "utf8");
+const nativeReadoutPreviewSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/NativeConnectorReadoutPreview.swift", import.meta.url), "utf8");
 const nativeHostProjectSource = fs.readFileSync(new URL("../../native/ios/VehicleDiagnosisELMHost/project.yml", import.meta.url), "utf8");
 const nativeHostInfoSource = fs.readFileSync(new URL("../../native/ios/VehicleDiagnosisELMHost/Sources/Info.plist", import.meta.url), "utf8");
+const nativeHostReadoutSource = fs.readFileSync(new URL("../../native/ios/VehicleDiagnosisELMHost/Sources/ReadoutCoordinatorView.swift", import.meta.url), "utf8");
 const nativeReadCommandWireSource = nativeReadCommandSource.slice(
   nativeReadCommandSource.indexOf("public var wireValue: String"),
   nativeReadCommandSource.indexOf("public var intent: String")
@@ -3291,6 +3293,7 @@ check(["0108", "0109"].every((wireValue) => nativeReadCommandSource.includes(`re
 check(["016A", "016C", "018E"].every((wireValue) => nativeReadCommandSource.includes(`return "${wireValue}"`)) && nativeReadCommandSource.includes('case .commandedDieselIntakeAirFlow: return "6A"') && nativeReadCommandSource.includes('case .commandedThrottleControl: return "6C"') && nativeReadCommandSource.includes('case .engineFrictionTorque: return "8E"') && nativeReadoutDecoderTestSource.includes('(.commandedDieselIntakeAirFlow, "41 6A 66"') && nativeReadoutDecoderTestSource.includes('(.commandedThrottleControl, "41 6C 99"') && nativeReadoutDecoderTestSource.includes('(.engineFrictionTorque, "41 8E 7B"'), "iPhone ELM327 diesel and torque PID command, readout, or decoder coverage is incomplete");
 check(["0184", "018C"].every((wireValue) => nativeReadCommandSource.includes(`return "${wireValue}"`)) && nativeReadCommandSource.includes('case .manifoldSurfaceTemperature: return "84"') && nativeReadCommandSource.includes('case .commandedThrottleActuatorControl: return "8C"') && nativeReadoutDecoderTestSource.includes('(.manifoldSurfaceTemperature, "41 84 5A"') && nativeReadoutDecoderTestSource.includes('(.commandedThrottleActuatorControl, "41 8C 80"'), "iPhone ELM327 temperature and throttle-control PID coverage is incomplete");
 check(nativeReadCommandSource.includes('case .commandedDieselExhaustFluid: return "01A5"') && nativeReadCommandSource.includes('case .commandedDieselExhaustFluid: return "A5"') && nativeReadoutDecoderTestSource.includes('(.commandedDieselExhaustFluid, "41 A5 66"'), "iPhone ELM327 diesel exhaust fluid PID coverage is incomplete");
+check(["011C", "0151"].every((wireValue) => nativeReadCommandSource.includes(`return "${wireValue}"`)) && nativeReadCommandSource.includes('case .obdStandard: return "1C"') && nativeReadCommandSource.includes('case .fuelType: return "51"') && nativeReadoutDecoderTestSource.includes('command: .obdStandard') && nativeReadoutDecoderTestSource.includes('command: .fuelType') && nativeReadoutPreviewSource.includes('public let liveTextValues') && nativeHostReadoutSource.includes('readoutPreview.liveTextValues'), "iPhone ELM327 text PID command, decoder, preview, or host coverage is incomplete");
 const nativeElmEnvelope = {
   schema_version: "native_connector_contract_v1",
   interface_id: "user-vci-elm327",
@@ -3354,6 +3357,23 @@ check(
     && nativeElmLivePidGoldenImport.session?.livePidSnapshot?.monitorValues?.length === 28
     && nativeElmLivePidGoldenImport.session?.vehicleCommandEnabled === false,
   "iPhone ELM327 BLE live PID envelope did not match the read-only diagnostic-session contract"
+);
+const nativeElmTextPidEnvelope = JSON.parse(JSON.stringify(nativeElmLivePidGoldenEnvelope));
+nativeElmTextPidEnvelope.data.monitor_values.push(
+  { id: "obd_standard", pid: "1C", value: "eobd", unit: "" },
+  { id: "fuel_type", pid: "51", value: "diesel", unit: "" }
+);
+const nativeElmTextPidEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmTextPidEnvelope);
+const nativeElmTextPidImport = obd.buildNativeConnectorDiagnosticImport(nativeElmTextPidEnvelope);
+check(
+  nativeElmTextPidEvaluation.accepted === true
+    && nativeElmTextPidEvaluation.wouldTransmit === false
+    && nativeElmTextPidImport.session?.livePidSnapshot?.monitorValues?.some((item) => item.id === "obd_standard" && item.pid === "1C" && item.value === "eobd")
+    && nativeElmTextPidImport.session?.livePidSnapshot?.monitorValues?.some((item) => item.id === "fuel_type" && item.pid === "51" && item.value === "diesel")
+    && nativeElmTextPidImport.session?.obdReportedProfile?.obdStandard === "eobd"
+    && nativeElmTextPidImport.session?.obdReportedProfile?.fuelType === "diesel"
+    && nativeElmTextPidImport.session?.vehicleCommandEnabled === false,
+  "iPhone ELM327 text PID values did not reach the read-only diagnostic session"
 );
 check(
   nativeElmReadinessGoldenEvaluation.accepted === true

@@ -102,6 +102,14 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.liveTextValues.isEmpty {
+                    Section("Live status") {
+                        ForEach(viewModel.readoutPreview.liveTextValues) { value in
+                            LabeledContent("\(value.monitorID) / PID \(value.pid)", value: "\(value.displayValue) / \(value.sourceScopeID)")
+                        }
+                    }
+                }
+
                 if !viewModel.readoutPreview.freezeFrameValues.isEmpty {
                     Section("フリーズフレーム") {
                         ForEach(viewModel.readoutPreview.freezeFrameValues) { value in
