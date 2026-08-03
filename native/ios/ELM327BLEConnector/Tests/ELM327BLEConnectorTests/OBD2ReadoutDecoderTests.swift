@@ -316,6 +316,10 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(fuelTrim[0].value, OBD2MonitorValue(id: "stft_b1", pid: "06", value: 12.5, unit: "%"))
         let runtime = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameEngineRuntime, response: "7E8 05 42 1F 00 02 58").get()
         XCTAssertEqual(runtime[0].value, OBD2MonitorValue(id: "engine_runtime", pid: "1F", value: 600, unit: "s"))
+        let timingAdvance = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameTimingAdvance, response: "7E8 04 42 0E 00 80").get()
+        XCTAssertEqual(timingAdvance[0].value, OBD2MonitorValue(id: "timing_advance", pid: "0E", value: 0, unit: "deg"))
+        let massAirFlow = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameMassAirFlow, response: "7E8 05 42 10 00 01 F4").get()
+        XCTAssertEqual(massAirFlow[0].value, OBD2MonitorValue(id: "maf", pid: "10", value: 5, unit: "g/s"))
         switch OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameVehicleSpeed, response: "42 0C 00 00") {
         case .failure(let error): XCTAssertEqual(error, .malformedResponse)
         case .success: XCTFail("Expected mismatched PID rejection")

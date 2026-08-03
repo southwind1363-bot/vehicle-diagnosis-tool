@@ -268,7 +268,9 @@ public enum OBD2ReadoutDecoder {
                 case .freezeFrameCoolantTemperature: value = bytes.count == 1 ? OBD2MonitorValue(id: "coolant_temp", pid: pid, value: Double(Int(bytes[0]) - 40), unit: "C") : nil
                 case .freezeFrameEngineRPM: value = bytes.count == 2 ? OBD2MonitorValue(id: "engine_speed", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 4, unit: "rpm") : nil
                 case .freezeFrameVehicleSpeed: value = bytes.count == 1 ? OBD2MonitorValue(id: "vehicle_speed", pid: pid, value: Double(bytes[0]), unit: "km/h") : nil
+                case .freezeFrameTimingAdvance: value = bytes.count == 1 ? OBD2MonitorValue(id: "timing_advance", pid: pid, value: Double(bytes[0]) / 2 - 64, unit: "deg") : nil
                 case .freezeFrameIntakeAirTemperature: value = bytes.count == 1 ? OBD2MonitorValue(id: "intake_air_temp", pid: pid, value: Double(Int(bytes[0]) - 40), unit: "C") : nil
+                case .freezeFrameMassAirFlow: value = bytes.count == 2 ? OBD2MonitorValue(id: "maf", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 100, unit: "g/s") : nil
                 case .freezeFrameThrottlePosition: value = bytes.count == 1 ? OBD2MonitorValue(id: "throttle_position", pid: pid, value: Double(bytes[0]) * 100 / 255, unit: "%") : nil
                 case .freezeFrameEngineRuntime: value = bytes.count == 2 ? OBD2MonitorValue(id: "engine_runtime", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])), unit: "s") : nil
                 case .freezeFrameControlModuleVoltage: value = bytes.count == 2 ? OBD2MonitorValue(id: "control_module_voltage", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 1000, unit: "V") : nil
