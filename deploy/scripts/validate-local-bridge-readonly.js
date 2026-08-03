@@ -30,8 +30,26 @@ const j2534UnavailableReadIntents = [
 ];
 const emptyJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([]);
 const detectedJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{ id: "fixture-j2534" }]);
-check(emptyJ2534DiscoveryEnvironment.registration_status === "no_registered_driver" && emptyJ2534DiscoveryEnvironment.next_check === "install_or_repair_j2534_driver_registration" && emptyJ2534DiscoveryEnvironment.registry_roots_checked.length === 2 && emptyJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not report a safe no-driver state");
-check(detectedJ2534DiscoveryEnvironment.registration_status === "registered_driver_detected" && detectedJ2534DiscoveryEnvironment.next_check === "verify_driver_runtime_and_readonly_exports" && detectedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not preserve the detected-driver safety gate");
+const mismatchedJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: false,
+  driver_readonly_api_ready: true
+}]);
+const incompleteJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: true,
+  driver_readonly_api_ready: false
+}]);
+const readyJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: true,
+  driver_readonly_api_ready: true
+}]);
+check(emptyJ2534DiscoveryEnvironment.registration_status === "no_registered_driver" && emptyJ2534DiscoveryEnvironment.driver_readiness_status === "no_registered_driver" && emptyJ2534DiscoveryEnvironment.next_check === "install_or_repair_j2534_driver_registration" && emptyJ2534DiscoveryEnvironment.registry_roots_checked.length === 2 && emptyJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not report a safe no-driver state");
+check(detectedJ2534DiscoveryEnvironment.registration_status === "registered_driver_detected" && detectedJ2534DiscoveryEnvironment.driver_readiness_status === "static_inspection_pending" && detectedJ2534DiscoveryEnvironment.next_check === "verify_driver_library_path" && detectedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not preserve the uninspected-driver safety gate");
+check(mismatchedJ2534DiscoveryEnvironment.driver_readiness_status === "runtime_architecture_mismatch" && mismatchedJ2534DiscoveryEnvironment.next_check === "install_matching_j2534_driver_architecture" && mismatchedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not distinguish an architecture mismatch");
+check(incompleteJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_api_incomplete" && incompleteJ2534DiscoveryEnvironment.next_check === "verify_driver_readonly_exports" && incompleteJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not distinguish missing read-only APIs");
+check(readyJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_static_check_complete" && readyJ2534DiscoveryEnvironment.next_check === "manual_vci_connection_review" && readyJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment incorrectly enabled commands after static checks");
 const j2534RequiredApis = [
   "PassThruOpen",
   "PassThruClose",

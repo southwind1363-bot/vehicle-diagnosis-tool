@@ -515,15 +515,46 @@ export function discoverJ2534RegistryDrivers(options = {}) {
 }
 
 export function getJ2534DiscoveryEnvironment(devices = []) {
-  const detectedCount = Array.isArray(devices) ? devices.length : 0;
+  const registeredDevices = Array.isArray(devices) ? devices : [];
+  const detectedCount = registeredDevices.length;
+  const hasUninspectedDriver = registeredDevices.some((device) => device?.driver_library_inspection_status !== "inspected");
+  const hasArchitectureMismatch = registeredDevices.some((device) => device?.driver_runtime_compatible === false);
+  const hasReadonlyApiGap = registeredDevices.some((device) => (
+    device?.driver_library_inspection_status === "inspected"
+    && device?.driver_runtime_compatible === true
+    && device?.driver_readonly_api_ready !== true
+  ));
+  const staticCheckComplete = detectedCount > 0
+    && !hasUninspectedDriver
+    && !hasArchitectureMismatch
+    && !hasReadonlyApiGap;
+  const driver_readiness_status = detectedCount === 0
+    ? "no_registered_driver"
+    : hasUninspectedDriver
+      ? "static_inspection_pending"
+      : hasArchitectureMismatch
+        ? "runtime_architecture_mismatch"
+        : hasReadonlyApiGap
+          ? "readonly_api_incomplete"
+          : staticCheckComplete
+            ? "readonly_static_check_complete"
+            : "static_inspection_pending";
+  const next_check = driver_readiness_status === "no_registered_driver"
+    ? "install_or_repair_j2534_driver_registration"
+    : driver_readiness_status === "static_inspection_pending"
+      ? "verify_driver_library_path"
+      : driver_readiness_status === "runtime_architecture_mismatch"
+        ? "install_matching_j2534_driver_architecture"
+        : driver_readiness_status === "readonly_api_incomplete"
+          ? "verify_driver_readonly_exports"
+          : "manual_vci_connection_review";
   return {
     registry_roots_checked: [...J2534_REGISTRY_ROOTS],
     bridge_runtime_architecture: J2534_HOST_ARCHITECTURE,
     bridge_runtime_bitness: J2534_HOST_BITNESS,
     registration_status: detectedCount > 0 ? "registered_driver_detected" : "no_registered_driver",
-    next_check: detectedCount > 0
-      ? "verify_driver_runtime_and_readonly_exports"
-      : "install_or_repair_j2534_driver_registration",
+    driver_readiness_status,
+    next_check,
     vehicle_command_enabled: false
   };
 }
