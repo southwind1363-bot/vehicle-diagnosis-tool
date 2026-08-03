@@ -15308,6 +15308,25 @@
       bridgeSession?.monitorInsights,
       bridgeSession?.monitor_insights
     );
+    const bridgeLivePidSnapshot = bridgeImport?.livePidSnapshot
+      || bridgeImport?.live_pid_snapshot
+      || bridgeSession?.livePidSnapshot
+      || bridgeSession?.live_pid_snapshot
+      || null;
+    const bridgeLivePidObservationCondition = normalizeLivePidObservationCondition(
+      bridgeLivePidSnapshot?.observationCondition || bridgeLivePidSnapshot?.observation_condition || "unspecified"
+    );
+    const livePidTimeline = normalizeLivePidTimeline(
+      bridgeImport?.livePidTimeline
+      || bridgeImport?.live_pid_timeline
+      || bridgeImport?.livePidSamples
+      || bridgeImport?.live_pid_samples
+      || bridgeSession?.livePidTimeline
+      || bridgeSession?.live_pid_timeline
+      || bridgeSession?.livePidSamples
+      || bridgeSession?.live_pid_samples
+      || []
+    );
     const selectPreferredMonitorValue = (current, candidate) => {
       if (!current) return candidate;
       if (!candidate) return current;
@@ -15386,6 +15405,10 @@
       protocol: bridgeImport?.protocol || bridgeImport?.obd_protocol || bridgeSession?.protocol || bridgeSession?.obd_protocol || null,
       capturedAt: bridgeImport?.capturedAt || bridgeImport?.captured_at || bridgeSession?.capturedAt || bridgeSession?.captured_at || null,
       captured_at: bridgeImport?.captured_at || bridgeImport?.capturedAt || bridgeSession?.captured_at || bridgeSession?.capturedAt || null,
+      ...(bridgeLivePidObservationCondition !== "unspecified" ? {
+        observationCondition: bridgeLivePidObservationCondition,
+        observation_condition: bridgeLivePidObservationCondition
+      } : {}),
       monitorValues,
       monitor_values: monitorValues,
       monitorValueSummary,
@@ -15694,6 +15717,8 @@
       monitor_insights: monitorInsights,
       livePidSnapshot,
       live_pid_snapshot: livePidSnapshot,
+      livePidTimeline,
+      live_pid_timeline: livePidTimeline,
       ecuResponseSummary,
       ecu_response_summary: ecuResponseSummary,
       supportedPidMatrix,
