@@ -188,9 +188,15 @@ try {
     const invalidInspection = inspectJ2534LibraryFile(invalidLibraryPath);
     const missingInspection = inspectJ2534LibraryFile(path.join(j2534PeFixtureDir, "missing.dll"));
     const networkInspection = inspectJ2534LibraryFile("\\\\diagnostic-share\\drivers\\j2534.dll");
+    const originalFixtureLibraryRoot = process.env.J2534_TEST_LIBRARY_ROOT;
+    process.env.J2534_TEST_LIBRARY_ROOT = j2534PeFixtureDir;
+    const quotedExpandedInspection = inspectJ2534LibraryFile(`"%J2534_TEST_LIBRARY_ROOT%${path.sep}${path.basename(x86LibraryPath)}"`);
+    if (originalFixtureLibraryRoot === undefined) delete process.env.J2534_TEST_LIBRARY_ROOT;
+    else process.env.J2534_TEST_LIBRARY_ROOT = originalFixtureLibraryRoot;
     check(x86Inspection.inspection_status === "inspected" && x86Inspection.pe_architecture === "x86" && x86Inspection.pe_bitness === 32 && x86Inspection.required_api_ready === true && x86Inspection.readonly_api_ready === true && x86Inspection.detected_required_api_count === 14 && x86Inspection.detected_readonly_api_count === 10 && x86Inspection.runtime_compatibility_status === (process.arch === "ia32" ? "compatible" : "architecture_mismatch"), "J2534 PE inspection did not recognize a complete decorated 32-bit read-only API export set");
     check(x64Inspection.inspection_status === "inspected" && x64Inspection.pe_architecture === "x64" && x64Inspection.pe_bitness === 64 && x64Inspection.required_api_ready === false && x64Inspection.readonly_api_ready === false && x64Inspection.missing_required_apis.includes("PassThruConnect") && x64Inspection.missing_readonly_apis.includes("PassThruConnect") && x64Inspection.runtime_compatibility_status === (process.arch === "x64" ? "compatible" : "architecture_mismatch"), "J2534 PE inspection did not report missing 64-bit read-only API exports");
     check(arm64Inspection.pe_architecture === "arm64" && arm64Inspection.pe_bitness === 64 && arm64Inspection.required_api_ready === true && arm64Inspection.runtime_compatibility_status === (process.arch === "arm64" ? "compatible" : "architecture_mismatch"), "J2534 PE inspection did not recognize an ARM64 library");
+    check(quotedExpandedInspection.inspection_status === "inspected" && quotedExpandedInspection.pe_architecture === "x86" && quotedExpandedInspection.required_api_ready === true && !JSON.stringify(quotedExpandedInspection).includes(j2534PeFixtureDir), "J2534 PE inspection did not safely resolve quoted environment-variable library paths");
     check(invalidInspection.inspection_status === "invalid_pe" && missingInspection.inspection_status === "file_not_found" && x86Inspection.vehicle_command_enabled === false && !JSON.stringify(x86Inspection).includes(j2534PeFixtureDir), "J2534 PE inspection did not safely reject invalid input or exposed its local path");
     check(networkInspection.inspection_status === "network_path_blocked" && networkInspection.vehicle_command_enabled === false, "J2534 PE inspection did not block a network library path before file access");
     const inspectedRegistryDrivers = parseJ2534RegistryDrivers([

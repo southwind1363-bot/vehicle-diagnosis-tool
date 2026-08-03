@@ -590,6 +590,14 @@ function createStableJ2534DeviceId(driver = {}) {
   return `j2534-${digest}`;
 }
 
+function resolveJ2534LibraryPath(filePath = "") {
+  const trimmed = String(filePath || "").trim();
+  const unquoted = trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')
+    ? trimmed.slice(1, -1).trim()
+    : trimmed;
+  return unquoted.replace(/%([A-Za-z_][A-Za-z0-9_]*)%/g, (token, name) => process.env[name] || token);
+}
+
 export function inspectJ2534LibraryFile(filePath = "") {
   const base = {
     inspection_status: "not_inspected",
@@ -613,7 +621,7 @@ export function inspectJ2534LibraryFile(filePath = "") {
     restricted_apis: [...J2534_RESTRICTED_API_NAMES],
     vehicle_command_enabled: false
   };
-  const resolvedPath = String(filePath || "").trim();
+  const resolvedPath = resolveJ2534LibraryPath(filePath);
   if (!resolvedPath) return { ...base, inspection_status: "path_missing" };
   if (isJ2534NetworkLibraryPath(resolvedPath)) {
     return { ...base, inspection_status: "network_path_blocked" };
