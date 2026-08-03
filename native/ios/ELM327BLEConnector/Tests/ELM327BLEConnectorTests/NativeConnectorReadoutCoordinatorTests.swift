@@ -82,7 +82,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         )
         let readiness = NativeConnectorEnvelopeFactory.readiness(
             context: context,
-            sequence: 4,
+            sequence: 5,
             scopeID: "7E8",
             status: OBD2ReadinessStatus(
                 milOn: false,
@@ -96,7 +96,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         )
         let ecuInfo = NativeConnectorEnvelopeFactory.ecuInfo(
             context: context,
-            sequence: 5,
+            sequence: 6,
             scopeID: "7E8",
             id: "calibration_id",
             infoType: "04",
@@ -104,20 +104,20 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         )
         let onboardMonitor = NativeConnectorEnvelopeFactory.onboardMonitor(
             context: context,
-            sequence: 6,
+            sequence: 7,
             scopeID: "7E8",
             tests: [OBD2OnboardMonitorTest(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5)]
         )
         let supportedPIDs = NativeConnectorEnvelopeFactory.supportedPIDs(
             context: context,
-            sequence: 7,
+            sequence: 8,
             scopeID: "7E8",
             pageBase: "00",
             pids: ["0C", "04"]
         )
         let permanentDTCFailure = NativeConnectorEnvelopeFactory.failedReadout(
             context: context,
-            sequence: 8,
+            sequence: 9,
             command: .permanentDTC,
             error: "readout_not_available"
         )

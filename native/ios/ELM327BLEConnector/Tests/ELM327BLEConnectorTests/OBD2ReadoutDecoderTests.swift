@@ -160,7 +160,7 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         let secondaryAir = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .secondaryAirStatus, response: "41 12 08").get()
         XCTAssertEqual(secondaryAir.map(\.value), [OBD2TextMonitorValue(id: "secondary_air_status", pid: "12", value: "pump_commanded_on_for_diagnostics", unit: "")])
         let twoBankOxygenSensors = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .oxygenSensorLocationsTwoBanks, response: "41 13 21").get()
-        XCTAssertEqual(twoBankOxygenSensors.map(\.value), [OBD2TextMonitorValue(id: "oxygen_sensors_present", pid: "13", value: "b1s1,b2s1", unit: "")])
+        XCTAssertEqual(twoBankOxygenSensors.map(\.value), [OBD2TextMonitorValue(id: "oxygen_sensors_present", pid: "13", value: "b1s1,b2s2", unit: "")])
         let oxygenSensors = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .oxygenSensorLocations, response: "41 1D 05").get()
         XCTAssertEqual(oxygenSensors.map(\.value), [OBD2TextMonitorValue(id: "oxygen_sensors_present_4banks", pid: "1D", value: "b1s1,b2s1", unit: "")])
         let auxiliaryInput = try OBD2ReadoutDecoder.decodeLiveTextPID(command: .auxiliaryInputStatus, response: "41 1E 01").get()
