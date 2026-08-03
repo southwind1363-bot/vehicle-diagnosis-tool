@@ -299,9 +299,9 @@ public enum OBD2ReadoutDecoder {
         }
     }
 
-    public static func decodeMode09SupportedInfoTypes(response: String) -> Result<[(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsCalibrationVerificationNumber: Bool, supportsEcuName: Bool)], OBD2ReadoutDecodeFailure> {
+    public static func decodeMode09SupportedInfoTypes(response: String) -> Result<[(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsCalibrationVerificationNumber: Bool, supportsSparkPerformanceTracking: Bool, supportsEcuName: Bool, supportsCompressionPerformanceTracking: Bool)], OBD2ReadoutDecodeFailure> {
         packets(in: response).flatMap { packets in
-            var decoded: [(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsCalibrationVerificationNumber: Bool, supportsEcuName: Bool)] = []
+            var decoded: [(scopeID: String?, bitmap: String, supportsCalibrationID: Bool, supportsCalibrationVerificationNumber: Bool, supportsSparkPerformanceTracking: Bool, supportsEcuName: Bool, supportsCompressionPerformanceTracking: Bool)] = []
             for packet in packets {
                 let payload = packet.payload
                 guard payload.count == 6, payload[0] == 0x49, payload[1] == 0x00 else {
@@ -312,10 +312,29 @@ public enum OBD2ReadoutDecoder {
                     payload.dropFirst(2).map { String(format: "%02X", $0) }.joined(),
                     (payload[2] & 0x10) != 0,
                     (payload[2] & 0x04) != 0,
-                    (payload[3] & 0x40) != 0
+                    (payload[2] & 0x01) != 0,
+                    (payload[3] & 0x40) != 0,
+                    (payload[3] & 0x20) != 0
                 ))
             }
             return .success(decoded)
+        }
+    }
+
+    public static func decodeMode09PerformanceTrackingCounters(response: String, infoType: UInt8, supportedScopeIDs: Set<String>) -> Result<[(scopeID: String?, value: String)], OBD2ReadoutDecodeFailure> {
+        guard infoType == 0x08 || infoType == 0x0B else { return .failure(.malformedResponse) }
+        return packets(in: response).flatMap { packets in
+            var decoded: [(scopeID: String?, value: String)] = []
+            for packet in packets {
+                let scopeKey = packet.scopeID ?? "LEGACY"
+                let payload = packet.payload
+                guard supportedScopeIDs.contains(scopeKey), payload.count >= 4, payload[0] == 0x49, payload[1] == infoType else { continue }
+                // Match the Web decoder: omit the response header byte and retain the remaining ECU bytes verbatim.
+                let counterBytes = payload.dropFirst(3)
+                guard !counterBytes.isEmpty else { return .failure(.malformedResponse) }
+                decoded.append((packet.scopeID, counterBytes.map { String(format: "%02X", $0) }.joined(separator: " ")))
+            }
+            return decoded.isEmpty ? .failure(.malformedResponse) : .success(decoded)
         }
     }
 

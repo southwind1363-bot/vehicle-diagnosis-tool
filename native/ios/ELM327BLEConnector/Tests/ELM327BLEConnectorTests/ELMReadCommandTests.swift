@@ -83,18 +83,21 @@ final class ELMReadCommandTests: XCTestCase {
 
     func testInitialQueueIsExactlyTheFixedReadOnlySet() {
         XCTAssertEqual(
-            ELMReadCommand.allCases.map(\.wireValue).filter { !["0103", "0108", "0109", "0112", "0113", "011C", "011D", "011E", "0151", "016A", "016C", "0184", "018C", "018E", "01A5"].contains($0) },
+            ELMReadCommand.allCases.map(\.wireValue).filter { !["0103", "0108", "0109", "0112", "0113", "011C", "011D", "011E", "0151", "016A", "016C", "0184", "018C", "018E", "01A5", "0908", "090B"].contains($0) },
             ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "03", "07", "0A", "06", "0200", "0202", "0203", "0204", "0206", "0207", "020A", "020B", "0205", "020C", "020D", "020E", "020F", "0210", "0211", "021F", "0242", "0900", "0904", "0906", "090A", "0100", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0101", "0104", "0106", "0107", "010A", "010B", "010C", "010D", "010E", "0105", "010F", "0110", "0111", "0114", "0115", "0116", "0117", "0118", "0119", "011A", "011B", "0124", "0125", "0126", "0127", "0128", "0129", "012A", "012B", "011F", "0121", "0122", "0123", "012C", "012D", "012E", "012F", "0130", "0131", "0132", "0133", "0134", "0135", "0138", "0139", "013C", "013D", "013E", "013F", "014C", "0142", "0143", "0144", "0145", "0146", "0147", "0148", "0149", "014A", "014B", "014D", "014E", "0152", "0159", "015A", "015B", "015C", "015D", "015E", "0161", "0162", "0163", "0164", "0169", "01A6"]
         )
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains("04"))
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains(where: { $0.hasPrefix("ATZ") }))
         XCTAssertFalse(ELMReadCommand.allCases.map(\.wireValue).contains("0902"))
+        XCTAssertTrue(["0908", "090B"].allSatisfy(ELMReadCommand.allCases.map(\.wireValue).contains))
         XCTAssertTrue(ELMReadCommand.allCases.map(\.wireValue).contains("0108"))
         XCTAssertTrue(ELMReadCommand.allCases.map(\.wireValue).contains("0109"))
         XCTAssertTrue(["0103", "0112", "0113", "011C", "011D", "011E", "0151"].allSatisfy(ELMReadCommand.allCases.map(\.wireValue).contains))
         XCTAssertTrue(["016A", "016C", "0184", "018C", "018E", "01A5"].allSatisfy(ELMReadCommand.allCases.map(\.wireValue).contains))
         XCTAssertEqual(ELMReadCommand.mode09CalibrationID.intent, "read_ecu_info")
         XCTAssertEqual(ELMReadCommand.mode09CalibrationVerificationNumber.intent, "read_ecu_info")
+        XCTAssertEqual(ELMReadCommand.mode09SparkPerformanceTracking.intent, "read_ecu_info")
+        XCTAssertEqual(ELMReadCommand.mode09CompressionPerformanceTracking.intent, "read_ecu_info")
         XCTAssertEqual(ELMReadCommand.onboardMonitor.intent, "read_onboard_monitor")
         XCTAssertEqual(ELMReadCommand.freezeFrameEngineRuntime.intent, "read_freeze_frame")
         XCTAssertEqual(ELMReadCommand.freezeFrameTimingAdvance.intent, "read_freeze_frame")
@@ -120,6 +123,8 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertEqual(ELMReadCommand.mode09SupportedInfoTypes.readoutID, "ecu_info_snapshot")
         XCTAssertEqual(ELMReadCommand.mode09CalibrationID.readoutID, "ecu_info_snapshot")
         XCTAssertEqual(ELMReadCommand.mode09CalibrationVerificationNumber.readoutID, "ecu_info_snapshot")
+        XCTAssertEqual(ELMReadCommand.mode09SparkPerformanceTracking.readoutID, "ecu_info_snapshot")
+        XCTAssertEqual(ELMReadCommand.mode09CompressionPerformanceTracking.readoutID, "ecu_info_snapshot")
         XCTAssertEqual(ELMReadCommand.onboardMonitor.readoutID, "onboard_monitor_snapshot")
         XCTAssertEqual(ELMReadCommand.supportedPIDs.readoutID, "supported_pid_matrix")
         XCTAssertEqual(ELMReadCommand.readinessStatus.readoutID, "readiness_snapshot")

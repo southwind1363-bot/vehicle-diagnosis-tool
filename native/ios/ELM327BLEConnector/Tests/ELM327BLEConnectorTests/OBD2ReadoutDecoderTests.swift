@@ -336,7 +336,9 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         let support = try OBD2ReadoutDecoder.decodeMode09SupportedInfoTypes(response: "7E8 06 49 00 00 40 00 00\n7E9 06 49 00 00 00 00 00").get()
         XCTAssertEqual(support.map(\.supportsCalibrationID), [false, false])
         XCTAssertEqual(support.map(\.supportsCalibrationVerificationNumber), [false, false])
+        XCTAssertEqual(support.map(\.supportsSparkPerformanceTracking), [false, false])
         XCTAssertEqual(support.map(\.supportsEcuName), [true, false])
+        XCTAssertEqual(support.map(\.supportsCompressionPerformanceTracking), [false, false])
         let names = try OBD2ReadoutDecoder.decodeMode09EcuNames(response: "7E8 10 0B 49 0A 00 45 4E 47\n7E8 21 49 4E 45 20 20", supportedScopeIDs: ["7E8"]).get()
         XCTAssertEqual(names.count, 1)
         XCTAssertEqual(names[0].scopeID, "7E8")
@@ -352,6 +354,29 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         switch OBD2ReadoutDecoder.decodeMode09CalibrationIDs(response: "7E8 03 49 02 00", supportedScopeIDs: ["7E8"]) {
         case .failure: break
         case .success: XCTFail("Non-calibration Mode 09 response must not be accepted")
+        }
+    }
+
+    func testMode09PerformanceTrackingCountersRequireAdvertisedScopeAndRetainRawBytes() throws {
+        let support = try OBD2ReadoutDecoder.decodeMode09SupportedInfoTypes(response: "7E8 06 49 00 01 20 00 00\n7E9 06 49 00 00 00 00 00").get()
+        XCTAssertEqual(support.map(\.supportsSparkPerformanceTracking), [true, false])
+        XCTAssertEqual(support.map(\.supportsCompressionPerformanceTracking), [true, false])
+        let spark = try OBD2ReadoutDecoder.decodeMode09PerformanceTrackingCounters(
+            response: "7E8 07 49 08 01 00 00 00 01",
+            infoType: 0x08,
+            supportedScopeIDs: ["7E8"]
+        ).get()
+        XCTAssertEqual(spark.map(\.scopeID), ["7E8"])
+        XCTAssertEqual(spark.map(\.value), ["00 00 00 01"])
+        let compression = try OBD2ReadoutDecoder.decodeMode09PerformanceTrackingCounters(
+            response: "7E8 07 49 0B 01 00 00 00 02",
+            infoType: 0x0B,
+            supportedScopeIDs: ["7E8"]
+        ).get()
+        XCTAssertEqual(compression.map(\.value), ["00 00 00 02"])
+        switch OBD2ReadoutDecoder.decodeMode09PerformanceTrackingCounters(response: "7E9 07 49 08 01 00 00 00 01", infoType: 0x08, supportedScopeIDs: ["7E8"]) {
+        case .failure: break
+        case .success: XCTFail("Mode 09 counter from an unadvertised ECU must not be accepted")
         }
     }
 

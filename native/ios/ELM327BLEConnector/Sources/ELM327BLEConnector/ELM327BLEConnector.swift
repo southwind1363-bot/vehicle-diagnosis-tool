@@ -139,7 +139,9 @@ public final class ELM327BLEConnector: NSObject {
     private var scheduledSupportedPIDPages = Set<ELMReadCommand>()
     private var mode09CalibrationIDScopes = Set<String>()
     private var mode09CalibrationVerificationNumberScopes = Set<String>()
+    private var mode09SparkPerformanceTrackingScopes = Set<String>()
     private var mode09EcuNameScopes = Set<String>()
+    private var mode09CompressionPerformanceTrackingScopes = Set<String>()
     private var plannedIntents = Set<String>()
     private var plannedReadoutIDs = Set<String>()
     private var observedReadoutScopes = Set<NativeConnectorReadoutScope>()
@@ -222,7 +224,9 @@ public final class ELM327BLEConnector: NSObject {
         scheduledSupportedPIDPages = [.supportedPIDs]
         mode09CalibrationIDScopes.removeAll()
         mode09CalibrationVerificationNumberScopes.removeAll()
+        mode09SparkPerformanceTrackingScopes.removeAll()
         mode09EcuNameScopes.removeAll()
+        mode09CompressionPerformanceTrackingScopes.removeAll()
         plannedIntents.removeAll()
         plannedReadoutIDs.removeAll()
         observedReadoutScopes.removeAll()
@@ -416,12 +420,16 @@ public final class ELM327BLEConnector: NSObject {
                         emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "supported_info_types_00", infoType: "00", value: result.bitmap))
                         if result.supportsCalibrationID { mode09CalibrationIDScopes.insert(result.scopeID ?? "LEGACY") }
                         if result.supportsCalibrationVerificationNumber { mode09CalibrationVerificationNumberScopes.insert(result.scopeID ?? "LEGACY") }
+                        if result.supportsSparkPerformanceTracking { mode09SparkPerformanceTrackingScopes.insert(result.scopeID ?? "LEGACY") }
                         if result.supportsEcuName { mode09EcuNameScopes.insert(result.scopeID ?? "LEGACY") }
+                        if result.supportsCompressionPerformanceTracking { mode09CompressionPerformanceTrackingScopes.insert(result.scopeID ?? "LEGACY") }
                     }
                     let followUpCommands: [ELMReadCommand] = [
                         mode09CalibrationIDScopes.isEmpty ? nil : .mode09CalibrationID,
                         mode09CalibrationVerificationNumberScopes.isEmpty ? nil : .mode09CalibrationVerificationNumber,
-                        mode09EcuNameScopes.isEmpty ? nil : .mode09EcuName
+                        mode09SparkPerformanceTrackingScopes.isEmpty ? nil : .mode09SparkPerformanceTracking,
+                        mode09EcuNameScopes.isEmpty ? nil : .mode09EcuName,
+                        mode09CompressionPerformanceTrackingScopes.isEmpty ? nil : .mode09CompressionPerformanceTracking
                     ].compactMap { $0 }
                     if !followUpCommands.isEmpty {
                         pendingCommands.insert(contentsOf: followUpCommands, at: 0)
@@ -450,12 +458,32 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
+            case .mode09SparkPerformanceTracking:
+                switch OBD2ReadoutDecoder.decodeMode09PerformanceTrackingCounters(response: response, infoType: 0x08, supportedScopeIDs: mode09SparkPerformanceTrackingScopes) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "in_use_performance_tracking_spark", infoType: "08", value: result.value))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
             case .mode09EcuName:
                 switch OBD2ReadoutDecoder.decodeMode09EcuNames(response: response, supportedScopeIDs: mode09EcuNameScopes) {
                 case .success(let results):
                     results.forEach { result in
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "ecu_name", infoType: "0A", value: result.name))
+                    }
+                case .failure(let error):
+                    emitFailure(for: command, error: error.rawValue)
+                }
+            case .mode09CompressionPerformanceTracking:
+                switch OBD2ReadoutDecoder.decodeMode09PerformanceTrackingCounters(response: response, infoType: 0x0B, supportedScopeIDs: mode09CompressionPerformanceTrackingScopes) {
+                case .success(let results):
+                    results.forEach { result in
+                        sequence += 1
+                        emit(NativeConnectorEnvelopeFactory.ecuInfo(context: context, sequence: sequence, scopeID: result.scopeID, id: "in_use_performance_tracking_compression", infoType: "0B", value: result.value))
                     }
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
