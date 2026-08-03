@@ -81,17 +81,19 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     var archiveStateLabel: String {
         switch archiveState {
         case "Complete": return "完了"
+        case "Partial": return "一部未取得"
         case "Interrupted": return "中断済み"
         default: return "未完了"
         }
     }
 
     var canExportArchive: Bool {
-        archiveState == "Complete" || archiveState == "Interrupted"
+        archiveState == "Complete" || archiveState == "Partial" || archiveState == "Interrupted"
     }
 
-    static func archiveState(for scanState: NativeConnectorScanState?) -> String {
+    static func archiveState(for scanState: NativeConnectorScanState?, hasReadoutFailures: Bool = false) -> String {
         switch scanState {
+        case .completed where hasReadoutFailures: return "Partial"
         case .completed: return "Complete"
         case .interrupted: return "Interrupted"
         case nil: return "Incomplete"
@@ -220,8 +222,11 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         peripherals = coordinator.peripherals
         characteristicChoices = coordinator.characteristicCandidates.map(CharacteristicChoice.init(candidate:))
         archiveRecordCount = coordinator.capturedEnvelopeCount
-        archiveState = Self.archiveState(for: coordinator.completedArchive?.completionManifest.scanState)
         readoutPreview = coordinator.readoutPreview
+        archiveState = Self.archiveState(
+            for: coordinator.completedArchive?.completionManifest.scanState,
+            hasReadoutFailures: !readoutPreview.readoutFailures.isEmpty
+        )
         errorMessage = coordinator.archiveError.map { self.archiveErrorMessage($0) }
             ?? coordinator.connectorError.map { self.connectorErrorMessage($0) }
 

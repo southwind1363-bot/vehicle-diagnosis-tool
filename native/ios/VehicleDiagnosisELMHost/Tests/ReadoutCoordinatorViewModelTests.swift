@@ -171,6 +171,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     @MainActor
     func testArchiveStateDistinguishesCompletedInterruptedAndMissingArchives() {
         XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .completed), "Complete")
+        XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .completed, hasReadoutFailures: true), "Partial")
         XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .interrupted), "Interrupted")
         XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: nil), "Incomplete")
 
