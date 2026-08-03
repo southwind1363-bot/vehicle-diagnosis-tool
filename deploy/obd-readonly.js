@@ -6768,6 +6768,8 @@
       onboardMonitorSnapshot,
       readoutCoverage,
       coreReadoutInventorySummary,
+      livePidSnapshot,
+      live_pid_snapshot: livePidSnapshot,
       monitorValues,
       monitorValueSummary,
       monitorInsights,
@@ -14551,6 +14553,10 @@
   function buildBridgeDiagnosticImport(parts = {}) {
     const summary = resolveBridgeSummary(parts);
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
+    const livePidSnapshot = summary.livePidSnapshot || summary.live_pid_snapshot || normalizeBridgeLivePidSnapshot({
+      monitor_values: summary.monitorValues || summary.monitor_values || [],
+      monitor_value_summary: summary.monitorValueSummary || summary.monitor_value_summary || null
+    });
     const metadataFields = buildSummaryMetadataFields(summary);
     const directSessionMetadata = getSessionMetadataOverrides(parts);
     const nestedBridgeSession = parts.bridgeSession
@@ -14936,6 +14942,8 @@
         onboardMonitorSnapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
         readoutCoverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freezeFrameSnapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
+        livePidSnapshot,
+        live_pid_snapshot: livePidSnapshot,
         monitorValues,
         monitorValueSummary: summary.monitorValueSummary || buildMonitorValueSummary(monitorValues),
         monitorInsights,

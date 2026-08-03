@@ -3105,9 +3105,22 @@ const jsonObservationSession = obd.buildDiagnosticScanSessionFromJson(JSON.strin
     monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 800, unit: "rpm", valueType: "number", pid: "0C" }]
   }
 }));
+const bridgeObservationImport = obd.buildBridgeDiagnosticImport({
+  bridge_export_payload: {
+    session: {
+      live_pid_snapshot: {
+        observation_condition: "post_repair",
+        monitor_values: [{ id: "engine_speed", label: "Engine RPM", value: 800, unit: "rpm", valueType: "number", pid: "0C" }]
+      }
+    }
+  }
+});
+const bridgeObservationSession = obd.buildDiagnosticScanSession({ bridge_diagnostic_import: bridgeObservationImport });
+const bridgeObservationRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(bridgeObservationImport.exportPayload));
 check(normalizedObservationContext?.conditions?.join("|") === "cold_start|symptom_reproduced|post_repair" && normalizedObservationContext?.inferred === false && normalizedObservationContext?.vehicleCommandEnabled === false && obd.normalizeObservationContext({ condition: "unverified" }) === null, "Observation conditions should retain only explicit known categories without inference");
 check(observationConditionSession?.observationContext?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionSession?.observation_context?.explicitly_recorded === true && observationConditionSession?.vehicleCommandEnabled === false && observationConditionExport?.session?.observation_context?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionRoundTrip?.observationContext?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionBridgeSession?.observation_context?.conditions?.join("|") === "cold_start|warmed_up|symptom_reproduced" && observationConditionBridgeSession?.vehicleCommandEnabled === false, "Explicit observation conditions did not survive session, export, bridge import, and JSON round trips safely");
 check(snapshotObservationSession?.observationContext?.conditions?.join("|") === "post_repair" && timelineObservationSession?.observation_context?.conditions?.join("|") === "post_repair" && jsonObservationSession?.observationContext?.conditions?.join("|") === "warmed_up" && snapshotObservationSession?.vehicleCommandEnabled === false && timelineObservationSession?.vehicleCommandEnabled === false && jsonObservationSession?.vehicleCommandEnabled === false, "Explicit live PID and timeline observation conditions did not reach the top-level scan session safely");
+check(bridgeObservationImport?.bridgeSession?.live_pid_snapshot?.observation_condition === "post_repair" && bridgeObservationSession?.observation_context?.conditions?.join("|") === "post_repair" && bridgeObservationRoundTrip?.observation_context?.conditions?.join("|") === "post_repair" && bridgeObservationSession?.vehicleCommandEnabled === false && bridgeObservationRoundTrip?.vehicleCommandEnabled === false, "Bridge live PID observation conditions did not survive import and JSON round trips safely");
 const mergedBridgeLivePidSession = obd.buildDiagnosticScanSession({ scan_session: obd.mergeDiagnosticInputs({
   scannerText: "Engine RPM: 650 rpm",
   bridgeImport: {
