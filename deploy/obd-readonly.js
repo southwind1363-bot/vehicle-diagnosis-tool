@@ -250,7 +250,11 @@
     const elmIdentified = adapterOpened && (source.elmIdentified === true || source.elm_identified === true);
     const vehicleVerified = elmIdentified && (source.vehicleVerified === true || source.vehicle_verified === true);
     const nativeHostImplemented = true;
-    const compatibilityStatus = vehicleVerified && elmIdentified
+    const nativeHostTransportSupported = adapterTransport === "ble_gatt";
+    const adapterTransportUnsupported = adapterTransport !== "unknown" && !nativeHostTransportSupported;
+    const compatibilityStatus = adapterTransportUnsupported
+      ? "adapter_transport_unsupported"
+      : vehicleVerified && elmIdentified
       ? "vehicle_verified"
       : elmIdentified
         ? "elm_identified"
@@ -270,8 +274,18 @@
       compatibility_status: compatibilityStatus,
       nativeHostImplemented,
       native_host_implemented: nativeHostImplemented,
-      connectorStatus: nativeHostImplemented ? "native_host_implemented" : "native_host_required",
-      connector_status: nativeHostImplemented ? "native_host_implemented" : "native_host_required",
+      nativeHostTransportSupported,
+      native_host_transport_supported: nativeHostTransportSupported,
+      connectorStatus: !nativeHostImplemented
+        ? "native_host_required"
+        : adapterTransportUnsupported
+          ? "native_host_transport_unsupported"
+          : "native_host_implemented",
+      connector_status: !nativeHostImplemented
+        ? "native_host_required"
+        : adapterTransportUnsupported
+          ? "native_host_transport_unsupported"
+          : "native_host_implemented",
       canConnect: false,
       can_connect: false,
       canSendReadQuery: false,
@@ -282,7 +296,9 @@
       can_clear_dtc: false,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
-      reason: "The native iPhone BLE host is implemented, but the Web app cannot connect directly. App distribution and adapter verification are still required before read-only vehicle communication."
+      reason: adapterTransportUnsupported
+        ? "The native iPhone host currently supports BLE GATT only. Bluetooth Classic and Wi-Fi TCP adapters require a separate transport implementation."
+        : "The native iPhone BLE host is implemented, but the Web app cannot connect directly. App distribution and BLE GATT adapter verification are still required before read-only vehicle communication."
     };
   }
 
