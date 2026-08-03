@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-  const APP_VERSION = "3.5.37";
+  const APP_VERSION = "3.5.38";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6345,6 +6345,25 @@ function renderObdBridgeSessionDetails(session = null) {
       `終了: ${endedAt === NO_DATA ? NO_DATA : formatDateTime(endedAt)}`,
       `取得時刻: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`
     ]]);
+  }
+
+  const nativeConnectorScanLifecycle = session?.nativeConnectorScanLifecycle || session?.native_connector_scan_lifecycle || null;
+  const nativeFailedScopes = nativeConnectorScanLifecycle?.failedReadoutScopes || nativeConnectorScanLifecycle?.failed_readout_scopes || [];
+  const nativeMissingScopes = nativeConnectorScanLifecycle?.missingReadoutScopes || nativeConnectorScanLifecycle?.missing_readout_scopes || [];
+  const nativeUnexpectedScopes = nativeConnectorScanLifecycle?.unexpectedReadoutScopes || nativeConnectorScanLifecycle?.unexpected_readout_scopes || [];
+  if (nativeConnectorScanLifecycle && (nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length)) {
+    const formatNativeScope = (item) => {
+      const readoutId = item?.readoutId || item?.readout_id || "";
+      const scopeId = item?.scopeId || item?.scope_id || "未確定";
+      return `${formatCoreReadoutLabel(readoutId, readoutId || "読取")} / ECU ${scopeId}`;
+    };
+    const nativeLifecycleLines = [
+      `読取状態: ${nativeConnectorScanLifecycle.scanState === "interrupted" || nativeConnectorScanLifecycle.scan_state === "interrupted" ? "中断・一部取得" : "未完了"}`
+    ];
+    if (nativeFailedScopes.length) nativeLifecycleLines.push(`失敗: ${nativeFailedScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
+    if (nativeMissingScopes.length) nativeLifecycleLines.push(`未取得: ${nativeMissingScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
+    if (nativeUnexpectedScopes.length) nativeLifecycleLines.push(`想定外応答: ${nativeUnexpectedScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
+    sections.push(["iPhone読取範囲", nativeLifecycleLines]);
   }
 
   const coverage = getReadoutCoverageDisplay(session?.readoutCoverage);
