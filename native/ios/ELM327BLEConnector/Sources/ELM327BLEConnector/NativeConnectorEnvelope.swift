@@ -190,7 +190,7 @@ public enum NativeConnectorEnvelopeFactory {
         case "read_permanent_dtc": readoutID = "permanent_dtc_snapshot"
         default: readoutID = nil
         }
-        make(
+        return make(
             context: context,
             sequence: sequence,
             intent: intent,
