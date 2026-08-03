@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-  const APP_VERSION = "3.5.46";
+  const APP_VERSION = "3.5.47";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1854,6 +1854,12 @@ function buildSelectedObdReadoutInterface() {
     vehicleCommandEnabled: false,
     wouldTransmit: false
   };
+}
+
+function buildSelectedObdObservationContext() {
+  return window.ObdReadOnly?.normalizeObservationContext?.({
+    condition: obdLiveObservationCondition?.value || null
+  }) || null;
 }
 
 function getObdInterfaceStrategyNote(interfaceId) {
@@ -5213,6 +5219,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     ended_at: capturedAt,
     captured_at: capturedAt,
     readoutInterface: buildSelectedObdReadoutInterface(),
+    observationContext: buildSelectedObdObservationContext() || undefined,
     connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus()
   });
   const webSerialReadoutSummary = buildWebSerialReadoutSummary();
@@ -5374,6 +5381,7 @@ function renderObdBridgeReadout(parts = {}) {
       ...(parts.livePidResponse ? [{ livePidSnapshot, observationCondition: obdLiveObservationCondition?.value || "unspecified" }] : [])
     ]
   });
+  const observationContext = buildSelectedObdObservationContext();
   const importResult = window.ObdReadOnly.buildBridgeDiagnosticImport({
     dtcSnapshot: dtcSnapshot || undefined,
     livePidSnapshot: livePidSnapshot || undefined,
@@ -5384,6 +5392,7 @@ function renderObdBridgeReadout(parts = {}) {
     supportedPidMatrix: supportedPidMatrix || undefined,
     vehicleProfile: vehicleProfile || undefined,
     vehicleApplicability: vehicleApplicability || undefined,
+    observationContext: observationContext || undefined,
     readoutInterface,
     connectionStatus: obdDevSession.bridgeStatus || previousSession.connectionStatus || undefined,
     vciList: obdDevSession.bridgeVciList || (Array.isArray(previousSession.vciDevices) ? { devices: previousSession.vciDevices } : undefined),
@@ -5424,6 +5433,7 @@ function renderObdBridgeReadout(parts = {}) {
     vciDevices: importResult.vciDevices || importResult.bridgeSession?.vciDevices,
     vehicleProfile: vehicleProfile || importResult.vehicleProfile || importResult.bridgeSession?.vehicleProfile || undefined,
     vehicleApplicability: vehicleApplicability || importResult.vehicleApplicability || importResult.bridgeSession?.vehicleApplicability || undefined,
+    observationContext: observationContext || importResult.observationContext || importResult.observation_context || importResult.bridgeSession?.observationContext || importResult.bridgeSession?.observation_context || undefined,
     readoutInterface: importResult.readoutInterface || importResult.readout_interface || importResult.bridgeSession?.readoutInterface || importResult.bridgeSession?.readout_interface || readoutInterface,
     adapterIdentity: importResult.adapterIdentity || importResult.bridgeSession?.adapterIdentity || obdDevSession.adapterIdentity || previousSession.adapterIdentity || undefined,
     toolHints: importResult.toolHints || importResult.bridgeSession?.toolHints || previousSession.toolHints || undefined,
@@ -6447,7 +6457,8 @@ function renderObdBridgeSessionDetails(session = null) {
       unspecified: "条件未指定",
       cold: "冷間時",
       warm: "暖機後",
-      symptom_reproduced: "症状再現時"
+      symptom_reproduced: "症状再現時",
+      post_repair: "修理後"
     }[latestObservationCondition] || "条件未指定";
     if (livePidTimelineSummary?.latestCapturedAt || livePidTimelineSummary?.latest_captured_at) {
       lines.push(`最新: ${formatDateTime(livePidTimelineSummary.latestCapturedAt || livePidTimelineSummary.latest_captured_at)}`);

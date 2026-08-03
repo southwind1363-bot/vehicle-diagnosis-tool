@@ -3523,9 +3523,10 @@
 
   function normalizeLivePidObservationCondition(value) {
     const normalized = String(value ?? "").trim().slice(0, 80).toLowerCase().replace(/[\s-]+/g, "_");
-    if (["cold", "冷間", "冷間時"].includes(normalized)) return "cold";
-    if (["warm", "暖機", "暖機後", "暖機時"].includes(normalized)) return "warm";
+    if (["cold", "cold_start", "coldstart", "冷間", "冷間時"].includes(normalized)) return "cold";
+    if (["warm", "warmed", "warm_up", "warmed_up", "warmup", "暖機", "暖機後", "暖機時"].includes(normalized)) return "warm";
     if (["symptom_reproduced", "症状再現", "症状再現時", "再現時"].includes(normalized)) return "symptom_reproduced";
+    if (["post_repair", "after_repair"].includes(normalized)) return "post_repair";
     return "unspecified";
   }
 

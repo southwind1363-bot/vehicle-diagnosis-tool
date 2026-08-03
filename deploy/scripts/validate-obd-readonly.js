@@ -2986,7 +2986,7 @@ check(source.includes('function normalizeLivePidTimeline(input = {})') && source
 check(source.includes('function buildLivePidTimelineSummary(input = {})') && source.includes('monitorComparisonKey') && source.includes('comparedValueCount') && source.includes('changedValueCount'), "Live PID timeline should derive ECU-scoped comparison values without diagnostic classification");
 check(appSource.includes('livePidTimeline: [],') && appSource.includes('window.ObdReadOnly.normalizeLivePidTimeline({') && appSource.includes('window.ObdReadOnly.buildLivePidTimelineSummary(livePidTimeline)') && appSource.includes('["ライブ履歴", livePidTimeline?.sampleCount') && appSource.includes('["前回比較", livePidTimelineComparisonLabel]'), "Web Serial and bridge readouts should retain and display bounded live PID history");
 check(appSource.includes('const livePidTimelineSummary = session?.livePidTimelineSummary || session?.live_pid_timeline_summary || null;') && appSource.includes('const latestObservationCondition = livePidTimelineSummary?.latestObservationCondition') && appSource.includes('lines.push(`最新: ${formatDateTime') && appSource.includes('観察条件: ${observationConditionLabel}') && appSource.includes('livePidTimelineSummary.comparedValueCount') && appSource.includes('同一ECUの比較対象PIDなし') && appSource.includes('livePidTimelineSummary?.comparisonBlockedByTimestamp') && appSource.includes('同一取得時刻の読取は差分比較しません') && appSource.includes('livePidTimelineSummary?.comparisonBlockedByProtocol') && appSource.includes('通信プロトコルが異なる読取は差分比較しません') && appSource.includes('sections.push(["ライブ履歴", lines]);') && appSource.includes('前回比較は2回以上の読取後に表示'), "OBD detail view should show observed live PID timeline conditions and comparisons without diagnosis claims");
-check(appSource.includes('const obdLiveObservationCondition = document.querySelector("#obdLiveObservationCondition");') && appSource.includes('observationCondition: obdLiveObservationCondition?.value || "unspecified"') && appSource.includes('前回と観察条件が異なるため差分比較は行いません'), "Live PID reads should retain selected observation conditions and suppress mixed-condition comparisons");
+check(appSource.includes('const obdLiveObservationCondition = document.querySelector("#obdLiveObservationCondition");') && appSource.includes('function buildSelectedObdObservationContext()') && appSource.includes('observationContext: buildSelectedObdObservationContext() || undefined,') && appSource.includes('observationCondition: obdLiveObservationCondition?.value || "unspecified"') && appSource.includes('前回と観察条件が異なるため差分比較は行いません') && source.includes('["post_repair", "after_repair"]') && indexSource.includes('<option value="post_repair">'), "Live PID reads should retain selected observation conditions, isolate post-repair data, and suppress mixed-condition comparisons");
 check(appSource.includes('function buildLivePidTimelineChartRows(timeline = null)') && appSource.includes('.filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)') && appSource.includes('heightPercent: range ? 18 + ((point.value - minimum) / range) * 82 : 55') && appSource.includes('delta: row.points.at(-1)?.value - row.points[0]?.value') && appSource.includes('変化 ${row.delta') && appSource.includes('obd-timeline-chart-bar'), "Live PID graph should chart only numeric values from the latest observation condition");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('通信ヒント:'), "OBD session details should display adapter protocol hints without treating them as confirmed session protocol");
@@ -12806,6 +12806,26 @@ const mixedConditionTimeline = obd.normalizeLivePidTimeline({
 });
 const mixedConditionSummary = obd.buildLivePidTimelineSummary(mixedConditionTimeline);
 check(mixedConditionTimeline.samples[0]?.observationCondition === "cold" && mixedConditionTimeline.samples[1]?.observation_condition === "warm" && mixedConditionSummary.comparisonAvailable === false && mixedConditionSummary.comparisonBlockedByCondition === true && mixedConditionSummary.changedValueCount === 0 && mixedConditionSummary.vehicle_command_enabled === false, "Mixed live PID observation conditions were incorrectly compared");
+const normalizedConditionAliasTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-07-17T00:00:00Z", observation_condition: "cold_start", live_pid_snapshot: decodedLivePids },
+    { captured_at: "2026-07-17T00:00:05Z", observation_condition: "warmed_up", live_pid_snapshot: { ...decodedLivePids, captured_at: "2026-07-17T00:00:05Z" } }
+  ]
+});
+const postRepairTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-07-17T00:00:00Z", observation_condition: "post_repair", live_pid_snapshot: decodedLivePids },
+    { captured_at: "2026-07-17T00:00:05Z", observation_condition: "after_repair", live_pid_snapshot: { ...decodedLivePids, captured_at: "2026-07-17T00:00:05Z" } }
+  ]
+});
+const postRepairTimelineSummary = obd.buildLivePidTimelineSummary(postRepairTimeline);
+const mixedPostRepairTimelineSummary = obd.buildLivePidTimelineSummary(obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-07-17T00:00:00Z", observation_condition: "unspecified", live_pid_snapshot: decodedLivePids },
+    { captured_at: "2026-07-17T00:00:05Z", observation_condition: "post_repair", live_pid_snapshot: { ...decodedLivePids, captured_at: "2026-07-17T00:00:05Z" } }
+  ]
+}));
+check(normalizedConditionAliasTimeline.samples[0]?.observationCondition === "cold" && normalizedConditionAliasTimeline.samples[1]?.observationCondition === "warm" && postRepairTimeline.samples.every((sample) => sample.observationCondition === "post_repair") && postRepairTimelineSummary.comparisonAvailable === true && mixedPostRepairTimelineSummary.comparisonAvailable === false && mixedPostRepairTimelineSummary.comparisonBlockedByCondition === true && mixedPostRepairTimelineSummary.vehicleCommandEnabled === false, "Live PID observation aliases did not retain post-repair data as a separate comparison condition");
 const sameTimestampTimeline = obd.normalizeLivePidTimeline({
   samples: [
     { captured_at: "2026-07-17T00:00:00Z", observation_condition: "warm", live_pid_snapshot: decodedLivePids },
