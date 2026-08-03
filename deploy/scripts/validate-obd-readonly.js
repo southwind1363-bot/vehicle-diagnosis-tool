@@ -3390,6 +3390,23 @@ check(
     && nativeElmTextPidImport.session?.vehicleCommandEnabled === false,
   "iPhone ELM327 text PID values did not reach the read-only diagnostic session"
 );
+const nativeElmFreezeFrameEntriesImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  readout_id: "freeze_frame_snapshot",
+  readout_scope_id: "7E8",
+  readout_attempt: 0,
+  data: {
+    trigger_dtc_entries: [{ code: "P0420", frame_number: 0 }],
+    values: []
+  }
+});
+check(
+  nativeElmFreezeFrameEntriesImport.accepted === true
+    && nativeElmFreezeFrameEntriesImport.session?.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.code === "P0420" && item.frameNumber === 0 && item.sourceEcu === "7E8")
+    && nativeElmFreezeFrameEntriesImport.session?.vehicleCommandEnabled === false,
+  "Structured iPhone freeze-frame trigger DTC entries did not reach the read-only diagnostic session"
+);
 check(
   nativeElmReadinessGoldenEvaluation.accepted === true
     && nativeElmReadinessGoldenEvaluation.readoutId === "readiness_snapshot"

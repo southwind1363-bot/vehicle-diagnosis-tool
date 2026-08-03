@@ -1812,7 +1812,7 @@
       read_stored_dtc: ["dtcs", "codes"],
       read_pending_dtc: ["dtcs", "codes"],
       read_permanent_dtc: ["dtcs", "codes"],
-      read_freeze_frame: ["monitor_values", "monitorValues", "items"],
+      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "trigger_dtc", "triggerDtc", "trigger_dtc_entries", "triggerDtcEntries"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
       read_onboard_monitor: ["tests", "items"],
@@ -2046,11 +2046,27 @@
         captured_at: capturedAt,
         protocol,
         freeze_frame_readout_status: "reported",
-        trigger_dtc_entries: scopedData.map(({ data, scopeId }) => ({
-          code: data.trigger_dtc || data.triggerDtc || data.dtc || null,
-          frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? null,
-          ...(scopeId !== "LEGACY" ? { source_ecu: scopeId } : {})
-        })).filter((item) => item.code),
+        trigger_dtc_entries: scopedData.flatMap(({ data, scopeId }) => {
+          const entries = Array.isArray(data.trigger_dtc_entries)
+            ? data.trigger_dtc_entries
+            : Array.isArray(data.triggerDtcEntries)
+              ? data.triggerDtcEntries
+              : [];
+          const fallbackCode = data.trigger_dtc || data.triggerDtc || data.dtc || null;
+          const rows = fallbackCode && !entries.some((item) => String(item?.code || item?.dtc || item || "").trim().toUpperCase() === String(fallbackCode).trim().toUpperCase())
+            ? [...entries, { code: fallbackCode }]
+            : entries;
+          return rows.map((row) => {
+            const item = row && typeof row === "object" && !Array.isArray(row) ? row : { code: row };
+            const code = item.code || item.dtc || item.trigger_dtc || item.triggerDtc || null;
+            const itemScopeId = readNativeConnectorDataScopeId(item) || (scopeId !== "LEGACY" ? scopeId : null);
+            return {
+              code,
+              frame_number: item.frame_number ?? item.frameNumber ?? data.trigger_frame_number ?? data.triggerFrameNumber ?? null,
+              ...(itemScopeId ? { source_ecu: itemScopeId } : {})
+            };
+          }).filter((item) => item.code);
+        }),
         monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
       };
     }
