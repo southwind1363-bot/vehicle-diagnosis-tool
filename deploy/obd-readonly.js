@@ -249,7 +249,7 @@
     const adapterOpened = source.adapterOpened === true || source.adapter_opened === true;
     const elmIdentified = adapterOpened && (source.elmIdentified === true || source.elm_identified === true);
     const vehicleVerified = elmIdentified && (source.vehicleVerified === true || source.vehicle_verified === true);
-    const nativeHostImplemented = false;
+    const nativeHostImplemented = true;
     const compatibilityStatus = vehicleVerified && elmIdentified
       ? "vehicle_verified"
       : elmIdentified
@@ -282,7 +282,7 @@
       can_clear_dtc: false,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
-      reason: "The iPhone read-only import contract is ready, but no native BLE host is bundled; transport detection never enables vehicle communication."
+      reason: "The native iPhone BLE host is implemented, but the Web app cannot connect directly. App distribution and adapter verification are still required before read-only vehicle communication."
     };
   }
 
@@ -313,9 +313,9 @@
       browser: "webkit",
       adapterTransport: "ble-gatt-or-classic",
       route: "native_connector_required",
-      currentAvailability: "iPhone read-only import contract ready; native BLE host and adapter verification pending",
+      currentAvailability: "iPhone native BLE host implemented; app distribution and adapter verification pending",
       requiresCompanionBridge: true,
-      requiredBeforeReadout: Object.freeze(["自前iPhoneコネクタの実装", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
+      requiredBeforeReadout: Object.freeze(["iPhone BLEホストのアプリ配布", "VCIのBLE GATTまたは専用SDK仕様確認", "車種・ECU適合情報の確認", "セッション保存前の識別情報マスク", "切断・タイムアウト時の安全停止"])
     })
   ]);
 
@@ -333,8 +333,8 @@
       platform: "ios",
       route: "native_connector_required",
       requiresDesktop: false,
-      currentAvailability: "iPhone read-only import contract ready; native BLE host and ELM327 transport verification pending",
-      requiredBeforeReadout: Object.freeze(["ELM327のBluetooth Classic/BLE方式確認", "自前コネクタでMode 03/07/02/01をread-only取得", "AT初期化差分とタイムアウト停止の確認", "識別情報を保存前にマスク", "読取結果を診断セッションへ正規化"])
+      currentAvailability: "iPhone native BLE host implemented; ELM327 transport verification pending",
+      requiredBeforeReadout: Object.freeze(["iPhone BLEホストのアプリ配布", "ELM327のBluetooth Classic/BLE方式確認", "自前コネクタでMode 03/07/02/01をread-only取得", "AT初期化差分とタイムアウト停止の確認", "識別情報を保存前にマスク", "読取結果を診断セッションへ正規化"])
     }),
     Object.freeze({
       interfaceId: "user-vci-elm327",
