@@ -14510,6 +14510,17 @@ check(compactCanSession.livePidSnapshot.monitorValues.every((item) => item.sourc
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.responseCount === 2, "Compact CAN log did not keep ECU response count");
 check(compactCanSession.ecuResponseSummary.ecus.find((item) => item.address === "7E8")?.services.includes("41"), "Compact CAN log did not keep ECU service list");
 check(compactCanSession.wouldTransmit === false && compactCanSession.retainedRawFrames === false, "Compact CAN log import retained raw frames or allowed transmit");
+const compactElmDtcSession = obd.buildScanSessionFromObdText([
+  ">03",
+  "7E803430171",
+  ">07",
+  "7E803470000",
+  ">0A",
+  "7E8034A0000"
+].join("\n"), { session_id: "compact-elm-dtc", protocol: "ISO15765-4" });
+const compactElmLiveSession = obd.buildScanSessionFromObdText(">010C\n7E804410C1AF8", { session_id: "compact-elm-live", protocol: "ISO15765-4" });
+const unscopedCompactDtcSession = obd.buildScanSessionFromObdText(">03\n430171", { session_id: "unscoped-compact-dtc", protocol: "ISO15765-4" });
+check(compactElmDtcSession.dtcSnapshot?.dtcStatusSummary?.complete === true && compactElmDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored" && item.ecu === "7E8") && compactElmDtcSession.dtcSnapshot?.dtcStatusSummary?.emptyStatuses?.join(",") === "pending,permanent" && compactElmLiveSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726 && item.sourceEcu === "7E8") && unscopedCompactDtcSession.dtcSnapshot?.dtcReadoutStatus === "unknown" && unscopedCompactDtcSession.dtcSnapshot?.codes?.length === 0 && compactElmDtcSession.vehicleCommandEnabled === false && compactElmLiveSession.vehicleCommandEnabled === false, "Compact ELM CAN-header responses were not normalized without treating unscoped compact text as vehicle data");
 const rawDtcSourceSnapshot = obd.decodeObdDtcResponse({ raw: "43 01 71", source_ecu: "7E8" });
 check(rawDtcSourceSnapshot.dtcs.some((item) => item.code === "P0171" && item.ecu === "7E8"), "Raw DTC response did not retain an explicit source ECU");
 const compactDtcSourceSession = obd.buildScanSessionFromObdText("can0 7E8#03430171", { session_id: "compact-dtc-source", protocol: "ISO15765-4" });

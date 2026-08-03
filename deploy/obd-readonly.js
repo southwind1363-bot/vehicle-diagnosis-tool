@@ -17899,6 +17899,11 @@
       return [id.toUpperCase(), ...bytes.map((byte) => byte.toUpperCase())].join(" ");
     });
 
+    text = text.replace(/\b(7E[89A-F])([0-9A-F]{2,128})\b/gi, (_match, id, data) => {
+      const bytes = data.match(/[0-9A-F]{2}/gi) || [];
+      return [id.toUpperCase(), ...bytes.map((byte) => byte.toUpperCase())].join(" ");
+    });
+
     text = text.replace(/\b([0-9A-F]{3}|[0-9A-F]{8})\s+\[(\d{1,2})\]\s+((?:[0-9A-F]{2}[\s,]*){1,64})/gi, (_match, id, length, data) => {
       const lengthByte = Math.max(0, Math.min(255, parseInt(length, 10) || 0)).toString(16).toUpperCase().padStart(2, "0");
       const bytes = data.match(/[0-9A-F]{2}/gi) || [];
