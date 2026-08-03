@@ -261,7 +261,8 @@ public enum NativeConnectorEnvelopeFactory {
     public static func freezeFrameTriggerDTC(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, code: String?) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_freeze_frame", data: [
             "trigger_dtc": code.map { .string($0) } ?? .null,
-            "trigger_dtc_entries": .array(code.map { [.object(["code": .string($0)])] } ?? []),
+            "trigger_dtc_entries": .array(code.map { [.object(["code": .string($0), "frame_number": .number(0), "source_ecu": scopeID.map { .string($0) } ?? .null])] } ?? []),
+            "trigger_frame_number": .number(0),
             "values": .array([]),
             "freeze_frame_readout_status": .string("reported")
         ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
@@ -269,14 +270,14 @@ public enum NativeConnectorEnvelopeFactory {
 
     public static func freezeFrameValue(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, value: OBD2MonitorValue) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_freeze_frame", data: [
-            "values": .array([.object(["id": .string(value.id), "pid": .string(value.pid), "value": .number(value.value), "unit": .string(value.unit), "freeze_frame_number": .number(0)])]),
+            "values": .array([.object(["id": .string(value.id), "pid": .string(value.pid), "value": .number(value.value), "unit": .string(value.unit), "freeze_frame_number": .number(0), "source_ecu": scopeID.map { .string($0) } ?? .null])]),
             "freeze_frame_readout_status": .string("reported")
         ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
     public static func freezeFrameValue(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?, value: OBD2TextMonitorValue) -> NativeConnectorEnvelope {
         make(context: context, sequence: sequence, intent: "read_freeze_frame", data: [
-            "values": .array([.object(["id": .string(value.id), "pid": .string(value.pid), "value": .string(value.value), "unit": .string(value.unit), "freeze_frame_number": .number(0)])]),
+            "values": .array([.object(["id": .string(value.id), "pid": .string(value.pid), "value": .string(value.value), "unit": .string(value.unit), "freeze_frame_number": .number(0), "source_ecu": scopeID.map { .string($0) } ?? .null])]),
             "freeze_frame_readout_status": .string("reported")
         ], readoutID: "freeze_frame_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
