@@ -196,7 +196,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 Self.monitorValues(in: envelope.data, scopeID: scopeID, keys: ["values", "monitor_values"]).forEach { freezeFrameValues[$0.id] = $0 }
                 Self.textMonitorValues(in: envelope.data, scopeID: scopeID, keys: ["values", "monitor_values"]).forEach { freezeFrameTextValues[$0.id] = $0 }
             case "read_ecu_info":
-                Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo[$0.id] = $0 }
+                Self.ecuInfoItems(in: envelope.data, scopeID: scopeID).forEach { ecuInfo["\($0.sourceScopeID)|\($0.infoID)"] = $0 }
             case "read_onboard_monitor":
                 Self.onboardMonitorItems(in: envelope.data, scopeID: scopeID).forEach { onboardMonitors[$0.id] = $0 }
             case "read_supported_pids":

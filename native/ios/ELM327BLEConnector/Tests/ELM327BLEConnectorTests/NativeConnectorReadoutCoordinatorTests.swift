@@ -102,28 +102,44 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             infoType: "04",
             value: "ECM-CAL-01"
         )
-        let onboardMonitor = NativeConnectorEnvelopeFactory.onboardMonitor(
+        let performanceTracking = NativeConnectorEnvelopeFactory.ecuInfo(
             context: context,
             sequence: 7,
+            scopeID: "7E8",
+            id: "in_use_performance_tracking_spark",
+            infoType: "08",
+            value: "00 00 00 01"
+        )
+        let secondaryEcuInfo = NativeConnectorEnvelopeFactory.ecuInfo(
+            context: context,
+            sequence: 8,
+            scopeID: "7E9",
+            id: "calibration_id",
+            infoType: "04",
+            value: "TCM-CAL-02"
+        )
+        let onboardMonitor = NativeConnectorEnvelopeFactory.onboardMonitor(
+            context: context,
+            sequence: 9,
             scopeID: "7E8",
             tests: [OBD2OnboardMonitorTest(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5)]
         )
         let supportedPIDs = NativeConnectorEnvelopeFactory.supportedPIDs(
             context: context,
-            sequence: 8,
+            sequence: 10,
             scopeID: "7E8",
             pageBase: "00",
             pids: ["0C", "04"]
         )
         let permanentDTCFailure = NativeConnectorEnvelopeFactory.failedReadout(
             context: context,
-            sequence: 9,
+            sequence: 11,
             command: .permanentDTC,
             error: "readout_not_available"
         )
         let freezeFrameTrigger = NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(
             context: context,
-            sequence: 10,
+            sequence: 12,
             scopeID: "7E8",
             code: "P0171"
         )
@@ -136,7 +152,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             scanID: context.scanID,
             connectionID: context.connectionID,
             vehicleContextID: context.vehicleContextID,
-            sequence: 11,
+            sequence: 13,
             readoutID: "freeze_frame_snapshot",
             readoutScopeID: "7E8",
             readoutAttempt: 0,
@@ -154,7 +170,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         )
         let freezeFrameFuelStatus = NativeConnectorEnvelopeFactory.freezeFrameValue(
             context: context,
-            sequence: 12,
+            sequence: 14,
             scopeID: "7E8",
             value: OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: "")
         )
@@ -165,6 +181,8 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         coordinator.connector(coordinator.connector, didEmit: textMonitor)
         coordinator.connector(coordinator.connector, didEmit: readiness)
         coordinator.connector(coordinator.connector, didEmit: ecuInfo)
+        coordinator.connector(coordinator.connector, didEmit: performanceTracking)
+        coordinator.connector(coordinator.connector, didEmit: secondaryEcuInfo)
         coordinator.connector(coordinator.connector, didEmit: onboardMonitor)
         coordinator.connector(coordinator.connector, didEmit: supportedPIDs)
         coordinator.connector(coordinator.connector, didEmit: permanentDTCFailure)
@@ -183,7 +201,11 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             NativeConnectorReadoutPreview.TextMonitorValue(monitorID: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor", unit: "", sourceScopeID: "7E8")
         ])
         XCTAssertEqual(coordinator.readoutPreview.readiness, [NativeConnectorReadoutPreview.Readiness(sourceScopeID: "7E8", milOn: false, dtcCount: 1, ignitionType: "spark", supportedMonitorCount: 1, incompleteMonitorCount: 0)])
-        XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8")])
+        XCTAssertEqual(coordinator.readoutPreview.ecuInfo, [
+            NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "ECM-CAL-01", sourceScopeID: "7E8"),
+            NativeConnectorReadoutPreview.ECUInfo(infoID: "in_use_performance_tracking_spark", infoType: "08", value: "00 00 00 01", sourceScopeID: "7E8"),
+            NativeConnectorReadoutPreview.ECUInfo(infoID: "calibration_id", infoType: "04", value: "TCM-CAL-02", sourceScopeID: "7E9")
+        ])
         XCTAssertEqual(coordinator.readoutPreview.onboardMonitors, [NativeConnectorReadoutPreview.OnboardMonitor(testID: "01", componentID: "02", value: 3, minimum: 1, maximum: 5, sourceScopeID: "7E8")])
         XCTAssertEqual(coordinator.readoutPreview.supportedPIDs, [NativeConnectorReadoutPreview.SupportedPIDs(sourceScopeID: "7E8", pids: ["04", "0C"])])
         XCTAssertEqual(coordinator.readoutPreview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_permanent_dtc", readoutID: "permanent_dtc_snapshot", sourceScopeID: "LEGACY", errorCodes: ["readout_not_available"])])
