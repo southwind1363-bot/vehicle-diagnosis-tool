@@ -1831,7 +1831,7 @@
       read_stored_dtc: ["dtcs", "codes"],
       read_pending_dtc: ["dtcs", "codes"],
       read_permanent_dtc: ["dtcs", "codes"],
-      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "trigger_dtc", "triggerDtc", "trigger_dtc_entries", "triggerDtcEntries"],
+      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "trigger_dtc", "triggerDtc", "trigger_dtc_entries", "triggerDtcEntries", "associated_dtc", "associatedDtc", "associated_dtc_entries", "associatedDtcEntries"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
       read_onboard_monitor: ["tests", "items"],
@@ -2070,14 +2070,18 @@
             ? data.trigger_dtc_entries
             : Array.isArray(data.triggerDtcEntries)
               ? data.triggerDtcEntries
-              : [];
-          const fallbackCode = data.trigger_dtc || data.triggerDtc || data.dtc || null;
+              : Array.isArray(data.associated_dtc_entries)
+                ? data.associated_dtc_entries
+                : Array.isArray(data.associatedDtcEntries)
+                  ? data.associatedDtcEntries
+                  : [];
+          const fallbackCode = data.trigger_dtc || data.triggerDtc || data.associated_dtc || data.associatedDtc || data.dtc || null;
           const rows = fallbackCode && !entries.some((item) => String(item?.code || item?.dtc || item || "").trim().toUpperCase() === String(fallbackCode).trim().toUpperCase())
             ? [...entries, { code: fallbackCode }]
             : entries;
           return rows.map((row) => {
             const item = row && typeof row === "object" && !Array.isArray(row) ? row : { code: row };
-            const code = item.code || item.dtc || item.trigger_dtc || item.triggerDtc || null;
+            const code = item.code || item.dtc || item.trigger_dtc || item.triggerDtc || item.associated_dtc || item.associatedDtc || null;
             const itemScopeId = readNativeConnectorDataScopeId(item) || (scopeId !== "LEGACY" ? scopeId : null);
             return {
               code,

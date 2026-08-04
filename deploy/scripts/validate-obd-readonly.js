@@ -3621,6 +3621,15 @@ check(
     && nativeElmFreezeFrameEntriesImport.session?.vehicleCommandEnabled === false,
   "Structured iPhone freeze-frame trigger DTC entries did not reach the read-only diagnostic session"
 );
+const nativeElmAssociatedFreezeFrameImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  readout_id: "freeze_frame_snapshot",
+  readout_scope_id: "7E8",
+  readout_attempt: 0,
+  data: { associatedDtc: "P0420" }
+});
+check(nativeElmAssociatedFreezeFrameImport.accepted === true && nativeElmAssociatedFreezeFrameImport.session?.freezeFrameSnapshot?.triggerDtc === "P0420" && nativeElmAssociatedFreezeFrameImport.session?.freezeFrameSnapshot?.sourceEcu === "7E8" && nativeElmAssociatedFreezeFrameImport.session?.vehicleCommandEnabled === false, "iPhone associated-DTC freeze-frame alias did not reach the read-only diagnostic session");
 check(
   nativeElmReadinessGoldenEvaluation.accepted === true
     && nativeElmReadinessGoldenEvaluation.readoutId === "readiness_snapshot"
@@ -4156,6 +4165,16 @@ const triggerOnlyNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
   expected_readout_scopes: nativeScopeManifest("freeze_frame_snapshot")
 });
 check(triggerOnlyNativeFreezeFrameScan.scanState === "completed" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.length === 0 && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.length === 2 && triggerOnlyNativeFreezeFrameScan.session?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.countsById?.freeze_frame_snapshot === 0 && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.itemById?.freeze_frame_snapshot?.status === "captured", "Trigger-only native freeze frame evidence was treated as missing or counted as PID values");
+const associatedMultiEcuNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 740, { associated_dtc: "P0300", monitor_values: [] }),
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E9", 741, { associatedDtc: "P0171", monitor_values: [] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("freeze_frame_snapshot")
+});
+check(associatedMultiEcuNativeFreezeFrameScan.scanState === "completed" && associatedMultiEcuNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtc === null && associatedMultiEcuNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.code === "P0300" && item.sourceEcu === "7E8") && associatedMultiEcuNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.code === "P0171" && item.sourceEcu === "7E9") && associatedMultiEcuNativeFreezeFrameScan.session?.vehicleCommandEnabled === false, "Multi-ECU associated freeze-frame DTC aliases were lost or resolved ambiguously");
 const blockedTriggerNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
   envelopes: [scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 742, { trigger_dtc: "P0300", monitor_values: [] }, { ok: false, blocked: true, errors: ["connector:not_ready"] })],
   scan_state: "completed",
