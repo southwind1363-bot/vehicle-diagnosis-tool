@@ -18442,6 +18442,11 @@ const scannerCsvEcuResponseTablesSession = obd.buildDiagnosticScanSessionFromCsv
   "ECU Responses", "ECU\tStatus", "7E9\tNo Response"
 ].join("\n"));
 check(scannerCsvEcuResponseTablesSession?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.status === "responded") && scannerCsvEcuResponseTablesSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.status === "no response") && scannerCsvEcuResponseTablesSession?.vehicleCommandEnabled === false && scannerCsvEcuResponseTablesSession?.retainedRawText === false, "Structured CSV import did not merge separate ECU-response tables into one read-only session");
+const scannerCsvEcuResponseMetadataTablesSession = obd.buildDiagnosticScanSessionFromCsv([
+  "ECU Responses", "ECU\tECU Name\tStatus\tResponse Time ms\tCaptured At\tProtocol", "7E8\tEngine Control Module\tResponded\t42\t2026-08-04T10:30:00+09:00\tCAN_11BIT_500K",
+  "ECU Responses", "ECU\tECU Name\tStatus\tResponse Time ms\tCaptured At\tProtocol", "7E9\tTransmission Control Module\tNo Response\t120\t2026-08-04T10:30:00+09:00\tCAN_11BIT_500K"
+].join("\n"));
+check(scannerCsvEcuResponseMetadataTablesSession?.ecuResponseSummary?.capturedAt === "2026-08-04T10:30:00+09:00" && scannerCsvEcuResponseMetadataTablesSession.ecuResponseSummary?.protocol === "CAN_11BIT_500K" && scannerCsvEcuResponseMetadataTablesSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.name === "Engine Control Module" && item.status === "responded" && item.responseTimeMs === 42) && scannerCsvEcuResponseMetadataTablesSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.name === "Transmission Control Module" && item.status === "no response" && item.responseTimeMs === 120) && scannerCsvEcuResponseMetadataTablesSession?.vehicleCommandEnabled === false && scannerCsvEcuResponseMetadataTablesSession?.retainedRawText === false, "Merged CSV ECU-response tables lost shared metadata, response details, or read-only safety");
 const scannerCsvEcuInfoTablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "ECU Information", "Item\tValue", "Calibration ID\tECU-CAL-01",
   "ECU Information", "Item\tValue", "CVN\tABCD1234",

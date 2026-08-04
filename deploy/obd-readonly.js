@@ -20554,9 +20554,13 @@
     const ecuResponseSummaries = tableSessions
       .map((session) => session.ecuResponseSummary)
       .filter((summary) => Array.isArray(summary?.ecus) && summary.ecus.length);
+    const ecuResponseCapturedAtValues = [...new Set(ecuResponseSummaries.map((summary) => summary.capturedAt || summary.captured_at || null).filter(Boolean))];
+    const ecuResponseProtocolValues = [...new Set(ecuResponseSummaries.map((summary) => summary.protocol || summary.obd_protocol || null).filter(Boolean))];
     const ecuResponseSummary = ecuResponseSummaries.length > 1
       ? normalizeEcuResponseSummary({
         source: "scanner_csv_import",
+        ...(ecuResponseCapturedAtValues.length === 1 ? { captured_at: ecuResponseCapturedAtValues[0] } : {}),
+        ...(ecuResponseProtocolValues.length === 1 ? { protocol: ecuResponseProtocolValues[0] } : {}),
         ecus: ecuResponseSummaries.flatMap((summary) => summary.ecus)
       })
       : ecuResponseSummaries[0];
