@@ -18446,6 +18446,14 @@ const scannerJsonMode06AliasSession = obd.buildDiagnosticScanSessionFromJson(JSO
   }
 }));
 check(scannerJsonMode06AliasSession?.onboardMonitorSnapshot?.testCount === 1 && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.testId === "01" && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.componentId === "02" && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.passed === true && scannerJsonMode06AliasSession.onboardMonitorSnapshot?.tests?.[0]?.sourceEcu === "7E8" && scannerJsonMode06AliasSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain a Mode 06 alias readout");
+const scannerJsonMode06ValueAliasSessions = ["onboardMonitorRows", "onboard_monitor_rows", "mode06Tests", "mode06_tests", "mode06Rows", "mode06_rows"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { [key]: [{ test_id: "01", component_id: "02", value: 15, min: 10, max: 20, source_ecu: "7E8" }] }
+})));
+check(scannerJsonMode06ValueAliasSessions.every((session) => session?.onboardMonitorSnapshot?.testCount === 1 && session.onboardMonitorSnapshot?.tests?.[0]?.testId === "01" && session.onboardMonitorSnapshot?.tests?.[0]?.componentId === "02" && session.onboardMonitorSnapshot?.tests?.[0]?.passed === true && session.onboardMonitorSnapshot?.tests?.[0]?.sourceEcu === "7E8" && session.importClassification?.bucketCounts?.onboardMonitorRows === 1 && session.vehicleCommandEnabled === false && session.retainedRawText === false), "Mode 06 value JSON aliases were not retained as safe read-only evidence");
+const reimportedScannerJsonMode06ValueAliasSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonMode06ValueAliasSessions[0])
+});
+check(reimportedScannerJsonMode06ValueAliasSession?.onboardMonitorSnapshot?.tests?.[0]?.testId === "01" && reimportedScannerJsonMode06ValueAliasSession.onboardMonitorSnapshot?.tests?.[0]?.passed === true && reimportedScannerJsonMode06ValueAliasSession.vehicleCommandEnabled === false, "Mode 06 value JSON aliases were not preserved through read-only export and reimport");
 const reimportedScannerJsonMode06AliasSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonMode06AliasSession)
 });
