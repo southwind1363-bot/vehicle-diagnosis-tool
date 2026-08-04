@@ -18911,7 +18911,7 @@
         : null;
     const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : hasBridgeLivePidResponse ? importSession : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
-    const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
+    const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data", "freezeFrameValues", "freeze_frame_values", "freezeFrameRows", "freeze_frame_rows");
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "associated_dtc", "associatedDtc");
     const readinessInput = hasBridgeReadinessResponse ? importSession : pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "ecuInfoRows", "ecu_info_rows", "mode09", "mode_09", "mode09Items", "mode09_items", "mode_09_items", "mode09Values", "mode09_values", "mode_09_values");

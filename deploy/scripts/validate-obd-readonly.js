@@ -18289,6 +18289,14 @@ const scannerJsonSupportedPidRowsAliasSession = obd.buildDiagnosticScanSessionFr
   supported_pid_rows: [{ pid: "05" }, { pid_code: "0C" }]
 }));
 check(scannerJsonSupportedPidListAliasSession?.supportedPidMatrix?.supportedPids?.join(",") === "01,05,0C" && scannerJsonSupportedPidListAliasSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && scannerJsonSupportedPidRowsAliasSession?.supportedPidMatrix?.supportedPids?.join(",") === "05,0C" && scannerJsonSupportedPidRowsAliasSession?.vehicleCommandEnabled === false && scannerJsonSupportedPidListAliasSession?.vehicleCommandEnabled === false, "Supported-PID JSON aliases were not retained as safe supported-only evidence");
+const scannerJsonFreezeFrameValueAliasSessions = ["freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { [key]: [{ pid: "05", value: 85, unit: "C" }], freeze_frame_dtc: "P0128" }
+})));
+check(scannerJsonFreezeFrameValueAliasSessions.every((session) => session?.freezeFrameSnapshot?.triggerDtc === "P0128" && session.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 85) && session.importClassification?.bucketCounts?.freezeFrameRows === 1 && session.vehicleCommandEnabled === false && session.retainedRawText === false), "Freeze-frame value JSON aliases were not retained as safe read-only evidence");
+const reimportedScannerJsonFreezeFrameValueAliasSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonFreezeFrameValueAliasSessions[0])
+});
+check(reimportedScannerJsonFreezeFrameValueAliasSession?.freezeFrameSnapshot?.triggerDtc === "P0128" && reimportedScannerJsonFreezeFrameValueAliasSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 85) && reimportedScannerJsonFreezeFrameValueAliasSession.vehicleCommandEnabled === false, "Freeze-frame value JSON aliases were not preserved through read-only export and reimport");
 const reimportedScannerJsonStandaloneVehicleProfileSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonStandaloneVehicleProfileSession)
 });
