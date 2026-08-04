@@ -17798,6 +17798,24 @@ const scanSessionWebSerialSummaryFalseCompletion = obd.buildDiagnosticScanSessio
   }
 });
 check(scanSessionWebSerialSummaryFalseCompletion.webSerialReadoutSummary?.completedCount === 0 && scanSessionWebSerialSummaryFalseCompletion.webSerialReadoutSummary?.incompleteCount === 1, "Diagnostic scan session accepted an attempt-less v2 Web Serial NO DATA summary as completed");
+const scanSessionWebSerialFalseExpectedEmpty = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempts: [{ label: "DTC", status: "completed", requested_command_count: 1, attempted_command_count: 1, completed_command_count: 0, positive_response_count: 0, expected_empty_command_count: 1, no_data_count: 0 }]
+  }
+});
+check(scanSessionWebSerialFalseExpectedEmpty.webSerialReadoutSummary?.attempts?.[0]?.status === "incomplete" && scanSessionWebSerialFalseExpectedEmpty.webSerialReadoutSummary?.attempts?.[0]?.expectedEmptyCommandCount === 0 && scanSessionWebSerialFalseExpectedEmpty.readoutQualitySummary?.webSerialExpectedEmptyCommandCount === 0 && scanSessionWebSerialFalseExpectedEmpty.vehicleCommandEnabled === false, "Diagnostic scan session accepted expected-empty evidence without a Web Serial NO DATA response");
+const scanSessionWebSerialSummaryFalseExpectedEmpty = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempt_count: 1,
+    completed_count: 1,
+    positive_response_count: 0,
+    expected_empty_command_count: 1,
+    no_data_count: 0
+  }
+});
+check(scanSessionWebSerialSummaryFalseExpectedEmpty.webSerialReadoutSummary?.completedCount === 0 && scanSessionWebSerialSummaryFalseExpectedEmpty.webSerialReadoutSummary?.incompleteCount === 1 && scanSessionWebSerialSummaryFalseExpectedEmpty.webSerialReadoutSummary?.expectedEmptyCommandCount === 0 && scanSessionWebSerialSummaryFalseExpectedEmpty.vehicleCommandEnabled === false, "Diagnostic scan session accepted an attempt-less expected-empty claim without a NO DATA response");
 const scanSessionLegacyWebSerialExecution = obd.buildDiagnosticScanSession({
   web_serial_readout_summary: {
     schema_version: "web_serial_readout_execution_v1",
