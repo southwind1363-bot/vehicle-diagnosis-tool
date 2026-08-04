@@ -19287,6 +19287,8 @@
     const measurementValueHeaderNames = new Set(["value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値"]);
     const readinessMonitorHeaderNames = new Set(["readinessmonitorid", "readinessid", "monitorid", "monitor", "レディネスモニター", "モニター"]);
     const readinessStatusHeaderNames = new Set(["status", "dtcstatus", "state", "状態", "ステータス"]);
+    const vehicleProfileHeaderNames = new Set(["make", "maker", "manufacturer", "brand", "model", "modelname", "modelcode", "chassiscode", "framecode", "year", "modelyear", "registrationyear", "productiondate", "builddate", "manufacturedate", "manufacturingdate", "productionday", "enginecode", "enginemodel", "enginetype", "powertraincode", "transmission", "transmissiontype", "gearbox", "transaxle", "drivetrain", "drivetype", "drivetraintype", "drivenwheels", "fueltype", "fuel", "powertraintype", "electrification", "hybridsystem", "evsystem"]);
+    const readoutInterfaceHeaderNames = new Set(["readoutinterface", "interfacelabel", "vcilabel", "scannerlabel", "devicemodel", "interfacemodel", "vcimodel", "readoutroute", "interfaceroute", "platform", "hostplatform"]);
     const headerCandidate = lines.slice(0, 24)
       .map((line, index) => {
         const headerLine = line.replace(/^\uFEFF/, "");
@@ -19301,11 +19303,13 @@
           && normalizedHeaders.some((header) => measurementValueHeaderNames.has(header));
         const hasReadinessColumns = normalizedHeaders.some((header) => readinessMonitorHeaderNames.has(header))
           && normalizedHeaders.some((header) => readinessStatusHeaderNames.has(header));
+        const hasVehicleProfileColumns = normalizedHeaders.some((header) => vehicleProfileHeaderNames.has(header));
+        const hasReadoutInterfaceColumns = normalizedHeaders.some((header) => readoutInterfaceHeaderNames.has(header));
         const sectionHint = lines.slice(0, index).at(-1) || "";
         const hasEcuResponseColumns = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint)
           && normalizedHeaders.some((header) => ["ecu", "module", "controlmodule", "system", "address", "ecuresponseid", "ecuid", "moduleid", "responseid"].includes(header))
           && normalizedHeaders.some((header) => readinessStatusHeaderNames.has(header));
-        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns && !hasReadinessColumns && !hasEcuResponseColumns)) return null;
+        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns && !hasReadinessColumns && !hasEcuResponseColumns && !hasVehicleProfileColumns && !hasReadoutInterfaceColumns)) return null;
         return { index, delimiter, headers };
       })
       .find(Boolean);
@@ -19374,7 +19378,9 @@
     const hasExplicitEcuResponseColumns = (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex)
       && (Number.isInteger(readoutKindIndex) || /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint));
     const hasExplicitDtcReadoutStatusColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(statusIndex);
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns) return null;
+    const hasExplicitVehicleProfileColumns = [vehicleMakerIndex, vehicleModelIndex, vehicleModelCodeIndex, vehicleYearIndex, vehicleProductionDateIndex, vehicleEngineCodeIndex, vehicleTransmissionIndex, vehicleDrivetrainIndex, vehicleFuelTypeIndex, vehicleElectrificationIndex].some(Number.isInteger);
+    const hasExplicitReadoutInterfaceColumns = [readoutInterfaceLabelIndex, readoutDeviceModelIndex, readoutRouteIndex, readoutPlatformIndex].some(Number.isInteger);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns && !hasExplicitVehicleProfileColumns && !hasExplicitReadoutInterfaceColumns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
