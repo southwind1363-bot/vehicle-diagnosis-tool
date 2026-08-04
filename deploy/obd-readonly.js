@@ -19123,7 +19123,8 @@
       Number(dtcSnapshot.dtcCount || dtcSnapshot.dtc_count || 0) > 0
       || ["reported", "blocked"].includes(String(dtcSnapshot.dtcReadoutStatus || dtcSnapshot.dtc_readout_status || "").toLowerCase())
     ));
-    if (![hasDtcSnapshotContent, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary].some(Boolean)) return null;
+    const hasScannerJsonVehicleMetadata = Boolean(scannerJsonVehicleProfile || scannerJsonVehicleApplicability);
+    if (![hasDtcSnapshotContent, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary, hasScannerJsonVehicleMetadata].some(Boolean)) return null;
     const explicitHadSensitiveIdentifier = input.hadSensitiveIdentifier === true
       || input.had_sensitive_identifier === true
       || input.importClassification?.hadSensitiveIdentifier === true
