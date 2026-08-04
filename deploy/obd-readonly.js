@@ -16294,8 +16294,15 @@
             : [];
     const normalizeTriggerEntry = (row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return null;
-      const code = extractDtcCodes([row.code, row.dtc, row.trigger_dtc, row.triggerDtc, row.trigger_code, row.triggerCode, row.associated_dtc, row.associatedDtc].filter(Boolean).join(" "))[0] || null;
-      if (!code) return null;
+      const codeValue = [row.code, row.dtc, row.trigger_dtc, row.triggerDtc, row.trigger_code, row.triggerCode, row.associated_dtc, row.associatedDtc].find((value) => value !== undefined && value !== null && value !== "") || "";
+      const genericCodeReference = extractDtcReferences(codeValue)[0] || null;
+      const manufacturerCodeReference = isExplicitManufacturerSpecificDtcRow(row)
+        ? extractManufacturerSpecificDtcReference(codeValue)
+        : null;
+      const codeReference = manufacturerCodeReference || genericCodeReference;
+      if (!codeReference) return null;
+      const code = codeReference.code;
+      const subcode = manufacturerCodeReference ? null : readDtcSubcodeAlias(row, codeReference.subcode);
       const frameInput = pickDefined(row.frame_number, row.frameNumber, row.trigger_frame_number, row.triggerFrameNumber, null);
       const frame = Number(frameInput);
       const frameNumber = frameInput !== null && frameInput !== "" && Number.isInteger(frame) && frame >= 0 && frame <= 255 ? frame : null;
@@ -16305,6 +16312,13 @@
       const ecuName = rowEcuName || (!rowEcu || !sourceEcu || rowEcu === sourceEcu ? sourceEcuName : null);
       return {
         code,
+        subcode,
+        ...(manufacturerCodeReference ? {
+          codeFormat: "manufacturer_specific",
+          code_format: "manufacturer_specific",
+          manufacturerSpecific: true,
+          manufacturer_specific: true
+        } : {}),
         frameNumber,
         frame_number: frameNumber,
         sourceEcu: ecu,
