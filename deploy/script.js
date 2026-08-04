@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.57";
+const APP_VERSION = "3.5.58";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4984,6 +4984,17 @@ function classifyWebSerialCommandResponse(command, response) {
   return { commandStatus: "incomplete", unrecognizedResponseCount: 1, stopScope: "none", stopReason: null };
 }
 
+function isWebSerialExpectedEmptyResponse(command, response) {
+  const normalizedCommand = String(command || "").trim().toUpperCase();
+  if (!["03", "07", "0A", "0202"].includes(normalizedCommand)) return false;
+  const lines = String(response || "")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
+    .filter(Boolean);
+  return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING"));
+}
+
 function buildWebSerialDtcResponseOverrides(commandResponses = []) {
   const dtcCommandMetadata = {
     "03": { key: "storedDtcResponse", status: "stored", intent: "read_stored_dtc" },
@@ -4993,12 +5004,7 @@ function buildWebSerialDtcResponseOverrides(commandResponses = []) {
   return (Array.isArray(commandResponses) ? commandResponses : []).reduce((overrides, item) => {
     const command = String(item?.command || "").trim().toUpperCase();
     const metadata = dtcCommandMetadata[command];
-    const responseLines = String(item?.response || "")
-      .replace(/\r/g, "\n")
-      .split("\n")
-      .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
-      .filter(Boolean);
-    if (!metadata || !responseLines.includes("NO DATA")) return overrides;
+    if (!metadata || !isWebSerialExpectedEmptyResponse(command, item?.response)) return overrides;
     return {
       ...overrides,
       [metadata.key]: {
@@ -5017,12 +5023,7 @@ function buildWebSerialDtcResponseOverrides(commandResponses = []) {
 
 function buildWebSerialFreezeFrameResponseOverride(commandResponses = []) {
   const response = (Array.isArray(commandResponses) ? commandResponses : []).find((item) => String(item?.command || "").trim().toUpperCase() === "0202")?.response;
-  const responseLines = String(response || "")
-    .replace(/\r/g, "\n")
-    .split("\n")
-    .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
-    .filter(Boolean);
-  if (!responseLines.includes("NO DATA")) return null;
+  if (!isWebSerialExpectedEmptyResponse("0202", response)) return null;
   return {
     source: "web_serial",
     intent: "read_freeze_frame",
@@ -5032,17 +5033,6 @@ function buildWebSerialFreezeFrameResponseOverride(commandResponses = []) {
     wouldTransmit: false,
     vehicleCommandEnabled: false
   };
-}
-
-function isWebSerialExpectedEmptyResponse(command, response) {
-  const normalizedCommand = String(command || "").trim().toUpperCase();
-  if (!["03", "07", "0A", "0202"].includes(normalizedCommand)) return false;
-  const lines = String(response || "")
-    .replace(/\r/g, "\n")
-    .split("\n")
-    .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
-    .filter(Boolean);
-  return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING"));
 }
 
 function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) {
