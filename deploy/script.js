@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.69";
+const APP_VERSION = "3.5.70";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9984,12 +9984,18 @@ function buildDtcDefinitionScopeSummary(definitions) {
         ? modelYearScopes
         : [{ models, yearFrom, yearTo }];
       if (!makers.length || !summaryScopes.length) return [];
+      const productionPeriod = filter.production_period || filter.productionPeriod || null;
+      const productionFrom = String(productionPeriod?.from || productionPeriod?.start || "").trim();
+      const productionTo = String(productionPeriod?.to || productionPeriod?.end || "").trim();
+      const productionRange = productionFrom && productionTo
+        ? `${productionFrom}-${productionTo}`
+        : productionFrom || productionTo;
       const additionalScope = filter.scope_confirmation_required === true || filter.scopeConfirmationRequired === true
         ? " VIN/trim確認必須"
         : "";
       return summaryScopes.map((scope) => {
         const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
-        return `${makers.join("/")} ${scope.models.join("/")} ${years}${additionalScope}`;
+        return `${makers.join("/")} ${scope.models.join("/")} ${years}${productionRange ? ` 生産 ${productionRange}` : ""}${additionalScope}`;
       });
     }))];
   if (!scopes.length) return "";
