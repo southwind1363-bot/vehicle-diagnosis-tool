@@ -16260,6 +16260,11 @@
       ...triggerDtcEntries.map((item) => item.sourceEcu || item.source_ecu || null)
     ].filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
+    const observedSourceEcuNames = [...new Set([
+      ...monitorValues.map((item) => item.sourceEcuName || item.source_ecu_name || null),
+      ...triggerDtcEntries.map((item) => item.sourceEcuName || item.source_ecu_name || null)
+    ].filter(Boolean))];
+    const resolvedSourceEcuName = sourceEcuName || (observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const triggerDtc = triggerDtcEntries.length === 1 ? triggerDtcEntries[0].code : triggerDtcEntries.length > 1 ? null : triggerCodes[0] || null;
     const triggerFrameNumberInput = pickDefined(sourceInput.trigger_frame_number, sourceInput.triggerFrameNumber, sourceInput.frame_number, sourceInput.frameNumber, null);
@@ -16284,8 +16289,8 @@
       source,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
-      sourceEcuName,
-      source_ecu_name: sourceEcuName,
+      sourceEcuName: resolvedSourceEcuName,
+      source_ecu_name: resolvedSourceEcuName,
       capturedAt,
       captured_at: capturedAt,
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
@@ -20511,7 +20516,10 @@
     const freezeFrameScopes = new Set(freezeFrameSnapshots.map((snapshot) => [
       snapshot.triggerDtc || snapshot.trigger_dtc || "",
       snapshot.triggerFrameNumber ?? snapshot.trigger_frame_number ?? "",
-      snapshot.sourceEcu || snapshot.source_ecu || ""
+      snapshot.sourceEcu || snapshot.source_ecu || "",
+      snapshot.sourceEcuName || snapshot.source_ecu_name || "",
+      snapshot.capturedAt || snapshot.captured_at || "",
+      snapshot.protocol || snapshot.obd_protocol || ""
     ].join("::")));
     const canMergeFreezeFrameSnapshots = freezeFrameSnapshots.length > 1 && freezeFrameScopes.size === 1 && [...freezeFrameScopes][0] !== "::::";
     const freezeFrameSnapshot = canMergeFreezeFrameSnapshots
@@ -20520,6 +20528,10 @@
         trigger_dtc: freezeFrameSnapshots[0].triggerDtc || freezeFrameSnapshots[0].trigger_dtc || null,
         trigger_frame_number: freezeFrameSnapshots[0].triggerFrameNumber ?? freezeFrameSnapshots[0].trigger_frame_number ?? null,
         source_ecu: freezeFrameSnapshots[0].sourceEcu || freezeFrameSnapshots[0].source_ecu || null,
+        source_ecu_name: freezeFrameSnapshots[0].sourceEcuName || freezeFrameSnapshots[0].source_ecu_name || null,
+        captured_at: freezeFrameSnapshots[0].capturedAt || freezeFrameSnapshots[0].captured_at || null,
+        protocol: freezeFrameSnapshots[0].protocol || freezeFrameSnapshots[0].obd_protocol || null,
+        trigger_dtc_entries: freezeFrameSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || []),
         values: freezeFrameSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []),
         freeze_frame_readout_status: "reported"
       })
