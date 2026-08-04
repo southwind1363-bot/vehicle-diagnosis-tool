@@ -19217,6 +19217,7 @@
     const ecuInfoRows = [];
     const onboardMonitorRows = [];
     const supportedPids = new Set();
+    const supportedPidEcuRows = new Map();
     const ecuResponseRows = [];
     const vehicleProfileValues = {};
     const readoutInterfaceValues = {};
@@ -19436,6 +19437,20 @@
           .map((item) => String(item).replace(/^0X/i, "").toUpperCase())
           .filter((item) => /^[0-9A-F]{2}$/.test(item));
         pidTokens.forEach((item) => supportedPids.add(item));
+        if (ecu && pidTokens.length) {
+          const scopeKey = `${ecu}::${ecuName || ""}`;
+          const scope = supportedPidEcuRows.get(scopeKey) || {
+            source_ecu: ecu,
+            ...(ecuName ? { source_ecu_name: ecuName } : {}),
+            supported_pids: new Set(),
+            captured_at_values: new Set(),
+            protocol_values: new Set()
+          };
+          pidTokens.forEach((item) => scope.supported_pids.add(item));
+          if (rowCapturedAt) scope.captured_at_values.add(rowCapturedAt);
+          if (rowProtocol) scope.protocol_values.add(rowProtocol);
+          supportedPidEcuRows.set(scopeKey, scope);
+        }
         return;
       }
       if ((isOnboardMonitorRow || isOnboardMonitorSection) && mode06TestId && mode06ComponentId && Number.isFinite(Number(rawValue))) {
@@ -19530,7 +19545,27 @@
       : null;
     const ecuInfoSnapshot = ecuInfoRows.length ? normalizeEcuInfoSnapshot({ source, ...readoutMetadata("ecu_info"), items: ecuInfoRows, ecuInfoReadoutStatus: "reported" }) : null;
     const onboardMonitorSnapshot = onboardMonitorRows.length ? normalizeOnboardMonitorSnapshot({ source, ...readoutMetadata("onboard_monitor"), tests: onboardMonitorRows, onboardMonitorReadoutStatus: "reported" }) : null;
-    const supportedPidMatrix = supportedPids.size ? { ...normalizeBridgeSupportedPidSnapshot({ source, ...readoutMetadata("supported_pid"), supported_pids: [...supportedPids], supportedPidReadoutStatus: "reported" }), source } : null;
+    const supportedPidEcuSnapshots = [...supportedPidEcuRows.values()].map((scope) => {
+      const capturedAtValues = [...scope.captured_at_values];
+      const protocolValues = [...scope.protocol_values];
+      return {
+        source_ecu: scope.source_ecu,
+        ...(scope.source_ecu_name ? { source_ecu_name: scope.source_ecu_name } : {}),
+        supported_pids: [...scope.supported_pids],
+        ...(capturedAtValues.length === 1 ? { captured_at: capturedAtValues[0] } : {}),
+        ...(protocolValues.length === 1 ? { protocol: protocolValues[0] } : {}),
+        supported_pid_readout_status: "reported"
+      };
+    });
+    const supportedPidMatrix = supportedPids.size
+      ? buildSupportedPidMatrix({
+        source,
+        ...readoutMetadata("supported_pid"),
+        supported_pids: [...supportedPids],
+        ...(supportedPidEcuSnapshots.length ? { supported_pid_ecu_snapshots: supportedPidEcuSnapshots } : {}),
+        supported_pid_readout_status: "reported"
+      })
+      : null;
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
     if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean) && !Object.values(readoutInterfaceValues).some(Boolean)) return null;
     const normalizedVehicleProfile = normalizeVehicleApplicabilitySnapshot(vehicleProfileValues);
@@ -20495,14 +20530,17 @@
     const supportedPidSnapshots = tableSessions
       .map((session) => session.supportedPidMatrix)
       .filter((snapshot) => snapshot && (snapshot.supportedPidReadoutStatus === "reported" || Number(snapshot.supportedCount) > 0));
+    const supportedPidCapturedAtValues = [...new Set(supportedPidSnapshots.map((snapshot) => snapshot.capturedAt || snapshot.captured_at || null).filter(Boolean))];
+    const supportedPidProtocolValues = [...new Set(supportedPidSnapshots.map((snapshot) => snapshot.protocol || snapshot.obd_protocol || null).filter(Boolean))];
     const supportedPidMatrix = supportedPidSnapshots.length > 1
-      ? {
-        ...normalizeBridgeSupportedPidSnapshot({
+      ? buildSupportedPidMatrix({
+          source: "scanner_csv_import",
+          ...(supportedPidCapturedAtValues.length === 1 ? { captured_at: supportedPidCapturedAtValues[0] } : {}),
+          ...(supportedPidProtocolValues.length === 1 ? { protocol: supportedPidProtocolValues[0] } : {}),
           supported_pids: supportedPidSnapshots.flatMap((snapshot) => snapshot.supportedPids || snapshot.supported_pids || []),
+          supported_pid_ecu_snapshots: supportedPidSnapshots.flatMap((snapshot) => snapshot.supportedPidEcuSnapshots || snapshot.supported_pid_ecu_snapshots || []),
           supported_pid_readout_status: "reported"
-        }),
-        source: "scanner_csv_import"
-      }
+        })
       : supportedPidSnapshots[0];
     const ecuResponseSummaries = tableSessions
       .map((session) => session.ecuResponseSummary)
