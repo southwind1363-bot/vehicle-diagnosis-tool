@@ -16235,7 +16235,7 @@
             : [];
     const normalizeTriggerEntry = (row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return null;
-      const code = extractDtcCodes([row.code, row.dtc, row.trigger_dtc, row.triggerDtc, row.trigger_code, row.triggerCode].filter(Boolean).join(" "))[0] || null;
+      const code = extractDtcCodes([row.code, row.dtc, row.trigger_dtc, row.triggerDtc, row.trigger_code, row.triggerCode, row.associated_dtc, row.associatedDtc].filter(Boolean).join(" "))[0] || null;
       if (!code) return null;
       const frameInput = pickDefined(row.frame_number, row.frameNumber, row.trigger_frame_number, row.triggerFrameNumber, null);
       const frame = Number(frameInput);
@@ -16254,28 +16254,40 @@
         source_ecu_name: ecuName
       };
     };
-    const triggerDtcEntries = [...new Map(triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).map((item) => [`${item.code}::${item.frameNumber ?? ""}::${item.sourceEcu || ""}`, item])).values()];
+    const explicitTriggerDtcEntries = [...new Map(triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).map((item) => [`${item.code}::${item.frameNumber ?? ""}::${item.sourceEcu || ""}`, item])).values()];
     const observedSourceEcus = [...new Set([
       ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null),
-      ...triggerDtcEntries.map((item) => item.sourceEcu || item.source_ecu || null)
+      ...explicitTriggerDtcEntries.map((item) => item.sourceEcu || item.source_ecu || null)
     ].filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set([
       ...monitorValues.map((item) => item.sourceEcuName || item.source_ecu_name || null),
-      ...triggerDtcEntries.map((item) => item.sourceEcuName || item.source_ecu_name || null)
+      ...explicitTriggerDtcEntries.map((item) => item.sourceEcuName || item.source_ecu_name || null)
     ].filter(Boolean))];
     const resolvedSourceEcuName = sourceEcuName || (observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
-    const triggerDtc = triggerDtcEntries.length === 1 ? triggerDtcEntries[0].code : triggerDtcEntries.length > 1 ? null : triggerCodes[0] || null;
     const triggerFrameNumberInput = pickDefined(sourceInput.trigger_frame_number, sourceInput.triggerFrameNumber, sourceInput.frame_number, sourceInput.frameNumber, null);
     const parsedTriggerFrameNumber = Number(triggerFrameNumberInput);
+    const inferredTriggerFrameNumber = triggerFrameNumberInput !== null && triggerFrameNumberInput !== "" && Number.isInteger(parsedTriggerFrameNumber) && parsedTriggerFrameNumber >= 0 && parsedTriggerFrameNumber <= 255
+      ? parsedTriggerFrameNumber
+      : null;
+    const triggerDtcEntries = explicitTriggerDtcEntries.length
+      ? explicitTriggerDtcEntries
+      : triggerCodes.map((code) => ({
+        code,
+        frameNumber: inferredTriggerFrameNumber,
+        frame_number: inferredTriggerFrameNumber,
+        sourceEcu: resolvedSourceEcu,
+        source_ecu: resolvedSourceEcu,
+        sourceEcuName: resolvedSourceEcuName,
+        source_ecu_name: resolvedSourceEcuName
+      }));
+    const triggerDtc = triggerDtcEntries.length === 1 ? triggerDtcEntries[0].code : null;
     const triggerFrameNumber = triggerDtcEntries.length === 1
       ? triggerDtcEntries[0].frameNumber
       : triggerDtcEntries.length > 1
         ? null
-        : triggerFrameNumberInput !== null && triggerFrameNumberInput !== "" && Number.isInteger(parsedTriggerFrameNumber) && parsedTriggerFrameNumber >= 0 && parsedTriggerFrameNumber <= 255
-          ? parsedTriggerFrameNumber
-          : null;
+        : inferredTriggerFrameNumber;
     const monitorValueSummary = buildMonitorValueSummary(monitorValues);
     const capturedItemCount = monitorValues.length;
     const expectedItemCount = expectedItems.length;
