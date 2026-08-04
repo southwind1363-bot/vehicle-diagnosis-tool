@@ -1625,5 +1625,27 @@
     "last_verified_date": "2026-08-04",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-c1a67-04-mazda3-2019-2020-front-radar",
+    "code": "C1A67",
+    "subcode": "04",
+    "title": "Front Radar Sensor Internal Malfunction",
+    "system": "Chassis / front radar sensor (source-specific)",
+    "applicability_note": "Mazda Service Bulletin 15-002/20 identifies C1A67:04 only for 2019-2020 Japan-built Mazda3 vehicles with VIN beginning JM1, Smart Brake Support, a front-radar-system malfunction message, and the DTC stored. Confirm VIN, build origin, model year, Smart Brake Support equipment, reporting front radar ECU, warning message, and Mazda service information before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Mazda"], "models": ["Mazda3"], "year_from": 2019, "year_to": 2020, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all DTCs, warning messages, reporting ECU, front-radar status, and concurrent ADAS/network DTCs before inspection.", "Do not clear DTCs, adjust, aim, calibrate, disconnect, replace, or program the front radar sensor, or start active tests from this tool; confirm VIN, Japan build origin, model year, Smart Brake Support equipment, reporting ECU, warning message, and bulletin applicability.", "Use Mazda service information and qualified ADAS diagnostic, repair, recovery, and calibration procedures."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to a Mazda3 outside the documented model year, build origin, VIN prefix, equipment level, or reporting ECU.", "Do not infer a front radar sensor, wiring, mounting, alignment, or network failure from C1A67:04 alone.", "Do not treat this definition as authorization to calibrate, aim, program, replace, or clear ADAS components."],
+    "required_tools": ["Compatible scan tool", "Mazda service information", "Qualified ADAS diagnostic equipment", "Manufacturer-specified radar calibration equipment when required"],
+    "safety_notes": ["Front radar diagnosis, replacement, aiming, and calibration can affect collision-warning and braking-assist behavior. Do not perform them without the manufacturer procedure, trained personnel, correct targets and equipment, secure vehicle conditions, and a verified recovery plan."],
+    "confidence": "Mazda source-specific DTC and subcode definition; VIN, build origin, model year, Smart Brake Support equipment, reporting ECU, warning message, and manufacturer procedure confirmation required.",
+    "source": "Mazda Service Bulletin 15-002/20 / NHTSA MC-10177851",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2020/MC-10177851-0001.pdf",
+    "source_date": "2020-07-15",
+    "last_verified_date": "2026-08-04",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]

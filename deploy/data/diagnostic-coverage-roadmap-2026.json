@@ -70,7 +70,7 @@
     "progress_percent": 16,
     "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
     "priority": 4,
-    "current_count_note": "C系親DTC 36件 / 出典定義40件・一意サブコード定義8件 (NHTSA公開資料、Honda 2012-14/2017 CR-V・2022-23 Civic、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highlander、Jeep 2019-20 Renegade、Audi 2023 SRS基準の出典定義39件から2024 SRSを追加、出典限定)",
+    "current_count_note": "C系親DTC 37件 / 出典定義41件・一意サブコード定義9件 (NHTSA公開資料、Honda 2012-14/2017 CR-V・2022-23 Civic、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highlander、Jeep 2019-20 Renegade、Audi 2023 SRS、Mazda 2019-20 Mazda3前方レーダーの出典定義、出典限定)",
     "next_actions": [
       "C系コードを制動、操舵、姿勢制御、車輪速、ヨーレート、電源系に分類する",
       "ライブデータ候補と点検条件を車種別確認前提で持たせる",
