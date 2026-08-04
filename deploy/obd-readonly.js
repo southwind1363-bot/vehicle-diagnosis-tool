@@ -5583,6 +5583,10 @@
       source.vehicle_profile_snapshot,
       source.vehicleInfo,
       source.vehicle_info,
+      source.vehicleInformation,
+      source.vehicle_information,
+      source.vehicleDetails,
+      source.vehicle_details,
       source.vehicleContext,
       source.vehicle_context,
       source.selectedVehicle,
@@ -17360,7 +17364,7 @@
   function isSensitiveIdentifierKey(key, { vehicleProfile = false } = {}) {
     const normalized = String(key || "");
     if (/(?:^vin$|^vin_|_vin$|vinNumber|vehicle_?identification|vehicleIdentification|車台番号)/i.test(normalized)) return true;
-    return vehicleProfile && /(?:^chassis$|^chassis_|_chassis$|chassisNumber|vehicle_?serial|vehicleSerial)/i.test(normalized);
+    return vehicleProfile && /(?:^chassis$|^chassis(?:_number|_serial|_id|Number|Serial|Id)$|chassisNumber|chassisSerial|chassisId|vehicle_?serial|vehicleSerial)/i.test(normalized);
   }
 
   function hasSensitiveIdentifierLabel(value) {
