@@ -4018,8 +4018,8 @@
       freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       source_ecu_name: sourceEcuName,
-      trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null,
-      trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || [],
+      trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.associated_dtc || data.associatedDtc || data.dtc || null,
+      trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || data.associated_dtc_entries || data.associatedDtcEntries || [],
       trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
       values: freezeFrameValues
       }),
@@ -16133,7 +16133,9 @@
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
-        freeze_frame_readout_status: input.data.freezeFrameReadoutStatus || input.data.freeze_frame_readout_status || input.freezeFrameReadoutStatus || input.freeze_frame_readout_status || null
+        freeze_frame_readout_status: input.data.freezeFrameReadoutStatus || input.data.freeze_frame_readout_status || input.freezeFrameReadoutStatus || input.freeze_frame_readout_status || null,
+        associated_dtc: input.data.associated_dtc || input.data.associatedDtc || input.associated_dtc || input.associatedDtc || null,
+        associated_dtc_entries: input.data.associated_dtc_entries || input.data.associatedDtcEntries || input.associated_dtc_entries || input.associatedDtcEntries || []
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
@@ -16207,6 +16209,8 @@
       sourceInput.trigger_code,
       sourceInput.freeze_dtc,
       sourceInput.freezeDtc,
+      sourceInput.associated_dtc,
+      sourceInput.associatedDtc,
       sourceInput.dtc,
       sourceInput.dtcCode,
       sourceInput.dtc_code
@@ -16218,8 +16222,12 @@
         ? sourceInput.trigger_dtc_entries
         : Array.isArray(sourceInput.freezeFrameTriggerEntries)
           ? sourceInput.freezeFrameTriggerEntries
-          : Array.isArray(sourceInput.freeze_frame_trigger_entries)
-            ? sourceInput.freeze_frame_trigger_entries
+        : Array.isArray(sourceInput.freeze_frame_trigger_entries)
+          ? sourceInput.freeze_frame_trigger_entries
+          : Array.isArray(sourceInput.associatedDtcEntries)
+            ? sourceInput.associatedDtcEntries
+            : Array.isArray(sourceInput.associated_dtc_entries)
+              ? sourceInput.associated_dtc_entries
             : [];
     const normalizeTriggerEntry = (row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return null;
@@ -18683,7 +18691,7 @@
     const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : hasBridgeLivePidResponse ? importSession : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
     const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data");
-    const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode");
+    const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "associated_dtc", "associatedDtc");
     const readinessInput = hasBridgeReadinessResponse ? importSession : pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "mode09", "mode_09");
     const supportedPidInput = hasBridgeSupportedPidResponse ? importSession : pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
@@ -18838,7 +18846,7 @@
     const freezeFrameSnapshotInput = hasValue(freezeFrameInput)
       ? (Array.isArray(freezeFrameInput) ? { monitor_values: freezeFrameInput, source: scannerJsonSource } : toSnapshotInput(freezeFrameInput, "monitor_values"))
       : null;
-    const hasEmbeddedFreezeFrameTrigger = Boolean(freezeFrameSnapshotInput?.trigger_dtc || freezeFrameSnapshotInput?.triggerDtc || freezeFrameSnapshotInput?.trigger_code || freezeFrameSnapshotInput?.triggerCode || freezeFrameSnapshotInput?.freeze_dtc || freezeFrameSnapshotInput?.freezeDtc || freezeFrameSnapshotInput?.dtc || freezeFrameSnapshotInput?.dtcCode || freezeFrameSnapshotInput?.dtc_code);
+    const hasEmbeddedFreezeFrameTrigger = Boolean(freezeFrameSnapshotInput?.trigger_dtc || freezeFrameSnapshotInput?.triggerDtc || freezeFrameSnapshotInput?.trigger_code || freezeFrameSnapshotInput?.triggerCode || freezeFrameSnapshotInput?.freeze_dtc || freezeFrameSnapshotInput?.freezeDtc || freezeFrameSnapshotInput?.associated_dtc || freezeFrameSnapshotInput?.associatedDtc || freezeFrameSnapshotInput?.dtc || freezeFrameSnapshotInput?.dtcCode || freezeFrameSnapshotInput?.dtc_code);
     const normalizedFreezeFrameInput = freezeFrameSnapshotInput && freezeFrameTriggerDtc && !hasEmbeddedFreezeFrameTrigger
       ? { ...freezeFrameSnapshotInput, trigger_dtc: freezeFrameTriggerDtc }
       : freezeFrameSnapshotInput;

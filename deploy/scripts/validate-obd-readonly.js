@@ -547,7 +547,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   if (bridgeFreezeFrameSnapshotFunctionSource) {
     const functionBody = bridgeFreezeFrameSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeFreezeFrameSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeFreezeFrameSnapshot should reuse the core freeze-frame normalizer");
-    check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.dtc || null') && functionBody.includes('trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
+    check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.associated_dtc || data.associatedDtc || data.dtc || null') && functionBody.includes('trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
     check(functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame value aliases");
     check(functionBody.includes('const errorCodes = readBridgeResponseErrorCodes(response);') && functionBody.includes('errorCodes.length === 0') && functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety)') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety('), "normalizeBridgeFreezeFrameSnapshot should preserve bridge failure status");
   }
@@ -7189,6 +7189,17 @@ const bridgeAliasFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
 });
 check(bridgeAliasFreezeFrameSnapshot.triggerDtc === "P0300", "Bridge freeze frame trigger alias was not normalized");
 check(bridgeAliasFreezeFrameSnapshot.monitorValues.length === 1, "Bridge freeze frame value alias was not normalized");
+const bridgeAssociatedFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    associatedDtcEntries: [{ code: "P0420", frameNumber: 1, sourceEcu: "7E8" }],
+    monitor_values: [{ pid: "05", value: 85, unit: "C" }]
+  }
+});
+const bridgeAssociatedFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freeze_frame_snapshot: bridgeAssociatedFreezeFrameSnapshot }))));
+check(bridgeAssociatedFreezeFrameSnapshot.triggerDtc === "P0420" && bridgeAssociatedFreezeFrameSnapshot.triggerDtcEntries?.[0]?.sourceEcu === "7E8" && bridgeAssociatedFreezeFrameRoundTrip?.freezeFrameSnapshot?.triggerDtc === "P0420" && bridgeAssociatedFreezeFrameRoundTrip?.vehicleCommandEnabled === false, "Bridge associated-DTC freeze-frame aliases were not retained through read-only export");
 const bridgeFreezeFrameRowAliases = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
@@ -18128,6 +18139,17 @@ const scannerJsonEmbeddedFreezeFrameTriggerSession = obd.buildDiagnosticScanSess
   }
 }));
 check(scannerJsonEmbeddedFreezeFrameTriggerSession?.freezeFrameSnapshot?.triggerDtc === "P0300" && scannerJsonEmbeddedFreezeFrameTriggerSession?.vehicleCommandEnabled === false, "Structured JSON import overwrote an embedded freeze-frame trigger DTC");
+const scannerJsonAssociatedFreezeFrameTriggerSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: {
+    freeze_frame_data: { associated_dtc: "P0420", monitor_values: [{ pid: "05", value: 85, unit: "C" }] },
+    freeze_frame_dtc: "P0171"
+  }
+}));
+const wrappedAssociatedFreezeFrameSnapshot = obd.normalizeFreezeFrameSnapshot({
+  associatedDtc: "P0300",
+  data: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }
+});
+check(scannerJsonAssociatedFreezeFrameTriggerSession?.freezeFrameSnapshot?.triggerDtc === "P0420" && scannerJsonAssociatedFreezeFrameTriggerSession?.vehicleCommandEnabled === false && wrappedAssociatedFreezeFrameSnapshot?.triggerDtc === "P0300", "Associated-DTC freeze-frame aliases did not preserve the embedded trigger safely");
 const fallbackPidContext = { window: { isSecureContext: true }, navigator: { serial: {} } };
 vm.createContext(fallbackPidContext);
 vm.runInContext(source, fallbackPidContext);
