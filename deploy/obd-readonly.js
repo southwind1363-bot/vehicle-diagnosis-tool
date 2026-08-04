@@ -18917,7 +18917,7 @@
     const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "ecuInfoRows", "ecu_info_rows", "mode09", "mode_09", "mode09Items", "mode09_items", "mode_09_items", "mode09Values", "mode09_values", "mode_09_values");
     const supportedPidInput = hasBridgeSupportedPidResponse ? importSession : pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list", "pids", "pid_list", "pidList", "supportedPidRows", "supported_pid_rows");
     const onboardMonitorInput = hasBridgeOnboardMonitorResponse ? importSession : pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
-    const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
+    const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecuResponseRows", "ecu_response_rows", "ecus", "modules", "controllers");
     const connectionStatusInput = pick("connectionStatus", "connection_status", "connectionStatusResponse", "connection_status_response");
     const vciDevicesInput = pick("vciDevices", "vci_devices", "vciList", "vci_list", "listVciResponse", "list_vci_response");
     const adapterIdentityInput = pick("adapterIdentity", "adapter_identity", "adapterIdentityResponse", "adapter_identity_response");

@@ -18407,6 +18407,14 @@ const reimportedScannerJsonReadinessValueAliasSession = obd.buildDiagnosticScanS
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonReadinessValueAliasSessions[0])
 });
 check(reimportedScannerJsonReadinessValueAliasSession?.readinessSnapshot?.monitorCount === 1 && reimportedScannerJsonReadinessValueAliasSession.readinessSnapshot?.incompleteCount === 1 && reimportedScannerJsonReadinessValueAliasSession.vehicleCommandEnabled === false, "Readiness value JSON aliases were not preserved through read-only export and reimport");
+const scannerJsonEcuResponseAliasSessions = ["ecu_response_rows", "ecuResponseRows", "modules", "controllers"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { [key]: [{ address: "7E8", name: "Engine", response_status: "responded", response_time_ms: 24 }] }
+})));
+check(scannerJsonEcuResponseAliasSessions.every((session) => session?.ecuResponseSummary?.ecuCount === 1 && session.ecuResponseSummary?.ecus?.[0]?.address === "7E8" && session.ecuResponseSummary?.ecus?.[0]?.status === "responded" && session.ecuResponseSummary?.ecus?.[0]?.responseTimeMs === 24 && session.importClassification?.bucketCounts?.ecuResponseRows === 1 && session.vehicleCommandEnabled === false && session.retainedRawText === false), "ECU response JSON aliases were not retained as safe read-only evidence");
+const reimportedScannerJsonEcuResponseAliasSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonEcuResponseAliasSessions[0])
+});
+check(reimportedScannerJsonEcuResponseAliasSession?.ecuResponseSummary?.ecus?.[0]?.address === "7E8" && reimportedScannerJsonEcuResponseAliasSession.ecuResponseSummary?.ecus?.[0]?.responseTimeMs === 24 && reimportedScannerJsonEcuResponseAliasSession.vehicleCommandEnabled === false, "ECU response JSON aliases were not preserved through read-only export and reimport");
 const reimportedScannerJsonReadinessAliasSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonReadinessAliasSession)
 });
