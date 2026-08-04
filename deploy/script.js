@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.87";
+const APP_VERSION = "3.5.88";
 const APP_LAST_UPDATED = "2026-08-04";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9932,6 +9932,15 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   if (!filter || typeof filter !== "object") return { status: "not_limited" };
   const normalize = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
   const normalizeModel = (value) => normalize(value).replace(/[\s_-]+/g, "");
+  const normalizeProductionDate = (value) => {
+    const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const utc = new Date(Date.UTC(year, month - 1, day));
+    return utc.getUTCFullYear() === year && utc.getUTCMonth() === month - 1 && utc.getUTCDate() === day ? `${match[1]}-${match[2]}-${match[3]}` : null;
+  };
   const makers = (Array.isArray(filter.makers) ? filter.makers : []).map(normalize).filter(Boolean);
   const models = (Array.isArray(filter.models) ? filter.models : []).map(normalizeModel).filter(Boolean);
   const yearFrom = Number(filter.year_from ?? filter.yearFrom);
@@ -9955,6 +9964,13 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   if (!maker || !model || !Number.isInteger(year)) return { status: "unverified", reason: "vehicle_profile_incomplete" };
   const matched = makers.includes(maker) && scopes.some((scope) => scope.models.includes(model) && year >= scope.yearFrom && year <= scope.yearTo);
   if (!matched) return { status: "mismatch" };
+  const productionPeriod = filter.production_period || filter.productionPeriod || null;
+  const productionDate = normalizeProductionDate(vehicleProfile?.productionDate ?? vehicleProfile?.production_date ?? vehicleProfile?.buildDate ?? vehicleProfile?.build_date ?? vehicleProfile?.manufactureDate ?? vehicleProfile?.manufacture_date);
+  const productionFrom = normalizeProductionDate(productionPeriod?.from ?? productionPeriod?.start);
+  const productionTo = normalizeProductionDate(productionPeriod?.to ?? productionPeriod?.end);
+  if (productionDate && ((productionFrom && productionDate < productionFrom) || (productionTo && productionDate > productionTo))) {
+    return { status: "mismatch", reason: "production_date_out_of_scope" };
+  }
   if (filter.scope_confirmation_required === true || filter.scopeConfirmationRequired === true) {
     return { status: "unverified", reason: "additional_scope_confirmation_required" };
   }
