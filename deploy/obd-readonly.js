@@ -13795,7 +13795,7 @@
       if (isV2Input) completedCommandCount = Math.min(completedCommandCount, positiveResponseCount);
       const hasIncompleteEvidence = noDataCount > expectedEmptyCommandCount || negativeResponseCount > 0 || pendingNegativeResponseCount > 0 || emptyResponseCount > 0 || unrecognizedResponseCount > 0;
       const hasFailureEvidence = unableToConnectCount > 0 || adapterErrorCount > 0 || transportErrorCount > 0;
-      const hasCompleteEvidence = requestedCommandCount > 0 && completedCommandCount + expectedEmptyCommandCount === requestedCommandCount && positiveResponseCount + expectedEmptyCommandCount >= requestedCommandCount;
+      const hasCompleteEvidence = requestedCommandCount > 0 && completedCommandCount + expectedEmptyCommandCount === requestedCommandCount && positiveResponseCount + expectedEmptyCommandCount === requestedCommandCount;
       if (isV2Input && status === "completed" && (!hasCompleteEvidence || hasIncompleteEvidence || hasFailureEvidence)) {
         status = hasFailureEvidence ? "failed" : (positiveResponseCount > 0 ? "partial" : "incomplete");
       }
@@ -13871,7 +13871,7 @@
       const hasFailureEvidence = readCount("unableToConnectCount", "unable_to_connect_count") > 0
         || readCount("adapterErrorCount", "adapter_error_count") > 0
         || readCount("transportErrorCount", "transport_error_count") > 0;
-      if (positiveResponseCount + expectedEmptyCommandCount < completedCount || hasIncompleteEvidence || hasFailureEvidence) {
+      if (positiveResponseCount + expectedEmptyCommandCount !== completedCount || hasIncompleteEvidence || hasFailureEvidence) {
         const downgradedCount = completedCount;
         completedCount = 0;
         if (hasFailureEvidence) failedCount = Math.max(failedCount, downgradedCount);
