@@ -18915,7 +18915,7 @@
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "associated_dtc", "associatedDtc");
     const readinessInput = hasBridgeReadinessResponse ? importSession : pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness");
     const ecuInfoInput = hasBridgeEcuInfoResponse ? normalizeBridgeEcuInfoSnapshot(importSession) : pick("ecuInfoSnapshot", "ecu_info_snapshot", "ecuInfo", "ecu_info", "ecuInfoItems", "ecu_info_items", "ecuInfoRows", "ecu_info_rows", "mode09", "mode_09", "mode09Items", "mode09_items", "mode_09_items", "mode09Values", "mode09_values", "mode_09_values");
-    const supportedPidInput = hasBridgeSupportedPidResponse ? importSession : pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list");
+    const supportedPidInput = hasBridgeSupportedPidResponse ? importSession : pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list", "pids", "pid_list", "pidList", "supportedPidRows", "supported_pid_rows");
     const onboardMonitorInput = hasBridgeOnboardMonitorResponse ? importSession : pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecus");
     const connectionStatusInput = pick("connectionStatus", "connection_status", "connectionStatusResponse", "connection_status_response");

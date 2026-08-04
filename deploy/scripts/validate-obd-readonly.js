@@ -18282,6 +18282,13 @@ const scannerJsonMode09ItemsAliasSession = obd.buildDiagnosticScanSessionFromJso
   data: { mode09Items: [{ item_id: "calibration_id", decoded_value: "CAL-JSON-01", source_ecu: "7E8" }, { item_id: "vin", decoded_value: "JTD00000000000000", source_ecu: "7E8" }] }
 }));
 check(scannerJsonMode09ItemsAliasSession?.ecuInfoSnapshot?.itemCount === 2 && scannerJsonMode09ItemsAliasSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "CAL-JSON-01" && item.sourceEcu === "7E8") && scannerJsonMode09ItemsAliasSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "vin" && item.value === null) && scannerJsonMode09ItemsAliasSession?.hadSensitiveIdentifier === true && scannerJsonMode09ItemsAliasSession?.vehicleCommandEnabled === false && scannerJsonMode09ItemsAliasSession?.retainedRawText === false && !JSON.stringify(scannerJsonMode09ItemsAliasSession).includes("JTD00000000000000"), "Mode 09 item JSON aliases were not retained as sanitized read-only ECU information");
+const scannerJsonSupportedPidListAliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { pid_list: "01; 05; 0C" }
+}));
+const scannerJsonSupportedPidRowsAliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  supported_pid_rows: [{ pid: "05" }, { pid_code: "0C" }]
+}));
+check(scannerJsonSupportedPidListAliasSession?.supportedPidMatrix?.supportedPids?.join(",") === "01,05,0C" && scannerJsonSupportedPidListAliasSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && scannerJsonSupportedPidRowsAliasSession?.supportedPidMatrix?.supportedPids?.join(",") === "05,0C" && scannerJsonSupportedPidRowsAliasSession?.vehicleCommandEnabled === false && scannerJsonSupportedPidListAliasSession?.vehicleCommandEnabled === false, "Supported-PID JSON aliases were not retained as safe supported-only evidence");
 const reimportedScannerJsonStandaloneVehicleProfileSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonStandaloneVehicleProfileSession)
 });
