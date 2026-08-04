@@ -4067,6 +4067,8 @@
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.associated_dtc || data.associatedDtc || data.dtc || null,
       trigger_dtc_format: data.trigger_dtc_format || data.triggerDtcFormat || data.trigger_code_format || data.triggerCodeFormat || data.freeze_dtc_format || data.freezeDtcFormat || data.associated_dtc_format || data.associatedDtcFormat || data.dtc_format || data.dtcFormat || data.code_format || data.codeFormat || null,
       trigger_dtc_manufacturer_specific: data.trigger_dtc_manufacturer_specific === true || data.triggerDtcManufacturerSpecific === true || data.trigger_code_manufacturer_specific === true || data.triggerCodeManufacturerSpecific === true || data.associated_dtc_manufacturer_specific === true || data.associatedDtcManufacturerSpecific === true || data.manufacturer_specific === true || data.manufacturerSpecific === true,
+      trigger_dtc_reported_description: data.trigger_dtc_reported_description || data.triggerDtcReportedDescription || data.trigger_dtc_description || data.triggerDtcDescription || data.associated_dtc_reported_description || data.associatedDtcReportedDescription || null,
+      trigger_dtc_reported_status: data.trigger_dtc_reported_status || data.triggerDtcReportedStatus || data.associated_dtc_reported_status || data.associatedDtcReportedStatus || null,
       trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || data.associated_dtc_entries || data.associatedDtcEntries || [],
       trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
       values: freezeFrameValues
@@ -16312,6 +16314,22 @@
     const triggerCodeReferences = manufacturerTriggerCodeReference
       ? [manufacturerTriggerCodeReference]
       : extractDtcReferences(triggerCodeValues.join(" "));
+    const triggerDtcReportedDescription = normalizeDtcReportedDescription(pickDefined(
+      sourceInput.trigger_dtc_reported_description,
+      sourceInput.triggerDtcReportedDescription,
+      sourceInput.trigger_dtc_description,
+      sourceInput.triggerDtcDescription,
+      sourceInput.associated_dtc_reported_description,
+      sourceInput.associatedDtcReportedDescription,
+      null
+    ));
+    const triggerDtcReportedStatus = normalizeDtcReportedStatus(pickDefined(
+      sourceInput.trigger_dtc_reported_status,
+      sourceInput.triggerDtcReportedStatus,
+      sourceInput.associated_dtc_reported_status,
+      sourceInput.associatedDtcReportedStatus,
+      null
+    ));
 
     const triggerEntryRows = Array.isArray(sourceInput.triggerDtcEntries)
       ? sourceInput.triggerDtcEntries
@@ -16337,6 +16355,8 @@
       if (!codeReference) return null;
       const code = codeReference.code;
       const subcode = manufacturerCodeReference ? null : readDtcSubcodeAlias(row, codeReference.subcode);
+      const reportedDescription = normalizeDtcReportedDescription(row.reported_description || row.reportedDescription || row.description || row.failure_description || row.failureDescription || null);
+      const reportedStatus = normalizeDtcReportedStatus(row.reported_status || row.reportedStatus || null);
       const frameInput = pickDefined(row.frame_number, row.frameNumber, row.trigger_frame_number, row.triggerFrameNumber, null);
       const frame = Number(frameInput);
       const frameNumber = frameInput !== null && frameInput !== "" && Number.isInteger(frame) && frame >= 0 && frame <= 255 ? frame : null;
@@ -16353,6 +16373,8 @@
           manufacturerSpecific: true,
           manufacturer_specific: true
         } : {}),
+        ...(reportedDescription ? { reportedDescription, reported_description: reportedDescription } : {}),
+        ...(reportedStatus ? { reportedStatus, reported_status: reportedStatus } : {}),
         frameNumber,
         frame_number: frameNumber,
         sourceEcu: ecu,
@@ -16388,6 +16410,8 @@
           manufacturerSpecific: true,
           manufacturer_specific: true
         } : {}),
+        ...(triggerDtcReportedDescription ? { reportedDescription: triggerDtcReportedDescription, reported_description: triggerDtcReportedDescription } : {}),
+        ...(triggerDtcReportedStatus ? { reportedStatus: triggerDtcReportedStatus, reported_status: triggerDtcReportedStatus } : {}),
         frameNumber: inferredTriggerFrameNumber,
         frame_number: inferredTriggerFrameNumber,
         sourceEcu: resolvedSourceEcu,
@@ -19502,6 +19526,8 @@
           code: codeReference.code,
           subcode: manufacturerCodeReference ? null : dtcSubcode || codeReference.subcode || null,
           ...(manufacturerCodeReference ? { code_format: "manufacturer_specific", manufacturer_specific: true } : {}),
+          ...(reportedDtcDescription ? { reported_description: reportedDtcDescription } : {}),
+          ...(reportedDtcStatus ? { reported_status: reportedDtcStatus } : {}),
           ...(frameNumber === null ? {} : { frame_number: frameNumber }),
           ...(ecu ? { source_ecu: ecu } : {}),
           ...(ecuName ? { source_ecu_name: ecuName } : {})
