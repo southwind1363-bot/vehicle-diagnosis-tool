@@ -16919,6 +16919,8 @@
       || redactedItems.length > 0;
     const observedSourceEcus = [...new Set(items.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
+    const observedSourceEcuNames = [...new Set(items.map((item) => item.sourceEcuName || item.source_ecu_name || null).filter(Boolean))];
+    const resolvedSourceEcuName = sourceEcuName || (observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
     const expectedItems = ecuInfoItemCatalog.map((item) => ({
       id: item.id,
       label: item.label,
@@ -16971,8 +16973,8 @@
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
-      sourceEcuName,
-      source_ecu_name: sourceEcuName,
+      sourceEcuName: resolvedSourceEcuName,
+      source_ecu_name: resolvedSourceEcuName,
       itemCount: items.length,
       item_count: items.length,
       expectedItemCount: expectedItems.length,
@@ -19451,7 +19453,7 @@
       }
       if ((isEcuInfoRow || isEcuInfoSection) && ecuInfoId && rawValue) {
         recordReadoutMetadata("ecu_info", rowCapturedAt, rowProtocol);
-        ecuInfoRows.push({ id: ecuInfoId, value: rawValue, source_ecu: ecu || null });
+        ecuInfoRows.push({ id: ecuInfoId, value: rawValue, source_ecu: ecu || null, source_ecu_name: ecuName || null });
         return;
       }
       if (!rawValue || sensitiveLabel(label)) return;
@@ -20511,9 +20513,13 @@
     const ecuInfoSnapshots = tableSessions
       .map((session) => session.ecuInfoSnapshot)
       .filter((snapshot) => snapshot && (snapshot.ecuInfoReadoutStatus === "reported" || Number(snapshot.itemCount) > 0));
+    const ecuInfoCapturedAtValues = [...new Set(ecuInfoSnapshots.map((snapshot) => snapshot.capturedAt || snapshot.captured_at || null).filter(Boolean))];
+    const ecuInfoProtocolValues = [...new Set(ecuInfoSnapshots.map((snapshot) => snapshot.protocol || snapshot.obd_protocol || null).filter(Boolean))];
     const ecuInfoSnapshot = ecuInfoSnapshots.length > 1
       ? normalizeEcuInfoSnapshot({
         source: "scanner_csv_import",
+        ...(ecuInfoCapturedAtValues.length === 1 ? { captured_at: ecuInfoCapturedAtValues[0] } : {}),
+        ...(ecuInfoProtocolValues.length === 1 ? { protocol: ecuInfoProtocolValues[0] } : {}),
         items: ecuInfoSnapshots.flatMap((snapshot) => snapshot.items || [])
       })
       : ecuInfoSnapshots[0];
