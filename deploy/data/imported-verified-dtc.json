@@ -1865,5 +1865,27 @@
     "last_verified_date": "2026-08-04",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-u3000-54-mazda-mx5-2016-2024-bsm",
+    "code": "U3000",
+    "subcode": "54",
+    "title": "BSM control-module configuration error after right-side module replacement",
+    "system": "Network / blind spot monitoring control module (source-specific)",
+    "applicability_note": "Mazda Bulletin 09-041/22 identifies U3000:54 only for 2016-2024 MX-5 vehicles when a right-side BSM control module was replaced alone and automatic configuration or BSM radar aiming cannot complete. Confirm VIN, market, model year, BSM equipment, replacement history, reporting BSM module, stored/current status, and Mazda service information before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Mazda"], "models": ["MX-5"], "year_from": 2016, "year_to": 2024, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all DTCs, reporting BSM module details, warning indicators, replacement history, configuration/aiming status, and vehicle applicability evidence before any service.", "Do not clear DTCs, run automatic configuration, start BSM radar aiming, command active tests, replace modules, or program modules from this tool; confirm VIN, market, BSM equipment, right-module replacement history, reporting ECU, and Bulletin 09-041/22 applicability.", "Use Mazda service information, manufacturer-specified diagnostic equipment, qualified ADAS repair procedures, and documented calibration and recovery steps."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition without the documented right-side BSM module replacement context.", "Do not infer a BSM module, radar, wiring, configuration, aiming, or network fault from U3000:54 alone.", "Do not treat this definition as authorization to clear DTCs, program modules, run configuration, or perform radar aiming."],
+    "required_tools": ["Compatible scan tool", "Mazda service information", "Manufacturer-specified diagnostic equipment"],
+    "safety_notes": ["BSM configuration and radar aiming affect driver-assistance behavior. Do not command, configure, aim, program, or replace related components without the Mazda procedure, correct targets and equipment, qualified personnel, and a recovery plan."],
+    "confidence": "Mazda Bulletin 09-041/22 source-specific U3000:54 readout context; VIN, market, BSM equipment, replacement history, reporting ECU, and manufacturer procedure confirmation required.",
+    "source": "Mazda Bulletin 09-041/22 / NHTSA MC-11028099",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2026/MC-11028099-0001.pdf",
+    "source_date": "2026-01-15",
+    "last_verified_date": "2026-08-04",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
