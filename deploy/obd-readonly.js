@@ -20523,9 +20523,69 @@
     const livePidSnapshots = tableSessions
       .map((session) => session.livePidSnapshot)
       .filter((snapshot) => snapshot && (snapshot.livePidReadoutStatus === "reported" || Number(snapshot.valueCount) > 0));
+    const livePidTimelineInputSamples = tableSessions.flatMap((session) => {
+      const samples = session.livePidTimeline?.samples || session.live_pid_timeline?.samples || [];
+      if (samples.length) return samples;
+      const snapshot = session.livePidSnapshot || session.live_pid_snapshot || null;
+      const capturedAt = snapshot?.capturedAt || snapshot?.captured_at || null;
+      return snapshot?.livePidReadoutStatus === "reported" && capturedAt
+        ? [{
+          captured_at: capturedAt,
+          protocol: snapshot.protocol || snapshot.obd_protocol || null,
+          observation_condition: snapshot.observationCondition || snapshot.observation_condition || "unspecified",
+          live_pid_snapshot: snapshot
+        }]
+        : [];
+    });
+    const livePidTimelineGroups = new Map();
+    livePidTimelineInputSamples.forEach((sample, index) => {
+      const capturedAt = sample?.capturedAt || sample?.captured_at || null;
+      const protocol = sample?.protocol || sample?.obd_protocol || null;
+      const observationCondition = normalizeLivePidObservationCondition(sample?.observationCondition || sample?.observation_condition);
+      const monitorValues = sample?.monitorValues || sample?.monitor_values || sample?.livePidSnapshot?.monitorValues || sample?.live_pid_snapshot?.monitor_values || [];
+      if (!capturedAt || !Array.isArray(monitorValues) || !monitorValues.length) return;
+      const key = `${capturedAt}::${protocol || ""}::${observationCondition}`;
+      const group = livePidTimelineGroups.get(key) || { capturedAt, protocol, observationCondition, monitorValues: [], index };
+      group.monitorValues.push(...monitorValues);
+      livePidTimelineGroups.set(key, group);
+    });
+    const livePidTimeline = normalizeLivePidTimeline({
+      samples: [...livePidTimelineGroups.values()]
+        .sort((left, right) => {
+          const leftTime = /^\d{4}-\d{2}-\d{2}T/.test(left.capturedAt) ? Date.parse(left.capturedAt) : Number.NaN;
+          const rightTime = /^\d{4}-\d{2}-\d{2}T/.test(right.capturedAt) ? Date.parse(right.capturedAt) : Number.NaN;
+          return Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime ? leftTime - rightTime : left.index - right.index;
+        })
+        .map((sample) => ({
+          captured_at: sample.capturedAt,
+          protocol: sample.protocol,
+          observation_condition: sample.observationCondition,
+          live_pid_snapshot: {
+            source: "scanner_csv_import",
+            captured_at: sample.capturedAt,
+            protocol: sample.protocol,
+            observation_condition: sample.observationCondition,
+            monitor_values: sample.monitorValues,
+            live_pid_readout_status: "reported"
+          }
+        }))
+    });
     const livePidCapturedAtValues = [...new Set(livePidSnapshots.map((snapshot) => snapshot.capturedAt || snapshot.captured_at || null).filter(Boolean))];
     const livePidProtocolValues = [...new Set(livePidSnapshots.map((snapshot) => snapshot.protocol || snapshot.obd_protocol || null).filter(Boolean))];
-    const livePidSnapshot = livePidSnapshots.length > 1
+    const latestLivePidTimelineSample = livePidTimeline.samples.at(-1) || null;
+    const livePidSnapshot = latestLivePidTimelineSample
+      ? {
+        ...normalizeBridgeLivePidSnapshot({
+          source: "scanner_csv_import",
+          captured_at: latestLivePidTimelineSample.capturedAt,
+          protocol: latestLivePidTimelineSample.protocol,
+          observation_condition: latestLivePidTimelineSample.observationCondition,
+          monitor_values: latestLivePidTimelineSample.monitorValues,
+          live_pid_readout_status: "reported"
+        }),
+        source: "scanner_csv_import"
+      }
+      : livePidSnapshots.length > 1
       ? {
         ...normalizeBridgeLivePidSnapshot({
           ...(livePidCapturedAtValues.length === 1 ? { captured_at: livePidCapturedAtValues[0] } : {}),
@@ -20668,6 +20728,7 @@
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
       livePidSnapshot,
+      livePidTimeline,
       freezeFrameSnapshot,
       readinessSnapshot,
       ecuInfoSnapshot,
