@@ -3238,6 +3238,18 @@
   function normalizeBridgeDriverReadiness(data = {}) {
     const readinessValue = String(data.driver_readiness_status || data.driverReadinessStatus || "").trim().toLowerCase();
     const nextCheckValue = String(data.next_check || data.nextCheck || "").trim().toLowerCase();
+    const readCount = (...values) => {
+      const value = values.find((item) => item !== undefined && item !== null && item !== "");
+      if (value === undefined || typeof value === "object") return null;
+      const count = Number(value);
+      return Number.isInteger(count) && count >= 0 && count <= 1000 ? count : null;
+    };
+    const readDeviceId = (...values) => {
+      const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
+      if (value === undefined) return null;
+      const normalized = String(value).replace(/[^A-Za-z0-9_.:-]+/g, "").slice(0, 80);
+      return normalized || null;
+    };
     const driverReadinessStatus = [
       "no_registered_driver",
       "static_inspection_pending",
@@ -3252,17 +3264,26 @@
       "verify_driver_readonly_exports",
       "manual_vci_connection_review"
     ].includes(nextCheckValue) ? nextCheckValue : null;
+    const staticReadyVciCount = readCount(data.static_ready_vci_count, data.staticReadyVciCount);
+    const staticBlockedVciCount = readCount(data.static_blocked_vci_count, data.staticBlockedVciCount);
+    const selectedStaticReadyDeviceId = readDeviceId(data.selected_static_ready_device_id, data.selectedStaticReadyDeviceId);
     return {
       driverReadinessStatus,
       driver_readiness_status: driverReadinessStatus,
       nextCheck,
-      next_check: nextCheck
+      next_check: nextCheck,
+      staticReadyVciCount,
+      static_ready_vci_count: staticReadyVciCount,
+      staticBlockedVciCount,
+      static_blocked_vci_count: staticBlockedVciCount,
+      selectedStaticReadyDeviceId,
+      selected_static_ready_device_id: selectedStaticReadyDeviceId
     };
   }
 
   function normalizeBridgeConnectionStatus(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck"];
+    const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
     const hasConnectionStatusData = connectionStatusKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedConnectionStatus = connectionStatusKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasConnectionStatusData);
@@ -3356,6 +3377,9 @@
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : bridgeSafety;
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
+    const explicitlySelectedDeviceIndex = selectedDeviceId ? -1 : devices.findIndex((device) => (
+      device?.selected === true || device?.is_selected === true || device?.isSelected === true
+    ));
     const replayMode = data.replay_mode === true || data.replayMode === true;
     const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
     const driverReadiness = normalizeBridgeDriverReadiness(data);
@@ -3462,7 +3486,7 @@
         sample_mode: deviceSampleMode,
         replayMode: deviceReplayMode,
         replay_mode: deviceReplayMode,
-        selected: selectedDeviceId ? id === selectedDeviceId : index === 0 && devices.length === 1,
+        selected: selectedDeviceId ? id === selectedDeviceId : explicitlySelectedDeviceIndex >= 0 ? index === explicitlySelectedDeviceIndex : index === 0 && devices.length === 1,
         vehicleCommandEnabled: false,
         vehicle_command_enabled: false,
         supportNote: "VCI識別情報は表示用に最小化し、シリアル番号などの生識別子は保持しません。"
@@ -3481,7 +3505,7 @@
       replayMode,
       replay_mode: replayMode,
       ...driverReadiness,
-      selectedDeviceId,
+      selectedDeviceId: selectedDeviceId || normalizedDevices.find((device) => device.selected)?.id || null,
       devices: normalizedDevices,
       deviceCount: normalizedDevices.length,
       connectionEnabled: localBridgeContract.connectionEnabled,

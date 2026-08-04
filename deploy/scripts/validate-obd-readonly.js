@@ -4387,6 +4387,23 @@ const bridgeStatusExtendedAliases = obd.normalizeBridgeConnectionStatus({
   }
 });
 check(bridgeStatusExtendedAliases.paired === true && bridgeStatusExtendedAliases.vciConnected === true && bridgeStatusExtendedAliases.vehicleConnected === true, "Extended bridge connection status aliases were not normalized");
+const bridgeJ2534PreferredStatus = obd.normalizeBridgeConnectionStatus({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    status: "ready_driver_discovery_mode",
+    paired: true,
+    vci_connected: false,
+    vehicle_connected: false,
+    driver_readiness_status: "readonly_static_check_complete",
+    next_check: "manual_vci_connection_review",
+    static_ready_vci_count: 1,
+    static_blocked_vci_count: 1,
+    selected_static_ready_device_id: "j2534-ready-2"
+  }
+});
+check(bridgeJ2534PreferredStatus.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534PreferredStatus.staticReadyVciCount === 1 && bridgeJ2534PreferredStatus.static_ready_vci_count === 1 && bridgeJ2534PreferredStatus.staticBlockedVciCount === 1 && bridgeJ2534PreferredStatus.static_blocked_vci_count === 1 && bridgeJ2534PreferredStatus.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredStatus.selected_static_ready_device_id === "j2534-ready-2" && bridgeJ2534PreferredStatus.vehicleCommandEnabled === false, "J2534 static-ready selection metadata was not normalized with the read-only connection status");
 const bridgeVciList = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,
@@ -4403,6 +4420,26 @@ check(bridgeVciList.deviceCount === 1, "VCI一覧の表示モデル件数が不�
 check(bridgeVciList.devices[0].selected === true, "VCI一覧の選択状態が不正です");
 check(!("serial_number" in bridgeVciList.devices[0]), "VCI一覧が生識別子を保持しています");
 check(bridgeVciList.connectionEnabled === true && bridgeVciList.vehicleCommandEnabled === false, "VCI一覧モデルの読取接続準備または安全状態が不正です");
+check(bridgeVciList.staticReadyVciCount === null && bridgeVciList.staticBlockedVciCount === null && bridgeVciList.selectedStaticReadyDeviceId === null, "Legacy bridge VCI metadata must not infer J2534 readiness counts");
+const bridgeJ2534PreferredVciList = obd.normalizeBridgeVciList({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    driver_status: "j2534_registry_detected",
+    driver_readiness_status: "readonly_static_check_complete",
+    next_check: "manual_vci_connection_review",
+    static_ready_vci_count: 1,
+    static_blocked_vci_count: 1,
+    selected_static_ready_device_id: "j2534-ready-2",
+    selected_device_id: "j2534-ready-2",
+    devices: [
+      { id: "j2534-incompatible-1", label: "Incompatible J2534 VCI", adapter_family: "j2534_passthru", connected: false },
+      { id: "j2534-ready-2", label: "Ready J2534 VCI", adapter_family: "j2534_passthru", connected: false }
+    ]
+  }
+});
+check(bridgeJ2534PreferredVciList.staticReadyVciCount === 1 && bridgeJ2534PreferredVciList.staticBlockedVciCount === 1 && bridgeJ2534PreferredVciList.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.selectedDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.devices[1]?.selected === true && bridgeJ2534PreferredVciList.vehicleCommandEnabled === false, "J2534 static-ready selection metadata was not retained in the VCI list");
 const bridgeMalformedVciList = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,
@@ -4486,6 +4523,12 @@ check(!JSON.stringify(bridgeJ2534VciList).includes("C:\\Program Files"), "J2534 
 const j2534VciSession = obd.buildDiagnosticScanSession({ vciDevices: bridgeJ2534VciList });
 const reimportedJ2534VciSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(j2534VciSession) }));
 check(reimportedJ2534VciSession?.vciDevices?.[0]?.adapterFamily === "j2534_passthru" && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_library_detected === true && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_library_inspection_status === "inspected" && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_library_architecture === "x86" && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_library_bitness === 32 && reimportedJ2534VciSession?.vciDevices?.[0]?.bridge_runtime_architecture === "x64" && reimportedJ2534VciSession?.vciDevices?.[0]?.bridge_runtime_bitness === 64 && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_runtime_compatible === false && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_runtime_compatibility_status === "architecture_mismatch" && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_missing_required_apis?.join(",") === "PassThruConnect" && reimportedJ2534VciSession?.vciDevices?.[0]?.driver_required_api_ready === false && reimportedJ2534VciSession?.vciDevices?.[0]?.connection_status === "driver_detected_not_opened" && reimportedJ2534VciSession?.vehicleCommandEnabled === false, "J2534 VCI discovery metadata was not retained through read-only session JSON reimport");
+const j2534PreferredReadinessSession = obd.buildDiagnosticScanSession({
+  connectionStatus: bridgeJ2534PreferredStatus,
+  vciDevices: bridgeJ2534PreferredVciList
+});
+const reimportedJ2534PreferredReadinessSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(j2534PreferredReadinessSession) }));
+check(reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticReadyVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connection_status?.static_ready_vci_count === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticBlockedVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.selectedStaticReadyDeviceId === "j2534-ready-2" && reimportedJ2534PreferredReadinessSession?.vciDevices?.[1]?.selected === true && reimportedJ2534PreferredReadinessSession?.vehicleCommandEnabled === false, "J2534 static-ready selection metadata was not retained through read-only session JSON reimport");
 const bridgeAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,
