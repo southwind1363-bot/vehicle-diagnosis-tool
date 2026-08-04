@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.99";
+const APP_VERSION = "3.6.00";
 const APP_LAST_UPDATED = "2026-08-04";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6404,6 +6404,13 @@ function renderObdBridgeSessionDetails(session = null) {
   const vciDriverStatus = selectedVci?.driverStatus || obdDevSession.bridgeVciList?.driverStatus || NO_DATA;
   const j2534DriverReadinessLabel = formatJ2534DriverReadiness(connectionStatus, formatJ2534DriverReadiness(obdDevSession.bridgeVciList));
   const j2534NextCheckLabel = formatJ2534NextCheck(connectionStatus, formatJ2534NextCheck(obdDevSession.bridgeVciList));
+  const readJ2534StaticCount = (...values) => {
+    const value = values.find((item) => item !== undefined && item !== null && item !== "");
+    const count = Number(value);
+    return Number.isInteger(count) && count >= 0 ? count : null;
+  };
+  const j2534StaticReadyVciCount = readJ2534StaticCount(connectionStatus?.staticReadyVciCount, connectionStatus?.static_ready_vci_count, obdDevSession.bridgeVciList?.staticReadyVciCount, obdDevSession.bridgeVciList?.static_ready_vci_count);
+  const j2534StaticBlockedVciCount = readJ2534StaticCount(connectionStatus?.staticBlockedVciCount, connectionStatus?.static_blocked_vci_count, obdDevSession.bridgeVciList?.staticBlockedVciCount, obdDevSession.bridgeVciList?.static_blocked_vci_count);
   if (connectionStatus?.displayStatus || vciDevices.length) {
     const lines = [
       `状態: ${connectionStatus?.displayStatus || NO_DATA}`,
@@ -6412,6 +6419,7 @@ function renderObdBridgeSessionDetails(session = null) {
     ];
     if (j2534DriverReadinessLabel) lines.push(`J2534準備: ${j2534DriverReadinessLabel}`);
     if (j2534NextCheckLabel) lines.push(`J2534次確認: ${j2534NextCheckLabel}`);
+    if (j2534StaticReadyVciCount !== null || j2534StaticBlockedVciCount !== null) lines.push(`J2534静的確認: 読取候補 ${j2534StaticReadyVciCount ?? "未報告"} / 要確認 ${j2534StaticBlockedVciCount ?? "未報告"}`);
     vciDevices.slice(0, 4).forEach((item) => {
       const runtimeCompatibility = formatJ2534RuntimeCompatibility(item);
       if (runtimeCompatibility) lines.push(`J2534 runtime: ${runtimeCompatibility}`);

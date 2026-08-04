@@ -4544,6 +4544,21 @@ const bridgeAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
 check(bridgeAdapterIdentity.adapterFamily === "elm327", "アダプター識別情報を整形できません");
 check(bridgeAdapterIdentity.vehicleCommandEnabled === false, "アダプター識別モデルが車両コマンド有効になっています");
 check(!("serial_number" in bridgeAdapterIdentity), "アダプター識別モデルが生識別子を保持しています");
+const bridgeJ2534AdapterIdentity = obd.normalizeBridgeAdapterIdentity({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    adapter_name: "Ready J2534 VCI",
+    adapter_family: "j2534_passthru",
+    driver_readiness_status: "readonly_static_check_complete",
+    next_check: "manual_vci_connection_review",
+    static_ready_vci_count: 1,
+    static_blocked_vci_count: 1,
+    selected_static_ready_device_id: "j2534-ready-2"
+  }
+});
+check(bridgeJ2534AdapterIdentity.adapterFamily === "j2534_passthru" && bridgeJ2534AdapterIdentity.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534AdapterIdentity.staticReadyVciCount === 1 && bridgeJ2534AdapterIdentity.staticBlockedVciCount === 1 && bridgeJ2534AdapterIdentity.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534AdapterIdentity.vehicleCommandEnabled === false, "J2534 adapter identity did not retain static-ready selection metadata");
 const bridgeMalformedAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,

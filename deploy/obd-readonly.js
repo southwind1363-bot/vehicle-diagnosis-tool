@@ -3516,7 +3516,7 @@
 
   function normalizeBridgeAdapterIdentity(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint"];
+    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
     const hasAdapterIdentityData = adapterIdentityKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
@@ -3529,6 +3529,7 @@
     };
     const replayMode = data.replay_mode === true || data.replayMode === true;
     const sampleMode = !replayMode && (data.sample_mode === true || data.sampleMode === true);
+    const driverReadiness = normalizeBridgeDriverReadiness(data);
     return {
       source: "local_bridge",
       intent: "adapter_identity",
@@ -3544,6 +3545,7 @@
       sample_mode: sampleMode,
       replayMode,
       replay_mode: replayMode,
+      ...driverReadiness,
       vehicleCommandEnabled: false,
       retainedRawText: false
     };
