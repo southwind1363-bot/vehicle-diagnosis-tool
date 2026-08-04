@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.58";
+const APP_VERSION = "3.5.59";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4930,6 +4930,15 @@ function hasWebSerialResponseError(lines, errorLines) {
   return lines.some((line) => [...errorLines].some((errorLine) => line === errorLine || line.startsWith(`${errorLine} `) || line.startsWith(`${errorLine}:`)));
 }
 
+function isWebSerialBusInitErrorLine(line) {
+  return /^BUS INIT:\s*\.{0,3}ERROR$/.test(String(line || "").trim().toUpperCase());
+}
+
+function isWebSerialInformationalResponseLine(line) {
+  const normalizedLine = String(line || "").trim().toUpperCase().replace(/\s+/g, " ");
+  return WEB_SERIAL_IGNORED_RESPONSE_LINES.has(normalizedLine) || /^BUS INIT:\s*\.{0,3}OK$/.test(normalizedLine) || /^BUS INIT:\s*\.{3}$/.test(normalizedLine);
+}
+
 function formatWebSerialStopReason(reason) {
   if (reason === "vehicle_link_error") return "車両通信を確立できません";
   if (reason === "adapter_error") return "アダプター応答エラー";
@@ -4944,7 +4953,7 @@ function classifyWebSerialCommandResponse(command, response) {
     .split("\n")
     .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
     .filter(Boolean)
-    .filter((line) => !WEB_SERIAL_IGNORED_RESPONSE_LINES.has(line));
+    .filter((line) => !isWebSerialInformationalResponseLine(line));
   const requestedService = /^[0-9A-F]{2}/.test(normalizedCommand) ? normalizedCommand.slice(0, 2) : null;
   const compactResponseLines = lines.map((line) => line.replace(/[^0-9A-F]/g, "")).filter(Boolean);
   const expectedPositiveService = requestedService ? (Number.parseInt(requestedService, 16) + 0x40).toString(16).padStart(2, "0").toUpperCase() : null;
@@ -4965,7 +4974,7 @@ function classifyWebSerialCommandResponse(command, response) {
     ? lines.some((line) => line !== normalizedCommand)
     : responseServices.some((item) => item.type === "positive");
   if (!lines.length) return { commandStatus: "incomplete", emptyResponseCount: 1, stopScope: "none", stopReason: null };
-  if (hasWebSerialResponseError(lines, WEB_SERIAL_VEHICLE_LINK_ERROR_LINES)) {
+  if (hasWebSerialResponseError(lines, WEB_SERIAL_VEHICLE_LINK_ERROR_LINES) || lines.some(isWebSerialBusInitErrorLine)) {
     return { commandStatus: "failed", unableToConnectCount: 1, stopScope: "scan", stopReason: "vehicle_link_error" };
   }
   if (hasWebSerialResponseError(lines, WEB_SERIAL_ADAPTER_ERROR_LINES)) {
@@ -4992,7 +5001,8 @@ function isWebSerialExpectedEmptyResponse(command, response) {
     .split("\n")
     .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
     .filter(Boolean);
-  return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING"));
+  const hasBusInit = lines.some((line) => line.startsWith("BUS INIT:"));
+  return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING") || isWebSerialInformationalResponseLine(line) || (hasBusInit && line === "OK"));
 }
 
 function buildWebSerialDtcResponseOverrides(commandResponses = []) {
