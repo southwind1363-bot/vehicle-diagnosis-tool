@@ -2897,6 +2897,24 @@ const webSerialNoDataDtcOverrides = webSerialDtcOverrideBuilder?.([
 ]);
 const webSerialNoDataDtcSession = obd.buildScanSessionFromObdText(">03\n7E803430171\n>07\nNO DATA\n>0A\nNO DATA", webSerialNoDataDtcOverrides);
 check(webSerialNoDataDtcOverrides?.pendingDtcResponse?.dtcReadoutStatus === "reported" && webSerialNoDataDtcOverrides?.pendingDtcResponse?.reportedStatuses?.join(",") === "pending" && webSerialNoDataDtcOverrides?.permanentDtcResponse?.reportedStatuses?.join(",") === "permanent" && !webSerialNoDataDtcOverrides?.livePidResponse && webSerialNoDataDtcSession.dtcSnapshot?.dtcStatusSummary?.complete === true && webSerialNoDataDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored") && webSerialNoDataDtcSession.dtcSnapshot?.dtcStatusSummary?.emptyStatuses?.join(",") === "pending,permanent" && webSerialNoDataDtcSession.vehicleCommandEnabled === false, "Web Serial NO DATA should mark only the requested DTC state as a safe empty readout");
+const webSerialReadoutOutcomeSource = appSource.match(/const WEB_SERIAL_ADAPTER_ERROR_LINES[\s\S]*?\r?\n}\r?\n\r?\nasync function runObdDeveloperRead/)?.[0] || "";
+const webSerialReadoutOutcomeBuilder = webSerialReadoutOutcomeSource
+  ? new Function(`${webSerialReadoutOutcomeSource.replace(/\r?\nasync function runObdDeveloperRead$/, "")}; return buildWebSerialReadoutOutcome;`)()
+  : null;
+const webSerialExpectedEmptyDtcOutcome = webSerialReadoutOutcomeBuilder?.(["03", "07", "0A"], [
+  { command: "03", response: "NO DATA" },
+  { command: "07", response: "SEARCHING...\rNO DATA" },
+  { command: "0A", response: "NO DATA" }
+]);
+const webSerialExpectedEmptyFreezeOutcome = webSerialReadoutOutcomeBuilder?.(["0202"], [{ command: "0202", response: "NO DATA" }]);
+const webSerialUnexpectedEmptyLiveOutcome = webSerialReadoutOutcomeBuilder?.(["010C"], [{ command: "010C", response: "NO DATA" }]);
+const expectedEmptyWebSerialSession = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempts: [{ label: "DTC", ...webSerialExpectedEmptyDtcOutcome }]
+  }
+});
+check(webSerialExpectedEmptyDtcOutcome?.status === "completed" && webSerialExpectedEmptyDtcOutcome?.readoutCompleted === true && webSerialExpectedEmptyDtcOutcome?.completedCommandCount === 0 && webSerialExpectedEmptyDtcOutcome?.expectedEmptyCommandCount === 3 && webSerialExpectedEmptyDtcOutcome?.noDataCount === 3 && webSerialExpectedEmptyFreezeOutcome?.status === "completed" && webSerialExpectedEmptyFreezeOutcome?.expectedEmptyCommandCount === 1 && webSerialUnexpectedEmptyLiveOutcome?.status === "incomplete" && webSerialUnexpectedEmptyLiveOutcome?.expectedEmptyCommandCount === 0 && expectedEmptyWebSerialSession.webSerialReadoutSummary?.attempts?.[0]?.status === "completed" && expectedEmptyWebSerialSession.readoutQualitySummary?.webSerialNoDataCount === 3 && expectedEmptyWebSerialSession.readoutQualitySummary?.webSerialExpectedEmptyCommandCount === 3 && expectedEmptyWebSerialSession.readoutQualitySummary?.webSerialResponseReviewCount === 0 && expectedEmptyWebSerialSession.vehicleCommandEnabled === false, "Web Serial should retain expected empty DTC and Mode 02 reads without suppressing unexpected empty PID review");
 const webSerialFreezeOverrideSource = appSource.match(/function buildWebSerialFreezeFrameResponseOverride[\s\S]*?\r?\n}\r?\n\r?\nfunction buildWebSerialReadoutOutcome/)?.[0] || "";
 const webSerialFreezeOverrideBuilder = webSerialFreezeOverrideSource
   ? new Function(`${webSerialFreezeOverrideSource.replace(/\r?\nfunction buildWebSerialReadoutOutcome$/, "")}; return buildWebSerialFreezeFrameResponseOverride;`)()

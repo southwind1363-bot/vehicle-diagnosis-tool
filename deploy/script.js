@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.56";
+const APP_VERSION = "3.5.57";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5034,19 +5034,34 @@ function buildWebSerialFreezeFrameResponseOverride(commandResponses = []) {
   };
 }
 
+function isWebSerialExpectedEmptyResponse(command, response) {
+  const normalizedCommand = String(command || "").trim().toUpperCase();
+  if (!["03", "07", "0A", "0202"].includes(normalizedCommand)) return false;
+  const lines = String(response || "")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
+    .filter(Boolean);
+  return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING"));
+}
+
 function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) {
   const requestedCommandCount = Array.isArray(commands) ? commands.map((command) => String(command || "").trim()).filter(Boolean).length : 0;
-  const outcomes = (Array.isArray(commandResponses) ? commandResponses : []).map((item) => classifyWebSerialCommandResponse(item?.command, item?.response));
+  const outcomes = (Array.isArray(commandResponses) ? commandResponses : []).map((item) => ({
+    ...classifyWebSerialCommandResponse(item?.command, item?.response),
+    expectedEmpty: isWebSerialExpectedEmptyResponse(item?.command, item?.response)
+  }));
   const total = (key) => outcomes.reduce((sum, outcome) => sum + (Number(outcome?.[key]) || 0), 0);
   const stopOutcome = outcomes.find((outcome) => outcome?.stopScope === "scan" || outcome?.stopScope === "attempt") || null;
   const attemptedCommandCount = Math.max(outcomes.length, Math.min(requestedCommandCount, Number(options.attemptedCommandCount) || outcomes.length));
   const transportErrorCount = options.transportErrorCount === true ? 1 : 0;
   const completedCommandCount = outcomes.filter((outcome) => outcome.commandStatus === "completed").length;
+  const expectedEmptyCommandCount = outcomes.filter((outcome) => outcome.expectedEmpty === true).length;
   const partialCommandCount = outcomes.filter((outcome) => outcome.commandStatus === "partial").length;
   const hardFailure = transportErrorCount > 0 || outcomes.some((outcome) => outcome.commandStatus === "failed");
   const status = hardFailure
     ? "failed"
-    : completedCommandCount === requestedCommandCount && requestedCommandCount > 0
+    : completedCommandCount + expectedEmptyCommandCount === requestedCommandCount && requestedCommandCount > 0
       ? "completed"
       : completedCommandCount > 0 || partialCommandCount > 0
         ? "partial"
@@ -5058,6 +5073,7 @@ function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) 
     attemptedCommandCount,
     promptTerminatedCommandCount: outcomes.length,
     completedCommandCount,
+    expectedEmptyCommandCount,
     positiveResponseCount: total("positiveResponseCount"),
     negativeResponseCount: total("negativeResponseCount"),
     pendingNegativeResponseCount: total("pendingNegativeResponseCount"),
@@ -5167,6 +5183,8 @@ function buildWebSerialReadoutSummary() {
     failed_count: countByStatus("failed"),
     positiveResponseCount: total("positiveResponseCount"),
     positive_response_count: total("positiveResponseCount"),
+    expectedEmptyCommandCount: total("expectedEmptyCommandCount"),
+    expected_empty_command_count: total("expectedEmptyCommandCount"),
     negativeResponseCount: total("negativeResponseCount"),
     negative_response_count: total("negativeResponseCount"),
     pendingNegativeResponseCount: total("pendingNegativeResponseCount"),

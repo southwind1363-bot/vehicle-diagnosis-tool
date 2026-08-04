@@ -8605,6 +8605,7 @@
     const webSerialNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.negativeResponseCount, normalizedWebSerialReadoutSummary?.negative_response_count);
     const webSerialPendingNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.pendingNegativeResponseCount, normalizedWebSerialReadoutSummary?.pending_negative_response_count);
     const webSerialNoDataCount = readCount(normalizedWebSerialReadoutSummary?.noDataCount, normalizedWebSerialReadoutSummary?.no_data_count);
+    const webSerialExpectedEmptyCommandCount = readCount(normalizedWebSerialReadoutSummary?.expectedEmptyCommandCount, normalizedWebSerialReadoutSummary?.expected_empty_command_count);
     const webSerialEmptyResponseCount = readCount(normalizedWebSerialReadoutSummary?.emptyResponseCount, normalizedWebSerialReadoutSummary?.empty_response_count);
     const webSerialUnrecognizedResponseCount = readCount(normalizedWebSerialReadoutSummary?.unrecognizedResponseCount, normalizedWebSerialReadoutSummary?.unrecognized_response_count);
     const webSerialAdapterErrorCount = readCount(normalizedWebSerialReadoutSummary?.adapterErrorCount, normalizedWebSerialReadoutSummary?.adapter_error_count);
@@ -8612,7 +8613,7 @@
     const webSerialTransportErrorCount = readCount(normalizedWebSerialReadoutSummary?.transportErrorCount, normalizedWebSerialReadoutSummary?.transport_error_count);
     const webSerialResponseReviewCount = webSerialNegativeResponseCount
       + webSerialPendingNegativeResponseCount
-      + webSerialNoDataCount
+      + Math.max(0, webSerialNoDataCount - webSerialExpectedEmptyCommandCount)
       + webSerialEmptyResponseCount
       + webSerialUnrecognizedResponseCount
       + webSerialAdapterErrorCount
@@ -8662,6 +8663,8 @@
       web_serial_pending_negative_response_count: webSerialPendingNegativeResponseCount,
       webSerialNoDataCount,
       web_serial_no_data_count: webSerialNoDataCount,
+      webSerialExpectedEmptyCommandCount,
+      web_serial_expected_empty_command_count: webSerialExpectedEmptyCommandCount,
       webSerialEmptyResponseCount,
       web_serial_empty_response_count: webSerialEmptyResponseCount,
       webSerialUnrecognizedResponseCount,
@@ -11579,6 +11582,7 @@
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
     const webSerialPendingNegativeResponseCount = toCount("webSerialPendingNegativeResponseCount", "web_serial_pending_negative_response_count", 0);
     const webSerialNoDataCount = toCount("webSerialNoDataCount", "web_serial_no_data_count", 0);
+    const webSerialExpectedEmptyCommandCount = toCount("webSerialExpectedEmptyCommandCount", "web_serial_expected_empty_command_count", 0);
     const webSerialEmptyResponseCount = toCount("webSerialEmptyResponseCount", "web_serial_empty_response_count", 0);
     const webSerialUnrecognizedResponseCount = toCount("webSerialUnrecognizedResponseCount", "web_serial_unrecognized_response_count", 0);
     const webSerialAdapterErrorCount = toCount("webSerialAdapterErrorCount", "web_serial_adapter_error_count", 0);
@@ -11612,6 +11616,8 @@
       web_serial_pending_negative_response_count: webSerialPendingNegativeResponseCount,
       webSerialNoDataCount,
       web_serial_no_data_count: webSerialNoDataCount,
+      webSerialExpectedEmptyCommandCount,
+      web_serial_expected_empty_command_count: webSerialExpectedEmptyCommandCount,
       webSerialEmptyResponseCount,
       web_serial_empty_response_count: webSerialEmptyResponseCount,
       webSerialUnrecognizedResponseCount,
@@ -13773,6 +13779,7 @@
       const negativeResponseCount = commandCount("negativeResponseCount", "negative_response_count");
       const pendingNegativeResponseCount = commandCount("pendingNegativeResponseCount", "pending_negative_response_count");
       const noDataCount = commandCount("noDataCount", "no_data_count");
+      const expectedEmptyCommandCount = Math.min(requestedCommandCount, commandCount("expectedEmptyCommandCount", "expected_empty_command_count"));
       const unableToConnectCount = commandCount("unableToConnectCount", "unable_to_connect_count");
       const adapterErrorCount = commandCount("adapterErrorCount", "adapter_error_count");
       const emptyResponseCount = commandCount("emptyResponseCount", "empty_response_count");
@@ -13780,9 +13787,9 @@
       const transportErrorCount = commandCount("transportErrorCount", "transport_error_count");
       if (!isV2Input && status === "completed" && positiveResponseCount === 0) positiveResponseCount = completedCommandCount;
       if (isV2Input) completedCommandCount = Math.min(completedCommandCount, positiveResponseCount);
-      const hasIncompleteEvidence = noDataCount > 0 || negativeResponseCount > 0 || pendingNegativeResponseCount > 0 || emptyResponseCount > 0 || unrecognizedResponseCount > 0;
+      const hasIncompleteEvidence = noDataCount > expectedEmptyCommandCount || negativeResponseCount > 0 || pendingNegativeResponseCount > 0 || emptyResponseCount > 0 || unrecognizedResponseCount > 0;
       const hasFailureEvidence = unableToConnectCount > 0 || adapterErrorCount > 0 || transportErrorCount > 0;
-      const hasCompleteEvidence = requestedCommandCount > 0 && completedCommandCount === requestedCommandCount && positiveResponseCount >= requestedCommandCount;
+      const hasCompleteEvidence = requestedCommandCount > 0 && completedCommandCount + expectedEmptyCommandCount === requestedCommandCount && positiveResponseCount + expectedEmptyCommandCount >= requestedCommandCount;
       if (isV2Input && status === "completed" && (!hasCompleteEvidence || hasIncompleteEvidence || hasFailureEvidence)) {
         status = hasFailureEvidence ? "failed" : (positiveResponseCount > 0 ? "partial" : "incomplete");
       }
@@ -13801,6 +13808,8 @@
         prompt_terminated_command_count: Math.min(attemptedCommandCount, commandCount("promptTerminatedCommandCount", "prompt_terminated_command_count")),
         completedCommandCount,
         completed_command_count: completedCommandCount,
+        expectedEmptyCommandCount,
+        expected_empty_command_count: expectedEmptyCommandCount,
         positiveResponseCount,
         positive_response_count: positiveResponseCount,
         negativeResponseCount,
@@ -13846,7 +13855,8 @@
     let failedCount = attempts.length ? countByStatus("failed") : readCount("failedCount", "failed_count");
     if (isV2Input && !attempts.length && completedCount > 0) {
       const positiveResponseCount = readCount("positiveResponseCount", "positive_response_count");
-      const hasIncompleteEvidence = readCount("noDataCount", "no_data_count") > 0
+      const expectedEmptyCommandCount = readCount("expectedEmptyCommandCount", "expected_empty_command_count");
+      const hasIncompleteEvidence = readCount("noDataCount", "no_data_count") > expectedEmptyCommandCount
         || readCount("negativeResponseCount", "negative_response_count") > 0
         || readCount("pendingNegativeResponseCount", "pending_negative_response_count") > 0
         || readCount("emptyResponseCount", "empty_response_count") > 0
@@ -13854,7 +13864,7 @@
       const hasFailureEvidence = readCount("unableToConnectCount", "unable_to_connect_count") > 0
         || readCount("adapterErrorCount", "adapter_error_count") > 0
         || readCount("transportErrorCount", "transport_error_count") > 0;
-      if (positiveResponseCount < completedCount || hasIncompleteEvidence || hasFailureEvidence) {
+      if (positiveResponseCount + expectedEmptyCommandCount < completedCount || hasIncompleteEvidence || hasFailureEvidence) {
         const downgradedCount = completedCount;
         completedCount = 0;
         if (hasFailureEvidence) failedCount = Math.max(failedCount, downgradedCount);
@@ -13869,6 +13879,7 @@
     const positiveResponseCount = !isV2Input && !attempts.length && completedCount > 0
       ? Math.max(total("positiveResponseCount", "positive_response_count"), completedCount)
       : total("positiveResponseCount", "positive_response_count");
+    const expectedEmptyCommandCount = total("expectedEmptyCommandCount", "expected_empty_command_count");
     const latestAttempt = attempts.at(-1) || normalizeAttempt(input.latestAttempt || input.latest_attempt || null);
     return {
       schemaVersion: "web_serial_readout_execution_v2",
@@ -13886,6 +13897,8 @@
       failed_count: failedCount,
       positiveResponseCount,
       positive_response_count: positiveResponseCount,
+      expectedEmptyCommandCount,
+      expected_empty_command_count: expectedEmptyCommandCount,
       negativeResponseCount: total("negativeResponseCount", "negative_response_count"),
       negative_response_count: total("negativeResponseCount", "negative_response_count"),
       pendingNegativeResponseCount: total("pendingNegativeResponseCount", "pending_negative_response_count"),
