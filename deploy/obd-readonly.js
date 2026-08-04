@@ -16067,10 +16067,10 @@
       const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || sourceInput.status || "unknown";
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "";
       const genericCodeReferences = extractDtcReferences(codeValue);
-      const manufacturerCodeReference = !genericCodeReferences.length && isExplicitManufacturerSpecificDtcRow(rowValue)
+      const manufacturerCodeReference = isExplicitManufacturerSpecificDtcRow(rowValue)
         ? extractManufacturerSpecificDtcReference(codeValue)
         : null;
-      const codes = genericCodeReferences.length ? genericCodeReferences : manufacturerCodeReference ? [manufacturerCodeReference] : [];
+      const codes = manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
       const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
       const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;

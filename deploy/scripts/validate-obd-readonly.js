@@ -18048,6 +18048,16 @@ const subcodeDtcSnapshot = obd.normalizeDtcSnapshot({
 });
 check(subcodeDtcSnapshot.codes.length === 1 && subcodeDtcSnapshot.dtcCount === 2, "DTC normalization did not retain distinct subcodes and status rows");
 check(subcodeDtcSnapshot.dtcs.some((item) => item.code === "C0051" && item.subcode === "00" && item.status === "unknown") && subcodeDtcSnapshot.dtcs.some((item) => item.code === "C0051" && item.subcode === "67" && item.status === "pending"), "DTC normalization did not preserve subcode values");
+const explicitManufacturerSpecificDtcSnapshot = obd.normalizeDtcSnapshot({
+  dtcs: [{
+    code: "C0051F",
+    code_format: "manufacturer_specific",
+    reported_description: "Vendor-reported steering module condition",
+    reported_status: "intermittent"
+  }]
+});
+const explicitManufacturerSpecificDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: explicitManufacturerSpecificDtcSnapshot });
+check(explicitManufacturerSpecificDtcSnapshot.dtcs.some((item) => item.code === "C0051F" && item.subcode === null && item.code_format === "manufacturer_specific" && item.manufacturer_specific === true && item.reported_description === "Vendor-reported steering module condition" && item.reported_status === "intermittent") && explicitManufacturerSpecificDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "C0051F" && item.subcode === null && item.manufacturerSpecific === true && item.reportedDescription === "Vendor-reported steering module condition" && item.reportedStatus === "intermittent") && explicitManufacturerSpecificDtcSession.vehicleCommandEnabled === false && explicitManufacturerSpecificDtcSession.wouldTransmit === false, "Explicit manufacturer-specific DTC formats must not be shortened into generic code and subcode values");
 const subcodeBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
