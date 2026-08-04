@@ -1498,5 +1498,27 @@
     "last_verified_date": "2026-08-03",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p05ce-00-toyota-highlander-grand-highlander-2023-2024",
+    "code": "P05CE",
+    "subcode": "00",
+    "title": "MIL ON with DTC P05CE00",
+    "system": "Powertrain / ECM software campaign (source-specific)",
+    "applicability_note": "Toyota Special Service Campaign 24TC05 identifies P05CE00 only for covered 2023-2024 Highlander vehicles produced from early October 2022 to mid-March 2024 and covered 2024 Grand Highlander vehicles produced from mid-June 2023 to early January 2024. Confirm VIN eligibility through Toyota TIS, model year, production period, reporting ECU, stored status, and Toyota service information before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Toyota"], "model_year_scopes": [{"models": ["Highlander"], "year_from": 2023, "year_to": 2024}, {"models": ["Grand Highlander"], "year_from": 2024, "year_to": 2024}], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all ECM DTCs, freeze-frame data, calibration information, warning status, and campaign eligibility evidence before inspection.", "Do not clear DTCs, reset the ECM, reprogram, code, or start active tests from this tool; confirm VIN eligibility through Toyota TIS, model year, production period, reporting ECU, stored status, and campaign applicability.", "Use Toyota Technical Instructions and qualified diagnostic procedures for diagnosis, repair, recovery, and post-repair verification."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to an uncovered vehicle, another Toyota model, a different model year, production period, market, ECM, or DTC status.", "Do not infer an ECM, actuator, wiring, or mechanical failure from P05CE00 alone.", "Do not treat this definition as authorization to reprogram the ECM or clear DTCs."],
+    "required_tools": ["Compatible scan tool", "Toyota TIS eligibility check", "Toyota service information", "Qualified diagnostic equipment"],
+    "safety_notes": ["ECM programming, calibration verification, and DTC clearing can alter vehicle operation and emissions readiness. Do not perform them without the manufacturer procedure, trained personnel, stable power support, and a recovery plan."],
+    "confidence": "Toyota source-specific DTC and subcode definition; VIN eligibility, model year, production period, reporting ECU, stored status, and manufacturer procedure confirmation required.",
+    "source": "Toyota Special Service Campaign 24TC05 / NHTSA MC-11010087",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2024/MC-11010087-0001.pdf",
+    "source_date": "2024-09-19",
+    "last_verified_date": "2026-08-04",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
