@@ -19359,6 +19359,7 @@
     };
     let freezeFrameTriggerDtc = null;
     let freezeFrameTriggerFrameNumber = null;
+    let freezeFrameTriggerDtcEntries = [];
     let milOn = null;
     let readinessIgnitionType = null;
     let capturedAt = null;
@@ -19448,11 +19449,30 @@
         const frameNumber = frameNumberText ? Number(frameNumberText) : null;
         return Number.isInteger(frameNumber) && frameNumber >= 0 && frameNumber <= 255 ? frameNumber : null;
       };
+      const readFreezeFrameTriggerEntry = () => {
+        const codeValue = cellAt(triggerDtcIndex, 48) || dtc;
+        const genericCodeReference = extractDtcReferences(codeValue)[0] || null;
+        const manufacturerCodeReference = manufacturerSpecificDtc
+          ? extractManufacturerSpecificDtcReference(codeValue)
+          : null;
+        const codeReference = manufacturerCodeReference || genericCodeReference;
+        if (!codeReference) return null;
+        const frameNumber = readFreezeFrameNumber();
+        return {
+          code: codeReference.code,
+          subcode: manufacturerCodeReference ? null : dtcSubcode || codeReference.subcode || null,
+          ...(manufacturerCodeReference ? { code_format: "manufacturer_specific", manufacturer_specific: true } : {}),
+          ...(frameNumber === null ? {} : { frame_number: frameNumber }),
+          ...(ecu ? { source_ecu: ecu } : {}),
+          ...(ecuName ? { source_ecu_name: ecuName } : {})
+        };
+      };
       if (isFreezeFrameRow && !freezeFrameTriggerDtc) {
-        const triggerDtc = extractDtcReferences(cellAt(triggerDtcIndex, 48) || dtc)[0]?.code || null;
-        if (triggerDtc) {
-          freezeFrameTriggerDtc = triggerDtc;
-          freezeFrameTriggerFrameNumber = readFreezeFrameNumber();
+        const triggerEntry = readFreezeFrameTriggerEntry();
+        if (triggerEntry) {
+          freezeFrameTriggerDtc = triggerEntry.code;
+          freezeFrameTriggerFrameNumber = triggerEntry.frame_number ?? null;
+          freezeFrameTriggerDtcEntries = [triggerEntry];
         }
       }
       if (dtcReadoutKind && (hasDtcCode || isExplicitEmptyDtcReadout(cellAt(statusIndex, 80)))) {
@@ -19615,8 +19635,12 @@
           recordReadoutMetadata("freeze_frame", rowCapturedAt, rowProtocol);
           freezeFrameValues.push(row);
           if (!freezeFrameTriggerDtc) {
-            freezeFrameTriggerDtc = extractDtcReferences(cellAt(triggerDtcIndex, 48) || dtc)[0]?.code || null;
-            freezeFrameTriggerFrameNumber = frameNumber;
+            const triggerEntry = readFreezeFrameTriggerEntry();
+            if (triggerEntry) {
+              freezeFrameTriggerDtc = triggerEntry.code;
+              freezeFrameTriggerFrameNumber = triggerEntry.frame_number ?? frameNumber;
+              freezeFrameTriggerDtcEntries = [triggerEntry];
+            }
           }
         } else {
           monitorValues.push(row);
@@ -19663,7 +19687,7 @@
       }
       : null;
     const freezeFrameSnapshot = freezeFrameValues.length
-      ? normalizeFreezeFrameSnapshot({ source, ...readoutMetadata("freeze_frame"), values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, ...(freezeFrameTriggerFrameNumber === null ? {} : { trigger_frame_number: freezeFrameTriggerFrameNumber }), freezeFrameReadoutStatus: "reported" })
+      ? normalizeFreezeFrameSnapshot({ source, ...readoutMetadata("freeze_frame"), values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, ...(freezeFrameTriggerDtcEntries.length ? { trigger_dtc_entries: freezeFrameTriggerDtcEntries } : {}), ...(freezeFrameTriggerFrameNumber === null ? {} : { trigger_frame_number: freezeFrameTriggerFrameNumber }), freezeFrameReadoutStatus: "reported" })
       : null;
     const readinessSnapshot = readinessMonitors.length
       ? normalizeReadinessSnapshot({ source, ...readoutMetadata("readiness"), monitors: readinessMonitors, ...(milOn === null ? {} : { milOn }), ...(readinessIgnitionType ? { readinessIgnitionType } : {}), readinessReadoutStatus: "reported" })
