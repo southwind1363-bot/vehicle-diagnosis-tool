@@ -7,7 +7,7 @@
     "progress_percent": 62,
     "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
     "priority": 1,
-    "current_count_note": "P系親DTC 2931件 / 出典定義2941件・一意サブコード定義12件 (Mazda 2023-25/2024-25 P20F8-00、Ford 2023-25 Bronco Sport/Maverick 8F35 P0767、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00、Hyundai 2020-22 Venue IVT T8X対象5コードを出典限定で追加)",
+    "current_count_note": "P系親DTC 2932件 / 出典定義2942件・一意サブコード定義13件 (Mazda 2023-25/2024-25 P20F8-00、Ford 2023-25 Bronco Sport/Maverick 8F35 P0767、Ford 2024-25 Mustang Mach-E P07E6-71、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00、Hyundai 2020-22 Venue IVT T8X対象5コードを出典限定で追加)",
     "next_actions": [
       "未収録Pコードを公式/規格系ソースで照合する",
       "同時DTC、フリーズフレーム、ライブデータPIDへのリンクを増やす",
