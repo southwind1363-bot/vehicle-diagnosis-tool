@@ -512,7 +512,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('"read_stored_dtc"') && functionBody.includes('"read_pending_dtc"') && functionBody.includes('"read_permanent_dtc"'), "normalizeBridgeDtcSnapshot should preserve stored, pending, and permanent DTC intents");
     check(functionBody.includes('const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";'), "normalizeBridgeDtcSnapshot should derive DTC status from bridge intent");
     check(functionBody.includes('const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) =>') && functionBody.includes('const ecuDtcRows = ecuRows.flatMap((ecuRow) => {') && functionBody.includes('const scopedEntriesByKey = new Map();') && functionBody.includes('const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get('), "normalizeBridgeDtcSnapshot should merge explicit ECU response DTC rows without retaining aggregate duplicates");
-    check(functionBody.includes('extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "")'), "normalizeBridgeDtcSnapshot should normalize DTC row code aliases and subcodes");
+    check(functionBody.includes('const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "";') && functionBody.includes('const manufacturerCodeReference = isExplicitManufacturerSpecificDtcRow(rowValue)') && functionBody.includes('const codeReferences = manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;'), "normalizeBridgeDtcSnapshot should normalize DTC row code aliases, subcodes, and explicit manufacturer-specific formats");
     check(functionBody.includes('const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;') && functionBody.includes('const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);') && functionBody.includes('ecu: rowEcu || fallbackEcu') && functionBody.includes('ecu_name: ecuName') && functionBody.includes('freezeFrameAvailable: rowValue.freeze_frame_available === true'), "normalizeBridgeDtcSnapshot should preserve ECU name and freeze-frame context");
     check(functionBody.includes('const key = `${entry.code}::${entry.subcode || ""}::${entry.ecu || ""}::${entry.status}`;'), "normalizeBridgeDtcSnapshot should deduplicate by code, subcode, ECU, and status");
     check(functionBody.includes('const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));'), "normalizeBridgeDtcSnapshot should mark normalized DTC rows as local bridge sourced");
@@ -18071,6 +18071,23 @@ const failureTypeByteBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
   data: { dtcs: [{ dtc_code: "U0100", failureTypeByte: 16 }] }
 });
 check(failureTypeByteBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.subcode === "10") && failureTypeByteBridgeSnapshot.wouldTransmit === false, "Bridge DTC failure type byte aliases were not normalized safely");
+const bridgeReportedManufacturerDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: {
+    dtcs: [{
+      code: "123456",
+      code_format: "manufacturer_specific",
+      reported_description: "Vendor-reported module condition",
+      reported_status: "intermittent",
+      ecu: "7E9",
+      ecu_name: "Body Control Module"
+    }]
+  }
+});
+const bridgeReportedManufacturerDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeReportedManufacturerDtcSnapshot });
+check(bridgeReportedManufacturerDtcSnapshot.dtcs.some((item) => item.code === "123456" && item.code_format === "manufacturer_specific" && item.manufacturer_specific === true && item.reported_description === "Vendor-reported module condition" && item.reported_status === "intermittent" && item.ecu === "7E9" && item.ecu_name === "Body Control Module") && bridgeReportedManufacturerDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "123456" && item.manufacturerSpecific === true && item.reportedDescription === "Vendor-reported module condition" && item.reportedStatus === "intermittent") && bridgeReportedManufacturerDtcSession.vehicleCommandEnabled === false && bridgeReportedManufacturerDtcSession.wouldTransmit === false, "Bridge DTC normalization must retain manufacturer-specific format and reported metadata without inferring a definition");
 const statusByteDtcSnapshot = obd.normalizeDtcSnapshot({
   dtcs: [
     { dtc_code: "P0300", dtc_status_byte: 47 },

@@ -3112,10 +3112,18 @@
       if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName, ecu_name: fallbackEcuName }));
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
+      const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "";
+      const genericCodeReferences = extractDtcReferences(codeValue);
+      const manufacturerCodeReference = isExplicitManufacturerSpecificDtcRow(rowValue)
+        ? extractManufacturerSpecificDtcReference(codeValue)
+        : null;
+      const codeReferences = manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
+      const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
+      const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
       const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);
-      return extractDtcReferences(rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "").map(({ code, subcode }) => ({
+      return codeReferences.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
         statusByte: readDtcStatusByteAlias(rowValue),
@@ -3128,7 +3136,10 @@
         ecu: rowEcu || fallbackEcu,
         ecuName,
         ecu_name: ecuName,
-        freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true
+        freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
+        ...(codeFormat ? { codeFormat, code_format: codeFormat, manufacturerSpecific: true, manufacturer_specific: true } : {}),
+        ...(reportedDescription ? { reportedDescription, reported_description: reportedDescription } : {}),
+        ...(reportedStatus ? { reportedStatus, reported_status: reportedStatus } : {})
       }));
     });
     const ecuDtcRows = ecuRows.flatMap((ecuRow) => {
