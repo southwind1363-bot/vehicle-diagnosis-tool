@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.88";
+const APP_VERSION = "3.5.89";
 const APP_LAST_UPDATED = "2026-08-04";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -313,6 +313,7 @@ const vehicleModelCodeSelect = document.querySelector("#vehicleModelCode");
 const vehicleEngineCodeSelect = document.querySelector("#vehicleEngineCode");
 const vehicleYearSelect = document.querySelector("#vehicleYear");
 const vehicleYearManualInput = document.querySelector("#vehicleYearManual");
+const vehicleProductionDateInput = document.querySelector("#vehicleProductionDate");
 const vehicleManualInput = document.querySelector("#vehicleManual");
 const vehicleSelectionSummary = document.querySelector("#vehicleSelectionSummary");
 const obdVehicleInput = document.querySelector("#obdVehicle");
@@ -322,6 +323,7 @@ const obdVehicleModelCodeSelect = document.querySelector("#obdVehicleModelCode")
 const obdVehicleEngineCodeSelect = document.querySelector("#obdVehicleEngineCode");
 const obdVehicleYearSelect = document.querySelector("#obdVehicleYear");
 const obdVehicleYearManualInput = document.querySelector("#obdVehicleYearManual");
+const obdVehicleProductionDateInput = document.querySelector("#obdVehicleProductionDate");
 const obdVehicleManualInput = document.querySelector("#obdVehicleManual");
 const obdVehicleSelectionSummary = document.querySelector("#obdVehicleSelectionSummary");
 const obdAvailableReadoutSummary = document.querySelector("#obdAvailableReadoutSummary");
@@ -577,7 +579,7 @@ vehicleYearSelect.addEventListener("change", () => {
   updateVehicleYearManualVisibility();
   renderVehicleEngineOptions();
 });
-[vehicleEngineCodeSelect, vehicleManualInput].forEach((element) => {
+[vehicleEngineCodeSelect, vehicleProductionDateInput, vehicleManualInput].forEach((element) => {
   element.addEventListener("input", syncVehicleInput);
   element.addEventListener("change", syncVehicleInput);
 });
@@ -595,7 +597,7 @@ obdVehicleYearSelect?.addEventListener("change", () => {
   updateObdVehicleYearManualVisibility();
   renderObdVehicleEngineOptions();
 });
-[obdVehicleEngineCodeSelect, obdVehicleManualInput, obdInterfaceSelect].forEach((element) => {
+[obdVehicleEngineCodeSelect, obdVehicleProductionDateInput, obdVehicleManualInput, obdInterfaceSelect].forEach((element) => {
   element?.addEventListener("change", syncObdVehicleInput);
   element?.addEventListener("input", syncObdVehicleInput);
 });
@@ -1390,6 +1392,7 @@ function syncVehicleInput() {
     selectedVehicleValue(vehicleModelSelect),
     selectedVehicleValue(vehicleModelCodeSelect),
     selectedVehicleYear(),
+    vehicleProductionDateInput.value ? `生産 ${vehicleProductionDateInput.value}` : "",
     selectedVehicleValue(vehicleEngineCodeSelect),
     vehicleManualInput.value.trim()
   ];
@@ -1406,8 +1409,9 @@ function buildSelectedDiagnosticVehicleProfile() {
   const maker = selectedVehicleValue(vehicleMakerSelect);
   const model = selectedVehicleValue(vehicleModelSelect);
   const year = selectedVehicleValue(vehicleYearSelect) || vehicleYearManualInput.value.trim();
-  if (!maker && !model && !year) return null;
-  return { maker: maker || null, model: model || null, year: year || null };
+  const productionDate = vehicleProductionDateInput.value || null;
+  if (!maker && !model && !year && !productionDate) return null;
+  return { maker: maker || null, model: model || null, year: year || null, productionDate };
 }
 
 function selectedVehicleValue(select) {
@@ -1532,14 +1536,16 @@ function buildSelectedObdVehicleProfile() {
   const model = selectedVehicleValue(obdVehicleModelSelect);
   const modelCode = selectedVehicleValue(obdVehicleModelCodeSelect);
   const year = selectedVehicleValue(obdVehicleYearSelect) || obdVehicleYearManualInput.value.trim();
+  const productionDate = obdVehicleProductionDateInput.value || null;
   const engineCode = selectedVehicleValue(obdVehicleEngineCodeSelect);
   const freeText = obdVehicleManualInput.value.trim();
-  if (!maker && !model && !modelCode && !year && !engineCode && !freeText) return null;
+  if (!maker && !model && !modelCode && !year && !productionDate && !engineCode && !freeText) return null;
   return {
     maker: maker || null,
     model: model || null,
     modelCode: modelCode || null,
     year: year || null,
+    productionDate,
     engineCode: engineCode || null,
     label: obdVehicleInput.value.trim() || freeText || null,
     notes: freeText || null
@@ -1772,6 +1778,7 @@ function syncObdVehicleInput() {
     selectedVehicleValue(obdVehicleModelSelect),
     selectedVehicleValue(obdVehicleModelCodeSelect),
     selectedObdVehicleYear(),
+    obdVehicleProductionDateInput.value ? `生産 ${obdVehicleProductionDateInput.value}` : "",
     selectedVehicleValue(obdVehicleEngineCodeSelect),
     obdVehicleManualInput.value.trim()
   ];
@@ -1789,6 +1796,7 @@ function resetObdVehicleSelector() {
   replaceSelectOptions(obdVehicleYearSelect, "先に車種を選択", []);
   replaceSelectOptions(obdVehicleEngineCodeSelect, "先に車種を選択", []);
   obdVehicleYearManualInput.hidden = true;
+  obdVehicleProductionDateInput.value = "";
   syncObdVehicleInput();
 }
 
@@ -2196,6 +2204,7 @@ function applyDiagnosisVehicleToObdSetup() {
   renderObdVehicleYearOptions();
   obdVehicleYearSelect.value = vehicleYearSelect.value;
   obdVehicleYearManualInput.value = vehicleYearManualInput.value;
+  obdVehicleProductionDateInput.value = vehicleProductionDateInput.value;
   updateObdVehicleYearManualVisibility();
   renderObdVehicleEngineOptions();
   obdVehicleEngineCodeSelect.value = vehicleEngineCodeSelect.value;
