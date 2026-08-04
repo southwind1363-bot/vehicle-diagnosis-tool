@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.61";
+const APP_VERSION = "3.5.62";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7076,6 +7076,8 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   const webSerialResponseReviewDeltaValue = summary.webSerialResponseReviewDelta ?? summary.web_serial_response_review_delta;
   const webSerialNegativeResponseDeltaValue = summary.webSerialNegativeResponseDelta ?? summary.web_serial_negative_response_delta;
   const webSerialNoDataDeltaValue = summary.webSerialNoDataDelta ?? summary.web_serial_no_data_delta;
+  const webSerialExpectedEmptyCommandDeltaValue = summary.webSerialExpectedEmptyCommandDelta ?? summary.web_serial_expected_empty_command_delta;
+  const webSerialUnresolvedNoDataDeltaValue = summary.webSerialUnresolvedNoDataDelta ?? summary.web_serial_unresolved_no_data_delta;
   const issueDelta = Number.isFinite(Number(issueDeltaValue)) ? Number(issueDeltaValue) : 0;
   const rawDelta = Number.isFinite(Number(rawDeltaValue)) ? Number(rawDeltaValue) : 0;
   const readinessDelta = Number.isFinite(Number(readinessDeltaValue)) ? Number(readinessDeltaValue) : 0;
@@ -7084,6 +7086,8 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   const webSerialResponseReviewDelta = Number.isFinite(Number(webSerialResponseReviewDeltaValue)) ? Number(webSerialResponseReviewDeltaValue) : 0;
   const webSerialNegativeResponseDelta = Number.isFinite(Number(webSerialNegativeResponseDeltaValue)) ? Number(webSerialNegativeResponseDeltaValue) : 0;
   const webSerialNoDataDelta = Number.isFinite(Number(webSerialNoDataDeltaValue)) ? Number(webSerialNoDataDeltaValue) : 0;
+  const webSerialExpectedEmptyCommandDelta = Number.isFinite(Number(webSerialExpectedEmptyCommandDeltaValue)) ? Number(webSerialExpectedEmptyCommandDeltaValue) : 0;
+  const webSerialUnresolvedNoDataDelta = Number.isFinite(Number(webSerialUnresolvedNoDataDeltaValue)) ? Number(webSerialUnresolvedNoDataDeltaValue) : webSerialNoDataDelta;
   const parts = [];
   if (issueDelta !== 0) parts.push(`品質${issueDelta > 0 ? "+" : ""}${issueDelta}`);
   if (rawDelta !== 0) parts.push(`RAW${rawDelta > 0 ? "+" : ""}${rawDelta}`);
@@ -7092,7 +7096,8 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   if (mode06Delta !== 0) parts.push(`M06${mode06Delta > 0 ? "+" : ""}${mode06Delta}`);
   if (webSerialResponseReviewDelta !== 0) parts.push(`通信${webSerialResponseReviewDelta > 0 ? "+" : ""}${webSerialResponseReviewDelta}`);
   if (webSerialNegativeResponseDelta !== 0) parts.push(`NRC${webSerialNegativeResponseDelta > 0 ? "+" : ""}${webSerialNegativeResponseDelta}`);
-  if (webSerialNoDataDelta !== 0) parts.push(`NO DATA${webSerialNoDataDelta > 0 ? "+" : ""}${webSerialNoDataDelta}`);
+  if (webSerialExpectedEmptyCommandDelta !== 0) parts.push(`正常空結果${webSerialExpectedEmptyCommandDelta > 0 ? "+" : ""}${webSerialExpectedEmptyCommandDelta}`);
+  if (webSerialUnresolvedNoDataDelta !== 0) parts.push(`NO DATA${webSerialUnresolvedNoDataDelta > 0 ? "+" : ""}${webSerialUnresolvedNoDataDelta}`);
   if (summary.issueIdsChanged === true) parts.push("項目変化");
   if (summary.reviewRequiredChanged === true) parts.push("確認状態変化");
   const reviewActionSummary = summary.reviewActionSummary || summary.review_action_summary || null;

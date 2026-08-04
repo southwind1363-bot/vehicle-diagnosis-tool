@@ -11451,6 +11451,8 @@
       negative_response: readCount(currentSummary, "webSerialNegativeResponseCount") - readCount(importedQualitySummary, "webSerialNegativeResponseCount"),
       pending_negative_response: readCount(currentSummary, "webSerialPendingNegativeResponseCount") - readCount(importedQualitySummary, "webSerialPendingNegativeResponseCount"),
       no_data: readCount(currentSummary, "webSerialNoDataCount") - readCount(importedQualitySummary, "webSerialNoDataCount"),
+      expected_empty: readCount(currentSummary, "webSerialExpectedEmptyCommandCount") - readCount(importedQualitySummary, "webSerialExpectedEmptyCommandCount"),
+      unresolved_no_data: Math.max(0, readCount(currentSummary, "webSerialNoDataCount") - readCount(currentSummary, "webSerialExpectedEmptyCommandCount")) - Math.max(0, readCount(importedQualitySummary, "webSerialNoDataCount") - readCount(importedQualitySummary, "webSerialExpectedEmptyCommandCount")),
       empty_response: readCount(currentSummary, "webSerialEmptyResponseCount") - readCount(importedQualitySummary, "webSerialEmptyResponseCount"),
       unrecognized_response: readCount(currentSummary, "webSerialUnrecognizedResponseCount") - readCount(importedQualitySummary, "webSerialUnrecognizedResponseCount"),
       adapter_error: readCount(currentSummary, "webSerialAdapterErrorCount") - readCount(importedQualitySummary, "webSerialAdapterErrorCount"),
@@ -11555,7 +11557,11 @@
       webSerialNegativeResponseDelta: webSerialResponseOutcomeDeltas.negative_response,
       web_serial_negative_response_delta: webSerialResponseOutcomeDeltas.negative_response,
       webSerialNoDataDelta: webSerialResponseOutcomeDeltas.no_data,
-      web_serial_no_data_delta: webSerialResponseOutcomeDeltas.no_data
+      web_serial_no_data_delta: webSerialResponseOutcomeDeltas.no_data,
+      webSerialExpectedEmptyCommandDelta: webSerialResponseOutcomeDeltas.expected_empty,
+      web_serial_expected_empty_command_delta: webSerialResponseOutcomeDeltas.expected_empty,
+      webSerialUnresolvedNoDataDelta: webSerialResponseOutcomeDeltas.unresolved_no_data,
+      web_serial_unresolved_no_data_delta: webSerialResponseOutcomeDeltas.unresolved_no_data
     };
   }
 
