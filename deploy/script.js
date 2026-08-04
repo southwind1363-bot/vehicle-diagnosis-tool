@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.92";
+const APP_VERSION = "3.5.93";
 const APP_LAST_UPDATED = "2026-08-04";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8152,12 +8152,15 @@ function analyzeObdScannerImport(options = {}) {
     });
   }
   if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport()) {
-    const structuredImportVehicleProfile = buildSelectedObdVehicleProfile();
+    const importedVehicleProfile = structuredImportSession.vehicleProfile || structuredImportSession.vehicle_profile || null;
+    const structuredImportVehicleProfile = importedVehicleProfile || buildSelectedObdVehicleProfile();
+    const importedVehicleApplicability = structuredImportSession.vehicleApplicability || structuredImportSession.vehicle_applicability || null;
+    const structuredImportVehicleApplicability = importedVehicleApplicability || buildSelectedObdVehicleApplicability(structuredImportVehicleProfile);
     const importedReadoutInterface = structuredImportSession.readoutInterface || structuredImportSession.readout_interface || null;
     obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
       scan_session: structuredImportSession,
       vehicleProfile: structuredImportVehicleProfile || undefined,
-      vehicleApplicability: buildSelectedObdVehicleApplicability(structuredImportVehicleProfile) || undefined,
+      vehicleApplicability: structuredImportVehicleApplicability || undefined,
       readoutInterface: importedReadoutInterface || buildSelectedObdReadoutInterface()
     });
   }
@@ -8499,7 +8502,8 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
   const displayCode = `${subcode ? `${code}:${subcode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
-  const vehicleProfile = vehicleProfileOverride && typeof vehicleProfileOverride === "object"
+  const hasSessionVehicleProfile = vehicleProfileOverride && typeof vehicleProfileOverride === "object";
+  const vehicleProfile = hasSessionVehicleProfile
     ? vehicleProfileOverride
     : buildSelectedObdVehicleProfile();
   const dtcDefinitions = findDtcDefinitionCandidates(code, subcode);
@@ -8559,11 +8563,23 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
     applicabilityMatched.className = "obd-dtc-check";
     applicabilityMatched.textContent = "適用範囲: 選択車両と一致しています。ECU・サブコード・整備書の適合確認は引き続き必要です。";
     wrapper.appendChild(applicabilityMatched);
+    if (hasSessionVehicleProfile) {
+      const sessionProfileSource = document.createElement("p");
+      sessionProfileSource.className = "obd-dtc-check";
+      sessionProfileSource.textContent = "適用判定は、読取セッションに保存された車両情報を使用しています。";
+      wrapper.appendChild(sessionProfileSource);
+    }
   } else if (definitionApplicability.status === "mismatch") {
     const applicabilityMismatch = document.createElement("p");
     applicabilityMismatch.className = "obd-dtc-check";
     applicabilityMismatch.textContent = "適用範囲: 選択車両はこの出典限定定義の対象外です。定義を診断根拠に使わず、該当車種の整備書を確認してください。";
     wrapper.appendChild(applicabilityMismatch);
+    if (hasSessionVehicleProfile) {
+      const sessionProfileSource = document.createElement("p");
+      sessionProfileSource.className = "obd-dtc-check";
+      sessionProfileSource.textContent = "適用判定は、読取セッションに保存された車両情報を使用しています。";
+      wrapper.appendChild(sessionProfileSource);
+    }
   } else if (definitionApplicability.status === "unverified") {
     const applicabilityUnverified = document.createElement("p");
     applicabilityUnverified.className = "obd-dtc-check";
@@ -8651,6 +8667,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   button.className = "obd-code-button";
   button.dataset.dtcCode = code;
   button.dataset.dtcSubcode = subcode || "";
+  button._obdVehicleProfile = vehicleProfile;
   button.textContent = "詳しい診断手順を見る";
   wrapper.appendChild(button);
   return wrapper;
@@ -8884,7 +8901,11 @@ function handleDetectedDtcClick(event) {
 
   document.querySelector("#obdCode").value = formatDtcReference(button.dataset.dtcCode, button.dataset.dtcSubcode);
   activateTab("diagnosis-panel");
-  renderDiagnosis(buildDiagnosis(getInput()));
+  const input = getInput();
+  if (button._obdVehicleProfile && typeof button._obdVehicleProfile === "object") {
+    input.vehicleProfile = button._obdVehicleProfile;
+  }
+  renderDiagnosis(buildDiagnosis(input));
   document.querySelector("#resultTitle").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
