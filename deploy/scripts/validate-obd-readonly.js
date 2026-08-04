@@ -18418,6 +18418,11 @@ const scannerCsvLiveDataTablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "Live Data", "Parameter\tValue\tUnit", "Coolant Temperature\t85\tC"
 ].join("\n"));
 check(scannerCsvLiveDataTablesSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerCsvLiveDataTablesSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 85) && scannerCsvLiveDataTablesSession?.vehicleCommandEnabled === false && scannerCsvLiveDataTablesSession?.retainedRawText === false, "Structured CSV import did not merge separate live-data tables into one read-only session");
+const scannerCsvLiveDataEcuMetadataTablesSession = obd.buildDiagnosticScanSessionFromCsv([
+  "Live Data", "Parameter\tValue\tUnit\tCaptured At\tProtocol\tECU\tECU Name", "Engine Speed\t800\trpm\t2026-08-04T10:20:00+09:00\tCAN_11BIT_500K\t7E8\tEngine Control Module",
+  "Live Data", "Parameter\tValue\tUnit\tCaptured At\tProtocol\tECU\tECU Name", "Coolant Temperature\t85\tC\t2026-08-04T10:20:00+09:00\tCAN_11BIT_500K\t7E8\tEngine Control Module"
+].join("\n"));
+check(scannerCsvLiveDataEcuMetadataTablesSession?.livePidSnapshot?.sourceEcu === "7E8" && scannerCsvLiveDataEcuMetadataTablesSession.livePidSnapshot?.sourceEcuName === "Engine Control Module" && scannerCsvLiveDataEcuMetadataTablesSession.livePidSnapshot?.capturedAt === "2026-08-04T10:20:00+09:00" && scannerCsvLiveDataEcuMetadataTablesSession.livePidSnapshot?.protocol === "CAN_11BIT_500K" && scannerCsvLiveDataEcuMetadataTablesSession.livePidSnapshot?.monitorValues?.every((item) => item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module") && scannerCsvLiveDataEcuMetadataTablesSession?.vehicleCommandEnabled === false && scannerCsvLiveDataEcuMetadataTablesSession?.retainedRawText === false, "Merged CSV live-data tables lost single-ECU provenance, shared metadata, or read-only safety");
 const scannerCsvSupportedPidTablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "Supported PIDs", "PID\tStatus", "01\tSupported", "05\tSupported",
   "Supported PIDs", "PID\tStatus", "0C\tSupported", "0D\tSupported"

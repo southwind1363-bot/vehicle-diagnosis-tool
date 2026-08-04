@@ -3610,6 +3610,11 @@
       .filter(Boolean);
     const observedSourceEcus = [...new Set(monitorValues.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
+    const observedSourceEcuNames = [...new Set(monitorValues
+      .filter((item) => !resolvedSourceEcu || (item.sourceEcu || item.source_ecu || null) === resolvedSourceEcu)
+      .map((item) => item.sourceEcuName || item.source_ecu_name || null)
+      .filter(Boolean))];
+    const resolvedSourceEcuName = sourceEcuName || (observedSourceEcus.length === 1 && observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
     const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
       ? getBridgeReadoutStatus(resolvedBridgeSafety)
@@ -3639,8 +3644,8 @@
       protocol: readBridgeProtocol(data),
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
-      sourceEcuName,
-      source_ecu_name: sourceEcuName,
+      sourceEcuName: resolvedSourceEcuName,
+      source_ecu_name: resolvedSourceEcuName,
       supportedPids,
       supported_pids: supportedPids,
       capturedAt,
@@ -20518,9 +20523,13 @@
     const livePidSnapshots = tableSessions
       .map((session) => session.livePidSnapshot)
       .filter((snapshot) => snapshot && (snapshot.livePidReadoutStatus === "reported" || Number(snapshot.valueCount) > 0));
+    const livePidCapturedAtValues = [...new Set(livePidSnapshots.map((snapshot) => snapshot.capturedAt || snapshot.captured_at || null).filter(Boolean))];
+    const livePidProtocolValues = [...new Set(livePidSnapshots.map((snapshot) => snapshot.protocol || snapshot.obd_protocol || null).filter(Boolean))];
     const livePidSnapshot = livePidSnapshots.length > 1
       ? {
         ...normalizeBridgeLivePidSnapshot({
+          ...(livePidCapturedAtValues.length === 1 ? { captured_at: livePidCapturedAtValues[0] } : {}),
+          ...(livePidProtocolValues.length === 1 ? { protocol: livePidProtocolValues[0] } : {}),
           monitor_values: livePidSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []),
           live_pid_readout_status: "reported"
         }),
