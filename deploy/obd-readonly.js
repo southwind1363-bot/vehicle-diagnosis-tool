@@ -18909,7 +18909,7 @@
           }
         }
         : null;
-    const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : hasBridgeLivePidResponse ? importSession : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values");
+    const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : hasBridgeLivePidResponse ? importSession : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values", "pidValues", "pid_values", "livePidValues", "live_pid_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
     const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data", "freezeFrameValues", "freeze_frame_values", "freezeFrameRows", "freeze_frame_rows");
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "associated_dtc", "associatedDtc");
