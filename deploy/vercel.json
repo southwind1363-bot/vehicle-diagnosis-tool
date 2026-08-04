@@ -1,55 +1,8 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "style.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "script.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "obd-readonly.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "local-bridge-readonly.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "service-worker.js",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "manifest.webmanifest",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "offline-assets.json",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "google9fd0215a9842e2d1.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "sitemap.xml",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "robots.txt",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "data/**",
-      "use": "@vercel/static"
-    }
-  ],
+  "framework": null,
+  "buildCommand": "",
+  "outputDirectory": ".",
   "rewrites": [
     {
       "source": "/",
