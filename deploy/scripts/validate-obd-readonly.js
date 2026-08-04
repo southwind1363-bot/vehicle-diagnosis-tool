@@ -18271,6 +18271,13 @@ const scannerJsonDataWrappedVehicleInformationSession = obd.buildDiagnosticScanS
   data: { vehicle_information: { make: "Toyota", model: "Prius", chassis_code: "ZVW50", model_year: "2023", vin: "JTD00000000000000" }, stored_dtcs: [{ code: "P0300" }] }
 }));
 check(scannerJsonDataWrappedVehicleInformationSession?.vehicleProfile?.maker === "Toyota" && scannerJsonDataWrappedVehicleInformationSession?.vehicleProfile?.modelCode === "ZVW50" && scannerJsonDataWrappedVehicleInformationSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored") && scannerJsonDataWrappedVehicleInformationSession?.hadSensitiveIdentifier === true && scannerJsonDataWrappedVehicleInformationSession?.vehicleCommandEnabled === false && !JSON.stringify(scannerJsonDataWrappedVehicleInformationSession).includes("JTD00000000000000"), "Data-wrapped vehicle information and DTC JSON were not retained as one safe read-only session");
+const scannerJsonDtcListAliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: { dtc_list: [{ code: "P0420", state: "pending", ecu: "7E8" }] }
+}));
+const scannerJsonDiagnosticTroubleCodesAliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { diagnostic_trouble_codes: [{ dtc_code: "U0100", status: "stored", ecu_id: "7E9" }] }
+}));
+check(scannerJsonDtcListAliasSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0420" && item.status === "pending" && item.ecu === "7E8") && scannerJsonDtcListAliasSession?.vehicleCommandEnabled === false && scannerJsonDiagnosticTroubleCodesAliasSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "U0100" && item.status === "stored" && item.ecu === "7E9") && scannerJsonDiagnosticTroubleCodesAliasSession?.vehicleCommandEnabled === false, "DTC-list JSON aliases were not retained as safe read-only DTC evidence");
 const reimportedScannerJsonStandaloneVehicleProfileSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonStandaloneVehicleProfileSession)
 });

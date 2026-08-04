@@ -18864,7 +18864,7 @@
     const bridgeResponseSession = getDiagnosticSessionInput(session);
     const importSession = bridgeResponseSession !== session ? bridgeResponseSession : session;
     const hasBridgeResponsePayload = bridgeResponseSession !== session;
-    const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
+    const hasExplicitDtcCollection = ["dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes", "dtc_list", "dtcList", "diagnostic_trouble_codes", "diagnosticTroubleCodes", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
     const hasExplicitLivePidCollection = ["livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values"].some((key) => importSession[key] !== undefined && importSession[key] !== null);
     const hasArrayDataDtcRows = !hasExplicitDtcCollection && hasDtcRows(importSession.data);
     const hasArrayDataLivePidRows = !hasExplicitDtcCollection && !hasExplicitLivePidCollection && hasLivePidRows(importSession.data);
@@ -18885,7 +18885,7 @@
     const bridgeReadoutId = String(importSession.data?.readout_id || importSession.data?.readoutId || importSession.readout_id || importSession.readoutId || "").trim().toLowerCase();
     const hasBridgeReadinessResponse = hasBridgeResponsePayload && bridgeIntent === "read_live_pid_snapshot" && bridgeReadoutId === "readiness_snapshot";
     const hasBridgeLivePidResponse = hasBridgeResponsePayload && bridgeIntent === "read_live_pid_snapshot" && !hasBridgeReadinessResponse;
-    const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes");
+    const dtcInput = pick("dtcSnapshot", "dtc_snapshot", "dtcs", "codes", "dtc_codes", "dtcCodes", "dtc_list", "dtcList", "diagnostic_trouble_codes", "diagnosticTroubleCodes");
     const statusSpecificDtcInput = {
       stored_dtcs: pick("stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes"),
       pending_dtcs: pick("pending_dtcs", "pendingDtcs", "pending_dtc_codes", "pendingDtcCodes", "pending_codes", "pendingCodes"),
