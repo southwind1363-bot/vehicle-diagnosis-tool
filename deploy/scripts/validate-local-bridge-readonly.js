@@ -45,11 +45,23 @@ const readyJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{
   driver_runtime_compatible: true,
   driver_readonly_api_ready: true
 }]);
+const mixedJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{
+  id: "fixture-incompatible-j2534",
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: false,
+  driver_readonly_api_ready: true
+}, {
+  id: "fixture-ready-j2534",
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: true,
+  driver_readonly_api_ready: true
+}]);
 check(emptyJ2534DiscoveryEnvironment.registration_status === "no_registered_driver" && emptyJ2534DiscoveryEnvironment.driver_readiness_status === "no_registered_driver" && emptyJ2534DiscoveryEnvironment.next_check === "install_or_repair_j2534_driver_registration" && emptyJ2534DiscoveryEnvironment.registry_roots_checked.length === 2 && emptyJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not report a safe no-driver state");
 check(detectedJ2534DiscoveryEnvironment.registration_status === "registered_driver_detected" && detectedJ2534DiscoveryEnvironment.driver_readiness_status === "static_inspection_pending" && detectedJ2534DiscoveryEnvironment.next_check === "verify_driver_library_path" && detectedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not preserve the uninspected-driver safety gate");
 check(mismatchedJ2534DiscoveryEnvironment.driver_readiness_status === "runtime_architecture_mismatch" && mismatchedJ2534DiscoveryEnvironment.next_check === "install_matching_j2534_driver_architecture" && mismatchedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not distinguish an architecture mismatch");
 check(incompleteJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_api_incomplete" && incompleteJ2534DiscoveryEnvironment.next_check === "verify_driver_readonly_exports" && incompleteJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not distinguish missing read-only APIs");
 check(readyJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_static_check_complete" && readyJ2534DiscoveryEnvironment.next_check === "manual_vci_connection_review" && readyJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment incorrectly enabled commands after static checks");
+check(mixedJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_static_check_complete" && mixedJ2534DiscoveryEnvironment.static_ready_vci_count === 1 && mixedJ2534DiscoveryEnvironment.static_blocked_vci_count === 1 && mixedJ2534DiscoveryEnvironment.selected_static_ready_device_id === "fixture-ready-j2534" && mixedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not retain a compatible read-only candidate beside an incompatible driver");
 const j2534RequiredApis = [
   "PassThruOpen",
   "PassThruClose",
@@ -195,10 +207,18 @@ try {
     const x86LibraryPath = path.join(j2534PeFixtureDir, "j2534-x86.dll");
     const x64LibraryPath = path.join(j2534PeFixtureDir, "j2534-x64-partial.dll");
     const arm64LibraryPath = path.join(j2534PeFixtureDir, "j2534-arm64.dll");
+    const matchingLibraryPath = path.join(j2534PeFixtureDir, "j2534-runtime-ready.dll");
+    const mismatchedLibraryPath = path.join(j2534PeFixtureDir, "j2534-runtime-mismatch.dll");
     const invalidLibraryPath = path.join(j2534PeFixtureDir, "invalid.dll");
+    const matchingMachine = process.arch === "ia32" ? 0x014C : process.arch === "arm64" ? 0xAA64 : 0x8664;
+    const matchingBitness = process.arch === "ia32" ? 32 : 64;
+    const mismatchedMachine = process.arch === "ia32" ? 0x8664 : 0x014C;
+    const mismatchedBitness = process.arch === "ia32" ? 64 : 32;
     fs.writeFileSync(x86LibraryPath, buildTestPeLibrary(0x014C, 32, j2534RequiredApis.map((name, index) => index === 0 ? `_${name}@4` : name)));
     fs.writeFileSync(x64LibraryPath, buildTestPeLibrary(0x8664, 64, ["PassThruOpen", "PassThruClose", "PassThruReadVersion"]));
     fs.writeFileSync(arm64LibraryPath, buildTestPeLibrary(0xAA64, 64, j2534RequiredApis));
+    fs.writeFileSync(matchingLibraryPath, buildTestPeLibrary(matchingMachine, matchingBitness, j2534RequiredApis));
+    fs.writeFileSync(mismatchedLibraryPath, buildTestPeLibrary(mismatchedMachine, mismatchedBitness, j2534RequiredApis));
     fs.writeFileSync(invalidLibraryPath, "not a PE library");
     const x86Inspection = inspectJ2534LibraryFile(x86LibraryPath);
     const x64Inspection = inspectJ2534LibraryFile(x64LibraryPath);
@@ -225,6 +245,31 @@ try {
     ].join("\n"), { inspectLibraries: true });
     check(inspectedRegistryDrivers[0]?.driver_library_architecture === "x86" && inspectedRegistryDrivers[0]?.driver_library_bitness === 32 && inspectedRegistryDrivers[0]?.driver_runtime_compatibility_status === (process.arch === "ia32" ? "compatible" : "architecture_mismatch") && inspectedRegistryDrivers[0]?.driver_required_api_ready === true && inspectedRegistryDrivers[0]?.driver_readonly_api_ready === true && inspectedRegistryDrivers[0]?.driver_detected_required_api_count === 14 && inspectedRegistryDrivers[0]?.driver_detected_readonly_api_count === 10, "J2534 registry discovery did not attach safe DLL compatibility metadata");
     check(!JSON.stringify(inspectedRegistryDrivers).includes(x86LibraryPath) && inspectedRegistryDrivers[0]?.vehicle_command_enabled === false, "J2534 registry discovery exposed a DLL path or enabled vehicle commands");
+    const prioritizedJ2534RegistryText = [
+      "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Incompatible VCI",
+      "    Name    REG_SZ    Incompatible J2534 VCI",
+      "    Vendor    REG_SZ    Fixture Vendor",
+      `    FunctionLibrary    REG_SZ    ${mismatchedLibraryPath}`,
+      "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Ready VCI",
+      "    Name    REG_SZ    Ready J2534 VCI",
+      "    Vendor    REG_SZ    Fixture Vendor",
+      `    FunctionLibrary    REG_SZ    ${matchingLibraryPath}`
+    ].join("\n");
+    const prioritizedJ2534Server = createLocalBridgeApp({ pairingToken: token, j2534RegistryText: prioritizedJ2534RegistryText });
+    const prioritizedJ2534Port = await new Promise((resolve) => {
+      prioritizedJ2534Server.listen(0, "127.0.0.1", () => resolve(prioritizedJ2534Server.address().port));
+    });
+    try {
+      const prioritizedVci = await post(prioritizedJ2534Port, "list_vci");
+      const prioritizedIdentity = await post(prioritizedJ2534Port, "adapter_identity");
+      const prioritizedReadout = await post(prioritizedJ2534Port, "read_stored_dtc");
+      const readyDevice = prioritizedVci.data.devices.find((device) => device.label === "Ready J2534 VCI");
+      check(prioritizedVci.data.driver_readiness_status === "readonly_static_check_complete" && prioritizedVci.data.static_ready_vci_count === 1 && prioritizedVci.data.static_blocked_vci_count === 1 && prioritizedVci.data.selected_device_id === readyDevice?.id && prioritizedVci.data.selected_static_ready_device_id === readyDevice?.id, "J2534 discovery did not prefer the runtime-compatible read-only driver");
+      check(prioritizedIdentity.data.adapter_name === "Ready J2534 VCI" && prioritizedIdentity.data.vehicle_command_enabled === false, "J2534 adapter identity did not retain the preferred read-only driver");
+      check(prioritizedReadout.ok === false && prioritizedReadout.errors.includes("vci_not_connected") && prioritizedReadout.data.selected_device_id === readyDevice?.id && prioritizedReadout.would_transmit === false && prioritizedReadout.data.vehicle_command_enabled === false, "J2534 preferred driver readout did not remain closed before manual connection review");
+    } finally {
+      await new Promise((resolve) => prioritizedJ2534Server.close(resolve));
+    }
   } finally {
     fs.rmSync(j2534PeFixtureDir, { recursive: true, force: true });
   }

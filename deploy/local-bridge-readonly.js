@@ -242,9 +242,13 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   const replayMode = Boolean(replaySnapshot);
   const discoveryMode = !replayMode && j2534DiscoveryRequested;
   const driverDetected = discoveryMode && discoveredVciDevices.length > 0;
+  const selectedJ2534Driver = driverDetected ? selectPreferredJ2534Driver(discoveredVciDevices) : null;
   const j2534StatusData = discoveryMode ? {
     driver_readiness_status: j2534DiscoveryEnvironment.driver_readiness_status,
-    next_check: j2534DiscoveryEnvironment.next_check
+    next_check: j2534DiscoveryEnvironment.next_check,
+    static_ready_vci_count: j2534DiscoveryEnvironment.static_ready_vci_count,
+    static_blocked_vci_count: j2534DiscoveryEnvironment.static_blocked_vci_count,
+    selected_static_ready_device_id: j2534DiscoveryEnvironment.selected_static_ready_device_id
   } : {};
   const base = {
     request_id: request.request_id,
@@ -280,7 +284,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     return {
       ...base,
       data: {
-        selected_device_id: replayMode ? "replay-readonly-input" : driverDetected ? discoveredVciDevices[0].id : discoveryMode ? null : "sample-readonly-vci",
+        selected_device_id: replayMode ? "replay-readonly-input" : selectedJ2534Driver?.id || (discoveryMode ? null : "sample-readonly-vci"),
         driver_status: replayMode ? "replay_mode" : driverDetected ? "j2534_registry_detected" : discoveryMode ? "j2534_driver_not_detected" : "sample_mode",
         ...j2534StatusData,
         devices: replayMode ? [
@@ -312,7 +316,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     return {
       ...base,
       data: {
-        adapter_name: replayMode ? "Read-only Local Bridge Replay" : driverDetected ? discoveredVciDevices[0].label : discoveryMode ? null : "Read-only Local Bridge Sample",
+        adapter_name: replayMode ? "Read-only Local Bridge Replay" : selectedJ2534Driver?.label || (discoveryMode ? null : "Read-only Local Bridge Sample"),
         adapter_family: replayMode ? "local_bridge_replay" : discoveryMode ? "j2534_passthru" : "local_bridge_sample",
         firmware_version: bridgeVersion,
         sample_mode: !replayMode && !discoveryMode,
@@ -331,7 +335,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
       ok: false,
       errors: [driverDetected ? "vci_not_connected" : "vci_not_detected"],
       data: {
-        selected_device_id: driverDetected ? discoveredVciDevices[0].id : null,
+        selected_device_id: selectedJ2534Driver?.id || null,
         adapter_family: "j2534_passthru",
         driver_status: driverDetected ? "j2534_registry_detected" : "j2534_driver_not_detected",
         connection_status: driverDetected ? "driver_detected_not_opened" : "driver_not_detected",
@@ -530,28 +534,25 @@ export function discoverJ2534RegistryDrivers(options = {}) {
 export function getJ2534DiscoveryEnvironment(devices = []) {
   const registeredDevices = Array.isArray(devices) ? devices : [];
   const detectedCount = registeredDevices.length;
-  const hasUninspectedDriver = registeredDevices.some((device) => device?.driver_library_inspection_status !== "inspected");
-  const hasArchitectureMismatch = registeredDevices.some((device) => device?.driver_runtime_compatible === false);
-  const hasReadonlyApiGap = registeredDevices.some((device) => (
-    device?.driver_library_inspection_status === "inspected"
-    && device?.driver_runtime_compatible === true
-    && device?.driver_readonly_api_ready !== true
-  ));
-  const staticCheckComplete = detectedCount > 0
-    && !hasUninspectedDriver
-    && !hasArchitectureMismatch
-    && !hasReadonlyApiGap;
+  const deviceReadiness = registeredDevices.map((device) => getJ2534DriverReadiness(device));
+  const readyDeviceIndexes = deviceReadiness
+    .map((status, index) => status === "readonly_static_check_complete" ? index : -1)
+    .filter((index) => index >= 0);
+  const hasStaticReadyDriver = readyDeviceIndexes.length > 0;
+  const hasUninspectedDriver = deviceReadiness.includes("static_inspection_pending");
+  const hasArchitectureMismatch = deviceReadiness.includes("runtime_architecture_mismatch");
+  const hasReadonlyApiGap = deviceReadiness.includes("readonly_api_incomplete");
   const driver_readiness_status = detectedCount === 0
     ? "no_registered_driver"
-    : hasUninspectedDriver
+    : hasStaticReadyDriver
+      ? "readonly_static_check_complete"
+      : hasUninspectedDriver
       ? "static_inspection_pending"
       : hasArchitectureMismatch
         ? "runtime_architecture_mismatch"
         : hasReadonlyApiGap
           ? "readonly_api_incomplete"
-          : staticCheckComplete
-            ? "readonly_static_check_complete"
-            : "static_inspection_pending";
+          : "static_inspection_pending";
   const next_check = driver_readiness_status === "no_registered_driver"
     ? "install_or_repair_j2534_driver_registration"
     : driver_readiness_status === "static_inspection_pending"
@@ -568,8 +569,25 @@ export function getJ2534DiscoveryEnvironment(devices = []) {
     registration_status: detectedCount > 0 ? "registered_driver_detected" : "no_registered_driver",
     driver_readiness_status,
     next_check,
+    static_ready_vci_count: readyDeviceIndexes.length,
+    static_blocked_vci_count: detectedCount - readyDeviceIndexes.length,
+    selected_static_ready_device_id: readyDeviceIndexes.length > 0 ? registeredDevices[readyDeviceIndexes[0]]?.id || null : null,
     vehicle_command_enabled: false
   };
+}
+
+function getJ2534DriverReadiness(device = {}) {
+  if (device?.driver_library_inspection_status !== "inspected") return "static_inspection_pending";
+  if (device?.driver_runtime_compatible !== true) return "runtime_architecture_mismatch";
+  if (device?.driver_readonly_api_ready !== true) return "readonly_api_incomplete";
+  return "readonly_static_check_complete";
+}
+
+function selectPreferredJ2534Driver(devices = []) {
+  const registeredDevices = Array.isArray(devices) ? devices : [];
+  return registeredDevices.find((device) => getJ2534DriverReadiness(device) === "readonly_static_check_complete")
+    || registeredDevices[0]
+    || null;
 }
 
 export function parseJ2534RegistryDrivers(text = "", options = {}) {
