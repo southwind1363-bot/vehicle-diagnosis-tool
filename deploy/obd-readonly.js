@@ -4065,6 +4065,8 @@
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       source_ecu_name: sourceEcuName,
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.associated_dtc || data.associatedDtc || data.dtc || null,
+      trigger_dtc_format: data.trigger_dtc_format || data.triggerDtcFormat || data.trigger_code_format || data.triggerCodeFormat || data.freeze_dtc_format || data.freezeDtcFormat || data.associated_dtc_format || data.associatedDtcFormat || data.dtc_format || data.dtcFormat || data.code_format || data.codeFormat || null,
+      trigger_dtc_manufacturer_specific: data.trigger_dtc_manufacturer_specific === true || data.triggerDtcManufacturerSpecific === true || data.trigger_code_manufacturer_specific === true || data.triggerCodeManufacturerSpecific === true || data.associated_dtc_manufacturer_specific === true || data.associatedDtcManufacturerSpecific === true || data.manufacturer_specific === true || data.manufacturerSpecific === true,
       trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || data.associated_dtc_entries || data.associatedDtcEntries || [],
       trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
       values: freezeFrameValues
@@ -16265,7 +16267,7 @@
       purpose: item.purpose,
       interpretationNote: item.interpretationNote
     }));
-    const triggerCodes = extractDtcCodes([
+    const triggerCodeValues = [
       sourceInput.trigger_dtc,
       sourceInput.triggerDtc,
       sourceInput.triggerCode,
@@ -16277,7 +16279,39 @@
       sourceInput.dtc,
       sourceInput.dtcCode,
       sourceInput.dtc_code
-    ].filter(Boolean).join(" "));
+    ].filter((value) => value !== undefined && value !== null && value !== "");
+    const triggerDtcFormat = pickDefined(
+      sourceInput.trigger_dtc_format,
+      sourceInput.triggerDtcFormat,
+      sourceInput.trigger_code_format,
+      sourceInput.triggerCodeFormat,
+      sourceInput.freeze_dtc_format,
+      sourceInput.freezeDtcFormat,
+      sourceInput.associated_dtc_format,
+      sourceInput.associatedDtcFormat,
+      sourceInput.dtc_format,
+      sourceInput.dtcFormat,
+      sourceInput.code_format,
+      sourceInput.codeFormat,
+      null
+    );
+    const triggerDtcManufacturerSpecific = sourceInput.trigger_dtc_manufacturer_specific === true
+      || sourceInput.triggerDtcManufacturerSpecific === true
+      || sourceInput.trigger_code_manufacturer_specific === true
+      || sourceInput.triggerCodeManufacturerSpecific === true
+      || sourceInput.associated_dtc_manufacturer_specific === true
+      || sourceInput.associatedDtcManufacturerSpecific === true
+      || sourceInput.manufacturer_specific === true
+      || sourceInput.manufacturerSpecific === true;
+    const manufacturerTriggerCodeReference = isExplicitManufacturerSpecificDtcRow({
+      code_format: triggerDtcFormat,
+      manufacturer_specific: triggerDtcManufacturerSpecific
+    })
+      ? extractManufacturerSpecificDtcReference(triggerCodeValues[0])
+      : null;
+    const triggerCodeReferences = manufacturerTriggerCodeReference
+      ? [manufacturerTriggerCodeReference]
+      : extractDtcReferences(triggerCodeValues.join(" "));
 
     const triggerEntryRows = Array.isArray(sourceInput.triggerDtcEntries)
       ? sourceInput.triggerDtcEntries
@@ -16346,8 +16380,14 @@
       : null;
     const triggerDtcEntries = explicitTriggerDtcEntries.length
       ? explicitTriggerDtcEntries
-      : triggerCodes.map((code) => ({
-        code,
+      : triggerCodeReferences.map((reference) => ({
+        code: reference.code,
+        ...(reference.codeFormat === "manufacturer_specific" ? {
+          codeFormat: "manufacturer_specific",
+          code_format: "manufacturer_specific",
+          manufacturerSpecific: true,
+          manufacturer_specific: true
+        } : {}),
         frameNumber: inferredTriggerFrameNumber,
         frame_number: inferredTriggerFrameNumber,
         sourceEcu: resolvedSourceEcu,
