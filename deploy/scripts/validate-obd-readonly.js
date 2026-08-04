@@ -17823,7 +17823,7 @@ const scanSessionWebSerialSummaryFalseExpectedEmpty = obd.buildDiagnosticScanSes
   }
 });
 check(scanSessionWebSerialSummaryFalseExpectedEmpty.webSerialReadoutSummary?.completedCount === 0 && scanSessionWebSerialSummaryFalseExpectedEmpty.webSerialReadoutSummary?.incompleteCount === 1 && scanSessionWebSerialSummaryFalseExpectedEmpty.webSerialReadoutSummary?.expectedEmptyCommandCount === 0 && scanSessionWebSerialSummaryFalseExpectedEmpty.vehicleCommandEnabled === false, "Diagnostic scan session accepted an attempt-less expected-empty claim without a NO DATA response");
-const scanSessionWebSerialSummaryConflictingExpectedEmpty = obd.buildDiagnosticScanSession({
+const scanSessionWebSerialSummaryMultipleResponseCompletion = obd.buildDiagnosticScanSession({
   web_serial_readout_summary: {
     schema_version: "web_serial_readout_execution_v2",
     attempt_count: 1,
@@ -17833,7 +17833,7 @@ const scanSessionWebSerialSummaryConflictingExpectedEmpty = obd.buildDiagnosticS
     no_data_count: 1
   }
 });
-check(scanSessionWebSerialSummaryConflictingExpectedEmpty.webSerialReadoutSummary?.completedCount === 0 && scanSessionWebSerialSummaryConflictingExpectedEmpty.webSerialReadoutSummary?.partialCount === 1 && scanSessionWebSerialSummaryConflictingExpectedEmpty.vehicleCommandEnabled === false, "Diagnostic scan session accepted an attempt-less conflicting expected-empty claim as completed");
+check(scanSessionWebSerialSummaryMultipleResponseCompletion.webSerialReadoutSummary?.completedCount === 1 && scanSessionWebSerialSummaryMultipleResponseCompletion.webSerialReadoutSummary?.partialCount === 0 && scanSessionWebSerialSummaryMultipleResponseCompletion.webSerialReadoutSummary?.expectedEmptyCommandCount === 1 && scanSessionWebSerialSummaryMultipleResponseCompletion.vehicleCommandEnabled === false, "Diagnostic scan session rejected an attempt-less multiple-response Web Serial summary without failure evidence");
 const scanSessionLegacyWebSerialExecution = obd.buildDiagnosticScanSession({
   web_serial_readout_summary: {
     schema_version: "web_serial_readout_execution_v1",

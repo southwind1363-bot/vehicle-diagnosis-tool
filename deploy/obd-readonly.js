@@ -13871,7 +13871,7 @@
       const hasFailureEvidence = readCount("unableToConnectCount", "unable_to_connect_count") > 0
         || readCount("adapterErrorCount", "adapter_error_count") > 0
         || readCount("transportErrorCount", "transport_error_count") > 0;
-      if (positiveResponseCount + expectedEmptyCommandCount !== completedCount || hasIncompleteEvidence || hasFailureEvidence) {
+      if (positiveResponseCount + expectedEmptyCommandCount < completedCount || hasIncompleteEvidence || hasFailureEvidence) {
         const downgradedCount = completedCount;
         completedCount = 0;
         if (hasFailureEvidence) failedCount = Math.max(failedCount, downgradedCount);
