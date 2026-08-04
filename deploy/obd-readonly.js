@@ -17422,9 +17422,38 @@
   }
 
   function mergeDtcSnapshots(...snapshots) {
+    const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
+    const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
+    const captureContexts = snapshots
+      .map((snapshot, index) => {
+        const capturedAt = readSnapshotCapturedAt(snapshot);
+        const protocol = readSnapshotProtocol(snapshot);
+        return {
+          capturedAt,
+          captured_at: capturedAt,
+          protocol,
+          source: snapshot?.source || "diagnostic_core",
+          dtcCount: Number(snapshot?.dtcCount ?? snapshot?.dtc_count ?? 0),
+          dtc_count: Number(snapshot?.dtcCount ?? snapshot?.dtc_count ?? 0),
+          index
+        };
+      })
+      .filter((context) => context.capturedAt || context.protocol);
+    const capturedAtValues = [...new Set(captureContexts.map((context) => context.capturedAt).filter(Boolean))];
+    const protocolValues = [...new Set(captureContexts.map((context) => context.protocol).filter(Boolean))];
+    const hasUnrecordedCaptureContext = snapshots.some((snapshot) => !readSnapshotCapturedAt(snapshot));
     const rows = snapshots
       .filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))
-      .flatMap((snapshot) => snapshot.dtcs.map((row) => ({ ...row, source: row.source || snapshot.source || "diagnostic_core" })));
+      .flatMap((snapshot) => {
+        const capturedAt = readSnapshotCapturedAt(snapshot);
+        const protocol = readSnapshotProtocol(snapshot);
+        return snapshot.dtcs.map((row) => ({
+          ...row,
+          source: row.source || snapshot.source || "diagnostic_core",
+          ...(!row.capturedAt && !row.captured_at && capturedAt ? { capturedAt, captured_at: capturedAt } : {}),
+          ...(!row.protocol && !row.obd_protocol && protocol ? { protocol } : {})
+        }));
+      });
     const typedCodeKeys = new Set(rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
       .map((row) => `${row.code || ""}::${row.subcode || row.sub_code || ""}`));
@@ -17496,10 +17525,21 @@
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
       source: "merged_dtc_snapshots",
-      capturedAt: snapshots.find((item) => item?.capturedAt)?.capturedAt || null,
-      protocol: snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol
+      capturedAt: capturedAtValues.length > 1 ? null : snapshots.find((item) => item?.capturedAt)?.capturedAt || snapshots.find((item) => item?.captured_at)?.captured_at || null,
+      captured_at: capturedAtValues.length > 1 ? null : snapshots.find((item) => item?.capturedAt)?.capturedAt || snapshots.find((item) => item?.captured_at)?.captured_at || null,
+      capturedAtValues,
+      captured_at_values: [...capturedAtValues],
+      captureContexts,
+      capture_contexts: captureContexts.map((context) => ({ ...context })),
+      captureTimeUncertain: capturedAtValues.length > 1,
+      capture_time_uncertain: capturedAtValues.length > 1,
+      captureTimePartial: hasUnrecordedCaptureContext,
+      capture_time_partial: hasUnrecordedCaptureContext,
+      protocol: protocolValues.length > 1 ? null : snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol
         || snapshots.find((item) => item?.protocol || item?.obd_protocol)?.obd_protocol
         || null,
+      protocolValues,
+      protocol_values: [...protocolValues],
       codes,
       codeCount,
       code_count: codeCount,
