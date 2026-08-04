@@ -18289,6 +18289,10 @@ const scannerJsonSupportedPidRowsAliasSession = obd.buildDiagnosticScanSessionFr
   supported_pid_rows: [{ pid: "05" }, { pid_code: "0C" }]
 }));
 check(scannerJsonSupportedPidListAliasSession?.supportedPidMatrix?.supportedPids?.join(",") === "01,05,0C" && scannerJsonSupportedPidListAliasSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && scannerJsonSupportedPidRowsAliasSession?.supportedPidMatrix?.supportedPids?.join(",") === "05,0C" && scannerJsonSupportedPidRowsAliasSession?.vehicleCommandEnabled === false && scannerJsonSupportedPidListAliasSession?.vehicleCommandEnabled === false, "Supported-PID JSON aliases were not retained as safe supported-only evidence");
+const scannerJsonLivePidValueAliasSessions = ["pidValues", "pid_values", "livePidValues", "live_pid_values"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { [key]: [{ pid: "0C", value: 800, unit: "rpm" }] }
+})));
+check(scannerJsonLivePidValueAliasSessions.every((session) => session?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && session.importClassification?.bucketCounts?.livePidRows === 1 && session.vehicleCommandEnabled === false && session.retainedRawText === false), "Live-PID value JSON aliases were not retained as safe read-only evidence");
 const scannerJsonFreezeFrameValueAliasSessions = ["freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   data: { [key]: [{ pid: "05", value: 85, unit: "C" }], freeze_frame_dtc: "P0128" }
 })));
