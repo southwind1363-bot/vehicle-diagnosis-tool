@@ -17104,6 +17104,8 @@
 
     const observedSourceEcus = [...new Set(tests.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
+    const observedSourceEcuNames = [...new Set(tests.map((item) => item.sourceEcuName || item.source_ecu_name || null).filter(Boolean))];
+    const resolvedSourceEcuName = sourceEcuName || (observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const testCount = tests.length;
     const passedCount = tests.filter((test) => test.status === "pass").length;
@@ -17130,8 +17132,8 @@
       protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
-      sourceEcuName,
-      source_ecu_name: sourceEcuName,
+      sourceEcuName: resolvedSourceEcuName,
+      source_ecu_name: resolvedSourceEcuName,
       testCount,
       test_count: testCount,
       passedCount,
@@ -19447,7 +19449,8 @@
           ...(Number.isFinite(Number(minimum)) && minimum ? { min: Number(minimum) } : {}),
           ...(Number.isFinite(Number(maximum)) && maximum ? { max: Number(maximum) } : {}),
           ...(cellAt(statusIndex, 40) ? { status: cellAt(statusIndex, 40).toLowerCase() } : {}),
-          ...(ecu ? { source_ecu: ecu } : {})
+          ...(ecu ? { source_ecu: ecu } : {}),
+          ...(ecuName ? { source_ecu_name: ecuName } : {})
         });
         return;
       }
@@ -20554,9 +20557,13 @@
     const onboardMonitorSnapshots = tableSessions
       .map((session) => session.onboardMonitorSnapshot)
       .filter((snapshot) => snapshot && (snapshot.onboardMonitorReadoutStatus === "reported" || Number(snapshot.testCount) > 0));
+    const onboardMonitorCapturedAtValues = [...new Set(onboardMonitorSnapshots.map((snapshot) => snapshot.capturedAt || snapshot.captured_at || null).filter(Boolean))];
+    const onboardMonitorProtocolValues = [...new Set(onboardMonitorSnapshots.map((snapshot) => snapshot.protocol || snapshot.obd_protocol || null).filter(Boolean))];
     const onboardMonitorSnapshot = onboardMonitorSnapshots.length > 1
       ? normalizeOnboardMonitorSnapshot({
         source: "scanner_csv_import",
+        ...(onboardMonitorCapturedAtValues.length === 1 ? { captured_at: onboardMonitorCapturedAtValues[0] } : {}),
+        ...(onboardMonitorProtocolValues.length === 1 ? { protocol: onboardMonitorProtocolValues[0] } : {}),
         tests: onboardMonitorSnapshots.flatMap((snapshot) => snapshot.tests || []),
         onboard_monitor_readout_status: "reported"
       })

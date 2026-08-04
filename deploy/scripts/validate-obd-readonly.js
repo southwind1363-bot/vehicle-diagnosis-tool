@@ -18454,6 +18454,11 @@ const scannerCsvMode06TablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "Mode 06", "Test ID\tComponent ID\tValue\tMin\tMax", "03\t04\t2\t1\t3"
 ].join("\n"));
 check(scannerCsvMode06TablesSession?.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.componentId === "02" && item.value === 15 && item.passed === true) && scannerCsvMode06TablesSession.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "03" && item.componentId === "04" && item.value === 2 && item.passed === true) && scannerCsvMode06TablesSession?.vehicleCommandEnabled === false && scannerCsvMode06TablesSession?.retainedRawText === false, "Structured CSV import did not merge separate Mode 06 tables into one read-only session");
+const scannerCsvMode06MetadataTablesSession = obd.buildDiagnosticScanSessionFromCsv([
+  "Mode 06", "Test ID\tComponent ID\tValue\tMin\tMax\tCaptured At\tProtocol\tECU\tECU Name", "01\t02\t15\t10\t20\t2026-07-18T09:45:04+09:00\tCAN_11BIT_500K\t7E8\tEngine Control Module",
+  "Mode 06", "Test ID\tComponent ID\tValue\tMin\tMax\tCaptured At\tProtocol\tECU\tECU Name", "03\t04\t2\t1\t3\t2026-07-18T09:45:04+09:00\tCAN_11BIT_500K\t7E8\tEngine Control Module"
+].join("\n"));
+check(scannerCsvMode06MetadataTablesSession?.onboardMonitorSnapshot?.sourceEcu === "7E8" && scannerCsvMode06MetadataTablesSession.onboardMonitorSnapshot?.sourceEcuName === "Engine Control Module" && scannerCsvMode06MetadataTablesSession.onboardMonitorSnapshot?.capturedAt === "2026-07-18T09:45:04+09:00" && scannerCsvMode06MetadataTablesSession.onboardMonitorSnapshot?.protocol === "CAN_11BIT_500K" && scannerCsvMode06MetadataTablesSession.onboardMonitorSnapshot?.tests?.every((item) => item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module") && scannerCsvMode06MetadataTablesSession.onboardMonitorSnapshot?.passedCount === 2 && scannerCsvMode06MetadataTablesSession?.vehicleCommandEnabled === false, "Merged CSV Mode 06 tables lost ECU provenance or readout metadata");
 const scannerCsvFreezeFrameTablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "Freeze Frame", "Freeze Frame DTC\tFreeze Frame Number\tParameter\tValue\tUnit", "P0300\t0\tEngine Speed\t1500\trpm",
   "Freeze Frame", "Freeze Frame DTC\tFreeze Frame Number\tParameter\tValue\tUnit", "P0300\t0\tCoolant Temperature\t85\tC"
