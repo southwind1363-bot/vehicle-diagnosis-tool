@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.90";
+const APP_VERSION = "3.5.91";
 const APP_LAST_UPDATED = "2026-08-04";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2525,6 +2525,11 @@ function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApp
       ? "出典限定DTCの適用範囲: 車種・年式は候補と一致しますが、VIN・トリム等の追加条件が未確認です。適合が確認できるまで診断手順を流用しないでください。"
       : "出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。");
     if (dtcApplicabilityScopeSummary) facts.push(`出典限定DTCの適用候補: ${dtcApplicabilityScopeSummary}`);
+  }
+
+  if (dtcApplicability?.status === "mismatch" && dtcApplicability.reason === "production_date_out_of_scope") {
+    const productionDate = input.vehicleProfile?.productionDate || input.vehicleProfile?.production_date || null;
+    facts.push(`出典限定DTCの適用根拠: 入力生産日${productionDate ? ` ${productionDate}` : ""}は候補範囲外です。${dtcApplicabilityScopeSummary ? ` 候補: ${dtcApplicabilityScopeSummary}` : ""}`);
   }
 
   if (flow) {
@@ -8567,6 +8572,14 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null) {
     wrapper.appendChild(applicabilityUnverified);
   }
 
+  if (definitionApplicability.status === "mismatch" && definitionApplicability.reason === "production_date_out_of_scope") {
+    const productionDate = vehicleProfile?.productionDate || vehicleProfile?.production_date || null;
+    const productionDateReason = document.createElement("p");
+    productionDateReason.className = "obd-dtc-check";
+    productionDateReason.textContent = `適用根拠: 入力生産日${productionDate ? ` ${productionDate}` : ""}は候補範囲外です。${definitionScopeSummary ? ` 候補: ${definitionScopeSummary}` : ""}`;
+    wrapper.appendChild(productionDateReason);
+  }
+
   if (hasImportedDefinitionEvidence) {
     const sourceMeta = [registered.source, registered.source_date].filter(Boolean).join(" / ");
     if (sourceMeta) {
@@ -9933,7 +9946,7 @@ function evaluateDtcDefinitionCandidatesApplicability(definitions, vehicleProfil
   if (statuses.includes("matched")) return { status: "matched" };
   if (statuses.includes("not_limited")) return { status: "not_limited" };
   if (statuses.includes("unverified")) return evaluations.find((item) => item.status === "unverified") || { status: "unverified" };
-  return { status: "mismatch" };
+  return evaluations.find((item) => item.status === "mismatch") || { status: "mismatch" };
 }
 
 function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
