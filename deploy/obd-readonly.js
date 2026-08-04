@@ -17804,6 +17804,11 @@
     const onboardMonitorResponseInput = withSessionProtocol(sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response || {});
     const ecuInfoResponseInput = withSessionProtocol(sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || {});
     const supportedPidResponseInput = withSessionProtocol(sessionInput.supportedPidResponse || sessionInput.supported_pid_response || {});
+    const hasNormalizedFreezeFrameShape = (value) => Boolean(value && typeof value === "object" && !Array.isArray(value) && (
+      value.schemaVersion || value.schema_version || value.freezeFrameReadoutStatus || value.freeze_frame_readout_status
+      || Array.isArray(value.values) || Array.isArray(value.monitorValues) || Array.isArray(value.monitor_values)
+      || Array.isArray(value.triggerDtcEntries) || Array.isArray(value.trigger_dtc_entries)
+    ));
     const livePidSnapshot = livePidSnapshotInput?.monitorValues || livePidSnapshotInput?.monitor_values || hasSnapshotSchema(livePidSnapshotInput)
       ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
       : (livePidSnapshotInput?.raw || livePidSnapshotInput?.response || Array.isArray(livePidSnapshotInput?.bytes))
@@ -17813,13 +17818,13 @@
         : decodeLivePidResponse(livePidResponseInput);
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
       ? freezeFrameSnapshotInput
-      : freezeFrameSnapshotInput?.schema_version
+      : hasNormalizedFreezeFrameShape(freezeFrameSnapshotInput)
         ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)
         : (freezeFrameSnapshotInput?.raw || freezeFrameSnapshotInput?.response || Array.isArray(freezeFrameSnapshotInput?.bytes))
           ? decodeFreezeFrameResponse(withSessionProtocol(freezeFrameSnapshotInput))
         : freezeFrameResponseInput?.schemaVersion
           ? freezeFrameResponseInput
-          : freezeFrameResponseInput?.schema_version
+          : hasNormalizedFreezeFrameShape(freezeFrameResponseInput)
             ? normalizeFreezeFrameSnapshot(freezeFrameResponseInput)
         : decodeFreezeFrameResponse(freezeFrameResponseInput));
     const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
@@ -18437,7 +18442,7 @@
       readoutRequestPlanSummary: metadataOverrides.readoutRequestPlanSummary,
       dtcSnapshot: sessionInput.dtcSnapshot || sessionInput.dtc_snapshot || null,
       livePidSnapshot: sessionInput.livePidSnapshot || sessionInput.live_pid_snapshot || null,
-      freezeFrameSnapshot: sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || null,
+      freezeFrameSnapshot: sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || readFreezeFrameResponseOption(),
       readinessSnapshot: sessionInput.readinessSnapshot || sessionInput.readiness_snapshot || null,
       onboardMonitorSnapshot: sessionInput.onboardMonitorSnapshot || sessionInput.onboard_monitor_snapshot || null,
       ecuInfoSnapshot: sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || null,

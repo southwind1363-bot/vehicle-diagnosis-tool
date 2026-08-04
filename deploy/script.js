@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのCANヘッダ読取を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.5.55";
+const APP_VERSION = "3.5.56";
 const APP_LAST_UPDATED = "2026-08-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4595,7 +4595,8 @@ function buildWebSerialAdapterIdentity(commandResponses = []) {
 }
 
 async function readObdDeveloperDtc() {
-  return runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
+  const readCompleted = await runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
+  return readCompleted || obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
 }
 
 async function readObdDeveloperCoreScan() {
@@ -4636,8 +4637,11 @@ async function readObdDeveloperCoreScan() {
 }
 
 async function readObdDeveloperFreezeFrame() {
-  if (!await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"])) return false;
-  const triggerDtc = obdDevSession.lastSession?.freezeFrameSnapshot?.triggerDtc;
+  const readCompleted = await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"]);
+  const freezeFrameSnapshot = obdDevSession.lastSession?.freezeFrameSnapshot;
+  const emptyFreezeFrameReadout = freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && !(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc);
+  if (!readCompleted && !emptyFreezeFrameReadout) return false;
+  const triggerDtc = freezeFrameSnapshot?.triggerDtc;
   if (!triggerDtc) {
     obdDevStatus.textContent = "フリーズフレーム起点DTCがないため、追加PID要求を送りませんでした。";
     renderObdDeveloperGate();
@@ -5011,6 +5015,25 @@ function buildWebSerialDtcResponseOverrides(commandResponses = []) {
   }, {});
 }
 
+function buildWebSerialFreezeFrameResponseOverride(commandResponses = []) {
+  const response = (Array.isArray(commandResponses) ? commandResponses : []).find((item) => String(item?.command || "").trim().toUpperCase() === "0202")?.response;
+  const responseLines = String(response || "")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().toUpperCase().replace(/\s+/g, " "))
+    .filter(Boolean);
+  if (!responseLines.includes("NO DATA")) return null;
+  return {
+    source: "web_serial",
+    intent: "read_freeze_frame",
+    values: [],
+    freezeFrameReadoutStatus: "reported",
+    retainedRawText: false,
+    wouldTransmit: false,
+    vehicleCommandEnabled: false
+  };
+}
+
 function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) {
   const requestedCommandCount = Array.isArray(commands) ? commands.map((command) => String(command || "").trim()).filter(Boolean).length : 0;
   const outcomes = (Array.isArray(commandResponses) ? commandResponses : []).map((item) => classifyWebSerialCommandResponse(item?.command, item?.response));
@@ -5244,6 +5267,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
+  const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(commandResponses);
   const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, {
     session_id: obdDevSession.scanSessionId || "web-serial-dev-readout",
     protocol: "ELM327",
@@ -5253,6 +5277,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     readoutInterface: buildSelectedObdReadoutInterface(),
     observationContext: buildSelectedObdObservationContext() || undefined,
     connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus(),
+    ...(freezeFrameResponseOverride ? { freezeFrameResponse: freezeFrameResponseOverride } : {}),
     ...dtcResponseOverrides
   });
   const webSerialReadoutSummary = buildWebSerialReadoutSummary();
