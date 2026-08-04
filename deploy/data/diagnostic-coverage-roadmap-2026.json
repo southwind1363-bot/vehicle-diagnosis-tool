@@ -28,7 +28,7 @@
     "progress_percent": 56,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 554件 / 出典定義563件・一意サブコード定義11件 (Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF DTCを出典限定で追加)",
+    "current_count_note": "U系親DTC 554件 / 出典定義565件・一意サブコード定義13件 (Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1Bを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
@@ -37,7 +37,7 @@
     "blocked_until": [],
     "safety_note": "通信線測定はショートや誤接続を避け、メーカー整備書の測定条件を優先する。",
     "source": "ローカル検証集計",
-    "source_date": "2026-08-04",
+    "source_date": "2026-08-05",
     "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   },
