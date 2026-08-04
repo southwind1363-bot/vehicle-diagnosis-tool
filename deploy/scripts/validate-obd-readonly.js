@@ -18439,6 +18439,11 @@ const scannerCsvReadinessTablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "I/M Readiness", "Monitor\tStatus", "Catalyst\tNot Complete"
 ].join("\n"));
 check(scannerCsvReadinessTablesSession?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.complete === true) && scannerCsvReadinessTablesSession.readinessSnapshot?.monitors?.some((item) => item.id === "catalyst" && item.complete === false) && scannerCsvReadinessTablesSession?.vehicleCommandEnabled === false && scannerCsvReadinessTablesSession?.retainedRawText === false, "Structured CSV import did not merge separate readiness tables into one read-only session");
+const scannerCsvReadinessMultiEcuTablesSession = obd.buildDiagnosticScanSessionFromCsv([
+  "I/M Readiness", "Monitor\tStatus\tCaptured At\tProtocol\tECU\tECU Name", "Misfire\tComplete\t2026-07-18T09:45:02+09:00\tCAN_11BIT_500K\t7E8\tEngine Control Module",
+  "I/M Readiness", "Monitor\tStatus\tCaptured At\tProtocol\tECU\tECU Name", "Catalyst\tNot Complete\t2026-07-18T09:45:02+09:00\tCAN_11BIT_500K\t7E9\tTransmission Control Module"
+].join("\n"));
+check(scannerCsvReadinessMultiEcuTablesSession?.readinessSnapshot?.readinessScope === "multiple_ecus" && scannerCsvReadinessMultiEcuTablesSession.readinessSnapshot?.readinessEcuSnapshots?.length === 2 && scannerCsvReadinessMultiEcuTablesSession.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.sourceEcuName === "Engine Control Module" && item.monitors?.some((monitor) => monitor.id === "misfire" && monitor.complete === true)) && scannerCsvReadinessMultiEcuTablesSession.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.sourceEcuName === "Transmission Control Module" && item.monitors?.some((monitor) => monitor.id === "catalyst" && monitor.complete === false)) && scannerCsvReadinessMultiEcuTablesSession.readinessSnapshot?.milOn === null && scannerCsvReadinessMultiEcuTablesSession?.vehicleCommandEnabled === false, "CSV readiness tables mixed monitor states across ECUs");
 const scannerCsvMode06TablesSession = obd.buildDiagnosticScanSessionFromCsv([
   "Mode 06", "Test ID\tComponent ID\tValue\tMin\tMax", "01\t02\t15\t10\t20",
   "Mode 06", "Test ID\tComponent ID\tValue\tMin\tMax", "03\t04\t2\t1\t3"

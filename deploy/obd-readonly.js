@@ -16383,8 +16383,8 @@
       }
       : input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
-    const sourceEcu = readObdResponseSourceEcu(sourceInput);
-    const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
+    const declaredSourceEcu = readObdResponseSourceEcu(sourceInput);
+    const declaredSourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const readinessEcuSnapshotInputs = Array.isArray(sourceInput.readinessEcuSnapshots)
       ? sourceInput.readinessEcuSnapshots
       : Array.isArray(sourceInput.readiness_ecu_snapshots)
@@ -16407,11 +16407,6 @@
         readiness_scope: "single_ecu"
       };
     }).filter(Boolean);
-    const readinessScope = readinessEcuSnapshots.length > 1
-      ? "multiple_ecus"
-      : readinessEcuSnapshots.length === 1 || sourceEcu
-        ? "single_ecu"
-        : "unspecified";
     const readinessStatusBytes = normalizeReadinessStatusBytes(sourceInput);
     const explicitMonitors = Array.isArray(input)
       ? input
@@ -16486,6 +16481,8 @@
             ? null
             : false)
         : readOptionalBooleanAlias(completeAlias);
+      const monitorSourceEcu = readObdResponseSourceEcu(monitor);
+      const monitorSourceEcuName = monitor?.source_ecu_name || monitor?.sourceEcuName || monitor?.ecu_name || monitor?.ecuName || monitor?.module_name || monitor?.moduleName || null;
       return {
         id,
         label: String(monitor?.label || monitor?.displayLabel || monitor?.display_label || catalogItem?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
@@ -16493,10 +16490,23 @@
         supported,
         complete,
         status: statusKey !== rawStatusKey ? statusKey : (statusAlias || (supported ? (complete ? "complete" : "not_complete") : "not_supported")),
+        sourceEcu: monitorSourceEcu,
+        source_ecu: monitorSourceEcu,
+        sourceEcuName: monitorSourceEcuName,
+        source_ecu_name: monitorSourceEcuName,
         diagnosticUse: catalogItem?.diagnosticUse || "",
         notCompleteNote: catalogItem?.notCompleteNote || ""
       };
     });
+    const observedMonitorEcus = [...new Set(normalized.map((monitor) => monitor.sourceEcu || monitor.source_ecu || null).filter(Boolean))];
+    const sourceEcu = declaredSourceEcu || (observedMonitorEcus.length === 1 ? observedMonitorEcus[0] : null);
+    const observedMonitorEcuNames = [...new Set(normalized.map((monitor) => monitor.sourceEcuName || monitor.source_ecu_name || null).filter(Boolean))];
+    const sourceEcuName = declaredSourceEcuName || (observedMonitorEcuNames.length === 1 ? observedMonitorEcuNames[0] : null);
+    const readinessScope = readinessEcuSnapshots.length > 1
+      ? "multiple_ecus"
+      : readinessEcuSnapshots.length === 1 || sourceEcu
+        ? "single_ecu"
+        : "unspecified";
     const knownMonitors = readinessMonitorCatalog.map((item) => ({
       id: item.id,
       label: item.label,
@@ -19296,7 +19306,12 @@
         recordReadoutMetadata("readiness", rowCapturedAt, rowProtocol);
         const monitorId = cellAt(readinessMonitorIndex, 80).toLowerCase().replace(/[\s\-]+/g, "_");
         const readinessStatus = cellAt(statusIndex, 80).toLowerCase();
-        if (monitorId && readinessStatus) readinessMonitors.push({ id: monitorId, status: readinessStatus });
+        if (monitorId && readinessStatus) readinessMonitors.push({
+          id: monitorId,
+          status: readinessStatus,
+          ...(ecu ? { source_ecu: ecu } : {}),
+          ...(ecuName ? { source_ecu_name: ecuName } : {})
+        });
         const milText = cellAt(milIndex, 40).toLowerCase();
         if (milOn === null && ["on", "true", "1", "yes", "mil_on", "点灯"].includes(milText)) milOn = true;
         if (milOn === null && ["off", "false", "0", "no", "mil_off", "消灯"].includes(milText)) milOn = false;
@@ -20505,10 +20520,28 @@
     const readinessSnapshots = tableSessions
       .map((session) => session.readinessSnapshot)
       .filter((snapshot) => snapshot && (snapshot.readinessReadoutStatus === "reported" || Number(snapshot.monitorCount) > 0));
-    const readinessSnapshot = readinessSnapshots.length > 1
+    const readinessSnapshotScopeKeys = new Set(readinessSnapshots.map((snapshot) => [
+      snapshot.sourceEcu || snapshot.source_ecu || "",
+      snapshot.sourceEcuName || snapshot.source_ecu_name || "",
+      snapshot.capturedAt || snapshot.captured_at || "",
+      snapshot.protocol || snapshot.obd_protocol || ""
+    ].join("::")));
+    const readinessEcuIds = [...new Set(readinessSnapshots.map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu || null).filter(Boolean))];
+    const readinessSnapshot = readinessEcuIds.length > 1
+      ? normalizeReadinessSnapshot({
+        source: "scanner_csv_import",
+        readiness_ecu_snapshots: readinessSnapshots
+      })
+      : readinessSnapshots.length > 1 && readinessSnapshotScopeKeys.size === 1
       ? normalizeReadinessSnapshot({
         source: "scanner_csv_import",
         monitors: readinessSnapshots.flatMap((snapshot) => snapshot.monitors || []),
+        source_ecu: readinessSnapshots[0].sourceEcu || readinessSnapshots[0].source_ecu || null,
+        source_ecu_name: readinessSnapshots[0].sourceEcuName || readinessSnapshots[0].source_ecu_name || null,
+        captured_at: readinessSnapshots[0].capturedAt || readinessSnapshots[0].captured_at || null,
+        protocol: readinessSnapshots[0].protocol || readinessSnapshots[0].obd_protocol || null,
+        mil_on: readinessSnapshots.every((snapshot) => snapshot.milOn === readinessSnapshots[0].milOn) ? readinessSnapshots[0].milOn : null,
+        readiness_ignition_type: readinessSnapshots.every((snapshot) => snapshot.readinessIgnitionType === readinessSnapshots[0].readinessIgnitionType) ? readinessSnapshots[0].readinessIgnitionType : null,
         readiness_readout_status: "reported"
       })
       : readinessSnapshots[0];
