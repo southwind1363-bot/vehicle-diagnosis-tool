@@ -18399,6 +18399,14 @@ const scannerJsonReadinessAliasSession = obd.buildDiagnosticScanSessionFromJson(
   }
 }));
 check(scannerJsonReadinessAliasSession?.readinessSnapshot?.milOn === true && scannerJsonReadinessAliasSession.readinessSnapshot?.readinessIgnitionType === "spark" && scannerJsonReadinessAliasSession.readinessSnapshot?.completeCount === 1 && scannerJsonReadinessAliasSession.readinessSnapshot?.incompleteCount === 1 && scannerJsonReadinessAliasSession.readinessSnapshot?.notSupportedCount === 1 && scannerJsonReadinessAliasSession?.vehicleCommandEnabled === false, "Structured JSON import did not retain an I/M readiness alias readout");
+const scannerJsonReadinessValueAliasSessions = ["readinessMonitors", "readiness_monitors", "readinessValues", "readiness_values", "readinessRows", "readiness_rows"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { [key]: [{ monitor_id: "catalyst", is_supported: true, is_complete: false }] }
+})));
+check(scannerJsonReadinessValueAliasSessions.every((session) => session?.readinessSnapshot?.monitorCount === 1 && session.readinessSnapshot?.incompleteCount === 1 && session.importClassification?.bucketCounts?.readinessRows === 1 && session.vehicleCommandEnabled === false && session.retainedRawText === false), "Readiness value JSON aliases were not retained as safe read-only evidence");
+const reimportedScannerJsonReadinessValueAliasSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonReadinessValueAliasSessions[0])
+});
+check(reimportedScannerJsonReadinessValueAliasSession?.readinessSnapshot?.monitorCount === 1 && reimportedScannerJsonReadinessValueAliasSession.readinessSnapshot?.incompleteCount === 1 && reimportedScannerJsonReadinessValueAliasSession.vehicleCommandEnabled === false, "Readiness value JSON aliases were not preserved through read-only export and reimport");
 const reimportedScannerJsonReadinessAliasSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonReadinessAliasSession)
 });
