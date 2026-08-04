@@ -1887,5 +1887,27 @@
     "last_verified_date": "2026-08-04",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-b10a3-86-mazda-cx70-2025-afs",
+    "code": "B10A3",
+    "subcode": "86",
+    "title": "Error signal received from swivel actuator (LH)",
+    "system": "Body / adaptive front-lighting system (source-specific)",
+    "applicability_note": "Mazda Bulletin 09-019/25 identifies B10A3:86 only for 2025 CX-70 vehicles with Adaptive Front lighting System (AFS) produced before 2025-04-11. Confirm VIN, production date, AFS equipment, reporting AFS Control Module, warning indication, current/stored status, and Mazda service information before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Mazda"], "models": ["CX-70"], "year_from": 2025, "year_to": 2025, "production_period": {"to": "2025-04-10"}, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all DTCs, reporting AFS Control Module details, warning indication, freeze-frame conditions, concurrent lighting/body DTCs, and vehicle applicability evidence before any service.", "Do not clear DTCs, command AFS swivel functions, disconnect lighting circuits, replace lamps/modules, or program the AFS Control Module from this tool; confirm documented vehicle scope and service information.", "Use Mazda service information, manufacturer-specified diagnostic equipment, qualified lighting-system repair procedures, and post-repair verification."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this definition outside the documented CX-70 production-date and AFS-equipment scope.", "Do not infer a swivel actuator, lamp, wiring, AFS Control Module, or calibration fault from B10A3:86 alone."],
+    "required_tools": ["Compatible scan tool", "Mazda service information", "Manufacturer-specified diagnostic equipment"],
+    "safety_notes": ["Adaptive-lighting work can affect headlamp aim and road visibility. Do not command, adjust, disconnect, replace, or program related components without the Mazda procedure and recovery plan."],
+    "confidence": "Mazda Bulletin 09-019/25 source-specific B10A3:86 readout context; VIN, production date, AFS equipment, reporting ECU, and manufacturer procedure confirmation required.",
+    "source": "Mazda Bulletin 09-019/25 / NHTSA MC-11029238",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2026/MC-11029238-0001.pdf",
+    "source_date": "2026-02-25",
+    "last_verified_date": "2026-08-04",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
