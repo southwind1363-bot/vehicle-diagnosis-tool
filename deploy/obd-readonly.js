@@ -19355,6 +19355,10 @@
     const vehicleYearIndex = findIndex("year", "model year", "registration year", "vehicle year", "年式", "登録年");
     const vehicleProductionDateIndex = findIndex("production date", "production_date", "build date", "build_date", "manufacture date", "manufacture_date", "manufacturing date", "production day", "生産日", "製造日", "組立日");
     const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code", "エンジン型式", "原動機型式");
+    const vehicleTransmissionIndex = findIndex("transmission", "transmission type", "transmission_type", "gearbox", "transaxle");
+    const vehicleDrivetrainIndex = findIndex("drivetrain", "drive type", "drive_type", "drivetrain type", "drivetrain_type", "driven wheels");
+    const vehicleFuelTypeIndex = findIndex("fuel type", "fuel_type", "fuel", "powertrain type", "powertrain_type");
+    const vehicleElectrificationIndex = findIndex("electrification", "hybrid system", "hybrid_system", "ev system", "ev_system");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -19452,6 +19456,10 @@
       if (!vehicleProfileValues.year) vehicleProfileValues.year = cellAt(vehicleYearIndex, 24) || null;
       if (!vehicleProfileValues.productionDate) vehicleProfileValues.productionDate = cellAt(vehicleProductionDateIndex, 40) || null;
       if (!vehicleProfileValues.engineCode) vehicleProfileValues.engineCode = cellAt(vehicleEngineCodeIndex, 80) || null;
+      if (!vehicleProfileValues.transmission) vehicleProfileValues.transmission = cellAt(vehicleTransmissionIndex, 80) || null;
+      if (!vehicleProfileValues.drivetrain) vehicleProfileValues.drivetrain = cellAt(vehicleDrivetrainIndex, 80) || null;
+      if (!vehicleProfileValues.fuelType) vehicleProfileValues.fuelType = cellAt(vehicleFuelTypeIndex, 80) || null;
+      if (!vehicleProfileValues.electrification) vehicleProfileValues.electrification = cellAt(vehicleElectrificationIndex, 80) || null;
       if (!readoutInterfaceValues.label) readoutInterfaceValues.label = cellAt(readoutInterfaceLabelIndex, 120) || null;
       if (!readoutInterfaceValues.deviceModel) readoutInterfaceValues.deviceModel = cellAt(readoutDeviceModelIndex, 120) || null;
       if (!readoutInterfaceValues.route) readoutInterfaceValues.route = cellAt(readoutRouteIndex, 80) || null;
@@ -19574,6 +19582,20 @@
       const mode06ComponentId = cellAt(mode06ComponentIdIndex, 8);
       if (isVehicleInformationSection && label && rawValue) {
         const vehicleField = {
+          transmission: "transmission",
+          transmissiontype: "transmission",
+          gearbox: "transmission",
+          transaxle: "transmission",
+          drivetrain: "drivetrain",
+          drivetype: "drivetrain",
+          drivetraintype: "drivetrain",
+          drivenwheels: "drivetrain",
+          fueltype: "fuelType",
+          fuel: "fuelType",
+          powertraintype: "fuelType",
+          electrification: "electrification",
+          hybridsystem: "electrification",
+          evsystem: "electrification",
           make: "maker",
           maker: "maker",
           manufacturer: "maker",
@@ -19789,7 +19811,7 @@
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
     if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean) && !Object.values(readoutInterfaceValues).some(Boolean)) return null;
     const normalizedVehicleProfile = normalizeVehicleProfileInput(vehicleProfileValues) || {};
-    const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.productionDate || normalizedVehicleProfile.engineCode
+    const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.productionDate || normalizedVehicleProfile.engineCode || normalizedVehicleProfile.transmission || normalizedVehicleProfile.drivetrain || normalizedVehicleProfile.fuelType || normalizedVehicleProfile.electrification
       ? {
         maker: normalizedVehicleProfile.maker,
         model: normalizedVehicleProfile.model,
@@ -19799,7 +19821,14 @@
         productionDate: normalizedVehicleProfile.productionDate || null,
         production_date: normalizedVehicleProfile.productionDate || null,
         engineCode: normalizedVehicleProfile.engineCode,
-        engine_code: normalizedVehicleProfile.engineCode
+        engine_code: normalizedVehicleProfile.engineCode,
+        transmission: normalizedVehicleProfile.transmission,
+        transmission_type: normalizedVehicleProfile.transmission,
+        drivetrain: normalizedVehicleProfile.drivetrain,
+        drive_type: normalizedVehicleProfile.drivetrain,
+        fuelType: normalizedVehicleProfile.fuelType,
+        fuel_type: normalizedVehicleProfile.fuelType,
+        electrification: normalizedVehicleProfile.electrification
       }
       : null;
     const normalizedReadoutInterface = normalizeReadoutInterfaceSnapshot(readoutInterfaceValues);
