@@ -5474,13 +5474,29 @@
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
     const hadSensitiveIdentifier = hasSensitiveIdentifierValue(input)
       || Object.keys(input).some((key) => isSensitiveIdentifierKey(key, { vehicleProfile: true }));
-    const sanitizedInput = Object.fromEntries(Object.entries(input)
+    const productionDateKeys = new Set(["productionDate", "production_date", "buildDate", "build_date", "manufactureDate", "manufacture_date"]);
+    const sanitizedValues = Object.fromEntries(Object.entries(input)
       .filter(([key]) => !isSensitiveIdentifierKey(key, { vehicleProfile: true }))
       .map(([key, value]) => [key, sanitizeEcuInfoValue(value)]));
+    const rawProductionDate = pickDefined(...[...productionDateKeys].map((key) => sanitizedValues[key]));
+    const productionDateMatch = String(rawProductionDate || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+    const productionDate = productionDateMatch
+      && Number.isInteger(Number(productionDateMatch[1]))
+      && Number.isInteger(Number(productionDateMatch[2]))
+      && Number.isInteger(Number(productionDateMatch[3]))
+      && (() => {
+        const utc = new Date(Date.UTC(Number(productionDateMatch[1]), Number(productionDateMatch[2]) - 1, Number(productionDateMatch[3])));
+        return utc.getUTCFullYear() === Number(productionDateMatch[1]) && utc.getUTCMonth() === Number(productionDateMatch[2]) - 1 && utc.getUTCDate() === Number(productionDateMatch[3]);
+      })()
+      ? `${productionDateMatch[1]}-${productionDateMatch[2]}-${productionDateMatch[3]}`
+      : null;
+    const sanitizedInput = Object.fromEntries(Object.entries(sanitizedValues)
+      .filter(([key]) => !productionDateKeys.has(key)));
     const normalized = normalizeVehicleApplicabilitySnapshot(sanitizedInput);
     if (!normalized.maker && !normalized.model && !normalized.modelCode && !normalized.year && !normalized.engineCode) {
       return {
         ...sanitizedInput,
+        ...(productionDate ? { productionDate, production_date: productionDate } : {}),
         hadSensitiveIdentifier,
         had_sensitive_identifier: hadSensitiveIdentifier
       };
@@ -5492,6 +5508,7 @@
       modelCode: normalized.modelCode,
       model_code: normalized.modelCode,
       year: normalized.year,
+      ...(productionDate ? { productionDate, production_date: productionDate } : {}),
       engineCode: normalized.engineCode,
       engine_code: normalized.engineCode,
       grade: normalized.grade,
@@ -18813,6 +18830,8 @@
         modelCode: scannerJsonVehicle.modelCode,
         model_code: scannerJsonVehicle.modelCode,
         year: scannerJsonVehicle.year,
+        productionDate: scannerJsonVehicleProfileInput?.productionDate || scannerJsonVehicleProfileInput?.production_date || null,
+        production_date: scannerJsonVehicleProfileInput?.productionDate || scannerJsonVehicleProfileInput?.production_date || null,
         engineCode: scannerJsonVehicle.engineCode,
         engine_code: scannerJsonVehicle.engineCode,
         grade: scannerJsonVehicle.grade,
@@ -19214,6 +19233,7 @@
     const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model", "車種", "車名");
     const vehicleModelCodeIndex = findIndex("model code", "chassis code", "frame code", "vehicle model code", "body code", "型式", "型式コード");
     const vehicleYearIndex = findIndex("year", "model year", "registration year", "vehicle year", "年式", "登録年");
+    const vehicleProductionDateIndex = findIndex("production date", "production_date", "build date", "build_date", "manufacture date", "manufacture_date", "manufacturing date", "production day", "生産日", "製造日", "組立日");
     const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code", "エンジン型式", "原動機型式");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
@@ -19309,6 +19329,7 @@
       if (!vehicleProfileValues.model) vehicleProfileValues.model = cellAt(vehicleModelIndex, 120) || null;
       if (!vehicleProfileValues.modelCode) vehicleProfileValues.modelCode = cellAt(vehicleModelCodeIndex, 80) || null;
       if (!vehicleProfileValues.year) vehicleProfileValues.year = cellAt(vehicleYearIndex, 24) || null;
+      if (!vehicleProfileValues.productionDate) vehicleProfileValues.productionDate = cellAt(vehicleProductionDateIndex, 40) || null;
       if (!vehicleProfileValues.engineCode) vehicleProfileValues.engineCode = cellAt(vehicleEngineCodeIndex, 80) || null;
       if (!readoutInterfaceValues.label) readoutInterfaceValues.label = cellAt(readoutInterfaceLabelIndex, 120) || null;
       if (!readoutInterfaceValues.deviceModel) readoutInterfaceValues.deviceModel = cellAt(readoutDeviceModelIndex, 120) || null;
@@ -19431,6 +19452,14 @@
           registrationyear: "year",
           "年式": "year",
           "登録年": "year",
+          productiondate: "productionDate",
+          builddate: "productionDate",
+          manufacturedate: "productionDate",
+          manufacturingdate: "productionDate",
+          productionday: "productionDate",
+          "生産日": "productionDate",
+          "製造日": "productionDate",
+          "組立日": "productionDate",
           enginecode: "engineCode",
           enginemodel: "engineCode",
           enginetype: "engineCode",
@@ -19613,14 +19642,16 @@
       : null;
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
     if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean) && !Object.values(readoutInterfaceValues).some(Boolean)) return null;
-    const normalizedVehicleProfile = normalizeVehicleApplicabilitySnapshot(vehicleProfileValues);
-    const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.engineCode
+    const normalizedVehicleProfile = normalizeVehicleProfileInput(vehicleProfileValues) || {};
+    const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.productionDate || normalizedVehicleProfile.engineCode
       ? {
         maker: normalizedVehicleProfile.maker,
         model: normalizedVehicleProfile.model,
         modelCode: normalizedVehicleProfile.modelCode,
         model_code: normalizedVehicleProfile.modelCode,
         year: normalizedVehicleProfile.year,
+        productionDate: normalizedVehicleProfile.productionDate || null,
+        production_date: normalizedVehicleProfile.productionDate || null,
         engineCode: normalizedVehicleProfile.engineCode,
         engine_code: normalizedVehicleProfile.engineCode
       }
