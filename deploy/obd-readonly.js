@@ -4212,7 +4212,12 @@
         return normalizeBridgeReadinessSnapshot({
           ...response,
           data: {
+            ...data,
             ...row,
+            source_ecu: row.source_ecu || row.sourceEcu || row.ecu || row.address || data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
+            source_ecu_name: row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null,
+            captured_at: row.captured_at || row.capturedAt || row.timestamp || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null,
+            protocol: row.protocol || row.obd_protocol || row.communicationProtocol || row.communication_protocol || data.protocol || data.obd_protocol || data.communicationProtocol || data.communication_protocol || response.protocol || response.obd_protocol || null,
             readinessEcuSnapshots: [],
             readiness_ecu_snapshots: []
           }
