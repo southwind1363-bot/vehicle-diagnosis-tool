@@ -479,6 +479,16 @@ button:focus-visible,
   color: var(--danger);
 }
 
+.offline-cache-status {
+  margin: -0.35rem 0 1rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.offline-cache-status.error {
+  color: var(--danger);
+}
+
 .safety-panel {
   padding: 18px 20px;
   border-color: color-mix(in srgb, var(--danger) 50%, var(--line));

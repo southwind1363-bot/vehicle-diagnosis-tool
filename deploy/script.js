@@ -229,8 +229,8 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.53";
-const APP_LAST_UPDATED = "2026-08-05";
+const APP_VERSION = "3.6.54";
+const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -305,6 +305,7 @@ const aiButton = document.querySelector("#aiButton");
 const resetButton = document.querySelector("#resetButton");
 const themeButton = document.querySelector("#themeButton");
 const dataStatus = document.querySelector("#dataStatus");
+const offlineCacheStatus = document.querySelector("#offlineCacheStatus");
 const symptomSelect = document.querySelector("#symptomSelect");
 const vehicleInput = document.querySelector("#vehicle");
 const vehicleMakerSelect = document.querySelector("#vehicleMaker");
@@ -1161,17 +1162,28 @@ async function fetchJson(path) {
 }
 
 async function registerOfflineCache() {
-  if (!("serviceWorker" in navigator) || !window.isSecureContext) return;
+  if (!("serviceWorker" in navigator) || !window.isSecureContext) {
+    setOfflineCacheStatus("端末内オフライン診断データは、HTTPS対応ブラウザで有効になります。", true);
+    return;
+  }
 
   try {
     const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);
     await registration.update();
     const response = await fetch(OFFLINE_ASSET_MANIFEST, { cache: "no-store" });
-    if (!response.ok) return;
+    if (!response.ok) {
+      setOfflineCacheStatus("端末内オフライン診断データの一覧を取得できませんでした。", true);
+      return;
+    }
 
     const payload = await response.json();
-    const urls = Array.isArray(payload.assets) ? payload.assets : [];
-    if (!urls.length) return;
+    const urls = Array.isArray(payload.assets) ? payload.assets.filter((url) => typeof url === "string" && url) : [];
+    if (!urls.length) {
+      setOfflineCacheStatus("端末内オフライン診断データの一覧が空です。", true);
+      return;
+    }
+
+    setOfflineCacheStatus(`端末内オフライン診断データを準備中です。予定 ${urls.length} 件。`);
 
     const postCacheMessage = () => {
       const worker = registration.active || registration.waiting || registration.installing;
@@ -1182,9 +1194,32 @@ async function registerOfflineCache() {
       registration.installing.addEventListener("statechange", postCacheMessage);
     }
     postCacheMessage();
+    navigator.serviceWorker.ready
+      .then(() => refreshOfflineCacheStatus(urls))
+      .catch(() => setOfflineCacheStatus("端末内オフライン診断データの準備状態を確認できませんでした。", true));
+    navigator.serviceWorker.addEventListener("controllerchange", () => refreshOfflineCacheStatus(urls), { once: true });
   } catch (_) {
-    // Offline support is best-effort and should never block diagnosis assistance.
+    setOfflineCacheStatus("端末内オフライン診断データの準備を開始できませんでした。", true);
   }
+}
+
+function setOfflineCacheStatus(message, isError = false) {
+  if (!offlineCacheStatus) return;
+  offlineCacheStatus.textContent = message;
+  offlineCacheStatus.classList.toggle("error", isError);
+}
+
+async function refreshOfflineCacheStatus(urls = []) {
+  if (!offlineCacheStatus || !("caches" in window)) return;
+  const cached = await Promise.all(urls.map(async (url) => Boolean(await caches.match(new Request(url)))));
+  const cachedCount = cached.filter(Boolean).length;
+  const complete = cachedCount === urls.length;
+  setOfflineCacheStatus(
+    complete
+      ? `端末内オフライン診断データ: ${cachedCount}/${urls.length} 件を準備済みです。`
+      : `端末内オフライン診断データ: ${cachedCount}/${urls.length} 件を準備済みです。通信中に残りを取得します。`,
+    false
+  );
 }
 
 function activateTab(targetId) {
