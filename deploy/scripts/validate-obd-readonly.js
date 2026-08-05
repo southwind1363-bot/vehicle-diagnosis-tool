@@ -547,7 +547,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   if (bridgeFreezeFrameSnapshotFunctionSource) {
     const functionBody = bridgeFreezeFrameSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeFreezeFrameSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeFreezeFrameSnapshot should reuse the core freeze-frame normalizer");
-    check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.associated_dtc || data.associatedDtc || data.dtc || null') && functionBody.includes('trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
+    check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.freeze_dtc || data.freezeDtc || data.associated_dtc || data.associatedDtc || data.dtc || null') && functionBody.includes('trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
     check(functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame value aliases");
     check(functionBody.includes('const errorCodes = readBridgeResponseErrorCodes(response);') && functionBody.includes('errorCodes.length === 0') && functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety)') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety('), "normalizeBridgeFreezeFrameSnapshot should preserve bridge failure status");
   }
@@ -18312,6 +18312,10 @@ const scannerJsonFreezeFrameValueAliasSessions = ["freeze_frame_values", "freeze
   data: { [key]: [{ pid: "05", value: 85, unit: "C" }], freeze_frame_dtc: "P0128" }
 })));
 check(scannerJsonFreezeFrameValueAliasSessions.every((session) => session?.freezeFrameSnapshot?.triggerDtc === "P0128" && session.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 85) && session.importClassification?.bucketCounts?.freezeFrameRows === 1 && session.vehicleCommandEnabled === false && session.retainedRawText === false), "Freeze-frame value JSON aliases were not retained as safe read-only evidence");
+const scannerJsonFreezeFrameTriggerAliasSessions = ["freeze_dtc", "freezeDtc"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { [key]: "P0128", freeze_frame_values: [{ pid: "05", value: 85, unit: "C" }] }
+})));
+check(scannerJsonFreezeFrameTriggerAliasSessions.every((session) => session?.freezeFrameSnapshot?.triggerDtc === "P0128" && session.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp") && session.vehicleCommandEnabled === false && session.retainedRawText === false), "Freeze-frame trigger DTC JSON aliases were not retained as safe read-only evidence");
 const reimportedScannerJsonFreezeFrameValueAliasSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonFreezeFrameValueAliasSessions[0])
 });
