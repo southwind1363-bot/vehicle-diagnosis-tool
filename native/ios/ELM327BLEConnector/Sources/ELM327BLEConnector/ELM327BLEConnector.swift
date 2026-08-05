@@ -585,7 +585,7 @@ public final class ELM327BLEConnector: NSObject {
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, scopeID: result.scopeID, pageBase: command.supportedPIDPageBase!, pids: result.pids))
                     }
-                    let supportedCommands = ELMReadCommand.allCases.filter { candidate in
+                    let supportedCommands = ELMReadCommand.initialLivePIDCommands.filter { candidate in
                         candidate.livePID.map(liveSupportedPIDs.contains) == true && scheduledLivePIDCommands.insert(candidate).inserted
                     }
                     var nextPage: ELMReadCommand?

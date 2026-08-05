@@ -20,6 +20,17 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(ELMReadCommand.initialReadoutCommands.contains(.longTermFuelTrimBank2))
     }
 
+    func testInitialLivePIDPlanIsBoundedToTheCoreReadoutSet() {
+        XCTAssertEqual(
+            ELMReadCommand.initialLivePIDCommands.map(\.wireValue),
+            ["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151"]
+        )
+        XCTAssertEqual(ELMReadCommand.initialLivePIDCommands.count, 25)
+        XCTAssertTrue(ELMReadCommand.initialLivePIDCommands.allSatisfy { $0.intent == "read_live_pid_snapshot" && $0.readoutID == "live_pid_snapshot" })
+        XCTAssertFalse(ELMReadCommand.initialLivePIDCommands.contains(.odometer))
+        XCTAssertFalse(ELMReadCommand.initialLivePIDCommands.contains(.commandedDieselExhaustFluid))
+    }
+
     func testAdapterSetupRequiresAnExplicitSuccessfulResponse() {
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .disableEcho, response: "ATE0\rOK"))
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "OK"))

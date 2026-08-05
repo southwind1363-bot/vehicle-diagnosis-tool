@@ -150,6 +150,35 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .readinessStatus
     ]
 
+    // Keep the first vehicle pass bounded; expanded supported-PID reads belong to a later explicit flow.
+    public static let initialLivePIDCommands: [ELMReadCommand] = [
+        .engineRPM,
+        .coolantTemperature,
+        .intakeAirTemperature,
+        .vehicleSpeed,
+        .timingAdvance,
+        .calculatedLoad,
+        .fuelSystemStatus,
+        .manifoldAbsolutePressure,
+        .massAirFlow,
+        .throttlePosition,
+        .shortTermFuelTrimBank1,
+        .longTermFuelTrimBank1,
+        .shortTermFuelTrimBank2,
+        .longTermFuelTrimBank2,
+        .distanceWithMIL,
+        .fuelLevel,
+        .warmupsSinceClear,
+        .distanceSinceClear,
+        .barometricPressure,
+        .controlModuleVoltage,
+        .obdStandard,
+        .engineRuntime,
+        .ambientAirTemperature,
+        .timeWithMIL,
+        .fuelType
+    ]
+
     public var wireValue: String {
         switch self {
         case .disableEcho: return "ATE0"
