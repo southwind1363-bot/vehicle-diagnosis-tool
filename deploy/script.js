@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.42";
+const APP_VERSION = "3.6.43";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5019,7 +5019,7 @@ function classifyWebSerialCommandResponse(command, response) {
 
 function isWebSerialExpectedEmptyResponse(command, response) {
   const normalizedCommand = String(command || "").trim().toUpperCase();
-  if (!["03", "07", "0A", "0202", "0900"].includes(normalizedCommand)) return false;
+  if (!["03", "07", "0A", "0202", "06", "0900"].includes(normalizedCommand)) return false;
   const lines = getWebSerialResponseLines(normalizedCommand, response);
   const hasBusInit = lines.some((line) => line.startsWith("BUS INIT:"));
   return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING") || isWebSerialInformationalResponseLine(line) || (hasBusInit && line === "OK"));
@@ -5192,6 +5192,17 @@ function buildWebSerialOnboardMonitorResponseOverride(commandResponses = []) {
   const response = String((Array.isArray(commandResponses) ? commandResponses : [])
     .find((item) => String(item?.command || "").trim().toUpperCase() === "06")?.response || "").trim();
   if (!response) return null;
+  if (isWebSerialExpectedEmptyResponse("06", response)) {
+    return {
+      source: "web_serial",
+      intent: "read_onboard_monitor",
+      tests: [],
+      onboardMonitorReadoutStatus: "reported",
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
   return {
     source: "web_serial",
     intent: "read_onboard_monitor",
