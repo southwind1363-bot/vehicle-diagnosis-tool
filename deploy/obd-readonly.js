@@ -8275,8 +8275,8 @@
       isNext: index === 0
     }));
     const pendingReadoutQueueById = Object.fromEntries(pendingReadoutQueue.map((item) => [item.id, { ...item }]));
-    const nextPendingReadoutId = pendingReadoutIds[0] || null;
-    const nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
+    let nextPendingReadoutId = pendingReadoutIds[0] || null;
+    let nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
     const pendingReadoutQueueSummary = {
       schemaVersion: "pending_readout_queue_summary_v1",
       schema_version: "pending_readout_queue_summary_v1",
@@ -8373,6 +8373,8 @@
       pendingReadoutQueue.splice(0, pendingReadoutQueue.length, ...orderedPendingReadoutQueue);
       Object.keys(pendingReadoutQueueById).forEach((id) => delete pendingReadoutQueueById[id]);
       Object.assign(pendingReadoutQueueById, Object.fromEntries(pendingReadoutQueue.map((item) => [item.id, { ...item }])));
+      nextPendingReadoutId = pendingReadoutQueue[0]?.id || null;
+      nextPendingReadoutState = nextPendingReadoutId ? pendingReadoutStateById[nextPendingReadoutId] || null : null;
     }
     const nextReadoutState = readoutStates.find((item) => item.id === nextRecommendedReadoutId) || null;
     const nextReadoutQueueEntry = nextRecommendedReadoutId
