@@ -26,6 +26,12 @@ const nativeReadCommandWireSource = nativeReadCommandSource.slice(
 const nativeReadCommandWireValues = [...nativeReadCommandWireSource.matchAll(/return "([^"]+)"/g)].map((match) => match[1]);
 const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventListener(\"submit\""));
 const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
+const offlineAssetPaths = Array.isArray(offlineAssets.assets) ? offlineAssets.assets : [];
+const offlineAssetPathSet = new Set(offlineAssetPaths);
+const loadDataRequestPaths = [...loadDataSource.matchAll(/fetchJson\("([^"]+)"\)/g)].map((match) => match[1]);
+const missingOfflineLoadDataPaths = loadDataRequestPaths.filter((path) => !offlineAssetPathSet.has(path));
+const duplicateOfflineAssetPaths = offlineAssetPaths.filter((path, index) => offlineAssetPaths.indexOf(path) !== index);
+const missingOfflineAssetFiles = offlineAssetPaths.filter((path) => path !== "./" && !fs.existsSync(new URL(`../${path}`, import.meta.url)));
 const syncVehicleInputSource = appSource.slice(appSource.indexOf("function syncVehicleInput()"), appSource.indexOf("function selectedVehicleYear()"));
 const dtcDefinitionApplicabilitySource = appSource.slice(appSource.indexOf("function findDtcDefinitionCandidates"), appSource.indexOf("function findById"));
 const modernGenericMatchSource = appSource.slice(appSource.indexOf("function codeMatchesModern"), appSource.indexOf("function getDiagnosticWorkflowMatches"));
@@ -3446,6 +3452,8 @@ check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.
 check(appSource.includes('if (isMobileDevice()) return "user-vci-elm327";') && appSource.includes('スマホ用 ELM327 を優先') && !appSource.includes('if (isMobileDevice()) return "user-vci-thinkcar-bluetooth";'), "Mobile automatic interface selection should prioritize ELM327 without claiming direct iPhone transport");
 check(appSource.includes('window.ObdReadOnly.getElmTransportProfile({ platform: "ios" })') && appSource.includes('profile.adapterTransport} / ${profile.compatibilityStatus} / ${profile.connectorStatus}'), "iPhone ELM connection guide should expose the unverified transport profile");
 check(/^\d+\.\d+\.\d+$/.test(cacheVersion) && appVersion === cacheVersion && offlineAssets.version === appVersion, "OBD offline cache version should match the active app version");
+check(offlineAssets.asset_count === offlineAssetPaths.length && duplicateOfflineAssetPaths.length === 0 && missingOfflineAssetFiles.length === 0, "Offline manifest asset count, uniqueness, or file availability is invalid");
+check(missingOfflineLoadDataPaths.length === 0, `Offline manifest is missing loadData JSON assets: ${missingOfflineLoadDataPaths.join(", ")}`);
 check(serviceWorkerSource.includes('const isDiagnosticDataRequest = url.pathname.includes("/data/") && url.pathname.endsWith(".json");') && serviceWorkerSource.includes('if (isDiagnosticDataRequest)') && serviceWorkerSource.includes('const response = await fetch(request);') && serviceWorkerSource.includes('cache.put(request, response.clone());\n            return response;') && serviceWorkerSource.includes('const cached = await caches.match(request);\n          if (cached) return cached;\n          return response;'), "Diagnostic roadmap JSON should refresh online while falling back to cached data for failed HTTP responses or offline use");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
 check(dtcStandardsReference.some((item) => item.id === "sae-j1979da-current-2026-07" && item.title.includes("J1979DA_202607") && item.source_url.includes("j1979da_202607") && item.source_date === "2026-07-16" && item.reference_type === "licensed_dataset" && item.service_manual_required === true), "Current J1979DA source URL is missing");
