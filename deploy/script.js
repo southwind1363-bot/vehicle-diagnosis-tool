@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.36";
+const APP_VERSION = "3.6.37";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5072,6 +5072,21 @@ function buildWebSerialFreezeFrameResponseOverride(commandResponses = []) {
   };
 }
 
+function buildWebSerialReadinessResponseOverride(commandResponses = []) {
+  const response = String((Array.isArray(commandResponses) ? commandResponses : [])
+    .find((item) => String(item?.command || "").trim().toUpperCase() === "0101")?.response || "").trim();
+  if (!response) return null;
+  return {
+    source: "web_serial",
+    intent: "read_live_pid_snapshot",
+    protocol: "ELM327",
+    raw: response,
+    retainedRawText: false,
+    wouldTransmit: false,
+    vehicleCommandEnabled: false
+  };
+}
+
 function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) {
   const requestedCommandCount = Array.isArray(commands) ? commands.map((command) => String(command || "").trim()).filter(Boolean).length : 0;
   const outcomes = (Array.isArray(commandResponses) ? commandResponses : []).map((item) => ({
@@ -5325,6 +5340,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
   const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(commandResponses);
+  const readinessResponseOverride = buildWebSerialReadinessResponseOverride(commandResponses);
   const scanSessionOptions = {
     session_id: obdDevSession.scanSessionId || "web-serial-dev-readout",
     protocol: "ELM327",
@@ -5335,6 +5351,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     observationContext: buildSelectedObdObservationContext() || undefined,
     connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus(),
     ...(freezeFrameResponseOverride ? { freezeFrameResponse: freezeFrameResponseOverride } : {}),
+    ...(readinessResponseOverride ? { readinessResponse: readinessResponseOverride } : {}),
     ...dtcResponseOverrides
   };
   const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, scanSessionOptions);
