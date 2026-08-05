@@ -202,6 +202,14 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.readoutFailureLabel("transport_failure"), "アダプターまたは車両通信の異常を検出したため、中断しました")
     }
 
+    @MainActor
+    func testArchiveLimitErrorUsesTheActualArchiveSafetyLimit() {
+        let viewModel = ReadoutCoordinatorViewModel()
+        let expected = "読取結果が安全な保存上限の\(NativeConnectorScanArchiveBuilder.maximumEnvelopeCount)件を超えたため、中断しました。"
+
+        XCTAssertEqual(viewModel.archiveErrorMessage(.tooManyEnvelopes), expected)
+    }
+
     private func decode<T: Decodable>(_ type: T.Type, json: String) throws -> T {
         try JSONDecoder().decode(type, from: Data(json.utf8))
     }

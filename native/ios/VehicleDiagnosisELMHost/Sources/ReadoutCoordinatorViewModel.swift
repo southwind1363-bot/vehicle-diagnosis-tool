@@ -284,10 +284,10 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         }
     }
 
-    private func archiveErrorMessage(_ error: NativeConnectorScanArchiveError) -> String {
+    func archiveErrorMessage(_ error: NativeConnectorScanArchiveError) -> String {
         switch error {
         case .tooManyEnvelopes:
-            return "読取結果が安全な保存上限の256件を超えたため、中断しました。"
+            return "読取結果が安全な保存上限の\(NativeConnectorScanArchiveBuilder.maximumEnvelopeCount)件を超えたため、中断しました。"
         case .scanNotStarted:
             return "完了した読取結果がないため、アーカイブを作成できません。"
         case .scanAlreadyCompleted:
