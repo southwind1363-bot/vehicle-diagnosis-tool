@@ -1801,6 +1801,27 @@
     "imported_definition_only": true
   },
   {
+    "id": "verified-import-p2797-ford-f150-lightning-2022-2025-sobdmb-sobdmc",
+    "code": "P2797",
+    "title": "Illuminated powertrain malfunction indicator with P2797 stored in SOBDMB and/or SOBDMC",
+    "system": "Powertrain / EV on-board diagnostic module software diagnostic context (source-specific)",
+    "applicability_note": "Ford Technical Service Bulletin 25-2124 identifies P2797 stored in the SOBDMB and/or SOBDMC only for North American 2022-2025 F-150 Lightning vehicles built on or before 2025-02-19 when the powertrain malfunction (wrench) indicator is illuminated. Confirm VIN, market, model year, production date, reporting SOBDMB/SOBDMC, current/history status, warning condition, freeze-frame/snapshot data, concurrent DTCs, and current Ford service information before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Ford"], "models": ["F-150 Lightning"], "year_from": 2022, "year_to": 2025, "production_period": {"to": "2025-02-19"}, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting ECU details, warning indicators, freeze-frame/snapshot data including EXTERIOR_TEMP when available, and VIN/build-date applicability evidence before any service.", "Do not clear DTCs, reprogram SOBDMB/SOBDMC, command high-voltage, charging, drive, or active-test functions from this tool; confirm documented scope and current Ford procedure applicability.", "Use Ford service information, manufacturer-specified equipment, qualified EV/high-voltage repair procedures, approved 12-volt power support where required, and a recovery plan."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition outside the documented North American 2022-2025 F-150 Lightning production-date scope.", "Do not infer a module, software, temperature-input, high-voltage battery, wiring, or drive-system fault from P2797 alone.", "Do not treat this definition as authorization to clear DTCs, reprogram modules, road test, connect high-voltage charging, or perform active tests."],
+    "required_tools": ["Compatible scan tool", "Ford service information", "Manufacturer-specified diagnostic equipment", "Approved 12-volt power support where required"],
+    "safety_notes": ["Electric-drive, high-voltage, charging, vehicle movement, and module-programming work can cause injury, vehicle movement, or ECU damage when performed incorrectly. Do not perform it without the Ford procedure, correct equipment, qualified personnel, isolation/support conditions, and a recovery plan."],
+    "confidence": "Ford TSB 25-2124 source-specific P2797 readout context; VIN, North American market, model year, production date, reporting SOBDMB/SOBDMC, warning condition, snapshot data, and manufacturer procedure confirmation required.",
+    "source": "Ford Technical Service Bulletin 25-2124 / NHTSA MC-11016927",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11016927-0001.pdf",
+    "source_date": "2025-04-04",
+    "last_verified_date": "2026-08-05",
+    "service_manual_required": true,
+    "imported_definition_only": true
+  },
+  {
     "id": "verified-import-p07e6-71-ford-mustang-mach-e-2024-2025-park-pawl",
     "code": "P07E6",
     "subcode": "71",
