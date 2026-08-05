@@ -100,6 +100,11 @@
     stft_b2: Object.freeze(["short fuel trim bank 2", "stft bank 2"]),
     ltft_b2: Object.freeze(["long fuel trim bank 2", "ltft bank 2"])
   });
+  const fallbackPidDefinitions = Object.freeze({
+    "05": "coolant_temp",
+    "0C": "engine_speed",
+    "0D": "vehicle_speed"
+  });
   let monitorDefinitions = fallbackMonitorDefinitions;
 
   const policy = Object.freeze({
@@ -4475,8 +4480,10 @@
       .map((value) => String(value || "").trim())
       .filter(Boolean);
     const normalizedLabelAlias = labelAlias ? normalizeMonitorLabel(labelAlias) : "";
+    const fallbackPidId = pidAliases.map((value) => fallbackPidDefinitions[value.toUpperCase()] || null).find(Boolean);
     const definition = monitorDefinitions.find((item) => item.id === id)
       || (pidAliases.length ? monitorDefinitions.find((item) => pidAliases.includes(item.pid)) : null)
+      || (fallbackPidId ? monitorDefinitions.find((item) => item.id === fallbackPidId) : null)
       || (normalizedLabelAlias ? monitorDefinitions.find((item) => item.aliases.some((alias) => isMonitorLabelMatch(normalizedLabelAlias, alias))) : null)
       || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
