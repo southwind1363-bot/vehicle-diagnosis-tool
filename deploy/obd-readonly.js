@@ -4651,7 +4651,7 @@
             ? decodeLivePidResponse(livePidResponseInput)
             : normalizeBridgeLivePidSnapshot(livePidSnapshotInput))
       : null;
-    const livePidTimeline = normalizeLivePidTimeline(input.livePidTimeline || input.live_pid_timeline || input.livePidSamples || input.live_pid_samples || []);
+    const livePidTimeline = normalizeLivePidTimeline(input.livePidTimeline || input.live_pid_timeline || input.livePidSamples || input.live_pid_samples || input.pidSamples || input.pid_samples || []);
     const latestLivePidTimelineSample = livePidTimeline.samples.at(-1) || null;
     const allowLivePidTimelineFallback = allowLivePidTimelineFallbackInput === true || !hasLivePidSnapshotInput;
     const livePidCoverageSnapshot = allowLivePidTimelineFallback && latestLivePidTimelineSample
@@ -6522,12 +6522,22 @@
           }
           : livePidSnapshotInput)
       : livePidSnapshotInput;
-    const livePidSnapshot = livePidSnapshotInput?.monitorValues
+    const normalizedLivePidSnapshot = livePidSnapshotInput?.monitorValues
       ? livePidSnapshotInput
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
-    const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || []);
+    const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || parts.pidSamples || parts.pid_samples || []);
+    const latestLivePidTimelineSample = livePidTimeline.samples.at(-1) || null;
+    const livePidSnapshot = !hasObjectContent(livePidSnapshotInput) && latestLivePidTimelineSample
+      ? normalizeBridgeLivePidSnapshot({
+        source: parts.source || parts.source_type || "local_bridge",
+        captured_at: latestLivePidTimelineSample.capturedAt || latestLivePidTimelineSample.captured_at || null,
+        protocol: latestLivePidTimelineSample.protocol || latestLivePidTimelineSample.obd_protocol || null,
+        observation_condition: latestLivePidTimelineSample.observationCondition || latestLivePidTimelineSample.observation_condition || "unspecified",
+        monitor_values: latestLivePidTimelineSample.monitorValues || latestLivePidTimelineSample.monitor_values || []
+      })
+      : normalizedLivePidSnapshot;
     const monitorValues = Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length
       ? directMonitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorValues);
@@ -7147,8 +7157,8 @@
       dtc_snapshot: pickPresent(parts.dtc_snapshot, parts.dtcSnapshot, nested.dtc_snapshot, nested.dtcSnapshot, null),
       livePidSnapshot: pickPresent(parts.livePidSnapshot, parts.live_pid_snapshot, parts.livePidResponse, parts.live_pid_response, nested.livePidSnapshot, nested.live_pid_snapshot, nested.livePidResponse, nested.live_pid_response, null),
       live_pid_snapshot: pickPresent(parts.live_pid_snapshot, parts.livePidSnapshot, parts.live_pid_response, parts.livePidResponse, nested.live_pid_snapshot, nested.livePidSnapshot, nested.live_pid_response, nested.livePidResponse, null),
-      livePidTimeline: pickPresent(parts.livePidTimeline, parts.live_pid_timeline, parts.livePidSamples, parts.live_pid_samples, nested.livePidTimeline, nested.live_pid_timeline, nested.livePidSamples, nested.live_pid_samples, null),
-      live_pid_timeline: pickPresent(parts.live_pid_timeline, parts.livePidTimeline, parts.live_pid_samples, parts.livePidSamples, nested.live_pid_timeline, nested.livePidTimeline, nested.live_pid_samples, nested.livePidSamples, null),
+      livePidTimeline: pickPresent(parts.livePidTimeline, parts.live_pid_timeline, parts.livePidSamples, parts.live_pid_samples, parts.pidSamples, parts.pid_samples, nested.livePidTimeline, nested.live_pid_timeline, nested.livePidSamples, nested.live_pid_samples, nested.pidSamples, nested.pid_samples, null),
+      live_pid_timeline: pickPresent(parts.live_pid_timeline, parts.livePidTimeline, parts.live_pid_samples, parts.livePidSamples, parts.pid_samples, parts.pidSamples, nested.live_pid_timeline, nested.livePidTimeline, nested.live_pid_samples, nested.livePidSamples, nested.pid_samples, nested.pidSamples, null),
       supportedPidMatrix: pickPresent(parts.supportedPidMatrix, parts.supported_pid_matrix, parts.supportedPidSnapshot, parts.supported_pid_snapshot, parts.supportedPidResponse, parts.supported_pid_response, nested.supportedPidMatrix, nested.supported_pid_matrix, nested.supportedPidSnapshot, nested.supported_pid_snapshot, nested.supportedPidResponse, nested.supported_pid_response, null),
       supported_pid_matrix: pickPresent(parts.supported_pid_matrix, parts.supportedPidMatrix, parts.supported_pid_snapshot, parts.supportedPidSnapshot, parts.supported_pid_response, parts.supportedPidResponse, nested.supported_pid_matrix, nested.supportedPidMatrix, nested.supported_pid_snapshot, nested.supportedPidSnapshot, nested.supported_pid_response, nested.supportedPidResponse, null),
       freezeFrameSnapshot: pickPresent(parts.freezeFrameSnapshot, parts.freeze_frame_snapshot, parts.freezeFrameResponse, parts.freeze_frame_response, nested.freezeFrameSnapshot, nested.freeze_frame_snapshot, nested.freezeFrameResponse, nested.freeze_frame_response, null),
@@ -7269,7 +7279,7 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
-    const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || []);
+    const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || parts.pidSamples || parts.pid_samples || []);
     const monitorValues = Array.isArray(monitorValuesInput) && monitorValuesInput.length
       ? monitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : Array.isArray(livePidSnapshot.monitorValues)
@@ -13728,8 +13738,8 @@
       adapter_identity: pickPresent(input.adapter_identity, input.adapterIdentity, input.adapter_identity_response, input.adapterIdentityResponse, payload?.adapter_identity, payload?.adapterIdentity, payload?.adapter_identity_response, payload?.adapterIdentityResponse, nested.adapter_identity, nested.adapterIdentity, nested.adapter_identity_response, nested.adapterIdentityResponse, null),
       webSerialReadoutSummary: pickPresent(input.webSerialReadoutSummary, input.web_serial_readout_summary, payload?.webSerialReadoutSummary, payload?.web_serial_readout_summary, nested.webSerialReadoutSummary, nested.web_serial_readout_summary, null),
       web_serial_readout_summary: pickPresent(input.web_serial_readout_summary, input.webSerialReadoutSummary, payload?.web_serial_readout_summary, payload?.webSerialReadoutSummary, nested.web_serial_readout_summary, nested.webSerialReadoutSummary, null),
-      livePidTimeline: pickPresent(input.livePidTimeline, input.live_pid_timeline, input.livePidSamples, input.live_pid_samples, payload?.livePidTimeline, payload?.live_pid_timeline, payload?.livePidSamples, payload?.live_pid_samples, nested.livePidTimeline, nested.live_pid_timeline, nested.livePidSamples, nested.live_pid_samples, null),
-      live_pid_timeline: pickPresent(input.live_pid_timeline, input.livePidTimeline, input.live_pid_samples, input.livePidSamples, payload?.live_pid_timeline, payload?.livePidTimeline, payload?.live_pid_samples, payload?.livePidSamples, nested.live_pid_timeline, nested.livePidTimeline, nested.live_pid_samples, nested.livePidSamples, null),
+      livePidTimeline: pickPresent(input.livePidTimeline, input.live_pid_timeline, input.livePidSamples, input.live_pid_samples, input.pidSamples, input.pid_samples, payload?.livePidTimeline, payload?.live_pid_timeline, payload?.livePidSamples, payload?.live_pid_samples, payload?.pidSamples, payload?.pid_samples, nested.livePidTimeline, nested.live_pid_timeline, nested.livePidSamples, nested.live_pid_samples, nested.pidSamples, nested.pid_samples, null),
+      live_pid_timeline: pickPresent(input.live_pid_timeline, input.livePidTimeline, input.live_pid_samples, input.livePidSamples, input.pid_samples, input.pidSamples, payload?.live_pid_timeline, payload?.livePidTimeline, payload?.live_pid_samples, payload?.livePidSamples, payload?.pid_samples, payload?.pidSamples, nested.live_pid_timeline, nested.livePidTimeline, nested.live_pid_samples, nested.livePidSamples, nested.pid_samples, nested.pidSamples, null),
       readoutCoverage: pickPresent(input.readoutCoverage, input.readout_coverage, payload?.readoutCoverage, payload?.readout_coverage, nested.readoutCoverage, nested.readout_coverage, null),
       readout_coverage: pickPresent(input.readout_coverage, input.readoutCoverage, payload?.readout_coverage, payload?.readoutCoverage, nested.readout_coverage, nested.readoutCoverage, null),
       coreSessionStatus: pickPresent(input.coreSessionStatus, input.core_session_status, input.importedCoreSessionStatus, input.imported_core_session_status, payload?.coreSessionStatus, payload?.core_session_status, payload?.importedCoreSessionStatus, payload?.imported_core_session_status, nested.coreSessionStatus, nested.core_session_status, nested.importedCoreSessionStatus, nested.imported_core_session_status, null),
@@ -15437,10 +15447,14 @@
       || bridgeImport?.live_pid_timeline
       || bridgeImport?.livePidSamples
       || bridgeImport?.live_pid_samples
+      || bridgeImport?.pidSamples
+      || bridgeImport?.pid_samples
       || bridgeSession?.livePidTimeline
       || bridgeSession?.live_pid_timeline
       || bridgeSession?.livePidSamples
       || bridgeSession?.live_pid_samples
+      || bridgeSession?.pidSamples
+      || bridgeSession?.pid_samples
       || []
     );
     const selectPreferredMonitorValue = (current, candidate) => {
@@ -21079,6 +21093,8 @@
       || sessionInput.live_pid_timeline
       || sessionInput.livePidSamples
       || sessionInput.live_pid_samples
+      || sessionInput.pidSamples
+      || sessionInput.pid_samples
       || [];
     const freezeFrameSnapshotInput = sessionInput.freezeFrameSnapshot || sessionInput.freeze_frame_snapshot || sessionInput.freezeFrameResponse || sessionInput.freeze_frame_response || sessionInput.freezeFrame || sessionInput.freeze_frame || {};
     const readinessSnapshotInput = sessionInput.readinessSnapshot || sessionInput.readiness_snapshot || sessionInput.readinessResponse || sessionInput.readiness_response || sessionInput.readiness || {};
@@ -21105,7 +21121,7 @@
           }
           : livePidSnapshotInput)
       : livePidSnapshotInput;
-    const livePidSnapshot = preserveExplicitReadoutFailure(livePidSnapshotInput?.monitorValues
+    const normalizedLivePidSnapshot = preserveExplicitReadoutFailure(livePidSnapshotInput?.monitorValues
       ? livePidSnapshotInput
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
@@ -21113,10 +21129,23 @@
     const livePidTimeline = normalizeLivePidTimeline(livePidTimelineInput);
     const livePidTimelineSummary = buildLivePidTimelineSummary(livePidTimeline);
     const allowLivePidTimelineFallback = !hasObjectContent(livePidSnapshotInput)
-      || (!['reported', 'unparsed', 'blocked'].includes(livePidSnapshot.livePidReadoutStatus || livePidSnapshot.live_pid_readout_status || '')
-        && livePidSnapshot.blocked !== true
-        && livePidSnapshot.isBlocked !== true
-        && livePidSnapshot.is_blocked !== true);
+      || (!['reported', 'unparsed', 'blocked'].includes(normalizedLivePidSnapshot.livePidReadoutStatus || normalizedLivePidSnapshot.live_pid_readout_status || '')
+        && normalizedLivePidSnapshot.blocked !== true
+        && normalizedLivePidSnapshot.isBlocked !== true
+        && normalizedLivePidSnapshot.is_blocked !== true);
+    const latestLivePidTimelineSample = livePidTimeline.samples.at(-1) || null;
+    const livePidSnapshot = allowLivePidTimelineFallback && latestLivePidTimelineSample
+      ? {
+        ...normalizeBridgeLivePidSnapshot({
+          source: sessionInput.source || sessionInput.source_type || "local_bridge",
+          captured_at: latestLivePidTimelineSample.capturedAt || latestLivePidTimelineSample.captured_at || null,
+          protocol: latestLivePidTimelineSample.protocol || latestLivePidTimelineSample.obd_protocol || null,
+          observation_condition: latestLivePidTimelineSample.observationCondition || latestLivePidTimelineSample.observation_condition || "unspecified",
+          monitor_values: latestLivePidTimelineSample.monitorValues || latestLivePidTimelineSample.monitor_values || []
+        }),
+        source: sessionInput.source || sessionInput.source_type || "local_bridge"
+      }
+      : normalizedLivePidSnapshot;
     const obdReportedProfile = buildObdReportedProfile(livePidSnapshot, getObdReportedProfileInput(sessionInput));
     const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
       ? (supportedPidMatrixInput.data && typeof supportedPidMatrixInput.data === "object"

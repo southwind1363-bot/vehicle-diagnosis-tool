@@ -18528,6 +18528,19 @@ const reimportedScannerJsonPidSampleAliasSession = obd.buildDiagnosticScanSessio
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonPidSampleAliasSessions[0])
 });
 check(reimportedScannerJsonPidSampleAliasSession?.livePidTimeline?.sampleCount === 2 && reimportedScannerJsonPidSampleAliasSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && reimportedScannerJsonPidSampleAliasSession.vehicleCommandEnabled === false, "PID sample JSON aliases were not preserved through read-only export and reimport");
+const directPidSampleAliases = ["pidSamples", "pid_samples"].map((key) => obd.buildDiagnosticScanSession({
+  [key]: [
+    { captured_at: "2026-08-05T10:00:00+09:00", observation_condition: "warm", monitor_values: [{ pid: "0C", value: 900, unit: "rpm" }] },
+    { captured_at: "2026-08-05T10:00:05+09:00", observation_condition: "warm", monitor_values: [{ pid: "0C", value: 1100, unit: "rpm" }] }
+  ]
+}));
+const nestedPidSampleAliasSession = obd.buildDiagnosticScanSession({
+  session: { pid_samples: directPidSampleAliases[0]?.livePidTimeline?.samples || [] }
+});
+const bridgePidSampleAliasImport = obd.buildBridgeDiagnosticImport({
+  bridge_session: { pidSamples: directPidSampleAliases[1]?.livePidTimeline?.samples || [] }
+});
+check(directPidSampleAliases.every((session) => session?.livePidTimeline?.sampleCount === 2 && session.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1100) && session.vehicleCommandEnabled === false) && nestedPidSampleAliasSession?.livePidTimeline?.sampleCount === 2 && nestedPidSampleAliasSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1100) && nestedPidSampleAliasSession.vehicleCommandEnabled === false && bridgePidSampleAliasImport?.bridgeSession?.livePidTimeline?.sampleCount === 2 && bridgePidSampleAliasImport.bridgeSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1100) && bridgePidSampleAliasImport.vehicleCommandEnabled === false, "PID sample aliases were not retained consistently through direct, nested, and bridge diagnostic inputs");
 const scannerJsonNonIsoTimelineSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     live_pid_timeline: {
