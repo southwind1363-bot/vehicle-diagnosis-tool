@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.33";
+const APP_VERSION = "3.6.34";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5315,8 +5315,17 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     ...dtcResponseOverrides
   });
   const webSerialReadoutSummary = buildWebSerialReadoutSummary();
+  const hasLivePidTimelineSample = scanSession.livePidSnapshot?.livePidReadoutStatus === "reported"
+    && Array.isArray(scanSession.livePidSnapshot.monitorValues)
+    && scanSession.livePidSnapshot.monitorValues.length > 0;
   const livePidTimeline = window.ObdReadOnly.normalizeLivePidTimeline({
-    samples: [...obdDevSession.livePidTimeline, { livePidSnapshot: scanSession.livePidSnapshot, observationCondition: obdLiveObservationCondition?.value || "unspecified" }]
+    samples: hasLivePidTimelineSample
+      ? [...obdDevSession.livePidTimeline, {
+        capturedAt,
+        livePidSnapshot: scanSession.livePidSnapshot,
+        observationCondition: obdLiveObservationCondition?.value || "unspecified"
+      }]
+      : [...obdDevSession.livePidTimeline]
   });
   const livePidTimelineSummary = window.ObdReadOnly.buildLivePidTimelineSummary(livePidTimeline);
   obdDevSession.livePidTimeline = livePidTimeline.samples;
