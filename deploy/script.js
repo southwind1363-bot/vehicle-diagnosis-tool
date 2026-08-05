@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.35";
+const APP_VERSION = "3.6.36";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5030,19 +5030,30 @@ function buildWebSerialDtcResponseOverrides(commandResponses = []) {
   return (Array.isArray(commandResponses) ? commandResponses : []).reduce((overrides, item) => {
     const command = String(item?.command || "").trim().toUpperCase();
     const metadata = dtcCommandMetadata[command];
-    if (!metadata || !isWebSerialExpectedEmptyResponse(command, item?.response)) return overrides;
+    const response = String(item?.response || "").trim();
+    if (!metadata || !response) return overrides;
     return {
       ...overrides,
-      [metadata.key]: {
-        source: "web_serial",
-        intent: metadata.intent,
-        dtcs: [],
-        reportedStatuses: [metadata.status],
-        dtcReadoutStatus: "reported",
-        retainedRawText: false,
-        wouldTransmit: false,
-        vehicleCommandEnabled: false
-      }
+      [metadata.key]: isWebSerialExpectedEmptyResponse(command, response)
+        ? {
+          source: "web_serial",
+          intent: metadata.intent,
+          dtcs: [],
+          reportedStatuses: [metadata.status],
+          dtcReadoutStatus: "reported",
+          retainedRawText: false,
+          wouldTransmit: false,
+          vehicleCommandEnabled: false
+        }
+        : {
+          source: "web_serial",
+          intent: metadata.intent,
+          protocol: "ELM327",
+          raw: response,
+          retainedRawText: false,
+          wouldTransmit: false,
+          vehicleCommandEnabled: false
+        }
     };
   }, {});
 }
