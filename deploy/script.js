@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.54";
+const APP_VERSION = "3.6.55";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7487,6 +7487,7 @@ function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
   const attemptedReadoutCountValue = summary.attemptedReadoutCount ?? summary.attempted_readout_count;
   const pendingReadoutCountValue = summary.pendingReadoutCount ?? summary.pending_readout_count;
   const errorReadoutCountValue = summary.errorReadoutCount ?? summary.error_readout_count;
+  const failedReadoutCountValue = summary.failedReadoutCount ?? summary.failed_readout_count;
   const errorCodesSource = summary.errorCodes ?? summary.error_codes ?? [];
   const totalReadoutCountValue = summary.totalReadoutCount ?? summary.total_readout_count;
   const totalValueCount = Number.isFinite(Number(totalValueCountValue)) ? Number(totalValueCountValue) : 0;
@@ -7494,12 +7495,14 @@ function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA) {
   const attempted = Number.isFinite(Number(attemptedReadoutCountValue)) ? Number(attemptedReadoutCountValue) : captured;
   const pending = Number.isFinite(Number(pendingReadoutCountValue)) ? Number(pendingReadoutCountValue) : 0;
   const errorReadoutCount = Number.isFinite(Number(errorReadoutCountValue)) ? Number(errorReadoutCountValue) : 0;
+  const failedReadoutCount = Number.isFinite(Number(failedReadoutCountValue)) ? Number(failedReadoutCountValue) : 0;
   const errorCodes = Array.isArray(errorCodesSource) ? errorCodesSource : [];
   const total = Number.isFinite(Number(totalReadoutCountValue)) ? Number(totalReadoutCountValue) : 0;
   const parts = [];
   if (total) parts.push(`${captured}/${total}読取`);
   if (total && attempted !== captured) parts.push(`試行${attempted}/${total}`);
   if (pending > 0) parts.push(`保留${pending}`);
+  if (failedReadoutCount > 0) parts.push(`読取失敗状態${failedReadoutCount}`);
   if (errorReadoutCount > 0) parts.push(`読取失敗${errorReadoutCount}`);
   const errorReasonLabel = formatReadoutErrorCodes(errorCodes);
   if (errorReasonLabel) parts.push(errorReasonLabel);
@@ -7542,11 +7545,14 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const capturedReadoutDeltaValue = summary.capturedReadoutDelta ?? summary.captured_readout_delta;
   const attemptedReadoutDeltaValue = summary.attemptedReadoutDelta ?? summary.attempted_readout_delta;
   const pendingReadoutDeltaValue = summary.pendingReadoutDelta ?? summary.pending_readout_delta;
+  const failedReadoutDeltaValue = summary.failedReadoutDelta ?? summary.failed_readout_delta;
   const totalDelta = Number.isFinite(Number(totalValueCountDeltaValue)) ? Number(totalValueCountDeltaValue) : 0;
   const capturedDelta = Number.isFinite(Number(capturedReadoutDeltaValue)) ? Number(capturedReadoutDeltaValue) : 0;
   const attemptedDelta = Number.isFinite(Number(attemptedReadoutDeltaValue)) ? Number(attemptedReadoutDeltaValue) : 0;
   const pendingDelta = Number.isFinite(Number(pendingReadoutDeltaValue)) ? Number(pendingReadoutDeltaValue) : 0;
+  const failedDelta = Number.isFinite(Number(failedReadoutDeltaValue)) ? Number(failedReadoutDeltaValue) : 0;
   const changedIds = Array.isArray(summary.changedValueCountIds) ? summary.changedValueCountIds : Array.isArray(summary.changed_value_count_ids) ? summary.changed_value_count_ids : [];
+  const changedFailedReasonIds = Array.isArray(summary.changedFailedReasonIds) ? summary.changedFailedReasonIds : Array.isArray(summary.changed_failed_reason_ids) ? summary.changed_failed_reason_ids : [];
   const snakeNextPendingReadoutChanged = summary.next_pending_readout_changed === true && summary.nextPendingReadoutChanged !== true;
   const rawPidUndecodedDeltaValue = summary.rawPidUndecodedDelta ?? summary.raw_pid_undecoded_delta;
   const readinessIncompleteDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
@@ -7559,7 +7565,9 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   if (capturedDelta !== 0) parts.push(`読取${capturedDelta > 0 ? "+" : ""}${capturedDelta}`);
   if (attemptedDelta !== 0) parts.push(`試行${attemptedDelta > 0 ? "+" : ""}${attemptedDelta}`);
   if (pendingDelta !== 0) parts.push(`保留${pendingDelta > 0 ? "+" : ""}${pendingDelta}`);
+  if (failedDelta !== 0) parts.push(`失敗${failedDelta > 0 ? "+" : ""}${failedDelta}`);
   if (changedIds.length) parts.push(changedIds.slice(0, 3).map((id) => formatCoreReadoutLabel(id, id)).join(","));
+  if (changedFailedReasonIds.length) parts.push(`失敗理由:${changedFailedReasonIds.slice(0, 3).map((id) => formatCoreReadoutLabel(id, id)).join(",")}`);
   if (summary.nextPendingReadoutChanged === true || snakeNextPendingReadoutChanged) {
     const nextId = summary.currentNextPendingReadoutId ?? summary.current_next_pending_readout_id;
     parts.push(`次${formatCoreReadoutLabel(nextId, nextId || "なし")}`);

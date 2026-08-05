@@ -15811,6 +15811,9 @@ const scanSessionSnakeCoreReadoutInventoryImport = obd.buildDiagnosticScanSessio
     pending_ids: ["freeze_frame_snapshot", "readiness_snapshot"],
     attempted_readout_count: 3,
     attempted_ids: ["dtc_snapshot", "freeze_frame_snapshot", "readiness_snapshot"],
+    failed_readout_count: 1,
+    failed_readout_ids: ["live_pid_snapshot"],
+    failed_readout_reason_by_id: { live_pid_snapshot: "unparsed_response" },
     next_pending_readout_id: "freeze_frame_snapshot",
     counts_by_id: { dtc_snapshot: 2, freeze_frame_snapshot: 3 },
     raw_pid_undecoded_count: 2,
@@ -15822,6 +15825,7 @@ const scanSessionSnakeCoreReadoutInventoryImport = obd.buildDiagnosticScanSessio
 check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventorySummary?.schemaVersion === "core_readout_inventory_v1" && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventorySummary?.totalValueCount === 5, "Diagnostic scan session did not normalize imported core readout inventory aliases");
 check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedTotalValueCount === 5 && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedCapturedReadoutCount === 1, "Diagnostic scan session did not read snake_case imported core readout inventory counts");
 check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedPendingIds?.includes("freeze_frame_snapshot") && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedAttemptedIds?.includes("readiness_snapshot"), "Diagnostic scan session did not read snake_case imported core readout inventory id lists");
+check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventorySummary?.failedReadoutReasonById?.live_pid_snapshot === "unparsed_response" && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedFailedIds?.includes("live_pid_snapshot") && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.changedFailedReasonIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not compare snake_case imported readout failure reasons");
 check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedNextPendingReadoutId === "freeze_frame_snapshot" && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedCountsById?.freeze_frame_snapshot === 3, "Diagnostic scan session did not read snake_case imported core readout inventory cursor or counts_by_id");
 check(Number.isFinite(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.rawPidUndecodedDelta) && Number.isFinite(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.ecuInfoMissingKeyDelta), "Diagnostic scan session did not read snake_case imported core readout inventory quality counts");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
