@@ -3008,7 +3008,24 @@ const webSerialFreezeOverrideBuilder = webSerialFreezeOverrideSource
 const webSerialNoDataFreezeOverride = webSerialFreezeOverrideBuilder?.([{ command: "0202", response: "SEARCHING...\rNO DATA" }]);
 const webSerialNoDataFreezeSession = obd.buildScanSessionFromObdText(">0202\nNO DATA", { freezeFrameResponse: webSerialNoDataFreezeOverride });
 check(webSerialNoDataFreezeOverride?.freezeFrameReadoutStatus === "reported" && Array.isArray(webSerialNoDataFreezeOverride?.values) && webSerialNoDataFreezeOverride.values.length === 0 && webSerialFreezeOverrideBuilder?.([{ command: "0202", response: "0202\rBUS INIT: ...\rOK\rNO DATA" }])?.freezeFrameReadoutStatus === "reported" && webSerialFreezeOverrideBuilder?.([{ command: "010C", response: "NO DATA" }]) === null && webSerialNoDataFreezeSession.freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && webSerialNoDataFreezeSession.freezeFrameSnapshot?.monitorValues?.length === 0 && webSerialNoDataFreezeSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "empty" && webSerialNoDataFreezeSession.vehicleCommandEnabled === false, "Web Serial NO DATA should mark only the requested Mode 02 freeze-frame as a safe empty readout");
-check(webSerialFreezeOverrideBuilder?.([{ command: "0202", response: "BUS ERROR\rNO DATA" }]) === null && webSerialFreezeOverrideBuilder?.([{ command: "0202", response: "NO DATA\r42020000" }]) === null, "Web Serial freeze-frame overrides must not treat mixed vehicle-link errors or positive responses as an empty result");
+check(webSerialFreezeOverrideBuilder?.([{ command: "0202", response: "BUS ERROR\rNO DATA" }])?.raw === ">0202\nBUS ERROR\rNO DATA" && webSerialFreezeOverrideBuilder?.([{ command: "0202", response: "NO DATA\r42020000" }])?.raw === ">0202\nNO DATA\r42020000", "Web Serial freeze-frame overrides must not treat mixed vehicle-link errors or positive responses as an empty result");
+const webSerialFreezeFrameHistorySource = appSource.slice(
+  appSource.indexOf("function isWebSerialFreezeFrameCommand"),
+  appSource.indexOf("function updateWebSerialFreezeFrameReadoutResponses")
+);
+const webSerialFreezeFrameHistoryBuilder = webSerialFreezeFrameHistorySource
+  ? new Function(`${webSerialFreezeFrameHistorySource}; return mergeWebSerialFreezeFrameReadoutResponses;`)()
+  : null;
+const webSerialPreviousFreezeFrameResponses = [
+  { command: "0202", response: "42 02 00 01 71" },
+  { command: "020C", response: "42 0C 00 1A F8" }
+];
+const webSerialLatestFreezeFrameTriggerResponses = webSerialFreezeFrameHistoryBuilder?.(webSerialPreviousFreezeFrameResponses, [{ command: "0202", response: "42 02 00 03 00" }]);
+const webSerialLatestFreezeFrameResponses = webSerialFreezeFrameHistoryBuilder?.(webSerialLatestFreezeFrameTriggerResponses, [{ command: "020C", response: "42 0C 00 17 70" }]);
+const webSerialLatestFreezeFrameOverride = webSerialFreezeOverrideBuilder?.(webSerialLatestFreezeFrameResponses);
+const webSerialLatestFreezeFrameSession = obd.buildScanSessionFromObdText(">03\n43 01 71\n>0202\n42 02 00 01 71\n>020C\n42 0C 00 1A F8\n>03\n43 03 00", { freezeFrameResponse: webSerialLatestFreezeFrameOverride });
+check(webSerialLatestFreezeFrameTriggerResponses?.length === 1 && webSerialLatestFreezeFrameTriggerResponses?.[0]?.command === "0202" && webSerialLatestFreezeFrameResponses?.map((item) => item.command).join(",") === "0202,020C" && webSerialLatestFreezeFrameOverride?.raw?.includes("42 02 00 03 00") && !webSerialLatestFreezeFrameOverride?.raw?.includes("42 02 00 01 71") && webSerialLatestFreezeFrameSession?.freezeFrameSnapshot?.triggerDtc === "P0300" && webSerialLatestFreezeFrameSession?.freezeFrameSnapshot?.monitorValues?.map((item) => item.value).join(",") === "1500", "Web Serial freeze-frame rereads must replace the prior trigger and values as one current readout");
+check(appSource.includes('freezeFrameReadoutResponses: [],') && appSource.includes('obdDevSession.freezeFrameReadoutResponses = [];') && appSource.includes('const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));'), "Web Serial freeze-frame state should reset on a new connection and retain only the current readout bundle");
 const webSerialReadinessOverrideSource = appSource.match(/function buildWebSerialReadinessResponseOverride\(commandResponses = \[\]\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
 const webSerialReadinessOverrideBuilder = webSerialReadinessOverrideSource
   ? new Function(`${webSerialReadinessOverrideSource}; return buildWebSerialReadinessResponseOverride;`)()

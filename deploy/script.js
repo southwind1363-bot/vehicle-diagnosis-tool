@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.38";
+const APP_VERSION = "3.6.39";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -519,6 +519,7 @@ const obdDevSession = {
   supportedPidSet: [],
   readoutAttempts: [],
   livePidTimeline: [],
+  freezeFrameReadoutResponses: [],
   bridgeEndpoint: null,
   bridgeStatus: null,
   bridgeVciList: null,
@@ -4471,6 +4472,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.readoutAttempts = [];
     obdDevSession.coreScanStopReason = null;
     obdDevSession.livePidTimeline = [];
+    obdDevSession.freezeFrameReadoutResponses = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
     setObdDeveloperConnectionState("initializing");
@@ -5058,18 +5060,59 @@ function buildWebSerialDtcResponseOverrides(commandResponses = []) {
   }, {});
 }
 
+function isWebSerialFreezeFrameCommand(command) {
+  return /^02[0-9A-F]{2}$/.test(String(command || "").trim().toUpperCase());
+}
+
+function mergeWebSerialFreezeFrameReadoutResponses(previous = [], commandResponses = []) {
+  const currentResponses = (Array.isArray(commandResponses) ? commandResponses : [])
+    .map((item) => ({
+      command: String(item?.command || "").trim().toUpperCase(),
+      response: String(item?.response || "").trim()
+    }))
+    .filter((item) => isWebSerialFreezeFrameCommand(item.command) && item.response);
+  if (!currentResponses.length) return Array.isArray(previous) ? previous : [];
+  const previousResponses = currentResponses.some((item) => item.command === "0202")
+    ? []
+    : (Array.isArray(previous) ? previous : []);
+  const responseByCommand = new Map(previousResponses.map((item) => [String(item?.command || "").trim().toUpperCase(), item]));
+  currentResponses.forEach((item) => responseByCommand.set(item.command, item));
+  return [...responseByCommand.values()];
+}
+
+function updateWebSerialFreezeFrameReadoutResponses(commandResponses = []) {
+  const merged = mergeWebSerialFreezeFrameReadoutResponses(obdDevSession.freezeFrameReadoutResponses, commandResponses);
+  obdDevSession.freezeFrameReadoutResponses = merged;
+  return merged;
+}
+
 function buildWebSerialFreezeFrameResponseOverride(commandResponses = []) {
-  const response = (Array.isArray(commandResponses) ? commandResponses : []).find((item) => String(item?.command || "").trim().toUpperCase() === "0202")?.response;
-  if (!isWebSerialExpectedEmptyResponse("0202", response)) return null;
-  return {
-    source: "web_serial",
-    intent: "read_freeze_frame",
-    values: [],
-    freezeFrameReadoutStatus: "reported",
-    retainedRawText: false,
-    wouldTransmit: false,
-    vehicleCommandEnabled: false
-  };
+  const responses = (Array.isArray(commandResponses) ? commandResponses : [])
+    .filter((item) => isWebSerialFreezeFrameCommand(item?.command));
+  const response = responses.find((item) => String(item?.command || "").trim().toUpperCase() === "0202")?.response;
+  if (isWebSerialExpectedEmptyResponse("0202", response)) {
+    return {
+      source: "web_serial",
+      intent: "read_freeze_frame",
+      values: [],
+      freezeFrameReadoutStatus: "reported",
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
+  const raw = responses.map((item) => `>${String(item.command || "").trim().toUpperCase()}\n${String(item.response || "").trim()}`).join("\n");
+  return raw
+    ? {
+      source: "web_serial",
+      intent: "read_freeze_frame",
+      protocol: "ELM327",
+      raw,
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    }
+    : null;
 }
 
 function buildWebSerialReadinessResponseOverride(commandResponses = []) {
@@ -5354,7 +5397,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
-  const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(commandResponses);
+  const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));
   const readinessResponseOverride = buildWebSerialReadinessResponseOverride(commandResponses);
   const onboardMonitorResponseOverride = buildWebSerialOnboardMonitorResponseOverride(commandResponses);
   const scanSessionOptions = {
