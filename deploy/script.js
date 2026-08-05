@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.46";
+const APP_VERSION = "3.6.47";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4669,7 +4669,7 @@ async function readObdDeveloperFreezeFrame() {
     return true;
   }
   if (!await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"])) return false;
-  const supportedPids = getWebSerialFreezeFrameSupportedPids(obdDevSession.freezeFrameCapabilityResponse);
+  const supportedPids = getWebSerialFreezeFrameSupportedPidsForTriggerScopes(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot);
   if (!supportedPids.has("02")) {
     obdDevStatus.textContent = "Mode 02の対応PIDからフリーズフレーム起点DTCを確認できないため、値の追加要求を送りませんでした。";
     renderObdDeveloperGate();
@@ -5093,21 +5093,60 @@ function updateWebSerialFreezeFrameCapabilityResponse(commandResponses = []) {
   return resolved;
 }
 
-function getWebSerialFreezeFrameSupportedPids(response = "") {
-  const hex = String(response || "").toUpperCase().replace(/[^0-9A-F]/g, "");
+function decodeWebSerialFreezeFrameSupportedPidBitmap(bitmap = "") {
   const supported = new Set();
-  for (let index = 0; index <= hex.length - 12; index += 1) {
-    if (hex.slice(index, index + 4) !== "4200") continue;
-    const bitmap = hex.slice(index + 4, index + 12);
-    if (!/^[0-9A-F]{8}$/.test(bitmap)) continue;
-    for (let byteIndex = 0; byteIndex < 4; byteIndex += 1) {
-      const byte = Number.parseInt(bitmap.slice(byteIndex * 2, byteIndex * 2 + 2), 16);
-      for (let bitIndex = 0; bitIndex < 8; bitIndex += 1) {
-        if ((byte & (1 << (7 - bitIndex))) !== 0) supported.add((byteIndex * 8 + bitIndex + 1).toString(16).padStart(2, "0").toUpperCase());
-      }
+  if (!/^[0-9A-F]{8}$/.test(String(bitmap || ""))) return supported;
+  for (let byteIndex = 0; byteIndex < 4; byteIndex += 1) {
+    const byte = Number.parseInt(bitmap.slice(byteIndex * 2, byteIndex * 2 + 2), 16);
+    for (let bitIndex = 0; bitIndex < 8; bitIndex += 1) {
+      if ((byte & (1 << (7 - bitIndex))) !== 0) supported.add((byteIndex * 8 + bitIndex + 1).toString(16).padStart(2, "0").toUpperCase());
     }
   }
   return supported;
+}
+
+function parseWebSerialFreezeFrameSupportedPidRows(response = "") {
+  return String(response || "").split(/\r?\n/).flatMap((line) => {
+    const hex = String(line || "").toUpperCase().replace(/[^0-9A-F]/g, "");
+    const standardHeaderMatch = hex.match(/^([0-9A-F]{3})(?:[0-9A-F]{2})?4200([0-9A-F]{8})/);
+    const extendedHeaderMatch = standardHeaderMatch ? null : hex.match(/^([0-9A-F]{8})(?:[0-9A-F]{2})?4200([0-9A-F]{8})/);
+    const headerlessMatch = standardHeaderMatch || extendedHeaderMatch ? null : hex.match(/^4200([0-9A-F]{8})/);
+    const match = standardHeaderMatch || extendedHeaderMatch || headerlessMatch;
+    if (!match) return [];
+    const scopeId = standardHeaderMatch || extendedHeaderMatch ? match[1] : null;
+    const bitmap = standardHeaderMatch || extendedHeaderMatch ? match[2] : match[1];
+    return [{ scopeId, supportedPids: decodeWebSerialFreezeFrameSupportedPidBitmap(bitmap) }];
+  });
+}
+
+function getWebSerialFreezeFrameSupportedPids(response = "") {
+  return parseWebSerialFreezeFrameSupportedPidRows(response).reduce((supported, row) => {
+    row.supportedPids.forEach((pid) => supported.add(pid));
+    return supported;
+  }, new Set());
+}
+
+function getWebSerialFreezeFrameTriggerScopeIds(freezeFrameSnapshot = null) {
+  const entries = Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
+    ? freezeFrameSnapshot.triggerDtcEntries
+    : Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) ? freezeFrameSnapshot.trigger_dtc_entries : [];
+  return new Set(entries
+    .map((entry) => entry?.sourceEcu || entry?.source_ecu || null)
+    .filter(Boolean)
+    .map((scopeId) => String(scopeId).trim().toUpperCase()));
+}
+
+function getWebSerialFreezeFrameSupportedPidsForTriggerScopes(response = "", freezeFrameSnapshot = null) {
+  const rows = parseWebSerialFreezeFrameSupportedPidRows(response);
+  const triggerScopeIds = getWebSerialFreezeFrameTriggerScopeIds(freezeFrameSnapshot);
+  const scopedRows = rows.filter((row) => row.scopeId);
+  const applicableRows = triggerScopeIds.size && scopedRows.length
+    ? scopedRows.filter((row) => triggerScopeIds.has(row.scopeId))
+    : rows;
+  return applicableRows.reduce((supported, row) => {
+    row.supportedPids.forEach((pid) => supported.add(pid));
+    return supported;
+  }, new Set());
 }
 
 function mergeWebSerialFreezeFrameReadoutResponses(previous = [], commandResponses = []) {
