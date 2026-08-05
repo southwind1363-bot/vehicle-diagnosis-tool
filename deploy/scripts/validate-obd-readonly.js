@@ -18289,6 +18289,10 @@ const scannerJsonDiagnosticTroubleCodesAliasSession = obd.buildDiagnosticScanSes
   data: { diagnostic_trouble_codes: [{ dtc_code: "U0100", status: "stored", ecu_id: "7E9" }] }
 }));
 check(scannerJsonDtcListAliasSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0420" && item.status === "pending" && item.ecu === "7E8") && scannerJsonDtcListAliasSession?.vehicleCommandEnabled === false && scannerJsonDiagnosticTroubleCodesAliasSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "U0100" && item.status === "stored" && item.ecu === "7E9") && scannerJsonDiagnosticTroubleCodesAliasSession?.vehicleCommandEnabled === false, "DTC-list JSON aliases were not retained as safe read-only DTC evidence");
+const scannerJsonTroubleCodeAliasSessions = ["trouble_codes", "troubleCodes"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: { [key]: [{ code: "P0300", status: "stored", ecu: "7E8" }] }
+})));
+check(scannerJsonTroubleCodeAliasSessions.every((session) => session?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "7E8") && session.vehicleCommandEnabled === false && session.retainedRawText === false), "Trouble-code JSON aliases were not retained as safe read-only DTC evidence");
 const scannerJsonMode09ItemsAliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   data: { mode09Items: [{ item_id: "calibration_id", decoded_value: "CAL-JSON-01", source_ecu: "7E8" }, { item_id: "vin", decoded_value: "JTD00000000000000", source_ecu: "7E8" }] }
 }));
