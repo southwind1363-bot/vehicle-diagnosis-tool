@@ -14572,6 +14572,20 @@
     const capturedItems = items.filter((item) => item?.status === "captured");
     const emptyItems = items.filter((item) => item?.status === "empty");
     const missingItems = items.filter((item) => item?.status === "missing");
+    const failedReadoutReasons = new Set(["transport_safety_blocked", "blocked_readout", "not_supported", "transport_error", "unparsed_response", "unknown_response"]);
+    const itemById = Object.fromEntries(items.filter((item) => item?.id).map((item) => [item.id, item]));
+    const retainedFailedReadoutIds = normalizedBase.failedReadoutIds.filter((id) => {
+      const item = itemById[id];
+      return !item || failedReadoutReasons.has(item.statusReason || item.status_reason);
+    });
+    const failedReadoutIds = [...new Set([
+      ...retainedFailedReadoutIds,
+      ...items.filter((item) => failedReadoutReasons.has(item?.statusReason || item?.status_reason)).map((item) => item.id)
+    ])];
+    const failedReadoutReasonById = Object.fromEntries(failedReadoutIds.map((id) => [
+      id,
+      itemById[id]?.statusReason || itemById[id]?.status_reason || normalizedBase.failedReadoutReasonById?.[id] || null
+    ]));
     return normalizeReadoutCoverageSnapshot({
       ...normalizedBase,
       items,
@@ -14587,7 +14601,10 @@
       missingIds: missingItems.map((item) => item.id),
       missingLabels: missingItems.map((item) => item.label),
       pendingIds: [...emptyItems, ...missingItems].map((item) => item.id),
-      pendingLabels: [...emptyItems, ...missingItems].map((item) => item.label)
+      pendingLabels: [...emptyItems, ...missingItems].map((item) => item.label),
+      failedReadoutCount: failedReadoutIds.length,
+      failedReadoutIds,
+      failedReadoutReasonById
     });
   }
 

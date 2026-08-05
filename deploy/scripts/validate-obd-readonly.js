@@ -3432,6 +3432,9 @@ const mergedBridgeLivePidSession = obd.buildDiagnosticScanSession({ scan_session
 }) });
 const mergedBridgeLivePidExport = obd.buildBridgeSessionExportPayload({ bridgeSession: mergedBridgeLivePidSession });
 check(mergedBridgeLivePidSession?.livePidSnapshot?.source === "scanner_text_and_local_bridge" && mergedBridgeLivePidSession?.livePidSnapshot?.protocol === "CAN_11_500" && mergedBridgeLivePidSession?.livePidSnapshot?.capturedAt === "2026-07-20T12:00:00Z" && mergedBridgeLivePidSession?.livePidSnapshot?.monitorValues?.[0]?.value === 805 && mergedBridgeLivePidSession?.livePidSnapshot?.monitorValues?.[0]?.source === "local_bridge" && mergedBridgeLivePidSession?.vehicleCommandEnabled === false && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.protocol === "CAN_11_500" && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.captured_at === "2026-07-20T12:00:00Z" && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.monitor_values?.[0]?.value === 805 && mergedBridgeLivePidExport?.session?.live_pid_snapshot?.vehicle_command_enabled === false, "Merged bridge live PID provenance did not survive session export");
+const failedBridgeLivePidSummary = obd.buildBridgeSessionSummary({ livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } } });
+const recoveredBridgeLivePidMerge = obd.mergeDiagnosticInputs({ scannerText: "Engine RPM: 650 rpm", bridgeImport: obd.buildBridgeSessionExportPayload(failedBridgeLivePidSummary) });
+check(recoveredBridgeLivePidMerge.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && recoveredBridgeLivePidMerge.readoutCoverage?.failedReadoutCount === 0 && !recoveredBridgeLivePidMerge.readoutCoverage?.failedReadoutIds?.includes("live_pid_snapshot"), "A successful merged live PID readout retained a stale bridge failure");
 const mergedScannerSnapshotSession = obd.mergeDiagnosticInputs({
   scannerText: [
     "Stored DTC",
