@@ -6678,10 +6678,11 @@
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
     const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });
-    const { protocol, capturedAt } = resolveSessionTemporalContext({
+    const { protocol, capturedAt, startedAt, endedAt } = resolveSessionTemporalContext({
       input: parts,
       dtcSnapshot,
       livePidSnapshot,
+      livePidTimeline,
       freezeFrameSnapshot,
       readinessSnapshot,
       ecuInfoSnapshot,
@@ -6859,8 +6860,8 @@
     return {
       source: parts.source || parts.source_type || "local_bridge",
       source_type: parts.source_type || parts.source || "local_bridge",
-      startedAt: parts.startedAt || parts.started_at || null,
-      endedAt: parts.endedAt || parts.ended_at || null,
+      startedAt,
+      endedAt,
       capturedAt,
       protocol,
       obd_protocol: protocol,
@@ -7833,6 +7834,7 @@
     input = {},
     dtcSnapshot = {},
     livePidSnapshot = {},
+    livePidTimeline = {},
     freezeFrameSnapshot = {},
     readinessSnapshot = {},
     ecuInfoSnapshot = {},
@@ -7840,6 +7842,18 @@
     ecuResponseSummary = {},
     supportedPidMatrix = {}
   } = {}) {
+    const timelineSamples = Array.isArray(livePidTimeline)
+      ? livePidTimeline
+      : Array.isArray(livePidTimeline?.samples)
+        ? livePidTimeline.samples
+        : [];
+    const timelineIsoCaptures = timelineSamples
+      .map((sample) => sample?.capturedAt || sample?.captured_at || null)
+      .filter((capturedAt) => /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt)));
+    const hasCompleteTimelineIsoRange = timelineSamples.length > 0 && timelineIsoCaptures.length === timelineSamples.length;
+    const orderedTimelineIsoCaptures = hasCompleteTimelineIsoRange
+      ? [...timelineIsoCaptures].sort((left, right) => Date.parse(left) - Date.parse(right))
+      : [];
     return {
       protocol: input.protocol
         || input.obd_protocol
@@ -7909,6 +7923,15 @@
         || supportedPidMatrix.capturedAt
         || supportedPidMatrix.captured_at
         || supportedPidMatrix.timestamp
+        || orderedTimelineIsoCaptures.at(-1)
+        || null,
+      startedAt: input.startedAt
+        || input.started_at
+        || orderedTimelineIsoCaptures[0]
+        || null,
+      endedAt: input.endedAt
+        || input.ended_at
+        || orderedTimelineIsoCaptures.at(-1)
         || null
     };
   }
@@ -21333,10 +21356,11 @@
     });
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
     const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });
-    const { protocol, capturedAt } = resolveSessionTemporalContext({
+    const { protocol, capturedAt, startedAt, endedAt } = resolveSessionTemporalContext({
       input: sessionInput,
       dtcSnapshot,
       livePidSnapshot,
+      livePidTimeline,
       freezeFrameSnapshot,
       readinessSnapshot,
       ecuInfoSnapshot,
@@ -21533,10 +21557,10 @@
       native_connector_boundary: nativeConnectorBoundary,
       nativeConnectorScanLifecycle,
       native_connector_scan_lifecycle: nativeConnectorScanLifecycle,
-      startedAt: sessionInput.started_at || sessionInput.startedAt || null,
-      started_at: sessionInput.started_at || sessionInput.startedAt || null,
-      endedAt: sessionInput.ended_at || sessionInput.endedAt || null,
-      ended_at: sessionInput.ended_at || sessionInput.endedAt || null,
+      startedAt,
+      started_at: startedAt,
+      endedAt,
+      ended_at: endedAt,
       capturedAt,
       captured_at: capturedAt,
       protocol,
