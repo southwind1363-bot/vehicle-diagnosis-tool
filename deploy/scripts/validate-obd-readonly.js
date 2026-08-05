@@ -13021,6 +13021,10 @@ const restoredObdProfileSession = obd.buildDiagnosticScanSession({
   livePidSnapshot: { values: [], live_pid_readout_status: "unknown" }
 });
 check(restoredObdProfileSession.obdReportedProfile?.fuel_type === "diesel" && restoredObdProfileSession.obd_reported_profile?.vehicle_command_enabled === false, "Saved ECU-reported OBD profile was not preserved across session import");
+const fallbackPidTimeline = obd.normalizeLivePidTimeline({
+  samples: [{ captured_at: "2026-07-17T00:00:00Z", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }]
+});
+check(fallbackPidTimeline.sampleCount === 1 && fallbackPidTimeline.samples[0]?.monitorValues?.[0]?.id === "engine_speed" && fallbackPidTimeline.vehicleCommandEnabled === false, "Fallback PID definitions did not retain standard live PID timeline values");
 const reportedLivePidTimeline = obd.normalizeLivePidTimeline({
   samples: [
     { captured_at: "2026-07-17T00:00:00Z", live_pid_snapshot: decodedLivePids },
