@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.39";
+const APP_VERSION = "3.6.40";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -520,6 +520,7 @@ const obdDevSession = {
   readoutAttempts: [],
   livePidTimeline: [],
   freezeFrameReadoutResponses: [],
+  ecuInfoReadoutResponses: [],
   bridgeEndpoint: null,
   bridgeStatus: null,
   bridgeVciList: null,
@@ -4473,6 +4474,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.coreScanStopReason = null;
     obdDevSession.livePidTimeline = [];
     obdDevSession.freezeFrameReadoutResponses = [];
+    obdDevSession.ecuInfoReadoutResponses = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
     setObdDeveloperConnectionState("initializing");
@@ -5115,6 +5117,50 @@ function buildWebSerialFreezeFrameResponseOverride(commandResponses = []) {
     : null;
 }
 
+function isWebSerialEcuInfoCommand(command) {
+  return new Set(["0900", "0904", "0906", "0908", "090A", "090B"])
+    .has(String(command || "").trim().toUpperCase());
+}
+
+function mergeWebSerialEcuInfoReadoutResponses(previous = [], commandResponses = []) {
+  const currentResponses = (Array.isArray(commandResponses) ? commandResponses : [])
+    .map((item) => ({
+      command: String(item?.command || "").trim().toUpperCase(),
+      response: String(item?.response || "").trim()
+    }))
+    .filter((item) => isWebSerialEcuInfoCommand(item.command) && item.response);
+  if (!currentResponses.length) return Array.isArray(previous) ? previous : [];
+  const previousResponses = currentResponses.some((item) => item.command === "0900")
+    ? []
+    : (Array.isArray(previous) ? previous : []);
+  const responseByCommand = new Map(previousResponses.map((item) => [String(item?.command || "").trim().toUpperCase(), item]));
+  currentResponses.forEach((item) => responseByCommand.set(item.command, item));
+  return [...responseByCommand.values()];
+}
+
+function updateWebSerialEcuInfoReadoutResponses(commandResponses = []) {
+  const merged = mergeWebSerialEcuInfoReadoutResponses(obdDevSession.ecuInfoReadoutResponses, commandResponses);
+  obdDevSession.ecuInfoReadoutResponses = merged;
+  return merged;
+}
+
+function buildWebSerialEcuInfoResponseOverride(commandResponses = []) {
+  const responses = (Array.isArray(commandResponses) ? commandResponses : [])
+    .filter((item) => isWebSerialEcuInfoCommand(item?.command));
+  const raw = responses.map((item) => `>${String(item.command || "").trim().toUpperCase()}\n${String(item.response || "").trim()}`).join("\n");
+  return raw
+    ? {
+      source: "web_serial",
+      intent: "read_ecu_info",
+      protocol: "ELM327",
+      raw,
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    }
+    : null;
+}
+
 function buildWebSerialReadinessResponseOverride(commandResponses = []) {
   const response = String((Array.isArray(commandResponses) ? commandResponses : [])
     .find((item) => String(item?.command || "").trim().toUpperCase() === "0101")?.response || "").trim();
@@ -5398,6 +5444,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
   const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));
+  const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses));
   const readinessResponseOverride = buildWebSerialReadinessResponseOverride(commandResponses);
   const onboardMonitorResponseOverride = buildWebSerialOnboardMonitorResponseOverride(commandResponses);
   const scanSessionOptions = {
@@ -5410,6 +5457,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     observationContext: buildSelectedObdObservationContext() || undefined,
     connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus(),
     ...(freezeFrameResponseOverride ? { freezeFrameResponse: freezeFrameResponseOverride } : {}),
+    ...(ecuInfoResponseOverride ? { ecuInfoResponse: ecuInfoResponseOverride } : {}),
     ...(readinessResponseOverride ? { readinessResponse: readinessResponseOverride } : {}),
     ...(onboardMonitorResponseOverride ? { onboardMonitorResponse: onboardMonitorResponseOverride } : {}),
     ...dtcResponseOverrides

@@ -3026,6 +3026,23 @@ const webSerialLatestFreezeFrameOverride = webSerialFreezeOverrideBuilder?.(webS
 const webSerialLatestFreezeFrameSession = obd.buildScanSessionFromObdText(">03\n43 01 71\n>0202\n42 02 00 01 71\n>020C\n42 0C 00 1A F8\n>03\n43 03 00", { freezeFrameResponse: webSerialLatestFreezeFrameOverride });
 check(webSerialLatestFreezeFrameTriggerResponses?.length === 1 && webSerialLatestFreezeFrameTriggerResponses?.[0]?.command === "0202" && webSerialLatestFreezeFrameResponses?.map((item) => item.command).join(",") === "0202,020C" && webSerialLatestFreezeFrameOverride?.raw?.includes("42 02 00 03 00") && !webSerialLatestFreezeFrameOverride?.raw?.includes("42 02 00 01 71") && webSerialLatestFreezeFrameSession?.freezeFrameSnapshot?.triggerDtc === "P0300" && webSerialLatestFreezeFrameSession?.freezeFrameSnapshot?.monitorValues?.map((item) => item.value).join(",") === "1500", "Web Serial freeze-frame rereads must replace the prior trigger and values as one current readout");
 check(appSource.includes('freezeFrameReadoutResponses: [],') && appSource.includes('obdDevSession.freezeFrameReadoutResponses = [];') && appSource.includes('const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));'), "Web Serial freeze-frame state should reset on a new connection and retain only the current readout bundle");
+const webSerialEcuInfoHistorySource = appSource.slice(
+  appSource.indexOf("function isWebSerialEcuInfoCommand"),
+  appSource.indexOf("function buildWebSerialReadinessResponseOverride")
+);
+const webSerialEcuInfoHistoryBuilder = webSerialEcuInfoHistorySource
+  ? new Function(`${webSerialEcuInfoHistorySource}; return { mergeWebSerialEcuInfoReadoutResponses, buildWebSerialEcuInfoResponseOverride };`)()
+  : null;
+const webSerialPreviousEcuInfoResponses = [
+  { command: "0900", response: "49 00 10 00 00 00" },
+  { command: "0904", response: "49 04 01 4F 4C 44" }
+];
+const webSerialLatestEcuInfoSupportResponses = webSerialEcuInfoHistoryBuilder?.mergeWebSerialEcuInfoReadoutResponses(webSerialPreviousEcuInfoResponses, [{ command: "0900", response: "49 00 10 00 00 00" }]);
+const webSerialLatestEcuInfoResponses = webSerialEcuInfoHistoryBuilder?.mergeWebSerialEcuInfoReadoutResponses(webSerialLatestEcuInfoSupportResponses, [{ command: "0904", response: "49 04 01 4E 45 57" }]);
+const webSerialLatestEcuInfoOverride = webSerialEcuInfoHistoryBuilder?.buildWebSerialEcuInfoResponseOverride(webSerialLatestEcuInfoResponses);
+const webSerialLatestEcuInfoSession = obd.buildDiagnosticScanSession({ ecuInfoResponse: webSerialLatestEcuInfoOverride });
+check(webSerialLatestEcuInfoSupportResponses?.length === 1 && webSerialLatestEcuInfoSupportResponses?.[0]?.command === "0900" && webSerialLatestEcuInfoResponses?.map((item) => item.command).join(",") === "0900,0904" && webSerialLatestEcuInfoOverride?.raw?.includes("49 04 01 4E 45 57") && !webSerialLatestEcuInfoOverride?.raw?.includes("49 04 01 4F 4C 44") && !webSerialLatestEcuInfoOverride?.raw?.includes(">0902") && webSerialLatestEcuInfoSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "NEW") && !webSerialLatestEcuInfoSession?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "OLD") && webSerialLatestEcuInfoSession?.vehicleCommandEnabled === false, "Web Serial ECU-information rereads must replace stale Mode 09 data without requesting identifiers");
+check(appSource.includes('ecuInfoReadoutResponses: [],') && appSource.includes('obdDevSession.ecuInfoReadoutResponses = [];') && appSource.includes('const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses));') && appSource.includes('...(ecuInfoResponseOverride ? { ecuInfoResponse: ecuInfoResponseOverride } : {}),'), "Web Serial ECU-information state should reset on a new connection and retain only the latest approved Mode 09 readout");
 const webSerialReadinessOverrideSource = appSource.match(/function buildWebSerialReadinessResponseOverride\(commandResponses = \[\]\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
 const webSerialReadinessOverrideBuilder = webSerialReadinessOverrideSource
   ? new Function(`${webSerialReadinessOverrideSource}; return buildWebSerialReadinessResponseOverride;`)()
