@@ -4711,11 +4711,12 @@
       && !snapshot?.capturedAt
       && !snapshot?.captured_at
       && !(Array.isArray(snapshot?.[key]) && snapshot[key].length > 0);
+    const unavailableReadoutStatuses = new Set(["unparsed", "blocked", "not_supported", "unsupported", "unavailable"]);
     const isUnavailableReadout = (snapshot, readoutStatus, input = {}) => snapshot?.blocked === true
       || snapshot?.isBlocked === true
       || snapshot?.is_blocked === true
       || Boolean(getExplicitReadoutFailureStatus(input))
-      || ["unparsed", "blocked"].includes(String(readoutStatus || "").trim().toLowerCase());
+      || unavailableReadoutStatuses.has(String(readoutStatus || "").trim().toLowerCase());
     const items = [
       ...(includeInfrastructure ? [
       {
@@ -4739,6 +4740,9 @@
       ] : []),
       {
         id: "dtc_snapshot",
+        inputPresent: hasDtcSnapshotInput || hasTypedDtcSnapshotInput,
+        readoutStatus: dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || null,
+        safetyInput: dtcSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(dtcSnapshot, dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status, dtcSnapshotSafetyInput),
         label: "DTC",
         available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && !isUnknownWithoutEvidence(dtcSnapshot, "codes", dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes)),
@@ -4746,6 +4750,9 @@
       },
       {
         id: "live_pid_snapshot",
+        inputPresent: hasLivePidSnapshotInput || livePidTimeline.samples.length > 0,
+        readoutStatus: livePidCoverageSnapshot?.livePidReadoutStatus || livePidCoverageSnapshot?.live_pid_readout_status || null,
+        safetyInput: livePidSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(livePidCoverageSnapshot, livePidCoverageSnapshot?.livePidReadoutStatus || livePidCoverageSnapshot?.live_pid_readout_status, livePidSnapshotSafetyInput),
         label: "ライブPID",
         available: !["unparsed", "blocked"].includes(livePidCoverageSnapshot?.livePidReadoutStatus || livePidCoverageSnapshot?.live_pid_readout_status) && !isUnknownWithoutEvidence(livePidCoverageSnapshot, "monitorValues", livePidCoverageSnapshot?.livePidReadoutStatus || livePidCoverageSnapshot?.live_pid_readout_status) && (livePidCoverageSnapshot?.blocked === false || Array.isArray(livePidCoverageSnapshot?.monitorValues)),
@@ -4753,6 +4760,9 @@
       },
       {
         id: "freeze_frame_snapshot",
+        inputPresent: hasFreezeFrameSnapshotInput,
+        readoutStatus: freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || null,
+        safetyInput: freezeFrameSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, freezeFrameSnapshotSafetyInput),
         capturedEvidence: Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
           || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0)
@@ -4763,6 +4773,9 @@
       },
       {
         id: "readiness_snapshot",
+        inputPresent: hasReadinessSnapshotInput,
+        readoutStatus: readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null,
+        safetyInput: readinessSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, readinessSnapshotSafetyInput),
         capturedEvidence: (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0)
           || (Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) && readinessSnapshot.readiness_ecu_snapshots.length > 0),
@@ -4774,6 +4787,9 @@
       },
       {
         id: "ecu_info_snapshot",
+        inputPresent: hasEcuInfoSnapshotInput,
+        readoutStatus: ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || null,
+        safetyInput: ecuInfoSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(ecuInfoSnapshot, ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, ecuInfoSnapshotSafetyInput),
         label: "ECU情報",
         available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status) || isUnknownWithoutEvidence(ecuInfoSnapshot, "items", ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
@@ -4783,6 +4799,9 @@
       },
       {
         id: "onboard_monitor_snapshot",
+        inputPresent: hasOnboardMonitorSnapshotInput,
+        readoutStatus: onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || null,
+        safetyInput: onboardMonitorSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(onboardMonitorSnapshot, onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status, onboardMonitorSnapshotSafetyInput),
         label: "Mode06",
         available: ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status) || isUnknownWithoutEvidence(onboardMonitorSnapshot, "tests", onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
@@ -4792,20 +4811,50 @@
       },
       {
         id: "supported_pid_matrix",
+        inputPresent: hasSupportedPidMatrixInput,
+        readoutStatus: supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || null,
+        safetyInput: supportedPidMatrixSafetyInput,
         responseUnavailable: isUnavailableReadout(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status, supportedPidMatrixSafetyInput),
         capturedEvidence: [supportedPidMatrix?.supportedPidEcuSnapshots, supportedPidMatrix?.supported_pid_ecu_snapshots].some((snapshots) => Array.isArray(snapshots) && snapshots.some((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].some((pids) => Array.isArray(pids) && pids.length > 0))),
         label: "対応PID",
         available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
         count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : 0
       }
-    ].map(({ responseUnavailable, capturedEvidence = false, ...item }) => {
+    ].map(({ responseUnavailable, capturedEvidence = false, inputPresent = false, readoutStatus = null, safetyInput = {}, ...item }) => {
       const available = responseUnavailable ? false : item.available;
       const count = responseUnavailable ? 0 : item.count;
+      const normalizedReadoutStatus = String(readoutStatus || "").trim().toLowerCase();
+      const errorCodes = [...new Set([
+        ...readBridgeResponseErrorCodes(safetyInput),
+        ...readBridgeResponseErrorCodes(item)
+      ])];
+      const status = available ? (count > 0 || capturedEvidence ? "captured" : "empty") : "missing";
+      const statusReason = status === "captured"
+        ? "captured"
+        : status === "empty"
+          ? "empty_response"
+          : hasReadoutTransportViolation(safetyInput)
+            ? "transport_safety_blocked"
+            : hasExplicitReadoutBlock(safetyInput) || normalizedReadoutStatus === "blocked"
+              ? "blocked_readout"
+              : ["not_supported", "unsupported", "unavailable"].includes(normalizedReadoutStatus)
+                ? "not_supported"
+                : errorCodes.length > 0
+                  ? "transport_error"
+                  : normalizedReadoutStatus === "unparsed" || getExplicitReadoutFailureStatus(safetyInput) === "unparsed"
+                    ? "unparsed_response"
+                    : inputPresent
+                      ? "unknown_response"
+                      : "not_requested";
       return Object.freeze({
         ...item,
         available,
         count,
-        status: available ? (count > 0 || capturedEvidence ? "captured" : "empty") : "missing"
+        status,
+        statusReason,
+        status_reason: statusReason,
+        errorCodes,
+        error_codes: [...errorCodes]
       });
     });
     const availableCount = items.filter((item) => item.available).length;
@@ -4817,6 +4866,9 @@
     const capturedLabels = capturedItems.map((item) => item.label);
     const pendingIds = pendingItems.map((item) => item.id);
     const pendingLabels = pendingItems.map((item) => item.label);
+    const failedItems = items.filter((item) => ["transport_safety_blocked", "blocked_readout", "not_supported", "transport_error", "unparsed_response", "unknown_response"].includes(item.statusReason));
+    const failedReadoutIds = failedItems.map((item) => item.id);
+    const failedReadoutReasonById = Object.fromEntries(failedItems.map((item) => [item.id, item.statusReason]));
     const nextPendingItem = pendingItems[0] || null;
     const nextEmptyItem = emptyItems[0] || null;
     const nextMissingItem = missingItems[0] || null;
@@ -4871,6 +4923,12 @@
       has_missing_readouts: missingItems.length > 0,
       hasEmptyReadouts: emptyItems.length > 0,
       has_empty_readouts: emptyItems.length > 0,
+      failedReadoutCount: failedReadoutIds.length,
+      failed_readout_count: failedReadoutIds.length,
+      failedReadoutIds,
+      failed_readout_ids: failedReadoutIds,
+      failedReadoutReasonById,
+      failed_readout_reason_by_id: failedReadoutReasonById,
       requiredCount: items.length,
       required_count: items.length,
       capturedCount: capturedItems.length,
@@ -4962,7 +5020,11 @@
       missingIds: missingItems.map((item) => item.id),
       missing_ids: missingItems.map((item) => item.id),
       missingLabels: missingItems.map((item) => item.label),
-      missing_labels: missingItems.map((item) => item.label)
+      missing_labels: missingItems.map((item) => item.label),
+      failedReadoutIds,
+      failed_readout_ids: failedReadoutIds,
+      failedReadoutReasonById,
+      failed_readout_reason_by_id: failedReadoutReasonById
     };
   }
 
@@ -5135,6 +5197,20 @@
       if (item && typeof item === "object" && item.id) byId[item.id] = item;
       return byId;
     }, {});
+    const failedReadoutReasons = new Set(["transport_safety_blocked", "blocked_readout", "not_supported", "transport_error", "unparsed_response", "unknown_response"]);
+    const failedReadoutIdsInput = pickDefined(input.failedReadoutIds, input.failed_readout_ids);
+    const failedReadoutReasonByIdInput = pickDefined(input.failedReadoutReasonById, input.failed_readout_reason_by_id);
+    const inferredFailedReadoutIds = normalizedItems
+      .filter((item) => item && typeof item === "object" && item.id && failedReadoutReasons.has(item.statusReason || item.status_reason))
+      .map((item) => item.id);
+    const normalizedFailedReadoutIds = [...new Set((Array.isArray(failedReadoutIdsInput) ? failedReadoutIdsInput : inferredFailedReadoutIds)
+      .map((id) => String(id || "").trim())
+      .filter(Boolean))];
+    const normalizedFailedReadoutReasonById = Object.fromEntries(normalizedFailedReadoutIds.map((id) => {
+      const item = itemById[id] || {};
+      const reason = item.statusReason || item.status_reason || failedReadoutReasonByIdInput?.[id] || null;
+      return [id, reason];
+    }));
     const itemsByStatus = ["captured", "empty", "missing"].reduce((byStatus, status) => {
       byStatus[status] = normalizedItems.filter((item) => item && typeof item === "object" && item.status === status);
       return byStatus;
@@ -5214,6 +5290,12 @@
       has_missing_readouts: normalizedMissingIds.length > 0,
       hasEmptyReadouts: normalizedEmptyIds.length > 0,
       has_empty_readouts: normalizedEmptyIds.length > 0,
+      failedReadoutCount: normalizedFailedReadoutIds.length,
+      failed_readout_count: normalizedFailedReadoutIds.length,
+      failedReadoutIds: normalizedFailedReadoutIds,
+      failed_readout_ids: normalizedFailedReadoutIds,
+      failedReadoutReasonById: normalizedFailedReadoutReasonById,
+      failed_readout_reason_by_id: normalizedFailedReadoutReasonById,
       requiredCount: totalCategories,
       required_count: totalCategories,
       capturedCount: capturedCategories,
@@ -5308,6 +5390,10 @@
       empty_labels: normalizedEmptyLabels,
       missingIds: normalizedMissingIds,
       missing_ids: normalizedMissingIds,
+      failedReadoutIds: normalizedFailedReadoutIds,
+      failed_readout_ids: normalizedFailedReadoutIds,
+      failedReadoutReasonById: normalizedFailedReadoutReasonById,
+      failed_readout_reason_by_id: normalizedFailedReadoutReasonById,
       missingLabels: normalizedMissingLabels,
       missing_labels: normalizedMissingLabels
     };

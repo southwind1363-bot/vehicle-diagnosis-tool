@@ -13411,6 +13411,20 @@ const unparsedLivePidSession = obd.buildDiagnosticScanSession({ livePidResponse:
 check(unparsedLivePidSession.readoutCoverage?.itemById?.live_pid_snapshot?.status === "missing" && unparsedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.status === "missing" && unparsedLivePidSession.vehicleCommandEnabled === false, "不完全なライブPID応答を未読取として保持できません");
 const nestedUnparsedLivePidCoverage = obd.buildReadoutCoverageSnapshot({ live_pid_response: { ok: true, data: { raw: "41" } } });
 check(nestedUnparsedLivePidCoverage.itemById?.live_pid_snapshot?.status === "missing", "ネストした不完全ライブPID応答を未読取として扱えません");
+check(nestedUnparsedLivePidCoverage.itemById?.live_pid_snapshot?.statusReason === "unparsed_response" && nestedUnparsedLivePidCoverage.failedReadoutIds?.includes("live_pid_snapshot") && nestedUnparsedLivePidCoverage.completionSummary?.failedReadoutReasonById?.live_pid_snapshot === "unparsed_response", "Readout coverage did not preserve an unparsed response as a failed readout reason");
+const unsupportedLivePidCoverage = obd.buildReadoutCoverageSnapshot({
+  livePidSnapshot: { blocked: false, livePidReadoutStatus: "not_supported", monitorValues: [] }
+});
+check(unsupportedLivePidCoverage.itemById?.live_pid_snapshot?.status === "missing" && unsupportedLivePidCoverage.itemById?.live_pid_snapshot?.statusReason === "not_supported", "Unsupported readout was presented as an empty response");
+const failedLivePidCoverage = obd.buildReadoutCoverageSnapshot({
+  livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } }
+});
+check(failedLivePidCoverage.itemById?.live_pid_snapshot?.status === "missing" && failedLivePidCoverage.itemById?.live_pid_snapshot?.statusReason === "transport_error" && failedLivePidCoverage.failedReadoutReasonById?.live_pid_snapshot === "transport_error", "Transport failure was not separated from an unrequested readout");
+const failedLivePidSession = obd.buildDiagnosticScanSession({
+  livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } }
+});
+const reimportedFailedLivePidSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(failedLivePidSession)));
+check(reimportedFailedLivePidSession?.readoutCoverage?.failedReadoutReasonById?.live_pid_snapshot === "transport_error" && reimportedFailedLivePidSession?.vehicleCommandEnabled === false, "Transport failure reason was not retained through read-only export and JSON reimport");
 const reimportedUnparsedLivePidSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedLivePidSession) });
 check(reimportedUnparsedLivePidSession.livePidSnapshot?.live_pid_readout_status === "unparsed" && reimportedUnparsedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.status === "missing" && reimportedUnparsedLivePidSession.vehicleCommandEnabled === false, "保存済み不完全ライブPID応答を再取込できません");
 const decodedFreezeFrame = obd.decodeFreezeFrameResponse({ raw: "42 02 00 01 71 42 01 00 82 07 22 00 42 03 00 01 00 42 24 00 80 00 20 00 42 0C 00 1A F8 42 0E 00 80 42 05 00 7B" });
@@ -17756,6 +17770,12 @@ const normalizedSnakeCoverageFields = obd.normalizeReadoutCoverageSnapshot({
 check(normalizedSnakeCoverageFields.totalCategories === 7 && normalizedSnakeCoverageFields.availableCategories === 3, "Readout coverage normalization did not accept snake_case category counts");
 check(normalizedSnakeCoverageFields.capturedPercent === 29 && normalizedSnakeCoverageFields.progressPercent === 43, "Readout coverage normalization did not accept snake_case progress aliases");
 check(normalizedSnakeCoverageFields.emptyIds[0] === "freeze_frame_snapshot" && normalizedSnakeCoverageFields.missingIds[0] === "readiness_snapshot", "Readout coverage normalization did not accept snake_case id aliases");
+const normalizedFailedReadoutCoverage = obd.normalizeReadoutCoverageSnapshot({
+  total_categories: 7,
+  failed_readout_ids: ["live_pid_snapshot"],
+  failed_readout_reason_by_id: { live_pid_snapshot: "transport_error" }
+});
+check(normalizedFailedReadoutCoverage.failedReadoutIds?.[0] === "live_pid_snapshot" && normalizedFailedReadoutCoverage.failedReadoutReasonById?.live_pid_snapshot === "transport_error" && normalizedFailedReadoutCoverage.completionSummary?.failedReadoutCount === 1, "Readout coverage normalization did not retain failed readout aliases");
 const nestedReadoutCoverageFields = obd.normalizeReadoutCoverageSnapshot({ data: {
   schema_version: "readout_coverage_v1",
   total_categories: 7,
