@@ -10,6 +10,12 @@ struct ReadoutCoordinatorView: View {
                     LabeledContent("接続", value: viewModel.connectorStateLabel)
                     LabeledContent("アーカイブ", value: viewModel.archiveStateLabel)
                     LabeledContent("取得済みレコード", value: "\(viewModel.archiveRecordCount)")
+                    LabeledContent("読取範囲", value: viewModel.readoutCompletionLabel)
+                    if !viewModel.missingReadoutLabels.isEmpty {
+                        Text("未取得: \(viewModel.missingReadoutLabels.joined(separator: " / "))")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
                     if let errorMessage = viewModel.errorMessage {
                         Text(errorMessage)
                             .foregroundStyle(.red)

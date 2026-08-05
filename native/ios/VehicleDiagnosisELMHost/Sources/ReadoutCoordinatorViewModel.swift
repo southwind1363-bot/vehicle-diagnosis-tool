@@ -91,6 +91,19 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         archiveState == "Complete" || archiveState == "Partial" || archiveState == "Interrupted"
     }
 
+    var readoutCompletionLabel: String {
+        guard let archive = coordinator.completedArchive else { return "完了待ち" }
+        let summary = Self.readoutCompletion(expectedReadoutIDs: archive.completionManifest.expectedReadouts, envelopes: archive.envelopes)
+        return "予定 \(summary.expectedCount) / 取得 \(summary.capturedCount) / 未取得 \(summary.missingIDs.count)"
+    }
+
+    var missingReadoutLabels: [String] {
+        guard let archive = coordinator.completedArchive else { return [] }
+        return Self.readoutCompletion(expectedReadoutIDs: archive.completionManifest.expectedReadouts, envelopes: archive.envelopes)
+            .missingIDs
+            .map { readoutLabel(intent: $0, readoutID: $0) }
+    }
+
     static func archiveState(for scanState: NativeConnectorScanState?, hasReadoutFailures: Bool = false) -> String {
         switch scanState {
         case .completed where hasReadoutFailures: return "Partial"
@@ -98,6 +111,16 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         case .interrupted: return "Interrupted"
         case nil: return "Incomplete"
         }
+    }
+
+    static func readoutCompletion(expectedReadoutIDs: [String], envelopes: [NativeConnectorEnvelope]) -> (expectedCount: Int, capturedCount: Int, missingIDs: [String]) {
+        let expectedIDs = Set(expectedReadoutIDs.filter { !$0.isEmpty })
+        let capturedIDs = Set(envelopes.compactMap { envelope -> String? in
+            guard envelope.ok, let readoutID = envelope.readoutID, expectedIDs.contains(readoutID) else { return nil }
+            return readoutID
+        })
+        let missingIDs = expectedIDs.subtracting(capturedIDs).sorted()
+        return (expectedIDs.count, capturedIDs.count, missingIDs)
     }
 
     func readoutLabel(intent: String, readoutID: String?) -> String {

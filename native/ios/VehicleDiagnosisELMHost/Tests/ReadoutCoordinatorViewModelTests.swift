@@ -98,6 +98,8 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.archiveState, "Complete")
         XCTAssertEqual(viewModel.archiveRecordCount, 1)
+        XCTAssertEqual(viewModel.readoutCompletionLabel, "予定 1 / 取得 1 / 未取得 0")
+        XCTAssertEqual(viewModel.missingReadoutLabels, [])
         XCTAssertTrue(viewModel.canExportArchive)
         XCTAssertNil(viewModel.errorMessage)
     }
@@ -177,6 +179,18 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
 
         let viewModel = ReadoutCoordinatorViewModel()
         XCTAssertFalse(viewModel.canExportArchive)
+    }
+
+    @MainActor
+    func testReadoutCompletionKeepsExpectedButUncapturedReadoutsVisible() {
+        let completion = ReadoutCoordinatorViewModel.readoutCompletion(
+            expectedReadoutIDs: ["stored_dtc_snapshot", "readiness_snapshot", "stored_dtc_snapshot"],
+            envelopes: []
+        )
+
+        XCTAssertEqual(completion.expectedCount, 2)
+        XCTAssertEqual(completion.capturedCount, 0)
+        XCTAssertEqual(completion.missingIDs, ["readiness_snapshot", "stored_dtc_snapshot"])
     }
 
     @MainActor
