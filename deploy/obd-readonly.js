@@ -8361,6 +8361,19 @@
       : fallbackNextRecommendedReadoutId
         ? "fallback_state"
         : null;
+    if (nextRecommendedReadoutId && pendingReadoutQueueById[nextRecommendedReadoutId]) {
+      const orderedPendingReadoutQueue = [
+        pendingReadoutQueueById[nextRecommendedReadoutId],
+        ...pendingReadoutQueue.filter((item) => item.id !== nextRecommendedReadoutId)
+      ].map((item, index) => ({
+        ...item,
+        position: index + 1,
+        isNext: index === 0
+      }));
+      pendingReadoutQueue.splice(0, pendingReadoutQueue.length, ...orderedPendingReadoutQueue);
+      Object.keys(pendingReadoutQueueById).forEach((id) => delete pendingReadoutQueueById[id]);
+      Object.assign(pendingReadoutQueueById, Object.fromEntries(pendingReadoutQueue.map((item) => [item.id, { ...item }])));
+    }
     const nextReadoutState = readoutStates.find((item) => item.id === nextRecommendedReadoutId) || null;
     const nextReadoutQueueEntry = nextRecommendedReadoutId
       ? pendingReadoutQueueById[nextRecommendedReadoutId] || null
@@ -8536,6 +8549,12 @@
     const readoutRequestPlanSummary = buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
     const nextReadoutRequestSafetySummary = buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
     Object.assign(pendingReadoutQueueSummary, {
+      nextReadoutId: pendingReadoutQueue[0]?.id || null,
+      next_readout_id: pendingReadoutQueue[0]?.id || null,
+      nextReadoutLabel: pendingReadoutQueue[0]?.label || null,
+      next_readout_label: pendingReadoutQueue[0]?.label || null,
+      nextReadoutStatus: pendingReadoutQueue[0]?.status || null,
+      next_readout_status: pendingReadoutQueue[0]?.status || null,
       recommendedReadoutId: nextReadoutSummary?.id || null,
       recommended_readout_id: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
@@ -19002,7 +19021,8 @@
       || scannerJsonVehicle.candidateRanges?.length > 0
       || scannerJsonVehicle.applicableRanges?.length > 0
       || scannerJsonVehicle.supportedEngineCodes?.length > 0
-      || scannerJsonVehicle.supportedEcus?.length > 0;
+      || scannerJsonVehicle.supportedEcus?.length > 0
+      || (isTrustedBridgeSessionExport && ["matched", "partial", "manual", "unlisted", "unknown"].includes(scannerJsonVehicle.status));
     const scannerJsonVehicleProfile = hasScannerJsonVehicleIdentity
       ? {
         maker: scannerJsonVehicle.maker,
