@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.45";
+const APP_VERSION = "3.6.46";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -520,6 +520,7 @@ const obdDevSession = {
   readoutAttempts: [],
   livePidTimeline: [],
   freezeFrameReadoutResponses: [],
+  freezeFrameCapabilityResponse: null,
   ecuInfoReadoutResponses: [],
   bridgeEndpoint: null,
   bridgeStatus: null,
@@ -4474,6 +4475,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.coreScanStopReason = null;
     obdDevSession.livePidTimeline = [];
     obdDevSession.freezeFrameReadoutResponses = [];
+    obdDevSession.freezeFrameCapabilityResponse = null;
     obdDevSession.ecuInfoReadoutResponses = [];
     obdDevSession.lastSession = null;
     obdDevSession.initializing = true;
@@ -4516,6 +4518,7 @@ async function disconnectObdDeveloperVci(options = {}) {
   obdDevSession.readLoopActive = false;
   obdDevSession.supportedPidDiscoveryComplete = false;
   obdDevSession.supportedPidSet = [];
+  obdDevSession.freezeFrameCapabilityResponse = null;
   obdDevSession.livePidTimeline = [];
   obdDevSession.readInProgress = false;
   obdDevSession.initializing = false;
@@ -4665,11 +4668,16 @@ async function readObdDeveloperFreezeFrame() {
     renderObdDeveloperGate();
     return true;
   }
-  if (!await readObdDeveloperSupportedPidMaps()) return false;
-  const supportedPids = new Set(obdDevSession.supportedPidSet);
+  if (!await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"])) return false;
+  const supportedPids = getWebSerialFreezeFrameSupportedPids(obdDevSession.freezeFrameCapabilityResponse);
+  if (!supportedPids.has("02")) {
+    obdDevStatus.textContent = "Mode 02の対応PIDからフリーズフレーム起点DTCを確認できないため、値の追加要求を送りませんでした。";
+    renderObdDeveloperGate();
+    return true;
+  }
   const supportedCommands = obdDevSession.freezeFramePidList.filter((command) => supportedPids.has(command.slice(2)));
   if (!supportedCommands.length) {
-    obdDevStatus.textContent = "対応PIDが確認できないため、フリーズフレーム値の追加要求を送りませんでした。";
+    obdDevStatus.textContent = "Mode 02の対応PIDからフリーズフレーム値を確認できないため、追加要求を送りませんでした。";
     renderObdDeveloperGate();
     return true;
   }
@@ -5063,7 +5071,43 @@ function buildWebSerialDtcResponseOverrides(commandResponses = []) {
 }
 
 function isWebSerialFreezeFrameCommand(command) {
-  return /^02[0-9A-F]{2}$/.test(String(command || "").trim().toUpperCase());
+  const normalizedCommand = String(command || "").trim().toUpperCase();
+  return /^02[0-9A-F]{2}$/.test(normalizedCommand) && normalizedCommand !== "0200";
+}
+
+function resolveWebSerialFreezeFrameCapabilityResponse(previous = null, commandResponses = []) {
+  const responses = (Array.isArray(commandResponses) ? commandResponses : [])
+    .map((item) => ({
+      command: String(item?.command || "").trim().toUpperCase(),
+      response: String(item?.response || "").trim()
+    }))
+    .filter((item) => item.response);
+  const currentCapability = responses.find((item) => item.command === "0200")?.response || null;
+  if (responses.some((item) => item.command === "0202")) return currentCapability;
+  return currentCapability || (typeof previous === "string" && previous.trim() ? previous : null);
+}
+
+function updateWebSerialFreezeFrameCapabilityResponse(commandResponses = []) {
+  const resolved = resolveWebSerialFreezeFrameCapabilityResponse(obdDevSession.freezeFrameCapabilityResponse, commandResponses);
+  obdDevSession.freezeFrameCapabilityResponse = resolved;
+  return resolved;
+}
+
+function getWebSerialFreezeFrameSupportedPids(response = "") {
+  const hex = String(response || "").toUpperCase().replace(/[^0-9A-F]/g, "");
+  const supported = new Set();
+  for (let index = 0; index <= hex.length - 12; index += 1) {
+    if (hex.slice(index, index + 4) !== "4200") continue;
+    const bitmap = hex.slice(index + 4, index + 12);
+    if (!/^[0-9A-F]{8}$/.test(bitmap)) continue;
+    for (let byteIndex = 0; byteIndex < 4; byteIndex += 1) {
+      const byte = Number.parseInt(bitmap.slice(byteIndex * 2, byteIndex * 2 + 2), 16);
+      for (let bitIndex = 0; bitIndex < 8; bitIndex += 1) {
+        if ((byte & (1 << (7 - bitIndex))) !== 0) supported.add((byteIndex * 8 + bitIndex + 1).toString(16).padStart(2, "0").toUpperCase());
+      }
+    }
+  }
+  return supported;
 }
 
 function mergeWebSerialFreezeFrameReadoutResponses(previous = [], commandResponses = []) {
@@ -5464,6 +5508,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   if (hasCommandResponses) appendObdDeveloperLog(chunks.join("\n"));
   const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
+  updateWebSerialFreezeFrameCapabilityResponse(commandResponses);
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
   const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));
@@ -5544,7 +5589,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
 function isAllowedObdDeveloperCommand(command) {
   return [
     "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP",
-    "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
+    "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
     ...obdDevSession.freezeFramePidList,
     ...obdDevSession.selectedPidList
   ].includes(command);
