@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.49";
+const APP_VERSION = "3.6.50";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -526,6 +526,7 @@ const obdDevSession = {
   bridgeStatus: null,
   bridgeVciList: null,
   adapterIdentity: null,
+  adapterInitializationSummary: null,
   lastSession: null,
   previewMode: null,
   requestedInterfaceId: null,
@@ -4466,6 +4467,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.bridgeStatus = null;
     obdDevSession.bridgeVciList = null;
     obdDevSession.adapterIdentity = null;
+    obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({ status: "in_progress" });
     obdDevSession.lastRawText = "";
     obdDevSession.connectedAt = new Date().toISOString();
     obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
@@ -4489,7 +4491,7 @@ async function connectObdDeveloperVci() {
     if (obdDevSession.port) setObdDeveloperConnectionState("ready");
   } catch (error) {
     obdDevSession.initializing = false;
-    const failureMessage = `読取を開始できませんでした: ${error?.message || error}`;
+    const failureMessage = formatWebSerialAdapterInitializationFailure(obdDevSession.adapterInitializationSummary, error);
     await disconnectObdDeveloperVci({ reason: "connection_failed", statusMessage: failureMessage });
   }
 }
@@ -4546,17 +4548,50 @@ async function disconnectObdDeveloperVci(options = {}) {
 }
 
 async function initializeElmDeveloperAdapter() {
-  const initCommands = ["ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0"];
+  const initSteps = [
+    { command: "ATZ", step: "adapter_reset" },
+    { command: "ATE0", step: "disable_echo" },
+    { command: "ATL0", step: "disable_linefeeds" },
+    { command: "ATS0", step: "disable_spaces" },
+    { command: "ATH1", step: "enable_headers" },
+    { command: "ATSP0", step: "automatic_protocol" }
+  ];
   const responses = [];
-  for (const command of initCommands) {
+  let completedStepCount = 0;
+  for (const { command, step } of initSteps) {
     const timeoutMs = command === "ATZ" ? 5000 : 2500;
-    const response = await sendElmDeveloperCommand(command, timeoutMs);
+    let response;
+    try {
+      response = await sendElmDeveloperCommand(command, timeoutMs);
+    } catch (error) {
+      obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
+        status: "failed",
+        attemptedSetupStepCount: completedStepCount + 1,
+        completedSetupStepCount: completedStepCount,
+        failedSetupStep: step,
+        stopReason: getWebSerialAdapterInitializationStopReason(error)
+      });
+      throw error;
+    }
     const outcome = classifyWebSerialCommandResponse(command, response);
     if (outcome.commandStatus !== "completed") {
+      obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
+        status: "failed",
+        attemptedSetupStepCount: completedStepCount + 1,
+        completedSetupStepCount: completedStepCount,
+        failedSetupStep: step,
+        stopReason: outcome.stopReason || outcome.commandStatus
+      });
       throw new Error(`elm_adapter_initialization_failed:${command}:${outcome.stopReason || outcome.commandStatus}`);
     }
     responses.push(`${command}\n${response}`);
+    completedStepCount += 1;
   }
+  obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
+    status: "completed",
+    attemptedSetupStepCount: initSteps.length,
+    completedSetupStepCount: initSteps.length
+  });
   appendObdDeveloperLog(responses.join("\n"));
   obdDevStatus.textContent = "VCI初期化を送信しました。次にVCI確認、DTC読取、ライブデータ読取を試せます。";
   renderObdDeveloperGate();
@@ -5475,6 +5510,78 @@ function buildWebSerialReadoutSummary() {
   };
 }
 
+const WEB_SERIAL_ADAPTER_INITIALIZATION_STEPS = Object.freeze({
+  adapter_reset: "アダプター再起動",
+  disable_echo: "エコー停止",
+  disable_linefeeds: "改行停止",
+  disable_spaces: "空白停止",
+  enable_headers: "応答ヘッダー有効化",
+  automatic_protocol: "プロトコル自動判定"
+});
+
+function buildWebSerialAdapterInitializationSummary(options = {}) {
+  const status = ["not_started", "in_progress", "completed", "failed"].includes(options?.status)
+    ? options.status
+    : "not_started";
+  const attemptedSetupStepCount = Math.max(0, Number(options?.attemptedSetupStepCount) || 0);
+  const completedSetupStepCount = Math.min(attemptedSetupStepCount, Math.max(0, Number(options?.completedSetupStepCount) || 0));
+  const failedSetupStep = WEB_SERIAL_ADAPTER_INITIALIZATION_STEPS[options?.failedSetupStep]
+    ? options.failedSetupStep
+    : null;
+  const stopReason = typeof options?.stopReason === "string" && options.stopReason.trim()
+    ? options.stopReason.trim().slice(0, 40)
+    : null;
+  return {
+    schemaVersion: "web_serial_adapter_initialization_v1",
+    schema_version: "web_serial_adapter_initialization_v1",
+    source: "web_serial",
+    initializationStatus: status,
+    initialization_status: status,
+    attemptedSetupStepCount,
+    attempted_setup_step_count: attemptedSetupStepCount,
+    completedSetupStepCount,
+    completed_setup_step_count: completedSetupStepCount,
+    ...(failedSetupStep ? { failedSetupStep, failed_setup_step: failedSetupStep } : {}),
+    ...(stopReason ? { stopReason, stop_reason: stopReason } : {}),
+    retainedRawText: false,
+    retained_raw_text: false,
+    retainedAdapterIdentity: false,
+    retained_adapter_identity: false,
+    readOnly: true,
+    read_only: true,
+    wouldTransmit: false,
+    would_transmit: false,
+    vehicleCommandEnabled: false,
+    vehicle_command_enabled: false
+  };
+}
+
+function getWebSerialAdapterInitializationStopReason(error) {
+  const message = String(error?.message || error || "");
+  if (message.startsWith("elm_response_timeout:")) return "response_timeout";
+  if (message.startsWith("elm_transport_")) return "transport_error";
+  return "initialization_error";
+}
+
+function formatWebSerialAdapterInitializationSummary(summary = null) {
+  const status = summary?.initializationStatus || summary?.initialization_status;
+  if (status === "completed") return `完了 (${summary.completedSetupStepCount ?? summary.completed_setup_step_count ?? 0}/${summary.attemptedSetupStepCount ?? summary.attempted_setup_step_count ?? 0})`;
+  if (status === "in_progress") return "実行中";
+  if (status === "failed") {
+    const step = summary?.failedSetupStep || summary?.failed_setup_step;
+    const label = WEB_SERIAL_ADAPTER_INITIALIZATION_STEPS[step] || "設定応答";
+    return `停止: ${label}`;
+  }
+  return null;
+}
+
+function formatWebSerialAdapterInitializationFailure(summary = null, error = null) {
+  const summaryLabel = formatWebSerialAdapterInitializationSummary(summary);
+  return summaryLabel
+    ? `VCI初期化を完了できませんでした: ${summaryLabel}`
+    : `読取を開始できませんでした: ${error?.message || error}`;
+}
+
 function buildWebSerialConnectionStatus(outcome = null) {
   const latestAttempt = outcome && typeof outcome === "object"
     ? outcome
@@ -5482,9 +5589,13 @@ function buildWebSerialConnectionStatus(outcome = null) {
   const transportError = Number(latestAttempt?.transportErrorCount) > 0;
   const adapterError = Number(latestAttempt?.adapterErrorCount) > 0;
   const vehicleLinkError = Number(latestAttempt?.unableToConnectCount) > 0;
-  const adapterConnected = Boolean(obdDevSession.port) && !transportError;
+  const adapterInitializationSummary = obdDevSession.adapterInitializationSummary;
+  const adapterInitializationFailed = (adapterInitializationSummary?.initializationStatus || adapterInitializationSummary?.initialization_status) === "failed";
+  const adapterConnected = Boolean(obdDevSession.port) && !transportError && !adapterInitializationFailed;
   const connectionState = String(obdDevSession.connectionState || "disconnected");
-  const status = transportError
+  const status = adapterInitializationFailed
+    ? "adapter_initialization_failed"
+    : transportError
     ? "transport_error"
     : vehicleLinkError
       ? "vehicle_link_error"
@@ -5501,18 +5612,22 @@ function buildWebSerialConnectionStatus(outcome = null) {
   return {
     source: "web_serial",
     intent: "connection_status",
-    ok: !transportError && !adapterError && !vehicleLinkError,
+    ok: !adapterInitializationFailed && !transportError && !adapterError && !vehicleLinkError,
     blocked: false,
     wouldTransmit: false,
     readOnly: true,
     vehicleCommandEnabled: false,
     status,
-    displayStatus: vehicleLinkError
+    displayStatus: adapterInitializationFailed
+      ? "Web Serialアダプター初期化を完了できません"
+      : vehicleLinkError
       ? "車両通信を確立できません"
       : adapterError
         ? "Web Serialアダプターエラー"
         : displayStatus,
-    nextAction: vehicleLinkError
+    nextAction: adapterInitializationFailed
+      ? "アダプター電源、通信速度、初期化応答を確認してから、読取専用で再接続"
+      : vehicleLinkError
       ? "イグニッション状態、OBDコネクター接続、車両プロトコル、アダプター状態を確認してから、読取専用で再試行"
       : adapterError
         ? "アダプター電源、ファームウェア応答、シリアル設定を確認してから、読取専用で再試行"
@@ -5531,6 +5646,7 @@ function buildWebSerialConnectionStatus(outcome = null) {
     latest_readout_status: latestAttempt?.status || null,
     latestReadoutStopReason: latestAttempt?.stopReason || null,
     latest_readout_stop_reason: latestAttempt?.stopReason || null,
+    ...(adapterInitializationSummary ? { adapterInitializationSummary, adapter_initialization_summary: adapterInitializationSummary } : {}),
     ...(obdDevSession.lastDisconnectReason ? { lastDisconnectReason: obdDevSession.lastDisconnectReason, last_disconnect_reason: obdDevSession.lastDisconnectReason } : {}),
     retainedRawText: false,
     retained_raw_text: false,
@@ -7867,12 +7983,16 @@ function renderObdDeveloperSessionSummary(session = null) {
       : obdDevSession.previewMode
         ? "読取前プレビュー"
         : "未読取";
+  const adapterInitializationLabel = formatWebSerialAdapterInitializationSummary(
+    connectionStatus?.adapterInitializationSummary || connectionStatus?.adapter_initialization_summary || obdDevSession.adapterInitializationSummary
+  );
   const values = [
     ["読取", connectionLabel],
     ["方式", selectedInterface],
     ["読取経路", readoutInterfaceLabel],
     ["車両", vehicleLabel],
     ["状態", connectionStatus?.displayStatus || NO_DATA],
+    ...(adapterInitializationLabel ? [["VCI初期化", adapterInitializationLabel]] : []),
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["DTC応答状態", dtcResponseStatusLabel],
