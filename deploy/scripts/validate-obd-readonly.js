@@ -4601,6 +4601,29 @@ const bridgeJ2534PreferredStatus = obd.normalizeBridgeConnectionStatus({
   }
 });
 check(bridgeJ2534PreferredStatus.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534PreferredStatus.staticReadyVciCount === 1 && bridgeJ2534PreferredStatus.static_ready_vci_count === 1 && bridgeJ2534PreferredStatus.staticBlockedVciCount === 1 && bridgeJ2534PreferredStatus.static_blocked_vci_count === 1 && bridgeJ2534PreferredStatus.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredStatus.selected_static_ready_device_id === "j2534-ready-2" && bridgeJ2534PreferredStatus.vehicleCommandEnabled === false, "J2534 static-ready selection metadata was not normalized with the read-only connection status");
+const bridgeJ2534ReadinessStatuses = [
+  ["no_registered_driver", "J2534ドライバー未登録", "WindowsにJ2534 Pass-Thruドライバーを登録"],
+  ["static_inspection_pending", "J2534 DLL静的確認待ち", "read-only必須APIを静的確認"],
+  ["runtime_architecture_mismatch", "J2534 DLLの32/64bit不一致", "一致するアーキテクチャ"],
+  ["readonly_api_incomplete", "J2534 read-only API不足", "read-only必須APIを確認"]
+].map(([driver_readiness_status, displayStatus, nextAction]) => ({
+  expectedStatus: driver_readiness_status,
+  expectedDisplayStatus: displayStatus,
+  expectedNextAction: nextAction,
+  result: obd.normalizeBridgeConnectionStatus({
+    ok: true,
+    blocked: false,
+    would_transmit: false,
+    data: {
+      status: "driver_not_detected",
+      paired: true,
+      vci_connected: false,
+      vehicle_connected: false,
+      driver_readiness_status
+    }
+  })
+}));
+check(bridgeJ2534ReadinessStatuses.every((item) => item.result.driverReadinessStatus === item.expectedStatus && item.result.displayStatus === item.expectedDisplayStatus && item.result.nextAction.includes(item.expectedNextAction) && item.result.vehicleCommandEnabled === false), "J2534 static readiness failures were not surfaced as read-only connection states");
 const bridgeVciList = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,

@@ -3327,6 +3327,18 @@
     } else if (sampleMode) {
       displayStatus = "サンプル";
       nextAction = "サンプル応答です。実VCI・実車接続の読取結果とは混同しません。";
+    } else if (driverReadiness.driverReadinessStatus === "no_registered_driver") {
+      displayStatus = "J2534ドライバー未登録";
+      nextAction = "WindowsにJ2534 Pass-Thruドライバーを登録してから、DLLのread-only静的確認を行います。";
+    } else if (driverReadiness.driverReadinessStatus === "static_inspection_pending") {
+      displayStatus = "J2534 DLL静的確認待ち";
+      nextAction = "登録済みJ2534 DLLのパス、32/64bit、read-only必須APIを静的確認します。";
+    } else if (driverReadiness.driverReadinessStatus === "runtime_architecture_mismatch") {
+      displayStatus = "J2534 DLLの32/64bit不一致";
+      nextAction = "Windowsブリッジと一致するアーキテクチャのJ2534ドライバーを登録してから、VCI接続を確認します。";
+    } else if (driverReadiness.driverReadinessStatus === "readonly_api_incomplete") {
+      displayStatus = "J2534 read-only API不足";
+      nextAction = "登録DLLのread-only必須APIを確認し、互換ドライバーへ更新してからVCI接続を確認します。";
     } else if (status === "not_connected") {
       displayStatus = "未接続";
       nextAction = "PC側ブリッジの起動とペアリング準備を確認します。";
