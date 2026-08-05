@@ -18515,6 +18515,19 @@ const reimportedScannerJsonTimelineSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonTimelineSession)
 });
 check(reimportedScannerJsonTimelineSession?.livePidTimeline?.sampleCount === 2 && reimportedScannerJsonTimelineSession?.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && reimportedScannerJsonTimelineSession?.vehicleCommandEnabled === false, "JSON live PID timeline was not preserved through read-only export and reimport");
+const scannerJsonPidSampleAliasSessions = ["pidSamples", "pid_samples"].map((key) => obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  data: {
+    [key]: [
+      { captured_at: "2026-08-05T09:45:00+09:00", protocol: "CAN_11BIT_500K", observation_condition: "warm", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] },
+      { captured_at: "2026-08-05T09:45:05+09:00", protocol: "CAN_11BIT_500K", observation_condition: "warm", monitor_values: [{ pid: "0C", value: 1200, unit: "rpm" }] }
+    ]
+  }
+})));
+check(scannerJsonPidSampleAliasSessions.every((session) => session?.livePidTimeline?.sampleCount === 2 && session.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && session.startedAt === "2026-08-05T09:45:00+09:00" && session.endedAt === "2026-08-05T09:45:05+09:00" && session.importClassification?.bucketCounts?.livePidSamples === 2 && session.vehicleCommandEnabled === false && session.retainedRawText === false), "PID sample JSON aliases were not retained as read-only live-data timeline evidence");
+const reimportedScannerJsonPidSampleAliasSession = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonPidSampleAliasSessions[0])
+});
+check(reimportedScannerJsonPidSampleAliasSession?.livePidTimeline?.sampleCount === 2 && reimportedScannerJsonPidSampleAliasSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && reimportedScannerJsonPidSampleAliasSession.vehicleCommandEnabled === false, "PID sample JSON aliases were not preserved through read-only export and reimport");
 const scannerJsonNonIsoTimelineSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     live_pid_timeline: {

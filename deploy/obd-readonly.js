@@ -3717,7 +3717,11 @@
           ? source.livePidSamples
           : Array.isArray(source.live_pid_samples)
             ? source.live_pid_samples
-            : [];
+            : Array.isArray(source.pidSamples)
+              ? source.pidSamples
+              : Array.isArray(source.pid_samples)
+                ? source.pid_samples
+                : [];
     const samples = sampleInput
       .map((sample) => {
         const item = sample && typeof sample === "object" ? sample : {};
@@ -18919,7 +18923,7 @@
         }
         : null;
     const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : hasBridgeLivePidResponse ? importSession : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values", "pidValues", "pid_values", "livePidValues", "live_pid_values");
-    const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples");
+    const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples", "pidSamples", "pid_samples");
     const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data", "freezeFrameValues", "freeze_frame_values", "freezeFrameRows", "freeze_frame_rows");
     const freezeFrameTriggerDtc = pick("freeze_frame_dtc", "freezeFrameDtc", "freeze_frame_trigger_dtc", "freezeFrameTriggerDtc", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc");
     const readinessInput = hasBridgeReadinessResponse ? importSession : pick("readinessSnapshot", "readiness_snapshot", "readiness", "i_m_readiness", "imReadiness", "readinessMonitors", "readiness_monitors", "readinessValues", "readiness_values", "readinessRows", "readiness_rows");
