@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.50";
+const APP_VERSION = "3.6.51";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -517,6 +517,7 @@ const obdDevSession = {
   scanSessionId: null,
   supportedPidDiscoveryComplete: false,
   supportedPidSet: [],
+  supportedPidReadoutResponses: [],
   readoutAttempts: [],
   livePidTimeline: [],
   freezeFrameReadoutResponses: [],
@@ -4473,6 +4474,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
     obdDevSession.supportedPidDiscoveryComplete = false;
     obdDevSession.supportedPidSet = [];
+    obdDevSession.supportedPidReadoutResponses = [];
     obdDevSession.readoutAttempts = [];
     obdDevSession.coreScanStopReason = null;
     obdDevSession.livePidTimeline = [];
@@ -4520,6 +4522,7 @@ async function disconnectObdDeveloperVci(options = {}) {
   obdDevSession.readLoopActive = false;
   obdDevSession.supportedPidDiscoveryComplete = false;
   obdDevSession.supportedPidSet = [];
+  obdDevSession.supportedPidReadoutResponses = [];
   obdDevSession.freezeFrameCapabilityResponse = null;
   obdDevSession.livePidTimeline = [];
   obdDevSession.readInProgress = false;
@@ -5342,6 +5345,49 @@ function buildWebSerialOnboardMonitorResponseOverride(commandResponses = []) {
   };
 }
 
+function isWebSerialSupportedPidCommand(command) {
+  return /^01(?:00|20|40|60|80|A0|C0|E0)$/.test(String(command || "").trim().toUpperCase());
+}
+
+function resolveWebSerialSupportedPidReadoutResponses(previous = [], commandResponses = []) {
+  const currentResponses = (Array.isArray(commandResponses) ? commandResponses : [])
+    .map((item) => ({
+      command: String(item?.command || "").trim().toUpperCase(),
+      response: String(item?.response || "").trim()
+    }))
+    .filter((item) => isWebSerialSupportedPidCommand(item.command) && item.response);
+  if (!currentResponses.length) return Array.isArray(previous) ? previous : [];
+  const resolved = currentResponses.some((item) => item.command === "0100")
+    ? []
+    : (Array.isArray(previous) ? previous : []).filter((item) => isWebSerialSupportedPidCommand(item?.command) && String(item?.response || "").trim());
+  for (const item of currentResponses) {
+    const index = resolved.findIndex((candidate) => candidate.command === item.command);
+    if (index >= 0) resolved[index] = item;
+    else resolved.push(item);
+  }
+  return resolved;
+}
+
+function updateWebSerialSupportedPidReadoutResponses(commandResponses = []) {
+  const resolved = resolveWebSerialSupportedPidReadoutResponses(obdDevSession.supportedPidReadoutResponses, commandResponses);
+  obdDevSession.supportedPidReadoutResponses = resolved;
+  return resolved;
+}
+
+function buildWebSerialSupportedPidResponseOverride(commandResponses = []) {
+  const transcript = buildWebSerialAttemptTranscript(commandResponses);
+  if (!transcript) return null;
+  return {
+    source: "web_serial",
+    intent: "read_supported_pids",
+    protocol: "ELM327",
+    raw: transcript,
+    retainedRawText: false,
+    wouldTransmit: false,
+    vehicleCommandEnabled: false
+  };
+}
+
 function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) {
   const requestedCommandCount = Array.isArray(commands) ? commands.map((command) => String(command || "").trim()).filter(Boolean).length : 0;
   const outcomes = (Array.isArray(commandResponses) ? commandResponses : []).map((item) => ({
@@ -5676,6 +5722,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   updateWebSerialFreezeFrameCapabilityResponse(commandResponses);
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
+  const supportedPidResponseOverride = buildWebSerialSupportedPidResponseOverride(updateWebSerialSupportedPidReadoutResponses(commandResponses));
   const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));
   const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses));
   const readinessResponseOverride = buildWebSerialReadinessResponseOverride(commandResponses);
@@ -5689,6 +5736,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     readoutInterface: buildSelectedObdReadoutInterface(),
     observationContext: buildSelectedObdObservationContext() || undefined,
     connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus(),
+    ...(supportedPidResponseOverride ? { supportedPidResponse: supportedPidResponseOverride } : {}),
     ...(freezeFrameResponseOverride ? { freezeFrameResponse: freezeFrameResponseOverride } : {}),
     ...(ecuInfoResponseOverride ? { ecuInfoResponse: ecuInfoResponseOverride } : {}),
     ...(readinessResponseOverride ? { readinessResponse: readinessResponseOverride } : {}),
