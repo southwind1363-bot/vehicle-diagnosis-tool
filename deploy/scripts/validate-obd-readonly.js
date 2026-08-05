@@ -8451,6 +8451,11 @@ check(onboardMonitorSnapshotDataAliases.captured_at === "2026-07-07T00:50:00Z" &
 const bridgeSummary = obd.buildBridgeSessionSummary({ dtcSnapshot: bridgeDtcSnapshot, livePidSnapshot: bridgePidSnapshot, freezeFrameSnapshot: bridgeFreezeFrameSnapshot, readinessSnapshot: bridgeReadinessSnapshot, ecuInfoSnapshot: bridgeEcuInfoSnapshot, onboardMonitorSnapshot: bridgeOnboardMonitorSnapshot, supportedPidMatrix: bridgeSupportedPidSnapshot, adapterIdentity: bridgeAdapterIdentity });
 check(bridgeSummary.vehicleCommandEnabled === false && bridgeSummary.vehicle_command_enabled === false && bridgeSummary.wouldTransmit === false && bridgeSummary.would_transmit === false, "Bridge session summary should explicitly retain read-only top-level flags");
 check(bridgeSummary.codes.join(",") === "P0171,P0300", "ブリッジセッション要約へDTCを引き継げません");
+const bridgeSummaryWithoutReadouts = obd.buildBridgeSessionSummary({});
+check(bridgeSummaryWithoutReadouts.readoutCoverage?.failedReadoutCount === 0 && bridgeSummaryWithoutReadouts.coreReadoutInventorySummary?.failedReadoutCount === 0 && bridgeSummaryWithoutReadouts.readoutCoverage?.itemById?.live_pid_snapshot?.statusReason === "not_requested", "Empty bridge summary treated unrequested readouts as failures");
+const bridgeSummaryWithFailedLivePid = obd.buildBridgeSessionSummary({ livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } } });
+const bridgeSummaryWithFailedLivePidReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeSummaryWithFailedLivePid)));
+check(bridgeSummaryWithFailedLivePid.readoutCoverage?.failedReadoutIds?.join(",") === "live_pid_snapshot" && bridgeSummaryWithFailedLivePid.coreReadoutInventorySummary?.failedReadoutIds?.join(",") === "live_pid_snapshot" && bridgeSummaryWithFailedLivePidReimport?.readoutCoverage?.failedReadoutIds?.join(",") === "live_pid_snapshot", "Bridge live PID failure did not remain isolated through read-only export and reimport");
 const bridgeSummaryTypedDtcAliases = obd.buildBridgeSessionSummary({
   stored_dtc_snapshot: { dtcs: [{ code: "P0171" }] },
   pendingDtcSnapshot: { dtcs: [{ code: "P0300" }] },

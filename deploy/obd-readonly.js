@@ -6822,6 +6822,15 @@
       ecuResponseSummary,
       supportedPidMatrix
     });
+    const hasDtcReadoutInput = hasTypedDtcSnapshotInput
+      || hasObjectContent(dtcSnapshotInput)
+      || ["codes", "dtc_codes", "dtcCodes"].some((key) => parts[key] !== undefined && parts[key] !== null);
+    const hasLivePidReadoutInput = hasObjectContent(livePidSnapshotInput) || livePidTimeline.samples.length > 0 || hasDirectMonitorEvidence;
+    const hasFreezeFrameReadoutInput = hasObjectContent(freezeFrameSnapshotInput);
+    const hasReadinessReadoutInput = hasObjectContent(readinessSnapshotInput);
+    const hasEcuInfoReadoutInput = hasObjectContent(ecuInfoSnapshotInput);
+    const hasOnboardMonitorReadoutInput = hasObjectContent(onboardMonitorSnapshotInput);
+    const hasSupportedPidReadoutInput = hasObjectContent(supportedPidMatrixInput);
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
@@ -6829,19 +6838,27 @@
       adapterIdentity,
       dtcSnapshot,
       dtcSnapshotSafetyInput: dtcSnapshotInput,
+      dtcInputPresent: hasDtcReadoutInput,
+      typedDtcInputPresent: hasTypedDtcSnapshotInput,
       livePidSnapshot,
       livePidTimeline,
       livePidSnapshotSafetyInput: livePidSnapshotInput,
+      livePidInputPresent: hasLivePidReadoutInput,
       freezeFrameSnapshot,
       freezeFrameSnapshotSafetyInput: freezeFrameSnapshotInput,
+      freezeFrameInputPresent: hasFreezeFrameReadoutInput,
       readinessSnapshot,
       readinessSnapshotSafetyInput: readinessSnapshotInput,
+      readinessInputPresent: hasReadinessReadoutInput,
       ecuInfoSnapshot,
       ecuInfoSnapshotSafetyInput: ecuInfoSnapshotInput,
+      ecuInfoInputPresent: hasEcuInfoReadoutInput,
       onboardMonitorSnapshot,
       onboardMonitorSnapshotSafetyInput: onboardMonitorSnapshotInput,
+      onboardMonitorInputPresent: hasOnboardMonitorReadoutInput,
       supportedPidMatrix,
-      supportedPidMatrixSafetyInput: supportedPidMatrixInput
+      supportedPidMatrixSafetyInput: supportedPidMatrixInput,
+      supportedPidInputPresent: hasSupportedPidReadoutInput
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
@@ -7442,12 +7459,21 @@
         wouldTransmit: dtcSnapshotInput.wouldTransmit === true || dtcSnapshotInput.would_transmit === true
       }
       : normalizeDtcSnapshot({ source: "local_bridge", codes: Array.isArray(codesInput) ? codesInput : [] });
+    const hasDtcReadoutInput = hasObjectContent(dtcSnapshotInput)
+      || ["codes", "dtc_codes", "dtcCodes"].some((key) => parts[key] !== undefined && parts[key] !== null);
+    const hasLivePidReadoutInput = hasObjectContent(livePidSnapshotInput) || livePidTimeline.samples.length > 0 || hasDirectMonitorEvidence;
+    const hasFreezeFrameReadoutInput = hasObjectContent(freezeFrameSnapshotInput);
+    const hasReadinessReadoutInput = hasObjectContent(readinessSnapshotInput);
+    const hasEcuInfoReadoutInput = hasObjectContent(ecuInfoSnapshotInput);
+    const hasOnboardMonitorReadoutInput = hasObjectContent(onboardMonitorSnapshotInput);
+    const hasSupportedPidReadoutInput = hasObjectContent(supportedPidMatrixInput);
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
       vciDevices: normalizedVciList.devices,
       adapterIdentity,
       dtcSnapshot,
+      dtcInputPresent: hasDtcReadoutInput,
       livePidSnapshot: {
         blocked: false,
         monitorValues,
@@ -7456,11 +7482,17 @@
         livePidReadoutStatus: livePidSnapshot.livePidReadoutStatus || livePidSnapshot.live_pid_readout_status || null,
         live_pid_readout_status: livePidSnapshot.livePidReadoutStatus || livePidSnapshot.live_pid_readout_status || null
       },
+      livePidInputPresent: hasLivePidReadoutInput,
       freezeFrameSnapshot,
+      freezeFrameInputPresent: hasFreezeFrameReadoutInput,
       readinessSnapshot,
+      readinessInputPresent: hasReadinessReadoutInput,
       ecuInfoSnapshot,
+      ecuInfoInputPresent: hasEcuInfoReadoutInput,
       onboardMonitorSnapshot,
-      supportedPidMatrix
+      onboardMonitorInputPresent: hasOnboardMonitorReadoutInput,
+      supportedPidMatrix,
+      supportedPidInputPresent: hasSupportedPidReadoutInput
     });
     const derivedWarnings = [];
     if (hasBridgeInfrastructureContext && (connectionStatus.blocked || normalizedVciList.blocked)) derivedWarnings.push("local_bridge_disabled");
@@ -19149,6 +19181,13 @@
         : importSession;
     const pick = (...keys) => keys.map((key) => input[key]).find((item) => item !== undefined && item !== null);
     const hasValue = (item) => Array.isArray(item) ? item.length > 0 : Boolean(item && typeof item === "object" && Object.keys(item).length > 0);
+    const trustedReadoutCoverage = isTrustedBridgeSessionExport
+      ? pick("readoutCoverage", "readout_coverage")
+      : null;
+    const trustedFailedReadoutCoverage = trustedReadoutCoverage
+      && normalizeReadoutCoverageSnapshot(trustedReadoutCoverage).failedReadoutIds.length > 0
+      ? trustedReadoutCoverage
+      : null;
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
@@ -19493,6 +19532,7 @@
       connectionStatus: connectionStatusInput || undefined,
       vciDevices: vciDevicesInput || undefined,
       adapterIdentity: adapterIdentityInput || undefined,
+      readoutCoverage: trustedFailedReadoutCoverage || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       observationContext: scannerJsonObservationContext || undefined,
