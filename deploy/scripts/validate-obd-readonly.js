@@ -13420,9 +13420,12 @@ const failedLivePidCoverage = obd.buildReadoutCoverageSnapshot({
   livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } }
 });
 check(failedLivePidCoverage.itemById?.live_pid_snapshot?.status === "missing" && failedLivePidCoverage.itemById?.live_pid_snapshot?.statusReason === "transport_error" && failedLivePidCoverage.failedReadoutReasonById?.live_pid_snapshot === "transport_error", "Transport failure was not separated from an unrequested readout");
+const unrequestedReadoutSession = obd.buildDiagnosticScanSession({});
+check(unrequestedReadoutSession.readoutCoverage?.failedReadoutCount === 0 && unrequestedReadoutSession.coreReadoutInventorySummary?.failedReadoutCount === 0 && unrequestedReadoutSession.readoutCoverage?.itemById?.live_pid_snapshot?.statusReason === "not_requested", "Unrequested readouts were incorrectly recorded as failed responses");
 const failedLivePidSession = obd.buildDiagnosticScanSession({
   livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } }
 });
+check(failedLivePidSession.readoutCoverage?.failedReadoutIds?.join(",") === "live_pid_snapshot" && failedLivePidSession.coreReadoutInventorySummary?.failedReadoutIds?.join(",") === "live_pid_snapshot", "A single failed live PID readout marked unrelated unrequested readouts as failed");
 const reimportedFailedLivePidSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(failedLivePidSession)));
 check(reimportedFailedLivePidSession?.readoutCoverage?.failedReadoutReasonById?.live_pid_snapshot === "transport_error" && reimportedFailedLivePidSession?.vehicleCommandEnabled === false, "Transport failure reason was not retained through read-only export and JSON reimport");
 check(failedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.statusReason === "transport_error" && failedLivePidSession.coreReadoutInventorySummary?.failedReadoutReasonById?.live_pid_snapshot === "transport_error", "Core readout inventory did not retain the transport failure reason");

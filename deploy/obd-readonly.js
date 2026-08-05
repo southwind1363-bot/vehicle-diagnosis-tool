@@ -4617,16 +4617,20 @@
     const ecuInfoSnapshotSafetyInput = input.ecuInfoSnapshotSafetyInput || input.ecu_info_snapshot_safety_input || ecuInfoSnapshotInput;
     const onboardMonitorSnapshotSafetyInput = input.onboardMonitorSnapshotSafetyInput || input.onboard_monitor_snapshot_safety_input || onboardMonitorSnapshotInput;
     const supportedPidMatrixSafetyInput = input.supportedPidMatrixSafetyInput || input.supported_pid_matrix_safety_input || supportedPidMatrixInput;
+    const inputPresenceOverride = (camelKey, snakeKey, fallback) => {
+      const override = pickDefined(input[camelKey], input[snakeKey]);
+      return typeof override === "boolean" ? override : fallback;
+    };
     const hasConnectionStatusInput = hasObjectContent(connectionStatusInput);
     const hasAdapterIdentityInput = hasObjectContent(adapterIdentityInput);
-    const hasDtcSnapshotInput = hasObjectContent(dtcSnapshotInput);
-    const hasTypedDtcSnapshotInput = hasObjectContent(storedDtcSnapshotInput) || hasObjectContent(pendingDtcSnapshotInput) || hasObjectContent(permanentDtcSnapshotInput);
-    const hasLivePidSnapshotInput = hasObjectContent(livePidSnapshotInput);
-    const hasFreezeFrameSnapshotInput = hasObjectContent(freezeFrameSnapshotInput);
-    const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
-    const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
-    const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
-    const hasSupportedPidMatrixInput = hasObjectContent(supportedPidMatrixInput);
+    const hasDtcSnapshotInput = inputPresenceOverride("dtcInputPresent", "dtc_input_present", hasObjectContent(dtcSnapshotInput));
+    const hasTypedDtcSnapshotInput = inputPresenceOverride("typedDtcInputPresent", "typed_dtc_input_present", hasObjectContent(storedDtcSnapshotInput) || hasObjectContent(pendingDtcSnapshotInput) || hasObjectContent(permanentDtcSnapshotInput));
+    const hasLivePidSnapshotInput = inputPresenceOverride("livePidInputPresent", "live_pid_input_present", hasObjectContent(livePidSnapshotInput));
+    const hasFreezeFrameSnapshotInput = inputPresenceOverride("freezeFrameInputPresent", "freeze_frame_input_present", hasObjectContent(freezeFrameSnapshotInput));
+    const hasReadinessSnapshotInput = inputPresenceOverride("readinessInputPresent", "readiness_input_present", hasObjectContent(readinessSnapshotInput));
+    const hasEcuInfoSnapshotInput = inputPresenceOverride("ecuInfoInputPresent", "ecu_info_input_present", hasObjectContent(ecuInfoSnapshotInput));
+    const hasOnboardMonitorSnapshotInput = inputPresenceOverride("onboardMonitorInputPresent", "onboard_monitor_input_present", hasObjectContent(onboardMonitorSnapshotInput));
+    const hasSupportedPidMatrixInput = inputPresenceOverride("supportedPidInputPresent", "supported_pid_input_present", hasObjectContent(supportedPidMatrixInput));
     const allowLivePidTimelineFallbackInput = pickDefined(input.allowLivePidTimelineFallback, input.allow_live_pid_timeline_fallback);
     const includeInfrastructureInput = pickDefined(input.includeInfrastructure, input.include_infrastructure);
     const includeInfrastructure = includeInfrastructureInput === true
@@ -4833,6 +4837,8 @@
         ? "captured"
         : status === "empty"
           ? "empty_response"
+          : !inputPresent
+            ? "not_requested"
           : hasReadoutTransportViolation(safetyInput)
             ? "transport_safety_blocked"
             : hasExplicitReadoutBlock(safetyInput) || normalizedReadoutStatus === "blocked"
@@ -5416,6 +5422,8 @@
       empty_labels: normalizedEmptyLabels,
       missingIds: normalizedMissingIds,
       missing_ids: normalizedMissingIds,
+      failedReadoutCount: normalizedFailedReadoutIds.length,
+      failed_readout_count: normalizedFailedReadoutIds.length,
       failedReadoutIds: normalizedFailedReadoutIds,
       failed_readout_ids: normalizedFailedReadoutIds,
       failedReadoutReasonById: normalizedFailedReadoutReasonById,
@@ -21577,6 +21585,16 @@
       ecuResponseSummary,
       supportedPidMatrix
     });
+    const hasDtcReadoutInput = hasTypedDtcSnapshotInput
+      || dtcSnapshotInput !== sessionInput
+      || ["codes", "dtcs", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs", "raw", "response", "bytes"]
+        .some((key) => sessionInput[key] !== undefined && sessionInput[key] !== null);
+    const hasLivePidReadoutInput = hasObjectContent(livePidSnapshotInput) || livePidTimeline.samples.length > 0;
+    const hasFreezeFrameReadoutInput = hasObjectContent(freezeFrameSnapshotInput);
+    const hasReadinessReadoutInput = hasObjectContent(readinessSnapshotInput);
+    const hasEcuInfoReadoutInput = hasObjectContent(ecuInfoSnapshotInput);
+    const hasOnboardMonitorReadoutInput = hasObjectContent(onboardMonitorSnapshotInput);
+    const hasSupportedPidReadoutInput = hasObjectContent(supportedPidMatrixInput);
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: effectiveBridgeInfrastructureContext,
       connectionStatus,
@@ -21584,20 +21602,28 @@
       adapterIdentity,
       dtcSnapshot,
       dtcSnapshotSafetyInput,
+      dtcInputPresent: hasDtcReadoutInput,
+      typedDtcInputPresent: hasTypedDtcSnapshotInput,
       livePidSnapshot,
       livePidTimeline,
       allowLivePidTimelineFallback,
       livePidSnapshotSafetyInput: livePidSnapshotInput,
+      livePidInputPresent: hasLivePidReadoutInput,
       freezeFrameSnapshot,
       freezeFrameSnapshotSafetyInput: freezeFrameSnapshotInput,
+      freezeFrameInputPresent: hasFreezeFrameReadoutInput,
       readinessSnapshot,
       readinessSnapshotSafetyInput: readinessSafetyInput,
+      readinessInputPresent: hasReadinessReadoutInput,
       ecuInfoSnapshot,
       ecuInfoSnapshotSafetyInput: ecuInfoSafetyInput,
+      ecuInfoInputPresent: hasEcuInfoReadoutInput,
       onboardMonitorSnapshot,
       onboardMonitorSnapshotSafetyInput: onboardMonitorSafetyInput,
+      onboardMonitorInputPresent: hasOnboardMonitorReadoutInput,
       supportedPidMatrix,
-      supportedPidMatrixSafetyInput: supportedPidMatrixInput
+      supportedPidMatrixSafetyInput: supportedPidMatrixInput,
+      supportedPidInputPresent: hasSupportedPidReadoutInput
     });
     const readoutCoverage = resolveReadoutCoverageSnapshot(readoutCoverageInput, derivedReadoutCoverage);
     const coreReadoutInventorySummary = buildCoreReadoutInventorySummary({
