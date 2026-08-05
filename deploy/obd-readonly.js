@@ -3722,7 +3722,7 @@
               : Array.isArray(source.pid_samples)
                 ? source.pid_samples
                 : [];
-    const samples = sampleInput
+    const normalizedSamples = sampleInput
       .map((sample) => {
         const item = sample && typeof sample === "object" ? sample : {};
         const snapshotInput = item.livePidSnapshot || item.live_pid_snapshot || item;
@@ -3791,7 +3791,13 @@
           retained_raw_text: false
         };
       })
-      .filter(Boolean)
+      .filter(Boolean);
+    const samplesHaveChronologicalIsoTimestamps = normalizedSamples.length > 1
+      && normalizedSamples.every((sample) => /^\d{4}-\d{2}-\d{2}T/.test(String(sample.capturedAt || sample.captured_at || ""))
+        && Number.isFinite(Date.parse(sample.capturedAt || sample.captured_at)));
+    const samples = (samplesHaveChronologicalIsoTimestamps
+      ? [...normalizedSamples].sort((left, right) => Date.parse(left.capturedAt || left.captured_at) - Date.parse(right.capturedAt || right.captured_at))
+      : normalizedSamples)
       .slice(-60);
     return {
       schemaVersion: "live_pid_timeline_v1",

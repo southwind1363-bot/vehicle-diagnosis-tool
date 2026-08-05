@@ -18510,7 +18510,7 @@ const scannerJsonReverseTimelineSession = obd.buildDiagnosticScanSessionFromJson
     }
   }
 }));
-check(scannerJsonReverseTimelineSession?.livePidTimeline?.samples?.[0]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerJsonReverseTimelineSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerJsonReverseTimelineSession?.startedAt === "2026-07-18T09:45:00+09:00" && scannerJsonReverseTimelineSession?.endedAt === "2026-07-18T09:45:05+09:00", "Structured JSON import did not use the newest ISO timeline sample as the current live PID snapshot");
+check(scannerJsonReverseTimelineSession?.livePidTimeline?.samples?.[0]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && scannerJsonReverseTimelineSession?.livePidTimeline?.samples?.[1]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerJsonReverseTimelineSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && scannerJsonReverseTimelineSession?.startedAt === "2026-07-18T09:45:00+09:00" && scannerJsonReverseTimelineSession?.endedAt === "2026-07-18T09:45:05+09:00", "Structured JSON import did not order ISO timeline samples before selecting the current live PID snapshot");
 const reimportedScannerJsonTimelineSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonTimelineSession)
 });
@@ -18541,6 +18541,19 @@ const bridgePidSampleAliasImport = obd.buildBridgeDiagnosticImport({
   bridge_session: { pidSamples: directPidSampleAliases[1]?.livePidTimeline?.samples || [] }
 });
 check(directPidSampleAliases.every((session) => session?.livePidTimeline?.sampleCount === 2 && session.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1100) && session.vehicleCommandEnabled === false) && nestedPidSampleAliasSession?.livePidTimeline?.sampleCount === 2 && nestedPidSampleAliasSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1100) && nestedPidSampleAliasSession.vehicleCommandEnabled === false && bridgePidSampleAliasImport?.bridgeSession?.livePidTimeline?.sampleCount === 2 && bridgePidSampleAliasImport.bridgeSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1100) && bridgePidSampleAliasImport.vehicleCommandEnabled === false, "PID sample aliases were not retained consistently through direct, nested, and bridge diagnostic inputs");
+const reversePidSampleTimeline = [
+  { captured_at: "2026-08-05T10:15:05+09:00", observation_condition: "warm", monitor_values: [{ pid: "0C", value: 1200, unit: "rpm" }] },
+  { captured_at: "2026-08-05T10:15:00+09:00", observation_condition: "warm", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }
+];
+const directReversePidSampleSession = obd.buildDiagnosticScanSession({ pid_samples: reversePidSampleTimeline });
+const bridgeReversePidSampleImport = obd.buildBridgeDiagnosticImport({ bridge_session: { pidSamples: reversePidSampleTimeline } });
+const nonIsoPidSampleTimeline = obd.normalizeLivePidTimeline({
+  pid_samples: [
+    { captured_at: "later-capture", monitor_values: [{ pid: "0C", value: 1200, unit: "rpm" }] },
+    { captured_at: "earlier-capture", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }
+  ]
+});
+check(directReversePidSampleSession?.livePidTimeline?.samples?.[0]?.capturedAt === "2026-08-05T10:15:00+09:00" && directReversePidSampleSession.livePidTimeline?.samples?.[1]?.capturedAt === "2026-08-05T10:15:05+09:00" && directReversePidSampleSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && directReversePidSampleSession.livePidTimelineSummary?.changes?.[0]?.delta === 400 && bridgeReversePidSampleImport?.bridgeSession?.livePidTimeline?.samples?.[1]?.capturedAt === "2026-08-05T10:15:05+09:00" && bridgeReversePidSampleImport.bridgeSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1200) && bridgeReversePidSampleImport.vehicleCommandEnabled === false && nonIsoPidSampleTimeline.samples?.[0]?.capturedAt === "later-capture" && nonIsoPidSampleTimeline.samples?.[1]?.capturedAt === "earlier-capture" && nonIsoPidSampleTimeline.vehicleCommandEnabled === false, "PID timeline chronology normalization changed latest values or inferred an order from non-ISO timestamps");
 const scannerJsonNonIsoTimelineSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     live_pid_timeline: {
