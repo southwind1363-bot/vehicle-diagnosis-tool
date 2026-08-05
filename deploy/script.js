@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.51";
+const APP_VERSION = "3.6.52";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4495,6 +4495,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.initializing = false;
     const failureMessage = formatWebSerialAdapterInitializationFailure(obdDevSession.adapterInitializationSummary, error);
     await disconnectObdDeveloperVci({ reason: "connection_failed", statusMessage: failureMessage });
+    retainWebSerialConnectionAttempt();
   }
 }
 
@@ -5626,6 +5627,28 @@ function formatWebSerialAdapterInitializationFailure(summary = null, error = nul
   return summaryLabel
     ? `VCI初期化を完了できませんでした: ${summaryLabel}`
     : `読取を開始できませんでした: ${error?.message || error}`;
+}
+
+function retainWebSerialConnectionAttempt() {
+  if (!hasBridgeDiagnosticScanSessionSupport()) return null;
+  const capturedAt = new Date().toISOString();
+  const session = window.ObdReadOnly.buildDiagnosticScanSession({
+    source: "web_serial",
+    session_id: obdDevSession.scanSessionId || "web-serial-connection-attempt",
+    protocol: "ELM327",
+    started_at: obdDevSession.connectedAt || capturedAt,
+    ended_at: capturedAt,
+    captured_at: capturedAt,
+    readoutInterface: buildSelectedObdReadoutInterface(),
+    observationContext: buildSelectedObdObservationContext() || undefined,
+    connectionStatus: buildWebSerialConnectionStatus(),
+    retained_raw_text: false,
+    vehicle_command_enabled: false,
+    would_transmit: false
+  });
+  obdDevSession.lastSession = session;
+  renderObdDeveloperSessionSummary(session);
+  return session;
 }
 
 function buildWebSerialConnectionStatus(outcome = null) {
