@@ -194,6 +194,18 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testReadoutScopeSummaryKeepsObservedECUScopesVisibleWithoutGuessingMissingECUs() {
+        let summary = ReadoutCoordinatorViewModel.readoutScopeSummary([
+            NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E9"),
+            NativeConnectorReadoutScope(readoutID: "readiness_snapshot", scopeID: "7E8"),
+            NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E8")
+        ])
+
+        XCTAssertEqual(summary, "2 ECU / 7E8 / 7E9")
+        XCTAssertEqual(ReadoutCoordinatorViewModel.readoutScopeSummary([]), "ECUスコープ未取得")
+    }
+
+    @MainActor
     func testReadoutFailureLabelsExplainTransportStopConditions() {
         let viewModel = ReadoutCoordinatorViewModel()
 

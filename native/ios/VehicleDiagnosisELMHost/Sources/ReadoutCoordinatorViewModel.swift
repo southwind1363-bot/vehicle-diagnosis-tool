@@ -104,6 +104,11 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
             .map { readoutLabel(intent: $0, readoutID: $0) }
     }
 
+    var reportedReadoutScopeLabel: String {
+        guard let archive = coordinator.completedArchive else { return "完了待ち" }
+        return Self.readoutScopeSummary(archive.completionManifest.expectedReadoutScopes)
+    }
+
     static func archiveState(for scanState: NativeConnectorScanState?, hasReadoutFailures: Bool = false) -> String {
         switch scanState {
         case .completed where hasReadoutFailures: return "Partial"
@@ -121,6 +126,12 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         })
         let missingIDs = expectedIDs.subtracting(capturedIDs).sorted()
         return (expectedIDs.count, capturedIDs.count, missingIDs)
+    }
+
+    static func readoutScopeSummary(_ scopes: [NativeConnectorReadoutScope]) -> String {
+        let scopeIDs = Set(scopes.map(\.scopeID).filter { !$0.isEmpty }).sorted()
+        guard !scopeIDs.isEmpty else { return "ECUスコープ未取得" }
+        return "\(scopeIDs.count) ECU / \(scopeIDs.joined(separator: " / "))"
     }
 
     func readoutLabel(intent: String, readoutID: String?) -> String {

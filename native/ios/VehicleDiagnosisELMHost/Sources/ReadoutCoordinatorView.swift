@@ -11,6 +11,7 @@ struct ReadoutCoordinatorView: View {
                     LabeledContent("アーカイブ", value: viewModel.archiveStateLabel)
                     LabeledContent("取得済みレコード", value: "\(viewModel.archiveRecordCount)")
                     LabeledContent("読取範囲", value: viewModel.readoutCompletionLabel)
+                    LabeledContent("ECU応答範囲", value: viewModel.reportedReadoutScopeLabel)
                     if !viewModel.missingReadoutLabels.isEmpty {
                         Text("未取得: \(viewModel.missingReadoutLabels.joined(separator: " / "))")
                             .font(.footnote)
