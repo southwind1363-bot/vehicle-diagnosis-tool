@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.48";
+const APP_VERSION = "3.6.49";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4662,8 +4662,7 @@ async function readObdDeveloperFreezeFrame() {
   const freezeFrameSnapshot = obdDevSession.lastSession?.freezeFrameSnapshot;
   const emptyFreezeFrameReadout = freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && !(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc);
   if (!readCompleted && !emptyFreezeFrameReadout) return false;
-  const triggerDtc = freezeFrameSnapshot?.triggerDtc;
-  if (!triggerDtc) {
+  if (!hasWebSerialFreezeFrameTriggerDtc(freezeFrameSnapshot)) {
     obdDevStatus.textContent = "フリーズフレーム起点DTCがないため、追加PID要求を送りませんでした。";
     renderObdDeveloperGate();
     return true;
@@ -5134,6 +5133,17 @@ function getWebSerialFreezeFrameTriggerScopeIds(freezeFrameSnapshot = null) {
     .map((entry) => entry?.sourceEcu || entry?.source_ecu || null)
     .filter(Boolean)
     .map((scopeId) => String(scopeId).trim().toUpperCase()));
+}
+
+function hasWebSerialFreezeFrameTriggerDtc(freezeFrameSnapshot = null) {
+  if (String(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc || "").trim()) return true;
+  const entries = Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
+    ? freezeFrameSnapshot.triggerDtcEntries
+    : Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) ? freezeFrameSnapshot.trigger_dtc_entries : [];
+  return entries.some((entry) => {
+    const code = String(entry?.code || entry?.dtc || "").trim().toUpperCase();
+    return code && code !== "P0000";
+  });
 }
 
 function getWebSerialFreezeFrameSupportedPidsForTriggerScopes(response = "", freezeFrameSnapshot = null) {
