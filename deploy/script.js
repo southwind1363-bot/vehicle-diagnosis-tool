@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.40";
+const APP_VERSION = "3.6.41";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -528,7 +528,7 @@ const obdDevSession = {
   lastSession: null,
   previewMode: null,
   requestedInterfaceId: null,
-  selectedPidList: ["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0110", "0111", "0106", "0107", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151"],
+  selectedPidList: ["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151"],
   freezeFramePidList: ["020C", "0205", "020F", "020D", "020E", "0204", "0203", "020B", "0210", "0211", "0206", "0207", "0242"]
 };
 
