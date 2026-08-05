@@ -13025,6 +13025,13 @@ const fallbackPidTimeline = obd.normalizeLivePidTimeline({
   samples: [{ captured_at: "2026-07-17T00:00:00Z", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }]
 });
 check(fallbackPidTimeline.sampleCount === 1 && fallbackPidTimeline.samples[0]?.monitorValues?.[0]?.id === "engine_speed" && fallbackPidTimeline.vehicleCommandEnabled === false, "Fallback PID definitions did not retain standard live PID timeline values");
+const fallbackPidCombinedSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  pid_values: [{ pid: "0C", value: 800, unit: "rpm" }, { pid: "0D", value: 40, unit: "km/h" }],
+  freeze_frame_values: [{ pid: "05", value: 85, unit: "C" }],
+  freeze_frame_dtc: "P0128",
+  live_pid_samples: [{ captured_at: "2026-07-17T00:00:00Z", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }, { captured_at: "2026-07-17T00:00:05Z", monitor_values: [{ pid: "0C", value: 1000, unit: "rpm" }] }]
+}));
+check(fallbackPidCombinedSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed") && fallbackPidCombinedSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "vehicle_speed") && fallbackPidCombinedSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp") && fallbackPidCombinedSession.livePidTimeline?.sampleCount === 2 && fallbackPidCombinedSession.vehicleCommandEnabled === false, "Fallback PID definitions did not retain live, freeze-frame, and timeline JSON safely");
 const reportedLivePidTimeline = obd.normalizeLivePidTimeline({
   samples: [
     { captured_at: "2026-07-17T00:00:00Z", live_pid_snapshot: decodedLivePids },
