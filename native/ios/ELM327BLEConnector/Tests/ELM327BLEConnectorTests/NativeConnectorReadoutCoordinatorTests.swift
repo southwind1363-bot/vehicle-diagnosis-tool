@@ -210,4 +210,38 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertEqual(coordinator.readoutPreview.supportedPIDs, [NativeConnectorReadoutPreview.SupportedPIDs(sourceScopeID: "7E8", pids: ["04", "0C"])])
         XCTAssertEqual(coordinator.readoutPreview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_permanent_dtc", readoutID: "permanent_dtc_snapshot", sourceScopeID: "LEGACY", errorCodes: ["readout_not_available"])])
     }
+
+    func testPreviewDoesNotUseDiagnosticValuesFromFailedReadouts() {
+        let accepted = NativeConnectorEnvelopeFactory.dtcs(
+            context: context,
+            sequence: 1,
+            intent: "read_stored_dtc",
+            scopeID: "7E8",
+            dtcs: [OBD2DTC(code: "P0171", status: "stored")]
+        )
+        let failed = NativeConnectorEnvelope(
+            schemaVersion: "native_connector_contract_v1",
+            interfaceID: "user-vci-elm327",
+            platform: "ios",
+            intent: "read_stored_dtc",
+            capturedAt: "2026-08-06T00:00:00Z",
+            scanID: context.scanID,
+            connectionID: context.connectionID,
+            vehicleContextID: context.vehicleContextID,
+            sequence: 2,
+            readoutID: "stored_dtc_snapshot",
+            readoutScopeID: "7E8",
+            readoutAttempt: 0,
+            ok: false,
+            blocked: false,
+            wouldTransmit: false,
+            errors: ["transport_failure"],
+            data: ["dtcs": .array([.object(["code": .string("P0300"), "status": .string("stored")])])]
+        )
+
+        let preview = NativeConnectorReadoutPreview(envelopes: [accepted, failed])
+
+        XCTAssertEqual(preview.storedDTCs.map(\.code), ["P0171"])
+        XCTAssertEqual(preview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_stored_dtc", readoutID: "stored_dtc_snapshot", sourceScopeID: "7E8", errorCodes: ["transport_failure"])])
+    }
 }
