@@ -5086,16 +5086,30 @@
         || snapshot?.blocked === true
         || snapshot?.isBlocked === true
         || snapshot?.is_blocked === true;
-      const errorCodes = readBridgeResponseErrorCodes(snapshot);
+      const errorCodes = [...new Set([
+        ...readBridgeResponseErrorCodes(snapshot),
+        ...readBridgeResponseErrorCodes(coverageItem)
+      ])];
       const count = responseUnavailable ? 0 : item.count;
       const status = responseUnavailable
         ? "missing"
         : count > 0 ? "captured" : coverageItem?.status || "missing";
+      const statusReason = status === "captured"
+        ? "captured"
+        : status === "empty"
+          ? "empty_response"
+          : coverageItem?.statusReason
+            || coverageItem?.status_reason
+            || coverage.failedReadoutReasonById?.[item.id]
+            || coverage.failed_readout_reason_by_id?.[item.id]
+            || (errorCodes.length > 0 ? "transport_error" : "not_requested");
       return {
         ...item,
         count,
         label: coverageItem?.label || item.id,
         status,
+        statusReason,
+        status_reason: statusReason,
         errorCodes,
         error_codes: [...errorCodes],
         captured: status === "captured",
@@ -5120,6 +5134,10 @@
     const errorReadoutIds = errorReadoutItems.map((item) => item.id);
     const errorCodesByReadoutId = Object.fromEntries(errorReadoutItems.map((item) => [item.id, [...item.errorCodes]]));
     const errorCodes = [...new Set(errorReadoutItems.flatMap((item) => item.errorCodes))];
+    const failedReadoutReasons = new Set(["transport_safety_blocked", "blocked_readout", "not_supported", "transport_error", "unparsed_response", "unknown_response"]);
+    const failedReadoutItems = items.filter((item) => failedReadoutReasons.has(item.statusReason));
+    const failedReadoutIds = failedReadoutItems.map((item) => item.id);
+    const failedReadoutReasonById = Object.fromEntries(failedReadoutItems.map((item) => [item.id, item.statusReason]));
     const nextPendingReadoutId = pendingIds[0] || null;
     const nextPendingReadout = nextPendingReadoutId ? itemById[nextPendingReadoutId] || null : null;
     const totalValueCount = items.reduce((total, item) => total + item.count, 0);
@@ -5158,8 +5176,16 @@
       error_codes: [...errorCodes],
       errorCodesByReadoutId,
       error_codes_by_readout_id: Object.fromEntries(Object.entries(errorCodesByReadoutId).map(([id, codes]) => [id, [...codes]])),
+      failedReadoutCount: failedReadoutIds.length,
+      failed_readout_count: failedReadoutIds.length,
+      failedReadoutIds,
+      failed_readout_ids: [...failedReadoutIds],
+      failedReadoutReasonById,
+      failed_readout_reason_by_id: { ...failedReadoutReasonById },
       nextPendingReadoutId,
       nextPendingReadoutStatus: nextPendingReadout?.status || null,
+      nextPendingReadoutStatusReason: nextPendingReadout?.statusReason || null,
+      next_pending_readout_status_reason: nextPendingReadout?.statusReason || null,
       nextPendingReadoutLabel: nextPendingReadout?.label || null,
       allReadoutsAttempted: missingIds.length === 0,
       valueCaptureComplete: pendingIds.length === 0,
@@ -11270,10 +11296,15 @@
     const pendingIds = normalizeIds(summary.pendingIds || summary.pending_ids || [...missingIds, ...emptyIds]);
     const attemptedIds = normalizeIds(summary.attemptedIds || summary.attempted_ids || [...capturedIds, ...emptyIds]);
     const errorReadoutIds = normalizeIds(summary.errorReadoutIds || summary.error_readout_ids);
+    const failedReadoutIds = normalizeIds(summary.failedReadoutIds || summary.failed_readout_ids);
     const errorCodes = readBridgeResponseErrorCodes(summary);
     const errorCodesByReadoutId = (summary.errorCodesByReadoutId || summary.error_codes_by_readout_id) && typeof (summary.errorCodesByReadoutId || summary.error_codes_by_readout_id) === "object"
       ? Object.fromEntries(Object.entries(summary.errorCodesByReadoutId || summary.error_codes_by_readout_id).map(([id, codes]) => [id, readBridgeResponseErrorCodes({ errorCodes: codes })]))
       : {};
+    const failedReadoutReasonByIdInput = (summary.failedReadoutReasonById || summary.failed_readout_reason_by_id) && typeof (summary.failedReadoutReasonById || summary.failed_readout_reason_by_id) === "object"
+      ? (summary.failedReadoutReasonById || summary.failed_readout_reason_by_id)
+      : {};
+    const failedReadoutReasonById = Object.fromEntries(failedReadoutIds.map((id) => [id, failedReadoutReasonByIdInput[id] || itemById[id]?.statusReason || itemById[id]?.status_reason || null]));
     const totalValueCount = toCount("totalValueCount", "total_value_count", Object.values(countsById).reduce((total, value) => total + (Number.isFinite(Number(value)) ? Number(value) : 0), 0));
     return {
       ...summary,
@@ -11315,8 +11346,16 @@
       error_codes: [...errorCodes],
       errorCodesByReadoutId,
       error_codes_by_readout_id: Object.fromEntries(Object.entries(errorCodesByReadoutId).map(([id, codes]) => [id, [...codes]])),
+      failedReadoutCount: toCount("failedReadoutCount", "failed_readout_count", failedReadoutIds.length),
+      failed_readout_count: toCount("failedReadoutCount", "failed_readout_count", failedReadoutIds.length),
+      failedReadoutIds,
+      failed_readout_ids: failedReadoutIds,
+      failedReadoutReasonById,
+      failed_readout_reason_by_id: { ...failedReadoutReasonById },
       nextPendingReadoutId: summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0] || null,
       next_pending_readout_id: summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0] || null,
+      nextPendingReadoutStatusReason: summary.nextPendingReadoutStatusReason || summary.next_pending_readout_status_reason || itemById[summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0]]?.statusReason || itemById[summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0]]?.status_reason || null,
+      next_pending_readout_status_reason: summary.next_pending_readout_status_reason || summary.nextPendingReadoutStatusReason || itemById[summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0]]?.statusReason || itemById[summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0]]?.status_reason || null,
       allReadoutsAttempted: pickDefined(summary.allReadoutsAttempted, summary.all_readouts_attempted, missingIds.length === 0) === true,
       all_readouts_attempted: pickDefined(summary.allReadoutsAttempted, summary.all_readouts_attempted, missingIds.length === 0) === true,
       valueCaptureComplete: pickDefined(summary.valueCaptureComplete, summary.value_capture_complete, pendingIds.length === 0) === true,
