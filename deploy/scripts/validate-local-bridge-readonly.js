@@ -8,6 +8,8 @@ const failures = [];
 const token = "local-bridge-test-token";
 const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge" });
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const packageManifest = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "package.json"), "utf8"));
+const j2534BridgeStarterSource = fs.readFileSync(path.join(scriptDir, "start-j2534-readonly-bridge.js"), "utf8");
 const monitorDefinitionRows = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "data", "obd-monitor-definitions.json"), "utf8"));
 const monitorDefinitionIds = new Set(monitorDefinitionRows.map((row) => row.id));
 const bridgeComputedValueIds = new Set([
@@ -28,6 +30,7 @@ const j2534UnavailableReadIntents = [
   "read_onboard_monitor",
   "read_live_pid_snapshot"
 ];
+check(packageManifest.scripts?.["bridge:j2534:dev"] === "C:\\Progra~1\\nodejs\\node.exe scripts/start-j2534-readonly-bridge.js" && j2534BridgeStarterSource.includes('process.env.LOCAL_BRIDGE_DISCOVER_J2534 = "1"') && j2534BridgeStarterSource.includes("createLocalBridgeApp()") && j2534BridgeStarterSource.includes("vehicle_command_enabled=false"), "J2534 bridge starter must explicitly enable only static read-only discovery");
 const emptyJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([]);
 const detectedJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{ id: "fixture-j2534" }]);
 const mismatchedJ2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment([{
