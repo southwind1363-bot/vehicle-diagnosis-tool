@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial読取セッションの根拠整合性を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.41";
+const APP_VERSION = "3.6.42";
 const APP_LAST_UPDATED = "2026-08-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5019,7 +5019,7 @@ function classifyWebSerialCommandResponse(command, response) {
 
 function isWebSerialExpectedEmptyResponse(command, response) {
   const normalizedCommand = String(command || "").trim().toUpperCase();
-  if (!["03", "07", "0A", "0202"].includes(normalizedCommand)) return false;
+  if (!["03", "07", "0A", "0202", "0900"].includes(normalizedCommand)) return false;
   const lines = getWebSerialResponseLines(normalizedCommand, response);
   const hasBusInit = lines.some((line) => line.startsWith("BUS INIT:"));
   return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING") || isWebSerialInformationalResponseLine(line) || (hasBusInit && line === "OK"));
@@ -5147,6 +5147,18 @@ function updateWebSerialEcuInfoReadoutResponses(commandResponses = []) {
 function buildWebSerialEcuInfoResponseOverride(commandResponses = []) {
   const responses = (Array.isArray(commandResponses) ? commandResponses : [])
     .filter((item) => isWebSerialEcuInfoCommand(item?.command));
+  const supportResponse = responses.find((item) => String(item?.command || "").trim().toUpperCase() === "0900")?.response;
+  if (isWebSerialExpectedEmptyResponse("0900", supportResponse)) {
+    return {
+      source: "web_serial",
+      intent: "read_ecu_info",
+      values: [],
+      ecuInfoReadoutStatus: "reported",
+      retainedRawText: false,
+      wouldTransmit: false,
+      vehicleCommandEnabled: false
+    };
+  }
   const raw = responses.map((item) => `>${String(item.command || "").trim().toUpperCase()}\n${String(item.response || "").trim()}`).join("\n");
   return raw
     ? {
