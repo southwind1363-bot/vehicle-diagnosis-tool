@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.88";
+const APP_VERSION = "3.6.89";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6928,7 +6928,11 @@ function formatObdDtcResponseFormat(formats = null, fallback = NO_DATA) {
 function formatUdsDtcSubfunction(value, fallback = NO_DATA) {
   const normalized = String(value || "").toUpperCase();
   if (!/^[0-9A-F]{2}$/.test(normalized)) return fallback;
-  return normalized === "02" ? `0x${normalized} reportDTCByStatusMask` : `0x${normalized}`;
+  const labels = {
+    "01": "reportNumberOfDTCByStatusMask",
+    "02": "reportDTCByStatusMask"
+  };
+  return labels[normalized] ? `0x${normalized} ${labels[normalized]}` : `0x${normalized}`;
 }
 
 function formatObdEcuInfoResponseFormat(format = null, fallback = NO_DATA) {
