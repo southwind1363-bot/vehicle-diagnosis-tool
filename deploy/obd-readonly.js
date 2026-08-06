@@ -3243,7 +3243,8 @@
       includeObservedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
     });
     const dtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
-    const dtcResponseFormat = readDtcResponseFormatAlias(data);
+    const dtcResponseFormats = readDtcResponseFormatAliases(data);
+    const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -3282,6 +3283,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcResponseFormat,
       dtc_response_format: dtcResponseFormat,
+      dtcResponseFormats,
+      dtc_response_formats: [...dtcResponseFormats],
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
@@ -16680,7 +16683,8 @@
     const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
-    const dtcResponseFormat = readDtcResponseFormatAlias(sourceInput);
+    const dtcResponseFormats = readDtcResponseFormatAliases(sourceInput);
+    const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(sourceInput);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -16731,6 +16735,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcResponseFormat,
       dtc_response_format: dtcResponseFormat,
+      dtcResponseFormats,
+      dtc_response_formats: [...dtcResponseFormats],
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
@@ -18208,7 +18214,7 @@
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
     const dtcResponseFormats = [...new Set(
-      snapshots.map((snapshot) => readDtcResponseFormatAlias(snapshot)).filter(Boolean)
+      snapshots.flatMap((snapshot) => readDtcResponseFormatAliases(snapshot))
     )];
     const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
     const ecuResponses = [...new Map(
@@ -22476,14 +22482,22 @@
     return aliases[normalized] || null;
   }
 
-  function readDtcResponseFormatAlias(row) {
-    const value = [
+  function readDtcResponseFormatAliases(row) {
+    const values = [
+      row?.dtc_response_formats,
+      row?.dtcResponseFormats,
       row?.dtc_response_format,
       row?.dtcResponseFormat,
       row?.response_format,
       row?.responseFormat
-    ].find((item) => item !== undefined && item !== null && item !== "");
-    return normalizeDtcResponseFormat(value);
+    ].flatMap((item) => Array.isArray(item) ? item : [item]);
+    return [...new Set(values
+      .map((value) => normalizeDtcResponseFormat(value))
+      .filter(Boolean))];
+  }
+
+  function readDtcResponseFormatAlias(row) {
+    return readDtcResponseFormatAliases(row)[0] || null;
   }
 
   function readDtcStatusAvailabilityMaskAliases(row) {
