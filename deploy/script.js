@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.74";
+const APP_VERSION = "3.6.75";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6043,6 +6043,9 @@ function renderObdBridgeReadout(parts = {}) {
   const monitorValues = livePidSnapshot?.monitorValues || [];
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
   const currentCodes = currentDtcSnapshot?.dtcs?.filter((item) => item?.code) || [];
+  const currentDtcReadoutStatus = currentDtcSnapshot?.dtcReadoutStatus || currentDtcSnapshot?.dtc_readout_status || null;
+  const currentDtcResponseFormats = currentDtcSnapshot?.dtcResponseFormats || currentDtcSnapshot?.dtc_response_formats || [currentDtcSnapshot?.dtcResponseFormat || currentDtcSnapshot?.dtc_response_format].filter(Boolean);
+  const currentDtcResponseFormatLabel = formatObdDtcResponseFormat(currentDtcResponseFormats, "");
 
   if (monitorValues.length) {
     renderObdMonitorValues(monitorValues, livePidSnapshot.monitorInsights || []);
@@ -6054,6 +6057,11 @@ function renderObdBridgeReadout(parts = {}) {
     [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, dtcSnapshot.dtcs, session.vehicleProfile || session.vehicle_profile || null)));
     const statusSummary = formatObdBridgeDtcStatusSummary(dtcSnapshot.dtcs);
     obdImportStatus.textContent = `${currentCodes.length}件のブリッジDTCを読取りました。累計${dtcSnapshot.dtcs.length}件です。${statusSummary}`;
+  } else if (currentDtcReadoutStatus === "unparsed") {
+    const formatSuffix = currentDtcResponseFormatLabel ? ` ${currentDtcResponseFormatLabel}。` : "";
+    obdImportStatus.textContent = `ブリッジDTC応答を受け取りましたが、内容は未解析です。${formatSuffix}DTCは0件として扱いません。`;
+  } else if (currentDtcReadoutStatus === "blocked") {
+    obdImportStatus.textContent = "ブリッジDTC読取は遮断されました。DTCは0件として扱いません。";
   } else if (currentDtcSnapshot) {
     obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
   } else if (parts.freezeFrameResponse && freezeFrameSnapshot) {
