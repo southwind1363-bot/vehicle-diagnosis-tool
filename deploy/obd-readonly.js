@@ -14727,7 +14727,49 @@
 
   function resolveReadoutCoverageSnapshot(input = null, derived = null) {
     if (input && typeof input === "object") {
-      return normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);
+      const normalizedInput = normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);
+      if (!derived || normalizedInput.failedReadoutIds.length === 0) return normalizedInput;
+      const normalizedDerived = normalizeReadoutCoverageSnapshot(derived);
+      const recoveredIds = normalizedInput.failedReadoutIds.filter((id) => normalizedDerived.itemById?.[id]?.status === "captured");
+      if (recoveredIds.length === 0) return normalizedInput;
+      const recoveredIdSet = new Set(recoveredIds);
+      const items = normalizedInput.items.map((item) => recoveredIdSet.has(item.id)
+        ? { ...item, ...normalizedDerived.itemById[item.id] }
+        : item);
+      const capturedItems = items.filter((item) => item?.status === "captured");
+      const emptyItems = items.filter((item) => item?.status === "empty");
+      const missingItems = items.filter((item) => item?.status === "missing");
+      const failedReadoutReasons = new Set(["transport_safety_blocked", "blocked_readout", "not_supported", "transport_error", "unparsed_response", "unknown_response"]);
+      const inferredFailedReadoutIds = items.filter((item) => failedReadoutReasons.has(item?.statusReason || item?.status_reason)).map((item) => item.id);
+      const failedReadoutIds = [...new Set([
+        ...normalizedInput.failedReadoutIds.filter((id) => !recoveredIdSet.has(id)),
+        ...inferredFailedReadoutIds
+      ])];
+      const itemById = Object.fromEntries(items.filter((item) => item?.id).map((item) => [item.id, item]));
+      const failedReadoutReasonById = Object.fromEntries(failedReadoutIds.map((id) => [
+        id,
+        itemById[id]?.statusReason || itemById[id]?.status_reason || normalizedInput.failedReadoutReasonById?.[id] || null
+      ]));
+      return normalizeReadoutCoverageSnapshot({
+        ...normalizedInput,
+        items,
+        totalCategories: items.length,
+        availableCategories: capturedItems.length + emptyItems.length,
+        capturedCategories: capturedItems.length,
+        emptyCategories: emptyItems.length,
+        missingCategories: missingItems.length,
+        capturedIds: capturedItems.map((item) => item.id),
+        capturedLabels: capturedItems.map((item) => item.label),
+        emptyIds: emptyItems.map((item) => item.id),
+        emptyLabels: emptyItems.map((item) => item.label),
+        missingIds: missingItems.map((item) => item.id),
+        missingLabels: missingItems.map((item) => item.label),
+        pendingIds: [...emptyItems, ...missingItems].map((item) => item.id),
+        pendingLabels: [...emptyItems, ...missingItems].map((item) => item.label),
+        failedReadoutCount: failedReadoutIds.length,
+        failedReadoutIds,
+        failedReadoutReasonById
+      });
     }
     return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());
   }

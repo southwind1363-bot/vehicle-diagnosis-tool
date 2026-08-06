@@ -296,7 +296,7 @@ const resolveReadoutCoverageFunctionChecks = () => {
   if (resolveReadoutCoverageFunctionSource) {
     const functionBody = resolveReadoutCoverageFunctionSource[0];
     check(functionBody.includes('if (input && typeof input === "object") {'), "resolveReadoutCoverageSnapshot should prefer explicit readout coverage input");
-    check(functionBody.includes('return normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);'), "resolveReadoutCoverageSnapshot should normalize explicit readout coverage input");
+    check(functionBody.includes('const normalizedInput = normalizeReadoutCoverageSnapshot(input?.schemaVersion ? input : input);') && functionBody.includes('const recoveredIds = normalizedInput.failedReadoutIds.filter'), "resolveReadoutCoverageSnapshot should normalize explicit coverage before recovering a successful readout");
     check(functionBody.includes('return normalizeReadoutCoverageSnapshot(derived || buildReadoutCoverageSnapshot());'), "resolveReadoutCoverageSnapshot should fall back to derived or empty readout coverage");
   }
 };
@@ -13434,6 +13434,11 @@ const failedLivePidSession = obd.buildDiagnosticScanSession({
   livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } }
 });
 check(failedLivePidSession.readoutCoverage?.failedReadoutIds?.join(",") === "live_pid_snapshot" && failedLivePidSession.coreReadoutInventorySummary?.failedReadoutIds?.join(",") === "live_pid_snapshot", "A single failed live PID readout marked unrelated unrequested readouts as failed");
+const recoveredLivePidSession = obd.buildDiagnosticScanSession({
+  readoutCoverage: failedLivePidSession.readoutCoverage,
+  livePidSnapshot: { monitorValues: [{ id: "engine_speed", value: 650, unit: "rpm" }] }
+});
+check(recoveredLivePidSession.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && recoveredLivePidSession.readoutCoverage?.failedReadoutCount === 0 && !recoveredLivePidSession.readoutCoverage?.failedReadoutIds?.includes("live_pid_snapshot"), "A successful direct live PID readout retained saved failure coverage");
 const reimportedFailedLivePidSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(failedLivePidSession)));
 check(reimportedFailedLivePidSession?.readoutCoverage?.failedReadoutReasonById?.live_pid_snapshot === "transport_error" && reimportedFailedLivePidSession?.vehicleCommandEnabled === false, "Transport failure reason was not retained through read-only export and JSON reimport");
 check(failedLivePidSession.coreReadoutInventorySummary?.itemById?.live_pid_snapshot?.statusReason === "transport_error" && failedLivePidSession.coreReadoutInventorySummary?.failedReadoutReasonById?.live_pid_snapshot === "transport_error", "Core readout inventory did not retain the transport failure reason");
