@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.92";
+const APP_VERSION = "3.6.93";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6046,6 +6046,7 @@ function renderObdBridgeReadout(parts = {}) {
   const currentDtcReadoutStatus = currentDtcSnapshot?.dtcReadoutStatus || currentDtcSnapshot?.dtc_readout_status || null;
   const currentDtcResponseFormats = currentDtcSnapshot?.dtcResponseFormats || currentDtcSnapshot?.dtc_response_formats || [currentDtcSnapshot?.dtcResponseFormat || currentDtcSnapshot?.dtc_response_format].filter(Boolean);
   const currentDtcResponseFormatLabel = formatObdDtcResponseFormat(currentDtcResponseFormats, "");
+  const currentReportedDtcEcuCountLabel = formatObdReportedDtcEcuCountSummary(currentDtcSnapshot);
 
   if (monitorValues.length) {
     renderObdMonitorValues(monitorValues, livePidSnapshot.monitorInsights || []);
@@ -6062,6 +6063,8 @@ function renderObdBridgeReadout(parts = {}) {
     obdImportStatus.textContent = `ブリッジDTC応答を受け取りましたが、内容は未解析です。${formatSuffix}DTCは0件として扱いません。`;
   } else if (currentDtcReadoutStatus === "blocked") {
     obdImportStatus.textContent = "ブリッジDTC読取は遮断されました。DTCは0件として扱いません。";
+  } else if (currentReportedDtcEcuCountLabel) {
+    obdImportStatus.textContent = `ブリッジDTC件数応答を取得しました。${currentReportedDtcEcuCountLabel}。個別DTC一覧は未展開です。`;
   } else if (currentDtcSnapshot) {
     obdImportStatus.textContent = "ブリッジDTC応答を受け取りました。DTCは0件です。";
   } else if (parts.freezeFrameResponse && freezeFrameSnapshot) {
@@ -6120,6 +6123,21 @@ function formatObdBridgeDtcStatusSummary(dtcs = []) {
     .filter((status) => counts[status] > 0)
     .map((status) => `${formatObdBridgeDtcStatusLabel(status)}${counts[status]}件`);
   return parts.length ? ` 内訳: ${parts.join(" / ")}。` : "";
+}
+
+function formatObdReportedDtcEcuCountSummary(snapshot = null, fallback = "") {
+  const ecuResponses = Array.isArray(snapshot?.ecuResponses)
+    ? snapshot.ecuResponses
+    : Array.isArray(snapshot?.ecu_responses)
+      ? snapshot.ecu_responses
+      : [];
+  const entries = ecuResponses.map((response) => {
+    const count = response?.codeCount ?? response?.code_count ?? response?.dtcCount ?? response?.dtc_count ?? null;
+    if (!Number.isFinite(Number(count)) || Number(count) <= 0) return null;
+    const ecu = String(response?.ecuName || response?.ecu_name || response?.ecu || response?.ecu_id || response?.ecuId || response?.address || response?.module || response?.module_id || response?.moduleId || "ECU").trim() || "ECU";
+    return `${ecu}: ${Math.round(Number(count))}件`;
+  }).filter(Boolean);
+  return entries.length ? entries.join(" / ") : fallback;
 }
 
 function formatObdBridgeDtcStatusLabel(status = "unknown") {
@@ -8040,6 +8058,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const dtcResponseFormats = dtcSnapshot?.dtcResponseFormats || dtcSnapshot?.dtc_response_formats || [dtcSnapshot?.dtcResponseFormat || dtcSnapshot?.dtc_response_format].filter(Boolean);
   const dtcResponseFormatLabel = formatObdDtcResponseFormat(dtcResponseFormats, NO_DATA);
   const dtcResponseSubfunction = dtcSnapshot?.dtcResponseSubfunction || dtcSnapshot?.dtc_response_subfunction || null;
+  const reportedDtcEcuCountLabel = formatObdReportedDtcEcuCountSummary(dtcSnapshot, NO_DATA);
   const dtcStatusAvailabilityMask = dtcSnapshot?.dtcStatusAvailabilityMask || dtcSnapshot?.dtc_status_availability_mask || null;
   const dtcMetadataSummary = dtcSnapshot?.dtcMetadataSummary || dtcSnapshot?.dtc_metadata_summary || null;
   const dtcMetadataTotalCount = Number(dtcMetadataSummary?.totalCount ?? dtcMetadataSummary?.total_count ?? 0);
@@ -8193,6 +8212,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["状態", connectionStatus?.displayStatus || NO_DATA],
     ...(adapterInitializationLabel ? [["VCI初期化", adapterInitializationLabel]] : []),
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
+    ...(reportedDtcEcuCountLabel !== NO_DATA ? [["ECU報告DTC件数", `${reportedDtcEcuCountLabel} (個別DTC詳細未展開)`]] : []),
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["DTC応答状態", dtcResponseStatusLabel],
     ["DTC応答形式", dtcResponseFormatLabel],
