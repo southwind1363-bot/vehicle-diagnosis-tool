@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.64";
+const APP_VERSION = "3.6.65";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6313,6 +6313,21 @@ function readCoreSessionAliasArray(coreSessionStatus, camelKey, snakeKey) {
   return Array.isArray(snakeValue) ? snakeValue : [];
 }
 
+function formatSessionCaptureIntegritySummary(summary = null, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const status = summary.status || "unknown";
+  const capturedAt = summary.capturedAt || summary.captured_at || null;
+  const earliestCapturedAt = summary.earliestCapturedAt || summary.earliest_captured_at || null;
+  const latestCapturedAt = summary.latestCapturedAt || summary.latest_captured_at || null;
+  const captureSpanSeconds = Number(summary.captureSpanSeconds ?? summary.capture_span_seconds);
+  if (status === "single" && capturedAt) return formatDateTime(capturedAt);
+  if (status === "range" && earliestCapturedAt && latestCapturedAt) {
+    const spanLabel = Number.isFinite(captureSpanSeconds) ? ` / ${captureSpanSeconds}秒` : "";
+    return `${formatDateTime(earliestCapturedAt)} -> ${formatDateTime(latestCapturedAt)}${spanLabel}`;
+  }
+  return fallback;
+}
+
 function formatCoreSessionStatusSummary(coreSessionStatus, fallback = NO_DATA) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
   const completionPercentValue = readCoreSessionAliasValue(coreSessionStatus, "completionPercent", "completion_percent");
@@ -8046,6 +8061,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const startedAtValue = session?.startedAt || session?.started_at;
   const endedAtValue = session?.endedAt || session?.ended_at;
   const capturedAtValue = session?.capturedAt || session?.captured_at;
+  const sessionCaptureIntegritySummary = session?.sessionCaptureIntegritySummary || session?.session_capture_integrity_summary || coreSessionStatus?.sessionCaptureIntegritySummary || coreSessionStatus?.session_capture_integrity_summary || session?.diagnosticFlowSummary?.sessionCaptureIntegritySummary || session?.diagnosticFlowSummary?.session_capture_integrity_summary || null;
   const sourceLengthLabel = sourceLengthValue ? `${sourceLengthValue}文字` : NO_DATA;
   const webSerialReadoutLabel = formatWebSerialReadoutSummary(webSerialReadoutSummary, NO_DATA);
   const observedEcuSummary = coreSessionStatus?.observedEcuSummary || coreSessionStatus?.observed_ecu_summary || session?.diagnosticFlowSummary?.observedEcuSummary || session?.diagnosticFlowSummary?.observed_ecu_summary || null;
@@ -8090,6 +8106,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     : (obdDevSession.connectedAt ? formatDateTime(obdDevSession.connectedAt) : NO_DATA);
   const endedAtLabel = endedAtValue ? formatDateTime(endedAtValue) : NO_DATA;
   const capturedAtLabel = capturedAtValue ? formatDateTime(capturedAtValue) : NO_DATA;
+  const captureIntegrityLabel = formatSessionCaptureIntegritySummary(sessionCaptureIntegritySummary, NO_DATA);
   const hasRecoveredBridgeSession = Boolean(
     sessionConnectionStatus?.displayStatus
     || (Array.isArray(sessionVciDevices) && sessionVciDevices.length > 0)
@@ -8157,6 +8174,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["開始", startedAtLabel],
     ["終了", endedAtLabel],
     ["取得時刻", capturedAtLabel],
+    ["読取時刻範囲", captureIntegrityLabel],
     ["ブリッジ", obdDevSession.bridgeEndpoint || hasRecoveredBridgeSession ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ...(j2534RuntimeCompatibilityLabel ? [["J2534 runtime", j2534RuntimeCompatibilityLabel]] : []),
