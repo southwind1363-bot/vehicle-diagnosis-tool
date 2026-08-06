@@ -1446,7 +1446,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus'), "normalizeDtcSnapshot should normalize DTC status aliases");
     check(functionBody.includes('const sourceEcuName = sourceInput.source_ecu_name') && functionBody.includes('const rowEcu = rowValue.source_ecu') && functionBody.includes('const ecuName = rowEcuName || (sourceEcuName') && functionBody.includes('rowValue.ecuId') && functionBody.includes('rowValue.ecuName') && functionBody.includes('rowValue.module_id') && functionBody.includes('rowValue.freezeFrame === true'), "normalizeDtcSnapshot should preserve ECU name and freeze-frame aliases");
     check(functionBody.includes('const typedDtcCodes = new Set(rows') && functionBody.includes('typedDtcCodes.has(`${row.code}::${row.subcode || ""}::${row.ecu || ""}`)') && functionBody.includes('const key = `${row.code}::${row.subcode || ""}::${row.ecu || ""}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should suppress only matching untyped code/subcode/ECU duplicates");
-    check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "normalizeDtcSnapshot should accept protocol aliases");
+    check(functionBody.includes('const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;') && functionBody.includes('protocol,'), "normalizeDtcSnapshot should accept protocol aliases");
     check(functionBody.includes('schema_version: "dtc_snapshot_v1"'), "normalizeDtcSnapshot should expose snake_case schema version");
     check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount'), "normalizeDtcSnapshot should expose snake_case capture and DTC count aliases");
     check(functionBody.includes('stored_count: storedCount') && functionBody.includes('pending_count: pendingCount') && functionBody.includes('permanent_count: permanentCount'), "normalizeDtcSnapshot should expose snake_case DTC status counts");
@@ -18487,6 +18487,23 @@ const udsStatusAliasBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const udsStatusAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: udsStatusAliasBridgeSnapshot }))));
 check(udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.statusByte === "8A") && udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "P0300" && item.status_byte === "2F") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "U0100" && item.status_byte === "8A") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.statusByte === "2F") && udsStatusAliasRoundTrip?.vehicleCommandEnabled === false, "UDS DTC status aliases were not retained through read-only bridge export and JSON reimport");
+const udsDoipDtcOnlySnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    diagnostic_protocol: "UDS",
+    transport_protocol: "DoIP",
+    network_protocol: "Ethernet",
+    dtcs: [{ dtc_code: "U0100", status_byte: "0x8A", source_ecu: "7E0" }]
+  }
+});
+const udsDoipDtcOnlySession = obd.buildDiagnosticScanSession({ dtc_snapshot: udsDoipDtcOnlySnapshot });
+const udsDoipDtcOnlyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(udsDoipDtcOnlySession)
+}));
+check(udsDoipDtcOnlySnapshot.protocol === "UDS" && udsDoipDtcOnlySnapshot.protocolProvenance?.transportProtocol === "DoIP" && udsDoipDtcOnlySession.protocolProvenance?.diagnosticProtocol === "UDS" && udsDoipDtcOnlySession.protocolProvenance?.transportProtocol === "DoIP" && udsDoipDtcOnlySession.protocolProvenance?.networkProtocol === "Ethernet" && udsDoipDtcOnlyRoundTrip?.dtcSnapshot?.transportProtocol === "DoIP" && udsDoipDtcOnlyRoundTrip?.protocolProvenance?.networkProtocol === "Ethernet" && udsDoipDtcOnlyRoundTrip?.vehicleCommandEnabled === false && udsDoipDtcOnlyRoundTrip?.wouldTransmit === false, "DTC-only UDS over DoIP provenance was lost through read-only session export and import");
 const statusAvailabilityMaskDtcSnapshot = obd.normalizeDtcSnapshot({
   dtc_status_availability_mask: 165,
   dtcs: [{ dtc_code: "P0300", status: "stored" }]

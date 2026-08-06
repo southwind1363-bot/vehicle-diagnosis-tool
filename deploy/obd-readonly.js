@@ -3215,6 +3215,13 @@
     });
     const codes = [...new Set(dtcs.map((item) => item.code))];
     const capturedAt = data.captured_at || data.capturedAt || null;
+    const protocol = readBridgeProtocol(data);
+    const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
+    const protocolProvenance = {
+      primaryProtocol: sanitizedPrimaryProtocol,
+      primary_protocol: sanitizedPrimaryProtocol,
+      ...readBridgeProtocolProvenance(data)
+    };
     const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
     const normalizedEcuResponses = ecuRows.map((row) => ({
       ecu: row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null,
@@ -3278,7 +3285,15 @@
       dtc_status_availability_masks: dtcStatusAvailabilityMasks,
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
-      protocol: readBridgeProtocol(data),
+      protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
       sourceEcuName,
@@ -16630,6 +16645,13 @@
     const resolvedSourceEcuName = sourceEcuName || (normalizedDtcs.length === 1 ? normalizedDtcs[0].ecuName || null : null);
     const codes = [...new Set(normalizedDtcs.map((row) => row.code))];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
+    const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
+    const protocolProvenance = {
+      primaryProtocol: sanitizedPrimaryProtocol,
+      primary_protocol: sanitizedPrimaryProtocol,
+      ...readBridgeProtocolProvenance(sourceInput)
+    };
     const codeCount = codes.length;
     const dtcCount = normalizedDtcs.length;
     const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
@@ -16670,7 +16692,15 @@
       source,
       capturedAt,
       captured_at: capturedAt,
-      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
