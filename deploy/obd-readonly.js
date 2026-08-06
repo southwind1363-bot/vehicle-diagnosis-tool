@@ -18226,7 +18226,7 @@
       && udsResponseIndex + 5 < bytes.length
       && Boolean(sourceEcu);
     const udsDtcByStatusResponse = udsResponseIndex >= 0
-      && bytes[udsResponseIndex + 1] === 0x02
+      && [0x02, 0x0A, 0x0F].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
       && Boolean(sourceEcu);
@@ -18234,11 +18234,6 @@
       && [0x0B, 0x0C, 0x0D, 0x0E].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
-      && Boolean(sourceEcu);
-    const udsSupportedDtcResponse = udsResponseIndex >= 0
-      && bytes[udsResponseIndex + 1] === 0x0A
-      && udsResponseIndex + 5 < bytes.length
-      && (bytes.length - (udsResponseIndex + 2)) % 4 === 0
       && Boolean(sourceEcu);
     if (negativeDtcResponse) {
       const requestedService = negativeRequestedService.toString(16).toUpperCase().padStart(2, "0");
@@ -18271,14 +18266,10 @@
         dtcs: []
       });
     }
-    if (serviceByte === undefined && (udsDtcByStatusResponse || udsOccurrenceDtcResponse || udsSupportedDtcResponse)) {
-      const hasStatusAvailabilityMask = udsDtcByStatusResponse || udsOccurrenceDtcResponse;
-      const recordStart = hasStatusAvailabilityMask ? udsResponseIndex + 3 : udsResponseIndex + 2;
-      const dtcStatusAvailabilityMask = hasStatusAvailabilityMask
-        ? bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0")
-        : null;
+    if (serviceByte === undefined && (udsDtcByStatusResponse || udsOccurrenceDtcResponse)) {
+      const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
       const records = [];
-      for (let index = recordStart; index + 3 < bytes.length; index += 4) {
+      for (let index = udsResponseIndex + 3; index + 3 < bytes.length; index += 4) {
         records.push({
           code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
           code_format: "uds_3byte",
@@ -18294,7 +18285,7 @@
         dtc_readout_status: "reported",
         dtc_response_format: dtcResponseFormat,
         dtc_response_subfunction: dtcResponseSubfunction,
-        ...(dtcStatusAvailabilityMask ? { dtc_status_availability_mask: dtcStatusAvailabilityMask } : {}),
+        dtc_status_availability_mask: dtcStatusAvailabilityMask,
         dtcs: records
       });
     }
