@@ -206,6 +206,20 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCaptureRangeSummaryKeepsOnlyValidReadoutTimesAndPreservesTheirRange() {
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.captureRangeSummary(capturedAtValues: [
+                "2026-08-06T00:00:10Z",
+                "invalid",
+                "2026-08-06T00:00:00Z"
+            ]),
+            "2026-08-06T00:00:00Z -> 2026-08-06T00:00:10Z / 10秒"
+        )
+        XCTAssertEqual(ReadoutCoordinatorViewModel.captureRangeSummary(capturedAtValues: ["2026-08-06T00:00:00.250Z"]), "2026-08-06T00:00:00.250Z")
+        XCTAssertEqual(ReadoutCoordinatorViewModel.captureRangeSummary(capturedAtValues: ["invalid"]), "未取得")
+    }
+
+    @MainActor
     func testReadoutFailureLabelsExplainTransportStopConditions() {
         let viewModel = ReadoutCoordinatorViewModel()
 

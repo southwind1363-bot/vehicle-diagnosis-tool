@@ -109,6 +109,11 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         return Self.readoutScopeSummary(archive.completionManifest.expectedReadoutScopes)
     }
 
+    var captureRangeLabel: String {
+        guard let archive = coordinator.completedArchive else { return "未取得" }
+        return Self.captureRangeSummary(capturedAtValues: archive.envelopes.map(\.capturedAt))
+    }
+
     static func archiveState(for scanState: NativeConnectorScanState?, hasReadoutFailures: Bool = false) -> String {
         switch scanState {
         case .completed where hasReadoutFailures: return "Partial"
@@ -132,6 +137,25 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         let scopeIDs = Set(scopes.map(\.scopeID).filter { !$0.isEmpty }).sorted()
         guard !scopeIDs.isEmpty else { return "ECUスコープ未取得" }
         return "\(scopeIDs.count) ECU / \(scopeIDs.joined(separator: " / "))"
+    }
+
+    static func captureRangeSummary(capturedAtValues: [String]) -> String {
+        let captures = capturedAtValues.compactMap { value -> (value: String, date: Date)? in
+            guard let date = parseCaptureDate(value) else { return nil }
+            return (value, date)
+        }.sorted { $0.date < $1.date }
+        guard let first = captures.first, let last = captures.last else { return "未取得" }
+        guard first.date != last.date else { return first.value }
+        let spanSeconds = max(0, Int(last.date.timeIntervalSince(first.date).rounded()))
+        return "\(first.value) -> \(last.value) / \(spanSeconds)秒"
+    }
+
+    private static func parseCaptureDate(_ value: String) -> Date? {
+        let standard = ISO8601DateFormatter()
+        if let date = standard.date(from: value) { return date }
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions.insert(.withFractionalSeconds)
+        return fractional.date(from: value)
     }
 
     func readoutLabel(intent: String, readoutID: String?) -> String {
