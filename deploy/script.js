@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.73";
+const APP_VERSION = "3.6.74";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6905,6 +6905,18 @@ function formatJ2534DriverReadiness(item = null, fallback = null) {
   }[status] || fallback;
 }
 
+function formatObdDtcResponseFormat(formats = null, fallback = NO_DATA) {
+  const values = Array.isArray(formats) ? formats : [formats];
+  const labels = {
+    obd_mode03: "OBD Mode 03 (stored)",
+    obd_mode07: "OBD Mode 07 (pending)",
+    obd_mode0a: "OBD Mode 0A (permanent)",
+    uds_read_dtc_information: "UDS ReadDTCInformation (unparsed)"
+  };
+  const resolved = [...new Set(values.map((value) => labels[value] || null).filter(Boolean))];
+  return resolved.length ? resolved.join(" / ") : fallback;
+}
+
 function formatJ2534NextCheck(item = null, fallback = null) {
   const nextCheck = String(item?.nextCheck || item?.next_check || "").trim().toLowerCase();
   return {
@@ -7993,6 +8005,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     || null;
   const dtcReadoutStatusLabel = formatObdDtcReadoutStatusSummary(dtcReadoutStatusSummary, NO_DATA);
   const dtcResponseStatusLabel = formatObdReadoutStatus(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status, NO_DATA);
+  const dtcResponseFormats = dtcSnapshot?.dtcResponseFormats || dtcSnapshot?.dtc_response_formats || [dtcSnapshot?.dtcResponseFormat || dtcSnapshot?.dtc_response_format].filter(Boolean);
+  const dtcResponseFormatLabel = formatObdDtcResponseFormat(dtcResponseFormats, NO_DATA);
   const dtcStatusAvailabilityMask = dtcSnapshot?.dtcStatusAvailabilityMask || dtcSnapshot?.dtc_status_availability_mask || null;
   const dtcMetadataSummary = dtcSnapshot?.dtcMetadataSummary || dtcSnapshot?.dtc_metadata_summary || null;
   const dtcMetadataTotalCount = Number(dtcMetadataSummary?.totalCount ?? dtcMetadataSummary?.total_count ?? 0);
@@ -8147,6 +8161,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["DTC応答状態", dtcResponseStatusLabel],
+    ["DTC応答形式", dtcResponseFormatLabel],
     ["DTC読取状態", dtcReadoutStatusLabel],
     ["DTC状態ビット可用マスク", dtcStatusAvailabilityMask ? `0x${dtcStatusAvailabilityMask} (reported)` : NO_DATA],
     ["DTC詳細報告値", dtcMetadataLabel],
