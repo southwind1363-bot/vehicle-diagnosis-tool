@@ -6279,6 +6279,7 @@
     const readoutId = nextReadoutSummary.id || nextReadoutSummary.readoutId || nextReadoutSummary.readout_id || null;
     if (!readoutId) return null;
     const status = nextReadoutSummary.status || nextReadoutSummary.readoutStatus || nextReadoutSummary.readout_status || null;
+    const statusReason = nextReadoutSummary.statusReason || nextReadoutSummary.status_reason || nextReadoutSummary.readoutStatusReason || nextReadoutSummary.readout_status_reason || null;
     const source = nextReadoutSummary.source || nextReadoutSummary.readoutSource || nextReadoutSummary.readout_source || null;
     const reasonId = nextReadoutSummary.reasonId
       || nextReadoutSummary.reason_id
@@ -6296,6 +6297,8 @@
       readout_id: readoutId,
       label: nextReadoutSummary.label || nextReadoutSummary.readoutLabel || nextReadoutSummary.readout_label || readoutId,
       status,
+      statusReason,
+      status_reason: statusReason,
       source,
       reasonId,
       reason_id: reasonId,
@@ -8553,6 +8556,8 @@
       id: nextRecommendedReadoutId,
       label: nextReadoutState?.label || nextReadoutCandidate?.label || nextRecommendedReadoutId,
       status: nextReadoutState?.status || null,
+      statusReason: nextReadoutCandidate?.statusReason || nextReadoutCandidate?.status_reason || nextReadoutState?.statusReason || nextReadoutState?.status_reason || null,
+      status_reason: nextReadoutCandidate?.status_reason || nextReadoutCandidate?.statusReason || nextReadoutState?.status_reason || nextReadoutState?.statusReason || null,
       source: nextReadoutSource,
       priority: nextReadoutState?.priority ?? nextReadoutCandidate?.priority ?? null,
       queuePosition: nextReadoutQueueEntry?.position || null,
@@ -9084,6 +9089,8 @@
       next_readout_label: nextReadoutSummary?.label || null,
       nextReadoutStatus: nextReadoutSummary?.status || null,
       next_readout_status: nextReadoutSummary?.status || null,
+      nextReadoutStatusReason: nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null,
+      next_readout_status_reason: nextReadoutSummary?.status_reason || nextReadoutSummary?.statusReason || null,
       nextReadoutSource: nextReadoutSummary?.source || null,
       next_readout_source: nextReadoutSummary?.source || null,
       nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
@@ -9169,6 +9176,8 @@
       next_readout_label: nextReadoutSummary?.label || null,
       nextReadoutStatus: nextReadoutSummary?.status || null,
       next_readout_status: nextReadoutSummary?.status || null,
+      nextReadoutStatusReason: nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null,
+      next_readout_status_reason: nextReadoutSummary?.status_reason || nextReadoutSummary?.statusReason || null,
       nextReadoutSource: nextReadoutSummary?.source || null,
       next_readout_source: nextReadoutSummary?.source || null,
       nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
