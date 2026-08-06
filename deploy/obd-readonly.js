@@ -4796,6 +4796,17 @@
       || snapshot?.is_blocked === true
       || Boolean(getExplicitReadoutFailureStatus(input))
       || unavailableReadoutStatuses.has(String(readoutStatus || "").trim().toLowerCase());
+    const hasReportedDtcCount = (snapshot) => {
+      const ecuResponses = Array.isArray(snapshot?.ecuResponses)
+        ? snapshot.ecuResponses
+        : Array.isArray(snapshot?.ecu_responses)
+          ? snapshot.ecu_responses
+          : [];
+      return ecuResponses.some((response) => {
+        const count = response?.codeCount ?? response?.code_count ?? response?.dtcCount ?? response?.dtc_count ?? null;
+        return Number.isFinite(Number(count)) && Number(count) > 0;
+      });
+    };
     const items = [
       ...(includeInfrastructure ? [
       {
@@ -4823,6 +4834,7 @@
         readoutStatus: dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || null,
         safetyInput: dtcSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(dtcSnapshot, dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status, dtcSnapshotSafetyInput),
+        capturedEvidence: hasReportedDtcCount(dtcSnapshot),
         label: "DTC",
         available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && !isUnknownWithoutEvidence(dtcSnapshot, "codes", dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes)),
         count: Array.isArray(dtcSnapshot?.codes) ? dtcSnapshot.codes.length : 0
