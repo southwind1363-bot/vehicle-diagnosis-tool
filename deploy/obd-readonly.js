@@ -3240,8 +3240,10 @@
     const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
+    const hasReportedDtcCount = normalizedEcuResponses.some((row) => Number.isSafeInteger(row?.codeCount) && row.codeCount > 0);
     const dtcStatusSummary = buildDtcStatusSummary({
       reportedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false ? [defaultStatus] : [],
+      reportedCountOnlyStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false && normalizedDtcs.length === 0 && hasReportedDtcCount ? [defaultStatus] : [],
       dtcs: normalizedDtcs,
       includeObservedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
     });
@@ -16489,7 +16491,7 @@
     };
   }
 
-  function buildDtcStatusSummary({ reportedStatuses = [], dtcs = [], includeObservedStatuses = true } = {}) {
+  function buildDtcStatusSummary({ reportedStatuses = [], reportedCountOnlyStatuses = [], dtcs = [], includeObservedStatuses = true } = {}) {
     const expectedStatuses = ["stored", "pending", "permanent"];
     const normalizeStatuses = (values) => [...new Set(
       (Array.isArray(values) ? values : [values])
@@ -16497,8 +16499,9 @@
         .filter((value) => expectedStatuses.includes(value))
     )].sort((left, right) => expectedStatuses.indexOf(left) - expectedStatuses.indexOf(right));
     const observedStatuses = normalizeStatuses((Array.isArray(dtcs) ? dtcs : []).map((row) => row?.status));
-    const normalizedReportedStatuses = normalizeStatuses([...reportedStatuses, ...(includeObservedStatuses ? observedStatuses : [])]);
-    const emptyStatuses = normalizedReportedStatuses.filter((status) => !observedStatuses.includes(status));
+    const normalizedReportedCountOnlyStatuses = normalizeStatuses(reportedCountOnlyStatuses).filter((status) => !observedStatuses.includes(status));
+    const normalizedReportedStatuses = normalizeStatuses([...reportedStatuses, ...normalizedReportedCountOnlyStatuses, ...(includeObservedStatuses ? observedStatuses : [])]);
+    const emptyStatuses = normalizedReportedStatuses.filter((status) => !observedStatuses.includes(status) && !normalizedReportedCountOnlyStatuses.includes(status));
     const unreportedStatuses = expectedStatuses.filter((status) => !normalizedReportedStatuses.includes(status));
     return {
       schemaVersion: "dtc_status_summary_v1",
@@ -16509,6 +16512,8 @@
       reported_statuses: normalizedReportedStatuses,
       observedStatuses,
       observed_statuses: observedStatuses,
+      reportedCountOnlyStatuses: normalizedReportedCountOnlyStatuses,
+      reported_count_only_statuses: normalizedReportedCountOnlyStatuses,
       emptyStatuses,
       empty_statuses: emptyStatuses,
       unreportedStatuses,
@@ -16517,6 +16522,8 @@
       reported_count: normalizedReportedStatuses.length,
       observedCount: observedStatuses.length,
       observed_count: observedStatuses.length,
+      reportedCountOnlyCount: normalizedReportedCountOnlyStatuses.length,
+      reported_count_only_count: normalizedReportedCountOnlyStatuses.length,
       emptyCount: emptyStatuses.length,
       empty_count: emptyStatuses.length,
       complete: unreportedStatuses.length === 0,
@@ -16716,6 +16723,12 @@
         sourceInput.dtc_status,
         sourceInput.readoutStatus,
         sourceInput.readout_status
+      ],
+      reportedCountOnlyStatuses: [
+        ...(Array.isArray(sourceInput.reportedCountOnlyStatuses) ? sourceInput.reportedCountOnlyStatuses : []),
+        ...(Array.isArray(sourceInput.reported_count_only_statuses) ? sourceInput.reported_count_only_statuses : []),
+        ...(Array.isArray(sourceInput.dtcStatusSummary?.reportedCountOnlyStatuses) ? sourceInput.dtcStatusSummary.reportedCountOnlyStatuses : []),
+        ...(Array.isArray(sourceInput.dtc_status_summary?.reported_count_only_statuses) ? sourceInput.dtc_status_summary.reported_count_only_statuses : [])
       ],
       dtcs: normalizedDtcs,
       includeObservedStatuses: requestedReadoutStatus !== "blocked"
@@ -18268,6 +18281,10 @@
       reportedStatuses: snapshots.flatMap((snapshot) => [
         ...(Array.isArray(snapshot?.dtcStatusSummary?.reportedStatuses) ? snapshot.dtcStatusSummary.reportedStatuses : []),
         ...(Array.isArray(snapshot?.dtc_status_summary?.reported_statuses) ? snapshot.dtc_status_summary.reported_statuses : [])
+      ]),
+      reportedCountOnlyStatuses: snapshots.flatMap((snapshot) => [
+        ...(Array.isArray(snapshot?.dtcStatusSummary?.reportedCountOnlyStatuses) ? snapshot.dtcStatusSummary.reportedCountOnlyStatuses : []),
+        ...(Array.isArray(snapshot?.dtc_status_summary?.reported_count_only_statuses) ? snapshot.dtc_status_summary.reported_count_only_statuses : [])
       ]),
       dtcs: reportedRows,
       includeObservedStatuses: true

@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.94";
+const APP_VERSION = "3.6.95";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6164,9 +6164,11 @@ function formatObdDtcReadoutStatusSummary(summary = null, fallback = NO_DATA) {
     .filter(Boolean)
     .join(" / ");
   const reported = formatStatuses(readList("reportedStatuses", "reported_statuses"));
+  const countOnly = formatStatuses(readList("reportedCountOnlyStatuses", "reported_count_only_statuses"));
   const empty = formatStatuses(readList("emptyStatuses", "empty_statuses"));
   const unreported = formatStatuses(readList("unreportedStatuses", "unreported_statuses"));
   const parts = [];
+  if (countOnly) parts.push(`件数応答 ${countOnly}`);
   if (reported) parts.push(`取得 ${reported}`);
   if (empty) parts.push(`空 ${empty}`);
   if (unreported) parts.push(`未読取 ${unreported}`);
