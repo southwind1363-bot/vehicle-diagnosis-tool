@@ -13434,6 +13434,8 @@ const failedLivePidSession = obd.buildDiagnosticScanSession({
   livePidResponse: { ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"], data: { raw: "" } }
 });
 check(failedLivePidSession.readoutCoverage?.failedReadoutIds?.join(",") === "live_pid_snapshot" && failedLivePidSession.coreReadoutInventorySummary?.failedReadoutIds?.join(",") === "live_pid_snapshot", "A single failed live PID readout marked unrelated unrequested readouts as failed");
+const failedLivePidCandidate = obd.buildNextReadoutCandidates(failedLivePidSession.readoutCoverage).find((item) => item.id === "live_pid_snapshot");
+check(failedLivePidCandidate?.statusReason === "transport_error" && obd.normalizeNextReadoutCandidates([failedLivePidCandidate])?.[0]?.status_reason === "transport_error", "A failed readout reason was not retained on the safe retry candidate");
 const recoveredLivePidSession = obd.buildDiagnosticScanSession({
   readoutCoverage: failedLivePidSession.readoutCoverage,
   livePidSnapshot: { monitorValues: [{ id: "engine_speed", value: 650, unit: "rpm" }] }

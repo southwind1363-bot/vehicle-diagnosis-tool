@@ -6106,6 +6106,7 @@
     return (normalizedCoverage.items || [])
       .filter((item) => item && typeof item === "object" && (item.status === "missing" || item.status === "empty"))
       .map((item) => {
+        const statusReason = item.statusReason || item.status_reason || normalizedCoverage.failedReadoutReasonById?.[item.id] || null;
         let reason = item.status === "missing"
           ? "未読取のため次候補"
           : "読取応答が空のため再確認候補";
@@ -6158,6 +6159,8 @@
           id: item.id || "",
           label: item.label || item.id || "",
           status: item.status,
+          statusReason,
+          status_reason: statusReason,
           priority: item.id === "ecu_info_snapshot" && applicabilityEcuMismatch
             ? 103
             : item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")
@@ -7847,6 +7850,8 @@
         id: String(pickDefined(item.id, item.readout_id, item.readoutId, "") || ""),
         label: pickDefined(item.label, item.displayLabel, item.display_label, item.name, item.id, item.readout_id, item.readoutId, "") || "",
         status: typeof item.status === "string" ? item.status : "missing",
+        statusReason: pickDefined(item.statusReason, item.status_reason, item.readoutStatusReason, item.readout_status_reason, null),
+        status_reason: pickDefined(item.status_reason, item.statusReason, item.readout_status_reason, item.readoutStatusReason, null),
         priority: Number.isFinite(Number(pickDefined(item.priority, item.sort_order, item.sortOrder)))
           ? Math.round(Number(pickDefined(item.priority, item.sort_order, item.sortOrder)))
           : 0,
