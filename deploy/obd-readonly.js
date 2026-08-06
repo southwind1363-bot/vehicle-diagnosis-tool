@@ -16559,6 +16559,7 @@
         dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null,
         dtc_response_formats: input.data.dtcResponseFormats || input.data.dtc_response_formats || input.dtcResponseFormats || input.dtc_response_formats || null,
         dtc_response_format: input.data.dtcResponseFormat || input.data.dtc_response_format || input.data.responseFormat || input.data.response_format || input.dtcResponseFormat || input.dtc_response_format || input.responseFormat || input.response_format || null,
+        dtc_response_subfunction: input.data.dtcResponseSubfunction ?? input.data.dtc_response_subfunction ?? input.data.subfunction ?? input.data.sub_function ?? input.dtcResponseSubfunction ?? input.dtc_response_subfunction ?? input.subfunction ?? input.sub_function ?? null,
         ecu_responses: Array.isArray(input.data.ecu_responses) ? input.data.ecu_responses : Array.isArray(input.data.ecuResponses) ? input.data.ecuResponses : Array.isArray(input.ecu_responses) ? input.ecu_responses : Array.isArray(input.ecuResponses) ? input.ecuResponses : []
       }
       : input && typeof input === "object" ? input : {};
@@ -16700,6 +16701,7 @@
       protocolProvenance
     });
     const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
+    const dtcResponseSubfunction = normalizeUdsDtcSubfunction(sourceInput.dtcResponseSubfunction ?? sourceInput.dtc_response_subfunction ?? sourceInput.subfunction ?? sourceInput.sub_function ?? null);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(sourceInput);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -16750,6 +16752,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcResponseFormat,
       dtc_response_format: dtcResponseFormat,
+      dtcResponseSubfunction,
+      dtc_response_subfunction: dtcResponseSubfunction,
       dtcResponseFormats,
       dtc_response_formats: [...dtcResponseFormats],
       dtcStatusAvailabilityMask,
@@ -18125,6 +18129,8 @@
           : bytes.includes(0x59)
             ? "uds_read_dtc_information"
             : null;
+    const udsResponseIndex = bytes.indexOf(0x59);
+    const dtcResponseSubfunction = udsResponseIndex >= 0 ? normalizeUdsDtcSubfunction(bytes[udsResponseIndex + 1]) : null;
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
@@ -18132,6 +18138,7 @@
         protocol: input.protocol || input.obd_protocol || null,
         dtc_readout_status: hasResponseInput ? "unparsed" : "unknown",
         dtc_response_format: dtcResponseFormat,
+        dtc_response_subfunction: dtcResponseSubfunction,
         dtcs: []
       });
     }
@@ -18146,6 +18153,7 @@
         protocol: input.protocol || input.obd_protocol || null,
         dtc_readout_status: "unparsed",
         dtc_response_format: dtcResponseFormat,
+        dtc_response_subfunction: dtcResponseSubfunction,
         dtcs: []
       });
     }
@@ -18165,6 +18173,7 @@
       status,
       dtc_readout_status: "reported",
       dtc_response_format: dtcResponseFormat,
+      dtc_response_subfunction: dtcResponseSubfunction,
       dtcs: [...new Set(codes)].map((code) => ({ code, status, ...(sourceEcu ? { ecu: sourceEcu } : {}) }))
     });
   }
@@ -22553,6 +22562,12 @@
       uds_19: "uds_read_dtc_information"
     };
     return aliases[normalized] || null;
+  }
+
+  function normalizeUdsDtcSubfunction(value) {
+    if (Number.isInteger(value) && value >= 0 && value <= 0xFF) return value.toString(16).toUpperCase().padStart(2, "0");
+    const normalized = String(value ?? "").trim().toUpperCase().replace(/^0X/, "");
+    return /^[0-9A-F]{1,2}$/.test(normalized) ? normalized.padStart(2, "0") : null;
   }
 
   function readDtcResponseFormatAliases(row) {
