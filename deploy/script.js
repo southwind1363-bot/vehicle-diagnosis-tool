@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.7";
+const APP_VERSION = "3.7.8";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6966,6 +6966,7 @@ function formatUdsDtcSubfunction(value, fallback = NO_DATA) {
     "12": "reportNumberOfEmissionsRelatedOBDDTCByStatusMask",
     "13": "reportEmissionsRelatedOBDDTCByStatusMask",
     "15": "reportDTCWithPermanentStatus",
+    "17": "reportUserDefMemoryDTCByStatusMask",
     "11": "reportNumberOfMirrorMemoryDTCByStatusMask"
   };
   return labels[normalized] ? `0x${normalized} ${labels[normalized]}` : `0x${normalized}`;
@@ -8081,6 +8082,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const reportedDtcEcuCountLabel = formatObdReportedDtcEcuCountSummary(dtcSnapshot, NO_DATA);
   const dtcStatusAvailabilityMask = dtcSnapshot?.dtcStatusAvailabilityMask || dtcSnapshot?.dtc_status_availability_mask || null;
   const dtcFormatIdentifier = dtcSnapshot?.dtcFormatIdentifier || dtcSnapshot?.dtc_format_identifier || null;
+  const dtcMemorySelection = dtcSnapshot?.dtcMemorySelection || dtcSnapshot?.dtc_memory_selection || null;
   const dtcMetadataSummary = dtcSnapshot?.dtcMetadataSummary || dtcSnapshot?.dtc_metadata_summary || null;
   const dtcMetadataTotalCount = Number(dtcMetadataSummary?.totalCount ?? dtcMetadataSummary?.total_count ?? 0);
   const dtcMetadataLabel = dtcMetadataTotalCount > 0
@@ -8242,6 +8244,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC読取状態", dtcReadoutStatusLabel],
     ["DTC状態ビット可用マスク", dtcStatusAvailabilityMask ? `0x${dtcStatusAvailabilityMask} (reported)` : NO_DATA],
     ["DTC形式識別子", dtcFormatIdentifier ? `0x${dtcFormatIdentifier} (reported)` : NO_DATA],
+    ["DTCメモリ選択", dtcMemorySelection ? `0x${dtcMemorySelection} (reported)` : NO_DATA],
     ["DTC詳細報告値", dtcMetadataLabel],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["応答ECU", observedEcuLabel],

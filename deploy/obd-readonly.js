@@ -3107,7 +3107,9 @@
           dtc_response_format: response.data.dtcResponseFormat || response.data.dtc_response_format || response.data.responseFormat || response.data.response_format || response.dtcResponseFormat || response.dtc_response_format || response.responseFormat || response.response_format || null,
           dtc_response_subfunction: response.data.dtcResponseSubfunction ?? response.data.dtc_response_subfunction ?? response.data.subfunction ?? response.data.sub_function ?? response.dtcResponseSubfunction ?? response.dtc_response_subfunction ?? response.subfunction ?? response.sub_function ?? null,
           dtc_format_identifiers: response.data.dtcFormatIdentifiers || response.data.dtc_format_identifiers || response.data.formatIdentifiers || response.data.format_identifiers || response.dtcFormatIdentifiers || response.dtc_format_identifiers || response.formatIdentifiers || response.format_identifiers || null,
-          dtc_format_identifier: response.data.dtcFormatIdentifier ?? response.data.dtc_format_identifier ?? response.data.formatIdentifier ?? response.data.format_identifier ?? response.dtcFormatIdentifier ?? response.dtc_format_identifier ?? response.formatIdentifier ?? response.format_identifier ?? null
+          dtc_format_identifier: response.data.dtcFormatIdentifier ?? response.data.dtc_format_identifier ?? response.data.formatIdentifier ?? response.data.format_identifier ?? response.dtcFormatIdentifier ?? response.dtc_format_identifier ?? response.formatIdentifier ?? response.format_identifier ?? null,
+          dtc_memory_selections: response.data.dtcMemorySelections || response.data.dtc_memory_selections || response.data.memorySelections || response.data.memory_selections || response.dtcMemorySelections || response.dtc_memory_selections || response.memorySelections || response.memory_selections || null,
+          dtc_memory_selection: response.data.dtcMemorySelection ?? response.data.dtc_memory_selection ?? response.data.memorySelection ?? response.data.memory_selection ?? response.dtcMemorySelection ?? response.dtc_memory_selection ?? response.memorySelection ?? response.memory_selection ?? null
         }
         : response
       : {};
@@ -3269,6 +3271,8 @@
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcFormatIdentifiers = readDtcFormatIdentifierAliases(data);
     const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
+    const dtcMemorySelections = readDtcMemorySelectionAliases(data);
+    const dtcMemorySelection = dtcMemorySelections.length === 1 ? dtcMemorySelections[0] : null;
     const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(data);
     const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(data);
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
@@ -3321,6 +3325,10 @@
       dtc_format_identifier: dtcFormatIdentifier,
       dtcFormatIdentifiers,
       dtc_format_identifiers: [...dtcFormatIdentifiers],
+      dtcMemorySelection,
+      dtc_memory_selection: dtcMemorySelection,
+      dtcMemorySelections,
+      dtc_memory_selections: [...dtcMemorySelections],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -16612,6 +16620,8 @@
         dtc_response_subfunction: input.data.dtcResponseSubfunction ?? input.data.dtc_response_subfunction ?? input.data.subfunction ?? input.data.sub_function ?? input.dtcResponseSubfunction ?? input.dtc_response_subfunction ?? input.subfunction ?? input.sub_function ?? null,
         dtc_format_identifiers: input.data.dtcFormatIdentifiers || input.data.dtc_format_identifiers || input.data.formatIdentifiers || input.data.format_identifiers || input.dtcFormatIdentifiers || input.dtc_format_identifiers || input.formatIdentifiers || input.format_identifiers || null,
         dtc_format_identifier: input.data.dtcFormatIdentifier ?? input.data.dtc_format_identifier ?? input.data.formatIdentifier ?? input.data.format_identifier ?? input.dtcFormatIdentifier ?? input.dtc_format_identifier ?? input.formatIdentifier ?? input.format_identifier ?? null,
+        dtc_memory_selections: input.data.dtcMemorySelections || input.data.dtc_memory_selections || input.data.memorySelections || input.data.memory_selections || input.dtcMemorySelections || input.dtc_memory_selections || input.memorySelections || input.memory_selections || null,
+        dtc_memory_selection: input.data.dtcMemorySelection ?? input.data.dtc_memory_selection ?? input.data.memorySelection ?? input.data.memory_selection ?? input.dtcMemorySelection ?? input.dtc_memory_selection ?? input.memorySelection ?? input.memory_selection ?? null,
         ecu_responses: Array.isArray(input.data.ecu_responses) ? input.data.ecu_responses : Array.isArray(input.data.ecuResponses) ? input.data.ecuResponses : Array.isArray(input.ecu_responses) ? input.ecu_responses : Array.isArray(input.ecuResponses) ? input.ecuResponses : []
       }
       : input && typeof input === "object" ? input : {};
@@ -16784,6 +16794,8 @@
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcFormatIdentifiers = readDtcFormatIdentifierAliases(sourceInput);
     const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
+    const dtcMemorySelections = readDtcMemorySelectionAliases(sourceInput);
+    const dtcMemorySelection = dtcMemorySelections.length === 1 ? dtcMemorySelections[0] : null;
     const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(sourceInput);
     const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(sourceInput);
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
@@ -16848,6 +16860,10 @@
       dtc_format_identifier: dtcFormatIdentifier,
       dtcFormatIdentifiers,
       dtc_format_identifiers: [...dtcFormatIdentifiers],
+      dtcMemorySelection,
+      dtc_memory_selection: dtcMemorySelection,
+      dtcMemorySelections,
+      dtc_memory_selections: [...dtcMemorySelections],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -18255,6 +18271,11 @@
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
       && Boolean(sourceEcu);
+    const udsUserDefinedMemoryDtcResponse = udsResponseIndex >= 0
+      && bytes[udsResponseIndex + 1] === 0x17
+      && udsResponseIndex + 7 < bytes.length
+      && (bytes.length - (udsResponseIndex + 4)) % 4 === 0
+      && Boolean(sourceEcu);
     if (negativeDtcResponse) {
       const requestedService = negativeRequestedService.toString(16).toUpperCase().padStart(2, "0");
       const nrc = negativeResponseCode.toString(16).toUpperCase().padStart(2, "0");
@@ -18288,10 +18309,14 @@
         dtcs: []
       });
     }
-    if (serviceByte === undefined && (udsDtcByStatusResponse || udsEmptyDtcByStatusResponse || udsOccurrenceDtcResponse)) {
+    if (serviceByte === undefined && (udsDtcByStatusResponse || udsEmptyDtcByStatusResponse || udsOccurrenceDtcResponse || udsUserDefinedMemoryDtcResponse)) {
       const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+      const dtcMemorySelection = udsUserDefinedMemoryDtcResponse
+        ? bytes[udsResponseIndex + 3].toString(16).toUpperCase().padStart(2, "0")
+        : null;
+      const recordStart = udsUserDefinedMemoryDtcResponse ? udsResponseIndex + 4 : udsResponseIndex + 3;
       const records = [];
-      for (let index = udsResponseIndex + 3; index + 3 < bytes.length; index += 4) {
+      for (let index = recordStart; index + 3 < bytes.length; index += 4) {
         records.push({
           code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
           code_format: "uds_3byte",
@@ -18308,6 +18333,7 @@
         dtc_response_format: dtcResponseFormat,
         dtc_response_subfunction: dtcResponseSubfunction,
         dtc_status_availability_mask: dtcStatusAvailabilityMask,
+        ...(dtcMemorySelection ? { dtc_memory_selection: dtcMemorySelection } : {}),
         dtcs: records
       });
     }
@@ -18442,6 +18468,9 @@
     const dtcFormatIdentifiers = [...new Set(
       snapshots.flatMap((snapshot) => readDtcFormatIdentifierAliases(snapshot))
     )];
+    const dtcMemorySelections = [...new Set(
+      snapshots.flatMap((snapshot) => readDtcMemorySelectionAliases(snapshot))
+    )];
     const dtcNegativeResponseServices = [...new Set(
       snapshots.flatMap((snapshot) => readDtcNegativeResponseServiceAliases(snapshot))
     )];
@@ -18492,6 +18521,7 @@
     });
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
+    const dtcMemorySelection = dtcMemorySelections.length === 1 ? dtcMemorySelections[0] : null;
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
     const dtcNegativeResponseCode = dtcNegativeResponseCodes.length === 1 ? dtcNegativeResponseCodes[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -18557,6 +18587,10 @@
       dtc_format_identifier: dtcFormatIdentifier,
       dtcFormatIdentifiers,
       dtc_format_identifiers: [...dtcFormatIdentifiers],
+      dtcMemorySelection,
+      dtc_memory_selection: dtcMemorySelection,
+      dtcMemorySelections,
+      dtc_memory_selections: [...dtcMemorySelections],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -22875,6 +22909,22 @@
       row?.dtcFormatIdentifier,
       row?.format_identifier,
       row?.formatIdentifier
+    ].flatMap((item) => Array.isArray(item) ? item : [item]);
+    return [...new Set(values
+      .map((value) => normalizeDtcStatusByte(value))
+      .filter((value) => value !== null))];
+  }
+
+  function readDtcMemorySelectionAliases(row) {
+    const values = [
+      row?.dtc_memory_selections,
+      row?.dtcMemorySelections,
+      row?.memory_selections,
+      row?.memorySelections,
+      row?.dtc_memory_selection,
+      row?.dtcMemorySelection,
+      row?.memory_selection,
+      row?.memorySelection
     ].flatMap((item) => Array.isArray(item) ? item : [item]);
     return [...new Set(values
       .map((value) => normalizeDtcStatusByte(value))
