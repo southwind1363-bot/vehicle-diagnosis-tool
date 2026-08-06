@@ -16591,9 +16591,22 @@
           const ecu = redactSensitiveText(String(row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const ecuName = redactSensitiveText(String(row.ecuName || row.ecu_name || row.name || row.label || row.displayName || row.display_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const status = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
+          const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(row.intent)
+            ? row.intent
+            : ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(sourceInput.intent)
+              ? sourceInput.intent
+              : null;
           const codeCountValue = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count;
           const codeCount = Number.isSafeInteger(Number(codeCountValue)) && Number(codeCountValue) >= 0 && Number(codeCountValue) <= 10000 ? Number(codeCountValue) : null;
-          return ecu ? [ecu, { ecu, ecuName, ecu_name: ecuName, status, codeCount, code_count: codeCount }] : null;
+          return ecu ? [`${ecu}::${intent || status}`, {
+            ecu,
+            ecuName,
+            ecu_name: ecuName,
+            status,
+            ...(intent ? { intent } : {}),
+            codeCount,
+            code_count: codeCount
+          }] : null;
         })
         .filter(Boolean)
     ).values()];
@@ -18276,17 +18289,33 @@
     )];
     const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
     const ecuResponses = [...new Map(
-      snapshots
-        .flatMap((snapshot) => [snapshot?.ecuResponses, snapshot?.ecu_responses])
-        .filter(Array.isArray)
-        .flat()
-        .filter((row) => row && typeof row === "object" && !Array.isArray(row))
-        .map((row) => {
+      snapshots.flatMap((snapshot) => {
+        const rows = Array.isArray(snapshot?.ecuResponses)
+          ? snapshot.ecuResponses
+          : Array.isArray(snapshot?.ecu_responses)
+            ? snapshot.ecu_responses
+            : [];
+        const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(snapshot?.intent)
+          ? snapshot.intent
+          : null;
+        return rows
+          .filter((row) => row && typeof row === "object" && !Array.isArray(row))
+          .map((row) => {
           const ecu = redactSensitiveText(String(row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const ecuName = redactSensitiveText(String(row.ecuName || row.ecu_name || row.name || row.label || row.displayName || row.display_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-          return ecu ? [ecu, { ecu, ecuName, ecu_name: ecuName }] : null;
-        })
-        .filter(Boolean)
+          const responseStatus = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
+          const rawCount = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count ?? null;
+          const codeCount = Number.isSafeInteger(Number(rawCount)) && Number(rawCount) >= 0 && Number(rawCount) <= 10000 ? Number(rawCount) : null;
+          return ecu ? [`${ecu}::${intent || responseStatus}`, {
+            ecu,
+            ecuName,
+            ecu_name: ecuName,
+            status: responseStatus,
+            ...(intent ? { intent } : {}),
+            ...(codeCount !== null ? { codeCount, code_count: codeCount } : {})
+          }] : null;
+        });
+      }).filter(Boolean)
     ).values()];
     const errorCodes = readBridgeResponseErrorCodes({
       errors: snapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot))

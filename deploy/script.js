@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.93";
+const APP_VERSION = "3.6.94";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6135,7 +6135,12 @@ function formatObdReportedDtcEcuCountSummary(snapshot = null, fallback = "") {
     const count = response?.codeCount ?? response?.code_count ?? response?.dtcCount ?? response?.dtc_count ?? null;
     if (!Number.isFinite(Number(count)) || Number(count) <= 0) return null;
     const ecu = String(response?.ecuName || response?.ecu_name || response?.ecu || response?.ecu_id || response?.ecuId || response?.address || response?.module || response?.module_id || response?.moduleId || "ECU").trim() || "ECU";
-    return `${ecu}: ${Math.round(Number(count))}件`;
+    const intentLabel = {
+      read_stored_dtc: "保存DTC",
+      read_pending_dtc: "保留DTC",
+      read_permanent_dtc: "永久DTC"
+    }[response?.intent] || "";
+    return `${intentLabel ? `${intentLabel} ` : ""}${ecu}: ${Math.round(Number(count))}件`;
   }).filter(Boolean);
   return entries.length ? entries.join(" / ") : fallback;
 }
