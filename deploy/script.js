@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.8";
+const APP_VERSION = "3.7.9";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8093,6 +8093,9 @@ function renderObdDeveloperSessionSummary(session = null) {
   const ecuInfoResponseFormatLabel = formatObdEcuInfoResponseFormat(ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format, NO_DATA);
   const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
   const freezeFrameTriggerNumber = freezeFrameSnapshot?.triggerFrameNumber ?? freezeFrameSnapshot?.trigger_frame_number ?? null;
+  const udsDtcSnapshotRecordCount = Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords || freezeFrameSnapshot?.uds_dtc_snapshot_records)
+    ? (freezeFrameSnapshot.udsDtcSnapshotRecords || freezeFrameSnapshot.uds_dtc_snapshot_records).length
+    : 0;
   const freezeFrameNumberSummary = freezeFrameSnapshot?.freezeFrameNumberSummary || freezeFrameSnapshot?.freeze_frame_number_summary || null;
   const freezeFrameNumbersLabel = Array.isArray(freezeFrameNumberSummary?.frameValueCounts || freezeFrameNumberSummary?.frame_value_counts)
     ? (freezeFrameNumberSummary.frameValueCounts || freezeFrameNumberSummary.frame_value_counts).map((item) => `#${item.frameNumber ?? item.frame_number}: ${item.valueCount ?? item.value_count}`).join(" / ") || NO_DATA
@@ -8235,6 +8238,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["状態", connectionStatus?.displayStatus || NO_DATA],
     ...(adapterInitializationLabel ? [["VCI初期化", adapterInitializationLabel]] : []),
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
+    ["UDS FF raw records", udsDtcSnapshotRecordCount ? `${udsDtcSnapshotRecordCount} (raw evidence)` : NO_DATA],
     ...(reportedDtcEcuCountLabel !== NO_DATA ? [["ECU報告DTC件数", `${reportedDtcEcuCountLabel} (個別DTC詳細未展開)`]] : []),
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["DTC応答状態", dtcResponseStatusLabel],
