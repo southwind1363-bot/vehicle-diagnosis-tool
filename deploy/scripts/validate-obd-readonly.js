@@ -15044,7 +15044,11 @@ const compactElmLiveSession = obd.buildScanSessionFromObdText(">010C\n7E804410C1
 const unscopedCompactDtcSession = obd.buildScanSessionFromObdText(">03\n430171", { session_id: "unscoped-compact-dtc", protocol: "ISO15765-4" });
 check(compactElmDtcSession.dtcSnapshot?.dtcStatusSummary?.complete === true && compactElmDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored" && item.ecu === "7E8") && compactElmDtcSession.dtcSnapshot?.dtcStatusSummary?.emptyStatuses?.join(",") === "pending,permanent" && compactElmLiveSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726 && item.sourceEcu === "7E8") && unscopedCompactDtcSession.dtcSnapshot?.dtcReadoutStatus === "unknown" && unscopedCompactDtcSession.dtcSnapshot?.codes?.length === 0 && compactElmDtcSession.vehicleCommandEnabled === false && compactElmLiveSession.vehicleCommandEnabled === false, "Compact ELM CAN-header responses were not normalized without treating unscoped compact text as vehicle data");
 const rawDtcSourceSnapshot = obd.decodeObdDtcResponse({ raw: "43 01 71", source_ecu: "7E8" });
-check(rawDtcSourceSnapshot.dtcs.some((item) => item.code === "P0171" && item.ecu === "7E8"), "Raw DTC response did not retain an explicit source ECU");
+check(rawDtcSourceSnapshot.dtcs.some((item) => item.code === "P0171" && item.ecu === "7E8") && rawDtcSourceSnapshot.dtcResponseFormat === "obd_mode03", "Raw OBD DTC response did not retain its source ECU and response format");
+const rawUdsDtcResponse = obd.decodeObdDtcResponse({ raw: "59 02 01 23 45 8A", protocol: "UDS", source_ecu: "7E0" });
+const rawUdsDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: rawUdsDtcResponse });
+const rawUdsDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(rawUdsDtcSession)));
+check(rawUdsDtcResponse.dtcReadoutStatus === "unparsed" && rawUdsDtcResponse.dtcResponseFormat === "uds_read_dtc_information" && rawUdsDtcResponse.dtcs.length === 0 && rawUdsDtcResponse.retainedRawText === false && rawUdsDtcSession.dtcSnapshot?.dtc_response_format === "uds_read_dtc_information" && rawUdsDtcRoundTrip?.dtcSnapshot?.dtcResponseFormat === "uds_read_dtc_information" && rawUdsDtcRoundTrip?.dtcSnapshot?.dtcs?.length === 0 && rawUdsDtcRoundTrip?.vehicleCommandEnabled === false && rawUdsDtcRoundTrip?.wouldTransmit === false, "Raw UDS DTC responses must remain unparsed, raw-data-free, and read-only through session export and import");
 const compactDtcSourceSession = obd.buildScanSessionFromObdText("can0 7E8#03430171", { session_id: "compact-dtc-source", protocol: "ISO15765-4" });
 check(compactDtcSourceSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8" && item.status === "stored") && compactDtcSourceSession.vehicleCommandEnabled === false, "Compact CAN DTC log did not retain its source ECU safely");
 const mixedEcuDtcSession = obd.buildScanSessionFromObdText([
@@ -18504,6 +18508,13 @@ const udsDoipDtcOnlyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stri
   bridge_export_payload: obd.buildBridgeSessionExportPayload(udsDoipDtcOnlySession)
 }));
 check(udsDoipDtcOnlySnapshot.protocol === "UDS" && udsDoipDtcOnlySnapshot.protocolProvenance?.transportProtocol === "DoIP" && udsDoipDtcOnlySession.protocolProvenance?.diagnosticProtocol === "UDS" && udsDoipDtcOnlySession.protocolProvenance?.transportProtocol === "DoIP" && udsDoipDtcOnlySession.protocolProvenance?.networkProtocol === "Ethernet" && udsDoipDtcOnlyRoundTrip?.dtcSnapshot?.transportProtocol === "DoIP" && udsDoipDtcOnlyRoundTrip?.protocolProvenance?.networkProtocol === "Ethernet" && udsDoipDtcOnlyRoundTrip?.vehicleCommandEnabled === false && udsDoipDtcOnlyRoundTrip?.wouldTransmit === false, "DTC-only UDS over DoIP provenance was lost through read-only session export and import");
+const udsResponseFormatBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: { response_format: "service-19", dtcs: [] }
+});
+check(udsResponseFormatBridgeSnapshot.dtcResponseFormat === "uds_read_dtc_information" && udsResponseFormatBridgeSnapshot.dtc_response_format === "uds_read_dtc_information" && udsResponseFormatBridgeSnapshot.retainedRawText === false && udsResponseFormatBridgeSnapshot.wouldTransmit === false, "Bridge UDS DTC response format aliases were not normalized safely");
 const statusAvailabilityMaskDtcSnapshot = obd.normalizeDtcSnapshot({
   dtc_status_availability_mask: 165,
   dtcs: [{ dtc_code: "P0300", status: "stored" }]

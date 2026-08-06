@@ -3243,6 +3243,7 @@
       includeObservedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
     });
     const dtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
+    const dtcResponseFormat = readDtcResponseFormatAlias(data);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -3279,6 +3280,8 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      dtcResponseFormat,
+      dtc_response_format: dtcResponseFormat,
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
@@ -16677,6 +16680,7 @@
     const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
+    const dtcResponseFormat = readDtcResponseFormatAlias(sourceInput);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(sourceInput);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -16725,6 +16729,8 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      dtcResponseFormat,
+      dtc_response_format: dtcResponseFormat,
       dtcStatusAvailabilityMask,
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
@@ -18071,12 +18077,22 @@
     const hasResponseInput = hasObdResponseInput(input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const serviceByte = bytes.find((byte) => byte === 0x43 || byte === 0x47 || byte === 0x4A);
+    const dtcResponseFormat = serviceByte === 0x43
+      ? "obd_mode03"
+      : serviceByte === 0x47
+        ? "obd_mode07"
+        : serviceByte === 0x4A
+          ? "obd_mode0a"
+          : bytes.includes(0x59)
+            ? "uds_read_dtc_information"
+            : null;
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
         capturedAt: input.captured_at || input.capturedAt || null,
         protocol: input.protocol || input.obd_protocol || null,
         dtc_readout_status: hasResponseInput ? "unparsed" : "unknown",
+        dtc_response_format: dtcResponseFormat,
         dtcs: []
       });
     }
@@ -18090,6 +18106,7 @@
         captured_at: input.captured_at || input.capturedAt || null,
         protocol: input.protocol || input.obd_protocol || null,
         dtc_readout_status: "unparsed",
+        dtc_response_format: dtcResponseFormat,
         dtcs: []
       });
     }
@@ -18108,6 +18125,7 @@
       protocol: input.protocol || input.obd_protocol || null,
       status,
       dtc_readout_status: "reported",
+      dtc_response_format: dtcResponseFormat,
       dtcs: [...new Set(codes)].map((code) => ({ code, status, ...(sourceEcu ? { ecu: sourceEcu } : {}) }))
     });
   }
@@ -18189,6 +18207,10 @@
     const dtcStatusAvailabilityMasks = [...new Set(
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
+    const dtcResponseFormats = [...new Set(
+      snapshots.map((snapshot) => readDtcResponseFormatAlias(snapshot)).filter(Boolean)
+    )];
+    const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
     const ecuResponses = [...new Map(
       snapshots
         .flatMap((snapshot) => [snapshot?.ecuResponses, snapshot?.ecu_responses])
@@ -18249,6 +18271,10 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      dtcResponseFormat,
+      dtc_response_format: dtcResponseFormat,
+      dtcResponseFormats,
+      dtc_response_formats: [...dtcResponseFormats],
       ecuResponses,
       ecu_responses: ecuResponses,
       errorCodes,
@@ -22424,6 +22450,40 @@
       row?.udsStatusByte
     ].find((item) => item !== undefined && item !== null && item !== "");
     return normalizeDtcStatusByte(value);
+  }
+
+  function normalizeDtcResponseFormat(value) {
+    const normalized = String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const aliases = {
+      obd_mode03: "obd_mode03",
+      obd_mode_03: "obd_mode03",
+      mode03: "obd_mode03",
+      mode_03: "obd_mode03",
+      obd_mode07: "obd_mode07",
+      obd_mode_07: "obd_mode07",
+      mode07: "obd_mode07",
+      mode_07: "obd_mode07",
+      obd_mode0a: "obd_mode0a",
+      obd_mode_0a: "obd_mode0a",
+      mode0a: "obd_mode0a",
+      mode_0a: "obd_mode0a",
+      uds_read_dtc_information: "uds_read_dtc_information",
+      uds_read_dtc: "uds_read_dtc_information",
+      read_dtc_information: "uds_read_dtc_information",
+      service_19: "uds_read_dtc_information",
+      uds_19: "uds_read_dtc_information"
+    };
+    return aliases[normalized] || null;
+  }
+
+  function readDtcResponseFormatAlias(row) {
+    const value = [
+      row?.dtc_response_format,
+      row?.dtcResponseFormat,
+      row?.response_format,
+      row?.responseFormat
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcResponseFormat(value);
   }
 
   function readDtcStatusAvailabilityMaskAliases(row) {
