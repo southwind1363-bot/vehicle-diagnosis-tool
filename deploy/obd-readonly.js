@@ -8002,6 +8002,64 @@
     };
   }
 
+  function buildSessionCaptureIntegritySummary({
+    dtcSnapshot = {},
+    livePidSnapshot = {},
+    freezeFrameSnapshot = {},
+    readinessSnapshot = {},
+    ecuInfoSnapshot = {},
+    onboardMonitorSnapshot = {},
+    supportedPidMatrix = {}
+  } = {}) {
+    const snapshotEntries = [
+      ["dtc_snapshot", dtcSnapshot],
+      ["live_pid_snapshot", livePidSnapshot],
+      ["freeze_frame_snapshot", freezeFrameSnapshot],
+      ["readiness_snapshot", readinessSnapshot],
+      ["ecu_info_snapshot", ecuInfoSnapshot],
+      ["onboard_monitor_snapshot", onboardMonitorSnapshot],
+      ["supported_pid_matrix", supportedPidMatrix]
+    ];
+    const captureRows = snapshotEntries.flatMap(([readoutId, snapshot]) => {
+      const capturedAt = snapshot?.capturedAt || snapshot?.captured_at || snapshot?.timestamp || null;
+      return /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt))
+        ? [{ readoutId, capturedAt }]
+        : [];
+    });
+    const capturedAtValues = [...new Set(captureRows.map((row) => row.capturedAt))]
+      .sort((left, right) => Date.parse(left) - Date.parse(right));
+    const earliestCapturedAt = capturedAtValues[0] || null;
+    const latestCapturedAt = capturedAtValues.at(-1) || null;
+    const captureSpanSeconds = capturedAtValues.length > 1
+      ? Math.max(0, Math.round((Date.parse(latestCapturedAt) - Date.parse(earliestCapturedAt)) / 1000))
+      : 0;
+    const status = capturedAtValues.length > 1 ? "range" : capturedAtValues.length === 1 ? "single" : "unknown";
+    const readoutIds = [...new Set(captureRows.map((row) => row.readoutId))];
+    return {
+      schemaVersion: "session_capture_integrity_summary_v1",
+      schema_version: "session_capture_integrity_summary_v1",
+      status,
+      capturedAt: status === "single" ? earliestCapturedAt : null,
+      captured_at: status === "single" ? earliestCapturedAt : null,
+      capturedAtValues,
+      captured_at_values: [...capturedAtValues],
+      earliestCapturedAt,
+      earliest_captured_at: earliestCapturedAt,
+      latestCapturedAt,
+      latest_captured_at: latestCapturedAt,
+      captureSpanSeconds,
+      capture_span_seconds: captureSpanSeconds,
+      readoutIds,
+      readout_ids: [...readoutIds],
+      readoutCount: readoutIds.length,
+      readout_count: readoutIds.length,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function resolveSessionTemporalContext({
     input = {},
     dtcSnapshot = {},
@@ -8341,7 +8399,8 @@
     supportedPidMatrix = null,
     webSerialReadoutSummary = null,
     warnings = [],
-    nextReadoutCandidates = []
+    nextReadoutCandidates = [],
+    sessionCaptureIntegritySummary = null
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const observedEcuSummary = buildObservedEcuSummary({
@@ -8351,6 +8410,15 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      supportedPidMatrix
+    });
+    const normalizedSessionCaptureIntegritySummary = sessionCaptureIntegritySummary || buildSessionCaptureIntegritySummary({
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
       supportedPidMatrix
     });
     const vehicleApplicabilityEcuMatchSummary = buildVehicleApplicabilityEcuMatchSummary({
@@ -9146,6 +9214,8 @@
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       observedEcuSummary,
       observed_ecu_summary: observedEcuSummary,
+      sessionCaptureIntegritySummary: normalizedSessionCaptureIntegritySummary,
+      session_capture_integrity_summary: normalizedSessionCaptureIntegritySummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
       missing_readout_count: analysisBlockerSummary.missingReadoutCount,
       emptyReadoutCount: analysisBlockerSummary.emptyReadoutCount,
@@ -9202,6 +9272,8 @@
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       observedEcuSummary,
       observed_ecu_summary: observedEcuSummary,
+      sessionCaptureIntegritySummary: normalizedSessionCaptureIntegritySummary,
+      session_capture_integrity_summary: normalizedSessionCaptureIntegritySummary,
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
       include_infrastructure: normalizedCoverage.includeInfrastructure === true,
       requiredReadoutIds,
@@ -9360,6 +9432,11 @@
       || coreSessionStatus?.observed_ecu_summary
       || readiness.observedEcuSummary
       || readiness.observed_ecu_summary
+      || null;
+    const sessionCaptureIntegritySummary = coreSessionStatus?.sessionCaptureIntegritySummary
+      || coreSessionStatus?.session_capture_integrity_summary
+      || readiness.sessionCaptureIntegritySummary
+      || readiness.session_capture_integrity_summary
       || null;
     const vehicleApplicabilityEvidenceReviewRequired = pickDefined(vehicleApplicabilityEvidenceSummary?.reviewRequired, vehicleApplicabilityEvidenceSummary?.review_required, false) === true;
     const vehicleApplicabilityEvidencePresent = pickDefined(vehicleApplicabilityEvidenceSummary?.evidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, false) === true;
@@ -9783,6 +9860,8 @@
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       observedEcuSummary,
       observed_ecu_summary: observedEcuSummary,
+      sessionCaptureIntegritySummary,
+      session_capture_integrity_summary: sessionCaptureIntegritySummary,
       pendingQueueNextReadoutId: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pending_queue_next_readout_id: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pendingQueueNextReadoutStatus: readAliasValue(queueSummary, "nextReadoutStatus") || coreSessionStatus?.nextPendingReadoutState?.status || coreSessionStatus?.next_pending_readout_state?.status || null,
@@ -14827,6 +14906,13 @@
       || diagnosticFlowSummary.observedEcuSummary
       || diagnosticFlowSummary.observed_ecu_summary
       || null;
+    const sessionCaptureIntegritySummary = summary.sessionCaptureIntegritySummary
+      || summary.session_capture_integrity_summary
+      || coreSessionStatus.sessionCaptureIntegritySummary
+      || coreSessionStatus.session_capture_integrity_summary
+      || diagnosticFlowSummary.sessionCaptureIntegritySummary
+      || diagnosticFlowSummary.session_capture_integrity_summary
+      || null;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary
       || summary.next_readout_candidate_safety_summary
       || coreSessionStatus.nextReadoutCandidateSafetySummary
@@ -14986,6 +15072,7 @@
         core_session_status: coreSessionStatus,
         diagnostic_flow_summary: diagnosticFlowSummary,
         observed_ecu_summary: observedEcuSummary,
+        session_capture_integrity_summary: sessionCaptureIntegritySummary,
         next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
         readout_completion_summary: readoutCompletionSummary,
         analysis_readiness_summary: analysisReadinessSummary,
@@ -21706,6 +21793,15 @@
       ecuResponseSummary,
       supportedPidMatrix
     });
+    const sessionCaptureIntegritySummary = buildSessionCaptureIntegritySummary({
+      dtcSnapshot,
+      livePidSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      supportedPidMatrix
+    });
     const hasDtcReadoutInput = hasTypedDtcSnapshotInput
       || dtcSnapshotInput !== sessionInput
       || ["codes", "dtcs", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs", "raw", "response", "bytes"]
@@ -21792,7 +21888,8 @@
       supportedPidMatrix,
       webSerialReadoutSummary,
       warnings: resolvedWarnings,
-      nextReadoutCandidates: resolvedNextReadoutCandidates
+      nextReadoutCandidates: resolvedNextReadoutCandidates,
+      sessionCaptureIntegritySummary
     });
     const diagnosticFlowSummary = buildDiagnosticFlowSummary(coreSessionStatus);
     const nextReadoutCandidateSafetySummary = sessionInput.nextReadoutCandidateSafetySummary
@@ -21967,6 +22064,8 @@
       bridge_export_payload: bridgeExportPayload,
       coreReadoutInventorySummary,
       core_readout_inventory_summary: coreReadoutInventorySummary,
+      sessionCaptureIntegritySummary,
+      session_capture_integrity_summary: sessionCaptureIntegritySummary,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       next_readout_candidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
