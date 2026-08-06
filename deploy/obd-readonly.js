@@ -3265,6 +3265,10 @@
     const dtcResponseSubfunction = normalizeUdsDtcSubfunction(data.dtcResponseSubfunction ?? data.dtc_response_subfunction ?? data.subfunction ?? data.sub_function ?? null);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
+    const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(data);
+    const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(data);
+    const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
+    const dtcNegativeResponseCode = dtcNegativeResponseCodes.length === 1 ? dtcNegativeResponseCodes[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
       dtcs: normalizedDtcs,
       statusAvailabilityMask: dtcStatusAvailabilityMask,
@@ -3309,6 +3313,14 @@
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
       dtc_status_availability_masks: dtcStatusAvailabilityMasks,
+      dtcNegativeResponseService,
+      dtc_negative_response_service: dtcNegativeResponseService,
+      dtcNegativeResponseServices,
+      dtc_negative_response_services: [...dtcNegativeResponseServices],
+      dtcNegativeResponseCode,
+      dtc_negative_response_code: dtcNegativeResponseCode,
+      dtcNegativeResponseCodes,
+      dtc_negative_response_codes: [...dtcNegativeResponseCodes],
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
       protocol,
@@ -16760,6 +16772,10 @@
     const dtcResponseSubfunction = normalizeUdsDtcSubfunction(sourceInput.dtcResponseSubfunction ?? sourceInput.dtc_response_subfunction ?? sourceInput.subfunction ?? sourceInput.sub_function ?? null);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(sourceInput);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
+    const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(sourceInput);
+    const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(sourceInput);
+    const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
+    const dtcNegativeResponseCode = dtcNegativeResponseCodes.length === 1 ? dtcNegativeResponseCodes[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
       dtcs: normalizedDtcs,
       statusAvailabilityMask: dtcStatusAvailabilityMask,
@@ -16816,6 +16832,14 @@
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
       dtc_status_availability_masks: dtcStatusAvailabilityMasks,
+      dtcNegativeResponseService,
+      dtc_negative_response_service: dtcNegativeResponseService,
+      dtcNegativeResponseServices,
+      dtc_negative_response_services: [...dtcNegativeResponseServices],
+      dtcNegativeResponseCode,
+      dtc_negative_response_code: dtcNegativeResponseCode,
+      dtcNegativeResponseCodes,
+      dtc_negative_response_codes: [...dtcNegativeResponseCodes],
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
       retainedRawText: false,
@@ -18176,15 +18200,25 @@
     const hasResponseInput = hasObdResponseInput(input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const serviceByte = bytes.find((byte) => byte === 0x43 || byte === 0x47 || byte === 0x4A);
+    const negativeResponseIndex = bytes.findIndex((byte, index) => byte === 0x7F && Number.isInteger(bytes[index + 1]) && Number.isInteger(bytes[index + 2]));
+    const negativeRequestedService = negativeResponseIndex >= 0 ? bytes[negativeResponseIndex + 1] : null;
+    const negativeResponseCode = negativeResponseIndex >= 0 ? bytes[negativeResponseIndex + 2] : null;
+    const negativeDtcResponse = serviceByte === undefined && [0x03, 0x07, 0x0A, 0x19].includes(negativeRequestedService);
     const dtcResponseFormat = serviceByte === 0x43
       ? "obd_mode03"
       : serviceByte === 0x47
         ? "obd_mode07"
         : serviceByte === 0x4A
           ? "obd_mode0a"
-          : bytes.includes(0x59)
-            ? "uds_read_dtc_information"
-            : null;
+          : negativeRequestedService === 0x03
+            ? "obd_mode03"
+            : negativeRequestedService === 0x07
+              ? "obd_mode07"
+              : negativeRequestedService === 0x0A
+                ? "obd_mode0a"
+                : bytes.includes(0x59) || negativeRequestedService === 0x19
+                  ? "uds_read_dtc_information"
+                  : null;
     const udsResponseIndex = bytes.indexOf(0x59);
     const dtcResponseSubfunction = udsResponseIndex >= 0 ? normalizeUdsDtcSubfunction(bytes[udsResponseIndex + 1]) : null;
     const udsDtcCountResponse = udsResponseIndex >= 0
@@ -18196,6 +18230,21 @@
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
       && Boolean(sourceEcu);
+    if (negativeDtcResponse) {
+      const requestedService = negativeRequestedService.toString(16).toUpperCase().padStart(2, "0");
+      const nrc = negativeResponseCode.toString(16).toUpperCase().padStart(2, "0");
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+        captured_at: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: "unparsed",
+        dtc_response_format: dtcResponseFormat,
+        dtc_negative_response_service: requestedService,
+        dtc_negative_response_code: nrc,
+        dtcs: []
+      });
+    }
     if (serviceByte === undefined && udsDtcCountResponse) {
       const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
       const dtcCount = (bytes[udsResponseIndex + 4] << 8) | bytes[udsResponseIndex + 5];
@@ -18363,6 +18412,12 @@
     const dtcStatusAvailabilityMasks = [...new Set(
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
+    const dtcNegativeResponseServices = [...new Set(
+      snapshots.flatMap((snapshot) => readDtcNegativeResponseServiceAliases(snapshot))
+    )];
+    const dtcNegativeResponseCodes = [...new Set(
+      snapshots.flatMap((snapshot) => readDtcNegativeResponseCodeAliases(snapshot))
+    )];
     const dtcResponseFormats = [...new Set(
       snapshots.flatMap((snapshot) => readDtcResponseFormatAliases(snapshot))
     )];
@@ -18400,6 +18455,8 @@
       errors: snapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot))
     });
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
+    const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
+    const dtcNegativeResponseCode = dtcNegativeResponseCodes.length === 1 ? dtcNegativeResponseCodes[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
       dtcs: mergedRows,
       statusAvailabilityMask: dtcStatusAvailabilityMask,
@@ -18455,6 +18512,14 @@
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
       dtc_status_availability_masks: dtcStatusAvailabilityMasks,
+      dtcNegativeResponseService,
+      dtc_negative_response_service: dtcNegativeResponseService,
+      dtcNegativeResponseServices,
+      dtc_negative_response_services: [...dtcNegativeResponseServices],
+      dtcNegativeResponseCode,
+      dtc_negative_response_code: dtcNegativeResponseCode,
+      dtcNegativeResponseCodes,
+      dtc_negative_response_codes: [...dtcNegativeResponseCodes],
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
       retainedRawText: false
@@ -22749,6 +22814,28 @@
     return [...new Set(values
       .map((value) => normalizeDtcStatusByte(value))
       .filter((value) => value !== null))];
+  }
+
+  function readDtcNegativeResponseByteAliases(row, singularKeys = [], pluralKeys = []) {
+    const values = [
+      ...pluralKeys.flatMap((key) => Array.isArray(row?.[key]) ? row[key] : []),
+      ...singularKeys.map((key) => row?.[key])
+    ];
+    return [...new Set(values.map((value) => normalizeDtcStatusByte(value)).filter(Boolean))];
+  }
+
+  function readDtcNegativeResponseServiceAliases(row) {
+    return readDtcNegativeResponseByteAliases(row,
+      ["dtcNegativeResponseService", "dtc_negative_response_service", "negativeResponseService", "negative_response_service"],
+      ["dtcNegativeResponseServices", "dtc_negative_response_services", "negativeResponseServices", "negative_response_services"]
+    );
+  }
+
+  function readDtcNegativeResponseCodeAliases(row) {
+    return readDtcNegativeResponseByteAliases(row,
+      ["dtcNegativeResponseCode", "dtc_negative_response_code", "negativeResponseCode", "negative_response_code"],
+      ["dtcNegativeResponseCodes", "dtc_negative_response_codes", "negativeResponseCodes", "negative_response_codes"]
+    );
   }
 
   function readDtcStatusAvailabilityMaskAlias(row) {
