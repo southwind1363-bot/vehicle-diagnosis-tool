@@ -3105,7 +3105,9 @@
           dtc_readout_status: response.data.dtcReadoutStatus || response.data.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null,
           dtc_response_formats: response.data.dtcResponseFormats || response.data.dtc_response_formats || response.dtcResponseFormats || response.dtc_response_formats || null,
           dtc_response_format: response.data.dtcResponseFormat || response.data.dtc_response_format || response.data.responseFormat || response.data.response_format || response.dtcResponseFormat || response.dtc_response_format || response.responseFormat || response.response_format || null,
-          dtc_response_subfunction: response.data.dtcResponseSubfunction ?? response.data.dtc_response_subfunction ?? response.data.subfunction ?? response.data.sub_function ?? response.dtcResponseSubfunction ?? response.dtc_response_subfunction ?? response.subfunction ?? response.sub_function ?? null
+          dtc_response_subfunction: response.data.dtcResponseSubfunction ?? response.data.dtc_response_subfunction ?? response.data.subfunction ?? response.data.sub_function ?? response.dtcResponseSubfunction ?? response.dtc_response_subfunction ?? response.subfunction ?? response.sub_function ?? null,
+          dtc_format_identifiers: response.data.dtcFormatIdentifiers || response.data.dtc_format_identifiers || response.data.formatIdentifiers || response.data.format_identifiers || response.dtcFormatIdentifiers || response.dtc_format_identifiers || response.formatIdentifiers || response.format_identifiers || null,
+          dtc_format_identifier: response.data.dtcFormatIdentifier ?? response.data.dtc_format_identifier ?? response.data.formatIdentifier ?? response.data.format_identifier ?? response.dtcFormatIdentifier ?? response.dtc_format_identifier ?? response.formatIdentifier ?? response.format_identifier ?? null
         }
         : response
       : {};
@@ -3265,6 +3267,8 @@
     const dtcResponseSubfunction = normalizeUdsDtcSubfunction(data.dtcResponseSubfunction ?? data.dtc_response_subfunction ?? data.subfunction ?? data.sub_function ?? null);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
+    const dtcFormatIdentifiers = readDtcFormatIdentifierAliases(data);
+    const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
     const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(data);
     const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(data);
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
@@ -3313,6 +3317,10 @@
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
       dtc_status_availability_masks: dtcStatusAvailabilityMasks,
+      dtcFormatIdentifier,
+      dtc_format_identifier: dtcFormatIdentifier,
+      dtcFormatIdentifiers,
+      dtc_format_identifiers: [...dtcFormatIdentifiers],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -16602,6 +16610,8 @@
         dtc_response_formats: input.data.dtcResponseFormats || input.data.dtc_response_formats || input.dtcResponseFormats || input.dtc_response_formats || null,
         dtc_response_format: input.data.dtcResponseFormat || input.data.dtc_response_format || input.data.responseFormat || input.data.response_format || input.dtcResponseFormat || input.dtc_response_format || input.responseFormat || input.response_format || null,
         dtc_response_subfunction: input.data.dtcResponseSubfunction ?? input.data.dtc_response_subfunction ?? input.data.subfunction ?? input.data.sub_function ?? input.dtcResponseSubfunction ?? input.dtc_response_subfunction ?? input.subfunction ?? input.sub_function ?? null,
+        dtc_format_identifiers: input.data.dtcFormatIdentifiers || input.data.dtc_format_identifiers || input.data.formatIdentifiers || input.data.format_identifiers || input.dtcFormatIdentifiers || input.dtc_format_identifiers || input.formatIdentifiers || input.format_identifiers || null,
+        dtc_format_identifier: input.data.dtcFormatIdentifier ?? input.data.dtc_format_identifier ?? input.data.formatIdentifier ?? input.data.format_identifier ?? input.dtcFormatIdentifier ?? input.dtc_format_identifier ?? input.formatIdentifier ?? input.format_identifier ?? null,
         ecu_responses: Array.isArray(input.data.ecu_responses) ? input.data.ecu_responses : Array.isArray(input.data.ecuResponses) ? input.data.ecuResponses : Array.isArray(input.ecu_responses) ? input.ecu_responses : Array.isArray(input.ecuResponses) ? input.ecuResponses : []
       }
       : input && typeof input === "object" ? input : {};
@@ -16772,6 +16782,8 @@
     const dtcResponseSubfunction = normalizeUdsDtcSubfunction(sourceInput.dtcResponseSubfunction ?? sourceInput.dtc_response_subfunction ?? sourceInput.subfunction ?? sourceInput.sub_function ?? null);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(sourceInput);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
+    const dtcFormatIdentifiers = readDtcFormatIdentifierAliases(sourceInput);
+    const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
     const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(sourceInput);
     const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(sourceInput);
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
@@ -16832,6 +16844,10 @@
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
       dtc_status_availability_masks: dtcStatusAvailabilityMasks,
+      dtcFormatIdentifier,
+      dtc_format_identifier: dtcFormatIdentifier,
+      dtcFormatIdentifiers,
+      dtc_format_identifiers: [...dtcFormatIdentifiers],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -18222,7 +18238,7 @@
     const udsResponseIndex = bytes.indexOf(0x59);
     const dtcResponseSubfunction = udsResponseIndex >= 0 ? normalizeUdsDtcSubfunction(bytes[udsResponseIndex + 1]) : null;
     const udsDtcCountResponse = udsResponseIndex >= 0
-      && [0x01, 0x11, 0x12].includes(bytes[udsResponseIndex + 1])
+      && [0x01, 0x07, 0x11, 0x12].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 5 < bytes.length
       && Boolean(sourceEcu);
     const udsDtcByStatusResponse = udsResponseIndex >= 0
@@ -18252,6 +18268,7 @@
     }
     if (serviceByte === undefined && udsDtcCountResponse) {
       const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+      const dtcFormatIdentifier = bytes[udsResponseIndex + 3].toString(16).toUpperCase().padStart(2, "0");
       const dtcCount = (bytes[udsResponseIndex + 4] << 8) | bytes[udsResponseIndex + 5];
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
@@ -18262,6 +18279,7 @@
         dtc_response_format: dtcResponseFormat,
         dtc_response_subfunction: dtcResponseSubfunction,
         dtc_status_availability_mask: dtcStatusAvailabilityMask,
+        dtc_format_identifier: dtcFormatIdentifier,
         ecu_responses: [{ ecu: sourceEcu, status: "reported", dtc_count: dtcCount }],
         dtcs: []
       });
@@ -18417,6 +18435,9 @@
     const dtcStatusAvailabilityMasks = [...new Set(
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
+    const dtcFormatIdentifiers = [...new Set(
+      snapshots.flatMap((snapshot) => readDtcFormatIdentifierAliases(snapshot))
+    )];
     const dtcNegativeResponseServices = [...new Set(
       snapshots.flatMap((snapshot) => readDtcNegativeResponseServiceAliases(snapshot))
     )];
@@ -18466,6 +18487,7 @@
       errors: snapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot))
     });
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
+    const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
     const dtcNegativeResponseCode = dtcNegativeResponseCodes.length === 1 ? dtcNegativeResponseCodes[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -18527,6 +18549,10 @@
       dtc_status_availability_mask: dtcStatusAvailabilityMask,
       dtcStatusAvailabilityMasks,
       dtc_status_availability_masks: dtcStatusAvailabilityMasks,
+      dtcFormatIdentifier,
+      dtc_format_identifier: dtcFormatIdentifier,
+      dtcFormatIdentifiers,
+      dtc_format_identifiers: [...dtcFormatIdentifiers],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -22829,6 +22855,22 @@
       row?.statusAvailabilityMask,
       row?.dtc_status_mask,
       row?.dtcStatusMask
+    ].flatMap((item) => Array.isArray(item) ? item : [item]);
+    return [...new Set(values
+      .map((value) => normalizeDtcStatusByte(value))
+      .filter((value) => value !== null))];
+  }
+
+  function readDtcFormatIdentifierAliases(row) {
+    const values = [
+      row?.dtc_format_identifiers,
+      row?.dtcFormatIdentifiers,
+      row?.format_identifiers,
+      row?.formatIdentifiers,
+      row?.dtc_format_identifier,
+      row?.dtcFormatIdentifier,
+      row?.format_identifier,
+      row?.formatIdentifier
     ].flatMap((item) => Array.isArray(item) ? item : [item]);
     return [...new Set(values
       .map((value) => normalizeDtcStatusByte(value))
