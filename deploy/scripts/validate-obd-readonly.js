@@ -13438,6 +13438,8 @@ const failedLivePidCandidate = obd.buildNextReadoutCandidates(failedLivePidSessi
 check(failedLivePidCandidate?.statusReason === "transport_error" && obd.normalizeNextReadoutCandidates([failedLivePidCandidate])?.[0]?.status_reason === "transport_error", "A failed readout reason was not retained on the safe retry candidate");
 const failedLivePidNextSummarySession = obd.buildDiagnosticScanSession({ readoutCoverage: failedLivePidSession.readoutCoverage, nextReadoutCandidates: [failedLivePidCandidate] });
 check(failedLivePidNextSummarySession.nextReadoutReasonSummary?.statusReason === "transport_error", "A failed readout reason was not retained in the next-readout summary");
+const failedLivePidNextSummaryReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(failedLivePidNextSummarySession)));
+check(failedLivePidNextSummaryReimport?.nextReadoutReasonSummary?.statusReason === "transport_error" && failedLivePidNextSummaryReimport?.nextReadoutCandidates?.[0]?.statusReason === "transport_error", "A trusted bridge export lost the failed readout reason during JSON reimport");
 const recoveredLivePidSession = obd.buildDiagnosticScanSession({
   readoutCoverage: failedLivePidSession.readoutCoverage,
   livePidSnapshot: { monitorValues: [{ id: "engine_speed", value: 650, unit: "rpm" }] }

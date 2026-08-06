@@ -19261,6 +19261,12 @@
       && normalizeReadoutCoverageSnapshot(trustedReadoutCoverage).failedReadoutIds.length > 0
       ? trustedReadoutCoverage
       : null;
+    const trustedNextReadoutCandidates = isTrustedBridgeSessionExport
+      ? pick("nextReadoutCandidates", "next_readout_candidates")
+      : null;
+    const trustedNextReadoutReasonSummary = isTrustedBridgeSessionExport
+      ? pick("nextReadoutReasonSummary", "next_readout_reason_summary")
+      : null;
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
@@ -19606,6 +19612,8 @@
       vciDevices: vciDevicesInput || undefined,
       adapterIdentity: adapterIdentityInput || undefined,
       readoutCoverage: trustedFailedReadoutCoverage || undefined,
+      nextReadoutCandidates: trustedNextReadoutCandidates || undefined,
+      nextReadoutReasonSummary: trustedNextReadoutReasonSummary || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       observationContext: scannerJsonObservationContext || undefined,
