@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.62";
+const APP_VERSION = "3.6.63";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6491,6 +6491,15 @@ function formatNextReadoutReasonSummary(summary = null, fallback = NO_DATA) {
   const readoutId = summary.readoutId || summary.readout_id || "";
   const label = summary.label || summary.readoutLabel || summary.readout_label || formatCoreReadoutLabel(readoutId, readoutId);
   const status = summary.status || summary.readoutStatus || summary.readout_status || "";
+  const statusReason = summary.statusReason || summary.status_reason || summary.readoutStatusReason || summary.readout_status_reason || "";
+  const statusReasonLabel = {
+    transport_safety_blocked: "通信安全停止",
+    blocked_readout: "読取拒否",
+    not_supported: "非対応",
+    transport_error: "通信エラー",
+    unparsed_response: "応答未解析",
+    unknown_response: "応答不明"
+  }[statusReason] || "";
   const reasonId = summary.reasonId || summary.reason_id || summary.reason || "";
   const queuePositionValue = summary.queuePosition ?? summary.queue_position;
   const bridgeIntent = summary.bridgeIntent || summary.bridge_intent || summary.readoutRequest?.bridgeIntent || summary.readout_request?.bridge_intent || "";
@@ -6498,6 +6507,7 @@ function formatNextReadoutReasonSummary(summary = null, fallback = NO_DATA) {
   const parts = [];
   if (label) parts.push(label);
   if (status) parts.push(status);
+  if (statusReasonLabel) parts.push(statusReasonLabel);
   if (reasonId) parts.push(reasonId);
   if (Number.isFinite(Number(queuePositionValue))) parts.push(`queue ${Number(queuePositionValue)}`);
   if (bridgeIntent) parts.push(bridgeIntent);
