@@ -17861,6 +17861,7 @@
   function normalizeEcuInfoValue(row, index) {
     if (!row || typeof row !== "object") return null;
     const infoType = String(row.info_type || row.infoType || row.mode09_type || row.mode09Type || row.type || "").toUpperCase();
+    const dataIdentifier = normalizeUdsDataIdentifier(row.data_identifier ?? row.dataIdentifier ?? row.did ?? row.did_id ?? row.didId ?? null);
     const rowId = row.id || row.item_id || row.itemId || row.mode09_id || row.mode09Id;
     const catalogItem = ecuInfoItemCatalog.find((item) => item.id === rowId || item.infoType === infoType);
     const id = catalogItem?.id || String(rowId || `ecu_info_${index + 1}`).slice(0, 80);
@@ -17883,6 +17884,8 @@
       label: catalogItem?.label || row.label || row.displayLabel || row.display_label || id,
       service: catalogItem?.service || row.service || row.service_mode || row.serviceMode || "09",
       infoType: catalogItem?.infoType || infoType || null,
+      dataIdentifier,
+      data_identifier: dataIdentifier,
       value,
       valueType: catalogItem?.valueType || row.value_type || row.valueType || row.typeOfValue || "text",
       sourceEcu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
@@ -18293,6 +18296,14 @@
       dtc_metadata_summary: dtcMetadataSummary,
       retainedRawText: false
     };
+  }
+
+  function normalizeUdsDataIdentifier(value) {
+    if (Number.isInteger(value) && value >= 0 && value <= 0xFFFF) {
+      return value.toString(16).toUpperCase().padStart(4, "0");
+    }
+    const normalized = String(value ?? "").trim().toUpperCase().replace(/^0X/, "");
+    return /^[0-9A-F]{1,4}$/.test(normalized) ? normalized.padStart(4, "0") : null;
   }
 
   function normalizeTypedDtcSnapshotInput(input = null, status = "stored", intent = "read_stored_dtc") {
