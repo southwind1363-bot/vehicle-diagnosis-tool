@@ -4007,6 +4007,19 @@ const nativeCompletionManifest = Object.freeze({
 });
 const manifestNativeScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest });
 check(nativeConnectorContract.completionManifestSchemaVersion === "native_connector_completion_manifest_v1" && nativeConnectorContract.completionManifestRecordType === "completion_manifest" && manifestNativeScanSession.ok === true && manifestNativeScanSession.scanState === "completed" && manifestNativeScanSession.partial === false && manifestNativeScanSession.completionManifest?.recordType === "completion_manifest" && manifestNativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && manifestNativeScanSession.vehicleCommandEnabled === false, "Native connector terminal manifest did not produce a complete read-only session");
+const nativeQuickReadoutBatch = nativeScanBatch
+  .filter((envelope) => ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_supported_pids", "read_live_pid_snapshot"].includes(envelope.intent))
+  .sort((left, right) => left.sequence - right.sequence)
+  .map((envelope, sequence) => ({ ...envelope, sequence }));
+const nativeQuickExpectedReadouts = ["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "supported_pid_matrix", "readiness_snapshot", "live_pid_snapshot"];
+const nativeQuickReadoutManifest = {
+  ...nativeCompletionManifest,
+  expected_intents: [...new Set(nativeQuickReadoutBatch.map((envelope) => envelope.intent))],
+  expected_readouts: nativeQuickExpectedReadouts,
+  connection_segments: [{ ...nativeCompletionManifest.connection_segments[0], last_sequence: nativeQuickReadoutBatch.length - 1, envelope_count: nativeQuickReadoutBatch.length }]
+};
+const nativeQuickReadoutSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeQuickReadoutBatch, completion_manifest: nativeQuickReadoutManifest });
+check(nativeQuickReadoutSession.ok === true && nativeQuickReadoutSession.scanState === "completed" && nativeQuickReadoutSession.partial === false && nativeQuickReadoutSession.session?.nativeConnectorScanLifecycle?.missingReadouts?.length === 0 && nativeQuickReadoutSession.session?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed") && nativeQuickReadoutSession.session?.coreSessionStatus?.readyForAnalysis === false && nativeQuickReadoutSession.session?.coreSessionStatus?.remainingReadoutIds?.includes("freeze_frame_snapshot") && nativeQuickReadoutSession.session?.coreSessionStatus?.remainingReadoutIds?.includes("ecu_info_snapshot") && nativeQuickReadoutSession.vehicleCommandEnabled === false, "iPhone quick readout must import as a complete narrow capture without claiming full diagnostic analysis readiness");
 const partialNativeCompletionBatch = nativeScanBatch.map((envelope) => envelope.intent === "read_permanent_dtc" ? {
   ...envelope,
   readout_id: "permanent_dtc_snapshot",
