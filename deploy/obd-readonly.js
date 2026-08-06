@@ -17508,6 +17508,12 @@
     if (Array.isArray(input.mode_09_values)) return input.mode_09_values;
     if (Array.isArray(input.info_values)) return input.info_values;
     if (Array.isArray(input.infoValues)) return input.infoValues;
+    if (Array.isArray(input.uds_data_identifiers)) return input.uds_data_identifiers;
+    if (Array.isArray(input.udsDataIdentifiers)) return input.udsDataIdentifiers;
+    if (Array.isArray(input.uds_did_items)) return input.uds_did_items;
+    if (Array.isArray(input.udsDidItems)) return input.udsDidItems;
+    if (Array.isArray(input.data_identifiers)) return input.data_identifiers;
+    if (Array.isArray(input.dataIdentifiers)) return input.dataIdentifiers;
     if (!input || typeof input !== "object") return [];
     const aliases = [
       ["supported_info_types_00", "supported_info_types_00", "00"],
