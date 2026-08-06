@@ -18173,6 +18173,26 @@
             : null;
     const udsResponseIndex = bytes.indexOf(0x59);
     const dtcResponseSubfunction = udsResponseIndex >= 0 ? normalizeUdsDtcSubfunction(bytes[udsResponseIndex + 1]) : null;
+    const udsDtcCountResponse = udsResponseIndex >= 0
+      && bytes[udsResponseIndex + 1] === 0x01
+      && udsResponseIndex + 5 < bytes.length
+      && Boolean(sourceEcu);
+    if (serviceByte === undefined && udsDtcCountResponse) {
+      const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+      const dtcCount = (bytes[udsResponseIndex + 4] << 8) | bytes[udsResponseIndex + 5];
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        source_ecu: sourceEcu,
+        captured_at: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: "reported",
+        dtc_response_format: dtcResponseFormat,
+        dtc_response_subfunction: dtcResponseSubfunction,
+        dtc_status_availability_mask: dtcStatusAvailabilityMask,
+        ecu_responses: [{ ecu: sourceEcu, status: "reported", dtc_count: dtcCount }],
+        dtcs: []
+      });
+    }
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
