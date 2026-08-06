@@ -18230,6 +18230,11 @@
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
       && Boolean(sourceEcu);
+    const udsSupportedDtcResponse = udsResponseIndex >= 0
+      && bytes[udsResponseIndex + 1] === 0x0A
+      && udsResponseIndex + 5 < bytes.length
+      && (bytes.length - (udsResponseIndex + 2)) % 4 === 0
+      && Boolean(sourceEcu);
     if (negativeDtcResponse) {
       const requestedService = negativeRequestedService.toString(16).toUpperCase().padStart(2, "0");
       const nrc = negativeResponseCode.toString(16).toUpperCase().padStart(2, "0");
@@ -18261,10 +18266,13 @@
         dtcs: []
       });
     }
-    if (serviceByte === undefined && udsDtcByStatusResponse) {
-      const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+    if (serviceByte === undefined && (udsDtcByStatusResponse || udsSupportedDtcResponse)) {
+      const recordStart = udsDtcByStatusResponse ? udsResponseIndex + 3 : udsResponseIndex + 2;
+      const dtcStatusAvailabilityMask = udsDtcByStatusResponse
+        ? bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0")
+        : null;
       const records = [];
-      for (let index = udsResponseIndex + 3; index + 3 < bytes.length; index += 4) {
+      for (let index = recordStart; index + 3 < bytes.length; index += 4) {
         records.push({
           code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
           code_format: "uds_3byte",
@@ -18280,7 +18288,7 @@
         dtc_readout_status: "reported",
         dtc_response_format: dtcResponseFormat,
         dtc_response_subfunction: dtcResponseSubfunction,
-        dtc_status_availability_mask: dtcStatusAvailabilityMask,
+        ...(dtcStatusAvailabilityMask ? { dtc_status_availability_mask: dtcStatusAvailabilityMask } : {}),
         dtcs: records
       });
     }
@@ -18422,6 +18430,12 @@
       snapshots.flatMap((snapshot) => readDtcResponseFormatAliases(snapshot))
     )];
     const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
+    const dtcResponseSubfunctions = [...new Set(
+      snapshots
+        .map((snapshot) => normalizeUdsDtcSubfunction(snapshot?.dtcResponseSubfunction ?? snapshot?.dtc_response_subfunction ?? snapshot?.subfunction ?? snapshot?.sub_function ?? null))
+        .filter(Boolean)
+    )];
+    const dtcResponseSubfunction = dtcResponseSubfunctions.length === 1 ? dtcResponseSubfunctions[0] : null;
     const ecuResponses = [...new Map(
       snapshots.flatMap((snapshot) => {
         const rows = Array.isArray(snapshot?.ecuResponses)
@@ -18504,6 +18518,10 @@
       dtc_response_format: dtcResponseFormat,
       dtcResponseFormats,
       dtc_response_formats: [...dtcResponseFormats],
+      dtcResponseSubfunction,
+      dtc_response_subfunction: dtcResponseSubfunction,
+      dtcResponseSubfunctions,
+      dtc_response_subfunctions: [...dtcResponseSubfunctions],
       ecuResponses,
       ecu_responses: ecuResponses,
       errorCodes,
