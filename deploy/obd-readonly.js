@@ -17646,7 +17646,12 @@
     const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured);
     const supportedInfoTypesItem = items.find((item) => item.id === "supported_info_types_00");
     const supportedInfoTypesSummary = decodeMode09SupportedInfoTypes(supportedInfoTypesItem?.value);
-    const ecuInfoResponseFormat = readEcuInfoResponseFormatAlias(sourceInput);
+    const explicitEcuInfoResponseFormat = readEcuInfoResponseFormatAlias(sourceInput);
+    const protocolEvidence = `${protocolProvenance.diagnosticProtocol || ""} ${protocol || ""}`;
+    const ecuInfoResponseFormat = explicitEcuInfoResponseFormat
+      || (items.some((item) => item.dataIdentifier || item.data_identifier) && /\buds\b/i.test(protocolEvidence)
+        ? "uds_read_data_by_identifier"
+        : null);
     const explicitReadoutStatus = pickDefined(
       sourceInput.ecuInfoReadoutStatus,
       sourceInput.ecu_info_readout_status,
