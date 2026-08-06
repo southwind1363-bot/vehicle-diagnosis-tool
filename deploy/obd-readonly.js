@@ -3055,7 +3055,7 @@
   }
 
   function normalizeProtocolProvenanceValue(value) {
-    const text = redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim();
+    const text = redactSensitiveTextForRetention(String(value || "")).replace(/\s+/g, " ").trim();
     return text ? text.slice(0, 120) : null;
   }
 
@@ -3068,6 +3068,23 @@
     const diagnosticProtocol = normalizeProtocolProvenanceValue(data.diagnostic_protocol || data.diagnosticProtocol || nested.diagnostic_protocol || nested.diagnosticProtocol);
     const transportProtocol = normalizeProtocolProvenanceValue(data.transport_protocol || data.transportProtocol || nested.transport_protocol || nested.transportProtocol);
     const networkProtocol = normalizeProtocolProvenanceValue(data.network_protocol || data.networkProtocol || nested.network_protocol || nested.networkProtocol);
+    return {
+      diagnosticProtocol,
+      diagnostic_protocol: diagnosticProtocol,
+      transportProtocol,
+      transport_protocol: transportProtocol,
+      networkProtocol,
+      network_protocol: networkProtocol
+    };
+  }
+
+  function mergeProtocolProvenance(...sources) {
+    const entries = sources
+      .filter((source) => source && typeof source === "object" && !Array.isArray(source))
+      .map((source) => readBridgeProtocolProvenance(source));
+    const diagnosticProtocol = entries.map((entry) => entry.diagnosticProtocol).find(Boolean) || null;
+    const transportProtocol = entries.map((entry) => entry.transportProtocol).find(Boolean) || null;
+    const networkProtocol = entries.map((entry) => entry.networkProtocol).find(Boolean) || null;
     return {
       diagnosticProtocol,
       diagnostic_protocol: diagnosticProtocol,
@@ -22037,6 +22054,22 @@
       ...freezeFrameSnapshot.monitorValues
     ], mergedMonitorValueSummary);
     const resolvedImportClassification = resolveImportClassification(importClassification);
+    const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
+    const protocolProvenance = {
+      primaryProtocol: sanitizedPrimaryProtocol,
+      primary_protocol: sanitizedPrimaryProtocol,
+      ...mergeProtocolProvenance(
+        sessionInput,
+        dtcSnapshot,
+        livePidSnapshot,
+        freezeFrameSnapshot,
+        readinessSnapshot,
+        ecuInfoSnapshot,
+        onboardMonitorSnapshot,
+        ecuResponseSummary,
+        supportedPidMatrix
+      )
+    };
 
     return sanitizeSensitiveIdentifiersForRetention({
       schemaVersion: "scan_session_v1",
@@ -22057,6 +22090,14 @@
       captured_at: capturedAt,
       protocol,
       obd_protocol: protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       vehicleProfile: resolvedMetadata.vehicleProfile,
       vehicle_profile: resolvedMetadata.vehicleProfile,
       vehicleApplicability: resolvedMetadata.vehicleApplicability,

@@ -7957,6 +7957,14 @@ const bridgeUdsDoipProtocolRoundTrip = obd.buildDiagnosticScanSessionFromJson(JS
   bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeUdsDoipProtocolEcuInfoSnapshot }))
 }));
 check(bridgeUdsDoipProtocolEcuInfoSnapshot.protocol === "UDS" && bridgeUdsDoipProtocolEcuInfoSnapshot.diagnosticProtocol === "UDS" && bridgeUdsDoipProtocolEcuInfoSnapshot.transportProtocol === "DoIP" && bridgeUdsDoipProtocolEcuInfoSnapshot.networkProtocol === "Ethernet" && bridgeUdsDoipProtocolRoundTrip?.ecuInfoSnapshot?.diagnosticProtocol === "UDS" && bridgeUdsDoipProtocolRoundTrip?.ecuInfoSnapshot?.transportProtocol === "DoIP" && bridgeUdsDoipProtocolRoundTrip?.ecuInfoSnapshot?.networkProtocol === "Ethernet" && bridgeUdsDoipProtocolRoundTrip?.vehicleCommandEnabled === false && bridgeUdsDoipProtocolRoundTrip?.wouldTransmit === false, "Bridge ECU information lost UDS over DoIP provenance through read-only export and import");
+const bridgeUdsDoipProtocolSession = obd.buildDiagnosticScanSession({
+  protocol: "ISO15765-4",
+  ecu_info_snapshot: bridgeUdsDoipProtocolEcuInfoSnapshot
+});
+const bridgeUdsDoipProtocolSessionRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(bridgeUdsDoipProtocolSession)
+}));
+check(bridgeUdsDoipProtocolSession.protocol === "ISO15765-4" && bridgeUdsDoipProtocolSession.protocolProvenance?.primaryProtocol === "ISO15765-4" && bridgeUdsDoipProtocolSession.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeUdsDoipProtocolSession.protocolProvenance?.transportProtocol === "DoIP" && bridgeUdsDoipProtocolSession.protocolProvenance?.networkProtocol === "Ethernet" && bridgeUdsDoipProtocolSessionRoundTrip?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeUdsDoipProtocolSessionRoundTrip?.protocolProvenance?.transportProtocol === "DoIP" && bridgeUdsDoipProtocolSessionRoundTrip?.protocolProvenance?.networkProtocol === "Ethernet" && bridgeUdsDoipProtocolSessionRoundTrip?.vehicleCommandEnabled === false && bridgeUdsDoipProtocolSessionRoundTrip?.wouldTransmit === false, "Diagnostic scan session lost UDS over DoIP provenance through read-only export and import");
 const bridgeProtocolPrecedenceEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,
