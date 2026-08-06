@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.77";
+const APP_VERSION = "3.6.78";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7078,7 +7078,11 @@ function renderObdBridgeSessionDetails(session = null) {
     if (ecuExpectedSummary.missingCount) {
       lines.push(`未取得用途: ${formatObdExpectedItemPreview(ecuExpectedSummary.missing, "diagnosticUse", 3)}`);
     }
-    lines.push(...ecuItems.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`));
+    lines.push(...ecuItems.slice(0, 6).map((item) => {
+      const dataIdentifier = item?.dataIdentifier || item?.data_identifier || null;
+      const didSuffix = dataIdentifier ? ` / DID 0x${dataIdentifier}` : "";
+      return `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}${didSuffix}`;
+    }));
     sections.push(["ECU情報", lines]);
   }
 
