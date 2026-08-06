@@ -580,6 +580,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     const functionBody = bridgeEcuInfoSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeEcuInfoSnapshot({') && functionBody.includes('...data,'), "normalizeBridgeEcuInfoSnapshot should delegate bridge ECU info data to the core normalizer");
     check(functionBody.includes('source: "local_bridge"') && functionBody.includes('protocol: readBridgeProtocol(data)'), "normalizeBridgeEcuInfoSnapshot should preserve local bridge source and protocol");
+    check(source.includes('data.diagnostic_protocol') && source.includes('data.transport_protocol') && source.includes('data.network_protocol'), "Bridge protocol intake should retain diagnostic, transport, and network protocol aliases");
     check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('ecu_info_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge failure status");
     check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('items,') && functionBody.includes('const hasItemEvidence = items.length > 0;') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasItemEvidence));'), "normalizeBridgeEcuInfoSnapshot should retain a parent ECU name without replacing an explicit ECU info row source");
   }
@@ -7922,6 +7923,31 @@ const bridgeEcuInfoParentSourceSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   }
 });
 check(bridgeEcuInfoParentSourceSnapshot.sourceEcuName === "Engine Control Module" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "calibration_id")?.sourceEcu === "7E8" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "calibration_id")?.source_ecu_name === "Engine Control Module" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "ecu_name")?.source_ecu === "7E9" && bridgeEcuInfoParentSourceSnapshot.items.find((item) => item.id === "ecu_name")?.sourceEcuName === null, "Bridge Mode 09 should inherit a matching parent ECU name without relabelling another ECU");
+const bridgeUdsProtocolEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    diagnostic_protocol: "UDS on CAN FD",
+    source_ecu: "7E0",
+    items: [{ id: "ecu_name", value: "Powertrain Control Module" }]
+  }
+});
+check(bridgeUdsProtocolEcuInfoSnapshot.protocol === "UDS on CAN FD" && bridgeUdsProtocolEcuInfoSnapshot.sourceEcu === "7E0" && bridgeUdsProtocolEcuInfoSnapshot.items[0]?.sourceEcu === "7E0" && bridgeUdsProtocolEcuInfoSnapshot.vehicleCommandEnabled === false && bridgeUdsProtocolEcuInfoSnapshot.wouldTransmit === false, "Bridge ECU information did not preserve UDS protocol provenance as read-only data");
+const bridgeDoipProtocolEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { transport_protocol: "DoIP", items: [{ id: "ecu_name", value: "Gateway ECU" }] }
+});
+check(bridgeDoipProtocolEcuInfoSnapshot.protocol === "DoIP" && bridgeDoipProtocolEcuInfoSnapshot.vehicleCommandEnabled === false && bridgeDoipProtocolEcuInfoSnapshot.wouldTransmit === false, "Bridge ECU information did not preserve DoIP transport protocol provenance as read-only data");
+const bridgeProtocolPrecedenceEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { protocol: "ISO15765-4", diagnostic_protocol: "UDS on CAN", items: [{ id: "ecu_name", value: "Engine ECU" }] }
+});
+check(bridgeProtocolPrecedenceEcuInfoSnapshot.protocol === "ISO15765-4", "Bridge protocol intake did not preserve the explicit protocol precedence");
 const bridgeEcuInfoRowSourceSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
   ok: true,
   blocked: false,

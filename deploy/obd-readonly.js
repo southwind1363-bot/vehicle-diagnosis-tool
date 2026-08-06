@@ -3051,7 +3051,7 @@
   }
 
   function readBridgeProtocol(data = {}) {
-    return data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || data.protocol_name || data.protocolName || data.bus_protocol || data.busProtocol || null;
+    return data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || data.diagnostic_protocol || data.diagnosticProtocol || data.transport_protocol || data.transportProtocol || data.network_protocol || data.networkProtocol || data.protocol_name || data.protocolName || data.bus_protocol || data.busProtocol || null;
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
