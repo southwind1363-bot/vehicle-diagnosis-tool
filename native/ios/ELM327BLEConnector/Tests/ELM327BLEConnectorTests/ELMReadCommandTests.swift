@@ -31,6 +31,26 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(ELMReadCommand.initialLivePIDCommands.contains(.commandedDieselExhaustFluid))
     }
 
+    func testQuickReadoutPlanKeepsOnlyTheFastReadOnlyCore() {
+        XCTAssertEqual(
+            ELMReadCommand.quickReadoutCommands,
+            [
+                .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol,
+                .identifyAdapter, .describeProtocol,
+                .storedDTC, .pendingDTC, .permanentDTC,
+                .supportedPIDs, .readinessStatus
+            ]
+        )
+        XCTAssertEqual(
+            ELMReadCommand.quickLivePIDCommands.map(\.wireValue),
+            ["010C", "0105", "010D", "0142"]
+        )
+        XCTAssertTrue(ELMReadCommand.quickLivePIDCommands.allSatisfy { $0.intent == "read_live_pid_snapshot" && $0.readoutID == "live_pid_snapshot" })
+        XCTAssertFalse(ELMReadCommand.quickReadoutCommands.contains(.onboardMonitor))
+        XCTAssertFalse(ELMReadCommand.quickReadoutCommands.contains(.freezeFrameCapabilities))
+        XCTAssertFalse(ELMReadCommand.quickReadoutCommands.contains(.mode09SupportedInfoTypes))
+    }
+
     func testAdapterSetupRequiresAnExplicitSuccessfulResponse() {
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .disableEcho, response: "ATE0\rOK"))
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "OK"))

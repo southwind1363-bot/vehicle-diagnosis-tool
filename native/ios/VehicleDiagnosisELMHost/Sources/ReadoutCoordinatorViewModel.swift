@@ -250,6 +250,11 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         coordinator.beginInitialReadout()
     }
 
+    func beginQuickReadout() {
+        exportURL = nil
+        coordinator.beginQuickReadout()
+    }
+
     func disconnect() {
         coordinator.disconnect()
     }

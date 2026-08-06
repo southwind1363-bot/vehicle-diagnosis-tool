@@ -51,6 +51,16 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
     }
 
     public func beginInitialReadout() {
+        resetReadoutState()
+        connector.runInitialReadout()
+    }
+
+    public func beginQuickReadout() {
+        resetReadoutState()
+        connector.runQuickReadout()
+    }
+
+    private func resetReadoutState() {
         archiveBuilder.reset()
         completedArchive = nil
         capturedEnvelopeCount = 0
@@ -60,7 +70,6 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
         connectorError = nil
         archiveRejected = false
         notifyUpdate()
-        connector.runInitialReadout()
     }
 
     public func disconnect() {

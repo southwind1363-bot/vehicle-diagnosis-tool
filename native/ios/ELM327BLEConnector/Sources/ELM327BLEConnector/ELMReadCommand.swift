@@ -150,6 +150,21 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .readinessStatus
     ]
 
+    // Short, supported-PID-gated capture for a quick condition check or basic meter.
+    public static let quickReadoutCommands: [ELMReadCommand] = [
+        .disableEcho,
+        .disableLinefeeds,
+        .enableHeaders,
+        .autoProtocol,
+        .identifyAdapter,
+        .describeProtocol,
+        .storedDTC,
+        .pendingDTC,
+        .permanentDTC,
+        .supportedPIDs,
+        .readinessStatus
+    ]
+
     // Keep the first vehicle pass bounded; expanded supported-PID reads belong to a later explicit flow.
     public static let initialLivePIDCommands: [ELMReadCommand] = [
         .engineRPM,
@@ -177,6 +192,13 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .ambientAirTemperature,
         .timeWithMIL,
         .fuelType
+    ]
+
+    public static let quickLivePIDCommands: [ELMReadCommand] = [
+        .engineRPM,
+        .coolantTemperature,
+        .vehicleSpeed,
+        .controlModuleVoltage
     ]
 
     public var wireValue: String {

@@ -178,6 +178,7 @@ public final class ELM327BLEConnector: NSObject {
     private var freezeFrameSupportedPIDsByScope: [String: Set<String>] = [:]
     private var freezeFrameTriggerScopeIDs = Set<String>()
     private var liveSupportedPIDs = Set<String>()
+    private var requestedLivePIDCommands: [ELMReadCommand] = []
     private var scheduledLivePIDCommands = Set<ELMReadCommand>()
     private var scheduledSupportedPIDPages = Set<ELMReadCommand>()
     private var mode09CalibrationIDScopes = Set<String>()
@@ -259,6 +260,20 @@ public final class ELM327BLEConnector: NSObject {
     }
 
     public func runInitialReadout() {
+        runReadout(
+            commands: ELMReadCommand.initialReadoutCommands,
+            livePIDCommands: ELMReadCommand.initialLivePIDCommands
+        )
+    }
+
+    public func runQuickReadout() {
+        runReadout(
+            commands: ELMReadCommand.quickReadoutCommands,
+            livePIDCommands: ELMReadCommand.quickLivePIDCommands
+        )
+    }
+
+    private func runReadout(commands: [ELMReadCommand], livePIDCommands: [ELMReadCommand]) {
         guard state == .ready, transmitCharacteristic != nil, receiveCharacteristic != nil else { return fail(.characteristicNotReady) }
         sessionContext = NativeConnectorSessionContext()
         sequence = 0
@@ -268,6 +283,7 @@ public final class ELM327BLEConnector: NSObject {
         freezeFrameSupportedPIDsByScope.removeAll()
         freezeFrameTriggerScopeIDs.removeAll()
         liveSupportedPIDs.removeAll()
+        requestedLivePIDCommands = livePIDCommands
         scheduledLivePIDCommands.removeAll()
         scheduledSupportedPIDPages = [.supportedPIDs]
         mode09CalibrationIDScopes.removeAll()
@@ -281,7 +297,7 @@ public final class ELM327BLEConnector: NSObject {
         emittedEnvelopeCount = 0
         firstEnvelopeSequence = nil
         didEmitTerminalManifest = false
-        pendingCommands = ELMReadCommand.initialReadoutCommands
+        pendingCommands = commands
         plan(commands: pendingCommands)
         runNextCommand()
     }
@@ -585,7 +601,7 @@ public final class ELM327BLEConnector: NSObject {
                         sequence += 1
                         emit(NativeConnectorEnvelopeFactory.supportedPIDs(context: context, sequence: sequence, scopeID: result.scopeID, pageBase: command.supportedPIDPageBase!, pids: result.pids))
                     }
-                    let supportedCommands = ELMReadCommand.initialLivePIDCommands.filter { candidate in
+                    let supportedCommands = requestedLivePIDCommands.filter { candidate in
                         candidate.livePID.map(liveSupportedPIDs.contains) == true && scheduledLivePIDCommands.insert(candidate).inserted
                     }
                     var nextPage: ELMReadCommand?

@@ -83,6 +83,10 @@ struct ReadoutCoordinatorView: View {
                         viewModel.beginInitialReadout()
                     }
                     .disabled(!viewModel.canStartReadout)
+                    Button("クイック読取") {
+                        viewModel.beginQuickReadout()
+                    }
+                    .disabled(!viewModel.canStartReadout)
                     Button("切断", role: .destructive) {
                         viewModel.disconnect()
                     }
