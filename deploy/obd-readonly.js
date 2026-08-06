@@ -4423,6 +4423,7 @@
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           ecu_info_readout_status: response.data.ecuInfoReadoutStatus || response.data.ecu_info_readout_status || response.ecuInfoReadoutStatus || response.ecu_info_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null,
+          ecu_info_response_format: response.data.ecuInfoResponseFormat || response.data.ecu_info_response_format || response.data.responseFormat || response.data.response_format || response.ecuInfoResponseFormat || response.ecu_info_response_format || response.responseFormat || response.response_format || null,
           had_sensitive_identifier: response.data.hadSensitiveIdentifier === true || response.data.had_sensitive_identifier === true || response.hadSensitiveIdentifier === true || response.had_sensitive_identifier === true
         }
         : response
@@ -17588,6 +17589,7 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         ecu_info_readout_status: input.data.ecuInfoReadoutStatus || input.data.ecu_info_readout_status || input.ecuInfoReadoutStatus || input.ecu_info_readout_status || null,
+        ecu_info_response_format: input.data.ecuInfoResponseFormat || input.data.ecu_info_response_format || input.data.responseFormat || input.data.response_format || input.ecuInfoResponseFormat || input.ecu_info_response_format || input.responseFormat || input.response_format || null,
         had_sensitive_identifier: input.data.hadSensitiveIdentifier === true || input.data.had_sensitive_identifier === true || input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true
       }
       : input && typeof input === "object" ? input : {};
