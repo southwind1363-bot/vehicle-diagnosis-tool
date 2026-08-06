@@ -3163,10 +3163,13 @@
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "";
       const genericCodeReferences = extractDtcReferences(codeValue);
+      const udsThreeByteCodeReference = isExplicitUdsThreeByteDtcRow(rowValue)
+        ? extractUdsThreeByteDtcReference(codeValue)
+        : null;
       const manufacturerCodeReference = isExplicitManufacturerSpecificDtcRow(rowValue)
         ? extractManufacturerSpecificDtcReference(codeValue)
         : null;
-      const codeReferences = manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
+      const codeReferences = udsThreeByteCodeReference ? [udsThreeByteCodeReference] : manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
       const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
       const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
@@ -3186,7 +3189,11 @@
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
-        ...(codeFormat ? { codeFormat, code_format: codeFormat, manufacturerSpecific: true, manufacturer_specific: true } : {}),
+        ...(codeFormat ? {
+          codeFormat,
+          code_format: codeFormat,
+          ...(codeFormat === "manufacturer_specific" ? { manufacturerSpecific: true, manufacturer_specific: true } : {})
+        } : {}),
         ...(reportedDescription ? { reportedDescription, reported_description: reportedDescription } : {}),
         ...(reportedStatus ? { reportedStatus, reported_status: reportedStatus } : {})
       }));
@@ -16654,10 +16661,13 @@
       const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || sourceInput.status || "unknown";
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "";
       const genericCodeReferences = extractDtcReferences(codeValue);
+      const udsThreeByteCodeReference = isExplicitUdsThreeByteDtcRow(rowValue)
+        ? extractUdsThreeByteDtcReference(codeValue)
+        : null;
       const manufacturerCodeReference = isExplicitManufacturerSpecificDtcRow(rowValue)
         ? extractManufacturerSpecificDtcReference(codeValue)
         : null;
-      const codes = manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
+      const codes = udsThreeByteCodeReference ? [udsThreeByteCodeReference] : manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
       const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
       const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
@@ -16677,7 +16687,11 @@
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
-        ...(codeFormat ? { codeFormat, code_format: codeFormat, manufacturerSpecific: true, manufacturer_specific: true } : {}),
+        ...(codeFormat ? {
+          codeFormat,
+          code_format: codeFormat,
+          ...(codeFormat === "manufacturer_specific" ? { manufacturerSpecific: true, manufacturer_specific: true } : {})
+        } : {}),
         ...(reportedDescription ? { reportedDescription, reported_description: reportedDescription } : {}),
         ...(reportedStatus ? { reportedStatus, reported_status: reportedStatus } : {})
       }));
@@ -18177,6 +18191,11 @@
       && bytes[udsResponseIndex + 1] === 0x01
       && udsResponseIndex + 5 < bytes.length
       && Boolean(sourceEcu);
+    const udsDtcByStatusResponse = udsResponseIndex >= 0
+      && bytes[udsResponseIndex + 1] === 0x02
+      && udsResponseIndex + 6 < bytes.length
+      && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
+      && Boolean(sourceEcu);
     if (serviceByte === undefined && udsDtcCountResponse) {
       const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
       const dtcCount = (bytes[udsResponseIndex + 4] << 8) | bytes[udsResponseIndex + 5];
@@ -18191,6 +18210,29 @@
         dtc_status_availability_mask: dtcStatusAvailabilityMask,
         ecu_responses: [{ ecu: sourceEcu, status: "reported", dtc_count: dtcCount }],
         dtcs: []
+      });
+    }
+    if (serviceByte === undefined && udsDtcByStatusResponse) {
+      const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+      const records = [];
+      for (let index = udsResponseIndex + 3; index + 3 < bytes.length; index += 4) {
+        records.push({
+          code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
+          code_format: "uds_3byte",
+          status_byte: bytes[index + 3],
+          ecu: sourceEcu
+        });
+      }
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        source_ecu: sourceEcu,
+        captured_at: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: "reported",
+        dtc_response_format: dtcResponseFormat,
+        dtc_response_subfunction: dtcResponseSubfunction,
+        dtc_status_availability_mask: dtcStatusAvailabilityMask,
+        dtcs: records
       });
     }
     if (serviceByte === undefined) {
@@ -22760,6 +22802,17 @@
   function extractManufacturerSpecificDtcReference(value) {
     const match = String(value || "").trim().toUpperCase().match(/^(?:0X)?([0-9A-F]{6})$/);
     return match ? { code: match[1], subcode: null, codeFormat: "manufacturer_specific" } : null;
+  }
+
+  function extractUdsThreeByteDtcReference(value) {
+    const match = String(value || "").trim().toUpperCase().match(/^(?:0X)?([0-9A-F]{6})$/);
+    return match ? { code: match[1], subcode: null, codeFormat: "uds_3byte" } : null;
+  }
+
+  function isExplicitUdsThreeByteDtcRow(value) {
+    if (!value || typeof value !== "object") return false;
+    const codeFormat = String(value.code_format || value.codeFormat || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    return codeFormat === "uds_3byte";
   }
 
   function isExplicitManufacturerSpecificDtcRow(value) {
