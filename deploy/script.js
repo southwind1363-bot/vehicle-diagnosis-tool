@@ -6925,6 +6925,12 @@ function formatObdDtcResponseFormat(formats = null, fallback = NO_DATA) {
   return resolved.length ? resolved.join(" / ") : fallback;
 }
 
+function formatUdsDtcSubfunction(value, fallback = NO_DATA) {
+  const normalized = String(value || "").toUpperCase();
+  if (!/^[0-9A-F]{2}$/.test(normalized)) return fallback;
+  return normalized === "02" ? `0x${normalized} reportDTCByStatusMask` : `0x${normalized}`;
+}
+
 function formatObdEcuInfoResponseFormat(format = null, fallback = NO_DATA) {
   return {
     obd_mode09: "OBD Mode 09",
@@ -8183,7 +8189,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTC内訳", dtcStatusSummary || NO_DATA],
     ["DTC応答状態", dtcResponseStatusLabel],
     ["DTC応答形式", dtcResponseFormatLabel],
-    ["UDS DTCサブ機能", dtcResponseSubfunction ? `0x${dtcResponseSubfunction}` : NO_DATA],
+    ["UDS DTCサブ機能", formatUdsDtcSubfunction(dtcResponseSubfunction)],
     ["DTC読取状態", dtcReadoutStatusLabel],
     ["DTC状態ビット可用マスク", dtcStatusAvailabilityMask ? `0x${dtcStatusAvailabilityMask} (reported)` : NO_DATA],
     ["DTC詳細報告値", dtcMetadataLabel],
