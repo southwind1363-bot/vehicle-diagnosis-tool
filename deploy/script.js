@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.68";
+const APP_VERSION = "3.6.69";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7958,6 +7958,15 @@ function renderObdDeveloperSessionSummary(session = null) {
   const j2534NextCheckLabel = formatJ2534NextCheck(connectionStatus, formatJ2534NextCheck(obdDevSession.bridgeVciList));
   const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
   const ecuInfoSnapshot = session?.ecuInfoSnapshot || session?.ecu_info_snapshot || null;
+  const ecuInfoProtocolProvenance = ecuInfoSnapshot?.protocolProvenance || ecuInfoSnapshot?.protocol_provenance || null;
+  const ecuInfoProtocolEntries = [
+    ["診断", ecuInfoProtocolProvenance?.diagnosticProtocol || ecuInfoProtocolProvenance?.diagnostic_protocol || ecuInfoSnapshot?.diagnosticProtocol || ecuInfoSnapshot?.diagnostic_protocol || null],
+    ["搬送", ecuInfoProtocolProvenance?.transportProtocol || ecuInfoProtocolProvenance?.transport_protocol || ecuInfoSnapshot?.transportProtocol || ecuInfoSnapshot?.transport_protocol || null],
+    ["ネットワーク", ecuInfoProtocolProvenance?.networkProtocol || ecuInfoProtocolProvenance?.network_protocol || ecuInfoSnapshot?.networkProtocol || ecuInfoSnapshot?.network_protocol || null]
+  ].filter(([, value]) => typeof value === "string" && value.trim());
+  const ecuInfoProtocolLabel = ecuInfoProtocolEntries.length
+    ? ecuInfoProtocolEntries.map(([label, value]) => `${label}: ${value}`).join(" / ")
+    : ecuInfoSnapshot?.protocol || NO_DATA;
   const freezeFrameSnapshot = session?.freezeFrameSnapshot || session?.freeze_frame_snapshot || null;
   const livePidSnapshot = session?.livePidSnapshot || session?.live_pid_snapshot || null;
   const livePidTimeline = session?.livePidTimeline || session?.live_pid_timeline || null;
@@ -8145,6 +8154,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["ECU由来", observedEcuSourceCoverageLabel],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],
     ["ECU情報状態", ecuInfoReadoutStatusLabel],
+    ["ECU通信", ecuInfoProtocolLabel],
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
     ["Mode09対応", ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],
     ["Mode09対応タイプ00", ecuInfoSnapshot?.supportInfoTypesCaptured === false ? "未取得" : "取得済み"],
