@@ -17912,7 +17912,7 @@
     return {
       id,
       label: catalogItem?.label || row.label || row.displayLabel || row.display_label || id,
-      service: catalogItem?.service || row.service || row.service_mode || row.serviceMode || "09",
+      service: catalogItem?.service || row.service || row.service_mode || row.serviceMode || (dataIdentifier ? "22" : "09"),
       infoType: catalogItem?.infoType || infoType || null,
       dataIdentifier,
       data_identifier: dataIdentifier,
