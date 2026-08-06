@@ -18986,6 +18986,7 @@
       storedDtcResponses: [],
       pendingDtcResponses: [],
       permanentDtcResponses: [],
+      udsDtcResponses: [],
       supportedPidResponses: [],
       livePidResponses: [],
       freezeFrameResponses: [],
@@ -18998,7 +18999,7 @@
 
     buildObdLogPackets(redacted).forEach((packetInput) => {
       const bytes = packetInput.bytes;
-      const responseServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F];
+      const responseServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x59, 0x7F];
       const serviceIndex = bytes.findIndex((byte) => responseServices.includes(byte));
       const serviceByte = serviceIndex >= 0 ? bytes[serviceIndex] : null;
       const hasPair = (first, second) => bytes.some((byte, index) => byte === first && bytes[index + 1] === second);
@@ -19023,6 +19024,8 @@
         buckets.pendingDtcResponses.push(packet);
       } else if (serviceByte === 0x4A) {
         buckets.permanentDtcResponses.push(packet);
+      } else if (serviceByte === 0x59) {
+        buckets.udsDtcResponses.push(packet);
       } else if (hasPair(0x41, 0x00) || hasPair(0x41, 0x20) || hasPair(0x41, 0x40) || hasPair(0x41, 0x60) || hasPair(0x41, 0x80)) {
         buckets.supportedPidResponses.push(packet);
       } else if (hasPair(0x41, 0x01)) {
@@ -19306,6 +19309,15 @@
       const sourceEcu = getBucketSourceEcu(bucketName);
       return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     };
+    const readUdsDtcSnapshot = () => {
+      const rows = classified.responseBuckets.udsDtcResponses || [];
+      if (!rows.length) return null;
+      return mergeDtcSnapshots(...rows.map((row) => decodeObdDtcResponse({
+        raw: normalizeBucketResponse(row),
+        protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+        ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+      })));
+    };
     const readLivePidResponseOption = () => {
       const explicitResponse = sessionInput.livePidResponse || sessionInput.live_pid_response;
       if (explicitResponse) return explicitResponse;
@@ -19464,6 +19476,7 @@
       return readResponseOption("readinessResponse", "readiness_response", "readinessResponses");
     };
     const ecuResponses = buildEcuResponsesFromClassifiedObd(classified);
+    const udsDtcSnapshot = readUdsDtcSnapshot();
     const session = buildDecodedObdScanSession({
       session_id: sessionInput.session_id || sessionInput.sessionId || "obd_text_scan_session",
       started_at: sessionInput.started_at || sessionInput.startedAt || null,
@@ -19501,7 +19514,7 @@
       ecuInfoResponse: readEcuInfoResponseOption(),
       ecus: ecuResponses
     });
-    const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, textDtcSnapshot);
+    const mergedDtcSnapshot = mergeDtcSnapshots(session.dtcSnapshot, udsDtcSnapshot, textDtcSnapshot);
     const textImportMetadata = buildTextImportMetadata({
       session,
       classified,
@@ -19520,8 +19533,9 @@
       }
       : textImportMetadata.importClassification;
     const hasTextDtcReadout = textDtcSnapshot?.dtcReadoutStatus === "reported" || textDtcSnapshot?.dtc_readout_status === "reported";
+    const hasUdsDtcReadout = udsDtcSnapshot?.dtcReadoutStatus === "reported" || udsDtcSnapshot?.dtc_readout_status === "reported";
     const hasTextFreezeFrameReadout = textFreezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" || textFreezeFrameSnapshot?.freeze_frame_readout_status === "reported";
-    const outputDtcSnapshot = hasTextDtcReadout ? mergedDtcSnapshot : session.dtcSnapshot;
+    const outputDtcSnapshot = hasTextDtcReadout || hasUdsDtcReadout ? mergedDtcSnapshot : session.dtcSnapshot;
     const sessionFreezeFrameValues = Array.isArray(session.freezeFrameSnapshot?.monitorValues)
       ? session.freezeFrameSnapshot.monitorValues
       : Array.isArray(session.freezeFrameSnapshot?.monitor_values)
