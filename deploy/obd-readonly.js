@@ -18246,6 +18246,10 @@
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
       && Boolean(sourceEcu);
+    const udsEmptyDtcByStatusResponse = udsResponseIndex >= 0
+      && [0x02, 0x0F, 0x13].includes(bytes[udsResponseIndex + 1])
+      && udsResponseIndex + 2 === bytes.length - 1
+      && Boolean(sourceEcu);
     const udsOccurrenceDtcResponse = udsResponseIndex >= 0
       && [0x0B, 0x0C, 0x0D, 0x0E].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 6 < bytes.length
@@ -18284,7 +18288,7 @@
         dtcs: []
       });
     }
-    if (serviceByte === undefined && (udsDtcByStatusResponse || udsOccurrenceDtcResponse)) {
+    if (serviceByte === undefined && (udsDtcByStatusResponse || udsEmptyDtcByStatusResponse || udsOccurrenceDtcResponse)) {
       const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
       const records = [];
       for (let index = udsResponseIndex + 3; index + 3 < bytes.length; index += 4) {
