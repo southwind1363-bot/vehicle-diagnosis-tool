@@ -18226,7 +18226,7 @@
       && udsResponseIndex + 5 < bytes.length
       && Boolean(sourceEcu);
     const udsDtcByStatusResponse = udsResponseIndex >= 0
-      && [0x02, 0x0A, 0x0F].includes(bytes[udsResponseIndex + 1])
+      && [0x02, 0x0A, 0x0F, 0x13, 0x15].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
       && Boolean(sourceEcu);
