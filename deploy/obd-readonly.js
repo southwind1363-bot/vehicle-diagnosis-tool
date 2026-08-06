@@ -19375,7 +19375,10 @@
       return raw ? { raw, protocol: sessionInput.protocol || sessionInput.obd_protocol || null, ...(sourceEcu ? { source_ecu: sourceEcu } : {}) } : { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     };
     const readUdsDtcSnapshot = () => {
-      const rows = classified.responseBuckets.udsDtcResponses || [];
+      const rows = [
+        ...(classified.responseBuckets.udsDtcResponses || []),
+        ...(classified.responseBuckets.negativeResponses || []).filter((row) => row?.negativeResponse?.requestedService === "19")
+      ];
       if (!rows.length) return null;
       return mergeDtcSnapshots(...rows.map((row) => decodeObdDtcResponse({
         raw: normalizeBucketResponse(row),
@@ -19599,8 +19602,9 @@
       : textImportMetadata.importClassification;
     const hasTextDtcReadout = textDtcSnapshot?.dtcReadoutStatus === "reported" || textDtcSnapshot?.dtc_readout_status === "reported";
     const hasUdsDtcReadout = udsDtcSnapshot?.dtcReadoutStatus === "reported" || udsDtcSnapshot?.dtc_readout_status === "reported";
+    const hasUdsDtcFailureEvidence = ["unparsed", "blocked"].includes(udsDtcSnapshot?.dtcReadoutStatus || udsDtcSnapshot?.dtc_readout_status || "unknown");
     const hasTextFreezeFrameReadout = textFreezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" || textFreezeFrameSnapshot?.freeze_frame_readout_status === "reported";
-    const outputDtcSnapshot = hasTextDtcReadout || hasUdsDtcReadout ? mergedDtcSnapshot : session.dtcSnapshot;
+    const outputDtcSnapshot = hasTextDtcReadout || hasUdsDtcReadout || hasUdsDtcFailureEvidence ? mergedDtcSnapshot : session.dtcSnapshot;
     const sessionFreezeFrameValues = Array.isArray(session.freezeFrameSnapshot?.monitorValues)
       ? session.freezeFrameSnapshot.monitorValues
       : Array.isArray(session.freezeFrameSnapshot?.monitor_values)
