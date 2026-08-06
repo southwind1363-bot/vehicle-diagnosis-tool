@@ -18508,10 +18508,11 @@ const udsStatusAliasBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
   blocked: false,
-  data: { dtcs: [{ dtc_code: "U0100", statusOfDtc: "0x8A" }, { dtc_code: "P0300", uds_status_byte: 47 }] }
+  data: { diagnostic_protocol: "UDS", dtcs: [{ dtc_code: "U0100", statusOfDtc: "0x8A" }, { dtc_code: "P0300", uds_status_byte: 47 }] }
 });
 const udsStatusAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: udsStatusAliasBridgeSnapshot }))));
-check(udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.statusByte === "8A") && udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "P0300" && item.status_byte === "2F") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "U0100" && item.status_byte === "8A") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.statusByte === "2F") && udsStatusAliasRoundTrip?.vehicleCommandEnabled === false, "UDS DTC status aliases were not retained through read-only bridge export and JSON reimport");
+const nestedUdsStatusDtcSnapshot = obd.normalizeDtcSnapshot({ dtc_response_format: "", data: { diagnostic_protocol: "UDS", dtcs: [{ dtc_code: "U0123", status_byte: "40" }] } });
+check(udsStatusAliasBridgeSnapshot.dtcResponseFormat === "uds_read_dtc_information" && udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "U0100" && item.statusByte === "8A") && udsStatusAliasBridgeSnapshot.dtcs.some((item) => item.code === "P0300" && item.status_byte === "2F") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "U0100" && item.status_byte === "8A") && udsStatusAliasRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.statusByte === "2F") && nestedUdsStatusDtcSnapshot.dtcResponseFormat === "uds_read_dtc_information" && nestedUdsStatusDtcSnapshot.dtcs.some((item) => item.code === "U0123" && item.status_byte === "40") && udsStatusAliasRoundTrip?.vehicleCommandEnabled === false, "UDS DTC status aliases were not retained through read-only bridge export and JSON reimport");
 const udsDoipDtcOnlySnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,

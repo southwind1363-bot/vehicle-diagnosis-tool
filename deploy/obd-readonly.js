@@ -3102,7 +3102,9 @@
           ...response.data,
           source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
-          dtc_readout_status: response.data.dtcReadoutStatus || response.data.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
+          dtc_readout_status: response.data.dtcReadoutStatus || response.data.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null,
+          dtc_response_formats: response.data.dtcResponseFormats || response.data.dtc_response_formats || response.dtcResponseFormats || response.dtc_response_formats || null,
+          dtc_response_format: response.data.dtcResponseFormat || response.data.dtc_response_format || response.data.responseFormat || response.data.response_format || response.dtcResponseFormat || response.dtc_response_format || response.responseFormat || response.response_format || null
         }
         : response
       : {};
@@ -3243,7 +3245,12 @@
       includeObservedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
     });
     const dtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
-    const dtcResponseFormats = readDtcResponseFormatAliases(data);
+    const dtcResponseFormats = inferUdsDtcResponseFormats({
+      formats: readDtcResponseFormatAliases(data),
+      dtcs: normalizedDtcs,
+      protocol: sanitizedPrimaryProtocol,
+      protocolProvenance
+    });
     const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
@@ -16550,6 +16557,8 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null,
+        dtc_response_formats: input.data.dtcResponseFormats || input.data.dtc_response_formats || input.dtcResponseFormats || input.dtc_response_formats || null,
+        dtc_response_format: input.data.dtcResponseFormat || input.data.dtc_response_format || input.data.responseFormat || input.data.response_format || input.dtcResponseFormat || input.dtc_response_format || input.responseFormat || input.response_format || null,
         ecu_responses: Array.isArray(input.data.ecu_responses) ? input.data.ecu_responses : Array.isArray(input.data.ecuResponses) ? input.data.ecuResponses : Array.isArray(input.ecu_responses) ? input.ecu_responses : Array.isArray(input.ecuResponses) ? input.ecuResponses : []
       }
       : input && typeof input === "object" ? input : {};
@@ -16684,7 +16693,12 @@
     const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
-    const dtcResponseFormats = readDtcResponseFormatAliases(sourceInput);
+    const dtcResponseFormats = inferUdsDtcResponseFormats({
+      formats: readDtcResponseFormatAliases(sourceInput),
+      dtcs: normalizedDtcs,
+      protocol: sanitizedPrimaryProtocol,
+      protocolProvenance
+    });
     const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(sourceInput);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
@@ -22557,6 +22571,13 @@
 
   function readDtcResponseFormatAlias(row) {
     return readDtcResponseFormatAliases(row)[0] || null;
+  }
+
+  function inferUdsDtcResponseFormats({ formats = [], dtcs = [], protocol = null, protocolProvenance = null } = {}) {
+    if (formats.length) return formats;
+    const protocolEvidence = `${protocolProvenance?.diagnosticProtocol || ""} ${protocol || ""}`;
+    const hasUdsStatusByte = Array.isArray(dtcs) && dtcs.some((item) => normalizeDtcStatusByte(item?.statusByte || item?.status_byte) !== null);
+    return hasUdsStatusByte && /\buds\b/i.test(protocolEvidence) ? ["uds_read_dtc_information"] : [];
   }
 
   function readDtcStatusAvailabilityMaskAliases(row) {
