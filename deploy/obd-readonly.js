@@ -18222,7 +18222,7 @@
     const udsResponseIndex = bytes.indexOf(0x59);
     const dtcResponseSubfunction = udsResponseIndex >= 0 ? normalizeUdsDtcSubfunction(bytes[udsResponseIndex + 1]) : null;
     const udsDtcCountResponse = udsResponseIndex >= 0
-      && bytes[udsResponseIndex + 1] === 0x01
+      && [0x01, 0x11, 0x12].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 5 < bytes.length
       && Boolean(sourceEcu);
     const udsDtcByStatusResponse = udsResponseIndex >= 0
