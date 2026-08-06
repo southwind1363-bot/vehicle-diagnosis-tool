@@ -3104,7 +3104,8 @@
           source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           dtc_readout_status: response.data.dtcReadoutStatus || response.data.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null,
           dtc_response_formats: response.data.dtcResponseFormats || response.data.dtc_response_formats || response.dtcResponseFormats || response.dtc_response_formats || null,
-          dtc_response_format: response.data.dtcResponseFormat || response.data.dtc_response_format || response.data.responseFormat || response.data.response_format || response.dtcResponseFormat || response.dtc_response_format || response.responseFormat || response.response_format || null
+          dtc_response_format: response.data.dtcResponseFormat || response.data.dtc_response_format || response.data.responseFormat || response.data.response_format || response.dtcResponseFormat || response.dtc_response_format || response.responseFormat || response.response_format || null,
+          dtc_response_subfunction: response.data.dtcResponseSubfunction ?? response.data.dtc_response_subfunction ?? response.data.subfunction ?? response.data.sub_function ?? response.dtcResponseSubfunction ?? response.dtc_response_subfunction ?? response.subfunction ?? response.sub_function ?? null
         }
         : response
       : {};
@@ -3252,6 +3253,7 @@
       protocolProvenance
     });
     const dtcResponseFormat = dtcResponseFormats.length === 1 ? dtcResponseFormats[0] : null;
+    const dtcResponseSubfunction = normalizeUdsDtcSubfunction(data.dtcResponseSubfunction ?? data.dtc_response_subfunction ?? data.subfunction ?? data.sub_function ?? null);
     const dtcStatusAvailabilityMasks = readDtcStatusAvailabilityMaskAliases(data);
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -3290,6 +3292,8 @@
       dtc_readout_status: dtcReadoutStatus,
       dtcResponseFormat,
       dtc_response_format: dtcResponseFormat,
+      dtcResponseSubfunction,
+      dtc_response_subfunction: dtcResponseSubfunction,
       dtcResponseFormats,
       dtc_response_formats: [...dtcResponseFormats],
       dtcStatusAvailabilityMask,
