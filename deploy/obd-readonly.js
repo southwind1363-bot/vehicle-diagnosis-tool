@@ -16909,22 +16909,27 @@
     const udsDtcSnapshotRecords = udsDtcSnapshotRecordInputs.map((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return null;
       const codeReference = extractUdsThreeByteDtcReference(row.code || row.dtc || row.dtc_code || row.dtcCode || "");
+      const recordType = String(row.snapshot_record_type ?? row.snapshotRecordType ?? "data").trim().toLowerCase() === "identification" ? "identification" : "data";
       const statusByte = normalizeDtcStatusByte(row.status_byte ?? row.statusByte ?? row.status_of_dtc ?? row.statusOfDtc ?? null);
       const recordNumberValue = Number(row.snapshot_record_number ?? row.snapshotRecordNumber ?? row.record_number ?? row.recordNumber);
-      const identifierCountValue = Number(row.snapshot_record_identifier_count ?? row.snapshotRecordIdentifierCount ?? row.identifier_count ?? row.identifierCount);
+      const identifierCountInput = row.snapshot_record_identifier_count ?? row.snapshotRecordIdentifierCount ?? row.identifier_count ?? row.identifierCount;
+      const identifierCountValue = identifierCountInput === undefined || identifierCountInput === null || identifierCountInput === "" ? null : Number(identifierCountInput);
       const rawData = parseObdHexBytes(row.raw_data ?? row.rawData ?? row.snapshot_data ?? row.snapshotData ?? []).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
       const recordEcu = readObdResponseSourceEcu(row) || sourceEcu;
-      if (!codeReference || !statusByte || !Number.isInteger(recordNumberValue) || recordNumberValue < 0 || recordNumberValue > 255 || !Number.isInteger(identifierCountValue) || identifierCountValue < 0 || identifierCountValue > 255 || !recordEcu) return null;
+      const hasDataRecordShape = Boolean(statusByte) && Number.isInteger(identifierCountValue) && identifierCountValue >= 0 && identifierCountValue <= 255;
+      if (!codeReference || !Number.isInteger(recordNumberValue) || recordNumberValue < 0 || recordNumberValue > 255 || !recordEcu || (recordType === "data" && !hasDataRecordShape)) return null;
       return {
         code: codeReference.code,
         codeFormat: "uds_3byte",
         code_format: "uds_3byte",
+        snapshotRecordType: recordType,
+        snapshot_record_type: recordType,
         statusByte,
         status_byte: statusByte,
         snapshotRecordNumber: recordNumberValue,
         snapshot_record_number: recordNumberValue,
-        snapshotRecordIdentifierCount: identifierCountValue,
-        snapshot_record_identifier_count: identifierCountValue,
+        snapshotRecordIdentifierCount: recordType === "identification" ? null : identifierCountValue,
+        snapshot_record_identifier_count: recordType === "identification" ? null : identifierCountValue,
         rawData,
         raw_data: rawData,
         sourceEcu: recordEcu,
@@ -18432,11 +18437,16 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
+    const isSnapshotIdentificationResponse = responseIndex >= 0
+      && bytes[responseIndex + 1] === 0x03
+      && responseIndex + 5 < bytes.length
+      && (bytes.length - (responseIndex + 2)) % 4 === 0
+      && Boolean(sourceEcu);
     const isSnapshotRecordResponse = responseIndex >= 0
       && bytes[responseIndex + 1] === 0x04
       && responseIndex + 7 < bytes.length
       && Boolean(sourceEcu);
-    if (!isSnapshotRecordResponse) {
+    if (!isSnapshotIdentificationResponse && !isSnapshotRecordResponse) {
       return normalizeFreezeFrameSnapshot({
         source: input.source || "obd_response_decoder",
         ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
@@ -18445,23 +18455,35 @@
         freeze_frame_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown"
       });
     }
-    const record = {
-      code: bytes.slice(responseIndex + 2, responseIndex + 5).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
-      code_format: "uds_3byte",
-      status_byte: bytes[responseIndex + 5].toString(16).toUpperCase().padStart(2, "0"),
-      snapshot_record_number: bytes[responseIndex + 6],
-      snapshot_record_identifier_count: bytes[responseIndex + 7],
-      raw_data: bytes.slice(responseIndex + 8),
-      source_ecu: sourceEcu
-    };
+    const records = isSnapshotIdentificationResponse
+      ? Array.from({ length: (bytes.length - (responseIndex + 2)) / 4 }, (_item, index) => {
+        const start = responseIndex + 2 + (index * 4);
+        return {
+          code: bytes.slice(start, start + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
+          code_format: "uds_3byte",
+          snapshot_record_type: "identification",
+          snapshot_record_number: bytes[start + 3],
+          source_ecu: sourceEcu
+        };
+      })
+      : [{
+        code: bytes.slice(responseIndex + 2, responseIndex + 5).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
+        code_format: "uds_3byte",
+        snapshot_record_type: "data",
+        status_byte: bytes[responseIndex + 5].toString(16).toUpperCase().padStart(2, "0"),
+        snapshot_record_number: bytes[responseIndex + 6],
+        snapshot_record_identifier_count: bytes[responseIndex + 7],
+        raw_data: bytes.slice(responseIndex + 8),
+        source_ecu: sourceEcu
+      }];
     return normalizeFreezeFrameSnapshot({
       source: input.source || "obd_response_decoder",
       source_ecu: sourceEcu,
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
       freeze_frame_readout_status: "reported",
-      trigger_dtc_entries: [{ code: record.code, code_format: "uds_3byte", frame_number: record.snapshot_record_number, source_ecu: sourceEcu }],
-      uds_dtc_snapshot_records: [record]
+      trigger_dtc_entries: records.map((record) => ({ code: record.code, code_format: "uds_3byte", frame_number: record.snapshot_record_number, source_ecu: sourceEcu })),
+      uds_dtc_snapshot_records: records
     });
   }
 
