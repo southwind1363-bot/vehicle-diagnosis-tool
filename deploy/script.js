@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.6.78";
+const APP_VERSION = "3.6.79";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6925,6 +6925,13 @@ function formatObdDtcResponseFormat(formats = null, fallback = NO_DATA) {
   return resolved.length ? resolved.join(" / ") : fallback;
 }
 
+function formatObdEcuInfoResponseFormat(format = null, fallback = NO_DATA) {
+  return {
+    obd_mode09: "OBD Mode 09",
+    uds_read_data_by_identifier: "UDS ReadDataByIdentifier (unparsed)"
+  }[format] || fallback;
+}
+
 function formatJ2534NextCheck(item = null, fallback = null) {
   const nextCheck = String(item?.nextCheck || item?.next_check || "").trim().toLowerCase();
   return {
@@ -8027,6 +8034,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     : NO_DATA;
   const livePidReadoutStatusLabel = formatObdReadoutStatus(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status, NO_DATA);
   const ecuInfoReadoutStatusLabel = formatObdReadoutStatus(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, NO_DATA);
+  const ecuInfoResponseFormatLabel = formatObdEcuInfoResponseFormat(ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format, NO_DATA);
   const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
   const freezeFrameTriggerNumber = freezeFrameSnapshot?.triggerFrameNumber ?? freezeFrameSnapshot?.trigger_frame_number ?? null;
   const freezeFrameNumberSummary = freezeFrameSnapshot?.freezeFrameNumberSummary || freezeFrameSnapshot?.freeze_frame_number_summary || null;
@@ -8182,6 +8190,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["ECU由来", observedEcuSourceCoverageLabel],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],
     ["ECU情報状態", ecuInfoReadoutStatusLabel],
+    ["ECU情報応答形式", ecuInfoResponseFormatLabel],
     ["ECU通信", ecuInfoProtocolLabel],
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
     ["Mode09対応", ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],

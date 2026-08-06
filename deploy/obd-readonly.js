@@ -17638,6 +17638,7 @@
     const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured);
     const supportedInfoTypesItem = items.find((item) => item.id === "supported_info_types_00");
     const supportedInfoTypesSummary = decodeMode09SupportedInfoTypes(supportedInfoTypesItem?.value);
+    const ecuInfoResponseFormat = readEcuInfoResponseFormatAlias(sourceInput);
     const explicitReadoutStatus = pickDefined(
       sourceInput.ecuInfoReadoutStatus,
       sourceInput.ecu_info_readout_status,
@@ -17704,6 +17705,8 @@
       support_info_types_summary: supportedInfoTypesSummary,
       ecuInfoReadoutStatus: normalizedReadoutStatus,
       ecu_info_readout_status: normalizedReadoutStatus,
+      ecuInfoResponseFormat,
+      ecu_info_response_format: ecuInfoResponseFormat,
       ...(typeof sourceInput.ok === "boolean" ? { ok: sourceInput.ok } : {}),
       blocked: sourceInput.blocked === true || sourceInput.isBlocked === true || sourceInput.is_blocked === true,
       wouldTransmit: false,
@@ -18493,6 +18496,11 @@
     };
     const hasMode09Frame = bytes.some((byte, index) => isKnownMode09FrameStart(index));
     const readoutStatus = hasMode09Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
+    const ecuInfoResponseFormat = hasMode09Frame
+      ? "obd_mode09"
+      : bytes.includes(0x62)
+        ? "uds_read_data_by_identifier"
+        : null;
 
     for (let index = 0; index < bytes.length - 2; index++) {
       if (!isKnownMode09FrameStart(index)) continue;
@@ -18515,8 +18523,35 @@
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
       ecu_info_readout_status: readoutStatus,
+      ecu_info_response_format: ecuInfoResponseFormat,
       values
     });
+  }
+
+  function normalizeEcuInfoResponseFormat(value) {
+    const normalized = String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const aliases = {
+      obd_mode09: "obd_mode09",
+      obd_mode_09: "obd_mode09",
+      mode09: "obd_mode09",
+      mode_09: "obd_mode09",
+      uds_read_data_by_identifier: "uds_read_data_by_identifier",
+      uds_read_did: "uds_read_data_by_identifier",
+      read_data_by_identifier: "uds_read_data_by_identifier",
+      service_22: "uds_read_data_by_identifier",
+      uds_22: "uds_read_data_by_identifier"
+    };
+    return aliases[normalized] || null;
+  }
+
+  function readEcuInfoResponseFormatAlias(row) {
+    const value = [
+      row?.ecu_info_response_format,
+      row?.ecuInfoResponseFormat,
+      row?.response_format,
+      row?.responseFormat
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeEcuInfoResponseFormat(value);
   }
 
   function decodeReadinessResponse(input = {}) {
