@@ -3054,6 +3054,30 @@
     return data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || data.diagnostic_protocol || data.diagnosticProtocol || data.transport_protocol || data.transportProtocol || data.network_protocol || data.networkProtocol || data.protocol_name || data.protocolName || data.bus_protocol || data.busProtocol || null;
   }
 
+  function normalizeProtocolProvenanceValue(value) {
+    const text = redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim();
+    return text ? text.slice(0, 120) : null;
+  }
+
+  function readBridgeProtocolProvenance(data = {}) {
+    const nested = data.protocol_provenance && typeof data.protocol_provenance === "object"
+      ? data.protocol_provenance
+      : data.protocolProvenance && typeof data.protocolProvenance === "object"
+        ? data.protocolProvenance
+        : {};
+    const diagnosticProtocol = normalizeProtocolProvenanceValue(data.diagnostic_protocol || data.diagnosticProtocol || nested.diagnostic_protocol || nested.diagnosticProtocol);
+    const transportProtocol = normalizeProtocolProvenanceValue(data.transport_protocol || data.transportProtocol || nested.transport_protocol || nested.transportProtocol);
+    const networkProtocol = normalizeProtocolProvenanceValue(data.network_protocol || data.networkProtocol || nested.network_protocol || nested.networkProtocol);
+    return {
+      diagnosticProtocol,
+      diagnostic_protocol: diagnosticProtocol,
+      transportProtocol,
+      transport_protocol: transportProtocol,
+      networkProtocol,
+      network_protocol: networkProtocol
+    };
+  }
+
   function normalizeBridgeDtcSnapshot(response = {}) {
     const data = response && typeof response === "object"
       ? response.data && typeof response.data === "object"
@@ -4399,6 +4423,7 @@
         source: "local_bridge",
         captured_at: data.captured_at || data.capturedAt || null,
         protocol: readBridgeProtocol(data),
+        protocol_provenance: readBridgeProtocolProvenance(data),
         ecu_info_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)
       }),
       intent: "read_ecu_info",
@@ -17504,6 +17529,12 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
+    const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
+    const protocolProvenance = {
+      primaryProtocol: protocol,
+      primary_protocol: protocol,
+      ...readBridgeProtocolProvenance(sourceInput)
+    };
     const rows = collectEcuInfoRows(sourceInput);
     const items = rows
       .map((row) => {
@@ -17580,7 +17611,15 @@
       intent: sourceInput.intent || null,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
-      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
