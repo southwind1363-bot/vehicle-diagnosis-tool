@@ -3182,6 +3182,7 @@
       const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
       const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
       const faultDetectionCounterRaw = readDtcFaultDetectionCounterRawAlias(rowValue);
+      const functionalUnitRaw = readDtcFunctionalUnitRawAlias(rowValue);
       return codeReferences.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -3189,6 +3190,7 @@
         status_byte: readDtcStatusByteAlias(rowValue),
         severity: readDtcSeverityAlias(rowValue),
         dtc_severity: readDtcSeverityAlias(rowValue),
+        ...(functionalUnitRaw ? { dtcFunctionalUnitRaw: functionalUnitRaw, dtc_functional_unit_raw: functionalUnitRaw } : {}),
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || fallbackStatus,
@@ -16721,6 +16723,7 @@
       const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
       const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
       const faultDetectionCounterRaw = readDtcFaultDetectionCounterRawAlias(rowValue);
+      const functionalUnitRaw = readDtcFunctionalUnitRawAlias(rowValue);
       return codes.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -16728,6 +16731,7 @@
         status_byte: readDtcStatusByteAlias(rowValue),
         severity: readDtcSeverityAlias(rowValue),
         dtc_severity: readDtcSeverityAlias(rowValue),
+        ...(functionalUnitRaw ? { dtcFunctionalUnitRaw: functionalUnitRaw, dtc_functional_unit_raw: functionalUnitRaw } : {}),
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
         status: rowStatus,
@@ -18624,6 +18628,26 @@
     });
   }
 
+  function decodeUdsDtcSeverityResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const responseIndex = bytes.indexOf(0x59);
+    const subfunction = bytes[responseIndex + 1];
+    const isSeverityResponse = responseIndex >= 0
+      && [0x08, 0x09].includes(subfunction)
+      && responseIndex + 8 < bytes.length
+      && (bytes.length - (responseIndex + 3)) % 6 === 0
+      && Boolean(sourceEcu);
+    if (!isSeverityResponse) {
+      return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", ...(sourceEcu ? { source_ecu: sourceEcu } : {}), captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: Number.isInteger(subfunction) ? subfunction.toString(16).toUpperCase().padStart(2, "0") : "09", dtcs: [] });
+    }
+    const records = [];
+    for (let index = responseIndex + 3; index + 5 < bytes.length; index += 6) {
+      records.push({ code: bytes.slice(index + 2, index + 5).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""), code_format: "uds_3byte", severity: bytes[index], dtc_functional_unit_raw: bytes[index + 1].toString(16).toUpperCase().padStart(2, "0"), status_byte: bytes[index + 5], ecu: sourceEcu });
+    }
+    return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", source_ecu: sourceEcu, captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: "reported", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: subfunction.toString(16).toUpperCase().padStart(2, "0"), dtc_status_availability_mask: bytes[responseIndex + 2].toString(16).toUpperCase().padStart(2, "0"), dtcs: records });
+  }
+
   function mergeDtcSnapshots(...snapshots) {
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
@@ -19705,6 +19729,8 @@
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
         };
+        const severitySnapshot = decodeUdsDtcSeverityResponse(input);
+        if (severitySnapshot.dtcReadoutStatus === "reported") return severitySnapshot;
         const faultDetectionCounterSnapshot = decodeUdsDtcFaultDetectionCounterResponse(input);
         if (faultDetectionCounterSnapshot.dtcReadoutStatus === "reported") return faultDetectionCounterSnapshot;
         const extendedDataSnapshot = decodeUdsDtcExtendedDataResponse(input);
@@ -23258,6 +23284,12 @@
     return normalizeDtcSeverity(value);
   }
 
+  function readDtcFunctionalUnitRawAlias(row) {
+    const value = [row?.dtc_functional_unit_raw, row?.dtcFunctionalUnitRaw, row?.functional_unit_raw, row?.functionalUnitRaw, row?.functional_unit, row?.functionalUnit].find((item) => item !== undefined && item !== null && item !== "");
+    const normalized = normalizeDtcStatusByte(value);
+    return normalized || null;
+  }
+
   function normalizeDtcOccurrenceCount(value) {
     const numeric = typeof value === "string" && /^\d+$/.test(value.trim()) ? Number(value.trim()) : value;
     return Number.isInteger(numeric) && numeric >= 0 && numeric <= 65535 ? numeric : null;
@@ -24165,6 +24197,7 @@
     decodeUdsDtcSnapshotResponse,
     decodeUdsDtcExtendedDataResponse,
     decodeUdsDtcFaultDetectionCounterResponse,
+    decodeUdsDtcSeverityResponse,
     mergeDtcSnapshots,
     decodeSupportedPidResponse,
     decodeLivePidResponse,

@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.15";
+const APP_VERSION = "3.7.16";
 const APP_LAST_UPDATED = "2026-08-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6956,6 +6956,8 @@ function formatUdsDtcSubfunction(value, fallback = NO_DATA) {
   const labels = {
     "01": "reportNumberOfDTCByStatusMask",
     "02": "reportDTCByStatusMask",
+    "08": "reportDTCBySeverityMaskRecord",
+    "09": "reportSeverityInformationOfDTC",
     "06": "reportDTCExtDataRecordByDTCNumber",
     "07": "reportNumberOfDTCBySeverityMaskRecord",
     "0A": "reportSupportedDTCs",
@@ -9169,6 +9171,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const subcode = dtc.subcode || dtc.sub_code || null;
   const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;
   const severity = dtc.severity || dtc.dtc_severity || dtc.dtcSeverity || dtc.severityByte || dtc.severity_byte || null;
+  const functionalUnitRaw = dtc.dtcFunctionalUnitRaw || dtc.dtc_functional_unit_raw || dtc.functionalUnitRaw || dtc.functional_unit_raw || null;
   const occurrenceCount = dtc.occurrenceCount ?? dtc.occurrence_count ?? dtc.occurrenceCounter ?? dtc.occurrence_counter ?? null;
   const manufacturerSpecific = dtc.manufacturerSpecific === true || dtc.manufacturer_specific === true || dtc.codeFormat === "manufacturer_specific" || dtc.code_format === "manufacturer_specific";
   const reportedDescription = dtc.reportedDescription || dtc.reported_description || null;
@@ -9321,6 +9324,12 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
     reportedSeverity.className = "obd-dtc-check";
     reportedSeverity.textContent = `DTC severity: ${severity} (reported)`;
     wrapper.appendChild(reportedSeverity);
+  }
+  if (functionalUnitRaw) {
+    const reportedFunctionalUnit = document.createElement("p");
+    reportedFunctionalUnit.className = "obd-dtc-check";
+    reportedFunctionalUnit.textContent = `DTC functional unit: 0x${functionalUnitRaw} (reported)`;
+    wrapper.appendChild(reportedFunctionalUnit);
   }
 
   if (occurrenceCount !== null) {
