@@ -18517,8 +18517,11 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
     const responseIndex = bytes.indexOf(0x59);
+    const responseSubfunction = Number.isInteger(bytes[responseIndex + 1])
+      ? bytes[responseIndex + 1].toString(16).toUpperCase().padStart(2, "0")
+      : null;
     const isExtendedDataResponse = responseIndex >= 0
-      && bytes[responseIndex + 1] === 0x06
+      && [0x06, 0x10].includes(bytes[responseIndex + 1])
       && responseIndex + 6 < bytes.length
       && Boolean(sourceEcu);
     if (!isExtendedDataResponse) {
@@ -18529,7 +18532,7 @@
         protocol: input.protocol || input.obd_protocol || null,
         dtc_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown",
         dtc_response_format: "uds_read_dtc_information",
-        dtc_response_subfunction: "06",
+        dtc_response_subfunction: responseSubfunction || "06",
         dtcs: []
       });
     }
@@ -18540,7 +18543,7 @@
       protocol: input.protocol || input.obd_protocol || null,
       dtc_readout_status: "reported",
       dtc_response_format: "uds_read_dtc_information",
-      dtc_response_subfunction: "06",
+      dtc_response_subfunction: responseSubfunction,
       dtcs: [{
         code: bytes.slice(responseIndex + 2, responseIndex + 5).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
         code_format: "uds_3byte",
