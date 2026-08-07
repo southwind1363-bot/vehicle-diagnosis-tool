@@ -18359,6 +18359,11 @@
       && udsResponseIndex + 7 < bytes.length
       && (bytes.length - (udsResponseIndex + 4)) % 4 === 0
       && Boolean(sourceEcu);
+    const udsSupportedExtendedDataResponse = udsResponseIndex >= 0
+      && bytes[udsResponseIndex + 1] === 0x1A
+      && udsResponseIndex + 3 < bytes.length
+      && (bytes.length - (udsResponseIndex + 4)) % 4 === 0
+      && Boolean(sourceEcu);
     if (negativeDtcResponse) {
       const requestedService = negativeRequestedService.toString(16).toUpperCase().padStart(2, "0");
       const nrc = negativeResponseCode.toString(16).toUpperCase().padStart(2, "0");
@@ -18419,6 +18424,15 @@
         ...(dtcMemorySelection ? { dtc_memory_selection: dtcMemorySelection } : {}),
         dtcs: records
       });
+    }
+    if (serviceByte === undefined && udsSupportedExtendedDataResponse) {
+      const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+      const extendedDataRecordNumber = bytes[udsResponseIndex + 3];
+      const records = [];
+      for (let index = udsResponseIndex + 4; index + 3 < bytes.length; index += 4) {
+        records.push({ code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""), code_format: "uds_3byte", status_byte: bytes[index + 3], extended_data_record_number: extendedDataRecordNumber, ecu: sourceEcu });
+      }
+      return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", source_ecu: sourceEcu, captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: "reported", dtc_response_format: dtcResponseFormat, dtc_response_subfunction: dtcResponseSubfunction, dtc_status_availability_mask: dtcStatusAvailabilityMask, dtcs: records });
     }
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
