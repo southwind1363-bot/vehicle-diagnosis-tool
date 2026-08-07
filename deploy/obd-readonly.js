@@ -4921,10 +4921,16 @@
         responseUnavailable: isUnavailableReadout(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, freezeFrameSnapshotSafetyInput),
         capturedEvidence: Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
           || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0)
-          || (Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) && freezeFrameSnapshot.trigger_dtc_entries.length > 0),
+          || (Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) && freezeFrameSnapshot.trigger_dtc_entries.length > 0)
+          || (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) && freezeFrameSnapshot.udsDtcSnapshotRecords.length > 0)
+          || (Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) && freezeFrameSnapshot.uds_dtc_snapshot_records.length > 0)
+          || (Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) && freezeFrameSnapshot.udsDtcStoredDataRecords.length > 0)
+          || (Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) && freezeFrameSnapshot.uds_dtc_stored_data_records.length > 0),
         label: "フリーズフレーム",
-        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues)),
-        count: Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0
+        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records)),
+        count: (Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0)
+          + (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) ? freezeFrameSnapshot.udsDtcSnapshotRecords.length : Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) ? freezeFrameSnapshot.uds_dtc_snapshot_records.length : 0)
+          + (Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) ? freezeFrameSnapshot.udsDtcStoredDataRecords.length : Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) ? freezeFrameSnapshot.uds_dtc_stored_data_records.length : 0)
       },
       {
         id: "readiness_snapshot",
@@ -5206,7 +5212,7 @@
     const definitions = [
       { id: "dtc_snapshot", count: countItems(dtcSnapshot?.codes), valueKey: "dtcCount" },
       { id: "live_pid_snapshot", count: countItems(livePidSnapshot?.monitorValues), valueKey: "livePidValueCount" },
-      { id: "freeze_frame_snapshot", count: countItems(freezeFrameSnapshot?.monitorValues), valueKey: "freezeFrameValueCount" },
+      { id: "freeze_frame_snapshot", count: countItems(freezeFrameSnapshot?.monitorValues) + countItems(freezeFrameSnapshot?.udsDtcSnapshotRecords || freezeFrameSnapshot?.uds_dtc_snapshot_records) + countItems(freezeFrameSnapshot?.udsDtcStoredDataRecords || freezeFrameSnapshot?.uds_dtc_stored_data_records), valueKey: "freezeFrameValueCount" },
       { id: "readiness_snapshot", count: numericCount(readinessSnapshot?.monitorCount, countItems(readinessSnapshot?.monitors)), valueKey: "readinessMonitorCount" },
       { id: "ecu_info_snapshot", count: numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), valueKey: "ecuInfoItemCount" },
       { id: "onboard_monitor_snapshot", count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)), valueKey: "onboardMonitorTestCount" },
@@ -16945,7 +16951,8 @@
         freeze_frame_readout_status: input.data.freezeFrameReadoutStatus || input.data.freeze_frame_readout_status || input.freezeFrameReadoutStatus || input.freeze_frame_readout_status || null,
         associated_dtc: input.data.associated_dtc || input.data.associatedDtc || input.associated_dtc || input.associatedDtc || null,
         associated_dtc_entries: input.data.associated_dtc_entries || input.data.associatedDtcEntries || input.associated_dtc_entries || input.associatedDtcEntries || [],
-        uds_dtc_snapshot_records: input.data.udsDtcSnapshotRecords || input.data.uds_dtc_snapshot_records || input.data.dtcSnapshotRecords || input.data.dtc_snapshot_records || input.udsDtcSnapshotRecords || input.uds_dtc_snapshot_records || input.dtcSnapshotRecords || input.dtc_snapshot_records || []
+        uds_dtc_snapshot_records: input.data.udsDtcSnapshotRecords || input.data.uds_dtc_snapshot_records || input.data.dtcSnapshotRecords || input.data.dtc_snapshot_records || input.udsDtcSnapshotRecords || input.uds_dtc_snapshot_records || input.dtcSnapshotRecords || input.dtc_snapshot_records || [],
+        uds_dtc_stored_data_records: input.data.udsDtcStoredDataRecords || input.data.uds_dtc_stored_data_records || input.data.dtcStoredDataRecords || input.data.dtc_stored_data_records || input.udsDtcStoredDataRecords || input.uds_dtc_stored_data_records || input.dtcStoredDataRecords || input.dtc_stored_data_records || []
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
@@ -16988,6 +16995,30 @@
         snapshot_record_number: recordNumberValue,
         snapshotRecordIdentifierCount: recordType === "identification" ? null : identifierCountValue,
         snapshot_record_identifier_count: recordType === "identification" ? null : identifierCountValue,
+        rawData,
+        raw_data: rawData,
+        sourceEcu: recordEcu,
+        source_ecu: recordEcu
+      };
+    }).filter(Boolean);
+    const udsDtcStoredDataRecordInputs = Array.isArray(sourceInput.udsDtcStoredDataRecords)
+      ? sourceInput.udsDtcStoredDataRecords
+      : Array.isArray(sourceInput.uds_dtc_stored_data_records)
+        ? sourceInput.uds_dtc_stored_data_records
+        : Array.isArray(sourceInput.dtcStoredDataRecords)
+          ? sourceInput.dtcStoredDataRecords
+          : Array.isArray(sourceInput.dtc_stored_data_records)
+            ? sourceInput.dtc_stored_data_records
+            : [];
+    const udsDtcStoredDataRecords = udsDtcStoredDataRecordInputs.map((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+      const recordNumber = Number(row.stored_data_record_number ?? row.storedDataRecordNumber ?? row.record_number ?? row.recordNumber);
+      const rawData = parseObdHexBytes(row.raw_data ?? row.rawData ?? row.stored_data ?? row.storedData ?? []).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+      const recordEcu = readObdResponseSourceEcu(row) || sourceEcu;
+      if (!Number.isInteger(recordNumber) || recordNumber < 0 || recordNumber > 255 || !recordEcu) return null;
+      return {
+        storedDataRecordNumber: recordNumber,
+        stored_data_record_number: recordNumber,
         rawData,
         raw_data: rawData,
         sourceEcu: recordEcu,
@@ -17179,7 +17210,8 @@
     const observedSourceEcus = [...new Set([
       ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null),
       ...explicitTriggerDtcEntries.map((item) => item.sourceEcu || item.source_ecu || null),
-      ...udsDtcSnapshotRecords.map((item) => item.sourceEcu || item.source_ecu || null)
+      ...udsDtcSnapshotRecords.map((item) => item.sourceEcu || item.source_ecu || null),
+      ...udsDtcStoredDataRecords.map((item) => item.sourceEcu || item.source_ecu || null)
     ].filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set([
@@ -17223,7 +17255,7 @@
     const expectedItemCount = expectedItems.length;
     const monitorInsights = analyzeMonitorValues(monitorValues);
     const freezeFrameNumberSummary = buildFreezeFrameNumberSummary(monitorValues);
-    const readoutStatus = sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (monitorValues.length || triggerDtcEntries.length || udsDtcSnapshotRecords.length ? "reported" : "unknown");
+    const readoutStatus = sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (monitorValues.length || triggerDtcEntries.length || udsDtcSnapshotRecords.length || udsDtcStoredDataRecords.length ? "reported" : "unknown");
 
     return {
       schemaVersion: "freeze_frame_snapshot_v1",
@@ -17244,6 +17276,8 @@
       trigger_frame_number: triggerFrameNumber,
       udsDtcSnapshotRecords,
       uds_dtc_snapshot_records: udsDtcSnapshotRecords,
+      udsDtcStoredDataRecords,
+      uds_dtc_stored_data_records: udsDtcStoredDataRecords,
       monitorValues,
       monitor_values: monitorValues,
       monitorValueSummary,
@@ -18571,6 +18605,26 @@
     });
   }
 
+  function decodeUdsDtcStoredDataResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const responseIndex = bytes.indexOf(0x59);
+    const isStoredDataResponse = responseIndex >= 0 && bytes[responseIndex + 1] === 0x05 && responseIndex + 2 < bytes.length && Boolean(sourceEcu);
+    if (!isStoredDataResponse) return normalizeFreezeFrameSnapshot({ source: input.source || "obd_response_decoder", ...(sourceEcu ? { source_ecu: sourceEcu } : {}), captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, freeze_frame_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown" });
+    return normalizeFreezeFrameSnapshot({
+      source: input.source || "obd_response_decoder",
+      source_ecu: sourceEcu,
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || input.obd_protocol || null,
+      freeze_frame_readout_status: "reported",
+      uds_dtc_stored_data_records: [{
+        stored_data_record_number: bytes[responseIndex + 2],
+        raw_data: bytes.slice(responseIndex + 3),
+        source_ecu: sourceEcu
+      }]
+    });
+  }
+
   function decodeUdsDtcExtendedDataResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
@@ -19811,7 +19865,11 @@
       const rows = [
         ...(classified.responseBuckets.udsDtcResponses || []),
         ...(classified.responseBuckets.negativeResponses || []).filter((row) => row?.negativeResponse?.requestedService === "19")
-      ];
+      ].filter((row) => {
+        const bytes = parseObdHexBytes(normalizeBucketResponse(row));
+        const responseIndex = bytes.indexOf(0x59);
+        return !(responseIndex >= 0 && bytes[responseIndex + 1] === 0x05);
+      });
       if (!rows.length) return null;
       return mergeDtcSnapshots(...rows.map((row) => {
         const input = {
@@ -19834,18 +19892,21 @@
       }));
     };
     const readUdsDtcFreezeFrameSnapshot = () => {
-      const snapshots = (classified.responseBuckets.udsDtcResponses || []).map((row) => decodeUdsDtcSnapshotResponse({
+      const inputs = (classified.responseBuckets.udsDtcResponses || []).map((row) => ({
         raw: normalizeBucketResponse(row),
         protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
         ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
-      })).filter((snapshot) => (snapshot.udsDtcSnapshotRecords || snapshot.uds_dtc_snapshot_records || []).length);
-      if (!snapshots.length) return null;
+      }));
+      const snapshots = inputs.map((input) => decodeUdsDtcSnapshotResponse(input)).filter((snapshot) => (snapshot.udsDtcSnapshotRecords || snapshot.uds_dtc_snapshot_records || []).length);
+      const storedDataSnapshots = inputs.map((input) => decodeUdsDtcStoredDataResponse(input)).filter((snapshot) => (snapshot.udsDtcStoredDataRecords || snapshot.uds_dtc_stored_data_records || []).length);
+      if (!snapshots.length && !storedDataSnapshots.length) return null;
       return normalizeFreezeFrameSnapshot({
         source: "obd_response_decoder",
         protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
         freeze_frame_readout_status: "reported",
         trigger_dtc_entries: snapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || []),
-        uds_dtc_snapshot_records: snapshots.flatMap((snapshot) => snapshot.udsDtcSnapshotRecords || snapshot.uds_dtc_snapshot_records || [])
+        uds_dtc_snapshot_records: snapshots.flatMap((snapshot) => snapshot.udsDtcSnapshotRecords || snapshot.uds_dtc_snapshot_records || []),
+        uds_dtc_stored_data_records: storedDataSnapshots.flatMap((snapshot) => snapshot.udsDtcStoredDataRecords || snapshot.uds_dtc_stored_data_records || [])
       });
     };
     const readLivePidResponseOption = () => {
@@ -20067,7 +20128,7 @@
     const hasUdsDtcReadout = udsDtcSnapshot?.dtcReadoutStatus === "reported" || udsDtcSnapshot?.dtc_readout_status === "reported";
     const hasUdsDtcFailureEvidence = ["unparsed", "blocked"].includes(udsDtcSnapshot?.dtcReadoutStatus || udsDtcSnapshot?.dtc_readout_status || "unknown");
     const hasTextFreezeFrameReadout = textFreezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" || textFreezeFrameSnapshot?.freeze_frame_readout_status === "reported";
-    const hasUdsDtcFreezeFrameReadout = (udsDtcFreezeFrameSnapshot?.udsDtcSnapshotRecords || udsDtcFreezeFrameSnapshot?.uds_dtc_snapshot_records || []).length > 0;
+    const hasUdsDtcFreezeFrameReadout = (udsDtcFreezeFrameSnapshot?.udsDtcSnapshotRecords || udsDtcFreezeFrameSnapshot?.uds_dtc_snapshot_records || []).length > 0 || (udsDtcFreezeFrameSnapshot?.udsDtcStoredDataRecords || udsDtcFreezeFrameSnapshot?.uds_dtc_stored_data_records || []).length > 0;
     const outputDtcSnapshot = hasTextDtcReadout || hasUdsDtcReadout || hasUdsDtcFailureEvidence ? mergedDtcSnapshot : session.dtcSnapshot;
     const sessionFreezeFrameValues = Array.isArray(session.freezeFrameSnapshot?.monitorValues)
       ? session.freezeFrameSnapshot.monitorValues
@@ -20089,6 +20150,10 @@
         uds_dtc_snapshot_records: [
           ...(selectedFreezeFrameSnapshot?.udsDtcSnapshotRecords || selectedFreezeFrameSnapshot?.uds_dtc_snapshot_records || []),
           ...(udsDtcFreezeFrameSnapshot.udsDtcSnapshotRecords || udsDtcFreezeFrameSnapshot.uds_dtc_snapshot_records || [])
+        ],
+        uds_dtc_stored_data_records: [
+          ...(selectedFreezeFrameSnapshot?.udsDtcStoredDataRecords || selectedFreezeFrameSnapshot?.uds_dtc_stored_data_records || []),
+          ...(udsDtcFreezeFrameSnapshot.udsDtcStoredDataRecords || udsDtcFreezeFrameSnapshot.uds_dtc_stored_data_records || [])
         ]
       })
       : selectedFreezeFrameSnapshot;
@@ -24317,6 +24382,7 @@
     parseObdHexBytes,
     decodeObdDtcResponse,
     decodeUdsDtcSnapshotResponse,
+    decodeUdsDtcStoredDataResponse,
     decodeUdsDtcExtendedDataResponse,
     decodeUdsDtcFaultDetectionCounterResponse,
     decodeUdsDtcSeverityResponse,
