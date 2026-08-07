@@ -3267,6 +3267,7 @@
     }));
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
+    const udsDtcExtendedDataRecordResponses = readUdsDtcExtendedDataRecordResponseAliases(data, resolvedSourceEcu);
     const codeCount = codes.length;
     const dtcCount = normalizedDtcs.length;
     const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
@@ -3324,6 +3325,8 @@
       dtcs: normalizedDtcs,
       dtcCount,
       dtc_count: dtcCount,
+      udsDtcExtendedDataRecordResponses,
+      uds_dtc_extended_data_record_responses: udsDtcExtendedDataRecordResponses.map((item) => ({ ...item })),
       storedCount,
       stored_count: storedCount,
       pendingCount,
@@ -4898,10 +4901,13 @@
         readoutStatus: dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || null,
         safetyInput: dtcSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(dtcSnapshot, dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status, dtcSnapshotSafetyInput),
-        capturedEvidence: hasReportedDtcCount(dtcSnapshot),
+        capturedEvidence: hasReportedDtcCount(dtcSnapshot)
+          || (Array.isArray(dtcSnapshot?.udsDtcExtendedDataRecordResponses) && dtcSnapshot.udsDtcExtendedDataRecordResponses.length > 0)
+          || (Array.isArray(dtcSnapshot?.uds_dtc_extended_data_record_responses) && dtcSnapshot.uds_dtc_extended_data_record_responses.length > 0),
         label: "DTC",
-        available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && !isUnknownWithoutEvidence(dtcSnapshot, "codes", dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes)),
-        count: Array.isArray(dtcSnapshot?.codes) ? dtcSnapshot.codes.length : 0
+        available: !["unparsed", "blocked"].includes(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && !isUnknownWithoutEvidence(dtcSnapshot, "codes", dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status) && (dtcSnapshot?.blocked === false || Array.isArray(dtcSnapshot?.codes) || Array.isArray(dtcSnapshot?.udsDtcExtendedDataRecordResponses) || Array.isArray(dtcSnapshot?.uds_dtc_extended_data_record_responses)),
+        count: (Array.isArray(dtcSnapshot?.codes) ? dtcSnapshot.codes.length : 0)
+          + (Array.isArray(dtcSnapshot?.udsDtcExtendedDataRecordResponses) ? dtcSnapshot.udsDtcExtendedDataRecordResponses.length : Array.isArray(dtcSnapshot?.uds_dtc_extended_data_record_responses) ? dtcSnapshot.uds_dtc_extended_data_record_responses.length : 0)
       },
       {
         id: "live_pid_snapshot",
@@ -16796,6 +16802,7 @@
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const resolvedSourceEcuName = sourceEcuName || (normalizedDtcs.length === 1 ? normalizedDtcs[0].ecuName || null : null);
+    const udsDtcExtendedDataRecordResponses = readUdsDtcExtendedDataRecordResponseAliases(sourceInput, resolvedSourceEcu);
     const codes = [...new Set(normalizedDtcs.map((row) => row.code))];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
@@ -16890,6 +16897,8 @@
       dtcs: normalizedDtcs,
       dtcCount,
       dtc_count: dtcCount,
+      udsDtcExtendedDataRecordResponses,
+      uds_dtc_extended_data_record_responses: udsDtcExtendedDataRecordResponses.map((item) => ({ ...item })),
       storedCount,
       stored_count: storedCount,
       pendingCount,
@@ -18678,6 +18687,43 @@
     });
   }
 
+  function decodeUdsDtcExtendedDataByRecordNumberResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const responseIndex = bytes.indexOf(0x59);
+    const isExtendedDataByRecordResponse = responseIndex >= 0
+      && bytes[responseIndex + 1] === 0x16
+      && responseIndex + 2 < bytes.length
+      && Boolean(sourceEcu);
+    if (!isExtendedDataByRecordResponse) {
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+        captured_at: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown",
+        dtc_response_format: "uds_read_dtc_information",
+        dtc_response_subfunction: "16",
+        dtcs: []
+      });
+    }
+    return normalizeDtcSnapshot({
+      source: input.source || "obd_response_decoder",
+      source_ecu: sourceEcu,
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || input.obd_protocol || null,
+      dtc_readout_status: "reported",
+      dtc_response_format: "uds_read_dtc_information",
+      dtc_response_subfunction: "16",
+      uds_dtc_extended_data_record_responses: [{
+        extended_data_record_number: bytes[responseIndex + 2],
+        raw_data: bytes.slice(responseIndex + 3),
+        source_ecu: sourceEcu
+      }],
+      dtcs: []
+    });
+  }
+
   function decodeUdsDtcFaultDetectionCounterResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
@@ -18874,6 +18920,11 @@
     const dtcReadinessGroupIdentifiers = [...new Set(
       snapshots.flatMap((snapshot) => readDtcReadinessGroupIdentifierAliases(snapshot))
     )];
+    const udsDtcExtendedDataRecordResponses = [...new Map(
+      snapshots
+        .flatMap((snapshot) => readUdsDtcExtendedDataRecordResponseAliases(snapshot, snapshot?.sourceEcu || snapshot?.source_ecu || null))
+        .map((item) => [`${item.sourceEcu}::${item.extendedDataRecordNumber}::${item.rawData}`, item])
+    ).values()];
     const dtcNegativeResponseServices = [...new Set(
       snapshots.flatMap((snapshot) => readDtcNegativeResponseServiceAliases(snapshot))
     )];
@@ -18959,6 +19010,8 @@
       dtcs: mergedRows,
       dtcCount,
       dtc_count: dtcCount,
+      udsDtcExtendedDataRecordResponses,
+      uds_dtc_extended_data_record_responses: udsDtcExtendedDataRecordResponses.map((item) => ({ ...item })),
       storedCount,
       stored_count: storedCount,
       pendingCount,
@@ -19887,6 +19940,8 @@
         if (readinessGroupSnapshot.dtcReadoutStatus === "reported") return readinessGroupSnapshot;
         const faultDetectionCounterSnapshot = decodeUdsDtcFaultDetectionCounterResponse(input);
         if (faultDetectionCounterSnapshot.dtcReadoutStatus === "reported") return faultDetectionCounterSnapshot;
+        const extendedDataByRecordSnapshot = decodeUdsDtcExtendedDataByRecordNumberResponse(input);
+        if (extendedDataByRecordSnapshot.dtcReadoutStatus === "reported") return extendedDataByRecordSnapshot;
         const extendedDataSnapshot = decodeUdsDtcExtendedDataResponse(input);
         return extendedDataSnapshot.dtcReadoutStatus === "reported" ? extendedDataSnapshot : decodeObdDtcResponse(input);
       }));
@@ -23411,6 +23466,32 @@
       .filter((value) => value !== null))];
   }
 
+  function readUdsDtcExtendedDataRecordResponseAliases(row, fallbackEcu = null) {
+    const values = [
+      row?.uds_dtc_extended_data_record_responses,
+      row?.udsDtcExtendedDataRecordResponses,
+      row?.dtc_extended_data_record_responses,
+      row?.dtcExtendedDataRecordResponses
+    ].flatMap((item) => Array.isArray(item) ? item : []);
+    const entries = values.flatMap((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const recordNumber = readDtcExtendedDataRecordNumberAlias(item);
+      const rawData = readDtcExtendedDataRawAlias({ ...item, extended_data_raw: item.extended_data_raw ?? item.extendedDataRaw ?? item.raw_data ?? item.rawData });
+      const sourceEcu = item.source_ecu || item.sourceEcu || item.ecu || item.address || fallbackEcu || null;
+      return recordNumber !== null && rawData !== null && sourceEcu
+        ? [{
+          extendedDataRecordNumber: recordNumber,
+          extended_data_record_number: recordNumber,
+          rawData,
+          raw_data: rawData,
+          sourceEcu,
+          source_ecu: sourceEcu
+        }]
+        : [];
+    });
+    return [...new Map(entries.map((item) => [`${item.sourceEcu}::${item.extendedDataRecordNumber}::${item.rawData}`, item])).values()];
+  }
+
   function readDtcNegativeResponseByteAliases(row, singularKeys = [], pluralKeys = []) {
     const values = [
       ...pluralKeys.flatMap((key) => Array.isArray(row?.[key]) ? row[key] : []),
@@ -24384,6 +24465,7 @@
     decodeUdsDtcSnapshotResponse,
     decodeUdsDtcStoredDataResponse,
     decodeUdsDtcExtendedDataResponse,
+    decodeUdsDtcExtendedDataByRecordNumberResponse,
     decodeUdsDtcFaultDetectionCounterResponse,
     decodeUdsDtcSeverityResponse,
     decodeUdsWwhObdDtcResponse,
