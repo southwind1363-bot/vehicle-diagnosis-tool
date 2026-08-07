@@ -3181,6 +3181,7 @@
       const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);
       const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
       const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
+      const faultDetectionCounterRaw = readDtcFaultDetectionCounterRawAlias(rowValue);
       return codeReferences.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -3200,6 +3201,10 @@
           extended_data_record_number: extendedDataRecordNumber,
           extendedDataRaw: extendedDataRaw,
           extended_data_raw: extendedDataRaw
+        } : {}),
+        ...(faultDetectionCounterRaw ? {
+          faultDetectionCounterRaw,
+          fault_detection_counter_raw: faultDetectionCounterRaw
         } : {}),
         ...(codeFormat ? {
           codeFormat,
@@ -16715,6 +16720,7 @@
       const ecuName = rowEcuName || (sourceEcuName && (!rowEcu || !sourceEcu || rowEcu === sourceEcu) ? sourceEcuName : null);
       const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
       const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
+      const faultDetectionCounterRaw = readDtcFaultDetectionCounterRawAlias(rowValue);
       return codes.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -16734,6 +16740,10 @@
           extended_data_record_number: extendedDataRecordNumber,
           extendedDataRaw: extendedDataRaw,
           extended_data_raw: extendedDataRaw
+        } : {}),
+        ...(faultDetectionCounterRaw ? {
+          faultDetectionCounterRaw,
+          fault_detection_counter_raw: faultDetectionCounterRaw
         } : {}),
         ...(codeFormat ? {
           codeFormat,
@@ -18542,6 +18552,48 @@
     });
   }
 
+  function decodeUdsDtcFaultDetectionCounterResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const responseIndex = bytes.indexOf(0x59);
+    const isFaultDetectionCounterResponse = responseIndex >= 0
+      && bytes[responseIndex + 1] === 0x14
+      && responseIndex + 5 < bytes.length
+      && (bytes.length - (responseIndex + 2)) % 4 === 0
+      && Boolean(sourceEcu);
+    if (!isFaultDetectionCounterResponse) {
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+        captured_at: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown",
+        dtc_response_format: "uds_read_dtc_information",
+        dtc_response_subfunction: "14",
+        dtcs: []
+      });
+    }
+    const records = [];
+    for (let index = responseIndex + 2; index + 3 < bytes.length; index += 4) {
+      records.push({
+        code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
+        code_format: "uds_3byte",
+        fault_detection_counter_raw: bytes[index + 3].toString(16).toUpperCase().padStart(2, "0"),
+        ecu: sourceEcu
+      });
+    }
+    return normalizeDtcSnapshot({
+      source: input.source || "obd_response_decoder",
+      source_ecu: sourceEcu,
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || input.obd_protocol || null,
+      dtc_readout_status: "reported",
+      dtc_response_format: "uds_read_dtc_information",
+      dtc_response_subfunction: "14",
+      dtcs: records
+    });
+  }
+
   function mergeDtcSnapshots(...snapshots) {
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
@@ -19623,6 +19675,8 @@
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
         };
+        const faultDetectionCounterSnapshot = decodeUdsDtcFaultDetectionCounterResponse(input);
+        if (faultDetectionCounterSnapshot.dtcReadoutStatus === "reported") return faultDetectionCounterSnapshot;
         const extendedDataSnapshot = decodeUdsDtcExtendedDataResponse(input);
         return extendedDataSnapshot.dtcReadoutStatus === "reported" ? extendedDataSnapshot : decodeObdDtcResponse(input);
       }));
@@ -23226,6 +23280,19 @@
     return bytes.length <= 4096 ? bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ") : null;
   }
 
+  function readDtcFaultDetectionCounterRawAlias(row) {
+    const value = [
+      row?.fault_detection_counter_raw,
+      row?.faultDetectionCounterRaw,
+      row?.fault_detection_counter,
+      row?.faultDetectionCounter,
+      row?.dtc_fault_detection_counter,
+      row?.dtcFaultDetectionCounter
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    const bytes = Number.isInteger(value) && value >= 0 && value <= 255 ? [value] : parseObdHexBytes(value ?? []);
+    return bytes.length === 1 ? bytes[0].toString(16).toUpperCase().padStart(2, "0") : null;
+  }
+
   function extractDtcReferences(value) {
     const matches = [...String(value || "").toUpperCase().matchAll(DTC_REFERENCE_PATTERN)];
     const seen = new Set();
@@ -24067,6 +24134,7 @@
     decodeObdDtcResponse,
     decodeUdsDtcSnapshotResponse,
     decodeUdsDtcExtendedDataResponse,
+    decodeUdsDtcFaultDetectionCounterResponse,
     mergeDtcSnapshots,
     decodeSupportedPidResponse,
     decodeLivePidResponse,

@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.11";
+const APP_VERSION = "3.7.12";
 const APP_LAST_UPDATED = "2026-08-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6966,6 +6966,7 @@ function formatUdsDtcSubfunction(value, fallback = NO_DATA) {
     "0F": "reportMirrorMemoryDTCByStatusMask",
     "12": "reportNumberOfEmissionsRelatedOBDDTCByStatusMask",
     "13": "reportEmissionsRelatedOBDDTCByStatusMask",
+    "14": "reportDTCFaultDetectionCounter",
     "15": "reportDTCWithPermanentStatus",
     "17": "reportUserDefMemoryDTCByStatusMask",
     "11": "reportNumberOfMirrorMemoryDTCByStatusMask"
@@ -8085,6 +8086,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const dtcFormatIdentifier = dtcSnapshot?.dtcFormatIdentifier || dtcSnapshot?.dtc_format_identifier || null;
   const dtcMemorySelection = dtcSnapshot?.dtcMemorySelection || dtcSnapshot?.dtc_memory_selection || null;
   const udsDtcExtendedDataRecordCount = (dtcSnapshot?.dtcs || []).filter((item) => Number.isInteger(Number(item?.extendedDataRecordNumber ?? item?.extended_data_record_number))).length;
+  const udsDtcFaultDetectionCounterCount = (dtcSnapshot?.dtcs || []).filter((item) => /^[0-9A-F]{2}$/i.test(String(item?.faultDetectionCounterRaw || item?.fault_detection_counter_raw || ""))).length;
   const dtcMetadataSummary = dtcSnapshot?.dtcMetadataSummary || dtcSnapshot?.dtc_metadata_summary || null;
   const dtcMetadataTotalCount = Number(dtcMetadataSummary?.totalCount ?? dtcMetadataSummary?.total_count ?? 0);
   const dtcMetadataLabel = dtcMetadataTotalCount > 0
@@ -8241,6 +8243,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ...(adapterInitializationLabel ? [["VCI初期化", adapterInitializationLabel]] : []),
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["UDS DTC extended raw records", udsDtcExtendedDataRecordCount ? `${udsDtcExtendedDataRecordCount} (raw evidence)` : NO_DATA],
+    ["UDS DTC fault counter records", udsDtcFaultDetectionCounterCount ? `${udsDtcFaultDetectionCounterCount} (raw evidence)` : NO_DATA],
     ["UDS FF raw records", udsDtcSnapshotRecordCount ? `${udsDtcSnapshotRecordCount} (raw evidence)` : NO_DATA],
     ...(reportedDtcEcuCountLabel !== NO_DATA ? [["ECU報告DTC件数", `${reportedDtcEcuCountLabel} (個別DTC詳細未展開)`]] : []),
     ["DTC内訳", dtcStatusSummary || NO_DATA],
