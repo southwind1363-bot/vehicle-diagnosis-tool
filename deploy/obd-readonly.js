@@ -3109,7 +3109,9 @@
           dtc_format_identifiers: response.data.dtcFormatIdentifiers || response.data.dtc_format_identifiers || response.data.formatIdentifiers || response.data.format_identifiers || response.dtcFormatIdentifiers || response.dtc_format_identifiers || response.formatIdentifiers || response.format_identifiers || null,
           dtc_format_identifier: response.data.dtcFormatIdentifier ?? response.data.dtc_format_identifier ?? response.data.formatIdentifier ?? response.data.format_identifier ?? response.dtcFormatIdentifier ?? response.dtc_format_identifier ?? response.formatIdentifier ?? response.format_identifier ?? null,
           dtc_memory_selections: response.data.dtcMemorySelections || response.data.dtc_memory_selections || response.data.memorySelections || response.data.memory_selections || response.dtcMemorySelections || response.dtc_memory_selections || response.memorySelections || response.memory_selections || null,
-          dtc_memory_selection: response.data.dtcMemorySelection ?? response.data.dtc_memory_selection ?? response.data.memorySelection ?? response.data.memory_selection ?? response.dtcMemorySelection ?? response.dtc_memory_selection ?? response.memorySelection ?? response.memory_selection ?? null
+          dtc_memory_selection: response.data.dtcMemorySelection ?? response.data.dtc_memory_selection ?? response.data.memorySelection ?? response.data.memory_selection ?? response.dtcMemorySelection ?? response.dtc_memory_selection ?? response.memorySelection ?? response.memory_selection ?? null,
+          dtc_readiness_group_identifiers: response.data.dtcReadinessGroupIdentifiers || response.data.dtc_readiness_group_identifiers || response.data.readinessGroupIdentifiers || response.data.readiness_group_identifiers || response.dtcReadinessGroupIdentifiers || response.dtc_readiness_group_identifiers || response.readinessGroupIdentifiers || response.readiness_group_identifiers || null,
+          dtc_readiness_group_identifier: response.data.dtcReadinessGroupIdentifier ?? response.data.dtc_readiness_group_identifier ?? response.data.readinessGroupIdentifier ?? response.data.readiness_group_identifier ?? response.dtcReadinessGroupIdentifier ?? response.dtc_readiness_group_identifier ?? response.readinessGroupIdentifier ?? response.readiness_group_identifier ?? null
         }
         : response
       : {};
@@ -3292,6 +3294,8 @@
     const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
     const dtcMemorySelections = readDtcMemorySelectionAliases(data);
     const dtcMemorySelection = dtcMemorySelections.length === 1 ? dtcMemorySelections[0] : null;
+    const dtcReadinessGroupIdentifiers = readDtcReadinessGroupIdentifierAliases(data);
+    const dtcReadinessGroupIdentifier = dtcReadinessGroupIdentifiers.length === 1 ? dtcReadinessGroupIdentifiers[0] : null;
     const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(data);
     const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(data);
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
@@ -3348,6 +3352,10 @@
       dtc_memory_selection: dtcMemorySelection,
       dtcMemorySelections,
       dtc_memory_selections: [...dtcMemorySelections],
+      dtcReadinessGroupIdentifier,
+      dtc_readiness_group_identifier: dtcReadinessGroupIdentifier,
+      dtcReadinessGroupIdentifiers,
+      dtc_readiness_group_identifiers: [...dtcReadinessGroupIdentifiers],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -16641,6 +16649,8 @@
         dtc_format_identifier: input.data.dtcFormatIdentifier ?? input.data.dtc_format_identifier ?? input.data.formatIdentifier ?? input.data.format_identifier ?? input.dtcFormatIdentifier ?? input.dtc_format_identifier ?? input.formatIdentifier ?? input.format_identifier ?? null,
         dtc_memory_selections: input.data.dtcMemorySelections || input.data.dtc_memory_selections || input.data.memorySelections || input.data.memory_selections || input.dtcMemorySelections || input.dtc_memory_selections || input.memorySelections || input.memory_selections || null,
         dtc_memory_selection: input.data.dtcMemorySelection ?? input.data.dtc_memory_selection ?? input.data.memorySelection ?? input.data.memory_selection ?? input.dtcMemorySelection ?? input.dtc_memory_selection ?? input.memorySelection ?? input.memory_selection ?? null,
+        dtc_readiness_group_identifiers: input.data.dtcReadinessGroupIdentifiers || input.data.dtc_readiness_group_identifiers || input.data.readinessGroupIdentifiers || input.data.readiness_group_identifiers || input.dtcReadinessGroupIdentifiers || input.dtc_readiness_group_identifiers || input.readinessGroupIdentifiers || input.readiness_group_identifiers || null,
+        dtc_readiness_group_identifier: input.data.dtcReadinessGroupIdentifier ?? input.data.dtc_readiness_group_identifier ?? input.data.readinessGroupIdentifier ?? input.data.readiness_group_identifier ?? input.dtcReadinessGroupIdentifier ?? input.dtc_readiness_group_identifier ?? input.readinessGroupIdentifier ?? input.readiness_group_identifier ?? null,
         ecu_responses: Array.isArray(input.data.ecu_responses) ? input.data.ecu_responses : Array.isArray(input.data.ecuResponses) ? input.data.ecuResponses : Array.isArray(input.ecu_responses) ? input.ecu_responses : Array.isArray(input.ecuResponses) ? input.ecuResponses : []
       }
       : input && typeof input === "object" ? input : {};
@@ -16834,6 +16844,8 @@
     const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
     const dtcMemorySelections = readDtcMemorySelectionAliases(sourceInput);
     const dtcMemorySelection = dtcMemorySelections.length === 1 ? dtcMemorySelections[0] : null;
+    const dtcReadinessGroupIdentifiers = readDtcReadinessGroupIdentifierAliases(sourceInput);
+    const dtcReadinessGroupIdentifier = dtcReadinessGroupIdentifiers.length === 1 ? dtcReadinessGroupIdentifiers[0] : null;
     const dtcNegativeResponseServices = readDtcNegativeResponseServiceAliases(sourceInput);
     const dtcNegativeResponseCodes = readDtcNegativeResponseCodeAliases(sourceInput);
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
@@ -16902,6 +16914,10 @@
       dtc_memory_selection: dtcMemorySelection,
       dtcMemorySelections,
       dtc_memory_selections: [...dtcMemorySelections],
+      dtcReadinessGroupIdentifier,
+      dtc_readiness_group_identifier: dtcReadinessGroupIdentifier,
+      dtcReadinessGroupIdentifiers,
+      dtc_readiness_group_identifiers: [...dtcReadinessGroupIdentifiers],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -18699,6 +18715,21 @@
     return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", source_ecu: sourceEcu, captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: "reported", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: "55", dtc_status_availability_mask: statusAvailabilityMask, dtc_format_identifier: formatIdentifier, dtcs });
   }
 
+  function decodeUdsDtcReadinessGroupResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const responseIndex = bytes.indexOf(0x59);
+    const isReadinessGroupResponse = responseIndex >= 0 && bytes[responseIndex + 1] === 0x56 && responseIndex + 5 < bytes.length && (bytes.length - (responseIndex + 6)) % 4 === 0 && Boolean(sourceEcu);
+    if (!isReadinessGroupResponse) return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", ...(sourceEcu ? { source_ecu: sourceEcu } : {}), captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: "56", dtcs: [] });
+    const functionalGroupRaw = bytes[responseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+    const statusAvailabilityMask = bytes[responseIndex + 3].toString(16).toUpperCase().padStart(2, "0");
+    const formatIdentifier = bytes[responseIndex + 4].toString(16).toUpperCase().padStart(2, "0");
+    const readinessGroupIdentifier = bytes[responseIndex + 5].toString(16).toUpperCase().padStart(2, "0");
+    const dtcs = [];
+    for (let index = responseIndex + 6; index + 3 < bytes.length; index += 4) dtcs.push({ code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""), code_format: "uds_3byte", status_byte: bytes[index + 3], wwh_obd_functional_group_raw: functionalGroupRaw, ecu: sourceEcu });
+    return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", source_ecu: sourceEcu, captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: "reported", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: "56", dtc_status_availability_mask: statusAvailabilityMask, dtc_format_identifier: formatIdentifier, dtc_readiness_group_identifier: readinessGroupIdentifier, dtcs });
+  }
+
   function mergeDtcSnapshots(...snapshots) {
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
@@ -18786,6 +18817,9 @@
     const dtcMemorySelections = [...new Set(
       snapshots.flatMap((snapshot) => readDtcMemorySelectionAliases(snapshot))
     )];
+    const dtcReadinessGroupIdentifiers = [...new Set(
+      snapshots.flatMap((snapshot) => readDtcReadinessGroupIdentifierAliases(snapshot))
+    )];
     const dtcNegativeResponseServices = [...new Set(
       snapshots.flatMap((snapshot) => readDtcNegativeResponseServiceAliases(snapshot))
     )];
@@ -18837,6 +18871,7 @@
     const dtcStatusAvailabilityMask = dtcStatusAvailabilityMasks.length === 1 ? dtcStatusAvailabilityMasks[0] : null;
     const dtcFormatIdentifier = dtcFormatIdentifiers.length === 1 ? dtcFormatIdentifiers[0] : null;
     const dtcMemorySelection = dtcMemorySelections.length === 1 ? dtcMemorySelections[0] : null;
+    const dtcReadinessGroupIdentifier = dtcReadinessGroupIdentifiers.length === 1 ? dtcReadinessGroupIdentifiers[0] : null;
     const dtcNegativeResponseService = dtcNegativeResponseServices.length === 1 ? dtcNegativeResponseServices[0] : null;
     const dtcNegativeResponseCode = dtcNegativeResponseCodes.length === 1 ? dtcNegativeResponseCodes[0] : null;
     const dtcMetadataSummary = buildDtcMetadataSummary({
@@ -18906,6 +18941,10 @@
       dtc_memory_selection: dtcMemorySelection,
       dtcMemorySelections,
       dtc_memory_selections: [...dtcMemorySelections],
+      dtcReadinessGroupIdentifier,
+      dtc_readiness_group_identifier: dtcReadinessGroupIdentifier,
+      dtcReadinessGroupIdentifiers,
+      dtc_readiness_group_identifiers: [...dtcReadinessGroupIdentifiers],
       dtcNegativeResponseService,
       dtc_negative_response_service: dtcNegativeResponseService,
       dtcNegativeResponseServices,
@@ -19786,6 +19825,8 @@
         if (wwhSnapshot.dtcReadoutStatus === "reported") return wwhSnapshot;
         const wwhPermanentSnapshot = decodeUdsWwhObdPermanentDtcResponse(input);
         if (wwhPermanentSnapshot.dtcReadoutStatus === "reported") return wwhPermanentSnapshot;
+        const readinessGroupSnapshot = decodeUdsDtcReadinessGroupResponse(input);
+        if (readinessGroupSnapshot.dtcReadoutStatus === "reported") return readinessGroupSnapshot;
         const faultDetectionCounterSnapshot = decodeUdsDtcFaultDetectionCounterResponse(input);
         if (faultDetectionCounterSnapshot.dtcReadoutStatus === "reported") return faultDetectionCounterSnapshot;
         const extendedDataSnapshot = decodeUdsDtcExtendedDataResponse(input);
@@ -23289,6 +23330,22 @@
       .filter((value) => value !== null))];
   }
 
+  function readDtcReadinessGroupIdentifierAliases(row) {
+    const values = [
+      row?.dtc_readiness_group_identifiers,
+      row?.dtcReadinessGroupIdentifiers,
+      row?.readiness_group_identifiers,
+      row?.readinessGroupIdentifiers,
+      row?.dtc_readiness_group_identifier,
+      row?.dtcReadinessGroupIdentifier,
+      row?.readiness_group_identifier,
+      row?.readinessGroupIdentifier
+    ].flatMap((item) => Array.isArray(item) ? item : [item]);
+    return [...new Set(values
+      .map((value) => normalizeDtcStatusByte(value))
+      .filter((value) => value !== null))];
+  }
+
   function readDtcNegativeResponseByteAliases(row, singularKeys = [], pluralKeys = []) {
     const values = [
       ...pluralKeys.flatMap((key) => Array.isArray(row?.[key]) ? row[key] : []),
@@ -24265,6 +24322,7 @@
     decodeUdsDtcSeverityResponse,
     decodeUdsWwhObdDtcResponse,
     decodeUdsWwhObdPermanentDtcResponse,
+    decodeUdsDtcReadinessGroupResponse,
     mergeDtcSnapshots,
     decodeSupportedPidResponse,
     decodeLivePidResponse,
