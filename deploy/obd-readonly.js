@@ -18685,6 +18685,20 @@
     return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", source_ecu: sourceEcu, captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: "reported", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: "42", dtc_status_availability_mask: statusAvailabilityMask, dtc_format_identifier: formatIdentifier, dtcs });
   }
 
+  function decodeUdsWwhObdPermanentDtcResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const responseIndex = bytes.indexOf(0x59);
+    const isWwhPermanentResponse = responseIndex >= 0 && bytes[responseIndex + 1] === 0x55 && responseIndex + 4 < bytes.length && (bytes.length - (responseIndex + 5)) % 4 === 0 && Boolean(sourceEcu);
+    if (!isWwhPermanentResponse) return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", ...(sourceEcu ? { source_ecu: sourceEcu } : {}), captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: "55", dtcs: [] });
+    const functionalGroupRaw = bytes[responseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
+    const statusAvailabilityMask = bytes[responseIndex + 3].toString(16).toUpperCase().padStart(2, "0");
+    const formatIdentifier = bytes[responseIndex + 4].toString(16).toUpperCase().padStart(2, "0");
+    const dtcs = [];
+    for (let index = responseIndex + 5; index + 3 < bytes.length; index += 4) dtcs.push({ code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""), code_format: "uds_3byte", status: "permanent", status_byte: bytes[index + 3], wwh_obd_functional_group_raw: functionalGroupRaw, ecu: sourceEcu });
+    return normalizeDtcSnapshot({ source: input.source || "obd_response_decoder", source_ecu: sourceEcu, captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, dtc_readout_status: "reported", dtc_response_format: "uds_read_dtc_information", dtc_response_subfunction: "55", dtc_status_availability_mask: statusAvailabilityMask, dtc_format_identifier: formatIdentifier, dtcs });
+  }
+
   function mergeDtcSnapshots(...snapshots) {
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
@@ -19770,6 +19784,8 @@
         if (severitySnapshot.dtcReadoutStatus === "reported") return severitySnapshot;
         const wwhSnapshot = decodeUdsWwhObdDtcResponse(input);
         if (wwhSnapshot.dtcReadoutStatus === "reported") return wwhSnapshot;
+        const wwhPermanentSnapshot = decodeUdsWwhObdPermanentDtcResponse(input);
+        if (wwhPermanentSnapshot.dtcReadoutStatus === "reported") return wwhPermanentSnapshot;
         const faultDetectionCounterSnapshot = decodeUdsDtcFaultDetectionCounterResponse(input);
         if (faultDetectionCounterSnapshot.dtcReadoutStatus === "reported") return faultDetectionCounterSnapshot;
         const extendedDataSnapshot = decodeUdsDtcExtendedDataResponse(input);
@@ -24248,6 +24264,7 @@
     decodeUdsDtcFaultDetectionCounterResponse,
     decodeUdsDtcSeverityResponse,
     decodeUdsWwhObdDtcResponse,
+    decodeUdsWwhObdPermanentDtcResponse,
     mergeDtcSnapshots,
     decodeSupportedPidResponse,
     decodeLivePidResponse,
