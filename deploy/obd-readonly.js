@@ -18412,6 +18412,7 @@
       && udsResponseIndex + 6 < bytes.length
       && (bytes.length - (udsResponseIndex + 3)) % 4 === 0
       && Boolean(sourceEcu);
+    const udsPermanentDtcResponse = udsResponseIndex >= 0 && bytes[udsResponseIndex + 1] === 0x15;
     const udsEmptyDtcByStatusResponse = udsResponseIndex >= 0
       && [0x02, 0x0F, 0x13].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 2 === bytes.length - 1
@@ -18476,6 +18477,7 @@
           code: bytes.slice(index, index + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
           code_format: "uds_3byte",
           status_byte: bytes[index + 3],
+          ...(udsPermanentDtcResponse ? { status: "permanent" } : {}),
           ecu: sourceEcu
         });
       }
