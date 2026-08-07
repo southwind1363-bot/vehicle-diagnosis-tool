@@ -16937,6 +16937,8 @@
       const codeReference = extractUdsThreeByteDtcReference(row.code || row.dtc || row.dtc_code || row.dtcCode || "");
       const recordType = String(row.snapshot_record_type ?? row.snapshotRecordType ?? "data").trim().toLowerCase() === "identification" ? "identification" : "data";
       const statusByte = normalizeDtcStatusByte(row.status_byte ?? row.statusByte ?? row.status_of_dtc ?? row.statusOfDtc ?? null);
+      const dtcMemorySelections = readDtcMemorySelectionAliases(row);
+      const dtcMemorySelection = dtcMemorySelections.length === 1 ? dtcMemorySelections[0] : null;
       const recordNumberValue = Number(row.snapshot_record_number ?? row.snapshotRecordNumber ?? row.record_number ?? row.recordNumber);
       const identifierCountInput = row.snapshot_record_identifier_count ?? row.snapshotRecordIdentifierCount ?? row.identifier_count ?? row.identifierCount;
       const identifierCountValue = identifierCountInput === undefined || identifierCountInput === null || identifierCountInput === "" ? null : Number(identifierCountInput);
@@ -16952,6 +16954,8 @@
         snapshot_record_type: recordType,
         statusByte,
         status_byte: statusByte,
+        dtcMemorySelection,
+        dtc_memory_selection: dtcMemorySelection,
         snapshotRecordNumber: recordNumberValue,
         snapshot_record_number: recordNumberValue,
         snapshotRecordIdentifierCount: recordType === "identification" ? null : identifierCountValue,
@@ -18468,10 +18472,14 @@
       && responseIndex + 5 < bytes.length
       && (bytes.length - (responseIndex + 2)) % 4 === 0
       && Boolean(sourceEcu);
-    const isSnapshotRecordResponse = responseIndex >= 0
+    const isUserDefinedMemorySnapshotResponse = responseIndex >= 0
+      && bytes[responseIndex + 1] === 0x18
+      && responseIndex + 8 < bytes.length
+      && Boolean(sourceEcu);
+    const isSnapshotRecordResponse = (responseIndex >= 0
       && bytes[responseIndex + 1] === 0x04
       && responseIndex + 7 < bytes.length
-      && Boolean(sourceEcu);
+      && Boolean(sourceEcu)) || isUserDefinedMemorySnapshotResponse;
     if (!isSnapshotIdentificationResponse && !isSnapshotRecordResponse) {
       return normalizeFreezeFrameSnapshot({
         source: input.source || "obd_response_decoder",
@@ -18481,6 +18489,13 @@
         freeze_frame_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown"
       });
     }
+    const dtcStart = isUserDefinedMemorySnapshotResponse ? responseIndex + 3 : responseIndex + 2;
+    const statusIndex = dtcStart + 3;
+    const recordNumberIndex = statusIndex + 1;
+    const identifierCountIndex = recordNumberIndex + 1;
+    const dtcMemorySelection = isUserDefinedMemorySnapshotResponse
+      ? bytes[responseIndex + 2].toString(16).toUpperCase().padStart(2, "0")
+      : null;
     const records = isSnapshotIdentificationResponse
       ? Array.from({ length: (bytes.length - (responseIndex + 2)) / 4 }, (_item, index) => {
         const start = responseIndex + 2 + (index * 4);
@@ -18493,13 +18508,14 @@
         };
       })
       : [{
-        code: bytes.slice(responseIndex + 2, responseIndex + 5).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
+        code: bytes.slice(dtcStart, dtcStart + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
         code_format: "uds_3byte",
         snapshot_record_type: "data",
-        status_byte: bytes[responseIndex + 5].toString(16).toUpperCase().padStart(2, "0"),
-        snapshot_record_number: bytes[responseIndex + 6],
-        snapshot_record_identifier_count: bytes[responseIndex + 7],
-        raw_data: bytes.slice(responseIndex + 8),
+        status_byte: bytes[statusIndex].toString(16).toUpperCase().padStart(2, "0"),
+        ...(dtcMemorySelection ? { dtc_memory_selection: dtcMemorySelection } : {}),
+        snapshot_record_number: bytes[recordNumberIndex],
+        snapshot_record_identifier_count: bytes[identifierCountIndex],
+        raw_data: bytes.slice(identifierCountIndex + 1),
         source_ecu: sourceEcu
       }];
     return normalizeFreezeFrameSnapshot({
@@ -18508,7 +18524,7 @@
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
       freeze_frame_readout_status: "reported",
-      trigger_dtc_entries: records.map((record) => ({ code: record.code, code_format: "uds_3byte", frame_number: record.snapshot_record_number, source_ecu: sourceEcu })),
+      trigger_dtc_entries: records.map((record) => ({ code: record.code, code_format: "uds_3byte", ...(record.dtc_memory_selection ? { dtc_memory_selection: record.dtc_memory_selection } : {}), frame_number: record.snapshot_record_number, source_ecu: sourceEcu })),
       uds_dtc_snapshot_records: records
     });
   }
