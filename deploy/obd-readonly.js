@@ -18520,10 +18520,20 @@
     const responseSubfunction = Number.isInteger(bytes[responseIndex + 1])
       ? bytes[responseIndex + 1].toString(16).toUpperCase().padStart(2, "0")
       : null;
-    const isExtendedDataResponse = responseIndex >= 0
+    const isUserDefinedMemoryExtendedDataResponse = responseIndex >= 0
+      && bytes[responseIndex + 1] === 0x19
+      && responseIndex + 7 < bytes.length
+      && Boolean(sourceEcu);
+    const isExtendedDataResponse = (responseIndex >= 0
       && [0x06, 0x10].includes(bytes[responseIndex + 1])
       && responseIndex + 6 < bytes.length
-      && Boolean(sourceEcu);
+      && Boolean(sourceEcu)) || isUserDefinedMemoryExtendedDataResponse;
+    const dtcStart = isUserDefinedMemoryExtendedDataResponse ? responseIndex + 3 : responseIndex + 2;
+    const statusIndex = dtcStart + 3;
+    const recordNumberIndex = statusIndex + 1;
+    const dtcMemorySelection = isUserDefinedMemoryExtendedDataResponse
+      ? bytes[responseIndex + 2].toString(16).toUpperCase().padStart(2, "0")
+      : null;
     if (!isExtendedDataResponse) {
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
@@ -18544,12 +18554,13 @@
       dtc_readout_status: "reported",
       dtc_response_format: "uds_read_dtc_information",
       dtc_response_subfunction: responseSubfunction,
+      ...(dtcMemorySelection ? { dtc_memory_selection: dtcMemorySelection } : {}),
       dtcs: [{
-        code: bytes.slice(responseIndex + 2, responseIndex + 5).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
+        code: bytes.slice(dtcStart, dtcStart + 3).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
         code_format: "uds_3byte",
-        status_byte: bytes[responseIndex + 5],
-        extended_data_record_number: bytes[responseIndex + 6],
-        extended_data_raw: bytes.slice(responseIndex + 7),
+        status_byte: bytes[statusIndex],
+        extended_data_record_number: bytes[recordNumberIndex],
+        extended_data_raw: bytes.slice(recordNumberIndex + 1),
         ecu: sourceEcu
       }]
     });
