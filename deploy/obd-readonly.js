@@ -3179,6 +3179,8 @@
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
       const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);
+      const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
+      const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
       return codeReferences.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -3193,6 +3195,12 @@
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
+        ...(extendedDataRecordNumber !== null ? {
+          extendedDataRecordNumber,
+          extended_data_record_number: extendedDataRecordNumber,
+          extendedDataRaw: extendedDataRaw,
+          extended_data_raw: extendedDataRaw
+        } : {}),
         ...(codeFormat ? {
           codeFormat,
           code_format: codeFormat,
@@ -16705,6 +16713,8 @@
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
       const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       const ecuName = rowEcuName || (sourceEcuName && (!rowEcu || !sourceEcu || rowEcu === sourceEcu) ? sourceEcuName : null);
+      const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
+      const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
       return codes.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -16719,6 +16729,12 @@
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
+        ...(extendedDataRecordNumber !== null ? {
+          extendedDataRecordNumber,
+          extended_data_record_number: extendedDataRecordNumber,
+          extendedDataRaw: extendedDataRaw,
+          extended_data_raw: extendedDataRaw
+        } : {}),
         ...(codeFormat ? {
           codeFormat,
           code_format: codeFormat,
@@ -18487,6 +18503,45 @@
     });
   }
 
+  function decodeUdsDtcExtendedDataResponse(input = {}) {
+    const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const responseIndex = bytes.indexOf(0x59);
+    const isExtendedDataResponse = responseIndex >= 0
+      && bytes[responseIndex + 1] === 0x06
+      && responseIndex + 6 < bytes.length
+      && Boolean(sourceEcu);
+    if (!isExtendedDataResponse) {
+      return normalizeDtcSnapshot({
+        source: input.source || "obd_response_decoder",
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+        captured_at: input.captured_at || input.capturedAt || null,
+        protocol: input.protocol || input.obd_protocol || null,
+        dtc_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown",
+        dtc_response_format: "uds_read_dtc_information",
+        dtc_response_subfunction: "06",
+        dtcs: []
+      });
+    }
+    return normalizeDtcSnapshot({
+      source: input.source || "obd_response_decoder",
+      source_ecu: sourceEcu,
+      captured_at: input.captured_at || input.capturedAt || null,
+      protocol: input.protocol || input.obd_protocol || null,
+      dtc_readout_status: "reported",
+      dtc_response_format: "uds_read_dtc_information",
+      dtc_response_subfunction: "06",
+      dtcs: [{
+        code: bytes.slice(responseIndex + 2, responseIndex + 5).map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(""),
+        code_format: "uds_3byte",
+        status_byte: bytes[responseIndex + 5],
+        extended_data_record_number: bytes[responseIndex + 6],
+        extended_data_raw: bytes.slice(responseIndex + 7),
+        ecu: sourceEcu
+      }]
+    });
+  }
+
   function mergeDtcSnapshots(...snapshots) {
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
@@ -19562,11 +19617,15 @@
         ...(classified.responseBuckets.negativeResponses || []).filter((row) => row?.negativeResponse?.requestedService === "19")
       ];
       if (!rows.length) return null;
-      return mergeDtcSnapshots(...rows.map((row) => decodeObdDtcResponse({
-        raw: normalizeBucketResponse(row),
-        protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
-        ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
-      })));
+      return mergeDtcSnapshots(...rows.map((row) => {
+        const input = {
+          raw: normalizeBucketResponse(row),
+          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+        };
+        const extendedDataSnapshot = decodeUdsDtcExtendedDataResponse(input);
+        return extendedDataSnapshot.dtcReadoutStatus === "reported" ? extendedDataSnapshot : decodeObdDtcResponse(input);
+      }));
     };
     const readUdsDtcFreezeFrameSnapshot = () => {
       const snapshots = (classified.responseBuckets.udsDtcResponses || []).map((row) => decodeUdsDtcSnapshotResponse({
@@ -23136,6 +23195,37 @@
     return normalizeDtcOccurrenceCount(value);
   }
 
+  function normalizeDtcExtendedDataRecordNumber(value) {
+    const numeric = typeof value === "string" && /^\d+$/.test(value.trim()) ? Number(value.trim()) : value;
+    return Number.isInteger(numeric) && numeric >= 0 && numeric <= 255 ? numeric : null;
+  }
+
+  function readDtcExtendedDataRecordNumberAlias(row) {
+    const value = [
+      row?.extended_data_record_number,
+      row?.extendedDataRecordNumber,
+      row?.dtc_extended_data_record_number,
+      row?.dtcExtendedDataRecordNumber,
+      row?.record_number,
+      row?.recordNumber
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcExtendedDataRecordNumber(value);
+  }
+
+  function readDtcExtendedDataRawAlias(row) {
+    const value = [
+      row?.extended_data_raw,
+      row?.extendedDataRaw,
+      row?.extended_data,
+      row?.extendedData,
+      row?.dtc_extended_data_raw,
+      row?.dtcExtendedDataRaw
+    ].find((item) => item !== undefined && item !== null);
+    if (value === undefined) return null;
+    const bytes = parseObdHexBytes(value);
+    return bytes.length <= 4096 ? bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ") : null;
+  }
+
   function extractDtcReferences(value) {
     const matches = [...String(value || "").toUpperCase().matchAll(DTC_REFERENCE_PATTERN)];
     const seen = new Set();
@@ -23976,6 +24066,7 @@
     parseObdHexBytes,
     decodeObdDtcResponse,
     decodeUdsDtcSnapshotResponse,
+    decodeUdsDtcExtendedDataResponse,
     mergeDtcSnapshots,
     decodeSupportedPidResponse,
     decodeLivePidResponse,
