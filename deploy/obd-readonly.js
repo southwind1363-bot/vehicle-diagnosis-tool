@@ -16682,6 +16682,11 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
+    const normalizeDtcResponseEcu = (value) => {
+      const sourceEcu = String(value || "").trim();
+      const compactCanAddress = sourceEcu.replace(/^0x/i, "");
+      return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
+    };
     const ecuResponses = [...new Map(
       [sourceInput.ecuResponses, sourceInput.ecu_responses]
         .filter(Array.isArray)
@@ -16698,7 +16703,7 @@
               : null;
           const codeCountValue = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count;
           const codeCount = Number.isSafeInteger(Number(codeCountValue)) && Number(codeCountValue) >= 0 && Number(codeCountValue) <= 10000 ? Number(codeCountValue) : null;
-          return ecu ? [`${ecu}::${intent || status}`, {
+          return ecu ? [`${normalizeDtcResponseEcu(ecu)}::${intent || status}`, {
             ecu,
             ecuName,
             ecu_name: ecuName,
@@ -18988,7 +18993,7 @@
           const responseStatus = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
           const rawCount = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count ?? null;
           const codeCount = Number.isSafeInteger(Number(rawCount)) && Number(rawCount) >= 0 && Number(rawCount) <= 10000 ? Number(rawCount) : null;
-          return ecu ? [`${ecu}::${intent || responseStatus}`, {
+          return ecu ? [`${normalizeDtcMergeEcu(ecu)}::${intent || responseStatus}`, {
             ecu,
             ecuName,
             ecu_name: ecuName,
