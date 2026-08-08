@@ -164,6 +164,7 @@ export function createLocalBridgeApp(options = {}) {
   const bridgeVersion = options.bridgeVersion || "readonly-dev-0.1.0";
   const replaySnapshot = buildReplaySnapshot(options);
   const replayMode = Boolean(replaySnapshot);
+  const sampleReadoutsEnabled = options.enableSampleReadouts === true;
   const j2534DiscoveryRequested = typeof options.j2534RegistryText === "string"
     || options.discoverJ2534 === true
     || process.env.LOCAL_BRIDGE_DISCOVER_J2534 === "1";
@@ -190,6 +191,7 @@ export function createLocalBridgeApp(options = {}) {
         api_version: API_VERSION,
         vehicle_command_enabled: false,
         sample_mode: !replayMode && !j2534DiscoveryRequested,
+        sample_readouts_enabled: sampleReadoutsEnabled,
         replay_mode: replayMode,
         j2534_discovery_requested: j2534DiscoveryRequested,
         vci_detected_count: discoveredVciDevices.length,
@@ -213,7 +215,7 @@ export function createLocalBridgeApp(options = {}) {
       return;
     }
 
-    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment));
+    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment, sampleReadoutsEnabled));
   });
 }
 
@@ -238,7 +240,7 @@ function isReadinessSnapshotRequest(request = {}) {
   return readoutId === "readiness_snapshot" || requestedPid === "01";
 }
 
-function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices)) {
+function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices), sampleReadoutsEnabled = false) {
   const replayMode = Boolean(replaySnapshot);
   const discoveryMode = !replayMode && j2534DiscoveryRequested;
   const driverDetected = discoveryMode && discoveredVciDevices.length > 0;
@@ -340,6 +342,20 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
         driver_status: driverDetected ? "j2534_registry_detected" : "j2534_driver_not_detected",
         connection_status: driverDetected ? "driver_detected_not_opened" : "driver_not_detected",
         ...j2534StatusData,
+        vehicle_command_enabled: false
+      }
+    };
+  }
+
+  if (!replayMode && !sampleReadoutsEnabled) {
+    return {
+      ...base,
+      ok: false,
+      errors: ["sample_mode_no_vehicle_readout"],
+      data: {
+        sample_mode: true,
+        sample_readouts_enabled: false,
+        connection_status: "sample_mode_no_vehicle_readout",
         vehicle_command_enabled: false
       }
     };

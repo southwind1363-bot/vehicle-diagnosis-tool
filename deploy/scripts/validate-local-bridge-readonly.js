@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const failures = [];
 const token = "local-bridge-test-token";
-const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge" });
+const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", enableSampleReadouts: true });
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "package.json"), "utf8"));
 const j2534BridgeStarterSource = fs.readFileSync(path.join(scriptDir, "start-j2534-readonly-bridge.js"), "utf8");
@@ -161,6 +161,20 @@ try {
   check(health.ok === true, "health endpoint did not respond ok");
   check(health.vehicle_command_enabled === false, "health endpoint enabled vehicle commands");
   check(health.sample_mode === true && health.replay_mode === false, "default bridge health did not distinguish sample mode from replay mode");
+  check(health.sample_readouts_enabled === true, "explicit bridge sample readout mode was not reported");
+
+  const disabledSampleServer = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge" });
+  const disabledSamplePort = await new Promise((resolve) => {
+    disabledSampleServer.listen(0, "127.0.0.1", () => resolve(disabledSampleServer.address().port));
+  });
+  try {
+    const disabledSampleHealth = await fetch(`http://127.0.0.1:${disabledSamplePort}/health`).then((response) => response.json());
+    const disabledSampleReadout = await post(disabledSamplePort, "read_stored_dtc");
+    check(disabledSampleHealth.sample_mode === true && disabledSampleHealth.sample_readouts_enabled === false, "default bridge did not report disabled sample readouts");
+    check(disabledSampleReadout.ok === false && disabledSampleReadout.blocked === false && disabledSampleReadout.errors.includes("sample_mode_no_vehicle_readout") && disabledSampleReadout.would_transmit === false && disabledSampleReadout.data.sample_mode === true && !Object.hasOwn(disabledSampleReadout.data, "dtcs") && !Object.hasOwn(disabledSampleReadout.data, "values"), "default bridge exposed sample diagnostic values as vehicle readouts");
+  } finally {
+    await new Promise((resolve) => disabledSampleServer.close(resolve));
+  }
 
   const preflight = await fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "OPTIONS",
