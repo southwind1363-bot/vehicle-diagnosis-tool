@@ -18427,6 +18427,10 @@
       && udsResponseIndex + 7 < bytes.length
       && (bytes.length - (udsResponseIndex + 4)) % 4 === 0
       && Boolean(sourceEcu);
+    const udsEmptyUserDefinedMemoryDtcResponse = udsResponseIndex >= 0
+      && bytes[udsResponseIndex + 1] === 0x17
+      && udsResponseIndex + 3 === bytes.length - 1
+      && Boolean(sourceEcu);
     const udsSupportedExtendedDataResponse = udsResponseIndex >= 0
       && bytes[udsResponseIndex + 1] === 0x1A
       && udsResponseIndex + 3 < bytes.length
@@ -18465,12 +18469,12 @@
         dtcs: []
       });
     }
-    if (serviceByte === undefined && (udsDtcByStatusResponse || udsEmptyDtcByStatusResponse || udsOccurrenceDtcResponse || udsUserDefinedMemoryDtcResponse)) {
+    if (serviceByte === undefined && (udsDtcByStatusResponse || udsEmptyDtcByStatusResponse || udsOccurrenceDtcResponse || udsUserDefinedMemoryDtcResponse || udsEmptyUserDefinedMemoryDtcResponse)) {
       const dtcStatusAvailabilityMask = bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0");
-      const dtcMemorySelection = udsUserDefinedMemoryDtcResponse
+      const dtcMemorySelection = (udsUserDefinedMemoryDtcResponse || udsEmptyUserDefinedMemoryDtcResponse)
         ? bytes[udsResponseIndex + 3].toString(16).toUpperCase().padStart(2, "0")
         : null;
-      const recordStart = udsUserDefinedMemoryDtcResponse ? udsResponseIndex + 4 : udsResponseIndex + 3;
+      const recordStart = (udsUserDefinedMemoryDtcResponse || udsEmptyUserDefinedMemoryDtcResponse) ? udsResponseIndex + 4 : udsResponseIndex + 3;
       const records = [];
       for (let index = recordStart; index + 3 < bytes.length; index += 4) {
         records.push({
