@@ -359,7 +359,7 @@ try {
   check(ecuInfo.data.values.some((item) => item.id === "supported_info_types_00" && item.value === "55 60 00 00"), "ECU info response did not include supported info types");
   check(ecuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "ECU info response did not include sample CALID");
   check(ecuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "ECU info response did not include sample ECU name");
-  check(ecuInfo.data.values.some((item) => item.id === "vin"), "ECU info response did not include sample VIN for downstream redaction checks");
+  check(ecuInfo.data.had_sensitive_identifier === true && !ecuInfo.data.values.some((item) => item.id === "vin") && !JSON.stringify(ecuInfo).includes("JTDKN3DU0A0123456"), "ECU info response exposed a raw VIN instead of marking it redacted");
 
   const onboardMonitor = await post(port, "read_onboard_monitor");
   check(onboardMonitor.data.tests.some((item) => item.test_id === "01" && item.value === 100), "on-board monitor response did not include sample passing test");
@@ -629,6 +629,24 @@ try {
     check(incompleteIsoTpReplay.ok === false && incompleteIsoTpReplay.errors.includes("replay_ecu_info_transport_incomplete") && incompleteIsoTpReplay.data.values.length === 0, "incomplete replay ISO-TP ECU information was not reported as a transport failure");
   } finally {
     await new Promise((resolve) => incompleteIsoTpReplayServer.close(resolve));
+  }
+
+  const vinReplayServer = createLocalBridgeApp({
+    pairingToken: token,
+    replayLogText: [
+      "can0 7E8#101349024A54444B",
+      "can0 7E8#214E334455304130",
+      "can0 7E8#2231323334353600"
+    ].join("\n")
+  });
+  const vinReplayPort = await new Promise((resolve) => {
+    vinReplayServer.listen(0, "127.0.0.1", () => resolve(vinReplayServer.address().port));
+  });
+  try {
+    const vinReplayEcuInfo = await post(vinReplayPort, "read_ecu_info");
+    check(vinReplayEcuInfo.ok === true && vinReplayEcuInfo.data.had_sensitive_identifier === true && vinReplayEcuInfo.data.values.length === 0 && !JSON.stringify(vinReplayEcuInfo).includes("JTDKN3DU0A0123456"), "Mode 09 VIN replay exposed a raw VIN through the local bridge");
+  } finally {
+    await new Promise((resolve) => vinReplayServer.close(resolve));
   }
 
   const replayEcuInfo = await post(replayPort, "read_ecu_info");

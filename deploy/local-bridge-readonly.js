@@ -154,6 +154,24 @@ const SAMPLE_ECU_INFO_VALUES = [
   { id: "calibration_verification_number", info_type: "06", value: "CVN-ABCD" },
   { id: "ecu_name", info_type: "0A", value: "Engine ECU" }
 ];
+
+function sanitizeEcuInfoValuesForBrowser(values = []) {
+  let hadSensitiveIdentifier = false;
+  const sanitizedValues = (Array.isArray(values) ? values : []).flatMap((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+    const id = String(item.id || "").trim().toLowerCase();
+    const infoType = String(item.info_type || item.infoType || "").trim().toUpperCase();
+    const value = typeof item.value === "string" ? item.value.trim() : "";
+    const isVinItem = id === "vin" || id === "vehicle_identification_number" || infoType === "02";
+    const hasVinValue = /\b[A-HJ-NPR-Z0-9]{17}\b/i.test(value);
+    if (isVinItem || hasVinValue) {
+      hadSensitiveIdentifier = true;
+      return [];
+    }
+    return [{ ...item }];
+  });
+  return { values: sanitizedValues, hadSensitiveIdentifier };
+}
 const SAMPLE_ONBOARD_MONITOR_TESTS = [
   { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
   { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
@@ -446,22 +464,26 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   if (request.intent === "read_ecu_info" && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.ecu_info
       || (replaySnapshot.readoutObserved?.ecu_info ? null : "replay_ecu_info_not_observed");
+    const ecuInfo = sanitizeEcuInfoValuesForBrowser(replaySnapshot.ecuInfoValues);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        values: replaySnapshot.ecuInfoValues
+        values: ecuInfo.values,
+        ...(ecuInfo.hadSensitiveIdentifier ? { had_sensitive_identifier: true } : {})
       }
     };
   }
 
   if (request.intent === "read_ecu_info") {
+    const ecuInfo = sanitizeEcuInfoValuesForBrowser(SAMPLE_ECU_INFO_VALUES);
     return {
       ...base,
       data: {
         protocol: "ISO15765-4",
-        values: SAMPLE_ECU_INFO_VALUES
+        values: ecuInfo.values,
+        ...(ecuInfo.hadSensitiveIdentifier ? { had_sensitive_identifier: true } : {})
       }
     };
   }
