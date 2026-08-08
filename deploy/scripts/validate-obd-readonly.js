@@ -46,6 +46,7 @@ const developerSessionSummarySource = appSource.slice(
   appSource.indexOf("function renderObdOperationPlan(items)")
 );
 const elmDeveloperCommandGuardSource = appSource.match(/function isAllowedObdDeveloperCommand\(command\) \{[\s\S]*?\r?\n\}/);
+const webSerialReadOnlyAllowlistDefinitionSource = appSource.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = Object\.freeze\(\[[\s\S]*?\]\);/s);
 const livePidTimelineChartRowsFunctionSource = appSource.match(/function buildLivePidTimelineChartRows\(timeline = null\) \{[\s\S]*?\r?\n\}/);
 const monitorDefinitions = JSON.parse(
   fs.readFileSync(new URL("../data/obd-monitor-definitions.json", import.meta.url), "utf8")
@@ -117,6 +118,7 @@ if (concurrentDtcRequirementsSource.includes("function evaluateDtcConcurrentRequ
   check(typeof evaluateDtcConcurrentRequirements === "function" && paired?.missing.length === 0 && partial?.missing.join("|") === "C1100:94" && unrelated?.required.length === 0, "Concurrent DTC requirements must retain paired, partial, and unrelated-source behavior");
 }
 check(Boolean(elmDeveloperCommandGuardSource), "isAllowedObdDeveloperCommand is missing from script.js");
+check(Boolean(webSerialReadOnlyAllowlistDefinitionSource), "WEB_SERIAL_READ_ONLY_COMMANDS is missing from script.js");
 if (elmDeveloperCommandGuardSource) {
   const elmDeveloperCommandGuardContext = {
     obdDevSession: {
@@ -125,7 +127,7 @@ if (elmDeveloperCommandGuardSource) {
     }
   };
   vm.createContext(elmDeveloperCommandGuardContext);
-  vm.runInContext(elmDeveloperCommandGuardSource[0], elmDeveloperCommandGuardContext);
+  vm.runInContext(`${webSerialReadOnlyAllowlistDefinitionSource?.[0] || ""}\n${elmDeveloperCommandGuardSource[0]}`, elmDeveloperCommandGuardContext);
   const isAllowedObdDeveloperCommand = elmDeveloperCommandGuardContext.isAllowedObdDeveloperCommand;
   check(typeof isAllowedObdDeveloperCommand === "function" && ["ATZ", "03", "07", "0A", "0100", "0101", "06", "090A", "0200", "0205", "010C"].every((command) => isAllowedObdDeveloperCommand(command) === true), "Web Serial command guard must retain the approved read-only ELM and OBD readouts");
   check(["04", "08", "10 03", "1101", "1400", "2701", "2EF190", "3101", "012345"].every((command) => isAllowedObdDeveloperCommand(command) === false), "Web Serial command guard must reject clear, control, reset, security, write, routine, and unknown commands");
@@ -2980,7 +2982,13 @@ check(webSerialSelectedLivePids.every((pid) => monitorDefinitions.some((item) =>
 const webSerialBank2FuelTrimSnapshot = obd.decodeLivePidResponse({ raw: "41 08 84 41 09 7C" });
 check(webSerialBank2FuelTrimSnapshot.monitorValues?.some((item) => item.id === "stft_b2" && item.value === 3.125) && webSerialBank2FuelTrimSnapshot.monitorValues?.some((item) => item.id === "ltft_b2" && item.value === -3.125) && webSerialBank2FuelTrimSnapshot.wouldTransmit === false, "Web Serial bank-2 fuel trim decoding must preserve both supported read-only PID values");
 check(appSource.includes('const emptyFreezeFrameReadout = freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && !(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc);') && appSource.includes('if (!readCompleted && !emptyFreezeFrameReadout) return false;') && appSource.includes('if (!hasWebSerialFreezeFrameTriggerDtc(freezeFrameSnapshot)) {') && appSource.includes('if (!await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"])) return false;') && appSource.includes('const supportedPids = getWebSerialFreezeFrameSupportedPidsForTriggerScopes(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot);') && appSource.includes('if (!supportedPids.has("02")) {') && appSource.includes('const supportedCommands = obdDevSession.freezeFramePidList.filter((command) => supportedPids.has(command.slice(2)));'), "Web Serial freeze-frame values should be requested only after a trigger DTC and confirmed Mode 02 supported PID map");
-check(appSource.includes('freezeFramePidList: ["020C", "0205", "020F", "020D", "020E", "0204", "0203", "020B", "0210", "0211", "0206", "0207", "0242"]') && appSource.includes('...obdDevSession.freezeFramePidList,'), "Web Serial command allowlist should contain only the selected read-only freeze-frame PID requests");
+check(appSource.includes('freezeFramePidList: ["020C", "0205", "020F", "020D", "020E", "0204", "0203", "020B", "0210", "0211", "0206", "0207", "0242"]') && appSource.includes('const WEB_SERIAL_READ_ONLY_COMMANDS = Object.freeze(['), "Web Serial command allowlist should contain only the selected read-only freeze-frame PID requests");
+const webSerialReadOnlyAllowlistSource = appSource.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = Object\.freeze\(\[[\s\S]*?\]\);/s)?.[0] || "";
+const webSerialAllowedCommandSource = appSource.match(/function isAllowedObdDeveloperCommand\(command\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
+const webSerialAllowedCommand = webSerialReadOnlyAllowlistSource && webSerialAllowedCommandSource
+  ? new Function(`${webSerialReadOnlyAllowlistSource}\n${webSerialAllowedCommandSource}; return isAllowedObdDeveloperCommand;`)()
+  : null;
+check(webSerialAllowedCommand?.("03") === true && webSerialAllowedCommand?.("010C") === true && webSerialAllowedCommand?.("020C") === true && webSerialAllowedCommand?.("0904") === true && webSerialAllowedCommand?.("04") === false && webSerialAllowedCommand?.("1101") === false && !webSerialReadOnlyAllowlistSource.includes('obdDevSession.'), "Web Serial writes must use an immutable read-only command allowlist and reject Mode 04 or arbitrary service commands");
 check(appSource.includes('if (!await runObdDeveloperRead("対応PID確認", ["0100"])) return false;') && appSource.includes('for (const basePid of ["20", "40", "60", "80", "A0", "C0", "E0"])') && appSource.includes('if (!await runObdDeveloperRead("対応PID確認", [`01${basePid}`])) return false;') && appSource.includes('return true;'), "Web Serial should extend supported-PID bitmap checks across every standard range only when the vehicle advertises the next range");
 check(appSource.includes('["08", "0908"]') && appSource.includes('["0B", "090B"]') && appSource.includes('"03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",') && !appSource.includes('"0902"'), "Web Serial command allowlist must read only supported non-identifying Mode 09 information without requesting the VIN");
 check(appSource.includes('const response = await readElmDeveloperResponse(timeoutMs);') && appSource.includes('if (!response) throw new Error(`elm_response_timeout:${normalized}`);'), "Web Serial command handling must reject empty adapter responses as timeouts");

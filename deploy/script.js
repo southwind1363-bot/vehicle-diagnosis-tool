@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.41";
+const APP_VERSION = "3.7.42";
 const APP_LAST_UPDATED = "2026-08-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -498,6 +498,12 @@ let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled
 let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
 let activeObdStage = "setup";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
+const WEB_SERIAL_READ_ONLY_COMMANDS = Object.freeze([
+  "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP",
+  "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
+  "010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151",
+  "020C", "0205", "020F", "020D", "020E", "0204", "0203", "020B", "0210", "0211", "0206", "0207", "0242"
+]);
 const obdDevSession = {
   port: null,
   reader: null,
@@ -5874,12 +5880,7 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
 }
 
 function isAllowedObdDeveloperCommand(command) {
-  return [
-    "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP",
-    "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
-    ...obdDevSession.freezeFramePidList,
-    ...obdDevSession.selectedPidList
-  ].includes(command);
+  return WEB_SERIAL_READ_ONLY_COMMANDS.includes(command);
 }
 
 function isCurrentWebSerialReadLoop(reader, port) {
