@@ -17238,16 +17238,24 @@
           interpretationNote: catalogItem?.interpretationNote || item.supportNote
         };
       });
-    const expectedItems = freezeFrameItemCatalog.map((item) => ({
-      id: item.id,
-      monitorId: item.monitorId,
-      label: item.label,
-      pid: item.pid,
-      priority: item.priority,
-      captured: monitorValues.some((value) => value.id === item.monitorId || value.pid === item.pid),
-      purpose: item.purpose,
-      interpretationNote: item.interpretationNote
-    }));
+    const expectedItems = freezeFrameItemCatalog.map((item) => {
+      const capturedValues = monitorValues.filter((value) => value.id === item.monitorId || value.pid === item.pid);
+      const capturedEcuIds = [...new Set(capturedValues.map((value) => value.sourceEcu || value.source_ecu || null).filter(Boolean))].sort();
+      return {
+        id: item.id,
+        monitorId: item.monitorId,
+        label: item.label,
+        pid: item.pid,
+        priority: item.priority,
+        captured: capturedValues.length > 0,
+        capturedEcuIds,
+        captured_ecu_ids: capturedEcuIds,
+        capturedEcuCount: capturedEcuIds.length,
+        captured_ecu_count: capturedEcuIds.length,
+        purpose: item.purpose,
+        interpretationNote: item.interpretationNote
+      };
+    });
     const triggerCodeValues = [
       sourceInput.trigger_dtc,
       sourceInput.triggerDtc,
