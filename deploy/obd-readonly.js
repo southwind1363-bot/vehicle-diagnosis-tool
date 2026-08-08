@@ -22631,16 +22631,22 @@
       snapshot.capturedAt || snapshot.captured_at || "",
       snapshot.protocol || snapshot.obd_protocol || ""
     ].join("::")));
+    const freezeFrameEcuIds = [...new Set(freezeFrameSnapshots
+      .map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu || null)
+      .filter(Boolean))];
     const canMergeFreezeFrameSnapshots = freezeFrameSnapshots.length > 1 && freezeFrameScopes.size === 1 && [...freezeFrameScopes][0] !== "::::";
-    const freezeFrameSnapshot = canMergeFreezeFrameSnapshots
+    const canAggregateFreezeFrameEcuSnapshots = freezeFrameSnapshots.length > 1 && freezeFrameEcuIds.length > 1;
+    const freezeFrameSnapshot = canMergeFreezeFrameSnapshots || canAggregateFreezeFrameEcuSnapshots
       ? normalizeFreezeFrameSnapshot({
         source: "scanner_csv_import",
-        trigger_dtc: freezeFrameSnapshots[0].triggerDtc || freezeFrameSnapshots[0].trigger_dtc || null,
-        trigger_frame_number: freezeFrameSnapshots[0].triggerFrameNumber ?? freezeFrameSnapshots[0].trigger_frame_number ?? null,
-        source_ecu: freezeFrameSnapshots[0].sourceEcu || freezeFrameSnapshots[0].source_ecu || null,
-        source_ecu_name: freezeFrameSnapshots[0].sourceEcuName || freezeFrameSnapshots[0].source_ecu_name || null,
-        captured_at: freezeFrameSnapshots[0].capturedAt || freezeFrameSnapshots[0].captured_at || null,
-        protocol: freezeFrameSnapshots[0].protocol || freezeFrameSnapshots[0].obd_protocol || null,
+        ...(canMergeFreezeFrameSnapshots ? {
+          trigger_dtc: freezeFrameSnapshots[0].triggerDtc || freezeFrameSnapshots[0].trigger_dtc || null,
+          trigger_frame_number: freezeFrameSnapshots[0].triggerFrameNumber ?? freezeFrameSnapshots[0].trigger_frame_number ?? null,
+          source_ecu: freezeFrameSnapshots[0].sourceEcu || freezeFrameSnapshots[0].source_ecu || null,
+          source_ecu_name: freezeFrameSnapshots[0].sourceEcuName || freezeFrameSnapshots[0].source_ecu_name || null,
+          captured_at: freezeFrameSnapshots[0].capturedAt || freezeFrameSnapshots[0].captured_at || null,
+          protocol: freezeFrameSnapshots[0].protocol || freezeFrameSnapshots[0].obd_protocol || null
+        } : {}),
         trigger_dtc_entries: freezeFrameSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || []),
         values: freezeFrameSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []),
         freeze_frame_readout_status: "reported"
