@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.33";
+const APP_VERSION = "3.7.34";
 const APP_LAST_UPDATED = "2026-08-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7333,7 +7333,8 @@ function renderObdBridgeSessionDetails(session = null) {
       label.className = "obd-timeline-chart-label";
       const unit = row.unit ? ` ${row.unit}` : "";
       const delta = Number.isFinite(row.delta) ? ` / 変化 ${row.delta >= 0 ? "+" : ""}${row.delta}${unit}` : "";
-      label.textContent = `${row.label}${unit} / 最小 ${row.minimum}${unit} / 最大 ${row.maximum}${unit} / 最新 ${row.latest}${unit}${delta}`;
+      const sourceEcu = row.sourceEcu ? ` [${row.sourceEcu}]` : "";
+      label.textContent = `${row.label}${sourceEcu}${unit} / 最小 ${row.minimum}${unit} / 最大 ${row.maximum}${unit} / 最新 ${row.latest}${unit}${delta}`;
       const bars = document.createElement("div");
       bars.className = "obd-timeline-chart-bars";
       row.points.forEach((point) => {
@@ -7355,18 +7356,22 @@ function renderObdBridgeSessionDetails(session = null) {
 function buildLivePidTimelineChartRows(timeline = null) {
   const samples = Array.isArray(timeline?.samples) ? timeline.samples : [];
   const latestCondition = samples.at(-1)?.observationCondition || samples.at(-1)?.observation_condition || "unspecified";
-  const rowsById = new Map();
+  const rowsByKey = new Map();
+  const normalizeUnit = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
   samples
     .filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)
     .forEach((sample) => {
       (sample?.monitorValues || sample?.monitor_values || []).forEach((item) => {
         if (!item?.id || !Number.isFinite(item.value)) return;
-        const row = rowsById.get(item.id) || { id: item.id, label: item.label || item.id, unit: item.unit || "", points: [] };
+        const sourceEcu = item.sourceEcu || item.source_ecu || null;
+        const unit = item.unit || "";
+        const rowKey = `${item.id}::${sourceEcu || ""}::${normalizeUnit(unit)}`;
+        const row = rowsByKey.get(rowKey) || { id: item.id, label: item.label || item.id, unit, sourceEcu, source_ecu: sourceEcu, points: [] };
         row.points.push({ value: item.value, capturedAt: sample.capturedAt || sample.captured_at || null });
-        rowsById.set(item.id, row);
+        rowsByKey.set(rowKey, row);
       });
     });
-  return [...rowsById.values()]
+  return [...rowsByKey.values()]
     .filter((row) => row.points.length >= 2)
     .sort((left, right) => right.points.length - left.points.length || left.label.localeCompare(right.label, "ja"))
     .slice(0, 4)
