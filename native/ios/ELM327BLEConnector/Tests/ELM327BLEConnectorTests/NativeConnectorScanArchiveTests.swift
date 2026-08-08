@@ -148,6 +148,15 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         try mismatchedScopeBuilder.append(envelope(sequence: 1, scopeID: "7E8"))
         let mismatchedScope = NativeConnectorReadoutScope(readoutID: "ecu_info_snapshot", scopeID: "7E8")
         XCTAssertThrowsError(try mismatchedScopeBuilder.complete(with: manifest(count: 1, first: 1, last: 1, scopes: [mismatchedScope])))
+
+        let missingObservedScopeBuilder = NativeConnectorScanArchiveBuilder()
+        try missingObservedScopeBuilder.append(envelope(sequence: 1, scopeID: "7E8"))
+        XCTAssertThrowsError(try missingObservedScopeBuilder.complete(with: manifest(count: 1, first: 1, last: 1, scopes: [])))
+
+        let substitutedObservedScopeBuilder = NativeConnectorScanArchiveBuilder()
+        try substitutedObservedScopeBuilder.append(envelope(sequence: 1, scopeID: "7E8"))
+        let substitutedScope = NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E9")
+        XCTAssertThrowsError(try substitutedObservedScopeBuilder.complete(with: manifest(count: 1, first: 1, last: 1, scopes: [substitutedScope])))
     }
 
     func testEnforcesTheSharedNativeArchiveEnvelopeLimit() throws {

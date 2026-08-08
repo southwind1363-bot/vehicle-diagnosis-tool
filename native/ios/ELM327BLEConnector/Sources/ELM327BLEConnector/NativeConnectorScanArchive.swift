@@ -130,6 +130,15 @@ public final class NativeConnectorScanArchiveBuilder {
 
         let segment = manifest.connectionSegments[0]
         guard segment.connectionSequence == 0 else { throw NativeConnectorScanArchiveError.manifestBoundaryMismatch }
+        let archivedReadoutScopes = Set(envelopes.compactMap { envelope -> NativeConnectorReadoutScope? in
+            guard let readoutID = envelope.readoutID,
+                  let scopeID = envelope.readoutScopeID,
+                  !scopeID.isEmpty
+            else { return nil }
+            return NativeConnectorReadoutScope(readoutID: readoutID, scopeID: scopeID)
+        })
+        guard Set(manifest.expectedReadoutScopes) == archivedReadoutScopes
+        else { throw NativeConnectorScanArchiveError.manifestBoundaryMismatch }
         if let first = envelopes.first {
             guard manifest.scanID == first.scanID,
                   manifest.vehicleContextID == first.vehicleContextID,
