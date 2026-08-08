@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.50";
+const APP_VERSION = "3.7.51";
 const APP_LAST_UPDATED = "2026-08-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10742,7 +10742,7 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   const model = normalizeModel(vehicleProfile?.model);
   const year = Number(vehicleProfile?.year);
   if (!maker || !model || !Number.isInteger(year)) return { status: "unverified", reason: "vehicle_profile_incomplete" };
-  const matched = makers.includes(maker) && scopes.some((scope) => scope.models.includes(model) && year >= scope.yearFrom && year <= scope.yearTo);
+  const matched = makers.includes(maker) && scopes.some((scope) => (scope.models.includes("all") || scope.models.includes(model)) && year >= scope.yearFrom && year <= scope.yearTo);
   if (!matched) return { status: "mismatch" };
   const productionPeriod = filter.production_period || filter.productionPeriod || null;
   const productionDate = normalizeProductionDate(vehicleProfile?.productionDate ?? vehicleProfile?.production_date ?? vehicleProfile?.buildDate ?? vehicleProfile?.build_date ?? vehicleProfile?.manufactureDate ?? vehicleProfile?.manufacture_date);
