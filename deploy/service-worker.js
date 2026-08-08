@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "vehicle-diagnosis-tool";
-const CACHE_VERSION = "3.7.54";
+const CACHE_VERSION = "3.7.55";
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 const OFFLINE_MANIFEST_URL = "offline-assets.json";
 const CORE_ASSETS = [

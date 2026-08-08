@@ -4189,7 +4189,13 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
+    const freezeFrameEcuSnapshotRows = Array.isArray(data.freezeFrameEcuSnapshots)
+      ? data.freezeFrameEcuSnapshots
+      : Array.isArray(data.freeze_frame_ecu_snapshots)
+        ? data.freeze_frame_ecu_snapshots
+        : [];
     const malformedFreezeFrameAlias = [
+      "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
       "values",
       "freeze_frame_values", "freezeFrameValues",
       "freeze_frame_rows", "freezeFrameRows",
@@ -4229,12 +4235,22 @@
             ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
           };
       });
+    const hasFreezeFrameEcuSnapshotEvidence = freezeFrameEcuSnapshotRows.some((snapshot) => snapshot
+      && typeof snapshot === "object"
+      && !Array.isArray(snapshot)
+      && [
+        snapshot.values, snapshot.freeze_frame_values, snapshot.freezeFrameValues,
+        snapshot.monitor_values, snapshot.monitorValues,
+        snapshot.trigger_dtc_entries, snapshot.triggerDtcEntries,
+        snapshot.uds_dtc_snapshot_records, snapshot.udsDtcSnapshotRecords,
+        snapshot.uds_dtc_stored_data_records, snapshot.udsDtcStoredDataRecords
+      ].some((value) => Array.isArray(value) && value.length > 0));
     const errorCodes = readBridgeResponseErrorCodes(response);
     const bridgeSafety = malformedFreezeFrameAlias
       ? { ...readBridgeSnapshotSafety(response, false), ok: false, blocked: true, unparsed: true }
       : readBridgeSnapshotSafety(
         response,
-        errorCodes.length === 0 && [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray)
+        errorCodes.length === 0 && (hasFreezeFrameEcuSnapshotEvidence || [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray))
       );
     return {
       ...normalizeFreezeFrameSnapshot({
@@ -4251,7 +4267,8 @@
       trigger_dtc_reported_status: data.trigger_dtc_reported_status || data.triggerDtcReportedStatus || data.associated_dtc_reported_status || data.associatedDtcReportedStatus || null,
       trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || data.associated_dtc_entries || data.associatedDtcEntries || [],
       trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
-      values: freezeFrameValues
+      values: freezeFrameValues,
+      freeze_frame_ecu_snapshots: freezeFrameEcuSnapshotRows
       }),
       intent: "read_freeze_frame",
       ok: bridgeSafety.ok,

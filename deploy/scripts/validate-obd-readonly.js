@@ -562,7 +562,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     const functionBody = bridgeFreezeFrameSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeFreezeFrameSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeFreezeFrameSnapshot should reuse the core freeze-frame normalizer");
     check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.freeze_dtc || data.freezeDtc || data.associated_dtc || data.associatedDtc || data.dtc || null') && functionBody.includes('trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
-    check(functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame value aliases");
+    check(functionBody.includes('Array.isArray(data.freezeFrameEcuSnapshots)') && functionBody.includes('Array.isArray(data.freeze_frame_ecu_snapshots)') && functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('freeze_frame_ecu_snapshots: freezeFrameEcuSnapshotRows'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame ECU scope and value aliases");
     check(functionBody.includes('const errorCodes = readBridgeResponseErrorCodes(response);') && functionBody.includes('errorCodes.length === 0') && functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety)') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety('), "normalizeBridgeFreezeFrameSnapshot should preserve bridge failure status");
   }
 };
@@ -7306,6 +7306,19 @@ const nestedBridgeFreezeFrameSourceSnapshot = obd.normalizeBridgeFreezeFrameSnap
   data: { trigger_dtc: "P0171", monitor_values: [{ pid: "0C", value: 900, unit: "rpm" }] }
 });
 check(nestedBridgeFreezeFrameSourceSnapshot.sourceEcu === "7E8" && nestedBridgeFreezeFrameSourceSnapshot.source_ecu === "7E8" && nestedBridgeFreezeFrameSourceSnapshot.monitorValues[0]?.source_ecu === "7E8", "Nested bridge freeze-frame source ECU was not retained");
+const nestedBridgeMultiEcuFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    freeze_frame_ecu_snapshots: [
+      { source_ecu: "7E8", captured_at: "2026-08-09T08:30:00+09:00", protocol: "CAN_11BIT_500K", trigger_dtc: "P0300", monitor_values: [{ pid: "0C", value: 1500, unit: "rpm" }] },
+      { source_ecu: "7E9", captured_at: "2026-08-09T08:30:01+09:00", protocol: "CAN_11BIT_500K", trigger_dtc: "P0171", monitor_values: [{ pid: "05", value: 85, unit: "C" }] }
+    ]
+  }
+});
+const nestedBridgeMultiEcuFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freezeFrameResponse: nestedBridgeMultiEcuFreezeFrameSnapshot }))));
+check(nestedBridgeMultiEcuFreezeFrameSnapshot.freezeFrameReadoutStatus === "reported" && nestedBridgeMultiEcuFreezeFrameSnapshot.freezeFrameScope === "multiple_ecus" && nestedBridgeMultiEcuFreezeFrameSnapshot.monitorValues?.some((item) => item.sourceEcu === "7E8" && item.value === 1500) && nestedBridgeMultiEcuFreezeFrameSnapshot.monitorValues?.some((item) => item.sourceEcu === "7E9" && item.value === 85) && nestedBridgeMultiEcuFreezeFrameSnapshot.freezeFrameEcuSnapshots?.map((item) => `${item.sourceEcu}:${item.capturedAt}`).sort().join(",") === "7E8:2026-08-09T08:30:00+09:00,7E9:2026-08-09T08:30:01+09:00" && nestedBridgeMultiEcuFreezeFrameRoundTrip?.freezeFrameSnapshot?.freeze_frame_scope === "multiple_ecus" && nestedBridgeMultiEcuFreezeFrameRoundTrip.freezeFrameSnapshot?.freeze_frame_ecu_snapshots?.length === 2 && nestedBridgeMultiEcuFreezeFrameRoundTrip?.vehicleCommandEnabled === false && nestedBridgeMultiEcuFreezeFrameRoundTrip?.wouldTransmit === false, "Nested bridge multi-ECU freeze-frame scopes were not preserved through the read-only session");
 const savedBridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({ readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 });
 const nestedBridgeReadinessSourceSnapshot = obd.normalizeBridgeReadinessSnapshot({
   source_ecu: "7E8",
