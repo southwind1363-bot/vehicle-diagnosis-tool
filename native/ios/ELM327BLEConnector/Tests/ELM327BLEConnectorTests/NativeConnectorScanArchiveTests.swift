@@ -89,6 +89,18 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().append(sensitive))
         }
 
+        for (id, infoType) in [("vin", "02"), ("vehicle_identification_number", "04"), ("unexpected_identifier", "02")] {
+            let sensitiveEcuInfo = NativeConnectorEnvelopeFactory.ecuInfo(
+                context: context,
+                sequence: 1,
+                scopeID: "7E8",
+                id: id,
+                infoType: infoType,
+                value: "1HGCM82633A004352"
+            )
+            XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().append(sensitiveEcuInfo))
+        }
+
         let safeEnvelope = envelope(sequence: 1)
         var dataWithoutSafetyFlag = safeEnvelope.data
         dataWithoutSafetyFlag.removeValue(forKey: "vehicle_command_enabled")

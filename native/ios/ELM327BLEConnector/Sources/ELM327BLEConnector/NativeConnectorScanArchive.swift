@@ -161,6 +161,7 @@ public final class NativeConnectorScanArchiveBuilder {
     }
 
     private static func isSafe(data: [String: NativeConnectorJSONValue]) -> Bool {
+        if isSensitiveEcuInfoItem(data) { return false }
         data.allSatisfy { key, value in
             let normalizedKey = key.lowercased()
             if ["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "log", "logs", "debug"].contains(normalizedKey) { return false }
@@ -169,6 +170,22 @@ public final class NativeConnectorScanArchiveBuilder {
             if ["read_only", "readonly"].contains(normalizedKey) && !isEnabled(value) { return false }
             return isSafe(value: value)
         }
+    }
+
+    private static func isSensitiveEcuInfoItem(_ data: [String: NativeConnectorJSONValue]) -> Bool {
+        let identifier: String
+        if case .string(let value)? = data["id"] {
+            identifier = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        } else {
+            identifier = ""
+        }
+        let infoType: String
+        if case .string(let value)? = data["info_type"] {
+            infoType = value.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        } else {
+            infoType = ""
+        }
+        return ["vin", "vehicle_identification_number"].contains(identifier) || infoType == "02"
     }
 
     private static func hasExplicitVehicleCommandDisabled(in data: [String: NativeConnectorJSONValue]) -> Bool {
