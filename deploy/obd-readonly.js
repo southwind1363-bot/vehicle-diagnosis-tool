@@ -3982,13 +3982,19 @@
     const protocolMatches = Boolean(previousSample && latestSample && (!previousSample.protocol || !latestSample.protocol || previousSample.protocol === latestSample.protocol));
     const comparisonAvailable = observationConditionMatches && capturedAtDiffers && protocolMatches;
     const monitorComparisonKey = (item) => `${item?.id || ""}::${item?.sourceEcu || item?.source_ecu || ""}`;
+    const monitorComparisonUnit = (item) => String(item?.unit || "").trim().toLocaleLowerCase("en-US");
     const previousValuesByKey = new Map(
       (previousSample?.monitorValues || [])
         .filter((item) => item?.id && Number.isFinite(item?.value))
         .map((item) => [monitorComparisonKey(item), item])
     );
-    const comparableValues = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
+    const comparisonCandidates = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
       .filter((item) => item?.id && Number.isFinite(item?.value) && previousValuesByKey.has(monitorComparisonKey(item)));
+    const unitMismatchValueCount = comparisonCandidates
+      .filter((item) => monitorComparisonUnit(item) !== monitorComparisonUnit(previousValuesByKey.get(monitorComparisonKey(item))))
+      .length;
+    const comparableValues = comparisonCandidates
+      .filter((item) => monitorComparisonUnit(item) === monitorComparisonUnit(previousValuesByKey.get(monitorComparisonKey(item))));
     const changes = comparableValues
       .map((item) => {
         const previous = previousValuesByKey.get(monitorComparisonKey(item));
@@ -4038,6 +4044,8 @@
       latest_captured_at: latestSample?.capturedAt || null,
       comparedValueCount: comparableValues.length,
       compared_value_count: comparableValues.length,
+      unitMismatchValueCount,
+      unit_mismatch_value_count: unitMismatchValueCount,
       changedValueCount: changes.length,
       changed_value_count: changes.length,
       changes,
