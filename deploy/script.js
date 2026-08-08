@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.31";
+const APP_VERSION = "3.7.32";
 const APP_LAST_UPDATED = "2026-08-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10679,11 +10679,12 @@ function findDtcDefinitionCandidates(code, subcode = null) {
   const matches = [...(dataStore.obdCodes || []), ...importedDefinitions]
     .filter((item) => item.code === code);
   const normalizedSubcode = String(subcode || "").trim().toUpperCase().replace(/^0X/, "");
+  const codeLevelMatches = matches.filter((item) => !item.subcode && !item.sub_code);
   if (/^[0-9A-F]{1,4}$/.test(normalizedSubcode)) {
     const exactMatches = matches.filter((item) => String(item.subcode || item.sub_code || "").trim().toUpperCase() === normalizedSubcode);
-    if (exactMatches.length) return exactMatches;
+    if (exactMatches.length) return [...codeLevelMatches, ...exactMatches];
   }
-  return matches.filter((item) => !item.subcode && !item.sub_code);
+  return codeLevelMatches;
 }
 
 function findByCode(code, subcode = null, vehicleProfile = null) {
