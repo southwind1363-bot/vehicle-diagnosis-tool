@@ -18739,7 +18739,11 @@
       && responseIndex + 5 < bytes.length
       && (bytes.length - (responseIndex + 2)) % 4 === 0
       && Boolean(sourceEcu);
-    if (!isFaultDetectionCounterResponse) {
+    const isEmptyFaultDetectionCounterResponse = responseIndex >= 0
+      && bytes[responseIndex + 1] === 0x14
+      && responseIndex + 1 === bytes.length - 1
+      && Boolean(sourceEcu);
+    if (!isFaultDetectionCounterResponse && !isEmptyFaultDetectionCounterResponse) {
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
         ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
