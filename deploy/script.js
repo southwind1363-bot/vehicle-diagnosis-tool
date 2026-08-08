@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.29";
+const APP_VERSION = "3.7.30";
 const APP_LAST_UPDATED = "2026-08-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2353,7 +2353,7 @@ function buildDiagnosis(input) {
     partsChecks: confirmationBeforeParts.length ? confirmationBeforeParts : [NO_DATA],
     safetyItems: buildSafetyItems(safetyTags),
     customer: buildCustomerExplanation(flow, interview),
-    sources: buildSources(obd, flow, workflowMatches),
+    sources: buildSources(obd, flow, workflowMatches, sourceSpecificDtcContext),
     confidenceItems: buildConfidenceItems(obd, flow, interview)
   };
 }
@@ -2709,7 +2709,7 @@ function buildCautions(obd, flow, beforeParts, workflowMatches = []) {
   return collectUnique(cautions);
 }
 
-function buildSources(obd, flow, workflowMatches = []) {
+function buildSources(obd, flow, workflowMatches = [], sourceSpecificDtcContext = null) {
   const sources = [];
 
   if (obd?.sources?.length) sources.push(...obd.sources);
@@ -2721,6 +2721,13 @@ function buildSources(obd, flow, workflowMatches = []) {
     item.source,
     ...(Array.isArray(item.source_url) ? item.source_url : [item.source_url])
   ].filter(Boolean)));
+  if (sourceSpecificDtcContext?.hasDefinitions) {
+    sources.push(...sourceSpecificDtcContext.definitions.flatMap((item) => [
+      item.source,
+      item.source_date ? `出典日: ${item.source_date}` : null,
+      ...(Array.isArray(item.source_url) ? item.source_url : [item.source_url])
+    ].filter(Boolean)));
+  }
 
   return collectUnique(sources).length ? collectUnique(sources) : [NO_DATA];
 }
@@ -10688,6 +10695,7 @@ function buildSourceSpecificDtcContext(definitions, vehicleProfile = null) {
     .filter((item) => item?.imported_definition_only === true && Boolean(item?.source));
   return {
     hasDefinitions: sourceSpecificDefinitions.length > 0,
+    definitions: sourceSpecificDefinitions,
     applicability: evaluateDtcDefinitionCandidatesApplicability(sourceSpecificDefinitions, vehicleProfile),
     scopeSummary: buildDtcDefinitionScopeSummary(sourceSpecificDefinitions)
   };
