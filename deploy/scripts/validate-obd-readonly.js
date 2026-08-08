@@ -1514,6 +1514,7 @@ const ecuResponseSummaryFunctionChecks = () => {
     check(functionBody.includes('schema_version: "ecu_response_summary_v1"'), "normalizeEcuResponseSummary should expose snake_case schema version");
     check(functionBody.includes('dtc_count: dtcCount') && functionBody.includes('response_count: responseCount') && functionBody.includes('negative_response_count: negativeResponseCount'), "normalizeEcuResponseSummary should expose snake_case ECU response count aliases");
     check(functionBody.includes('negative_requested_services: negativeRequestedServices') && functionBody.includes('negative_response_labels: negativeResponseLabels') && functionBody.includes('response_time_ms: responseTimeMs'), "normalizeEcuResponseSummary should expose snake_case service, label, and timing aliases");
+    check(functionBody.includes('const responseServices = Array.isArray(row?.response_services)') && functionBody.includes('response_services: responseServices'), "normalizeEcuResponseSummary should expose response service aliases separately from requested services");
     check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('ecu_count: ecus.length') && functionBody.includes('retained_raw_text: false'), "normalizeEcuResponseSummary should expose snake_case capture, ECU count, and raw retention aliases");
     check(functionBody.includes('total_dtc_count: totalDtcCount') && functionBody.includes('total_response_count: totalResponseCount') && functionBody.includes('total_negative_response_count: totalNegativeResponseCount'), "normalizeEcuResponseSummary should expose snake_case ECU response summary total aliases");
   }
@@ -1881,10 +1882,10 @@ const ecuResponsesFromBucketsFunctionChecks = () => {
     const functionBody = ecuResponsesFromBucketsFunctionSource[0];
     check(functionBody.includes('Object.values(responseBuckets || {}).flat().filter((row) => row?.ecu)'), "buildEcuResponsesFromResponseBuckets should aggregate only packets with ECU ids");
     check(functionBody.includes('const byEcu = new Map();') && functionBody.includes('byEcu.get(packet.ecu)'), "buildEcuResponsesFromResponseBuckets should group responses by ECU");
-    check(functionBody.includes('services: new Set()') && functionBody.includes('if (packet.service) current.services.add(packet.service);'), "buildEcuResponsesFromResponseBuckets should deduplicate service ids per ECU");
+    check(functionBody.includes('services: new Set()') && functionBody.includes('response_services: new Set()') && functionBody.includes('current.response_services.add(packet.service);'), "buildEcuResponsesFromResponseBuckets should deduplicate response service ids per ECU");
     check(functionBody.includes('negative_response_count: 0') && functionBody.includes('current.negative_response_count += 1;'), "buildEcuResponsesFromResponseBuckets should count negative responses per ECU");
     check(functionBody.includes('negative_requested_services: new Set()') && functionBody.includes('negative_response_labels: new Set()'), "buildEcuResponsesFromResponseBuckets should collect negative requested services and labels");
-    check(functionBody.includes('services: [...row.services]') && functionBody.includes('negative_response_labels: [...row.negative_response_labels]'), "buildEcuResponsesFromResponseBuckets should return serializable ECU response arrays");
+    check(functionBody.includes('services: [...row.services]') && functionBody.includes('response_services: [...row.response_services]') && functionBody.includes('negative_response_labels: [...row.negative_response_labels]'), "buildEcuResponsesFromResponseBuckets should return serializable ECU response arrays");
   }
 };
 const isoTpSummaryFunctionChecks = () => {
@@ -5013,6 +5014,7 @@ const ecuResponseSummaryRowAliases = obd.normalizeEcuResponseSummary({
       codeCount: 1,
       responses: 4,
       requestedServices: ["01", "09"],
+      responseServices: ["41", "49"],
       negativeServices: ["22"],
       negativeLabels: ["conditions not correct"],
       latencyMs: 62
@@ -5021,6 +5023,7 @@ const ecuResponseSummaryRowAliases = obd.normalizeEcuResponseSummary({
 });
 check(ecuResponseSummaryRowAliases.ecus[0]?.address === "7E9", "ECU response summary ecuId alias was not normalized");
 check(ecuResponseSummaryRowAliases.ecus[0]?.services.join(",") === "01,09", "ECU response summary requestedServices alias was not normalized");
+check(ecuResponseSummaryRowAliases.ecus[0]?.responseServices?.join(",") === "41,49" && ecuResponseSummaryRowAliases.ecus[0]?.response_services?.join(",") === "41,49", "ECU response summary responseServices alias was not normalized");
 check(ecuResponseSummaryRowAliases.ecus[0]?.negativeRequestedServices[0] === "22", "ECU response summary negativeServices alias was not normalized");
 check(ecuResponseSummaryRowAliases.ecus[0]?.responseTimeMs === 62, "ECU response summary latencyMs alias was not normalized");
 const ecuResponseSummaryDataAliases = obd.normalizeEcuResponseSummary({
@@ -14534,6 +14537,7 @@ check(classifiedObdText.responseBuckets.livePidResponses[0]?.ecu === "7E8", "OBD
 check(classifiedObdText.responseBuckets.livePidResponses[0]?.frameLength === 4, "OBDログ分類でCANフレーム長を保持できません");
 check(classifiedObdText.ecuResponseCount === 1, "OBDログ分類でECU応答数を集計できません");
 check(classifiedObdText.ecuResponses[0]?.services.includes("43") && classifiedObdText.ecuResponses[0]?.services.includes("49"), "OBDログ分類でECU別サービス一覧を保持できません");
+check(classifiedObdText.ecuResponses[0]?.response_services?.includes("43") && classifiedObdText.ecuResponses[0]?.response_services?.includes("49"), "OBDログ分類でECU別応答サービス一覧を保持できません");
 check(classifiedObdText.responseBuckets.ecuInfoResponses[0]?.isoTp === true, "ISO-TP分割応答を再構成済みとして保持できません");
 check(classifiedObdText.responseBuckets.ecuInfoResponses[0]?.frameCount === 2, "ISO-TP分割応答のフレーム数を保持できません");
 check(classifiedObdText.responseBuckets.ecuInfoResponses[0]?.sequenceError === false, "正常なISO-TP分割応答を順序異常として扱っています");
@@ -14571,7 +14575,9 @@ const interruptedIsoTpSession = obd.buildScanSessionFromObdText([
 check(interruptedIsoTpSession.importClassification.isoTpSummary.totalCount === 2 && interruptedIsoTpSession.importClassification.isoTpSummary.incompleteCount === 1 && interruptedIsoTpSession.importClassification.isoTpSummary.sequenceErrorCount === 1 && interruptedIsoTpSession.warnings.includes("isotp_reassembly_issue") && interruptedIsoTpSession.vehicleCommandEnabled === false, "Interrupted ISO-TP responses must retain a transport warning without enabling vehicle commands");
 check(classifiedObdText.retainedRawText === false && classifiedObdText.wouldTransmit === false, "OBD log classification retained raw text or allowed transmit");
 const textScanSession = obd.buildScanSessionFromObdText(obdTextLog, { session_id: "obd-text-test", protocol: "ISO15765-4" });
+const textScanSessionResponseServicesRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(textScanSession)));
 check(textScanSession.schemaVersion === "scan_session_v1", "OBD text log was not converted to scan session");
+check(textScanSession.ecuResponseSummary?.ecus?.[0]?.responseServices?.includes("43") && textScanSession.ecuResponseSummary?.ecus?.[0]?.response_services?.includes("49") && textScanSessionResponseServicesRoundTrip?.ecuResponseSummary?.ecus?.[0]?.responseServices?.includes("43") && textScanSessionResponseServicesRoundTrip?.ecuResponseSummary?.ecus?.[0]?.response_services?.includes("49") && textScanSessionResponseServicesRoundTrip?.vehicleCommandEnabled === false, "ECU response-service provenance was not retained through read-only export and JSON reimport");
 check(textScanSession.importClassification.bucketCounts.freezeFrameResponses === 2, "OBD text scan session did not keep freeze-frame bucket count");
 check(textScanSession.importClassification.negativeResponseSummary.totalCount === 1, "OBD text scan session did not keep negative response summary");
 check(textScanSession.warnings.includes("negative_obd_response_present"), "OBD text scan session did not reflect negative response warning");

@@ -17874,6 +17874,7 @@
       const dtcCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null;
       const responseCount = Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.responses) ? row.responses : null;
       const services = Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
+      const responseServices = Array.isArray(row?.response_services) ? row.response_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.responseServices) ? row.responseServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
       const negativeResponseCount = Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negatives) ? row.negatives : 0;
       const negativeRequestedServices = Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negative_services) ? row.negative_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeServices) ? row.negativeServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
       const negativeResponseLabels = Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negative_labels) ? row.negative_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeLabels) ? row.negativeLabels.map((item) => String(item)).slice(0, 16) : [];
@@ -17888,6 +17889,8 @@
         responseCount,
         response_count: responseCount,
         services,
+        responseServices,
+        response_services: responseServices,
         negativeResponseCount,
         negative_response_count: negativeResponseCount,
         negativeRequestedServices,
@@ -17910,6 +17913,7 @@
         dtcCount: row.dtcCount,
         responseCount: row.responseCount,
         services: [...row.services].sort(),
+        responseServices: [...row.responseServices].sort(),
         negativeResponseCount: row.negativeResponseCount,
         negativeRequestedServices: [...row.negativeRequestedServices].sort(),
         negativeResponseLabels: [...row.negativeResponseLabels].sort(),
@@ -20029,12 +20033,16 @@
         status: "ok",
         response_count: 0,
         services: new Set(),
+        response_services: new Set(),
         negative_response_count: 0,
         negative_requested_services: new Set(),
         negative_response_labels: new Set()
       };
       current.response_count += 1;
-      if (packet.service) current.services.add(packet.service);
+      if (packet.service) {
+        current.services.add(packet.service);
+        current.response_services.add(packet.service);
+      }
       if (packet.negativeResponse) {
         current.negative_response_count += 1;
         if (packet.negativeResponse.requestedService) current.negative_requested_services.add(packet.negativeResponse.requestedService);
@@ -20048,6 +20056,7 @@
       status: row.status,
       response_count: row.response_count,
       services: [...row.services],
+      response_services: [...row.response_services],
       negative_response_count: row.negative_response_count,
       negative_requested_services: [...row.negative_requested_services],
       negative_response_labels: [...row.negative_response_labels]
