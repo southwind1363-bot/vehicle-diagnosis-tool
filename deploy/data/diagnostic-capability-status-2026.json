@@ -28,6 +28,7 @@
         ,"GM PIP5841GのP04FBを車種・年式・2.0 LSY・寒冷条件の適用確認つきで追加"
         ,"GM PIT6459AのK160ブレーキECU U0028-88/U0037-88を北米2026年車・サブコード・制動系安全条件つきで追加"
         ,"Mazda MSP66のCX-90/CX-70 M Hybrid Boost P0DABをVIN・生産日・高電圧安全条件つきで追加"
+        ,"Mazda DRW59の2026 CX-30/Mazda3 P0126-00をVIN・生産日・Open状態・PCM安全条件つきで追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",

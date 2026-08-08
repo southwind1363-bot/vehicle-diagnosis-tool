@@ -7,7 +7,7 @@
     "progress_percent": 63,
     "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
     "priority": 1,
-    "current_count_note": "P系親DTC 2934件 / 出典定義2945件・一意サブコード定義15件 (Mazda 2019-2022 Mazda3/CX-30/MX-30 P05A0-00、Mazda 2018-25 CX-5 P0126-00、Mazda 2023-25/2024-25 P20F8-00、Mazda MSP66 2024-26 CX-90/2025-26 CX-70 M Hybrid Boost P0DAB、Ford 2023-25 Bronco Sport/Maverick 8F35 P0766/P0767/P2703、Ford 2024-25 Mustang Mach-E P07E6-71、Ford 2022-25 F-150 Lightning SOBDMB/SOBDMC P2797、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00、Hyundai 2020-22 Venue IVT T8X対象5コード、Hyundai 2016 Sonata Hybrid TZ4 P0300-P0304、GM 2019-2025 2.0 LSY P04FBを出典限定で追加)",
+    "current_count_note": "P系親DTC 2934件 / 出典定義2945件・一意サブコード定義15件 (Mazda 2019-2022 Mazda3/CX-30/MX-30 P05A0-00、Mazda 2018-25 CX-5 P0126-00、Mazda DRW59 2026 CX-30/Mazda3 P0126-00、Mazda 2023-25/2024-25 P20F8-00、Mazda MSP66 2024-26 CX-90/2025-26 CX-70 M Hybrid Boost P0DAB、Ford 2023-25 Bronco Sport/Maverick 8F35 P0766/P0767/P2703、Ford 2024-25 Mustang Mach-E P07E6-71、Ford 2022-25 F-150 Lightning SOBDMB/SOBDMC P2797、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00、Hyundai 2020-22 Venue IVT T8X対象5コード、Hyundai 2016 Sonata Hybrid TZ4 P0300-P0304、GM 2019-2025 2.0 LSY P04FBを出典限定で追加)",
     "next_actions": [
       "未収録Pコードを公式/規格系ソースで照合する",
       "同時DTC、フリーズフレーム、ライブデータPIDへのリンクを増やす",
