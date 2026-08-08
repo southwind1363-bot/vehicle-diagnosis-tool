@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.45";
+const APP_VERSION = "3.7.46";
 const APP_LAST_UPDATED = "2026-08-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3997,33 +3997,18 @@ function getObdInterfacePreviewConfig(interfaceId) {
       label: "ELM327",
       adapterIdentity: { adapterName: "ELM327 Sample", adapterFamily: "ELM327", firmwareVersion: "v1.5-sim" },
       connectionStatus: { displayStatus: "読取前プレビュー中", nextAction: "読取はデスクトップ版Chrome系ブラウザのWeb Serialで確認" },
-      dtcs: [
-        { code: "P0171", status: "stored" },
-        { code: "P0300", status: "pending" }
-      ],
-      ecuResponses: [{ address: "7E8", status: "ok", dtcCount: 2, services: ["01", "03", "09"], negativeResponseCount: 0 }],
       operatorNote: "PCはWeb Serial、iPhoneは自前コネクタの実装・実機確認待ちです。"
     },
     "user-vci-thinkcar-bluetooth": {
       label: "THINKCAR Bluetooth",
       adapterIdentity: { adapterName: "THINKCAR Sample", adapterFamily: "THINKCAR", firmwareVersion: "bt-sim" },
       connectionStatus: { displayStatus: "Bluetooth読取前プレビュー中", nextAction: "読取は自前iPhoneコネクタまたはPCローカルブリッジで確認" },
-      dtcs: [
-        { code: "P0420", status: "stored" },
-        { code: "P0133", status: "pending" }
-      ],
-      ecuResponses: [{ address: "7E8", status: "ok", dtcCount: 2, services: ["01", "03", "09"], negativeResponseCount: 0 }],
       operatorNote: "自前iPhoneコネクタまたはPCローカルブリッジでread-only結果を取り込む前提です。"
     },
     "user-vci-techstream-j2534": {
       label: "J2534",
       adapterIdentity: { adapterName: "J2534 Sample", adapterFamily: "J2534 Pass-Thru", firmwareVersion: "drv-sim" },
       connectionStatus: { displayStatus: "J2534読取前プレビュー中", nextAction: "読取はPCドライバとローカルブリッジで確認" },
-      dtcs: [
-        { code: "U0100", status: "stored" },
-        { code: "P0606", status: "permanent" }
-      ],
-      ecuResponses: [{ address: "7E0", status: "ok", dtcCount: 2, services: ["01", "03", "09"], negativeResponseCount: 0 }],
       operatorNote: "J2534はスマホ単体ではなくPC側ドライバ前提です。"
     }
   };
@@ -4057,42 +4042,31 @@ function getObdInterfacePreviewConfig(interfaceId) {
       ]
     },
     session: {
+      source: "interface_preview",
+      source_type: "interface_preview",
       protocol: interfaceId === "user-vci-elm327" ? "ELM327" : "local_bridge_preview",
       capturedAt,
-      warnings: ["confirm_dtc_with_service_manual"],
-      connectionStatus: selected.connectionStatus,
-      adapterIdentity: selected.adapterIdentity,
+      previewMode: true,
+      preview_mode: true,
+      sampleMode: true,
+      sample_mode: true,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      warnings: ["preview_not_vehicle_readout"],
+      connectionStatus: { ...selected.connectionStatus, sample_mode: true, vehicle_connected: false, vci_connected: false },
+      adapterIdentity: { ...selected.adapterIdentity, sample_mode: true, vehicle_command_enabled: false },
       vciDevices: [
         {
           id: interfaceId,
           label: selected.label,
           connected: false,
           selected: true,
+          sample_mode: true,
           driverStatus: interfaceId === "user-vci-elm327" ? "not_required" : "sample_ready"
         }
-      ],
-      dtcSnapshot: {
-        dtcs: selected.dtcs,
-        capturedAt,
-        ecuResponses: selected.ecuResponses
-      },
-      livePidSnapshot: {
-        monitorValues: sharedMonitorValues,
-        monitorInsights: [
-          { level: "caution", title: "読取前プレビュー", detail: "実車値ではありません。表示確認用です。", nextStep: "実車では同条件で再測定する" }
-        ]
-      },
-      readinessSnapshot: sharedReadiness,
-      freezeFrameSnapshot: {
-        monitorValues: sharedFreezeFrame
-      },
-      ecuInfoSnapshot: sharedEcuInfo,
-      onboardMonitorSnapshot: sharedMonitorTests,
-      supportedPidMatrix: sharedSupportedPids,
-      ecuResponseSummary: {
-        ecus: selected.ecuResponses
-      },
-      readoutCoverage: sharedCoverage
+      ]
     }
   };
 }
@@ -4114,9 +4088,7 @@ function loadObdInterfacePreviewSample(interfaceId) {
   dtcs.forEach((item) => {
     if (item?.code) obdDetectedCodes.appendChild(createObdDtcCard(item, dtcs, preview.session.vehicleProfile || preview.session.vehicle_profile || null));
   });
-  obdImportStatus.textContent = dtcs.length
-    ? `${preview.label}プレビューのDTC ${dtcs.length}件を表示しています。`
-    : `${preview.label}プレビューでDTCは0件です。`;
+  obdImportStatus.textContent = `${preview.label}の読取前プレビューです。DTC・ライブデータは実車未読取です。`;
   if (obdPreviewStatus) obdPreviewStatus.textContent = preview.previewStatus;
   if (obdPreviewGuide) {
     obdPreviewGuide.innerHTML = "";

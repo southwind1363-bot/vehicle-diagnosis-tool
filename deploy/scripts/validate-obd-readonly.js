@@ -5,6 +5,8 @@ const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const serviceWorkerSource = fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
+const interfacePreviewSource = appSource.match(/function getObdInterfacePreviewConfig\(interfaceId\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
+check(interfacePreviewSource.includes('source: "interface_preview"') && interfacePreviewSource.includes("preview_mode: true") && interfacePreviewSource.includes("sample_mode: true") && interfacePreviewSource.includes('warnings: ["preview_not_vehicle_readout"]') && !interfacePreviewSource.includes('code: "P0171"') && !interfacePreviewSource.includes('monitorValues: sharedMonitorValues') && appSource.includes("DTC・ライブデータは実車未読取です。"), "Interface preview must not put sample DTC or PID values into a vehicle diagnostic session");
 const offlineAssets = JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8"));
 const appVersion = appSource.match(/const APP_VERSION = "([^"\\r\\n]+)";/)?.[1] || "";
 const cacheVersion = serviceWorkerSource.match(/const CACHE_VERSION = "([^"\\r\\n]+)";/)?.[1] || "";
