@@ -6800,6 +6800,44 @@
     };
   }
 
+  function getDtcSnapshotResponseServices(snapshot = {}, row = {}) {
+    const intent = String(row?.intent || snapshot?.intent || "").trim();
+    const intentService = {
+      read_stored_dtc: "03",
+      read_pending_dtc: "07",
+      read_permanent_dtc: "0A"
+    }[intent];
+    if (intentService) return [intentService];
+    const responseFormats = [
+      snapshot?.dtcResponseFormat,
+      snapshot?.dtc_response_format,
+      ...(Array.isArray(snapshot?.dtcResponseFormats) ? snapshot.dtcResponseFormats : []),
+      ...(Array.isArray(snapshot?.dtc_response_formats) ? snapshot.dtc_response_formats : [])
+    ].filter(Boolean);
+    const formatServices = {
+      obd_mode03: "03",
+      obd_mode07: "07",
+      obd_mode0a: "0A",
+      uds_read_dtc_information: "19"
+    };
+    return [...new Set(responseFormats.map((format) => formatServices[format]).filter(Boolean))];
+  }
+
+  function buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot = {}, source = "diagnostic_core", fallbackProtocol = null) {
+    return {
+      source,
+      captured_at: dtcSnapshot?.capturedAt || dtcSnapshot?.captured_at || null,
+      protocol: dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || fallbackProtocol || null,
+      ecu_responses: (dtcSnapshot?.ecuResponses || dtcSnapshot?.ecu_responses || []).map((row) => ({
+        address: row.ecu || row.address || null,
+        ecu_name: row.ecu_name || row.ecuName || null,
+        status: row.status || "unknown",
+        dtc_count: Number.isInteger(row.codeCount) ? row.codeCount : Number.isInteger(row.code_count) ? row.code_count : null,
+        services: getDtcSnapshotResponseServices(dtcSnapshot, row)
+      }))
+    };
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
@@ -6939,18 +6977,7 @@
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
         : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
-    const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput || {
-        source: "local_bridge",
-        captured_at: dtcSnapshot.capturedAt || null,
-        protocol: dtcSnapshot.protocol || dtcSnapshot.obd_protocol || parts.protocol || parts.obd_protocol || null,
-        ecu_responses: (dtcSnapshot.ecuResponses || dtcSnapshot.ecu_responses || []).map((row) => ({
-          address: row.ecu || null,
-          ecu_name: row.ecu_name || row.ecuName || null,
-          status: row.status || "unknown",
-          dtc_count: Number.isInteger(row.codeCount) ? row.codeCount : null,
-          services: ["03"]
-        }))
-      }));
+    const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput || buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot, "local_bridge", parts.protocol || parts.obd_protocol || null)));
     const connectionStatusInput = parts.connectionStatus || parts.connection_status || parts.connectionStatusResponse || parts.connection_status_response || {};
     const vciListInput = parts.vciList || parts.vci_list || parts.vciDevices || parts.vci_devices || parts.listVciResponse || parts.list_vci_response || {};
     const adapterIdentityInput = parts.adapterIdentity || parts.adapter_identity || parts.adapterIdentityResponse || parts.adapter_identity_response || {};
@@ -22781,7 +22808,9 @@
         : (onboardMonitorSnapshotInput?.data && typeof onboardMonitorSnapshotInput.data === "object" && !Array.isArray(onboardMonitorSnapshotInput.data))
           ? normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)
           : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSafetyInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
-    const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput));
+    const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(hasObjectContent(ecuResponseSummaryInput)
+      ? ecuResponseSummaryInput
+      : buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot, sessionInput.source || sessionInput.source_type || "diagnostic_core", sessionInput.protocol || sessionInput.obd_protocol || null)));
     const ecuInfoSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))

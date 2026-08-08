@@ -1432,7 +1432,7 @@ const bridgeSessionSummaryFunctionChecks = () => {
     check(functionBody.includes('const generatedImportedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);') && functionBody.includes('parts.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison'), "buildBridgeSessionSummary should preserve explicit imported comparison aliases before generating comparisons");
     check(functionBody.includes('const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);') && functionBody.includes('parts.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison'), "buildBridgeSessionSummary should preserve explicit imported next readout guard comparison aliases");
     check(source.includes('parts.core_session_status?.readout_request_plan_gate_summary') && source.includes('parts.diagnostic_flow_summary?.readout_request_plan_gate_summary'), "buildBridgeSessionSummary should read nested snake_case request plan gate summaries");
-    check(functionBody.includes('const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput || {'), "buildBridgeSessionSummary should re-normalize ECU response summaries to backfill aliases");
+    check(functionBody.includes('const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput || buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot, "local_bridge", parts.protocol || parts.obd_protocol || null)));'), "buildBridgeSessionSummary should derive ECU response summaries from DTC response provenance");
   }
 };
 const dtcSnapshotFunctionChecks = () => {
@@ -2221,7 +2221,7 @@ const diagnosticScanSessionFunctionChecks = () => {
     check(functionBody.includes('sessionInput.freezeFrameSnapshot') && functionBody.includes('sessionInput.freeze_frame_response') && functionBody.includes('sessionInput.freeze_frame'), "buildDiagnosticScanSession should accept freeze-frame snapshot and response aliases");
     check(functionBody.includes('sessionInput.readinessSnapshot') && functionBody.includes('sessionInput.readiness_response'), "buildDiagnosticScanSession should accept readiness snapshot and response aliases");
     check(functionBody.includes('sessionInput.ecuInfoSnapshot') && functionBody.includes('sessionInput.ecu_info_response') && functionBody.includes('sessionInput.ecu_info_items'), "buildDiagnosticScanSession should accept ECU info snapshot and response aliases");
-    check(functionBody.includes('const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput));'), "buildDiagnosticScanSession should re-normalize ECU response summaries to backfill aliases");
+    check(functionBody.includes('const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(hasObjectContent(ecuResponseSummaryInput)') && functionBody.includes('buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot, sessionInput.source || sessionInput.source_type || "diagnostic_core", sessionInput.protocol || sessionInput.obd_protocol || null)'), "buildDiagnosticScanSession should derive ECU response summaries from DTC response provenance when no summary is supplied");
     check(functionBody.includes('decodeLivePidResponse(livePidResponseInput)') && functionBody.includes('normalizeBridgeLivePidSnapshot(livePidSnapshotInput)'), "buildDiagnosticScanSession should decode raw live PID responses or normalize bridge live PID snapshots");
     check(functionBody.includes('decodeFreezeFrameResponse(freezeFrameResponseInput)') && functionBody.includes('normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)'), "buildDiagnosticScanSession should decode or normalize freeze-frame input");
     check(functionBody.includes('decodeReadinessResponse(readinessResponseInput)') && functionBody.includes('normalizeReadinessSnapshot(readinessSnapshotInput)'), "buildDiagnosticScanSession should decode or normalize readiness input");
@@ -4955,6 +4955,14 @@ const bridgeDtcAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
 check(bridgeDtcAliasSnapshot.codes.join(",") === "P0420", "Bridge DTC alias codes were not normalized");
 const bridgeDtcAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcAliasSnapshot }))));
 check(bridgeDtcAliasSnapshot.ecuResponses[0]?.status === "responded" && bridgeDtcAliasSnapshot.ecuResponses[0]?.codeCount === 1 && bridgeDtcAliasRoundTrip?.dtcSnapshot?.ecuResponses?.[0]?.status === "responded" && bridgeDtcAliasRoundTrip?.dtcSnapshot?.ecu_responses?.[0]?.code_count === 1 && bridgeDtcAliasRoundTrip?.vehicleCommandEnabled === false && bridgeDtcAliasRoundTrip?.wouldTransmit === false, "Bridge DTC ECU response status and count aliases were not retained through read-only export");
+const pendingDtcEcuSummarySession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ intent: "read_pending_dtc", ok: true, blocked: false, data: { ecu_responses: [{ ecu: "7E8", status: "reported", dtc_count: 1 }] } })
+});
+const permanentDtcEcuSummary = obd.buildBridgeSessionSummary({
+  dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ intent: "read_permanent_dtc", ok: true, blocked: false, data: { ecu_responses: [{ ecu: "7E8", status: "reported", dtc_count: 1 }] } })
+});
+const udsDtcEcuSummarySession = obd.buildDiagnosticScanSession({ dtc_snapshot: obd.decodeObdDtcResponse({ raw: "59 01 FF 01 00 00", protocol: "UDS", source_ecu: "7E0" }) });
+check(pendingDtcEcuSummarySession.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "07" && permanentDtcEcuSummary.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "0A" && udsDtcEcuSummarySession.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "19" && pendingDtcEcuSummarySession.vehicleCommandEnabled === false && udsDtcEcuSummarySession.wouldTransmit === false, "DTC-derived ECU response summaries did not retain pending, permanent, and UDS read service provenance");
 const ecuResponseSummaryAliases = obd.normalizeEcuResponseSummary({
   ecus: [
     {
