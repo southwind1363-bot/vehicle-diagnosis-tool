@@ -229,8 +229,8 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.28";
-const APP_LAST_UPDATED = "2026-08-07";
+const APP_VERSION = "3.7.29";
+const APP_LAST_UPDATED = "2026-08-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -2314,6 +2314,7 @@ function buildDiagnosis(input) {
   const dtcDefinitions = findDtcDefinitionCandidates(input.obdCode, input.obdSubcode);
   const dtcApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, input.vehicleProfile);
   const dtcApplicabilityScopeSummary = buildDtcDefinitionScopeSummary(dtcDefinitions);
+  const sourceSpecificDtcContext = buildSourceSpecificDtcContext(dtcDefinitions, input.vehicleProfile);
   const obd = selectApplicableDtcDefinition(dtcDefinitions, input.vehicleProfile);
   const flow = findById(dataStore.symptomFlows, input.symptomId);
   const interview = buildInterviewAnalysis(input.interview);
@@ -2338,7 +2339,7 @@ function buildDiagnosis(input) {
   return {
     confidence: getConfidence(obd, flow, interview),
     safety: buildSafetyMessage(safetyTags),
-    facts: buildFacts(input, obd, flow, interview, dtcApplicability, dtcApplicabilityScopeSummary),
+    facts: buildFacts(input, obd, flow, interview, dtcApplicability, dtcApplicabilityScopeSummary, sourceSpecificDtcContext),
     interview: interview.insights.length ? interview.insights : [NO_DATA],
     guesses: buildGuesses(obd, flow, interview),
     modernReferences,
@@ -2538,7 +2539,7 @@ function drivingText(value) {
   return labels[value] || "";
 }
 
-function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApplicabilityScopeSummary = "") {
+function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApplicabilityScopeSummary = "", sourceSpecificDtcContext = null) {
   const displayedDtc = formatDtcReference(input.obdCode, input.obdSubcode);
   const facts = [
     input.vehicle ? `車種情報: ${input.vehicle}` : `車種情報: ${NO_DATA}`,
@@ -2570,6 +2571,14 @@ function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApp
   if (dtcApplicability?.status === "mismatch" && dtcApplicability.reason === "production_date_out_of_scope") {
     const productionDate = input.vehicleProfile?.productionDate || input.vehicleProfile?.production_date || null;
     facts.push(`出典限定DTCの適用根拠: 入力生産日${productionDate ? ` ${productionDate}` : ""}は候補範囲外です。${dtcApplicabilityScopeSummary ? ` 候補: ${dtcApplicabilityScopeSummary}` : ""}`);
+  }
+
+  if (sourceSpecificDtcContext?.hasDefinitions) {
+    if (sourceSpecificDtcContext.applicability.status === "unverified") {
+      facts.push(`出典限定DTCの補足: 車種・年式は公式出典の候補と一致しますが、${sourceSpecificDtcContext.applicability.reason === "additional_scope_confirmation_required" ? "VIN・市場・装備・ECU等の追加条件" : "車両情報"}が未確認です。汎用DTCの診断内容を置換せず、適合確認後に出典を参照してください。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`);
+    } else if (sourceSpecificDtcContext.applicability.status === "mismatch") {
+      facts.push(`出典限定DTCの補足: この車両は公式出典の車種限定候補の対象外です。汎用DTCの診断内容を維持し、出典限定の手順は適用しません。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`);
+    }
   }
 
   if (flow) {
@@ -9203,6 +9212,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const dtcDefinitions = findDtcDefinitionCandidates(code, subcode);
   const definitionApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, vehicleProfile);
   const definitionScopeSummary = buildDtcDefinitionScopeSummary(dtcDefinitions);
+  const sourceSpecificDtcContext = buildSourceSpecificDtcContext(dtcDefinitions, vehicleProfile);
   const registered = selectApplicableDtcDefinition(dtcDefinitions, vehicleProfile);
   const modern = getModernGenericMatches(code)[0];
   const hasImportedDefinitionEvidence = registered?.imported_definition_only === true && Boolean(registered?.source);
@@ -9282,6 +9292,18 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
       : "車種・年式が揃っていないため未確認です。";
     applicabilityUnverified.textContent = `適用範囲: ${unverifiedReason}適合が確認できるまで診断手順を流用しないでください。${definitionScopeSummary ? ` 候補: ${definitionScopeSummary}` : ""}`;
     wrapper.appendChild(applicabilityUnverified);
+  }
+
+  if (sourceSpecificDtcContext.hasDefinitions && sourceSpecificDtcContext.applicability.status === "unverified") {
+    const sourceSpecificApplicability = document.createElement("p");
+    sourceSpecificApplicability.className = "obd-dtc-check";
+    sourceSpecificApplicability.textContent = `出典限定の補足: 車種・年式は候補と一致しますが、${sourceSpecificDtcContext.applicability.reason === "additional_scope_confirmation_required" ? "VIN・市場・装備・ECU等の追加条件" : "車両情報"}が未確認です。汎用DTCの診断内容を置換せず、適合確認後に出典を参照してください。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`;
+    wrapper.appendChild(sourceSpecificApplicability);
+  } else if (sourceSpecificDtcContext.hasDefinitions && sourceSpecificDtcContext.applicability.status === "mismatch") {
+    const sourceSpecificMismatch = document.createElement("p");
+    sourceSpecificMismatch.className = "obd-dtc-check";
+    sourceSpecificMismatch.textContent = `出典限定の補足: 選択車両はこの公式出典の車種限定候補の対象外です。汎用DTCの診断内容を維持し、出典限定の手順は適用しません。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`;
+    wrapper.appendChild(sourceSpecificMismatch);
   }
 
   if (definitionApplicability.status === "mismatch" && definitionApplicability.reason === "production_date_out_of_scope") {
@@ -10659,6 +10681,16 @@ function findDtcDefinitionCandidates(code, subcode = null) {
 
 function findByCode(code, subcode = null, vehicleProfile = null) {
   return selectApplicableDtcDefinition(findDtcDefinitionCandidates(code, subcode), vehicleProfile);
+}
+
+function buildSourceSpecificDtcContext(definitions, vehicleProfile = null) {
+  const sourceSpecificDefinitions = (Array.isArray(definitions) ? definitions : [])
+    .filter((item) => item?.imported_definition_only === true && Boolean(item?.source));
+  return {
+    hasDefinitions: sourceSpecificDefinitions.length > 0,
+    applicability: evaluateDtcDefinitionCandidatesApplicability(sourceSpecificDefinitions, vehicleProfile),
+    scopeSummary: buildDtcDefinitionScopeSummary(sourceSpecificDefinitions)
+  };
 }
 
 function evaluateDtcDefinitionCandidatesApplicability(definitions, vehicleProfile = null) {

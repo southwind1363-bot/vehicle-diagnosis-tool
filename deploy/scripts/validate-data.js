@@ -97,7 +97,8 @@ function hasDisjointSourceSpecificDtcDefinitions(rows) {
 
 function hasScopedGenericSourceSpecificDtcDefinitions(rows) {
   if (!Array.isArray(rows) || rows.length < 2) return false;
-  const genericRows = rows.filter((row) => /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(row.file));
+  const genericRows = rows.filter((row) => row.file === "obd-codes.json"
+    || /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(row.file));
   const sourceSpecificRows = rows.filter((row) => row.file === "imported-verified-dtc.json"
     && row.imported_definition_only === true
     && isDtcVehicleFilter(row.vehicle_filter)
@@ -123,6 +124,10 @@ if (!hasScopedGenericSourceSpecificDtcDefinitions(scopedGenericDtcOverlapFixture
   || hasScopedGenericSourceSpecificDtcDefinitions([
     ...scopedGenericDtcOverlapFixture,
     { file: "generic-obd-codes-modern-2026-part2.json", imported_definition_only: false, vehicle_filter: null }
+  ])
+  || hasScopedGenericSourceSpecificDtcDefinitions([
+    ...scopedGenericDtcOverlapFixture,
+    { file: "obd-codes.json", imported_definition_only: false, vehicle_filter: null }
   ])) {
   reportError("Scoped generic/source-specific DTC overlap validation is not enforcing its safety boundary");
 }
