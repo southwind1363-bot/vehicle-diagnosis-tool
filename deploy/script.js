@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web SerialのMode 02対応PIDと起点ECUの整合を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.34";
+const APP_VERSION = "3.7.35";
 const APP_LAST_UPDATED = "2026-08-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7358,6 +7358,11 @@ function buildLivePidTimelineChartRows(timeline = null) {
   const latestCondition = samples.at(-1)?.observationCondition || samples.at(-1)?.observation_condition || "unspecified";
   const rowsByKey = new Map();
   const normalizeUnit = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
+  const normalizeCanAddressKey = (value) => {
+    const sourceEcu = String(value || "").trim();
+    const compactCanAddress = sourceEcu.replace(/^0x/i, "");
+    return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
+  };
   samples
     .filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)
     .forEach((sample) => {
@@ -7365,7 +7370,7 @@ function buildLivePidTimelineChartRows(timeline = null) {
         if (!item?.id || !Number.isFinite(item.value)) return;
         const sourceEcu = item.sourceEcu || item.source_ecu || null;
         const unit = item.unit || "";
-        const rowKey = `${item.id}::${sourceEcu || ""}::${normalizeUnit(unit)}`;
+        const rowKey = `${item.id}::${normalizeCanAddressKey(sourceEcu)}::${normalizeUnit(unit)}`;
         const row = rowsByKey.get(rowKey) || { id: item.id, label: item.label || item.id, unit, sourceEcu, source_ecu: sourceEcu, points: [] };
         row.points.push({ value: item.value, capturedAt: sample.capturedAt || sample.captured_at || null });
         rowsByKey.set(rowKey, row);

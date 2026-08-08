@@ -3981,7 +3981,12 @@
     const capturedAtDiffers = Boolean(previousSample && latestSample && previousSample.capturedAt !== latestSample.capturedAt);
     const protocolMatches = Boolean(previousSample && latestSample && (!previousSample.protocol || !latestSample.protocol || previousSample.protocol === latestSample.protocol));
     const comparisonAvailable = observationConditionMatches && capturedAtDiffers && protocolMatches;
-    const monitorComparisonKey = (item) => `${item?.id || ""}::${item?.sourceEcu || item?.source_ecu || ""}`;
+    const monitorComparisonEcu = (item) => {
+      const sourceEcu = String(item?.sourceEcu || item?.source_ecu || "").trim();
+      const compactCanAddress = sourceEcu.replace(/^0x/i, "");
+      return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
+    };
+    const monitorComparisonKey = (item) => `${item?.id || ""}::${monitorComparisonEcu(item)}`;
     const monitorComparisonUnit = (item) => String(item?.unit || "").trim().toLocaleLowerCase("en-US");
     const previousValuesByKey = new Map(
       (previousSample?.monitorValues || [])
