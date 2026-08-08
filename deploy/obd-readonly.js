@@ -17731,7 +17731,7 @@
                     : Array.isArray(sourceInput.items)
                       ? sourceInput.items
                       : [];
-    const ecus = rows.map((row, index) => {
+    const rawEcus = rows.map((row, index) => {
       const id = String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
       const name = row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : row?.ecu_name ? String(row.ecu_name).slice(0, 120) : row?.ecuName ? String(row.ecuName).slice(0, 120) : null;
       const address = row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null;
@@ -17763,6 +17763,25 @@
         response_time_ms: responseTimeMs
       };
     });
+    const normalizeEcuSummaryIdentity = (value) => {
+      const sourceEcu = String(value || "").trim();
+      const compactCanAddress = sourceEcu.replace(/^0x/i, "");
+      return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
+    };
+    const ecus = [...new Map(rawEcus.map((row) => {
+      const signature = JSON.stringify({
+        name: row.name,
+        status: row.status,
+        dtcCount: row.dtcCount,
+        responseCount: row.responseCount,
+        services: [...row.services].sort(),
+        negativeResponseCount: row.negativeResponseCount,
+        negativeRequestedServices: [...row.negativeRequestedServices].sort(),
+        negativeResponseLabels: [...row.negativeResponseLabels].sort(),
+        responseTimeMs: row.responseTimeMs
+      });
+      return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
+    })).values()];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
     const totalDtcCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.dtcCount) ? ecu.dtcCount : 0), 0);

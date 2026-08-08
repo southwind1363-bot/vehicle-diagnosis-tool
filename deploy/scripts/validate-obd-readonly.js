@@ -1508,7 +1508,7 @@ const ecuResponseSummaryFunctionChecks = () => {
     check(functionBody.includes('const dtcCount = Number.isInteger(row?.dtc_count)') && functionBody.includes('Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null'), "normalizeEcuResponseSummary should normalize DTC count aliases and arrays");
     check(functionBody.includes('const negativeResponseCount = Number.isInteger(row?.negative_response_count)') && functionBody.includes('const negativeRequestedServices ='), "normalizeEcuResponseSummary should normalize negative response counts and service aliases");
     check(functionBody.includes('row?.response_status || row?.responseStatus') && functionBody.includes('row?.display_name') && functionBody.includes('row?.displayName'), "normalizeEcuResponseSummary should normalize status and display name aliases");
-    check(functionBody.includes('const responseTimeMs = Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('row?.elapsed_ms') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases and never retain raw text");
+    check(functionBody.includes('const responseTimeMs = Number.isFinite(Number(row?.response_time_ms))') && functionBody.includes('row?.elapsed_ms') && functionBody.includes('const normalizeEcuSummaryIdentity = (value) => {') && functionBody.includes('const ecus = [...new Map(rawEcus.map((row) => {') && functionBody.includes('retainedRawText: false'), "normalizeEcuResponseSummary should normalize response timing aliases, collapse equivalent CAN aliases, and never retain raw text");
     check(functionBody.includes('schema_version: "ecu_response_summary_v1"'), "normalizeEcuResponseSummary should expose snake_case schema version");
     check(functionBody.includes('dtc_count: dtcCount') && functionBody.includes('response_count: responseCount') && functionBody.includes('negative_response_count: negativeResponseCount'), "normalizeEcuResponseSummary should expose snake_case ECU response count aliases");
     check(functionBody.includes('negative_requested_services: negativeRequestedServices') && functionBody.includes('negative_response_labels: negativeResponseLabels') && functionBody.includes('response_time_ms: responseTimeMs'), "normalizeEcuResponseSummary should expose snake_case service, label, and timing aliases");
@@ -5011,6 +5011,19 @@ check(ecuResponseSummaryDataAliases.capturedAt === "2026-07-07T01:00:00Z" && ecu
 check(ecuResponseSummaryDataAliases.ecus[0]?.dtcCount === 2 && ecuResponseSummaryDataAliases.ecus[0]?.responseTimeMs === 71, "ECU response summary did not normalize dtcCodes and elapsed_ms aliases");
 check(ecuResponseSummaryDataAliases.captured_at === "2026-07-07T01:00:00Z" && ecuResponseSummaryDataAliases.ecu_count === 1, "ECU response summary snake_case capture and ECU count aliases were not exposed");
 check(ecuResponseSummaryDataAliases.ecus[0]?.dtc_count === 2 && ecuResponseSummaryDataAliases.ecus[0]?.response_time_ms === 71 && ecuResponseSummaryDataAliases.total_response_count === 0, "ECU response summary snake_case data payload row aliases were not exposed");
+const ecuResponseSummaryEquivalentCanRows = obd.normalizeEcuResponseSummary({
+  ecus: [
+    { address: "0x7e8", status: "ok", dtc_count: 1, response_count: 2, services: ["03", "01"], response_time_ms: 45 },
+    { address: "7E8", status: "ok", dtc_count: 1, response_count: 2, services: ["01", "03"], response_time_ms: 45 }
+  ]
+});
+const ecuResponseSummaryDistinctCanRows = obd.normalizeEcuResponseSummary({
+  ecus: [
+    { address: "0x7e8", status: "ok", dtc_count: 1, response_count: 2, services: ["03"], response_time_ms: 45 },
+    { address: "7E8", status: "ok", dtc_count: 1, response_count: 2, services: ["07"], response_time_ms: 45 }
+  ]
+});
+check(ecuResponseSummaryEquivalentCanRows.ecuCount === 1 && ecuResponseSummaryEquivalentCanRows.totalResponseCount === 2 && ecuResponseSummaryEquivalentCanRows.ecus?.[0]?.address === "7E8" && ecuResponseSummaryDistinctCanRows.ecuCount === 2 && ecuResponseSummaryDistinctCanRows.totalResponseCount === 4, "ECU response summaries did not collapse only fully equivalent CAN address aliases");
 const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_pending_dtc",
   ok: true,
