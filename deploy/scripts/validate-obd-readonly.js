@@ -1432,7 +1432,7 @@ const bridgeSessionSummaryFunctionChecks = () => {
     check(functionBody.includes('const generatedImportedCoreComparisonSummary = buildImportedCoreComparisonSummary(importedCoreSessionStatus, coreSessionStatus);') && functionBody.includes('parts.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison'), "buildBridgeSessionSummary should preserve explicit imported comparison aliases before generating comparisons");
     check(functionBody.includes('const generatedImportedNextReadoutGuardComparisonSummary = buildImportedNextReadoutGuardComparisonSummary(importedNextReadoutGuardSummary, nextReadoutGuardSummary);') && functionBody.includes('parts.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison'), "buildBridgeSessionSummary should preserve explicit imported next readout guard comparison aliases");
     check(source.includes('parts.core_session_status?.readout_request_plan_gate_summary') && source.includes('parts.diagnostic_flow_summary?.readout_request_plan_gate_summary'), "buildBridgeSessionSummary should read nested snake_case request plan gate summaries");
-    check(functionBody.includes('const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(ecuResponseSummaryInput || buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot, "local_bridge", parts.protocol || parts.obd_protocol || null)));'), "buildBridgeSessionSummary should derive ECU response summaries from DTC response provenance");
+    check(functionBody.includes('buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot, "local_bridge", parts.protocol || parts.obd_protocol || null)'), "buildBridgeSessionSummary should derive ECU response summaries from explicit or positive DTC provenance");
   }
 };
 const dtcSnapshotFunctionChecks = () => {
@@ -4963,6 +4963,12 @@ const permanentDtcEcuSummary = obd.buildBridgeSessionSummary({
 });
 const udsDtcEcuSummarySession = obd.buildDiagnosticScanSession({ dtc_snapshot: obd.decodeObdDtcResponse({ raw: "59 01 FF 01 00 00", protocol: "UDS", source_ecu: "7E0" }) });
 check(pendingDtcEcuSummarySession.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "07" && permanentDtcEcuSummary.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "0A" && udsDtcEcuSummarySession.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "19" && pendingDtcEcuSummarySession.vehicleCommandEnabled === false && udsDtcEcuSummarySession.wouldTransmit === false, "DTC-derived ECU response summaries did not retain pending, permanent, and UDS read service provenance");
+const rawMode03EcuSummarySession = obd.buildDiagnosticScanSession({ dtc_snapshot: obd.decodeObdDtcResponse({ raw: "43 01 71 00 00", source_ecu: "7E8" }) });
+const rawMode07EcuSummarySession = obd.buildDiagnosticScanSession({ dtc_snapshot: obd.decodeObdDtcResponse({ raw: "47 01 71 00 00", source_ecu: "7E8" }) });
+const rawMode0AEmptyEcuSummarySession = obd.buildDiagnosticScanSession({ dtc_snapshot: obd.decodeObdDtcResponse({ raw: "4A 00 00", source_ecu: "7E8" }) });
+const unparsedDtcEcuSummarySession = obd.buildDiagnosticScanSession({ dtc_snapshot: obd.decodeObdDtcResponse({ raw: "43 01", source_ecu: "7E8" }) });
+const rawMode03EcuSummaryRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(rawMode03EcuSummarySession)));
+check(rawMode03EcuSummarySession.ecuResponseSummary?.ecus?.[0]?.address === "7E8" && rawMode03EcuSummarySession.ecuResponseSummary?.ecus?.[0]?.dtcCount === 1 && rawMode03EcuSummarySession.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "03" && rawMode07EcuSummarySession.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "07" && rawMode0AEmptyEcuSummarySession.ecuResponseSummary?.ecus?.[0]?.dtcCount === 0 && rawMode0AEmptyEcuSummarySession.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "0A" && unparsedDtcEcuSummarySession.ecuResponseSummary?.ecuCount === 0 && rawMode03EcuSummaryRoundTrip?.ecuResponseSummary?.ecus?.[0]?.services?.join(",") === "03" && rawMode03EcuSummaryRoundTrip?.vehicleCommandEnabled === false, "Positive raw OBD DTC responses did not retain ECU provenance without promoting unparsed responses");
 const ecuResponseSummaryAliases = obd.normalizeEcuResponseSummary({
   ecus: [
     {

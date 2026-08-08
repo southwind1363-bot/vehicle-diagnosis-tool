@@ -6824,11 +6824,42 @@
   }
 
   function buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot = {}, source = "diagnostic_core", fallbackProtocol = null) {
+    const explicitEcuResponses = (dtcSnapshot?.ecuResponses || dtcSnapshot?.ecu_responses || []).filter((row) => row && typeof row === "object");
+    const normalizeEcuIdentity = (value) => {
+      const sourceEcu = String(value || "").trim();
+      const compactCanAddress = sourceEcu.replace(/^0x/i, "");
+      return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
+    };
+    const snapshotReadoutStatus = dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "unknown";
+    const snapshotSourceEcu = dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu || null;
+    const snapshotSourceEcuName = dtcSnapshot?.sourceEcuName || dtcSnapshot?.source_ecu_name || null;
+    const fallbackRowsByEcu = new Map();
+    if (!explicitEcuResponses.length && snapshotReadoutStatus === "reported") {
+      (dtcSnapshot?.dtcs || []).forEach((row) => {
+        const ecu = row?.ecu || row?.ecu_id || row?.ecuId || row?.address || snapshotSourceEcu || null;
+        const identity = normalizeEcuIdentity(ecu);
+        if (!identity || !row?.code) return;
+        const current = fallbackRowsByEcu.get(identity) || { ecu, ecuName: row?.ecuName || row?.ecu_name || snapshotSourceEcuName || null, codes: new Set() };
+        current.codes.add(`${row.code}::${row.subcode || row.sub_code || ""}`);
+        fallbackRowsByEcu.set(identity, current);
+      });
+      if (!fallbackRowsByEcu.size && snapshotSourceEcu) {
+        fallbackRowsByEcu.set(normalizeEcuIdentity(snapshotSourceEcu), { ecu: snapshotSourceEcu, ecuName: snapshotSourceEcuName, codes: new Set() });
+      }
+    }
+    const ecuResponses = explicitEcuResponses.length
+      ? explicitEcuResponses
+      : [...fallbackRowsByEcu.values()].map((row) => ({
+        ecu: row.ecu,
+        ecu_name: row.ecuName,
+        status: "reported",
+        code_count: row.codes.size
+      }));
     return {
       source,
       captured_at: dtcSnapshot?.capturedAt || dtcSnapshot?.captured_at || null,
       protocol: dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || fallbackProtocol || null,
-      ecu_responses: (dtcSnapshot?.ecuResponses || dtcSnapshot?.ecu_responses || []).map((row) => ({
+      ecu_responses: ecuResponses.map((row) => ({
         address: row.ecu || row.address || null,
         ecu_name: row.ecu_name || row.ecuName || null,
         status: row.status || "unknown",
@@ -18608,6 +18639,7 @@
     const status = serviceByte === 0x47 ? "pending" : serviceByte === 0x4A ? "permanent" : "stored";
     return normalizeDtcSnapshot({
       source: input.source || "obd_response_decoder",
+      ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
       status,
