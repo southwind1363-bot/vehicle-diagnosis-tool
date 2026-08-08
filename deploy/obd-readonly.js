@@ -16803,8 +16803,8 @@
     });
     const typedDtcCodes = new Set(rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
-      .map((row) => `${row.code}::${row.subcode || ""}::${row.ecu || ""}`));
-    const deduplicatedRows = rows.filter((row) => !(["", "unknown"].includes(String(row.status || "").trim().toLowerCase()) && typedDtcCodes.has(`${row.code}::${row.subcode || ""}::${row.ecu || ""}`)));
+      .map((row) => `${row.code}::${row.subcode || ""}`));
+    const deduplicatedRows = rows.filter((row) => !(["", "unknown"].includes(String(row.status || "").trim().toLowerCase()) && typedDtcCodes.has(`${row.code}::${row.subcode || ""}`)));
     const byCode = new Map();
     deduplicatedRows.forEach((row) => {
       const key = `${row.code}::${row.subcode || ""}::${row.ecu || ""}::${row.status || "unknown"}`;
@@ -18856,6 +18856,11 @@
   function mergeDtcSnapshots(...snapshots) {
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
+    const normalizeDtcMergeEcu = (value) => {
+      const sourceEcu = String(value || "").trim();
+      const compactCanAddress = sourceEcu.replace(/^0x/i, "");
+      return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
+    };
     const captureContexts = snapshots
       .map((snapshot, index) => {
         const capturedAt = readSnapshotCapturedAt(snapshot);
@@ -18896,7 +18901,8 @@
     });
     const byCodeAndStatus = new Map();
     normalizedRows.forEach((row) => {
-      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || ""}::${row.status || "unknown"}`;
+      const ecu = row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "";
+      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;
       if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
     });
     const mergedRows = [...byCodeAndStatus.values()];
