@@ -18414,7 +18414,7 @@
       && Boolean(sourceEcu);
     const udsPermanentDtcResponse = udsResponseIndex >= 0 && bytes[udsResponseIndex + 1] === 0x15;
     const udsEmptyDtcByStatusResponse = udsResponseIndex >= 0
-      && [0x02, 0x0F, 0x13, 0x15].includes(bytes[udsResponseIndex + 1])
+      && [0x02, 0x0A, 0x0F, 0x13, 0x15].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 2 === bytes.length - 1
       && Boolean(sourceEcu);
     const udsOccurrenceDtcResponse = udsResponseIndex >= 0
