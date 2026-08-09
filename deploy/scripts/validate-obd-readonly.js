@@ -15540,6 +15540,22 @@ const snakeOnlyEcuScopedCoverage = obd.buildReadoutCoverageSnapshot({
   supported_pid_input_present: true
 });
 check(snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.status === "captured" && snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.available === true && snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.count === 1 && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.status === "captured" && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.available === true && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.count === 2 && snakeOnlyEcuScopedCoverage.includeInfrastructure === false, "Snake-case ECU-scoped readiness or supported PID evidence was treated as unavailable by readout coverage");
+const ecuScopedReadinessSession = obd.buildDiagnosticScanSession({
+  readiness_snapshot: {
+    schemaVersion: "readiness_snapshot_v1",
+    readiness_readout_status: "reported",
+    readiness_ecu_snapshots: [{ source_ecu: "7E8", monitors: [{ id: "catalyst", supported: true, complete: true, status: "complete" }] }]
+  }
+});
+const ecuScopedReadinessBridgeSummary = obd.buildBridgeSessionSummary({
+  readiness_snapshot: {
+    schemaVersion: "readiness_snapshot_v1",
+    readiness_readout_status: "reported",
+    readiness_ecu_snapshots: [{ source_ecu: "7E8", monitors: [{ id: "catalyst", supported: true, complete: true, status: "complete" }] }]
+  }
+});
+const ecuScopedReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(ecuScopedReadinessSession)));
+check(((ecuScopedReadinessSession.readinessSnapshot?.readinessEcuSnapshots || ecuScopedReadinessSession.readinessSnapshot?.readiness_ecu_snapshots)?.[0]?.sourceEcu || (ecuScopedReadinessSession.readinessSnapshot?.readinessEcuSnapshots || ecuScopedReadinessSession.readinessSnapshot?.readiness_ecu_snapshots)?.[0]?.source_ecu) === "7E8" && ecuScopedReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && ecuScopedReadinessSession.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 1 && ecuScopedReadinessBridgeSummary.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && ecuScopedReadinessBridgeSummary.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 1 && ecuScopedReadinessRoundTrip?.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && ecuScopedReadinessRoundTrip?.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 1 && ecuScopedReadinessSession.vehicleCommandEnabled === false && ecuScopedReadinessSession.wouldTransmit === false && ecuScopedReadinessRoundTrip?.vehicleCommandEnabled === false && ecuScopedReadinessRoundTrip?.wouldTransmit === false, "ECU-scoped readiness evidence was not retained consistently through session, bridge summary, and read-only export");
 const ecuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
   include_infrastructure: false,
   freeze_frame_snapshot: {
