@@ -194,7 +194,7 @@ public final class NativeConnectorScanArchiveBuilder {
 
     private static func isSafe(data: [String: NativeConnectorJSONValue]) -> Bool {
         if isSensitiveEcuInfoItem(data) { return false }
-        data.allSatisfy { key, value in
+        return data.allSatisfy { key, value in
             let normalizedKey = key.lowercased()
             if ["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "log", "logs", "debug"].contains(normalizedKey) { return false }
             if sensitiveDataKeys.contains(normalizedKey) { return false }
