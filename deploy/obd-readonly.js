@@ -3692,7 +3692,7 @@
 
   function normalizeBridgeAdapterIdentity(response = {}) {
     const data = response && typeof response === "object" ? response.data || response : {};
-    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
+    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
     const hasAdapterIdentityData = adapterIdentityKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
@@ -3717,6 +3717,8 @@
       firmwareVersion: readAdapterIdentityText(data.firmware_version, data.firmwareVersion, data.firmware, data.version),
       adapterProtocolHint: readAdapterIdentityText(data.adapter_protocol_hint, data.adapterProtocolHint, data.protocol_hint, data.protocolHint),
       adapter_protocol_hint: readAdapterIdentityText(data.adapter_protocol_hint, data.adapterProtocolHint, data.protocol_hint, data.protocolHint),
+      adapterProtocolNumber: readAdapterIdentityText(data.adapter_protocol_number, data.adapterProtocolNumber, data.protocol_number, data.protocolNumber),
+      adapter_protocol_number: readAdapterIdentityText(data.adapter_protocol_number, data.adapterProtocolNumber, data.protocol_number, data.protocolNumber),
       sampleMode,
       sample_mode: sampleMode,
       replayMode,

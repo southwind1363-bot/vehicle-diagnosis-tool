@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.2";
+const APP_VERSION = "3.8.3";
 const APP_LAST_UPDATED = "2026-08-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -499,7 +499,7 @@ let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
 let activeObdStage = "setup";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const WEB_SERIAL_READ_ONLY_COMMANDS = Object.freeze([
-  "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP",
+  "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP", "ATDPN",
   "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
   "010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151",
   "020C", "0205", "020F", "020D", "020E", "0204", "0203", "020B", "0210", "0211", "0206", "0207", "0242"
@@ -4631,7 +4631,7 @@ async function initializeElmDeveloperAdapter() {
 }
 
 async function identifyObdDeveloperVci() {
-  const commands = ["ATI", "AT@1", "ATDP"];
+  const commands = ["ATI", "AT@1", "ATDP", "ATDPN"];
   const commandResponses = [];
   for (const command of commands) {
     const response = await sendElmDeveloperCommand(command, 2500);
@@ -4654,11 +4654,20 @@ function getWebSerialAdapterProtocolHint(commandResponses = []) {
     ?.slice(0, 80) || null;
 }
 
+function getWebSerialAdapterProtocolNumber(commandResponses = []) {
+  const response = commandResponses.find((item) => item?.command === "ATDPN")?.response || "";
+  return String(response)
+    .split(/\r?\n/)
+    .map((line) => line.trim().toUpperCase())
+    .find((line) => /^(?:A?[0-9A-C])$/.test(line)) || null;
+}
+
 function buildWebSerialAdapterIdentity(commandResponses = []) {
   const atiResponse = commandResponses.find((item) => item?.command === "ATI")?.response || "";
   const match = String(atiResponse).match(/\b(ELM327|STN\d{3,4}|OBDLINK(?:\s+[A-Z0-9+.-]+)?)(?:\s+(?:V(?:ERSION)?\s*)?(\d+(?:\.\d+){0,3}))?\b/i);
   const adapterProtocolHint = getWebSerialAdapterProtocolHint(commandResponses);
-  if (!match && !adapterProtocolHint) return null;
+  const adapterProtocolNumber = getWebSerialAdapterProtocolNumber(commandResponses);
+  if (!match && !adapterProtocolHint && !adapterProtocolNumber) return null;
 
   const adapterName = match ? match[1].replace(/\s+/g, " ").trim().slice(0, 40) : null;
   const adapterFamily = /^STN/i.test(adapterName || "")
@@ -4678,6 +4687,8 @@ function buildWebSerialAdapterIdentity(commandResponses = []) {
     firmwareVersion,
     adapterProtocolHint,
     adapter_protocol_hint: adapterProtocolHint,
+    adapterProtocolNumber,
+    adapter_protocol_number: adapterProtocolNumber,
     vehicleCommandEnabled: false,
     retainedRawText: false
   };
@@ -5483,7 +5494,7 @@ async function runObdDeveloperRead(label, commands) {
       attemptedCommandCount += 1;
       const response = await sendElmDeveloperCommand(command, 3500);
       commandResponses.push({ command, response });
-      chunks.push(["ATI", "AT@1", "ATDP"].includes(command) ? "[adapter identity response not retained]" : response);
+      chunks.push(["ATI", "AT@1", "ATDP", "ATDPN"].includes(command) ? "[adapter identity response not retained]" : response);
       const commandOutcome = classifyWebSerialCommandResponse(command, response);
       if (commandOutcome.stopScope === "attempt" || commandOutcome.stopScope === "scan") break;
     }
@@ -5758,7 +5769,7 @@ function buildWebSerialAttemptTranscript(commandResponses = []) {
     .map((item) => {
       const command = String(item?.command || "").trim().toUpperCase();
       const response = String(item?.response || "").trim();
-      if (!command || !response || ["ATI", "AT@1", "ATDP"].includes(command)) return "";
+      if (!command || !response || ["ATI", "AT@1", "ATDP", "ATDPN"].includes(command)) return "";
       return `>${command}\n${response}`;
     })
     .filter(Boolean)
@@ -7168,7 +7179,8 @@ function renderObdBridgeSessionDetails(session = null) {
       `名称: ${adapterIdentity.adapterName || NO_DATA}`,
       `系統: ${adapterIdentity.adapterFamily || NO_DATA}`,
       `FW: ${adapterIdentity.firmwareVersion || NO_DATA}`,
-      `通信ヒント: ${adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA}`
+      `通信ヒント: ${adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA}`,
+      `通信番号: ${adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA}`
     ]]);
   }
 
