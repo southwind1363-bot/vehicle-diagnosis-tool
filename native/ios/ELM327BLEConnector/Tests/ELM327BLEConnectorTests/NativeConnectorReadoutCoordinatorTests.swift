@@ -30,7 +30,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
             scanState: .completed,
             expectedIntents: ["read_stored_dtc"],
             expectedReadouts: ["stored_dtc_snapshot"],
-            expectedReadoutScopes: [],
+            expectedReadoutScopes: [NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E8")],
             connectionSegments: [NativeConnectorConnectionSegment(connectionID: context.connectionID, connectionSequence: 0, firstSequence: 1, lastSequence: 1, envelopeCount: 1)],
             interruption: nil,
             readOnly: true,
