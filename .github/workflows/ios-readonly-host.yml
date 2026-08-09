@@ -5,10 +5,16 @@ on:
     branches: [main]
     paths:
       - "native/ios/**"
+      - "deploy/obd-readonly.js"
+      - "deploy/scripts/validate-obd-readonly.js"
+      - "deploy/scripts/fixtures/native-elm327-*.json"
       - ".github/workflows/ios-readonly-host.yml"
   pull_request:
     paths:
       - "native/ios/**"
+      - "deploy/obd-readonly.js"
+      - "deploy/scripts/validate-obd-readonly.js"
+      - "deploy/scripts/fixtures/native-elm327-*.json"
       - ".github/workflows/ios-readonly-host.yml"
 
 permissions:
