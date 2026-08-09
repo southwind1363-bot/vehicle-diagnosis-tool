@@ -22455,17 +22455,28 @@
     const supportedPidPageBases = [...supportedPidPageBaseSet].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
     const items = monitorDefinitions
       .filter((definition) => definition.service === "01" && definition.pid)
-      .map((definition) => ({
-        id: definition.id,
-        label: definition.label,
-        service: definition.service,
-        pid: definition.pid,
-        unit: definition.unit,
-        category: definition.category,
-        supported: supported.has(String(definition.pid).toUpperCase()),
-        scope: definition.scope,
-        supportNote: definition.supportNote
-      }));
+      .map((definition) => {
+        const normalizedPid = String(definition.pid).toUpperCase();
+        const supportedEcuIds = [...new Set(supportedPidEcuSnapshots
+          .filter((snapshot) => snapshot.supportedPids.includes(normalizedPid))
+          .map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu || null)
+          .filter(Boolean))].sort();
+        return {
+          id: definition.id,
+          label: definition.label,
+          service: definition.service,
+          pid: definition.pid,
+          unit: definition.unit,
+          category: definition.category,
+          supported: supported.has(normalizedPid),
+          supportedEcuIds,
+          supported_ecu_ids: supportedEcuIds,
+          supportedEcuCount: supportedEcuIds.length,
+          supported_ecu_count: supportedEcuIds.length,
+          scope: definition.scope,
+          supportNote: definition.supportNote
+        };
+      });
     const supportedPidPageSummary = {
       schemaVersion: "supported_pid_page_summary_v1",
       schema_version: "supported_pid_page_summary_v1",
