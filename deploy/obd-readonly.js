@@ -5295,6 +5295,18 @@
       return ecuSnapshots.reduce((total, ecuSnapshot) => total + numericCount(ecuSnapshot?.monitorCount, countItems(ecuSnapshot?.monitors)), 0);
     };
     const readinessMonitorCount = countReadinessMonitors(readinessSnapshot);
+    const countSupportedPids = (snapshot = {}) => {
+      const directCount = numericCount(snapshot?.supportedCount, countItems(snapshot?.supportedPids));
+      const ecuSnapshots = Array.isArray(snapshot?.supportedPidEcuSnapshots)
+        ? snapshot.supportedPidEcuSnapshots
+        : Array.isArray(snapshot?.supported_pid_ecu_snapshots)
+          ? snapshot.supported_pid_ecu_snapshots
+          : [];
+      if (directCount > 0 || ecuSnapshots.length === 0) return directCount;
+      return new Set(ecuSnapshots.flatMap((ecuSnapshot) => [ecuSnapshot?.supportedPids, ecuSnapshot?.supported_pids, ecuSnapshot?.pids]
+        .find((pids) => Array.isArray(pids)) || [])).size;
+    };
+    const supportedPidCount = countSupportedPids(supportedPidMatrix);
     const definitions = [
       { id: "dtc_snapshot", count: countItems(dtcSnapshot?.codes), valueKey: "dtcCount" },
       { id: "live_pid_snapshot", count: countItems(livePidSnapshot?.monitorValues), valueKey: "livePidValueCount" },
@@ -5302,7 +5314,7 @@
       { id: "readiness_snapshot", count: readinessMonitorCount, valueKey: "readinessMonitorCount" },
       { id: "ecu_info_snapshot", count: numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), valueKey: "ecuInfoItemCount" },
       { id: "onboard_monitor_snapshot", count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)), valueKey: "onboardMonitorTestCount" },
-      { id: "supported_pid_matrix", count: numericCount(supportedPidMatrix?.supportedCount, countItems(supportedPidMatrix?.supportedPids)), valueKey: "supportedPidCount" }
+      { id: "supported_pid_matrix", count: supportedPidCount, valueKey: "supportedPidCount" }
     ];
     const snapshotById = {
       dtc_snapshot: dtcSnapshot,

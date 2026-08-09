@@ -15556,6 +15556,22 @@ const ecuScopedReadinessBridgeSummary = obd.buildBridgeSessionSummary({
 });
 const ecuScopedReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(ecuScopedReadinessSession)));
 check(((ecuScopedReadinessSession.readinessSnapshot?.readinessEcuSnapshots || ecuScopedReadinessSession.readinessSnapshot?.readiness_ecu_snapshots)?.[0]?.sourceEcu || (ecuScopedReadinessSession.readinessSnapshot?.readinessEcuSnapshots || ecuScopedReadinessSession.readinessSnapshot?.readiness_ecu_snapshots)?.[0]?.source_ecu) === "7E8" && ecuScopedReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && ecuScopedReadinessSession.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 1 && ecuScopedReadinessBridgeSummary.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && ecuScopedReadinessBridgeSummary.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 1 && ecuScopedReadinessRoundTrip?.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && ecuScopedReadinessRoundTrip?.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 1 && ecuScopedReadinessSession.vehicleCommandEnabled === false && ecuScopedReadinessSession.wouldTransmit === false && ecuScopedReadinessRoundTrip?.vehicleCommandEnabled === false && ecuScopedReadinessRoundTrip?.wouldTransmit === false, "ECU-scoped readiness evidence was not retained consistently through session, bridge summary, and read-only export");
+const ecuScopedSupportedPidSession = obd.buildDiagnosticScanSession({
+  supported_pid_matrix: {
+    schemaVersion: "supported_pid_matrix_v1",
+    supported_pid_readout_status: "reported",
+    supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["0C", "0D"] }]
+  }
+});
+const ecuScopedSupportedPidBridgeSummary = obd.buildBridgeSessionSummary({
+  supported_pid_matrix: {
+    schemaVersion: "supported_pid_matrix_v1",
+    supported_pid_readout_status: "reported",
+    supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["0C", "0D"] }]
+  }
+});
+const ecuScopedSupportedPidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(ecuScopedSupportedPidSession)));
+check(ecuScopedSupportedPidSession.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && ecuScopedSupportedPidSession.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && ecuScopedSupportedPidBridgeSummary.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && ecuScopedSupportedPidBridgeSummary.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && ecuScopedSupportedPidRoundTrip?.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && ecuScopedSupportedPidRoundTrip?.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && ecuScopedSupportedPidSession.vehicleCommandEnabled === false && ecuScopedSupportedPidSession.wouldTransmit === false && ecuScopedSupportedPidRoundTrip?.vehicleCommandEnabled === false && ecuScopedSupportedPidRoundTrip?.wouldTransmit === false, "ECU-scoped supported PID evidence was not retained consistently through session, bridge summary, and read-only export");
 const ecuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
   include_infrastructure: false,
   freeze_frame_snapshot: {
