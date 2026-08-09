@@ -15608,6 +15608,15 @@ const failedOnboardMonitorSession = obd.buildDiagnosticScanSession({
 });
 const failedOnboardMonitorRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(failedOnboardMonitorSession)));
 check(failedOnboardMonitorSession.onboardMonitorSnapshot?.testCount === 1 && failedOnboardMonitorSession.onboardMonitorSnapshot?.failedCount === 1 && failedOnboardMonitorSession.onboardMonitorSnapshot?.passedCount === 0 && failedOnboardMonitorSession.readoutCoverage?.itemById?.onboard_monitor_snapshot?.count === 1 && failedOnboardMonitorSession.warnings?.includes("onboard_monitor_test_failed") && failedOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.testCount === 1 && failedOnboardMonitorRoundTrip.onboardMonitorSnapshot?.failedCount === 1 && failedOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.passedCount === 0 && failedOnboardMonitorRoundTrip?.warnings?.includes("onboard_monitor_test_failed") && failedOnboardMonitorSession.vehicleCommandEnabled === false && failedOnboardMonitorSession.wouldTransmit === false && failedOnboardMonitorRoundTrip?.vehicleCommandEnabled === false && failedOnboardMonitorRoundTrip?.wouldTransmit === false, "Structured failed Mode 06 input did not normalize consistently through the read-only session path");
+const supportedPidAliasSession = obd.buildDiagnosticScanSession({
+  supported_pid_matrix: {
+    schemaVersion: "supported_pid_matrix_v1",
+    supported_pid_readout_status: "reported",
+    supported_pids: ["0C", "0D"]
+  }
+});
+const supportedPidAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(supportedPidAliasSession)));
+check(supportedPidAliasSession.supportedPidMatrix?.supportedPids?.join(",") === "0C,0D" && supportedPidAliasSession.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && supportedPidAliasSession.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && supportedPidAliasRoundTrip?.supportedPidMatrix?.supportedPids?.join(",") === "0C,0D" && supportedPidAliasRoundTrip?.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && supportedPidAliasRoundTrip?.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && supportedPidAliasSession.vehicleCommandEnabled === false && supportedPidAliasSession.wouldTransmit === false && supportedPidAliasRoundTrip?.vehicleCommandEnabled === false && supportedPidAliasRoundTrip?.wouldTransmit === false, "Structured supported-PID aliases did not normalize consistently through the read-only session path");
 const emptyFreezeFrameSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: {
     schemaVersion: "freeze_frame_snapshot_v1",

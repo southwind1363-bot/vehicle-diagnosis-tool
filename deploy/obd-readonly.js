@@ -5296,13 +5296,13 @@
     };
     const readinessMonitorCount = countReadinessMonitors(readinessSnapshot);
     const countSupportedPids = (snapshot = {}) => {
-      const directCount = numericCount(snapshot?.supportedCount, countItems(snapshot?.supportedPids));
+      const directPidCount = countItems(snapshot?.supportedPids);
       const ecuSnapshots = Array.isArray(snapshot?.supportedPidEcuSnapshots)
         ? snapshot.supportedPidEcuSnapshots
         : Array.isArray(snapshot?.supported_pid_ecu_snapshots)
           ? snapshot.supported_pid_ecu_snapshots
           : [];
-      if (directCount > 0 || ecuSnapshots.length === 0) return directCount;
+      if (directPidCount > 0 || ecuSnapshots.length === 0) return directPidCount;
       return new Set(ecuSnapshots.flatMap((ecuSnapshot) => [ecuSnapshot?.supportedPids, ecuSnapshot?.supported_pids, ecuSnapshot?.pids]
         .find((pids) => Array.isArray(pids)) || [])).size;
     };
@@ -23164,7 +23164,7 @@
           ? normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput)
           : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSafetyInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
     const supportedPidMatrix = preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
-      ? supportedPidMatrixInput
+      ? (!Array.isArray(supportedPidMatrixInput.supportedPids) || !Array.isArray(supportedPidMatrixInput.items) ? buildSupportedPidMatrix(supportedPidMatrixInput) : supportedPidMatrixInput)
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
       : (supportedPidMatrixInput?.data || Array.isArray(supportedPidMatrixInput?.supported_pids) || Array.isArray(supportedPidMatrixInput?.supportedPids))
