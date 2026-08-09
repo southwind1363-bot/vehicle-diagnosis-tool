@@ -15488,6 +15488,16 @@ const snakeOnlyFreezeFrameEvidenceSession = obd.buildDiagnosticScanSession({
 });
 const snakeOnlyFreezeFrameEvidenceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(snakeOnlyFreezeFrameEvidenceSession)));
 check(snakeOnlyFreezeFrameEvidenceSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && snakeOnlyFreezeFrameEvidenceSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlyFreezeFrameEvidenceSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("freeze_frame_snapshot") && snakeOnlyFreezeFrameEvidenceRoundTrip?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && snakeOnlyFreezeFrameEvidenceRoundTrip?.vehicleCommandEnabled === false && snakeOnlyFreezeFrameEvidenceRoundTrip?.wouldTransmit === false, "Snake-case freeze-frame trigger evidence was treated as an empty readout");
+const snakeOnlyUdsFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
+  include_infrastructure: false,
+  freeze_frame_snapshot: {
+    schemaVersion: "freeze_frame_snapshot_v1",
+    freeze_frame_readout_status: "reported",
+    uds_dtc_snapshot_records: [{ code: "012345", source_ecu: "7E8", snapshot_record_number: 2 }]
+  },
+  freeze_frame_input_present: true
+});
+check(snakeOnlyUdsFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.status === "captured" && snakeOnlyUdsFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.available === true && snakeOnlyUdsFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.count === 1 && snakeOnlyUdsFreezeFrameCoverage.includeInfrastructure === false, "Snake-case UDS freeze-frame evidence was treated as unavailable by readout coverage");
 const mixedEcuCompactSession = obd.buildScanSessionFromObdText([
   "can0 7E8#04410C1AF8",
   "can0 7E9#04410C0FA0"
