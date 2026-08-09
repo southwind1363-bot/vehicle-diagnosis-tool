@@ -21033,6 +21033,24 @@
       ecuResponseSummary?.protocol || ecuResponseSummary?.obd_protocol || null
     ].map((item) => redactSensitiveTextForRetention(String(item || "")).trim().slice(0, 80)).filter(Boolean))];
     const multipleProtocols = observedProtocols.length > 1;
+    const readinessRowCount = (() => {
+      const directCount = Number.isFinite(Number(readinessSnapshot?.monitorCount))
+        ? Math.max(0, Math.round(Number(readinessSnapshot.monitorCount)))
+        : Array.isArray(readinessSnapshot?.monitors)
+          ? readinessSnapshot.monitors.length
+          : 0;
+      const ecuSnapshots = Array.isArray(readinessSnapshot?.readinessEcuSnapshots)
+        ? readinessSnapshot.readinessEcuSnapshots
+        : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
+          ? readinessSnapshot.readiness_ecu_snapshots
+          : [];
+      if (directCount > 0 || ecuSnapshots.length === 0) return directCount;
+      return ecuSnapshots.reduce((total, snapshot) => total + (Number.isFinite(Number(snapshot?.monitorCount))
+        ? Math.max(0, Math.round(Number(snapshot.monitorCount)))
+        : Array.isArray(snapshot?.monitors)
+          ? snapshot.monitors.length
+          : 0), 0);
+    })();
     const importClassification = {
       schemaVersion: "scanner_json_import_v1",
       schema_version: "scanner_json_import_v1",
@@ -21042,7 +21060,7 @@
         livePidRows: importedLivePidSnapshot?.monitorValues?.length || 0,
         livePidSamples: livePidTimeline?.sampleCount || 0,
         freezeFrameRows: freezeFrameSnapshot?.monitorValues?.length || 0,
-        readinessRows: readinessSnapshot?.monitors?.length || 0,
+        readinessRows: readinessRowCount,
         ecuInfoRows: ecuInfoSnapshot?.itemCount || 0,
         supportedPidRows: supportedPidMatrix?.supportedPids?.length || 0,
         onboardMonitorRows: onboardMonitorSnapshot?.testCount || 0,
@@ -21053,7 +21071,7 @@
         live_pid_rows: importedLivePidSnapshot?.monitorValues?.length || 0,
         live_pid_samples: livePidTimeline?.sampleCount || 0,
         freeze_frame_rows: freezeFrameSnapshot?.monitorValues?.length || 0,
-        readiness_rows: readinessSnapshot?.monitors?.length || 0,
+        readiness_rows: readinessRowCount,
         ecu_info_rows: ecuInfoSnapshot?.itemCount || 0,
         supported_pid_rows: supportedPidMatrix?.supportedPids?.length || 0,
         onboard_monitor_rows: onboardMonitorSnapshot?.testCount || 0,
