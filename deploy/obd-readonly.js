@@ -4891,6 +4891,18 @@
             ? decodeSupportedPidResponse(supportedPidMatrixInput)
             : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput))
       : null;
+    const readinessEcuSnapshots = Array.isArray(readinessSnapshot?.readinessEcuSnapshots)
+      ? readinessSnapshot.readinessEcuSnapshots
+      : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
+        ? readinessSnapshot.readiness_ecu_snapshots
+        : [];
+    const readinessEcuMonitorCount = readinessEcuSnapshots.reduce((total, snapshot) => total + (Array.isArray(snapshot?.monitors) ? (snapshot.monitorCount || snapshot.monitors.length) : 0), 0);
+    const supportedPidEcuSnapshots = Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots)
+      ? supportedPidMatrix.supportedPidEcuSnapshots
+      : Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots)
+        ? supportedPidMatrix.supported_pid_ecu_snapshots
+        : [];
+    const scopedSupportedPids = [...new Set(supportedPidEcuSnapshots.flatMap((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].find((pids) => Array.isArray(pids)) || []))];
     const isUnknownWithoutEvidence = (snapshot, key, readoutStatus) => String(readoutStatus || "").trim().toLowerCase() === "unknown"
       && !snapshot?.capturedAt
       && !snapshot?.captured_at
@@ -4982,13 +4994,12 @@
         readoutStatus: readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null,
         safetyInput: readinessSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, readinessSnapshotSafetyInput),
-        capturedEvidence: (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0)
-          || (Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) && readinessSnapshot.readiness_ecu_snapshots.length > 0),
+        capturedEvidence: readinessEcuSnapshots.length > 0,
         label: "レディネス",
         available: ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status) || isUnknownWithoutEvidence(readinessSnapshot, "monitors", readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
           ? false
-          : readinessSnapshot?.blocked === false || Array.isArray(readinessSnapshot?.monitors),
-        count: Array.isArray(readinessSnapshot?.monitors) ? readinessSnapshot.monitorCount || readinessSnapshot.monitors.length : 0
+          : readinessSnapshot?.blocked === false || Array.isArray(readinessSnapshot?.monitors) || readinessEcuSnapshots.length > 0,
+        count: Array.isArray(readinessSnapshot?.monitors) ? readinessSnapshot.monitorCount || readinessSnapshot.monitors.length : readinessEcuMonitorCount
       },
       {
         id: "ecu_info_snapshot",
@@ -5020,10 +5031,10 @@
         readoutStatus: supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || null,
         safetyInput: supportedPidMatrixSafetyInput,
         responseUnavailable: isUnavailableReadout(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status, supportedPidMatrixSafetyInput),
-        capturedEvidence: [supportedPidMatrix?.supportedPidEcuSnapshots, supportedPidMatrix?.supported_pid_ecu_snapshots].some((snapshots) => Array.isArray(snapshots) && snapshots.some((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].some((pids) => Array.isArray(pids) && pids.length > 0))),
+        capturedEvidence: scopedSupportedPids.length > 0,
         label: "対応PID",
-        available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids)),
-        count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : 0
+        available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids) || scopedSupportedPids.length > 0),
+        count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : scopedSupportedPids.length
       }
     ].map(({ responseUnavailable, capturedEvidence = false, inputPresent = false, readoutStatus = null, safetyInput = {}, ...item }) => {
       const available = responseUnavailable ? false : item.available;

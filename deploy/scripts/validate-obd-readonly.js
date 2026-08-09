@@ -15498,6 +15498,22 @@ const snakeOnlyUdsFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
   freeze_frame_input_present: true
 });
 check(snakeOnlyUdsFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.status === "captured" && snakeOnlyUdsFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.available === true && snakeOnlyUdsFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.count === 1 && snakeOnlyUdsFreezeFrameCoverage.includeInfrastructure === false, "Snake-case UDS freeze-frame evidence was treated as unavailable by readout coverage");
+const snakeOnlyEcuScopedCoverage = obd.buildReadoutCoverageSnapshot({
+  include_infrastructure: false,
+  readiness_snapshot: {
+    schemaVersion: "readiness_snapshot_v1",
+    readiness_readout_status: "reported",
+    readiness_ecu_snapshots: [{ source_ecu: "7E8", monitors: [{ id: "catalyst", complete: true }] }]
+  },
+  readiness_input_present: true,
+  supported_pid_matrix: {
+    schemaVersion: "supported_pid_matrix_v1",
+    supported_pid_readout_status: "reported",
+    supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["05", "0C"] }]
+  },
+  supported_pid_input_present: true
+});
+check(snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.status === "captured" && snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.available === true && snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.count === 1 && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.status === "captured" && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.available === true && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.count === 2 && snakeOnlyEcuScopedCoverage.includeInfrastructure === false, "Snake-case ECU-scoped readiness or supported PID evidence was treated as unavailable by readout coverage");
 const mixedEcuCompactSession = obd.buildScanSessionFromObdText([
   "can0 7E8#04410C1AF8",
   "can0 7E9#04410C0FA0"
