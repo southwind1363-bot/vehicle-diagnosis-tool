@@ -6994,6 +6994,16 @@
     };
   }
 
+  function needsFreezeFrameScopedNormalization(snapshot = {}) {
+    return Boolean(
+      snapshot && typeof snapshot === "object" && !Array.isArray(snapshot)
+      && snapshot.schemaVersion
+      && !Array.isArray(snapshot.monitorValues)
+      && !Array.isArray(snapshot.monitor_values)
+      && (Array.isArray(snapshot.freezeFrameEcuSnapshots) || Array.isArray(snapshot.freeze_frame_ecu_snapshots))
+    );
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
@@ -7105,7 +7115,7 @@
           : ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? freezeFrameSnapshotInput
+      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
@@ -7784,7 +7794,7 @@
       ? onboardMonitorSnapshotInput
       : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? freezeFrameSnapshotInput
+      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
@@ -23078,14 +23088,8 @@
       && collectEcuInfoRows(ecuInfoSnapshotInput.data).length > 0
       ? { ...ecuInfoSnapshotInput, blocked: true }
       : ecuInfoSnapshotInput;
-    const freezeFrameSchemaNeedsScopedNormalization = Boolean(
-      freezeFrameSnapshotInput?.schemaVersion
-      && !Array.isArray(freezeFrameSnapshotInput.monitorValues)
-      && !Array.isArray(freezeFrameSnapshotInput.monitor_values)
-      && (Array.isArray(freezeFrameSnapshotInput.freezeFrameEcuSnapshots) || Array.isArray(freezeFrameSnapshotInput.freeze_frame_ecu_snapshots))
-    );
     const freezeFrameSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (freezeFrameSchemaNeedsScopedNormalization ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : (freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data))
