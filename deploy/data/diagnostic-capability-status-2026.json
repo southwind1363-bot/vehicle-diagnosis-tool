@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent":  66,
-    "current_basis": "P系2935件、U系557件、B系56件、C系38件、個別DTC定義3637件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+    "current_basis": "P系2935件、U系557件、B系56件、C系38件、個別DTC定義3638件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "未知コードをファミリーフローへ退避",
@@ -42,6 +42,7 @@
         ,"Subaru 07-90-15の2015 Legacy/Outback SRVD B2350を始動時電圧・報告ECU・ADAS安全条件つきで追加"
         ,"GM PIT6137の2020-23 Silverado/Sierra HD C15DD-00を市場・ブレーキ整備履歴・EPB安全条件つきで追加"
         ,"Mazda Bulletin Notesの2025-26 CX-70/2024-26 CX-90 VCM U0415-68をDSC交換履歴・制動系安全条件つきで追加"
+        ,"Mazda Bulletin Notesの2024 CX-90 C0040-24を警告表示・報告ECU・ブレーキ安全条件つきで追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",
