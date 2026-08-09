@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.16";
+const APP_VERSION = "3.8.17";
 const APP_LAST_UPDATED = "2026-08-10";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9235,11 +9235,12 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const vehicleProfile = hasSessionVehicleProfile
     ? vehicleProfileOverride
     : buildSelectedObdVehicleProfile();
+  const dtcVehicleProfile = withReportedDtcEcu(vehicleProfile, dtc);
   const dtcDefinitions = findDtcDefinitionCandidates(code, subcode);
-  const definitionApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, vehicleProfile);
+  const definitionApplicability = evaluateDtcDefinitionCandidatesApplicability(dtcDefinitions, dtcVehicleProfile);
   const definitionScopeSummary = buildDtcDefinitionScopeSummary(dtcDefinitions);
-  const sourceSpecificDtcContext = buildSourceSpecificDtcContext(dtcDefinitions, vehicleProfile);
-  const registered = selectApplicableDtcDefinition(dtcDefinitions, vehicleProfile);
+  const sourceSpecificDtcContext = buildSourceSpecificDtcContext(dtcDefinitions, dtcVehicleProfile);
+  const registered = selectApplicableDtcDefinition(dtcDefinitions, dtcVehicleProfile);
   const modern = getModernGenericMatches(code)[0];
   const hasImportedDefinitionEvidence = registered?.imported_definition_only === true && Boolean(registered?.source);
   const system = registered?.faultSystem || registered?.system || modern?.system;
@@ -10865,6 +10866,27 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     return { status: "unverified", reason: "additional_scope_confirmation_required" };
   }
   return { status: "matched" };
+}
+
+function withReportedDtcEcu(vehicleProfile = null, dtc = null) {
+  if (!vehicleProfile || typeof vehicleProfile !== "object") return vehicleProfile;
+  const explicitEcu = vehicleProfile.targetEcu
+    ?? vehicleProfile.target_ecu
+    ?? vehicleProfile.ecuName
+    ?? vehicleProfile.ecu_name
+    ?? vehicleProfile.ecu
+    ?? vehicleProfile.module
+    ?? vehicleProfile.moduleName
+    ?? vehicleProfile.module_name;
+  if (String(explicitEcu || "").trim()) return vehicleProfile;
+  const reportedEcuName = dtc?.ecuName
+    ?? dtc?.ecu_name
+    ?? dtc?.sourceEcuName
+    ?? dtc?.source_ecu_name
+    ?? dtc?.moduleName
+    ?? dtc?.module_name;
+  if (!String(reportedEcuName || "").trim()) return vehicleProfile;
+  return { ...vehicleProfile, ecuName: reportedEcuName };
 }
 
 function buildDtcDefinitionScopeSummary(definitions) {
