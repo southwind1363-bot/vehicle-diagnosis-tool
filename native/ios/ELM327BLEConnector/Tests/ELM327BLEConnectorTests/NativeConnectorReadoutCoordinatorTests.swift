@@ -52,6 +52,48 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertThrowsError(try NativeConnectorReadoutCoordinator().exportCompletedArchive())
     }
 
+    func testCoordinatorExportsCapturedReadoutsAfterAnInterruptedSession() throws {
+        let coordinator = NativeConnectorReadoutCoordinator()
+        let envelope = NativeConnectorEnvelopeFactory.dtcs(
+            context: context,
+            sequence: 1,
+            intent: "read_stored_dtc",
+            scopeID: "7E8",
+            dtcs: [OBD2DTC(code: "P0300", status: "stored")]
+        )
+        let manifest = NativeConnectorCompletionManifest(
+            schemaVersion: "native_connector_completion_manifest_v1",
+            recordType: "completion_manifest",
+            platform: "ios",
+            interfaceID: "user-vci-elm327",
+            scanID: context.scanID,
+            vehicleContextID: context.vehicleContextID,
+            capturedAt: "2026-08-09T00:00:00Z",
+            scanState: .interrupted,
+            expectedIntents: ["read_stored_dtc", "read_pending_dtc"],
+            expectedReadouts: ["stored_dtc_snapshot", "pending_dtc_snapshot"],
+            expectedReadoutScopes: [NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E8")],
+            connectionSegments: [NativeConnectorConnectionSegment(connectionID: context.connectionID, connectionSequence: 0, firstSequence: 1, lastSequence: 1, envelopeCount: 1)],
+            interruption: NativeConnectorInterruption(code: "transport:response_timeout", connectionID: context.connectionID, sequence: 1),
+            readOnly: true,
+            vehicleCommandEnabled: false,
+            executionEnabled: false,
+            wouldTransmit: false,
+            retainedRawPayload: false
+        )
+
+        coordinator.connector(coordinator.connector, didEmit: envelope)
+        coordinator.connector(coordinator.connector, didComplete: manifest)
+        let archive = try coordinator.exportCompletedArchive()
+
+        XCTAssertEqual(archive.envelopes, [envelope])
+        XCTAssertEqual(archive.completionManifest.scanState, .interrupted)
+        XCTAssertEqual(archive.completionManifest.interruption?.code, "transport:response_timeout")
+        XCTAssertTrue(archive.completionManifest.readOnly)
+        XCTAssertFalse(archive.completionManifest.vehicleCommandEnabled)
+        XCTAssertFalse(archive.completionManifest.wouldTransmit)
+    }
+
     func testCoordinatorBuildsDeduplicatedPreviewFromAcceptedEnvelopes() {
         let coordinator = NativeConnectorReadoutCoordinator()
         let dtc = NativeConnectorEnvelopeFactory.dtcs(
