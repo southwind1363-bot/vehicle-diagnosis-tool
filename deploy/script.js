@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.4";
+const APP_VERSION = "3.8.5";
 const APP_LAST_UPDATED = "2026-08-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10679,7 +10679,8 @@ function formatDtcReference(code, subcode = null) {
 }
 
 const SOURCE_SCOPED_CONCURRENT_DTC_REQUIREMENTS = Object.freeze({
-  "https://static.nhtsa.gov/odi/tsbs/2026/MC-11030186-0001.pdf": ["C1110:13", "C1100:94"]
+  "https://static.nhtsa.gov/odi/tsbs/2026/MC-11030186-0001.pdf": ["C1110:13", "C1100:94"],
+  "https://static.nhtsa.gov/odi/tsbs/2025/MC-11019256-0001.pdf": ["P2C8A", "P2C8B", "U3577", "U3578", "U3579", "U357A", "U357B", "U357C", "U357D", "U357E", "U357F", "U3580", "U35AF"]
 });
 
 function evaluateDtcConcurrentRequirements(definition, observedDtcs = null) {
