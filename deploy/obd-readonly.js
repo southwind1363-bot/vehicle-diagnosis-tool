@@ -18391,6 +18391,26 @@
     const passedCount = tests.filter((test) => test.status === "pass").length;
     const failedCount = tests.filter((test) => test.status === "fail").length;
     const unknownCount = tests.filter((test) => test.status === "unknown").length;
+    const ecuTestSummary = observedSourceEcus.map((ecu) => {
+      const ecuTests = tests.filter((test) => (test.sourceEcu || test.source_ecu || null) === ecu);
+      const ecuName = ecuTests.map((test) => test.sourceEcuName || test.source_ecu_name || null).find(Boolean) || null;
+      const ecuPassedCount = ecuTests.filter((test) => test.status === "pass").length;
+      const ecuFailedCount = ecuTests.filter((test) => test.status === "fail").length;
+      const ecuUnknownCount = ecuTests.filter((test) => test.status === "unknown").length;
+      return {
+        ecu,
+        ecuName,
+        ecu_name: ecuName,
+        testCount: ecuTests.length,
+        test_count: ecuTests.length,
+        passedCount: ecuPassedCount,
+        passed_count: ecuPassedCount,
+        failedCount: ecuFailedCount,
+        failed_count: ecuFailedCount,
+        unknownCount: ecuUnknownCount,
+        unknown_count: ecuUnknownCount
+      };
+    });
     const explicitReadoutStatus = pickDefined(
       sourceInput.onboardMonitorReadoutStatus,
       sourceInput.onboard_monitor_readout_status,
@@ -18422,6 +18442,8 @@
       failed_count: failedCount,
       unknownCount,
       unknown_count: unknownCount,
+      ecuTestSummary,
+      ecu_test_summary: ecuTestSummary,
       onboardMonitorReadoutStatus: normalizedReadoutStatus,
       onboard_monitor_readout_status: normalizedReadoutStatus,
       tests,
