@@ -4100,6 +4100,15 @@ const nativeCompletionManifest = Object.freeze({
 });
 const manifestNativeScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest });
 check(nativeConnectorContract.completionManifestSchemaVersion === "native_connector_completion_manifest_v1" && nativeConnectorContract.completionManifestRecordType === "completion_manifest" && manifestNativeScanSession.ok === true && manifestNativeScanSession.scanState === "completed" && manifestNativeScanSession.partial === false && manifestNativeScanSession.completionManifest?.recordType === "completion_manifest" && manifestNativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && manifestNativeScanSession.vehicleCommandEnabled === false, "Native connector terminal manifest did not produce a complete read-only session");
+const mismatchedNativeCompletionManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
+  envelopes: nativeScanBatch,
+  completion_manifest: {
+    ...nativeCompletionManifest,
+    expected_intents: ["read_ecu_info"],
+    expected_readouts: ["stored_dtc_snapshot"]
+  }
+});
+check(mismatchedNativeCompletionManifest.accepted === false && mismatchedNativeCompletionManifest.blocked === true && mismatchedNativeCompletionManifest.errors.includes("completion_manifest_readout_intent_mismatch") && mismatchedNativeCompletionManifest.vehicleCommandEnabled === false, "Native connector completion manifest accepted a readout ID that does not belong to its declared intent");
 const nativeQuickReadoutBatch = nativeScanBatch
   .filter((envelope) => ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_supported_pids", "read_live_pid_snapshot"].includes(envelope.intent))
   .sort((left, right) => left.sequence - right.sequence)

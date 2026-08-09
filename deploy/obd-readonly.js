@@ -1491,6 +1491,13 @@
     }[intent] || null;
   }
 
+  function isNativeConnectorReadoutAllowedForIntent(intent, readoutId) {
+    if (intent === "read_live_pid_snapshot") {
+      return ["readiness_snapshot", "live_pid_snapshot"].includes(readoutId);
+    }
+    return getNativeConnectorReadoutId(intent) === readoutId;
+  }
+
   function normalizeNativeConnectorScanLifecycle(input = {}) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
     const hasLifecycleContent = Boolean(
@@ -2782,6 +2789,7 @@
     const distinctStrings = (value) => new Set((Array.isArray(value) ? value : []).map((item) => String(item || "").trim()).filter(Boolean)).size;
     if (!Array.isArray(expectedIntentsSource) || expectedIntents.length !== distinctStrings(expectedIntentsSource)) errors.push("invalid_completion_manifest_expected_intents");
     if (!Array.isArray(expectedReadoutsSource) || expectedReadouts.length !== distinctStrings(expectedReadoutsSource)) errors.push("invalid_completion_manifest_expected_readouts");
+    if (expectedReadouts.some((readoutId) => !expectedIntents.some((intent) => isNativeConnectorReadoutAllowedForIntent(intent, readoutId)))) errors.push("completion_manifest_readout_intent_mismatch");
     if (!Array.isArray(expectedReadoutScopesSource) || expectedReadoutScopes.length !== expectedReadoutScopesSource.length || expectedReadoutScopes.some((item) => !expectedReadouts.includes(item.readoutId))) errors.push("invalid_completion_manifest_expected_readout_scopes");
     if (scanState === "completed" && !expectedReadouts.length) errors.push("completion_manifest_missing_readouts");
     const interruption = manifest.interruption === null ? null : normalizeNativeConnectorInterruption(manifest.interruption);
