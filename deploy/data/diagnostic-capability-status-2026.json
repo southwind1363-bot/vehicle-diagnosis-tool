@@ -4,8 +4,8 @@
         "label":  "汎用OBD2 DTC",
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
-        "progress_percent": 69,
-    "current_basis": "P系2936件、U系557件、B系56件、C系41件、個別DTC定義3645件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+        "progress_percent": 70,
+    "current_basis": "P系2936件、U系557件、B系57件、C系41件、個別DTC定義3647件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "未知コードをファミリーフローへ退避",
