@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.15";
+const APP_VERSION = "3.8.16";
 const APP_LAST_UPDATED = "2026-08-10";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10771,6 +10771,11 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     if (["japan", "jp", "japanese", "japanmarket"].includes(normalized)) return "japan";
     return normalized;
   };
+  const normalizeEcu = (value) => {
+    const normalized = normalize(value).replace(/[^a-z0-9]+/g, "");
+    if (["ipma", "imageprocessingmodulea"].includes(normalized)) return "ipma";
+    return normalized;
+  };
   const normalizeProductionDate = (value) => {
     const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
     if (!match) return null;
@@ -10802,6 +10807,10 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     ? filter.markets
     : [filter.market ?? filter.region ?? filter.destination_market ?? filter.destinationMarket];
   const markets = marketValues.map(normalizeMarket).filter(Boolean);
+  const ecuValues = Array.isArray(filter.ecus)
+    ? filter.ecus
+    : [filter.ecu ?? filter.ecu_name ?? filter.ecuName ?? filter.reporting_ecu ?? filter.reportingEcu];
+  const ecus = ecuValues.map(normalizeEcu).filter(Boolean);
   const yearFrom = Number(filter.year_from ?? filter.yearFrom);
   const yearTo = Number(filter.year_to ?? filter.yearTo);
   const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -10842,6 +10851,9 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   const market = normalizeMarket(vehicleProfile?.market ?? vehicleProfile?.region ?? vehicleProfile?.destinationMarket ?? vehicleProfile?.destination_market ?? vehicleProfile?.salesRegion ?? vehicleProfile?.sales_region ?? vehicleProfile?.country ?? vehicleProfile?.countryCode ?? vehicleProfile?.country_code);
   if (markets.length && !market) return { status: "unverified", reason: "market_confirmation_required" };
   if (markets.length && !markets.includes(market)) return { status: "mismatch", reason: "market_out_of_scope" };
+  const ecu = normalizeEcu(vehicleProfile?.targetEcu ?? vehicleProfile?.target_ecu ?? vehicleProfile?.ecuName ?? vehicleProfile?.ecu_name ?? vehicleProfile?.ecu ?? vehicleProfile?.module ?? vehicleProfile?.moduleName ?? vehicleProfile?.module_name);
+  if (ecus.length && !ecu) return { status: "unverified", reason: "ecu_confirmation_required" };
+  if (ecus.length && !ecus.includes(ecu)) return { status: "mismatch", reason: "ecu_out_of_scope" };
   const productionPeriod = filter.production_period || filter.productionPeriod || null;
   const productionDate = normalizeProductionDate(vehicleProfile?.productionDate ?? vehicleProfile?.production_date ?? vehicleProfile?.buildDate ?? vehicleProfile?.build_date ?? vehicleProfile?.manufactureDate ?? vehicleProfile?.manufacture_date);
   const productionFrom = normalizeProductionDate(productionPeriod?.from ?? productionPeriod?.start);
@@ -10882,6 +10894,10 @@ function buildDtcDefinitionScopeSummary(definitions) {
         ? filter.markets
         : [filter.market ?? filter.region ?? filter.destination_market ?? filter.destinationMarket];
       const markets = marketValues.map((value) => String(value || "").trim()).filter(Boolean);
+      const ecuValues = Array.isArray(filter.ecus)
+        ? filter.ecus
+        : [filter.ecu ?? filter.ecu_name ?? filter.ecuName ?? filter.reporting_ecu ?? filter.reportingEcu];
+      const ecus = ecuValues.map((value) => String(value || "").trim()).filter(Boolean);
       const yearFrom = Number(filter.year_from ?? filter.yearFrom);
       const yearTo = Number(filter.year_to ?? filter.yearTo);
       const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -10911,7 +10927,7 @@ function buildDtcDefinitionScopeSummary(definitions) {
       return summaryScopes.map((scope) => {
         const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
         const scopeMakers = scope.makers.length ? scope.makers : makers;
-        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${electrifications.length ? ` 電動化 ${electrifications.join("/")}` : ""}${markets.length ? ` 市場 ${markets.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
+        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${electrifications.length ? ` 電動化 ${electrifications.join("/")}` : ""}${markets.length ? ` 市場 ${markets.join("/")}` : ""}${ecus.length ? ` ECU ${ecus.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
       });
     }))];
   if (!scopes.length) return "";
