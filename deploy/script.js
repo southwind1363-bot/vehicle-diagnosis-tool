@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.17";
+const APP_VERSION = "3.8.18";
 const APP_LAST_UPDATED = "2026-08-10";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8238,6 +8238,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   ].map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 8);
   const observedEcuReadoutLabels = {
     dtc_snapshot: "DTC",
+    ecu_response_summary: "ECU応答",
     live_pid_snapshot: "ライブ",
     freeze_frame_snapshot: "FF",
     readiness_snapshot: "RDY",

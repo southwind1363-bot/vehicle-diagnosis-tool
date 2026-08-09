@@ -6115,6 +6115,14 @@
     }
   }
 
+  function isRespondedEcuResponse(row) {
+    const status = String(row?.status || row?.responseStatus || row?.response_status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+    return ["responded", "response", "ok", "success", "available", "positive"].includes(status);
+  }
+
   function buildObservedEcuSummary({
     dtcSnapshot = {},
     freezeFrameSnapshot = {},
@@ -6122,6 +6130,7 @@
     ecuInfoSnapshot = {},
     onboardMonitorSnapshot = {},
     livePidSnapshot = {},
+    ecuResponseSummary = {},
     supportedPidMatrix = {}
   } = {}) {
     const rows = [];
@@ -6148,6 +6157,12 @@
         .flat()
         .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name }))
     ]);
+    add("ecu_response_summary", (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
+      .filter(isRespondedEcuResponse)
+      .map((item) => ({
+        ecuId: item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null,
+        ecuName: item?.name || item?.ecuName || item?.ecu_name || item?.label || item?.displayName || item?.display_name || null
+      })));
     add("live_pid_snapshot", [
       { ecuId: livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu, ecuName: livePidSnapshot?.sourceEcuName || livePidSnapshot?.source_ecu_name },
       ...(livePidSnapshot?.monitorValues || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
@@ -6264,10 +6279,16 @@
     ecuInfoSnapshot = {},
     onboardMonitorSnapshot = {},
     livePidSnapshot = {},
+    ecuResponseSummary = {},
     supportedPidMatrix = {}
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
+    const respondedEcuAddresses = [...new Set((Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
+      .filter(isRespondedEcuResponse)
+      .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
+      .map(normalizeComparableCanEcuAddress)
+      .filter(Boolean))].sort();
     const observedAddressInputs = [
       dtcSnapshot?.sourceEcu,
       dtcSnapshot?.source_ecu,
@@ -6300,7 +6321,8 @@
       ...[
         ...(Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots) ? supportedPidMatrix.supportedPidEcuSnapshots : []),
         ...(Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots) ? supportedPidMatrix.supported_pid_ecu_snapshots : [])
-      ].map((item) => item?.sourceEcu || item?.source_ecu || null)
+      ].map((item) => item?.sourceEcu || item?.source_ecu || null),
+      ...respondedEcuAddresses
     ];
     const observedAddresses = [...new Set(observedAddressInputs.map(normalizeComparableCanEcuAddress).filter(Boolean))].sort();
     const comparableObservedAddresses = expectedAddress
@@ -6324,6 +6346,8 @@
       expected_address: expectedAddress,
       observedAddresses,
       observed_addresses: observedAddresses,
+      respondedEcuAddresses,
+      responded_ecu_addresses: respondedEcuAddresses,
       comparableObservedAddresses,
       comparable_observed_addresses: comparableObservedAddresses,
       reviewRequired,
@@ -7288,6 +7312,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const explicitNextReadoutCandidates = metadataOverrides.nextReadoutCandidates || [];
@@ -7309,6 +7334,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix,
       webSerialReadoutSummary: metadataOverrides.webSerialReadoutSummary,
       warnings,
@@ -7940,6 +7966,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
@@ -7964,6 +7991,7 @@
         ecuInfoSnapshot,
         onboardMonitorSnapshot,
         livePidSnapshot,
+        ecuResponseSummary,
         supportedPidMatrix,
         webSerialReadoutSummary: metadataOverrides.webSerialReadoutSummary,
         warnings: resolvedWarnings,
@@ -8798,6 +8826,7 @@
     ecuInfoSnapshot = null,
     onboardMonitorSnapshot = null,
     livePidSnapshot = null,
+    ecuResponseSummary = null,
     supportedPidMatrix = null,
     webSerialReadoutSummary = null,
     warnings = [],
@@ -8812,6 +8841,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const normalizedSessionCaptureIntegritySummary = sessionCaptureIntegritySummary || buildSessionCaptureIntegritySummary({
@@ -8831,6 +8861,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
@@ -14131,6 +14162,7 @@
       ecuInfoSnapshot: summary.ecuInfoSnapshot || summary.ecu_info_snapshot || null,
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || summary.onboard_monitor_snapshot || null,
       livePidSnapshot: summary.livePidSnapshot || summary.live_pid_snapshot || { monitorValues: summary.monitorValues || summary.monitor_values || [], monitorValueSummary: summary.monitorValueSummary || summary.monitor_value_summary || null },
+      ecuResponseSummary: summary.ecuResponseSummary || summary.ecu_response_summary || null,
       supportedPidMatrix: summary.supportedPidMatrix || summary.supported_pid_matrix || null,
       webSerialReadoutSummary: summary.webSerialReadoutSummary || summary.web_serial_readout_summary || null,
       warnings: warnings || summary.warnings || summary.warning_flags || [],
@@ -15591,6 +15623,7 @@
             ecuInfoSnapshot: summary.ecuInfoSnapshot,
             onboardMonitorSnapshot: summary.onboardMonitorSnapshot,
             livePidSnapshot: summary.livePidSnapshot,
+            ecuResponseSummary: summary.ecuResponseSummary,
             supportedPidMatrix: summary.supportedPidMatrix
           })
         })
@@ -16123,6 +16156,7 @@
         : null;
     const monitorById = new Map();
     const bridgeSession = bridgeImport?.bridgeSession || bridgeImport?.bridge_session || null;
+    const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(input.importedCoreSessionStatus
       || input.imported_core_session_status
       || bridgeImport?.importedCoreSessionStatus
@@ -16440,6 +16474,7 @@
             ecuInfoSnapshot,
             onboardMonitorSnapshot,
             livePidSnapshot: { monitorValues, monitorValueSummary },
+            ecuResponseSummary,
             supportedPidMatrix
           })
         )
@@ -16464,6 +16499,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot: { monitorValues, monitorValueSummary },
+      ecuResponseSummary,
       supportedPidMatrix,
       webSerialReadoutSummary,
       warnings: mergedBridgeMetadata.warnings,
@@ -16658,7 +16694,6 @@
       || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
       || null;
-    const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
     const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || scannerAnalysis.vehicleProfile || scannerAnalysis.vehicle_profile || null;
     const readoutInterface = mergedBridgeMetadata.readoutInterface || bridgeImport?.readoutInterface || bridgeImport?.readout_interface || bridgeSession?.readoutInterface || bridgeSession?.readout_interface || scannerAnalysis.readoutInterface || scannerAnalysis.readout_interface || null;
     const connectionStatus = bridgeImport?.connectionStatus || bridgeImport?.connection_status || bridgeSession?.connectionStatus || bridgeSession?.connection_status || null;
@@ -23302,6 +23337,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const resolvedNextReadoutCandidates = resolveNextReadoutCandidates({
@@ -23322,6 +23358,7 @@
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
       livePidSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix,
       webSerialReadoutSummary,
       warnings: resolvedWarnings,
