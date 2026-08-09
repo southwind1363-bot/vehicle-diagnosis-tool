@@ -168,6 +168,22 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         }
     }
 
+    func testRejectsManifestThatOmitsArchivedReadoutIntent() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(envelope(sequence: 1))
+        let omittedArchiveIntent = manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            expectedIntents: ["read_ecu_info"],
+            expectedReadouts: ["ecu_info_snapshot"]
+        )
+
+        XCTAssertThrowsError(try builder.complete(with: omittedArchiveIntent)) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .manifestBoundaryMismatch)
+        }
+    }
+
     func testRejectsSequenceAndTerminalBoundaryMismatch() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         try builder.append(envelope(sequence: 1))

@@ -148,6 +148,11 @@ public final class NativeConnectorScanArchiveBuilder {
 
         let segment = manifest.connectionSegments[0]
         guard segment.connectionSequence == 0 else { throw NativeConnectorScanArchiveError.manifestBoundaryMismatch }
+        let archivedIntents = Set(envelopes.map(\.intent))
+        let archivedReadoutIDs = Set(envelopes.compactMap(\.readoutID))
+        guard archivedIntents.isSubset(of: Set(manifest.expectedIntents)),
+              archivedReadoutIDs.isSubset(of: Set(manifest.expectedReadouts))
+        else { throw NativeConnectorScanArchiveError.manifestBoundaryMismatch }
         let archivedReadoutScopes = Set(envelopes.compactMap { envelope -> NativeConnectorReadoutScope? in
             guard let readoutID = envelope.readoutID,
                   let scopeID = envelope.readoutScopeID,
