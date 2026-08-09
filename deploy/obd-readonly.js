@@ -17602,10 +17602,16 @@
         readinessEcuSnapshots: [],
         readiness_ecu_snapshots: []
       });
+      const scopedMonitors = (normalizedSnapshot.monitors || []).map((monitor) => ({
+        ...monitor,
+        sourceEcu: monitor.sourceEcu || monitor.source_ecu || snapshotSourceEcu,
+        source_ecu: monitor.source_ecu || monitor.sourceEcu || snapshotSourceEcu
+      }));
       return {
         ...normalizedSnapshot,
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
+        monitors: scopedMonitors,
         readinessScope: "single_ecu",
         readiness_scope: "single_ecu"
       };
@@ -17710,13 +17716,24 @@
       : readinessEcuSnapshots.length === 1 || sourceEcu
         ? "single_ecu"
         : "unspecified";
-    const knownMonitors = readinessMonitorCatalog.map((item) => ({
-      id: item.id,
-      label: item.label,
-      category: item.category,
-      appliesTo: [...item.appliesTo],
-      observed: normalized.some((monitor) => monitor.id === item.id)
-    }));
+    const observedReadinessMonitors = readinessScope === "multiple_ecus"
+      ? readinessEcuSnapshots.flatMap((snapshot) => snapshot.monitors || [])
+      : normalized;
+    const knownMonitors = readinessMonitorCatalog.map((item) => {
+      const observedMonitors = observedReadinessMonitors.filter((monitor) => monitor.id === item.id);
+      const observedEcuIds = [...new Set(observedMonitors.map((monitor) => monitor.sourceEcu || monitor.source_ecu || null).filter(Boolean))].sort();
+      return {
+        id: item.id,
+        label: item.label,
+        category: item.category,
+        appliesTo: [...item.appliesTo],
+        observed: observedMonitors.length > 0,
+        observedEcuIds,
+        observed_ecu_ids: observedEcuIds,
+        observedEcuCount: observedEcuIds.length,
+        observed_ecu_count: observedEcuIds.length
+      };
+    });
 
     const milInput = pickDefined(sourceInput.mil_on, sourceInput.milOn, sourceInput.mil, sourceInput.milStatus, sourceInput.mil_status, undefined);
     const milOn = readinessScope === "multiple_ecus" ? null : readOptionalBooleanAlias(milInput);
