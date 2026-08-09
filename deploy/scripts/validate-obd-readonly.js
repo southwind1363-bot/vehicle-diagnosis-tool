@@ -15550,6 +15550,19 @@ const ecuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
   freeze_frame_input_present: true
 });
 check(ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.status === "captured" && ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.available === true && ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.count === 2 && ecuScopedFreezeFrameCoverage.includeInfrastructure === false, "ECU-scoped freeze-frame evidence was treated as unavailable by readout coverage");
+const ecuScopedFreezeFrameSession = obd.buildDiagnosticScanSession({
+  freeze_frame_snapshot: {
+    schemaVersion: "freeze_frame_snapshot_v1",
+    freeze_frame_readout_status: "reported",
+    freeze_frame_ecu_snapshots: [{
+      source_ecu: "7E8",
+      monitor_values: [{ id: "engine_speed", value: 1500 }],
+      uds_dtc_snapshot_records: [{ code: "012345", status_byte: "40", snapshot_record_number: 1, snapshot_record_identifier_count: 0 }]
+    }]
+  }
+});
+const ecuScopedFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(ecuScopedFreezeFrameSession)));
+check(ecuScopedFreezeFrameSession.freezeFrameSnapshot?.freezeFrameEcuSnapshots?.[0]?.sourceEcu === "7E8" && ecuScopedFreezeFrameSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.sourceEcu === "7E8") && ecuScopedFreezeFrameSession.freezeFrameSnapshot?.udsDtcSnapshotRecords?.some((item) => item.code === "012345" && item.sourceEcu === "7E8") && ecuScopedFreezeFrameSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.count === 2 && ecuScopedFreezeFrameSession.coreReadoutInventorySummary?.items?.find((item) => item.id === "freeze_frame_snapshot")?.count === 2 && ecuScopedFreezeFrameRoundTrip?.freezeFrameSnapshot?.freezeFrameEcuSnapshots?.[0]?.sourceEcu === "7E8" && ecuScopedFreezeFrameRoundTrip?.freezeFrameSnapshot?.udsDtcSnapshotRecords?.some((item) => item.code === "012345" && item.sourceEcu === "7E8") && ecuScopedFreezeFrameSession.vehicleCommandEnabled === false && ecuScopedFreezeFrameSession.wouldTransmit === false && ecuScopedFreezeFrameRoundTrip?.vehicleCommandEnabled === false && ecuScopedFreezeFrameRoundTrip?.wouldTransmit === false, "ECU-scoped schema freeze-frame input was not normalized safely through the diagnostic session or read-only export");
 const mixedEcuCompactSession = obd.buildScanSessionFromObdText([
   "can0 7E8#04410C1AF8",
   "can0 7E9#04410C0FA0"

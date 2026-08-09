@@ -23078,8 +23078,14 @@
       && collectEcuInfoRows(ecuInfoSnapshotInput.data).length > 0
       ? { ...ecuInfoSnapshotInput, blocked: true }
       : ecuInfoSnapshotInput;
+    const freezeFrameSchemaNeedsScopedNormalization = Boolean(
+      freezeFrameSnapshotInput?.schemaVersion
+      && !Array.isArray(freezeFrameSnapshotInput.monitorValues)
+      && !Array.isArray(freezeFrameSnapshotInput.monitor_values)
+      && (Array.isArray(freezeFrameSnapshotInput.freezeFrameEcuSnapshots) || Array.isArray(freezeFrameSnapshotInput.freeze_frame_ecu_snapshots))
+    );
     const freezeFrameSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? freezeFrameSnapshotInput
+      ? (freezeFrameSchemaNeedsScopedNormalization ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : (freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data))
