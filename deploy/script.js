@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.7.69";
+const APP_VERSION = "3.7.70";
 const APP_LAST_UPDATED = "2026-08-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10743,6 +10743,7 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     : Array.isArray(filter.modelYearScopes) ? filter.modelYearScopes : null;
   const modelYearScopes = (rawModelYearScopes || [])
     .map((scope) => ({
+      makers: (Array.isArray(scope?.makers) ? scope.makers : []).map(normalize).filter(Boolean),
       models: (Array.isArray(scope?.models) ? scope.models : []).map(normalizeModel).filter(Boolean),
       yearFrom: Number(scope?.year_from ?? scope?.yearFrom),
       yearTo: Number(scope?.year_to ?? scope?.yearTo)
@@ -10750,12 +10751,15 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     .filter((scope) => scope.models.length && Number.isInteger(scope.yearFrom) && Number.isInteger(scope.yearTo) && scope.yearFrom <= scope.yearTo);
   const scopes = rawModelYearScopes
     ? modelYearScopes
-    : [{ models, yearFrom, yearTo }];
+    : [{ makers: [], models, yearFrom, yearTo }];
   const maker = normalize(vehicleProfile?.maker);
   const model = normalizeModel(vehicleProfile?.model);
   const year = Number(vehicleProfile?.year);
   if (!maker || !model || !Number.isInteger(year)) return { status: "unverified", reason: "vehicle_profile_incomplete" };
-  const matched = makers.includes(maker) && scopes.some((scope) => (scope.models.includes("all") || scope.models.includes(model)) && year >= scope.yearFrom && year <= scope.yearTo);
+  const matched = makers.includes(maker) && scopes.some((scope) => {
+    const scopeMakerMatches = scope.makers.length === 0 || scope.makers.includes(maker);
+    return scopeMakerMatches && (scope.models.includes("all") || scope.models.includes(model)) && year >= scope.yearFrom && year <= scope.yearTo;
+  });
   if (!matched) return { status: "mismatch" };
   const productionPeriod = filter.production_period || filter.productionPeriod || null;
   const productionDate = normalizeProductionDate(vehicleProfile?.productionDate ?? vehicleProfile?.production_date ?? vehicleProfile?.buildDate ?? vehicleProfile?.build_date ?? vehicleProfile?.manufactureDate ?? vehicleProfile?.manufacture_date);
@@ -10784,6 +10788,7 @@ function buildDtcDefinitionScopeSummary(definitions) {
         : Array.isArray(filter.modelYearScopes) ? filter.modelYearScopes : null;
       const modelYearScopes = (rawModelYearScopes || [])
         .map((scope) => ({
+          makers: (Array.isArray(scope?.makers) ? scope.makers : []).map((value) => String(value || "").trim()).filter(Boolean),
           models: (Array.isArray(scope?.models) ? scope.models : []).map((value) => String(value || "").trim()).filter(Boolean),
           yearFrom: Number(scope?.year_from ?? scope?.yearFrom),
           yearTo: Number(scope?.year_to ?? scope?.yearTo)
@@ -10791,7 +10796,7 @@ function buildDtcDefinitionScopeSummary(definitions) {
         .filter((scope) => scope.models.length && Number.isInteger(scope.yearFrom) && Number.isInteger(scope.yearTo) && scope.yearFrom <= scope.yearTo);
       const summaryScopes = rawModelYearScopes
         ? modelYearScopes
-        : [{ models, yearFrom, yearTo }];
+        : [{ makers: [], models, yearFrom, yearTo }];
       if (!makers.length || !summaryScopes.length) return [];
       const productionPeriod = filter.production_period || filter.productionPeriod || null;
       const productionFrom = String(productionPeriod?.from || productionPeriod?.start || "").trim();
@@ -10804,7 +10809,8 @@ function buildDtcDefinitionScopeSummary(definitions) {
         : "";
       return summaryScopes.map((scope) => {
         const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
-        return `${makers.join("/")} ${scope.models.join("/")} ${years}${productionRange ? ` 生産 ${productionRange}` : ""}${additionalScope}`;
+        const scopeMakers = scope.makers.length ? scope.makers : makers;
+        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${productionRange ? ` 生産 ${productionRange}` : ""}${additionalScope}`;
       });
     }))];
   if (!scopes.length) return "";

@@ -2820,6 +2820,21 @@ if (dtcDefinitionApplicabilitySource && hondaSrsDefinition && hondaSrs2023Defini
     source: "Official test source",
     vehicle_filter: { makers: ["Hyundai"], models: ["Sonata Hybrid"], year_from: 2016, year_to: 2016, scope_confirmation_required: true }
   };
+  const makerScopedP0300 = {
+    id: "test-maker-scoped-p0300",
+    code: "P0300",
+    title: "Maker-scoped P0300 context",
+    imported_definition_only: true,
+    source: "Official test source",
+    vehicle_filter: {
+      makers: ["Ford", "Lincoln"],
+      model_year_scopes: [
+        { makers: ["Ford"], models: ["Maverick"], year_from: 2025, year_to: 2026 },
+        { makers: ["Lincoln"], models: ["Nautilus"], year_from: 2024, year_to: 2026 }
+      ],
+      scope_confirmation_required: true
+    }
+  };
   check(evaluateDtcDefinitionApplicability(mazdaEsuB200249Definition, { maker: "Mazda", model: "Mazda3", year: "2019" }).status === "unverified" && evaluateDtcDefinitionApplicability(mazdaEsuB200249Definition, { maker: "Mazda", model: "CX-30", year: "2019" }).status === "mismatch" && evaluateDtcDefinitionApplicability(mazdaC15B10e717Definition, { maker: "Mazda", model: "CX-5", year: "2015" }).status === "unverified" && evaluateDtcDefinitionApplicability(mazdaC15B10e717Definition, { maker: "Mazda", model: "CX-5", year: "2016" }).status === "mismatch", "Mazda source-specific DTC definitions must remain unverified in-scope and rejected outside documented model years");
   check(evaluateDtcDefinitionApplicability(hondaSrsDefinition, { maker: "Honda", model: "CR-V", year: "2015" }).status === "unverified" && evaluateDtcDefinitionApplicability(hondaSrsDefinition, { maker: "Honda", model: "CR-V", year: "2015" }).reason === "additional_scope_confirmation_required", "DTC applicability did not retain Honda SRS VIN and ECU confirmation requirements");
   check(evaluateDtcDefinitionApplicability(hondaSrsDefinition, { maker: "Toyota", model: "Prius", year: "2015" }).status === "mismatch", "DTC applicability accepted a vehicle outside the documented Honda scope");
@@ -2828,6 +2843,7 @@ if (dtcDefinitionApplicabilitySource && hondaSrsDefinition && hondaSrs2023Defini
   const scopedP0300InScope = buildSourceSpecificDtcContext(scopedP0300Candidates, { maker: "Hyundai", model: "Sonata Hybrid", year: "2016" });
   const scopedP0300OutOfScope = buildSourceSpecificDtcContext(scopedP0300Candidates, { maker: "Toyota", model: "Prius", year: "2016" });
   check(findByCode("P0300", null, { maker: "Hyundai", model: "Sonata Hybrid", year: "2016" })?.title === "Random/multiple cylinder misfire" && scopedP0300InScope.applicability.status === "unverified" && scopedP0300InScope.applicability.reason === "additional_scope_confirmation_required" && scopedP0300InScope.definitions[0]?.source === "Official test source" && scopedP0300OutOfScope.applicability.status === "mismatch" && scopedP0300OutOfScope.scopeSummary.includes("Hyundai Sonata Hybrid 2016"), "Scoped source-specific P0300 context must retain the unrestricted definition while exposing in-scope and out-of-scope evidence separately");
+  check(evaluateDtcDefinitionApplicability(makerScopedP0300, { maker: "Ford", model: "Maverick", year: "2025" }).status === "unverified" && evaluateDtcDefinitionApplicability(makerScopedP0300, { maker: "Lincoln", model: "Nautilus", year: "2026" }).status === "unverified" && evaluateDtcDefinitionApplicability(makerScopedP0300, { maker: "Ford", model: "Nautilus", year: "2025" }).status === "mismatch" && evaluateDtcDefinitionApplicability(makerScopedP0300, { maker: "Lincoln", model: "Maverick", year: "2025" }).status === "mismatch" && buildDtcDefinitionScopeSummary([makerScopedP0300]).includes("Ford Maverick 2025-2026") && buildDtcDefinitionScopeSummary([makerScopedP0300]).includes("Lincoln Nautilus 2024-2026"), "DTC maker-scoped model-year applicability must reject cross-maker model matches and preserve the documented scope summary");
   check(evaluateDtcDefinitionApplicability(hondaSrsDefinition, { maker: "Honda", model: "CR-V" }).status === "unverified" && evaluateDtcDefinitionApplicability({ code: "P0300" }, { maker: "Toyota", model: "Prius", year: "2020" }).status === "not_limited", "DTC applicability did not distinguish missing vehicle context from unrestricted definitions");
   check(evaluateDtcDefinitionCandidatesApplicability([hondaSrsDefinition, hondaSrs2023Definition], { maker: "Honda", model: "CR-V", year: "2023" }).reason === "additional_scope_confirmation_required" && evaluateDtcDefinitionCandidatesApplicability([hondaSrsDefinition, hondaSrs2023Definition], { maker: "Toyota", model: "Prius", year: "2015" }).status === "mismatch", "DTC applicability did not aggregate multiple source-specific definitions");
   const hondaAccordCrvB0020Definition = hondaAccordCrvSrsDtcDefinitions.find((item) => item.code === "B0020");
