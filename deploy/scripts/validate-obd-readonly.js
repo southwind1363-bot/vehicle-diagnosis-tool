@@ -3934,6 +3934,9 @@ const nativeElmEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmEnvelop
 const nativeElmLivePidGoldenEnvelope = JSON.parse(
   fs.readFileSync(new URL("fixtures/native-elm327-live-pid-envelope.json", import.meta.url), "utf8")
 );
+const nativeElmAdapterIdentityGoldenEnvelope = JSON.parse(
+  fs.readFileSync(new URL("fixtures/native-elm327-adapter-identity-envelope.json", import.meta.url), "utf8")
+);
 const nativeElmReadinessGoldenEnvelope = JSON.parse(
   fs.readFileSync(new URL("fixtures/native-elm327-readiness-envelope.json", import.meta.url), "utf8")
 );
@@ -3945,6 +3948,8 @@ const nativeElmScanArchiveGolden = JSON.parse(
 );
 const nativeElmLivePidGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmLivePidGoldenEnvelope);
 const nativeElmLivePidGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmLivePidGoldenEnvelope);
+const nativeElmAdapterIdentityGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmAdapterIdentityGoldenEnvelope);
+const nativeElmAdapterIdentityGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmAdapterIdentityGoldenEnvelope);
 const nativeElmReadinessGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmReadinessGoldenEnvelope);
 const nativeElmReadinessGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmReadinessGoldenEnvelope);
 const nativeElmEcuInfoGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmEcuInfoGoldenEnvelope);
@@ -3991,6 +3996,18 @@ check(
     && nativeElmLivePidGoldenImport.session?.livePidSnapshot?.monitorValues?.length === 28
     && nativeElmLivePidGoldenImport.session?.vehicleCommandEnabled === false,
   "iPhone ELM327 BLE live PID envelope did not match the read-only diagnostic-session contract"
+);
+check(
+  nativeElmAdapterIdentityGoldenEvaluation.accepted === true
+    && nativeElmAdapterIdentityGoldenEvaluation.readoutSucceeded === true
+    && nativeElmAdapterIdentityGoldenImport.session?.adapterIdentity?.adapterFamily === "ELM327"
+    && nativeElmAdapterIdentityGoldenImport.session?.adapterIdentity?.adapterProtocolHint === "ISO 15765-4"
+    && nativeElmAdapterIdentityGoldenImport.session?.adapterIdentity?.adapterProtocolNumber === "A6"
+    && nativeElmAdapterIdentityGoldenImport.session?.adapterIdentity?.adapterName === null
+    && nativeElmAdapterIdentityGoldenImport.vehicleCommandEnabled === false
+    && nativeElmAdapterIdentityGoldenImport.wouldTransmit === false
+    && !JSON.stringify(nativeElmAdapterIdentityGoldenImport).includes("979867700221"),
+  "iPhone ELM327 adapter protocol metadata envelope did not normalize without raw identity retention"
 );
 const nativeElmTextPidEnvelope = JSON.parse(JSON.stringify(nativeElmLivePidGoldenEnvelope));
 nativeElmTextPidEnvelope.data.monitor_values.push(
