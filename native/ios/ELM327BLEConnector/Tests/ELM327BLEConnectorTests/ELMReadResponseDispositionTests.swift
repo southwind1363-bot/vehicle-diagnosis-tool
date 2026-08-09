@@ -16,4 +16,19 @@ final class ELMReadResponseDispositionTests: XCTestCase {
         XCTAssertEqual(classifyELMReadResponse("BUFFER FULL"), .transportFailure)
         XCTAssertEqual(classifyELMReadResponse("LV RESET"), .transportFailure)
     }
+
+    func testAdapterIdentityRejectsExplicitFailureResponses() {
+        for command in [ELMReadCommand.identifyAdapter, .describeProtocol] {
+            XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: command, response: "?"))
+            XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: command, response: "ERROR"))
+            XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: command, response: "NO DATA"))
+            XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: command, response: command.wireValue))
+        }
+    }
+
+    func testAdapterIdentityAcceptsUsableELMAndProtocolResponses() {
+        XCTAssertTrue(isUsableELMAdapterIdentityResponse(command: .identifyAdapter, response: "ATI\nELM327 v1.5"))
+        XCTAssertTrue(isUsableELMAdapterIdentityResponse(command: .describeProtocol, response: "ATDP\nAUTO, ISO 15765-4 (CAN 11/500)"))
+        XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: .storedDTC, response: "ELM327 v1.5"))
+    }
 }

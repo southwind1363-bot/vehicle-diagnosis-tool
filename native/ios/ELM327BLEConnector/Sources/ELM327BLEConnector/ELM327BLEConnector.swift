@@ -40,6 +40,24 @@ func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: Strin
     return lines.contains("OK")
 }
 
+func isUsableELMAdapterIdentityResponse(command: ELMReadCommand, response: String) -> Bool {
+    guard command == .identifyAdapter || command == .describeProtocol else { return false }
+    let lines = response
+        .split(whereSeparator: { $0.isNewline })
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+        .filter { !$0.isEmpty && $0 != command.wireValue }
+    guard !lines.isEmpty else { return false }
+    return !lines.contains(where: {
+        $0 == "?"
+            || $0.contains("ERROR")
+            || $0 == "NO DATA"
+            || $0 == "UNABLE TO CONNECT"
+            || $0 == "STOPPED"
+            || $0 == "BUFFER FULL"
+            || $0 == "LV RESET"
+    })
+}
+
 func requiresELMWriteCapacityWait(writeWithoutResponse: Bool, canSendWithoutResponse: Bool) -> Bool {
     writeWithoutResponse && !canSendWithoutResponse
 }
@@ -421,10 +439,20 @@ public final class ELM327BLEConnector: NSObject {
                     return
                 }
             case .identifyAdapter:
+                guard isUsableELMAdapterIdentityResponse(command: command, response: response) else {
+                    emitFailure(for: command, error: "adapter_identity_unavailable")
+                    interrupt(.invalidResponse)
+                    return
+                }
                 adapterName = firstResponseLine(in: response, excluding: command)
                 sequence += 1
                 emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
             case .describeProtocol:
+                guard isUsableELMAdapterIdentityResponse(command: command, response: response) else {
+                    emitFailure(for: command, error: "adapter_protocol_unavailable")
+                    interrupt(.invalidResponse)
+                    return
+                }
                 protocolHint = firstResponseLine(in: response, excluding: command)
                 sequence += 1
                 emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
