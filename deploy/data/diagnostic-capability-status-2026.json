@@ -5,13 +5,13 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent":  66,
-    "current_basis": "P系2935件、U系557件、B系56件、C系37件、個別DTC定義3635件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+    "current_basis": "P系2935件、U系557件、B系56件、C系38件、個別DTC定義3636件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "未知コードをファミリーフローへ退避",
                      "整備書確認必須と出典前提の方針を固定",
                      "ブリッジDTCを保存/保留/永久の状態別にセッションへ積み上げ",
-        "NHTSA公開資料で確認したB系36件・C系37件を出典付き定義として追加",
+    "NHTSA公開資料で確認したB系36件・C系38件を出典付き定義として追加",
         "Toyota 24TC05のP05CE-00を車種・年式・生産期間・TIS適用確認つきで追加",
         "Hyundai T8XのVenue IVT対象5コードを車種・生産期間・WEBDCS適用確認つきで追加",
         "FCA B2AのRAM SCCM対象3サブコードを車種・年式・VINリコール適用確認つきで追加",
@@ -40,6 +40,7 @@
         ,"Subaru 03-89-22の2019-21 Forester VDC B280Bを報告VDC ECU・EyeSight・制動系安全条件つきで追加"
         ,"Subaru 15-262-20の2018-19 Legacy/Outback・2019-20 Ascent B224CをHarmanユニット・報告ECU・read-only条件つきで追加"
         ,"Subaru 07-90-15の2015 Legacy/Outback SRVD B2350を始動時電圧・報告ECU・ADAS安全条件つきで追加"
+        ,"GM PIT6137の2020-23 Silverado/Sierra HD C15DD-00を市場・ブレーキ整備履歴・EPB安全条件つきで追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",

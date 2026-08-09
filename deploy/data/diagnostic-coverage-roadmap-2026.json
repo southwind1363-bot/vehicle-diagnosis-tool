@@ -67,10 +67,10 @@
     "label": "C系 シャシDTC",
     "coverage_area": "chassis-dtc",
     "current_state": "出典確認済み定義を追加開始",
-    "progress_percent": 17,
+    "progress_percent": 18,
     "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
     "priority": 4,
-    "current_count_note": "C系親DTC 37件 / 出典定義43件・一意サブコード定義11件 (NHTSA公開資料、Ford 2018-19 F-150 ABS C0051-54/C0051-64、Honda 2012-14/2017 CR-V・2022-23 Civic、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highland、Jeep 2019-20 Renegade、Audi 2023 SRS、Mazda 2019-20 Mazda3前方レーダーの出典定義、出典限定)",
+    "current_count_note": "C系親DTC 38件 / 出典定義44件・一意サブコード定義12件 (NHTSA公開資料、Ford 2018-19 F-150 ABS C0051-54/C0051-64、Honda 2012-14/2017 CR-V・2022-23 Civic、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highland、Jeep 2019-20 Renegade、Audi 2023 SRS、Mazda 2019-20 Mazda3前方レーダー、GM 2020-23 Silverado/Sierra HD EPB C15DD-00の出典定義、出典限定)",
     "next_actions": [
       "C系コードを制動、操舵、姿勢制御、車輪速、ヨーレート、電源系に分類する",
       "ライブデータ候補と点検条件を車種別確認前提で持たせる",
