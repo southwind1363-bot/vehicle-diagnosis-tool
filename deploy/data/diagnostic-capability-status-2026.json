@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent":  66,
-    "current_basis": "P系2935件、U系557件、B系51件、C系37件、個別DTC定義3630件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+    "current_basis": "P系2935件、U系557件、B系52件、C系37件、個別DTC定義3631件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "未知コードをファミリーフローへ退避",
@@ -35,6 +35,7 @@
         ,"American Honda 2026情報収集依頼の2025 Pilot P0420/P0430をCEL・保存DTC・適用確認つきの読取専用コンテキストとして追加"
         ,"Toyota 23TE02の2010-15 Prius/2012-17 Prius V IPM P0A7A/P0A78を市場・年式・HV/フェイルセーフ安全条件つきで追加"
         ,"Ford SSM 54823の2025-26 Maverick SOBDMC P0A5D/P0A60/P0A63/P0A6F/P0A72/P0A75/P0E52を市場・生産日・限定出力警告・EV安全条件つきで追加"
+        ,"Ford SSM 54589の2019-24 Ford/Lincoln SYNC3 TCU B156D-89を装備・報告ECU・接続症状・read-only条件つきで追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",
