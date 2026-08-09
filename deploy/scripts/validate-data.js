@@ -483,10 +483,14 @@ const importedBodyRows = codeRows.filter((row) => row.file === "imported-verifie
 const importedBodySourceDefinitionCount = importedBodyRows.length;
 const bodyDefinitionCount = [...coverageDefinitionKeys].filter((key) => key.startsWith("B")).length;
 const bodyParentCodeCount = [...coverageParentCodes].filter((code) => code.startsWith("B")).length;
+const importedChassisRows = codeRows.filter((row) => row.file === "imported-verified-dtc.json" && /^C/.test(row.code));
+const importedChassisSourceDefinitionCount = importedChassisRows.length;
+const chassisDefinitionCount = [...coverageDefinitionKeys].filter((key) => key.startsWith("C")).length;
 const chassisParentCodeCount = [...coverageParentCodes].filter((code) => code.startsWith("C")).length;
 const coverageRoadmap = JSON.parse(fs.readFileSync(path.join(dataDir, "diagnostic-coverage-roadmap-2026.json"), "utf8"));
 const diagnosticCapabilityStatus = JSON.parse(fs.readFileSync(path.join(dataDir, "diagnostic-capability-status-2026.json"), "utf8"));
 const bodyCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-body-b");
+const chassisCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-chassis-c");
 const genericDtcCapability = diagnosticCapabilityStatus.find((row) => row.id === "capability-generic-obd2-dtc");
 const powertrainCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-generic-powertrain-p");
 const networkCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-network-u");
@@ -503,7 +507,10 @@ if (!networkCoverageRoadmap || !String(networkCoverageRoadmap.current_count_note
 if (!bodyCoverageRoadmap || !String(bodyCoverageRoadmap.current_count_note || "").includes(`親DTC ${bodyParentCodeCount}件`) || !String(bodyCoverageRoadmap.current_count_note || "").includes(`出典定義${importedBodySourceDefinitionCount}件`) || !String(bodyCoverageRoadmap.current_count_note || "").includes(`一意サブコード定義${bodyDefinitionCount}件`)) {
   reportError("B系ロードマップのDTC件数が実データ集計と一致しません");
 }
-if (!genericDtcCapability || !String(genericDtcCapability.current_basis || "").includes(`B系${bodyParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`C系${chassisParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`個別DTC定義${coverageDefinitionKeys.size}件`)) {
+if (!chassisCoverageRoadmap || !String(chassisCoverageRoadmap.current_count_note || "").includes(`親DTC ${chassisParentCodeCount}件`) || !String(chassisCoverageRoadmap.current_count_note || "").includes(`個別DTC定義${chassisDefinitionCount}件`) || !String(chassisCoverageRoadmap.current_count_note || "").includes(`出典限定${importedChassisSourceDefinitionCount}件`)) {
+  reportError("C系ロードマップのDTC件数が実データ集計と一致しません");
+}
+if (!genericDtcCapability || !String(genericDtcCapability.current_basis || "").includes(`P系${powertrainParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`U系${networkParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`B系${bodyParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`C系${chassisParentCodeCount}件`) || !String(genericDtcCapability.current_basis || "").includes(`個別DTC定義${coverageDefinitionKeys.size}件`)) {
   reportError("汎用OBD2 DTC能力表示の件数が実データ集計と一致しません");
 }
 

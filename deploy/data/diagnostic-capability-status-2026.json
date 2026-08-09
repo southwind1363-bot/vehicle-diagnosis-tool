@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent": 73,
-    "current_basis": "P系2939件、U系569件、B系59件、C系41件、個別DTC定義3674件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+    "current_basis": "P系2942件、U系569件、B系59件、C系42件、個別DTC定義3678件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "未知コードをファミリーフローへ退避",
@@ -43,6 +43,7 @@
         ,"American Honda 25-025の2024 ZDX BECM P2C8A/P2C8B/U3577-U3580/U35AFを全コード同時・高電圧安全条件・適用確認つきで追加"
         ,"GM PIP6070Bの2024-26 Envision 2.0 LSY P06DDを北米・DTC状態・油量/オイル消費確認・エンジン安全条件つきで追加"
         ,"GM PIT6393Jの2025-26 Yukon/Yukon XL IVD/IVE U164Eを北米・報告ECU・ソフトウェア適用確認つきで追加"
+        ,"GM PIT6396Aの2020-23 Silverado/Sierra K111交換後P2535/P12A6/P10DA/C111B/P157Aを北米・エンジン・非N2N・部品番号・read-only条件つきで追加"
         ,"GM PIT6137の2020-23 Silverado/Sierra HD C15DD-00を市場・ブレーキ整備履歴・EPB安全条件つきで追加"
         ,"Mazda Bulletin Notesの2025-26 CX-70/2024-26 CX-90 VCM U0415-68をDSC交換履歴・制動系安全条件つきで追加"
         ,"Mazda Bulletin Notesの2024 CX-90 C0040-24を警告表示・報告ECU・ブレーキ安全条件つきで追加"

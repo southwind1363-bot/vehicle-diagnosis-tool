@@ -7,7 +7,7 @@
     "progress_percent": 63,
     "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
     "priority": 1,
-      "current_count_note": "P系親DTC 2939件 / 個別DTC定義2953件・出典限定65件 (Mazda 2019-2022 Mazda3/CX-30/MX-30 P05A0-00、Mazda 2018-25 CX-5 P0126-00、Mazda DRW59 2026 CX-30/Mazda3 P0126-00、Mazda 2023-25/2024-25 P20F8-00、Mazda MSP66 2024-26 CX-90/2025-26 CX-70 M Hybrid Boost P0DAB、Ford 2023-25 Bronco Sport/Maverick 8F35 P0766/P0767/P2703・2023-26 6.7L Super Duty/F-650/F-750 P0384・2025-26 Maverick SOBDMC P0A5D/P0A60/P0A63/P0A6F/P0A72/P0A75/P0E52、Ford 2024-25 Mustang Mach-E P07E6-71、Ford 2022-25 F-150 Lightning SOBDMB/SOBDMC P2797、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00・2010-15 Prius/2012-17 Prius V IPM P0A7A/P0A78、Hyundai 2020-22 Venue IVT T8X対象5コード、Hyundai 2016 Sonata Hybrid TZ4 P0300-P0304・2020-23 Sonata DN8/DN8A P2181-00/F0/F1、Honda 2025 Pilot P0420/P0430、GM 2019-2025 2.0 LSY P04FB、GM 2024-26 Envision 2.0 LSY P06DD、Acura 2024 ZDX BECM P2C8A/P2C8Bを出典限定で追加)",
+      "current_count_note": "P系親DTC 2942件 / 個別DTC定義2956件・出典限定69件 (Mazda 2019-2022 Mazda3/CX-30/MX-30 P05A0-00、Mazda 2018-25 CX-5 P0126-00、Mazda DRW59 2026 CX-30/Mazda3 P0126-00、Mazda 2023-25/2024-25 P20F8-00、Mazda MSP66 2024-26 CX-90/2025-26 CX-70 M Hybrid Boost P0DAB、Ford 2023-25 Bronco Sport/Maverick 8F35 P0766/P0767/P2703・2023-26 6.7L Super Duty/F-650/F-750 P0384・2025-26 Maverick SOBDMC P0A5D/P0A60/P0A63/P0A6F/P0A72/P0A75/P0E52、Ford 2024-25 Mustang Mach-E P07E6-71、Ford 2022-25 F-150 Lightning SOBDMB/SOBDMC P2797、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00・2010-15 Prius/2012-17 Prius V IPM P0A7A/P0A78、Hyundai 2020-22 Venue IVT T8X対象5コード、Hyundai 2016 Sonata Hybrid TZ4 P0300-P0304・2020-23 Sonata DN8/DN8A P2181-00/F0/F1、Honda 2025 Pilot P0420/P0430、GM 2019-2025 2.0 LSY P04FB、GM 2024-26 Envision 2.0 LSY P06DD、Acura 2024 ZDX BECM P2C8A/P2C8B、GM 2020-23 Silverado/Sierra K111 P2535/P12A6/P10DA/P157Aを出典限定で追加)",
     "next_actions": [
       "未収録Pコードを公式/規格系ソースで照合する",
       "同時DTC、フリーズフレーム、ライブデータPIDへのリンクを増やす",
@@ -70,7 +70,7 @@
     "progress_percent": 24,
     "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
     "priority": 4,
-    "current_count_note": "C系親DTC 41件 / 出典定義49件・一意サブコード定義14件 (NHTSA公開資料、Subaru 2013 BRZ C1249/Forester 2013・Impreza 2008-13 C1531、Ford 2018-19 F-150 ABS C0051-54/C0051-64、Honda 2012-14/2017 CR-V・2022-23 Civic・2024 Prologue K160 C2A22、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highland、Jeep 2019-20 Renegade、Audi 2023 SRS、Mazda 2019-20 Mazda3前方レーダー、Mazda 2024 CX-90 C0040-24、GM 2020-23 Silverado/Sierra HD EPB C15DD-00の出典定義、出典限定)",
+    "current_count_note": "C系親DTC 42件 / 個別DTC定義46件・出典限定50件 (NHTSA公開資料: Subaru 2013 BRZ C1249/Forester 2013・Impreza 2008-13 C1531、Ford 2018-19 F-150 ABS C0051-54/C0051-64、Honda 2012-14/2017 CR-V・2022-23 Civic・2024 Prologue K160 C2A22、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highlander、Jeep 2019-20 Renegade、Audi 2023 SRS、Mazda 2019-20 Mazda3前方レーダー、Mazda 2024 CX-90 C0040-24、GM 2020-23 Silverado/Sierra HD EPB C15DD-00、GM 2020-23 Silverado/Sierra K111 P2535/P12A6/P10DA/C111B/P157Aを出典限定で追加)",
     "next_actions": [
       "C系コードを制動、操舵、姿勢制御、車輪速、ヨーレート、電源系に分類する",
       "ライブデータ候補と点検条件を車種別確認前提で持たせる",
