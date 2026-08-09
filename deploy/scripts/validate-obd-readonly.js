@@ -15599,6 +15599,15 @@ const incompleteReadinessSession = obd.buildDiagnosticScanSession({
 });
 const incompleteReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(incompleteReadinessSession)));
 check(incompleteReadinessSession.readinessSnapshot?.monitorCount === 1 && incompleteReadinessSession.readinessSnapshot?.incompleteCount === 1 && incompleteReadinessSession.readinessSnapshot?.completeCount === 0 && incompleteReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && incompleteReadinessSession.warnings?.includes("readiness_incomplete") && incompleteReadinessRoundTrip?.readinessSnapshot?.monitorCount === 1 && incompleteReadinessRoundTrip.readinessSnapshot?.incompleteCount === 1 && incompleteReadinessRoundTrip?.readinessSnapshot?.completeCount === 0 && incompleteReadinessRoundTrip?.warnings?.includes("readiness_incomplete") && incompleteReadinessSession.vehicleCommandEnabled === false && incompleteReadinessSession.wouldTransmit === false && incompleteReadinessRoundTrip?.vehicleCommandEnabled === false && incompleteReadinessRoundTrip?.wouldTransmit === false, "Structured incomplete readiness input did not normalize consistently through the read-only session path");
+const failedOnboardMonitorSession = obd.buildDiagnosticScanSession({
+  onboard_monitor_snapshot: {
+    schemaVersion: "onboard_monitor_snapshot_v1",
+    onboard_monitor_readout_status: "reported",
+    tests: [{ test_id: "01", component_id: "02", value: 8, min: 1, max: 5, status: "fail", source_ecu: "7E8" }]
+  }
+});
+const failedOnboardMonitorRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(failedOnboardMonitorSession)));
+check(failedOnboardMonitorSession.onboardMonitorSnapshot?.testCount === 1 && failedOnboardMonitorSession.onboardMonitorSnapshot?.failedCount === 1 && failedOnboardMonitorSession.onboardMonitorSnapshot?.passedCount === 0 && failedOnboardMonitorSession.readoutCoverage?.itemById?.onboard_monitor_snapshot?.count === 1 && failedOnboardMonitorSession.warnings?.includes("onboard_monitor_test_failed") && failedOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.testCount === 1 && failedOnboardMonitorRoundTrip.onboardMonitorSnapshot?.failedCount === 1 && failedOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.passedCount === 0 && failedOnboardMonitorRoundTrip?.warnings?.includes("onboard_monitor_test_failed") && failedOnboardMonitorSession.vehicleCommandEnabled === false && failedOnboardMonitorSession.wouldTransmit === false && failedOnboardMonitorRoundTrip?.vehicleCommandEnabled === false && failedOnboardMonitorRoundTrip?.wouldTransmit === false, "Structured failed Mode 06 input did not normalize consistently through the read-only session path");
 const emptyFreezeFrameSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: {
     schemaVersion: "freeze_frame_snapshot_v1",

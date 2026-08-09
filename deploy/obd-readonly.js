@@ -23150,7 +23150,7 @@
         ? decodeReadinessResponse(readinessResponseInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);
     const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
-      ? onboardMonitorSnapshotInput
+      ? (!Number.isFinite(Number(onboardMonitorSnapshotInput.testCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.failedCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.passedCount)) ? normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput) : onboardMonitorSnapshotInput)
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
         : (onboardMonitorSnapshotInput?.data && typeof onboardMonitorSnapshotInput.data === "object" && !Array.isArray(onboardMonitorSnapshotInput.data))
