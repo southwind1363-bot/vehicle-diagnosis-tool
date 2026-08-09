@@ -4871,7 +4871,9 @@
       }
       : livePidSnapshot;
     const freezeFrameSnapshot = hasFreezeFrameSnapshotInput
-      ? (freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput))
+      ? (freezeFrameSnapshotInput?.schemaVersion
+          ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+          : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput))
       : null;
     const freezeFrameEcuSnapshots = Array.isArray(freezeFrameSnapshot?.freezeFrameEcuSnapshots)
       ? freezeFrameSnapshot.freezeFrameEcuSnapshots

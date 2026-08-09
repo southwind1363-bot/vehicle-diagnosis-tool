@@ -15545,11 +15545,21 @@ const ecuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
   freeze_frame_snapshot: {
     schemaVersion: "freeze_frame_snapshot_v1",
     freeze_frame_readout_status: "reported",
-    freeze_frame_ecu_snapshots: [{ source_ecu: "7E8", monitor_values: [{ id: "engine_speed", value: 1500 }], uds_dtc_snapshot_records: [{ code: "P0300", snapshot_record_number: 1 }] }]
+    freeze_frame_ecu_snapshots: [{ source_ecu: "7E8", monitor_values: [{ id: "engine_speed", value: 1500 }], uds_dtc_snapshot_records: [{ code: "012345", status_byte: "40", snapshot_record_number: 1, snapshot_record_identifier_count: 0 }] }]
   },
   freeze_frame_input_present: true
 });
 check(ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.status === "captured" && ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.available === true && ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.count === 2 && ecuScopedFreezeFrameCoverage.includeInfrastructure === false, "ECU-scoped freeze-frame evidence was treated as unavailable by readout coverage");
+const malformedEcuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
+  include_infrastructure: false,
+  freeze_frame_snapshot: {
+    schemaVersion: "freeze_frame_snapshot_v1",
+    freeze_frame_readout_status: "reported",
+    freeze_frame_ecu_snapshots: [{ source_ecu: "7E8", monitor_values: [{ id: "engine_speed", value: 1500 }], uds_dtc_snapshot_records: [{ code: "P0300", snapshot_record_number: 1 }] }]
+  },
+  freeze_frame_input_present: true
+});
+check(malformedEcuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.status === "captured" && malformedEcuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.available === true && malformedEcuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.count === 1 && malformedEcuScopedFreezeFrameCoverage.includeInfrastructure === false, "Malformed ECU-scoped UDS freeze-frame records were counted as captured evidence");
 const ecuScopedFreezeFrameSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: {
     schemaVersion: "freeze_frame_snapshot_v1",
