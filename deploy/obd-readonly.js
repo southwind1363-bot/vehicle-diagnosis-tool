@@ -22991,7 +22991,7 @@
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
     const dtcSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion
-      ? (Array.isArray(dtcSnapshotInput.codes) ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput))
+      ? (Array.isArray(dtcSnapshotInput.codes) && Array.isArray(dtcSnapshotInput.dtcs) ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput))
       : hasTypedDtcSnapshotInput
         ? mergeDtcSnapshots(
           normalizeTypedDtcSnapshotInput(storedDtcSnapshotInput, "stored", "read_stored_dtc"),

@@ -15581,6 +15581,15 @@ const udsExtendedOnlySession = obd.buildDiagnosticScanSession({
 });
 const udsExtendedOnlyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(udsExtendedOnlySession)));
 check(Array.isArray(udsExtendedOnlySession?.dtcSnapshot?.codes) && udsExtendedOnlySession.dtcSnapshot.codes.length === 0 && udsExtendedOnlySession.dtcSnapshot?.udsDtcExtendedDataRecordResponses?.length === 1 && udsExtendedOnlySession.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && udsExtendedOnlySession.coreReadoutInventorySummary?.countsById?.dtc_snapshot === 0 && Array.isArray(udsExtendedOnlyRoundTrip?.dtcSnapshot?.codes) && udsExtendedOnlyRoundTrip.dtcSnapshot.codes.length === 0 && udsExtendedOnlyRoundTrip.dtcSnapshot?.udsDtcExtendedDataRecordResponses?.length === 1 && udsExtendedOnlyRoundTrip.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && udsExtendedOnlySession.vehicleCommandEnabled === false && udsExtendedOnlySession.wouldTransmit === false && udsExtendedOnlyRoundTrip?.vehicleCommandEnabled === false && udsExtendedOnlyRoundTrip?.wouldTransmit === false, "Structured UDS extended-DTC input without a code list did not remain a safe readable session");
+const codesOnlyDtcSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    schemaVersion: "dtc_snapshot_v1",
+    dtc_readout_status: "reported",
+    codes: ["P0300"]
+  }
+});
+const codesOnlyDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(codesOnlyDtcSession)));
+check(codesOnlyDtcSession.dtcSnapshot?.codes?.join(",") === "P0300" && codesOnlyDtcSession.dtcSnapshot?.dtcs?.[0]?.code === "P0300" && codesOnlyDtcSession.dtcSnapshot?.dtcs?.[0]?.status === "unknown" && codesOnlyDtcSession.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && codesOnlyDtcSession.coreReadoutInventorySummary?.countsById?.dtc_snapshot === 1 && codesOnlyDtcRoundTrip?.dtcSnapshot?.codes?.join(",") === "P0300" && codesOnlyDtcRoundTrip?.dtcSnapshot?.dtcs?.[0]?.code === "P0300" && codesOnlyDtcRoundTrip?.dtcSnapshot?.dtcs?.[0]?.status === "unknown" && codesOnlyDtcSession.vehicleCommandEnabled === false && codesOnlyDtcSession.wouldTransmit === false && codesOnlyDtcRoundTrip?.vehicleCommandEnabled === false && codesOnlyDtcRoundTrip?.wouldTransmit === false, "Structured DTC codes without detail rows did not normalize consistently through the read-only session path");
 const emptyFreezeFrameSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: {
     schemaVersion: "freeze_frame_snapshot_v1",
