@@ -7,7 +7,7 @@
     "progress_percent": 63,
     "target_state": "主要な汎用Pコードを公式/規格系ソースで個別定義し、未知コードはファミリーフローへ退避する",
     "priority": 1,
-      "current_count_note": "P系親DTC 2935件 / 出典定義2949件・一意サブコード定義18件 (Mazda 2019-2022 Mazda3/CX-30/MX-30 P05A0-00、Mazda 2018-25 CX-5 P0126-00、Mazda DRW59 2026 CX-30/Mazda3 P0126-00、Mazda 2023-25/2024-25 P20F8-00、Mazda MSP66 2024-26 CX-90/2025-26 CX-70 M Hybrid Boost P0DAB、Ford 2023-25 Bronco Sport/Maverick 8F35 P0766/P0767/P2703・2023-26 6.7L Super Duty/F-650/F-750 P0384・2025-26 Maverick SOBDMC P0A5D/P0A60/P0A63/P0A6F/P0A72/P0A75/P0E52、Ford 2024-25 Mustang Mach-E P07E6-71、Ford 2022-25 F-150 Lightning SOBDMB/SOBDMC P2797、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00・2010-15 Prius/2012-17 Prius V IPM P0A7A/P0A78、Hyundai 2020-22 Venue IVT T8X対象5コード、Hyundai 2016 Sonata Hybrid TZ4 P0300-P0304・2020-23 Sonata DN8/DN8A P2181-00/F0/F1、Honda 2025 Pilot P0420/P0430、GM 2019-2025 2.0 LSY P04FBを出典限定で追加)",
+      "current_count_note": "P系親DTC 2939件 / 個別DTC定義2953件・出典限定65件 (Mazda 2019-2022 Mazda3/CX-30/MX-30 P05A0-00、Mazda 2018-25 CX-5 P0126-00、Mazda DRW59 2026 CX-30/Mazda3 P0126-00、Mazda 2023-25/2024-25 P20F8-00、Mazda MSP66 2024-26 CX-90/2025-26 CX-70 M Hybrid Boost P0DAB、Ford 2023-25 Bronco Sport/Maverick 8F35 P0766/P0767/P2703・2023-26 6.7L Super Duty/F-650/F-750 P0384・2025-26 Maverick SOBDMC P0A5D/P0A60/P0A63/P0A6F/P0A72/P0A75/P0E52、Ford 2024-25 Mustang Mach-E P07E6-71、Ford 2022-25 F-150 Lightning SOBDMB/SOBDMC P2797、Toyota 2023-24 Highlander/2024 Grand Highlander P05CE-00・2010-15 Prius/2012-17 Prius V IPM P0A7A/P0A78、Hyundai 2020-22 Venue IVT T8X対象5コード、Hyundai 2016 Sonata Hybrid TZ4 P0300-P0304・2020-23 Sonata DN8/DN8A P2181-00/F0/F1、Honda 2025 Pilot P0420/P0430、GM 2019-2025 2.0 LSY P04FB、GM 2024-26 Envision 2.0 LSY P06DD、Acura 2024 ZDX BECM P2C8A/P2C8Bを出典限定で追加)",
     "next_actions": [
       "未収録Pコードを公式/規格系ソースで照合する",
       "同時DTC、フリーズフレーム、ライブデータPIDへのリンクを増やす",
@@ -28,7 +28,7 @@
     "progress_percent": 59,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 557件 / 出典定義574件・一意サブコード定義17件 (Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68を出典限定で追加)",
+    "current_count_note": "U系親DTC 569件 / 個別DTC定義586件・出典限定58件 (Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68、Acura 2024 ZDX BECM U3577-U3580/U35AF、GM 2025-26 Yukon/Yukon XL IVD/IVE U164Eを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",

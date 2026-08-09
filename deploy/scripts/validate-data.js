@@ -475,6 +475,10 @@ const coverageDtcFiles = new Set(jsonFiles.filter((file) => file === "obd-codes.
 const coverageDtcRows = codeRows.filter((row) => coverageDtcFiles.has(row.file) && isDtc(row.code));
 const coverageDefinitionKeys = new Set(coverageDtcRows.map((row) => `${row.code}:${row.subcode || ""}`));
 const coverageParentCodes = new Set(coverageDtcRows.map((row) => row.code));
+const powertrainDefinitionCount = [...coverageDefinitionKeys].filter((key) => key.startsWith("P")).length;
+const powertrainParentCodeCount = [...coverageParentCodes].filter((code) => code.startsWith("P")).length;
+const networkDefinitionCount = [...coverageDefinitionKeys].filter((key) => key.startsWith("U")).length;
+const networkParentCodeCount = [...coverageParentCodes].filter((code) => code.startsWith("U")).length;
 const importedBodyRows = codeRows.filter((row) => row.file === "imported-verified-dtc.json" && /^B/.test(row.code));
 const importedBodySourceDefinitionCount = importedBodyRows.length;
 const bodyDefinitionCount = [...coverageDefinitionKeys].filter((key) => key.startsWith("B")).length;
@@ -484,6 +488,18 @@ const coverageRoadmap = JSON.parse(fs.readFileSync(path.join(dataDir, "diagnosti
 const diagnosticCapabilityStatus = JSON.parse(fs.readFileSync(path.join(dataDir, "diagnostic-capability-status-2026.json"), "utf8"));
 const bodyCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-body-b");
 const genericDtcCapability = diagnosticCapabilityStatus.find((row) => row.id === "capability-generic-obd2-dtc");
+const powertrainCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-generic-powertrain-p");
+const networkCoverageRoadmap = coverageRoadmap.find((row) => row.id === "coverage-network-u");
+const powertrainParentCountLabel = `P\u7cfb\u89aaDTC ${powertrainParentCodeCount}\u4ef6`;
+const powertrainDefinitionCountLabel = `\u500b\u5225DTC\u5b9a\u7fa9${powertrainDefinitionCount}\u4ef6`;
+const networkParentCountLabel = `U\u7cfb\u89aaDTC ${networkParentCodeCount}\u4ef6`;
+const networkDefinitionCountLabel = `\u500b\u5225DTC\u5b9a\u7fa9${networkDefinitionCount}\u4ef6`;
+if (!powertrainCoverageRoadmap || !String(powertrainCoverageRoadmap.current_count_note || "").includes(powertrainParentCountLabel) || !String(powertrainCoverageRoadmap.current_count_note || "").includes(powertrainDefinitionCountLabel)) {
+  reportError("Powertrain DTC roadmap count does not match the data set");
+}
+if (!networkCoverageRoadmap || !String(networkCoverageRoadmap.current_count_note || "").includes(networkParentCountLabel) || !String(networkCoverageRoadmap.current_count_note || "").includes(networkDefinitionCountLabel)) {
+  reportError("Network DTC roadmap count does not match the data set");
+}
 if (!bodyCoverageRoadmap || !String(bodyCoverageRoadmap.current_count_note || "").includes(`親DTC ${bodyParentCodeCount}件`) || !String(bodyCoverageRoadmap.current_count_note || "").includes(`出典定義${importedBodySourceDefinitionCount}件`) || !String(bodyCoverageRoadmap.current_count_note || "").includes(`一意サブコード定義${bodyDefinitionCount}件`)) {
   reportError("B系ロードマップのDTC件数が実データ集計と一致しません");
 }
