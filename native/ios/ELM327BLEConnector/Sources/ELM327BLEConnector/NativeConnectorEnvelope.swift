@@ -90,7 +90,8 @@ public enum NativeConnectorEnvelopeFactory {
         context: NativeConnectorSessionContext,
         sequence: Int,
         adapterName: String?,
-        protocolHint: String?
+        protocolHint: String?,
+        protocolNumber: String?
     ) -> NativeConnectorEnvelope {
         var data: [String: NativeConnectorJSONValue] = [
             "adapter_family": .string(adapterFamily(for: adapterName)),
@@ -98,6 +99,9 @@ public enum NativeConnectorEnvelopeFactory {
         ]
         if let protocolFamily = protocolFamily(for: protocolHint) {
             data["adapter_protocol_hint"] = .string(protocolFamily)
+        }
+        if let protocolNumber = normalizedProtocolNumber(for: protocolNumber) {
+            data["adapter_protocol_number"] = .string(protocolNumber)
         }
         return make(context: context, sequence: sequence, intent: "adapter_identity", data: data)
     }
@@ -123,6 +127,16 @@ public enum NativeConnectorEnvelopeFactory {
             "AUTO"
         ]
         return knownProtocols.first { normalizedHint.contains($0) }
+    }
+
+    private static func normalizedProtocolNumber(for protocolNumber: String?) -> String? {
+        let normalizedNumber = protocolNumber?
+            .uppercased()
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        guard normalizedNumber.range(of: "^(A)?[0-9A-C]$", options: .regularExpression) != nil else {
+            return nil
+        }
+        return normalizedNumber
     }
 
     public static func supportedPIDs(

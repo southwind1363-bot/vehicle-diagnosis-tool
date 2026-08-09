@@ -18,7 +18,7 @@ final class ELMReadResponseDispositionTests: XCTestCase {
     }
 
     func testAdapterIdentityRejectsExplicitFailureResponses() {
-        for command in [ELMReadCommand.identifyAdapter, .describeProtocol] {
+        for command in [ELMReadCommand.identifyAdapter, .describeProtocol, .describeProtocolNumber] {
             XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: command, response: "?"))
             XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: command, response: "ERROR"))
             XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: command, response: "NO DATA"))
@@ -29,6 +29,14 @@ final class ELMReadResponseDispositionTests: XCTestCase {
     func testAdapterIdentityAcceptsUsableELMAndProtocolResponses() {
         XCTAssertTrue(isUsableELMAdapterIdentityResponse(command: .identifyAdapter, response: "ATI\nELM327 v1.5"))
         XCTAssertTrue(isUsableELMAdapterIdentityResponse(command: .describeProtocol, response: "ATDP\nAUTO, ISO 15765-4 (CAN 11/500)"))
+        XCTAssertTrue(isUsableELMAdapterIdentityResponse(command: .describeProtocolNumber, response: "ATDPN\nA6"))
         XCTAssertFalse(isUsableELMAdapterIdentityResponse(command: .storedDTC, response: "ELM327 v1.5"))
+    }
+
+    func testAdapterProtocolNumberRetainsOnlyELMProtocolValues() {
+        XCTAssertEqual(normalizedELMAdapterProtocolNumber(response: "ATDPN\nA6"), "A6")
+        XCTAssertEqual(normalizedELMAdapterProtocolNumber(response: "ATDPN\n6"), "6")
+        XCTAssertNil(normalizedELMAdapterProtocolNumber(response: "ATDPN\nAUTO"))
+        XCTAssertNil(normalizedELMAdapterProtocolNumber(response: "ATDPN\nA6\nserial=979867700221"))
     }
 }

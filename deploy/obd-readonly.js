@@ -724,7 +724,7 @@
     Object.freeze({
       intent: "adapter_identity",
       label: "Adapter identity",
-      dataShape: Object.freeze(["adapter_name", "adapter_family", "firmware_version", "vehicle_command_enabled"]),
+      dataShape: Object.freeze(["adapter_name", "adapter_family", "firmware_version", "adapter_protocol_hint", "adapter_protocol_number", "vehicle_command_enabled"]),
       safeDefault: Object.freeze({
         adapter_name: null,
         adapter_family: null,

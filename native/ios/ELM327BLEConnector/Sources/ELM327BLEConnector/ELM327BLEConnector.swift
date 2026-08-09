@@ -41,7 +41,7 @@ func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: Strin
 }
 
 func isUsableELMAdapterIdentityResponse(command: ELMReadCommand, response: String) -> Bool {
-    guard command == .identifyAdapter || command == .describeProtocol else { return false }
+    guard command == .identifyAdapter || command == .describeProtocol || command == .describeProtocolNumber else { return false }
     let lines = response
         .split(whereSeparator: { $0.isNewline })
         .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
@@ -56,6 +56,19 @@ func isUsableELMAdapterIdentityResponse(command: ELMReadCommand, response: Strin
             || $0 == "BUFFER FULL"
             || $0 == "LV RESET"
     })
+}
+
+func normalizedELMAdapterProtocolNumber(response: String) -> String? {
+    let lines = response
+        .split(whereSeparator: { $0.isNewline })
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased() }
+        .filter { !$0.isEmpty && $0 != ELMReadCommand.describeProtocolNumber.wireValue }
+    guard lines.count == 1,
+          lines[0].range(of: "^(A)?[0-9A-C]$", options: .regularExpression) != nil
+    else {
+        return nil
+    }
+    return lines[0]
 }
 
 func requiresELMWriteCapacityWait(writeWithoutResponse: Bool, canSendWithoutResponse: Bool) -> Bool {
@@ -192,6 +205,7 @@ public final class ELM327BLEConnector: NSObject {
     private var sessionContext: NativeConnectorSessionContext?
     private var adapterName: String?
     private var protocolHint: String?
+    private var protocolNumber: String?
     private var freezeFrameSupportedPIDs = Set<String>()
     private var freezeFrameSupportedPIDsByScope: [String: Set<String>] = [:]
     private var freezeFrameTriggerScopeIDs = Set<String>()
@@ -297,6 +311,7 @@ public final class ELM327BLEConnector: NSObject {
         sequence = 0
         adapterName = nil
         protocolHint = nil
+        protocolNumber = nil
         freezeFrameSupportedPIDs.removeAll()
         freezeFrameSupportedPIDsByScope.removeAll()
         freezeFrameTriggerScopeIDs.removeAll()
@@ -446,7 +461,7 @@ public final class ELM327BLEConnector: NSObject {
                 }
                 adapterName = firstResponseLine(in: response, excluding: command)
                 sequence += 1
-                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber))
             case .describeProtocol:
                 guard isUsableELMAdapterIdentityResponse(command: command, response: response) else {
                     emitFailure(for: command, error: "adapter_protocol_unavailable")
@@ -455,7 +470,18 @@ public final class ELM327BLEConnector: NSObject {
                 }
                 protocolHint = firstResponseLine(in: response, excluding: command)
                 sequence += 1
-                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint))
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber))
+            case .describeProtocolNumber:
+                guard isUsableELMAdapterIdentityResponse(command: command, response: response),
+                      let normalizedProtocolNumber = normalizedELMAdapterProtocolNumber(response: response)
+                else {
+                    emitFailure(for: command, error: "adapter_protocol_number_unavailable")
+                    interrupt(.invalidResponse)
+                    return
+                }
+                protocolNumber = normalizedProtocolNumber
+                sequence += 1
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber))
             case .storedDTC, .pendingDTC, .permanentDTC:
                 switch OBD2ReadoutDecoder.decodeDTCs(command: command, response: response) {
                 case .success(let results):

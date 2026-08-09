@@ -174,7 +174,8 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             context: context,
             sequence: 1,
             adapterName: "ELM327",
-            protocolHint: "AUTO"
+            protocolHint: "AUTO",
+            protocolNumber: nil
         ))
         try builder.complete(with: manifest(
             count: 1,

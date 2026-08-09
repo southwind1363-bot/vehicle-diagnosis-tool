@@ -7,12 +7,14 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
             context: NativeConnectorSessionContext(),
             sequence: 1,
             adapterName: "STN1170 SN: 979867700221",
-            protocolHint: "AUTO, ISO 15765-4 (CAN 11/500)"
+            protocolHint: "AUTO, ISO 15765-4 (CAN 11/500)",
+            protocolNumber: "A6"
         )
 
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
         XCTAssertTrue(json.contains("\"adapter_family\":\"STN\""))
         XCTAssertTrue(json.contains("\"adapter_protocol_hint\":\"ISO 15765-4\""))
+        XCTAssertTrue(json.contains("\"adapter_protocol_number\":\"A6\""))
         XCTAssertFalse(json.contains("adapter_name"))
         XCTAssertFalse(json.contains("979867700221"))
     }

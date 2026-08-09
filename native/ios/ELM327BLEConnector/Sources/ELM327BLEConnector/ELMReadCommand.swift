@@ -7,6 +7,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case autoProtocol
     case identifyAdapter
     case describeProtocol
+    case describeProtocolNumber
     case storedDTC
     case pendingDTC
     case permanentDTC
@@ -140,6 +141,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .autoProtocol,
         .identifyAdapter,
         .describeProtocol,
+        .describeProtocolNumber,
         .storedDTC,
         .pendingDTC,
         .permanentDTC,
@@ -158,6 +160,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .autoProtocol,
         .identifyAdapter,
         .describeProtocol,
+        .describeProtocolNumber,
         .storedDTC,
         .pendingDTC,
         .permanentDTC,
@@ -209,6 +212,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .autoProtocol: return "ATSP0"
         case .identifyAdapter: return "ATI"
         case .describeProtocol: return "ATDP"
+        case .describeProtocolNumber: return "ATDPN"
         case .storedDTC: return "03"
         case .pendingDTC: return "07"
         case .permanentDTC: return "0A"
@@ -339,7 +343,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
 
     public var intent: String {
         switch self {
-        case .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol, .identifyAdapter, .describeProtocol: return "adapter_identity"
+        case .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol, .identifyAdapter, .describeProtocol, .describeProtocolNumber: return "adapter_identity"
         case .storedDTC: return "read_stored_dtc"
         case .pendingDTC: return "read_pending_dtc"
         case .permanentDTC: return "read_permanent_dtc"
@@ -359,7 +363,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
 
     public var readoutID: String? {
         switch self {
-        case .identifyAdapter, .describeProtocol: return "adapter_identity"
+        case .identifyAdapter, .describeProtocol, .describeProtocolNumber: return "adapter_identity"
         case .storedDTC: return "stored_dtc_snapshot"
         case .pendingDTC: return "pending_dtc_snapshot"
         case .permanentDTC: return "permanent_dtc_snapshot"
