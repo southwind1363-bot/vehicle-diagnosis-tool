@@ -23145,7 +23145,7 @@
           ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput)
           : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)), freezeFrameSafetyInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
     const readinessSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
-      ? readinessSnapshotInput
+      ? (!Number.isFinite(Number(readinessSnapshotInput.monitorCount)) || !Number.isFinite(Number(readinessSnapshotInput.incompleteCount)) || !Number.isFinite(Number(readinessSnapshotInput.completeCount)) ? normalizeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);

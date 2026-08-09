@@ -15590,6 +15590,15 @@ const codesOnlyDtcSession = obd.buildDiagnosticScanSession({
 });
 const codesOnlyDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(codesOnlyDtcSession)));
 check(codesOnlyDtcSession.dtcSnapshot?.codes?.join(",") === "P0300" && codesOnlyDtcSession.dtcSnapshot?.dtcs?.[0]?.code === "P0300" && codesOnlyDtcSession.dtcSnapshot?.dtcs?.[0]?.status === "unknown" && codesOnlyDtcSession.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && codesOnlyDtcSession.coreReadoutInventorySummary?.countsById?.dtc_snapshot === 1 && codesOnlyDtcRoundTrip?.dtcSnapshot?.codes?.join(",") === "P0300" && codesOnlyDtcRoundTrip?.dtcSnapshot?.dtcs?.[0]?.code === "P0300" && codesOnlyDtcRoundTrip?.dtcSnapshot?.dtcs?.[0]?.status === "unknown" && codesOnlyDtcSession.vehicleCommandEnabled === false && codesOnlyDtcSession.wouldTransmit === false && codesOnlyDtcRoundTrip?.vehicleCommandEnabled === false && codesOnlyDtcRoundTrip?.wouldTransmit === false, "Structured DTC codes without detail rows did not normalize consistently through the read-only session path");
+const incompleteReadinessSession = obd.buildDiagnosticScanSession({
+  readiness_snapshot: {
+    schemaVersion: "readiness_snapshot_v1",
+    readiness_readout_status: "reported",
+    monitors: [{ id: "catalyst", supported: true, complete: false, status: "incomplete" }]
+  }
+});
+const incompleteReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(incompleteReadinessSession)));
+check(incompleteReadinessSession.readinessSnapshot?.monitorCount === 1 && incompleteReadinessSession.readinessSnapshot?.incompleteCount === 1 && incompleteReadinessSession.readinessSnapshot?.completeCount === 0 && incompleteReadinessSession.readoutCoverage?.itemById?.readiness_snapshot?.count === 1 && incompleteReadinessSession.warnings?.includes("readiness_incomplete") && incompleteReadinessRoundTrip?.readinessSnapshot?.monitorCount === 1 && incompleteReadinessRoundTrip.readinessSnapshot?.incompleteCount === 1 && incompleteReadinessRoundTrip?.readinessSnapshot?.completeCount === 0 && incompleteReadinessRoundTrip?.warnings?.includes("readiness_incomplete") && incompleteReadinessSession.vehicleCommandEnabled === false && incompleteReadinessSession.wouldTransmit === false && incompleteReadinessRoundTrip?.vehicleCommandEnabled === false && incompleteReadinessRoundTrip?.wouldTransmit === false, "Structured incomplete readiness input did not normalize consistently through the read-only session path");
 const emptyFreezeFrameSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: {
     schemaVersion: "freeze_frame_snapshot_v1",
