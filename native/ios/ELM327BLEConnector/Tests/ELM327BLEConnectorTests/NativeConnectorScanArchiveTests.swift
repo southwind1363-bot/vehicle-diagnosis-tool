@@ -168,6 +168,25 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         }
     }
 
+    func testAcceptsAdapterIdentityEnvelopeWithItsManifestReadout() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327",
+            protocolHint: "AUTO"
+        ))
+        try builder.complete(with: manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+
+        XCTAssertEqual(try builder.export().envelopes.count, 1)
+    }
+
     func testRejectsManifestThatOmitsArchivedReadoutIntent() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         try builder.append(envelope(sequence: 1))

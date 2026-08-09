@@ -57,7 +57,7 @@ public final class NativeConnectorScanArchiveBuilder {
     ]
 
     private static let allowedReadoutIDsByIntent: [String: Set<String>] = [
-        "adapter_identity": [],
+        "adapter_identity": ["adapter_identity"],
         "read_stored_dtc": ["stored_dtc_snapshot"],
         "read_pending_dtc": ["pending_dtc_snapshot"],
         "read_permanent_dtc": ["permanent_dtc_snapshot"],
@@ -98,7 +98,7 @@ public final class NativeConnectorScanArchiveBuilder {
               !envelope.blocked,
               !envelope.wouldTransmit,
               Self.hasExplicitVehicleCommandDisabled(in: envelope.data),
-              Self.isReadoutConsistent(intent: envelope.intent, readoutID: envelope.readoutID),
+              Self.isEnvelopeReadoutConsistent(intent: envelope.intent, readoutID: envelope.readoutID),
               envelope.sequence >= 0
         else { throw NativeConnectorScanArchiveError.invalidEnvelope }
         guard Self.isSafe(data: envelope.data) else { throw NativeConnectorScanArchiveError.unsafeEnvelope }
@@ -133,7 +133,7 @@ public final class NativeConnectorScanArchiveBuilder {
               Set(manifest.expectedReadouts).isSubset(of: Self.allowedReadoutIDs),
               manifest.expectedReadouts.allSatisfy({ readoutID in
                   manifest.expectedIntents.contains { intent in
-                      Self.isReadoutConsistent(intent: intent, readoutID: readoutID)
+                      Self.isManifestReadoutConsistent(intent: intent, readoutID: readoutID)
                   }
               }),
               manifest.expectedReadoutScopes.allSatisfy({
@@ -225,9 +225,14 @@ public final class NativeConnectorScanArchiveBuilder {
         return true
     }
 
-    private static func isReadoutConsistent(intent: String, readoutID: String?) -> Bool {
+    private static func isEnvelopeReadoutConsistent(intent: String, readoutID: String?) -> Bool {
+        if intent == "adapter_identity" { return readoutID == nil }
+        return isManifestReadoutConsistent(intent: intent, readoutID: readoutID)
+    }
+
+    private static func isManifestReadoutConsistent(intent: String, readoutID: String?) -> Bool {
         guard let allowedReadoutIDs = allowedReadoutIDsByIntent[intent] else { return false }
-        guard let readoutID else { return allowedReadoutIDs.isEmpty }
+        guard let readoutID else { return false }
         return allowedReadoutIDs.contains(readoutID)
     }
 
