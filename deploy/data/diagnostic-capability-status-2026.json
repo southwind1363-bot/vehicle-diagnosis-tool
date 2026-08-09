@@ -33,6 +33,7 @@
         ,"Hyundai 26-EM-003Hの2020-23 Sonata DN8/DN8A P2181-00/F0/F1をプラットフォーム・エンジン・生産日・ECM適用確認つきで追加"
         ,"Ford 25-2515の6.7L F-Super Duty/F-650/F-750 P0384を市場・生産日・PCM適用確認つきで追加"
         ,"American Honda 2026情報収集依頼の2025 Pilot P0420/P0430をCEL・保存DTC・適用確認つきの読取専用コンテキストとして追加"
+        ,"Toyota 23TE02の2010-15 Prius/2012-17 Prius V IPM P0A7A/P0A78を市場・年式・HV/フェイルセーフ安全条件つきで追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",
