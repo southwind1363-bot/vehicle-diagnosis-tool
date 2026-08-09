@@ -229,8 +229,8 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.10";
-const APP_LAST_UPDATED = "2026-08-09";
+const APP_VERSION = "3.8.11";
+const APP_LAST_UPDATED = "2026-08-10";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -10738,6 +10738,15 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   if (!filter || typeof filter !== "object") return { status: "not_limited" };
   const normalize = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
   const normalizeModel = (value) => normalize(value).replace(/[\s_-]+/g, "");
+  const normalizeDrivetrain = (value) => {
+    const normalized = normalize(value).replace(/[\s_-]+/g, "");
+    if (["4wd", "4x4", "fourwheeldrive"].includes(normalized)) return "4wd";
+    if (["2wd", "2x4", "twowheeldrive"].includes(normalized)) return "2wd";
+    if (["awd", "allwheeldrive"].includes(normalized)) return "awd";
+    if (["fwd", "frontwheeldrive"].includes(normalized)) return "fwd";
+    if (["rwd", "rearwheeldrive"].includes(normalized)) return "rwd";
+    return normalized;
+  };
   const normalizeProductionDate = (value) => {
     const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
     if (!match) return null;
@@ -10749,6 +10758,10 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   };
   const makers = (Array.isArray(filter.makers) ? filter.makers : []).map(normalize).filter(Boolean);
   const models = (Array.isArray(filter.models) ? filter.models : []).map(normalizeModel).filter(Boolean);
+  const drivetrainValues = Array.isArray(filter.drivetrains)
+    ? filter.drivetrains
+    : [filter.drivetrain ?? filter.drive_type ?? filter.driveType];
+  const drivetrains = drivetrainValues.map(normalizeDrivetrain).filter(Boolean);
   const yearFrom = Number(filter.year_from ?? filter.yearFrom);
   const yearTo = Number(filter.year_to ?? filter.yearTo);
   const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -10774,6 +10787,9 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     return scopeMakerMatches && (scope.models.includes("all") || scope.models.includes(model)) && year >= scope.yearFrom && year <= scope.yearTo;
   });
   if (!matched) return { status: "mismatch" };
+  const drivetrain = normalizeDrivetrain(vehicleProfile?.drivetrain ?? vehicleProfile?.drive_type ?? vehicleProfile?.driveType ?? vehicleProfile?.drivetrainType ?? vehicleProfile?.drivenWheels);
+  if (drivetrains.length && !drivetrain) return { status: "unverified", reason: "drivetrain_confirmation_required" };
+  if (drivetrains.length && !drivetrains.includes(drivetrain)) return { status: "mismatch", reason: "drivetrain_out_of_scope" };
   const productionPeriod = filter.production_period || filter.productionPeriod || null;
   const productionDate = normalizeProductionDate(vehicleProfile?.productionDate ?? vehicleProfile?.production_date ?? vehicleProfile?.buildDate ?? vehicleProfile?.build_date ?? vehicleProfile?.manufactureDate ?? vehicleProfile?.manufacture_date);
   const productionFrom = normalizeProductionDate(productionPeriod?.from ?? productionPeriod?.start);
@@ -10794,6 +10810,10 @@ function buildDtcDefinitionScopeSummary(definitions) {
       if (!filter || typeof filter !== "object") return [];
       const makers = (Array.isArray(filter.makers) ? filter.makers : []).map((value) => String(value || "").trim()).filter(Boolean);
       const models = (Array.isArray(filter.models) ? filter.models : []).map((value) => String(value || "").trim()).filter(Boolean);
+      const drivetrainValues = Array.isArray(filter.drivetrains)
+        ? filter.drivetrains
+        : [filter.drivetrain ?? filter.drive_type ?? filter.driveType];
+      const drivetrains = drivetrainValues.map((value) => String(value || "").trim()).filter(Boolean);
       const yearFrom = Number(filter.year_from ?? filter.yearFrom);
       const yearTo = Number(filter.year_to ?? filter.yearTo);
       const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -10823,7 +10843,7 @@ function buildDtcDefinitionScopeSummary(definitions) {
       return summaryScopes.map((scope) => {
         const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
         const scopeMakers = scope.makers.length ? scope.makers : makers;
-        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${productionRange ? ` 生産 ${productionRange}` : ""}${additionalScope}`;
+        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
       });
     }))];
   if (!scopes.length) return "";
