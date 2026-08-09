@@ -23138,7 +23138,7 @@
       ? { ...ecuInfoSnapshotInput, blocked: true }
       : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) || !Array.isArray(freezeFrameSnapshotInput.monitorValues) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : (freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data))

@@ -15581,6 +15581,14 @@ const udsExtendedOnlySession = obd.buildDiagnosticScanSession({
 });
 const udsExtendedOnlyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(udsExtendedOnlySession)));
 check(Array.isArray(udsExtendedOnlySession?.dtcSnapshot?.codes) && udsExtendedOnlySession.dtcSnapshot.codes.length === 0 && udsExtendedOnlySession.dtcSnapshot?.udsDtcExtendedDataRecordResponses?.length === 1 && udsExtendedOnlySession.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && udsExtendedOnlySession.coreReadoutInventorySummary?.countsById?.dtc_snapshot === 0 && Array.isArray(udsExtendedOnlyRoundTrip?.dtcSnapshot?.codes) && udsExtendedOnlyRoundTrip.dtcSnapshot.codes.length === 0 && udsExtendedOnlyRoundTrip.dtcSnapshot?.udsDtcExtendedDataRecordResponses?.length === 1 && udsExtendedOnlyRoundTrip.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && udsExtendedOnlySession.vehicleCommandEnabled === false && udsExtendedOnlySession.wouldTransmit === false && udsExtendedOnlyRoundTrip?.vehicleCommandEnabled === false && udsExtendedOnlyRoundTrip?.wouldTransmit === false, "Structured UDS extended-DTC input without a code list did not remain a safe readable session");
+const emptyFreezeFrameSession = obd.buildDiagnosticScanSession({
+  freeze_frame_snapshot: {
+    schemaVersion: "freeze_frame_snapshot_v1",
+    freeze_frame_readout_status: "reported"
+  }
+});
+const emptyFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(emptyFreezeFrameSession)));
+check(Array.isArray(emptyFreezeFrameSession?.freezeFrameSnapshot?.monitorValues) && emptyFreezeFrameSession.freezeFrameSnapshot.monitorValues.length === 0 && emptyFreezeFrameSession.readoutCoverage?.itemById?.freeze_frame_snapshot?.count === 0 && Array.isArray(emptyFreezeFrameRoundTrip?.freezeFrameSnapshot?.monitorValues) && emptyFreezeFrameRoundTrip.freezeFrameSnapshot.monitorValues.length === 0 && emptyFreezeFrameSession.vehicleCommandEnabled === false && emptyFreezeFrameSession.wouldTransmit === false && emptyFreezeFrameRoundTrip?.vehicleCommandEnabled === false && emptyFreezeFrameRoundTrip?.wouldTransmit === false, "Structured empty freeze-frame input did not remain a safe readable session");
 const ecuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
   include_infrastructure: false,
   freeze_frame_snapshot: {
