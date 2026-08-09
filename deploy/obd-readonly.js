@@ -18160,16 +18160,24 @@
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set(items.map((item) => item.sourceEcuName || item.source_ecu_name || null).filter(Boolean))];
     const resolvedSourceEcuName = sourceEcuName || (observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
-    const expectedItems = ecuInfoItemCatalog.map((item) => ({
-      id: item.id,
-      label: item.label,
-      service: item.service,
-      infoType: item.infoType,
-      privacyClass: item.privacyClass,
-      captured: items.some((value) => value.id === item.id || value.infoType === item.infoType),
-      diagnosticUse: item.diagnosticUse,
-      storagePolicy: item.storagePolicy
-    }));
+    const expectedItems = ecuInfoItemCatalog.map((item) => {
+      const capturedValues = items.filter((value) => value.id === item.id || value.infoType === item.infoType);
+      const capturedEcuIds = [...new Set(capturedValues.map((value) => value.sourceEcu || value.source_ecu || null).filter(Boolean))].sort();
+      return {
+        id: item.id,
+        label: item.label,
+        service: item.service,
+        infoType: item.infoType,
+        privacyClass: item.privacyClass,
+        captured: capturedValues.length > 0,
+        capturedEcuIds,
+        captured_ecu_ids: capturedEcuIds,
+        capturedEcuCount: capturedEcuIds.length,
+        captured_ecu_count: capturedEcuIds.length,
+        diagnosticUse: item.diagnosticUse,
+        storagePolicy: item.storagePolicy
+      };
+    });
     const keyItemIds = new Set(["vin", "calibration_id", "calibration_verification_number", "ecu_name"]);
     const keyItems = expectedItems.filter((item) => keyItemIds.has(item.id));
     const capturedKeyItems = keyItems.filter((item) => item.captured);
