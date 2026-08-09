@@ -56,6 +56,18 @@ public final class NativeConnectorScanArchiveBuilder {
         "live_pid_snapshot"
     ]
 
+    private static let allowedReadoutIDsByIntent: [String: Set<String>] = [
+        "adapter_identity": [],
+        "read_stored_dtc": ["stored_dtc_snapshot"],
+        "read_pending_dtc": ["pending_dtc_snapshot"],
+        "read_permanent_dtc": ["permanent_dtc_snapshot"],
+        "read_freeze_frame": ["freeze_frame_snapshot"],
+        "read_supported_pids": ["supported_pid_matrix"],
+        "read_ecu_info": ["ecu_info_snapshot"],
+        "read_onboard_monitor": ["onboard_monitor_snapshot"],
+        "read_live_pid_snapshot": ["readiness_snapshot", "live_pid_snapshot"]
+    ]
+
     private static let sensitiveDataKeys: Set<String> = [
         "adapter_name",
         "adapter_serial",
@@ -86,6 +98,7 @@ public final class NativeConnectorScanArchiveBuilder {
               !envelope.blocked,
               !envelope.wouldTransmit,
               Self.hasExplicitVehicleCommandDisabled(in: envelope.data),
+              Self.isReadoutConsistent(intent: envelope.intent, readoutID: envelope.readoutID),
               envelope.sequence >= 0
         else { throw NativeConnectorScanArchiveError.invalidEnvelope }
         guard Self.isSafe(data: envelope.data) else { throw NativeConnectorScanArchiveError.unsafeEnvelope }
@@ -118,6 +131,11 @@ public final class NativeConnectorScanArchiveBuilder {
               Set(manifest.expectedReadoutScopes).count == manifest.expectedReadoutScopes.count,
               Set(manifest.expectedIntents).isSubset(of: Self.allowedIntents),
               Set(manifest.expectedReadouts).isSubset(of: Self.allowedReadoutIDs),
+              manifest.expectedReadouts.allSatisfy({ readoutID in
+                  manifest.expectedIntents.contains { intent in
+                      Self.isReadoutConsistent(intent: intent, readoutID: readoutID)
+                  }
+              }),
               manifest.expectedReadoutScopes.allSatisfy({
                   manifest.expectedReadouts.contains($0.readoutID)
                       && Self.isValidScope($0.scopeID)
@@ -200,6 +218,12 @@ public final class NativeConnectorScanArchiveBuilder {
     private static func hasExplicitVehicleCommandDisabled(in data: [String: NativeConnectorJSONValue]) -> Bool {
         guard case .bool(false) = data["vehicle_command_enabled"] else { return false }
         return true
+    }
+
+    private static func isReadoutConsistent(intent: String, readoutID: String?) -> Bool {
+        guard let allowedReadoutIDs = allowedReadoutIDsByIntent[intent] else { return false }
+        guard let readoutID else { return allowedReadoutIDs.isEmpty }
+        return allowedReadoutIDs.contains(readoutID)
     }
 
     private static func isValidScope(_ value: String) -> Bool {

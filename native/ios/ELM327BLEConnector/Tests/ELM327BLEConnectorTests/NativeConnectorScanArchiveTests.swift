@@ -14,7 +14,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: sequence, intent: "read_stored_dtc", scopeID: scopeID, dtcs: [OBD2DTC(code: code, status: "stored")])
     }
 
-    private func manifest(state: NativeConnectorScanState = .completed, count: Int = 2, first: Int? = 1, last: Int? = 2, interruption: NativeConnectorInterruption? = nil, scopes: [NativeConnectorReadoutScope] = []) -> NativeConnectorCompletionManifest {
+    private func manifest(state: NativeConnectorScanState = .completed, count: Int = 2, first: Int? = 1, last: Int? = 2, interruption: NativeConnectorInterruption? = nil, scopes: [NativeConnectorReadoutScope] = [], expectedIntents: [String] = ["read_stored_dtc"], expectedReadouts: [String] = ["stored_dtc_snapshot"]) -> NativeConnectorCompletionManifest {
         NativeConnectorCompletionManifest(
             schemaVersion: "native_connector_completion_manifest_v1",
             recordType: "completion_manifest",
@@ -24,8 +24,8 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             vehicleContextID: context.vehicleContextID,
             capturedAt: "2026-07-21T00:00:00Z",
             scanState: state,
-            expectedIntents: ["read_stored_dtc"],
-            expectedReadouts: ["stored_dtc_snapshot"],
+            expectedIntents: expectedIntents,
+            expectedReadouts: expectedReadouts,
             expectedReadoutScopes: scopes,
             connectionSegments: [NativeConnectorConnectionSegment(connectionID: context.connectionID, connectionSequence: 0, firstSequence: first, lastSequence: last, envelopeCount: count)],
             interruption: interruption,
@@ -124,6 +124,48 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             data: dataWithoutSafetyFlag
         )
         XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().append(missingSafetyFlag))
+    }
+
+    func testRejectsEnvelopeWhoseIntentDoesNotMatchItsReadoutID() {
+        let mismatched = NativeConnectorEnvelope(
+            schemaVersion: "native_connector_contract_v1",
+            interfaceID: "user-vci-elm327",
+            platform: "ios",
+            intent: "read_stored_dtc",
+            capturedAt: "2026-07-21T00:00:00Z",
+            scanID: context.scanID,
+            connectionID: context.connectionID,
+            vehicleContextID: context.vehicleContextID,
+            sequence: 1,
+            readoutID: "readiness_snapshot",
+            readoutScopeID: "7E8",
+            readoutAttempt: 0,
+            ok: true,
+            blocked: false,
+            wouldTransmit: false,
+            errors: [],
+            data: ["vehicle_command_enabled": .bool(false)]
+        )
+
+        XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().append(mismatched)) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidEnvelope)
+        }
+    }
+
+    func testRejectsManifestWhoseIntentDoesNotMatchItsReadoutID() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(envelope(sequence: 1))
+        let mismatched = manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            expectedIntents: ["read_ecu_info"],
+            expectedReadouts: ["stored_dtc_snapshot"]
+        )
+
+        XCTAssertThrowsError(try builder.complete(with: mismatched)) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidManifest)
+        }
     }
 
     func testRejectsSequenceAndTerminalBoundaryMismatch() throws {
