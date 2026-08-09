@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent":  66,
-    "current_basis": "P系2934件、U系557件、B系51件、C系37件、個別DTC定義3626件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+    "current_basis": "P系2934件、U系557件、B系51件、C系37件、個別DTC定義3629件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "未知コードをファミリーフローへ退避",
@@ -30,6 +30,7 @@
         ,"Mazda MSP66のCX-90/CX-70 M Hybrid Boost P0DABをVIN・生産日・高電圧安全条件つきで追加"
         ,"Mazda DRW59の2026 CX-30/Mazda3 P0126-00をVIN・生産日・Open状態・PCM安全条件つきで追加"
         ,"GM PIT6503AのB174W ACP2 U1615/U1616/U197A/U3000-98/B1A05を北米2024-26年・装備・報告ECU適用確認つきで追加"
+        ,"Hyundai 26-EM-003Hの2020-23 Sonata DN8/DN8A P2181-00/F0/F1をプラットフォーム・エンジン・生産日・ECM適用確認つきで追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",
