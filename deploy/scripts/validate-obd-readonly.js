@@ -15572,6 +15572,15 @@ const ecuScopedSupportedPidBridgeSummary = obd.buildBridgeSessionSummary({
 });
 const ecuScopedSupportedPidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(ecuScopedSupportedPidSession)));
 check(ecuScopedSupportedPidSession.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && ecuScopedSupportedPidSession.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && ecuScopedSupportedPidBridgeSummary.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && ecuScopedSupportedPidBridgeSummary.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && ecuScopedSupportedPidRoundTrip?.readoutCoverage?.itemById?.supported_pid_matrix?.count === 2 && ecuScopedSupportedPidRoundTrip?.coreReadoutInventorySummary?.countsById?.supported_pid_matrix === 2 && ecuScopedSupportedPidSession.vehicleCommandEnabled === false && ecuScopedSupportedPidSession.wouldTransmit === false && ecuScopedSupportedPidRoundTrip?.vehicleCommandEnabled === false && ecuScopedSupportedPidRoundTrip?.wouldTransmit === false, "ECU-scoped supported PID evidence was not retained consistently through session, bridge summary, and read-only export");
+const udsExtendedOnlySession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    schemaVersion: "dtc_snapshot_v1",
+    dtc_readout_status: "reported",
+    uds_dtc_extended_data_record_responses: [{ extended_data_record_number: "01", raw_data: ["AA", "BB"], source_ecu: "7E8" }]
+  }
+});
+const udsExtendedOnlyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(udsExtendedOnlySession)));
+check(Array.isArray(udsExtendedOnlySession?.dtcSnapshot?.codes) && udsExtendedOnlySession.dtcSnapshot.codes.length === 0 && udsExtendedOnlySession.dtcSnapshot?.udsDtcExtendedDataRecordResponses?.length === 1 && udsExtendedOnlySession.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && udsExtendedOnlySession.coreReadoutInventorySummary?.countsById?.dtc_snapshot === 0 && Array.isArray(udsExtendedOnlyRoundTrip?.dtcSnapshot?.codes) && udsExtendedOnlyRoundTrip.dtcSnapshot.codes.length === 0 && udsExtendedOnlyRoundTrip.dtcSnapshot?.udsDtcExtendedDataRecordResponses?.length === 1 && udsExtendedOnlyRoundTrip.readoutCoverage?.itemById?.dtc_snapshot?.count === 1 && udsExtendedOnlySession.vehicleCommandEnabled === false && udsExtendedOnlySession.wouldTransmit === false && udsExtendedOnlyRoundTrip?.vehicleCommandEnabled === false && udsExtendedOnlyRoundTrip?.wouldTransmit === false, "Structured UDS extended-DTC input without a code list did not remain a safe readable session");
 const ecuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
   include_infrastructure: false,
   freeze_frame_snapshot: {
