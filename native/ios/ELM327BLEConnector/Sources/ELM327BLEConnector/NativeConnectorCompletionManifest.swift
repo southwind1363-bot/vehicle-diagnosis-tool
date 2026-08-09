@@ -9,6 +9,11 @@ public struct NativeConnectorReadoutScope: Codable, Sendable, Hashable {
     public let readoutID: String
     public let scopeID: String
 
+    public init(readoutID: String, scopeID: String) {
+        self.readoutID = readoutID
+        self.scopeID = scopeID
+    }
+
     enum CodingKeys: String, CodingKey {
         case readoutID = "readout_id"
         case scopeID = "scope_id"
