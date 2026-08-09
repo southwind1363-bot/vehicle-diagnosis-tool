@@ -8439,6 +8439,7 @@
     readinessSnapshot = {},
     ecuInfoSnapshot = {},
     onboardMonitorSnapshot = {},
+    ecuResponseSummary = {},
     supportedPidMatrix = {}
   } = {}) {
     const snapshotEntries = [
@@ -8448,9 +8449,11 @@
       ["readiness_snapshot", readinessSnapshot],
       ["ecu_info_snapshot", ecuInfoSnapshot],
       ["onboard_monitor_snapshot", onboardMonitorSnapshot],
+      ["ecu_response_summary", ecuResponseSummary],
       ["supported_pid_matrix", supportedPidMatrix]
     ];
     const captureRows = snapshotEntries.flatMap(([readoutId, snapshot]) => {
+      if (readoutId === "ecu_response_summary" && (!Array.isArray(snapshot?.ecus) || snapshot.ecus.length === 0)) return [];
       const capturedAt = snapshot?.capturedAt || snapshot?.captured_at || snapshot?.timestamp || null;
       return /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt))
         ? [{ readoutId, capturedAt }]
@@ -8851,6 +8854,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const vehicleApplicabilityEcuMatchSummary = buildVehicleApplicabilityEcuMatchSummary({
@@ -16455,6 +16459,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const resolvedNextReadoutCandidates = normalizeNextReadoutCandidates(
@@ -23272,6 +23277,7 @@
       readinessSnapshot,
       ecuInfoSnapshot,
       onboardMonitorSnapshot,
+      ecuResponseSummary,
       supportedPidMatrix
     });
     const hasDtcReadoutInput = hasTypedDtcSnapshotInput
