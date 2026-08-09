@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "Web Serial終端確認、ECU応答サービス来歴、既定サンプル読取遮断を確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.13";
+const APP_VERSION = "3.8.14";
 const APP_LAST_UPDATED = "2026-08-10";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10754,6 +10754,14 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     if (["manual", "mt", "manualtransmission"].includes(normalized)) return "manual";
     return normalized;
   };
+  const normalizeElectrification = (value) => {
+    const normalized = normalize(value).replace(/[\s_.-]+/g, "");
+    if (["hybrid", "hev", "fullhybrid"].includes(normalized)) return "hybrid";
+    if (["pluginhybrid", "phev", "pluginhev"].includes(normalized)) return "plug-in-hybrid";
+    if (["electric", "ev", "bev", "batteryelectric"].includes(normalized)) return "electric";
+    if (["mildhybrid", "mhev"].includes(normalized)) return "mild-hybrid";
+    return normalized;
+  };
   const normalizeProductionDate = (value) => {
     const match = String(value || "").trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
     if (!match) return null;
@@ -10777,6 +10785,10 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     ? filter.transmissions
     : [filter.transmission ?? filter.transmission_type ?? filter.transmissionType];
   const transmissions = transmissionValues.map(normalizeTransmission).filter(Boolean);
+  const electrificationValues = Array.isArray(filter.electrifications)
+    ? filter.electrifications
+    : [filter.electrification ?? filter.hybrid_system ?? filter.hybridSystem ?? filter.ev_system ?? filter.evSystem];
+  const electrifications = electrificationValues.map(normalizeElectrification).filter(Boolean);
   const yearFrom = Number(filter.year_from ?? filter.yearFrom);
   const yearTo = Number(filter.year_to ?? filter.yearTo);
   const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -10811,6 +10823,9 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   const transmission = normalizeTransmission(vehicleProfile?.transmission ?? vehicleProfile?.transmission_type ?? vehicleProfile?.transmissionType ?? vehicleProfile?.gearbox ?? vehicleProfile?.transaxle);
   if (transmissions.length && !transmission) return { status: "unverified", reason: "transmission_confirmation_required" };
   if (transmissions.length && !transmissions.includes(transmission)) return { status: "mismatch", reason: "transmission_out_of_scope" };
+  const electrification = normalizeElectrification(vehicleProfile?.electrification ?? vehicleProfile?.hybridSystem ?? vehicleProfile?.hybrid_system ?? vehicleProfile?.evSystem ?? vehicleProfile?.ev_system);
+  if (electrifications.length && !electrification) return { status: "unverified", reason: "electrification_confirmation_required" };
+  if (electrifications.length && !electrifications.includes(electrification)) return { status: "mismatch", reason: "electrification_out_of_scope" };
   const productionPeriod = filter.production_period || filter.productionPeriod || null;
   const productionDate = normalizeProductionDate(vehicleProfile?.productionDate ?? vehicleProfile?.production_date ?? vehicleProfile?.buildDate ?? vehicleProfile?.build_date ?? vehicleProfile?.manufactureDate ?? vehicleProfile?.manufacture_date);
   const productionFrom = normalizeProductionDate(productionPeriod?.from ?? productionPeriod?.start);
@@ -10843,6 +10858,10 @@ function buildDtcDefinitionScopeSummary(definitions) {
         ? filter.transmissions
         : [filter.transmission ?? filter.transmission_type ?? filter.transmissionType];
       const transmissions = transmissionValues.map((value) => String(value || "").trim()).filter(Boolean);
+      const electrificationValues = Array.isArray(filter.electrifications)
+        ? filter.electrifications
+        : [filter.electrification ?? filter.hybrid_system ?? filter.hybridSystem ?? filter.ev_system ?? filter.evSystem];
+      const electrifications = electrificationValues.map((value) => String(value || "").trim()).filter(Boolean);
       const yearFrom = Number(filter.year_from ?? filter.yearFrom);
       const yearTo = Number(filter.year_to ?? filter.yearTo);
       const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -10872,7 +10891,7 @@ function buildDtcDefinitionScopeSummary(definitions) {
       return summaryScopes.map((scope) => {
         const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
         const scopeMakers = scope.makers.length ? scope.makers : makers;
-        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
+        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${electrifications.length ? ` 電動化 ${electrifications.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
       });
     }))];
   if (!scopes.length) return "";
