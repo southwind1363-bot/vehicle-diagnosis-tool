@@ -15540,6 +15540,16 @@ const snakeOnlyEcuScopedCoverage = obd.buildReadoutCoverageSnapshot({
   supported_pid_input_present: true
 });
 check(snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.status === "captured" && snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.available === true && snakeOnlyEcuScopedCoverage.itemById?.readiness_snapshot?.count === 1 && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.status === "captured" && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.available === true && snakeOnlyEcuScopedCoverage.itemById?.supported_pid_matrix?.count === 2 && snakeOnlyEcuScopedCoverage.includeInfrastructure === false, "Snake-case ECU-scoped readiness or supported PID evidence was treated as unavailable by readout coverage");
+const ecuScopedFreezeFrameCoverage = obd.buildReadoutCoverageSnapshot({
+  include_infrastructure: false,
+  freeze_frame_snapshot: {
+    schemaVersion: "freeze_frame_snapshot_v1",
+    freeze_frame_readout_status: "reported",
+    freeze_frame_ecu_snapshots: [{ source_ecu: "7E8", monitor_values: [{ id: "engine_speed", value: 1500 }], uds_dtc_snapshot_records: [{ code: "P0300", snapshot_record_number: 1 }] }]
+  },
+  freeze_frame_input_present: true
+});
+check(ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.status === "captured" && ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.available === true && ecuScopedFreezeFrameCoverage.itemById?.freeze_frame_snapshot?.count === 2 && ecuScopedFreezeFrameCoverage.includeInfrastructure === false, "ECU-scoped freeze-frame evidence was treated as unavailable by readout coverage");
 const mixedEcuCompactSession = obd.buildScanSessionFromObdText([
   "can0 7E8#04410C1AF8",
   "can0 7E9#04410C0FA0"

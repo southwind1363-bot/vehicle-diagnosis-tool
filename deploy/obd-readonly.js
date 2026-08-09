@@ -4873,6 +4873,16 @@
     const freezeFrameSnapshot = hasFreezeFrameSnapshotInput
       ? (freezeFrameSnapshotInput?.schemaVersion ? freezeFrameSnapshotInput : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput))
       : null;
+    const freezeFrameEcuSnapshots = Array.isArray(freezeFrameSnapshot?.freezeFrameEcuSnapshots)
+      ? freezeFrameSnapshot.freezeFrameEcuSnapshots
+      : Array.isArray(freezeFrameSnapshot?.freeze_frame_ecu_snapshots)
+        ? freezeFrameSnapshot.freeze_frame_ecu_snapshots
+        : [];
+    const firstArrayLength = (...values) => (values.find((value) => Array.isArray(value)) || []).length;
+    const freezeFrameEcuRecordCount = freezeFrameEcuSnapshots.reduce((total, snapshot) => total
+      + firstArrayLength(snapshot?.monitorValues, snapshot?.monitor_values, snapshot?.values, snapshot?.freeze_frame_values)
+      + firstArrayLength(snapshot?.udsDtcSnapshotRecords, snapshot?.uds_dtc_snapshot_records)
+      + firstArrayLength(snapshot?.udsDtcStoredDataRecords, snapshot?.uds_dtc_stored_data_records), 0);
     const readinessSnapshot = hasReadinessSnapshotInput
       ? (readinessSnapshotInput?.schemaVersion ? readinessSnapshotInput : normalizeBridgeReadinessSnapshot(readinessSnapshotInput))
       : null;
@@ -4981,12 +4991,14 @@
           || (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) && freezeFrameSnapshot.udsDtcSnapshotRecords.length > 0)
           || (Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) && freezeFrameSnapshot.uds_dtc_snapshot_records.length > 0)
           || (Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) && freezeFrameSnapshot.udsDtcStoredDataRecords.length > 0)
-          || (Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) && freezeFrameSnapshot.uds_dtc_stored_data_records.length > 0),
+          || (Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) && freezeFrameSnapshot.uds_dtc_stored_data_records.length > 0)
+          || freezeFrameEcuSnapshots.length > 0,
         label: "フリーズフレーム",
-        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records)),
+        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) || freezeFrameEcuSnapshots.length > 0),
         count: (Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0)
           + (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) ? freezeFrameSnapshot.udsDtcSnapshotRecords.length : Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) ? freezeFrameSnapshot.uds_dtc_snapshot_records.length : 0)
           + (Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) ? freezeFrameSnapshot.udsDtcStoredDataRecords.length : Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) ? freezeFrameSnapshot.uds_dtc_stored_data_records.length : 0)
+          + (Array.isArray(freezeFrameSnapshot?.monitorValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) ? 0 : freezeFrameEcuRecordCount)
       },
       {
         id: "readiness_snapshot",
