@@ -8454,10 +8454,16 @@
     ];
     const captureRows = snapshotEntries.flatMap(([readoutId, snapshot]) => {
       if (readoutId === "ecu_response_summary" && (!Array.isArray(snapshot?.ecus) || snapshot.ecus.length === 0)) return [];
-      const capturedAt = snapshot?.capturedAt || snapshot?.captured_at || snapshot?.timestamp || null;
-      return /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt))
-        ? [{ readoutId, capturedAt }]
-        : [];
+      const capturedAtValues = [
+        snapshot?.capturedAt,
+        snapshot?.captured_at,
+        snapshot?.timestamp,
+        ...(Array.isArray(snapshot?.capturedAtValues) ? snapshot.capturedAtValues : []),
+        ...(Array.isArray(snapshot?.captured_at_values) ? snapshot.captured_at_values : [])
+      ];
+      return [...new Set(capturedAtValues)]
+        .filter((capturedAt) => /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt)))
+        .map((capturedAt) => ({ readoutId, capturedAt }));
     });
     const capturedAtValues = [...new Set(captureRows.map((row) => row.capturedAt))]
       .sort((left, right) => Date.parse(left) - Date.parse(right));
@@ -16931,6 +16937,7 @@
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
+        captured_at_values: input.data.captured_at_values || input.data.capturedAtValues || input.captured_at_values || input.capturedAtValues || null,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null,
         dtc_response_formats: input.data.dtcResponseFormats || input.data.dtc_response_formats || input.dtcResponseFormats || input.dtc_response_formats || null,
@@ -17089,6 +17096,10 @@
     const udsDtcExtendedDataRecordResponses = readUdsDtcExtendedDataRecordResponseAliases(sourceInput, resolvedSourceEcu);
     const codes = [...new Set(normalizedDtcs.map((row) => row.code))];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const capturedAtValues = [...new Set([
+      ...(Array.isArray(sourceInput.capturedAtValues) ? sourceInput.capturedAtValues : []),
+      ...(Array.isArray(sourceInput.captured_at_values) ? sourceInput.captured_at_values : [])
+    ])].filter((value) => /^\d{4}-\d{2}-\d{2}T/.test(String(value || "")) && Number.isFinite(Date.parse(value)));
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
     const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
     const protocolProvenance = {
@@ -17160,6 +17171,7 @@
       source,
       capturedAt,
       captured_at: capturedAt,
+      ...(capturedAtValues.length ? { capturedAtValues, captured_at_values: [...capturedAtValues] } : {}),
       protocol,
       protocolProvenance,
       protocol_provenance: protocolProvenance,
