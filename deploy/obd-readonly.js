@@ -4147,13 +4147,34 @@
   }
 
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
+    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
+      ? response.data
+      : null;
+    const hasNestedSupportedPidPayload = Boolean(nestedData && [
+      "supported_pids", "supportedPids", "pids", "pid_list", "pidList", "supported_pid_rows", "supportedPidRows",
+      "supported_pid_list", "supportedPidList", "supportedPidsText", "supported_pids_text",
+      "supported_pid_page_bases", "supportedPidPageBases", "queried_pid_bases", "queriedPidBases", "supported_pid_pages", "supportedPidPages",
+      "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots", "ecu_snapshots", "ecuSnapshots"
+    ].some((key) => nestedData[key] !== undefined));
+    // Never union outer and nested PID evidence; outer values only complete an otherwise empty envelope.
+    const outerSupportedPidFallback = nestedData && !hasNestedSupportedPidPayload
+      ? {
+        supported_pids: response.supported_pids ?? response.supportedPids ?? response.pids,
+        pid_list: response.pid_list ?? response.pidList,
+        supported_pid_rows: response.supported_pid_rows ?? response.supportedPidRows,
+        supported_pid_list: response.supported_pid_list ?? response.supportedPidList ?? response.supportedPidsText ?? response.supported_pids_text,
+        supported_pid_page_bases: response.supported_pid_page_bases ?? response.supportedPidPageBases ?? response.queried_pid_bases ?? response.queriedPidBases ?? response.supported_pid_pages ?? response.supportedPidPages,
+        supported_pid_ecu_snapshots: response.supported_pid_ecu_snapshots ?? response.supportedPidEcuSnapshots ?? response.ecu_snapshots ?? response.ecuSnapshots
+      }
+      : {};
     const data = response && typeof response === "object"
-      ? response.data && typeof response.data === "object"
+      ? nestedData
         ? {
-          ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
-          supported_pid_readout_status: response.data.supportedPidReadoutStatus || response.data.supported_pid_readout_status || response.supportedPidReadoutStatus || response.supported_pid_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
+          ...nestedData,
+          source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          supported_pid_readout_status: nestedData.supportedPidReadoutStatus || nestedData.supported_pid_readout_status || response.supportedPidReadoutStatus || response.supported_pid_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
+          ...outerSupportedPidFallback
         }
         : response
       : {};
