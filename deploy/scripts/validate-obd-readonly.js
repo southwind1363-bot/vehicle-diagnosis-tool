@@ -5136,7 +5136,8 @@ const mixedBridgeOuterReadoutSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: bridgeOuterMetadataDtcSnapshot,
   live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ ok: true, blocked: false, would_transmit: false, timestamp: "2026-08-10T00:08:05Z", communication_protocol: "ISO15765-4", data: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] } })
 });
-check(mixedBridgeOuterReadoutSession.multipleProtocols === true && mixedBridgeOuterReadoutSession.observedProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && mixedBridgeOuterReadoutSession.warnings?.includes("mixed_protocol_readout") && mixedBridgeOuterReadoutSession.vehicleCommandEnabled === false && mixedBridgeOuterReadoutSession.wouldTransmit === false, "Outer bridge metadata did not reach mixed-protocol session safeguards");
+const mixedBridgeOuterReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(mixedBridgeOuterReadoutSession)));
+check(mixedBridgeOuterReadoutSession.multipleProtocols === true && mixedBridgeOuterReadoutSession.observedProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && mixedBridgeOuterReadoutSession.warnings?.includes("mixed_protocol_readout") && mixedBridgeOuterReadoutRoundTrip?.multipleProtocols === true && mixedBridgeOuterReadoutRoundTrip?.observedProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && mixedBridgeOuterReadoutRoundTrip?.warnings?.includes("mixed_protocol_readout") && mixedBridgeOuterReadoutSession.vehicleCommandEnabled === false && mixedBridgeOuterReadoutRoundTrip?.vehicleCommandEnabled === false && mixedBridgeOuterReadoutSession.wouldTransmit === false && mixedBridgeOuterReadoutRoundTrip?.wouldTransmit === false, "Outer bridge metadata did not reach mixed-protocol session safeguards");
 const bridgeEcuOnlyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
