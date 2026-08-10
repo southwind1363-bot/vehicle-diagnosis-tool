@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.35";
+const APP_VERSION = "3.8.36";
 const APP_LAST_UPDATED = "2026-08-10";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7055,6 +7055,13 @@ function renderObdBridgeSessionDetails(session = null) {
   }
 
   const readoutProtocol = session?.protocol || session?.obd_protocol || NO_DATA;
+  const observedProtocols = Array.isArray(session?.observedProtocols)
+    ? session.observedProtocols
+    : Array.isArray(session?.observed_protocols)
+      ? session.observed_protocols
+      : [];
+  const observedProtocolLabel = observedProtocols.length ? observedProtocols.join(" / ") : readoutProtocol;
+  const multipleProtocols = session?.multipleProtocols === true || session?.multiple_protocols === true || observedProtocols.length > 1;
   const capturedAt = session?.capturedAt || NO_DATA;
   const startedAt = session?.startedAt || NO_DATA;
   const endedAt = session?.endedAt || NO_DATA;
@@ -7080,6 +7087,8 @@ function renderObdBridgeSessionDetails(session = null) {
       ...coreSessionLines.slice(0, 4),
       ...warningLines.slice(0, 4).map((item) => `注意: ${item}`),
       `プロトコル: ${readoutProtocol}`,
+      `観測通信方式: ${observedProtocolLabel}`,
+      ...(multipleProtocols ? ["通信方式が混在: 再読取では方式を固定して確認"] : []),
       `開始: ${startedAt === NO_DATA ? NO_DATA : formatDateTime(startedAt)}`,
       `終了: ${endedAt === NO_DATA ? NO_DATA : formatDateTime(endedAt)}`,
       `取得時刻: ${capturedAt === NO_DATA ? NO_DATA : formatDateTime(capturedAt)}`
