@@ -4187,11 +4187,13 @@
         : getBridgeReadoutStatus(resolvedBridgeSafety);
     const blocked = resolvedBridgeSafety.blocked || readoutStatus === "blocked";
     const readoutOk = blocked ? false : readoutStatus === "reported" ? true : readoutStatus === "unparsed" ? false : undefined;
+    const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
+    const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
-      captured_at: data.captured_at || data.capturedAt || data.timestamp || null,
-      protocol: readBridgeProtocol(data),
+      captured_at: capturedAt,
+      protocol,
       supported_pid_readout_status: readoutStatus,
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       source_ecu_name: data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null,
