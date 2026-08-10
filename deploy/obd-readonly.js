@@ -16929,6 +16929,30 @@
     };
   }
 
+  function normalizeDtcCaptureContexts(input = []) {
+    if (!Array.isArray(input)) return [];
+    return input.flatMap((item, fallbackIndex) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return [];
+      const capturedAt = item.capturedAt || item.captured_at || item.timestamp || null;
+      const protocol = normalizeProtocolProvenanceValue(item.protocol || item.obd_protocol || item.communicationProtocol || item.communication_protocol || null);
+      if (!/^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && !protocol) return [];
+      const normalizedCapturedAt = /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt)) ? capturedAt : null;
+      const source = redactSensitiveText(String(item.source || item.source_type || "diagnostic_core")).replace(/\s+/g, " ").trim().slice(0, 80) || "diagnostic_core";
+      const countValue = item.dtcCount ?? item.dtc_count;
+      const dtcCount = Number.isSafeInteger(Number(countValue)) && Number(countValue) >= 0 && Number(countValue) <= 10000 ? Number(countValue) : null;
+      const indexValue = Number(item.index);
+      const index = Number.isSafeInteger(indexValue) && indexValue >= 0 ? indexValue : fallbackIndex;
+      return [{
+        capturedAt: normalizedCapturedAt,
+        captured_at: normalizedCapturedAt,
+        protocol,
+        source,
+        ...(dtcCount !== null ? { dtcCount, dtc_count: dtcCount } : {}),
+        index
+      }];
+    });
+  }
+
   function normalizeDtcSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
@@ -16938,6 +16962,7 @@
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         captured_at_values: input.data.captured_at_values || input.data.capturedAtValues || input.captured_at_values || input.capturedAtValues || null,
+        capture_contexts: input.data.capture_contexts || input.data.captureContexts || input.capture_contexts || input.captureContexts || null,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         protocol_values: input.data.protocol_values || input.data.protocolValues || input.protocol_values || input.protocolValues || null,
         dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null,
@@ -17097,13 +17122,16 @@
     const udsDtcExtendedDataRecordResponses = readUdsDtcExtendedDataRecordResponseAliases(sourceInput, resolvedSourceEcu);
     const codes = [...new Set(normalizedDtcs.map((row) => row.code))];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+    const captureContexts = normalizeDtcCaptureContexts(sourceInput.captureContexts || sourceInput.capture_contexts || []);
     const capturedAtValues = [...new Set([
+      ...captureContexts.map((context) => context.capturedAt),
       ...(Array.isArray(sourceInput.capturedAtValues) ? sourceInput.capturedAtValues : []),
       ...(Array.isArray(sourceInput.captured_at_values) ? sourceInput.captured_at_values : [])
     ])].filter((value) => /^\d{4}-\d{2}-\d{2}T/.test(String(value || "")) && Number.isFinite(Date.parse(value)));
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
     const protocolValues = [...new Set([
       protocol,
+      ...captureContexts.map((context) => context.protocol),
       ...(Array.isArray(sourceInput.protocolValues) ? sourceInput.protocolValues : []),
       ...(Array.isArray(sourceInput.protocol_values) ? sourceInput.protocol_values : [])
     ].map(normalizeProtocolProvenanceValue).filter(Boolean))];
@@ -17178,6 +17206,7 @@
       capturedAt,
       captured_at: capturedAt,
       ...(capturedAtValues.length ? { capturedAtValues, captured_at_values: [...capturedAtValues] } : {}),
+      ...(captureContexts.length ? { captureContexts, capture_contexts: captureContexts.map((context) => ({ ...context })) } : {}),
       protocol,
       ...(protocolValues.length ? { protocolValues, protocol_values: [...protocolValues] } : {}),
       protocolProvenance,
@@ -19285,35 +19314,29 @@
       ...(Array.isArray(snapshot?.protocolValues) ? snapshot.protocolValues : []),
       ...(Array.isArray(snapshot?.protocol_values) ? snapshot.protocol_values : [])
     ].map(normalizeProtocolProvenanceValue).filter(Boolean))];
+    const readSnapshotCaptureContexts = (snapshot, index) => {
+      const explicitContexts = normalizeDtcCaptureContexts(snapshot?.captureContexts || snapshot?.capture_contexts || []);
+      if (explicitContexts.length) return explicitContexts.map((context) => ({ ...context, index }));
+      const capturedAtValues = readSnapshotCapturedAtValues(snapshot);
+      const protocol = readSnapshotProtocol(snapshot);
+      const dtcCount = Number(snapshot?.dtcCount ?? snapshot?.dtc_count ?? 0);
+      return capturedAtValues.length
+        ? capturedAtValues.map((capturedAt) => ({ capturedAt, captured_at: capturedAt, protocol, source: snapshot?.source || "diagnostic_core", dtcCount, dtc_count: dtcCount, index }))
+        : protocol ? [{ capturedAt: null, captured_at: null, protocol, source: snapshot?.source || "diagnostic_core", dtcCount, dtc_count: dtcCount, index }] : [];
+    };
     const normalizeDtcMergeEcu = (value) => {
       const sourceEcu = String(value || "").trim();
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
       return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
     };
-    const captureContexts = snapshots
-      .flatMap((snapshot, index) => {
-        const capturedAtValues = readSnapshotCapturedAtValues(snapshot);
-        const protocol = readSnapshotProtocol(snapshot);
-        const makeContext = (capturedAt) => ({
-          capturedAt,
-          captured_at: capturedAt,
-          protocol,
-          source: snapshot?.source || "diagnostic_core",
-          dtcCount: Number(snapshot?.dtcCount ?? snapshot?.dtc_count ?? 0),
-          dtc_count: Number(snapshot?.dtcCount ?? snapshot?.dtc_count ?? 0),
-          index
-        });
-        return capturedAtValues.length
-          ? capturedAtValues.map(makeContext)
-          : protocol ? [makeContext(null)] : [];
-      })
+    const captureContexts = snapshots.flatMap(readSnapshotCaptureContexts)
       .filter((context) => context.capturedAt || context.protocol);
     const capturedAtValues = [...new Set(captureContexts.map((context) => context.capturedAt).filter(Boolean))];
     const protocolValues = [...new Set([
       ...captureContexts.map((context) => context.protocol),
       ...snapshots.flatMap(readSnapshotProtocolValues)
     ].map(normalizeProtocolProvenanceValue).filter(Boolean))];
-    const hasUnrecordedCaptureContext = snapshots.some((snapshot) => readSnapshotCapturedAtValues(snapshot).length === 0);
+    const hasUnrecordedCaptureContext = snapshots.some((snapshot, index) => !readSnapshotCaptureContexts(snapshot, index).some((context) => context.capturedAt));
     const rows = snapshots
       .filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))
       .flatMap((snapshot) => {
