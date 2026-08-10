@@ -4608,7 +4608,7 @@
         source: "local_bridge",
         captured_at: capturedAt,
         protocol,
-        protocol_provenance: readBridgeProtocolProvenance(data),
+        protocol_provenance: mergeProtocolProvenance(data, response),
         ecu_info_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)
       }),
       intent: "read_ecu_info",
