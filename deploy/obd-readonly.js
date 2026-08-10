@@ -23344,8 +23344,20 @@
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
+    const observedProtocols = [...new Set([
+      ...(Array.isArray(sessionInput.observedProtocols) ? sessionInput.observedProtocols : Array.isArray(sessionInput.observed_protocols) ? sessionInput.observed_protocols : []),
+      dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || null,
+      livePidSnapshot?.protocol || livePidSnapshot?.obd_protocol || null,
+      ...(livePidTimeline?.samples || []).map((sample) => sample?.protocol || sample?.obd_protocol || null),
+      freezeFrameSnapshot?.protocol || freezeFrameSnapshot?.obd_protocol || null,
+      readinessSnapshot?.protocol || readinessSnapshot?.obd_protocol || null,
+      ecuInfoSnapshot?.protocol || ecuInfoSnapshot?.obd_protocol || null,
+      onboardMonitorSnapshot?.protocol || onboardMonitorSnapshot?.obd_protocol || null,
+      supportedPidMatrix?.protocol || supportedPidMatrix?.obd_protocol || null
+    ].map((item) => normalizeProtocolProvenanceValue(item)).filter(Boolean))];
+    const multipleProtocols = observedProtocols.length > 1;
     const warnings = [];
-    if (importClassification?.multipleProtocols === true || importClassification?.multiple_protocols === true) warnings.push("mixed_protocol_readout");
+    if (multipleProtocols || importClassification?.multipleProtocols === true || importClassification?.multiple_protocols === true) warnings.push("mixed_protocol_readout");
     appendCommonCoreWarnings(warnings, {
       dtcWarning: "save_before_clear",
       hasDtcCodes: dtcSnapshot.codes.length > 0,
@@ -23621,6 +23633,10 @@
       captured_at: capturedAt,
       protocol,
       obd_protocol: protocol,
+      observedProtocols,
+      observed_protocols: observedProtocols,
+      multipleProtocols,
+      multiple_protocols: multipleProtocols,
       protocolProvenance,
       protocol_provenance: protocolProvenance,
       diagnosticProtocol: protocolProvenance.diagnosticProtocol,
