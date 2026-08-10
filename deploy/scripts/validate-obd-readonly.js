@@ -5122,6 +5122,16 @@ check(bridgeDtcSnapshot.intent === "read_stored_dtc", "保存DTCブリッジ応�
 check(bridgeDtcSnapshot.dtcs.every((item) => item.status === "stored"), "保存DTCブリッジ応答の種別を保持できません");
 check(bridgeDtcSnapshot.retainedRawText === false, "ブリッジDTC変換が原文保持になっています");
 check(bridgeDtcSnapshot.wouldTransmit === false, "ブリッジDTC変換が送信済み扱いになっています");
+const bridgeOuterMetadataDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  timestamp: "2026-08-10T00:08:00Z",
+  communication_protocol: "CAN_11BIT_500K",
+  data: { dtcs: [{ code: "P0171" }] }
+});
+const bridgeOuterMetadataDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeOuterMetadataDtcSnapshot }))));
+check(bridgeOuterMetadataDtcSnapshot.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcRoundTrip?.vehicleCommandEnabled === false, "Bridge outer DTC capture and protocol metadata were not retained through read-only export");
 const bridgeEcuOnlyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,

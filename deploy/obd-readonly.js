@@ -3258,8 +3258,8 @@
       return true;
     });
     const codes = [...new Set(dtcs.map((item) => item.code))];
-    const capturedAt = data.captured_at || data.capturedAt || null;
-    const protocol = readBridgeProtocol(data);
+    const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
+    const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
     const protocolProvenance = {
       primaryProtocol: sanitizedPrimaryProtocol,
