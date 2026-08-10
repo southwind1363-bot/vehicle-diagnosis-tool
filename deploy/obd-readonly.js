@@ -16939,6 +16939,7 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         captured_at_values: input.data.captured_at_values || input.data.capturedAtValues || input.captured_at_values || input.capturedAtValues || null,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
+        protocol_values: input.data.protocol_values || input.data.protocolValues || input.protocol_values || input.protocolValues || null,
         dtc_readout_status: input.data.dtcReadoutStatus || input.data.dtc_readout_status || input.dtcReadoutStatus || input.dtc_readout_status || null,
         dtc_response_formats: input.data.dtcResponseFormats || input.data.dtc_response_formats || input.dtcResponseFormats || input.dtc_response_formats || null,
         dtc_response_format: input.data.dtcResponseFormat || input.data.dtc_response_format || input.data.responseFormat || input.data.response_format || input.dtcResponseFormat || input.dtc_response_format || input.responseFormat || input.response_format || null,
@@ -17101,6 +17102,11 @@
       ...(Array.isArray(sourceInput.captured_at_values) ? sourceInput.captured_at_values : [])
     ])].filter((value) => /^\d{4}-\d{2}-\d{2}T/.test(String(value || "")) && Number.isFinite(Date.parse(value)));
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
+    const protocolValues = [...new Set([
+      protocol,
+      ...(Array.isArray(sourceInput.protocolValues) ? sourceInput.protocolValues : []),
+      ...(Array.isArray(sourceInput.protocol_values) ? sourceInput.protocol_values : [])
+    ].map(normalizeProtocolProvenanceValue).filter(Boolean))];
     const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
     const protocolProvenance = {
       primaryProtocol: sanitizedPrimaryProtocol,
@@ -17173,6 +17179,7 @@
       captured_at: capturedAt,
       ...(capturedAtValues.length ? { capturedAtValues, captured_at_values: [...capturedAtValues] } : {}),
       protocol,
+      ...(protocolValues.length ? { protocolValues, protocol_values: [...protocolValues] } : {}),
       protocolProvenance,
       protocol_provenance: protocolProvenance,
       diagnosticProtocol: protocolProvenance.diagnosticProtocol,
@@ -19273,6 +19280,11 @@
       ...(Array.isArray(snapshot?.captured_at_values) ? snapshot.captured_at_values : [])
     ])].filter((capturedAt) => /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt)));
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
+    const readSnapshotProtocolValues = (snapshot) => [...new Set([
+      readSnapshotProtocol(snapshot),
+      ...(Array.isArray(snapshot?.protocolValues) ? snapshot.protocolValues : []),
+      ...(Array.isArray(snapshot?.protocol_values) ? snapshot.protocol_values : [])
+    ].map(normalizeProtocolProvenanceValue).filter(Boolean))];
     const normalizeDtcMergeEcu = (value) => {
       const sourceEcu = String(value || "").trim();
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
@@ -19297,7 +19309,10 @@
       })
       .filter((context) => context.capturedAt || context.protocol);
     const capturedAtValues = [...new Set(captureContexts.map((context) => context.capturedAt).filter(Boolean))];
-    const protocolValues = [...new Set(captureContexts.map((context) => context.protocol).filter(Boolean))];
+    const protocolValues = [...new Set([
+      ...captureContexts.map((context) => context.protocol),
+      ...snapshots.flatMap(readSnapshotProtocolValues)
+    ].map(normalizeProtocolProvenanceValue).filter(Boolean))];
     const hasUnrecordedCaptureContext = snapshots.some((snapshot) => readSnapshotCapturedAtValues(snapshot).length === 0);
     const rows = snapshots
       .filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))
@@ -19448,9 +19463,7 @@
       capture_time_uncertain: capturedAtValues.length > 1,
       captureTimePartial: hasUnrecordedCaptureContext,
       capture_time_partial: hasUnrecordedCaptureContext,
-      protocol: protocolValues.length > 1 ? null : snapshots.find((item) => item?.protocol || item?.obd_protocol)?.protocol
-        || snapshots.find((item) => item?.protocol || item?.obd_protocol)?.obd_protocol
-        || null,
+      protocol: protocolValues.length === 1 ? protocolValues[0] : null,
       protocolValues,
       protocol_values: [...protocolValues],
       codes,
