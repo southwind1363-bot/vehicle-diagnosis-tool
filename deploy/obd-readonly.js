@@ -3929,7 +3929,17 @@
             wouldTransmit: false
           }
           : normalizeBridgeLivePidSnapshot(snapshotInput);
-        const capturedAt = item.capturedAt || item.captured_at || snapshot.capturedAt || snapshot.captured_at || null;
+        const capturedAt = item.capturedAt
+          || item.captured_at
+          || item.timestamp
+          || item.capturedTimestamp
+          || item.captured_timestamp
+          || snapshot.capturedAt
+          || snapshot.captured_at
+          || snapshot.timestamp
+          || snapshot.capturedTimestamp
+          || snapshot.captured_timestamp
+          || null;
         const protocol = snapshot.protocol || snapshot.obd_protocol || item.protocol || item.obd_protocol || null;
         const observationCondition = normalizeLivePidObservationCondition(item.observationCondition || item.observation_condition || snapshot.observationCondition || snapshot.observation_condition);
         if (snapshot.livePidReadoutStatus !== "reported" || snapshot.blocked || snapshot.wouldTransmit || !capturedAt || !snapshot.monitorValues.length) return null;
