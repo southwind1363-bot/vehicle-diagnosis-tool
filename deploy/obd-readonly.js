@@ -19267,6 +19267,11 @@
 
   function mergeDtcSnapshots(...snapshots) {
     const readSnapshotCapturedAt = (snapshot) => snapshot?.capturedAt || snapshot?.captured_at || null;
+    const readSnapshotCapturedAtValues = (snapshot) => [...new Set([
+      readSnapshotCapturedAt(snapshot),
+      ...(Array.isArray(snapshot?.capturedAtValues) ? snapshot.capturedAtValues : []),
+      ...(Array.isArray(snapshot?.captured_at_values) ? snapshot.captured_at_values : [])
+    ])].filter((capturedAt) => /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt)));
     const readSnapshotProtocol = (snapshot) => snapshot?.protocol || snapshot?.obd_protocol || null;
     const normalizeDtcMergeEcu = (value) => {
       const sourceEcu = String(value || "").trim();
@@ -19274,10 +19279,10 @@
       return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
     };
     const captureContexts = snapshots
-      .map((snapshot, index) => {
-        const capturedAt = readSnapshotCapturedAt(snapshot);
+      .flatMap((snapshot, index) => {
+        const capturedAtValues = readSnapshotCapturedAtValues(snapshot);
         const protocol = readSnapshotProtocol(snapshot);
-        return {
+        const makeContext = (capturedAt) => ({
           capturedAt,
           captured_at: capturedAt,
           protocol,
@@ -19285,12 +19290,15 @@
           dtcCount: Number(snapshot?.dtcCount ?? snapshot?.dtc_count ?? 0),
           dtc_count: Number(snapshot?.dtcCount ?? snapshot?.dtc_count ?? 0),
           index
-        };
+        });
+        return capturedAtValues.length
+          ? capturedAtValues.map(makeContext)
+          : protocol ? [makeContext(null)] : [];
       })
       .filter((context) => context.capturedAt || context.protocol);
     const capturedAtValues = [...new Set(captureContexts.map((context) => context.capturedAt).filter(Boolean))];
     const protocolValues = [...new Set(captureContexts.map((context) => context.protocol).filter(Boolean))];
-    const hasUnrecordedCaptureContext = snapshots.some((snapshot) => !readSnapshotCapturedAt(snapshot));
+    const hasUnrecordedCaptureContext = snapshots.some((snapshot) => readSnapshotCapturedAtValues(snapshot).length === 0);
     const rows = snapshots
       .filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))
       .flatMap((snapshot) => {
@@ -19430,8 +19438,8 @@
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
       source: "merged_dtc_snapshots",
-      capturedAt: capturedAtValues.length > 1 ? null : snapshots.find((item) => item?.capturedAt)?.capturedAt || snapshots.find((item) => item?.captured_at)?.captured_at || null,
-      captured_at: capturedAtValues.length > 1 ? null : snapshots.find((item) => item?.capturedAt)?.capturedAt || snapshots.find((item) => item?.captured_at)?.captured_at || null,
+      capturedAt: capturedAtValues.length === 1 ? capturedAtValues[0] : null,
+      captured_at: capturedAtValues.length === 1 ? capturedAtValues[0] : null,
       capturedAtValues,
       captured_at_values: [...capturedAtValues],
       captureContexts,
