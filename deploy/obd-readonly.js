@@ -4410,6 +4410,8 @@
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : bridgeSafety;
     const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
+    const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
+    const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
       intent: "readiness_snapshot",
@@ -4455,8 +4457,8 @@
       if (readinessEcuSnapshots.length === 1) return withBridgeMetadata(readinessEcuSnapshots[0]);
       return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
-        captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
-        protocol: readBridgeProtocol(data),
+        captured_at: capturedAt,
+        protocol,
         readiness_readout_status: bridgeReadoutStatus,
         readiness_scope: "multiple_ecus",
         readiness_ecu_snapshots: readinessEcuSnapshots
@@ -4475,8 +4477,8 @@
       }));
       return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
-        captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
-        protocol: readBridgeProtocol(data),
+        captured_at: capturedAt,
+        protocol,
         readiness_readout_status: bridgeReadoutStatus,
         readiness_scope: "multiple_ecus",
         readiness_ecu_snapshots: readinessEcuSnapshots
@@ -4498,8 +4500,8 @@
         source: "local_bridge",
         source_ecu: sourceEcu,
         source_ecu_name: sourceEcuName,
-        captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
-        protocol: readBridgeProtocol(data),
+        captured_at: capturedAt,
+        protocol,
         readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus,
         readiness_status_byte_a: Number.isFinite(a) ? a : null,
         readiness_status_byte_b: Number.isFinite(b) ? b : null,
@@ -4538,8 +4540,8 @@
       source: "local_bridge",
       source_ecu: sourceEcu,
       source_ecu_name: sourceEcuName,
-      captured_at: data.captured_at || data.capturedAt || response.capturedAt || null,
-      protocol: readBridgeProtocol(data),
+      captured_at: capturedAt,
+      protocol,
       readiness_readout_status: bridgeReadoutStatus,
       readiness_status_byte_a: Number.isFinite(a) ? a : null,
       readiness_status_byte_b: b,

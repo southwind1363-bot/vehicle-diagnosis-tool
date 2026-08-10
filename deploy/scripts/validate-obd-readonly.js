@@ -7929,6 +7929,16 @@ check(bridgeReadinessSnapshot.mil_on === true && bridgeReadinessSnapshot.monitor
 check(bridgeReadinessSnapshot.incomplete_count === 1 && bridgeReadinessSnapshot.complete_count === bridgeReadinessSnapshot.completeCount && bridgeReadinessSnapshot.not_supported_count === bridgeReadinessSnapshot.notSupportedCount, "Bridge readiness did not expose snake_case completion count aliases");
 check(bridgeReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeReadinessSnapshot.readiness_readout_status === "reported", "Bridge readiness did not mark a complete B/C/D response as reported");
 check(bridgeReadinessSnapshot.readinessIgnitionType === "spark" && bridgeReadinessSnapshot.readiness_ignition_type === "spark", "Bridge readiness did not retain observed spark ignition layout");
+const bridgeOuterMetadataReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  timestamp: "2026-08-10T00:04:00Z",
+  communication_protocol: "CAN_11BIT_500K",
+  data: { readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 }
+});
+const bridgeOuterMetadataReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeOuterMetadataReadinessSnapshot }))));
+check(bridgeOuterMetadataReadinessSnapshot.capturedAt === "2026-08-10T00:04:00Z" && bridgeOuterMetadataReadinessSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataReadinessRoundTrip?.readinessSnapshot?.capturedAt === "2026-08-10T00:04:00Z" && bridgeOuterMetadataReadinessRoundTrip?.readinessSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge outer readiness capture and protocol metadata were not retained through read-only export");
 const bridgeMalformedReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,
