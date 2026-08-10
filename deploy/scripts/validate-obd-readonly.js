@@ -8676,10 +8676,13 @@ const bridgeOuterMetadataOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMoni
   would_transmit: false,
   captured_timestamp: "2026-08-10T00:06:00Z",
   communication_protocol: "CAN_11BIT_500K",
+  diagnostic_protocol: "UDS",
+  transport_protocol: "ISO-TP",
+  network_protocol: "CAN",
   data: { tests: [{ test_id: "01", component_id: "01", value: 3, min: 0, max: 2 }] }
 });
 const bridgeOuterMetadataOnboardMonitorRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ onboard_monitor_snapshot: bridgeOuterMetadataOnboardMonitorSnapshot }))));
-check(bridgeOuterMetadataOnboardMonitorSnapshot.capturedAt === "2026-08-10T00:06:00Z" && bridgeOuterMetadataOnboardMonitorSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.capturedAt === "2026-08-10T00:06:00Z" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataOnboardMonitorRoundTrip?.vehicleCommandEnabled === false, "Bridge outer Mode 06 capture and protocol metadata were not retained through read-only export");
+check(bridgeOuterMetadataOnboardMonitorSnapshot.capturedAt === "2026-08-10T00:06:00Z" && bridgeOuterMetadataOnboardMonitorSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataOnboardMonitorSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataOnboardMonitorSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataOnboardMonitorSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.capturedAt === "2026-08-10T00:06:00Z" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataOnboardMonitorRoundTrip?.vehicleCommandEnabled === false, "Bridge outer Mode 06 capture and protocol provenance were not retained through read-only export");
 check(bridgeOnboardMonitorSnapshot.source === "local_bridge", "Bridge Mode 06 source was not normalized");
 check(bridgeOnboardMonitorSnapshot.intent === "read_onboard_monitor" && bridgeOnboardMonitorSnapshot.blocked === false && bridgeOnboardMonitorSnapshot.wouldTransmit === false, "Bridge Mode 06 safety metadata was not normalized");
 check(bridgeOnboardMonitorSnapshot.failedCount === 1, "Bridge Mode 06 failed count was not carried");
