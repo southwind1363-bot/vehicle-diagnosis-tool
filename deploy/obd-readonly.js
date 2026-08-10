@@ -4259,12 +4259,32 @@
   }
 
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
+    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
+      ? response.data
+      : null;
+    const hasNestedFreezeFramePayload = Boolean(nestedData && [
+      "values", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "monitor_values", "monitorValues", "pid_values", "pidValues",
+      "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
+      "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc",
+      "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"
+    ].some((key) => nestedData[key] !== undefined));
+    // Never combine outer and nested freeze-frame evidence; outer values only complete an otherwise empty envelope.
+    const outerFreezeFrameFallback = nestedData && !hasNestedFreezeFramePayload
+      ? {
+        values: response.values ?? response.freeze_frame_values ?? response.freezeFrameValues ?? response.freeze_frame_rows ?? response.freezeFrameRows ?? response.monitor_values ?? response.monitorValues ?? response.pid_values ?? response.pidValues,
+        freeze_frame_ecu_snapshots: response.freeze_frame_ecu_snapshots ?? response.freezeFrameEcuSnapshots,
+        trigger_dtc: response.trigger_dtc ?? response.triggerDtc ?? response.trigger_code ?? response.triggerCode ?? response.freeze_dtc ?? response.freezeDtc ?? response.associated_dtc ?? response.associatedDtc ?? response.dtc,
+        trigger_dtc_entries: response.trigger_dtc_entries ?? response.triggerDtcEntries ?? response.freeze_frame_trigger_entries ?? response.freezeFrameTriggerEntries ?? response.associated_dtc_entries ?? response.associatedDtcEntries,
+        trigger_frame_number: response.trigger_frame_number ?? response.triggerFrameNumber ?? response.frame_number ?? response.frameNumber
+      }
+      : {};
     const data = response && typeof response === "object"
-      ? response.data && typeof response.data === "object"
+      ? nestedData
         ? {
-          ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
+          ...nestedData,
+          source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          ...outerFreezeFrameFallback
         }
         : response
       : {};
