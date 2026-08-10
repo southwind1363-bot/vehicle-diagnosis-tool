@@ -5128,10 +5128,13 @@ const bridgeOuterMetadataDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   would_transmit: false,
   timestamp: "2026-08-10T00:08:00Z",
   communication_protocol: "CAN_11BIT_500K",
+  diagnostic_protocol: "UDS",
+  transport_protocol: "ISO-TP",
+  network_protocol: "CAN",
   data: { dtcs: [{ code: "P0171" }] }
 });
 const bridgeOuterMetadataDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeOuterMetadataDtcSnapshot }))));
-check(bridgeOuterMetadataDtcSnapshot.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcRoundTrip?.vehicleCommandEnabled === false, "Bridge outer DTC capture and protocol metadata were not retained through read-only export");
+check(bridgeOuterMetadataDtcSnapshot.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataDtcSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataDtcSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataDtcRoundTrip?.vehicleCommandEnabled === false, "Bridge outer DTC capture and protocol provenance were not retained through read-only export");
 const mixedBridgeOuterReadoutSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: bridgeOuterMetadataDtcSnapshot,
   live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ ok: true, blocked: false, would_transmit: false, timestamp: "2026-08-10T00:08:05Z", communication_protocol: "ISO15765-4", data: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] } })

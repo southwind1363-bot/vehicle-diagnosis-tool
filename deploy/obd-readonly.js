@@ -3264,7 +3264,7 @@
     const protocolProvenance = {
       primaryProtocol: sanitizedPrimaryProtocol,
       primary_protocol: sanitizedPrimaryProtocol,
-      ...readBridgeProtocolProvenance(data)
+      ...mergeProtocolProvenance(data, response)
     };
     const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
     const normalizedEcuResponses = ecuRows.map((row) => ({
