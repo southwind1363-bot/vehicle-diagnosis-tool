@@ -4441,8 +4441,21 @@
     const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
+    const protocolProvenance = {
+      primaryProtocol: normalizeProtocolProvenanceValue(protocol),
+      primary_protocol: normalizeProtocolProvenanceValue(protocol),
+      ...mergeProtocolProvenance(data, response)
+    };
     const withBridgeMetadata = (snapshot) => ({
       ...snapshot,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       intent: "readiness_snapshot",
       ok: resolvedBridgeSafety.ok,
       blocked: resolvedBridgeSafety.blocked,
@@ -18070,6 +18083,12 @@
       combinedMonitorStateAvailable: false,
       combined_monitor_state_available: false
     } : null;
+    const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
+    const protocolProvenance = {
+      primaryProtocol: normalizeProtocolProvenanceValue(protocol),
+      primary_protocol: normalizeProtocolProvenanceValue(protocol),
+      ...readBridgeProtocolProvenance(sourceInput)
+    };
 
     return {
       schemaVersion: "readiness_snapshot_v1",
@@ -18087,7 +18106,15 @@
       readiness_ecu_aggregate_summary: readinessEcuAggregateSummary,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
       captured_at: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
-      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       milOn,
       mil_on: milOn,
       storedDtcCount,
