@@ -5141,6 +5141,26 @@ const mixedBridgeOuterReadoutSession = obd.buildDiagnosticScanSession({
 });
 const mixedBridgeOuterReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(mixedBridgeOuterReadoutSession)));
 check(mixedBridgeOuterReadoutSession.multipleProtocols === true && mixedBridgeOuterReadoutSession.observedProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && mixedBridgeOuterReadoutSession.warnings?.includes("mixed_protocol_readout") && mixedBridgeOuterReadoutRoundTrip?.multipleProtocols === true && mixedBridgeOuterReadoutRoundTrip?.observedProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && mixedBridgeOuterReadoutRoundTrip?.warnings?.includes("mixed_protocol_readout") && mixedBridgeOuterReadoutSession.vehicleCommandEnabled === false && mixedBridgeOuterReadoutRoundTrip?.vehicleCommandEnabled === false && mixedBridgeOuterReadoutSession.wouldTransmit === false && mixedBridgeOuterReadoutRoundTrip?.wouldTransmit === false, "Outer bridge metadata did not reach mixed-protocol session safeguards");
+const completeBridgeProtocolEnvelope = {
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  communication_protocol: "CAN_11BIT_500K",
+  diagnostic_protocol: "UDS",
+  transport_protocol: "DoIP",
+  network_protocol: "Ethernet"
+};
+const completeBridgeProtocolSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ ...completeBridgeProtocolEnvelope, data: { dtcs: [{ code: "P0300" }] } }),
+  live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ ...completeBridgeProtocolEnvelope, data: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] } }),
+  freeze_frame_snapshot: obd.normalizeBridgeFreezeFrameSnapshot({ ...completeBridgeProtocolEnvelope, data: { trigger_dtc: "P0300", monitor_values: [{ pid: "05", value: 75, unit: "C" }] } }),
+  readiness_snapshot: obd.normalizeBridgeReadinessSnapshot({ ...completeBridgeProtocolEnvelope, data: { readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 } }),
+  ecu_info_snapshot: obd.normalizeBridgeEcuInfoSnapshot({ ...completeBridgeProtocolEnvelope, data: { items: [{ id: "ecu_sw_version", value: "SW-1", data_identifier: "F189" }] } }),
+  onboard_monitor_snapshot: obd.normalizeBridgeOnboardMonitorSnapshot({ ...completeBridgeProtocolEnvelope, data: { tests: [{ test_id: "01", component_id: "01", value: 1, min: 0, max: 2 }] } }),
+  supported_pid_matrix: obd.normalizeBridgeSupportedPidSnapshot({ ...completeBridgeProtocolEnvelope, data: { supported_pids: ["0C", "05"] } })
+});
+const completeBridgeProtocolRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(completeBridgeProtocolSession)));
+check(completeBridgeProtocolSession.protocolProvenance?.diagnosticProtocol === "UDS" && completeBridgeProtocolSession.protocolProvenance?.transportProtocol === "DoIP" && completeBridgeProtocolSession.protocolProvenance?.networkProtocol === "Ethernet" && completeBridgeProtocolSession.dtcSnapshot?.protocolProvenance?.transportProtocol === "DoIP" && completeBridgeProtocolSession.livePidSnapshot?.protocolProvenance?.networkProtocol === "Ethernet" && completeBridgeProtocolSession.freezeFrameSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && completeBridgeProtocolSession.readinessSnapshot?.protocolProvenance?.transportProtocol === "DoIP" && completeBridgeProtocolSession.ecuInfoSnapshot?.protocolProvenance?.networkProtocol === "Ethernet" && completeBridgeProtocolSession.onboardMonitorSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && completeBridgeProtocolSession.supportedPidMatrix?.protocolProvenance?.transportProtocol === "DoIP" && completeBridgeProtocolRoundTrip?.protocolProvenance?.diagnosticProtocol === "UDS" && completeBridgeProtocolRoundTrip?.protocolProvenance?.transportProtocol === "DoIP" && completeBridgeProtocolRoundTrip?.protocolProvenance?.networkProtocol === "Ethernet" && completeBridgeProtocolRoundTrip?.readinessSnapshot?.protocolProvenance?.networkProtocol === "Ethernet" && completeBridgeProtocolRoundTrip?.supportedPidMatrix?.protocolProvenance?.diagnosticProtocol === "UDS" && completeBridgeProtocolSession.vehicleCommandEnabled === false && completeBridgeProtocolRoundTrip?.vehicleCommandEnabled === false && completeBridgeProtocolSession.wouldTransmit === false && completeBridgeProtocolRoundTrip?.wouldTransmit === false, "Complete bridge protocol provenance was not retained across readout snapshots and read-only session export");
 const bridgeEcuOnlyDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_stored_dtc",
   ok: true,
