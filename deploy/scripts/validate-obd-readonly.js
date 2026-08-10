@@ -581,7 +581,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('readinessRowIdAliases') && functionBody.includes('statusbyteb: "readiness_status_byte_b"'), "normalizeBridgeReadinessSnapshot should normalize readiness row id aliases");
     check(functionBody.includes('Array.isArray(data.readiness_values)') && functionBody.includes('Array.isArray(data.readinessRows)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('Array.isArray(response.monitorValues)'), "normalizeBridgeReadinessSnapshot should accept readiness value aliases");
     check(functionBody.includes('Array.isArray(data.readinessEcuSnapshots)') && functionBody.includes('Array.isArray(data.readiness_ecu_snapshots)') && functionBody.includes('readiness_scope: "multiple_ecus"') && functionBody.includes('readiness_ecu_snapshots: readinessEcuSnapshots'), "normalizeBridgeReadinessSnapshot should retain multiple ECU readiness snapshots without a combined readiness claim");
-    check(functionBody.includes('data.readinessStatusByteB !== undefined') && functionBody.includes('data.statusByteD !== undefined'), "normalizeBridgeReadinessSnapshot should accept direct readiness status byte aliases");
+    check(functionBody.includes('data.readinessStatusByteB !== undefined') && functionBody.includes('data.statusByteD !== undefined') && functionBody.includes('const outerReadinessValueFallback = nestedData && !hasNestedReadinessPayload') && functionBody.includes('Do not combine nested and outer readiness payloads'), "normalizeBridgeReadinessSnapshot should accept direct readiness status byte aliases without mixing nested and outer payloads");
     check(functionBody.includes('const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {'), "normalizeBridgeReadinessSnapshot should build readiness values by normalized id");
     check(functionBody.includes('const resolvedBridgeSafety = malformedReadinessAlias') && functionBody.includes('const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);') && functionBody.includes('if (![b, c, d].every(Number.isFinite))') && functionBody.includes('readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus'), "normalizeBridgeReadinessSnapshot should distinguish blocked and unparsed readiness responses without B/C/D bytes");
     check(functionBody.includes('const compressionIgnition = (b & 0x08) !== 0;'), "normalizeBridgeReadinessSnapshot should derive spark/compression layout from byte B");
@@ -8012,6 +8012,28 @@ const bridgeOuterMetadataReadinessSnapshot = obd.normalizeBridgeReadinessSnapsho
 });
 const bridgeOuterMetadataReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeOuterMetadataReadinessSnapshot }))));
 check(bridgeOuterMetadataReadinessSnapshot.capturedAt === "2026-08-10T00:04:00Z" && bridgeOuterMetadataReadinessSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataReadinessSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataReadinessSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataReadinessSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataReadinessRoundTrip?.readinessSnapshot?.capturedAt === "2026-08-10T00:04:00Z" && bridgeOuterMetadataReadinessRoundTrip?.readinessSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataReadinessRoundTrip?.readinessSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataReadinessRoundTrip?.readinessSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataReadinessRoundTrip?.readinessSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataReadinessRoundTrip?.vehicleCommandEnabled === false, "Bridge outer readiness capture and protocol provenance were not retained through read-only export");
+const bridgeOuterReadinessValueFallbackSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  mil_on: true,
+  status_byte_a: 0x81,
+  status_byte_b: 0x07,
+  status_byte_c: 0x22,
+  status_byte_d: 0x00,
+  data: { readout_id: "readiness_snapshot" }
+});
+const bridgeNestedReadinessValuePrioritySnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  status_byte_b: 0x08,
+  status_byte_c: 0x00,
+  status_byte_d: 0x00,
+  data: { readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 }
+});
+check(bridgeOuterReadinessValueFallbackSnapshot.sourceEcu === "7E8" && bridgeOuterReadinessValueFallbackSnapshot.milOn === true && bridgeOuterReadinessValueFallbackSnapshot.readinessReadoutStatus === "reported" && bridgeOuterReadinessValueFallbackSnapshot.readinessIgnitionType === "spark" && bridgeOuterReadinessValueFallbackSnapshot.monitorCount === 11 && bridgeNestedReadinessValuePrioritySnapshot.readinessIgnitionType === "spark" && bridgeNestedReadinessValuePrioritySnapshot.monitorCount === 11 && bridgeNestedReadinessValuePrioritySnapshot.wouldTransmit === false, "Outer readiness values must fill only an otherwise empty nested envelope and never override nested values");
 const bridgeMalformedReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,

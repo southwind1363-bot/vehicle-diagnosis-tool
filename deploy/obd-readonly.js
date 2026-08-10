@@ -4355,13 +4355,36 @@
   }
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
+    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
+      ? response.data
+      : null;
+    const hasNestedReadinessPayload = Boolean(nestedData && [
+      "mil_on", "milStatus", "mil",
+      "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d",
+      "readinessStatusByteA", "readinessStatusByteB", "readinessStatusByteC", "readinessStatusByteD",
+      "status_byte_a", "status_byte_b", "status_byte_c", "status_byte_d",
+      "statusByteA", "statusByteB", "statusByteC", "statusByteD",
+      "values", "monitor_values", "monitorValues", "readiness_values", "readinessValues", "pid_values", "pidValues", "readiness_rows", "readinessRows",
+      "readinessEcuSnapshots", "readiness_ecu_snapshots"
+    ].some((key) => nestedData[key] !== undefined));
+    // Do not combine nested and outer readiness payloads: outer fields only fill an empty nested envelope.
+    const outerReadinessValueFallback = nestedData && !hasNestedReadinessPayload
+      ? {
+        mil_on: response.mil_on ?? response.milStatus ?? response.mil,
+        readiness_status_byte_a: response.readiness_status_byte_a ?? response.readinessStatusByteA ?? response.status_byte_a ?? response.statusByteA,
+        readiness_status_byte_b: response.readiness_status_byte_b ?? response.readinessStatusByteB ?? response.status_byte_b ?? response.statusByteB,
+        readiness_status_byte_c: response.readiness_status_byte_c ?? response.readinessStatusByteC ?? response.status_byte_c ?? response.statusByteC,
+        readiness_status_byte_d: response.readiness_status_byte_d ?? response.readinessStatusByteD ?? response.status_byte_d ?? response.statusByteD
+      }
+      : {};
     const data = response && typeof response === "object"
-      ? response.data && typeof response.data === "object"
+      ? nestedData
         ? {
-          ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
-          readiness_readout_status: response.data.readinessReadoutStatus || response.data.readiness_readout_status || response.readinessReadoutStatus || response.readiness_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
+          ...nestedData,
+          source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          readiness_readout_status: nestedData.readinessReadoutStatus || nestedData.readiness_readout_status || response.readinessReadoutStatus || response.readiness_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
+          ...outerReadinessValueFallback
         }
         : response
       : {};
