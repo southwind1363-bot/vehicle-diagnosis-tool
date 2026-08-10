@@ -4597,13 +4597,15 @@
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, blocked: hasItemEvidence, unparsed: !hasItemEvidence }
       : bridgeSafety;
+    const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
+    const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
         items,
         source: "local_bridge",
-        captured_at: data.captured_at || data.capturedAt || null,
-        protocol: readBridgeProtocol(data),
+        captured_at: capturedAt,
+        protocol,
         protocol_provenance: readBridgeProtocolProvenance(data),
         ecu_info_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)
       }),
