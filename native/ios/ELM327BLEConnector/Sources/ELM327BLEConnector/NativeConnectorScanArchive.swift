@@ -136,6 +136,11 @@ public final class NativeConnectorScanArchiveBuilder {
                       Self.isManifestReadoutConsistent(intent: intent, readoutID: readoutID)
                   }
               }),
+              manifest.expectedIntents.allSatisfy({ intent in
+                  manifest.expectedReadouts.contains { readoutID in
+                      Self.isManifestReadoutConsistent(intent: intent, readoutID: readoutID)
+                  }
+              }),
               manifest.expectedReadoutScopes.allSatisfy({
                   manifest.expectedReadouts.contains($0.readoutID)
                       && Self.isValidScope($0.scopeID)

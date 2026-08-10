@@ -2790,6 +2790,7 @@
     if (!Array.isArray(expectedIntentsSource) || expectedIntents.length !== distinctStrings(expectedIntentsSource)) errors.push("invalid_completion_manifest_expected_intents");
     if (!Array.isArray(expectedReadoutsSource) || expectedReadouts.length !== distinctStrings(expectedReadoutsSource)) errors.push("invalid_completion_manifest_expected_readouts");
     if (expectedReadouts.some((readoutId) => !expectedIntents.some((intent) => isNativeConnectorReadoutAllowedForIntent(intent, readoutId)))) errors.push("completion_manifest_readout_intent_mismatch");
+    if (expectedIntents.some((intent) => !expectedReadouts.some((readoutId) => isNativeConnectorReadoutAllowedForIntent(intent, readoutId)))) errors.push("completion_manifest_intent_readout_mismatch");
     if (!Array.isArray(expectedReadoutScopesSource) || expectedReadoutScopes.length !== expectedReadoutScopesSource.length || expectedReadoutScopes.some((item) => !expectedReadouts.includes(item.readoutId))) errors.push("invalid_completion_manifest_expected_readout_scopes");
     if (scanState === "completed" && !expectedReadouts.length) errors.push("completion_manifest_missing_readouts");
     const interruption = manifest.interruption === null ? null : normalizeNativeConnectorInterruption(manifest.interruption);

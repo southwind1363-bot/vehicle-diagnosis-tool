@@ -11,6 +11,7 @@ const offlineAssets = JSON.parse(fs.readFileSync(new URL("../offline-assets.json
 const appVersion = appSource.match(/const APP_VERSION = "([^"\\r\\n]+)";/)?.[1] || "";
 const cacheVersion = serviceWorkerSource.match(/const CACHE_VERSION = "([^"\\r\\n]+)";/)?.[1] || "";
 const nativeArchiveExportSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/NativeConnectorArchiveExport.swift", import.meta.url), "utf8");
+const nativeScanArchiveSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/NativeConnectorScanArchive.swift", import.meta.url), "utf8");
 const nativeConnectorSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/ELM327BLEConnector.swift", import.meta.url), "utf8");
 const nativeReadCommandSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Sources/ELM327BLEConnector/ELMReadCommand.swift", import.meta.url), "utf8");
 const nativeReadCommandTestSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Tests/ELM327BLEConnectorTests/ELMReadCommandTests.swift", import.meta.url), "utf8");
@@ -3923,6 +3924,7 @@ check(nativeConnectorContract.id === "native_connector_contract_v1" && nativeCon
 check(nativeHostProjectSource.includes('name: VehicleDiagnosisELMHost') && nativeHostProjectSource.includes('platform: iOS') && nativeHostProjectSource.includes('iOS: "16.0"') && nativeHostProjectSource.includes('INFOPLIST_FILE: Sources/Info.plist') && nativeHostProjectSource.includes('package: ELM327BLEConnector') && nativeHostProjectSource.includes('path: ../ELM327BLEConnector'), "iPhone ELM327ホストのiOSターゲット、権限ファイル、読取コネクタ依存関係が不足しています");
 check(nativeHostInfoSource.includes('<key>NSBluetoothAlwaysUsageDescription</key>') && nativeHostInfoSource.includes('<key>LSRequiresIPhoneOS</key>') && nativeHostInfoSource.includes('<key>UILaunchScreen</key>'), "iPhone ELM327ホストのBluetooth権限またはiOSアプリ設定が不足しています");
 check(new RegExp(`maximumTransferBytes: Int \\{ ${nativeConnectorContract.maxArchiveBytes.toLocaleString("en-US").replace(/,/g, "_")} \\}`).test(nativeArchiveExportSource), "iPhoneアーカイブ書出し上限とWeb取込契約が一致していません");
+check(nativeScanArchiveSource.includes('manifest.expectedReadouts.allSatisfy') && nativeScanArchiveSource.includes('manifest.expectedIntents.allSatisfy') && nativeScanArchiveSource.includes('Self.isManifestReadoutConsistent(intent: intent, readoutID: readoutID)'), "iPhoneアーカイブの完了マニフェストがIntentとreadout IDの対応表を双方向に検証していません");
 check(["03", "07", "0A", "06", "0200", "0202", "0900", "0908", "090B", "0100", "0101", "01C0", "01E0"].every((wireValue) => nativeReadCommandSource.includes(`return "${wireValue}"`)) && nativeReadCommandSource.includes('case .supportedPIDsA0: return .supportedPIDsC0') && nativeReadCommandSource.includes('case .supportedPIDsC0: return .supportedPIDsE0') && nativeReadCommandSource.includes('case .supportedPIDsE0: return "E0"'), "iPhone ELM327初期読取とWeb側のDTC・FF・PID・readiness・ECU情報期待項目が一致していません");
 check(nativeReadCommandWireValues.length > 0 && nativeReadCommandWireValues.every((wireValue) => ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "ATDPN", "03", "07", "0A", "06"].includes(wireValue) || /^01[0-9A-F]{2}$/.test(wireValue) || /^02[0-9A-F]{2}$/.test(wireValue) || /^09(?:00|04|06|08|0A|0B)$/.test(wireValue)), "iPhone ELM327 command catalog must contain only explicit read-only adapter and OBD commands");
 check(nativeReadCommandSource.includes('case .describeProtocolNumber: return "ATDPN"') && nativeReadCommandSource.includes('case .identifyAdapter, .describeProtocol, .describeProtocolNumber: return "adapter_identity"') && nativeConnectorSource.includes("func isUsableELMAdapterIdentityResponse") && nativeConnectorSource.includes("func normalizedELMAdapterProtocolNumber") && nativeConnectorSource.includes('emitFailure(for: command, error: "adapter_identity_unavailable")') && nativeConnectorSource.includes('emitFailure(for: command, error: "adapter_protocol_unavailable")') && nativeConnectorSource.includes('emitFailure(for: command, error: "adapter_protocol_number_unavailable")') && nativeReadResponseDispositionTestSource.includes("testAdapterIdentityRejectsExplicitFailureResponses") && nativeReadResponseDispositionTestSource.includes("testAdapterIdentityAcceptsUsableELMAndProtocolResponses") && nativeReadResponseDispositionTestSource.includes("testAdapterProtocolNumberRetainsOnlyELMProtocolValues"), "iPhone ELM327 adapter identity and protocol errors must interrupt before vehicle readout");
@@ -4245,6 +4247,15 @@ const mismatchedNativeCompletionManifest = obd.buildNativeConnectorScanSessionFr
   }
 });
 check(mismatchedNativeCompletionManifest.accepted === false && mismatchedNativeCompletionManifest.blocked === true && mismatchedNativeCompletionManifest.errors.includes("completion_manifest_readout_intent_mismatch") && mismatchedNativeCompletionManifest.vehicleCommandEnabled === false, "Native connector completion manifest accepted a readout ID that does not belong to its declared intent");
+const unpairedIntentNativeCompletionManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
+  envelopes: nativeScanBatch,
+  completion_manifest: {
+    ...nativeCompletionManifest,
+    expected_intents: ["read_stored_dtc", "read_ecu_info"],
+    expected_readouts: ["stored_dtc_snapshot"]
+  }
+});
+check(unpairedIntentNativeCompletionManifest.accepted === false && unpairedIntentNativeCompletionManifest.blocked === true && unpairedIntentNativeCompletionManifest.errors.includes("completion_manifest_intent_readout_mismatch") && unpairedIntentNativeCompletionManifest.vehicleCommandEnabled === false, "Native connector completion manifest accepted an intent without a matching readout ID");
 const nativeQuickReadoutBatch = nativeScanBatch
   .filter((envelope) => ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_supported_pids", "read_live_pid_snapshot"].includes(envelope.intent))
   .sort((left, right) => left.sequence - right.sequence)

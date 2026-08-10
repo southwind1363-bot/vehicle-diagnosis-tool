@@ -168,6 +168,22 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         }
     }
 
+    func testRejectsManifestWithAnUnpairedExpectedIntent() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(envelope(sequence: 1))
+        let unpairedIntent = manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            expectedIntents: ["read_stored_dtc", "read_ecu_info"],
+            expectedReadouts: ["stored_dtc_snapshot"]
+        )
+
+        XCTAssertThrowsError(try builder.complete(with: unpairedIntent)) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidManifest)
+        }
+    }
+
     func testAcceptsAdapterIdentityEnvelopeWithItsManifestReadout() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(
