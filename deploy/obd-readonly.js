@@ -4287,8 +4287,8 @@
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
-      captured_at: data.captured_at || data.capturedAt || null,
-      protocol: readBridgeProtocol(data),
+      captured_at: data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null,
+      protocol: readBridgeProtocol(data) || readBridgeProtocol(response),
       freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       source_ecu_name: sourceEcuName,

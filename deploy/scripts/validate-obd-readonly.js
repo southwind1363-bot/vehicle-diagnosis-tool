@@ -7833,6 +7833,16 @@ check(bridgeFreezeFrameSnapshot.triggerDtc === "P0171", "ブリッジフリー�
 check(bridgeFreezeFrameSnapshot.monitorValues.length === 2, "ブリッジフリーズフレーム値を整形できません");
 check(bridgeFreezeFrameSnapshot.trigger_dtc === "P0171" && bridgeFreezeFrameSnapshot.monitor_values.length === 2, "Bridge freeze-frame did not expose snake_case trigger and monitor aliases");
 check(bridgeFreezeFrameSnapshot.monitor_value_summary.total_count === 2 && bridgeFreezeFrameSnapshot.captured_at === "2026-06-28T00:01:45Z", "Bridge freeze-frame did not expose snake_case summary and capture aliases");
+const bridgeOuterMetadataFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  captured_timestamp: "2026-08-10T00:03:00Z",
+  communication_protocol: "CAN_11BIT_500K",
+  data: { trigger_dtc: "P0171", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }
+});
+const bridgeOuterMetadataFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freeze_frame_snapshot: bridgeOuterMetadataFreezeFrameSnapshot }))));
+check(bridgeOuterMetadataFreezeFrameSnapshot.capturedAt === "2026-08-10T00:03:00Z" && bridgeOuterMetadataFreezeFrameSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.capturedAt === "2026-08-10T00:03:00Z" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataFreezeFrameRoundTrip?.vehicleCommandEnabled === false, "Bridge outer freeze-frame capture and protocol metadata were not retained through read-only export");
 const bridgeMalformedFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
