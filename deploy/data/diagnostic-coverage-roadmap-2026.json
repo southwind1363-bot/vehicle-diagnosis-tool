@@ -25,10 +25,10 @@
     "label": "U系 通信DTC",
     "coverage_area": "network-dtc",
     "current_state": "個別定義を拡張中",
-    "progress_percent": 59,
+    "progress_percent": 60,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 569件 / 個別DTC定義586件・出典限定58件 (Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68、Acura 2024 ZDX BECM U3577-U3580/U35AF、GM 2025-26 Yukon/Yukon XL IVD/IVE U164Eを出典限定で追加)",
+    "current_count_note": "U系親DTC 569件 / 個別DTC定義587件・出典限定59件 (Mazda 2017-23 CX-5 FSC/parking assist U045A-68、Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68、Acura 2024 ZDX BECM U3577-U3580/U35AF、GM 2025-26 Yukon/Yukon XL IVD/IVE U164Eを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
@@ -37,7 +37,7 @@
     "blocked_until": [],
     "safety_note": "通信線測定はショートや誤接続を避け、メーカー整備書の測定条件を優先する。",
     "source": "ローカル検証集計",
-    "source_date": "2026-08-09",
+    "source_date": "2026-08-11",
     "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   },
@@ -46,10 +46,10 @@
     "label": "B系 ボディDTC",
     "coverage_area": "body-dtc",
     "current_state": "出典確認済み定義を追加開始",
-    "progress_percent": 28,
+    "progress_percent": 29,
     "target_state": "SRS、エアコン、ドア、ライト、スマートキー、ボディECU系を車種別確認前提で整理する",
     "priority": 3,
-    "current_count_note": "B系親DTC 59件 / 出典定義108件・一意サブコード定義90件 (Mazda 2013-15 CX-5・2019-2022 Mazda3 SRS・2019-2021 Mazda3/2020-2021 CX-30/2022 MX-30駐車支援・Mazda 2019-20/2020 Mazda3/CX-30 telematics・2024-25 CX-90/CX-70/MX-5 AFS、Honda 2015-16、2017、2018-20 Accord/2019-20 CR-V、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Acura 2015 TLX製造05/2015前、Subaru 2010-14 Legacy/Outback・2012 Impreza・2015 Legacy/Outback SRVD B2350・2018-19 Legacy/Outback/2019-20 Ascent Harman B224C・2019-21 Forester VDC B280B、Jeep 2014-17 Cherokee・2019-20・2022-23 Renegade・2024-25 Wagoneer S、Chrysler 2015-17 200、GM 2014 SRS・2024-26 B174W ACP2 B1A05・2021-26 Cadillac CT4 GEN2 VPM B1A62:46/:49/:54/:55/:92/:98、B1A9B:00、B1594:11/:12/:13/:29/:82、Bentley 2018-22 Continental GT/Flying Spur、Audi 2020-21 ADAS・Audi 2021-25 J285 B2000-49、Ford 2021-22 Mustang Mach-E IPMA B1578-78・Ford/Lincoln 2019-24 SYNC3 TCU B156D-89・Ford 2024-26 Ranger B14AA-11、JLR 2017 BCM fuel sender、FCA 2023-24 RAM SCCM、出典限定)",
+    "current_count_note": "B系親DTC 60件 / 出典定義109件・一意サブコード定義91件 (Mazda 2013-15 CX-5・2019-2022 Mazda3 SRS・2019-2022 Mazda3/2020-2022 CX-30/2022 MX-30 B11C4-23・2019-2021 Mazda3/2020-2021 CX-30/2022 MX-30駐車支援・Mazda 2019-20/2020 Mazda3/CX-30 telematics・2024-25 CX-90/CX-70/MX-5 AFS、Honda 2015-16、2017、2018-20 Accord/2019-20 CR-V、2023 CR-V/HR-V、2023-25 Accord Hybrid、2026 Passport、Acura 2015 TLX製造05/2015前、Subaru 2010-14 Legacy/Outback・2012 Impreza・2015 Legacy/Outback SRVD B2350・2018-19 Legacy/Outback/2019-20 Ascent Harman B224C・2019-21 Forester VDC B280B、Jeep 2014-17 Cherokee・2019-20・2022-23 Renegade・2024-25 Wagoneer S、Chrysler 2015-17 200、GM 2014 SRS・2024-26 B174W ACP2 B1A05・2021-26 Cadillac CT4 GEN2 VPM B1A62:46/:49/:54/:55/:92/:98、B1A9B:00、B1594:11/:12/:13/:29/:82、Bentley 2018-22 Continental GT/Flying Spur、Audi 2020-21 ADAS・Audi 2021-25 J285 B2000-49、Ford 2021-22 Mustang Mach-E IPMA B1578-78・Ford/Lincoln 2019-24 SYNC3 TCU B156D-89・Ford 2024-26 Ranger B14AA-11、JLR 2017 BCM fuel sender、FCA 2023-24 RAM SCCM、出典限定)",
     "next_actions": [
       "汎用/メーカー別のB系コード収録可否をソース別に分ける",
       "SRS、ブレーキ、盗難防止など安全系は強い注意と整備書必須を付ける",
@@ -58,7 +58,7 @@
     "blocked_until": ["公式またはメーカー診断機表示に基づく定義ソース確認"],
     "safety_note": "SRSや盗難防止系は誤作動・復旧不能リスクがあるため、読取整理だけから始める。",
     "source": "ローカル検証集計",
-    "source_date": "2026-08-09",
+    "source_date": "2026-08-11",
     "eta_target": "2026-Q4 見込み",
     "service_manual_required": true
   },
