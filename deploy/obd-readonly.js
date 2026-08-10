@@ -8474,6 +8474,15 @@
       : 0;
     const status = capturedAtValues.length > 1 ? "range" : capturedAtValues.length === 1 ? "single" : "unknown";
     const readoutIds = [...new Set(captureRows.map((row) => row.readoutId))];
+    const readoutCaptureTimeline = captureRows
+      .slice()
+      .sort((left, right) => Date.parse(left.capturedAt) - Date.parse(right.capturedAt) || left.readoutId.localeCompare(right.readoutId))
+      .map((row) => ({
+        readoutId: row.readoutId,
+        readout_id: row.readoutId,
+        capturedAt: row.capturedAt,
+        captured_at: row.capturedAt
+      }));
     return {
       schemaVersion: "session_capture_integrity_summary_v1",
       schema_version: "session_capture_integrity_summary_v1",
@@ -8492,6 +8501,10 @@
       readout_ids: [...readoutIds],
       readoutCount: readoutIds.length,
       readout_count: readoutIds.length,
+      readoutCaptureTimeline,
+      readout_capture_timeline: readoutCaptureTimeline.map((row) => ({ ...row })),
+      readoutCaptureCount: readoutCaptureTimeline.length,
+      readout_capture_count: readoutCaptureTimeline.length,
       readOnly: true,
       read_only: true,
       wouldTransmit: false,
