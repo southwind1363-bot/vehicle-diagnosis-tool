@@ -552,6 +552,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeLivePidSnapshot should carry supported PID context and snake_case alias");
     check(functionBody.includes('const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);') && functionBody.includes('monitor_value_summary: monitorValueSummary'), "normalizeBridgeLivePidSnapshot should preserve explicit summaries and expose snake_case alias");
     check(functionBody.includes('const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);') && functionBody.includes('...analyzeMonitorValues(monitorValues)') && functionBody.includes('monitor_insights: monitorInsights'), "normalizeBridgeLivePidSnapshot should merge explicit and derived insights with snake_case alias");
+    check(functionBody.includes('const hasNestedLivePidPayload = Boolean(nestedData') && functionBody.includes('const outerLivePidFallback = nestedData && !hasNestedLivePidPayload') && functionBody.includes('...outerLivePidFallback'), "normalizeBridgeLivePidSnapshot should only use outer live PID evidence for an empty nested envelope");
     check(functionBody.includes('const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";') && functionBody.includes('observation_condition: observationCondition') && functionBody.includes('captured_at: capturedAt') && functionBody.includes('monitor_values: monitorValues') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeLivePidSnapshot should retain safe observation conditions with capture, values, and retention aliases");
     check(functionBody.includes('data.timestamp') && functionBody.includes('response.timestamp') && functionBody.includes('const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);') && functionBody.includes('protocol,'), "normalizeBridgeLivePidSnapshot should retain outer bridge capture and protocol metadata");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeLivePidSnapshot should not retain raw bridge text");
@@ -7685,6 +7686,23 @@ const bridgeOuterMetadataLivePidRoundTrip = obd.buildDiagnosticScanSessionFromJs
   obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ live_pid_snapshot: bridgeOuterMetadataLivePidSnapshot }))
 ));
 check(bridgeOuterMetadataLivePidSnapshot.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataLivePidSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataLivePidSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataLivePidRoundTrip?.vehicleCommandEnabled === false, "Bridge outer live PID capture and protocol provenance were not retained through read-only export");
+const bridgeOuterLivePidFallbackSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  monitor_values: [{ pid: "0C", value: 820, unit: "rpm" }],
+  data: { readout_id: "live_pid_snapshot" }
+});
+check(bridgeOuterLivePidFallbackSnapshot.monitorValues.length === 1 && bridgeOuterLivePidFallbackSnapshot.monitorValues[0]?.id === "engine_speed" && bridgeOuterLivePidFallbackSnapshot.monitorValues[0]?.sourceEcu === "7E8" && bridgeOuterLivePidFallbackSnapshot.wouldTransmit === false, "Outer live PID values should complete an otherwise empty nested envelope without changing read-only safety");
+const bridgeNestedLivePidPrioritySnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  monitor_values: [{ pid: "0C", value: 820, unit: "rpm" }],
+  data: { monitor_values: [{ pid: "05", value: 84, unit: "C" }] }
+});
+check(bridgeNestedLivePidPrioritySnapshot.monitorValues.length === 1 && bridgeNestedLivePidPrioritySnapshot.monitorValues[0]?.id === "coolant_temp" && !bridgeNestedLivePidPrioritySnapshot.monitorValues.some((item) => item.id === "engine_speed") && bridgeNestedLivePidPrioritySnapshot.wouldTransmit === false, "Nested live PID values must take priority over outer values without combining sources");
 const bridgePidLiveDataAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,

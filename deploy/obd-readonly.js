@@ -3740,12 +3740,29 @@
   }
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
+    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
+      ? response.data
+      : null;
+    const hasNestedLivePidPayload = Boolean(nestedData && [
+      "values", "monitor_values", "monitorValues", "pid_values", "pidValues", "live_pid_values", "livePidValues", "live_data", "liveData", "items",
+      "monitorValueSummary", "monitor_value_summary", "monitorInsights", "monitor_insights", "insights"
+    ].some((key) => nestedData[key] !== undefined));
+    // Never combine outer and nested live PID evidence; outer values only complete an otherwise empty envelope.
+    const outerLivePidFallback = nestedData && !hasNestedLivePidPayload
+      ? {
+        values: response.values ?? response.monitor_values ?? response.monitorValues ?? response.pid_values ?? response.pidValues ?? response.live_pid_values ?? response.livePidValues ?? response.live_data ?? response.liveData ?? response.items,
+        monitor_value_summary: response.monitorValueSummary ?? response.monitor_value_summary,
+        monitor_insights: response.monitorInsights ?? response.monitor_insights ?? response.insights
+      }
+      : {};
     const data = response && typeof response === "object"
-      ? response.data && typeof response.data === "object"
+      ? nestedData
         ? {
-          ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName
+          ...nestedData,
+          source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          live_pid_readout_status: nestedData.livePidReadoutStatus || nestedData.live_pid_readout_status || response.livePidReadoutStatus || response.live_pid_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
+          ...outerLivePidFallback
         }
         : response
       : {};
