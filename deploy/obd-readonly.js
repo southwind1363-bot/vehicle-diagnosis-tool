@@ -4682,11 +4682,13 @@
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, blocked: hasTestEvidence, unparsed: !hasTestEvidence }
       : bridgeSafety;
+    const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
+    const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     return {
       ...normalizeOnboardMonitorSnapshot({
       source: "local_bridge",
-      captured_at: data.captured_at || data.capturedAt || null,
-      protocol: readBridgeProtocol(data),
+      captured_at: capturedAt,
+      protocol,
       onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety),
       source_ecu: sourceEcu,
       source_ecu_name: sourceEcuName,
