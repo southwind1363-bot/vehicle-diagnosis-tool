@@ -4202,6 +4202,11 @@
     const readoutOk = blocked ? false : readoutStatus === "reported" ? true : readoutStatus === "unparsed" ? false : undefined;
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
+    const protocolProvenance = {
+      primaryProtocol: normalizeProtocolProvenanceValue(protocol),
+      primary_protocol: normalizeProtocolProvenanceValue(protocol),
+      ...mergeProtocolProvenance(data, response)
+    };
     return {
       ...buildSupportedPidMatrix({
       source: "local_bridge",
@@ -4214,6 +4219,14 @@
       supported_pids: supportedPids,
       supported_pid_ecu_snapshots: supportedPidEcuSnapshots
       }),
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       intent: "read_supported_pids",
       ...(readoutOk === undefined ? {} : { ok: readoutOk }),
       blocked,
@@ -22821,6 +22834,12 @@
         : supportedPidEcuSnapshots.length === 1 || sourceEcu
           ? "single_ecu"
           : "unspecified";
+    const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
+    const protocolProvenance = {
+      primaryProtocol: normalizeProtocolProvenanceValue(protocol),
+      primary_protocol: normalizeProtocolProvenanceValue(protocol),
+      ...readBridgeProtocolProvenance(sourceInput)
+    };
 
     return {
       schemaVersion: "supported_pid_matrix_v1",
@@ -22832,7 +22851,15 @@
       source_ecu_name: resolvedSourceEcuName,
       capturedAt,
       captured_at: capturedAt,
-      protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,
+      protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       supportedPids,
       supported_pids: supportedPids,
       supportedPidPageBases,

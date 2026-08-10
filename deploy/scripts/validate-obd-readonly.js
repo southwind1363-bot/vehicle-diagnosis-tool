@@ -2033,7 +2033,7 @@ const supportedPidMatrixFunctionChecks = () => {
     check(functionBody.includes('monitorDefinitions') && functionBody.includes('definition.service === "01" && definition.pid'), "buildSupportedPidMatrix should map support against Mode 01 monitor definitions");
     check(functionBody.includes('const normalizedPid = String(definition.pid).toUpperCase();') && functionBody.includes('supported: supported.has(normalizedPid)') && functionBody.includes('supported_ecu_ids: supportedEcuIds') && functionBody.includes('supported_ecu_count: supportedEcuIds.length'), "buildSupportedPidMatrix should mark definitions and ECU provenance from decoded PID ids");
     check(functionBody.includes('const supportedCount = items.filter((item) => item.supported).length') && functionBody.includes('const knownPidCount = items.length'), "buildSupportedPidMatrix should expose supported and known PID counts");
-    check(functionBody.includes('protocol: sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null,'), "buildSupportedPidMatrix should accept protocol aliases");
+    check(functionBody.includes('const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;') && functionBody.includes('protocol,'), "buildSupportedPidMatrix should accept protocol aliases");
     check(functionBody.includes('retainedRawText: false'), "buildSupportedPidMatrix should never retain raw text");
     check(functionBody.includes('schema_version: "supported_pid_matrix_v1"'), "buildSupportedPidMatrix should expose snake_case schema version");
     check(functionBody.includes('supported_pids: supportedPids') && functionBody.includes('supported_count: supportedCount') && functionBody.includes('unsupported_count: unsupportedCount'), "buildSupportedPidMatrix should expose snake_case supported PID aliases");
@@ -7710,10 +7710,13 @@ const bridgeOuterMetadataSupportedPidSnapshot = obd.normalizeBridgeSupportedPidS
   would_transmit: false,
   timestamp: "2026-08-10T00:07:00Z",
   communication_protocol: "CAN_11BIT_500K",
+  diagnostic_protocol: "UDS",
+  transport_protocol: "ISO-TP",
+  network_protocol: "CAN",
   data: { supported_pids: ["0C", "05"] }
 });
 const bridgeOuterMetadataSupportedPidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ supported_pid_matrix: bridgeOuterMetadataSupportedPidSnapshot }))));
-check(bridgeOuterMetadataSupportedPidSnapshot.capturedAt === "2026-08-10T00:07:00Z" && bridgeOuterMetadataSupportedPidSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataSupportedPidRoundTrip?.supportedPidMatrix?.capturedAt === "2026-08-10T00:07:00Z" && bridgeOuterMetadataSupportedPidRoundTrip?.supportedPidMatrix?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataSupportedPidRoundTrip?.vehicleCommandEnabled === false, "Bridge outer supported-PID capture and protocol metadata were not retained through read-only export");
+check(bridgeOuterMetadataSupportedPidSnapshot.capturedAt === "2026-08-10T00:07:00Z" && bridgeOuterMetadataSupportedPidSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataSupportedPidSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataSupportedPidSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataSupportedPidSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataSupportedPidRoundTrip?.supportedPidMatrix?.capturedAt === "2026-08-10T00:07:00Z" && bridgeOuterMetadataSupportedPidRoundTrip?.supportedPidMatrix?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataSupportedPidRoundTrip?.supportedPidMatrix?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataSupportedPidRoundTrip?.supportedPidMatrix?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataSupportedPidRoundTrip?.supportedPidMatrix?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataSupportedPidRoundTrip?.vehicleCommandEnabled === false, "Bridge outer supported-PID capture and protocol provenance were not retained through read-only export");
 const bridgeEmptyEcuSupportedPidPageSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   ok: true,
   blocked: false,
