@@ -3839,6 +3839,11 @@
       || response.captured_timestamp
       || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
+    const protocolProvenance = {
+      primaryProtocol: normalizeProtocolProvenanceValue(protocol),
+      primary_protocol: normalizeProtocolProvenanceValue(protocol),
+      ...mergeProtocolProvenance(data, response)
+    };
     const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";
     const observationCondition = normalizeLivePidObservationCondition(observationConditionInput);
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
@@ -3858,6 +3863,14 @@
       errorCodes,
       error_codes: [...errorCodes],
       protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
@@ -4286,11 +4299,17 @@
         response,
         errorCodes.length === 0 && (hasFreezeFrameEcuSnapshotEvidence || [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray))
       );
+    const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
+    const protocolProvenance = {
+      primaryProtocol: normalizeProtocolProvenanceValue(protocol),
+      primary_protocol: normalizeProtocolProvenanceValue(protocol),
+      ...mergeProtocolProvenance(data, response)
+    };
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null,
-      protocol: readBridgeProtocol(data) || readBridgeProtocol(response),
+      protocol,
       freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       source_ecu_name: sourceEcuName,
@@ -4304,6 +4323,14 @@
       values: freezeFrameValues,
       freeze_frame_ecu_snapshots: freezeFrameEcuSnapshotRows
       }),
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       intent: "read_freeze_frame",
       ok: bridgeSafety.ok,
       blocked: bridgeSafety.blocked,
@@ -17661,6 +17688,11 @@
       .filter(Boolean))];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || (nestedCapturedAtValues.length === 1 ? nestedCapturedAtValues[0] : null);
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || (nestedProtocolValues.length === 1 ? nestedProtocolValues[0] : null);
+    const protocolProvenance = {
+      primaryProtocol: normalizeProtocolProvenanceValue(protocol),
+      primary_protocol: normalizeProtocolProvenanceValue(protocol),
+      ...readBridgeProtocolProvenance(sourceInput)
+    };
     const triggerFrameNumberInput = pickDefined(sourceInput.trigger_frame_number, sourceInput.triggerFrameNumber, sourceInput.frame_number, sourceInput.frameNumber, null);
     const parsedTriggerFrameNumber = Number(triggerFrameNumberInput);
     const inferredTriggerFrameNumber = triggerFrameNumberInput !== null && triggerFrameNumberInput !== "" && Number.isInteger(parsedTriggerFrameNumber) && parsedTriggerFrameNumber >= 0 && parsedTriggerFrameNumber <= 255
@@ -17714,6 +17746,14 @@
       capturedAt,
       captured_at: capturedAt,
       protocol,
+      protocolProvenance,
+      protocol_provenance: protocolProvenance,
+      diagnosticProtocol: protocolProvenance.diagnosticProtocol,
+      diagnostic_protocol: protocolProvenance.diagnosticProtocol,
+      transportProtocol: protocolProvenance.transportProtocol,
+      transport_protocol: protocolProvenance.transportProtocol,
+      networkProtocol: protocolProvenance.networkProtocol,
+      network_protocol: protocolProvenance.networkProtocol,
       freezeFrameScope,
       freeze_frame_scope: freezeFrameScope,
       freezeFrameEcuSnapshots,

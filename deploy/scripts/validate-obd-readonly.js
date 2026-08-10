@@ -7642,6 +7642,9 @@ const bridgeOuterMetadataLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
   would_transmit: false,
   timestamp: "2026-08-10T00:01:01Z",
   communication_protocol: "CAN_11BIT_500K",
+  diagnostic_protocol: "UDS",
+  transport_protocol: "ISO-TP",
+  network_protocol: "CAN",
   data: {
     monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }]
   }
@@ -7649,7 +7652,7 @@ const bridgeOuterMetadataLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
 const bridgeOuterMetadataLivePidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
   obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ live_pid_snapshot: bridgeOuterMetadataLivePidSnapshot }))
 ));
-check(bridgeOuterMetadataLivePidSnapshot.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidRoundTrip?.vehicleCommandEnabled === false, "Bridge outer live PID capture and protocol metadata were not retained through read-only export");
+check(bridgeOuterMetadataLivePidSnapshot.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataLivePidSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataLivePidSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataLivePidRoundTrip?.vehicleCommandEnabled === false, "Bridge outer live PID capture and protocol provenance were not retained through read-only export");
 const bridgePidLiveDataAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
@@ -7868,10 +7871,13 @@ const bridgeOuterMetadataFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSna
   would_transmit: false,
   captured_timestamp: "2026-08-10T00:03:00Z",
   communication_protocol: "CAN_11BIT_500K",
+  diagnostic_protocol: "UDS",
+  transport_protocol: "ISO-TP",
+  network_protocol: "CAN",
   data: { trigger_dtc: "P0171", monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }
 });
 const bridgeOuterMetadataFreezeFrameRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ freeze_frame_snapshot: bridgeOuterMetadataFreezeFrameSnapshot }))));
-check(bridgeOuterMetadataFreezeFrameSnapshot.capturedAt === "2026-08-10T00:03:00Z" && bridgeOuterMetadataFreezeFrameSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.capturedAt === "2026-08-10T00:03:00Z" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataFreezeFrameRoundTrip?.vehicleCommandEnabled === false, "Bridge outer freeze-frame capture and protocol metadata were not retained through read-only export");
+check(bridgeOuterMetadataFreezeFrameSnapshot.capturedAt === "2026-08-10T00:03:00Z" && bridgeOuterMetadataFreezeFrameSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataFreezeFrameSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataFreezeFrameSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataFreezeFrameSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.capturedAt === "2026-08-10T00:03:00Z" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataFreezeFrameRoundTrip?.freezeFrameSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataFreezeFrameRoundTrip?.vehicleCommandEnabled === false, "Bridge outer freeze-frame capture and protocol provenance were not retained through read-only export");
 const bridgeMalformedFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
