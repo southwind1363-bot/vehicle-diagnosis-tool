@@ -8454,6 +8454,12 @@
     ];
     const captureRows = snapshotEntries.flatMap(([readoutId, snapshot]) => {
       if (readoutId === "ecu_response_summary" && (!Array.isArray(snapshot?.ecus) || snapshot.ecus.length === 0)) return [];
+      const snapshotProtocol = normalizeProtocolProvenanceValue(snapshot?.protocol || snapshot?.obd_protocol || snapshot?.communicationProtocol || snapshot?.communication_protocol || null);
+      const captureContextByTimestamp = new Map((readoutId === "dtc_snapshot"
+        ? normalizeDtcCaptureContexts(snapshot?.captureContexts || snapshot?.capture_contexts || [])
+        : [])
+        .filter((context) => context.capturedAt)
+        .map((context) => [context.capturedAt, context]));
       const capturedAtValues = [
         snapshot?.capturedAt,
         snapshot?.captured_at,
@@ -8463,7 +8469,7 @@
       ];
       return [...new Set(capturedAtValues)]
         .filter((capturedAt) => /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt)))
-        .map((capturedAt) => ({ readoutId, capturedAt }));
+        .map((capturedAt) => ({ readoutId, capturedAt, protocol: captureContextByTimestamp.get(capturedAt)?.protocol || snapshotProtocol }));
     });
     const capturedAtValues = [...new Set(captureRows.map((row) => row.capturedAt))]
       .sort((left, right) => Date.parse(left) - Date.parse(right));
@@ -8481,7 +8487,9 @@
         readoutId: row.readoutId,
         readout_id: row.readoutId,
         capturedAt: row.capturedAt,
-        captured_at: row.capturedAt
+        captured_at: row.capturedAt,
+        protocol: row.protocol,
+        obd_protocol: row.protocol
       }));
     return {
       schemaVersion: "session_capture_integrity_summary_v1",
