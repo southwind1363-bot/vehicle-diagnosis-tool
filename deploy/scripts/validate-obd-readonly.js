@@ -553,6 +553,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);') && functionBody.includes('monitor_value_summary: monitorValueSummary'), "normalizeBridgeLivePidSnapshot should preserve explicit summaries and expose snake_case alias");
     check(functionBody.includes('const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);') && functionBody.includes('...analyzeMonitorValues(monitorValues)') && functionBody.includes('monitor_insights: monitorInsights'), "normalizeBridgeLivePidSnapshot should merge explicit and derived insights with snake_case alias");
     check(functionBody.includes('const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";') && functionBody.includes('observation_condition: observationCondition') && functionBody.includes('captured_at: capturedAt') && functionBody.includes('monitor_values: monitorValues') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeLivePidSnapshot should retain safe observation conditions with capture, values, and retention aliases");
+    check(functionBody.includes('data.timestamp') && functionBody.includes('response.timestamp') && functionBody.includes('const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);') && functionBody.includes('protocol,'), "normalizeBridgeLivePidSnapshot should retain outer bridge capture and protocol metadata");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeLivePidSnapshot should not retain raw bridge text");
     check(functionBody.includes('const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);') && functionBody.includes('const resolvedBridgeSafety = malformedLivePidAlias') && functionBody.includes('const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed') && functionBody.includes('? getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit'), "normalizeBridgeLivePidSnapshot should prioritize bridge failure states over reported status");
   }
@@ -7616,6 +7617,20 @@ const bridgePidAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
 check(bridgePidAliasSnapshot.supportedPids.join(",") === "0C,05" && bridgePidAliasSnapshot.protocol === "ISO15765-4" && bridgePidAliasSnapshot.capturedAt === "2026-06-28T00:01:01Z", "Bridge live PID aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues[0]?.id === "engine_speed" && bridgePidAliasSnapshot.monitorValues[1]?.valueType === "number", "Bridge live PID row aliases were not normalized");
 check(bridgePidAliasSnapshot.monitorValues.length === 2, "Bridge live PID monitor_values alias was not normalized");
+const bridgeOuterMetadataLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  timestamp: "2026-08-10T00:01:01Z",
+  communication_protocol: "CAN_11BIT_500K",
+  data: {
+    monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }]
+  }
+});
+const bridgeOuterMetadataLivePidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ live_pid_snapshot: bridgeOuterMetadataLivePidSnapshot }))
+));
+check(bridgeOuterMetadataLivePidSnapshot.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.capturedAt === "2026-08-10T00:01:01Z" && bridgeOuterMetadataLivePidRoundTrip?.livePidSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataLivePidRoundTrip?.vehicleCommandEnabled === false, "Bridge outer live PID capture and protocol metadata were not retained through read-only export");
 const bridgePidLiveDataAliasSnapshot = obd.normalizeBridgeLivePidSnapshot({
   ok: true,
   blocked: false,
@@ -13742,6 +13757,28 @@ const mixedProtocolTimeline = obd.normalizeLivePidTimeline({
 });
 const mixedProtocolSummary = obd.buildLivePidTimelineSummary(mixedProtocolTimeline);
 check(mixedProtocolTimeline.samples[0]?.protocol === "CAN_11BIT_500K" && mixedProtocolTimeline.samples[1]?.protocol === "ISO15765-4" && mixedProtocolSummary.comparisonAvailable === false && mixedProtocolSummary.comparisonBlockedByProtocol === true && mixedProtocolSummary.changedValueCount === 0 && mixedProtocolSummary.vehicle_command_enabled === false, "Mixed-protocol live PID samples were incorrectly compared");
+const mixedBridgeOuterProtocolTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    {
+      observation_condition: "warm",
+      live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({
+        timestamp: "2026-08-10T00:02:00Z",
+        communication_protocol: "CAN_11BIT_500K",
+        data: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] }
+      })
+    },
+    {
+      observation_condition: "warm",
+      live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({
+        captured_timestamp: "2026-08-10T00:02:05Z",
+        communication_protocol: "ISO15765-4",
+        data: { monitor_values: [{ pid: "0C", value: 900, unit: "rpm" }] }
+      })
+    }
+  ]
+});
+const mixedBridgeOuterProtocolSummary = obd.buildLivePidTimelineSummary(mixedBridgeOuterProtocolTimeline);
+check(mixedBridgeOuterProtocolTimeline.samples[0]?.capturedAt === "2026-08-10T00:02:00Z" && mixedBridgeOuterProtocolTimeline.samples[1]?.capturedAt === "2026-08-10T00:02:05Z" && mixedBridgeOuterProtocolSummary.comparisonAvailable === false && mixedBridgeOuterProtocolSummary.comparisonBlockedByProtocol === true && mixedBridgeOuterProtocolSummary.changedValueCount === 0 && mixedBridgeOuterProtocolSummary.vehicleCommandEnabled === false, "Bridge outer protocol metadata did not block an unsafe live PID comparison");
 const engineSpeedMonitor = decodedLivePids.monitorValues.find((item) => item.id === "engine_speed");
 const mixedEcuTimeline = obd.normalizeLivePidTimeline({
   samples: [

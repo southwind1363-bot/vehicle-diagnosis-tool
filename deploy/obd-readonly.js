@@ -3827,7 +3827,18 @@
         ? String(explicitReadoutStatus).trim().toLowerCase()
         : resolvedBridgeSafety.ok ? "reported" : "unknown";
     const supportedPids = collectBridgeSupportedPids(data);
-    const capturedAt = data.captured_at || data.capturedAt || null;
+    const capturedAt = data.captured_at
+      || data.capturedAt
+      || data.timestamp
+      || data.capturedTimestamp
+      || data.captured_timestamp
+      || response.captured_at
+      || response.capturedAt
+      || response.timestamp
+      || response.capturedTimestamp
+      || response.captured_timestamp
+      || null;
+    const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";
     const observationCondition = normalizeLivePidObservationCondition(observationConditionInput);
     const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
@@ -3846,7 +3857,7 @@
       would_transmit: resolvedBridgeSafety.wouldTransmit,
       errorCodes,
       error_codes: [...errorCodes],
-      protocol: readBridgeProtocol(data),
+      protocol,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
