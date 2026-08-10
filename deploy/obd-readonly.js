@@ -8587,6 +8587,12 @@
         protocol: row.protocol,
         obd_protocol: row.protocol
       }));
+    const captureProtocols = [...new Set(captureRows.map((row) => row.protocol).filter(Boolean))];
+    const captureProtocolConsistency = captureProtocols.length > 1
+      ? "mixed"
+      : captureProtocols.length === 1
+        ? "single"
+        : "unknown";
     return {
       schemaVersion: "session_capture_integrity_summary_v1",
       schema_version: "session_capture_integrity_summary_v1",
@@ -8609,6 +8615,14 @@
       readout_capture_timeline: readoutCaptureTimeline.map((row) => ({ ...row })),
       readoutCaptureCount: readoutCaptureTimeline.length,
       readout_capture_count: readoutCaptureTimeline.length,
+      captureProtocols,
+      capture_protocols: [...captureProtocols],
+      captureProtocolCount: captureProtocols.length,
+      capture_protocol_count: captureProtocols.length,
+      multipleCaptureProtocols: captureProtocols.length > 1,
+      multiple_capture_protocols: captureProtocols.length > 1,
+      captureProtocolConsistency,
+      capture_protocol_consistency: captureProtocolConsistency,
       readOnly: true,
       read_only: true,
       wouldTransmit: false,

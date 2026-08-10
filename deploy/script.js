@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.42";
+const APP_VERSION = "3.8.43";
 const APP_LAST_UPDATED = "2026-08-10";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6369,6 +6369,19 @@ function formatSessionCaptureIntegritySummary(summary = null, fallback = NO_DATA
   return fallback;
 }
 
+function formatSessionCaptureProtocolSummary(summary = null, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const protocols = Array.isArray(summary.captureProtocols)
+    ? summary.captureProtocols
+    : Array.isArray(summary.capture_protocols)
+      ? summary.capture_protocols
+      : [];
+  const label = protocols.filter(Boolean).join(" / ");
+  if (!label) return fallback;
+  const consistency = summary.captureProtocolConsistency || summary.capture_protocol_consistency || null;
+  return consistency === "mixed" ? `混在: ${label}` : label;
+}
+
 function formatCoreSessionStatusSummary(coreSessionStatus, fallback = NO_DATA) {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
   const completionPercentValue = readCoreSessionAliasValue(coreSessionStatus, "completionPercent", "completion_percent");
@@ -8277,6 +8290,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const endedAtLabel = endedAtValue ? formatDateTime(endedAtValue) : NO_DATA;
   const capturedAtLabel = capturedAtValue ? formatDateTime(capturedAtValue) : NO_DATA;
   const captureIntegrityLabel = formatSessionCaptureIntegritySummary(sessionCaptureIntegritySummary, NO_DATA);
+  const captureProtocolLabel = formatSessionCaptureProtocolSummary(sessionCaptureIntegritySummary, NO_DATA);
   const hasRecoveredBridgeSession = Boolean(
     sessionConnectionStatus?.displayStatus
     || (Array.isArray(sessionVciDevices) && sessionVciDevices.length > 0)
@@ -8359,6 +8373,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["終了", endedAtLabel],
     ["取得時刻", capturedAtLabel],
     ["読取時刻範囲", captureIntegrityLabel],
+    ["読取通信方式", captureProtocolLabel],
     ["ブリッジ", obdDevSession.bridgeEndpoint || hasRecoveredBridgeSession ? "確認済み" : obdDevSession.previewMode ? "プレビュー" : "未確認"],
     ["VCI", bridgeDeviceCount],
     ...(j2534RuntimeCompatibilityLabel ? [["J2534 runtime", j2534RuntimeCompatibilityLabel]] : []),
