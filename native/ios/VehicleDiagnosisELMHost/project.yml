@@ -41,3 +41,12 @@ targets:
 packages:
   ELM327BLEConnector:
     path: ../ELM327BLEConnector
+schemes:
+  VehicleDiagnosisELMHost:
+    build:
+      targets:
+        VehicleDiagnosisELMHost: all
+    test:
+      targets:
+        - VehicleDiagnosisELMHostTests
+        - ELM327BLEConnectorTests
