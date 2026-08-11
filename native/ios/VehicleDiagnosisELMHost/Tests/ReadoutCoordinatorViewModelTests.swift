@@ -177,6 +177,44 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testInvalidCompletionManifestCannotBeExported() async throws {
+        let coordinator = NativeConnectorReadoutCoordinator()
+        let viewModel = ReadoutCoordinatorViewModel(coordinator: coordinator)
+        let envelope = try readoutEnvelope(readoutID: "live_pid_snapshot", scopeID: "7E8")
+        let manifest = try decode(NativeConnectorCompletionManifest.self, json: """
+        {
+          "schema_version": "native_connector_completion_manifest_v1",
+          "record_type": "completion_manifest",
+          "platform": "ios",
+          "interface_id": "user-vci-elm327",
+          "scan_id": "\(envelope.scanID.uuidString)",
+          "vehicle_context_id": "\(envelope.vehicleContextID.uuidString)",
+          "captured_at": "2026-08-11T00:00:01Z",
+          "scan_state": "completed",
+          "expected_intents": ["read_live_pid_snapshot"],
+          "expected_readouts": ["live_pid_snapshot"],
+          "expected_readout_scopes": [{ "readout_id": "live_pid_snapshot", "scope_id": "7E9" }],
+          "connection_segments": [{ "connection_id": "\(envelope.connectionID.uuidString)", "connection_sequence": 0, "first_sequence": 1, "last_sequence": 1, "envelope_count": 1 }],
+          "interruption": null,
+          "read_only": true,
+          "vehicle_command_enabled": false,
+          "execution_enabled": false,
+          "would_transmit": false,
+          "retained_raw_payload": false
+        }
+        """)
+
+        coordinator.connector(coordinator.connector, didEmit: envelope)
+        coordinator.connector(coordinator.connector, didComplete: manifest)
+        await Task.yield()
+
+        XCTAssertEqual(viewModel.archiveState, "Incomplete")
+        XCTAssertFalse(viewModel.canExportArchive)
+        XCTAssertNil(viewModel.exportURL)
+        XCTAssertNotNil(viewModel.errorMessage)
+    }
+
+    @MainActor
     func testArchiveStateDistinguishesCompletedInterruptedAndMissingArchives() {
         XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .completed), "Complete")
         XCTAssertEqual(ReadoutCoordinatorViewModel.archiveState(for: .completed, hasReadoutFailures: true), "Partial")
