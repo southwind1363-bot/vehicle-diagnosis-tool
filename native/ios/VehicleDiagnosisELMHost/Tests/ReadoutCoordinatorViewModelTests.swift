@@ -194,6 +194,44 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testReadoutCompletionRejectsErrorBlockedAndTransmittingEnvelopes() {
+        func envelope(readoutID: String, ok: Bool, blocked: Bool, wouldTransmit: Bool, errors: [String]) -> NativeConnectorEnvelope {
+            NativeConnectorEnvelope(
+                schemaVersion: "native_connector_contract_v1",
+                interfaceID: "user-vci-elm327",
+                platform: "ios",
+                intent: "read_live_pid_snapshot",
+                capturedAt: "2026-08-11T00:00:00Z",
+                scanID: context.scanID,
+                connectionID: context.connectionID,
+                vehicleContextID: context.vehicleContextID,
+                sequence: 1,
+                readoutID: readoutID,
+                readoutScopeID: "7E8",
+                readoutAttempt: 0,
+                ok: ok,
+                blocked: blocked,
+                wouldTransmit: wouldTransmit,
+                errors: errors,
+                data: ["vehicle_command_enabled": .bool(false)]
+            )
+        }
+        let completion = ReadoutCoordinatorViewModel.readoutCompletion(
+            expectedReadoutIDs: ["live_pid_snapshot", "readiness_snapshot", "stored_dtc_snapshot", "freeze_frame_snapshot"],
+            envelopes: [
+                envelope(readoutID: "live_pid_snapshot", ok: true, blocked: false, wouldTransmit: false, errors: []),
+                envelope(readoutID: "readiness_snapshot", ok: true, blocked: false, wouldTransmit: false, errors: ["transport_failure"]),
+                envelope(readoutID: "stored_dtc_snapshot", ok: true, blocked: true, wouldTransmit: false, errors: []),
+                envelope(readoutID: "freeze_frame_snapshot", ok: true, blocked: false, wouldTransmit: true, errors: [])
+            ]
+        )
+
+        XCTAssertEqual(completion.expectedCount, 4)
+        XCTAssertEqual(completion.capturedCount, 1)
+        XCTAssertEqual(completion.missingIDs, ["freeze_frame_snapshot", "readiness_snapshot", "stored_dtc_snapshot"])
+    }
+
+    @MainActor
     func testReadoutScopeSummaryKeepsObservedECUScopesVisibleWithoutGuessingMissingECUs() {
         let summary = ReadoutCoordinatorViewModel.readoutScopeSummary([
             NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E9"),
