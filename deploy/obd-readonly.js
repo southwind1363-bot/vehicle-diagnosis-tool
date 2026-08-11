@@ -3104,10 +3104,14 @@
     };
   }
 
+  function getBridgeResponseDataEnvelope(response = {}) {
+    if (!response || typeof response !== "object" || Array.isArray(response)) return null;
+    return [response.data, response.payload, response.result]
+      .find((candidate) => candidate && typeof candidate === "object" && !Array.isArray(candidate)) || null;
+  }
+
   function normalizeBridgeDtcSnapshot(response = {}) {
-    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
-      ? response.data
-      : null;
+    const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedDtcPayload = Boolean(nestedData && [
       "dtcs", "codes", "dtc_codes", "dtcCodes",
       "stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes",
@@ -3761,9 +3765,7 @@
   }
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
-    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
-      ? response.data
-      : null;
+    const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedLivePidPayload = Boolean(nestedData && [
       "values", "monitor_values", "monitorValues", "pid_values", "pidValues", "live_pid_values", "livePidValues", "live_data", "liveData", "items",
       "monitorValueSummary", "monitor_value_summary", "monitorInsights", "monitor_insights", "insights"
@@ -4185,9 +4187,7 @@
   }
 
   function normalizeBridgeSupportedPidSnapshot(response = {}) {
-    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
-      ? response.data
-      : null;
+    const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedSupportedPidPayload = Boolean(nestedData && [
       "supported_pids", "supportedPids", "pids", "pid_list", "pidList", "supported_pid_rows", "supportedPidRows",
       "supported_pid_list", "supportedPidList", "supportedPidsText", "supported_pids_text",
@@ -4297,9 +4297,7 @@
   }
 
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
-    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
-      ? response.data
-      : null;
+    const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedFreezeFramePayload = Boolean(nestedData && [
       "values", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "monitor_values", "monitorValues", "pid_values", "pidValues",
       "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
@@ -4434,9 +4432,7 @@
   }
 
   function normalizeBridgeReadinessSnapshot(response = {}) {
-    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
-      ? response.data
-      : null;
+    const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedReadinessPayload = Boolean(nestedData && [
       "mil_on", "milStatus", "mil",
       "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d",
@@ -4743,9 +4739,7 @@
   }
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
-    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
-      ? response.data
-      : null;
+    const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedEcuInfoPayload = Boolean(nestedData && ([
       "values", "items", "ecu_info", "ecu_info_items", "ecu_info_rows", "ecuInfo", "ecuInfoItems", "ecuInfoRows",
       "mode09_items", "mode09Items", "mode_09_items", "mode09_values", "mode09Values", "mode_09_values",
@@ -4820,9 +4814,7 @@
   }
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
-    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
-      ? response.data
-      : null;
+    const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedOnboardMonitorPayload = Boolean(nestedData && [
       "tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests",
       "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"
