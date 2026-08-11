@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.66";
+const APP_VERSION = "3.8.67";
 const APP_LAST_UPDATED = "2026-08-11";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2957,9 +2957,15 @@ function scoreModernGenericCode(item, code) {
   return { score: 0, reasons: [] };
 }
 
+function hasDirectModernGenericSourceUrl(item) {
+  const sourceUrls = Array.isArray(item?.source_url) ? item.source_url : [item?.source_url];
+  return item?.confidence !== "sample" && sourceUrls.some((url) => typeof url === "string" && url.trim().startsWith("https://"));
+}
+
 function getModernGenericMatches(code) {
   return (dataStore.genericObdCodesModern || [])
     .filter((item) => item?.imported_definition_only !== true)
+    .filter(hasDirectModernGenericSourceUrl)
     .map((item) => ({ ...item, _matchInfo: scoreModernGenericCode(item, code) }))
     .filter((item) => item._matchInfo.score > 0)
     .sort((a, b) => b._matchInfo.score - a._matchInfo.score);
