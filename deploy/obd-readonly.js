@@ -676,7 +676,7 @@
     maxSequence: 1000000,
     maxReadoutAttempt: 1000000,
     maxConnectionSequence: 63,
-    allowedInterfaceIds: Object.freeze(["user-vci-thinkcar-bluetooth", "user-vci-elm327"]),
+    allowedInterfaceIds: Object.freeze(["user-vci-elm327"]),
     allowedReadIntents: Object.freeze([...localBridgeContract.allowedReadIntents]),
     blockedWriteIntents: Object.freeze([...localBridgeContract.blockedWriteIntents]),
     requiredEnvelopeFields: Object.freeze(["schema_version", "interface_id", "platform", "intent", "captured_at", "data"]),
