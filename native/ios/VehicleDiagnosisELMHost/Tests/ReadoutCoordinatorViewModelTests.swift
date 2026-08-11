@@ -244,6 +244,41 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testObservedReadoutScopesExcludeErrorsBlockedAndTransmittingEnvelopes() {
+        func envelope(readoutID: String, scopeID: String, errors: [String] = [], blocked: Bool = false, wouldTransmit: Bool = false) -> NativeConnectorEnvelope {
+            NativeConnectorEnvelope(
+                schemaVersion: "native_connector_contract_v1",
+                interfaceID: "user-vci-elm327",
+                platform: "ios",
+                intent: "read_live_pid_snapshot",
+                capturedAt: "2026-08-11T00:00:00Z",
+                scanID: UUID(),
+                connectionID: UUID(),
+                vehicleContextID: UUID(),
+                sequence: 1,
+                readoutID: readoutID,
+                readoutScopeID: scopeID,
+                readoutAttempt: 0,
+                ok: true,
+                blocked: blocked,
+                wouldTransmit: wouldTransmit,
+                errors: errors,
+                data: ["vehicle_command_enabled": .bool(false)]
+            )
+        }
+        let scopes = ReadoutCoordinatorViewModel.observedReadoutScopes([
+            envelope(readoutID: "live_pid_snapshot", scopeID: "7E8"),
+            envelope(readoutID: "readiness_snapshot", scopeID: "7E9", errors: ["transport_failure"]),
+            envelope(readoutID: "stored_dtc_snapshot", scopeID: "7EA", blocked: true),
+            envelope(readoutID: "freeze_frame_snapshot", scopeID: "7EB", wouldTransmit: true),
+            envelope(readoutID: "live_pid_snapshot", scopeID: "7E8")
+        ])
+
+        XCTAssertEqual(scopes, [NativeConnectorReadoutScope(readoutID: "live_pid_snapshot", scopeID: "7E8")])
+        XCTAssertEqual(ReadoutCoordinatorViewModel.readoutScopeSummary(scopes), "1 ECU / 7E8")
+    }
+
+    @MainActor
     func testCaptureRangeSummaryKeepsOnlyValidReadoutTimesAndPreservesTheirRange() {
         XCTAssertEqual(
             ReadoutCoordinatorViewModel.captureRangeSummary(capturedAtValues: [

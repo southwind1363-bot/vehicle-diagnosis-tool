@@ -106,7 +106,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
 
     var reportedReadoutScopeLabel: String {
         guard let archive = coordinator.completedArchive else { return "完了待ち" }
-        return Self.readoutScopeSummary(archive.completionManifest.expectedReadoutScopes)
+        return Self.readoutScopeSummary(Self.observedReadoutScopes(archive.envelopes))
     }
 
     var captureRangeLabel: String {
@@ -131,6 +131,20 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         })
         let missingIDs = expectedIDs.subtracting(capturedIDs).sorted()
         return (expectedIDs.count, capturedIDs.count, missingIDs)
+    }
+
+    static func observedReadoutScopes(_ envelopes: [NativeConnectorEnvelope]) -> [NativeConnectorReadoutScope] {
+        let scopes = Set(envelopes.compactMap { envelope -> NativeConnectorReadoutScope? in
+            guard envelope.ok, envelope.errors.isEmpty, !envelope.blocked, !envelope.wouldTransmit,
+                  let readoutID = envelope.readoutID,
+                  let scopeID = envelope.readoutScopeID,
+                  !scopeID.isEmpty
+            else { return nil }
+            return NativeConnectorReadoutScope(readoutID: readoutID, scopeID: scopeID)
+        })
+        return scopes.sorted { lhs, rhs in
+            lhs.scopeID == rhs.scopeID ? lhs.readoutID < rhs.readoutID : lhs.scopeID < rhs.scopeID
+        }
     }
 
     static func readoutScopeSummary(_ scopes: [NativeConnectorReadoutScope]) -> String {
