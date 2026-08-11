@@ -47,8 +47,15 @@ const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventLi
 const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
 const offlineAssetPaths = Array.isArray(offlineAssets.assets) ? offlineAssets.assets : [];
 const offlineAssetPathSet = new Set(offlineAssetPaths);
+const diagnosticDataPaths = fs.readdirSync(new URL("../data/", import.meta.url), { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
+  .map((entry) => `data/${entry.name}`)
+  .sort();
+const offlineDiagnosticDataPaths = offlineAssetPaths.filter((path) => path.startsWith("data/") && path.endsWith(".json")).sort();
 const loadDataRequestPaths = [...loadDataSource.matchAll(/fetchJson\("([^"]+)"\)/g)].map((match) => match[1]);
 const missingOfflineLoadDataPaths = loadDataRequestPaths.filter((path) => !offlineAssetPathSet.has(path));
+const missingOfflineDiagnosticDataPaths = diagnosticDataPaths.filter((path) => !offlineAssetPathSet.has(path));
+const extraOfflineDiagnosticDataPaths = offlineDiagnosticDataPaths.filter((path) => !diagnosticDataPaths.includes(path));
 const duplicateOfflineAssetPaths = offlineAssetPaths.filter((path, index) => offlineAssetPaths.indexOf(path) !== index);
 const missingOfflineAssetFiles = offlineAssetPaths.filter((path) => path !== "./" && !fs.existsSync(new URL(`../${path}`, import.meta.url)));
 const syncVehicleInputSource = appSource.slice(appSource.indexOf("function syncVehicleInput()"), appSource.indexOf("function selectedVehicleYear()"));
@@ -3751,6 +3758,7 @@ check(appSource.includes('window.ObdReadOnly.getElmTransportProfile({ platform: 
 check(/^\d+\.\d+\.\d+$/.test(cacheVersion) && appVersion === cacheVersion && offlineAssets.version === appVersion, "OBD offline cache version should match the active app version");
 check(offlineAssets.asset_count === offlineAssetPaths.length && duplicateOfflineAssetPaths.length === 0 && missingOfflineAssetFiles.length === 0, "Offline manifest asset count, uniqueness, or file availability is invalid");
 check(missingOfflineLoadDataPaths.length === 0, `Offline manifest is missing loadData JSON assets: ${missingOfflineLoadDataPaths.join(", ")}`);
+check(missingOfflineDiagnosticDataPaths.length === 0 && extraOfflineDiagnosticDataPaths.length === 0, `Offline manifest diagnostic-data coverage is invalid: missing ${missingOfflineDiagnosticDataPaths.join(", ")}; extra ${extraOfflineDiagnosticDataPaths.join(", ")}`);
 check(indexSource.includes('id="offlineCacheStatus"') && appSource.includes('const offlineCacheStatus = document.querySelector("#offlineCacheStatus");') && appSource.includes('function setOfflineCacheStatus(message, isError = false)') && appSource.includes('async function refreshOfflineCacheStatus(urls = [])') && appSource.includes('caches.match(new Request(url))') && appSource.includes('navigator.serviceWorker.ready') && appSource.includes('端末内オフライン診断データ'), "Offline cache readiness should be visible without changing diagnostic data or vehicle communication");
 check(serviceWorkerSource.includes('const isDiagnosticDataRequest = url.pathname.includes("/data/") && url.pathname.endsWith(".json");') && serviceWorkerSource.includes('if (isDiagnosticDataRequest)') && serviceWorkerSource.includes('const response = await fetch(request);') && serviceWorkerSource.includes('cache.put(request, response.clone());\n            return response;') && serviceWorkerSource.includes('const cached = await caches.match(request);\n          if (cached) return cached;\n          return response;'), "Diagnostic roadmap JSON should refresh online while falling back to cached data for failed HTTP responses or offline use");
 check(appSource.includes('available: item.hardwareCompatibilityConfirmed === true') && appSource.includes('実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。') && appSource.includes('`${item.label} 実機適合`'), "Local bridge progress must count only hardware-compatibility-confirmed VCI candidates as verified");
