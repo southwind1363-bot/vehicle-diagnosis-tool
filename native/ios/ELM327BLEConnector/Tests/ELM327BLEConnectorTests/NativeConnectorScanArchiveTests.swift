@@ -14,7 +14,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: sequence, intent: "read_stored_dtc", scopeID: scopeID, dtcs: [OBD2DTC(code: code, status: "stored")])
     }
 
-    private func manifest(state: NativeConnectorScanState = .completed, count: Int = 2, first: Int? = 1, last: Int? = 2, interruption: NativeConnectorInterruption? = nil, scopes: [NativeConnectorReadoutScope] = [], expectedIntents: [String] = ["read_stored_dtc"], expectedReadouts: [String] = ["stored_dtc_snapshot"]) -> NativeConnectorCompletionManifest {
+    private func manifest(state: NativeConnectorScanState = .completed, count: Int = 2, first: Int? = 1, last: Int? = 2, interruption: NativeConnectorInterruption? = nil, scopes: [NativeConnectorReadoutScope] = [], readoutProfile: NativeConnectorReadoutProfile? = nil, expectedIntents: [String] = ["read_stored_dtc"], expectedReadouts: [String] = ["stored_dtc_snapshot"]) -> NativeConnectorCompletionManifest {
         NativeConnectorCompletionManifest(
             schemaVersion: "native_connector_completion_manifest_v1",
             recordType: "completion_manifest",
@@ -24,6 +24,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             vehicleContextID: context.vehicleContextID,
             capturedAt: "2026-07-21T00:00:00Z",
             scanState: state,
+            readoutProfile: readoutProfile,
             expectedIntents: expectedIntents,
             expectedReadouts: expectedReadouts,
             expectedReadoutScopes: scopes,
@@ -50,6 +51,15 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         XCTAssertEqual(manifestObject?["record_type"] as? String, "completion_manifest")
         XCTAssertNil(object?["raw_frames"])
         XCTAssertThrowsError(try builder.append(envelope(sequence: 3)))
+    }
+
+    func testReadoutProfileRejectsCompletedScopeMismatchButAllowsInterruptedCapture() throws {
+        let initialReadouts = ["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "freeze_frame_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix", "ecu_info_snapshot", "readiness_snapshot"]
+        let initialIntents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_freeze_frame", "read_onboard_monitor", "read_supported_pids", "read_ecu_info", "read_live_pid_snapshot"]
+        XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().complete(with: manifest(readoutProfile: .quickCondition, expectedIntents: initialIntents, expectedReadouts: initialReadouts)))
+
+        let interruption = NativeConnectorInterruption(code: "transport:disconnected", connectionID: context.connectionID, sequence: 0)
+        XCTAssertNoThrow(try NativeConnectorScanArchiveBuilder().complete(with: manifest(state: .interrupted, count: 0, first: nil, last: nil, interruption: interruption, readoutProfile: .quickCondition, expectedIntents: ["read_stored_dtc"], expectedReadouts: ["stored_dtc_snapshot"])))
     }
 
     func testRejectsMixedBoundaryAndUnsafeData() throws {

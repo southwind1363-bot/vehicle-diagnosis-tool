@@ -145,7 +145,8 @@ public final class NativeConnectorScanArchiveBuilder {
               manifest.expectedReadoutScopes.allSatisfy({
                   manifest.expectedReadouts.contains($0.readoutID)
                       && Self.isValidScope($0.scopeID)
-              })
+              }),
+              Self.isReadoutProfileConsistent(manifest)
         else { throw NativeConnectorScanArchiveError.invalidManifest }
         guard (manifest.scanState == .completed && manifest.interruption == nil)
               || (manifest.scanState == .interrupted && manifest.interruption != nil)
@@ -207,6 +208,33 @@ public final class NativeConnectorScanArchiveBuilder {
             if ["vehicle_command_enabled", "vehiclecommandenabled", "execution_enabled", "executionenabled", "would_transmit", "wouldtransmit"].contains(normalizedKey) && isEnabled(value) { return false }
             if ["read_only", "readonly"].contains(normalizedKey) && !isEnabled(value) { return false }
             return isSafe(value: value)
+        }
+    }
+
+    private static func isReadoutProfileConsistent(_ manifest: NativeConnectorCompletionManifest) -> Bool {
+        guard manifest.scanState == .completed, let profile = manifest.readoutProfile else { return true }
+        let expectedReadouts = Set(manifest.expectedReadouts)
+        switch profile {
+        case .initialDiagnostic:
+            return Set([
+                "stored_dtc_snapshot",
+                "pending_dtc_snapshot",
+                "permanent_dtc_snapshot",
+                "freeze_frame_snapshot",
+                "onboard_monitor_snapshot",
+                "supported_pid_matrix",
+                "ecu_info_snapshot",
+                "readiness_snapshot"
+            ]).isSubset(of: expectedReadouts)
+        case .quickCondition:
+            return Set([
+                "stored_dtc_snapshot",
+                "pending_dtc_snapshot",
+                "permanent_dtc_snapshot",
+                "supported_pid_matrix",
+                "readiness_snapshot"
+            ]).isSubset(of: expectedReadouts)
+                && Set(["freeze_frame_snapshot", "onboard_monitor_snapshot", "ecu_info_snapshot"]).isDisjoint(with: expectedReadouts)
         }
     }
 
