@@ -194,35 +194,14 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testReadoutCompletionRejectsErrorBlockedAndTransmittingEnvelopes() {
-        func envelope(readoutID: String, ok: Bool, blocked: Bool, wouldTransmit: Bool, errors: [String]) -> NativeConnectorEnvelope {
-            NativeConnectorEnvelope(
-                schemaVersion: "native_connector_contract_v1",
-                interfaceID: "user-vci-elm327",
-                platform: "ios",
-                intent: "read_live_pid_snapshot",
-                capturedAt: "2026-08-11T00:00:00Z",
-                scanID: context.scanID,
-                connectionID: context.connectionID,
-                vehicleContextID: context.vehicleContextID,
-                sequence: 1,
-                readoutID: readoutID,
-                readoutScopeID: "7E8",
-                readoutAttempt: 0,
-                ok: ok,
-                blocked: blocked,
-                wouldTransmit: wouldTransmit,
-                errors: errors,
-                data: ["vehicle_command_enabled": .bool(false)]
-            )
-        }
+    func testReadoutCompletionRejectsErrorBlockedAndTransmittingEnvelopes() throws {
         let completion = ReadoutCoordinatorViewModel.readoutCompletion(
             expectedReadoutIDs: ["live_pid_snapshot", "readiness_snapshot", "stored_dtc_snapshot", "freeze_frame_snapshot"],
             envelopes: [
-                envelope(readoutID: "live_pid_snapshot", ok: true, blocked: false, wouldTransmit: false, errors: []),
-                envelope(readoutID: "readiness_snapshot", ok: true, blocked: false, wouldTransmit: false, errors: ["transport_failure"]),
-                envelope(readoutID: "stored_dtc_snapshot", ok: true, blocked: true, wouldTransmit: false, errors: []),
-                envelope(readoutID: "freeze_frame_snapshot", ok: true, blocked: false, wouldTransmit: true, errors: [])
+                try readoutEnvelope(readoutID: "live_pid_snapshot", scopeID: "7E8", ok: true, blocked: false, wouldTransmit: false, errors: []),
+                try readoutEnvelope(readoutID: "readiness_snapshot", scopeID: "7E8", ok: true, blocked: false, wouldTransmit: false, errors: ["transport_failure"]),
+                try readoutEnvelope(readoutID: "stored_dtc_snapshot", scopeID: "7E8", ok: true, blocked: true, wouldTransmit: false, errors: []),
+                try readoutEnvelope(readoutID: "freeze_frame_snapshot", scopeID: "7E8", ok: true, blocked: false, wouldTransmit: true, errors: [])
             ]
         )
 
@@ -244,34 +223,13 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testObservedReadoutScopesExcludeErrorsBlockedAndTransmittingEnvelopes() {
-        func envelope(readoutID: String, scopeID: String, errors: [String] = [], blocked: Bool = false, wouldTransmit: Bool = false) -> NativeConnectorEnvelope {
-            NativeConnectorEnvelope(
-                schemaVersion: "native_connector_contract_v1",
-                interfaceID: "user-vci-elm327",
-                platform: "ios",
-                intent: "read_live_pid_snapshot",
-                capturedAt: "2026-08-11T00:00:00Z",
-                scanID: UUID(),
-                connectionID: UUID(),
-                vehicleContextID: UUID(),
-                sequence: 1,
-                readoutID: readoutID,
-                readoutScopeID: scopeID,
-                readoutAttempt: 0,
-                ok: true,
-                blocked: blocked,
-                wouldTransmit: wouldTransmit,
-                errors: errors,
-                data: ["vehicle_command_enabled": .bool(false)]
-            )
-        }
+    func testObservedReadoutScopesExcludeErrorsBlockedAndTransmittingEnvelopes() throws {
         let scopes = ReadoutCoordinatorViewModel.observedReadoutScopes([
-            envelope(readoutID: "live_pid_snapshot", scopeID: "7E8"),
-            envelope(readoutID: "readiness_snapshot", scopeID: "7E9", errors: ["transport_failure"]),
-            envelope(readoutID: "stored_dtc_snapshot", scopeID: "7EA", blocked: true),
-            envelope(readoutID: "freeze_frame_snapshot", scopeID: "7EB", wouldTransmit: true),
-            envelope(readoutID: "live_pid_snapshot", scopeID: "7E8")
+            try readoutEnvelope(readoutID: "live_pid_snapshot", scopeID: "7E8"),
+            try readoutEnvelope(readoutID: "readiness_snapshot", scopeID: "7E9", errors: ["transport_failure"]),
+            try readoutEnvelope(readoutID: "stored_dtc_snapshot", scopeID: "7EA", blocked: true),
+            try readoutEnvelope(readoutID: "freeze_frame_snapshot", scopeID: "7EB", wouldTransmit: true),
+            try readoutEnvelope(readoutID: "live_pid_snapshot", scopeID: "7E8")
         ])
 
         XCTAssertEqual(scopes, [NativeConnectorReadoutScope(readoutID: "live_pid_snapshot", scopeID: "7E8")])
@@ -307,6 +265,39 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         let expected = "読取結果が安全な保存上限の\(NativeConnectorScanArchiveBuilder.maximumEnvelopeCount)件を超えたため、中断しました。"
 
         XCTAssertEqual(viewModel.archiveErrorMessage(.tooManyEnvelopes), expected)
+    }
+
+    private func readoutEnvelope(
+        readoutID: String,
+        scopeID: String,
+        ok: Bool = true,
+        blocked: Bool = false,
+        wouldTransmit: Bool = false,
+        errors: [String] = []
+    ) throws -> NativeConnectorEnvelope {
+        let context = NativeConnectorSessionContext(scanID: UUID(), connectionID: UUID(), vehicleContextID: UUID())
+        let encodedErrors = String(data: try JSONEncoder().encode(errors), encoding: .utf8) ?? "[]"
+        return try decode(NativeConnectorEnvelope.self, json: """
+        {
+          "schema_version": "native_connector_contract_v1",
+          "interface_id": "user-vci-elm327",
+          "platform": "ios",
+          "intent": "read_live_pid_snapshot",
+          "captured_at": "2026-08-11T00:00:00Z",
+          "scan_id": "\(context.scanID.uuidString)",
+          "connection_id": "\(context.connectionID.uuidString)",
+          "vehicle_context_id": "\(context.vehicleContextID.uuidString)",
+          "sequence": 1,
+          "readout_id": "\(readoutID)",
+          "readout_scope_id": "\(scopeID)",
+          "readout_attempt": 0,
+          "ok": \(ok),
+          "blocked": \(blocked),
+          "would_transmit": \(wouldTransmit),
+          "errors": \(encodedErrors),
+          "data": { "vehicle_command_enabled": false }
+        }
+        """)
     }
 
     private func decode<T: Decodable>(_ type: T.Type, json: String) throws -> T {
