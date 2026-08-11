@@ -22615,6 +22615,7 @@
     else if (["3C", "3D", "3E", "3F"].includes(pid)) value = word() === null ? null : word() / 10 - 40;
     else if (pid === "43") value = word() === null ? null : word() * 100 / 255;
     else if (pid === "42" && Number.isInteger(b)) value = ((a * 256) + b) / 1000;
+    else if (pid === "59") value = word() === null ? null : word() * 10;
     else if (pid === "5C") value = a - 40;
     else if (pid === "5D") value = word() === null ? null : (word() - 26880) / 128;
     else if (pid === "5E") value = word() === null ? null : word() * 0.05;
@@ -22664,7 +22665,7 @@
     ];
     const twoBytePids = [
       "02", "03", "0C", "10", "14", "15", "16", "17", "18", "19", "1A", "1B", "1F", "21", "22", "23",
-      "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "5D", "5E", "63", "69"
+      "31", "32", "3C", "3D", "3E", "3F", "42", "43", "44", "4D", "4E", "59", "5D", "5E", "63", "69"
     ];
     const fourBytePids = ["01", "24", "25", "26", "27", "28", "29", "2A", "2B", "34", "35", "38", "39", "A6"];
     if (oneBytePids.includes(pid)) return 1;

@@ -13985,7 +13985,7 @@ check(decodedSupportedPids.supportedPidReadoutStatus === "reported" && obd.decod
 check(obd.buildSupportedPidMatrix({ obd_protocol: "ISO9141-2", supported_pids: ["0C"] }).protocol === "ISO9141-2", "Supported PID matrix did not preserve obd_protocol aliases");
 const ignoredNonBitmapPid = obd.decodeSupportedPidResponse({ raw: "41 0C 1A F8 41 05 7B" });
 check(ignoredNonBitmapPid.supportedPids.length === 0, "ライブPID応答を対応PIDビットマップとして誤読しています");
-const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 1F 01 2C 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0F 46 41 0D 28 41 0E 80 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 84 5A 41 8C 80 41 8E 7B 41 A6 00 01 E2 40" });
+const decodedLivePids = obd.decodeLivePidResponse({ raw: "41 01 82 07 22 00 41 03 01 00 41 12 02 41 13 31 41 1D 55 41 1E 01 41 1C 06 41 1F 01 2C 41 51 04 41 14 80 90 41 24 80 00 20 00 41 34 80 00 7F 00 41 0C 1A F8 41 05 7B 41 0F 46 41 0D 28 41 0E 80 41 42 34 98 41 11 80 41 21 01 F4 41 22 03 E8 41 23 00 C8 41 2F 99 41 30 05 41 31 00 64 41 32 FF 38 41 33 64 41 3C 13 88 41 43 01 FE 41 44 80 00 41 45 40 41 46 5A 41 47 99 41 48 66 41 49 80 41 4A 40 41 4B C0 41 4C 20 41 4D 00 3C 41 4E 00 78 41 52 80 41 59 00 C8 41 5C 64 41 5D 69 80 41 5E 00 C8 41 61 87 41 62 82 41 63 01 F4 41 64 7D 82 87 8C 91 41 69 80 90 41 6A 66 41 6C 99 41 84 5A 41 8C 80 41 8E 7B 41 A6 00 01 E2 40" });
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_speed")?.value === 1726, "回転数PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "coolant_temp")?.value === 83, "冷却水温PIDをデコードできません");
 check(decodedLivePids.monitorValues.find((item) => item.id === "intake_air_temp")?.value === 30, "吸気温PIDをデコードできません");
@@ -14227,6 +14227,7 @@ check(decodedLivePids.monitorValues.find((item) => item.id === "commanded_thrott
 check(decodedLivePids.monitorValues.find((item) => item.id === "time_with_mil")?.value === 60, "Time with MIL PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "time_since_clear")?.value === 120, "Time since clear PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "ethanol_percentage")?.value === 50.196, "Ethanol percentage PID was not decoded");
+check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_rail_pressure_absolute")?.value === 2000, "Absolute fuel rail pressure PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_oil_temp")?.value === 60, "Engine oil temperature PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "fuel_injection_timing")?.value === 1, "Fuel injection timing PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "engine_fuel_rate")?.value === 10, "Engine fuel rate PID was not decoded");
