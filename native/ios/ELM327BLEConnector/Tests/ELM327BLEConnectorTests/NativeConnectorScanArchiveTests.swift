@@ -152,6 +152,59 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         }
     }
 
+    func testRejectsContradictorySuccessfulEnvelopeErrorsWhileRetainingFailedReadoutEvidence() throws {
+        let base = envelope(sequence: 1)
+        let contradictory = NativeConnectorEnvelope(
+            schemaVersion: base.schemaVersion,
+            interfaceID: base.interfaceID,
+            platform: base.platform,
+            intent: base.intent,
+            capturedAt: base.capturedAt,
+            scanID: base.scanID,
+            connectionID: base.connectionID,
+            vehicleContextID: base.vehicleContextID,
+            sequence: base.sequence,
+            readoutID: base.readoutID,
+            readoutScopeID: base.readoutScopeID,
+            readoutAttempt: base.readoutAttempt,
+            ok: true,
+            blocked: base.blocked,
+            wouldTransmit: base.wouldTransmit,
+            errors: ["transport_failure"],
+            data: base.data
+        )
+        let builder = NativeConnectorScanArchiveBuilder()
+
+        XCTAssertThrowsError(try builder.append(contradictory)) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidEnvelope)
+        }
+
+        let failedReadout = NativeConnectorEnvelope(
+            schemaVersion: contradictory.schemaVersion,
+            interfaceID: contradictory.interfaceID,
+            platform: contradictory.platform,
+            intent: contradictory.intent,
+            capturedAt: contradictory.capturedAt,
+            scanID: contradictory.scanID,
+            connectionID: contradictory.connectionID,
+            vehicleContextID: contradictory.vehicleContextID,
+            sequence: contradictory.sequence,
+            readoutID: contradictory.readoutID,
+            readoutScopeID: contradictory.readoutScopeID,
+            readoutAttempt: contradictory.readoutAttempt,
+            ok: false,
+            blocked: contradictory.blocked,
+            wouldTransmit: contradictory.wouldTransmit,
+            errors: contradictory.errors,
+            data: contradictory.data
+        )
+        try builder.append(failedReadout)
+        try builder.complete(with: manifest(count: 1, first: 1, last: 1))
+
+        XCTAssertEqual(try builder.export().envelopes.first?.ok, false)
+        XCTAssertEqual(try builder.export().envelopes.first?.errors, ["transport_failure"])
+    }
+
     func testRejectsManifestWhoseIntentDoesNotMatchItsReadoutID() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         try builder.append(envelope(sequence: 1))

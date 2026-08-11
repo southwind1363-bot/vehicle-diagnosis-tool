@@ -97,6 +97,7 @@ public final class NativeConnectorScanArchiveBuilder {
               Self.allowedIntents.contains(envelope.intent),
               !envelope.blocked,
               !envelope.wouldTransmit,
+              (!envelope.ok || envelope.errors.isEmpty),
               Self.hasExplicitVehicleCommandDisabled(in: envelope.data),
               Self.isEnvelopeReadoutConsistent(intent: envelope.intent, readoutID: envelope.readoutID),
               envelope.sequence >= 0
