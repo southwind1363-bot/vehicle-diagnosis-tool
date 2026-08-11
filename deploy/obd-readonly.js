@@ -4443,13 +4443,14 @@
       "readinessStatusByteA", "readinessStatusByteB", "readinessStatusByteC", "readinessStatusByteD",
       "status_byte_a", "status_byte_b", "status_byte_c", "status_byte_d",
       "statusByteA", "statusByteB", "statusByteC", "statusByteD",
-      "values", "monitor_values", "monitorValues", "readiness_values", "readinessValues", "pid_values", "pidValues", "readiness_rows", "readinessRows",
+      "monitors", "values", "monitor_values", "monitorValues", "readiness_values", "readinessValues", "pid_values", "pidValues", "readiness_rows", "readinessRows",
       "readinessEcuSnapshots", "readiness_ecu_snapshots"
     ].some((key) => nestedData[key] !== undefined));
     // Do not combine nested and outer readiness payloads: outer fields only fill an empty nested envelope.
     const outerReadinessValueFallback = nestedData && !hasNestedReadinessPayload
       ? {
         mil_on: response.mil_on ?? response.milStatus ?? response.mil,
+        monitors: response.monitors,
         readiness_status_byte_a: response.readiness_status_byte_a ?? response.readinessStatusByteA ?? response.status_byte_a ?? response.statusByteA,
         readiness_status_byte_b: response.readiness_status_byte_b ?? response.readinessStatusByteB ?? response.status_byte_b ?? response.statusByteB,
         readiness_status_byte_c: response.readiness_status_byte_c ?? response.readinessStatusByteC ?? response.status_byte_c ?? response.statusByteC,
@@ -4476,6 +4477,7 @@
         : [];
     const malformedReadinessAlias = [
       "readinessEcuSnapshots", "readiness_ecu_snapshots",
+      "monitors",
       "values",
       "monitor_values", "monitorValues",
       "readiness_values", "readinessValues",
@@ -4485,6 +4487,7 @@
       || (response.monitorValues !== undefined && response.monitorValues !== null && !Array.isArray(response.monitorValues));
     const malformedReadinessEcuAlias = readinessEcuSnapshotRows.some((snapshot) => snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) && [
       "readinessEcuSnapshots", "readiness_ecu_snapshots",
+      "monitors",
       "values",
       "monitor_values", "monitorValues",
       "readiness_values", "readinessValues",
@@ -4548,7 +4551,7 @@
     const errorCodes = readBridgeResponseErrorCodes(response);
     const explicitReadoutStatus = String(data.readiness_readout_status || data.readinessReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
-    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || readinessEcuSnapshotRows.length > 0 || [data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || readinessEcuSnapshotRows.length > 0 || [data.monitors, data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
       || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined)));
     const resolvedBridgeSafety = malformedReadinessAlias || malformedReadinessEcuAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
@@ -4579,8 +4582,33 @@
       errorCodes,
       error_codes: [...errorCodes]
     });
-    const readinessRowsByEcu = new Map();
     const readinessRowIds = new Set(["mil_status", "monitor_status_mil", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d"]);
+    const hasDirectMonitorRows = rows.some((row) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+      const rowKey = String(row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
+      return !readinessRowIds.has(readinessRowIdAliases[rowKey] || row.id || row.name || row.label);
+    });
+    if (Array.isArray(data.monitors) || hasDirectMonitorRows) {
+      const directMonitorRows = Array.isArray(data.monitors) ? data.monitors : rows;
+      const hasDirectReadinessEvidence = directMonitorRows.length > 0 || [
+        data.mil_on, data.milStatus, data.mil,
+        data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d,
+        data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD,
+        data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d,
+        data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD
+      ].some((value) => value !== undefined);
+      return withBridgeMetadata(normalizeReadinessSnapshot({
+        ...data,
+        source: response.source || response.source_type || data.source || data.source_type || "local_bridge",
+        source_ecu: sourceEcu,
+        source_ecu_name: sourceEcuName,
+        captured_at: capturedAt,
+        protocol,
+        readiness_readout_status: bridgeReadoutStatus === "reported" && !hasDirectReadinessEvidence ? "unparsed" : bridgeReadoutStatus,
+        monitors: directMonitorRows
+      }));
+    }
+    const readinessRowsByEcu = new Map();
     rows.forEach((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return;
       const rowKey = String(
@@ -23413,6 +23441,8 @@
           normalizeTypedDtcSnapshotInput(pendingDtcSnapshotInput, "pending", "read_pending_dtc"),
           normalizeTypedDtcSnapshotInput(permanentDtcSnapshotInput, "permanent", "read_permanent_dtc")
         )
+        : (dtcSnapshotInput?.data && typeof dtcSnapshotInput.data === "object" && !Array.isArray(dtcSnapshotInput.data))
+          ? normalizeBridgeDtcSnapshot(dtcSnapshotInput)
         : normalizeDtcSnapshot(dtcSnapshotInput)), dtcSnapshotSafetyInput, ["dtcReadoutStatus", "dtc_readout_status"]);
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
@@ -23563,6 +23593,8 @@
       ? (!Number.isFinite(Number(readinessSnapshotInput.monitorCount)) || !Number.isFinite(Number(readinessSnapshotInput.incompleteCount)) || !Number.isFinite(Number(readinessSnapshotInput.completeCount)) ? normalizeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
+        : (readinessSnapshotInput?.data && typeof readinessSnapshotInput.data === "object" && !Array.isArray(readinessSnapshotInput.data))
+          ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);
     const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? (!Number.isFinite(Number(onboardMonitorSnapshotInput.testCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.failedCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.passedCount)) ? normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput) : onboardMonitorSnapshotInput)
