@@ -3202,5 +3202,27 @@
     "last_verified_date": "2026-08-11",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p0531-00-mazda-phev-refrigerant-pressure-2024-2025",
+    "code": "P0531",
+    "subcode": "00",
+    "title": "Refrigerant pressure sensor No.1 system function malfunction",
+    "system": "Powertrain / PCM and dash-electrical supply unit refrigerant-pressure context (source-specific)",
+    "applicability_note": "Mazda Bulletin Notes documents P0531:00 stored at engine startup only for 2024-2025 CX-90 PHEV vehicles with VINs lower than JM3KK******234945 and 2025 CX-70 PHEV vehicles with VINs lower than JM3KJ******127963, both produced before March 1, 2025. Confirm VIN, production date, PHEV configuration, reporting PCM, DTC status, warning state, and current Mazda service information before using this source-specific context.",
+    "vehicle_filter": {"makers": ["Mazda"], "model_year_scopes": [{"models": ["CX-90"], "year_from": 2024, "year_to": 2025}, {"models": ["CX-70"], "year_from": 2025, "year_to": 2025}], "engines": ["PHEV"], "production_period": {"to": "2025-02-28"}, "ecus": ["PCM"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting PCM details, freeze-frame, refrigerant-pressure observations, VIN, PHEV configuration, production-date evidence, and warning state before diagnosis.", "Do not clear DTCs, reprogram the PCM or dash-electrical supply unit, recover or charge refrigerant, disconnect high-voltage components, or start active tests from this tool; confirm the documented vehicle, PHEV configuration, VIN, production limit, reporting PCM, and Bulletin Notes applicability.", "Use current Mazda service information and qualified PHEV and air-conditioning diagnostic procedures after applicability is confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to a non-PHEV vehicle, another model year, a vehicle produced on or after March 1, 2025, or a vehicle outside the documented VIN ranges.", "Do not infer a refrigerant-pressure sensor, wiring, PCM, dash-electrical supply unit, compressor, refrigerant-charge, or high-voltage failure from P0531:00 alone."],
+    "required_tools": ["Compatible scan tool", "Mazda service information", "Manufacturer-specified diagnostic equipment"],
+    "safety_notes": ["PHEV high-voltage and air-conditioning service can cause electric shock, burns, refrigerant injury, drivability problems, or vehicle damage. Do not clear, service, program, or repair related systems without Mazda procedures, correct equipment, qualified personnel, a safe work area, and a recovery plan."],
+    "confidence": "Mazda Bulletin Notes source-specific P0531:00 context; VIN, model-year scope, PHEV configuration, production limit, reporting PCM, and manufacturer procedure confirmation required.",
+    "source": "Mazda Bulletin Notes / NHTSA MC-11016201",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11016201-0001.pdf",
+    "source_date": "2025-03-31",
+    "last_verified_date": "2026-08-11",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
