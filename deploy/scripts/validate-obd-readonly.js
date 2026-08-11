@@ -30,6 +30,19 @@ const nativeReadCommandWireSource = nativeReadCommandSource.slice(
   nativeReadCommandSource.indexOf("public var intent: String")
 );
 const nativeReadCommandWireValues = [...nativeReadCommandWireSource.matchAll(/return "([^"]+)"/g)].map((match) => match[1]);
+const nativeArchiveAllowedReadoutSource = nativeScanArchiveSource.slice(
+  nativeScanArchiveSource.indexOf("private static let allowedReadoutIDs"),
+  nativeScanArchiveSource.indexOf("private static let allowedReadoutIDsByIntent")
+);
+const nativeArchiveAllowedReadoutIds = [...nativeArchiveAllowedReadoutSource.matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+const nativeArchiveReadoutIntentSource = nativeScanArchiveSource.slice(
+  nativeScanArchiveSource.indexOf("private static let allowedReadoutIDsByIntent"),
+  nativeScanArchiveSource.indexOf("private static let sensitiveDataKeys")
+);
+const nativeArchiveReadoutIntentPairs = [...nativeArchiveReadoutIntentSource.matchAll(/"([^"]+)": \[([^\]]+)\]/g)].map((match) => ({
+  intent: match[1],
+  readoutIds: [...match[2].matchAll(/"([^"]+)"/g)].map((item) => item[1])
+}));
 const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventListener(\"submit\""));
 const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
 const offlineAssetPaths = Array.isArray(offlineAssets.assets) ? offlineAssets.assets : [];
@@ -3115,7 +3128,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2772件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2773件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3977,6 +3990,7 @@ check([iphoneThinkcarRoute, iphoneElmRoute, desktopThinkcarRoute, desktopElmRout
 check(appSource.includes('function getObdInterfaceReadoutRoute(interfaceId)') && appSource.includes('自前iPhoneコネクタ') && appSource.includes('native_connector_required'), "iPhone VCIの自前接続方針が診断機画面へ反映されていません");
 check(indexSource.includes('THINKCAR / ELM327') && indexSource.includes('外部診断機から共有またはコピーできる文字の取込は補助経路'), "外部診断機ログの補助取込案内が画面にありません");
 const nativeConnectorContract = obd.getNativeConnectorContract();
+check(nativeArchiveAllowedReadoutIds.length === 10 && nativeArchiveAllowedReadoutIds.every((readoutId) => nativeConnectorContract.allowedReadoutIds.includes(readoutId)) && nativeArchiveReadoutIntentPairs.length === 9 && nativeArchiveReadoutIntentPairs.every(({ intent, readoutIds }) => nativeConnectorContract.allowedReadIntents.includes(intent) && readoutIds.length > 0 && readoutIds.every((readoutId) => nativeArchiveAllowedReadoutIds.includes(readoutId) && nativeConnectorContract.allowedReadoutIds.includes(readoutId))) && nativeArchiveReadoutIntentPairs.some(({ intent, readoutIds }) => intent === "read_live_pid_snapshot" && readoutIds.includes("readiness_snapshot") && readoutIds.includes("live_pid_snapshot")), "iPhone native archive readout and intent allowlists must remain compatible with the Web diagnostic-session contract");
 check(nativeConnectorContract.id === "native_connector_contract_v1" && nativeConnectorContract.dataSchemaFamily === "local_bridge_response_data_v1" && nativeConnectorContract.dataShapeSource === "getLocalBridgeResponseSchemas" && nativeConnectorContract.maxArchiveBytes === 2000000 && nativeConnectorContract.maxEnvelopeCount === 1024 && nativeConnectorContract.importEnabled === true && nativeConnectorContract.connectionEnabled === false && nativeConnectorContract.vehicleCommandEnabled === false, "自前iPhoneコネクタ契約の安全既定値が不足しています");
 check(nativeHostProjectSource.includes('name: VehicleDiagnosisELMHost') && nativeHostProjectSource.includes('platform: iOS') && nativeHostProjectSource.includes('iOS: "16.0"') && nativeHostProjectSource.includes('INFOPLIST_FILE: Sources/Info.plist') && nativeHostProjectSource.includes('package: ELM327BLEConnector') && nativeHostProjectSource.includes('path: ../ELM327BLEConnector'), "iPhone ELM327ホストのiOSターゲット、権限ファイル、読取コネクタ依存関係が不足しています");
 check(nativeHostInfoSource.includes('<key>NSBluetoothAlwaysUsageDescription</key>') && nativeHostInfoSource.includes('<key>LSRequiresIPhoneOS</key>') && nativeHostInfoSource.includes('<key>UILaunchScreen</key>'), "iPhone ELM327ホストのBluetooth権限またはiOSアプリ設定が不足しています");
@@ -20740,6 +20754,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2772");
+  console.log("OBD read-only safety checks: 2773");
   console.log("Errors: 0");
 }
