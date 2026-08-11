@@ -4800,13 +4800,18 @@
           ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
         };
     });
-    const malformedMode09Alias = ["mode09_items", "mode09Items", "mode_09_items", "mode09_values", "mode09Values", "mode_09_values"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
+    const ecuInfoArrayAliases = [
+      "values", "items", "ecu_info", "ecu_info_items", "ecu_info_rows", "ecuInfo", "ecuInfoItems", "ecuInfoRows",
+      "mode09_items", "mode09Items", "mode_09_items", "mode09_values", "mode09Values", "mode_09_values",
+      "info_values", "infoValues", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers"
+    ];
+    const malformedEcuInfoAlias = ecuInfoArrayAliases.some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const errorCodes = readBridgeResponseErrorCodes(response);
     const hasItemEvidence = items.length > 0;
     const explicitReadoutStatus = String(data.ecu_info_readout_status || data.ecuInfoReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasItemEvidence));
-    const resolvedBridgeSafety = malformedMode09Alias
+    const resolvedBridgeSafety = malformedEcuInfoAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, blocked: hasItemEvidence, unparsed: !hasItemEvidence }
