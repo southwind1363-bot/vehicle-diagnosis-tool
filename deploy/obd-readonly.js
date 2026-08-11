@@ -3105,22 +3105,43 @@
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
+    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
+      ? response.data
+      : null;
+    const hasNestedDtcPayload = Boolean(nestedData && [
+      "dtcs", "codes", "dtc_codes", "dtcCodes",
+      "stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes",
+      "pending_dtcs", "pendingDtcs", "pending_dtc_codes", "pendingDtcCodes", "pending_codes", "pendingCodes",
+      "permanent_dtcs", "permanentDtcs", "permanent_dtc_codes", "permanentDtcCodes", "permanent_codes", "permanentCodes",
+      "ecu_responses", "ecuResponses"
+    ].some((key) => nestedData[key] !== undefined));
+    // Never combine outer and nested DTC evidence; outer code groups only complete an otherwise empty envelope.
+    const outerDtcFallback = nestedData && !hasNestedDtcPayload
+      ? {
+        dtcs: response.dtcs ?? response.codes ?? response.dtc_codes ?? response.dtcCodes,
+        stored_dtcs: response.stored_dtcs ?? response.storedDtcs ?? response.stored_dtc_codes ?? response.storedDtcCodes ?? response.stored_codes ?? response.storedCodes,
+        pending_dtcs: response.pending_dtcs ?? response.pendingDtcs ?? response.pending_dtc_codes ?? response.pendingDtcCodes ?? response.pending_codes ?? response.pendingCodes,
+        permanent_dtcs: response.permanent_dtcs ?? response.permanentDtcs ?? response.permanent_dtc_codes ?? response.permanentDtcCodes ?? response.permanent_codes ?? response.permanentCodes,
+        ecu_responses: response.ecu_responses ?? response.ecuResponses
+      }
+      : {};
     const data = response && typeof response === "object"
-      ? response.data && typeof response.data === "object"
+      ? nestedData
         ? {
-          ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
-          dtc_readout_status: response.data.dtcReadoutStatus || response.data.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null,
-          dtc_response_formats: response.data.dtcResponseFormats || response.data.dtc_response_formats || response.dtcResponseFormats || response.dtc_response_formats || null,
-          dtc_response_format: response.data.dtcResponseFormat || response.data.dtc_response_format || response.data.responseFormat || response.data.response_format || response.dtcResponseFormat || response.dtc_response_format || response.responseFormat || response.response_format || null,
-          dtc_response_subfunction: response.data.dtcResponseSubfunction ?? response.data.dtc_response_subfunction ?? response.data.subfunction ?? response.data.sub_function ?? response.dtcResponseSubfunction ?? response.dtc_response_subfunction ?? response.subfunction ?? response.sub_function ?? null,
-          dtc_format_identifiers: response.data.dtcFormatIdentifiers || response.data.dtc_format_identifiers || response.data.formatIdentifiers || response.data.format_identifiers || response.dtcFormatIdentifiers || response.dtc_format_identifiers || response.formatIdentifiers || response.format_identifiers || null,
-          dtc_format_identifier: response.data.dtcFormatIdentifier ?? response.data.dtc_format_identifier ?? response.data.formatIdentifier ?? response.data.format_identifier ?? response.dtcFormatIdentifier ?? response.dtc_format_identifier ?? response.formatIdentifier ?? response.format_identifier ?? null,
-          dtc_memory_selections: response.data.dtcMemorySelections || response.data.dtc_memory_selections || response.data.memorySelections || response.data.memory_selections || response.dtcMemorySelections || response.dtc_memory_selections || response.memorySelections || response.memory_selections || null,
-          dtc_memory_selection: response.data.dtcMemorySelection ?? response.data.dtc_memory_selection ?? response.data.memorySelection ?? response.data.memory_selection ?? response.dtcMemorySelection ?? response.dtc_memory_selection ?? response.memorySelection ?? response.memory_selection ?? null,
-          dtc_readiness_group_identifiers: response.data.dtcReadinessGroupIdentifiers || response.data.dtc_readiness_group_identifiers || response.data.readinessGroupIdentifiers || response.data.readiness_group_identifiers || response.dtcReadinessGroupIdentifiers || response.dtc_readiness_group_identifiers || response.readinessGroupIdentifiers || response.readiness_group_identifiers || null,
-          dtc_readiness_group_identifier: response.data.dtcReadinessGroupIdentifier ?? response.data.dtc_readiness_group_identifier ?? response.data.readinessGroupIdentifier ?? response.data.readiness_group_identifier ?? response.dtcReadinessGroupIdentifier ?? response.dtc_readiness_group_identifier ?? response.readinessGroupIdentifier ?? response.readiness_group_identifier ?? null
+          ...nestedData,
+          source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          dtc_readout_status: nestedData.dtcReadoutStatus || nestedData.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
+          dtc_response_formats: nestedData.dtcResponseFormats || nestedData.dtc_response_formats || response.dtcResponseFormats || response.dtc_response_formats || null,
+          dtc_response_format: nestedData.dtcResponseFormat || nestedData.dtc_response_format || nestedData.responseFormat || nestedData.response_format || response.dtcResponseFormat || response.dtc_response_format || response.responseFormat || response.response_format || null,
+          dtc_response_subfunction: nestedData.dtcResponseSubfunction ?? nestedData.dtc_response_subfunction ?? nestedData.subfunction ?? nestedData.sub_function ?? response.dtcResponseSubfunction ?? response.dtc_response_subfunction ?? response.subfunction ?? response.sub_function ?? null,
+          dtc_format_identifiers: nestedData.dtcFormatIdentifiers || nestedData.dtc_format_identifiers || nestedData.formatIdentifiers || nestedData.format_identifiers || response.dtcFormatIdentifiers || response.dtc_format_identifiers || response.formatIdentifiers || response.format_identifiers || null,
+          dtc_format_identifier: nestedData.dtcFormatIdentifier ?? nestedData.dtc_format_identifier ?? nestedData.formatIdentifier ?? nestedData.format_identifier ?? response.dtcFormatIdentifier ?? response.dtc_format_identifier ?? response.formatIdentifier ?? response.format_identifier ?? null,
+          dtc_memory_selections: nestedData.dtcMemorySelections || nestedData.dtc_memory_selections || nestedData.memorySelections || nestedData.memory_selections || response.dtcMemorySelections || response.dtc_memory_selections || response.memorySelections || response.memory_selections || null,
+          dtc_memory_selection: nestedData.dtcMemorySelection ?? nestedData.dtc_memory_selection ?? nestedData.memorySelection ?? nestedData.memory_selection ?? response.dtcMemorySelection ?? response.dtc_memory_selection ?? response.memorySelection ?? response.memory_selection ?? null,
+          dtc_readiness_group_identifiers: nestedData.dtcReadinessGroupIdentifiers || nestedData.dtc_readiness_group_identifiers || nestedData.readinessGroupIdentifiers || nestedData.readiness_group_identifiers || response.dtcReadinessGroupIdentifiers || response.dtc_readiness_group_identifiers || response.readinessGroupIdentifiers || response.readiness_group_identifiers || null,
+          dtc_readiness_group_identifier: nestedData.dtcReadinessGroupIdentifier ?? nestedData.dtc_readiness_group_identifier ?? nestedData.readinessGroupIdentifier ?? nestedData.readiness_group_identifier ?? response.dtcReadinessGroupIdentifier ?? response.dtc_readiness_group_identifier ?? response.readinessGroupIdentifier ?? response.readiness_group_identifier ?? null,
+          ...outerDtcFallback
         }
         : response
       : {};

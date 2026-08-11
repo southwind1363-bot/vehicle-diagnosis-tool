@@ -530,6 +530,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     const functionBody = bridgeDtcSnapshotFunctionSource[0];
     check(functionBody.includes('response.data && typeof response.data === "object"') && functionBody.includes('response.source_ecu || response.sourceEcu') && functionBody.includes('response.source_ecu_name || response.sourceEcuName'), "normalizeBridgeDtcSnapshot should unwrap bridge response data with outer ECU provenance");
     check(functionBody.includes('Array.isArray(data.dtcs)') && functionBody.includes('Array.isArray(data.dtc_codes)') && functionBody.includes('Array.isArray(data.dtcCodes)'), "normalizeBridgeDtcSnapshot should accept DTC array aliases");
+    check(functionBody.includes('const hasNestedDtcPayload = Boolean(nestedData') && functionBody.includes('const outerDtcFallback = nestedData && !hasNestedDtcPayload') && functionBody.includes('...outerDtcFallback'), "normalizeBridgeDtcSnapshot should only use outer DTC groups for an empty nested envelope");
     check(functionBody.includes('"read_stored_dtc"') && functionBody.includes('"read_pending_dtc"') && functionBody.includes('"read_permanent_dtc"'), "normalizeBridgeDtcSnapshot should preserve stored, pending, and permanent DTC intents");
     check(functionBody.includes('const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";'), "normalizeBridgeDtcSnapshot should derive DTC status from bridge intent");
     check(functionBody.includes('const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) =>') && functionBody.includes('const ecuDtcRows = ecuRows.flatMap((ecuRow) => {') && functionBody.includes('const scopedEntriesByKey = new Map();') && functionBody.includes('const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get('), "normalizeBridgeDtcSnapshot should merge explicit ECU response DTC rows without retaining aggregate duplicates");
@@ -5150,6 +5151,23 @@ const bridgeOuterMetadataDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const bridgeOuterMetadataDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeOuterMetadataDtcSnapshot }))));
 check(bridgeOuterMetadataDtcSnapshot.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataDtcSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataDtcSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.capturedAt === "2026-08-10T00:08:00Z" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataDtcRoundTrip?.dtcSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataDtcRoundTrip?.vehicleCommandEnabled === false, "Bridge outer DTC capture and protocol provenance were not retained through read-only export");
+const bridgeOuterDtcFallbackSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  pending_dtcs: ["P0300"],
+  data: { readout_id: "dtc_snapshot" }
+});
+check(bridgeOuterDtcFallbackSnapshot.dtcs.length === 1 && bridgeOuterDtcFallbackSnapshot.dtcs[0]?.code === "P0300" && bridgeOuterDtcFallbackSnapshot.dtcs[0]?.status === "pending" && bridgeOuterDtcFallbackSnapshot.dtcs[0]?.ecu === "7E8" && bridgeOuterDtcFallbackSnapshot.wouldTransmit === false, "Outer DTC groups should complete an otherwise empty nested envelope without changing read-only safety");
+const bridgeNestedDtcPrioritySnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  pending_dtcs: ["P0300"],
+  data: { stored_dtcs: ["P0171"] }
+});
+check(bridgeNestedDtcPrioritySnapshot.dtcs.length === 1 && bridgeNestedDtcPrioritySnapshot.dtcs[0]?.code === "P0171" && bridgeNestedDtcPrioritySnapshot.dtcs[0]?.status === "stored" && bridgeNestedDtcPrioritySnapshot.wouldTransmit === false, "Nested DTC groups must take priority over outer groups without combining sources");
 const mixedBridgeOuterReadoutSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: bridgeOuterMetadataDtcSnapshot,
   live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ ok: true, blocked: false, would_transmit: false, timestamp: "2026-08-10T00:08:05Z", communication_protocol: "ISO15765-4", data: { monitor_values: [{ pid: "0C", value: 800, unit: "rpm" }] } })
