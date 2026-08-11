@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.83";
+const APP_VERSION = "3.8.84";
 const APP_LAST_UPDATED = "2026-08-12";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4642,7 +4642,7 @@ async function initializeElmDeveloperAdapter() {
 }
 
 async function identifyObdDeveloperVci() {
-  const commands = ["ATI", "AT@1", "ATDP", "ATDPN"];
+  const commands = ["ATI", "AT@1"];
   const commandResponses = [];
   for (const command of commands) {
     const response = await sendElmDeveloperCommand(command, 2500);
@@ -4650,10 +4650,56 @@ async function identifyObdDeveloperVci() {
       commandResponses.push({ command, response });
     }
   }
-  const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
+  const adapterIdentity = mergeWebSerialAdapterIdentity(obdDevSession.adapterIdentity, buildWebSerialAdapterIdentity(commandResponses));
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
   appendObdDeveloperLog(commands.map((command) => `>${command}\n[adapter identity response not retained]`).join("\n"));
   renderObdDeveloperGate();
+}
+
+function mergeWebSerialAdapterIdentity(previous = null, update = null) {
+  if (!previous && !update) return null;
+  return {
+    ...(previous || {}),
+    ...(update || {}),
+    adapterName: update?.adapterName || previous?.adapterName || null,
+    adapterFamily: update?.adapterFamily || previous?.adapterFamily || null,
+    firmwareVersion: update?.firmwareVersion || previous?.firmwareVersion || null,
+    adapterProtocolHint: update?.adapterProtocolHint || previous?.adapterProtocolHint || null,
+    adapter_protocol_hint: update?.adapterProtocolHint || previous?.adapterProtocolHint || null,
+    adapterProtocolNumber: update?.adapterProtocolNumber || previous?.adapterProtocolNumber || null,
+    adapter_protocol_number: update?.adapterProtocolNumber || previous?.adapterProtocolNumber || null,
+    source: "web_serial",
+    intent: "adapter_identity",
+    ok: true,
+    blocked: false,
+    wouldTransmit: false,
+    vehicleCommandEnabled: false,
+    retainedRawText: false
+  };
+}
+
+async function captureObdDeveloperProtocolAfterStoredDtc() {
+  const commands = ["ATDP", "ATDPN"];
+  const commandResponses = [];
+  try {
+    for (const command of commands) {
+      const response = await sendElmDeveloperCommand(command, 2500);
+      if (classifyWebSerialCommandResponse(command, response).commandStatus === "completed") {
+        commandResponses.push({ command, response });
+      }
+    }
+  } catch (error) {
+    const message = error?.message || String(error);
+    if (message.startsWith("elm_response_timeout:") || message.startsWith("elm_transport_")) {
+      await disconnectObdDeveloperVci({ reason: message.startsWith("elm_response_timeout:") ? "response_timeout" : "transport_failed" });
+    }
+    return false;
+  }
+  const adapterIdentity = mergeWebSerialAdapterIdentity(obdDevSession.adapterIdentity, buildWebSerialAdapterIdentity(commandResponses));
+  if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
+  appendObdDeveloperLog(commands.map((command) => `>${command}\n[adapter identity response not retained]`).join("\n"));
+  renderObdDeveloperGate();
+  return commandResponses.length === commands.length;
 }
 
 function getWebSerialAdapterProtocolHint(commandResponses = []) {
@@ -4706,8 +4752,12 @@ function buildWebSerialAdapterIdentity(commandResponses = []) {
 }
 
 async function readObdDeveloperDtc() {
-  const readCompleted = await runObdDeveloperRead("DTC読取", ["03", "07", "0A"]);
-  return readCompleted || obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
+  const storedReadCompleted = await runObdDeveloperRead("保存DTC読取", ["03"]);
+  if (!storedReadCompleted) return obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
+  await captureObdDeveloperProtocolAfterStoredDtc();
+  if (!obdDevSession.port) return false;
+  const remainingReadCompleted = await runObdDeveloperRead("保留・永久DTC読取", ["07", "0A"]);
+  return (storedReadCompleted && remainingReadCompleted) || obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
 }
 
 async function readObdDeveloperCoreScan() {
