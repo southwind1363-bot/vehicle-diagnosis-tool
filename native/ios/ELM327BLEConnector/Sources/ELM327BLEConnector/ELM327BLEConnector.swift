@@ -120,6 +120,7 @@ func freezeFrameValueFollowUpCommands(
         .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad,
         .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1,
         .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure,
+        .freezeFrameFuelRailPressure, .freezeFrameFuelRailPressureAbsolute,
         .freezeFrameCoolantTemperature, .freezeFrameEngineRPM,
         .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance,
         .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow,
@@ -563,7 +564,7 @@ public final class ELM327BLEConnector: NSObject {
                 case .failure(let error):
                     emitFailure(for: command, error: error.rawValue)
                 }
-            case .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage:
+            case .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameFuelRailPressure, .freezeFrameFuelRailPressureAbsolute, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage:
                 switch OBD2ReadoutDecoder.decodeFreezeFrameValue(command: command, response: response) {
                 case .success(let results):
                     let triggerScopedResults = results.filter {

@@ -274,6 +274,8 @@ public enum OBD2ReadoutDecoder {
                 case .freezeFrameLongTermFuelTrimBank1: value = bytes.count == 1 ? OBD2MonitorValue(id: "ltft_b1", pid: pid, value: Double(Int(bytes[0]) - 128) * 100 / 128, unit: "%") : nil
                 case .freezeFrameFuelPressure: value = bytes.count == 1 ? OBD2MonitorValue(id: "fuel_pressure", pid: pid, value: Double(bytes[0]) * 3, unit: "kPa") : nil
                 case .freezeFrameManifoldAbsolutePressure: value = bytes.count == 1 ? OBD2MonitorValue(id: "map", pid: pid, value: Double(bytes[0]), unit: "kPa") : nil
+                case .freezeFrameFuelRailPressure: value = bytes.count == 2 ? OBD2MonitorValue(id: "fuel_rail_pressure", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 10, unit: "kPa") : nil
+                case .freezeFrameFuelRailPressureAbsolute: value = bytes.count == 2 ? OBD2MonitorValue(id: "fuel_rail_pressure_absolute", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) * 10, unit: "kPa") : nil
                 case .freezeFrameCoolantTemperature: value = bytes.count == 1 ? OBD2MonitorValue(id: "coolant_temp", pid: pid, value: Double(Int(bytes[0]) - 40), unit: "C") : nil
                 case .freezeFrameEngineRPM: value = bytes.count == 2 ? OBD2MonitorValue(id: "engine_speed", pid: pid, value: Double(Int(bytes[0]) * 256 + Int(bytes[1])) / 4, unit: "rpm") : nil
                 case .freezeFrameVehicleSpeed: value = bytes.count == 1 ? OBD2MonitorValue(id: "vehicle_speed", pid: pid, value: Double(bytes[0]), unit: "km/h") : nil

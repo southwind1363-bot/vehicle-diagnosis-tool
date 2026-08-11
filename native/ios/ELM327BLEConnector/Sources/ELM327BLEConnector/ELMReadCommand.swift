@@ -20,6 +20,8 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case freezeFrameLongTermFuelTrimBank1
     case freezeFrameFuelPressure
     case freezeFrameManifoldAbsolutePressure
+    case freezeFrameFuelRailPressure
+    case freezeFrameFuelRailPressureAbsolute
     case freezeFrameCoolantTemperature
     case freezeFrameEngineRPM
     case freezeFrameVehicleSpeed
@@ -227,6 +229,8 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameLongTermFuelTrimBank1: return "0207"
         case .freezeFrameFuelPressure: return "020A"
         case .freezeFrameManifoldAbsolutePressure: return "020B"
+        case .freezeFrameFuelRailPressure: return "0223"
+        case .freezeFrameFuelRailPressureAbsolute: return "0259"
         case .freezeFrameCoolantTemperature: return "0205"
         case .freezeFrameEngineRPM: return "020C"
         case .freezeFrameVehicleSpeed: return "020D"
@@ -351,7 +355,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .permanentDTC: return "read_permanent_dtc"
         case .onboardMonitor: return "read_onboard_monitor"
         case .freezeFrameCapabilities: return "read_freeze_frame"
-        case .freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
+        case .freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameFuelRailPressure, .freezeFrameFuelRailPressureAbsolute, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "read_freeze_frame"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09SparkPerformanceTracking, .mode09EcuName, .mode09CompressionPerformanceTracking: return "read_ecu_info"
         case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0, .supportedPIDsC0, .supportedPIDsE0: return "read_supported_pids"
         case .odometer: return "read_live_pid_snapshot"
@@ -372,7 +376,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .onboardMonitor: return "onboard_monitor_snapshot"
         case .supportedPIDs, .supportedPIDs20, .supportedPIDs40, .supportedPIDs60, .supportedPIDs80, .supportedPIDsA0, .supportedPIDsC0, .supportedPIDsE0: return "supported_pid_matrix"
         case .readinessStatus: return "readiness_snapshot"
-        case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
+        case .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameFuelRailPressure, .freezeFrameFuelRailPressureAbsolute, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage: return "freeze_frame_snapshot"
         case .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09SparkPerformanceTracking, .mode09EcuName, .mode09CompressionPerformanceTracking: return "ecu_info_snapshot"
         case .odometer: return "live_pid_snapshot"
         case .shortTermFuelTrimBank2, .longTermFuelTrimBank2: return "live_pid_snapshot"
@@ -394,7 +398,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     public var timeout: TimeInterval {
         switch self {
         case .storedDTC, .onboardMonitor: return 12
-        case .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage, .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09SparkPerformanceTracking, .mode09EcuName, .mode09CompressionPerformanceTracking, .readinessStatus: return 8
+        case .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .freezeFrameTriggerDTC, .freezeFrameFuelSystemStatus, .freezeFrameCalculatedLoad, .freezeFrameShortTermFuelTrimBank1, .freezeFrameLongTermFuelTrimBank1, .freezeFrameFuelPressure, .freezeFrameManifoldAbsolutePressure, .freezeFrameFuelRailPressure, .freezeFrameFuelRailPressureAbsolute, .freezeFrameCoolantTemperature, .freezeFrameEngineRPM, .freezeFrameVehicleSpeed, .freezeFrameTimingAdvance, .freezeFrameIntakeAirTemperature, .freezeFrameMassAirFlow, .freezeFrameThrottlePosition, .freezeFrameEngineRuntime, .freezeFrameControlModuleVoltage, .mode09SupportedInfoTypes, .mode09CalibrationID, .mode09CalibrationVerificationNumber, .mode09SparkPerformanceTracking, .mode09EcuName, .mode09CompressionPerformanceTracking, .readinessStatus: return 8
         default: return 4
         }
     }
@@ -408,6 +412,8 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .freezeFrameLongTermFuelTrimBank1: return "07"
         case .freezeFrameFuelPressure: return "0A"
         case .freezeFrameManifoldAbsolutePressure: return "0B"
+        case .freezeFrameFuelRailPressure: return "23"
+        case .freezeFrameFuelRailPressureAbsolute: return "59"
         case .freezeFrameCoolantTemperature: return "05"
         case .freezeFrameEngineRPM: return "0C"
         case .freezeFrameVehicleSpeed: return "0D"

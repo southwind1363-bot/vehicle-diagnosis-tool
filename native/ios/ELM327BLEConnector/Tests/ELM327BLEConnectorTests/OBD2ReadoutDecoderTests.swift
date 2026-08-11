@@ -323,6 +323,10 @@ final class OBD2ReadoutDecoderTests: XCTestCase {
         XCTAssertEqual(timingAdvance[0].value, OBD2MonitorValue(id: "timing_advance", pid: "0E", value: 0, unit: "deg"))
         let massAirFlow = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameMassAirFlow, response: "7E8 05 42 10 00 01 F4").get()
         XCTAssertEqual(massAirFlow[0].value, OBD2MonitorValue(id: "maf", pid: "10", value: 5, unit: "g/s"))
+        let fuelRailPressure = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameFuelRailPressure, response: "7E8 05 42 23 00 00 C8").get()
+        XCTAssertEqual(fuelRailPressure[0].value, OBD2MonitorValue(id: "fuel_rail_pressure", pid: "23", value: 2000, unit: "kPa"))
+        let fuelRailPressureAbsolute = try OBD2ReadoutDecoder.decodeFreezeFrameValue(command: .freezeFrameFuelRailPressureAbsolute, response: "7E8 05 42 59 00 00 C8").get()
+        XCTAssertEqual(fuelRailPressureAbsolute[0].value, OBD2MonitorValue(id: "fuel_rail_pressure_absolute", pid: "59", value: 2000, unit: "kPa"))
         let fuelSystem = try OBD2ReadoutDecoder.decodeFreezeFrameTextValue(command: .freezeFrameFuelSystemStatus, response: "7E8 05 42 03 00 01 08").get()
         XCTAssertEqual(fuelSystem.map(\.value), [
             OBD2TextMonitorValue(id: "fuel_system_status", pid: "03", value: "closed_loop_using_oxygen_sensor;closed_loop_with_oxygen_sensor_fault", unit: ""),

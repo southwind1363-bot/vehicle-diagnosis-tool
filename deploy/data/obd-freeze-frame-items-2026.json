@@ -194,5 +194,33 @@
     "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
     "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
     "source_date": "2025-05-01"
+  },
+  {
+    "id": "freeze_fuel_rail_pressure",
+    "monitor_id": "fuel_rail_pressure",
+    "label": "燃料レール圧力",
+    "service": "02",
+    "pid": "23",
+    "priority": 15,
+    "purpose": "故障時の燃料レール圧力を確認する",
+    "interpretation_note": "低圧側・高圧側などの系統、単位、基準値は車種整備書で確認する。通常ライブ値と同一視せず、発生時条件として扱う。",
+    "service_manual_required": true,
+    "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
+    "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2025-05-01"
+  },
+  {
+    "id": "freeze_fuel_rail_pressure_absolute",
+    "monitor_id": "fuel_rail_pressure_absolute",
+    "label": "絶対燃料レール圧力",
+    "service": "02",
+    "pid": "59",
+    "priority": 16,
+    "purpose": "故障時の絶対燃料レール圧力を確認する",
+    "interpretation_note": "燃料レール圧力とは別値として保持する。絶対圧の基準値と診断条件は車種整備書で確認し、通常ライブ値と同一視しない。",
+    "service_manual_required": true,
+    "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
+    "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2025-05-01"
   }
 ]
