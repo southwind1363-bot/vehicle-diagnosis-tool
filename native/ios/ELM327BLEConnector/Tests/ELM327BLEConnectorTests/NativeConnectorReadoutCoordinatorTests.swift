@@ -324,4 +324,42 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertEqual(preview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
         XCTAssertEqual(preview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_live_pid_snapshot", readoutID: "live_pid_snapshot", sourceScopeID: "7E8", errorCodes: ["transport_failure"])])
     }
+
+    func testCoordinatorRejectsContradictorySuccessfulEnvelopeErrors() {
+        let coordinator = NativeConnectorReadoutCoordinator()
+        let contradictory = NativeConnectorEnvelope(
+            schemaVersion: "native_connector_contract_v1",
+            interfaceID: "user-vci-elm327",
+            platform: "ios",
+            intent: "read_live_pid_snapshot",
+            capturedAt: "2026-08-11T00:00:00Z",
+            scanID: context.scanID,
+            connectionID: context.connectionID,
+            vehicleContextID: context.vehicleContextID,
+            sequence: 1,
+            readoutID: "live_pid_snapshot",
+            readoutScopeID: "7E8",
+            readoutAttempt: 0,
+            ok: true,
+            blocked: false,
+            wouldTransmit: false,
+            errors: ["transport_failure"],
+            data: [
+                "monitor_values": .array([.object([
+                    "id": .string("engine_speed"),
+                    "pid": .string("0C"),
+                    "value": .number(900),
+                    "unit": .string("rpm")
+                ])]),
+                "vehicle_command_enabled": .bool(false)
+            ]
+        )
+
+        coordinator.connector(coordinator.connector, didEmit: contradictory)
+
+        XCTAssertEqual(coordinator.archiveError, .invalidEnvelope)
+        XCTAssertEqual(coordinator.capturedEnvelopeCount, 0)
+        XCTAssertTrue(coordinator.readoutPreview.liveValues.isEmpty)
+        XCTAssertThrowsError(try coordinator.exportCompletedArchive())
+    }
 }
