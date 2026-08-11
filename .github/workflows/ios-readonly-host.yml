@@ -75,15 +75,16 @@ jobs:
 
       - name: Compile host integration tests for iOS Simulator
         run: |
+          simulator_id=$(xcrun simctl list devices available -j | python3 -c 'import json, sys; print(next(device["udid"] for devices in json.load(sys.stdin)["devices"].values() for device in devices if device.get("isAvailable")))')
           set +e
           set -o pipefail
-          xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -target VehicleDiagnosisELMHostTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee /tmp/vehicle-diagnosis-elm-host-tests.log
+          xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme VehicleDiagnosisELMHost -destination "platform=iOS Simulator,id=$simulator_id" CODE_SIGNING_ALLOWED=NO test 2>&1 | tee /tmp/vehicle-diagnosis-elm-host-tests.log
           test_status=${PIPESTATUS[0]}
           set -e
           if [ "$test_status" -ne 0 ]; then
             details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:|Testing failed:|Unable to find a destination)' /tmp/vehicle-diagnosis-elm-host-tests.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
             if [ -z "$details" ]; then details=$(tail -n 12 /tmp/vehicle-diagnosis-elm-host-tests.log | cut -c 1-600 | tr '\n' ' '); fi
-            echo "::error title=iOS host integration test compilation failure::${details:-xcodebuild test-target build failed without a diagnostic}"
+            echo "::error title=iOS host integration test failure::${details:-xcodebuild test failed without a diagnostic}"
             exit "$test_status"
           fi
         working-directory: native/ios/VehicleDiagnosisELMHost
