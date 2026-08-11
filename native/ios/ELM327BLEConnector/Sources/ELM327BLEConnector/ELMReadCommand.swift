@@ -198,7 +198,8 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .engineRuntime,
         .ambientAirTemperature,
         .timeWithMIL,
-        .fuelType
+        .fuelType,
+        .engineOilTemperature
     ]
 
     public static let quickLivePIDCommands: [ELMReadCommand] = [
