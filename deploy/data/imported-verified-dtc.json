@@ -3224,5 +3224,27 @@
     "last_verified_date": "2026-08-11",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-c0050-0f-gm-express-savana-2018-wheel-speed",
+    "code": "C0050",
+    "subcode": "0F",
+    "title": "ABS DTC C0050:0F with erratic wheel-speed signal context",
+    "system": "Chassis / electronic brake control module wheel-speed context (source-specific)",
+    "applicability_note": "GM Customer Satisfaction Program 18316 documents ABS DTC C0050:0F only for certain 2018 Chevrolet Express and GMC Savana vehicles equipped with RPO JH9 four-wheel disc hydraulic brakes. The source describes a right-rear wheel-speed-sensor signal becoming erratic when the rear axle is driven over rumble strips. Confirm VIN campaign status, model year, make/model, RPO JH9 brake configuration, reporting EBCM, DTC subcode, warning state, and current GM service information before using this source-specific context.",
+    "vehicle_filter": {"makers": ["Chevrolet", "GMC"], "model_year_scopes": [{"models": ["Express", "Savana"], "year_from": 2018, "year_to": 2018}], "trims": ["RPO JH9 four-wheel disc hydraulic brakes"], "ecus": ["EBCM"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting EBCM details, freeze-frame, ABS/StabiliTrak/traction-control warning state, VIN campaign status, brake configuration, and observed driving conditions before diagnosis.", "Do not clear DTCs, reprogram the EBCM, command ABS or traction-control functions, disconnect brake components, road-test to reproduce the concern, or start active tests from this tool; confirm the documented vehicle, RPO JH9 brake configuration, campaign status, reporting EBCM, subcode, and source applicability.", "Use current GM service information and qualified brake-system diagnostic procedures after applicability is confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to another GM model year, another brake configuration, an unconfirmed campaign vehicle, another EBCM, or a C0050 DTC without subcode 0F.", "Do not infer a wheel-speed sensor, axle, harness, EBCM, ABS, traction-control, or stability-control failure from C0050:0F alone."],
+    "required_tools": ["Compatible scan tool", "GM service information", "Manufacturer-specified diagnostic equipment"],
+    "safety_notes": ["Brake, stability-control, and road-test work can reduce vehicle-control functions or create collision risk. Do not clear, command, program, disconnect, or repair related systems without GM procedures, correct equipment, qualified personnel, a safe work area, and a recovery plan."],
+    "confidence": "GM Customer Satisfaction Program source-specific C0050:0F context; VIN campaign status, 2018 Express/Savana scope, RPO JH9 brake configuration, reporting EBCM, DTC subcode, and manufacturer procedure confirmation required.",
+    "source": "GM Customer Satisfaction Program 18316 / NHTSA MC-10150566",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2018/MC-10150566-9999.pdf",
+    "source_date": "2018-10-01",
+    "last_verified_date": "2026-08-11",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]

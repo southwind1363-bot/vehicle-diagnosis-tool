@@ -70,7 +70,7 @@
     "progress_percent": 24,
     "target_state": "ABS、VSC、EPS、ブレーキ、サスペンション、ADAS連携を安全系として整理する",
     "priority": 4,
-    "current_count_note": "C系親DTC 44件 / 個別DTC定義48件・出典限定52件 (NHTSA公開資料: Mazda 2014-21 Mazda6 body-repair ground C0023-62/C1001-92、Subaru 2013 BRZ C1249/Forester 2013・Impreza 2008-13 C1531、Ford 2018-19 F-150 ABS C0051-54/C0051-64、Honda 2012-14/2017 CR-V・2022-23 Civic・2024 Prologue K160 C2A22、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highlander、Jeep 2019-20 Renegade、Audi 2023 SRS、Mazda 2019-20 Mazda3前方レーダー、Mazda 2024 CX-90 C0040-24、GM 2020-23 Silverado/Sierra HD EPB C15DD-00、GM 2020-23 Silverado/Sierra K111 P2535/P12A6/P10DA/C111B/P157Aを出典限定で追加)",
+    "current_count_note": "C系親DTC 45件 / 個別DTC定義49件・出典限定53件 (NHTSA公開資料: Mazda 2014-21 Mazda6 body-repair ground C0023-62/C1001-92、Subaru 2013 BRZ C1249/Forester 2013・Impreza 2008-13 C1531、Ford 2018-19 F-150 ABS C0051-54/C0051-64、Honda 2012-14/2017 CR-V・2022-23 Civic・2024 Prologue K160 C2A22、Acura 2013-14 RDX AWD、Toyota 2024-25 Grand Highlander、Jeep 2019-20 Renegade、Audi 2023 SRS、Mazda 2019-20 Mazda3前方レーダー、Mazda 2024 CX-90 C0040-24、GM 2020-23 Silverado/Sierra HD EPB C15DD-00、GM 2020-23 Silverado/Sierra K111 P2535/P12A6/P10DA/C111B/P157Aを出典限定で追加・GM 2018 Express/Savana RPO JH9 C0050-0F)",
     "next_actions": [
       "C系コードを制動、操舵、姿勢制御、車輪速、ヨーレート、電源系に分類する",
       "ライブデータ候補と点検条件を車種別確認前提で持たせる",
