@@ -66,6 +66,9 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
           "blocked": false,
           "would_transmit": false,
           "errors": [],
+          "readout_id": "stored_dtc_snapshot",
+          "readout_scope_id": "7E8",
+          "readout_attempt": 0,
           "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8", "vehicle_command_enabled": false }
         }
         """)
@@ -128,6 +131,9 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
           "blocked": false,
           "would_transmit": false,
           "errors": [],
+          "readout_id": "stored_dtc_snapshot",
+          "readout_scope_id": "7E8",
+          "readout_attempt": 0,
           "data": { "dtcs": [{ "code": "P0300", "status": "stored" }], "source_ecu": "7E8", "vehicle_command_enabled": false }
         }
         """)
