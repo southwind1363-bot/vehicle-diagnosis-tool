@@ -178,6 +178,8 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .calculatedLoad,
         .fuelSystemStatus,
         .manifoldAbsolutePressure,
+        .fuelRailPressure,
+        .fuelRailPressureAbsolute,
         .massAirFlow,
         .throttlePosition,
         .shortTermFuelTrimBank1,
