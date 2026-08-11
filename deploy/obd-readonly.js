@@ -3361,6 +3361,8 @@
       blocked: resolvedBridgeSafety.blocked,
       wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       would_transmit: resolvedBridgeSafety.wouldTransmit,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
       errorCodes,
       error_codes: [...errorCodes],
       codes,
@@ -3910,6 +3912,8 @@
       blocked: resolvedBridgeSafety.blocked,
       wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       would_transmit: resolvedBridgeSafety.wouldTransmit,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
       errorCodes,
       error_codes: [...errorCodes],
       protocol,
@@ -4301,6 +4305,8 @@
       blocked,
       wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       would_transmit: resolvedBridgeSafety.wouldTransmit,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
       errorCodes,
       error_codes: [...errorCodes]
     };
@@ -4436,6 +4442,8 @@
       blocked: bridgeSafety.blocked,
       wouldTransmit: bridgeSafety.wouldTransmit,
       would_transmit: bridgeSafety.wouldTransmit,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
       errorCodes,
       error_codes: [...errorCodes]
     };
@@ -4585,6 +4593,8 @@
       blocked: resolvedBridgeSafety.blocked,
       wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       would_transmit: resolvedBridgeSafety.wouldTransmit,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
       errorCodes,
       error_codes: [...errorCodes]
     });
@@ -4818,6 +4828,8 @@
       blocked: resolvedBridgeSafety.blocked,
       wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       would_transmit: resolvedBridgeSafety.wouldTransmit,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
       errorCodes,
       error_codes: [...errorCodes]
     };
@@ -4928,6 +4940,8 @@
       blocked: resolvedBridgeSafety.blocked,
       wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       would_transmit: resolvedBridgeSafety.wouldTransmit,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
       errorCodes,
       error_codes: [...errorCodes]
     };
