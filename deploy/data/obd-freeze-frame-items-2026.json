@@ -222,5 +222,33 @@
     "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
     "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
     "source_date": "2025-05-01"
+  },
+  {
+    "id": "freeze_fuel_pressure",
+    "monitor_id": "fuel_pressure",
+    "label": "燃圧",
+    "service": "02",
+    "pid": "0A",
+    "priority": 17,
+    "purpose": "故障時の燃圧を確認する",
+    "interpretation_note": "燃料レール圧力とは別項目として保持する。車種の燃料系統、単位、基準値は整備書で確認する。",
+    "service_manual_required": true,
+    "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
+    "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2025-05-01"
+  },
+  {
+    "id": "freeze_engine_runtime",
+    "monitor_id": "engine_runtime",
+    "label": "エンジン始動後時間",
+    "service": "02",
+    "pid": "1F",
+    "priority": 18,
+    "purpose": "故障時点までのエンジン始動後時間を確認する",
+    "interpretation_note": "故障発生条件の補助情報として扱う。走行時間や故障継続時間を単独で断定しない。",
+    "service_manual_required": true,
+    "source": "SAE J1979系OBDサービス02のフリーズフレーム項目",
+    "source_url": ["https://www.sae.org/standards/content/j1979_202505/"],
+    "source_date": "2025-05-01"
   }
 ]
