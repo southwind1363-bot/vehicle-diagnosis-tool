@@ -482,7 +482,7 @@ for (const [code, rows] of codeLocations.entries()) {
 
 const coverageDtcFiles = new Set(jsonFiles.filter((file) => file === "obd-codes.json"
   || file === "imported-verified-dtc.json"
-  || /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(file)));
+  || /^generic-obd-codes-modern-2026(?:-part\d+)?\.json$/.test(file)));
 const coverageDtcRows = codeRows.filter((row) => coverageDtcFiles.has(row.file) && isDtc(row.code));
 const coverageDefinitionKeys = new Set(coverageDtcRows.map((row) => `${row.code}:${row.subcode || ""}`));
 const coverageParentCodes = new Set(coverageDtcRows.map((row) => row.code));

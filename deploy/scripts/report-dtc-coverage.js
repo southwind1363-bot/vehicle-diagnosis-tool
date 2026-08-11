@@ -7,9 +7,10 @@ const dataDir = path.join(projectRoot, "data");
 const read = (file) => JSON.parse(fs.readFileSync(path.join(dataDir, file), "utf8"));
 const dtcFiles = fs.readdirSync(dataDir)
   .filter((file) =>
+    // Legacy supplemental rows are not counted as verified individual definitions.
     file === "obd-codes.json" ||
     file === "imported-verified-dtc.json" ||
-    /^generic-obd-codes-modern(?:-2026(?:-part\d+)?)?\.json$/.test(file)
+    /^generic-obd-codes-modern-2026(?:-part\d+)?\.json$/.test(file)
   )
   .sort();
 const workflowFiles = [
