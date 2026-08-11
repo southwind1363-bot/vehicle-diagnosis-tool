@@ -3489,8 +3489,11 @@
     const hasConnectionStatusData = connectionStatusKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedConnectionStatus = connectionStatusKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasConnectionStatusData);
+    const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedConnectionStatus
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
       : bridgeSafety;
     const readConnectionText = (...values) => {
       const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
@@ -3507,7 +3510,10 @@
     let displayStatus = "準備中";
     let nextAction = "ローカルブリッジを起動しても、この画面からはまだ車両へ送信しません。";
 
-    if (replayMode) {
+    if (errorCodes.length) {
+      displayStatus = "通信エラー";
+      nextAction = "ブリッジ応答のエラーを確認し、VCI接続と通信状態を再確認します。";
+    } else if (replayMode) {
       displayStatus = "再生読取";
       nextAction = "外部ログの再生です。実VCI・実車接続の読取結果とは混同しません。";
     } else if (sampleMode) {
@@ -3564,7 +3570,9 @@
       readout_source_mode: readoutSourceMode,
       connectionEnabled: localBridgeContract.connectionEnabled,
       vehicleCommandEnabled: false,
-      errors: Array.isArray(response.errors) ? [...response.errors] : [],
+      errors: [...errorCodes],
+      errorCodes,
+      error_codes: [...errorCodes],
       nextAction,
       retainedRawText: false
     };
@@ -3587,8 +3595,11 @@
       .some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const malformedVciDeviceRow = devices.some((device) => !device || typeof device !== "object" || Array.isArray(device));
     const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(response) || Array.isArray(data) || [data.devices, data.vci_devices, data.items].some(Array.isArray));
+    const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedVciListAlias || malformedVciDeviceRow
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
       : bridgeSafety;
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
     const explicitlySelectedDeviceIndex = selectedDeviceId ? -1 : devices.findIndex((device) => (
@@ -3724,6 +3735,8 @@
       deviceCount: normalizedDevices.length,
       connectionEnabled: localBridgeContract.connectionEnabled,
       vehicleCommandEnabled: false,
+      errorCodes,
+      error_codes: [...errorCodes],
       retainedRawText: false
     };
   }
@@ -3734,8 +3747,11 @@
     const hasAdapterIdentityData = adapterIdentityKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
+    const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedAdapterIdentity
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
       : bridgeSafety;
     const readAdapterIdentityText = (...values) => {
       const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
@@ -3763,6 +3779,8 @@
       replay_mode: replayMode,
       ...driverReadiness,
       vehicleCommandEnabled: false,
+      errorCodes,
+      error_codes: [...errorCodes],
       retainedRawText: false
     };
   }
