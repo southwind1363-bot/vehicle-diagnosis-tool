@@ -3106,7 +3106,7 @@
 
   function getBridgeResponseDataEnvelope(response = {}) {
     if (!response || typeof response !== "object" || Array.isArray(response)) return null;
-    return [response.data, response.payload, response.result]
+    return [response.data, response.payload?.data, response.result?.data, response.payload, response.result]
       .find((candidate) => candidate && typeof candidate === "object" && !Array.isArray(candidate)) || null;
   }
 
