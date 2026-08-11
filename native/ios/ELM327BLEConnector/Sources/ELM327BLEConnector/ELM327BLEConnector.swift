@@ -171,6 +171,11 @@ public struct BLECharacteristicCandidate: Sendable {
     }
 }
 
+func hasELMCharacteristicConfigurationCandidates(_ candidates: [BLECharacteristicCandidate]) -> Bool {
+    candidates.contains { $0.supportsWrite || $0.supportsWriteWithoutResponse }
+        && candidates.contains { $0.supportsNotify }
+}
+
 public protocol ELM327BLEConnectorDelegate: AnyObject {
     func connector(_ connector: ELM327BLEConnector, didChange state: ELMConnectorState)
     func connector(_ connector: ELM327BLEConnector, didDiscover peripheral: BLEPeripheralCandidate)
@@ -912,6 +917,7 @@ extension ELM327BLEConnector: CBPeripheralDelegate {
                 supportsWriteWithoutResponse: characteristic.properties.contains(.writeWithoutResponse)
             )
         }.sorted { $0.characteristicUUID < $1.characteristicUUID }
+        guard hasELMCharacteristicConfigurationCandidates(candidates) else { return fail(.characteristicNotReady) }
         delegate?.connector(self, requiresCharacteristicSelection: candidates)
     }
 

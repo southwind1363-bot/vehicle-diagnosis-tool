@@ -82,6 +82,18 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(acceptsELMNotificationStateUpdate(peripheralMatches: true, subscribing: false))
     }
 
+    func testCharacteristicDiscoveryRequiresWritableAndNotifiableCandidates() {
+        let writable = BLECharacteristicCandidate(serviceUUID: "FFF0", characteristicUUID: "FFF1", supportsNotify: false, supportsWrite: true, supportsWriteWithoutResponse: false)
+        let writableWithoutResponse = BLECharacteristicCandidate(serviceUUID: "FFF0", characteristicUUID: "FFF2", supportsNotify: false, supportsWrite: false, supportsWriteWithoutResponse: true)
+        let notifiable = BLECharacteristicCandidate(serviceUUID: "FFF0", characteristicUUID: "FFF3", supportsNotify: true, supportsWrite: false, supportsWriteWithoutResponse: false)
+
+        XCTAssertTrue(hasELMCharacteristicConfigurationCandidates([writable, notifiable]))
+        XCTAssertTrue(hasELMCharacteristicConfigurationCandidates([writableWithoutResponse, notifiable]))
+        XCTAssertFalse(hasELMCharacteristicConfigurationCandidates([]))
+        XCTAssertFalse(hasELMCharacteristicConfigurationCandidates([writable]))
+        XCTAssertFalse(hasELMCharacteristicConfigurationCandidates([notifiable]))
+    }
+
     func testCompletedBleScanStillAllowsSelectingADiscoveredPeripheral() {
         XCTAssertTrue(allowsELMPeripheralSelection(state: .scanning))
         XCTAssertTrue(allowsELMPeripheralSelection(state: .scanComplete))
