@@ -98,7 +98,11 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     }
 
     var readoutProfileLabel: String {
-        switch coordinator.completedArchive?.completionManifest.readoutProfile {
+        Self.readoutProfileLabel(for: coordinator.completedArchive?.completionManifest.readoutProfile)
+    }
+
+    static func readoutProfileLabel(for profile: NativeConnectorReadoutProfile?) -> String {
+        switch profile {
         case .initialDiagnostic: return "初期診断読取"
         case .quickCondition: return "クイック状態確認"
         case nil: return "未記録"
