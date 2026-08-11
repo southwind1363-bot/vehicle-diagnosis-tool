@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.80";
+const APP_VERSION = "3.8.81";
 const APP_LAST_UPDATED = "2026-08-11";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7120,18 +7120,23 @@ function renderObdBridgeSessionDetails(session = null) {
   }
 
   const nativeConnectorScanLifecycle = session?.nativeConnectorScanLifecycle || session?.native_connector_scan_lifecycle || null;
+  const nativeReadoutProfile = session?.nativeConnectorReadoutProfile || session?.native_connector_readout_profile || null;
   const nativeFailedScopes = nativeConnectorScanLifecycle?.failedReadoutScopes || nativeConnectorScanLifecycle?.failed_readout_scopes || [];
   const nativeMissingScopes = nativeConnectorScanLifecycle?.missingReadoutScopes || nativeConnectorScanLifecycle?.missing_readout_scopes || [];
   const nativeUnexpectedScopes = nativeConnectorScanLifecycle?.unexpectedReadoutScopes || nativeConnectorScanLifecycle?.unexpected_readout_scopes || [];
-  if (nativeConnectorScanLifecycle && (nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length)) {
+  if (nativeReadoutProfile || (nativeConnectorScanLifecycle && (nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length))) {
     const formatNativeScope = (item) => {
       const readoutId = item?.readoutId || item?.readout_id || "";
       const scopeId = item?.scopeId || item?.scope_id || "未確定";
       return `${formatCoreReadoutLabel(readoutId, readoutId || "読取")} / ECU ${scopeId}`;
     };
     const nativeLifecycleLines = [
-      `読取状態: ${nativeConnectorScanLifecycle.scanState === "interrupted" || nativeConnectorScanLifecycle.scan_state === "interrupted" ? "中断・一部取得" : "未完了"}`
+      ...(nativeReadoutProfile === "initial_diagnostic" ? ["読取種別: 初期診断読取"] : []),
+      ...(nativeReadoutProfile === "quick_condition" ? ["読取種別: クイック状態確認", "本診断: 追加読取が必要"] : [])
     ];
+    if (nativeConnectorScanLifecycle && (nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length)) {
+      nativeLifecycleLines.push(`読取状態: ${nativeConnectorScanLifecycle.scanState === "interrupted" || nativeConnectorScanLifecycle.scan_state === "interrupted" ? "中断・一部取得" : "未完了"}`);
+    }
     if (nativeFailedScopes.length) nativeLifecycleLines.push(`失敗: ${nativeFailedScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
     if (nativeMissingScopes.length) nativeLifecycleLines.push(`未取得: ${nativeMissingScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
     if (nativeUnexpectedScopes.length) nativeLifecycleLines.push(`想定外応答: ${nativeUnexpectedScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
