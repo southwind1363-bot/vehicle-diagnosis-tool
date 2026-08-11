@@ -209,6 +209,7 @@ public final class ELM327BLEConnector: NSObject {
     private var connectionTimeoutWorkItem: DispatchWorkItem?
     private var sequence = 0
     private var sessionContext: NativeConnectorSessionContext?
+    private var activeReadoutProfile: NativeConnectorReadoutProfile = .initialDiagnostic
     private var adapterName: String?
     private var protocolHint: String?
     private var protocolNumber: String?
@@ -300,20 +301,23 @@ public final class ELM327BLEConnector: NSObject {
     public func runInitialReadout() {
         runReadout(
             commands: ELMReadCommand.initialReadoutCommands,
-            livePIDCommands: ELMReadCommand.initialLivePIDCommands
+            livePIDCommands: ELMReadCommand.initialLivePIDCommands,
+            readoutProfile: .initialDiagnostic
         )
     }
 
     public func runQuickReadout() {
         runReadout(
             commands: ELMReadCommand.quickReadoutCommands,
-            livePIDCommands: ELMReadCommand.quickLivePIDCommands
+            livePIDCommands: ELMReadCommand.quickLivePIDCommands,
+            readoutProfile: .quickCondition
         )
     }
 
-    private func runReadout(commands: [ELMReadCommand], livePIDCommands: [ELMReadCommand]) {
+    private func runReadout(commands: [ELMReadCommand], livePIDCommands: [ELMReadCommand], readoutProfile: NativeConnectorReadoutProfile) {
         guard state == .ready, transmitCharacteristic != nil, receiveCharacteristic != nil else { return fail(.characteristicNotReady) }
         sessionContext = NativeConnectorSessionContext()
+        activeReadoutProfile = readoutProfile
         sequence = 0
         adapterName = nil
         protocolHint = nil
@@ -782,6 +786,7 @@ public final class ELM327BLEConnector: NSObject {
             vehicleContextID: context.vehicleContextID,
             capturedAt: ISO8601DateFormatter().string(from: Date()),
             scanState: state,
+            readoutProfile: activeReadoutProfile,
             expectedIntents: plannedIntents.sorted(),
             expectedReadouts: plannedReadoutIDs.sorted(),
             expectedReadoutScopes: observedReadoutScopes.sorted {

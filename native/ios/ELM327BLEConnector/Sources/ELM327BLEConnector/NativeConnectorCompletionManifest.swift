@@ -48,6 +48,11 @@ public struct NativeConnectorInterruption: Codable, Sendable, Equatable {
     }
 }
 
+public enum NativeConnectorReadoutProfile: String, Codable, Sendable, Equatable {
+    case initialDiagnostic = "initial_diagnostic"
+    case quickCondition = "quick_condition"
+}
+
 public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
     public let schemaVersion: String
     public let recordType: String
@@ -57,6 +62,7 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
     public let vehicleContextID: UUID
     public let capturedAt: String
     public let scanState: NativeConnectorScanState
+    public let readoutProfile: NativeConnectorReadoutProfile? = nil
     public let expectedIntents: [String]
     public let expectedReadouts: [String]
     public let expectedReadoutScopes: [NativeConnectorReadoutScope]
@@ -77,6 +83,7 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
         case vehicleContextID = "vehicle_context_id"
         case capturedAt = "captured_at"
         case scanState = "scan_state"
+        case readoutProfile = "readout_profile"
         case expectedIntents = "expected_intents"
         case expectedReadouts = "expected_readouts"
         case expectedReadoutScopes = "expected_readout_scopes"

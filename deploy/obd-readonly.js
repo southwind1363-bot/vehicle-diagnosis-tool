@@ -687,7 +687,8 @@
     readoutScopeFields: Object.freeze(["readout_scope_id", "readout_attempt"]),
     completionManifestSchemaVersion: "native_connector_completion_manifest_v1",
     completionManifestRecordType: "completion_manifest",
-    completionManifestFields: Object.freeze(["schema_version", "record_type", "scan_state", "expected_readouts", "expected_readout_scopes", "connection_segments", "interruption"]),
+    completionManifestFields: Object.freeze(["schema_version", "record_type", "scan_state", "readout_profile", "expected_readouts", "expected_readout_scopes", "connection_segments", "interruption"]),
+    allowedReadoutProfiles: Object.freeze(["initial_diagnostic", "quick_condition"]),
     allowedReadoutIds: nativeConnectorReadoutIds,
     logPolicy: Object.freeze({
       storeRawPayload: false,
@@ -1280,6 +1281,7 @@
       responseOutcomeFields: [...nativeConnectorContract.responseOutcomeFields],
       readoutScopeFields: [...nativeConnectorContract.readoutScopeFields],
       completionManifestFields: [...nativeConnectorContract.completionManifestFields],
+      allowedReadoutProfiles: [...nativeConnectorContract.allowedReadoutProfiles],
       allowedReadoutIds: [...nativeConnectorContract.allowedReadoutIds],
       logPolicy: { ...nativeConnectorContract.logPolicy }
     };
@@ -2786,6 +2788,12 @@
     if (!capturedAt) errors.push("invalid_completion_manifest_captured_at");
     const scanState = ["completed", "interrupted"].includes(String(manifest.scan_state || "")) ? manifest.scan_state : null;
     if (!scanState) errors.push("invalid_completion_manifest_scan_state");
+    const readoutProfile = manifest.readout_profile === undefined
+      ? null
+      : nativeConnectorContract.allowedReadoutProfiles.includes(String(manifest.readout_profile || ""))
+        ? String(manifest.readout_profile)
+        : null;
+    if (manifest.readout_profile !== undefined && !readoutProfile) errors.push("invalid_completion_manifest_readout_profile");
     const expectedIntentsSource = manifest.expected_intents;
     const expectedReadoutsSource = manifest.expected_readouts;
     const expectedReadoutScopesSource = manifest.expected_readout_scopes;
@@ -2832,6 +2840,7 @@
         vehicleContextId,
         capturedAt,
         scanState,
+        readoutProfile,
         expectedIntents,
         expectedReadouts,
         expectedReadoutScopes,
@@ -2918,6 +2927,9 @@
         execution_enabled: false,
         would_transmit: false
       });
+      const sessionWithReadoutProfile = manifest.readoutProfile
+        ? { ...session, nativeConnectorReadoutProfile: manifest.readoutProfile, native_connector_readout_profile: manifest.readoutProfile }
+        : session;
       return {
         schemaVersion: "native_connector_scan_session_v1",
         schema_version: "native_connector_scan_session_v1",
@@ -2939,10 +2951,12 @@
         scan_state: "interrupted",
         expectedReadouts: manifest.expectedReadouts,
         expected_readouts: [...manifest.expectedReadouts],
+        readoutProfile: manifest.readoutProfile,
+        readout_profile: manifest.readoutProfile,
         envelopeCount: 0,
         envelope_count: 0,
         errors: [manifest.interruption.code],
-        session,
+        session: sessionWithReadoutProfile,
         retainedRawPayload: false,
         retained_raw_payload: false,
         vehicleCommandEnabled: false,
@@ -2965,8 +2979,14 @@
     if (result.interfaceId !== manifest.interfaceId || result.scanId !== manifest.scanId || result.vehicleContextId !== manifest.vehicleContextId || !matchesTerminalSegments(result.nativeConnectorScanLifecycle?.connectionSegments)) {
       return { ...blockedResult(["completion_manifest_boundary_mismatch"]), evaluations: result.evaluations || [] };
     }
+    const sessionWithReadoutProfile = manifest.readoutProfile
+      ? { ...result.session, nativeConnectorReadoutProfile: manifest.readoutProfile, native_connector_readout_profile: manifest.readoutProfile }
+      : result.session;
     return {
       ...result,
+      readoutProfile: manifest.readoutProfile,
+      readout_profile: manifest.readoutProfile,
+      session: sessionWithReadoutProfile,
       completionManifest: {
         schemaVersion: nativeConnectorContract.completionManifestSchemaVersion,
         schema_version: nativeConnectorContract.completionManifestSchemaVersion,
@@ -2974,6 +2994,8 @@
         record_type: nativeConnectorContract.completionManifestRecordType,
         scanState: manifest.scanState,
         scan_state: manifest.scanState,
+        readoutProfile: manifest.readoutProfile,
+        readout_profile: manifest.readoutProfile,
         interruption: manifest.interruption ? { ...manifest.interruption } : null
       }
     };
