@@ -53,6 +53,22 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(ELMReadCommand.quickReadoutCommands.contains(.mode09SupportedInfoTypes))
     }
 
+    func testProtocolCaptureFollowsTheFirstVehicleReadout() {
+        for plan in [ELMReadCommand.initialReadoutCommands, ELMReadCommand.quickReadoutCommands] {
+            guard let autoProtocolIndex = plan.firstIndex(of: .autoProtocol),
+                  let storedDTCIndex = plan.firstIndex(of: .storedDTC),
+                  let protocolHintIndex = plan.firstIndex(of: .describeProtocol),
+                  let protocolNumberIndex = plan.firstIndex(of: .describeProtocolNumber)
+            else {
+                return XCTFail("Readout plan is missing its protocol-capture boundary")
+            }
+
+            XCTAssertLessThan(autoProtocolIndex, storedDTCIndex)
+            XCTAssertLessThan(storedDTCIndex, protocolHintIndex)
+            XCTAssertLessThan(protocolHintIndex, protocolNumberIndex)
+        }
+    }
+
     func testAdapterSetupRequiresAnExplicitSuccessfulResponse() {
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .disableEcho, response: "ATE0\rOK"))
         XCTAssertTrue(isCompletedELMAdapterSetupResponse(command: .autoProtocol, response: "OK"))
