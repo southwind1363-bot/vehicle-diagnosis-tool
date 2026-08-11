@@ -15,6 +15,11 @@ final class ELMReadResponseDispositionTests: XCTestCase {
         XCTAssertEqual(classifyELMReadResponse("BUS ERROR"), .transportFailure)
         XCTAssertEqual(classifyELMReadResponse("BUFFER FULL"), .transportFailure)
         XCTAssertEqual(classifyELMReadResponse("LV RESET"), .transportFailure)
+        XCTAssertEqual(classifyELMReadResponse("?"), .transportFailure)
+        XCTAssertEqual(classifyELMReadResponse("ERROR"), .transportFailure)
+        XCTAssertEqual(classifyELMReadResponse("DATA ERROR"), .transportFailure)
+        XCTAssertEqual(classifyELMReadResponse("BUS BUSY"), .transportFailure)
+        XCTAssertEqual(classifyELMReadResponse("ACT ALERT"), .transportFailure)
     }
 
     func testAdapterIdentityRejectsExplicitFailureResponses() {

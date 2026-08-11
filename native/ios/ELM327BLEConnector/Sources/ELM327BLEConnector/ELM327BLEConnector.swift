@@ -14,7 +14,7 @@ enum ELMReadResponseDisposition: Equatable {
 
 func classifyELMReadResponse(_ response: String) -> ELMReadResponseDisposition {
     let normalized = response.uppercased()
-    if ["CAN ERROR", "BUS ERROR", "BUS INIT: ERROR", "BUFFER FULL", "LV RESET"].contains(where: normalized.contains) {
+    if ["CAN ERROR", "BUS ERROR", "BUS INIT: ERROR", "BUFFER FULL", "LV RESET", "DATA ERROR", "BUS BUSY", "ACT ALERT", "?", "ERROR"].contains(where: normalized.contains) {
         return .transportFailure
     }
     if ["UNABLE TO CONNECT", "STOPPED"].contains(where: normalized.contains) {
