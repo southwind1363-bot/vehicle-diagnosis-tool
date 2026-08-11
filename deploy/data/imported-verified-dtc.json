@@ -3027,5 +3027,27 @@
     "last_verified_date": "2026-08-11",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-u3003-16-mazda3-2014-2018-body-repair-ground",
+    "code": "U3003",
+    "subcode": "16",
+    "title": "Battery Power Supply",
+    "system": "Network / instrument-cluster electrical-power context (source-specific)",
+    "applicability_note": "Mazda Bulletin Notes identifies U3003:16 - Battery Power Supply only for 2014-2018 Mazda3 vehicles immediately after body repair at the front fender stay, with ABS, Brake, DSC, and TPMS warning lights illuminated. The bulletin documents a newly painted fender stay creating a poor front-harness ground connection. Confirm VIN, model year, body-repair history, front-fender-stay condition, reporting ECU, DTC subcode, warning state, concurrent DTCs, and current Mazda service information before using this source-specific context.",
+    "vehicle_filter": {"makers": ["Mazda"], "models": ["Mazda3"], "year_from": 2014, "year_to": 2018, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting ECU details, warning messages, concurrent DTCs, VIN, model year, body-repair history, and available scan-tool data before diagnosis.", "Do not clear DTCs, command ABS, brake, DSC, TPMS, or electrical functions, disconnect or repair grounds, repaint body parts, replace components, program modules, or start active tests from this tool; confirm the documented vehicle, timing after body repair, reporting ECU, DTC subcode, and Bulletin Notes applicability.", "Use current Mazda service information, bodyshop procedures, manufacturer-specified diagnostic equipment, and qualified repair methods after applicability is confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to another Mazda model, model year, body-repair condition, reporting ECU, or DTC subcode.", "Do not infer a battery, harness, ground, instrument-cluster, ABS, DSC, TPMS, or other component failure from U3003:16 alone.", "Do not treat this definition as authorization to clear DTCs, command vehicle functions, alter ground connections, repaint parts, program modules, or perform a repair."],
+    "required_tools": ["Compatible scan tool", "Mazda service information", "Mazda bodyshop procedures", "Manufacturer-specified diagnostic equipment"],
+    "safety_notes": ["Electrical-power faults with ABS, brake, DSC, and TPMS warnings can affect braking and stability-control awareness. Do not command, clear, repair, program, or road-test related systems without Mazda procedures, correct equipment, qualified personnel, a safe work area, and a recovery plan."],
+    "confidence": "Mazda Bulletin Notes source-specific U3003:16 readout context; VIN, 2014-2018 Mazda3 scope, body-repair timing, front-fender-stay condition, reporting ECU, warning state, and manufacturer procedure confirmation required.",
+    "source": "Mazda Bulletin Notes / NHTSA MC-11032100",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2026/MC-11032100-0001.pdf",
+    "source_date": "2026-04-07",
+    "last_verified_date": "2026-08-11",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]

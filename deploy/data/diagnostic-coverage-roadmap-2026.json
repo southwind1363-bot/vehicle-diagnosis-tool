@@ -28,7 +28,7 @@
     "progress_percent": 60,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-    "current_count_note": "U系親DTC 569件 / 個別DTC定義587件・出典限定59件 (Mazda 2017-23 CX-5 FSC/parking assist U045A-68、Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68、Acura 2024 ZDX BECM U3577-U3580/U35AF、GM 2025-26 Yukon/Yukon XL IVD/IVE U164Eを出典限定で追加)",
+    "current_count_note": "U系親DTC 569件 / 個別DTC定義588件・出典限定60件 (Mazda 2014-18 Mazda3 body-repair ground U3003-16、Mazda 2017-23 CX-5 FSC/parking assist U045A-68、Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68、Acura 2024 ZDX BECM U3577-U3580/U35AF、GM 2025-26 Yukon/Yukon XL IVD/IVE U164Eを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
