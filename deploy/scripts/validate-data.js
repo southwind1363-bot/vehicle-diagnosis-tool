@@ -166,7 +166,16 @@ function hasNhtsaArchiveSource(value) {
 }
 
 function isIsoDate(value) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value || "");
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
+if (!isIsoDate("2024-02-29") || isIsoDate("2025-02-29") || isIsoDate("2026-13-01") || isIsoDate("2026-04-31")) {
+  reportError("ISO date validation must reject non-calendar source and verification dates");
 }
 
 for (const file of jsonFiles) {
@@ -250,7 +259,11 @@ for (const file of jsonFiles) {
       if (!hasHttpsSourceUrl(row.source_url) || !hasGenericDtcPrimarySource(row.source_url)) {
         reportError(`${label}: generic 2026 DTC requires an HTTPS SAE J2012/J2012DA or ANSI J2012 primary-standard source_url`);
       }
+      if (!isIsoDate(row.source_date)) reportError(`${label}: generic 2026 DTC source_date is invalid`);
       if (!isIsoDate(row.last_verified_date)) reportError(`${label}: generic 2026 DTC last_verified_date is invalid`);
+      if (isIsoDate(row.source_date) && isIsoDate(row.last_verified_date) && row.last_verified_date < row.source_date) {
+        reportError(`${label}: generic 2026 DTC last_verified_date predates source_date`);
+      }
       if (row.service_manual_required !== true) reportError(`${label}: generic 2026 DTC must require the service manual`);
     }
 
@@ -267,6 +280,9 @@ for (const file of jsonFiles) {
       }
       if (!isIsoDate(row.source_date)) reportError(`${label}: verified imported DTC source_date is invalid`);
       if (!isIsoDate(row.last_verified_date)) reportError(`${label}: verified imported DTC last_verified_date is invalid`);
+      if (isIsoDate(row.source_date) && isIsoDate(row.last_verified_date) && row.last_verified_date < row.source_date) {
+        reportError(`${label}: verified imported DTC last_verified_date predates source_date`);
+      }
       if (row.service_manual_required !== true) reportError(`${label}: verified imported DTC must require the service manual`);
       if (row.imported_definition_only !== true) reportError(`${label}: verified imported DTC must be definition-only`);
       if (row.applicability_note && !isDtcVehicleFilter(row.vehicle_filter)) {
