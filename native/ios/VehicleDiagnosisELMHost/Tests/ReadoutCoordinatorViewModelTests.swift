@@ -108,6 +108,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         XCTAssertNil(viewModel.errorMessage)
     }
 
+    @MainActor
     func testReadoutProfileLabelKeepsInitialAndQuickScopesDistinct() {
         XCTAssertEqual(ReadoutCoordinatorViewModel.readoutProfileLabel(for: .initialDiagnostic), "初期診断読取")
         XCTAssertEqual(ReadoutCoordinatorViewModel.readoutProfileLabel(for: .quickCondition), "クイック状態確認")
