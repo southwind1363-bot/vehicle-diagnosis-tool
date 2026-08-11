@@ -3037,13 +3037,14 @@ check(appSource.includes('const freezeFrameEcuSnapshots = freezeFrameSnapshot?.f
 if (modernGenericMatchSource) {
   const modernGenericContext = { dataStore: { genericObdCodesModern: [
     hondaSrsDefinition,
-    { code: "P0300", title: "Random/multiple cylinder misfire", source_url: "https://example.invalid/j2012" },
-    { code: "P0171", title: "Sample only", confidence: "sample", source_url: "https://example.invalid/sample" },
-    { code: "P0420", title: "No direct source" }
+    { code: "P0300", title: "Current SAE source", source_url: "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions" },
+    { code: "P0171", title: "Sample only", confidence: "sample", source_url: "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions" },
+    { code: "P0420", title: "Autel-only source", source_url: "https://www.autel.com/es/u/cms/wwwes/202007/171330268cwe.pdf" },
+    { code: "P0430", title: "No direct source" }
   ] } };
   vm.createContext(modernGenericContext);
   vm.runInContext(modernGenericMatchSource, modernGenericContext);
-  check(modernGenericContext.getModernGenericMatches("B0001").length === 0 && modernGenericContext.getModernGenericMatches("P0300").length === 1 && modernGenericContext.getModernGenericMatches("P0171").length === 0 && modernGenericContext.getModernGenericMatches("P0420").length === 0, "Generic reference matching must use only directly sourced non-sample guidance");
+  check(modernGenericContext.getModernGenericMatches("B0001").length === 0 && modernGenericContext.getModernGenericMatches("P0300").length === 1 && modernGenericContext.getModernGenericMatches("P0171").length === 0 && modernGenericContext.getModernGenericMatches("P0420").length === 0 && modernGenericContext.getModernGenericMatches("P0430").length === 0, "Generic reference matching must use only current SAE-backed non-sample guidance");
 }
 check(appSource.includes('...inferSafetyTagsFromDtcDefinition(obd),') && appSource.includes('function inferSafetyTagsFromDtcDefinition(item)') && appSource.includes('if (text.includes("srs") || text.includes("airbag") || text.includes("restraint") || text.includes("エアバッグ") || text.includes("拘束")) tags.push("airbag");') && appSource.includes('function inferSafetyTagsFromModernItem(item) {\n  return inferSafetyTagsFromDtcDefinition(item);\n}'), "Detailed diagnosis should derive SRS and other safety warnings from source-specific DTC definitions");
 check(appSource.includes('if (obd?.source) sources.push(obd.source);') && appSource.includes('if (obd?.source_date) sources.push(`出典日: ${obd.source_date}`);') && appSource.includes('Array.isArray(obd?.source_url) ? obd.source_url : [obd?.source_url]'), "Detailed diagnosis sources should retain source-specific DTC name, date, and URL");
