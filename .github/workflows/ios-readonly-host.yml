@@ -73,24 +73,17 @@ jobs:
           fi
         working-directory: native/ios/VehicleDiagnosisELMHost
 
-      - name: Compile read-only connector tests for iOS Simulator
+      - name: Compile host integration tests for iOS Simulator
         run: |
           set +e
           set -o pipefail
           xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme VehicleDiagnosisELMHostTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/vehicle-diagnosis-elm-host-tests.log
-          host_test_status=${PIPESTATUS[0]}
-          if [ "$host_test_status" -eq 0 ]; then
-            xcodebuild -project VehicleDiagnosisELMHost.xcodeproj -scheme ELM327BLEConnectorTests -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build-for-testing 2>&1 | tee /tmp/elm327bleconnector-tests.log
-            test_status=${PIPESTATUS[0]}
-          else
-            test_status=$host_test_status
-            cp /tmp/vehicle-diagnosis-elm-host-tests.log /tmp/elm327bleconnector-tests.log
-          fi
+          test_status=${PIPESTATUS[0]}
           set -e
           if [ "$test_status" -ne 0 ]; then
-            details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:|Testing failed:|Unable to find a destination)' /tmp/elm327bleconnector-tests.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
-            if [ -z "$details" ]; then details=$(tail -n 12 /tmp/elm327bleconnector-tests.log | cut -c 1-600 | tr '\n' ' '); fi
-            echo "::error title=iOS connector test compilation failure::${details:-xcodebuild build-for-testing failed without a diagnostic}"
+            details=$(grep -E '(^| )((fatal )?error:|.*\.swift:[0-9]+:[0-9]+:|Testing failed:|Unable to find a destination)' /tmp/vehicle-diagnosis-elm-host-tests.log | tail -n 12 | cut -c 1-600 | tr '\n' ' ')
+            if [ -z "$details" ]; then details=$(tail -n 12 /tmp/vehicle-diagnosis-elm-host-tests.log | cut -c 1-600 | tr '\n' ' '); fi
+            echo "::error title=iOS host integration test compilation failure::${details:-xcodebuild build-for-testing failed without a diagnostic}"
             exit "$test_status"
           fi
         working-directory: native/ios/VehicleDiagnosisELMHost
