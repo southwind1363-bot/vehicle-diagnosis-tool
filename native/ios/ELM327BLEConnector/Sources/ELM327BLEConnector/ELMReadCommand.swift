@@ -199,6 +199,7 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         .ambientAirTemperature,
         .timeWithMIL,
         .fuelType,
+        .hybridBatteryRemaining,
         .engineOilTemperature
     ]
 

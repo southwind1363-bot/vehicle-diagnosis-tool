@@ -23,10 +23,11 @@ final class ELMReadCommandTests: XCTestCase {
     func testInitialLivePIDPlanIsBoundedToTheCoreReadoutSet() {
         XCTAssertEqual(
             ELMReadCommand.initialLivePIDCommands.map(\.wireValue),
-            ["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015C"]
+            ["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"]
         )
-        XCTAssertEqual(ELMReadCommand.initialLivePIDCommands.count, 28)
+        XCTAssertEqual(ELMReadCommand.initialLivePIDCommands.count, 29)
         XCTAssertTrue(ELMReadCommand.initialLivePIDCommands.allSatisfy { $0.intent == "read_live_pid_snapshot" && $0.readoutID == "live_pid_snapshot" })
+        XCTAssertTrue(ELMReadCommand.initialLivePIDCommands.contains(.hybridBatteryRemaining))
         XCTAssertTrue(ELMReadCommand.initialLivePIDCommands.contains(.engineOilTemperature))
         XCTAssertFalse(ELMReadCommand.initialLivePIDCommands.contains(.odometer))
         XCTAssertFalse(ELMReadCommand.initialLivePIDCommands.contains(.commandedDieselExhaustFluid))
