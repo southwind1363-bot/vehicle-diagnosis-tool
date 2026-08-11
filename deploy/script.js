@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.76";
+const APP_VERSION = "3.8.77";
 const APP_LAST_UPDATED = "2026-08-11";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8904,6 +8904,20 @@ function analyzeObdScannerImport(options = {}) {
     ? window.ObdReadOnly.buildDiagnosticScanSessionFromCsv(scannerText)
     : null;
   const structuredImportSession = jsonImportSession || csvImportSession;
+  const structuredImportRejected = structuredImportSession
+    && (structuredImportSession.accepted === false || structuredImportSession.ok === false || structuredImportSession.blocked === true);
+  if (structuredImportRejected) {
+    const errors = Array.isArray(structuredImportSession.errors) ? structuredImportSession.errors.filter(Boolean) : [];
+    obdDetectedCodes.innerHTML = "";
+    obdMonitorGrid.innerHTML = "";
+    obdMonitorInsightList.innerHTML = "";
+    obdMonitorInsightList.hidden = true;
+    renderObdImportToolHints();
+    obdImportStatus.textContent = `診断結果ファイルを取り込めませんでした: ${errors.slice(0, 3).join(" / ") || "検証に失敗"}`;
+    obdMonitorStatus.textContent = "拒否された読取ファイルから診断値を表示しません。";
+    obdMonitorCount.textContent = "0項目";
+    return;
+  }
   const analysis = structuredImportSession || (bridgeImport && hasBridgeMergeDiagnosticInputsSupport()
     ? window.ObdReadOnly.mergeDiagnosticInputs({ scannerText, bridgeImport })
     : window.ObdReadOnly.analyzeScannerText(scannerText));
