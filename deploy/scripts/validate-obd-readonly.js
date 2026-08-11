@@ -4064,6 +4064,19 @@ const nativeElmAdapterIdentityGoldenImport = obd.buildNativeConnectorDiagnosticI
 const nativeElmReadinessGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmReadinessGoldenEnvelope);
 const nativeElmReadinessGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmReadinessGoldenEnvelope);
 const nativeElmEcuInfoGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmEcuInfoGoldenEnvelope);
+const nativeElmSensitiveEcuInfoImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEcuInfoGoldenEnvelope,
+  data: {
+    ...nativeElmEcuInfoGoldenEnvelope.data,
+    items: [
+      ...nativeElmEcuInfoGoldenEnvelope.data.items,
+      { id: "vin", service: "09", info_type: "02", value: "JTDKN3DU0A0123456", source_ecu: "7E8" }
+    ]
+  }
+});
+const nativeElmSensitiveEcuInfoReimport = obd.buildDiagnosticScanSessionFromJson(
+  JSON.stringify(obd.buildBridgeSessionExportPayload(nativeElmSensitiveEcuInfoImport.session))
+);
 const nativeElmPerformanceCounterImport = obd.buildNativeConnectorDiagnosticImport({
   ...nativeElmEcuInfoGoldenEnvelope,
   data: {
@@ -4194,6 +4207,18 @@ check(
     && nativeElmEcuInfoGoldenImport.session?.ecuInfoSnapshot?.items?.some((item) => item.id === "ecu_name" && item.value === "ENGINE")
     && !JSON.stringify(nativeElmEcuInfoGoldenImport).includes("0902"),
   "iPhone ELM327 Mode 09 ECU information envelope did not preserve scoped ECU name safely"
+);
+check(
+  nativeElmSensitiveEcuInfoImport.accepted === true
+    && nativeElmSensitiveEcuInfoImport.session?.ecuInfoSnapshot?.items?.find((item) => item.id === "vin")?.value === null
+    && nativeElmSensitiveEcuInfoImport.session?.hadSensitiveIdentifier === true
+    && nativeElmSensitiveEcuInfoImport.session?.vehicleCommandEnabled === false
+    && !JSON.stringify(nativeElmSensitiveEcuInfoImport).includes("JTDKN3DU0A0123456")
+    && nativeElmSensitiveEcuInfoReimport?.ecuInfoSnapshot?.items?.find((item) => item.id === "vin")?.value === null
+    && nativeElmSensitiveEcuInfoReimport?.hadSensitiveIdentifier === true
+    && nativeElmSensitiveEcuInfoReimport?.vehicleCommandEnabled === false
+    && !JSON.stringify(nativeElmSensitiveEcuInfoReimport).includes("JTDKN3DU0A0123456"),
+  "iPhone ELM327 native ECU-info VIN must be redacted before session creation and remain redacted after export/import"
 );
 check(
   nativeElmPerformanceCounterImport.accepted === true
