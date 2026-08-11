@@ -286,4 +286,42 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertEqual(preview.storedDTCs.map(\.code), ["P0171"])
         XCTAssertEqual(preview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_stored_dtc", readoutID: "stored_dtc_snapshot", sourceScopeID: "7E8", errorCodes: ["transport_failure"])])
     }
+
+    func testPreviewDoesNotPromoteContradictorySuccessfulReadoutsWithErrors() {
+        let accepted = NativeConnectorEnvelopeFactory.livePID(
+            context: context,
+            sequence: 1,
+            scopeID: "7E8",
+            value: OBD2MonitorValue(id: "engine_speed", pid: "0C", value: 1726, unit: "rpm")
+        )
+        let contradictory = NativeConnectorEnvelope(
+            schemaVersion: "native_connector_contract_v1",
+            interfaceID: "user-vci-elm327",
+            platform: "ios",
+            intent: "read_live_pid_snapshot",
+            capturedAt: "2026-08-11T00:00:00Z",
+            scanID: context.scanID,
+            connectionID: context.connectionID,
+            vehicleContextID: context.vehicleContextID,
+            sequence: 2,
+            readoutID: "live_pid_snapshot",
+            readoutScopeID: "7E8",
+            readoutAttempt: 0,
+            ok: true,
+            blocked: false,
+            wouldTransmit: false,
+            errors: ["transport_failure"],
+            data: ["monitor_values": .array([.object([
+                "id": .string("engine_speed"),
+                "pid": .string("0C"),
+                "value": .number(900),
+                "unit": .string("rpm")
+            ])])]
+        )
+
+        let preview = NativeConnectorReadoutPreview(envelopes: [accepted, contradictory])
+
+        XCTAssertEqual(preview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
+        XCTAssertEqual(preview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_live_pid_snapshot", readoutID: "live_pid_snapshot", sourceScopeID: "7E8", errorCodes: ["transport_failure"])])
+    }
 }

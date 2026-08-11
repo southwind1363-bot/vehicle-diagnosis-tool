@@ -168,7 +168,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
 
         for envelope in envelopes {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
-            if !envelope.ok, !envelope.errors.isEmpty {
+            if (!envelope.ok || !envelope.errors.isEmpty), !envelope.errors.isEmpty {
                 let failure = ReadoutFailure(
                     intent: envelope.intent,
                     readoutID: envelope.readoutID,
@@ -177,7 +177,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 )
                 readoutFailures[failure.id] = failure
             }
-            guard envelope.ok, !envelope.blocked else { continue }
+            guard envelope.ok, envelope.errors.isEmpty, !envelope.blocked else { continue }
             switch envelope.intent {
             case "read_stored_dtc", "read_pending_dtc", "read_permanent_dtc":
                 let dtcs = Self.dtcs(in: envelope.data, status: Self.dtcStatus(for: envelope.intent), scopeID: scopeID)
