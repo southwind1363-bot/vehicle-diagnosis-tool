@@ -576,7 +576,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('...normalizeFreezeFrameSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeFreezeFrameSnapshot should reuse the core freeze-frame normalizer");
     check(functionBody.includes('trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.freeze_dtc || data.freezeDtc || data.associated_dtc || data.associatedDtc || data.dtc || null') && functionBody.includes('trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null'), "normalizeBridgeFreezeFrameSnapshot should normalize trigger DTC and frame-number aliases");
     check(functionBody.includes('Array.isArray(data.freezeFrameEcuSnapshots)') && functionBody.includes('Array.isArray(data.freeze_frame_ecu_snapshots)') && functionBody.includes('Array.isArray(data.freeze_frame_values)') && functionBody.includes('Array.isArray(data.freezeFrameRows)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('freeze_frame_ecu_snapshots: freezeFrameEcuSnapshotRows') && functionBody.includes('const outerFreezeFrameFallback = nestedData && !hasNestedFreezeFramePayload') && functionBody.includes('Never combine outer and nested freeze-frame evidence'), "normalizeBridgeFreezeFrameSnapshot should accept freeze-frame ECU scope and value aliases without merging nested and outer evidence");
-    check(functionBody.includes('const errorCodes = readBridgeResponseErrorCodes(response);') && functionBody.includes('errorCodes.length === 0') && functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety)') && functionBody.includes('wouldTransmit: bridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety('), "normalizeBridgeFreezeFrameSnapshot should preserve bridge failure status");
+    check(functionBody.includes('const errorCodes = readBridgeResponseErrorCodes(response);') && functionBody.includes('errorCodes.length === 0') && functionBody.includes('const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false') && functionBody.includes('intent: "read_freeze_frame"') && functionBody.includes('freeze_frame_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety('), "normalizeBridgeFreezeFrameSnapshot should preserve bridge failure status");
   }
 };
 const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
@@ -5177,6 +5177,20 @@ const bridgeNestedErrorDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   payload: { data: { errors: ["adapter_timeout"], dtcs: [] } }
 });
 check(bridgeNestedErrorDtcSnapshot.errorCodes?.includes("adapter_timeout") && bridgeNestedErrorDtcSnapshot.ok === false && bridgeNestedErrorDtcSnapshot.blocked === false && bridgeNestedErrorDtcSnapshot.dtcReadoutStatus === "unparsed", "Nested bridge errors must be retained without a successful DTC claim");
+const bridgeContradictoryCoreErrorSnapshots = {
+  live: obd.normalizeBridgeLivePidSnapshot({ ok: true, blocked: false, would_transmit: false, data: { errors: ["adapter_timeout"], values: [{ pid: "0C", value: 900, unit: "rpm" }] } }),
+  supported: obd.normalizeBridgeSupportedPidSnapshot({ ok: true, blocked: false, would_transmit: false, data: { errors: ["adapter_timeout"], supported_pids: ["0C"] } }),
+  freeze: obd.normalizeBridgeFreezeFrameSnapshot({ ok: true, blocked: false, would_transmit: false, data: { errors: ["adapter_timeout"], values: [{ pid: "05", value: 70, unit: "C" }] } }),
+  readiness: obd.normalizeBridgeReadinessSnapshot({ ok: true, blocked: false, would_transmit: false, data: { errors: ["adapter_timeout"], readiness_status_byte_b: 7, readiness_status_byte_c: 34, readiness_status_byte_d: 0 } })
+};
+check(
+  Object.values(bridgeContradictoryCoreErrorSnapshots).every((snapshot) => snapshot.ok === false && snapshot.blocked === false && snapshot.wouldTransmit === false && snapshot.vehicleCommandEnabled === false && snapshot.errorCodes?.includes("adapter_timeout"))
+    && bridgeContradictoryCoreErrorSnapshots.live.livePidReadoutStatus === "unparsed" && bridgeContradictoryCoreErrorSnapshots.live.monitorValues.length === 1
+    && bridgeContradictoryCoreErrorSnapshots.supported.supportedPidReadoutStatus === "unparsed" && bridgeContradictoryCoreErrorSnapshots.supported.supportedPids.includes("0C")
+    && bridgeContradictoryCoreErrorSnapshots.freeze.freezeFrameReadoutStatus === "unparsed" && bridgeContradictoryCoreErrorSnapshots.freeze.monitorValues.length === 1
+    && bridgeContradictoryCoreErrorSnapshots.readiness.readinessReadoutStatus === "unparsed",
+  "Contradictory bridge core errors must retain observations without a successful readout claim"
+);
 const savedBridgeStatus = obd.normalizeBridgeConnectionStatus({ status: "ready", is_paired: true, vci_ready: true, car_connected: true });
 check(savedBridgeStatus.ok === true && savedBridgeStatus.blocked === false && savedBridgeStatus.vehicleConnected === true, "保存済みブリッジ接続状態を読取済みとして再取込できません");
 const savedBridgeVciList = obd.normalizeBridgeVciList([{ id: "saved-vci", name: "Saved VCI", is_connected: true }]);

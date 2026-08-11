@@ -3841,10 +3841,12 @@
       "items"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);
+    const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedLivePidAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
-      : bridgeSafety;
-    const errorCodes = readBridgeResponseErrorCodes(response);
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
+        : bridgeSafety;
     const values = (Array.isArray(data.values)
       ? data.values
       : Array.isArray(data.monitor_values)
@@ -4283,7 +4285,9 @@
     );
     const resolvedBridgeSafety = malformedSupportedPidAlias || malformedSupportedPidEcuAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
-      : bridgeSafety;
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
+        : bridgeSafety;
     const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
       ? getBridgeReadoutStatus(resolvedBridgeSafety)
       : hasExplicitReadoutStatus
@@ -4423,6 +4427,9 @@
         response,
         errorCodes.length === 0 && (hasFreezeFrameEcuSnapshotEvidence || [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray))
       );
+    const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+      ? { ...bridgeSafety, ok: false, unparsed: true }
+      : bridgeSafety;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     const protocolProvenance = {
       primaryProtocol: normalizeProtocolProvenanceValue(protocol),
@@ -4434,7 +4441,7 @@
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null,
       protocol,
-      freeze_frame_readout_status: getBridgeReadoutStatus(bridgeSafety),
+      freeze_frame_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety),
       source_ecu: data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
       source_ecu_name: sourceEcuName,
       trigger_dtc: data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.freeze_dtc || data.freezeDtc || data.associated_dtc || data.associatedDtc || data.dtc || null,
@@ -4456,10 +4463,10 @@
       networkProtocol: protocolProvenance.networkProtocol,
       network_protocol: protocolProvenance.networkProtocol,
       intent: "read_freeze_frame",
-      ok: bridgeSafety.ok,
-      blocked: bridgeSafety.blocked,
-      wouldTransmit: bridgeSafety.wouldTransmit,
-      would_transmit: bridgeSafety.wouldTransmit,
+      ok: resolvedBridgeSafety.ok,
+      blocked: resolvedBridgeSafety.blocked,
+      wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+      would_transmit: resolvedBridgeSafety.wouldTransmit,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
       errorCodes,
@@ -4587,7 +4594,9 @@
       || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined)));
     const resolvedBridgeSafety = malformedReadinessAlias || malformedReadinessEcuAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
-      : bridgeSafety;
+      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
+        : bridgeSafety;
     const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
