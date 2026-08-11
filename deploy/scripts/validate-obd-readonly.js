@@ -56,6 +56,14 @@ const livePidTimelineChartRowsFunctionSource = appSource.match(/function buildLi
 const monitorDefinitions = JSON.parse(
   fs.readFileSync(new URL("../data/obd-monitor-definitions.json", import.meta.url), "utf8")
 );
+const nativeMode01ControlWireValues = new Set(["0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0"]);
+const nativeLivePidWireValues = nativeReadCommandWireValues.filter((wireValue) => /^01[0-9A-F]{2}$/.test(wireValue) && !nativeMode01ControlWireValues.has(wireValue));
+const nativeFreezeFramePidWireValues = nativeReadCommandWireValues.filter((wireValue) => /^02[0-9A-F]{2}$/.test(wireValue) && !["0200", "0202"].includes(wireValue));
+const standardMonitorPidSet = new Set(
+  monitorDefinitions
+    .filter((item) => item.service === "01" && typeof item.pid === "string")
+    .map((item) => item.pid.toUpperCase())
+);
 const freezeFrameItems = JSON.parse(
   fs.readFileSync(new URL("../data/obd-freeze-frame-items-2026.json", import.meta.url), "utf8")
 );
@@ -3107,7 +3115,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2771件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2772件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3977,6 +3985,7 @@ check(nativeScanArchiveSource.includes('manifest.expectedReadouts.allSatisfy') &
 check(nativeScanArchiveSource.includes('(!envelope.ok || envelope.errors.isEmpty)') && nativeScanArchiveTestSource.includes('testRejectsContradictorySuccessfulEnvelopeErrorsWhileRetainingFailedReadoutEvidence') && nativeReadoutCoordinatorTestSource.includes('testCoordinatorRejectsContradictorySuccessfulEnvelopeErrors') && nativeScanArchiveTestSource.includes('ok: false') && nativeScanArchiveTestSource.includes('errors: ["transport_failure"]'), "iPhoneアーカイブは成功とエラーが同居する矛盾応答を拒否し、通常の失敗記録を保持しなければなりません");
 check(["03", "07", "0A", "06", "0200", "0202", "0900", "0908", "090B", "0100", "0101", "01C0", "01E0"].every((wireValue) => nativeReadCommandSource.includes(`return "${wireValue}"`)) && nativeReadCommandSource.includes('case .supportedPIDsA0: return .supportedPIDsC0') && nativeReadCommandSource.includes('case .supportedPIDsC0: return .supportedPIDsE0') && nativeReadCommandSource.includes('case .supportedPIDsE0: return "E0"'), "iPhone ELM327初期読取とWeb側のDTC・FF・PID・readiness・ECU情報期待項目が一致していません");
 check(nativeReadCommandWireValues.length > 0 && nativeReadCommandWireValues.every((wireValue) => ["ATE0", "ATL0", "ATH1", "ATSP0", "ATI", "ATDP", "ATDPN", "03", "07", "0A", "06"].includes(wireValue) || /^01[0-9A-F]{2}$/.test(wireValue) || /^02[0-9A-F]{2}$/.test(wireValue) || /^09(?:00|04|06|08|0A|0B)$/.test(wireValue)), "iPhone ELM327 command catalog must contain only explicit read-only adapter and OBD commands");
+check(nativeLivePidWireValues.length > 0 && nativeFreezeFramePidWireValues.length > 0 && [...nativeLivePidWireValues, ...nativeFreezeFramePidWireValues].every((wireValue) => standardMonitorPidSet.has(wireValue.slice(2))), "iPhone ELM327 live and freeze-frame PID commands must remain covered by the shared standard monitor dictionary");
 check(nativeReadCommandSource.includes('case .describeProtocolNumber: return "ATDPN"') && nativeReadCommandSource.includes('case .identifyAdapter, .describeProtocol, .describeProtocolNumber: return "adapter_identity"') && nativeConnectorSource.includes("func isUsableELMAdapterIdentityResponse") && nativeConnectorSource.includes("func normalizedELMAdapterProtocolNumber") && nativeConnectorSource.includes('emitFailure(for: command, error: "adapter_identity_unavailable")') && nativeConnectorSource.includes('emitFailure(for: command, error: "adapter_protocol_unavailable")') && nativeConnectorSource.includes('emitFailure(for: command, error: "adapter_protocol_number_unavailable")') && nativeReadResponseDispositionTestSource.includes("testAdapterIdentityRejectsExplicitFailureResponses") && nativeReadResponseDispositionTestSource.includes("testAdapterIdentityAcceptsUsableELMAndProtocolResponses") && nativeReadResponseDispositionTestSource.includes("testAdapterProtocolNumberRetainsOnlyELMProtocolValues"), "iPhone ELM327 adapter identity and protocol errors must interrupt before vehicle readout");
 check(source.includes('dataShape: Object.freeze(["adapter_name", "adapter_family", "firmware_version", "adapter_protocol_hint", "adapter_protocol_number", "vehicle_command_enabled"])'), "Native connector adapter identity contract must accept normalized protocol metadata without requiring raw adapter text");
 check(nativeReadCommandSource.includes("public static let initialLivePIDCommands") && nativeReadCommandSource.includes("public static let quickLivePIDCommands") && nativeConnectorSource.includes("requestedLivePIDCommands.filter") && nativeConnectorSource.includes("livePIDCommands: ELMReadCommand.initialLivePIDCommands") && nativeConnectorSource.includes("livePIDCommands: ELMReadCommand.quickLivePIDCommands") && !nativeConnectorSource.includes("ELMReadCommand.allCases.filter { candidate in\n                        candidate.livePID") && nativeReadCommandTestSource.includes("testInitialLivePIDPlanIsBoundedToTheCoreReadoutSet") && nativeReadCommandTestSource.includes('ELMReadCommand.initialLivePIDCommands.count, 25') && nativeReadCommandTestSource.includes("testQuickReadoutPlanKeepsOnlyTheFastReadOnlyCore"), "iPhone live PID passes must stay bounded to their tested read-only sets");
@@ -20731,6 +20740,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2771");
+  console.log("OBD read-only safety checks: 2772");
   console.log("Errors: 0");
 }
