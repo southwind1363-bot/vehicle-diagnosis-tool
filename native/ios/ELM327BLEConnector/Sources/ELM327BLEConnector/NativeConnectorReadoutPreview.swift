@@ -166,7 +166,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var supportedPIDs: [String: Set<String>] = [:]
         var readoutFailures: [String: ReadoutFailure] = [:]
 
-        for envelope in envelopes {
+        for envelope in Self.latestAttemptEnvelopes(from: envelopes) {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
             if (!envelope.ok || !envelope.errors.isEmpty), !envelope.errors.isEmpty {
                 let failure = ReadoutFailure(
@@ -227,6 +227,25 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
             .sorted { $0.sourceScopeID < $1.sourceScopeID }
         self.readoutFailures = readoutFailures.values.sorted { lhs, rhs in
             lhs.sourceScopeID == rhs.sourceScopeID ? lhs.intent < rhs.intent : lhs.sourceScopeID < rhs.sourceScopeID
+        }
+    }
+
+    private static func latestAttemptEnvelopes(from envelopes: [NativeConnectorEnvelope]) -> [NativeConnectorEnvelope] {
+        var latestAttemptByReadoutScope: [String: Int] = [:]
+        for envelope in envelopes {
+            guard let readoutID = envelope.readoutID,
+                  let readoutAttempt = envelope.readoutAttempt
+            else { continue }
+            let scopeID = envelope.readoutScopeID ?? "LEGACY"
+            let key = "\(readoutID)|\(scopeID)"
+            latestAttemptByReadoutScope[key] = max(latestAttemptByReadoutScope[key] ?? readoutAttempt, readoutAttempt)
+        }
+        return envelopes.filter { envelope in
+            guard let readoutID = envelope.readoutID else { return true }
+            let scopeID = envelope.readoutScopeID ?? "LEGACY"
+            let key = "\(readoutID)|\(scopeID)"
+            guard let latestAttempt = latestAttemptByReadoutScope[key] else { return true }
+            return envelope.readoutAttempt == latestAttempt
         }
     }
 

@@ -8,6 +8,39 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         vehicleContextID: UUID(uuidString: "33333333-3333-4333-8333-333333333333")!
     )
 
+    private func livePIDEnvelope(
+        sequence: Int,
+        attempt: Int,
+        ok: Bool,
+        value: Double,
+        errors: [String] = []
+    ) -> NativeConnectorEnvelope {
+        NativeConnectorEnvelope(
+            schemaVersion: "native_connector_contract_v1",
+            interfaceID: "user-vci-elm327",
+            platform: "ios",
+            intent: "read_live_pid_snapshot",
+            capturedAt: "2026-08-11T00:00:00Z",
+            scanID: context.scanID,
+            connectionID: context.connectionID,
+            vehicleContextID: context.vehicleContextID,
+            sequence: sequence,
+            readoutID: "live_pid_snapshot",
+            readoutScopeID: "7E8",
+            readoutAttempt: attempt,
+            ok: ok,
+            blocked: false,
+            wouldTransmit: false,
+            errors: errors,
+            data: ["monitor_values": .array([.object([
+                "id": .string("engine_speed"),
+                "pid": .string("0C"),
+                "value": .number(value),
+                "unit": .string("rpm")
+            ])])]
+        )
+    }
+
     func testCoordinatorExportsOnlyACompletedStructuredArchive() throws {
         let coordinator = NativeConnectorReadoutCoordinator()
         var updateCount = 0
@@ -322,6 +355,38 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         let preview = NativeConnectorReadoutPreview(envelopes: [accepted, contradictory])
 
         XCTAssertEqual(preview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
+        XCTAssertEqual(preview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_live_pid_snapshot", readoutID: "live_pid_snapshot", sourceScopeID: "7E8", errorCodes: ["transport_failure"])])
+    }
+
+    func testPreviewUsesOnlyLatestReadoutAttemptAfterRetrySucceeds() {
+        let firstAttemptFailure = livePIDEnvelope(
+            sequence: 1,
+            attempt: 0,
+            ok: false,
+            value: 900,
+            errors: ["response_timeout"]
+        )
+        let retrySuccess = livePIDEnvelope(sequence: 2, attempt: 1, ok: true, value: 1726)
+
+        let preview = NativeConnectorReadoutPreview(envelopes: [firstAttemptFailure, retrySuccess])
+
+        XCTAssertEqual(preview.liveValues, [NativeConnectorReadoutPreview.MonitorValue(monitorID: "engine_speed", pid: "0C", value: 1726, unit: "rpm", sourceScopeID: "7E8")])
+        XCTAssertTrue(preview.readoutFailures.isEmpty)
+    }
+
+    func testPreviewDoesNotKeepOlderValuesWhenLatestRetryFails() {
+        let firstAttemptSuccess = livePIDEnvelope(sequence: 1, attempt: 0, ok: true, value: 1726)
+        let retryFailure = livePIDEnvelope(
+            sequence: 2,
+            attempt: 1,
+            ok: false,
+            value: 900,
+            errors: ["transport_failure"]
+        )
+
+        let preview = NativeConnectorReadoutPreview(envelopes: [firstAttemptSuccess, retryFailure])
+
+        XCTAssertTrue(preview.liveValues.isEmpty)
         XCTAssertEqual(preview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_live_pid_snapshot", readoutID: "live_pid_snapshot", sourceScopeID: "7E8", errorCodes: ["transport_failure"])])
     }
 
