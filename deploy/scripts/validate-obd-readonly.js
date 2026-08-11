@@ -4211,6 +4211,19 @@ const failedNativeEvaluation = obd.evaluateNativeConnectorEnvelope(failedNativeE
 const failedNativeImport = obd.buildNativeConnectorDiagnosticImport(failedNativeEnvelope);
 check(failedNativeEvaluation.accepted === true && failedNativeEvaluation.readoutSucceeded === false && failedNativeEvaluation.readoutStatus === "unparsed" && failedNativeEvaluation.readoutErrors.includes("transport:timeout"), "Native connector envelope acceptance and readout failure are conflated");
 check(failedNativeImport.accepted === true && failedNativeImport.readoutSucceeded === false && failedNativeImport.session?.dtcSnapshot?.dtcReadoutStatus === "unparsed" && failedNativeImport.session?.dtcSnapshot?.codes?.length === 0 && failedNativeImport.session?.dtcSnapshot?.errorCodes?.includes("transport:timeout"), "Failed native connector payload was retained as a successful DTC readout");
+const contradictoryNativeLivePidEnvelope = {
+  ...nativeElmLivePidGoldenEnvelope,
+  ok: true,
+  blocked: false,
+  errors: ["transport_failure"],
+  data: {
+    ...nativeElmLivePidGoldenEnvelope.data,
+    monitor_values: [{ id: "engine_speed", pid: "0C", value: 900, unit: "rpm" }]
+  }
+};
+const contradictoryNativeLivePidEvaluation = obd.evaluateNativeConnectorEnvelope(contradictoryNativeLivePidEnvelope);
+const contradictoryNativeLivePidImport = obd.buildNativeConnectorDiagnosticImport(contradictoryNativeLivePidEnvelope);
+check(contradictoryNativeLivePidEvaluation.accepted === true && contradictoryNativeLivePidEvaluation.readoutSucceeded === false && contradictoryNativeLivePidEvaluation.readoutStatus === "unparsed" && contradictoryNativeLivePidEvaluation.readoutErrors.includes("transport_failure") && contradictoryNativeLivePidImport.session?.livePidSnapshot?.livePidReadoutStatus === "unparsed" && contradictoryNativeLivePidImport.session?.livePidSnapshot?.monitorValues?.length === 0 && contradictoryNativeLivePidImport.session?.readoutCoverage?.failedReadoutReasonById?.live_pid_snapshot === "transport_error" && contradictoryNativeLivePidImport.vehicleCommandEnabled === false && contradictoryNativeLivePidImport.wouldTransmit === false, "Contradictory native live PID errors must not become diagnostic values during import");
 const blockedNativeReadoutEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, ok: false, blocked: true, errors: ["connector:not_ready"] });
 check(blockedNativeReadoutEvaluation.accepted === true && blockedNativeReadoutEvaluation.readoutSucceeded === false && blockedNativeReadoutEvaluation.readoutStatus === "blocked" && blockedNativeReadoutEvaluation.wouldTransmit === false, "Blocked native connector readout was not retained as a safe failure");
 check(malformedNativeImport.blocked === true && malformedNativeImport.session === null, "不正なiPhoneコネクタdataから診断セッションが生成されています");
