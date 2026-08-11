@@ -4756,13 +4756,27 @@
   }
 
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
+    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
+      ? response.data
+      : null;
+    const hasNestedOnboardMonitorPayload = Boolean(nestedData && [
+      "tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests",
+      "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"
+    ].some((key) => nestedData[key] !== undefined));
+    // Never combine outer and nested Mode 06 evidence; outer tests only complete an otherwise empty envelope.
+    const outerOnboardMonitorFallback = nestedData && !hasNestedOnboardMonitorPayload
+      ? {
+        tests: response.tests ?? response.values ?? response.mode06_tests ?? response.mode06Tests ?? response.mode06_rows ?? response.mode06Rows ?? response.monitor_tests ?? response.monitorTests ?? response.test_rows ?? response.testRows ?? response.onboard_monitor_tests ?? response.onboardMonitorTests
+      }
+      : {};
     const data = response && typeof response === "object"
-      ? response.data && typeof response.data === "object"
+      ? nestedData
         ? {
-          ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
-          onboard_monitor_readout_status: response.data.onboardMonitorReadoutStatus || response.data.onboard_monitor_readout_status || response.onboardMonitorReadoutStatus || response.onboard_monitor_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null
+          ...nestedData,
+          source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          onboard_monitor_readout_status: nestedData.onboardMonitorReadoutStatus || nestedData.onboard_monitor_readout_status || response.onboardMonitorReadoutStatus || response.onboard_monitor_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
+          ...outerOnboardMonitorFallback
         }
         : response
       : {};

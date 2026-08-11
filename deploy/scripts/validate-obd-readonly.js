@@ -604,6 +604,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     const functionBody = bridgeOnboardMonitorSnapshotFunctionSource[0];
     check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('source_ecu_name: sourceEcuName') && functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should retain a parent ECU name without replacing an explicit Mode 06 row source");
     check(functionBody.includes('Array.isArray(data.mode06_tests)') && functionBody.includes('Array.isArray(data.mode06Rows)') && functionBody.includes('Array.isArray(data.onboardMonitorTests)'), "normalizeBridgeOnboardMonitorSnapshot should accept Mode 06 test aliases");
+    check(functionBody.includes('const hasNestedOnboardMonitorPayload = Boolean(nestedData') && functionBody.includes('const outerOnboardMonitorFallback = nestedData && !hasNestedOnboardMonitorPayload') && functionBody.includes('...outerOnboardMonitorFallback'), "normalizeBridgeOnboardMonitorSnapshot should only use outer Mode 06 tests for an empty nested envelope");
     check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('const hasTestEvidence = tests.length > 0;') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasTestEvidence));'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge failure status");
   }
 };
@@ -8774,6 +8775,23 @@ const bridgeOuterMetadataOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMoni
 });
 const bridgeOuterMetadataOnboardMonitorRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ onboard_monitor_snapshot: bridgeOuterMetadataOnboardMonitorSnapshot }))));
 check(bridgeOuterMetadataOnboardMonitorSnapshot.capturedAt === "2026-08-10T00:06:00Z" && bridgeOuterMetadataOnboardMonitorSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataOnboardMonitorSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataOnboardMonitorSnapshot.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataOnboardMonitorSnapshot.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.capturedAt === "2026-08-10T00:06:00Z" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocolProvenance?.transportProtocol === "ISO-TP" && bridgeOuterMetadataOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.protocolProvenance?.networkProtocol === "CAN" && bridgeOuterMetadataOnboardMonitorRoundTrip?.vehicleCommandEnabled === false, "Bridge outer Mode 06 capture and protocol provenance were not retained through read-only export");
+const bridgeOuterOnboardMonitorFallbackSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  mode06_tests: [{ test_id: "01", component_id: "01", value: 1, min: 0, max: 2 }],
+  data: { readout_id: "onboard_monitor_snapshot" }
+});
+check(bridgeOuterOnboardMonitorFallbackSnapshot.testCount === 1 && bridgeOuterOnboardMonitorFallbackSnapshot.tests[0]?.sourceEcu === "7E8" && bridgeOuterOnboardMonitorFallbackSnapshot.onboardMonitorReadoutStatus === "reported" && bridgeOuterOnboardMonitorFallbackSnapshot.wouldTransmit === false, "Outer Mode 06 tests should complete an otherwise empty nested envelope without changing read-only safety");
+const bridgeNestedOnboardMonitorPrioritySnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  mode06_tests: [{ test_id: "01", component_id: "01", value: 1, min: 0, max: 2 }],
+  data: { tests: [{ test_id: "02", component_id: "01", value: 3, min: 0, max: 2 }] }
+});
+check(bridgeNestedOnboardMonitorPrioritySnapshot.testCount === 1 && bridgeNestedOnboardMonitorPrioritySnapshot.tests[0]?.testId === "02" && bridgeNestedOnboardMonitorPrioritySnapshot.failedCount === 1 && bridgeNestedOnboardMonitorPrioritySnapshot.wouldTransmit === false, "Nested Mode 06 tests must take priority over outer tests without combining sources");
 check(bridgeOnboardMonitorSnapshot.source === "local_bridge", "Bridge Mode 06 source was not normalized");
 check(bridgeOnboardMonitorSnapshot.intent === "read_onboard_monitor" && bridgeOnboardMonitorSnapshot.blocked === false && bridgeOnboardMonitorSnapshot.wouldTransmit === false, "Bridge Mode 06 safety metadata was not normalized");
 check(bridgeOnboardMonitorSnapshot.failedCount === 1, "Bridge Mode 06 failed count was not carried");
