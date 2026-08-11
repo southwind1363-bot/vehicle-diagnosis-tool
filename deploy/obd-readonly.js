@@ -4694,15 +4694,30 @@
   }
 
   function normalizeBridgeEcuInfoSnapshot(response = {}) {
+    const nestedData = response && typeof response === "object" && response.data && typeof response.data === "object"
+      ? response.data
+      : null;
+    const hasNestedEcuInfoPayload = Boolean(nestedData && ([
+      "values", "items", "ecu_info", "ecu_info_items", "ecu_info_rows", "ecuInfo", "ecuInfoItems", "ecuInfoRows",
+      "mode09_items", "mode09Items", "mode_09_items", "mode09_values", "mode09Values", "mode_09_values",
+      "info_values", "infoValues", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers"
+    ].some((key) => nestedData[key] !== undefined) || collectEcuInfoRows(nestedData).length > 0));
+    // Never combine outer and nested ECU identity evidence; outer rows only complete an otherwise empty envelope.
+    const outerEcuInfoFallback = nestedData && !hasNestedEcuInfoPayload
+      ? {
+        values: response.values ?? response.items ?? response.ecu_info ?? response.ecu_info_items ?? response.ecu_info_rows ?? response.ecuInfo ?? response.ecuInfoItems ?? response.ecuInfoRows ?? response.mode09_items ?? response.mode09Items ?? response.mode_09_items ?? response.mode09_values ?? response.mode09Values ?? response.mode_09_values ?? response.info_values ?? response.infoValues ?? response.uds_data_identifiers ?? response.udsDataIdentifiers ?? response.uds_did_items ?? response.udsDidItems ?? response.data_identifiers ?? response.dataIdentifiers
+      }
+      : {};
     const data = response && typeof response === "object"
-      ? response.data && typeof response.data === "object"
+      ? nestedData
         ? {
-          ...response.data,
-          source_ecu: response.data.source_ecu || response.data.sourceEcu || response.data.ecu || response.data.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
-          source_ecu_name: response.data.source_ecu_name || response.data.sourceEcuName || response.data.ecu_name || response.data.ecuName || response.data.module_name || response.data.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
-          ecu_info_readout_status: response.data.ecuInfoReadoutStatus || response.data.ecu_info_readout_status || response.ecuInfoReadoutStatus || response.ecu_info_readout_status || response.data.readoutStatus || response.data.readout_status || response.readoutStatus || response.readout_status || null,
-          ecu_info_response_format: response.data.ecuInfoResponseFormat || response.data.ecu_info_response_format || response.data.responseFormat || response.data.response_format || response.ecuInfoResponseFormat || response.ecu_info_response_format || response.responseFormat || response.response_format || null,
-          had_sensitive_identifier: response.data.hadSensitiveIdentifier === true || response.data.had_sensitive_identifier === true || response.hadSensitiveIdentifier === true || response.had_sensitive_identifier === true
+          ...nestedData,
+          source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
+          ecu_info_readout_status: nestedData.ecuInfoReadoutStatus || nestedData.ecu_info_readout_status || response.ecuInfoReadoutStatus || response.ecu_info_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
+          ecu_info_response_format: nestedData.ecuInfoResponseFormat || nestedData.ecu_info_response_format || nestedData.responseFormat || nestedData.response_format || response.ecuInfoResponseFormat || response.ecu_info_response_format || response.responseFormat || response.response_format || null,
+          had_sensitive_identifier: nestedData.hadSensitiveIdentifier === true || nestedData.had_sensitive_identifier === true || response.hadSensitiveIdentifier === true || response.had_sensitive_identifier === true,
+          ...outerEcuInfoFallback
         }
         : response
       : {};

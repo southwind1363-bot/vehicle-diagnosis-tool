@@ -595,6 +595,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     const functionBody = bridgeEcuInfoSnapshotFunctionSource[0];
     check(functionBody.includes('...normalizeEcuInfoSnapshot({') && functionBody.includes('...data,'), "normalizeBridgeEcuInfoSnapshot should delegate bridge ECU info data to the core normalizer");
     check(functionBody.includes('source: "local_bridge"') && functionBody.includes('const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);') && functionBody.includes('protocol,') && functionBody.includes('protocol_provenance: mergeProtocolProvenance(data, response)'), "normalizeBridgeEcuInfoSnapshot should preserve local bridge source and protocol provenance");
+    check(functionBody.includes('const hasNestedEcuInfoPayload = Boolean(nestedData') && functionBody.includes('const outerEcuInfoFallback = nestedData && !hasNestedEcuInfoPayload') && functionBody.includes('...outerEcuInfoFallback'), "normalizeBridgeEcuInfoSnapshot should only use outer ECU rows for an empty nested envelope");
     check(source.includes('data.diagnostic_protocol') && source.includes('data.transport_protocol') && source.includes('data.network_protocol'), "Bridge protocol intake should retain diagnostic, transport, and network protocol aliases");
     check(functionBody.includes('intent: "read_ecu_info"') && functionBody.includes('ecu_info_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit'), "normalizeBridgeEcuInfoSnapshot should preserve bridge failure status");
     check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('items,') && functionBody.includes('const hasItemEvidence = items.length > 0;') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasItemEvidence));'), "normalizeBridgeEcuInfoSnapshot should retain a parent ECU name without replacing an explicit ECU info row source");
@@ -8243,6 +8244,23 @@ const bridgeOuterMetadataEcuInfoSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
 });
 const bridgeOuterMetadataEcuInfoRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ ecu_info_snapshot: bridgeOuterMetadataEcuInfoSnapshot }))));
 check(bridgeOuterMetadataEcuInfoSnapshot.capturedAt === "2026-08-10T00:05:00Z" && bridgeOuterMetadataEcuInfoSnapshot.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataEcuInfoSnapshot.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataEcuInfoSnapshot.protocolProvenance?.transportProtocol === "DoIP" && bridgeOuterMetadataEcuInfoSnapshot.protocolProvenance?.networkProtocol === "Ethernet" && bridgeOuterMetadataEcuInfoSnapshot.ecuInfoResponseFormat === "uds_read_data_by_identifier" && bridgeOuterMetadataEcuInfoRoundTrip?.ecuInfoSnapshot?.capturedAt === "2026-08-10T00:05:00Z" && bridgeOuterMetadataEcuInfoRoundTrip?.ecuInfoSnapshot?.protocol === "CAN_11BIT_500K" && bridgeOuterMetadataEcuInfoRoundTrip?.ecuInfoSnapshot?.protocolProvenance?.diagnosticProtocol === "UDS" && bridgeOuterMetadataEcuInfoRoundTrip?.ecuInfoSnapshot?.protocolProvenance?.transportProtocol === "DoIP" && bridgeOuterMetadataEcuInfoRoundTrip?.ecuInfoSnapshot?.protocolProvenance?.networkProtocol === "Ethernet" && bridgeOuterMetadataEcuInfoRoundTrip?.ecuInfoSnapshot?.ecuInfoResponseFormat === "uds_read_data_by_identifier" && bridgeOuterMetadataEcuInfoRoundTrip?.vehicleCommandEnabled === false, "Bridge outer ECU information capture and protocol provenance were not retained through read-only export");
+const bridgeOuterEcuInfoFallbackSnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  items: [{ id: "calibration_id", value: "CAL-OUTER" }],
+  data: { readout_id: "ecu_info_snapshot" }
+});
+check(bridgeOuterEcuInfoFallbackSnapshot.itemCount === 1 && bridgeOuterEcuInfoFallbackSnapshot.items[0]?.value === "CAL-OUTER" && bridgeOuterEcuInfoFallbackSnapshot.items[0]?.sourceEcu === "7E8" && bridgeOuterEcuInfoFallbackSnapshot.wouldTransmit === false, "Outer ECU rows should complete an otherwise empty nested envelope without changing read-only safety");
+const bridgeNestedEcuInfoPrioritySnapshot = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  items: [{ id: "calibration_id", value: "CAL-OUTER" }],
+  data: { items: [{ id: "ecu_sw_version", value: "SW-INNER", data_identifier: "F189" }] }
+});
+check(bridgeNestedEcuInfoPrioritySnapshot.itemCount === 1 && bridgeNestedEcuInfoPrioritySnapshot.items[0]?.id === "ecu_sw_version" && bridgeNestedEcuInfoPrioritySnapshot.items[0]?.value === "SW-INNER" && bridgeNestedEcuInfoPrioritySnapshot.wouldTransmit === false, "Nested ECU rows must take priority over outer rows without combining sources");
 check(bridgeEcuInfoSnapshot.source === "local_bridge", "Bridge ECU info source was not normalized");
 check(bridgeEcuInfoSnapshot.intent === "read_ecu_info" && bridgeEcuInfoSnapshot.blocked === false && bridgeEcuInfoSnapshot.wouldTransmit === false, "Bridge ECU info safety metadata was not normalized");
 check(bridgeEcuInfoSnapshot.hadSensitiveIdentifier === true, "Bridge ECU info did not detect sensitive identifiers");
