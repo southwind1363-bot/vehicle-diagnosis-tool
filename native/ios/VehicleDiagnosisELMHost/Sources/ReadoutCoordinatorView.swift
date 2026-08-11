@@ -10,6 +10,7 @@ struct ReadoutCoordinatorView: View {
                     LabeledContent("接続", value: viewModel.connectorStateLabel)
                     LabeledContent("アーカイブ", value: viewModel.archiveStateLabel)
                     LabeledContent("取得済みレコード", value: "\(viewModel.archiveRecordCount)")
+                    LabeledContent("読取種別", value: viewModel.readoutProfileLabel)
                     LabeledContent("読取範囲", value: viewModel.readoutCompletionLabel)
                     LabeledContent("ECU応答範囲", value: viewModel.reportedReadoutScopeLabel)
                     LabeledContent("読取時刻範囲", value: viewModel.captureRangeLabel)

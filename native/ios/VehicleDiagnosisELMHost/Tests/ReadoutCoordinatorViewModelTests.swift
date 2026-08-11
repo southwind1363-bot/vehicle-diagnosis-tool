@@ -82,6 +82,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
           "vehicle_context_id": "\(context.vehicleContextID.uuidString)",
           "captured_at": "2026-07-22T00:00:00Z",
           "scan_state": "completed",
+          "readout_profile": "initial_diagnostic",
           "expected_intents": ["read_stored_dtc"],
           "expected_readouts": ["stored_dtc_snapshot"],
           "expected_readout_scopes": [{ "readout_id": "stored_dtc_snapshot", "scope_id": "7E8" }],
@@ -101,6 +102,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
 
         XCTAssertEqual(viewModel.archiveState, "Complete")
         XCTAssertEqual(viewModel.archiveRecordCount, 1)
+        XCTAssertEqual(viewModel.readoutProfileLabel, "初期診断読取")
         XCTAssertEqual(viewModel.readoutCompletionLabel, "予定 1 / 取得 1 / 未取得 0")
         XCTAssertEqual(viewModel.missingReadoutLabels, [])
         XCTAssertTrue(viewModel.canExportArchive)

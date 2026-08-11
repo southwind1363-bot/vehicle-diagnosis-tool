@@ -97,6 +97,14 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         return "予定 \(summary.expectedCount) / 取得 \(summary.capturedCount) / 未取得 \(summary.missingIDs.count)"
     }
 
+    var readoutProfileLabel: String {
+        switch coordinator.completedArchive?.completionManifest.readoutProfile {
+        case .initialDiagnostic: return "初期診断読取"
+        case .quickCondition: return "クイック状態確認"
+        case nil: return "未記録"
+        }
+    }
+
     var missingReadoutLabels: [String] {
         guard let archive = coordinator.completedArchive else { return [] }
         return Self.readoutCompletion(expectedReadoutIDs: archive.completionManifest.expectedReadouts, envelopes: archive.envelopes)
