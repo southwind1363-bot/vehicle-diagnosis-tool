@@ -229,8 +229,8 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.82";
-const APP_LAST_UPDATED = "2026-08-11";
+const APP_VERSION = "3.8.83";
+const APP_LAST_UPDATED = "2026-08-12";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -7121,10 +7121,11 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const nativeConnectorScanLifecycle = session?.nativeConnectorScanLifecycle || session?.native_connector_scan_lifecycle || null;
   const nativeReadoutProfile = session?.nativeConnectorReadoutProfile || session?.native_connector_readout_profile || null;
+  const nativeInterruption = nativeConnectorScanLifecycle?.interruption || null;
   const nativeFailedScopes = nativeConnectorScanLifecycle?.failedReadoutScopes || nativeConnectorScanLifecycle?.failed_readout_scopes || [];
   const nativeMissingScopes = nativeConnectorScanLifecycle?.missingReadoutScopes || nativeConnectorScanLifecycle?.missing_readout_scopes || [];
   const nativeUnexpectedScopes = nativeConnectorScanLifecycle?.unexpectedReadoutScopes || nativeConnectorScanLifecycle?.unexpected_readout_scopes || [];
-  if (nativeReadoutProfile || (nativeConnectorScanLifecycle && (nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length))) {
+  if (nativeReadoutProfile || nativeInterruption || (nativeConnectorScanLifecycle && (nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length))) {
     const formatNativeScope = (item) => {
       const readoutId = item?.readoutId || item?.readout_id || "";
       const scopeId = item?.scopeId || item?.scope_id || "未確定";
@@ -7134,9 +7135,10 @@ function renderObdBridgeSessionDetails(session = null) {
       ...(nativeReadoutProfile === "initial_diagnostic" ? ["読取種別: 初期診断読取"] : []),
       ...(nativeReadoutProfile === "quick_condition" ? ["読取種別: クイック状態確認", "本診断: 追加読取が必要"] : [])
     ];
-    if (nativeConnectorScanLifecycle && (nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length)) {
+    if (nativeConnectorScanLifecycle && (nativeInterruption || nativeFailedScopes.length || nativeMissingScopes.length || nativeUnexpectedScopes.length)) {
       nativeLifecycleLines.push(`読取状態: ${nativeConnectorScanLifecycle.scanState === "interrupted" || nativeConnectorScanLifecycle.scan_state === "interrupted" ? "中断・一部取得" : "未完了"}`);
     }
+    if (nativeInterruption?.code) nativeLifecycleLines.push(`通信停止: ${formatNativeConnectorInterruption(nativeInterruption.code)}`);
     if (nativeFailedScopes.length) nativeLifecycleLines.push(`失敗: ${nativeFailedScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
     if (nativeMissingScopes.length) nativeLifecycleLines.push(`未取得: ${nativeMissingScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
     if (nativeUnexpectedScopes.length) nativeLifecycleLines.push(`想定外応答: ${nativeUnexpectedScopes.slice(0, 4).map(formatNativeScope).join(" / ")}`);
@@ -7726,6 +7728,22 @@ function formatReadoutErrorCodes(errorCodes = []) {
       return code;
     }))];
   return labels.length ? `理由:${labels.slice(0, 3).join(",")}` : "";
+}
+
+function formatNativeConnectorInterruption(code) {
+  const normalized = String(code || "").trim();
+  if (normalized === "transport:bluetooth_unavailable") return "Bluetoothが利用できません。端末のBluetooth設定を確認";
+  if (normalized === "transport:connection_timeout") return "BLE接続またはサービス検出が時間切れ。VCIの電源と距離を確認";
+  if (normalized === "transport:write_capacity_timeout") return "BLE送信待機が時間切れ。接続を切り直して再読取";
+  if (normalized === "transport:write_failed") return "BLE送信に失敗。接続を切り直して再読取";
+  if (normalized === "transport:response_timeout") return "ELM327応答が時間切れ。VCI電源と車両通信を確認";
+  if (normalized === "transport:response_too_large") return "ELM327応答が上限を超過。読取を中断";
+  if (normalized === "transport:disconnected") return "BLE接続が切断。再接続後に読取専用で再開";
+  if (normalized === "connector:peripheral_not_selected") return "BLE機器が未選択。対象VCIを選択して再開";
+  if (normalized === "connector:characteristic_not_ready") return "BLE送受信特性を確認できません。VCIの通信仕様を確認";
+  if (normalized === "connector:invalid_state") return "接続手順が未完了。接続状態を最初から確認";
+  if (normalized === "readout:invalid_response") return "ELM327または車両応答を解釈できません。読取を中断";
+  return normalized || "停止理由を記録できませんでした";
 }
 
 function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA) {
