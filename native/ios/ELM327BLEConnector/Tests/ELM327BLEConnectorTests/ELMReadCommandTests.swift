@@ -7,8 +7,8 @@ final class ELMReadCommandTests: XCTestCase {
             ELMReadCommand.initialReadoutCommands,
             [
                 .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol,
-                .identifyAdapter, .describeProtocol, .describeProtocolNumber,
-                .storedDTC, .pendingDTC, .permanentDTC,
+                .identifyAdapter, .storedDTC, .describeProtocol, .describeProtocolNumber,
+                .pendingDTC, .permanentDTC,
                 .onboardMonitor, .freezeFrameCapabilities, .mode09SupportedInfoTypes,
                 .supportedPIDs, .readinessStatus
             ]
@@ -38,8 +38,8 @@ final class ELMReadCommandTests: XCTestCase {
             ELMReadCommand.quickReadoutCommands,
             [
                 .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol,
-                .identifyAdapter, .describeProtocol, .describeProtocolNumber,
-                .storedDTC, .pendingDTC, .permanentDTC,
+                .identifyAdapter, .storedDTC, .describeProtocol, .describeProtocolNumber,
+                .pendingDTC, .permanentDTC,
                 .supportedPIDs, .readinessStatus
             ]
         )
