@@ -3180,5 +3180,27 @@
     "last_verified_date": "2026-08-11",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p2b61-00-mazda-coolant-control-valve-2018-2025",
+    "code": "P2B61",
+    "subcode": "00",
+    "title": "Coolant control valve circuit range/performance",
+    "system": "Powertrain / PCM coolant-control valve context (source-specific)",
+    "applicability_note": "Mazda Bulletin Notes identifies P2B61:00 only as an exclusion to its P0126:00 service information when both codes are present. The source scope is non-turbo 2.0L/2.5L 2019-2022 CX-3, 2020-2023 CX-30, 2018-2025 CX-5, 2019-2023 Mazda3, and 2018-2021 Mazda6 vehicles subject to the documented VIN and production limits. Confirm VIN, engine, non-turbo configuration, production date, reporting PCM, P0126:00 co-occurrence, DTC status, and current Mazda service information before using this source-specific context.",
+    "vehicle_filter": {"makers": ["Mazda"], "model_year_scopes": [{"models": ["CX-3"], "year_from": 2019, "year_to": 2022}, {"models": ["CX-30"], "year_from": 2020, "year_to": 2023}, {"models": ["CX-5"], "year_from": 2018, "year_to": 2025}, {"models": ["Mazda3"], "year_from": 2019, "year_to": 2023}, {"models": ["Mazda6"], "year_from": 2018, "year_to": 2021}], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting PCM details, P0126:00 co-occurrence, freeze-frame, coolant-temperature observations, VIN, engine, turbo configuration, production-date evidence, and warning state before diagnosis.", "Do not clear DTCs, reprogram the PCM, replace the coolant-control valve, drain coolant, disconnect electrical connectors, or start active tests from this tool; confirm the documented vehicle, engine, non-turbo configuration, production limit, P0126:00 co-occurrence, and Bulletin Notes applicability.", "Use current Mazda service information and qualified cooling-system diagnostic procedures after applicability is confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to a turbocharged engine, another model, another model year, or a vehicle without confirmed P0126:00 co-occurrence.", "Do not infer a coolant-control valve, thermostat, wiring, PCM, coolant-temperature sensor, or cooling-system failure from P2B61:00 alone."],
+    "required_tools": ["Compatible scan tool", "Mazda service information", "Manufacturer-specified diagnostic equipment"],
+    "safety_notes": ["Cooling-system service and PCM programming can cause burns, fluid exposure, drivability problems, or vehicle damage. Do not clear, service, program, or repair related systems without Mazda procedures, correct equipment, qualified personnel, a safe work area, and a recovery plan."],
+    "confidence": "Mazda Bulletin Notes source-specific P2B61:00 exclusion context; VIN, model-year scope, engine, non-turbo configuration, production limit, P0126:00 co-occurrence, reporting PCM, and manufacturer procedure confirmation required.",
+    "source": "Mazda Bulletin Notes / NHTSA MC-11028091",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2026/MC-11028091-0001.pdf",
+    "source_date": "2026-01-08",
+    "last_verified_date": "2026-08-11",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]

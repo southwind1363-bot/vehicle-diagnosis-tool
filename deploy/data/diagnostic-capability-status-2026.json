@@ -5,9 +5,10 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent": 75,
-    "current_basis": "P系2943件、U系570件、B系69件、C系44件、個別DTC定義3696件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+    "current_basis": "P系2944件、U系570件、B系69件、C系44件、個別DTC定義3697件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
+                     "Mazda Bulletin Notesの2018-25 coolant-control P2B61-00をP0126-00同時読取・非ターボ・read-only適用確認つきで追加",
                      "Mazda Bulletin Notesの2014-18 Mazda3 U3003-16を板金後・警告灯・報告ECU・read-only適用確認つきで追加",
                      "Mazda Bulletin Notesの2014-21 Mazda6 C0023-62/C1001-92/U0121-00/U0401/U0415-00/U2005-86を板金後・報告ECU・read-only適用確認つきで追加",
                      "未知コードをファミリーフローへ退避",
