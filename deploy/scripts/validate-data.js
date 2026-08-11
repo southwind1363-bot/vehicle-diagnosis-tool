@@ -146,7 +146,18 @@ function hasHttpsSourceUrl(value) {
 
 function hasGenericDtcPrimarySource(value) {
   return sourceUrlList(value).some((url) => isNonEmptyString(url)
-    && /^https:\/\/(saemobilus\.sae\.org|webstore\.ansi\.org)\//.test(url.trim()));
+    && (/^https:\/\/saemobilus\.sae\.org\/standards\/j2012(?:da)?_/.test(url.trim())
+      || /^https:\/\/webstore\.ansi\.org\/standards\/sae\/sae2012/.test(url.trim())));
+}
+
+const genericDtcPrimarySourceFixture = "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions";
+const genericDtcDigitalAnnexFixture = "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions";
+const genericDtcNonDefinitionFixture = "https://saemobilus.sae.org/standards/j1979da_202607-j1979-da-digital-annex-e-e-diagnostic-test-modes";
+if (!hasGenericDtcPrimarySource(genericDtcPrimarySourceFixture)
+  || !hasGenericDtcPrimarySource([genericDtcDigitalAnnexFixture, "https://www.autel.com/example.pdf"])
+  || hasGenericDtcPrimarySource(genericDtcNonDefinitionFixture)
+  || hasGenericDtcPrimarySource("https://www.autel.com/example.pdf")) {
+  reportError("Generic DTC primary-source validation must require J2012 or J2012DA definitions");
 }
 
 function hasNhtsaArchiveSource(value) {
@@ -236,8 +247,8 @@ for (const file of jsonFiles) {
     if (/^generic-obd-codes-modern-2026(?:-part\d+)?\.json$/.test(file)) {
       if (!isDtc(row.code)) reportError(`${label}: generic 2026 DTC code is invalid`);
       if (!isNonEmptyString(row.title)) reportError(`${label}: generic 2026 DTC title is missing`);
-      if (!isSourceUrl(row.source_url) || !hasGenericDtcPrimarySource(row.source_url)) {
-        reportError(`${label}: generic 2026 DTC requires an SAE or ANSI primary-standard source_url`);
+      if (!hasHttpsSourceUrl(row.source_url) || !hasGenericDtcPrimarySource(row.source_url)) {
+        reportError(`${label}: generic 2026 DTC requires an HTTPS SAE J2012/J2012DA or ANSI J2012 primary-standard source_url`);
       }
       if (!isIsoDate(row.last_verified_date)) reportError(`${label}: generic 2026 DTC last_verified_date is invalid`);
       if (row.service_manual_required !== true) reportError(`${label}: generic 2026 DTC must require the service manual`);
