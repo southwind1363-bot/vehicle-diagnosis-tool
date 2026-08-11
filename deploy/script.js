@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.8.85";
+const APP_VERSION = "3.8.86";
 const APP_LAST_UPDATED = "2026-08-12";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4679,8 +4679,12 @@ function mergeWebSerialAdapterIdentity(previous = null, update = null) {
 }
 
 async function captureObdDeveloperProtocolAfterStoredDtc() {
+  if (!obdDevSession.writer || !obdDevSession.reader || obdDevSession.readInProgress) return false;
   const commands = ["ATDP", "ATDPN"];
   const commandResponses = [];
+  obdDevSession.readInProgress = true;
+  setObdDeveloperConnectionState("reading");
+  renderObdDeveloperGate();
   try {
     for (const command of commands) {
       const response = await sendElmDeveloperCommand(command, 2500);
@@ -4694,11 +4698,14 @@ async function captureObdDeveloperProtocolAfterStoredDtc() {
       await disconnectObdDeveloperVci({ reason: message.startsWith("elm_response_timeout:") ? "response_timeout" : "transport_failed" });
     }
     return false;
+  } finally {
+    obdDevSession.readInProgress = false;
+    if (obdDevSession.port && obdDevSession.connectionState !== "disconnecting") setObdDeveloperConnectionState("ready");
+    renderObdDeveloperGate();
   }
   const adapterIdentity = mergeWebSerialAdapterIdentity(obdDevSession.adapterIdentity, buildWebSerialAdapterIdentity(commandResponses));
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
   appendObdDeveloperLog(commands.map((command) => `>${command}\n[adapter identity response not retained]`).join("\n"));
-  renderObdDeveloperGate();
   return commandResponses.length === commands.length;
 }
 
