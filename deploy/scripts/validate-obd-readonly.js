@@ -503,9 +503,9 @@ const bridgeResponseSafetyFunctionChecks = () => {
   check(Boolean(bridgeResponseSafetyFunctionSource), "readBridgeResponseSafety is missing from obd-readonly.js");
   if (bridgeResponseSafetyFunctionSource) {
     const functionBody = bridgeResponseSafetyFunctionSource[0];
-    check(functionBody.includes('ok: isExplicitTrueFlag(response?.ok)') && functionBody.includes('unparsed: !wouldTransmit && !explicitlyBlocked && explicitlyUnblocked && isExplicitFalseFlag(response?.ok)'), "readBridgeResponseSafety should normalize explicit ok success and failure flags");
+    check(functionBody.includes('const envelopes = [response, ...getBridgeResponseEnvelopeCandidates(response)];') && functionBody.includes('ok: explicitlySucceeded && !explicitlyFailed && !explicitlyBlocked && !wouldTransmit') && functionBody.includes('unparsed: !wouldTransmit && !explicitlyBlocked && explicitlyUnblocked && explicitlyFailed'), "readBridgeResponseSafety should normalize explicit success and failure flags across bridge envelopes");
     check(functionBody.includes('blocked: explicitlyBlocked || wouldTransmit || !explicitlyUnblocked'), "readBridgeResponseSafety should fail closed for blocked or transmitting bridge responses");
-    check(functionBody.includes('const wouldTransmit = hasReadoutTransportViolation(response);'), "readBridgeResponseSafety should normalize transmitting aliases before accepting readouts");
+    check(functionBody.includes('const wouldTransmit = envelopes.some((item) => hasReadoutTransportViolation(item));'), "readBridgeResponseSafety should normalize transmitting aliases before accepting readouts");
   }
   check(Boolean(bridgeProtocolFunctionSource), "readBridgeProtocol is missing from obd-readonly.js");
   if (bridgeProtocolFunctionSource) {
@@ -5133,6 +5133,44 @@ const bridgeAdapterIdentityExtendedAliases = obd.normalizeBridgeAdapterIdentity(
   }
 });
 check(bridgeAdapterIdentityExtendedAliases.adapterName === "VCI Adapter" && bridgeAdapterIdentityExtendedAliases.firmwareVersion === "3.1", "Extended bridge adapter identity aliases were not normalized");
+const bridgeNestedInfrastructureStatus = obd.normalizeBridgeConnectionStatus({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  payload: { data: { status: "ready", paired: true, vci_connected: true, vehicle_connected: true } }
+});
+const bridgeNestedInfrastructureVciList = obd.normalizeBridgeVciList({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  result: { data: { selected_device_id: "nested-vci", devices: [{ id: "nested-vci", name: "Nested VCI", connected: true }] } }
+});
+const bridgeNestedInfrastructureAdapter = obd.normalizeBridgeAdapterIdentity({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  payload: { data: { adapter_name: "Nested Adapter", adapter_family: "elm327", firmware_version: "2.3" } }
+});
+const bridgeNestedInfrastructureSession = obd.buildDiagnosticScanSession({
+  connectionStatus: bridgeNestedInfrastructureStatus,
+  vciDevices: bridgeNestedInfrastructureVciList.devices,
+  adapterIdentity: bridgeNestedInfrastructureAdapter
+});
+check(bridgeNestedInfrastructureStatus.vehicleConnected === true && bridgeNestedInfrastructureVciList.devices[0]?.selected === true && bridgeNestedInfrastructureAdapter.adapterFamily === "elm327" && bridgeNestedInfrastructureSession.connectionStatus?.vehicleConnected === true && bridgeNestedInfrastructureSession.vciDevices?.[0]?.id === "nested-vci" && bridgeNestedInfrastructureSession.adapterIdentity?.firmwareVersion === "2.3" && bridgeNestedInfrastructureSession.vehicleCommandEnabled === false && bridgeNestedInfrastructureSession.wouldTransmit === false, "Nested bridge infrastructure envelopes were not retained in the read-only diagnostic session");
+const bridgeNestedUnsafeLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  result: { data: { would_transmit: true, values: [{ pid: "0C", value: 900, unit: "rpm" }] } }
+});
+check(bridgeNestedUnsafeLivePidSnapshot.ok === false && bridgeNestedUnsafeLivePidSnapshot.blocked === true && bridgeNestedUnsafeLivePidSnapshot.wouldTransmit === true, "Nested bridge transmitting flags must fail closed");
+const bridgeNestedErrorDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  payload: { data: { errors: ["adapter_timeout"], dtcs: [] } }
+});
+check(bridgeNestedErrorDtcSnapshot.errorCodes?.includes("adapter_timeout") && bridgeNestedErrorDtcSnapshot.ok === false && bridgeNestedErrorDtcSnapshot.blocked === false && bridgeNestedErrorDtcSnapshot.dtcReadoutStatus === "unparsed", "Nested bridge errors must be retained without a successful DTC claim");
 const savedBridgeStatus = obd.normalizeBridgeConnectionStatus({ status: "ready", is_paired: true, vci_ready: true, car_connected: true });
 check(savedBridgeStatus.ok === true && savedBridgeStatus.blocked === false && savedBridgeStatus.vehicleConnected === true, "保存済みブリッジ接続状態を読取済みとして再取込できません");
 const savedBridgeVciList = obd.normalizeBridgeVciList([{ id: "saved-vci", name: "Saved VCI", is_connected: true }]);

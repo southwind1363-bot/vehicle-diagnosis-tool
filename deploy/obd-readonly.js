@@ -1089,21 +1089,32 @@
   }
 
   function readBridgeResponseSafety(response = {}) {
-    const explicitlyBlocked = hasExplicitReadoutBlock(response);
-    const explicitlyUnblocked = isExplicitFalseFlag(response?.blocked)
-      || isExplicitFalseFlag(response?.isBlocked)
-      || isExplicitFalseFlag(response?.is_blocked);
-    const wouldTransmit = hasReadoutTransportViolation(response);
+    const envelopes = [response, ...getBridgeResponseEnvelopeCandidates(response)];
+    const explicitlyBlocked = envelopes.some((item) => hasExplicitReadoutBlock(item));
+    const explicitlyUnblocked = envelopes.some((item) => isExplicitFalseFlag(item?.blocked)
+      || isExplicitFalseFlag(item?.isBlocked)
+      || isExplicitFalseFlag(item?.is_blocked));
+    const wouldTransmit = envelopes.some((item) => hasReadoutTransportViolation(item));
+    const explicitlyFailed = envelopes.some((item) => isExplicitFalseFlag(item?.ok));
+    const explicitlySucceeded = envelopes.some((item) => isExplicitTrueFlag(item?.ok));
     return {
-      ok: isExplicitTrueFlag(response?.ok),
+      ok: explicitlySucceeded && !explicitlyFailed && !explicitlyBlocked && !wouldTransmit,
       blocked: explicitlyBlocked || wouldTransmit || !explicitlyUnblocked,
-      unparsed: !wouldTransmit && !explicitlyBlocked && explicitlyUnblocked && isExplicitFalseFlag(response?.ok),
+      unparsed: !wouldTransmit && !explicitlyBlocked && explicitlyUnblocked && explicitlyFailed,
       wouldTransmit
     };
   }
 
   function readBridgeResponseErrorCodes(response = {}) {
-    const data = response?.data && typeof response.data === "object" ? response.data : {};
+    const dataEnvelopes = getBridgeResponseEnvelopeCandidates(response);
+    const nestedErrorValues = dataEnvelopes.flatMap((data) => [
+      ...(Array.isArray(data.errors) ? data.errors : []),
+      ...(Array.isArray(data.errorCodes) ? data.errorCodes : []),
+      ...(Array.isArray(data.error_codes) ? data.error_codes : []),
+      data.errorCode,
+      data.error_code,
+      data.error
+    ]);
     const values = [
       ...(Array.isArray(response?.errors) ? response.errors : []),
       ...(Array.isArray(response?.errorCodes) ? response.errorCodes : []),
@@ -1111,12 +1122,7 @@
       response?.errorCode,
       response?.error_code,
       response?.error,
-      ...(Array.isArray(data.errors) ? data.errors : []),
-      ...(Array.isArray(data.errorCodes) ? data.errorCodes : []),
-      ...(Array.isArray(data.error_codes) ? data.error_codes : []),
-      data.errorCode,
-      data.error_code,
-      data.error
+      ...nestedErrorValues
     ];
     return [...new Set(values
       .map((value) => typeof value === "object" && value ? value.code || value.error_code || value.errorCode || null : value)
@@ -3105,9 +3111,13 @@
   }
 
   function getBridgeResponseDataEnvelope(response = {}) {
-    if (!response || typeof response !== "object" || Array.isArray(response)) return null;
+    return getBridgeResponseEnvelopeCandidates(response)[0] || null;
+  }
+
+  function getBridgeResponseEnvelopeCandidates(response = {}) {
+    if (!response || typeof response !== "object" || Array.isArray(response)) return [];
     return [response.data, response.payload?.data, response.result?.data, response.payload, response.result]
-      .find((candidate) => candidate && typeof candidate === "object" && !Array.isArray(candidate)) || null;
+      .filter((candidate) => candidate && typeof candidate === "object" && !Array.isArray(candidate));
   }
 
   function normalizeBridgeDtcSnapshot(response = {}) {
@@ -3472,7 +3482,7 @@
   }
 
   function normalizeBridgeConnectionStatus(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object" ? getBridgeResponseDataEnvelope(response) || response.data || response : {};
     const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
     const hasConnectionStatusData = connectionStatusKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedConnectionStatus = connectionStatusKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
@@ -3559,7 +3569,7 @@
   }
 
   function normalizeBridgeVciList(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object" ? getBridgeResponseDataEnvelope(response) || response.data || response : {};
     const devices = Array.isArray(response)
       ? response
       : Array.isArray(data)
@@ -3717,7 +3727,7 @@
   }
 
   function normalizeBridgeAdapterIdentity(response = {}) {
-    const data = response && typeof response === "object" ? response.data || response : {};
+    const data = response && typeof response === "object" ? getBridgeResponseDataEnvelope(response) || response.data || response : {};
     const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
     const hasAdapterIdentityData = adapterIdentityKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
     const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
