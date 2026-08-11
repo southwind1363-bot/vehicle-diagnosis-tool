@@ -62,7 +62,7 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
     public let vehicleContextID: UUID
     public let capturedAt: String
     public let scanState: NativeConnectorScanState
-    public let readoutProfile: NativeConnectorReadoutProfile? = nil
+    public let readoutProfile: NativeConnectorReadoutProfile?
     public let expectedIntents: [String]
     public let expectedReadouts: [String]
     public let expectedReadoutScopes: [NativeConnectorReadoutScope]
@@ -73,6 +73,48 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
     public let executionEnabled: Bool
     public let wouldTransmit: Bool
     public let retainedRawPayload: Bool
+
+    public init(
+        schemaVersion: String,
+        recordType: String,
+        platform: String,
+        interfaceID: String,
+        scanID: UUID,
+        vehicleContextID: UUID,
+        capturedAt: String,
+        scanState: NativeConnectorScanState,
+        readoutProfile: NativeConnectorReadoutProfile? = nil,
+        expectedIntents: [String],
+        expectedReadouts: [String],
+        expectedReadoutScopes: [NativeConnectorReadoutScope],
+        connectionSegments: [NativeConnectorConnectionSegment],
+        interruption: NativeConnectorInterruption?,
+        readOnly: Bool,
+        vehicleCommandEnabled: Bool,
+        executionEnabled: Bool,
+        wouldTransmit: Bool,
+        retainedRawPayload: Bool
+    ) {
+        self.schemaVersion = schemaVersion
+        self.recordType = recordType
+        self.platform = platform
+        self.interfaceID = interfaceID
+        self.scanID = scanID
+        self.vehicleContextID = vehicleContextID
+        self.capturedAt = capturedAt
+        self.scanState = scanState
+        self.readoutProfile = readoutProfile
+        self.expectedIntents = expectedIntents
+        self.expectedReadouts = expectedReadouts
+        self.expectedReadoutScopes = expectedReadoutScopes
+        self.connectionSegments = connectionSegments
+        self.interruption = interruption
+        self.readOnly = readOnly
+        self.vehicleCommandEnabled = vehicleCommandEnabled
+        self.executionEnabled = executionEnabled
+        self.wouldTransmit = wouldTransmit
+        self.retainedRawPayload = retainedRawPayload
+    }
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
