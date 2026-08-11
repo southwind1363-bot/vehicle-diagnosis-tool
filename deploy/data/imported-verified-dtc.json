@@ -3246,5 +3246,27 @@
     "last_verified_date": "2026-08-11",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p1a90-96-hyundai-ioniq-5-6-iccu-2022-2023",
+    "code": "P1A90",
+    "subcode": "96",
+    "title": "DC/DC Converter Input Voltage Sensor Fault",
+    "system": "High voltage / ICCU DC/DC converter and 12V auxiliary-battery charging context (source-specific)",
+    "applicability_note": "Hyundai Campaign 23-01-060H identifies P1A9096 in the ICCU only for certain 2022-2023 IONIQ 5 (NE1) vehicles produced 2021-10-04 through 2023-06-22 and certain 2023 IONIQ 6 (CE1) vehicles produced 2022-12-14 through 2023-06-20. The bulletin describes reduced-power mode, warning lamps, an audible chime, and a stop-vehicle message when the ICCU fault affects 12V auxiliary-battery charging. Confirm VIN campaign eligibility, market, exact model, production date, reporting ICCU, DTC subcode, active/history status, warning state, and current Hyundai service information before using this source-specific definition.",
+    "vehicle_filter": {"makers": ["Hyundai"], "model_year_scopes": [{"models": ["IONIQ 5"], "year_from": 2022, "year_to": 2023}, {"models": ["IONIQ 6"], "year_from": 2023, "year_to": 2023}], "ecus": ["ICCU"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting ICCU data, 12V battery condition, warning messages, reduced-power state, VIN, production-date evidence, campaign eligibility, and available freeze-frame/snapshot data before diagnosis.", "Do not clear DTCs, clear high-voltage faults, command the ICCU, replace the ICCU or fuse, shut down the high-voltage circuit, drain coolant, bleed the motor cooling system, update software, program modules, or start active tests from this tool; confirm VIN campaign eligibility, model, production date, reporting ICCU, DTC status, and Campaign 23-01-060H applicability.", "Use current Hyundai service information and a certified IONIQ Hyundai dealer or qualified high-voltage repair procedure after applicability is confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to another Hyundai model, a vehicle outside the documented production ranges, an unconfirmed campaign VIN, another ECU, or P1A90 without subcode 96.", "Do not infer an ICCU, fuse, 12V battery, high-voltage battery, wiring, sensor, or DC/DC converter failure from P1A90:96 alone.", "Do not install an ICCU fuse before the documented ICCU replacement procedure; the bulletin warns this can cause EV battery PRA damage."],
+    "required_tools": ["Compatible scan tool", "Hyundai WEBDCS campaign eligibility check", "Hyundai service information", "Certified IONIQ Hyundai dealer or qualified high-voltage service equipment"],
+    "safety_notes": ["High-voltage shutdown, ICCU replacement, software programming, coolant service, and fuse work can cause electric shock, burns, vehicle damage, reduced-power or no-start conditions, and battery damage. Do not clear, command, service, update, program, or repair related systems without Hyundai procedures, correct equipment, qualified personnel, a safe work area, stable power support, and a recovery plan."],
+    "confidence": "Hyundai Campaign 23-01-060H source-specific P1A90:96 ICCU context; VIN campaign eligibility, market, IONIQ 5/6 model-year and production scope, reporting ICCU, DTC status, and manufacturer procedure confirmation required.",
+    "source": "Hyundai Campaign 23-01-060H (Service Campaign 997) / NHTSA MC-10240085",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2023/MC-10240085-0001.pdf",
+    "source_date": "2023-07-01",
+    "last_verified_date": "2026-08-11",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
