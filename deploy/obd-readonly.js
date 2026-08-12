@@ -5407,7 +5407,11 @@
         available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status) || isUnknownWithoutEvidence(ecuInfoSnapshot, "items", ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
           ? false
           : ecuInfoSnapshot?.blocked === false || Array.isArray(ecuInfoSnapshot?.items),
-        count: Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.itemCount || ecuInfoSnapshot.items.length : 0
+        count: Math.max(
+          Number(ecuInfoSnapshot?.itemCount || ecuInfoSnapshot?.item_count) || 0,
+          Number(ecuInfoSnapshot?.scopedItemCount || ecuInfoSnapshot?.scoped_item_count) || 0,
+          Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items.length : 0
+        )
       },
       {
         id: "onboard_monitor_snapshot",
@@ -5688,7 +5692,7 @@
       { id: "live_pid_snapshot", count: countItems(livePidSnapshot?.monitorValues), valueKey: "livePidValueCount" },
       { id: "freeze_frame_snapshot", count: countItems(freezeFrameSnapshot?.monitorValues) + countItems(freezeFrameSnapshot?.udsDtcSnapshotRecords || freezeFrameSnapshot?.uds_dtc_snapshot_records) + countItems(freezeFrameSnapshot?.udsDtcStoredDataRecords || freezeFrameSnapshot?.uds_dtc_stored_data_records), valueKey: "freezeFrameValueCount" },
       { id: "readiness_snapshot", count: readinessMonitorCount, valueKey: "readinessMonitorCount" },
-      { id: "ecu_info_snapshot", count: numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), valueKey: "ecuInfoItemCount" },
+      { id: "ecu_info_snapshot", count: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)), valueKey: "ecuInfoItemCount" },
       { id: "onboard_monitor_snapshot", count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)), valueKey: "onboardMonitorTestCount" },
       { id: "supported_pid_matrix", count: supportedPidCount, valueKey: "supportedPidCount" }
     ];
@@ -18956,9 +18960,12 @@
         ...(Array.isArray(snapshot.item_ids) ? snapshot.item_ids : []),
         ...snapshotItems.map((item) => item?.id || item?.dataIdentifier || item?.data_identifier || null)
       ].filter(Boolean).map(String))];
-      const itemCount = Number.isFinite(Number(snapshot.itemCount || snapshot.item_count))
-        ? Math.max(0, Math.round(Number(snapshot.itemCount || snapshot.item_count)))
-        : snapshotItems.length;
+      const declaredItemCount = pickDefined(snapshot.itemCount, snapshot.item_count);
+      const itemCount = Math.max(
+        Number.isFinite(Number(declaredItemCount)) ? Math.max(0, Math.round(Number(declaredItemCount))) : 0,
+        snapshotItems.length,
+        itemIds.length
+      );
       const negativeResponseService = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service);
       const negativeResponseCode = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code);
       return {
@@ -18978,6 +18985,7 @@
         ecu_info_negative_response_code: negativeResponseCode
       };
     }).filter(Boolean);
+    const scopedItemCount = ecuInfoEcuSnapshots.reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
     const hadSensitiveIdentifier = sourceInput.hadSensitiveIdentifier === true
       || sourceInput.had_sensitive_identifier === true
       || redactedItems.length > 0;
@@ -19074,6 +19082,8 @@
       readout_ecu_ids: readoutEcuIds,
       itemCount: items.length,
       item_count: items.length,
+      scopedItemCount,
+      scoped_item_count: scopedItemCount,
       expectedItemCount: expectedItems.length,
       expected_item_count: expectedItems.length,
       hadSensitiveIdentifier,
@@ -21264,7 +21274,11 @@
             source_ecu_name: snapshot.sourceEcuName || snapshot.source_ecu_name || null,
             ecu_info_readout_status: snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || "unknown",
             item_count: snapshot.itemCount || snapshot.item_count || 0,
-            item_ids: (snapshot.items || []).map((item) => item?.id || item?.dataIdentifier || item?.data_identifier || null).filter(Boolean),
+            item_ids: [...new Set([
+              ...(Array.isArray(snapshot.itemIds) ? snapshot.itemIds : []),
+              ...(Array.isArray(snapshot.item_ids) ? snapshot.item_ids : []),
+              ...(snapshot.items || []).map((item) => item?.id || item?.dataIdentifier || item?.data_identifier || null)
+            ].filter(Boolean))],
             ecu_info_negative_response_service: snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service || null,
             ecu_info_negative_response_code: snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code || null
           })),
