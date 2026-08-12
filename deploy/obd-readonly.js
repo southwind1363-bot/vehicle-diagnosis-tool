@@ -2083,6 +2083,9 @@
         captured_at: capturedAt,
         protocol,
         ecu_info_readout_status: "reported",
+        readout_ecu_ids: scopedData
+          .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
+          .filter(Boolean),
         items: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["items", "ecu_info_items", "ecuInfoItems"], scopeId))
       };
     }
@@ -2091,6 +2094,9 @@
         captured_at: capturedAt,
         protocol,
         onboard_monitor_readout_status: "reported",
+        readout_ecu_ids: scopedData
+          .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
+          .filter(Boolean),
         tests: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["tests", "items", "mode06_tests", "mode06Tests"], scopeId))
       };
     }
@@ -6525,11 +6531,19 @@
     ]);
     add("ecu_info_snapshot", [
       { ecuId: ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu, ecuName: ecuInfoSnapshot?.sourceEcuName || ecuInfoSnapshot?.source_ecu_name },
+      ...[ecuInfoSnapshot?.readoutEcuIds, ecuInfoSnapshot?.readout_ecu_ids]
+        .filter(Array.isArray)
+        .flat()
+        .map((ecuId) => ({ ecuId })),
       ...(ecuInfoSnapshot?.items || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...ecuInfoNameCandidates
     ]);
     add("onboard_monitor_snapshot", [
       { ecuId: onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu, ecuName: onboardMonitorSnapshot?.sourceEcuName || onboardMonitorSnapshot?.source_ecu_name },
+      ...[onboardMonitorSnapshot?.readoutEcuIds, onboardMonitorSnapshot?.readout_ecu_ids]
+        .filter(Array.isArray)
+        .flat()
+        .map((ecuId) => ({ ecuId })),
       ...(onboardMonitorSnapshot?.tests || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     add("supported_pid_matrix", [
@@ -6575,8 +6589,14 @@
         || (Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) && readinessSnapshot.readiness_ecu_snapshots.length > 0)
           ? "readiness_snapshot"
           : null,
-      Array.isArray(ecuInfoSnapshot?.items) && ecuInfoSnapshot.items.length > 0 ? "ecu_info_snapshot" : null,
-      Array.isArray(onboardMonitorSnapshot?.tests) && onboardMonitorSnapshot.tests.length > 0 ? "onboard_monitor_snapshot" : null,
+      (Array.isArray(ecuInfoSnapshot?.items) && ecuInfoSnapshot.items.length > 0)
+        || String(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || "").toLowerCase() === "reported"
+          ? "ecu_info_snapshot"
+          : null,
+      (Array.isArray(onboardMonitorSnapshot?.tests) && onboardMonitorSnapshot.tests.length > 0)
+        || String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").toLowerCase() === "reported"
+          ? "onboard_monitor_snapshot"
+          : null,
       (Array.isArray(supportedPidMatrix?.supportedPids) && supportedPidMatrix.supportedPids.length > 0)
         || [supportedPidMatrix?.supportedPidEcuSnapshots, supportedPidMatrix?.supported_pid_ecu_snapshots].some((snapshots) => Array.isArray(snapshots) && snapshots.some((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].some((pids) => Array.isArray(pids) && pids.length > 0)))
           ? "supported_pid_matrix"
@@ -6656,9 +6676,13 @@
       ].map((item) => item?.sourceEcu || item?.source_ecu || null),
       ecuInfoSnapshot?.sourceEcu,
       ecuInfoSnapshot?.source_ecu,
+      ...(Array.isArray(ecuInfoSnapshot?.readoutEcuIds) ? ecuInfoSnapshot.readoutEcuIds : []),
+      ...(Array.isArray(ecuInfoSnapshot?.readout_ecu_ids) ? ecuInfoSnapshot.readout_ecu_ids : []),
       ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       onboardMonitorSnapshot?.sourceEcu,
       onboardMonitorSnapshot?.source_ecu,
+      ...(Array.isArray(onboardMonitorSnapshot?.readoutEcuIds) ? onboardMonitorSnapshot.readoutEcuIds : []),
+      ...(Array.isArray(onboardMonitorSnapshot?.readout_ecu_ids) ? onboardMonitorSnapshot.readout_ecu_ids : []),
       ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       supportedPidMatrix?.sourceEcu,
       supportedPidMatrix?.source_ecu,
@@ -18741,6 +18765,12 @@
     const hadSensitiveIdentifier = sourceInput.hadSensitiveIdentifier === true
       || sourceInput.had_sensitive_identifier === true
       || redactedItems.length > 0;
+    const readoutEcuIds = [...new Set([
+      ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
+      ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
+      sourceEcu,
+      ...items.map((item) => item.sourceEcu || item.source_ecu || null)
+    ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const observedSourceEcus = [...new Set(items.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set(items.map((item) => item.sourceEcuName || item.source_ecu_name || null).filter(Boolean))];
@@ -18821,6 +18851,8 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      readoutEcuIds,
+      readout_ecu_ids: readoutEcuIds,
       itemCount: items.length,
       item_count: items.length,
       expectedItemCount: expectedItems.length,
@@ -18950,6 +18982,12 @@
       })
       .filter(Boolean);
 
+    const readoutEcuIds = [...new Set([
+      ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
+      ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
+      sourceEcu,
+      ...tests.map((item) => item.sourceEcu || item.source_ecu || null)
+    ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const observedSourceEcus = [...new Set(tests.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set(tests.map((item) => item.sourceEcuName || item.source_ecu_name || null).filter(Boolean))];
@@ -19016,6 +19054,8 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      readoutEcuIds,
+      readout_ecu_ids: readoutEcuIds,
       testCount,
       test_count: testCount,
       passedCount,
@@ -20922,6 +20962,7 @@
           source: "obd_response_decoder",
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           ecu_info_readout_status: readoutStatus,
+          readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
           values
         });
       }
@@ -20947,6 +20988,7 @@
           source: "obd_response_decoder",
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           onboard_monitor_readout_status: readoutStatus,
+          readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
           tests
         });
       }

@@ -2544,6 +2544,29 @@ const multiEcuMode09Session = obd.buildDiagnosticScanSession({
 });
 check(multiEcuMode09Session?.ecuInfoSnapshot?.items?.filter((item) => item.id === "calibration_id").length === 2 && multiEcuMode09Session.ecuInfoSnapshot.items.some((item) => item.value === "ECM-CAL-01" && item.sourceEcu === "7E8") && multiEcuMode09Session.ecuInfoSnapshot.items.some((item) => item.value === "TCM-CAL-02" && item.sourceEcu === "7E9") && multiEcuMode09Session.vehicleCommandEnabled === false, "Multi-ECU Mode 09 calibration rows were dropped or lost ECU scope during diagnostic-session normalization");
 check(multiEcuMode09Session?.ecuInfoSnapshot?.expectedItems?.find((item) => item.id === "calibration_id")?.capturedEcuIds?.join(",") === "7E8,7E9" && multiEcuMode09Session.ecuInfoSnapshot?.expected_items?.find((item) => item.id === "calibration_id")?.captured_ecu_count === 2 && multiEcuMode09Session.vehicleCommandEnabled === false, "Multi-ECU Mode 09 expected-item coverage lost ECU provenance");
+const multiEcuEmptyReadoutSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: {
+    maker: "Toyota",
+    model: "Prius",
+    ecu_address: "7E8",
+    catalog_matched: true,
+    source_name: "verified catalog",
+    source_verified: true
+  },
+  ecu_info_snapshot: {
+    source: "native_connector",
+    ecu_info_readout_status: "reported",
+    readout_ecu_ids: ["7E8", "7E9"],
+    items: []
+  },
+  onboard_monitor_snapshot: {
+    source: "native_connector",
+    onboard_monitor_readout_status: "reported",
+    readout_ecu_ids: ["7E8", "7E9"],
+    tests: []
+  }
+});
+check(multiEcuEmptyReadoutSession?.ecuInfoSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutSession?.onboardMonitorSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutSession?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutSession?.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("ecu_info_snapshot") && multiEcuEmptyReadoutSession?.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("onboard_monitor_snapshot") && multiEcuEmptyReadoutSession?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && multiEcuEmptyReadoutSession?.vehicleCommandEnabled === false, "Reported empty multi-ECU Mode 09 and Mode 06 readouts must retain ECU scope for applicability matching without enabling vehicle commands");
 const scannerTextEcuInfoPayloadI = obd.buildScanSessionFromObdText("0904: 49 04 01 49 44");
 check(scannerTextEcuInfoPayloadI?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ID") && scannerTextEcuInfoPayloadI.vehicleCommandEnabled === false, "Mode 09 payload text containing 49 was incorrectly treated as a new response frame");
 const scannerIsoTpEcuInfoSession = obd.buildScanSessionFromObdText([
