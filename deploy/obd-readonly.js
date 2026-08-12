@@ -20733,7 +20733,7 @@
 
     buildObdLogPackets(redacted).forEach((packetInput) => {
       const bytes = packetInput.bytes;
-      const responseServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x59, 0x7F];
+      const responseServices = [0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x59, 0x62, 0x7F];
       const serviceIndex = bytes.findIndex((byte) => responseServices.includes(byte));
       const serviceByte = serviceIndex >= 0 ? bytes[serviceIndex] : null;
       const hasPair = (first, second) => bytes.some((byte, index) => byte === first && bytes[index + 1] === second);
@@ -20770,7 +20770,7 @@
         buckets.freezeFrameResponses.push(packet);
       } else if (serviceByte === 0x46) {
         buckets.onboardMonitorResponses.push(packet);
-      } else if (serviceByte === 0x49) {
+      } else if (serviceByte === 0x49 || serviceByte === 0x62) {
         buckets.ecuInfoResponses.push(packet);
       } else {
         buckets.unknownResponses.push(packet);
