@@ -21169,6 +21169,10 @@
         return normalizeEcuInfoSnapshot({
           source: "obd_response_decoder",
           protocol: ecuInfoProtocol,
+          diagnostic_protocol: explicitDiagnosticProtocol,
+          protocol_provenance: protocolProvenance,
+          transport_protocol: protocolProvenance.transportProtocol || protocolProvenance.transport_protocol || null,
+          network_protocol: protocolProvenance.networkProtocol || protocolProvenance.network_protocol || null,
           ecu_info_readout_status: readoutStatus,
           readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
           ...(negativeResponses.length === 1 && negativeResponseCodes.length === 1 ? {
