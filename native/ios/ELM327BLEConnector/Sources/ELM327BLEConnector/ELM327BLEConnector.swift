@@ -71,6 +71,20 @@ func normalizedELMAdapterProtocolNumber(response: String) -> String? {
     return lines[0]
 }
 
+func normalizedELMAdapterProtocolHint(response: String) -> String? {
+    response
+        .split(whereSeparator: { $0.isNewline })
+        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+        .first {
+            let normalized = $0.uppercased()
+            return !$0.isEmpty
+                && $0 != ">"
+                && normalized != ELMReadCommand.describeProtocol.wireValue
+                && normalized != "AUTO"
+                && !["OK", "NO DATA", "SEARCHING", "SEARCHING...", "UNABLE TO CONNECT", "STOPPED", "ERROR"].contains(normalized)
+        }
+}
+
 func requiresELMWriteCapacityWait(writeWithoutResponse: Bool, canSendWithoutResponse: Bool) -> Bool {
     writeWithoutResponse && !canSendWithoutResponse
 }
@@ -478,7 +492,7 @@ public final class ELM327BLEConnector: NSObject {
                     interrupt(.invalidResponse)
                     return
                 }
-                protocolHint = firstResponseLine(in: response, excluding: command)
+                protocolHint = normalizedELMAdapterProtocolHint(response: response)
                 sequence += 1
                 emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber))
             case .describeProtocolNumber:

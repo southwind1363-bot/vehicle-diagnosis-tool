@@ -44,4 +44,12 @@ final class ELMReadResponseDispositionTests: XCTestCase {
         XCTAssertNil(normalizedELMAdapterProtocolNumber(response: "ATDPN\nAUTO"))
         XCTAssertNil(normalizedELMAdapterProtocolNumber(response: "ATDPN\nA6\nserial=979867700221"))
     }
+
+    func testAdapterProtocolHintIgnoresTransientLines() {
+        XCTAssertEqual(
+            normalizedELMAdapterProtocolHint(response: "ATDP\nSEARCHING...\nAUTO, ISO 15765-4 (CAN 11/500)\n>"),
+            "AUTO, ISO 15765-4 (CAN 11/500)"
+        )
+        XCTAssertNil(normalizedELMAdapterProtocolHint(response: "ATDP\nAUTO\n>"))
+    }
 }
