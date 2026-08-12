@@ -18855,6 +18855,7 @@
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
+        ecu_info_ecu_snapshots: input.data.ecuInfoEcuSnapshots || input.data.ecu_info_ecu_snapshots || input.ecuInfoEcuSnapshots || input.ecu_info_ecu_snapshots || [],
         ecu_info_readout_status: input.data.ecuInfoReadoutStatus || input.data.ecu_info_readout_status || input.ecuInfoReadoutStatus || input.ecu_info_readout_status || null,
         ecu_info_response_format: input.data.ecuInfoResponseFormat || input.data.ecu_info_response_format || input.data.responseFormat || input.data.response_format || input.ecuInfoResponseFormat || input.ecu_info_response_format || input.responseFormat || input.response_format || null,
         ecu_info_negative_response_service: input.data.ecuInfoNegativeResponseService || input.data.ecu_info_negative_response_service || input.ecuInfoNegativeResponseService || input.ecu_info_negative_response_service || null,
@@ -18891,6 +18892,54 @@
       .filter(Boolean);
     const redactedItems = items.filter((item) => item.sensitiveIdentifierRedacted === true || item.sensitive_identifier_redacted === true);
     const redactedItemIds = [...new Set(redactedItems.map((item) => item.id).filter(Boolean))];
+    const normalizeNegativeResponseByte = (value) => {
+      const parsedValue = typeof value === "number" ? value : Number.parseInt(String(value || "").trim().replace(/^0x/i, ""), 16);
+      return Number.isInteger(parsedValue) && parsedValue >= 0 && parsedValue <= 0xFF
+        ? parsedValue.toString(16).toUpperCase().padStart(2, "0")
+        : null;
+    };
+    const rawEcuInfoEcuSnapshots = Array.isArray(sourceInput.ecuInfoEcuSnapshots)
+      ? sourceInput.ecuInfoEcuSnapshots
+      : Array.isArray(sourceInput.ecu_info_ecu_snapshots)
+        ? sourceInput.ecu_info_ecu_snapshots
+        : [];
+    const ecuInfoEcuSnapshots = rawEcuInfoEcuSnapshots.map((snapshot) => {
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+      const snapshotSourceEcu = readObdResponseSourceEcu(snapshot);
+      if (!snapshotSourceEcu) return null;
+      const snapshotItems = Array.isArray(snapshot.items)
+        ? snapshot.items
+        : Array.isArray(snapshot.values)
+          ? snapshot.values
+          : [];
+      const snapshotStatus = String(snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || snapshot.readoutStatus || snapshot.readout_status || "unknown").trim().toLowerCase();
+      const itemIds = [...new Set([
+        ...(Array.isArray(snapshot.itemIds) ? snapshot.itemIds : []),
+        ...(Array.isArray(snapshot.item_ids) ? snapshot.item_ids : []),
+        ...snapshotItems.map((item) => item?.id || item?.dataIdentifier || item?.data_identifier || null)
+      ].filter(Boolean).map(String))];
+      const itemCount = Number.isFinite(Number(snapshot.itemCount || snapshot.item_count))
+        ? Math.max(0, Math.round(Number(snapshot.itemCount || snapshot.item_count)))
+        : snapshotItems.length;
+      const negativeResponseService = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service);
+      const negativeResponseCode = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code);
+      return {
+        sourceEcu: snapshotSourceEcu,
+        source_ecu: snapshotSourceEcu,
+        sourceEcuName: snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null,
+        source_ecu_name: snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null,
+        ecuInfoReadoutStatus: ["reported", "unparsed", "blocked", "unknown"].includes(snapshotStatus) ? snapshotStatus : "unknown",
+        ecu_info_readout_status: ["reported", "unparsed", "blocked", "unknown"].includes(snapshotStatus) ? snapshotStatus : "unknown",
+        itemCount,
+        item_count: itemCount,
+        itemIds,
+        item_ids: itemIds,
+        ecuInfoNegativeResponseService: negativeResponseService,
+        ecu_info_negative_response_service: negativeResponseService,
+        ecuInfoNegativeResponseCode: negativeResponseCode,
+        ecu_info_negative_response_code: negativeResponseCode
+      };
+    }).filter(Boolean);
     const hadSensitiveIdentifier = sourceInput.hadSensitiveIdentifier === true
       || sourceInput.had_sensitive_identifier === true
       || redactedItems.length > 0;
@@ -18898,6 +18947,7 @@
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
       ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
       sourceEcu,
+      ...ecuInfoEcuSnapshots.map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu || null),
       ...items.map((item) => item.sourceEcu || item.source_ecu || null)
     ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const observedSourceEcus = [...new Set(items.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
@@ -18946,12 +18996,6 @@
       : items.length > 0
         ? "reported"
         : "unknown";
-    const normalizeNegativeResponseByte = (value) => {
-      const parsedValue = typeof value === "number" ? value : Number.parseInt(String(value || "").trim().replace(/^0x/i, ""), 16);
-      return Number.isInteger(parsedValue) && parsedValue >= 0 && parsedValue <= 0xFF
-        ? parsedValue.toString(16).toUpperCase().padStart(2, "0")
-        : null;
-    };
     const ecuInfoNegativeResponseService = normalizeNegativeResponseByte(sourceInput.ecuInfoNegativeResponseService || sourceInput.ecu_info_negative_response_service);
     const ecuInfoNegativeResponseCode = normalizeNegativeResponseByte(sourceInput.ecuInfoNegativeResponseCode || sourceInput.ecu_info_negative_response_code);
     const keyItemSummary = {
@@ -19001,6 +19045,8 @@
       redactedItemIds,
       redacted_item_ids: redactedItemIds,
       items,
+      ecuInfoEcuSnapshots,
+      ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
       expectedItems,
       expected_items: expectedItems,
       keyItemSummary,
@@ -21175,6 +21221,15 @@
           network_protocol: protocolProvenance.networkProtocol || protocolProvenance.network_protocol || null,
           ecu_info_readout_status: readoutStatus,
           readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
+          ecu_info_ecu_snapshots: snapshots.map((snapshot) => ({
+            source_ecu: snapshot.sourceEcu || snapshot.source_ecu || null,
+            source_ecu_name: snapshot.sourceEcuName || snapshot.source_ecu_name || null,
+            ecu_info_readout_status: snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || "unknown",
+            item_count: snapshot.itemCount || snapshot.item_count || 0,
+            item_ids: (snapshot.items || []).map((item) => item?.id || item?.dataIdentifier || item?.data_identifier || null).filter(Boolean),
+            ecu_info_negative_response_service: snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service || null,
+            ecu_info_negative_response_code: snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code || null
+          })),
           ...(negativeResponses.length === 1 && negativeResponseCodes.length === 1 ? {
             ecu_info_negative_response_service: "22",
             ecu_info_negative_response_code: negativeResponseCodes[0]
