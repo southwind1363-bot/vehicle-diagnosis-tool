@@ -14568,6 +14568,15 @@ const obdEcuInfoReadoutPlanSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", protocol: "ISO15765-4", dtcs: [] }
 });
 check(udsEcuInfoReadoutPlanSession.nextReadoutRequest?.serviceMode === "22" && udsEcuInfoReadoutPlanSession.coreSessionStatus?.pendingReadoutRequestQueue?.find((item) => item.readoutId === "ecu_info_snapshot")?.serviceMode === "22" && udsEcuInfoReadoutPlanRoundTrip?.nextReadoutRequest?.service_mode === "22" && obdEcuInfoReadoutPlanSession.nextReadoutRequest?.serviceMode === "09" && [udsEcuInfoReadoutPlanSession, udsEcuInfoReadoutPlanRoundTrip, obdEcuInfoReadoutPlanSession].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "ECU info readout plans must select UDS service 22 only with explicit UDS evidence and remain read-only through export");
+const udsDidApplicabilityMatchSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
+  ecu_info_response: { raw: "62 F1 89 53 57", protocol: "UDS", source_ecu: "18DA10F1" }
+});
+const udsDidApplicabilityMismatchSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
+  ecu_info_response: { raw: "62 F1 89 53 57", protocol: "UDS", source_ecu: "18DA10F2" }
+});
+check(udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && [udsDidApplicabilityMatchSession, udsDidApplicabilityMismatchSession].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Raw UDS DID ECU addresses must use paired 29-bit matching without hiding a different-node review");
 const reimportedUnparsedEcuInfoSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedEcuInfoSession) });
 check(reimportedUnparsedEcuInfoSession.ecuInfoSnapshot?.ecu_info_readout_status === "unparsed" && reimportedUnparsedEcuInfoSession.coreSessionStatus?.readoutStateById?.ecu_info_snapshot?.status === "missing" && reimportedUnparsedEcuInfoSession.vehicleCommandEnabled === false, "Saved unparsed ECU info responses were not preserved through read-only reimport");
 const decodedSupportedTypes = obd.decodeEcuInfoResponse({ raw: "49 00 01 55 60 00 00 49 04 01 43 41 4C 2D 31 32 33 34" });
