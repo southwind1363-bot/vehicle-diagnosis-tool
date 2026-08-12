@@ -3136,7 +3136,9 @@
       : data.protocolProvenance && typeof data.protocolProvenance === "object"
         ? data.protocolProvenance
         : {};
-    const diagnosticProtocol = normalizeProtocolProvenanceValue(data.diagnostic_protocol || data.diagnosticProtocol || nested.diagnostic_protocol || nested.diagnosticProtocol);
+    const explicitDiagnosticProtocol = normalizeProtocolProvenanceValue(data.diagnostic_protocol || data.diagnosticProtocol || nested.diagnostic_protocol || nested.diagnosticProtocol);
+    const genericProtocol = normalizeProtocolProvenanceValue(data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || nested.protocol || nested.obd_protocol || nested.communication_protocol || nested.communicationProtocol);
+    const diagnosticProtocol = explicitDiagnosticProtocol || (/\buds\b/i.test(genericProtocol || "") ? genericProtocol : null);
     const transportProtocol = normalizeProtocolProvenanceValue(data.transport_protocol || data.transportProtocol || nested.transport_protocol || nested.transportProtocol);
     const networkProtocol = normalizeProtocolProvenanceValue(data.network_protocol || data.networkProtocol || nested.network_protocol || nested.networkProtocol);
     return {
