@@ -6795,7 +6795,7 @@
     const applicabilityNeedsVehicleConfirmation = applicability.status === "partial"
       || applicability.status === "unlisted"
       || applicability.status === "manual";
-    return (normalizedCoverage.items || [])
+    const candidates = (normalizedCoverage.items || [])
       .filter((item) => item && typeof item === "object" && (item.status === "missing" || item.status === "empty"))
       .map((item) => {
         const statusReason = item.statusReason || item.status_reason || normalizedCoverage.failedReadoutReasonById?.[item.id] || null;
@@ -6863,7 +6863,59 @@
           reason,
           applicabilityStatus: applicability.status || null
         };
-      })
+      });
+    const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
+      ? ecuInfoSnapshot.ecuInfoEcuSnapshots
+      : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
+        ? ecuInfoSnapshot.ecu_info_ecu_snapshots
+        : [];
+    const ecuInfoNegativeOutcomes = ecuInfoEcuSnapshots.filter((snapshot) => {
+      const status = String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase();
+      const service = String(snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || "").trim().toUpperCase();
+      const code = String(snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || "").trim().toUpperCase();
+      return status === "unparsed" && /^[0-9A-F]{2}$/.test(service) && /^[0-9A-F]{2}$/.test(code);
+    });
+    if (ecuInfoNegativeOutcomes.length) {
+      const affectedEcuIds = [...new Set(ecuInfoNegativeOutcomes
+        .map((snapshot) => snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || null)
+        .filter(Boolean)
+        .map((value) => String(value).trim())
+        .filter(Boolean))];
+      const negativeResponseServices = [...new Set(ecuInfoNegativeOutcomes
+        .map((snapshot) => snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || null)
+        .filter(Boolean)
+        .map((value) => String(value).trim().toUpperCase()))];
+      const negativeResponseCodes = [...new Set(ecuInfoNegativeOutcomes
+        .map((snapshot) => snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || null)
+        .filter(Boolean)
+        .map((value) => String(value).trim().toUpperCase()))];
+      const existingEcuInfoCandidateIndex = candidates.findIndex((item) => item.id === "ecu_info_snapshot");
+      if (existingEcuInfoCandidateIndex >= 0) candidates.splice(existingEcuInfoCandidateIndex, 1);
+      candidates.push({
+        id: "ecu_info_snapshot",
+        label: "ECU情報",
+        status: "unparsed",
+        statusReason: "ecu_scoped_negative_response",
+        status_reason: "ecu_scoped_negative_response",
+        priority: 87,
+        reason: "一部ECUのUDS DID読取が負応答のため確認候補",
+        reasonId: "ecu_scoped_negative_response",
+        reason_id: "ecu_scoped_negative_response",
+        applicabilityStatus: applicability.status || null,
+        applicability_status: applicability.status || null,
+        affectedEcuIds,
+        affected_ecu_ids: affectedEcuIds,
+        negativeResponseServices,
+        negative_response_services: negativeResponseServices,
+        negativeResponseCodes,
+        negative_response_codes: negativeResponseCodes,
+        ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null,
+        ecu_info_response_format: ecuInfoSnapshot?.ecu_info_response_format || ecuInfoSnapshot?.ecuInfoResponseFormat || null,
+        diagnosticProtocol: ecuInfoSnapshot?.diagnosticProtocol || ecuInfoSnapshot?.diagnostic_protocol || null,
+        diagnostic_protocol: ecuInfoSnapshot?.diagnostic_protocol || ecuInfoSnapshot?.diagnosticProtocol || null
+      });
+    }
+    return candidates
       .sort((left, right) => {
         if ((applicability.status === "manual" || applicability.status === "unlisted") && left.id !== right.id) {
           if (left.id === "ecu_info_snapshot") return -1;
@@ -8790,7 +8842,16 @@
           ? Math.round(Number(pickDefined(item.priority, item.sort_order, item.sortOrder)))
           : 0,
         reason: pickDefined(item.reason, item.reason_label, item.reasonLabel, "") || "",
+        reasonId: pickDefined(item.reasonId, item.reason_id, null),
+        reason_id: pickDefined(item.reason_id, item.reasonId, null),
         applicabilityStatus: pickDefined(item.applicabilityStatus, item.applicability_status, item.vehicleApplicabilityStatus, item.vehicle_applicability_status, null),
+        applicability_status: pickDefined(item.applicability_status, item.applicabilityStatus, item.vehicle_applicability_status, item.vehicleApplicabilityStatus, null),
+        affectedEcuIds: Array.isArray(item.affectedEcuIds) ? item.affectedEcuIds : Array.isArray(item.affected_ecu_ids) ? item.affected_ecu_ids : [],
+        affected_ecu_ids: Array.isArray(item.affected_ecu_ids) ? item.affected_ecu_ids : Array.isArray(item.affectedEcuIds) ? item.affectedEcuIds : [],
+        negativeResponseServices: Array.isArray(item.negativeResponseServices) ? item.negativeResponseServices : Array.isArray(item.negative_response_services) ? item.negative_response_services : [],
+        negative_response_services: Array.isArray(item.negative_response_services) ? item.negative_response_services : Array.isArray(item.negativeResponseServices) ? item.negativeResponseServices : [],
+        negativeResponseCodes: Array.isArray(item.negativeResponseCodes) ? item.negativeResponseCodes : Array.isArray(item.negative_response_codes) ? item.negative_response_codes : [],
+        negative_response_codes: Array.isArray(item.negative_response_codes) ? item.negative_response_codes : Array.isArray(item.negativeResponseCodes) ? item.negativeResponseCodes : [],
         readOnly: true,
         read_only: true,
         wouldTransmit: false,
