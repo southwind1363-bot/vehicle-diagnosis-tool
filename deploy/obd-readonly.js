@@ -19228,6 +19228,7 @@
     const identityText = [id, rowId, row.label, row.displayLabel, row.display_label, row.name, row.key].filter(Boolean).join(" ");
     const sensitiveByIdentity = reportedPrivacyClass === "sensitive_identifier"
       || infoType === "02"
+      || dataIdentifier === "F190"
       || /(?:\bvin\b|vehicle\s*identification|車台番号)/i.test(identityText);
     const sensitiveValueDetected = hasSensitiveIdentifierValue(rawValue);
     const detected = row.detected === true || row.present === true || (rawValue !== null && rawValue !== undefined && String(rawValue).length > 0);
