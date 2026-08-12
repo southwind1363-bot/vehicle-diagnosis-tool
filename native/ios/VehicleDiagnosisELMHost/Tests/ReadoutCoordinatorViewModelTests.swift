@@ -263,6 +263,25 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testReadoutCompletionCountsExpectedEmptyReadoutsAsCaptured() {
+        let context = NativeConnectorSessionContext()
+        let completion = ReadoutCoordinatorViewModel.readoutCompletion(
+            expectedReadoutIDs: ["stored_dtc_snapshot", "pending_dtc_snapshot", "freeze_frame_snapshot", "onboard_monitor_snapshot", "ecu_info_snapshot"],
+            envelopes: [
+                NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: 1, intent: "read_stored_dtc", scopeID: nil, dtcs: []),
+                NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: 2, intent: "read_pending_dtc", scopeID: nil, dtcs: []),
+                NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: 3, scopeID: nil, code: nil),
+                NativeConnectorEnvelopeFactory.onboardMonitor(context: context, sequence: 4, scopeID: nil, tests: []),
+                NativeConnectorEnvelopeFactory.ecuInfoEmpty(context: context, sequence: 5, scopeID: nil)
+            ]
+        )
+
+        XCTAssertEqual(completion.expectedCount, 5)
+        XCTAssertEqual(completion.capturedCount, 5)
+        XCTAssertEqual(completion.missingIDs, [])
+    }
+
+    @MainActor
     func testReadoutCompletionAndScopesUseOnlyTheLatestAttemptForEachECUReadout() throws {
         let context = NativeConnectorSessionContext(scanID: UUID(), connectionID: UUID(), vehicleContextID: UUID())
         let earlierSuccess = try readoutEnvelope(
