@@ -2569,6 +2569,36 @@ const multiEcuEmptyReadoutSession = obd.buildDiagnosticScanSession({
 check(multiEcuEmptyReadoutSession?.ecuInfoSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutSession?.onboardMonitorSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutSession?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutSession?.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("ecu_info_snapshot") && multiEcuEmptyReadoutSession?.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("onboard_monitor_snapshot") && multiEcuEmptyReadoutSession?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && multiEcuEmptyReadoutSession?.vehicleCommandEnabled === false, "Reported empty multi-ECU Mode 09 and Mode 06 readouts must retain ECU scope for applicability matching without enabling vehicle commands");
 const multiEcuEmptyReadoutReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuEmptyReadoutSession)));
 check(multiEcuEmptyReadoutReimport?.ecuInfoSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutReimport?.onboardMonitorSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutReimport?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && multiEcuEmptyReadoutReimport?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && multiEcuEmptyReadoutReimport?.vehicleCommandEnabled === false, "Reported empty multi-ECU readout scope must survive read-only export and JSON reimport");
+const nestedBridgeEmptyEcuInfo = obd.normalizeBridgeEcuInfoSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  readout_ecu_ids: ["7E8", "7E9"],
+  data: { ecu_info_readout_status: "reported", items: [] }
+});
+const nestedBridgeEmptyOnboardMonitor = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  readoutEcuIds: ["7E8", "7E9"],
+  data: { onboard_monitor_readout_status: "reported", tests: [] }
+});
+const nestedBridgeEmptyReadoutSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: {
+    maker: "Toyota",
+    model: "Prius",
+    ecu_address: "7E8",
+    catalog_matched: true,
+    source_name: "verified catalog",
+    source_verified: true
+  },
+  ecu_info_snapshot: nestedBridgeEmptyEcuInfo,
+  onboard_monitor_snapshot: nestedBridgeEmptyOnboardMonitor
+});
+const nestedBridgeEmptyReadoutReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(nestedBridgeEmptyReadoutSession)));
+check(nestedBridgeEmptyEcuInfo?.readoutEcuIds?.join(",") === "7E8,7E9" && nestedBridgeEmptyOnboardMonitor?.readout_ecu_ids?.join(",") === "7E8,7E9", "Nested bridge empty Mode 09 and Mode 06 responses must retain outer ECU scope aliases");
+check(nestedBridgeEmptyReadoutSession?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && nestedBridgeEmptyReadoutSession?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched", "Nested bridge empty Mode 09 and Mode 06 ECU scope must participate in applicability matching");
+check(nestedBridgeEmptyReadoutReimport?.ecuInfoSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && nestedBridgeEmptyReadoutReimport?.onboardMonitorSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && nestedBridgeEmptyReadoutReimport?.vehicleCommandEnabled === false, "Nested bridge empty Mode 09 and Mode 06 ECU scope must survive read-only export and JSON reimport");
 const scannerTextEcuInfoPayloadI = obd.buildScanSessionFromObdText("0904: 49 04 01 49 44");
 check(scannerTextEcuInfoPayloadI?.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "ID") && scannerTextEcuInfoPayloadI.vehicleCommandEnabled === false, "Mode 09 payload text containing 49 was incorrectly treated as a new response frame");
 const scannerIsoTpEcuInfoSession = obd.buildScanSessionFromObdText([

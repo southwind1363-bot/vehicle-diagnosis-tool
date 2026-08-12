@@ -4853,6 +4853,7 @@
         ? {
           ...nestedData,
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          readout_ecu_ids: nestedData.readoutEcuIds || nestedData.readout_ecu_ids || response.readoutEcuIds || response.readout_ecu_ids || [],
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           ecu_info_readout_status: nestedData.ecuInfoReadoutStatus || nestedData.ecu_info_readout_status || response.ecuInfoReadoutStatus || response.ecu_info_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
           ecu_info_response_format: nestedData.ecuInfoResponseFormat || nestedData.ecu_info_response_format || nestedData.responseFormat || nestedData.response_format || response.ecuInfoResponseFormat || response.ecu_info_response_format || response.responseFormat || response.response_format || null,
@@ -4934,6 +4935,7 @@
         ? {
           ...nestedData,
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          readout_ecu_ids: nestedData.readoutEcuIds || nestedData.readout_ecu_ids || response.readoutEcuIds || response.readout_ecu_ids || [],
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           onboard_monitor_readout_status: nestedData.onboardMonitorReadoutStatus || nestedData.onboard_monitor_readout_status || response.onboardMonitorReadoutStatus || response.onboard_monitor_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
           ...outerOnboardMonitorFallback
@@ -5001,13 +5003,14 @@
     };
     return {
       ...normalizeOnboardMonitorSnapshot({
-      source: "local_bridge",
-      captured_at: capturedAt,
-      protocol,
-      onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety),
-      source_ecu: sourceEcu,
-      source_ecu_name: sourceEcuName,
-      tests
+        source: "local_bridge",
+        captured_at: capturedAt,
+        protocol,
+        onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety),
+        source_ecu: sourceEcu,
+        source_ecu_name: sourceEcuName,
+        readout_ecu_ids: data.readoutEcuIds || data.readout_ecu_ids || [],
+        tests
       }),
       protocolProvenance,
       protocol_provenance: protocolProvenance,
@@ -18747,6 +18750,7 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
@@ -18917,6 +18921,7 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
