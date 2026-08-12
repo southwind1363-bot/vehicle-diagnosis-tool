@@ -6886,13 +6886,37 @@
     );
   }
 
-  function buildReadOnlyNextReadoutRequest(nextReadoutSummary = null) {
+  function buildReadOnlyNextReadoutRequest(nextReadoutSummary = null, context = {}) {
     if (!nextReadoutSummary || typeof nextReadoutSummary !== "object" || !nextReadoutSummary.id) return null;
+    const protocolEvidence = [
+      nextReadoutSummary.diagnosticProtocol,
+      nextReadoutSummary.diagnostic_protocol,
+      nextReadoutSummary.protocol,
+      nextReadoutSummary.obd_protocol,
+      nextReadoutSummary.protocolProvenance?.diagnosticProtocol,
+      nextReadoutSummary.protocol_provenance?.diagnostic_protocol,
+      context.diagnosticProtocol,
+      context.diagnostic_protocol,
+      context.protocol,
+      context.obd_protocol,
+      context.protocolProvenance?.diagnosticProtocol,
+      context.protocol_provenance?.diagnostic_protocol
+    ].filter(Boolean).join(" ");
+    const ecuInfoResponseFormat = normalizeEcuInfoResponseFormat(
+      nextReadoutSummary.ecuInfoResponseFormat
+      || nextReadoutSummary.ecu_info_response_format
+      || context.ecuInfoResponseFormat
+      || context.ecu_info_response_format
+    );
+    const usesUdsEcuInfoReadout = nextReadoutSummary.id === "ecu_info_snapshot"
+      && (ecuInfoResponseFormat === "uds_read_data_by_identifier" || /\buds\b/i.test(protocolEvidence));
     const requestByReadoutId = {
       dtc_snapshot: { bridgeIntent: "read_stored_dtc", serviceMode: "03", pid: null },
       freeze_frame_snapshot: { bridgeIntent: "read_freeze_frame", serviceMode: "02", pid: null },
       readiness_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "01" },
-      ecu_info_snapshot: { bridgeIntent: "read_ecu_info", serviceMode: "09", pid: null },
+      ecu_info_snapshot: usesUdsEcuInfoReadout
+        ? { bridgeIntent: "read_ecu_info", serviceMode: "22", pid: null }
+        : { bridgeIntent: "read_ecu_info", serviceMode: "09", pid: null },
       onboard_monitor_snapshot: { bridgeIntent: "read_onboard_monitor", serviceMode: "06", pid: null },
       supported_pid_matrix: { bridgeIntent: "read_supported_pids", serviceMode: "01", pid: "00" },
       live_pid_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "supported-only" },
@@ -9283,6 +9307,20 @@
     sessionCaptureIntegritySummary = null
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const readoutRequestProtocolValues = [dtcSnapshot, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, onboardMonitorSnapshot, livePidSnapshot, supportedPidMatrix]
+      .flatMap((snapshot) => [
+        snapshot?.diagnosticProtocol,
+        snapshot?.diagnostic_protocol,
+        snapshot?.protocol,
+        snapshot?.obd_protocol,
+        snapshot?.protocolProvenance?.diagnosticProtocol,
+        snapshot?.protocol_provenance?.diagnostic_protocol
+      ])
+      .filter(Boolean);
+    const readoutRequestContext = {
+      diagnosticProtocol: readoutRequestProtocolValues.find((value) => /\buds\b/i.test(String(value))) || readoutRequestProtocolValues[0] || null,
+      ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null
+    };
     const observedEcuSummary = buildObservedEcuSummary({
       dtcSnapshot,
       freezeFrameSnapshot,
@@ -9516,14 +9554,14 @@
       isMissing: remainingReadoutIds.includes(nextRecommendedReadoutId),
       isEmpty: emptyReadoutIds.includes(nextRecommendedReadoutId)
     } : null;
-    const nextReadoutRequest = buildReadOnlyNextReadoutRequest(nextReadoutSummary);
+    const nextReadoutRequest = buildReadOnlyNextReadoutRequest(nextReadoutSummary, readoutRequestContext);
     if (nextReadoutSummary && nextReadoutRequest) {
       nextReadoutSummary.readoutRequest = nextReadoutRequest;
     }
     const nextReadoutCandidateSafetySummary = buildNextReadoutCandidateSafetySummary(nextReadoutCandidates);
     const pendingReadoutRequestQueue = pendingReadoutQueue
       .map((item) => {
-        const request = buildReadOnlyNextReadoutRequest(item);
+        const request = buildReadOnlyNextReadoutRequest(item, readoutRequestContext);
         return request ? {
           ...request,
           queuePosition: item.position,
@@ -9779,7 +9817,7 @@
         label: primaryBlockingReadoutLabel || primaryBlockingReadoutId,
         status: primaryBlockingReadoutState?.status || null,
         source: "primary_blocker"
-      })
+      }, readoutRequestContext)
       : null;
     const primaryBlockingSummary = primaryBlockingReasonId ? {
       schemaVersion: "primary_readout_blocker_v1",
