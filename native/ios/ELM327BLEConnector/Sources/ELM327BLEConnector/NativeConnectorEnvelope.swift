@@ -303,6 +303,13 @@ public enum NativeConnectorEnvelopeFactory {
         ], readoutID: "ecu_info_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
     }
 
+    public static func ecuInfoEmpty(context: NativeConnectorSessionContext, sequence: Int, scopeID: String?) -> NativeConnectorEnvelope {
+        make(context: context, sequence: sequence, intent: "read_ecu_info", data: [
+            "items": .array([]),
+            "ecu_info_readout_status": .string("reported")
+        ], readoutID: "ecu_info_snapshot", readoutScopeID: scopeID, readoutAttempt: 0)
+    }
+
     public static func failedReadout(
         context: NativeConnectorSessionContext,
         sequence: Int,

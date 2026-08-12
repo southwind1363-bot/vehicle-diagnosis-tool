@@ -183,4 +183,18 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"source_ecu\":\"7E8\""))
         XCTAssertTrue(json.contains("\"would_transmit\":false"))
     }
+
+    func testEmptyECUInfoUsesTheReadOnlyArchiveShape() throws {
+        let envelope = NativeConnectorEnvelopeFactory.ecuInfoEmpty(
+            context: NativeConnectorSessionContext(),
+            sequence: 6,
+            scopeID: nil
+        )
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"intent\":\"read_ecu_info\""))
+        XCTAssertTrue(json.contains("\"readout_id\":\"ecu_info_snapshot\""))
+        XCTAssertTrue(json.contains("\"items\":[]"))
+        XCTAssertTrue(json.contains("\"ecu_info_readout_status\":\"reported\""))
+        XCTAssertTrue(json.contains("\"would_transmit\":false"))
+    }
 }

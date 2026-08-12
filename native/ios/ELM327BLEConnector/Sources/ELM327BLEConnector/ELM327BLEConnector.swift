@@ -23,6 +23,15 @@ func classifyELMReadResponse(_ response: String) -> ELMReadResponseDisposition {
     return normalized.contains("NO DATA") ? .noData : .process
 }
 
+func isExpectedEmptyELMReadoutCommand(_ command: ELMReadCommand) -> Bool {
+    switch command {
+    case .storedDTC, .pendingDTC, .permanentDTC, .freezeFrameCapabilities, .onboardMonitor, .mode09SupportedInfoTypes:
+        return true
+    default:
+        return false
+    }
+}
+
 func isCompletedELMAdapterSetupResponse(command: ELMReadCommand, response: String) -> Bool {
     guard command.isAdapterSetup else { return false }
     let lines = response
@@ -468,6 +477,9 @@ public final class ELM327BLEConnector: NSObject {
                 interrupt(.invalidResponse)
                 return
             }
+            if emitExpectedEmptyReadout(for: command, context: context) {
+                break
+            }
             emitFailure(for: command, error: "readout_not_available")
         case .process:
             switch command {
@@ -767,6 +779,24 @@ public final class ELM327BLEConnector: NSObject {
         guard let context = sessionContext else { return }
         sequence += 1
         emit(NativeConnectorEnvelopeFactory.failedReadout(context: context, sequence: sequence, command: command, error: error))
+    }
+
+    private func emitExpectedEmptyReadout(for command: ELMReadCommand, context: NativeConnectorSessionContext) -> Bool {
+        guard isExpectedEmptyELMReadoutCommand(command) else { return false }
+        sequence += 1
+        switch command {
+        case .storedDTC, .pendingDTC, .permanentDTC:
+            emit(NativeConnectorEnvelopeFactory.dtcs(context: context, sequence: sequence, intent: command.intent, scopeID: nil, dtcs: []))
+        case .freezeFrameCapabilities:
+            emit(NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(context: context, sequence: sequence, scopeID: nil, code: nil))
+        case .onboardMonitor:
+            emit(NativeConnectorEnvelopeFactory.onboardMonitor(context: context, sequence: sequence, scopeID: nil, tests: []))
+        case .mode09SupportedInfoTypes:
+            emit(NativeConnectorEnvelopeFactory.ecuInfoEmpty(context: context, sequence: sequence, scopeID: nil))
+        default:
+            return false
+        }
+        return true
     }
 
     private func plan(commands: [ELMReadCommand]) {
