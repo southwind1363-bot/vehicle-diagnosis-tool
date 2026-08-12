@@ -107,6 +107,17 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
+                if !viewModel.readoutPreview.emptyReadouts.isEmpty {
+                    Section("読取済み・空結果") {
+                        ForEach(viewModel.readoutPreview.emptyReadouts) { readout in
+                            LabeledContent(
+                                viewModel.readoutLabel(intent: readout.intent, readoutID: readout.readoutID),
+                                value: "0件 / \(readout.sourceScopeID)"
+                            )
+                        }
+                    }
+                }
+
                 if !viewModel.readoutPreview.liveValues.isEmpty {
                     Section("ライブデータ") {
                         ForEach(viewModel.readoutPreview.liveValues) { value in

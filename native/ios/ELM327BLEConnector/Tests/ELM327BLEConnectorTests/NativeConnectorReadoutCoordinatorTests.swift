@@ -320,6 +320,48 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertEqual(preview.readoutFailures, [NativeConnectorReadoutPreview.ReadoutFailure(intent: "read_stored_dtc", readoutID: "stored_dtc_snapshot", sourceScopeID: "7E8", errorCodes: ["transport_failure"])])
     }
 
+    func testPreviewRetainsOnlyExplicitlyReportedEmptyReadouts() {
+        let stored = NativeConnectorEnvelopeFactory.dtcs(
+            context: context,
+            sequence: 1,
+            intent: "read_stored_dtc",
+            scopeID: nil,
+            dtcs: []
+        )
+        let freezeFrame = NativeConnectorEnvelopeFactory.freezeFrameTriggerDTC(
+            context: context,
+            sequence: 2,
+            scopeID: nil,
+            code: nil
+        )
+        let ecuInfo = NativeConnectorEnvelopeFactory.ecuInfoEmpty(
+            context: context,
+            sequence: 3,
+            scopeID: nil
+        )
+        let mode06 = NativeConnectorEnvelopeFactory.onboardMonitor(
+            context: context,
+            sequence: 4,
+            scopeID: nil,
+            tests: []
+        )
+        let failed = NativeConnectorEnvelopeFactory.failedReadout(
+            context: context,
+            sequence: 5,
+            command: .pendingDTC,
+            error: "readout_not_available"
+        )
+
+        let preview = NativeConnectorReadoutPreview(envelopes: [stored, freezeFrame, ecuInfo, mode06, failed])
+
+        XCTAssertEqual(preview.emptyReadouts, [
+            NativeConnectorReadoutPreview.EmptyReadout(intent: "read_ecu_info", readoutID: "ecu_info_snapshot", sourceScopeID: "LEGACY"),
+            NativeConnectorReadoutPreview.EmptyReadout(intent: "read_freeze_frame", readoutID: "freeze_frame_snapshot", sourceScopeID: "LEGACY"),
+            NativeConnectorReadoutPreview.EmptyReadout(intent: "read_onboard_monitor", readoutID: "onboard_monitor_snapshot", sourceScopeID: "LEGACY"),
+            NativeConnectorReadoutPreview.EmptyReadout(intent: "read_stored_dtc", readoutID: "stored_dtc_snapshot", sourceScopeID: "LEGACY")
+        ])
+    }
+
     func testPreviewDoesNotPromoteContradictorySuccessfulReadoutsWithErrors() {
         let accepted = NativeConnectorEnvelopeFactory.livePID(
             context: context,

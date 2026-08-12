@@ -91,6 +91,14 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         public var id: String { "\(readoutID ?? intent):\(sourceScopeID):\(errorCodes.joined(separator: ","))" }
     }
 
+    public struct EmptyReadout: Identifiable, Sendable, Equatable {
+        public let intent: String
+        public let readoutID: String
+        public let sourceScopeID: String
+
+        public var id: String { "\(readoutID):\(sourceScopeID)" }
+    }
+
     public let storedDTCs: [DTC]
     public let pendingDTCs: [DTC]
     public let permanentDTCs: [DTC]
@@ -104,6 +112,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
     public let onboardMonitors: [OnboardMonitor]
     public let supportedPIDs: [SupportedPIDs]
     public let readoutFailures: [ReadoutFailure]
+    public let emptyReadouts: [EmptyReadout]
 
     public init(
         storedDTCs: [DTC],
@@ -118,7 +127,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         ecuInfo: [ECUInfo],
         onboardMonitors: [OnboardMonitor],
         supportedPIDs: [SupportedPIDs],
-        readoutFailures: [ReadoutFailure]
+        readoutFailures: [ReadoutFailure],
+        emptyReadouts: [EmptyReadout]
     ) {
         self.storedDTCs = storedDTCs
         self.pendingDTCs = pendingDTCs
@@ -133,6 +143,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.onboardMonitors = onboardMonitors
         self.supportedPIDs = supportedPIDs
         self.readoutFailures = readoutFailures
+        self.emptyReadouts = emptyReadouts
     }
 
     public static let empty = NativeConnectorReadoutPreview(
@@ -148,7 +159,8 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         ecuInfo: [],
         onboardMonitors: [],
         supportedPIDs: [],
-        readoutFailures: []
+        readoutFailures: [],
+        emptyReadouts: []
     )
 
     public init(envelopes: [NativeConnectorEnvelope]) {
@@ -165,6 +177,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var onboardMonitors: [String: OnboardMonitor] = [:]
         var supportedPIDs: [String: Set<String>] = [:]
         var readoutFailures: [String: ReadoutFailure] = [:]
+        var emptyReadouts: [String: EmptyReadout] = [:]
 
         for envelope in Self.effectiveReadoutEnvelopes(from: envelopes) {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
@@ -178,6 +191,9 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 readoutFailures[failure.id] = failure
             }
             guard envelope.ok, envelope.errors.isEmpty, !envelope.blocked else { continue }
+            if let emptyReadout = Self.expectedEmptyReadout(in: envelope, scopeID: scopeID) {
+                emptyReadouts[emptyReadout.id] = emptyReadout
+            }
             switch envelope.intent {
             case "read_stored_dtc", "read_pending_dtc", "read_permanent_dtc":
                 let dtcs = Self.dtcs(in: envelope.data, status: Self.dtcStatus(for: envelope.intent), scopeID: scopeID)
@@ -228,6 +244,9 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         self.readoutFailures = readoutFailures.values.sorted { lhs, rhs in
             lhs.sourceScopeID == rhs.sourceScopeID ? lhs.intent < rhs.intent : lhs.sourceScopeID < rhs.sourceScopeID
         }
+        self.emptyReadouts = emptyReadouts.values.sorted { lhs, rhs in
+            lhs.sourceScopeID == rhs.sourceScopeID ? lhs.readoutID < rhs.readoutID : lhs.sourceScopeID < rhs.sourceScopeID
+        }
     }
 
     public static func effectiveReadoutEnvelopes(from envelopes: [NativeConnectorEnvelope]) -> [NativeConnectorEnvelope] {
@@ -255,6 +274,38 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         case "read_pending_dtc": return "pending"
         default: return "permanent"
         }
+    }
+
+    private static func expectedEmptyReadout(in envelope: NativeConnectorEnvelope, scopeID: String) -> EmptyReadout? {
+        guard let readoutID = envelope.readoutID else { return nil }
+        let data = envelope.data
+        let isEmpty: Bool
+        switch readoutID {
+        case "stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot":
+            isEmpty = hasReportedStatus(data, key: "dtc_readout_status") && isEmptyArray(data["dtcs"])
+        case "freeze_frame_snapshot":
+            isEmpty = hasReportedStatus(data, key: "freeze_frame_readout_status")
+                && freezeFrameTriggerDTCs(in: data, scopeID: scopeID).isEmpty
+                && monitorValues(in: data, scopeID: scopeID, keys: ["values", "monitor_values"]).isEmpty
+                && textMonitorValues(in: data, scopeID: scopeID, keys: ["values", "monitor_values"]).isEmpty
+        case "ecu_info_snapshot":
+            isEmpty = hasReportedStatus(data, key: "ecu_info_readout_status") && isEmptyArray(data["items"])
+        case "onboard_monitor_snapshot":
+            isEmpty = hasReportedStatus(data, key: "onboard_monitor_readout_status") && isEmptyArray(data["tests"])
+        default:
+            isEmpty = false
+        }
+        return isEmpty ? EmptyReadout(intent: envelope.intent, readoutID: readoutID, sourceScopeID: scopeID) : nil
+    }
+
+    private static func hasReportedStatus(_ data: [String: NativeConnectorJSONValue], key: String) -> Bool {
+        guard case .string(let status)? = data[key] else { return false }
+        return status.lowercased() == "reported"
+    }
+
+    private static func isEmptyArray(_ value: NativeConnectorJSONValue?) -> Bool {
+        guard case .array(let values)? = value else { return false }
+        return values.isEmpty
     }
 
     private static func dtcs(in data: [String: NativeConnectorJSONValue], status: String, scopeID: String) -> [DTC] {
