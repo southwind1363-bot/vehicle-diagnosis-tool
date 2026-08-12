@@ -2105,6 +2105,9 @@
         captured_at: capturedAt,
         protocol,
         freeze_frame_readout_status: "reported",
+        readout_ecu_ids: scopedData
+          .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
+          .filter(Boolean),
         trigger_dtc_entries: scopedData.flatMap(({ data, scopeId }) => {
           const entries = Array.isArray(data.trigger_dtc_entries)
             ? data.trigger_dtc_entries
@@ -6519,6 +6522,10 @@
     ]);
     add("freeze_frame_snapshot", [
       { ecuId: freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu, ecuName: freezeFrameSnapshot?.sourceEcuName || freezeFrameSnapshot?.source_ecu_name },
+      ...[freezeFrameSnapshot?.readoutEcuIds, freezeFrameSnapshot?.readout_ecu_ids]
+        .filter(Array.isArray)
+        .flat()
+        .map((ecuId) => ({ ecuId })),
       ...(freezeFrameSnapshot?.monitorValues || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
@@ -6579,11 +6586,12 @@
           : null,
       Array.isArray(livePidSnapshot?.monitorValues) && livePidSnapshot.monitorValues.length > 0 ? "live_pid_snapshot" : null,
       (Array.isArray(freezeFrameSnapshot?.monitorValues) && freezeFrameSnapshot.monitorValues.length > 0)
-        || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
-        || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0)
-        || (Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) && freezeFrameSnapshot.trigger_dtc_entries.length > 0)
-          ? "freeze_frame_snapshot"
-          : null,
+      || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
+      || (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries) && freezeFrameSnapshot.triggerDtcEntries.length > 0)
+      || (Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) && freezeFrameSnapshot.trigger_dtc_entries.length > 0)
+      || String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").toLowerCase() === "reported"
+        ? "freeze_frame_snapshot"
+        : null,
       (Array.isArray(readinessSnapshot?.monitors) && readinessSnapshot.monitors.length > 0)
         || (Array.isArray(readinessSnapshot?.readinessEcuSnapshots) && readinessSnapshot.readinessEcuSnapshots.length > 0)
         || (Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) && readinessSnapshot.readiness_ecu_snapshots.length > 0)
@@ -6666,6 +6674,8 @@
       ...(livePidSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       freezeFrameSnapshot?.sourceEcu,
       freezeFrameSnapshot?.source_ecu,
+      ...(Array.isArray(freezeFrameSnapshot?.readoutEcuIds) ? freezeFrameSnapshot.readoutEcuIds : []),
+      ...(Array.isArray(freezeFrameSnapshot?.readout_ecu_ids) ? freezeFrameSnapshot.readout_ecu_ids : []),
       ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
       readinessSnapshot?.sourceEcu,
@@ -17689,6 +17699,7 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
@@ -17993,6 +18004,15 @@
       ...triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean),
       ...freezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || [])
     ].map((item) => [`${item.code}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}`, item])).values()];
+    const readoutEcuIds = [...new Set([
+      ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
+      ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
+      sourceEcu,
+      ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null),
+      ...explicitTriggerDtcEntries.map((item) => item.sourceEcu || item.source_ecu || null),
+      ...udsDtcSnapshotRecords.map((item) => item.sourceEcu || item.source_ecu || null),
+      ...udsDtcStoredDataRecords.map((item) => item.sourceEcu || item.source_ecu || null)
+    ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const observedSourceEcus = [...new Set([
       ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null),
       ...explicitTriggerDtcEntries.map((item) => item.sourceEcu || item.source_ecu || null),
@@ -18068,6 +18088,8 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      readoutEcuIds,
+      readout_ecu_ids: readoutEcuIds,
       capturedAt,
       captured_at: capturedAt,
       protocol,
@@ -21047,6 +21069,7 @@
           source: "obd_response_decoder",
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           freeze_frame_readout_status: readoutStatus,
+          readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
           trigger_dtc_entries: triggerDtcEntries,
           values
         });

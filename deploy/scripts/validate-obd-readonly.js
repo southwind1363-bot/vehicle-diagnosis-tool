@@ -4460,27 +4460,31 @@ const multiScopeExpectedEmptyNativeBatch = [
   { ...nativeEnvelope("read_ecu_info", "2026-07-20T08:00:00Z", { items: [], ecu_info_readout_status: "reported" }, "user-vci-elm327", { sequence: 0 }), readout_scope_id: "7E8", readout_attempt: 0 },
   { ...nativeEnvelope("read_ecu_info", "2026-07-20T08:00:01Z", { items: [], ecu_info_readout_status: "reported" }, "user-vci-elm327", { sequence: 1 }), readout_scope_id: "7E9", readout_attempt: 0 },
   { ...nativeEnvelope("read_onboard_monitor", "2026-07-20T08:00:02Z", { tests: [], onboard_monitor_readout_status: "reported" }, "user-vci-elm327", { sequence: 2 }), readout_scope_id: "7E8", readout_attempt: 0 },
-  { ...nativeEnvelope("read_onboard_monitor", "2026-07-20T08:00:03Z", { tests: [], onboard_monitor_readout_status: "reported" }, "user-vci-elm327", { sequence: 3 }), readout_scope_id: "7E9", readout_attempt: 0 }
+  { ...nativeEnvelope("read_onboard_monitor", "2026-07-20T08:00:03Z", { tests: [], onboard_monitor_readout_status: "reported" }, "user-vci-elm327", { sequence: 3 }), readout_scope_id: "7E9", readout_attempt: 0 },
+  { ...nativeEnvelope("read_freeze_frame", "2026-07-20T08:00:04Z", { monitor_values: [], trigger_dtc_entries: [], freeze_frame_readout_status: "reported" }, "user-vci-elm327", { sequence: 4 }), readout_scope_id: "7E8", readout_attempt: 0 },
+  { ...nativeEnvelope("read_freeze_frame", "2026-07-20T08:00:05Z", { monitor_values: [], trigger_dtc_entries: [], freeze_frame_readout_status: "reported" }, "user-vci-elm327", { sequence: 5 }), readout_scope_id: "7E9", readout_attempt: 0 }
 ];
 const multiScopeExpectedEmptyNativeManifest = (() => {
   const manifest = {
     ...nativeCompletionManifest,
-    captured_at: "2026-07-20T08:00:04Z",
-    expected_intents: ["read_ecu_info", "read_onboard_monitor"],
-    expected_readouts: ["ecu_info_snapshot", "onboard_monitor_snapshot"],
+    captured_at: "2026-07-20T08:00:06Z",
+    expected_intents: ["read_ecu_info", "read_onboard_monitor", "read_freeze_frame"],
+    expected_readouts: ["ecu_info_snapshot", "onboard_monitor_snapshot", "freeze_frame_snapshot"],
     expected_readout_scopes: [
       { readout_id: "ecu_info_snapshot", scope_id: "7E8" },
       { readout_id: "ecu_info_snapshot", scope_id: "7E9" },
       { readout_id: "onboard_monitor_snapshot", scope_id: "7E8" },
-      { readout_id: "onboard_monitor_snapshot", scope_id: "7E9" }
+      { readout_id: "onboard_monitor_snapshot", scope_id: "7E9" },
+      { readout_id: "freeze_frame_snapshot", scope_id: "7E8" },
+      { readout_id: "freeze_frame_snapshot", scope_id: "7E9" }
     ],
-    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: 0, last_sequence: 3, envelope_count: 4 }]
+    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: 0, last_sequence: 5, envelope_count: 6 }]
   };
   delete manifest.readout_profile;
   return manifest;
 })();
 const multiScopeExpectedEmptyNativeSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: multiScopeExpectedEmptyNativeBatch, completion_manifest: multiScopeExpectedEmptyNativeManifest });
-check(multiScopeExpectedEmptyNativeSession.ok === true && multiScopeExpectedEmptyNativeSession.scanState === "completed" && multiScopeExpectedEmptyNativeSession.partial === false && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.ecuInfoReadoutStatus === "reported" && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.items?.length === 0 && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.onboardMonitorReadoutStatus === "reported" && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.tests?.length === 0 && multiScopeExpectedEmptyNativeSession.session?.readoutCoverage?.itemById?.ecu_info_snapshot?.status === "empty" && multiScopeExpectedEmptyNativeSession.session?.readoutCoverage?.itemById?.onboard_monitor_snapshot?.status === "empty" && multiScopeExpectedEmptyNativeSession.vehicleCommandEnabled === false, "Multi-ECU native empty ECU-info or Mode 06 readouts lost their reported state or ECU scope during aggregation");
+check(multiScopeExpectedEmptyNativeSession.ok === true && multiScopeExpectedEmptyNativeSession.scanState === "completed" && multiScopeExpectedEmptyNativeSession.partial === false && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.ecuInfoReadoutStatus === "reported" && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.items?.length === 0 && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.onboardMonitorReadoutStatus === "reported" && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.tests?.length === 0 && multiScopeExpectedEmptyNativeSession.session?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && multiScopeExpectedEmptyNativeSession.session?.freezeFrameSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiScopeExpectedEmptyNativeSession.session?.freezeFrameSnapshot?.monitorValues?.length === 0 && multiScopeExpectedEmptyNativeSession.session?.readoutCoverage?.itemById?.ecu_info_snapshot?.status === "empty" && multiScopeExpectedEmptyNativeSession.session?.readoutCoverage?.itemById?.onboard_monitor_snapshot?.status === "empty" && multiScopeExpectedEmptyNativeSession.session?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "empty" && multiScopeExpectedEmptyNativeSession.vehicleCommandEnabled === false, "Multi-ECU native empty ECU-info, Mode 06, or freeze-frame readouts lost their reported state or ECU scope during aggregation");
 const mismatchedNativeCompletionManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
   envelopes: nativeScanBatch,
   completion_manifest: {
