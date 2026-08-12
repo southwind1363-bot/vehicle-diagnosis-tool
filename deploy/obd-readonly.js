@@ -7491,12 +7491,50 @@
         ecuResponses.push({ address: ecu.address, ecu_name: ecu.ecu_name, status: "reported", services: [service] });
       });
     };
+    const addEcuInfoOutcomes = (snapshot, service) => {
+      const outcomes = Array.isArray(snapshot?.ecuInfoEcuSnapshots)
+        ? snapshot.ecuInfoEcuSnapshots
+        : Array.isArray(snapshot?.ecu_info_ecu_snapshots)
+          ? snapshot.ecu_info_ecu_snapshots
+          : [];
+      outcomes.forEach((outcome) => {
+        if (!outcome || typeof outcome !== "object") return;
+        const address = outcome.sourceEcu || outcome.source_ecu || outcome.ecu || outcome.ecu_id || outcome.ecuId || outcome.address || null;
+        const identity = normalizeEcuIdentity(address);
+        const readoutStatus = String(outcome.ecuInfoReadoutStatus || outcome.ecu_info_readout_status || "").trim().toLowerCase();
+        const negativeService = String(outcome.ecuInfoNegativeResponseService || outcome.ecu_info_negative_response_service || "").trim().toUpperCase();
+        const negativeCode = String(outcome.ecuInfoNegativeResponseCode || outcome.ecu_info_negative_response_code || "").trim().toUpperCase();
+        const isReported = readoutStatus === "reported";
+        const isNegativeResponse = readoutStatus === "unparsed" && /^[0-9A-F]{2}$/.test(negativeService) && /^[0-9A-F]{2}$/.test(negativeCode);
+        if (!identity || (!isReported && !isNegativeResponse)) return;
+        const name = outcome.sourceEcuName || outcome.source_ecu_name || outcome.ecuName || outcome.ecu_name || null;
+        const matchingRows = ecuResponses.filter((row) => normalizeEcuIdentity(row.address || row.ecu || row.id) === identity);
+        const response = matchingRows[0] || { address, ecu_name: name || null, status: isReported ? "reported" : "ok", services: [] };
+        if (!matchingRows.length) ecuResponses.push(response);
+        if (!response.ecu_name && name) response.ecu_name = name;
+        response.services = [...new Set([...(response.services || []), isNegativeResponse ? negativeService : service])];
+        if (isReported) {
+          response.response_services = [...new Set([...(response.response_services || []), service])];
+          response.status = response.status === "no_response" ? "reported" : response.status || "reported";
+        }
+        if (isNegativeResponse) {
+          response.negative_response_count = Math.max(Number(response.negative_response_count) || 0, 1);
+          response.negative_requested_services = [...new Set([...(response.negative_requested_services || []), negativeService])];
+          response.negative_response_labels = [...new Set([...(response.negative_response_labels || []), `UDS NRC ${negativeCode}`])];
+          response.status = response.status === "no_response" ? "ok" : response.status || "ok";
+        }
+      });
+    };
     addReportedReadout(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"], "01");
     addReportedReadout(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"], "02");
     addReportedReadout(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"], "01");
     addReportedReadout(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"], "06");
     const ecuInfoResponseFormat = normalizeEcuInfoResponseFormat(ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format);
-    if (ecuInfoResponseFormat) addReportedReadout(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"], ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "22" : "09");
+    if (ecuInfoResponseFormat) {
+      const ecuInfoService = ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "22" : "09";
+      addReportedReadout(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"], ecuInfoService);
+      addEcuInfoOutcomes(ecuInfoSnapshot, ecuInfoService);
+    }
     addReportedReadout(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"], "01");
     const capturedSnapshot = [livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, onboardMonitorSnapshot, ecuInfoSnapshot, supportedPidMatrix]
       .find((snapshot) => snapshot?.capturedAt || snapshot?.captured_at || snapshot?.timestamp);
