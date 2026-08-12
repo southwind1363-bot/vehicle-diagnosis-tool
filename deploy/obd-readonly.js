@@ -20255,6 +20255,33 @@
     });
   }
 
+  function decodeRawUdsDataByIdentifierResponse(bytes = [], input = {}) {
+    const protocolEvidence = [
+      input?.protocol,
+      input?.obd_protocol,
+      input?.diagnostic_protocol,
+      input?.diagnosticProtocol
+    ].filter(Boolean).join(" ");
+    const protocolDeclaresUds = /\buds\b/i.test(protocolEvidence);
+    const responseIndex = protocolDeclaresUds ? bytes.indexOf(0x62) : bytes[0] === 0x62 ? 0 : -1;
+    if (responseIndex < 0 || responseIndex + 3 >= bytes.length) return [];
+    const dataIdentifier = `${bytes[responseIndex + 1].toString(16).toUpperCase().padStart(2, "0")}${bytes[responseIndex + 2].toString(16).toUpperCase().padStart(2, "0")}`;
+    const payload = bytes.slice(responseIndex + 3);
+    if (!payload.length) return [];
+    const sourceEcu = readObdResponseSourceEcu(input);
+    const isVin = dataIdentifier === "F190";
+    return [{
+      id: isVin ? "vin" : `uds_did_${dataIdentifier.toLowerCase()}`,
+      label: isVin ? "VIN (UDS DID)" : `UDS DID 0x${dataIdentifier}`,
+      service: "22",
+      data_identifier: dataIdentifier,
+      value: payload.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" "),
+      value_type: "raw_hex",
+      ...(isVin ? { privacy_class: "sensitive_identifier" } : {}),
+      ...(sourceEcu ? { source_ecu: sourceEcu } : {})
+    }];
+  }
+
   function decodeEcuInfoResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
@@ -20265,10 +20292,12 @@
       return ecuInfoItemCatalog.some((item) => item.infoType === infoType);
     };
     const hasMode09Frame = bytes.some((byte, index) => isKnownMode09FrameStart(index));
-    const readoutStatus = hasMode09Frame ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
+    const rawUdsDidValues = hasMode09Frame ? [] : decodeRawUdsDataByIdentifierResponse(bytes, input);
+    const hasUdsDidResponse = rawUdsDidValues.length > 0 || (/\buds\b/i.test([input?.protocol, input?.obd_protocol, input?.diagnostic_protocol, input?.diagnosticProtocol].filter(Boolean).join(" ")) && bytes.includes(0x62)) || bytes[0] === 0x62;
+    const readoutStatus = hasMode09Frame || rawUdsDidValues.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     const ecuInfoResponseFormat = hasMode09Frame
       ? "obd_mode09"
-      : bytes.includes(0x62)
+      : hasUdsDidResponse
         ? "uds_read_data_by_identifier"
         : null;
 
@@ -20287,6 +20316,7 @@
         ...(sourceEcu ? { source_ecu: sourceEcu } : {})
       });
     }
+    values.push(...rawUdsDidValues);
 
     return normalizeEcuInfoSnapshot({
       source: input.source || "obd_response_decoder",
