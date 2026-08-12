@@ -40,6 +40,15 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
             ReadoutCoordinatorViewModel.receiveCharacteristicCandidates(from: [transmit, receive, alternateTransmit]).map(\.characteristicUUID),
             ["FFF2"]
         )
+
+        let separateServiceReceive = BLECharacteristicCandidate(
+            serviceUUID: "FFF1",
+            characteristicUUID: "FFF2",
+            supportsNotify: true,
+            supportsWrite: false,
+            supportsWriteWithoutResponse: false
+        )
+        XCTAssertNil(ReadoutCoordinatorViewModel.suggestedCharacteristicIDs(from: [transmit, separateServiceReceive]))
     }
 
     @MainActor

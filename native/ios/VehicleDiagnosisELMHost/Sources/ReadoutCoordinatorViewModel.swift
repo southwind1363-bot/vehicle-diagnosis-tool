@@ -235,6 +235,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         let transmitCandidates = transmitCharacteristicCandidates(from: candidates)
         let receiveCandidates = receiveCharacteristicCandidates(from: candidates)
         guard transmitCandidates.count == 1, receiveCandidates.count == 1 else { return nil }
+        guard transmitCandidates[0].serviceUUID == receiveCandidates[0].serviceUUID else { return nil }
         return (
             "\(transmitCandidates[0].serviceUUID)/\(transmitCandidates[0].characteristicUUID)",
             "\(receiveCandidates[0].serviceUUID)/\(receiveCandidates[0].characteristicUUID)"
