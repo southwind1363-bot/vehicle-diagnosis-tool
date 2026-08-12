@@ -18827,6 +18827,8 @@
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         ecu_info_readout_status: input.data.ecuInfoReadoutStatus || input.data.ecu_info_readout_status || input.ecuInfoReadoutStatus || input.ecu_info_readout_status || null,
         ecu_info_response_format: input.data.ecuInfoResponseFormat || input.data.ecu_info_response_format || input.data.responseFormat || input.data.response_format || input.ecuInfoResponseFormat || input.ecu_info_response_format || input.responseFormat || input.response_format || null,
+        ecu_info_negative_response_service: input.data.ecuInfoNegativeResponseService || input.data.ecu_info_negative_response_service || input.ecuInfoNegativeResponseService || input.ecu_info_negative_response_service || null,
+        ecu_info_negative_response_code: input.data.ecuInfoNegativeResponseCode || input.data.ecu_info_negative_response_code || input.ecuInfoNegativeResponseCode || input.ecu_info_negative_response_code || null,
         had_sensitive_identifier: input.data.hadSensitiveIdentifier === true || input.data.had_sensitive_identifier === true || input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true
       }
       : input && typeof input === "object" ? input : {};
@@ -18914,6 +18916,14 @@
       : items.length > 0
         ? "reported"
         : "unknown";
+    const normalizeNegativeResponseByte = (value) => {
+      const parsedValue = typeof value === "number" ? value : Number.parseInt(String(value || "").trim().replace(/^0x/i, ""), 16);
+      return Number.isInteger(parsedValue) && parsedValue >= 0 && parsedValue <= 0xFF
+        ? parsedValue.toString(16).toUpperCase().padStart(2, "0")
+        : null;
+    };
+    const ecuInfoNegativeResponseService = normalizeNegativeResponseByte(sourceInput.ecuInfoNegativeResponseService || sourceInput.ecu_info_negative_response_service);
+    const ecuInfoNegativeResponseCode = normalizeNegativeResponseByte(sourceInput.ecuInfoNegativeResponseCode || sourceInput.ecu_info_negative_response_code);
     const keyItemSummary = {
       totalCount: keyItems.length,
       total_count: keyItems.length,
@@ -18973,6 +18983,10 @@
       ecu_info_readout_status: normalizedReadoutStatus,
       ecuInfoResponseFormat,
       ecu_info_response_format: ecuInfoResponseFormat,
+      ecuInfoNegativeResponseService,
+      ecu_info_negative_response_service: ecuInfoNegativeResponseService,
+      ecuInfoNegativeResponseCode,
+      ecu_info_negative_response_code: ecuInfoNegativeResponseCode,
       ...(typeof sourceInput.ok === "boolean" ? { ok: sourceInput.ok } : {}),
       blocked: sourceInput.blocked === true || sourceInput.isBlocked === true || sourceInput.is_blocked === true,
       wouldTransmit: false,
@@ -20323,6 +20337,12 @@
   function decodeEcuInfoResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
+    const protocolEvidence = [input?.protocol, input?.obd_protocol, input?.diagnostic_protocol, input?.diagnosticProtocol].filter(Boolean).join(" ");
+    const protocolDeclaresUds = /\buds\b/i.test(protocolEvidence);
+    const negativeResponseIndex = protocolDeclaresUds
+      ? bytes.findIndex((byte, index) => byte === 0x7F && bytes[index + 1] === 0x22 && Number.isInteger(bytes[index + 2]))
+      : -1;
+    const udsDidNegativeResponse = negativeResponseIndex >= 0;
     const sourceEcu = readObdResponseSourceEcu(input);
     const isKnownMode09FrameStart = (index) => {
       if (bytes[index] !== 0x49 || !Number.isInteger(bytes[index + 1])) return false;
@@ -20331,7 +20351,7 @@
     };
     const hasMode09Frame = bytes.some((byte, index) => isKnownMode09FrameStart(index));
     const rawUdsDidValues = hasMode09Frame ? [] : decodeRawUdsDataByIdentifierResponse(bytes, input);
-    const hasUdsDidResponse = rawUdsDidValues.length > 0 || (/\buds\b/i.test([input?.protocol, input?.obd_protocol, input?.diagnostic_protocol, input?.diagnosticProtocol].filter(Boolean).join(" ")) && bytes.includes(0x62)) || bytes[0] === 0x62;
+    const hasUdsDidResponse = rawUdsDidValues.length > 0 || udsDidNegativeResponse || (protocolDeclaresUds && bytes.includes(0x62)) || bytes[0] === 0x62;
     const readoutStatus = hasMode09Frame || rawUdsDidValues.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
     const ecuInfoResponseFormat = hasMode09Frame
       ? "obd_mode09"
@@ -20358,10 +20378,15 @@
 
     return normalizeEcuInfoSnapshot({
       source: input.source || "obd_response_decoder",
+      ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
       ecu_info_readout_status: readoutStatus,
       ecu_info_response_format: ecuInfoResponseFormat,
+      ...(udsDidNegativeResponse ? {
+        ecu_info_negative_response_service: "22",
+        ecu_info_negative_response_code: bytes[negativeResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0")
+      } : {}),
       values
     });
   }
