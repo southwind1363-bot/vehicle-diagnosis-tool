@@ -6915,7 +6915,15 @@
       freeze_frame_snapshot: { bridgeIntent: "read_freeze_frame", serviceMode: "02", pid: null },
       readiness_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "01" },
       ecu_info_snapshot: usesUdsEcuInfoReadout
-        ? { bridgeIntent: "read_ecu_info", serviceMode: "22", pid: null }
+        ? {
+          bridgeIntent: "read_ecu_info",
+          serviceMode: "22",
+          pid: null,
+          dataIdentifier: null,
+          requiresDataIdentifier: true,
+          dataIdentifierConfigured: false,
+          executionBlockReason: "uds_data_identifier_required"
+        }
         : { bridgeIntent: "read_ecu_info", serviceMode: "09", pid: null },
       onboard_monitor_snapshot: { bridgeIntent: "read_onboard_monitor", serviceMode: "06", pid: null },
       supported_pid_matrix: { bridgeIntent: "read_supported_pids", serviceMode: "01", pid: "00" },
@@ -6937,6 +6945,14 @@
       serviceMode: request?.serviceMode || null,
       service_mode: request?.serviceMode || null,
       pid: request?.pid || null,
+      dataIdentifier: request?.dataIdentifier || null,
+      data_identifier: request?.dataIdentifier || null,
+      requiresDataIdentifier: request?.requiresDataIdentifier === true,
+      requires_data_identifier: request?.requiresDataIdentifier === true,
+      dataIdentifierConfigured: request?.dataIdentifierConfigured === true,
+      data_identifier_configured: request?.dataIdentifierConfigured === true,
+      executionBlockReason: request?.executionBlockReason || null,
+      execution_block_reason: request?.executionBlockReason || null,
       executionEnabled: false,
       execution_enabled: false,
       readOnly: true,
@@ -6957,6 +6973,10 @@
     const readoutId = input.readoutId || input.readout_id || input.id || null;
     const bridgeIntent = input.bridgeIntent || input.bridge_intent || null;
     const serviceMode = input.serviceMode || input.service_mode || null;
+    const dataIdentifier = input.dataIdentifier || input.data_identifier || null;
+    const requiresDataIdentifier = pickDefined(input.requiresDataIdentifier, input.requires_data_identifier, false) === true;
+    const dataIdentifierConfigured = pickDefined(input.dataIdentifierConfigured, input.data_identifier_configured, false) === true;
+    const executionBlockReason = input.executionBlockReason || input.execution_block_reason || null;
     const executionEnabled = pickDefined(input.executionEnabled, input.execution_enabled, false) === true;
     const readOnly = pickDefined(input.readOnly, input.read_only, true) !== false;
     const retainedRawText = pickDefined(input.retainedRawText, input.retained_raw_text, false) === true;
@@ -6970,6 +6990,14 @@
       bridge_intent: bridgeIntent,
       serviceMode,
       service_mode: serviceMode,
+      dataIdentifier,
+      data_identifier: dataIdentifier,
+      requiresDataIdentifier,
+      requires_data_identifier: requiresDataIdentifier,
+      dataIdentifierConfigured,
+      data_identifier_configured: dataIdentifierConfigured,
+      executionBlockReason,
+      execution_block_reason: executionBlockReason,
       executionEnabled,
       execution_enabled: executionEnabled,
       readOnly,
