@@ -6646,6 +6646,14 @@
     return match ? match[1] : null;
   }
 
+  function isComparableCanEcuAddressMatch(expectedAddress, observedAddress) {
+    if (!expectedAddress || !observedAddress || expectedAddress.length !== observedAddress.length) return false;
+    if (expectedAddress === observedAddress) return true;
+    if (!expectedAddress.startsWith("18DA") || !observedAddress.startsWith("18DA")) return false;
+    return expectedAddress.slice(4, 6) === observedAddress.slice(6, 8)
+      && expectedAddress.slice(6, 8) === observedAddress.slice(4, 6);
+  }
+
   function buildVehicleApplicabilityEcuMatchSummary({
     vehicleApplicability = {},
     dtcSnapshot = {},
@@ -6715,7 +6723,7 @@
         ? "not_observed"
         : !comparableObservedAddresses.length
           ? "not_comparable"
-          : comparableObservedAddresses.includes(expectedAddress)
+          : comparableObservedAddresses.some((address) => isComparableCanEcuAddressMatch(expectedAddress, address))
             ? "matched"
             : "mismatch";
     const reviewRequired = status === "mismatch";

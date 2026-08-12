@@ -16742,6 +16742,18 @@ const scanSessionApplicabilityEcuIncomparable = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] }
 });
 check(scanSessionApplicabilityEcuIncomparable.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_comparable" && scanSessionApplicabilityEcuIncomparable.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false, "Different CAN address formats must not be classified as an applicability ECU mismatch");
+const scanSessionApplicabilityUdsResponsePair = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-applicability-uds-response-pair",
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
+  dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "18DA10F1" }] }
+});
+const scanSessionApplicabilityUdsResponsePairRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionApplicabilityUdsResponsePair) }));
+const scanSessionApplicabilityUdsDifferentNode = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-applicability-uds-different-node",
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
+  dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "18DA10F2" }] }
+});
+check(scanSessionApplicabilityUdsResponsePair.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityUdsResponsePair.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && scanSessionApplicabilityUdsResponsePairRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityUdsDifferentNode.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && scanSessionApplicabilityUdsDifferentNode.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && [scanSessionApplicabilityUdsResponsePair, scanSessionApplicabilityUdsResponsePairRoundTrip, scanSessionApplicabilityUdsDifferentNode].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "UDS request and response CAN ID pairs must match one ECU without hiding different-node review");
 const scanSessionApplicabilityMode06SourceEcu = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-mode06-source-ecu",
   vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
