@@ -20412,6 +20412,10 @@
       ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
+      diagnostic_protocol: input.diagnostic_protocol || input.diagnosticProtocol || null,
+      protocol_provenance: input.protocol_provenance || input.protocolProvenance || null,
+      transport_protocol: input.transport_protocol || input.transportProtocol || null,
+      network_protocol: input.network_protocol || input.networkProtocol || null,
       ecu_info_readout_status: readoutStatus,
       ecu_info_response_format: ecuInfoResponseFormat,
       ...(udsDidNegativeResponse ? {
@@ -21129,7 +21133,14 @@
     const readEcuInfoResponseOption = () => {
       const explicitResponse = sessionInput.ecuInfoResponse || sessionInput.ecu_info_response;
       if (explicitResponse) return explicitResponse;
-      const protocolEvidence = [sessionInput.protocol, sessionInput.obd_protocol].filter(Boolean).join(" ");
+      const protocolProvenance = sessionInput.protocolProvenance || sessionInput.protocol_provenance || {};
+      const explicitDiagnosticProtocol = sessionInput.diagnosticProtocol
+        || sessionInput.diagnostic_protocol
+        || protocolProvenance.diagnosticProtocol
+        || protocolProvenance.diagnostic_protocol
+        || null;
+      const ecuInfoProtocol = sessionInput.protocol || sessionInput.obd_protocol || explicitDiagnosticProtocol || null;
+      const protocolEvidence = [sessionInput.protocol, sessionInput.obd_protocol, explicitDiagnosticProtocol].filter(Boolean).join(" ");
       const rows = [
         ...(classified.responseBuckets.ecuInfoResponses || []),
         ...(/\buds\b/i.test(protocolEvidence)
@@ -21139,7 +21150,11 @@
       if (rows.length) {
         const snapshots = rows.map((row) => decodeEcuInfoResponse({
           raw: normalizeBucketResponse(row),
-          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          protocol: ecuInfoProtocol,
+          diagnostic_protocol: explicitDiagnosticProtocol,
+          protocol_provenance: protocolProvenance,
+          transport_protocol: protocolProvenance.transportProtocol || protocolProvenance.transport_protocol || null,
+          network_protocol: protocolProvenance.networkProtocol || protocolProvenance.network_protocol || null,
           ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
         }));
         if (snapshots.length === 1) return snapshots[0];
@@ -21153,7 +21168,7 @@
         const negativeResponseCodes = [...new Set(negativeResponses.map((snapshot) => snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code).filter(Boolean))];
         return normalizeEcuInfoSnapshot({
           source: "obd_response_decoder",
-          protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          protocol: ecuInfoProtocol,
           ecu_info_readout_status: readoutStatus,
           readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
           ...(negativeResponses.length === 1 && negativeResponseCodes.length === 1 ? {
@@ -21163,7 +21178,7 @@
           values
         });
       }
-      return { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
+      return { protocol: ecuInfoProtocol };
     };
     const readOnboardMonitorResponseOption = () => {
       const explicitResponse = sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response;
