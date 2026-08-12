@@ -21129,28 +21129,41 @@
     const readEcuInfoResponseOption = () => {
       const explicitResponse = sessionInput.ecuInfoResponse || sessionInput.ecu_info_response;
       if (explicitResponse) return explicitResponse;
-      const rows = classified.responseBuckets.ecuInfoResponses || [];
-      if (rows.length > 1) {
+      const protocolEvidence = [sessionInput.protocol, sessionInput.obd_protocol].filter(Boolean).join(" ");
+      const rows = [
+        ...(classified.responseBuckets.ecuInfoResponses || []),
+        ...(/\buds\b/i.test(protocolEvidence)
+          ? (classified.responseBuckets.negativeResponses || []).filter((row) => row?.negativeResponse?.requestedService === "22")
+          : [])
+      ];
+      if (rows.length) {
         const snapshots = rows.map((row) => decodeEcuInfoResponse({
           raw: normalizeBucketResponse(row),
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
         }));
+        if (snapshots.length === 1) return snapshots[0];
         const values = snapshots.flatMap((snapshot) => snapshot.items || []);
         const readoutStatus = snapshots.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported")
           ? "reported"
           : snapshots.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "unparsed")
             ? "unparsed"
             : "unknown";
+        const negativeResponses = snapshots.filter((snapshot) => (snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service) === "22");
+        const negativeResponseCodes = [...new Set(negativeResponses.map((snapshot) => snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code).filter(Boolean))];
         return normalizeEcuInfoSnapshot({
           source: "obd_response_decoder",
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           ecu_info_readout_status: readoutStatus,
           readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
+          ...(negativeResponses.length === 1 && negativeResponseCodes.length === 1 ? {
+            ecu_info_negative_response_service: "22",
+            ecu_info_negative_response_code: negativeResponseCodes[0]
+          } : {}),
           values
         });
       }
-      return readResponseOption("ecuInfoResponse", "ecu_info_response", "ecuInfoResponses");
+      return { protocol: sessionInput.protocol || sessionInput.obd_protocol || null };
     };
     const readOnboardMonitorResponseOption = () => {
       const explicitResponse = sessionInput.onboardMonitorResponse || sessionInput.onboard_monitor_response;
