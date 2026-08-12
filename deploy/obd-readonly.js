@@ -6498,7 +6498,7 @@
       .trim()
       .toLowerCase()
       .replace(/[\s-]+/g, "_");
-    return ["responded", "response", "ok", "success", "available", "positive"].includes(status);
+    return ["responded", "response", "ok", "success", "available", "positive", "negative_response"].includes(status);
   }
 
   function buildObservedEcuSummary({
@@ -7565,7 +7565,7 @@
         if (!identity || (!isReported && !isNegativeResponse)) return;
         const name = outcome.sourceEcuName || outcome.source_ecu_name || outcome.ecuName || outcome.ecu_name || null;
         const matchingRows = ecuResponses.filter((row) => normalizeEcuIdentity(row.address || row.ecu || row.id) === identity);
-        const response = matchingRows[0] || { address, ecu_name: name || null, status: isReported ? "reported" : "ok", services: [] };
+        const response = matchingRows[0] || { address, ecu_name: name || null, status: isReported ? "reported" : "negative_response", services: [] };
         if (!matchingRows.length) ecuResponses.push(response);
         if (!response.ecu_name && name) response.ecu_name = name;
         response.services = [...new Set([...(response.services || []), isNegativeResponse ? negativeService : service])];
@@ -7577,7 +7577,7 @@
           response.negative_response_count = Math.max(Number(response.negative_response_count) || 0, 1);
           response.negative_requested_services = [...new Set([...(response.negative_requested_services || []), negativeService])];
           response.negative_response_labels = [...new Set([...(response.negative_response_labels || []), `UDS NRC ${negativeCode}`])];
-          response.status = response.status === "no_response" ? "ok" : response.status || "ok";
+          response.status = response.status === "no_response" ? "negative_response" : response.status || "negative_response";
         }
       });
     };
@@ -18783,7 +18783,7 @@
       const id = String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
       const name = row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : row?.ecu_name ? String(row.ecu_name).slice(0, 120) : row?.ecuName ? String(row.ecuName).slice(0, 120) : null;
       const address = row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null;
-      const status = row?.status || row?.response_status || row?.responseStatus || "unknown";
+      const reportedStatus = row?.status || row?.response_status || row?.responseStatus || "unknown";
       const dtcCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null;
       const responseCount = Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.responses) ? row.responses : null;
       const services = Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
@@ -18791,6 +18791,12 @@
       const negativeResponseCount = Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negatives) ? row.negatives : 0;
       const negativeRequestedServices = Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negative_services) ? row.negative_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeServices) ? row.negativeServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
       const negativeResponseLabels = Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negative_labels) ? row.negative_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeLabels) ? row.negativeLabels.map((item) => String(item)).slice(0, 16) : [];
+      const normalizedReportedStatus = String(reportedStatus).trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const status = negativeResponseCount > 0
+        && !responseServices.some((service) => service !== "7F")
+        && ["responded", "response", "ok", "success", "available", "positive"].includes(normalizedReportedStatus)
+        ? "negative_response"
+        : reportedStatus;
       const responseTimeMs = Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null;
       return {
         id,
@@ -21148,7 +21154,9 @@
     return [...byEcu.values()].map((row) => ({
       ecu: row.ecu,
       address: row.address,
-      status: row.status,
+      status: row.negative_response_count > 0 && [...row.response_services].every((service) => service === "7F")
+        ? "negative_response"
+        : row.status,
       response_count: row.response_count,
       services: [...row.services],
       response_services: [...row.response_services],
