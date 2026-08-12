@@ -2082,6 +2082,7 @@
       return {
         captured_at: capturedAt,
         protocol,
+        ecu_info_readout_status: "reported",
         items: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["items", "ecu_info_items", "ecuInfoItems"], scopeId))
       };
     }
@@ -2089,6 +2090,7 @@
       return {
         captured_at: capturedAt,
         protocol,
+        onboard_monitor_readout_status: "reported",
         tests: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["tests", "items", "mode06_tests", "mode06Tests"], scopeId))
       };
     }

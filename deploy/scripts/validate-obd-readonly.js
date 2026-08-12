@@ -4431,6 +4431,31 @@ const nativeCompletionManifest = Object.freeze({
 });
 const manifestNativeScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest });
 check(nativeConnectorContract.completionManifestSchemaVersion === "native_connector_completion_manifest_v1" && nativeConnectorContract.completionManifestRecordType === "completion_manifest" && manifestNativeScanSession.ok === true && manifestNativeScanSession.scanState === "completed" && manifestNativeScanSession.partial === false && manifestNativeScanSession.completionManifest?.recordType === "completion_manifest" && manifestNativeScanSession.readoutProfile === "initial_diagnostic" && manifestNativeScanSession.session?.nativeConnectorReadoutProfile === "initial_diagnostic" && manifestNativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && manifestNativeScanSession.vehicleCommandEnabled === false, "Native connector terminal manifest did not produce a complete read-only session");
+const multiScopeExpectedEmptyNativeBatch = [
+  { ...nativeEnvelope("read_ecu_info", "2026-07-20T08:00:00Z", { items: [], ecu_info_readout_status: "reported" }, "user-vci-elm327", { sequence: 0 }), readout_scope_id: "7E8", readout_attempt: 0 },
+  { ...nativeEnvelope("read_ecu_info", "2026-07-20T08:00:01Z", { items: [], ecu_info_readout_status: "reported" }, "user-vci-elm327", { sequence: 1 }), readout_scope_id: "7E9", readout_attempt: 0 },
+  { ...nativeEnvelope("read_onboard_monitor", "2026-07-20T08:00:02Z", { tests: [], onboard_monitor_readout_status: "reported" }, "user-vci-elm327", { sequence: 2 }), readout_scope_id: "7E8", readout_attempt: 0 },
+  { ...nativeEnvelope("read_onboard_monitor", "2026-07-20T08:00:03Z", { tests: [], onboard_monitor_readout_status: "reported" }, "user-vci-elm327", { sequence: 3 }), readout_scope_id: "7E9", readout_attempt: 0 }
+];
+const multiScopeExpectedEmptyNativeManifest = (() => {
+  const manifest = {
+    ...nativeCompletionManifest,
+    captured_at: "2026-07-20T08:00:04Z",
+    expected_intents: ["read_ecu_info", "read_onboard_monitor"],
+    expected_readouts: ["ecu_info_snapshot", "onboard_monitor_snapshot"],
+    expected_readout_scopes: [
+      { readout_id: "ecu_info_snapshot", scope_id: "7E8" },
+      { readout_id: "ecu_info_snapshot", scope_id: "7E9" },
+      { readout_id: "onboard_monitor_snapshot", scope_id: "7E8" },
+      { readout_id: "onboard_monitor_snapshot", scope_id: "7E9" }
+    ],
+    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: 0, last_sequence: 3, envelope_count: 4 }]
+  };
+  delete manifest.readout_profile;
+  return manifest;
+})();
+const multiScopeExpectedEmptyNativeSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: multiScopeExpectedEmptyNativeBatch, completion_manifest: multiScopeExpectedEmptyNativeManifest });
+check(multiScopeExpectedEmptyNativeSession.ok === true && multiScopeExpectedEmptyNativeSession.scanState === "completed" && multiScopeExpectedEmptyNativeSession.partial === false && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.ecuInfoReadoutStatus === "reported" && multiScopeExpectedEmptyNativeSession.session?.ecuInfoSnapshot?.items?.length === 0 && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.onboardMonitorReadoutStatus === "reported" && multiScopeExpectedEmptyNativeSession.session?.onboardMonitorSnapshot?.tests?.length === 0 && multiScopeExpectedEmptyNativeSession.session?.readoutCoverage?.itemById?.ecu_info_snapshot?.status === "empty" && multiScopeExpectedEmptyNativeSession.session?.readoutCoverage?.itemById?.onboard_monitor_snapshot?.status === "empty" && multiScopeExpectedEmptyNativeSession.vehicleCommandEnabled === false, "Multi-ECU native empty ECU-info or Mode 06 readouts lost their reported state during aggregation");
 const mismatchedNativeCompletionManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
   envelopes: nativeScanBatch,
   completion_manifest: {
