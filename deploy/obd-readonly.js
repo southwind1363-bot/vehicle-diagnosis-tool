@@ -2034,6 +2034,9 @@
       return {
         captured_at: capturedAt,
         protocol,
+        readout_ecu_ids: scopedData
+          .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
+          .filter(Boolean),
         monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
       };
     }
@@ -3866,6 +3869,7 @@
         ? {
           ...nestedData,
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          readout_ecu_ids: nestedData.readoutEcuIds || nestedData.readout_ecu_ids || response.readoutEcuIds || response.readout_ecu_ids || [],
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           live_pid_readout_status: nestedData.livePidReadoutStatus || nestedData.live_pid_readout_status || response.livePidReadoutStatus || response.live_pid_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
           ...outerLivePidFallback
@@ -3945,6 +3949,12 @@
       .map((item) => item.sourceEcuName || item.source_ecu_name || null)
       .filter(Boolean))];
     const resolvedSourceEcuName = sourceEcuName || (observedSourceEcus.length === 1 && observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
+    const readoutEcuIds = [...new Set([
+      ...(Array.isArray(data.readoutEcuIds) ? data.readoutEcuIds : []),
+      ...(Array.isArray(data.readout_ecu_ids) ? data.readout_ecu_ids : []),
+      resolvedSourceEcu,
+      ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null)
+    ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
     const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
       ? getBridgeReadoutStatus(resolvedBridgeSafety)
@@ -4002,6 +4012,8 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      readoutEcuIds,
+      readout_ecu_ids: readoutEcuIds,
       supportedPids,
       supported_pids: supportedPids,
       capturedAt,

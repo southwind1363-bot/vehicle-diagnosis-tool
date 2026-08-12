@@ -8710,6 +8710,19 @@ const bridgePidListJsonSession = obd.buildDiagnosticScanSessionFromJson(JSON.str
 check(bridgePidListJsonSession?.supportedPidMatrix?.supportedPidReadoutStatus === "reported" && bridgePidListJsonSession?.supportedPidMatrix?.supportedPids?.join(",") === "0C,05" && bridgePidListJsonSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && bridgePidListJsonSession?.vehicleCommandEnabled === false && bridgePidListJsonSession?.wouldTransmit === false, "Bridge response JSON pids alias was not retained safely");
 const bridgeEmptyLivePidJsonSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_response: { intent: "read_live_pid_snapshot", live_pid_readout_status: "reported", data: { monitor_values: [] } } }));
 check(bridgeEmptyLivePidJsonSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && bridgeEmptyLivePidJsonSession?.readoutCoverage?.itemById?.live_pid_snapshot?.status === "empty" && bridgeEmptyLivePidJsonSession?.livePidSnapshot?.blocked === false && bridgeEmptyLivePidJsonSession?.vehicleCommandEnabled === false && bridgeEmptyLivePidJsonSession?.wouldTransmit === false, "Bridge response JSON empty live PID result was not retained safely");
+const nestedBridgeEmptyLivePidScope = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  readout_ecu_ids: ["7E8", "7E9"],
+  data: { live_pid_readout_status: "reported", monitor_values: [] }
+});
+const nestedBridgeEmptyLivePidScopeSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { status: "matched", ecu_address: "7E8", source_verified: true },
+  live_pid_snapshot: nestedBridgeEmptyLivePidScope
+});
+const nestedBridgeEmptyLivePidScopeReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(nestedBridgeEmptyLivePidScopeSession)));
+check(nestedBridgeEmptyLivePidScope.readoutEcuIds?.join(",") === "7E8,7E9" && nestedBridgeEmptyLivePidScopeSession?.livePidSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && nestedBridgeEmptyLivePidScopeReimport?.livePidSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && nestedBridgeEmptyLivePidScopeSession?.readoutCoverage?.itemById?.live_pid_snapshot?.status === "empty" && nestedBridgeEmptyLivePidScopeSession?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_observed" && [nestedBridgeEmptyLivePidScope, nestedBridgeEmptyLivePidScopeSession, nestedBridgeEmptyLivePidScopeReimport].every((value) => value?.vehicleCommandEnabled === false || value?.vehicle_command_enabled === false) && nestedBridgeEmptyLivePidScopeSession?.wouldTransmit === false && nestedBridgeEmptyLivePidScopeReimport?.wouldTransmit === false, "Empty live PID ECU scope must survive read-only export without promoting observations into an applicability match");
 const bridgeStandardPidJsonSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_response: { intent: "read_live_pid_snapshot", data: { monitor_values: [{ pid: "0C", value: 900, unit: "rpm" }, { pid: "05", value: 86, unit: "C" }] } } }));
 check(bridgeStandardPidJsonSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 900) && bridgeStandardPidJsonSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 86) && bridgeStandardPidJsonSession?.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && bridgeStandardPidJsonSession?.vehicleCommandEnabled === false && bridgeStandardPidJsonSession?.wouldTransmit === false, "Bridge response JSON standard PID values were not normalized through the monitor dictionary");
 const nestedOuterFreezeFrameStatusSnapshot = obd.normalizeFreezeFrameSnapshot({ freeze_frame_readout_status: "reported", data: { values: [] } });
