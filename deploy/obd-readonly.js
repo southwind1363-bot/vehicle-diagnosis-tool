@@ -2041,6 +2041,9 @@
       return {
         captured_at: capturedAt,
         protocol,
+        readout_ecu_ids: scopedData
+          .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
+          .filter(Boolean),
         readiness_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
           const rows = Array.isArray(data.readiness_ecu_snapshots) ? data.readiness_ecu_snapshots : Array.isArray(data.readinessEcuSnapshots) ? data.readinessEcuSnapshots : [data];
           return rows.map((row) => ({
@@ -4551,6 +4554,7 @@
         ? {
           ...nestedData,
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
+          readout_ecu_ids: nestedData.readoutEcuIds || nestedData.readout_ecu_ids || response.readoutEcuIds || response.readout_ecu_ids || [],
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           readiness_readout_status: nestedData.readinessReadoutStatus || nestedData.readiness_readout_status || response.readinessReadoutStatus || response.readiness_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
           ...outerReadinessValueFallback
@@ -18190,6 +18194,7 @@
         ...input.data,
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
+        readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
         captured_at: input.data.captured_at || input.data.capturedAt || input.data.timestamp || input.captured_at || input.capturedAt || input.timestamp,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
@@ -18322,6 +18327,12 @@
     const sourceEcu = declaredSourceEcu || (observedMonitorEcus.length === 1 ? observedMonitorEcus[0] : null);
     const observedMonitorEcuNames = [...new Set(normalized.map((monitor) => monitor.sourceEcuName || monitor.source_ecu_name || null).filter(Boolean))];
     const sourceEcuName = declaredSourceEcuName || (observedMonitorEcuNames.length === 1 ? observedMonitorEcuNames[0] : null);
+    const readoutEcuIds = [...new Set([
+      ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
+      ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
+      sourceEcu,
+      ...readinessEcuSnapshots.map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu || null)
+    ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const readinessScope = readinessEcuSnapshots.length > 1
       ? "multiple_ecus"
       : readinessEcuSnapshots.length === 1 || sourceEcu
@@ -18445,6 +18456,8 @@
       source_ecu_name: sourceEcuName,
       readinessScope,
       readiness_scope: readinessScope,
+      readoutEcuIds,
+      readout_ecu_ids: readoutEcuIds,
       readinessEcuSnapshots,
       readiness_ecu_snapshots: readinessEcuSnapshots,
       readinessEcuAggregateSummary,

@@ -8721,6 +8721,16 @@ check(nestedOuterSupportedPidStatusSnapshot.supportedPidReadoutStatus === "repor
 const nestedOuterBridgeReadinessStatusSnapshot = obd.normalizeBridgeReadinessSnapshot({ readiness_readout_status: "reported", data: { monitors: [] } });
 const nestedOuterBridgeOnboardMonitorStatusSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({ onboard_monitor_readout_status: "reported", data: { tests: [] } });
 check(nestedOuterBridgeReadinessStatusSnapshot.readinessReadoutStatus === "unparsed" && nestedOuterBridgeReadinessStatusSnapshot.blocked === false && nestedOuterBridgeReadinessStatusSnapshot.ok === true && nestedOuterBridgeOnboardMonitorStatusSnapshot.onboardMonitorReadoutStatus === "reported" && nestedOuterBridgeOnboardMonitorStatusSnapshot.blocked === false && nestedOuterBridgeOnboardMonitorStatusSnapshot.ok === true && [nestedOuterBridgeReadinessStatusSnapshot, nestedOuterBridgeOnboardMonitorStatusSnapshot].every((snapshot) => snapshot.retainedRawText === false && snapshot.wouldTransmit === false), "Nested bridge readiness or Mode 06 status was not retained safely without values");
+const nestedBridgeEmptyReadinessScope = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  readout_ecu_ids: ["7E8", "7E9"],
+  data: { readiness_readout_status: "reported", monitors: [] }
+});
+const nestedBridgeEmptyReadinessScopeSession = obd.buildDiagnosticScanSession({ readiness_snapshot: nestedBridgeEmptyReadinessScope });
+const nestedBridgeEmptyReadinessScopeReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(nestedBridgeEmptyReadinessScopeSession)));
+check(nestedBridgeEmptyReadinessScope.readinessReadoutStatus === "unparsed" && nestedBridgeEmptyReadinessScope.readoutEcuIds?.join(",") === "7E8,7E9" && nestedBridgeEmptyReadinessScopeSession.readinessSnapshot?.readout_ecu_ids?.join(",") === "7E8,7E9" && nestedBridgeEmptyReadinessScopeReimport?.readinessSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && [nestedBridgeEmptyReadinessScope, nestedBridgeEmptyReadinessScopeSession, nestedBridgeEmptyReadinessScopeReimport].every((value) => value?.vehicleCommandEnabled === false || value?.vehicle_command_enabled === false) && nestedBridgeEmptyReadinessScopeSession?.wouldTransmit === false && nestedBridgeEmptyReadinessScopeReimport?.wouldTransmit === false, "Empty bridge readiness scope must survive read-only session export without promoting an unparsed response");
 const partialVinLegacySession = obd.buildDiagnosticScanSession({
   ecu_info_snapshot: {
     schemaVersion: "ecu_info_snapshot_v1",
