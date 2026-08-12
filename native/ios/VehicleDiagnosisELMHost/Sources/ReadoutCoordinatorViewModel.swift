@@ -137,7 +137,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
 
     static func readoutCompletion(expectedReadoutIDs: [String], envelopes: [NativeConnectorEnvelope]) -> (expectedCount: Int, capturedCount: Int, missingIDs: [String]) {
         let expectedIDs = Set(expectedReadoutIDs.filter { !$0.isEmpty })
-        let capturedIDs = Set(envelopes.compactMap { envelope -> String? in
+        let capturedIDs = Set(NativeConnectorReadoutPreview.effectiveReadoutEnvelopes(from: envelopes).compactMap { envelope -> String? in
             guard envelope.ok, envelope.errors.isEmpty, !envelope.blocked, !envelope.wouldTransmit, let readoutID = envelope.readoutID, expectedIDs.contains(readoutID) else { return nil }
             return readoutID
         })
@@ -146,7 +146,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     }
 
     static func observedReadoutScopes(_ envelopes: [NativeConnectorEnvelope]) -> [NativeConnectorReadoutScope] {
-        let scopes = Set(envelopes.compactMap { envelope -> NativeConnectorReadoutScope? in
+        let scopes = Set(NativeConnectorReadoutPreview.effectiveReadoutEnvelopes(from: envelopes).compactMap { envelope -> NativeConnectorReadoutScope? in
             guard envelope.ok, envelope.errors.isEmpty, !envelope.blocked, !envelope.wouldTransmit,
                   let readoutID = envelope.readoutID,
                   let scopeID = envelope.readoutScopeID,

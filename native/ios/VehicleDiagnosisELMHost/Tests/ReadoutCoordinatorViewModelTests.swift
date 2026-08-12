@@ -263,6 +263,52 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testReadoutCompletionAndScopesUseOnlyTheLatestAttemptForEachECUReadout() throws {
+        let context = NativeConnectorSessionContext(scanID: UUID(), connectionID: UUID(), vehicleContextID: UUID())
+        let earlierSuccess = try readoutEnvelope(
+            readoutID: "stored_dtc_snapshot",
+            scopeID: "7E8",
+            context: context,
+            sequence: 1,
+            readoutAttempt: 0
+        )
+        let latestFailure = try readoutEnvelope(
+            readoutID: "stored_dtc_snapshot",
+            scopeID: "7E8",
+            ok: false,
+            errors: ["transport_failure"],
+            context: context,
+            sequence: 2,
+            readoutAttempt: 1
+        )
+        let failedCompletion = ReadoutCoordinatorViewModel.readoutCompletion(
+            expectedReadoutIDs: ["stored_dtc_snapshot"],
+            envelopes: [earlierSuccess, latestFailure]
+        )
+        XCTAssertEqual(failedCompletion.capturedCount, 0)
+        XCTAssertEqual(failedCompletion.missingIDs, ["stored_dtc_snapshot"])
+        XCTAssertEqual(ReadoutCoordinatorViewModel.observedReadoutScopes([earlierSuccess, latestFailure]), [])
+
+        let latestSuccess = try readoutEnvelope(
+            readoutID: "stored_dtc_snapshot",
+            scopeID: "7E8",
+            context: context,
+            sequence: 3,
+            readoutAttempt: 2
+        )
+        let recoveredCompletion = ReadoutCoordinatorViewModel.readoutCompletion(
+            expectedReadoutIDs: ["stored_dtc_snapshot"],
+            envelopes: [earlierSuccess, latestFailure, latestSuccess]
+        )
+        XCTAssertEqual(recoveredCompletion.capturedCount, 1)
+        XCTAssertEqual(recoveredCompletion.missingIDs, [])
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.observedReadoutScopes([earlierSuccess, latestFailure, latestSuccess]),
+            [NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E8")]
+        )
+    }
+
+    @MainActor
     func testReadoutScopeSummaryKeepsObservedECUScopesVisibleWithoutGuessingMissingECUs() {
         let summary = ReadoutCoordinatorViewModel.readoutScopeSummary([
             NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E9"),
@@ -325,9 +371,12 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         ok: Bool = true,
         blocked: Bool = false,
         wouldTransmit: Bool = false,
-        errors: [String] = []
+        errors: [String] = [],
+        context: NativeConnectorSessionContext? = nil,
+        sequence: Int = 1,
+        readoutAttempt: Int = 0
     ) throws -> NativeConnectorEnvelope {
-        let context = NativeConnectorSessionContext(scanID: UUID(), connectionID: UUID(), vehicleContextID: UUID())
+        let context = context ?? NativeConnectorSessionContext(scanID: UUID(), connectionID: UUID(), vehicleContextID: UUID())
         let encodedErrors = String(data: try JSONEncoder().encode(errors), encoding: .utf8) ?? "[]"
         return try decode(NativeConnectorEnvelope.self, json: """
         {
@@ -339,10 +388,10 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
           "scan_id": "\(context.scanID.uuidString)",
           "connection_id": "\(context.connectionID.uuidString)",
           "vehicle_context_id": "\(context.vehicleContextID.uuidString)",
-          "sequence": 1,
+          "sequence": \(sequence),
           "readout_id": "\(readoutID)",
           "readout_scope_id": "\(scopeID)",
-          "readout_attempt": 0,
+          "readout_attempt": \(readoutAttempt),
           "ok": \(ok),
           "blocked": \(blocked),
           "would_transmit": \(wouldTransmit),

@@ -166,7 +166,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         var supportedPIDs: [String: Set<String>] = [:]
         var readoutFailures: [String: ReadoutFailure] = [:]
 
-        for envelope in Self.latestAttemptEnvelopes(from: envelopes) {
+        for envelope in Self.effectiveReadoutEnvelopes(from: envelopes) {
             let scopeID = envelope.readoutScopeID ?? "LEGACY"
             if (!envelope.ok || !envelope.errors.isEmpty), !envelope.errors.isEmpty {
                 let failure = ReadoutFailure(
@@ -230,7 +230,7 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
         }
     }
 
-    private static func latestAttemptEnvelopes(from envelopes: [NativeConnectorEnvelope]) -> [NativeConnectorEnvelope] {
+    public static func effectiveReadoutEnvelopes(from envelopes: [NativeConnectorEnvelope]) -> [NativeConnectorEnvelope] {
         var latestAttemptByReadoutScope: [String: Int] = [:]
         for envelope in envelopes {
             guard let readoutID = envelope.readoutID,
