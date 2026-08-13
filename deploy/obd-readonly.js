@@ -6583,7 +6583,7 @@
       ...[dtcSnapshot?.ecuResponses, dtcSnapshot?.ecu_responses]
         .filter(Array.isArray)
         .flat()
-        .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name }))
+        .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name, readoutStatus: item?.status || item?.responseStatus || item?.response_status || null }))
     ]);
     add("ecu_response_summary", (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
       .filter((item) => {
