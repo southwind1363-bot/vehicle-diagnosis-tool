@@ -6726,8 +6726,9 @@
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
-    const respondedEcuAddresses = [...new Set((Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
-      .filter(isRespondedEcuResponse)
+    const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
+      .filter(isRespondedEcuResponse);
+    const respondedEcuAddresses = [...new Set(respondedEcuRows
       .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
       .map(normalizeComparableCanEcuAddress)
       .filter(Boolean))].sort();
@@ -6785,6 +6786,33 @@
           : comparableObservedAddresses.some((address) => isComparableCanEcuAddressMatch(expectedAddress, address))
             ? "matched"
             : "mismatch";
+    const matchedResponseRows = expectedAddress
+      ? respondedEcuRows.filter((item) => isComparableCanEcuAddressMatch(
+        expectedAddress,
+        normalizeComparableCanEcuAddress(item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
+      ))
+      : [];
+    const matchedResponseStatuses = [...new Set(matchedResponseRows
+      .map((item) => String(item?.status || item?.responseStatus || item?.response_status || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[\s-]+/g, "_"))
+      .filter(Boolean))].sort();
+    const matchedNegativeResponseCount = matchedResponseRows.reduce((total, item) => {
+      const count = Number(item?.negativeResponseCount ?? item?.negative_response_count ?? 0);
+      return total + (Number.isFinite(count) ? Math.max(0, Math.round(count)) : 0);
+    }, 0);
+    const hasPositiveMatchedResponse = matchedResponseStatuses.some((item) => item !== "negative_response");
+    const hasNegativeMatchedResponse = matchedNegativeResponseCount > 0 || matchedResponseStatuses.includes("negative_response");
+    const matchedResponseEvidence = status !== "matched"
+      ? null
+      : hasPositiveMatchedResponse && hasNegativeMatchedResponse
+        ? "mixed_response"
+        : hasPositiveMatchedResponse
+          ? "positive_response"
+          : hasNegativeMatchedResponse
+            ? "negative_response"
+            : "observed_response";
     const reviewRequired = status === "mismatch";
     return {
       schemaVersion: "vehicle_applicability_ecu_match_summary_v1",
@@ -6798,6 +6826,12 @@
       responded_ecu_addresses: respondedEcuAddresses,
       comparableObservedAddresses,
       comparable_observed_addresses: comparableObservedAddresses,
+      matchedResponseEvidence,
+      matched_response_evidence: matchedResponseEvidence,
+      matchedResponseStatuses,
+      matched_response_statuses: matchedResponseStatuses,
+      matchedNegativeResponseCount,
+      matched_negative_response_count: matchedNegativeResponseCount,
       reviewRequired,
       review_required: reviewRequired,
       readOnly: true,
