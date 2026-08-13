@@ -6851,6 +6851,8 @@
     const applicabilityEcuMismatch = vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
       || vehicleApplicabilityEcuMatchSummary?.reviewRequired === true
       || vehicleApplicabilityEcuMatchSummary?.review_required === true;
+    const applicabilityEcuNegativeResponse = vehicleApplicabilityEcuMatchSummary?.status === "matched"
+      && (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence) === "negative_response";
     const priorityById = {
       dtc_snapshot: 100,
       freeze_frame_snapshot: 95,
@@ -6869,12 +6871,14 @@
     const candidates = (normalizedCoverage.items || [])
       .filter((item) => item && typeof item === "object" && (item.status === "missing" || item.status === "empty"))
       .map((item) => {
-        const statusReason = item.statusReason || item.status_reason || normalizedCoverage.failedReadoutReasonById?.[item.id] || null;
+        let statusReason = item.statusReason || item.status_reason || normalizedCoverage.failedReadoutReasonById?.[item.id] || null;
         let reason = item.status === "missing"
           ? "未読取のため次候補"
           : "読取応答が空のため再確認候補";
         if (item.id === "ecu_info_snapshot" && applicabilityEcuMismatch) {
           reason = "応答ECUと適合ECUの不一致確認のため再確認候補";
+        } else if (item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse) {
+          statusReason = "applicability_ecu_negative_response";
         } else if (item.id === "ecu_info_snapshot" && applicability.status === "manual") {
           reason = "車両適合確認のため再確認候補";
         } else if (item.id === "ecu_info_snapshot" && applicability.status === "unlisted") {
@@ -6926,12 +6930,32 @@
           status_reason: statusReason,
           priority: item.id === "ecu_info_snapshot" && applicabilityEcuMismatch
             ? 103
+            : item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+              ? 94
             : item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")
               ? 102
               : item.id === "ecu_info_snapshot" && applicability.status === "partial"
                 ? 92
               : (priorityById[item.id] || 10),
           reason,
+          reasonId: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+            ? "applicability_ecu_negative_response"
+            : null,
+          reason_id: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+            ? "applicability_ecu_negative_response"
+            : null,
+          matchedResponseEvidence: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+            ? (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence || null)
+            : null,
+          matched_response_evidence: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+            ? (vehicleApplicabilityEcuMatchSummary?.matched_response_evidence || vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || null)
+            : null,
+          matchedNegativeResponseCount: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+            ? Number(vehicleApplicabilityEcuMatchSummary?.matchedNegativeResponseCount ?? vehicleApplicabilityEcuMatchSummary?.matched_negative_response_count ?? 0)
+            : 0,
+          matched_negative_response_count: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+            ? Number(vehicleApplicabilityEcuMatchSummary?.matched_negative_response_count ?? vehicleApplicabilityEcuMatchSummary?.matchedNegativeResponseCount ?? 0)
+            : 0,
           applicabilityStatus: applicability.status || null
         };
       });
