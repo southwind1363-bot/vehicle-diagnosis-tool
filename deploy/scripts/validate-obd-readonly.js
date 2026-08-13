@@ -1507,7 +1507,7 @@ const dtcSnapshotFunctionChecks = () => {
     check(functionBody.includes('rowValue.dtc_code') && functionBody.includes('rowValue.dtcCode'), "normalizeDtcSnapshot should normalize row code aliases");
     check(functionBody.includes('row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus'), "normalizeDtcSnapshot should normalize DTC status aliases");
     check(functionBody.includes('const sourceEcuName = sourceInput.source_ecu_name') && functionBody.includes('const normalizeDtcResponseEcu = (value) => {') && functionBody.includes('const rowEcu = rowValue.source_ecu') && functionBody.includes('const ecuName = rowEcuName || (sourceEcuName') && functionBody.includes('rowValue.ecuId') && functionBody.includes('rowValue.ecuName') && functionBody.includes('rowValue.module_id') && functionBody.includes('rowValue.freezeFrame === true'), "normalizeDtcSnapshot should preserve ECU name and freeze-frame aliases");
-    check(functionBody.includes('const typedDtcCodes = new Set(rows') && functionBody.includes('typedDtcCodes.has(`${row.code}::${row.subcode || ""}`)') && functionBody.includes('const key = `${row.code}::${row.subcode || ""}::${row.ecu || ""}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should suppress untyped code and subcode duplicates when a reported state is retained");
+    check(functionBody.includes('const typedDtcFormatsByCode = new Map();') && functionBody.includes('typedDtcFormatsByCode.get(`${row.code}::${row.subcode || ""}`)') && functionBody.includes('(!codeFormat || typedFormats.has(codeFormat))') && functionBody.includes('const key = `${row.code}::${row.subcode || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}`;') && functionBody.includes('retainedRawText: false'), "normalizeDtcSnapshot should suppress legacy untyped duplicates while retaining distinct reported code formats");
     check(functionBody.includes('const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;') && functionBody.includes('protocol,'), "normalizeDtcSnapshot should accept protocol aliases");
     check(functionBody.includes('schema_version: "dtc_snapshot_v1"'), "normalizeDtcSnapshot should expose snake_case schema version");
     check(functionBody.includes('captured_at: capturedAt') && functionBody.includes('code_count: codeCount') && functionBody.includes('dtc_count: dtcCount'), "normalizeDtcSnapshot should expose snake_case capture and DTC count aliases");
@@ -20819,6 +20819,18 @@ const blockedFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: { freeze_frame_readout_status: "blocked", blocked: true, trigger_dtc_entries: [{ code: "P0300", frame_number: 0, source_ecu: "7E8" }] }
 });
 check(blockedFreezeFrameDtcLinkSession?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "blocked" && !blockedFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary && blockedFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatchCount === undefined && blockedFreezeFrameDtcLinkSession?.vehicleCommandEnabled === false && blockedFreezeFrameDtcLinkSession?.wouldTransmit === false, "Blocked freeze-frame evidence must not be linked into otherwise readable DTC results");
+const sameCodeDifferentFormatDtcLinkSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    dtc_readout_status: "reported",
+    dtcs: [
+      { code: "123456", code_format: "uds_3byte", status: "stored", ecu: "7E8" },
+      { code: "123456", code_format: "manufacturer_specific", manufacturer_specific: true, status: "stored", ecu: "7E8" }
+    ]
+  },
+  freeze_frame_snapshot: { freeze_frame_readout_status: "reported", trigger_dtc_entries: [{ code: "123456", code_format: "uds_3byte", frame_number: 0, source_ecu: "7E8" }] }
+});
+const sameCodeDifferentFormatDtcLinkRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(sameCodeDifferentFormatDtcLinkSession)));
+check(sameCodeDifferentFormatDtcLinkSession?.dtcSnapshot?.dtcCount === 2 && sameCodeDifferentFormatDtcLinkSession.dtcSnapshot?.dtcs?.some((item) => item.codeFormat === "uds_3byte" && item.freezeFrameMatchCount === 1) && sameCodeDifferentFormatDtcLinkSession.dtcSnapshot?.dtcs?.some((item) => item.codeFormat === "manufacturer_specific" && item.manufacturerSpecific === true && item.freezeFrameMatchCount === undefined) && sameCodeDifferentFormatDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary?.matchedDtcCount === 1 && sameCodeDifferentFormatDtcLinkRoundTrip?.dtcSnapshot?.dtcCount === 2 && sameCodeDifferentFormatDtcLinkRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.code_format === "uds_3byte" && item.freeze_frame_match_count === 1) && sameCodeDifferentFormatDtcLinkRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.code_format === "manufacturer_specific" && item.freezeFrameMatchCount === undefined) && sameCodeDifferentFormatDtcLinkRoundTrip?.vehicleCommandEnabled === false && sameCodeDifferentFormatDtcLinkRoundTrip?.wouldTransmit === false, "UDS and manufacturer-specific DTCs with the same six-digit text must remain distinct and only match the same reported code format");
 const duplicateStatusFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0300", status: "stored", ecu: "7E8" }, { code: "P0300", status: "pending", ecu: "7E8" }] },
   freeze_frame_snapshot: { freeze_frame_readout_status: "reported", trigger_dtc_entries: [{ code: "P0300", frame_number: 0, source_ecu: "7E8" }] }
@@ -21335,6 +21347,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2784");
+  console.log("OBD read-only safety checks: 2785");
   console.log("Errors: 0");
 }

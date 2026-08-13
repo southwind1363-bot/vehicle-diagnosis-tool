@@ -18051,13 +18051,24 @@
         ...(reportedStatus ? { reportedStatus, reported_status: reportedStatus } : {})
       }));
     });
-    const typedDtcCodes = new Set(rows
+    const normalizeDtcIdentityFormat = (row) => String(row?.codeFormat || row?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const typedDtcFormatsByCode = new Map();
+    rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
-      .map((row) => `${row.code}::${row.subcode || ""}`));
-    const deduplicatedRows = rows.filter((row) => !(["", "unknown"].includes(String(row.status || "").trim().toLowerCase()) && typedDtcCodes.has(`${row.code}::${row.subcode || ""}`)));
+      .forEach((row) => {
+        const key = `${row.code}::${row.subcode || ""}`;
+        if (!typedDtcFormatsByCode.has(key)) typedDtcFormatsByCode.set(key, new Set());
+        typedDtcFormatsByCode.get(key).add(normalizeDtcIdentityFormat(row));
+      });
+    const deduplicatedRows = rows.filter((row) => {
+      if (!["", "unknown"].includes(String(row.status || "").trim().toLowerCase())) return true;
+      const typedFormats = typedDtcFormatsByCode.get(`${row.code}::${row.subcode || ""}`);
+      const codeFormat = normalizeDtcIdentityFormat(row);
+      return !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
+    });
     const byCode = new Map();
     deduplicatedRows.forEach((row) => {
-      const key = `${row.code}::${row.subcode || ""}::${row.ecu || ""}::${row.status || "unknown"}`;
+      const key = `${row.code}::${row.subcode || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}`;
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
     });
 
@@ -24291,6 +24302,7 @@
       || !isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])) return cleanSnapshot;
 
     const normalizeLinkPart = (value) => String(value ?? "").trim().replace(/^0x/i, "").toUpperCase();
+    const normalizeLinkCodeFormat = (value) => String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const triggerEntries = (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
       ? freezeFrameSnapshot.triggerDtcEntries
       : Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) ? freezeFrameSnapshot.trigger_dtc_entries : [])
@@ -24300,6 +24312,7 @@
         return {
           code: normalizeLinkPart(entry?.code || entry?.dtc),
           subcode: normalizeLinkPart(entry?.subcode || entry?.sub_code),
+          codeFormat: normalizeLinkCodeFormat(entry?.codeFormat || entry?.code_format),
           sourceEcu: normalizeLinkPart(entry?.sourceEcu || entry?.source_ecu),
           sourceEcuName: entry?.sourceEcuName || entry?.source_ecu_name || null,
           frameNumber: frameInput !== undefined && frameInput !== null && frameInput !== "" && Number.isInteger(frameNumber) ? frameNumber : null
@@ -24309,7 +24322,7 @@
     if (!triggerEntries.length) return cleanSnapshot;
 
     const uniqueTriggerEntries = [...new Map(triggerEntries.map((entry) => [
-      `${entry.code}::${entry.subcode}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
+      `${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
       entry
     ])).values()];
     const udsSnapshotRecords = (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords)
@@ -24320,6 +24333,7 @@
         const frameNumber = Number(frameInput);
         return {
           code: normalizeLinkPart(record?.code || record?.dtc),
+          codeFormat: normalizeLinkCodeFormat(record?.codeFormat || record?.code_format),
           sourceEcu: normalizeLinkPart(record?.sourceEcu || record?.source_ecu),
           frameNumber: frameInput !== undefined && frameInput !== null && frameInput !== "" && Number.isInteger(frameNumber) ? frameNumber : null,
           snapshotRecordType: record?.snapshotRecordType || record?.snapshot_record_type || null,
@@ -24331,12 +24345,13 @@
     const linkedDtcs = cleanDtcs.map((row) => {
       const code = normalizeLinkPart(row?.code || row?.dtc);
       const subcode = normalizeLinkPart(row?.subcode || row?.sub_code);
+      const codeFormat = normalizeLinkCodeFormat(row?.codeFormat || row?.code_format);
       const ecu = normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu);
-      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && entry.sourceEcu === ecu);
-      matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`));
+      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && entry.sourceEcu === ecu && (!entry.codeFormat || !codeFormat || entry.codeFormat === codeFormat));
+      matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`));
       if (!matches.length) return row;
       const freezeFrameMatches = matches.map((entry) => {
-        const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && record.sourceEcu === entry.sourceEcu && record.frameNumber === entry.frameNumber);
+        const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && record.sourceEcu === entry.sourceEcu && record.frameNumber === entry.frameNumber && (!entry.codeFormat || !record.codeFormat || entry.codeFormat === record.codeFormat));
         const udsRecord = matchingUdsRecords.length === 1 ? matchingUdsRecords[0] : null;
         return {
           frameNumber: entry.frameNumber,
@@ -24363,6 +24378,7 @@
     const matchedDtcCount = new Set(linkedDtcRows.map((row) => [
       normalizeLinkPart(row?.code || row?.dtc),
       normalizeLinkPart(row?.subcode || row?.sub_code),
+      normalizeLinkCodeFormat(row?.codeFormat || row?.code_format),
       normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu)
     ].join("::"))).size;
     const matchedDtcRowCount = linkedDtcRows.length;
