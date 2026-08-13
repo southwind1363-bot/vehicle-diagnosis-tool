@@ -24276,6 +24276,93 @@
     };
   }
 
+  function linkReadableFreezeFrameToDtcSnapshot(dtcSnapshot = {}, freezeFrameSnapshot = {}) {
+    const { freezeFrameLinkSummary: storedFreezeFrameLinkSummary, freeze_frame_link_summary: storedFreezeFrameLinkSummaryAlias, ...dtcSnapshotBase } = dtcSnapshot && typeof dtcSnapshot === "object" ? dtcSnapshot : {};
+    const dtcs = Array.isArray(dtcSnapshotBase.dtcs) ? dtcSnapshotBase.dtcs : [];
+    const cleanDtcs = dtcs.map((row) => {
+      const { freezeFrameMatches, freeze_frame_matches, freezeFrameMatchCount, freeze_frame_match_count, ...cleanRow } = row && typeof row === "object" ? row : {};
+      return cleanRow;
+    });
+    const cleanSnapshot = {
+      ...dtcSnapshotBase,
+      dtcs: cleanDtcs
+    };
+    if (!isReadableDiagnosticSnapshot(dtcSnapshotBase, ["dtcReadoutStatus", "dtc_readout_status"])
+      || !isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])) return cleanSnapshot;
+
+    const normalizeLinkPart = (value) => String(value ?? "").trim().replace(/^0x/i, "").toUpperCase();
+    const triggerEntries = (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
+      ? freezeFrameSnapshot.triggerDtcEntries
+      : Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) ? freezeFrameSnapshot.trigger_dtc_entries : [])
+      .map((entry) => {
+        const frameInput = entry?.frameNumber ?? entry?.frame_number;
+        const frameNumber = Number(frameInput);
+        return {
+          code: normalizeLinkPart(entry?.code || entry?.dtc),
+          subcode: normalizeLinkPart(entry?.subcode || entry?.sub_code),
+          sourceEcu: normalizeLinkPart(entry?.sourceEcu || entry?.source_ecu),
+          sourceEcuName: entry?.sourceEcuName || entry?.source_ecu_name || null,
+          frameNumber: frameInput !== undefined && frameInput !== null && frameInput !== "" && Number.isInteger(frameNumber) ? frameNumber : null
+        };
+      })
+      .filter((entry) => entry.code);
+    if (!triggerEntries.length) return cleanSnapshot;
+
+    const uniqueTriggerEntries = [...new Map(triggerEntries.map((entry) => [
+      `${entry.code}::${entry.subcode}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
+      entry
+    ])).values()];
+    const matchedTriggerKeys = new Set();
+    const linkedDtcs = cleanDtcs.map((row) => {
+      const code = normalizeLinkPart(row?.code || row?.dtc);
+      const subcode = normalizeLinkPart(row?.subcode || row?.sub_code);
+      const ecu = normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu);
+      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && entry.sourceEcu === ecu);
+      matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`));
+      if (!matches.length) return row;
+      const freezeFrameMatches = matches.map((entry) => ({
+        frameNumber: entry.frameNumber,
+        frame_number: entry.frameNumber,
+        sourceEcu: entry.sourceEcu || null,
+        source_ecu: entry.sourceEcu || null,
+        sourceEcuName: entry.sourceEcuName,
+        source_ecu_name: entry.sourceEcuName
+      }));
+      return {
+        ...row,
+        freezeFrameAvailable: true,
+        freeze_frame_available: true,
+        freezeFrameMatches,
+        freeze_frame_matches: freezeFrameMatches,
+        freezeFrameMatchCount: freezeFrameMatches.length,
+        freeze_frame_match_count: freezeFrameMatches.length
+      };
+    });
+    const matchedDtcCount = linkedDtcs.filter((row) => Number(row.freezeFrameMatchCount || row.freeze_frame_match_count || 0) > 0).length;
+    const freezeFrameLinkSummary = {
+      schemaVersion: "dtc_freeze_frame_link_summary_v1",
+      schema_version: "dtc_freeze_frame_link_summary_v1",
+      matchPolicy: "exact_code_subcode_ecu",
+      match_policy: "exact_code_subcode_ecu",
+      triggerEntryCount: uniqueTriggerEntries.length,
+      trigger_entry_count: uniqueTriggerEntries.length,
+      matchedDtcCount,
+      matched_dtc_count: matchedDtcCount,
+      unmatchedTriggerEntryCount: uniqueTriggerEntries.length - matchedTriggerKeys.size,
+      unmatched_trigger_entry_count: uniqueTriggerEntries.length - matchedTriggerKeys.size,
+      retainedRawText: false,
+      retained_raw_text: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+    return {
+      ...cleanSnapshot,
+      dtcs: linkedDtcs,
+      freezeFrameLinkSummary,
+      freeze_frame_link_summary: freezeFrameLinkSummary
+    };
+  }
+
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
     const nativeConnectorBoundary = normalizeNativeConnectorBoundary(sessionInput.nativeConnectorBoundary || sessionInput.native_connector_boundary || {});
@@ -24331,7 +24418,7 @@
     const ecuInfoSnapshotInput = sessionInput.ecuInfoSnapshot || sessionInput.ecu_info_snapshot || sessionInput.ecuInfoResponse || sessionInput.ecu_info_response || sessionInput.ecuInfo || sessionInput.ecu_info || sessionInput.ecuInfoItems || sessionInput.ecu_info_items || {};
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
-    const dtcSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion
+    let dtcSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion
       ? (Array.isArray(dtcSnapshotInput.codes) && Array.isArray(dtcSnapshotInput.dtcs) ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput))
       : hasTypedDtcSnapshotInput
         ? mergeDtcSnapshots(
@@ -24487,6 +24574,7 @@
         : (freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data))
           ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput)
           : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)), freezeFrameSafetyInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
+    dtcSnapshot = linkReadableFreezeFrameToDtcSnapshot(dtcSnapshot, freezeFrameSnapshot);
     const readinessSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? (!Number.isFinite(Number(readinessSnapshotInput.monitorCount)) || !Number.isFinite(Number(readinessSnapshotInput.incompleteCount)) || !Number.isFinite(Number(readinessSnapshotInput.completeCount)) ? normalizeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
