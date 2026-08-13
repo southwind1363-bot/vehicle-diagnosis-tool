@@ -6731,7 +6731,8 @@
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
-      .filter(isRespondedEcuResponse);
+      .filter((row) => isRespondedEcuResponse(row)
+        || String(row?.status || row?.responseStatus || row?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_") === "reported");
     const respondedEcuAddresses = [...new Set(respondedEcuRows
       .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
       .map(normalizeComparableCanEcuAddress)
@@ -7693,7 +7694,13 @@
         const isPendingResponse = isNegativeResponse && negativeCode === "78";
         if (!identity || (!isReported && !isNegativeResponse)) return;
         const name = outcome.sourceEcuName || outcome.source_ecu_name || outcome.ecuName || outcome.ecu_name || null;
-        const matchingRows = ecuResponses.filter((row) => normalizeEcuIdentity(row.address || row.ecu || row.id) === identity);
+        const comparableAddress = normalizeComparableCanEcuAddress(address);
+        const matchingRows = ecuResponses.filter((row) => {
+          const rowAddress = row.address || row.ecu || row.id;
+          if (normalizeEcuIdentity(rowAddress) === identity) return true;
+          const comparableRowAddress = normalizeComparableCanEcuAddress(rowAddress);
+          return comparableAddress && comparableRowAddress && isComparableCanEcuAddressMatch(comparableRowAddress, comparableAddress);
+        });
         const response = matchingRows[0] || { address, ecu_name: name || null, status: isReported ? "reported" : isPendingResponse ? "pending_response" : "negative_response", services: [] };
         if (!matchingRows.length) ecuResponses.push(response);
         if (!response.ecu_name && name) response.ecu_name = name;

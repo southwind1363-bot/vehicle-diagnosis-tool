@@ -14590,7 +14590,22 @@ const udsDidApplicabilityMismatchSession = obd.buildDiagnosticScanSession({
   vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
   ecu_info_response: { raw: "62 F1 89 53 57", protocol: "UDS", source_ecu: "18DA10F2" }
 });
-check(udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && [udsDidApplicabilityMatchSession, udsDidApplicabilityMismatchSession].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Raw UDS DID ECU addresses must use paired 29-bit matching without hiding a different-node review");
+const udsDidPendingThenReportedPairedAddressSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
+  ecu_info_snapshot: {
+    schema_version: "ecu_info_snapshot_v2",
+    protocol: "UDS",
+    ecu_info_response_format: "uds_read_data_by_identifier",
+    ecu_info_readout_status: "reported",
+    items: [{ id: "uds_did_f189", data_identifier: "F189", value: "41 42", source_ecu: "18DAF110" }],
+    ecu_info_ecu_snapshots: [
+      { source_ecu: "18DAF110", ecu_info_readout_status: "reported", item_count: 1, item_ids: ["uds_did_f189"] },
+      { source_ecu: "18DA10F1", ecu_info_readout_status: "unparsed", ecu_info_negative_response_service: "22", ecu_info_negative_response_code: "78" }
+    ]
+  }
+});
+const udsDidPendingThenReportedPairedAddressRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(udsDidPendingThenReportedPairedAddressSession)));
+check(udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.length === 1 && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.[0]?.status === "reported" && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.[0]?.pendingNegativeResponseCount === 1 && udsDidPendingThenReportedPairedAddressSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && !udsDidPendingThenReportedPairedAddressSession.nextReadoutCandidates?.some((item) => item.id === "ecu_info_snapshot" && item.statusReason === "ecu_scoped_pending_response") && udsDidPendingThenReportedPairedAddressRoundTrip?.ecuResponseSummary?.ecus?.length === 1 && udsDidPendingThenReportedPairedAddressRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_evidence === "positive_response" && !udsDidPendingThenReportedPairedAddressRoundTrip?.nextReadoutCandidates?.some((item) => item.id === "ecu_info_snapshot" && item.status_reason === "ecu_scoped_pending_response") && [udsDidApplicabilityMatchSession, udsDidApplicabilityMismatchSession, udsDidPendingThenReportedPairedAddressSession, udsDidPendingThenReportedPairedAddressRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Raw UDS DID ECU addresses must use paired 29-bit matching without hiding a different-node review");
 const reimportedUnparsedEcuInfoSession = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(unparsedEcuInfoSession) });
 check(reimportedUnparsedEcuInfoSession.ecuInfoSnapshot?.ecu_info_readout_status === "unparsed" && reimportedUnparsedEcuInfoSession.coreSessionStatus?.readoutStateById?.ecu_info_snapshot?.status === "missing" && reimportedUnparsedEcuInfoSession.vehicleCommandEnabled === false, "Saved unparsed ECU info responses were not preserved through read-only reimport");
 const decodedSupportedTypes = obd.decodeEcuInfoResponse({ raw: "49 00 01 55 60 00 00 49 04 01 43 41 4C 2D 31 32 33 34" });
