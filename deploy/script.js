@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.38";
+const APP_VERSION = "3.9.39";
 const APP_LAST_UPDATED = "2026-08-12";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8255,6 +8255,13 @@ function renderObdDeveloperSessionSummary(session = null) {
   const dtcMetadataLabel = dtcMetadataTotalCount > 0
     ? `status byte ${Number(dtcMetadataSummary?.statusByteCount ?? dtcMetadataSummary?.status_byte_count ?? 0)}/${dtcMetadataTotalCount} / severity ${Number(dtcMetadataSummary?.severityCount ?? dtcMetadataSummary?.severity_count ?? 0)}/${dtcMetadataTotalCount} / occurrence ${Number(dtcMetadataSummary?.occurrenceCount ?? dtcMetadataSummary?.occurrence_count ?? 0)}/${dtcMetadataTotalCount} / mask ${dtcMetadataSummary?.statusAvailabilityMaskCaptured === true || dtcMetadataSummary?.status_availability_mask_captured === true ? "reported" : "not reported"}`
     : NO_DATA;
+  const dtcFreezeFrameLinkSummary = dtcSnapshot?.freezeFrameLinkSummary || dtcSnapshot?.freeze_frame_link_summary || null;
+  const dtcFreezeFrameTriggerEntryCount = Number(dtcFreezeFrameLinkSummary?.triggerEntryCount ?? dtcFreezeFrameLinkSummary?.trigger_entry_count ?? 0);
+  const dtcFreezeFrameMatchedDtcCount = Number(dtcFreezeFrameLinkSummary?.matchedDtcCount ?? dtcFreezeFrameLinkSummary?.matched_dtc_count ?? 0);
+  const dtcFreezeFrameUnmatchedTriggerCount = Number(dtcFreezeFrameLinkSummary?.unmatchedTriggerEntryCount ?? dtcFreezeFrameLinkSummary?.unmatched_trigger_entry_count ?? 0);
+  const dtcFreezeFrameLinkLabel = dtcFreezeFrameTriggerEntryCount > 0
+    ? `一致 ${dtcFreezeFrameMatchedDtcCount}/${dtcFreezeFrameTriggerEntryCount} / 未一致起点 ${dtcFreezeFrameUnmatchedTriggerCount}`
+    : NO_DATA;
   const livePidReadoutStatusLabel = formatObdReadoutStatus(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status, NO_DATA);
   const ecuInfoReadoutStatusLabel = formatObdReadoutStatus(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, NO_DATA);
   const ecuInfoResponseFormatLabel = formatObdEcuInfoResponseFormat(ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format, NO_DATA);
@@ -8427,6 +8434,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["DTCメモリ選択", dtcMemorySelection ? `0x${dtcMemorySelection} (reported)` : NO_DATA],
     ["DTC readiness group", dtcReadinessGroupIdentifier ? `0x${dtcReadinessGroupIdentifier} (reported)` : NO_DATA],
     ["DTC詳細報告値", dtcMetadataLabel],
+    ["DTC/FF照合", dtcFreezeFrameLinkLabel],
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["応答ECU", observedEcuLabel],
     ["ECU由来", observedEcuSourceCoverageLabel],
