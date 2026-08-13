@@ -21329,12 +21329,12 @@ check(thinkcarJsonSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "2601
 check(appSource.includes('const manufacturerSpecific = dtc.manufacturerSpecific === true') && appSource.includes('診断機報告: ${reportedDescription}') && appSource.includes('メーカー固有コードのため、車種・ECU・整備書で定義を確認してください。'), "Manufacturer-specific DTC cards should show only reported descriptions and require vehicle-specific definition review");
 check(appSource.includes('const freezeFrameMatches = Array.isArray(dtc.freezeFrameMatches)') && appSource.includes('フリーズフレーム: DTC / サブコード / ECU 一致確認済み') && appSource.includes('フリーズフレーム: 読取報告あり (DTC/ECU照合は未確認)'), "DTC cards should distinguish exact freeze-frame links from unscoped reported availability");
 check(appSource.includes('const udsSnapshotEvidence = [...new Set(freezeFrameMatches') && appSource.includes('UDSスナップショット読取値:'), "DTC cards should expose only reported UDS snapshot metadata from exact freeze-frame links");
-check(appSource.includes('const dtcFreezeFrameLinkSummary = dtcSnapshot?.freezeFrameLinkSummary || dtcSnapshot?.freeze_frame_link_summary || null;') && appSource.includes('["DTC/FF照合", dtcFreezeFrameLinkLabel]'), "OBD session summary should show exact DTC and freeze-frame link counts");
+check(appSource.includes('const dtcFreezeFrameLinkSummary = dtcSnapshot?.freezeFrameLinkSummary || dtcSnapshot?.freeze_frame_link_summary || null;') && appSource.includes('一致DTC ${dtcFreezeFrameMatchedDtcCount} / FF起点 ${dtcFreezeFrameTriggerEntryCount}') && appSource.includes('["DTC/FF照合", dtcFreezeFrameLinkLabel]'), "OBD session summary should label exact DTC and freeze-frame link counts without mixing their units");
 
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2783");
+  console.log("OBD read-only safety checks: 2784");
   console.log("Errors: 0");
 }
