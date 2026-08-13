@@ -7697,8 +7697,9 @@
       if (!current.ecu_name && name) current.ecu_name = name;
       sourceEcusByIdentity.set(identity, current);
     };
-    const collectSnapshotSourceEcus = (snapshot = {}) => {
-      if (!snapshot || typeof snapshot !== "object") return;
+    const collectSnapshotSourceEcus = (snapshot = {}, seenSnapshots = new WeakSet()) => {
+      if (!snapshot || typeof snapshot !== "object" || seenSnapshots.has(snapshot)) return;
+      seenSnapshots.add(snapshot);
       rememberEcu(snapshot.sourceEcu || snapshot.source_ecu || snapshot.ecu || snapshot.address, snapshot.sourceEcuName || snapshot.source_ecu_name || snapshot.ecuName || snapshot.ecu_name || null);
       [
         snapshot.monitorValues,
@@ -7713,6 +7714,14 @@
         if (!row || typeof row !== "object") return;
         rememberEcu(row.sourceEcu || row.source_ecu || row.ecu || row.address || row.ecu_id || row.ecuId, row.sourceEcuName || row.source_ecu_name || row.ecuName || row.ecu_name || null);
       });
+      [
+        snapshot.freezeFrameEcuSnapshots,
+        snapshot.freeze_frame_ecu_snapshots,
+        snapshot.readinessEcuSnapshots,
+        snapshot.readiness_ecu_snapshots,
+        snapshot.supportedPidEcuSnapshots,
+        snapshot.supported_pid_ecu_snapshots
+      ].filter(Array.isArray).flat().forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, seenSnapshots));
     };
     const addReportedReadout = (snapshot, statusKeys, service, responseService = null) => {
       const status = statusKeys.map((key) => snapshot?.[key]).find((value) => value !== undefined && value !== null) || "unknown";
