@@ -14481,6 +14481,40 @@ const sameEcuTimeline = obd.normalizeLivePidTimeline({
 });
 const sameEcuSummary = obd.buildLivePidTimelineSummary(sameEcuTimeline);
 check(sameEcuSummary.comparedValueCount === 1 && sameEcuSummary.changedValueCount === 1 && sameEcuSummary.changes[0]?.sourceEcu === "7E8" && sameEcuSummary.changes[0]?.source_ecu === "7E8" && sameEcuSummary.vehicle_command_enabled === false, "Live PID comparison changes did not retain the observed source ECU");
+const parallelEcuTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    {
+      captured_at: "2026-07-17T00:00:00Z",
+      observation_condition: "warm",
+      live_pid_snapshot: {
+        monitorValues: [
+          { ...engineSpeedMonitor, sourceEcu: "7E8", value: 800 },
+          { ...engineSpeedMonitor, sourceEcu: "7E9", value: 1500 }
+        ],
+        livePidReadoutStatus: "reported",
+        blocked: false,
+        wouldTransmit: false
+      }
+    },
+    {
+      captured_at: "2026-07-17T00:00:05Z",
+      observation_condition: "warm",
+      live_pid_snapshot: {
+        monitorValues: [
+          { ...engineSpeedMonitor, sourceEcu: "7E8", value: 900 },
+          { ...engineSpeedMonitor, sourceEcu: "7E9", value: 1300 }
+        ],
+        livePidReadoutStatus: "reported",
+        blocked: false,
+        wouldTransmit: false
+      }
+    }
+  ]
+});
+const parallelEcuSummary = obd.buildLivePidTimelineSummary(parallelEcuTimeline);
+const parallelEcuSession = obd.buildDiagnosticScanSession({ live_pid_timeline: parallelEcuTimeline });
+const parallelEcuRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(parallelEcuSession)));
+check(parallelEcuSummary.comparisonAvailable === true && parallelEcuSummary.comparedValueCount === 2 && parallelEcuSummary.changedValueCount === 2 && parallelEcuSummary.changes?.some((item) => item.sourceEcu === "7E8" && item.delta === 100) && parallelEcuSummary.changes?.some((item) => item.sourceEcu === "7E9" && item.delta === -200) && parallelEcuSession.livePidTimelineSummary?.changedValueCount === 2 && parallelEcuRoundTrip?.livePidTimelineSummary?.changes?.some((item) => item.sourceEcu === "7E8" && item.delta === 100) && parallelEcuRoundTrip?.livePidTimelineSummary?.changes?.some((item) => item.sourceEcu === "7E9" && item.delta === -200) && [parallelEcuSession, parallelEcuRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Parallel same-PID ECU readings were mixed or lost during read-only timeline export");
 const caseVariantEcuTimeline = obd.normalizeLivePidTimeline({
   samples: [
     { captured_at: "2026-07-17T00:00:00Z", observation_condition: "warm", live_pid_snapshot: { monitorValues: [{ ...engineSpeedMonitor, sourceEcu: "0x7e8", value: 800 }], livePidReadoutStatus: "reported", blocked: false, wouldTransmit: false } },
