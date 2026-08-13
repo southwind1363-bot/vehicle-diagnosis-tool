@@ -6512,6 +6512,14 @@
     supportedPidMatrix = {}
   } = {}) {
     const rows = [];
+    const normalizeObservedReadoutStatus = (value) => {
+      const status = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      if (status === "negative_response") return "negative_response";
+      if (status === "unparsed") return "unparsed";
+      if (status === "no_response") return "no_response";
+      if (status === "unknown") return "unknown";
+      return "reported";
+    };
     const ecuInfoNameCandidates = (Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).flatMap((item) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return [];
       const id = String(item.id || item.key || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -6524,7 +6532,8 @@
         const candidate = value && typeof value === "object" && !Array.isArray(value) ? value : { ecuId: value };
         const ecuId = redactSensitiveText(String(candidate.ecuId || candidate.ecu_id || candidate.id || candidate.ecu || candidate.address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
         const ecuName = redactSensitiveText(String(candidate.ecuName || candidate.ecu_name || candidate.name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-        if (ecuId) rows.push({ ecuId, ecuName, readoutId });
+        const readoutStatus = normalizeObservedReadoutStatus(candidate.readoutStatus || candidate.readout_status || candidate.status || null);
+        if (ecuId) rows.push({ ecuId, ecuName, readoutId, readoutStatus });
       });
     };
     add("dtc_snapshot", [
@@ -6539,7 +6548,8 @@
       .filter(isRespondedEcuResponse)
       .map((item) => ({
         ecuId: item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null,
-        ecuName: item?.name || item?.ecuName || item?.ecu_name || item?.label || item?.displayName || item?.display_name || null
+        ecuName: item?.name || item?.ecuName || item?.ecu_name || item?.label || item?.displayName || item?.display_name || null,
+        readoutStatus: item?.status || item?.responseStatus || item?.response_status || null
       })));
     add("live_pid_snapshot", [
       { ecuId: livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu, ecuName: livePidSnapshot?.sourceEcuName || livePidSnapshot?.source_ecu_name },
@@ -6561,14 +6571,23 @@
         ...(Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) ? readinessSnapshot.readiness_ecu_snapshots : [])
       ].map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
+    const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
+      ? ecuInfoSnapshot.ecuInfoEcuSnapshots
+      : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
+        ? ecuInfoSnapshot.ecu_info_ecu_snapshots
+        : [];
+    const scopedEcuInfoIds = new Set(ecuInfoEcuSnapshots.map((item) => item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || null).filter(Boolean));
+    const ecuInfoReadoutStatus = ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || null;
     add("ecu_info_snapshot", [
-      { ecuId: ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu, ecuName: ecuInfoSnapshot?.sourceEcuName || ecuInfoSnapshot?.source_ecu_name },
+      ...(scopedEcuInfoIds.has(ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu) ? [] : [{ ecuId: ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu, ecuName: ecuInfoSnapshot?.sourceEcuName || ecuInfoSnapshot?.source_ecu_name, readoutStatus: ecuInfoReadoutStatus }]),
       ...[ecuInfoSnapshot?.readoutEcuIds, ecuInfoSnapshot?.readout_ecu_ids]
         .filter(Array.isArray)
         .flat()
-        .map((ecuId) => ({ ecuId })),
-      ...(ecuInfoSnapshot?.items || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
-      ...ecuInfoNameCandidates
+        .filter((ecuId) => !scopedEcuInfoIds.has(ecuId))
+        .map((ecuId) => ({ ecuId, readoutStatus: ecuInfoReadoutStatus })),
+      ...(ecuInfoSnapshot?.items || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name, readoutStatus: "reported" })),
+      ...ecuInfoNameCandidates.map((item) => ({ ...item, readoutStatus: "reported" })),
+      ...ecuInfoEcuSnapshots.map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || null, ecuName: item?.sourceEcuName || item?.source_ecu_name || item?.ecuName || item?.ecu_name || null, readoutStatus: item?.ecuInfoReadoutStatus || item?.ecu_info_readout_status || null }))
     ]);
     add("onboard_monitor_snapshot", [
       { ecuId: onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu, ecuName: onboardMonitorSnapshot?.sourceEcuName || onboardMonitorSnapshot?.source_ecu_name },
@@ -6586,22 +6605,40 @@
       ].map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name }))
     ]);
     const byId = new Map();
-    rows.forEach(({ ecuId, ecuName, readoutId }) => {
+    rows.forEach(({ ecuId, ecuName, readoutId, readoutStatus }) => {
       if (!byId.has(ecuId) && byId.size >= 32) return;
-      const entry = byId.get(ecuId) || { id: ecuId, readoutIds: [], ecuNames: [] };
+      const entry = byId.get(ecuId) || { id: ecuId, readoutIds: [], ecuNames: [], readoutStatusValuesById: {} };
       if (!entry.readoutIds.includes(readoutId)) entry.readoutIds.push(readoutId);
       if (ecuName && !entry.ecuNames.includes(ecuName)) entry.ecuNames.push(ecuName);
+      const statusValues = entry.readoutStatusValuesById[readoutId] || [];
+      if (!statusValues.includes(readoutStatus)) statusValues.push(readoutStatus);
+      entry.readoutStatusValuesById[readoutId] = statusValues;
       byId.set(ecuId, entry);
     });
-    const ecus = [...byId.values()].map((entry) => ({
-      id: entry.id,
-      ecuName: entry.ecuNames.length === 1 ? entry.ecuNames[0] : null,
-      ecu_name: entry.ecuNames.length === 1 ? entry.ecuNames[0] : null,
-      ecuNames: [...entry.ecuNames],
-      ecu_names: [...entry.ecuNames],
-      readoutIds: [...entry.readoutIds],
-      readout_ids: [...entry.readoutIds]
-    }));
+    const readoutStatusPriority = { reported: 4, negative_response: 3, unparsed: 2, no_response: 1, unknown: 0 };
+    const ecus = [...byId.values()].map((entry) => {
+      const readoutStatusValuesById = Object.fromEntries(entry.readoutIds.map((readoutId) => [readoutId, [...(entry.readoutStatusValuesById[readoutId] || [])]]));
+      const readoutStatusById = Object.fromEntries(entry.readoutIds.map((readoutId) => [readoutId, [...(readoutStatusValuesById[readoutId] || [])].sort((left, right) => (readoutStatusPriority[right] || 0) - (readoutStatusPriority[left] || 0))[0] || "unknown"]));
+      const negativeResponseReadoutIds = entry.readoutIds.filter((readoutId) => (readoutStatusValuesById[readoutId] || []).includes("negative_response"));
+      const unparsedReadoutIds = entry.readoutIds.filter((readoutId) => (readoutStatusValuesById[readoutId] || []).includes("unparsed"));
+      return {
+        id: entry.id,
+        ecuName: entry.ecuNames.length === 1 ? entry.ecuNames[0] : null,
+        ecu_name: entry.ecuNames.length === 1 ? entry.ecuNames[0] : null,
+        ecuNames: [...entry.ecuNames],
+        ecu_names: [...entry.ecuNames],
+        readoutIds: [...entry.readoutIds],
+        readout_ids: [...entry.readoutIds],
+        readoutStatusById,
+        readout_status_by_id: readoutStatusById,
+        readoutStatusValuesById,
+        readout_status_values_by_id: readoutStatusValuesById,
+        negativeResponseReadoutIds,
+        negative_response_readout_ids: negativeResponseReadoutIds,
+        unparsedReadoutIds,
+        unparsed_readout_ids: unparsedReadoutIds
+      };
+    });
     const ecuIds = ecus.map((entry) => entry.id);
     const readoutIds = [...new Set(ecus.flatMap((entry) => entry.readoutIds))];
     const capturedReadoutIds = [
