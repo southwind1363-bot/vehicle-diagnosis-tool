@@ -4687,6 +4687,9 @@
         ? { ...bridgeSafety, ok: false, unparsed: true }
         : bridgeSafety;
     const bridgeReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
+    const resolvedReadoutStatus = bridgeReadoutStatus === "reported" && hasExplicitReadoutStatus
+      ? explicitReadoutStatus
+      : bridgeReadoutStatus;
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     const protocolProvenance = {
@@ -4736,7 +4739,7 @@
         source_ecu_name: sourceEcuName,
         captured_at: capturedAt,
         protocol,
-        readiness_readout_status: bridgeReadoutStatus === "reported" && !hasDirectReadinessEvidence ? "unparsed" : bridgeReadoutStatus,
+        readiness_readout_status: resolvedReadoutStatus === "reported" && !hasDirectReadinessEvidence ? "unparsed" : resolvedReadoutStatus,
         monitors: directMonitorRows
       }));
     }
@@ -4819,7 +4822,7 @@
         source_ecu_name: sourceEcuName,
         captured_at: capturedAt,
         protocol,
-        readiness_readout_status: bridgeReadoutStatus === "reported" ? "unparsed" : bridgeReadoutStatus,
+        readiness_readout_status: resolvedReadoutStatus === "reported" ? "unparsed" : resolvedReadoutStatus,
         readiness_status_byte_a: Number.isFinite(a) ? a : null,
         readiness_status_byte_b: Number.isFinite(b) ? b : null,
         readiness_status_byte_c: Number.isFinite(c) ? c : null,
@@ -4859,7 +4862,7 @@
       source_ecu_name: sourceEcuName,
       captured_at: capturedAt,
       protocol,
-      readiness_readout_status: bridgeReadoutStatus,
+      readiness_readout_status: resolvedReadoutStatus,
       readiness_status_byte_a: Number.isFinite(a) ? a : null,
       readiness_status_byte_b: b,
       readiness_status_byte_c: c,
@@ -22247,11 +22250,22 @@
     const readinessSnapshot = hasValue(readinessInput)
       ? hasBridgeReadinessResponse
         ? normalizeBridgeReadinessSnapshot(importSession)
-        : preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
-          normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors")),
-          readinessInput,
-          ["readinessReadoutStatus", "readiness_readout_status"]
-        ), readinessInput, ["readinessReadoutStatus", "readiness_readout_status"])
+        : (() => {
+          const normalizedReadinessSnapshot = normalizeReadinessSnapshot(Array.isArray(readinessInput) ? { monitors: readinessInput, source: scannerJsonSource } : toSnapshotInput(readinessInput, "monitors"));
+          const isTrustedReadinessSnapshot = isTrustedBridgeSessionExport
+            && readinessInput
+            && typeof readinessInput === "object"
+            && !Array.isArray(readinessInput)
+            && !getExplicitReadoutFailureStatus(readinessInput)
+            && (readinessInput.schemaVersion === "readiness_snapshot_v1" || readinessInput.schema_version === "readiness_snapshot_v1");
+          return isTrustedReadinessSnapshot
+            ? normalizedReadinessSnapshot
+            : preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
+              normalizedReadinessSnapshot,
+              readinessInput,
+              ["readinessReadoutStatus", "readiness_readout_status"]
+            ), readinessInput, ["readinessReadoutStatus", "readiness_readout_status"]);
+        })()
       : null;
     const ecuInfoSnapshot = hasValue(safeEcuInfoInput)
       ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
