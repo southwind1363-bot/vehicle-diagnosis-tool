@@ -2327,8 +2327,12 @@
     ]);
     const hardFailures = evaluations.filter(({ evaluation }) => evaluation.errors.some((error) => hardErrorIds.has(error)));
     const interfaceIds = [...new Set(evaluations.map(({ evaluation }) => evaluation.interfaceId).filter(Boolean))];
+    const adapterTransportTokens = [...new Set(evaluations.map(({ evaluation }) => evaluation.adapterTransport || "legacy_undeclared"))];
     if (interfaceIds.length > 1) {
       return blockedResult(["mixed_interface_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
+    }
+    if (adapterTransportTokens.length > 1) {
+      return blockedResult(["mixed_adapter_transport_batch"], evaluations.map(({ index, evaluation }) => ({ index, errors: [...evaluation.errors] })));
     }
     if (hardFailures.length) {
       return blockedResult(
@@ -2665,6 +2669,7 @@
       device_model: interfaceId === "user-vci-thinkcar-bluetooth" ? "TCMa" : "ELM327 mini",
       readout_route: "native_connector_readout",
       platform: "ios",
+      adapter_transport: adapterTransportTokens[0] === "ble_gatt" ? "ble_gatt" : null,
       observed_use: "native connector read-only scan session",
       hardware_compatibility_confirmed: false
     });

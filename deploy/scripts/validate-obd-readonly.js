@@ -4469,6 +4469,9 @@ const nativeScanBatch = [
 const nativeExpectedIntents = [...new Set(nativeScanBatch.map((envelope) => envelope.intent))];
 const nativeExpectedReadouts = ["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "freeze_frame_snapshot", "supported_pid_matrix", "ecu_info_snapshot", "onboard_monitor_snapshot", "readiness_snapshot", "live_pid_snapshot"];
 const nativeScanSession = obd.buildNativeConnectorScanSession({ envelopes: nativeScanBatch, scan_state: "completed", expected_intents: nativeExpectedIntents, expected_readouts: nativeExpectedReadouts });
+const nativeBleGattScanSession = obd.buildNativeConnectorScanSession({ envelopes: nativeScanBatch.map((envelope) => ({ ...envelope, adapter_transport: "ble_gatt" })), scan_state: "completed", expected_intents: nativeExpectedIntents, expected_readouts: nativeExpectedReadouts });
+const nativeMixedTransportScanSession = obd.buildNativeConnectorScanSession({ envelopes: [{ ...nativeScanBatch[0], adapter_transport: "ble_gatt" }, nativeScanBatch[1]], scan_state: "open" });
+check(nativeBleGattScanSession.accepted === true && nativeBleGattScanSession.session?.readoutInterface?.adapterTransport === "ble_gatt" && nativeMixedTransportScanSession.blocked === true && nativeMixedTransportScanSession.errors.includes("mixed_adapter_transport_batch"), "Native connector scan batches must retain one declared BLE GATT transport and reject mixed legacy transport evidence");
 const nativeCompletionManifest = Object.freeze({
   schema_version: "native_connector_completion_manifest_v1",
   record_type: "completion_manifest",
