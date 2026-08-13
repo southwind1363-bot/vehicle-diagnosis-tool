@@ -3358,15 +3358,16 @@
       ...typedDtcRowGroups.flatMap((group) => normalizeDtcRows(group.rows, group.status, sourceEcu, sourceEcuName)),
       ...ecuDtcRows
     ];
+    const normalizeDtcEntryCodeFormat = (entry) => String(entry?.codeFormat || entry?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const scopedEntriesByKey = new Map();
     entries.filter((entry) => entry.ecu).forEach((entry) => {
-      const key = `${entry.code}::${entry.subcode || ""}::${entry.status}`;
+      const key = `${entry.code}::${entry.subcode || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`;
       if (!scopedEntriesByKey.has(key)) scopedEntriesByKey.set(key, entry);
     });
-    const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(`${entry.code}::${entry.subcode || ""}::${entry.status}`) || entry);
+    const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(`${entry.code}::${entry.subcode || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`) || entry);
     const seen = new Set();
     const dtcs = resolvedEntries.filter((entry) => {
-      const key = `${entry.code}::${entry.subcode || ""}::${entry.ecu || ""}::${entry.status}`;
+      const key = `${entry.code}::${entry.subcode || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.ecu || ""}::${entry.status}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
