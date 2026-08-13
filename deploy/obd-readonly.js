@@ -6739,9 +6739,13 @@
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
     const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
+    const hasExplicitPositiveReportedResponse = (row) => {
+      const status = String(row?.status || row?.responseStatus || row?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const responseServices = Array.isArray(row?.responseServices) ? row.responseServices : Array.isArray(row?.response_services) ? row.response_services : [];
+      return status === "reported" && responseServices.some((service) => String(service || "").trim().toUpperCase() !== "7F");
+    };
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
-      .filter((row) => isRespondedEcuResponse(row)
-        || String(row?.status || row?.responseStatus || row?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_") === "reported");
+      .filter((row) => isRespondedEcuResponse(row) || hasExplicitPositiveReportedResponse(row));
     const respondedEcuAddresses = [...new Set(respondedEcuRows
       .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
       .map(normalizeComparableCanEcuAddress)
@@ -7668,7 +7672,7 @@
         rememberEcu(row.sourceEcu || row.source_ecu || row.ecu || row.address || row.ecu_id || row.ecuId, row.sourceEcuName || row.source_ecu_name || row.ecuName || row.ecu_name || null);
       });
     };
-    const addReportedReadout = (snapshot, statusKeys, service) => {
+    const addReportedReadout = (snapshot, statusKeys, service, responseService = null) => {
       const status = statusKeys.map((key) => snapshot?.[key]).find((value) => value !== undefined && value !== null) || "unknown";
       if (snapshot?.blocked === true || status !== "reported") return;
       sourceEcusByIdentity.clear();
@@ -7678,11 +7682,12 @@
         if (existing.length) {
           existing.forEach((row) => {
             row.services = [...new Set([...(row.services || []), service])];
+            if (responseService) row.response_services = [...new Set([...(row.response_services || []), responseService])];
             if (!row.ecu_name && ecu.ecu_name) row.ecu_name = ecu.ecu_name;
           });
           return;
         }
-        ecuResponses.push({ address: ecu.address, ecu_name: ecu.ecu_name, status: "reported", services: [service] });
+        ecuResponses.push({ address: ecu.address, ecu_name: ecu.ecu_name, status: "reported", services: [service], response_services: responseService ? [responseService] : [] });
       });
     };
     const addEcuInfoOutcomes = (snapshot, service) => {
@@ -7734,7 +7739,7 @@
     const ecuInfoResponseFormat = normalizeEcuInfoResponseFormat(ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format);
     if (ecuInfoResponseFormat) {
       const ecuInfoService = ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "22" : "09";
-      addReportedReadout(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"], ecuInfoService);
+      addReportedReadout(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"], ecuInfoService, ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "62" : "49");
       addEcuInfoOutcomes(ecuInfoSnapshot, ecuInfoService);
     }
     addReportedReadout(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"], "01");
