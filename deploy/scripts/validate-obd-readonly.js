@@ -21281,6 +21281,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2773");
+  console.log("OBD read-only safety checks: 2774");
   console.log("Errors: 0");
 }
