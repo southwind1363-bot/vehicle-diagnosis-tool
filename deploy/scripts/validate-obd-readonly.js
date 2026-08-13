@@ -180,7 +180,7 @@ if (elmDeveloperCommandGuardSource) {
   vm.createContext(elmDeveloperCommandGuardContext);
   vm.runInContext(`${webSerialReadOnlyAllowlistDefinitionSource?.[0] || ""}\n${elmDeveloperCommandGuardSource[0]}`, elmDeveloperCommandGuardContext);
   const isAllowedObdDeveloperCommand = elmDeveloperCommandGuardContext.isAllowedObdDeveloperCommand;
-  check(typeof isAllowedObdDeveloperCommand === "function" && ["ATZ", "03", "07", "0A", "0100", "0101", "06", "090A", "0200", "0205", "010C"].every((command) => isAllowedObdDeveloperCommand(command) === true), "Web Serial command guard must retain the approved read-only ELM and OBD readouts");
+  check(typeof isAllowedObdDeveloperCommand === "function" && ["ATZ", "03", "07", "0A", "0100", "0101", "06", "090A", "0200", "0205", "010C", "0123", "0159"].every((command) => isAllowedObdDeveloperCommand(command) === true), "Web Serial command guard must retain the approved read-only ELM and OBD readouts");
   check(isAllowedObdDeveloperCommand("ATDPN") === true, "Web Serial command guard must allow the read-only ELM protocol-number query");
   check(["04", "08", "10 03", "1101", "1400", "2701", "2EF190", "3101", "012345"].every((command) => isAllowedObdDeveloperCommand(command) === false), "Web Serial command guard must reject clear, control, reset, security, write, routine, and unknown commands");
 }
@@ -21363,6 +21363,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2789");
+  console.log("OBD read-only safety checks: 2790");
   console.log("Errors: 0");
 }
