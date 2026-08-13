@@ -6607,14 +6607,18 @@
     ]);
     const byId = new Map();
     rows.forEach(({ ecuId, ecuName, readoutId, readoutStatus }) => {
-      if (!byId.has(ecuId) && byId.size >= 32) return;
-      const entry = byId.get(ecuId) || { id: ecuId, readoutIds: [], ecuNames: [], readoutStatusValuesById: {} };
+      const comparableAddress = normalizeComparableCanEcuAddress(ecuId);
+      const ecuKey = comparableAddress?.startsWith("18DA")
+        ? `18DA${[comparableAddress.slice(4, 6), comparableAddress.slice(6, 8)].sort().join("")}`
+        : comparableAddress || ecuId;
+      if (!byId.has(ecuKey) && byId.size >= 32) return;
+      const entry = byId.get(ecuKey) || { id: ecuId, readoutIds: [], ecuNames: [], readoutStatusValuesById: {} };
       if (!entry.readoutIds.includes(readoutId)) entry.readoutIds.push(readoutId);
       if (ecuName && !entry.ecuNames.includes(ecuName)) entry.ecuNames.push(ecuName);
       const statusValues = entry.readoutStatusValuesById[readoutId] || [];
       if (!statusValues.includes(readoutStatus)) statusValues.push(readoutStatus);
       entry.readoutStatusValuesById[readoutId] = statusValues;
-      byId.set(ecuId, entry);
+      byId.set(ecuKey, entry);
     });
     const readoutStatusPriority = { reported: 5, negative_response: 4, pending_response: 3, unparsed: 2, no_response: 1, unknown: 0 };
     const ecus = [...byId.values()].map((entry) => {
