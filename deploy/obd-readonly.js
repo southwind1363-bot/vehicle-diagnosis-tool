@@ -15615,6 +15615,10 @@
       const emptyResponseCount = commandCount("emptyResponseCount", "empty_response_count");
       const unrecognizedResponseCount = commandCount("unrecognizedResponseCount", "unrecognized_response_count");
       const transportErrorCount = commandCount("transportErrorCount", "transport_error_count");
+      const responseTimingCount = Math.min(attemptedCommandCount, commandCount("responseTimingCount", "response_timing_count"));
+      const readDuration = (camelKey, snakeKey, maximum) => Math.max(0, Math.min(maximum, Number(attempt[camelKey] ?? attempt[snakeKey] ?? 0) || 0));
+      const totalResponseElapsedMs = readDuration("totalResponseElapsedMs", "total_response_elapsed_ms", 180000);
+      const maxResponseElapsedMs = Math.min(totalResponseElapsedMs, readDuration("maxResponseElapsedMs", "max_response_elapsed_ms", 60000));
       if (!isV2Input && status === "completed" && positiveResponseCount === 0) positiveResponseCount = completedCommandCount;
       if (isV2Input) completedCommandCount = Math.min(completedCommandCount, positiveResponseCount);
       const hasIncompleteEvidence = noDataCount > expectedEmptyCommandCount || negativeResponseCount > 0 || pendingNegativeResponseCount > 0 || emptyResponseCount > 0 || unrecognizedResponseCount > 0;
@@ -15658,6 +15662,12 @@
         unrecognized_response_count: unrecognizedResponseCount,
         transportErrorCount,
         transport_error_count: transportErrorCount,
+        responseTimingCount,
+        response_timing_count: responseTimingCount,
+        totalResponseElapsedMs,
+        total_response_elapsed_ms: totalResponseElapsedMs,
+        maxResponseElapsedMs,
+        max_response_elapsed_ms: maxResponseElapsedMs,
         timedOut: attempt.timedOut === true || attempt.timed_out === true,
         timed_out: attempt.timedOut === true || attempt.timed_out === true,
         readoutCompleted: status === "completed",
@@ -15712,6 +15722,14 @@
       : total("positiveResponseCount", "positive_response_count");
     const noDataCount = total("noDataCount", "no_data_count");
     const expectedEmptyCommandCount = Math.min(noDataCount, total("expectedEmptyCommandCount", "expected_empty_command_count"));
+    const duration = (camelKey, snakeKey, maximum) => attempts.length
+      ? Math.max(0, Math.min(maximum, attempts.reduce((sum, attempt) => sum + (Number(attempt[camelKey] ?? attempt[snakeKey]) || 0), 0)))
+      : Math.max(0, Math.min(maximum, Number(input[camelKey] ?? input[snakeKey] ?? 0) || 0));
+    const responseTimingCount = total("responseTimingCount", "response_timing_count");
+    const totalResponseElapsedMs = duration("totalResponseElapsedMs", "total_response_elapsed_ms", 5400000);
+    const maxResponseElapsedMs = attempts.length
+      ? Math.max(0, ...attempts.map((attempt) => Number(attempt.maxResponseElapsedMs ?? attempt.max_response_elapsed_ms) || 0))
+      : duration("maxResponseElapsedMs", "max_response_elapsed_ms", 60000);
     const latestAttempt = attempts.at(-1) || normalizeAttempt(input.latestAttempt || input.latest_attempt || null);
     return {
       schemaVersion: "web_serial_readout_execution_v2",
@@ -15747,6 +15765,12 @@
       unrecognized_response_count: total("unrecognizedResponseCount", "unrecognized_response_count"),
       transportErrorCount: total("transportErrorCount", "transport_error_count"),
       transport_error_count: total("transportErrorCount", "transport_error_count"),
+      responseTimingCount,
+      response_timing_count: responseTimingCount,
+      totalResponseElapsedMs,
+      total_response_elapsed_ms: totalResponseElapsedMs,
+      maxResponseElapsedMs: Math.min(totalResponseElapsedMs, maxResponseElapsedMs),
+      max_response_elapsed_ms: Math.min(totalResponseElapsedMs, maxResponseElapsedMs),
       latestAttempt,
       latest_attempt: latestAttempt,
       attempts,

@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.52";
+const APP_VERSION = "3.9.53";
 const APP_LAST_UPDATED = "2026-08-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5505,6 +5505,12 @@ function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) 
     ...classifyWebSerialCommandResponse(item?.command, item?.response),
     expectedEmpty: isWebSerialExpectedEmptyResponse(item?.command, item?.response)
   }));
+  const responseElapsedMs = (Array.isArray(commandResponses) ? commandResponses : [])
+    .map((item) => Number(item?.responseElapsedMs))
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  const failedCommandElapsedMs = Number(options?.failedCommandElapsedMs);
+  const totalResponseElapsedMs = responseElapsedMs.reduce((sum, value) => sum + value, 0)
+    + (Number.isFinite(failedCommandElapsedMs) && failedCommandElapsedMs >= 0 ? failedCommandElapsedMs : 0);
   const total = (key) => outcomes.reduce((sum, outcome) => sum + (Number(outcome?.[key]) || 0), 0);
   const stopOutcome = outcomes.find((outcome) => outcome?.stopScope === "scan" || outcome?.stopScope === "attempt") || null;
   const attemptedCommandCount = Math.max(outcomes.length, Math.min(requestedCommandCount, Number(options.attemptedCommandCount) || outcomes.length));
@@ -5537,6 +5543,12 @@ function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) 
     emptyResponseCount: total("emptyResponseCount"),
     unrecognizedResponseCount: total("unrecognizedResponseCount"),
     transportErrorCount,
+    responseTimingCount: responseElapsedMs.length,
+    response_timing_count: responseElapsedMs.length,
+    totalResponseElapsedMs,
+    total_response_elapsed_ms: totalResponseElapsedMs,
+    maxResponseElapsedMs: Math.max(0, ...responseElapsedMs, Number.isFinite(failedCommandElapsedMs) && failedCommandElapsedMs >= 0 ? failedCommandElapsedMs : 0),
+    max_response_elapsed_ms: Math.max(0, ...responseElapsedMs, Number.isFinite(failedCommandElapsedMs) && failedCommandElapsedMs >= 0 ? failedCommandElapsedMs : 0),
     timedOut: options.timedOut === true,
     stopReason: transportErrorCount ? "transport_error" : (stopOutcome?.stopReason || null),
     stopScope: transportErrorCount ? "transport" : (stopOutcome?.stopScope || "none")
@@ -5557,13 +5569,16 @@ async function runObdDeveloperRead(label, commands) {
   const chunks = [];
   const commandResponses = [];
   let attemptedCommandCount = 0;
+  let currentCommandStartedAt = null;
   try {
     obdDevStatus.textContent = `${label}中です。`;
     for (const command of commands) {
       chunks.push(`>${command}`);
       attemptedCommandCount += 1;
+      currentCommandStartedAt = Date.now();
       const response = await sendElmDeveloperCommand(command, 3500);
-      commandResponses.push({ command, response });
+      commandResponses.push({ command, response, responseElapsedMs: Math.max(0, Date.now() - currentCommandStartedAt) });
+      currentCommandStartedAt = null;
       chunks.push(["ATI", "AT@1", "ATDP", "ATDPN"].includes(command) ? "[adapter identity response not retained]" : response);
       const commandOutcome = classifyWebSerialCommandResponse(command, response);
       if (commandOutcome.stopScope === "attempt" || commandOutcome.stopScope === "scan") break;
@@ -5579,7 +5594,8 @@ async function runObdDeveloperRead(label, commands) {
   } catch (error) {
     const message = error?.message || String(error);
     const timedOut = message.startsWith("elm_response_timeout:");
-    const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { timedOut, transportErrorCount: true, attemptedCommandCount });
+    const failedCommandElapsedMs = currentCommandStartedAt === null ? null : Math.max(0, Date.now() - currentCommandStartedAt);
+    const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { timedOut, transportErrorCount: true, attemptedCommandCount, failedCommandElapsedMs });
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
     const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, {
       persistEmptyAttempt: true,
@@ -5655,6 +5671,12 @@ function buildWebSerialReadoutSummary() {
     unrecognized_response_count: total("unrecognizedResponseCount"),
     transportErrorCount: total("transportErrorCount"),
     transport_error_count: total("transportErrorCount"),
+    responseTimingCount: total("responseTimingCount"),
+    response_timing_count: total("responseTimingCount"),
+    totalResponseElapsedMs: total("totalResponseElapsedMs"),
+    total_response_elapsed_ms: total("totalResponseElapsedMs"),
+    maxResponseElapsedMs: Math.max(0, ...attempts.map((item) => Number(item?.maxResponseElapsedMs) || 0)),
+    max_response_elapsed_ms: Math.max(0, ...attempts.map((item) => Number(item?.maxResponseElapsedMs) || 0)),
     latestAttempt,
     latest_attempt: latestAttempt,
     attempts: attempts.map((item) => ({ ...item })),
