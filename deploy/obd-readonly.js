@@ -18548,7 +18548,7 @@
     const explicitTriggerDtcEntries = [...new Map([
       ...triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean),
       ...freezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || [])
-    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}`, item])).values()];
+    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}`, item])).values()];
     const readoutEcuIds = [...new Set([
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
       ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
