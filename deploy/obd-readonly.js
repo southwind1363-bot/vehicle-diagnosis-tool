@@ -6816,6 +6816,10 @@
         .toLowerCase()
         .replace(/[\s-]+/g, "_"))
       .filter(Boolean))].sort();
+    const matchedResponseServices = [...new Set(matchedResponseRows
+      .flatMap((item) => Array.isArray(item?.responseServices) ? item.responseServices : Array.isArray(item?.response_services) ? item.response_services : [])
+      .map((service) => String(service || "").trim().toUpperCase())
+      .filter((service) => /^[0-9A-F]{2}$/.test(service)))].sort();
     const matchedNegativeResponseCount = matchedResponseRows.reduce((total, item) => {
       const count = Number(item?.negativeResponseCount ?? item?.negative_response_count ?? 0);
       return total + (Number.isFinite(count) ? Math.max(0, Math.round(count)) : 0);
@@ -6855,6 +6859,8 @@
       matched_response_evidence: matchedResponseEvidence,
       matchedResponseStatuses,
       matched_response_statuses: matchedResponseStatuses,
+      matchedResponseServices,
+      matched_response_services: matchedResponseServices,
       matchedNegativeResponseCount,
       matched_negative_response_count: matchedNegativeResponseCount,
       matchedPendingNegativeResponseCount,
@@ -7690,7 +7696,7 @@
         ecuResponses.push({ address: ecu.address, ecu_name: ecu.ecu_name, status: "reported", services: [service], response_services: responseService ? [responseService] : [] });
       });
     };
-    const addEcuInfoOutcomes = (snapshot, service) => {
+    const addEcuInfoOutcomes = (snapshot, service, responseService = null) => {
       const outcomes = Array.isArray(snapshot?.ecuInfoEcuSnapshots)
         ? snapshot.ecuInfoEcuSnapshots
         : Array.isArray(snapshot?.ecu_info_ecu_snapshots)
@@ -7720,7 +7726,7 @@
         if (!response.ecu_name && name) response.ecu_name = name;
         response.services = [...new Set([...(response.services || []), isNegativeResponse ? negativeService : service])];
         if (isReported) {
-          response.response_services = [...new Set([...(response.response_services || []), service])];
+          response.response_services = [...new Set([...(response.response_services || []), responseService || service])];
           response.status = response.status === "no_response" ? "reported" : response.status || "reported";
         }
         if (isNegativeResponse) {
@@ -7740,7 +7746,7 @@
     if (ecuInfoResponseFormat) {
       const ecuInfoService = ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "22" : "09";
       addReportedReadout(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"], ecuInfoService, ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "62" : "49");
-      addEcuInfoOutcomes(ecuInfoSnapshot, ecuInfoService);
+      addEcuInfoOutcomes(ecuInfoSnapshot, ecuInfoService, ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "62" : "49");
     }
     addReportedReadout(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"], "01");
     const capturedSnapshot = [livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, onboardMonitorSnapshot, ecuInfoSnapshot, supportedPidMatrix]
