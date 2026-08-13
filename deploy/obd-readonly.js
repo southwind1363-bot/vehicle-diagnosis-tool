@@ -18943,7 +18943,7 @@
       const pendingCount = Math.min(negativeResponseCount, Math.max(0, hasExplicitPendingNegativeResponseCount ? pendingNegativeResponseCount : pendingLabelCount));
       const status = negativeResponseCount > 0
         && !responseServices.some((service) => service !== "7F")
-        && ["responded", "response", "ok", "success", "available", "positive", "negative_response"].includes(normalizedReportedStatus)
+        && ["reported", "responded", "response", "ok", "success", "available", "positive", "negative_response"].includes(normalizedReportedStatus)
         ? pendingCount === negativeResponseCount ? "pending_response" : "negative_response"
         : reportedStatus;
       const responseTimeMs = Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null;

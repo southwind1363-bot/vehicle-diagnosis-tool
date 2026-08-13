@@ -5676,7 +5676,13 @@ const ecuResponseSummaryPendingLabelAliases = obd.normalizeEcuResponseSummary({
     { address: "7ED", status: "negative_response", negative_response_count: 1, pending_negative_response_count: 0, negative_response_labels: ["response_pending"] }
   ]
 });
-check(ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7EB" && item.status === "pending_response" && item.pendingNegativeResponseCount === 1 && item.pending_negative_response_count === 1) && ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7EC" && item.status === "negative_response" && item.pendingNegativeResponseCount === 1 && item.negativeResponseCount === 2) && ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7ED" && item.status === "negative_response" && item.pendingNegativeResponseCount === 0), "ECU response summaries must infer UDS NRC 78 labels conservatively while respecting explicit pending counts");
+const ecuResponseSummaryReportedPendingRows = obd.normalizeEcuResponseSummary({
+  ecus: [
+    { address: "7EE", status: "reported", negative_response_count: 1, pending_negative_response_count: 1, negative_response_labels: ["UDS NRC 78"] },
+    { address: "7EF", status: "reported", negative_response_count: 1, pending_negative_response_count: 1, response_services: ["62"], negative_response_labels: ["UDS NRC 78"] }
+  ]
+});
+check(ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7EB" && item.status === "pending_response" && item.pendingNegativeResponseCount === 1 && item.pending_negative_response_count === 1) && ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7EC" && item.status === "negative_response" && item.pendingNegativeResponseCount === 1 && item.negativeResponseCount === 2) && ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7ED" && item.status === "negative_response" && item.pendingNegativeResponseCount === 0) && ecuResponseSummaryReportedPendingRows.ecus?.some((item) => item.address === "7EE" && item.status === "pending_response" && item.pendingNegativeResponseCount === 1) && ecuResponseSummaryReportedPendingRows.ecus?.some((item) => item.address === "7EF" && item.status === "reported" && item.responseServices?.includes("62") && item.pendingNegativeResponseCount === 1), "ECU response summaries must infer UDS NRC 78 labels conservatively while respecting explicit pending counts");
 const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_pending_dtc",
   ok: true,
