@@ -1712,8 +1712,8 @@ const mergeDtcSnapshotsFunctionChecks = () => {
     const functionBody = mergeDtcSnapshotsFunctionSource[0];
     check(functionBody.includes('.filter((snapshot) => snapshot && Array.isArray(snapshot.dtcs))'), "mergeDtcSnapshots should ignore missing snapshots and snapshots without DTC rows");
     check(functionBody.includes('source: row.source || snapshot.source || "diagnostic_core"') && functionBody.includes('capturedAt, captured_at: capturedAt'), "mergeDtcSnapshots should preserve row source and capture provenance with snapshot/default fallback");
-    check(functionBody.includes('const typedCodeKeys = new Set(rows') && functionBody.includes('const normalizedRows = rows.filter((row) => {') && functionBody.includes('return !["", "unknown"].includes(status) || !typedCodeKeys.has(key);'), "mergeDtcSnapshots should remove unscoped unknown duplicates when the same code has a reported status");
-    check(functionBody.includes('const normalizeDtcMergeEcu = (value) => {') && functionBody.includes('const compactCanAddress = sourceEcu.replace(/^0x/i, "");') && functionBody.includes('const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;') && functionBody.includes('`${normalizeDtcMergeEcu(ecu)}::${intent || responseStatus}`'), "mergeDtcSnapshots should deduplicate DTCs and ECU responses by normalized CAN identity");
+    check(functionBody.includes('const typedCodeFormatsByKey = new Map();') && functionBody.includes('const normalizedRows = rows.filter((row) => {') && functionBody.includes('(!codeFormat || typedFormats.has(codeFormat))'), "mergeDtcSnapshots should remove legacy untyped duplicates while retaining explicit DTC formats");
+    check(functionBody.includes('const normalizeDtcMergeEcu = (value) => {') && functionBody.includes('const normalizeDtcMergeCodeFormat = (row) =>') && functionBody.includes('const compactCanAddress = sourceEcu.replace(/^0x/i, "");') && functionBody.includes('const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;') && functionBody.includes('`${normalizeDtcMergeEcu(ecu)}::${intent || responseStatus}`'), "mergeDtcSnapshots should deduplicate DTCs by format and normalized CAN identity");
     check(functionBody.includes('if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);'), "mergeDtcSnapshots should retain the first valid row for each code/subcode/ECU/status pair");
     check(functionBody.includes('source: "merged_dtc_snapshots"'), "mergeDtcSnapshots should mark merged DTC source explicitly");
     check(functionBody.includes('const readSnapshotCapturedAtValues = (snapshot) =>') && functionBody.includes('capturedAt: capturedAtValues.length === 1 ? capturedAtValues[0] : null') && functionBody.includes('captureTimeUncertain: capturedAtValues.length > 1') && functionBody.includes('const readSnapshotProtocolValues = (snapshot) =>'), "mergeDtcSnapshots should preserve all valid capture times while refusing to label mixed captures as one snapshot");
@@ -20187,6 +20187,12 @@ const sameDtcAcrossEcusMerge = obd.mergeDtcSnapshots(
 );
 const sameDtcAcrossEcusRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtcSnapshot: sameDtcAcrossEcusMerge })) }));
 check(sameDtcAcrossEcusMerge.codeCount === 1 && sameDtcAcrossEcusMerge.dtcCount === 2 && sameDtcAcrossEcusMerge.dtcs.every((item) => item.code === "P0300" && item.status === "stored") && new Set(sameDtcAcrossEcusMerge.dtcs.map((item) => item.ecu)).size === 2 && sameDtcAcrossEcusRoundTrip?.dtcSnapshot?.dtcs?.filter((item) => item.code === "P0300" && item.status === "stored").length === 2 && new Set(sameDtcAcrossEcusRoundTrip?.dtcSnapshot?.dtcs?.filter((item) => item.status === "stored").map((item) => item.ecu)).size === 2 && sameDtcAcrossEcusRoundTrip?.vehicleCommandEnabled === false, "DTC merge did not retain the same stored code from separate ECU responses");
+const sameCodeDifferentFormatMerge = obd.mergeDtcSnapshots(
+  obd.normalizeDtcSnapshot({ dtcs: [{ code: "123456", code_format: "uds_3byte", status: "stored", ecu: "7E8" }] }),
+  obd.normalizeDtcSnapshot({ dtcs: [{ code: "123456", code_format: "manufacturer_specific", manufacturer_specific: true, status: "stored", ecu: "7E8" }] })
+);
+const sameCodeDifferentFormatMergeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtcSnapshot: sameCodeDifferentFormatMerge }))));
+check(sameCodeDifferentFormatMerge.codeCount === 1 && sameCodeDifferentFormatMerge.dtcCount === 2 && sameCodeDifferentFormatMerge.dtcs?.some((item) => item.codeFormat === "uds_3byte" && item.ecu === "7E8") && sameCodeDifferentFormatMerge.dtcs?.some((item) => item.codeFormat === "manufacturer_specific" && item.manufacturerSpecific === true && item.ecu === "7E8") && sameCodeDifferentFormatMergeRoundTrip?.dtcSnapshot?.dtcCount === 2 && sameCodeDifferentFormatMergeRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.code_format === "manufacturer_specific") && sameCodeDifferentFormatMergeRoundTrip?.vehicleCommandEnabled === false && sameCodeDifferentFormatMergeRoundTrip?.wouldTransmit === false, "Merged DTC snapshots must retain same-text UDS and manufacturer-specific codes as separate ECU-scoped records");
 const sameDtcCaseVariantEcuMerge = obd.mergeDtcSnapshots(
   obd.normalizeDtcSnapshot({ dtcs: [{ code: "P0300", status: "stored", ecu: "0x7e8" }] }),
   obd.normalizeDtcSnapshot({ dtcs: [{ code: "P0300", status: "stored", ecu: "7E8" }] })
@@ -21351,6 +21357,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2786");
+  console.log("OBD read-only safety checks: 2787");
   console.log("Errors: 0");
 }

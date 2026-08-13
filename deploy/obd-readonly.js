@@ -20453,6 +20453,7 @@
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
       return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
     };
+    const normalizeDtcMergeCodeFormat = (row) => String(row?.codeFormat || row?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const captureContexts = snapshots.flatMap(readSnapshotCaptureContexts)
       .filter((context) => context.capturedAt || context.protocol);
     const capturedAtValues = [...new Set(captureContexts.map((context) => context.capturedAt).filter(Boolean))];
@@ -20473,18 +20474,25 @@
           ...(!row.protocol && !row.obd_protocol && protocol ? { protocol } : {})
         }));
       });
-    const typedCodeKeys = new Set(rows
+    const typedCodeFormatsByKey = new Map();
+    rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
-      .map((row) => `${row.code || ""}::${row.subcode || row.sub_code || ""}`));
+      .forEach((row) => {
+        const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}`;
+        if (!typedCodeFormatsByKey.has(key)) typedCodeFormatsByKey.set(key, new Set());
+        typedCodeFormatsByKey.get(key).add(normalizeDtcMergeCodeFormat(row));
+      });
     const normalizedRows = rows.filter((row) => {
       const status = String(row.status || "unknown").trim().toLowerCase();
       const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}`;
-      return !["", "unknown"].includes(status) || !typedCodeKeys.has(key);
+      const codeFormat = normalizeDtcMergeCodeFormat(row);
+      const typedFormats = typedCodeFormatsByKey.get(key);
+      return !["", "unknown"].includes(status) || !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
     });
     const byCodeAndStatus = new Map();
     normalizedRows.forEach((row) => {
       const ecu = row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "";
-      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;
+      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;
       if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
     });
     const mergedRows = [...byCodeAndStatus.values()];
