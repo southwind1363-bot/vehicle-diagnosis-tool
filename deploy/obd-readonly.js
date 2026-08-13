@@ -7697,9 +7697,33 @@
       if (!current.ecu_name && name) current.ecu_name = name;
       sourceEcusByIdentity.set(identity, current);
     };
-    const collectSnapshotSourceEcus = (snapshot = {}, seenSnapshots = new WeakSet()) => {
+    const isReportedScopedSnapshot = (snapshot = {}) => {
+      const explicitStatus = [
+        snapshot.readoutStatus,
+        snapshot.readout_status,
+        snapshot.freezeFrameReadoutStatus,
+        snapshot.freeze_frame_readout_status,
+        snapshot.readinessReadoutStatus,
+        snapshot.readiness_readout_status,
+        snapshot.supportedPidReadoutStatus,
+        snapshot.supported_pid_readout_status
+      ].find((value) => value !== undefined && value !== null);
+      if (explicitStatus !== undefined) return String(explicitStatus).trim().toLowerCase() === "reported";
+      return [
+        snapshot.monitorValues,
+        snapshot.monitor_values,
+        snapshot.values,
+        snapshot.items,
+        snapshot.tests,
+        snapshot.monitors,
+        snapshot.supportedPids,
+        snapshot.supported_pids
+      ].some((value) => Array.isArray(value) && value.length > 0);
+    };
+    const collectSnapshotSourceEcus = (snapshot = {}, seenSnapshots = new WeakSet(), scoped = false) => {
       if (!snapshot || typeof snapshot !== "object" || seenSnapshots.has(snapshot)) return;
       seenSnapshots.add(snapshot);
+      if (scoped && !isReportedScopedSnapshot(snapshot)) return;
       rememberEcu(snapshot.sourceEcu || snapshot.source_ecu || snapshot.ecu || snapshot.address, snapshot.sourceEcuName || snapshot.source_ecu_name || snapshot.ecuName || snapshot.ecu_name || null);
       [
         snapshot.monitorValues,
@@ -7707,9 +7731,7 @@
         snapshot.values,
         snapshot.items,
         snapshot.tests,
-        snapshot.monitors,
-        snapshot.supportedPidEcuSnapshots,
-        snapshot.supported_pid_ecu_snapshots
+        snapshot.monitors
       ].filter(Array.isArray).flat().forEach((row) => {
         if (!row || typeof row !== "object") return;
         rememberEcu(row.sourceEcu || row.source_ecu || row.ecu || row.address || row.ecu_id || row.ecuId, row.sourceEcuName || row.source_ecu_name || row.ecuName || row.ecu_name || null);
@@ -7721,7 +7743,7 @@
         snapshot.readiness_ecu_snapshots,
         snapshot.supportedPidEcuSnapshots,
         snapshot.supported_pid_ecu_snapshots
-      ].filter(Array.isArray).flat().forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, seenSnapshots));
+      ].filter(Array.isArray).flat().forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, seenSnapshots, true));
     };
     const addReportedReadout = (snapshot, statusKeys, service, responseService = null) => {
       const status = statusKeys.map((key) => snapshot?.[key]).find((value) => value !== undefined && value !== null) || "unknown";
