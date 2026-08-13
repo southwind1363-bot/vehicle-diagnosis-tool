@@ -33,6 +33,7 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         )
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
         XCTAssertTrue(json.contains("\"schema_version\":\"native_connector_contract_v1\""))
+        XCTAssertTrue(json.contains("\"adapter_transport\":\"ble_gatt\""))
         XCTAssertTrue(json.contains("\"would_transmit\":false"))
         XCTAssertTrue(json.contains("\"readout_id\":\"live_pid_snapshot\""))
         XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))

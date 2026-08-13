@@ -94,6 +94,7 @@ public final class NativeConnectorScanArchiveBuilder {
         guard envelope.schemaVersion == "native_connector_contract_v1",
               envelope.platform == "ios",
               envelope.interfaceID == "user-vci-elm327",
+              envelope.adapterTransport == "ble_gatt",
               Self.allowedIntents.contains(envelope.intent),
               !envelope.blocked,
               !envelope.wouldTransmit,

@@ -47,6 +47,7 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
     public let schemaVersion: String
     public let interfaceID: String
     public let platform: String
+    public let adapterTransport: String? = nil
     public let intent: String
     public let capturedAt: String
     public let scanID: UUID
@@ -66,6 +67,7 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
         case schemaVersion = "schema_version"
         case interfaceID = "interface_id"
         case platform, intent
+        case adapterTransport = "adapter_transport"
         case capturedAt = "captured_at"
         case scanID = "scan_id"
         case connectionID = "connection_id"
@@ -342,6 +344,7 @@ public enum NativeConnectorEnvelopeFactory {
             schemaVersion: "native_connector_contract_v1",
             interfaceID: "user-vci-elm327",
             platform: "ios",
+            adapterTransport: "ble_gatt",
             intent: intent,
             capturedAt: timestampFormatter.string(from: Date()),
             scanID: context.scanID,
