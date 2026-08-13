@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent": 75,
-    "current_basis": "P系2942件、U系567件、B系69件、C系45件、個別DTC定義3693件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+  "current_basis": "P系2942件、U系568件、B系69件、C系45件、個別DTC定義3694件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "GM Customer Satisfaction Program 18316の2018 Express/Savana RPO JH9 C0050-0FをVINキャンペーン・ブレーキ仕様・EBCM・read-only適用確認つきで追加",
@@ -27,6 +27,7 @@
         "Mazda 09-011-26のCX-90 B10A3-86を年式・生産日・AFS適用確認つきで追加",
         "Mazda 09-041/22のMX-5 U3000-54を年式・BSM交換履歴・適用確認つきで追加",
         "Ford 26-2302のExplorer/Police Interceptor Utility/Aviator PSCM U3008-1B/U3009-1Bを年式・Aviator生産日・操舵安全条件つきで追加"
+        ,"Ford SSM 54101の2025 Ranger/Ranger Raptor ABS U3012-68をエンジン・生産日・制動警告・read-only適用確認つきで追加"
         ,"Ford 20-2046のF-150 ABS C0051-54/C0051-64をエンジン・ホイールベース・トリム・牽引仕様・工場/生産日適用確認つきで追加"
         ,"Ford 25-2398のMustang Mach-E IPMA B1578-78を年式・生産日・後方カメラ適用・ADAS/ブレーキ支援安全条件つきで追加"
         ,"Ford 25-2124のF-150 Lightning SOBDMB/SOBDMC P2797を年式・生産日・EV安全条件つきで追加"

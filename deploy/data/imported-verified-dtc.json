@@ -3268,5 +3268,27 @@
     "last_verified_date": "2026-08-11",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-u3012-68-ford-ranger-2025-abs",
+    "code": "U3012",
+    "subcode": "68",
+    "title": "ABS DTC U3012:68 reported with soft-brake-pedal warning context",
+    "system": "Chassis / ABS module CAN communication context (source-specific)",
+    "applicability_note": "Ford SSM 54101 documents U3012:68 stored in the ABS module only for 2025 Ranger vehicles with a 2.3L or 2.7L EcoBoost engine built on or before June 12, 2025, and 2025 Ranger Raptor vehicles with a 3.0L EcoBoost engine built on or before June 18, 2025. The source describes an ABS warning, possible soft brake pedal after startup, and brake-related IPC messages. Confirm VIN, market, exact model, engine, build date, reporting ABS module, DTC subcode, warning state, and current Ford service information before using this source-specific context.",
+    "vehicle_filter": {"makers": ["Ford"], "model_year_scopes": [{"models": ["Ranger"], "year_from": 2025, "year_to": 2025}, {"models": ["Ranger Raptor"], "year_from": 2025, "year_to": 2025}], "ecus": ["ABS"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting ABS-module details, freeze-frame/snapshot data, ABS and brake warning state, soft-pedal timing after startup, VIN, model, engine, build-date evidence, and available all-module scan results before diagnosis.", "Do not clear DTCs, command ABS, bleed brakes, disconnect brake components, reprogram the ABS module, road-test to reproduce the concern, or start active tests from this tool; first confirm the documented Ford model, engine, build date, reporting ABS module, subcode, warning state, and SSM 54101 applicability.", "Use current Ford service information and qualified brake-system diagnostic procedures after applicability is confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to another Ford model, model year, engine, build date, ABS module, or U3012 DTC without subcode 68.", "Do not infer an ABS module, CAN network, brake hydraulic component, or software failure from U3012:68 alone."],
+    "required_tools": ["Compatible scan tool", "Ford service information", "Ford Diagnosis and Repair System where applicable", "Qualified brake-system diagnostic equipment"],
+    "safety_notes": ["Brake warnings and a soft pedal can reduce vehicle-control performance and create collision risk. Do not clear, command, bleed, reprogram, disconnect, or road-test related systems without Ford procedures, correct equipment, qualified personnel, a safe work area, stable power support, and a recovery plan."],
+    "confidence": "Ford SSM 54101 source-specific U3012:68 ABS context; VIN, market, 2025 Ranger/Ranger Raptor model, engine, build date, reporting ABS module, subcode, warning state, and current Ford procedure confirmation required.",
+    "source": "Ford SSM 54101 / NHTSA MC-11021703",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11021703-0001.pdf",
+    "source_date": "2025-08-01",
+    "last_verified_date": "2026-08-13",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
