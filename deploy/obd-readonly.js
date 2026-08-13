@@ -7568,27 +7568,40 @@
     };
   }
 
-  function getDtcSnapshotResponseServices(snapshot = {}, row = {}) {
-    const intent = String(row?.intent || snapshot?.intent || "").trim();
-    const intentService = {
-      read_stored_dtc: "03",
-      read_pending_dtc: "07",
-      read_permanent_dtc: "0A"
-    }[intent];
-    if (intentService) return [intentService];
+  function getDtcSnapshotRequestServices(snapshot = {}, row = {}) {
     const responseFormats = [
       snapshot?.dtcResponseFormat,
       snapshot?.dtc_response_format,
       ...(Array.isArray(snapshot?.dtcResponseFormats) ? snapshot.dtcResponseFormats : []),
       ...(Array.isArray(snapshot?.dtc_response_formats) ? snapshot.dtc_response_formats : [])
     ].filter(Boolean);
-    const formatServices = {
+    const requestServiceByFormat = {
       obd_mode03: "03",
       obd_mode07: "07",
       obd_mode0a: "0A",
       uds_read_dtc_information: "19"
     };
-    return [...new Set(responseFormats.map((format) => formatServices[format]).filter(Boolean))];
+    const requestServices = [...new Set(responseFormats.map((format) => requestServiceByFormat[format]).filter(Boolean))];
+    if (requestServices.length) return requestServices;
+    const intent = String(row?.intent || snapshot?.intent || "").trim();
+    const intentService = {
+      read_stored_dtc: "03",
+      read_pending_dtc: "07",
+      read_permanent_dtc: "0A"
+    }[intent];
+    return intentService ? [intentService] : [];
+  }
+
+  function getDtcSnapshotPositiveResponseServices(snapshot = {}, row = {}) {
+    const responseByRequestService = {
+      "03": "43",
+      "07": "47",
+      "0A": "4A",
+      "19": "59"
+    };
+    return [...new Set(getDtcSnapshotRequestServices(snapshot, row)
+      .map((service) => responseByRequestService[service])
+      .filter(Boolean))];
   }
 
   function buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot = {}, source = "diagnostic_core", fallbackProtocol = null) {
@@ -7632,7 +7645,8 @@
         ecu_name: row.ecu_name || row.ecuName || null,
         status: row.status || "unknown",
         dtc_count: Number.isInteger(row.codeCount) ? row.codeCount : Number.isInteger(row.code_count) ? row.code_count : null,
-        services: getDtcSnapshotResponseServices(dtcSnapshot, row)
+        services: getDtcSnapshotRequestServices(dtcSnapshot, row),
+        response_services: getDtcSnapshotPositiveResponseServices(dtcSnapshot, row)
       }))
     };
   }
