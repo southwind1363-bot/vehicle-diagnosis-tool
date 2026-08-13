@@ -18974,6 +18974,9 @@
     const normalizeEcuSummaryIdentity = (value) => {
       const sourceEcu = String(value || "").trim();
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
+      if (/^18DA[0-9A-F]{4}$/i.test(compactCanAddress)) {
+        return `18DA${[compactCanAddress.slice(4, 6), compactCanAddress.slice(6, 8)].sort().join("")}`;
+      }
       return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
     };
     const ecus = [...new Map(rawEcus.map((row) => {
@@ -18985,6 +18988,7 @@
         services: [...row.services].sort(),
         responseServices: [...row.responseServices].sort(),
         negativeResponseCount: row.negativeResponseCount,
+        pendingNegativeResponseCount: row.pendingNegativeResponseCount,
         negativeRequestedServices: [...row.negativeRequestedServices].sort(),
         negativeResponseLabels: [...row.negativeResponseLabels].sort(),
         responseTimeMs: row.responseTimeMs

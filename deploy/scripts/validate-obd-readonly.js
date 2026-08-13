@@ -5656,7 +5656,19 @@ const ecuResponseSummaryDistinctCanRows = obd.normalizeEcuResponseSummary({
     { address: "7E8", status: "ok", dtc_count: 1, response_count: 2, services: ["07"], response_time_ms: 45 }
   ]
 });
-check(ecuResponseSummaryEquivalentCanRows.ecuCount === 1 && ecuResponseSummaryEquivalentCanRows.totalResponseCount === 2 && ecuResponseSummaryEquivalentCanRows.ecus?.[0]?.address === "7E8" && ecuResponseSummaryDistinctCanRows.ecuCount === 2 && ecuResponseSummaryDistinctCanRows.totalResponseCount === 4, "ECU response summaries did not collapse only fully equivalent CAN address aliases");
+const ecuResponseSummaryEquivalentPairedUdsRows = obd.normalizeEcuResponseSummary({
+  ecus: [
+    { address: "18DAF110", status: "reported", response_count: 2, response_services: ["62"] },
+    { address: "18DA10F1", status: "reported", response_count: 2, response_services: ["62"] }
+  ]
+});
+const ecuResponseSummaryDistinctPairedUdsRows = obd.normalizeEcuResponseSummary({
+  ecus: [
+    { address: "18DAF110", status: "reported", response_count: 2, response_services: ["62"] },
+    { address: "18DA10F1", status: "pending_response", negative_response_count: 1, pending_negative_response_count: 1, negative_response_labels: ["UDS NRC 78"] }
+  ]
+});
+check(ecuResponseSummaryEquivalentCanRows.ecuCount === 1 && ecuResponseSummaryEquivalentCanRows.totalResponseCount === 2 && ecuResponseSummaryEquivalentCanRows.ecus?.[0]?.address === "7E8" && ecuResponseSummaryDistinctCanRows.ecuCount === 2 && ecuResponseSummaryDistinctCanRows.totalResponseCount === 4 && ecuResponseSummaryEquivalentPairedUdsRows.ecuCount === 1 && ecuResponseSummaryEquivalentPairedUdsRows.totalResponseCount === 2 && ecuResponseSummaryEquivalentPairedUdsRows.ecus?.[0]?.address === "18DA10F1" && ecuResponseSummaryDistinctPairedUdsRows.ecuCount === 2 && ecuResponseSummaryDistinctPairedUdsRows.totalPendingNegativeResponseCount === 1, "ECU response summaries did not collapse only fully equivalent CAN address aliases");
 const ecuResponseSummaryPendingLabelAliases = obd.normalizeEcuResponseSummary({
   ecus: [
     { address: "7EB", status: "negative_response", negative_response_count: 1, negative_response_labels: ["UDS NRC 78"] },
