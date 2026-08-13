@@ -6536,6 +6536,21 @@
     supportedPidMatrix = {}
   } = {}) {
     const rows = [];
+    // Failed bridge responses may retain diagnostic rows, but they are not ECU observation evidence.
+    const readableDtcSnapshot = isReadableDiagnosticSnapshot(dtcSnapshot, ["dtcReadoutStatus", "dtc_readout_status"]) ? dtcSnapshot : {};
+    const readableLivePidSnapshot = isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot : {};
+    const readableFreezeFrameSnapshot = isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot : {};
+    const readableReadinessSnapshot = isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? readinessSnapshot : {};
+    const readableEcuInfoSnapshot = isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? ecuInfoSnapshot : {};
+    const readableOnboardMonitorSnapshot = isReadableDiagnosticSnapshot(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]) ? onboardMonitorSnapshot : {};
+    const readableSupportedPidMatrix = isReadableDiagnosticSnapshot(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"]) ? supportedPidMatrix : {};
+    dtcSnapshot = readableDtcSnapshot;
+    livePidSnapshot = readableLivePidSnapshot;
+    freezeFrameSnapshot = readableFreezeFrameSnapshot;
+    readinessSnapshot = readableReadinessSnapshot;
+    ecuInfoSnapshot = readableEcuInfoSnapshot;
+    onboardMonitorSnapshot = readableOnboardMonitorSnapshot;
+    supportedPidMatrix = readableSupportedPidMatrix;
     const normalizeObservedReadoutStatus = (value) => {
       const status = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
       if (status === "pending_response") return "pending_response";
@@ -6762,6 +6777,14 @@
     supportedPidMatrix = {}
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    // Retained failed payload rows must never satisfy a vehicle/ECU applicability match.
+    dtcSnapshot = isReadableDiagnosticSnapshot(dtcSnapshot, ["dtcReadoutStatus", "dtc_readout_status"]) ? dtcSnapshot : {};
+    livePidSnapshot = isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot : {};
+    freezeFrameSnapshot = isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot : {};
+    readinessSnapshot = isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? readinessSnapshot : {};
+    ecuInfoSnapshot = isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? ecuInfoSnapshot : {};
+    onboardMonitorSnapshot = isReadableDiagnosticSnapshot(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]) ? onboardMonitorSnapshot : {};
+    supportedPidMatrix = isReadableDiagnosticSnapshot(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"]) ? supportedPidMatrix : {};
     const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
     const hasExplicitPositiveReportedResponse = (row) => {
       const status = String(row?.status || row?.responseStatus || row?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");

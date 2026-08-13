@@ -17076,6 +17076,18 @@ const scanSessionApplicabilityDiagnosticAddressAlias = obd.buildDiagnosticScanSe
 check(scanSessionApplicabilityDiagnosticAddressAlias.vehicleApplicability?.ecuAddress === "0x7E8" && scanSessionApplicabilityDiagnosticAddressAlias.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched", "Diagnostic address applicability aliases should normalize into a matched ECU review summary");
 const applicabilityDiagnosticAddressAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionApplicabilityDiagnosticAddressAlias) }));
 check(applicabilityDiagnosticAddressAliasRoundTrip?.vehicleApplicability?.ecu_address === "0x7E8" && applicabilityDiagnosticAddressAliasRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && applicabilityDiagnosticAddressAliasRoundTrip?.vehicleCommandEnabled === false, "Diagnostic address applicability aliases were not retained through read-only bridge export and JSON import");
+const blockedApplicabilityReadoutSession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { ecu_address: "7E8" },
+  dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ blocked: true, data: { source_ecu: "7E8", dtcs: [{ code: "P0300" }] } }),
+  live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ blocked: true, data: { source_ecu: "7E8", values: [{ pid: "0C", value: 800 }] } }),
+  freeze_frame_snapshot: obd.normalizeBridgeFreezeFrameSnapshot({ blocked: true, data: { source_ecu: "7E8", values: [{ pid: "0C", value: 800 }] } }),
+  readiness_snapshot: obd.normalizeBridgeReadinessSnapshot({ blocked: true, data: { source_ecu: "7E8", readiness_status_byte_b: 0x07, readiness_status_byte_c: 0x22, readiness_status_byte_d: 0x00 } }),
+  ecu_info_snapshot: obd.normalizeBridgeEcuInfoSnapshot({ blocked: true, data: { source_ecu: "7E8", items: [{ id: "calibration_id", value: "ECM-CAL-01" }] } }),
+  onboard_monitor_snapshot: obd.normalizeBridgeOnboardMonitorSnapshot({ blocked: true, data: { source_ecu: "7E8", tests: [{ test_id: "01", component_id: "02", value: 1 }] } }),
+  supported_pid_matrix: obd.normalizeBridgeSupportedPidSnapshot({ blocked: true, data: { source_ecu: "7E8", supported_pids: ["0C"] } })
+});
+const blockedApplicabilityReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(blockedApplicabilityReadoutSession)));
+check(blockedApplicabilityReadoutSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_observed" && blockedApplicabilityReadoutSession.coreSessionStatus?.observedEcuSummary?.ecuCount === 0 && blockedApplicabilityReadoutSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.length === 0 && [blockedApplicabilityReadoutSession.dtcSnapshot?.dtcReadoutStatus, blockedApplicabilityReadoutSession.livePidSnapshot?.livePidReadoutStatus, blockedApplicabilityReadoutSession.freezeFrameSnapshot?.freezeFrameReadoutStatus, blockedApplicabilityReadoutSession.readinessSnapshot?.readinessReadoutStatus, blockedApplicabilityReadoutSession.ecuInfoSnapshot?.ecuInfoReadoutStatus, blockedApplicabilityReadoutSession.onboardMonitorSnapshot?.onboardMonitorReadoutStatus, blockedApplicabilityReadoutSession.supportedPidMatrix?.supportedPidReadoutStatus].every((status) => status === "blocked") && blockedApplicabilityReadoutRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_observed" && blockedApplicabilityReadoutRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuCount === 0 && [blockedApplicabilityReadoutSession, blockedApplicabilityReadoutRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Blocked readout rows must not be used as observed ECU or applicability-match evidence");
 const scanSessionApplicabilityPartial = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-partial",
   vehicle_profile: { maker: "Toyota", model: "Prius" },
@@ -21281,6 +21293,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2774");
+  console.log("OBD read-only safety checks: 2775");
   console.log("Errors: 0");
 }
