@@ -229,7 +229,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.40";
+const APP_VERSION = "3.9.41";
 const APP_LAST_UPDATED = "2026-08-12";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9555,6 +9555,19 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
     matchedFreezeFrame.className = "obd-dtc-check";
     matchedFreezeFrame.textContent = `フリーズフレーム: DTC / サブコード / ECU 一致確認済み${frames.length ? ` (${frames.join(", ")})` : ""}`;
     wrapper.appendChild(matchedFreezeFrame);
+    const udsSnapshotEvidence = [...new Set(freezeFrameMatches
+      .map((item) => {
+        const recordType = item?.snapshotRecordType || item?.snapshot_record_type || null;
+        const statusByte = item?.statusByte || item?.status_byte || null;
+        return recordType || statusByte ? `${recordType || "record"}${statusByte ? ` / status byte 0x${statusByte}` : ""}` : null;
+      })
+      .filter(Boolean))];
+    if (udsSnapshotEvidence.length) {
+      const udsSnapshot = document.createElement("p");
+      udsSnapshot.className = "obd-dtc-check";
+      udsSnapshot.textContent = `UDSスナップショット読取値: ${udsSnapshotEvidence.join(" / ")} (reported)`;
+      wrapper.appendChild(udsSnapshot);
+    }
   } else if (dtc.freezeFrameAvailable === true || dtc.freeze_frame_available === true) {
     const reportedFreezeFrame = document.createElement("p");
     reportedFreezeFrame.className = "obd-dtc-check";
