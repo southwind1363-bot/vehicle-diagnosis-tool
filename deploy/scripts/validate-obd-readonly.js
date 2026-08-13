@@ -3271,6 +3271,9 @@ const webSerialAllowedCommand = webSerialReadOnlyAllowlistSource && webSerialAll
   ? new Function(`${webSerialReadOnlyAllowlistSource}\n${webSerialAllowedCommandSource}; return isAllowedObdDeveloperCommand;`)()
   : null;
 check(webSerialAllowedCommand?.("03") === true && webSerialAllowedCommand?.("010C") === true && webSerialAllowedCommand?.("020A") === true && webSerialAllowedCommand?.("020C") === true && webSerialAllowedCommand?.("021F") === true && webSerialAllowedCommand?.("0223") === true && webSerialAllowedCommand?.("0259") === true && webSerialAllowedCommand?.("0904") === true && webSerialAllowedCommand?.("04") === false && webSerialAllowedCommand?.("1101") === false && !webSerialReadOnlyAllowlistSource.includes('obdDevSession.'), "Web Serial writes must use an immutable read-only command allowlist and reject Mode 04 or arbitrary service commands");
+const webSerialDefaultLiveCommands = ["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"];
+const webSerialDefaultFreezeFrameCommands = ["020C", "0205", "020F", "020D", "020E", "0204", "0203", "020A", "020B", "0223", "0259", "0210", "0211", "0206", "0207", "021F", "0242"];
+check([...webSerialDefaultLiveCommands, ...webSerialDefaultFreezeFrameCommands].every((command) => webSerialAllowedCommand?.(command) === true), "Every default Web Serial live and freeze-frame PID request must remain in the immutable read-only command allowlist");
 check(appSource.includes('if (!await runObdDeveloperRead("対応PID確認", ["0100"])) return false;') && appSource.includes('for (const basePid of ["20", "40", "60", "80", "A0", "C0", "E0"])') && appSource.includes('if (!await runObdDeveloperRead("対応PID確認", [`01${basePid}`])) return false;') && appSource.includes('return true;'), "Web Serial should extend supported-PID bitmap checks across every standard range only when the vehicle advertises the next range");
 check(appSource.includes('["08", "0908"]') && appSource.includes('["0B", "090B"]') && appSource.includes('"03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",') && !appSource.includes('"0902"'), "Web Serial command allowlist must read only supported non-identifying Mode 09 information without requesting the VIN");
 check(appSource.includes('const response = await readElmDeveloperResponse(timeoutMs);') && appSource.includes('if (!response) throw new Error(`elm_response_timeout:${normalized}`);'), "Web Serial command handling must reject empty adapter responses as timeouts");
@@ -21363,6 +21366,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2790");
+  console.log("OBD read-only safety checks: 2791");
   console.log("Errors: 0");
 }
