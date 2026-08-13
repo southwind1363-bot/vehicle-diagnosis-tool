@@ -7747,9 +7747,20 @@
     };
     const addReportedReadout = (snapshot, statusKeys, service, responseService = null) => {
       const status = statusKeys.map((key) => snapshot?.[key]).find((value) => value !== undefined && value !== null) || "unknown";
-      if (snapshot?.blocked === true || status !== "reported") return;
+      if (snapshot?.blocked === true) return;
       sourceEcusByIdentity.clear();
-      collectSnapshotSourceEcus(snapshot);
+      if (status === "reported") {
+        collectSnapshotSourceEcus(snapshot);
+      } else {
+        [
+          snapshot?.freezeFrameEcuSnapshots,
+          snapshot?.freeze_frame_ecu_snapshots,
+          snapshot?.readinessEcuSnapshots,
+          snapshot?.readiness_ecu_snapshots,
+          snapshot?.supportedPidEcuSnapshots,
+          snapshot?.supported_pid_ecu_snapshots
+        ].filter(Array.isArray).flat().forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, new WeakSet(), true));
+      }
       sourceEcusByIdentity.forEach((ecu, identity) => {
         const existing = ecuResponses.filter((row) => normalizeEcuIdentity(row.address || row.ecu || row.id) === identity);
         if (existing.length) {
