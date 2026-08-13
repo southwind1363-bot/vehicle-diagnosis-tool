@@ -6498,7 +6498,7 @@
       .trim()
       .toLowerCase()
       .replace(/[\s-]+/g, "_");
-    return ["responded", "response", "ok", "success", "available", "positive", "negative_response"].includes(status);
+    return ["responded", "response", "ok", "success", "available", "positive", "pending_response", "negative_response"].includes(status);
   }
 
   function buildObservedEcuSummary({
@@ -6514,6 +6514,7 @@
     const rows = [];
     const normalizeObservedReadoutStatus = (value) => {
       const status = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      if (status === "pending_response") return "pending_response";
       if (status === "negative_response") return "negative_response";
       if (status === "unparsed") return "unparsed";
       if (status === "no_response") return "no_response";
@@ -6615,11 +6616,12 @@
       entry.readoutStatusValuesById[readoutId] = statusValues;
       byId.set(ecuId, entry);
     });
-    const readoutStatusPriority = { reported: 4, negative_response: 3, unparsed: 2, no_response: 1, unknown: 0 };
+    const readoutStatusPriority = { reported: 5, negative_response: 4, pending_response: 3, unparsed: 2, no_response: 1, unknown: 0 };
     const ecus = [...byId.values()].map((entry) => {
       const readoutStatusValuesById = Object.fromEntries(entry.readoutIds.map((readoutId) => [readoutId, [...(entry.readoutStatusValuesById[readoutId] || [])]]));
       const readoutStatusById = Object.fromEntries(entry.readoutIds.map((readoutId) => [readoutId, [...(readoutStatusValuesById[readoutId] || [])].sort((left, right) => (readoutStatusPriority[right] || 0) - (readoutStatusPriority[left] || 0))[0] || "unknown"]));
       const negativeResponseReadoutIds = entry.readoutIds.filter((readoutId) => (readoutStatusValuesById[readoutId] || []).includes("negative_response"));
+      const pendingResponseReadoutIds = entry.readoutIds.filter((readoutId) => (readoutStatusValuesById[readoutId] || []).includes("pending_response"));
       const unparsedReadoutIds = entry.readoutIds.filter((readoutId) => (readoutStatusValuesById[readoutId] || []).includes("unparsed"));
       return {
         id: entry.id,
@@ -6635,6 +6637,8 @@
         readout_status_values_by_id: readoutStatusValuesById,
         negativeResponseReadoutIds,
         negative_response_readout_ids: negativeResponseReadoutIds,
+        pendingResponseReadoutIds,
+        pending_response_readout_ids: pendingResponseReadoutIds,
         unparsedReadoutIds,
         unparsed_readout_ids: unparsedReadoutIds
       };
@@ -6802,16 +6806,23 @@
       const count = Number(item?.negativeResponseCount ?? item?.negative_response_count ?? 0);
       return total + (Number.isFinite(count) ? Math.max(0, Math.round(count)) : 0);
     }, 0);
-    const hasPositiveMatchedResponse = matchedResponseStatuses.some((item) => item !== "negative_response");
-    const hasNegativeMatchedResponse = matchedNegativeResponseCount > 0 || matchedResponseStatuses.includes("negative_response");
+    const matchedPendingNegativeResponseCount = matchedResponseRows.reduce((total, item) => {
+      const count = Number(item?.pendingNegativeResponseCount ?? item?.pending_negative_response_count ?? 0);
+      return total + (Number.isFinite(count) ? Math.max(0, Math.round(count)) : 0);
+    }, 0);
+    const hasPositiveMatchedResponse = matchedResponseStatuses.some((item) => !["negative_response", "pending_response"].includes(item));
+    const hasTerminalNegativeMatchedResponse = (matchedNegativeResponseCount - matchedPendingNegativeResponseCount) > 0 || matchedResponseStatuses.includes("negative_response");
+    const hasPendingMatchedResponse = matchedPendingNegativeResponseCount > 0 || matchedResponseStatuses.includes("pending_response");
     const matchedResponseEvidence = status !== "matched"
       ? null
-      : hasPositiveMatchedResponse && hasNegativeMatchedResponse
+      : hasPositiveMatchedResponse && hasTerminalNegativeMatchedResponse
         ? "mixed_response"
         : hasPositiveMatchedResponse
           ? "positive_response"
-          : hasNegativeMatchedResponse
+          : hasTerminalNegativeMatchedResponse
             ? "negative_response"
+            : hasPendingMatchedResponse
+              ? "pending_response"
             : "observed_response";
     const reviewRequired = status === "mismatch";
     return {
@@ -6832,6 +6843,8 @@
       matched_response_statuses: matchedResponseStatuses,
       matchedNegativeResponseCount,
       matched_negative_response_count: matchedNegativeResponseCount,
+      matchedPendingNegativeResponseCount,
+      matched_pending_negative_response_count: matchedPendingNegativeResponseCount,
       reviewRequired,
       review_required: reviewRequired,
       readOnly: true,
@@ -6853,6 +6866,8 @@
       || vehicleApplicabilityEcuMatchSummary?.review_required === true;
     const applicabilityEcuNegativeResponse = vehicleApplicabilityEcuMatchSummary?.status === "matched"
       && (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence) === "negative_response";
+    const applicabilityEcuPendingResponse = vehicleApplicabilityEcuMatchSummary?.status === "matched"
+      && (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence) === "pending_response";
     const priorityById = {
       dtc_snapshot: 100,
       freeze_frame_snapshot: 95,
@@ -6877,8 +6892,8 @@
           : "読取応答が空のため再確認候補";
         if (item.id === "ecu_info_snapshot" && applicabilityEcuMismatch) {
           reason = "応答ECUと適合ECUの不一致確認のため再確認候補";
-        } else if (item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse) {
-          statusReason = "applicability_ecu_negative_response";
+        } else if (item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)) {
+          statusReason = applicabilityEcuPendingResponse ? "applicability_ecu_pending_response" : "applicability_ecu_negative_response";
         } else if (item.id === "ecu_info_snapshot" && applicability.status === "manual") {
           reason = "車両適合確認のため再確認候補";
         } else if (item.id === "ecu_info_snapshot" && applicability.status === "unlisted") {
@@ -6930,7 +6945,7 @@
           status_reason: statusReason,
           priority: item.id === "ecu_info_snapshot" && applicabilityEcuMismatch
             ? 103
-            : item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+            : item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
               ? 94
             : item.id === "ecu_info_snapshot" && (applicability.status === "manual" || applicability.status === "unlisted")
               ? 102
@@ -6938,22 +6953,22 @@
                 ? 92
               : (priorityById[item.id] || 10),
           reason,
-          reasonId: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
-            ? "applicability_ecu_negative_response"
+          reasonId: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
+            ? (applicabilityEcuPendingResponse ? "applicability_ecu_pending_response" : "applicability_ecu_negative_response")
             : null,
-          reason_id: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
-            ? "applicability_ecu_negative_response"
+          reason_id: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
+            ? (applicabilityEcuPendingResponse ? "applicability_ecu_pending_response" : "applicability_ecu_negative_response")
             : null,
-          matchedResponseEvidence: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+          matchedResponseEvidence: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
             ? (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence || null)
             : null,
-          matched_response_evidence: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+          matched_response_evidence: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
             ? (vehicleApplicabilityEcuMatchSummary?.matched_response_evidence || vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || null)
             : null,
-          matchedNegativeResponseCount: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+          matchedNegativeResponseCount: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
             ? Number(vehicleApplicabilityEcuMatchSummary?.matchedNegativeResponseCount ?? vehicleApplicabilityEcuMatchSummary?.matched_negative_response_count ?? 0)
             : 0,
-          matched_negative_response_count: item.id === "ecu_info_snapshot" && applicabilityEcuNegativeResponse
+          matched_negative_response_count: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
             ? Number(vehicleApplicabilityEcuMatchSummary?.matched_negative_response_count ?? vehicleApplicabilityEcuMatchSummary?.matchedNegativeResponseCount ?? 0)
             : 0,
           applicabilityStatus: applicability.status || null
@@ -18884,13 +18899,15 @@
       const services = Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
       const responseServices = Array.isArray(row?.response_services) ? row.response_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.responseServices) ? row.responseServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
       const negativeResponseCount = Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negatives) ? row.negatives : 0;
+      const pendingNegativeResponseCount = Number.isInteger(row?.pending_negative_response_count) ? row.pending_negative_response_count : Number.isInteger(row?.pendingNegativeResponseCount) ? row.pendingNegativeResponseCount : 0;
       const negativeRequestedServices = Array.isArray(row?.negative_requested_services) ? row.negative_requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negative_services) ? row.negative_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.negativeServices) ? row.negativeServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
       const negativeResponseLabels = Array.isArray(row?.negative_response_labels) ? row.negative_response_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negative_labels) ? row.negative_labels.map((item) => String(item)).slice(0, 16) : Array.isArray(row?.negativeLabels) ? row.negativeLabels.map((item) => String(item)).slice(0, 16) : [];
       const normalizedReportedStatus = String(reportedStatus).trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const pendingCount = Math.min(negativeResponseCount, Math.max(0, pendingNegativeResponseCount || (negativeResponseLabels.filter((item) => String(item).trim().toLowerCase() === "response_pending").length > 0 ? negativeResponseCount : 0)));
       const status = negativeResponseCount > 0
         && !responseServices.some((service) => service !== "7F")
         && ["responded", "response", "ok", "success", "available", "positive"].includes(normalizedReportedStatus)
-        ? "negative_response"
+        ? pendingCount === negativeResponseCount ? "pending_response" : "negative_response"
         : reportedStatus;
       const responseTimeMs = Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null;
       return {
@@ -18907,6 +18924,8 @@
         response_services: responseServices,
         negativeResponseCount,
         negative_response_count: negativeResponseCount,
+        pendingNegativeResponseCount: pendingCount,
+        pending_negative_response_count: pendingCount,
         negativeRequestedServices,
         negative_requested_services: negativeRequestedServices,
         negativeResponseLabels,
@@ -18940,6 +18959,7 @@
     const totalDtcCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.dtcCount) ? ecu.dtcCount : 0), 0);
     const totalResponseCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.responseCount) ? ecu.responseCount : 0), 0);
     const totalNegativeResponseCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.negativeResponseCount) ? ecu.negativeResponseCount : 0), 0);
+    const totalPendingNegativeResponseCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.pendingNegativeResponseCount) ? ecu.pendingNegativeResponseCount : 0), 0);
     return {
       schemaVersion: "ecu_response_summary_v1",
       schema_version: "ecu_response_summary_v1",
@@ -18956,6 +18976,8 @@
       total_response_count: totalResponseCount,
       totalNegativeResponseCount,
       total_negative_response_count: totalNegativeResponseCount,
+      totalPendingNegativeResponseCount,
+      total_pending_negative_response_count: totalPendingNegativeResponseCount,
       retainedRawText: false,
       retained_raw_text: false
     };
@@ -21231,6 +21253,7 @@
         services: new Set(),
         response_services: new Set(),
         negative_response_count: 0,
+        pending_negative_response_count: 0,
         negative_requested_services: new Set(),
         negative_response_labels: new Set()
       };
@@ -21241,6 +21264,7 @@
       }
       if (packet.negativeResponse) {
         current.negative_response_count += 1;
+        if (packet.negativeResponse.responseCode === "78") current.pending_negative_response_count += 1;
         if (packet.negativeResponse.requestedService) current.negative_requested_services.add(packet.negativeResponse.requestedService);
         if (packet.negativeResponse.responseLabel) current.negative_response_labels.add(packet.negativeResponse.responseLabel);
       }
@@ -21250,12 +21274,13 @@
       ecu: row.ecu,
       address: row.address,
       status: row.negative_response_count > 0 && [...row.response_services].every((service) => service === "7F")
-        ? "negative_response"
+        ? row.pending_negative_response_count === row.negative_response_count ? "pending_response" : "negative_response"
         : row.status,
       response_count: row.response_count,
       services: [...row.services],
       response_services: [...row.response_services],
       negative_response_count: row.negative_response_count,
+      pending_negative_response_count: row.pending_negative_response_count,
       negative_requested_services: [...row.negative_requested_services],
       negative_response_labels: [...row.negative_response_labels]
     }));
