@@ -7738,17 +7738,17 @@
         }
       });
     };
-    addReportedReadout(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"], "01");
-    addReportedReadout(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"], "02");
-    addReportedReadout(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"], "01");
-    addReportedReadout(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"], "06");
+    addReportedReadout(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"], "01", "41");
+    addReportedReadout(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"], "02", "42");
+    addReportedReadout(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"], "01", "41");
+    addReportedReadout(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"], "06", "46");
     const ecuInfoResponseFormat = normalizeEcuInfoResponseFormat(ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format);
     if (ecuInfoResponseFormat) {
       const ecuInfoService = ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "22" : "09";
       addReportedReadout(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"], ecuInfoService, ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "62" : "49");
       addEcuInfoOutcomes(ecuInfoSnapshot, ecuInfoService, ecuInfoResponseFormat === "uds_read_data_by_identifier" ? "62" : "49");
     }
-    addReportedReadout(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"], "01");
+    addReportedReadout(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"], "01", "41");
     const capturedSnapshot = [livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, onboardMonitorSnapshot, ecuInfoSnapshot, supportedPidMatrix]
       .find((snapshot) => snapshot?.capturedAt || snapshot?.captured_at || snapshot?.timestamp);
     const protocolSnapshot = [livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, onboardMonitorSnapshot, ecuInfoSnapshot, supportedPidMatrix]
