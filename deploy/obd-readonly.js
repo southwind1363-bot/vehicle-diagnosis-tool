@@ -6983,19 +6983,27 @@
       const status = String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase();
       const service = String(snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || "").trim().toUpperCase();
       const code = String(snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || "").trim().toUpperCase();
-      return status === "unparsed" && /^[0-9A-F]{2}$/.test(service) && /^[0-9A-F]{2}$/.test(code);
+      return status === "unparsed" && /^[0-9A-F]{2}$/.test(service) && /^[0-9A-F]{2}$/.test(code) && code !== "78";
     });
-    if (ecuInfoNegativeOutcomes.length) {
-      const affectedEcuIds = [...new Set(ecuInfoNegativeOutcomes
+    const ecuInfoPendingOutcomes = ecuInfoEcuSnapshots.filter((snapshot) => {
+      const status = String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase();
+      const service = String(snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || "").trim().toUpperCase();
+      const code = String(snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || "").trim().toUpperCase();
+      return status === "unparsed" && /^[0-9A-F]{2}$/.test(service) && code === "78";
+    });
+    const ecuInfoResponseOutcomes = ecuInfoNegativeOutcomes.length ? ecuInfoNegativeOutcomes : ecuInfoPendingOutcomes;
+    const ecuInfoOutcomeIsPending = ecuInfoNegativeOutcomes.length === 0 && ecuInfoPendingOutcomes.length > 0;
+    if (ecuInfoResponseOutcomes.length) {
+      const affectedEcuIds = [...new Set(ecuInfoResponseOutcomes
         .map((snapshot) => snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || null)
         .filter(Boolean)
         .map((value) => String(value).trim())
         .filter(Boolean))];
-      const negativeResponseServices = [...new Set(ecuInfoNegativeOutcomes
+      const responseServices = [...new Set(ecuInfoResponseOutcomes
         .map((snapshot) => snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || null)
         .filter(Boolean)
         .map((value) => String(value).trim().toUpperCase()))];
-      const negativeResponseCodes = [...new Set(ecuInfoNegativeOutcomes
+      const responseCodes = [...new Set(ecuInfoResponseOutcomes
         .map((snapshot) => snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || null)
         .filter(Boolean)
         .map((value) => String(value).trim().toUpperCase()))];
@@ -7005,20 +7013,24 @@
         id: "ecu_info_snapshot",
         label: "ECU情報",
         status: "unparsed",
-        statusReason: "ecu_scoped_negative_response",
-        status_reason: "ecu_scoped_negative_response",
-        priority: 87,
-        reason: "一部ECUのUDS DID読取が負応答のため確認候補",
-        reasonId: "ecu_scoped_negative_response",
-        reason_id: "ecu_scoped_negative_response",
+        statusReason: ecuInfoOutcomeIsPending ? "ecu_scoped_pending_response" : "ecu_scoped_negative_response",
+        status_reason: ecuInfoOutcomeIsPending ? "ecu_scoped_pending_response" : "ecu_scoped_negative_response",
+        priority: ecuInfoOutcomeIsPending ? 88 : 87,
+        reason: ecuInfoOutcomeIsPending ? "一部ECUのUDS DID読取が応答待ちのため再確認候補" : "一部ECUのUDS DID読取が負応答のため確認候補",
+        reasonId: ecuInfoOutcomeIsPending ? "ecu_scoped_pending_response" : "ecu_scoped_negative_response",
+        reason_id: ecuInfoOutcomeIsPending ? "ecu_scoped_pending_response" : "ecu_scoped_negative_response",
         applicabilityStatus: applicability.status || null,
         applicability_status: applicability.status || null,
         affectedEcuIds,
         affected_ecu_ids: affectedEcuIds,
-        negativeResponseServices,
-        negative_response_services: negativeResponseServices,
-        negativeResponseCodes,
-        negative_response_codes: negativeResponseCodes,
+        negativeResponseServices: ecuInfoOutcomeIsPending ? [] : responseServices,
+        negative_response_services: ecuInfoOutcomeIsPending ? [] : responseServices,
+        negativeResponseCodes: ecuInfoOutcomeIsPending ? [] : responseCodes,
+        negative_response_codes: ecuInfoOutcomeIsPending ? [] : responseCodes,
+        pendingResponseServices: ecuInfoOutcomeIsPending ? responseServices : [],
+        pending_response_services: ecuInfoOutcomeIsPending ? responseServices : [],
+        pendingResponseCodes: ecuInfoOutcomeIsPending ? responseCodes : [],
+        pending_response_codes: ecuInfoOutcomeIsPending ? responseCodes : [],
         ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null,
         ecu_info_response_format: ecuInfoSnapshot?.ecu_info_response_format || ecuInfoSnapshot?.ecuInfoResponseFormat || null,
         diagnosticProtocol: ecuInfoSnapshot?.diagnosticProtocol || ecuInfoSnapshot?.diagnostic_protocol || null,
@@ -7672,10 +7684,11 @@
         const negativeCode = String(outcome.ecuInfoNegativeResponseCode || outcome.ecu_info_negative_response_code || "").trim().toUpperCase();
         const isReported = readoutStatus === "reported";
         const isNegativeResponse = readoutStatus === "unparsed" && /^[0-9A-F]{2}$/.test(negativeService) && /^[0-9A-F]{2}$/.test(negativeCode);
+        const isPendingResponse = isNegativeResponse && negativeCode === "78";
         if (!identity || (!isReported && !isNegativeResponse)) return;
         const name = outcome.sourceEcuName || outcome.source_ecu_name || outcome.ecuName || outcome.ecu_name || null;
         const matchingRows = ecuResponses.filter((row) => normalizeEcuIdentity(row.address || row.ecu || row.id) === identity);
-        const response = matchingRows[0] || { address, ecu_name: name || null, status: isReported ? "reported" : "negative_response", services: [] };
+        const response = matchingRows[0] || { address, ecu_name: name || null, status: isReported ? "reported" : isPendingResponse ? "pending_response" : "negative_response", services: [] };
         if (!matchingRows.length) ecuResponses.push(response);
         if (!response.ecu_name && name) response.ecu_name = name;
         response.services = [...new Set([...(response.services || []), isNegativeResponse ? negativeService : service])];
@@ -7685,9 +7698,10 @@
         }
         if (isNegativeResponse) {
           response.negative_response_count = Math.max(Number(response.negative_response_count) || 0, 1);
+          if (isPendingResponse) response.pending_negative_response_count = Math.max(Number(response.pending_negative_response_count) || 0, 1);
           response.negative_requested_services = [...new Set([...(response.negative_requested_services || []), negativeService])];
           response.negative_response_labels = [...new Set([...(response.negative_response_labels || []), `UDS NRC ${negativeCode}`])];
-          response.status = response.status === "no_response" ? "negative_response" : response.status || "negative_response";
+          response.status = response.status === "no_response" ? (isPendingResponse ? "pending_response" : "negative_response") : response.status || (isPendingResponse ? "pending_response" : "negative_response");
         }
       });
     };
@@ -8962,6 +8976,10 @@
         negative_response_services: Array.isArray(item.negative_response_services) ? item.negative_response_services : Array.isArray(item.negativeResponseServices) ? item.negativeResponseServices : [],
         negativeResponseCodes: Array.isArray(item.negativeResponseCodes) ? item.negativeResponseCodes : Array.isArray(item.negative_response_codes) ? item.negative_response_codes : [],
         negative_response_codes: Array.isArray(item.negative_response_codes) ? item.negative_response_codes : Array.isArray(item.negativeResponseCodes) ? item.negativeResponseCodes : [],
+        pendingResponseServices: Array.isArray(item.pendingResponseServices) ? item.pendingResponseServices : Array.isArray(item.pending_response_services) ? item.pending_response_services : [],
+        pending_response_services: Array.isArray(item.pending_response_services) ? item.pending_response_services : Array.isArray(item.pendingResponseServices) ? item.pendingResponseServices : [],
+        pendingResponseCodes: Array.isArray(item.pendingResponseCodes) ? item.pendingResponseCodes : Array.isArray(item.pending_response_codes) ? item.pending_response_codes : [],
+        pending_response_codes: Array.isArray(item.pending_response_codes) ? item.pending_response_codes : Array.isArray(item.pendingResponseCodes) ? item.pendingResponseCodes : [],
         readOnly: true,
         read_only: true,
         wouldTransmit: false,
