@@ -7606,6 +7606,15 @@
 
   function buildDtcSnapshotEcuResponseSummaryInput(dtcSnapshot = {}, source = "diagnostic_core", fallbackProtocol = null) {
     const explicitEcuResponses = (dtcSnapshot?.ecuResponses || dtcSnapshot?.ecu_responses || []).filter((row) => row && typeof row === "object");
+    const normalizedServiceList = (...values) => [...new Set(values
+      .filter(Array.isArray)
+      .flat()
+      .map((value) => String(value || "").trim().toUpperCase())
+      .filter((value) => /^[0-9A-F]{2}$/.test(value)))].slice(0, 16);
+    const responseCount = (row) => Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.response_count) ? row.response_count : null;
+    const negativeResponseCount = (row) => Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : Number.isInteger(row?.negative_response_count) ? row.negative_response_count : 0;
+    const pendingNegativeResponseCount = (row) => Number.isInteger(row?.pendingNegativeResponseCount) ? row.pendingNegativeResponseCount : Number.isInteger(row?.pending_negative_response_count) ? row.pending_negative_response_count : 0;
+    const isPositiveStatus = (status) => ["reported", "responded", "response", "ok", "success", "available", "positive"].includes(String(status || "").trim().toLowerCase().replace(/[\s-]+/g, "_"));
     const normalizeEcuIdentity = (value) => {
       const sourceEcu = String(value || "").trim();
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
@@ -7640,14 +7649,27 @@
       source,
       captured_at: dtcSnapshot?.capturedAt || dtcSnapshot?.captured_at || null,
       protocol: dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || fallbackProtocol || null,
-      ecu_responses: ecuResponses.map((row) => ({
-        address: row.ecu || row.address || null,
-        ecu_name: row.ecu_name || row.ecuName || null,
-        status: row.status || "unknown",
-        dtc_count: Number.isInteger(row.codeCount) ? row.codeCount : Number.isInteger(row.code_count) ? row.code_count : null,
-        services: getDtcSnapshotRequestServices(dtcSnapshot, row),
-        response_services: getDtcSnapshotPositiveResponseServices(dtcSnapshot, row)
-      }))
+      ecu_responses: ecuResponses.map((row) => {
+        const status = row.status || row.responseStatus || row.response_status || snapshotReadoutStatus || "unknown";
+        const inferredRequestServices = getDtcSnapshotRequestServices(dtcSnapshot, row);
+        const inferredPositiveResponseServices = isPositiveStatus(status) ? getDtcSnapshotPositiveResponseServices(dtcSnapshot, row) : [];
+        return {
+          address: row.ecu || row.address || null,
+          ecu_name: row.ecu_name || row.ecuName || null,
+          status,
+          dtc_count: Number.isInteger(row.codeCount) ? row.codeCount : Number.isInteger(row.code_count) ? row.code_count : null,
+          response_count: responseCount(row),
+          services: normalizedServiceList(row.services, row.requestedServices, row.requested_services, inferredRequestServices),
+          response_services: normalizedServiceList(row.responseServices, row.response_services, inferredPositiveResponseServices),
+          negative_response_count: negativeResponseCount(row),
+          pending_negative_response_count: pendingNegativeResponseCount(row),
+          negative_requested_services: normalizedServiceList(row.negativeRequestedServices, row.negative_requested_services, row.negativeServices, row.negative_services),
+          negative_response_labels: [...new Set([
+            ...(Array.isArray(row.negativeResponseLabels) ? row.negativeResponseLabels : []),
+            ...(Array.isArray(row.negative_response_labels) ? row.negative_response_labels : [])
+          ].map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 16)
+        };
+      })
     };
   }
 
@@ -17772,6 +17794,19 @@
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
       return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
     };
+    const normalizeDtcEcuServiceList = (...values) => [...new Set(values
+      .filter(Array.isArray)
+      .flat()
+      .map((value) => String(value || "").trim().toUpperCase())
+      .filter((value) => /^[0-9A-F]{2}$/.test(value)))].slice(0, 16);
+    const normalizeDtcEcuCount = (value) => Number.isSafeInteger(Number(value)) && Number(value) >= 0 && Number(value) <= 10000
+      ? Number(value)
+      : 0;
+    const normalizeDtcEcuLabels = (...values) => [...new Set(values
+      .filter(Array.isArray)
+      .flat()
+      .map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 120))
+      .filter(Boolean))].slice(0, 16);
     const ecuResponses = [...new Map(
       [sourceInput.ecuResponses, sourceInput.ecu_responses]
         .filter(Array.isArray)
@@ -17788,6 +17823,14 @@
               : null;
           const codeCountValue = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count;
           const codeCount = Number.isSafeInteger(Number(codeCountValue)) && Number(codeCountValue) >= 0 && Number(codeCountValue) <= 10000 ? Number(codeCountValue) : null;
+          const responseCountValue = row.responseCount ?? row.response_count ?? row.responses;
+          const responseCount = Number.isSafeInteger(Number(responseCountValue)) && Number(responseCountValue) >= 0 && Number(responseCountValue) <= 10000 ? Number(responseCountValue) : null;
+          const negativeResponseCount = normalizeDtcEcuCount(row.negativeResponseCount ?? row.negative_response_count ?? row.negatives);
+          const pendingNegativeResponseCount = normalizeDtcEcuCount(row.pendingNegativeResponseCount ?? row.pending_negative_response_count);
+          const services = normalizeDtcEcuServiceList(row.services, row.requestedServices, row.requested_services);
+          const responseServices = normalizeDtcEcuServiceList(row.responseServices, row.response_services);
+          const negativeRequestedServices = normalizeDtcEcuServiceList(row.negativeRequestedServices, row.negative_requested_services, row.negativeServices, row.negative_services);
+          const negativeResponseLabels = normalizeDtcEcuLabels(row.negativeResponseLabels, row.negative_response_labels);
           return ecu ? [`${normalizeDtcResponseEcu(ecu)}::${intent || status}`, {
             ecu,
             ecuName,
@@ -17795,7 +17838,20 @@
             status,
             ...(intent ? { intent } : {}),
             codeCount,
-            code_count: codeCount
+            code_count: codeCount,
+            responseCount,
+            response_count: responseCount,
+            services,
+            responseServices,
+            response_services: responseServices,
+            negativeResponseCount,
+            negative_response_count: negativeResponseCount,
+            pendingNegativeResponseCount,
+            pending_negative_response_count: pendingNegativeResponseCount,
+            negativeRequestedServices,
+            negative_requested_services: negativeRequestedServices,
+            negativeResponseLabels,
+            negative_response_labels: negativeResponseLabels
           }] : null;
         })
         .filter(Boolean)
