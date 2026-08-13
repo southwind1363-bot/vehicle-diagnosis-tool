@@ -8691,12 +8691,24 @@
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
+    const isCanonicalDtcSnapshot = dtcSnapshotInput
+      && typeof dtcSnapshotInput === "object"
+      && !Array.isArray(dtcSnapshotInput)
+      && (dtcSnapshotInput.schemaVersion === "dtc_snapshot_v1" || dtcSnapshotInput.schema_version === "dtc_snapshot_v1")
+      && Array.isArray(dtcSnapshotInput.dtcs)
+      && dtcSnapshotInput.dtcs.some((row) => row && typeof row === "object" && String(row.code || row.dtc || row.dtc_code || row.dtcCode || "").trim());
+    const dtcSnapshotNormalizationInput = isCanonicalDtcSnapshot
+      ? (() => {
+        const { codes, ...detailedDtcSnapshot } = dtcSnapshotInput;
+        return detailedDtcSnapshot;
+      })()
+      : dtcSnapshotInput;
     const dtcSnapshot = dtcSnapshotInput && typeof dtcSnapshotInput === "object" && !Array.isArray(dtcSnapshotInput)
       ? {
         ...dtcSnapshotInput,
         ...normalizeDtcSnapshot({
           source: dtcSnapshotInput.source || dtcSnapshotInput.source_type || "local_bridge",
-          ...dtcSnapshotInput
+          ...dtcSnapshotNormalizationInput
         }),
         blocked: dtcSnapshotInput.blocked === true,
         wouldTransmit: dtcSnapshotInput.wouldTransmit === true || dtcSnapshotInput.would_transmit === true
@@ -22049,6 +22061,17 @@
           }
         }
         : null;
+    // A trusted export includes `codes` only as a base-code summary of its detailed `dtcs` rows.
+    const normalizedDtcInput = isTrustedBridgeSessionExport
+      && resolvedDtcInput
+      && !Array.isArray(resolvedDtcInput)
+      && Array.isArray(resolvedDtcInput.dtcs)
+      && resolvedDtcInput.dtcs.length > 0
+      ? (() => {
+        const { codes, ...detailedDtcInput } = resolvedDtcInput;
+        return detailedDtcInput;
+      })()
+      : resolvedDtcInput;
     const livePidInput = hasBridgeFreezeFrameResponse || hasBridgeReadinessResponse ? null : hasBridgeLivePidResponse ? importSession : pick("livePidSnapshot", "live_pid_snapshot", "livePid", "live_pid", "liveData", "live_data", "monitorValues", "monitor_values", "pidValues", "pid_values", "livePidValues", "live_pid_values");
     const livePidTimelineInput = pick("livePidTimeline", "live_pid_timeline", "livePidSamples", "live_pid_samples", "pidSamples", "pid_samples");
     const freezeFrameInput = hasBridgeFreezeFrameResponse ? importSession : pick("freezeFrameSnapshot", "freeze_frame_snapshot", "freezeFrame", "freeze_frame", "freezeFrameData", "freeze_frame_data", "freezeFrameValues", "freeze_frame_values", "freezeFrameRows", "freeze_frame_rows");
@@ -22163,14 +22186,14 @@
     };
     const safeEcuInfoInput = sanitizeEcuInfoInput(ecuInfoInput);
     const hasBridgeDtcArray = hasBridgeResponsePayload && Array.isArray(dtcInput);
-    const dtcSnapshot = (hasValue(resolvedDtcInput) || hasBridgeDtcArray)
+    const dtcSnapshot = (hasValue(normalizedDtcInput) || hasBridgeDtcArray)
       ? preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(
           hasBridgeDtcArray
             ? normalizeBridgeDtcSnapshot(importSession)
-            : normalizeDtcSnapshot(Array.isArray(resolvedDtcInput) ? { dtcs: resolvedDtcInput, source: scannerJsonSource } : toSnapshotInput(resolvedDtcInput, "dtcs")),
-          resolvedDtcInput || dtcInput,
+            : normalizeDtcSnapshot(Array.isArray(normalizedDtcInput) ? { dtcs: normalizedDtcInput, source: scannerJsonSource } : toSnapshotInput(normalizedDtcInput, "dtcs")),
+          normalizedDtcInput || dtcInput,
           ["dtcReadoutStatus", "dtc_readout_status"]
-        ), resolvedDtcInput || dtcInput, ["dtcReadoutStatus", "dtc_readout_status"])
+        ), normalizedDtcInput || dtcInput, ["dtcReadoutStatus", "dtc_readout_status"])
       : null;
     const livePidSnapshot = (hasBridgeLivePidResponse || hasValue(livePidInput))
       ? {

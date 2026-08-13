@@ -19989,6 +19989,8 @@ const subcodeBridgeSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const subcodeRoundTrip = obd.buildDiagnosticScanSession({ dtc_snapshot: subcodeBridgeSnapshot });
 check(subcodeBridgeSnapshot.dtcCount === 2 && subcodeRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.subcode === "67") && subcodeRoundTrip.dtcSnapshot?.dtcs?.some((item) => item.subcode === "00"), "Bridge DTC subcodes did not survive diagnostic session normalization");
+const subcodeExportRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(subcodeRoundTrip)));
+check(subcodeExportRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "C0051" && item.subcode === "67" && item.status === "stored") && subcodeExportRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "C0051" && item.subcode === "00" && item.status === "stored") && !subcodeExportRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "C0051" && item.subcode === null && item.status === "unknown") && subcodeExportRoundTrip?.vehicleCommandEnabled === false && subcodeExportRoundTrip?.wouldTransmit === false, "Bridge DTC subcodes did not survive read-only export and JSON reimport without an unknown base-code duplicate");
 const failureTypeByteDtcSnapshot = obd.normalizeDtcSnapshot({
   dtcs: [
     { dtc_code: "C0051", failure_type_byte: 103 },
