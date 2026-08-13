@@ -2180,6 +2180,7 @@
       device_model: evaluation.interfaceId === "user-vci-thinkcar-bluetooth" ? "TCMa" : "ELM327 mini",
       readout_route: "native_connector_readout",
       platform: evaluation.platform,
+      adapter_transport: evaluation.adapterTransport,
       observed_use: "native connector read-only diagnostic import",
       hardware_compatibility_confirmed: false
     });
@@ -9639,6 +9640,7 @@
     const deviceModel = text(source.deviceModel, source.device_model);
     const route = text(source.route, source.readoutRoute, source.readout_route);
     const platform = text(source.platform);
+    const adapterTransport = text(source.adapterTransport, source.adapter_transport);
     const observedUse = text(source.observedUse, source.observed_use);
     const hardwareCompatibilityConfirmed = source.hardwareCompatibilityConfirmed === true
       || source.hardware_compatibility_confirmed === true;
@@ -9656,6 +9658,8 @@
       readoutRoute: route,
       readout_route: route,
       platform,
+      adapterTransport: adapterTransport === "ble_gatt" ? "ble_gatt" : null,
+      adapter_transport: adapterTransport === "ble_gatt" ? "ble_gatt" : null,
       observedUse,
       observed_use: observedUse,
       hardwareCompatibilityConfirmed,
