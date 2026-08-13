@@ -687,6 +687,7 @@
     maxReadoutAttempt: 1000000,
     maxConnectionSequence: 63,
     allowedInterfaceIds: Object.freeze(["user-vci-elm327"]),
+    allowedAdapterTransports: Object.freeze(["ble_gatt"]),
     allowedReadIntents: Object.freeze([...localBridgeContract.allowedReadIntents]),
     blockedWriteIntents: Object.freeze([...localBridgeContract.blockedWriteIntents]),
     requiredEnvelopeFields: Object.freeze(["schema_version", "interface_id", "platform", "intent", "captured_at", "data"]),
@@ -1782,6 +1783,8 @@
     const schemaVersion = String(source.schemaVersion || source.schema_version || "").trim();
     const interfaceId = String(source.interfaceId || source.interface_id || "").trim();
     const platform = String(source.platform || "").trim().toLowerCase();
+    const adapterTransportInput = source.adapterTransport ?? source.adapter_transport;
+    const adapterTransport = String(adapterTransportInput || "").trim().toLowerCase();
     const intent = String(source.intent || "").trim();
     const capturedAtInput = String(source.capturedAt || source.captured_at || "").trim();
     const capturedAt = normalizeNativeConnectorCapturedAt(capturedAtInput);
@@ -1885,6 +1888,7 @@
       schemaVersion && schemaVersion !== nativeConnectorContract.id ? "unsupported_schema" : null,
       platform && platform !== nativeConnectorContract.platform ? "unsupported_platform" : null,
       interfaceId && !nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? "unsupported_interface" : null,
+      adapterTransport && !nativeConnectorContract.allowedAdapterTransports.includes(adapterTransport) ? "unsupported_adapter_transport" : null,
       blockedWriteIntent ? "blocked_write_intent" : null,
       intent && !knownReadIntent && !blockedWriteIntent ? "unsupported_intent" : null,
       knownReadIntent && !dataShapeValid ? "invalid_data_shape" : null,
@@ -1931,6 +1935,8 @@
       interfaceId: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
       interface_id: nativeConnectorContract.allowedInterfaceIds.includes(interfaceId) ? interfaceId : null,
       platform: platform === nativeConnectorContract.platform ? platform : null,
+      adapterTransport: nativeConnectorContract.allowedAdapterTransports.includes(adapterTransport) ? adapterTransport : null,
+      adapter_transport: nativeConnectorContract.allowedAdapterTransports.includes(adapterTransport) ? adapterTransport : null,
       intent: knownReadIntent ? intent : null,
       capturedAt: capturedAt && !Number.isNaN(Date.parse(capturedAt)) ? capturedAt : null,
       captured_at: capturedAt && !Number.isNaN(Date.parse(capturedAt)) ? capturedAt : null,
@@ -2292,6 +2298,7 @@
       "unsupported_schema",
       "unsupported_platform",
       "unsupported_interface",
+      "unsupported_adapter_transport",
       "blocked_write_intent",
       "unsupported_intent",
       "payload_too_large",

@@ -4389,6 +4389,10 @@ check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, platform: "and
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, interface_id: "unknown-vci" }).errors.includes("unsupported_interface"), "未登録VCIをiPhoneコネクタ契約で拒否できません");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, scan_id: "1HGCM82633A004352" }).errors.includes("invalid_scan_id") && obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, sequence: "1" }).errors.includes("invalid_sequence"), "iPhoneコネクタ境界に識別情報または非整数sequenceを受理しています");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, connection_sequence: "1" }).errors.includes("invalid_connection_sequence"), "iPhoneコネクタ再接続順序に非整数値を受理しています");
+const nativeBleGattEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, adapter_transport: "ble_gatt" });
+const nativeClassicTransportEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, adapter_transport: "bluetooth_classic" });
+const nativeWifiTransportImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmEnvelope, adapter_transport: "wifi_tcp" });
+check(nativeBleGattEvaluation.accepted === true && nativeBleGattEvaluation.adapterTransport === "ble_gatt" && nativeClassicTransportEvaluation.errors.includes("unsupported_adapter_transport") && nativeWifiTransportImport.accepted === false && nativeWifiTransportImport.errors.includes("unsupported_adapter_transport"), "iPhone native archives must reject declared non-BLE-GATT transports without breaking legacy archives");
 const nativeWriteEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, intent: "clear_dtc" });
 check(nativeWriteEvaluation.accepted === false && nativeWriteEvaluation.blockedWriteIntent === true && nativeWriteEvaluation.errors.includes("blocked_write_intent") && nativeWriteEvaluation.wouldTransmit === false, "iPhoneコネクタ契約が変更系intentを拒否していません");
 check(obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: { dtcs: [], vehicle_command_enabled: true } }).errors.includes("unsafe_execution_flags"), "iPhoneコネクタ契約が危険な実行フラグを拒否していません");
