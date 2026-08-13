@@ -24359,7 +24359,13 @@
         freeze_frame_match_count: freezeFrameMatches.length
       };
     });
-    const matchedDtcCount = linkedDtcs.filter((row) => Number(row.freezeFrameMatchCount || row.freeze_frame_match_count || 0) > 0).length;
+    const linkedDtcRows = linkedDtcs.filter((row) => Number(row.freezeFrameMatchCount || row.freeze_frame_match_count || 0) > 0);
+    const matchedDtcCount = new Set(linkedDtcRows.map((row) => [
+      normalizeLinkPart(row?.code || row?.dtc),
+      normalizeLinkPart(row?.subcode || row?.sub_code),
+      normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu)
+    ].join("::"))).size;
+    const matchedDtcRowCount = linkedDtcRows.length;
     const freezeFrameLinkSummary = {
       schemaVersion: "dtc_freeze_frame_link_summary_v1",
       schema_version: "dtc_freeze_frame_link_summary_v1",
@@ -24369,6 +24375,8 @@
       trigger_entry_count: uniqueTriggerEntries.length,
       matchedDtcCount,
       matched_dtc_count: matchedDtcCount,
+      matchedDtcRowCount,
+      matched_dtc_row_count: matchedDtcRowCount,
       unmatchedTriggerEntryCount: uniqueTriggerEntries.length - matchedTriggerKeys.size,
       unmatched_trigger_entry_count: uniqueTriggerEntries.length - matchedTriggerKeys.size,
       retainedRawText: false,

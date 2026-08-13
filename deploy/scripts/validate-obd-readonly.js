@@ -20819,6 +20819,12 @@ const blockedFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: { freeze_frame_readout_status: "blocked", blocked: true, trigger_dtc_entries: [{ code: "P0300", frame_number: 0, source_ecu: "7E8" }] }
 });
 check(blockedFreezeFrameDtcLinkSession?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "blocked" && !blockedFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary && blockedFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatchCount === undefined && blockedFreezeFrameDtcLinkSession?.vehicleCommandEnabled === false && blockedFreezeFrameDtcLinkSession?.wouldTransmit === false, "Blocked freeze-frame evidence must not be linked into otherwise readable DTC results");
+const duplicateStatusFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0300", status: "stored", ecu: "7E8" }, { code: "P0300", status: "pending", ecu: "7E8" }] },
+  freeze_frame_snapshot: { freeze_frame_readout_status: "reported", trigger_dtc_entries: [{ code: "P0300", frame_number: 0, source_ecu: "7E8" }] }
+});
+const duplicateStatusFreezeFrameDtcLinkRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(duplicateStatusFreezeFrameDtcLinkSession)));
+check(duplicateStatusFreezeFrameDtcLinkSession?.dtcSnapshot?.dtcs?.every((item) => item.freezeFrameMatchCount === 1) && duplicateStatusFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary?.matchedDtcCount === 1 && duplicateStatusFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary?.matchedDtcRowCount === 2 && duplicateStatusFreezeFrameDtcLinkRoundTrip?.dtcSnapshot?.freeze_frame_link_summary?.matched_dtc_count === 1 && duplicateStatusFreezeFrameDtcLinkRoundTrip?.dtcSnapshot?.freeze_frame_link_summary?.matched_dtc_row_count === 2 && duplicateStatusFreezeFrameDtcLinkRoundTrip?.vehicleCommandEnabled === false && duplicateStatusFreezeFrameDtcLinkRoundTrip?.wouldTransmit === false, "One freeze-frame trigger must summarize repeated DTC status rows as one ECU-scoped DTC while retaining both reported rows");
 const udsFreezeFrameDtcLinkSnapshot = obd.decodeUdsDtcSnapshotResponse({ bytes: "59 04 12 34 56 2F 01 00", source_ecu: "7E8", protocol: "UDS_CAN" });
 const udsFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "123456", code_format: "uds_3byte", status: "stored", ecu: "7E8" }] },
@@ -21329,6 +21335,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2782");
+  console.log("OBD read-only safety checks: 2783");
   console.log("Errors: 0");
 }
