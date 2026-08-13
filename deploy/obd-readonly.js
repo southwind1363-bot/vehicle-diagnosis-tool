@@ -6985,11 +6985,17 @@
       const code = String(snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || "").trim().toUpperCase();
       return status === "unparsed" && /^[0-9A-F]{2}$/.test(service) && /^[0-9A-F]{2}$/.test(code) && code !== "78";
     });
+    const ecuInfoReportedAddresses = ecuInfoEcuSnapshots
+      .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported")
+      .map((snapshot) => normalizeComparableCanEcuAddress(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || null))
+      .filter(Boolean);
     const ecuInfoPendingOutcomes = ecuInfoEcuSnapshots.filter((snapshot) => {
       const status = String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase();
       const service = String(snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || "").trim().toUpperCase();
       const code = String(snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || "").trim().toUpperCase();
-      return status === "unparsed" && /^[0-9A-F]{2}$/.test(service) && code === "78";
+      const sourceAddress = normalizeComparableCanEcuAddress(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || null);
+      const supersededByReportedOutcome = sourceAddress && ecuInfoReportedAddresses.some((reportedAddress) => isComparableCanEcuAddressMatch(reportedAddress, sourceAddress));
+      return status === "unparsed" && /^[0-9A-F]{2}$/.test(service) && code === "78" && !supersededByReportedOutcome;
     });
     const ecuInfoResponseOutcomes = ecuInfoNegativeOutcomes.length ? ecuInfoNegativeOutcomes : ecuInfoPendingOutcomes;
     const ecuInfoOutcomeIsPending = ecuInfoNegativeOutcomes.length === 0 && ecuInfoPendingOutcomes.length > 0;
