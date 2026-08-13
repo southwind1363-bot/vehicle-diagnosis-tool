@@ -24312,6 +24312,21 @@
       `${entry.code}::${entry.subcode}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
       entry
     ])).values()];
+    const udsSnapshotRecords = (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords)
+      ? freezeFrameSnapshot.udsDtcSnapshotRecords
+      : Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) ? freezeFrameSnapshot.uds_dtc_snapshot_records : [])
+      .map((record) => {
+        const frameInput = record?.snapshotRecordNumber ?? record?.snapshot_record_number;
+        const frameNumber = Number(frameInput);
+        return {
+          code: normalizeLinkPart(record?.code || record?.dtc),
+          sourceEcu: normalizeLinkPart(record?.sourceEcu || record?.source_ecu),
+          frameNumber: frameInput !== undefined && frameInput !== null && frameInput !== "" && Number.isInteger(frameNumber) ? frameNumber : null,
+          snapshotRecordType: record?.snapshotRecordType || record?.snapshot_record_type || null,
+          statusByte: normalizeDtcStatusByte(record?.statusByte || record?.status_byte || record?.statusOfDtc || record?.status_of_dtc)
+        };
+      })
+      .filter((record) => record.code && record.sourceEcu && record.frameNumber !== null);
     const matchedTriggerKeys = new Set();
     const linkedDtcs = cleanDtcs.map((row) => {
       const code = normalizeLinkPart(row?.code || row?.dtc);
@@ -24320,14 +24335,20 @@
       const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && entry.sourceEcu === ecu);
       matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`));
       if (!matches.length) return row;
-      const freezeFrameMatches = matches.map((entry) => ({
-        frameNumber: entry.frameNumber,
-        frame_number: entry.frameNumber,
-        sourceEcu: entry.sourceEcu || null,
-        source_ecu: entry.sourceEcu || null,
-        sourceEcuName: entry.sourceEcuName,
-        source_ecu_name: entry.sourceEcuName
-      }));
+      const freezeFrameMatches = matches.map((entry) => {
+        const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && record.sourceEcu === entry.sourceEcu && record.frameNumber === entry.frameNumber);
+        const udsRecord = matchingUdsRecords.length === 1 ? matchingUdsRecords[0] : null;
+        return {
+          frameNumber: entry.frameNumber,
+          frame_number: entry.frameNumber,
+          sourceEcu: entry.sourceEcu || null,
+          source_ecu: entry.sourceEcu || null,
+          sourceEcuName: entry.sourceEcuName,
+          source_ecu_name: entry.sourceEcuName,
+          ...(udsRecord?.snapshotRecordType ? { snapshotRecordType: udsRecord.snapshotRecordType, snapshot_record_type: udsRecord.snapshotRecordType } : {}),
+          ...(udsRecord?.statusByte ? { statusByte: udsRecord.statusByte, status_byte: udsRecord.statusByte } : {})
+        };
+      });
       return {
         ...row,
         freezeFrameAvailable: true,

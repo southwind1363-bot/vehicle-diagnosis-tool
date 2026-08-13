@@ -20824,7 +20824,8 @@ const udsFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "123456", code_format: "uds_3byte", status: "stored", ecu: "7E8" }] },
   freeze_frame_snapshot: udsFreezeFrameDtcLinkSnapshot
 });
-check(udsFreezeFrameDtcLinkSnapshot?.triggerDtcEntries?.[0]?.code === "123456" && udsFreezeFrameDtcLinkSnapshot.triggerDtcEntries?.[0]?.frameNumber === 1 && udsFreezeFrameDtcLinkSnapshot.triggerDtcEntries?.[0]?.sourceEcu === "7E8" && udsFreezeFrameDtcLinkSession?.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatchCount === 1 && udsFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatches?.[0]?.frameNumber === 1 && udsFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary?.matchedDtcCount === 1 && udsFreezeFrameDtcLinkSession?.vehicleCommandEnabled === false && udsFreezeFrameDtcLinkSession?.wouldTransmit === false, "UDS snapshot DTC evidence must link only to the same decoded three-byte DTC and ECU in a read-only session");
+const udsFreezeFrameDtcLinkRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(udsFreezeFrameDtcLinkSession)));
+check(udsFreezeFrameDtcLinkSnapshot?.triggerDtcEntries?.[0]?.code === "123456" && udsFreezeFrameDtcLinkSnapshot.triggerDtcEntries?.[0]?.frameNumber === 1 && udsFreezeFrameDtcLinkSnapshot.triggerDtcEntries?.[0]?.sourceEcu === "7E8" && udsFreezeFrameDtcLinkSession?.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatchCount === 1 && udsFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatches?.[0]?.frameNumber === 1 && udsFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatches?.[0]?.snapshotRecordType === "data" && udsFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatches?.[0]?.statusByte === "2F" && udsFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary?.matchedDtcCount === 1 && udsFreezeFrameDtcLinkRoundTrip?.dtcSnapshot?.dtcs?.[0]?.freeze_frame_matches?.[0]?.snapshot_record_type === "data" && udsFreezeFrameDtcLinkRoundTrip?.dtcSnapshot?.dtcs?.[0]?.freeze_frame_matches?.[0]?.status_byte === "2F" && udsFreezeFrameDtcLinkSession?.vehicleCommandEnabled === false && udsFreezeFrameDtcLinkSession?.wouldTransmit === false, "UDS snapshot DTC evidence must retain exact record metadata only for the same decoded three-byte DTC and ECU in a read-only session");
 const scannerCsvVehicleInformationSession = obd.buildDiagnosticScanSessionFromCsv([
   "Vehicle Information", "Item\tValue", "Make\tToyota", "Model\tPrius", "Model Year\t2023", "VIN\t1HGCM82633A004352"
 ].join("\n"));
@@ -21327,6 +21328,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2780");
+  console.log("OBD read-only safety checks: 2781");
   console.log("Errors: 0");
 }
