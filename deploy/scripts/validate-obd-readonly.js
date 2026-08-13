@@ -20819,6 +20819,12 @@ const blockedFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
   freeze_frame_snapshot: { freeze_frame_readout_status: "blocked", blocked: true, trigger_dtc_entries: [{ code: "P0300", frame_number: 0, source_ecu: "7E8" }] }
 });
 check(blockedFreezeFrameDtcLinkSession?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "blocked" && !blockedFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary && blockedFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatchCount === undefined && blockedFreezeFrameDtcLinkSession?.vehicleCommandEnabled === false && blockedFreezeFrameDtcLinkSession?.wouldTransmit === false, "Blocked freeze-frame evidence must not be linked into otherwise readable DTC results");
+const udsFreezeFrameDtcLinkSnapshot = obd.decodeUdsDtcSnapshotResponse({ bytes: "59 04 12 34 56 2F 01 00", source_ecu: "7E8", protocol: "UDS_CAN" });
+const udsFreezeFrameDtcLinkSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "123456", code_format: "uds_3byte", status: "stored", ecu: "7E8" }] },
+  freeze_frame_snapshot: udsFreezeFrameDtcLinkSnapshot
+});
+check(udsFreezeFrameDtcLinkSnapshot?.triggerDtcEntries?.[0]?.code === "123456" && udsFreezeFrameDtcLinkSnapshot.triggerDtcEntries?.[0]?.frameNumber === 1 && udsFreezeFrameDtcLinkSnapshot.triggerDtcEntries?.[0]?.sourceEcu === "7E8" && udsFreezeFrameDtcLinkSession?.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatchCount === 1 && udsFreezeFrameDtcLinkSession.dtcSnapshot?.dtcs?.[0]?.freezeFrameMatches?.[0]?.frameNumber === 1 && udsFreezeFrameDtcLinkSession.dtcSnapshot?.freezeFrameLinkSummary?.matchedDtcCount === 1 && udsFreezeFrameDtcLinkSession?.vehicleCommandEnabled === false && udsFreezeFrameDtcLinkSession?.wouldTransmit === false, "UDS snapshot DTC evidence must link only to the same decoded three-byte DTC and ECU in a read-only session");
 const scannerCsvVehicleInformationSession = obd.buildDiagnosticScanSessionFromCsv([
   "Vehicle Information", "Item\tValue", "Make\tToyota", "Model\tPrius", "Model Year\t2023", "VIN\t1HGCM82633A004352"
 ].join("\n"));
@@ -21319,6 +21325,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2777");
+  console.log("OBD read-only safety checks: 2778");
   console.log("Errors: 0");
 }
