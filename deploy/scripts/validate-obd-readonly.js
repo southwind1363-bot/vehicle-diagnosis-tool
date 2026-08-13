@@ -5657,6 +5657,14 @@ const ecuResponseSummaryDistinctCanRows = obd.normalizeEcuResponseSummary({
   ]
 });
 check(ecuResponseSummaryEquivalentCanRows.ecuCount === 1 && ecuResponseSummaryEquivalentCanRows.totalResponseCount === 2 && ecuResponseSummaryEquivalentCanRows.ecus?.[0]?.address === "7E8" && ecuResponseSummaryDistinctCanRows.ecuCount === 2 && ecuResponseSummaryDistinctCanRows.totalResponseCount === 4, "ECU response summaries did not collapse only fully equivalent CAN address aliases");
+const ecuResponseSummaryPendingLabelAliases = obd.normalizeEcuResponseSummary({
+  ecus: [
+    { address: "7EB", status: "negative_response", negative_response_count: 1, negative_response_labels: ["UDS NRC 78"] },
+    { address: "7EC", status: "responded", negative_response_count: 2, negative_response_labels: ["NRC 78", "conditions_not_correct"] },
+    { address: "7ED", status: "negative_response", negative_response_count: 1, pending_negative_response_count: 0, negative_response_labels: ["response_pending"] }
+  ]
+});
+check(ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7EB" && item.status === "pending_response" && item.pendingNegativeResponseCount === 1 && item.pending_negative_response_count === 1) && ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7EC" && item.status === "negative_response" && item.pendingNegativeResponseCount === 1 && item.negativeResponseCount === 2) && ecuResponseSummaryPendingLabelAliases.ecus?.some((item) => item.address === "7ED" && item.status === "negative_response" && item.pendingNegativeResponseCount === 0), "ECU response summaries must infer UDS NRC 78 labels conservatively while respecting explicit pending counts");
 const bridgePendingDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   intent: "read_pending_dtc",
   ok: true,
