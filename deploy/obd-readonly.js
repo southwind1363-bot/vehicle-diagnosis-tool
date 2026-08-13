@@ -6546,7 +6546,12 @@
         .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name }))
     ]);
     add("ecu_response_summary", (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
-      .filter(isRespondedEcuResponse)
+      .filter((item) => {
+        if (isRespondedEcuResponse(item)) return true;
+        const status = String(item?.status || item?.responseStatus || item?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+        const responseServices = Array.isArray(item?.responseServices) ? item.responseServices : Array.isArray(item?.response_services) ? item.response_services : [];
+        return status === "reported" && responseServices.some((service) => String(service || "").trim().toUpperCase() !== "7F");
+      })
       .map((item) => ({
         ecuId: item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null,
         ecuName: item?.name || item?.ecuName || item?.ecu_name || item?.label || item?.displayName || item?.display_name || null,
