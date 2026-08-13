@@ -3851,6 +3851,7 @@ const nativeEnvelopeSource = fs.readFileSync(new URL("../../native/ios/ELM327BLE
 const nativeEnvelopeTestSource = fs.readFileSync(new URL("../../native/ios/ELM327BLEConnector/Tests/ELM327BLEConnectorTests/NativeConnectorEnvelopeTests.swift", import.meta.url), "utf8");
 check(nativeEnvelopeSource.includes('"dtc_readout_status": .string("reported")'), "iOS ELM DTC envelopes must explicitly mark successful empty DTC readouts as reported");
 check(nativeEnvelopeSource.includes('public let adapterTransport: String? = nil') && nativeEnvelopeSource.includes('case adapterTransport = "adapter_transport"') && nativeEnvelopeSource.includes('adapterTransport: "ble_gatt"') && nativeScanArchiveSource.includes('envelope.adapterTransport == "ble_gatt"') && nativeEnvelopeTestSource.includes('adapter_transport'), "iOS ELM archives must declare and require their BLE GATT transport");
+check(nativeCompletionManifestSource.includes('public let adapterTransport: String?') && nativeCompletionManifestSource.includes('adapterTransport: String? = "ble_gatt"') && nativeCompletionManifestSource.includes('case adapterTransport = "adapter_transport"') && nativeScanArchiveSource.includes('manifest.adapterTransport == "ble_gatt"'), "iOS ELM completion manifests must retain the required BLE GATT transport");
 check(nativeEnvelopeSource.includes('case "read_stored_dtc": readoutID = "stored_dtc_snapshot"') && nativeEnvelopeSource.includes('case "read_pending_dtc": readoutID = "pending_dtc_snapshot"') && nativeEnvelopeSource.includes('case "read_permanent_dtc": readoutID = "permanent_dtc_snapshot"') && nativeEnvelopeSource.includes('readoutID: readoutID,'), "iOS ELM DTC envelopes must declare their typed readout ID before emitting a scoped result");
 check(/public static func dtcs\([\s\S]*?return make\([\s\S]*?readoutID: readoutID,/.test(nativeEnvelopeSource), "iOS ELM DTC envelope factory must return its scoped read-only result");
 check(nativeEnvelopeSource.includes('"supported_pid_readout_status": .string("reported")') && nativeEnvelopeSource.includes('readoutID: "supported_pid_matrix", readoutScopeID: scopeID, readoutAttempt: 0'), "iOS ELM supported PID envelopes must declare a reported scoped readout");
@@ -4495,6 +4496,11 @@ const nativeCompletionManifest = Object.freeze({
 });
 const manifestNativeScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest });
 check(nativeConnectorContract.completionManifestSchemaVersion === "native_connector_completion_manifest_v1" && nativeConnectorContract.completionManifestRecordType === "completion_manifest" && manifestNativeScanSession.ok === true && manifestNativeScanSession.scanState === "completed" && manifestNativeScanSession.partial === false && manifestNativeScanSession.completionManifest?.recordType === "completion_manifest" && manifestNativeScanSession.readoutProfile === "initial_diagnostic" && manifestNativeScanSession.session?.nativeConnectorReadoutProfile === "initial_diagnostic" && manifestNativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && manifestNativeScanSession.vehicleCommandEnabled === false, "Native connector terminal manifest did not produce a complete read-only session");
+const nativeBleGattCompletionManifest = { ...nativeCompletionManifest, adapter_transport: "ble_gatt" };
+const nativeBleGattManifestScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch.map((envelope) => ({ ...envelope, adapter_transport: "ble_gatt" })), completion_manifest: nativeBleGattCompletionManifest });
+const nativeManifestTransportMismatch = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeBleGattCompletionManifest });
+const invalidNativeManifestTransport = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: { ...nativeCompletionManifest, adapter_transport: "wifi_tcp" } });
+check(nativeBleGattManifestScanSession.accepted === true && nativeBleGattManifestScanSession.session?.readoutInterface?.adapterTransport === "ble_gatt" && nativeManifestTransportMismatch.blocked === true && nativeManifestTransportMismatch.errors.includes("completion_manifest_adapter_transport_mismatch") && invalidNativeManifestTransport.blocked === true && invalidNativeManifestTransport.errors.includes("invalid_completion_manifest_adapter_transport"), "Native completion manifests must retain BLE GATT transport and reject mismatched or unsupported transport evidence");
 const multiScopeExpectedEmptyNativeBatch = [
   { ...nativeEnvelope("read_ecu_info", "2026-07-20T08:00:00Z", { items: [], ecu_info_readout_status: "reported" }, "user-vci-elm327", { sequence: 0 }), readout_scope_id: "7E8", readout_attempt: 0 },
   { ...nativeEnvelope("read_ecu_info", "2026-07-20T08:00:01Z", { items: [], ecu_info_readout_status: "reported" }, "user-vci-elm327", { sequence: 1 }), readout_scope_id: "7E9", readout_attempt: 0 },
@@ -4597,6 +4603,18 @@ const emptyInterruptedManifest = obd.buildNativeConnectorScanSessionFromCompleti
     interruption: { code: "transport:disconnected", connection_id: nativeBoundary.connectionId, sequence: 0 }
   }
 });
+const emptyBleGattInterruptedManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
+  envelopes: [],
+  completion_manifest: {
+    ...nativeBleGattCompletionManifest,
+    captured_at: "2026-07-20T07:01:00Z",
+    scan_state: "interrupted",
+    expected_readouts: ["stored_dtc_snapshot"],
+    expected_intents: ["read_stored_dtc"],
+    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: null, last_sequence: null, envelope_count: 0 }],
+    interruption: { code: "transport:disconnected", connection_id: nativeBoundary.connectionId, sequence: 0 }
+  }
+});
 const adapterSetupFailureManifest = obd.buildNativeConnectorScanSessionFromCompletionManifest({
   envelopes: [{
     ...nativeEnvelope("adapter_identity", "2026-07-20T07:02:00Z", { adapter_family: "ELM327", vehicle_command_enabled: false }, "user-vci-elm327", { sequence: 1 }),
@@ -4617,7 +4635,7 @@ const adapterSetupFailureManifest = obd.buildNativeConnectorScanSessionFromCompl
 check(manifestBoundaryMismatch.blocked === true && manifestBoundaryMismatch.errors.includes("completion_manifest_boundary_mismatch"), "Native completion manifest did not reject a terminal boundary mismatch");
 check(manifestMissingReadout.ok === true && manifestMissingReadout.scanState === "interrupted" && manifestMissingReadout.partial === true, "Native completion manifest treated a missing expected readout as completed");
 check(manifestRawData.blocked === true && manifestRawData.errors.includes("completion_manifest_retains_raw_data"), "Native completion manifest retained raw transport data");
-check(emptyInterruptedManifest.ok === true && emptyInterruptedManifest.scanState === "interrupted" && emptyInterruptedManifest.partial === true && emptyInterruptedManifest.session?.nativeConnectorScanLifecycle?.interruption?.code === "transport:disconnected" && emptyInterruptedManifest.session?.vehicleCommandEnabled === false, "Native empty interruption did not retain a safe partial lifecycle session");
+check(emptyInterruptedManifest.ok === true && emptyInterruptedManifest.scanState === "interrupted" && emptyInterruptedManifest.partial === true && emptyInterruptedManifest.session?.nativeConnectorScanLifecycle?.interruption?.code === "transport:disconnected" && emptyInterruptedManifest.session?.readoutInterface?.adapterTransport === null && emptyBleGattInterruptedManifest.ok === true && emptyBleGattInterruptedManifest.session?.readoutInterface?.adapterTransport === "ble_gatt" && emptyInterruptedManifest.session?.vehicleCommandEnabled === false, "Native empty interruption did not retain a safe partial lifecycle session");
 check(adapterSetupFailureManifest.ok === true && adapterSetupFailureManifest.scanState === "interrupted" && adapterSetupFailureManifest.partial === true && adapterSetupFailureManifest.session?.nativeConnectorScanLifecycle?.errorCodes?.includes("adapter_setup_failed") && adapterSetupFailureManifest.session?.dtcSnapshot?.codes?.length === 0 && adapterSetupFailureManifest.vehicleCommandEnabled === false && adapterSetupFailureManifest.wouldTransmit === false, "Native adapter setup failure was not retained as a safe interrupted session");
 check(nativeScanSession.ok === true && nativeScanSession.accepted === true && nativeScanSession.partial === false && nativeScanSession.envelopeCount === 10 && nativeScanSession.acceptedEnvelopeCount === 10 && nativeScanSession.rejectedEnvelopeCount === 0, "iPhoneコネクタ連続読取を完全な診断セッションとして受理できません");
 check(nativeScanSession.scanState === "completed" && nativeScanSession.nativeConnectorScanLifecycle?.completionExplicit === true && nativeScanSession.nativeConnectorScanLifecycle?.connectionCount === 1 && nativeScanSession.nativeConnectorScanLifecycle?.missingIntents?.length === 0 && nativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed", "iPhoneコネクタ完了manifestを診断セッションへ保持できません");

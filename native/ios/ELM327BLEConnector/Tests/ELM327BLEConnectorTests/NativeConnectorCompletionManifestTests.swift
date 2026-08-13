@@ -33,6 +33,7 @@ final class NativeConnectorCompletionManifestTests: XCTestCase {
 
         XCTAssertEqual(object?["schema_version"] as? String, "native_connector_completion_manifest_v1")
         XCTAssertEqual(object?["record_type"] as? String, "completion_manifest")
+        XCTAssertEqual(object?["adapter_transport"] as? String, "ble_gatt")
         XCTAssertEqual(object?["scan_state"] as? String, "completed")
         XCTAssertEqual(object?["vehicle_command_enabled"] as? Bool, false)
         XCTAssertEqual(object?["execution_enabled"] as? Bool, false)

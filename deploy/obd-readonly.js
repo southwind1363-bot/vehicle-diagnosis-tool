@@ -2822,6 +2822,9 @@
     if (manifest.record_type !== nativeConnectorContract.completionManifestRecordType) errors.push("invalid_completion_manifest_record_type");
     if (manifest.platform !== nativeConnectorContract.platform) errors.push("invalid_completion_manifest_platform");
     if (!nativeConnectorContract.allowedInterfaceIds.includes(manifest.interface_id)) errors.push("invalid_completion_manifest_interface");
+    const adapterTransportInput = manifest.adapterTransport ?? manifest.adapter_transport;
+    const adapterTransport = adapterTransportInput === undefined ? null : String(adapterTransportInput || "").trim().toLowerCase();
+    if (adapterTransportInput !== undefined && !nativeConnectorContract.allowedAdapterTransports.includes(adapterTransport)) errors.push("invalid_completion_manifest_adapter_transport");
     const scanId = normalizeNativeConnectorUuid(manifest.scan_id);
     const vehicleContextId = normalizeNativeConnectorUuid(manifest.vehicle_context_id);
     const capturedAt = normalizeNativeConnectorCapturedAt(manifest.captured_at);
@@ -2883,6 +2886,7 @@
     return {
       manifest: errors.length ? null : {
         interfaceId: manifest.interface_id,
+        adapterTransport,
         scanId,
         vehicleContextId,
         capturedAt,
@@ -2956,6 +2960,7 @@
         device_model: manifest.interfaceId === "user-vci-thinkcar-bluetooth" ? "TCMa" : "ELM327 mini",
         readout_route: "native_connector_readout",
         platform: "ios",
+        adapter_transport: manifest.adapterTransport,
         observed_use: "native connector read-only scan interruption",
         hardware_compatibility_confirmed: false
       });
@@ -3025,6 +3030,9 @@
     if (result.blocked) return result;
     if (result.interfaceId !== manifest.interfaceId || result.scanId !== manifest.scanId || result.vehicleContextId !== manifest.vehicleContextId || !matchesTerminalSegments(result.nativeConnectorScanLifecycle?.connectionSegments)) {
       return { ...blockedResult(["completion_manifest_boundary_mismatch"]), evaluations: result.evaluations || [] };
+    }
+    if (result.readoutInterface?.adapterTransport !== manifest.adapterTransport) {
+      return { ...blockedResult(["completion_manifest_adapter_transport_mismatch"]), evaluations: result.evaluations || [] };
     }
     const sessionWithReadoutProfile = manifest.readoutProfile
       ? { ...result.session, nativeConnectorReadoutProfile: manifest.readoutProfile, native_connector_readout_profile: manifest.readoutProfile }

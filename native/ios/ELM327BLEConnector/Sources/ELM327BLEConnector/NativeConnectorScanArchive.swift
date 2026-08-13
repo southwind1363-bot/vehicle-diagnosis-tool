@@ -122,6 +122,7 @@ public final class NativeConnectorScanArchiveBuilder {
               manifest.recordType == "completion_manifest",
               manifest.platform == "ios",
               manifest.interfaceID == "user-vci-elm327",
+              manifest.adapterTransport == "ble_gatt",
               manifest.readOnly,
               !manifest.vehicleCommandEnabled,
               !manifest.executionEnabled,

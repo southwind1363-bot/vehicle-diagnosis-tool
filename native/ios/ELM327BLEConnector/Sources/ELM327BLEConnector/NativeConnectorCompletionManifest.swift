@@ -58,6 +58,7 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
     public let recordType: String
     public let platform: String
     public let interfaceID: String
+    public let adapterTransport: String?
     public let scanID: UUID
     public let vehicleContextID: UUID
     public let capturedAt: String
@@ -79,6 +80,7 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
         recordType: String,
         platform: String,
         interfaceID: String,
+        adapterTransport: String? = "ble_gatt",
         scanID: UUID,
         vehicleContextID: UUID,
         capturedAt: String,
@@ -99,6 +101,7 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
         self.recordType = recordType
         self.platform = platform
         self.interfaceID = interfaceID
+        self.adapterTransport = adapterTransport
         self.scanID = scanID
         self.vehicleContextID = vehicleContextID
         self.capturedAt = capturedAt
@@ -121,6 +124,7 @@ public struct NativeConnectorCompletionManifest: Codable, Sendable, Equatable {
         case recordType = "record_type"
         case platform
         case interfaceID = "interface_id"
+        case adapterTransport = "adapter_transport"
         case scanID = "scan_id"
         case vehicleContextID = "vehicle_context_id"
         case capturedAt = "captured_at"
