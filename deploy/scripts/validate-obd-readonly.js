@@ -4190,6 +4190,9 @@ const nativeElmAdapterIdentityGoldenEvaluation = obd.evaluateNativeConnectorEnve
 const nativeElmAdapterIdentityGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmAdapterIdentityGoldenEnvelope);
 const nativeElmReadinessGoldenEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmReadinessGoldenEnvelope);
 const nativeElmReadinessGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmReadinessGoldenEnvelope);
+const nativeElmLegacyReadinessEnvelope = { ...nativeElmReadinessGoldenEnvelope, intent: "read_live_pid_snapshot" };
+const nativeElmLegacyReadinessEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmLegacyReadinessEnvelope);
+const nativeElmLegacyReadinessImport = obd.buildNativeConnectorDiagnosticImport(nativeElmLegacyReadinessEnvelope);
 const nativeElmEcuInfoGoldenImport = obd.buildNativeConnectorDiagnosticImport(nativeElmEcuInfoGoldenEnvelope);
 const nativeElmSensitiveEcuInfoImport = obd.buildNativeConnectorDiagnosticImport({
   ...nativeElmEcuInfoGoldenEnvelope,
@@ -4336,9 +4339,7 @@ const nativeElmAssociatedFreezeFrameImport = obd.buildNativeConnectorDiagnosticI
   data: { associatedDtc: "P0420" }
 });
 check(nativeElmAssociatedFreezeFrameImport.accepted === true && nativeElmAssociatedFreezeFrameImport.session?.freezeFrameSnapshot?.triggerDtc === "P0420" && nativeElmAssociatedFreezeFrameImport.session?.freezeFrameSnapshot?.sourceEcu === "7E8" && nativeElmAssociatedFreezeFrameImport.session?.vehicleCommandEnabled === false, "iPhone associated-DTC freeze-frame alias did not reach the read-only diagnostic session");
-const dedicatedReadinessIntentEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmReadinessGoldenEnvelope, intent: "read_readiness" });
-const dedicatedReadinessIntentImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmReadinessGoldenEnvelope, intent: "read_readiness" });
-check(dedicatedReadinessIntentEvaluation.accepted === true && dedicatedReadinessIntentEvaluation.readoutId === "readiness_snapshot" && dedicatedReadinessIntentImport.session?.readinessSnapshot?.milOn === true && dedicatedReadinessIntentImport.vehicleCommandEnabled === false && dedicatedReadinessIntentImport.wouldTransmit === false, "Dedicated readiness intent did not normalize into a safe readiness diagnostic session");
+check(nativeElmReadinessGoldenEnvelope.intent === "read_readiness" && nativeElmReadinessGoldenEvaluation.accepted === true && nativeElmReadinessGoldenEvaluation.readoutId === "readiness_snapshot" && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.milOn === true && nativeElmReadinessGoldenImport.vehicleCommandEnabled === false && nativeElmReadinessGoldenImport.wouldTransmit === false && nativeElmLegacyReadinessEvaluation.accepted === true && nativeElmLegacyReadinessEvaluation.readoutId === "readiness_snapshot" && nativeElmLegacyReadinessImport.session?.readinessSnapshot?.milOn === true && nativeElmLegacyReadinessImport.vehicleCommandEnabled === false && nativeElmLegacyReadinessImport.wouldTransmit === false, "Dedicated and legacy readiness intents must normalize into a safe readiness diagnostic session");
 check(
   nativeElmReadinessGoldenEvaluation.accepted === true
     && nativeElmReadinessGoldenEvaluation.readoutId === "readiness_snapshot"
