@@ -19979,6 +19979,16 @@ const scanSessionWebSerialTimedOutCompletion = obd.buildDiagnosticScanSession({
 });
 const scanSessionWebSerialTimedOutCompletionRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scanSessionWebSerialTimedOutCompletion)));
 check(scanSessionWebSerialTimedOutCompletion.webSerialReadoutSummary?.attempts?.[0]?.status === "failed" && scanSessionWebSerialTimedOutCompletion.webSerialReadoutSummary?.attempts?.[0]?.readoutCompleted === false && scanSessionWebSerialTimedOutCompletion.webSerialReadoutSummary?.timedOutCount === 1 && scanSessionWebSerialTimedOutCompletion.readoutQualitySummary?.webSerialTimedOutCount === 1 && scanSessionWebSerialTimedOutCompletion.readoutQualitySummary?.reviewRequired === true && scanSessionWebSerialTimedOutCompletionRoundTrip?.webSerialReadoutSummary?.timed_out_count === 1 && scanSessionWebSerialTimedOutCompletionRoundTrip?.readoutQualitySummary?.web_serial_timed_out_count === 1 && [scanSessionWebSerialTimedOutCompletion, scanSessionWebSerialTimedOutCompletionRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Timed-out Web Serial reads must not remain completed or quality-clean after normalization");
+const scanSessionWebSerialSummaryTimedOutCompletion = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempt_count: 1,
+    completed_count: 1,
+    positive_response_count: 1,
+    timed_out_count: 1
+  }
+});
+check(scanSessionWebSerialSummaryTimedOutCompletion.webSerialReadoutSummary?.completedCount === 0 && scanSessionWebSerialSummaryTimedOutCompletion.webSerialReadoutSummary?.failedCount === 1 && scanSessionWebSerialSummaryTimedOutCompletion.readoutQualitySummary?.webSerialTimedOutCount === 1 && scanSessionWebSerialSummaryTimedOutCompletion.readoutQualitySummary?.reviewRequired === true && scanSessionWebSerialSummaryTimedOutCompletion.vehicleCommandEnabled === false, "Attempt-less timed-out Web Serial summaries must not remain completed or quality-clean");
 const scanSessionWebSerialSummaryFalseCompletion = obd.buildDiagnosticScanSession({
   web_serial_readout_summary: {
     schema_version: "web_serial_readout_execution_v2",

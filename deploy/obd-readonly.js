@@ -15843,7 +15843,8 @@
         || readCount("pendingNegativeResponseCount", "pending_negative_response_count") > 0
         || readCount("emptyResponseCount", "empty_response_count") > 0
         || readCount("unrecognizedResponseCount", "unrecognized_response_count") > 0;
-      const hasFailureEvidence = readCount("unableToConnectCount", "unable_to_connect_count") > 0
+      const hasFailureEvidence = readCount("timedOutCount", "timed_out_count") > 0
+        || readCount("unableToConnectCount", "unable_to_connect_count") > 0
         || readCount("adapterErrorCount", "adapter_error_count") > 0
         || readCount("transportErrorCount", "transport_error_count") > 0;
       if (positiveResponseCount + expectedEmptyCommandCount < completedCount || hasIncompleteEvidence || hasFailureEvidence) {
