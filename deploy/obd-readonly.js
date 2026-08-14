@@ -2565,6 +2565,7 @@
         read_supported_pids: { supported_pid_matrix: data },
         read_ecu_info: { ecu_info_snapshot: data },
         read_onboard_monitor: { onboard_monitor_snapshot: data },
+        read_readiness: { readiness_snapshot: data },
         read_live_pid_snapshot: readoutId === "readiness_snapshot"
           ? { readiness_snapshot: data }
           : { live_pid_snapshot: data }

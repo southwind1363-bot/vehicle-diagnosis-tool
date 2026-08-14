@@ -4486,6 +4486,16 @@ const nativeScanBatch = [
 const nativeExpectedIntents = [...new Set(nativeScanBatch.map((envelope) => envelope.intent))];
 const nativeExpectedReadouts = ["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "freeze_frame_snapshot", "supported_pid_matrix", "ecu_info_snapshot", "onboard_monitor_snapshot", "readiness_snapshot", "live_pid_snapshot"];
 const nativeScanSession = obd.buildNativeConnectorScanSession({ envelopes: nativeScanBatch, scan_state: "completed", expected_intents: nativeExpectedIntents, expected_readouts: nativeExpectedReadouts });
+const dedicatedReadinessNativeScan = obd.buildNativeConnectorScanSession({
+  envelopes: [{ ...nativeScanBatch[6], intent: "read_readiness" }],
+  scan_state: "completed",
+  expected_intents: ["read_readiness"],
+  expected_readouts: ["readiness_snapshot"]
+});
+const dedicatedReadinessNativeRoundTrip = dedicatedReadinessNativeScan.session
+  ? obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(dedicatedReadinessNativeScan.session)))
+  : null;
+check(dedicatedReadinessNativeScan.accepted === true && dedicatedReadinessNativeScan.scanState === "completed" && dedicatedReadinessNativeScan.session?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.complete === true) && !dedicatedReadinessNativeScan.session?.livePidSnapshot?.monitorValues?.length && dedicatedReadinessNativeScan.vehicleCommandEnabled === false && dedicatedReadinessNativeScan.wouldTransmit === false && dedicatedReadinessNativeRoundTrip?.readinessSnapshot?.monitors?.some((item) => item.id === "misfire" && item.complete === true) && dedicatedReadinessNativeRoundTrip?.vehicleCommandEnabled === false, "Dedicated readiness scan sessions did not preserve the readiness snapshot through read-only export and JSON reimport");
 const nativeBleGattScanSession = obd.buildNativeConnectorScanSession({ envelopes: nativeScanBatch.map((envelope) => ({ ...envelope, adapter_transport: "ble_gatt" })), scan_state: "completed", expected_intents: nativeExpectedIntents, expected_readouts: nativeExpectedReadouts });
 const nativeMixedTransportScanSession = obd.buildNativeConnectorScanSession({ envelopes: [{ ...nativeScanBatch[0], adapter_transport: "ble_gatt" }, nativeScanBatch[1]], scan_state: "open" });
 check(nativeBleGattScanSession.accepted === true && nativeBleGattScanSession.session?.readoutInterface?.adapterTransport === "ble_gatt" && nativeMixedTransportScanSession.blocked === true && nativeMixedTransportScanSession.errors.includes("mixed_adapter_transport_batch"), "Native connector scan batches must retain one declared BLE GATT transport and reject mixed legacy transport evidence");
