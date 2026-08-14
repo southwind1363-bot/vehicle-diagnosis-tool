@@ -4211,7 +4211,12 @@
       && latestSample.observationCondition !== "unspecified"
     );
     const observationConditionMatches = observationConditionsRecorded && previousSample.observationCondition === latestSample.observationCondition;
-    const capturedAtDiffers = Boolean(previousSample && latestSample && previousSample.capturedAt !== latestSample.capturedAt);
+    const hasVerifiedCaptureTimestamps = Boolean(
+      previousSample
+      && latestSample
+      && [previousSample.capturedAt, latestSample.capturedAt].every((capturedAt) => /^\d{4}-\d{2}-\d{2}T/.test(String(capturedAt || "")) && Number.isFinite(Date.parse(capturedAt)))
+    );
+    const capturedAtDiffers = Boolean(hasVerifiedCaptureTimestamps && previousSample.capturedAt !== latestSample.capturedAt);
     const protocolMatches = Boolean(previousSample && latestSample && (!previousSample.protocol || !latestSample.protocol || previousSample.protocol === latestSample.protocol));
     const comparisonAvailable = observationConditionMatches && capturedAtDiffers && protocolMatches;
     const monitorComparisonEcu = (item) => {
@@ -4268,8 +4273,10 @@
       comparison_blocked_by_condition: Boolean(previousSample && latestSample && !observationConditionMatches),
       comparisonBlockedByUnrecordedCondition: Boolean(previousSample && latestSample && !observationConditionsRecorded),
       comparison_blocked_by_unrecorded_condition: Boolean(previousSample && latestSample && !observationConditionsRecorded),
-      comparisonBlockedByTimestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
-      comparison_blocked_by_timestamp: Boolean(previousSample && latestSample && observationConditionMatches && !capturedAtDiffers),
+      comparisonBlockedByTimestamp: Boolean(previousSample && latestSample && observationConditionMatches && hasVerifiedCaptureTimestamps && !capturedAtDiffers),
+      comparison_blocked_by_timestamp: Boolean(previousSample && latestSample && observationConditionMatches && hasVerifiedCaptureTimestamps && !capturedAtDiffers),
+      comparisonBlockedByUnrecordedTimestamp: Boolean(previousSample && latestSample && observationConditionMatches && !hasVerifiedCaptureTimestamps),
+      comparison_blocked_by_unrecorded_timestamp: Boolean(previousSample && latestSample && observationConditionMatches && !hasVerifiedCaptureTimestamps),
       comparisonBlockedByProtocol: Boolean(previousSample && latestSample && observationConditionMatches && capturedAtDiffers && !protocolMatches),
       comparison_blocked_by_protocol: Boolean(previousSample && latestSample && observationConditionMatches && capturedAtDiffers && !protocolMatches),
       previousObservationCondition: previousSample?.observationCondition || null,

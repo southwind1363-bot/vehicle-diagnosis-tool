@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.68";
+const APP_VERSION = "3.9.69";
 const APP_LAST_UPDATED = "2026-08-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7392,6 +7392,8 @@ function renderObdBridgeSessionDetails(session = null) {
       if (livePidTimelineSummary.unitMismatchValueCount > 0) {
         lines.push(`単位が一致しないPID ${livePidTimelineSummary.unitMismatchValueCount}件は差分比較から除外`);
       }
+    } else if (livePidTimelineSummary?.comparisonBlockedByUnrecordedTimestamp) {
+      lines.push("取得時刻を確認できないため差分比較は行いません");
     } else if (livePidTimelineSummary?.comparisonBlockedByTimestamp) {
       lines.push("同一取得時刻の読取は差分比較しません");
     } else if (livePidTimelineSummary?.comparisonBlockedByProtocol) {
