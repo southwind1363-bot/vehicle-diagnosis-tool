@@ -21119,6 +21119,21 @@ const remergedMixedProtocolDtcSnapshots = obd.mergeDtcSnapshots(mixedProtocolDtc
 const remergedMixedProtocolDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: remergedMixedProtocolDtcSnapshots });
 const remergedMixedProtocolDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(remergedMixedProtocolDtcSession)));
 check(remergedMixedProtocolDtcSnapshots?.protocol === null && remergedMixedProtocolDtcSnapshots?.protocolValues?.join(",") === "CAN_11BIT_500K,ISO15765-4" && remergedMixedProtocolDtcSnapshots?.captureContexts?.map((context) => `${context.capturedAt}:${context.protocol}`).join(",") === "2026-08-04T10:00:00+09:00:CAN_11BIT_500K,2026-08-04T10:05:00+09:00:ISO15765-4,2026-08-04T10:10:00+09:00:CAN_11BIT_500K" && remergedMixedProtocolDtcSession?.dtcSnapshot?.protocolValues?.join(",") === "CAN_11BIT_500K,ISO15765-4" && remergedMixedProtocolDtcSession?.sessionCaptureIntegritySummary?.readoutCaptureTimeline?.map((row) => `${row.capturedAt}:${row.protocol}`).join(",") === "2026-08-04T10:00:00+09:00:CAN_11BIT_500K,2026-08-04T10:05:00+09:00:ISO15765-4,2026-08-04T10:10:00+09:00:CAN_11BIT_500K" && remergedMixedProtocolDtcSession?.sessionCaptureIntegritySummary?.captureProtocols?.join(",") === "CAN_11BIT_500K,ISO15765-4" && remergedMixedProtocolDtcSession?.sessionCaptureIntegritySummary?.multipleCaptureProtocols === true && remergedMixedProtocolDtcSession?.sessionCaptureIntegritySummary?.captureProtocolConsistency === "mixed" && remergedMixedProtocolDtcRoundTrip?.dtcSnapshot?.protocolValues?.join(",") === "CAN_11BIT_500K,ISO15765-4" && remergedMixedProtocolDtcRoundTrip?.dtcSnapshot?.captureContexts?.map((context) => `${context.capturedAt}:${context.protocol}`).join(",") === "2026-08-04T10:00:00+09:00:CAN_11BIT_500K,2026-08-04T10:05:00+09:00:ISO15765-4,2026-08-04T10:10:00+09:00:CAN_11BIT_500K" && remergedMixedProtocolDtcRoundTrip?.sessionCaptureIntegritySummary?.readoutCaptureTimeline?.map((row) => `${row.capturedAt}:${row.protocol}`).join(",") === "2026-08-04T10:00:00+09:00:CAN_11BIT_500K,2026-08-04T10:05:00+09:00:ISO15765-4,2026-08-04T10:10:00+09:00:CAN_11BIT_500K" && remergedMixedProtocolDtcRoundTrip?.sessionCaptureIntegritySummary?.captureProtocolConsistency === "mixed" && [remergedMixedProtocolDtcSession, remergedMixedProtocolDtcRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Re-merged DTC snapshots must retain mixed protocol capture contexts through read-only export and JSON reimport");
+const partialDtcStatusReadoutSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtcs: [{ code: "P0300", status: "stored" }], captured_at: "2026-08-14T10:00:00+09:00" }
+});
+const partialDtcStatusReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(partialDtcStatusReadoutSession)
+));
+const missingDtcStatusReadoutSession = obd.buildDiagnosticScanSession({});
+check(
+  partialDtcStatusReadoutSession?.coreSessionStatus?.dtcStatusReadoutPlan?.unreportedStatuses?.join(",") === "pending,permanent"
+  && partialDtcStatusReadoutSession.coreSessionStatus.dtcStatusReadoutPlan.requests?.map((item) => `${item.dtcStatus}:${item.bridgeIntent}:${item.serviceMode}:${item.required}`).join(",") === "stored:read_stored_dtc:03:false,pending:read_pending_dtc:07:true,permanent:read_permanent_dtc:0A:true"
+  && partialDtcStatusReadoutRoundTrip?.coreSessionStatus?.dtcStatusReadoutPlan?.unreportedStatuses?.join(",") === "pending,permanent"
+  && missingDtcStatusReadoutSession?.coreSessionStatus?.nextReadoutRequest?.bridgeIntent === "read_stored_dtc"
+  && missingDtcStatusReadoutSession.coreSessionStatus.nextReadoutRequest?.dtcStatusReadoutPlan?.requests?.every((item) => item.readOnly === true && item.executionEnabled === false && item.wouldTransmit === false && item.vehicleCommandEnabled === false),
+  "DTC status readout plans must retain stored, pending, and permanent read-only requests through export and import"
+);
 const captureIntegritySession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { codes: [{ code: "P0300", status: "stored" }], captured_at: "2026-08-04T10:00:00+09:00" },
   live_pid_snapshot: { monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }], captured_at: "2026-08-04T10:02:00+09:00" }

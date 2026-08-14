@@ -7140,6 +7140,60 @@
     );
   }
 
+  function buildDtcStatusReadoutPlan(summary = null) {
+    const expectedStatuses = ["stored", "pending", "permanent"];
+    const normalizeStatuses = (values) => [...new Set(
+      (Array.isArray(values) ? values : [values])
+        .map((value) => String(value || "").trim().toLowerCase())
+        .filter((value) => expectedStatuses.includes(value))
+    )].sort((left, right) => expectedStatuses.indexOf(left) - expectedStatuses.indexOf(right));
+    const reportedStatuses = normalizeStatuses(summary?.reportedStatuses || summary?.reported_statuses || []);
+    const unreportedStatuses = normalizeStatuses(
+      summary?.unreportedStatuses
+      || summary?.unreported_statuses
+      || expectedStatuses.filter((status) => !reportedStatuses.includes(status))
+    );
+    const requestByStatus = {
+      stored: { bridgeIntent: "read_stored_dtc", serviceMode: "03" },
+      pending: { bridgeIntent: "read_pending_dtc", serviceMode: "07" },
+      permanent: { bridgeIntent: "read_permanent_dtc", serviceMode: "0A" }
+    };
+    const requests = expectedStatuses.map((status) => ({
+      dtcStatus: status,
+      dtc_status: status,
+      bridgeIntent: requestByStatus[status].bridgeIntent,
+      bridge_intent: requestByStatus[status].bridgeIntent,
+      serviceMode: requestByStatus[status].serviceMode,
+      service_mode: requestByStatus[status].serviceMode,
+      reported: reportedStatuses.includes(status),
+      required: unreportedStatuses.includes(status),
+      readOnly: true,
+      read_only: true,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    }));
+    return {
+      schemaVersion: "dtc_status_readout_plan_v1",
+      schema_version: "dtc_status_readout_plan_v1",
+      expectedStatuses,
+      expected_statuses: expectedStatuses,
+      reportedStatuses,
+      reported_statuses: reportedStatuses,
+      unreportedStatuses,
+      unreported_statuses: unreportedStatuses,
+      complete: unreportedStatuses.length === 0,
+      requests,
+      read_only: true,
+      execution_enabled: false,
+      would_transmit: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function buildReadOnlyNextReadoutRequest(nextReadoutSummary = null, context = {}) {
     if (!nextReadoutSummary || typeof nextReadoutSummary !== "object" || !nextReadoutSummary.id) return null;
     const protocolEvidence = [
@@ -7164,8 +7218,18 @@
     );
     const usesUdsEcuInfoReadout = nextReadoutSummary.id === "ecu_info_snapshot"
       && (ecuInfoResponseFormat === "uds_read_data_by_identifier" || /\buds\b/i.test(protocolEvidence));
+    const dtcStatusReadoutPlan = nextReadoutSummary.id === "dtc_snapshot"
+      ? (context.dtcStatusReadoutPlan || context.dtc_status_readout_plan || buildDtcStatusReadoutPlan(context.dtcStatusSummary || context.dtc_status_summary || null))
+      : null;
+    const nextDtcStatus = dtcStatusReadoutPlan?.unreportedStatuses?.[0]
+      || dtcStatusReadoutPlan?.unreported_statuses?.[0]
+      || "stored";
     const requestByReadoutId = {
-      dtc_snapshot: { bridgeIntent: "read_stored_dtc", serviceMode: "03", pid: null },
+      dtc_snapshot: nextDtcStatus === "pending"
+        ? { bridgeIntent: "read_pending_dtc", serviceMode: "07", pid: null, dtcStatus: "pending" }
+        : nextDtcStatus === "permanent"
+          ? { bridgeIntent: "read_permanent_dtc", serviceMode: "0A", pid: null, dtcStatus: "permanent" }
+          : { bridgeIntent: "read_stored_dtc", serviceMode: "03", pid: null, dtcStatus: "stored" },
       freeze_frame_snapshot: { bridgeIntent: "read_freeze_frame", serviceMode: "02", pid: null },
       readiness_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "01" },
       ecu_info_snapshot: usesUdsEcuInfoReadout
@@ -7198,6 +7262,10 @@
       bridge_intent: request?.bridgeIntent || null,
       serviceMode: request?.serviceMode || null,
       service_mode: request?.serviceMode || null,
+      dtcStatus: request?.dtcStatus || null,
+      dtc_status: request?.dtcStatus || null,
+      dtcStatusReadoutPlan,
+      dtc_status_readout_plan: dtcStatusReadoutPlan,
       pid: request?.pid || null,
       dataIdentifier: request?.dataIdentifier || null,
       data_identifier: request?.dataIdentifier || null,
@@ -9752,9 +9820,15 @@
         snapshot?.protocol_provenance?.diagnostic_protocol
       ])
       .filter(Boolean);
+    const dtcStatusSummary = dtcSnapshot?.dtcStatusSummary
+      || dtcSnapshot?.dtc_status_summary
+      || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
+    const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const readoutRequestContext = {
       diagnosticProtocol: readoutRequestProtocolValues.find((value) => /\buds\b/i.test(String(value))) || readoutRequestProtocolValues[0] || null,
-      ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null
+      ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null,
+      dtcStatusSummary,
+      dtcStatusReadoutPlan
     };
     const observedEcuSummary = buildObservedEcuSummary({
       dtcSnapshot,
@@ -9788,9 +9862,6 @@
       supportedPidMatrix
     });
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
-    const dtcStatusSummary = dtcSnapshot?.dtcStatusSummary
-      || dtcSnapshot?.dtc_status_summary
-      || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
     const isExplicitlyBlockedReadout = (snapshot) => snapshot?.blocked === true || snapshot?.isBlocked === true || snapshot?.is_blocked === true;
     const isCapturedReadout = (snapshot, key) => (
       !isExplicitlyBlockedReadout(snapshot)
@@ -10670,6 +10741,8 @@
       readout_quality_summary: readoutQualitySummary,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcStatusReadoutPlan,
+      dtc_status_readout_plan: dtcStatusReadoutPlan,
       nextPendingReadoutId,
       next_pending_readout_id: nextPendingReadoutId,
       nextPendingReadoutState,
@@ -11717,6 +11790,7 @@
     const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
     const dtcStatusSummary = normalizeObject("dtcStatusSummary", "dtc_status_summary");
+    const dtcStatusReadoutPlan = summary.dtcStatusReadoutPlan || summary.dtc_status_readout_plan || null;
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
     const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
@@ -11795,6 +11869,8 @@
       readout_quality_summary: readoutQualitySummary,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcStatusReadoutPlan,
+      dtc_status_readout_plan: dtcStatusReadoutPlan,
       nextPendingReadoutId: pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutIds[0], null),
       next_pending_readout_id: pickDefined(summary.next_pending_readout_id, summary.nextPendingReadoutId, pendingReadoutIds[0], null),
       nextPendingReadoutState: summary.nextPendingReadoutState || summary.next_pending_readout_state || null,
