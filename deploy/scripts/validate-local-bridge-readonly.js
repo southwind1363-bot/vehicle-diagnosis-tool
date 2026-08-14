@@ -28,6 +28,7 @@ const j2534UnavailableReadIntents = [
   "read_supported_pids",
   "read_ecu_info",
   "read_onboard_monitor",
+  "read_readiness",
   "read_live_pid_snapshot"
 ];
 check(packageManifest.scripts?.["bridge:j2534:dev"] === "C:\\Progra~1\\nodejs\\node.exe scripts/start-j2534-readonly-bridge.js" && j2534BridgeStarterSource.includes('process.env.LOCAL_BRIDGE_DISCOVER_J2534 = "1"') && j2534BridgeStarterSource.includes("createLocalBridgeApp()") && j2534BridgeStarterSource.includes("vehicle_command_enabled=false"), "J2534 bridge starter must explicitly enable only static read-only discovery");
@@ -387,9 +388,11 @@ try {
   check(live.data.values.some((item) => item.id === "maf_sensor_status" && item.value === "mask_01"), "live PID response did not include sample MAF sensor status mask");
   check(live.data.values.some((item) => item.id === "commanded_diesel_intake_air_flow" && item.value === 50.2), "live PID response did not include sample diesel intake air flow command");
   check(live.data.values.some((item) => item.id === "commanded_throttle_control" && item.value === 50.2), "live PID response did not include sample diesel throttle control command");
-  const readiness = await post(port, "read_live_pid_snapshot", token, { readout_id: "readiness_snapshot", pid: "01" });
+  const readiness = await post(port, "read_readiness", token, { readout_id: "readiness_snapshot", pid: "01" });
   check(readiness.ok === true && readiness.blocked === false && readiness.would_transmit === false, "readiness request was not kept read-only");
   check(readiness.data.readiness_status_byte_a === 0x00 && readiness.data.readiness_status_byte_b === 0x07 && readiness.data.readiness_status_byte_c === 0x65 && readiness.data.readiness_status_byte_d === 0x00, "readiness request did not return a dedicated Mode 01 PID 01 snapshot");
+  const legacyReadiness = await post(port, "read_live_pid_snapshot", token, { readout_id: "readiness_snapshot", pid: "01" });
+  check(legacyReadiness.ok === true && legacyReadiness.would_transmit === false && legacyReadiness.data.readiness_status_byte_b === 0x07, "legacy readiness request was not retained as a read-only compatibility route");
   check(live.data.values.length >= 40, "live PID sample response did not include expanded monitor values");
   check(live.data.values.every((item) => monitorDefinitionIds.has(item.id)), "live PID sample response included an id not registered in monitor definitions");
   check(live.data.values.every((item) => live.data.supported_pids.includes(item.pid)), "live PID sample response included a pid not advertised as supported");
@@ -683,7 +686,7 @@ try {
   check(replayLive.data.values.some((item) => item.id === "auxiliary_input_status" && item.value === "pto_inactive"), "replay live response did not decode auxiliary input status");
   check(replayLive.data.values.some((item) => item.id === "stft_b1" && item.value === 0), "replay live response did not decode STFT B1");
   check(replayLive.data.values.some((item) => item.id === "ltft_b1" && item.value === 19.53), "replay live response did not decode LTFT B1");
-  const replayReadiness = await post(replayPort, "read_live_pid_snapshot", token, { readout_id: "readiness_snapshot", pid: "01" });
+  const replayReadiness = await post(replayPort, "read_readiness", token, { readout_id: "readiness_snapshot", pid: "01" });
   check(replayReadiness.ok === true && replayReadiness.would_transmit === false && replayReadiness.data.readiness_ecu_snapshots.some((item) => item.readiness_status_byte_a === 0x81 && item.readiness_status_byte_b === 0x07), "replay readiness request did not return an observed Mode 01 PID 01 snapshot");
   check(replayLive.data.values.some((item) => item.id === "fuel_pressure" && item.value === 120), "replay live response did not decode fuel pressure");
   check(replayLive.data.values.some((item) => item.id === "intake_air_temp" && item.value === 40), "replay live response did not decode intake air temperature");

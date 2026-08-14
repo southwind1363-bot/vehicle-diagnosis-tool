@@ -623,6 +623,7 @@
       "read_supported_pids",
       "read_ecu_info",
       "read_onboard_monitor",
+      "read_readiness",
       "read_live_pid_snapshot"
     ]),
     blockedWriteIntents: Object.freeze([
@@ -819,6 +820,20 @@
       safeDefault: Object.freeze({
         protocol: null,
         tests: Object.freeze([]),
+        captured_at: null
+      })
+    }),
+    Object.freeze({
+      intent: "read_readiness",
+      label: "Readiness snapshot",
+      dataShape: Object.freeze(["protocol", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d", "readiness_ecu_snapshots", "captured_at"]),
+      safeDefault: Object.freeze({
+        protocol: null,
+        readiness_status_byte_a: null,
+        readiness_status_byte_b: null,
+        readiness_status_byte_c: null,
+        readiness_status_byte_d: null,
+        readiness_ecu_snapshots: Object.freeze([]),
         captured_at: null
       })
     }),
@@ -1491,6 +1506,7 @@
   }
 
   function getNativeConnectorReadoutId(intent, data = {}, explicitReadoutId = null) {
+    if (intent === "read_readiness") return "readiness_snapshot";
     if (intent === "read_live_pid_snapshot") {
       const normalizedExplicitReadoutId = String(explicitReadoutId || data.readout_id || data.readoutId || "").trim();
       if (["readiness_snapshot", "live_pid_snapshot"].includes(normalizedExplicitReadoutId)) return normalizedExplicitReadoutId;
@@ -1513,6 +1529,7 @@
   }
 
   function isNativeConnectorReadoutAllowedForIntent(intent, readoutId) {
+    if (intent === "read_readiness") return readoutId === "readiness_snapshot";
     if (intent === "read_live_pid_snapshot") {
       return ["readiness_snapshot", "live_pid_snapshot"].includes(readoutId);
     }
@@ -1829,6 +1846,8 @@
     const explicitReadoutIdValid = !explicitReadoutIdInput || nativeConnectorContract.allowedReadoutIds.includes(explicitReadoutId);
     const explicitReadoutIdMatchesIntent = !explicitReadoutIdInput || (intent === "read_live_pid_snapshot"
       ? ["readiness_snapshot", "live_pid_snapshot"].includes(explicitReadoutId)
+      : intent === "read_readiness"
+        ? explicitReadoutId === "readiness_snapshot"
       : explicitReadoutId === getNativeConnectorReadoutId(intent, data || {}));
     const failedLivePidReadoutIdMissing = intent === "read_live_pid_snapshot" && !responseSucceeded && !explicitReadoutId;
     const explicitReadoutScopeInput = source.readoutScopeId ?? source.readout_scope_id;
@@ -1870,6 +1889,7 @@
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
       read_onboard_monitor: ["tests", "items"],
+      read_readiness: ["monitors", "readiness_ecu_snapshots", "readinessEcuSnapshots"],
       read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
     };
     const requiredDataKeys = requiredDataKeysByIntent[intent] || [];
@@ -2195,6 +2215,7 @@
       read_supported_pids: { supported_pid_matrix: data },
       read_ecu_info: { ecu_info_snapshot: data },
       read_onboard_monitor: { onboard_monitor_snapshot: data },
+      read_readiness: { readiness_snapshot: data },
       read_live_pid_snapshot: evaluation.readoutId === "readiness_snapshot"
         ? { readiness_snapshot: data }
         : { live_pid_snapshot: data }
@@ -7231,7 +7252,7 @@
           ? { bridgeIntent: "read_permanent_dtc", serviceMode: "0A", pid: null, dtcStatus: "permanent" }
           : { bridgeIntent: "read_stored_dtc", serviceMode: "03", pid: null, dtcStatus: "stored" },
       freeze_frame_snapshot: { bridgeIntent: "read_freeze_frame", serviceMode: "02", pid: null },
-      readiness_snapshot: { bridgeIntent: "read_live_pid_snapshot", serviceMode: "01", pid: "01" },
+      readiness_snapshot: { bridgeIntent: "read_readiness", serviceMode: "01", pid: "01" },
       ecu_info_snapshot: usesUdsEcuInfoReadout
         ? {
           bridgeIntent: "read_ecu_info",

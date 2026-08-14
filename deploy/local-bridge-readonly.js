@@ -62,6 +62,7 @@ const READ_INTENTS = new Set([
   "read_supported_pids",
   "read_ecu_info",
   "read_onboard_monitor",
+  "read_readiness",
   "read_live_pid_snapshot"
 ]);
 const SAFE_STATUS_INTENTS = new Set([
@@ -255,7 +256,8 @@ function isReadinessSnapshotRequest(request = {}) {
   const data = request?.data && typeof request.data === "object" ? request.data : {};
   const requestedPid = String(data.pid || data.requested_pid || data.requestedPid || "").trim().toUpperCase();
   const readoutId = String(data.readout_id || data.readoutId || "").trim();
-  return readoutId === "readiness_snapshot" || requestedPid === "01";
+  return request.intent === "read_readiness"
+    || (request.intent === "read_live_pid_snapshot" && (readoutId === "readiness_snapshot" || requestedPid === "01"));
 }
 
 function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices), sampleReadoutsEnabled = false) {
@@ -511,7 +513,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     };
   }
 
-  if (request.intent === "read_live_pid_snapshot" && isReadinessSnapshotRequest(request) && replaySnapshot) {
+  if (isReadinessSnapshotRequest(request) && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.readiness_snapshot
       || (replaySnapshot.readoutObserved?.readiness_snapshot ? null : "replay_readiness_not_observed");
     return {
@@ -524,7 +526,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     };
   }
 
-  if (request.intent === "read_live_pid_snapshot" && isReadinessSnapshotRequest(request)) {
+  if (isReadinessSnapshotRequest(request)) {
     return {
       ...base,
       data: {
