@@ -15758,6 +15758,8 @@
         retained_commands: false,
         readOnly: true,
         read_only: true,
+        wouldTransmit: false,
+        would_transmit: false,
         vehicleCommandEnabled: false,
         vehicle_command_enabled: false
       };
@@ -15856,6 +15858,8 @@
       retained_commands: false,
       readOnly: true,
       read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false
     };
