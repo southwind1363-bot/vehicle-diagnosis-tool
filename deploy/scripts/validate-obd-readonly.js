@@ -3475,7 +3475,10 @@ const webSerialReadinessOverrideSource = appSource.match(/function buildWebSeria
 const webSerialReadinessOverrideBuilder = webSerialReadinessOverrideSource
   ? new Function(`${webSerialReadinessOverrideSource}; return buildWebSerialReadinessResponseOverride;`)()
   : null;
-const webSerialLatestReadinessOverride = webSerialReadinessOverrideBuilder?.([{ command: "0101", response: "41 01 81 07 65 00" }]);
+const webSerialLatestReadinessOverride = webSerialReadinessOverrideBuilder?.([
+  { command: "0101", response: "41 01 00 07 65 00" },
+  { command: "0101", response: "41 01 81 07 65 00" }
+]);
 const webSerialLatestReadinessSession = obd.buildScanSessionFromObdText(">0101\n41 01 00 07 65 00\n>0101\n41 01 81 07 65 00", { readinessResponse: webSerialLatestReadinessOverride });
 const webSerialRejectedReadinessOverride = webSerialReadinessOverrideBuilder?.([{ command: "0101", response: "7F 01 11" }]);
 const webSerialRejectedReadinessSession = obd.buildScanSessionFromObdText(">0101\n41 01 00 07 65 00\n>0101\n7F 01 11", { readinessResponse: webSerialRejectedReadinessOverride });
