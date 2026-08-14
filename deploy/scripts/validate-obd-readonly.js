@@ -19951,7 +19951,19 @@ const scanSessionWebSerialTimingBound = obd.buildDiagnosticScanSession({
     attempts: [{ label: "DTC", status: "completed", requested_command_count: 1, attempted_command_count: 1, prompt_terminated_command_count: 1, completed_command_count: 1, positive_response_count: 1, response_timing_count: 99, total_response_elapsed_ms: 999999, max_response_elapsed_ms: 999999, vehicle_command_enabled: false }]
   }
 });
+const scanSessionWebSerialAttemptTimestamps = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempts: [
+      { label: "DTC", status: "completed", started_at: "2026-08-14T10:00:00+09:00", ended_at: "2026-08-14T10:00:05+09:00", requested_command_count: 1, attempted_command_count: 1, completed_command_count: 1, positive_response_count: 1 },
+      { label: "PID", status: "completed", started_at: "invalid", ended_at: "invalid", requested_command_count: 1, attempted_command_count: 1, completed_command_count: 1, positive_response_count: 1 },
+      { label: "Readiness", status: "completed", started_at: "2026-08-14T10:02:00+09:00", ended_at: "2026-08-14T10:01:00+09:00", requested_command_count: 1, attempted_command_count: 1, completed_command_count: 1, positive_response_count: 1 }
+    ]
+  }
+});
+const scanSessionWebSerialAttemptTimestampsRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scanSessionWebSerialAttemptTimestamps)));
 check(scanSessionWebSerialTiming.webSerialReadoutSummary?.responseTimingCount === 2 && scanSessionWebSerialTiming.web_serial_readout_summary?.total_response_elapsed_ms === 146 && scanSessionWebSerialTiming.webSerialReadoutSummary?.maxResponseElapsedMs === 93 && scanSessionWebSerialTiming.webSerialReadoutSummary?.attempts?.[0]?.retainedRawText === false && scanSessionWebSerialTiming.vehicleCommandEnabled === false && scanSessionWebSerialTimingBound.webSerialReadoutSummary?.attempts?.[0]?.responseTimingCount === 1 && scanSessionWebSerialTimingBound.webSerialReadoutSummary?.totalResponseElapsedMs === 180000 && scanSessionWebSerialTimingBound.webSerialReadoutSummary?.maxResponseElapsedMs === 60000 && scanSessionWebSerialTimingBound.vehicleCommandEnabled === false, "Diagnostic scan session did not retain bounded read-only Web Serial response timing");
+check(scanSessionWebSerialAttemptTimestamps.webSerialReadoutSummary?.attempts?.[0]?.startedAt === "2026-08-14T10:00:00+09:00" && scanSessionWebSerialAttemptTimestamps.webSerialReadoutSummary?.attempts?.[0]?.endedAt === "2026-08-14T10:00:05+09:00" && scanSessionWebSerialAttemptTimestamps.webSerialReadoutSummary?.attempts?.[1]?.startedAt === null && scanSessionWebSerialAttemptTimestamps.webSerialReadoutSummary?.attempts?.[1]?.endedAt === null && scanSessionWebSerialAttemptTimestamps.webSerialReadoutSummary?.attempts?.[2]?.startedAt === "2026-08-14T10:02:00+09:00" && scanSessionWebSerialAttemptTimestamps.webSerialReadoutSummary?.attempts?.[2]?.endedAt === null && scanSessionWebSerialAttemptTimestampsRoundTrip?.web_serial_readout_summary?.attempts?.[0]?.ended_at === "2026-08-14T10:00:05+09:00" && scanSessionWebSerialAttemptTimestampsRoundTrip?.webSerialReadoutSummary?.attempts?.[1]?.startedAt === null && scanSessionWebSerialAttemptTimestampsRoundTrip?.webSerialReadoutSummary?.attempts?.[2]?.endedAt === null && scanSessionWebSerialAttemptTimestamps.vehicleCommandEnabled === false && scanSessionWebSerialAttemptTimestampsRoundTrip?.wouldTransmit === false, "Web Serial attempt timestamps should retain valid chronology and discard invalid or reversed values safely");
 const scanSessionWebSerialFalseCompletion = obd.buildDiagnosticScanSession({
   web_serial_readout_summary: {
     schema_version: "web_serial_readout_execution_v2",

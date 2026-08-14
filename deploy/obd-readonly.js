@@ -15697,6 +15697,10 @@
   function normalizeWebSerialReadoutSummary(input = null) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
     const isV2Input = input.schemaVersion === "web_serial_readout_execution_v2" || input.schema_version === "web_serial_readout_execution_v2";
+    const normalizeAttemptTimestamp = (value) => {
+      const timestamp = typeof value === "string" ? value.trim() : "";
+      return /^\d{4}-\d{2}-\d{2}T/.test(timestamp) && Number.isFinite(Date.parse(timestamp)) ? timestamp : null;
+    };
     const normalizeAttempt = (attempt) => {
       if (!attempt || typeof attempt !== "object" || Array.isArray(attempt)) return null;
       let status = ["completed", "partial", "incomplete", "failed"].includes(attempt.status) ? attempt.status : "failed";
@@ -15720,6 +15724,11 @@
       const readDuration = (camelKey, snakeKey, maximum) => Math.max(0, Math.min(maximum, Number(attempt[camelKey] ?? attempt[snakeKey] ?? 0) || 0));
       const totalResponseElapsedMs = readDuration("totalResponseElapsedMs", "total_response_elapsed_ms", 180000);
       const maxResponseElapsedMs = Math.min(totalResponseElapsedMs, readDuration("maxResponseElapsedMs", "max_response_elapsed_ms", 60000));
+      const startedAt = normalizeAttemptTimestamp(attempt.startedAt || attempt.started_at);
+      const requestedEndedAt = normalizeAttemptTimestamp(attempt.endedAt || attempt.ended_at);
+      const endedAt = startedAt && requestedEndedAt && Date.parse(requestedEndedAt) < Date.parse(startedAt)
+        ? null
+        : requestedEndedAt;
       if (!isV2Input && status === "completed" && positiveResponseCount === 0) positiveResponseCount = completedCommandCount;
       if (isV2Input) completedCommandCount = Math.min(completedCommandCount, positiveResponseCount);
       const hasIncompleteEvidence = noDataCount > expectedEmptyCommandCount || negativeResponseCount > 0 || pendingNegativeResponseCount > 0 || emptyResponseCount > 0 || unrecognizedResponseCount > 0;
@@ -15731,10 +15740,10 @@
       return {
         label: String(attempt.label || "Web Serial読取").slice(0, 80),
         status,
-        startedAt: attempt.startedAt || attempt.started_at || null,
-        started_at: attempt.started_at || attempt.startedAt || null,
-        endedAt: attempt.endedAt || attempt.ended_at || null,
-        ended_at: attempt.ended_at || attempt.endedAt || null,
+        startedAt,
+        started_at: startedAt,
+        endedAt,
+        ended_at: endedAt,
         requestedCommandCount,
         requested_command_count: requestedCommandCount,
         attemptedCommandCount,
@@ -22256,6 +22265,9 @@
     const supportedPidInput = hasBridgeSupportedPidResponse ? importSession : pick("supportedPidMatrix", "supported_pid_matrix", "supportedPids", "supported_pids", "supportedPidList", "supported_pid_list", "pids", "pid_list", "pidList", "supportedPidRows", "supported_pid_rows");
     const onboardMonitorInput = hasBridgeOnboardMonitorResponse ? importSession : pick("onboardMonitorSnapshot", "onboard_monitor_snapshot", "onboardMonitor", "onboard_monitor", "onboardMonitorRows", "onboard_monitor_rows", "mode06Snapshot", "mode06_snapshot", "mode06", "mode_06", "mode06Tests", "mode06_tests", "mode06Rows", "mode06_rows");
     const ecuResponseInput = pick("ecuResponseSummary", "ecu_response_summary", "ecuResponses", "ecu_responses", "ecuResponseRows", "ecu_response_rows", "ecus", "modules", "controllers");
+    const webSerialReadoutSummary = isTrustedBridgeSessionExport
+      ? normalizeWebSerialReadoutSummary(pick("webSerialReadoutSummary", "web_serial_readout_summary"))
+      : null;
     const connectionStatusInput = pick("connectionStatus", "connection_status", "connectionStatusResponse", "connection_status_response");
     const vciDevicesInput = pick("vciDevices", "vci_devices", "vciList", "vci_list", "listVciResponse", "list_vci_response");
     const adapterIdentityInput = pick("adapterIdentity", "adapter_identity", "adapterIdentityResponse", "adapter_identity_response");
@@ -22478,7 +22490,7 @@
       || ["reported", "blocked"].includes(String(dtcSnapshot.dtcReadoutStatus || dtcSnapshot.dtc_readout_status || "").toLowerCase())
     ));
     const hasScannerJsonVehicleMetadata = Boolean(scannerJsonVehicleProfile || scannerJsonVehicleApplicability);
-    if (![hasDtcSnapshotContent, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary, hasScannerJsonVehicleMetadata].some(Boolean)) return null;
+    if (![hasDtcSnapshotContent, importedLivePidSnapshot, livePidTimeline, freezeFrameSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot, ecuResponseSummary, webSerialReadoutSummary, hasScannerJsonVehicleMetadata].some(Boolean)) return null;
     const explicitHadSensitiveIdentifier = input.hadSensitiveIdentifier === true
       || input.had_sensitive_identifier === true
       || input.importClassification?.hadSensitiveIdentifier === true
@@ -22585,6 +22597,7 @@
       supportedPidMatrix: supportedPidMatrix || undefined,
       onboardMonitorSnapshot: onboardMonitorSnapshot || undefined,
       ecuResponseSummary: ecuResponseSummary || undefined,
+      webSerialReadoutSummary: webSerialReadoutSummary || undefined,
       connectionStatus: connectionStatusInput || undefined,
       vciDevices: vciDevicesInput || undefined,
       adapterIdentity: adapterIdentityInput || undefined,
