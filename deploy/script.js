@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.62";
+const APP_VERSION = "3.9.63";
 const APP_LAST_UPDATED = "2026-08-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5903,6 +5903,8 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses));
   const readinessResponseOverride = buildWebSerialReadinessResponseOverride(commandResponses);
   const onboardMonitorResponseOverride = buildWebSerialOnboardMonitorResponseOverride(commandResponses);
+  const vehicleProfile = buildSelectedObdVehicleProfile();
+  const vehicleApplicability = buildSelectedObdVehicleApplicability(vehicleProfile);
   const scanSessionOptions = {
     session_id: obdDevSession.scanSessionId || "web-serial-dev-readout",
     protocol: "ELM327",
@@ -5910,6 +5912,8 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     ended_at: capturedAt,
     captured_at: capturedAt,
     readoutInterface: buildSelectedObdReadoutInterface(),
+    vehicleProfile: vehicleProfile || undefined,
+    vehicleApplicability: vehicleApplicability || undefined,
     observationContext: buildSelectedObdObservationContext() || undefined,
     connectionStatus: options?.connectionStatus || buildWebSerialConnectionStatus(),
     ...(supportedPidResponseOverride ? { supportedPidResponse: supportedPidResponseOverride } : {}),

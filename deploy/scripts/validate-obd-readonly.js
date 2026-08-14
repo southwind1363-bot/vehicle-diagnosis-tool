@@ -3475,6 +3475,19 @@ const webSerialReadinessOverrideSource = appSource.match(/function buildWebSeria
 const webSerialReadinessOverrideBuilder = webSerialReadinessOverrideSource
   ? new Function(`${webSerialReadinessOverrideSource}; return buildWebSerialReadinessResponseOverride;`)()
   : null;
+const webSerialReadoutRetentionSource = appSource.slice(
+  appSource.indexOf("function retainObdDeveloperReadout"),
+  appSource.indexOf("function isAllowedObdDeveloperCommand")
+);
+const webSerialVehicleApplicabilitySession = obd.buildDiagnosticScanSession({
+  source: "web_serial",
+  vehicleProfile: { maker: "Toyota", model: "Aqua", modelCode: "NHP10", year: "2021", engineCode: "1NZ-FXE" },
+  vehicleApplicability: { schemaVersion: "vehicle_applicability_v2", status: "matched", maker: "Toyota", model: "Aqua", modelCode: "NHP10", year: "2021", engineCode: "1NZ-FXE" }
+});
+const webSerialVehicleApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(webSerialVehicleApplicabilitySession)
+));
+check(webSerialReadoutRetentionSource.includes('const vehicleProfile = buildSelectedObdVehicleProfile();') && webSerialReadoutRetentionSource.includes('const vehicleApplicability = buildSelectedObdVehicleApplicability(vehicleProfile);') && webSerialReadoutRetentionSource.includes('vehicleProfile: vehicleProfile || undefined,') && webSerialReadoutRetentionSource.includes('vehicleApplicability: vehicleApplicability || undefined,') && webSerialVehicleApplicabilitySession?.vehicleProfile?.model === "Aqua" && webSerialVehicleApplicabilitySession?.vehicleApplicability?.status === "matched" && webSerialVehicleApplicabilityRoundTrip?.vehicleProfile?.modelCode === "NHP10" && webSerialVehicleApplicabilityRoundTrip?.vehicleApplicability?.engineCode === "1NZ-FXE" && webSerialVehicleApplicabilityRoundTrip?.vehicleCommandEnabled === false && webSerialVehicleApplicabilityRoundTrip?.wouldTransmit === false, "Web Serial sessions must retain selected vehicle applicability through read-only JSON export and reimport");
 const webSerialLatestReadinessOverride = webSerialReadinessOverrideBuilder?.([
   { command: "0101", response: "41 01 00 07 65 00" },
   { command: "0101", response: "41 01 81 07 65 00" }
