@@ -826,6 +826,9 @@
     Object.freeze({
       intent: "read_readiness",
       label: "Readiness snapshot",
+      requestVariants: Object.freeze([
+        Object.freeze({ readoutId: "readiness_snapshot", requestData: Object.freeze({ readout_id: "readiness_snapshot", pid: "01" }) })
+      ]),
       dataShape: Object.freeze(["protocol", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d", "readiness_ecu_snapshots", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,

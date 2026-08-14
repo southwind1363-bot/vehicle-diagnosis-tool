@@ -136,6 +136,17 @@ function hasBridgeIntentModel(intentId, schemaIntents, allowedReadIntents, suppo
   return allowedReadIntents.has(intentId) && schemaIntents.has(intentId) && supportCheck();
 }
 
+function hasBridgeReadinessContractSupport() {
+  const contract = window.ObdReadOnly?.getLocalBridgeContract?.();
+  const schemas = window.ObdReadOnly?.getLocalBridgeResponseSchemas?.() || [];
+  return hasBridgeIntentModel(
+    "read_readiness",
+    new Set(schemas.map((item) => item.intent)),
+    new Set(contract?.allowedReadIntents || []),
+    () => typeof window.ObdReadOnly?.normalizeBridgeReadinessSnapshot === "function"
+  );
+}
+
 function hasBridgeReadinessSupport() {
   return typeof window.ObdReadOnly?.normalizeBridgeReadinessSnapshot === "function";
 }
@@ -229,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.57";
+const APP_VERSION = "3.9.58";
 const APP_LAST_UPDATED = "2026-08-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3552,7 +3563,7 @@ function buildLocalBridgeImplementationSnapshot() {
     { id: "read_freeze_frame", label: "フリーズフレーム応答の正規化", available: hasBridgeIntentModel("read_freeze_frame", schemaIntents, allowedReadIntents, hasBridgeFreezeFrameSupport) },
     { id: "read_supported_pids", label: "対応PID応答の正規化", available: hasBridgeIntentModel("read_supported_pids", schemaIntents, allowedReadIntents, hasBridgeSupportedPidSupport) },
     { id: "read_live_pid_snapshot", label: "ライブPID応答の正規化", available: hasBridgeIntentModel("read_live_pid_snapshot", schemaIntents, allowedReadIntents, hasBridgeLivePidSupport) },
-    { id: "readiness_snapshot", label: "レディネス整形", available: hasBridgeReadinessSupport() },
+    { id: "read_readiness", label: "レディネス応答の正規化", available: hasBridgeReadinessContractSupport() },
     { id: "read_ecu_info", label: "ECU情報応答の正規化", available: hasBridgeIntentModel("read_ecu_info", schemaIntents, allowedReadIntents, hasBridgeEcuInfoSupport) },
     { id: "read_onboard_monitor", label: "Mode06応答の正規化", available: hasBridgeIntentModel("read_onboard_monitor", schemaIntents, allowedReadIntents, hasBridgeOnboardMonitorSupport) },
     { id: "session_summary", label: "セッション要約", available: hasBridgeSessionSummarySupport() },
@@ -4129,7 +4140,7 @@ function buildDiagnosticCoreProgressSnapshot() {
     { id: "dtc_status", label: "DTC状態別保持", available: hasBridgeDtcSupport() },
     { id: "pid_live_data", label: "PID / ライブデータ", available: hasBridgeLivePidSupport() && hasBridgeSupportedPidSupport() },
     { id: "freeze_frame", label: "フリーズフレーム", available: hasBridgeFreezeFrameSupport() },
-    { id: "readiness", label: "レディネス", available: hasBridgeReadinessSupport() },
+    { id: "readiness", label: "レディネス", available: hasBridgeReadinessContractSupport() },
     { id: "ecu_info_mode09", label: "ECU情報 / Mode09", available: hasBridgeEcuInfoSupport() },
     { id: "mode06", label: "Mode06監視結果", available: hasBridgeOnboardMonitorSupport() },
     { id: "diagnostic_import", label: "診断取込 / export", available: hasBridgeDiagnosticImportPipelineSupport() },
