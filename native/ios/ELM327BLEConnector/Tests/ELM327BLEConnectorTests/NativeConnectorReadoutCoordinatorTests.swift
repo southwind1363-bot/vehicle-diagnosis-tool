@@ -169,6 +169,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
                 ignitionType: "spark"
             )
         )
+        XCTAssertEqual(readiness.intent, "read_readiness")
         let ecuInfo = NativeConnectorEnvelopeFactory.ecuInfo(
             context: context,
             sequence: 6,
