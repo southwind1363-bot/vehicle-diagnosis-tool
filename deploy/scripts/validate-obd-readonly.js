@@ -19971,6 +19971,14 @@ const scanSessionWebSerialFalseCompletion = obd.buildDiagnosticScanSession({
   }
 });
 check(scanSessionWebSerialFalseCompletion.webSerialReadoutSummary?.attempts?.[0]?.status === "incomplete" && scanSessionWebSerialFalseCompletion.webSerialReadoutSummary?.attempts?.[0]?.readoutCompleted === false, "Diagnostic scan session accepted a v2 Web Serial NO DATA result as completed");
+const scanSessionWebSerialTimedOutCompletion = obd.buildDiagnosticScanSession({
+  web_serial_readout_summary: {
+    schema_version: "web_serial_readout_execution_v2",
+    attempts: [{ label: "PID", status: "completed", requested_command_count: 1, attempted_command_count: 1, completed_command_count: 1, positive_response_count: 1, timed_out: true }]
+  }
+});
+const scanSessionWebSerialTimedOutCompletionRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scanSessionWebSerialTimedOutCompletion)));
+check(scanSessionWebSerialTimedOutCompletion.webSerialReadoutSummary?.attempts?.[0]?.status === "failed" && scanSessionWebSerialTimedOutCompletion.webSerialReadoutSummary?.attempts?.[0]?.readoutCompleted === false && scanSessionWebSerialTimedOutCompletion.webSerialReadoutSummary?.timedOutCount === 1 && scanSessionWebSerialTimedOutCompletion.readoutQualitySummary?.webSerialTimedOutCount === 1 && scanSessionWebSerialTimedOutCompletion.readoutQualitySummary?.reviewRequired === true && scanSessionWebSerialTimedOutCompletionRoundTrip?.webSerialReadoutSummary?.timed_out_count === 1 && scanSessionWebSerialTimedOutCompletionRoundTrip?.readoutQualitySummary?.web_serial_timed_out_count === 1 && [scanSessionWebSerialTimedOutCompletion, scanSessionWebSerialTimedOutCompletionRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Timed-out Web Serial reads must not remain completed or quality-clean after normalization");
 const scanSessionWebSerialSummaryFalseCompletion = obd.buildDiagnosticScanSession({
   web_serial_readout_summary: {
     schema_version: "web_serial_readout_execution_v2",

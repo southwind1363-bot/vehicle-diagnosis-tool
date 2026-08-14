@@ -10473,6 +10473,7 @@
     const webSerialAdapterErrorCount = readCount(normalizedWebSerialReadoutSummary?.adapterErrorCount, normalizedWebSerialReadoutSummary?.adapter_error_count);
     const webSerialUnableToConnectCount = readCount(normalizedWebSerialReadoutSummary?.unableToConnectCount, normalizedWebSerialReadoutSummary?.unable_to_connect_count);
     const webSerialTransportErrorCount = readCount(normalizedWebSerialReadoutSummary?.transportErrorCount, normalizedWebSerialReadoutSummary?.transport_error_count);
+    const webSerialTimedOutCount = readCount(normalizedWebSerialReadoutSummary?.timedOutCount, normalizedWebSerialReadoutSummary?.timed_out_count);
     const webSerialResponseReviewCount = webSerialNegativeResponseCount
       + webSerialPendingNegativeResponseCount
       + Math.max(0, webSerialNoDataCount - webSerialExpectedEmptyCommandCount)
@@ -10480,7 +10481,8 @@
       + webSerialUnrecognizedResponseCount
       + webSerialAdapterErrorCount
       + webSerialUnableToConnectCount
-      + webSerialTransportErrorCount;
+      + webSerialTransportErrorCount
+      + webSerialTimedOutCount;
     const rawPidUndecodedCount = (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"])
       ? readCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount)
       : 0)
@@ -10536,7 +10538,9 @@
       webSerialUnableToConnectCount,
       web_serial_unable_to_connect_count: webSerialUnableToConnectCount,
       webSerialTransportErrorCount,
-      web_serial_transport_error_count: webSerialTransportErrorCount
+      web_serial_transport_error_count: webSerialTransportErrorCount,
+      webSerialTimedOutCount,
+      web_serial_timed_out_count: webSerialTimedOutCount
     };
     const analysisChecklist = [
       {
@@ -13535,6 +13539,7 @@
     const webSerialAdapterErrorCount = toCount("webSerialAdapterErrorCount", "web_serial_adapter_error_count", 0);
     const webSerialUnableToConnectCount = toCount("webSerialUnableToConnectCount", "web_serial_unable_to_connect_count", 0);
     const webSerialTransportErrorCount = toCount("webSerialTransportErrorCount", "web_serial_transport_error_count", 0);
+    const webSerialTimedOutCount = toCount("webSerialTimedOutCount", "web_serial_timed_out_count", 0);
     return {
       ...summary,
       schemaVersion,
@@ -13574,7 +13579,9 @@
       webSerialUnableToConnectCount,
       web_serial_unable_to_connect_count: webSerialUnableToConnectCount,
       webSerialTransportErrorCount,
-      web_serial_transport_error_count: webSerialTransportErrorCount
+      web_serial_transport_error_count: webSerialTransportErrorCount,
+      webSerialTimedOutCount,
+      web_serial_timed_out_count: webSerialTimedOutCount
     };
   }
 
@@ -15745,6 +15752,7 @@
       const readDuration = (camelKey, snakeKey, maximum) => Math.max(0, Math.min(maximum, Number(attempt[camelKey] ?? attempt[snakeKey] ?? 0) || 0));
       const totalResponseElapsedMs = readDuration("totalResponseElapsedMs", "total_response_elapsed_ms", 180000);
       const maxResponseElapsedMs = Math.min(totalResponseElapsedMs, readDuration("maxResponseElapsedMs", "max_response_elapsed_ms", 60000));
+      const timedOut = attempt.timedOut === true || attempt.timed_out === true;
       const startedAt = normalizeAttemptTimestamp(attempt.startedAt || attempt.started_at);
       const requestedEndedAt = normalizeAttemptTimestamp(attempt.endedAt || attempt.ended_at);
       const endedAt = startedAt && requestedEndedAt && Date.parse(requestedEndedAt) < Date.parse(startedAt)
@@ -15753,7 +15761,7 @@
       if (!isV2Input && status === "completed" && positiveResponseCount === 0) positiveResponseCount = completedCommandCount;
       if (isV2Input) completedCommandCount = Math.min(completedCommandCount, positiveResponseCount);
       const hasIncompleteEvidence = noDataCount > expectedEmptyCommandCount || negativeResponseCount > 0 || pendingNegativeResponseCount > 0 || emptyResponseCount > 0 || unrecognizedResponseCount > 0;
-      const hasFailureEvidence = unableToConnectCount > 0 || adapterErrorCount > 0 || transportErrorCount > 0;
+      const hasFailureEvidence = timedOut || unableToConnectCount > 0 || adapterErrorCount > 0 || transportErrorCount > 0;
       const hasCompleteEvidence = requestedCommandCount > 0 && completedCommandCount + expectedEmptyCommandCount === requestedCommandCount && positiveResponseCount + expectedEmptyCommandCount === requestedCommandCount;
       if (isV2Input && status === "completed" && (!hasCompleteEvidence || hasIncompleteEvidence || hasFailureEvidence)) {
         status = hasFailureEvidence ? "failed" : (positiveResponseCount > 0 ? "partial" : "incomplete");
@@ -15799,8 +15807,8 @@
         total_response_elapsed_ms: totalResponseElapsedMs,
         maxResponseElapsedMs,
         max_response_elapsed_ms: maxResponseElapsedMs,
-        timedOut: attempt.timedOut === true || attempt.timed_out === true,
-        timed_out: attempt.timedOut === true || attempt.timed_out === true,
+        timedOut,
+        timed_out: timedOut,
         readoutCompleted: status === "completed",
         readout_completed: status === "completed",
         stopReason,
@@ -15855,6 +15863,9 @@
       : total("positiveResponseCount", "positive_response_count");
     const noDataCount = total("noDataCount", "no_data_count");
     const expectedEmptyCommandCount = Math.min(noDataCount, total("expectedEmptyCommandCount", "expected_empty_command_count"));
+    const timedOutCount = attempts.length
+      ? attempts.filter((attempt) => attempt.timedOut === true).length
+      : readCount("timedOutCount", "timed_out_count");
     const duration = (camelKey, snakeKey, maximum) => attempts.length
       ? Math.max(0, Math.min(maximum, attempts.reduce((sum, attempt) => sum + (Number(attempt[camelKey] ?? attempt[snakeKey]) || 0), 0)))
       : Math.max(0, Math.min(maximum, Number(input[camelKey] ?? input[snakeKey] ?? 0) || 0));
@@ -15898,6 +15909,8 @@
       unrecognized_response_count: total("unrecognizedResponseCount", "unrecognized_response_count"),
       transportErrorCount: total("transportErrorCount", "transport_error_count"),
       transport_error_count: total("transportErrorCount", "transport_error_count"),
+      timedOutCount,
+      timed_out_count: timedOutCount,
       responseTimingCount,
       response_timing_count: responseTimingCount,
       totalResponseElapsedMs,

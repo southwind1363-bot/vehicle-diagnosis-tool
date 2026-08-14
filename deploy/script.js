@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.70";
+const APP_VERSION = "3.9.71";
 const APP_LAST_UPDATED = "2026-08-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6636,6 +6636,7 @@ function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA) {
   const pendingNegativeResponseCount = Number(summary.pendingNegativeResponseCount ?? summary.pending_negative_response_count ?? 0) || 0;
   const noDataCount = Number(summary.noDataCount ?? summary.no_data_count ?? 0) || 0;
   const expectedEmptyCommandCount = Number(summary.expectedEmptyCommandCount ?? summary.expected_empty_command_count ?? 0) || 0;
+  const timedOutCount = Number(summary.timedOutCount ?? summary.timed_out_count ?? 0) || 0;
   const unresolvedNoDataCount = Math.max(0, noDataCount - expectedEmptyCommandCount);
   const emptyResponseCount = Number(summary.emptyResponseCount ?? summary.empty_response_count ?? 0) || 0;
   const unrecognizedResponseCount = Number(summary.unrecognizedResponseCount ?? summary.unrecognized_response_count ?? 0) || 0;
@@ -6645,6 +6646,7 @@ function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA) {
     negativeResponseCount > 0 ? `NRC ${negativeResponseCount}` : "",
     pendingNegativeResponseCount > 0 ? `保留NRC ${pendingNegativeResponseCount}` : "",
     expectedEmptyCommandCount > 0 ? `正常空結果 ${expectedEmptyCommandCount}` : "",
+    timedOutCount > 0 ? `タイムアウト ${timedOutCount}` : "",
     unresolvedNoDataCount > 0 ? `NO DATA ${unresolvedNoDataCount}` : "",
     emptyResponseCount > 0 ? `空応答 ${emptyResponseCount}` : "",
     unrecognizedResponseCount > 0 ? `未解釈 ${unrecognizedResponseCount}` : ""
