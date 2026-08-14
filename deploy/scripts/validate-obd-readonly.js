@@ -20506,6 +20506,19 @@ const reimportedScannerJsonStatusDtcSession = obd.buildDiagnosticScanSession({
   bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerJsonStatusDtcSession)
 });
 check(reimportedScannerJsonStatusDtcSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored") && reimportedScannerJsonStatusDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "pending") && reimportedScannerJsonStatusDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0420" && item.status === "permanent") && reimportedScannerJsonStatusDtcSession?.vehicleCommandEnabled === false, "Status-specific JSON DTC arrays were not preserved through read-only export and reimport");
+const currentConfirmedDtcSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
+  session: { dtcs: [{ dtc_code: "P0171", status: "current" }, { dtc_code: "P0300", status: "confirmed" }] }
+}));
+const currentConfirmedBridgeDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  intent: "read_stored_dtc",
+  ok: true,
+  blocked: false,
+  data: { dtcs: [{ code: "P0171", status: "current" }, { code: "P0300", status: "confirmed" }] }
+});
+const currentConfirmedDtcRoundTrip = obd.buildDiagnosticScanSession({
+  bridge_export_payload: obd.buildBridgeSessionExportPayload(currentConfirmedDtcSession)
+});
+check(currentConfirmedDtcSession?.dtcSnapshot?.storedCount === 2 && currentConfirmedDtcSession.dtcSnapshot?.dtcs?.every((item) => item.status === "stored") && currentConfirmedDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.reportedStatus === "current") && currentConfirmedDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.reportedStatus === "confirmed") && currentConfirmedDtcSession.dtcSnapshot?.dtcStatusSummary?.observedStatuses?.join("|") === "stored" && currentConfirmedBridgeDtcSnapshot.storedCount === 2 && currentConfirmedBridgeDtcSnapshot.dtcs?.every((item) => item.status === "stored") && currentConfirmedBridgeDtcSnapshot.dtcs?.some((item) => item.reportedStatus === "current") && currentConfirmedBridgeDtcSnapshot.dtcs?.some((item) => item.reportedStatus === "confirmed") && currentConfirmedDtcRoundTrip?.dtcSnapshot?.storedCount === 2 && currentConfirmedDtcRoundTrip?.dtcSnapshot?.dtcs?.every((item) => item.status === "stored") && currentConfirmedDtcRoundTrip?.vehicleCommandEnabled === false, "Current and confirmed DTC aliases were not retained as read-only stored DTC evidence across direct, bridge, and export imports");
 const scannerJsonReadinessAliasSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({
   session: {
     i_m_readiness: {

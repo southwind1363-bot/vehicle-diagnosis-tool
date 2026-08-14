@@ -3325,7 +3325,10 @@
         : null;
       const codeReferences = udsThreeByteCodeReference ? [udsThreeByteCodeReference] : manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
       const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
-      const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
+      const rawRowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || fallbackStatus;
+      const normalizedRowStatus = normalizeDtcReadoutCategory(rawRowStatus, fallbackStatus);
+      const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null)
+        || (normalizedRowStatus !== String(rawRowStatus || "").trim().toLowerCase() ? normalizeDtcReportedStatus(rawRowStatus) : null);
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
       const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);
@@ -3347,7 +3350,7 @@
         ...(severityAvailabilityMask ? { dtcSeverityAvailabilityMask: severityAvailabilityMask, dtc_severity_availability_mask: severityAvailabilityMask } : {}),
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
-        status: row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || fallbackStatus,
+        status: normalizedRowStatus,
         ecu: rowEcu || fallbackEcu,
         ecuName,
         ecu_name: ecuName,
@@ -18179,7 +18182,10 @@
         : null;
       const codes = udsThreeByteCodeReference ? [udsThreeByteCodeReference] : manufacturerCodeReference ? [manufacturerCodeReference] : genericCodeReferences;
       const reportedDescription = normalizeDtcReportedDescription(rowValue.reported_description || rowValue.reportedDescription || rowValue.description || rowValue.failure_description || rowValue.failureDescription || null);
-      const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null);
+      const rawRowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || sourceInput.status || "unknown";
+      const normalizedRowStatus = normalizeDtcReadoutCategory(rawRowStatus, "unknown");
+      const reportedStatus = normalizeDtcReportedStatus(rowValue.reported_status || rowValue.reportedStatus || null)
+        || (normalizedRowStatus !== String(rawRowStatus || "").trim().toLowerCase() ? normalizeDtcReportedStatus(rawRowStatus) : null);
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
       const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       const ecuName = rowEcuName || (sourceEcuName && (!rowEcu || !sourceEcu || rowEcu === sourceEcu) ? sourceEcuName : null);
@@ -18201,7 +18207,7 @@
         ...(severityAvailabilityMask ? { dtcSeverityAvailabilityMask: severityAvailabilityMask, dtc_severity_availability_mask: severityAvailabilityMask } : {}),
         occurrenceCount: readDtcOccurrenceCountAlias(rowValue),
         occurrence_count: readDtcOccurrenceCountAlias(rowValue),
-        status: rowStatus,
+        status: normalizedRowStatus,
         ecu: rowEcu || sourceEcu,
         ecuName,
         ecu_name: ecuName,
@@ -25780,6 +25786,13 @@
   function normalizeDtcReportedStatus(value) {
     const text = String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
     return /^[a-z][a-z0-9 _/-]{0,62}$/.test(text) ? text : null;
+  }
+
+  function normalizeDtcReadoutCategory(value, fallback = "unknown") {
+    const status = String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (["stored", "current", "confirmed"].includes(status)) return "stored";
+    if (["pending", "permanent", "unknown"].includes(status)) return status;
+    return status || fallback;
   }
 
   function extractDtcCodes(value) {
