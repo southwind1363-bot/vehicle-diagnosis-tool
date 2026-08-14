@@ -10474,6 +10474,7 @@
     const webSerialUnableToConnectCount = readCount(normalizedWebSerialReadoutSummary?.unableToConnectCount, normalizedWebSerialReadoutSummary?.unable_to_connect_count);
     const webSerialTransportErrorCount = readCount(normalizedWebSerialReadoutSummary?.transportErrorCount, normalizedWebSerialReadoutSummary?.transport_error_count);
     const webSerialTimedOutCount = readCount(normalizedWebSerialReadoutSummary?.timedOutCount, normalizedWebSerialReadoutSummary?.timed_out_count);
+    const webSerialTransportIssueCount = Math.max(webSerialTransportErrorCount, webSerialTimedOutCount);
     const webSerialResponseReviewCount = webSerialNegativeResponseCount
       + webSerialPendingNegativeResponseCount
       + Math.max(0, webSerialNoDataCount - webSerialExpectedEmptyCommandCount)
@@ -10481,8 +10482,7 @@
       + webSerialUnrecognizedResponseCount
       + webSerialAdapterErrorCount
       + webSerialUnableToConnectCount
-      + webSerialTransportErrorCount
-      + webSerialTimedOutCount;
+      + webSerialTransportIssueCount;
     const rawPidUndecodedCount = (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"])
       ? readCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount)
       : 0)
