@@ -1300,9 +1300,9 @@ const sessionTemporalContextFunctionChecks = () => {
     const functionBody = sessionTemporalContextFunctionSource[0];
     check(functionBody.includes('protocol: input.protocol') && functionBody.includes('|| input.obd_protocol') && functionBody.includes('|| input.communicationProtocol') && functionBody.includes('|| input.protocol_name'), "resolveSessionTemporalContext should derive protocol from direct protocol aliases");
     check(functionBody.includes('|| dtcSnapshot.communication_protocol') && functionBody.includes('|| supportedPidMatrix.communicationProtocol'), "resolveSessionTemporalContext should derive protocol from readout communication aliases");
-    check(functionBody.includes('capturedAt: input.capturedAt') && functionBody.includes('|| input.captured_at') && functionBody.includes('|| input.capturedTimestamp'), "resolveSessionTemporalContext should normalize capturedAt aliases from direct input");
-    check(functionBody.includes('|| dtcSnapshot.timestamp') && functionBody.includes('|| supportedPidMatrix.captured_at'), "resolveSessionTemporalContext should derive capturedAt from readout timestamp aliases");
-    check(functionBody.indexOf('protocol: input.protocol') < functionBody.indexOf('capturedAt: input.capturedAt'), "resolveSessionTemporalContext should resolve protocol before capturedAt metadata");
+    check(functionBody.includes('const capturedAtCandidates = [') && functionBody.includes('input.captured_at') && functionBody.includes('input.capturedTimestamp'), "resolveSessionTemporalContext should normalize capturedAt aliases from direct input");
+    check(functionBody.includes('dtcSnapshot.timestamp') && functionBody.includes('supportedPidMatrix.captured_at') && functionBody.includes('firstVerifiedIsoTimestamp(...capturedAtCandidates)'), "resolveSessionTemporalContext should derive verified capturedAt values from readout timestamp aliases");
+    check(functionBody.includes('protocol: input.protocol') && functionBody.includes('capturedAt,') && functionBody.includes('const capturedAtCandidates = ['), "resolveSessionTemporalContext should resolve protocol and capturedAt metadata together");
   }
 };
 const importClassificationFunctionChecks = () => {
@@ -21200,6 +21200,13 @@ const mixedSnapshotCaptureIntegritySession = obd.buildDiagnosticScanSession({
 });
 const mixedSnapshotCaptureIntegrityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(mixedSnapshotCaptureIntegritySession)));
 check(mixedSnapshotCaptureIntegritySession?.sessionCaptureIntegritySummary?.status === "range" && mixedSnapshotCaptureIntegritySession.sessionCaptureIntegritySummary.captureSpanSeconds === 360 && mixedSnapshotCaptureIntegritySession.sessionCaptureIntegritySummary.capturedAtValues?.join(",") === "2026-08-04T10:00:00+09:00,2026-08-04T10:05:00+09:00,2026-08-04T10:06:00+09:00" && mixedSnapshotCaptureIntegritySession.sessionCaptureIntegritySummary.readoutIds?.join(",") === "dtc_snapshot,readiness_snapshot" && mixedSnapshotCaptureIntegrityRoundTrip?.sessionCaptureIntegritySummary?.captureSpanSeconds === 360 && mixedSnapshotCaptureIntegrityRoundTrip?.sessionCaptureIntegritySummary?.readoutIds?.join(",") === "dtc_snapshot,readiness_snapshot" && [mixedSnapshotCaptureIntegritySession, mixedSnapshotCaptureIntegrityRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Mixed snapshot capture timestamps must remain explicit through read-only export and JSON reimport");
+const invalidPrimaryTimestampSession = obd.buildDiagnosticScanSession({
+  captured_at: "not-a-timestamp",
+  dtc_snapshot: { codes: ["P0300"], captured_at: "not-a-timestamp" },
+  live_pid_snapshot: { monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }], captured_at: "2026-08-14T10:00:00Z" }
+});
+const invalidPrimaryTimestampRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(invalidPrimaryTimestampSession)));
+check(invalidPrimaryTimestampSession?.capturedAt === "2026-08-14T10:00:00Z" && invalidPrimaryTimestampSession?.sessionCaptureIntegritySummary?.capturedAt === "2026-08-14T10:00:00Z" && invalidPrimaryTimestampRoundTrip?.capturedAt === "2026-08-14T10:00:00Z" && invalidPrimaryTimestampRoundTrip?.sessionCaptureIntegritySummary?.capturedAt === "2026-08-14T10:00:00Z" && [invalidPrimaryTimestampSession, invalidPrimaryTimestampRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Invalid top-level capture timestamps must not mask a verified read-only snapshot timestamp");
 check(obd.buildDiagnosticScanSessionFromCsv("Readout,Status\nCurrent DTC,No Codes")?.dtcSnapshot?.dtcStatusSummary?.reportedStatuses?.includes("stored") && obd.buildDiagnosticScanSessionFromCsv("Readout,Status\nConfirmed DTC,No Codes")?.dtcSnapshot?.dtcReadoutStatus === "reported", "Structured CSV import did not recognize current or confirmed DTC readouts");
 check(obd.buildDiagnosticScanSessionFromCsv("Readout,Status\nStored DTC,no_response") === null, "Structured CSV import treated a failed DTC readout as an empty reported readout");
 const scannerJapaneseEmptyDtcSession = obd.buildDiagnosticScanSessionFromCsv([

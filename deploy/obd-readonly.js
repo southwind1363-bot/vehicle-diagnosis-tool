@@ -9519,6 +9519,50 @@
     const orderedTimelineIsoCaptures = hasCompleteTimelineIsoRange
       ? [...timelineIsoCaptures].sort((left, right) => Date.parse(left) - Date.parse(right))
       : [];
+    const verifiedIsoTimestamp = (value) => {
+      const timestamp = String(value || "").trim();
+      return /^\d{4}-\d{2}-\d{2}T/.test(timestamp) && Number.isFinite(Date.parse(timestamp))
+        ? timestamp
+        : null;
+    };
+    const firstVerifiedIsoTimestamp = (...values) => values
+      .map(verifiedIsoTimestamp)
+      .find(Boolean) || null;
+    const capturedAtCandidates = [
+      input.capturedAt,
+      input.captured_at,
+      input.timestamp,
+      input.capturedTimestamp,
+      input.captured_timestamp,
+      dtcSnapshot.capturedAt,
+      dtcSnapshot.captured_at,
+      dtcSnapshot.timestamp,
+      livePidSnapshot.capturedAt,
+      livePidSnapshot.captured_at,
+      livePidSnapshot.timestamp,
+      freezeFrameSnapshot.capturedAt,
+      freezeFrameSnapshot.captured_at,
+      freezeFrameSnapshot.timestamp,
+      readinessSnapshot.capturedAt,
+      readinessSnapshot.captured_at,
+      readinessSnapshot.timestamp,
+      ecuInfoSnapshot.capturedAt,
+      ecuInfoSnapshot.captured_at,
+      ecuInfoSnapshot.timestamp,
+      onboardMonitorSnapshot.capturedAt,
+      onboardMonitorSnapshot.captured_at,
+      onboardMonitorSnapshot.timestamp,
+      ecuResponseSummary.capturedAt,
+      ecuResponseSummary.captured_at,
+      ecuResponseSummary.timestamp,
+      supportedPidMatrix.capturedAt,
+      supportedPidMatrix.captured_at,
+      supportedPidMatrix.timestamp,
+      orderedTimelineIsoCaptures.at(-1)
+    ];
+    const capturedAt = firstVerifiedIsoTimestamp(...capturedAtCandidates)
+      || capturedAtCandidates.find((value) => String(value || "").trim())
+      || null;
     return {
       protocol: input.protocol
         || input.obd_protocol
@@ -9559,37 +9603,7 @@
         || supportedPidMatrix.communicationProtocol
         || supportedPidMatrix.communication_protocol
         || null,
-      capturedAt: input.capturedAt
-        || input.captured_at
-        || input.timestamp
-        || input.capturedTimestamp
-        || input.captured_timestamp
-        || dtcSnapshot.capturedAt
-        || dtcSnapshot.captured_at
-        || dtcSnapshot.timestamp
-        || livePidSnapshot.capturedAt
-        || livePidSnapshot.captured_at
-        || livePidSnapshot.timestamp
-        || freezeFrameSnapshot.capturedAt
-        || freezeFrameSnapshot.captured_at
-        || freezeFrameSnapshot.timestamp
-        || readinessSnapshot.capturedAt
-        || readinessSnapshot.captured_at
-        || readinessSnapshot.timestamp
-        || ecuInfoSnapshot.capturedAt
-        || ecuInfoSnapshot.captured_at
-        || ecuInfoSnapshot.timestamp
-        || onboardMonitorSnapshot.capturedAt
-        || onboardMonitorSnapshot.captured_at
-        || onboardMonitorSnapshot.timestamp
-        || ecuResponseSummary.capturedAt
-        || ecuResponseSummary.captured_at
-        || ecuResponseSummary.timestamp
-        || supportedPidMatrix.capturedAt
-        || supportedPidMatrix.captured_at
-        || supportedPidMatrix.timestamp
-        || orderedTimelineIsoCaptures.at(-1)
-        || null,
+      capturedAt,
       startedAt: input.startedAt
         || input.started_at
         || orderedTimelineIsoCaptures[0]
