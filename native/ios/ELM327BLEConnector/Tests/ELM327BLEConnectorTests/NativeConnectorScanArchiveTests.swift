@@ -55,7 +55,7 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
 
     func testReadoutProfileRejectsCompletedScopeMismatchButAllowsInterruptedCapture() throws {
         let initialReadouts = ["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "freeze_frame_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix", "ecu_info_snapshot", "readiness_snapshot"]
-        let initialIntents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_freeze_frame", "read_onboard_monitor", "read_supported_pids", "read_ecu_info", "read_live_pid_snapshot"]
+        let initialIntents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_freeze_frame", "read_onboard_monitor", "read_supported_pids", "read_ecu_info", "read_readiness"]
         XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().complete(with: manifest(readoutProfile: .quickCondition, expectedIntents: initialIntents, expectedReadouts: initialReadouts)))
 
         let interruption = NativeConnectorInterruption(code: "transport:disconnected", connectionID: context.connectionID, sequence: 0)

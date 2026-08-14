@@ -40,6 +40,7 @@ public final class NativeConnectorScanArchiveBuilder {
         "read_supported_pids",
         "read_ecu_info",
         "read_onboard_monitor",
+        "read_readiness",
         "read_live_pid_snapshot"
     ]
 
@@ -65,6 +66,7 @@ public final class NativeConnectorScanArchiveBuilder {
         "read_supported_pids": ["supported_pid_matrix"],
         "read_ecu_info": ["ecu_info_snapshot"],
         "read_onboard_monitor": ["onboard_monitor_snapshot"],
+        "read_readiness": ["readiness_snapshot"],
         "read_live_pid_snapshot": ["readiness_snapshot", "live_pid_snapshot"]
     ]
 

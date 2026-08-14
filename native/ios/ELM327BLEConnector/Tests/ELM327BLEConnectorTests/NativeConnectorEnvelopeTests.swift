@@ -157,6 +157,7 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
             )
         )
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"intent\":\"read_readiness\""))
         XCTAssertTrue(json.contains("\"readout_id\":\"readiness_snapshot\""))
         XCTAssertTrue(json.contains("\"readout_scope_id\":\"7E8\""))
         XCTAssertTrue(json.contains("\"vehicle_command_enabled\":false"))

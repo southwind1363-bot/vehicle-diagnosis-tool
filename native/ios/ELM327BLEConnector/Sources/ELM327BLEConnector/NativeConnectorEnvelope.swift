@@ -249,7 +249,7 @@ public enum NativeConnectorEnvelopeFactory {
         make(
             context: context,
             sequence: sequence,
-            intent: "read_live_pid_snapshot",
+            intent: "read_readiness",
             data: [
                 "readout_id": .string("readiness_snapshot"),
                 "pid": .string("01"),
@@ -320,7 +320,9 @@ public enum NativeConnectorEnvelopeFactory {
     ) -> NativeConnectorEnvelope {
         var data: [String: NativeConnectorJSONValue] = command.intent == "read_supported_pids"
             ? ["supported_pids": .array([])]
-            : command.intent == "read_live_pid_snapshot"
+            : command.intent == "read_readiness"
+                ? ["monitors": .array([])]
+                : command.intent == "read_live_pid_snapshot"
                 ? ["monitor_values": .array([])]
                 : ["adapter_family": .string("ELM327")]
         if let readoutID = command.readoutID { data["readout_id"] = .string(readoutID) }

@@ -202,6 +202,10 @@ public struct NativeConnectorReadoutPreview: Sendable, Equatable {
                 case "read_pending_dtc": dtcs.forEach { pendingDTCs[$0.id] = $0 }
                 default: dtcs.forEach { permanentDTCs[$0.id] = $0 }
                 }
+            case "read_readiness":
+                if let snapshot = Self.readiness(in: envelope.data, scopeID: scopeID) {
+                    readiness[snapshot.id] = snapshot
+                }
             case "read_live_pid_snapshot":
                 Self.monitorValues(in: envelope.data, scopeID: scopeID).forEach { liveValues[$0.id] = $0 }
                 Self.textMonitorValues(in: envelope.data, scopeID: scopeID).forEach { liveTextValues[$0.id] = $0 }
