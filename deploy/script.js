@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.84";
+const APP_VERSION = "3.9.85";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2558,6 +2558,14 @@ function crankingText(value) {
   return labels[value] || "";
 }
 
+function describeDtcDefinitionApplicabilityReason(reason, fallback = "") {
+  const descriptions = {
+    dtc_state_confirmation_required: "DTC状態（current/history）が未確認です。",
+    dtc_state_out_of_scope: "読取DTC状態は公式出典の対象範囲外です。"
+  };
+  return descriptions[reason] || fallback;
+}
+
 function drivingText(value) {
   const labels = {
     accel: "加速時",
@@ -2590,11 +2598,12 @@ function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApp
   if (dtcApplicability?.status === "matched") {
     facts.push("出典限定DTCの適用範囲: 選択車両と一致しています。ECU・サブコード・整備書の適合確認は引き続き必要です。");
   } else if (dtcApplicability?.status === "mismatch") {
-    facts.push("出典限定DTCの適用範囲: 選択車両は対象外です。この定義は診断根拠に使わず、該当車種の整備書を確認してください。");
+    facts.push(`出典限定DTCの適用範囲: ${describeDtcDefinitionApplicabilityReason(dtcApplicability.reason, "選択車両は対象外です。")}この定義は診断根拠に使わず、該当車種の整備書を確認してください。`);
   } else if (dtcApplicability?.status === "unverified") {
-    facts.push(dtcApplicability.reason === "additional_scope_confirmation_required"
-      ? "出典限定DTCの適用範囲: 車種・年式は候補と一致しますが、VIN・トリム等の追加条件が未確認です。適合が確認できるまで診断手順を流用しないでください。"
-      : "出典限定DTCの適用範囲: 車種・年式が揃っていないため未確認です。適合が確認できるまで診断手順を流用しないでください。");
+    const unverifiedReason = dtcApplicability.reason === "additional_scope_confirmation_required"
+      ? "車種・年式は候補と一致しますが、VIN・トリム等の追加条件が未確認です。"
+      : "車種・年式が揃っていないため未確認です。";
+    facts.push(`出典限定DTCの適用範囲: ${describeDtcDefinitionApplicabilityReason(dtcApplicability.reason, unverifiedReason)}適合が確認できるまで診断手順を流用しないでください。`);
     if (dtcApplicabilityScopeSummary) facts.push(`出典限定DTCの適用候補: ${dtcApplicabilityScopeSummary}`);
   }
 
@@ -2605,9 +2614,12 @@ function buildFacts(input, obd, flow, interview, dtcApplicability = null, dtcApp
 
   if (sourceSpecificDtcContext?.hasDefinitions) {
     if (sourceSpecificDtcContext.applicability.status === "unverified") {
-      facts.push(`出典限定DTCの補足: 車種・年式は公式出典の候補と一致しますが、${sourceSpecificDtcContext.applicability.reason === "additional_scope_confirmation_required" ? "VIN・市場・装備・ECU等の追加条件" : "車両情報"}が未確認です。汎用DTCの診断内容を置換せず、適合確認後に出典を参照してください。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`);
+      const sourceSpecificUnverifiedReason = sourceSpecificDtcContext.applicability.reason === "additional_scope_confirmation_required"
+        ? "車種・年式は公式出典の候補と一致しますが、VIN・市場・装備・ECU等の追加条件が未確認です。"
+        : "車種・年式は公式出典の候補と一致しますが、車両情報が未確認です。";
+      facts.push(`出典限定DTCの補足: ${describeDtcDefinitionApplicabilityReason(sourceSpecificDtcContext.applicability.reason, sourceSpecificUnverifiedReason)}汎用DTCの診断内容を置換せず、適合確認後に出典を参照してください。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`);
     } else if (sourceSpecificDtcContext.applicability.status === "mismatch") {
-      facts.push(`出典限定DTCの補足: この車両は公式出典の車種限定候補の対象外です。汎用DTCの診断内容を維持し、出典限定の手順は適用しません。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`);
+      facts.push(`出典限定DTCの補足: ${describeDtcDefinitionApplicabilityReason(sourceSpecificDtcContext.applicability.reason, "この車両は公式出典の車種限定候補の対象外です。")}汎用DTCの診断内容を維持し、出典限定の手順は適用しません。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`);
     }
   }
 
@@ -9526,7 +9538,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   } else if (definitionApplicability.status === "mismatch") {
     const applicabilityMismatch = document.createElement("p");
     applicabilityMismatch.className = "obd-dtc-check";
-    applicabilityMismatch.textContent = "適用範囲: 選択車両はこの出典限定定義の対象外です。定義を診断根拠に使わず、該当車種の整備書を確認してください。";
+    applicabilityMismatch.textContent = `適用範囲: ${describeDtcDefinitionApplicabilityReason(definitionApplicability.reason, "選択車両はこの出典限定定義の対象外です。")}定義を診断根拠に使わず、該当車種の整備書を確認してください。`;
     wrapper.appendChild(applicabilityMismatch);
     if (hasSessionVehicleProfile) {
       const sessionProfileSource = document.createElement("p");
@@ -9540,19 +9552,22 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
     const unverifiedReason = definitionApplicability.reason === "additional_scope_confirmation_required"
       ? "車種・年式は候補と一致しますが、VIN・トリム等の追加条件が未確認です。"
       : "車種・年式が揃っていないため未確認です。";
-    applicabilityUnverified.textContent = `適用範囲: ${unverifiedReason}適合が確認できるまで診断手順を流用しないでください。${definitionScopeSummary ? ` 候補: ${definitionScopeSummary}` : ""}`;
+    applicabilityUnverified.textContent = `適用範囲: ${describeDtcDefinitionApplicabilityReason(definitionApplicability.reason, unverifiedReason)}適合が確認できるまで診断手順を流用しないでください。${definitionScopeSummary ? ` 候補: ${definitionScopeSummary}` : ""}`;
     wrapper.appendChild(applicabilityUnverified);
   }
 
   if (sourceSpecificDtcContext.hasDefinitions && sourceSpecificDtcContext.applicability.status === "unverified") {
     const sourceSpecificApplicability = document.createElement("p");
     sourceSpecificApplicability.className = "obd-dtc-check";
-    sourceSpecificApplicability.textContent = `出典限定の補足: 車種・年式は候補と一致しますが、${sourceSpecificDtcContext.applicability.reason === "additional_scope_confirmation_required" ? "VIN・市場・装備・ECU等の追加条件" : "車両情報"}が未確認です。汎用DTCの診断内容を置換せず、適合確認後に出典を参照してください。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`;
+    const sourceSpecificUnverifiedReason = sourceSpecificDtcContext.applicability.reason === "additional_scope_confirmation_required"
+      ? "車種・年式は候補と一致しますが、VIN・市場・装備・ECU等の追加条件が未確認です。"
+      : "車種・年式は候補と一致しますが、車両情報が未確認です。";
+    sourceSpecificApplicability.textContent = `出典限定の補足: ${describeDtcDefinitionApplicabilityReason(sourceSpecificDtcContext.applicability.reason, sourceSpecificUnverifiedReason)}汎用DTCの診断内容を置換せず、適合確認後に出典を参照してください。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`;
     wrapper.appendChild(sourceSpecificApplicability);
   } else if (sourceSpecificDtcContext.hasDefinitions && sourceSpecificDtcContext.applicability.status === "mismatch") {
     const sourceSpecificMismatch = document.createElement("p");
     sourceSpecificMismatch.className = "obd-dtc-check";
-    sourceSpecificMismatch.textContent = `出典限定の補足: 選択車両はこの公式出典の車種限定候補の対象外です。汎用DTCの診断内容を維持し、出典限定の手順は適用しません。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`;
+    sourceSpecificMismatch.textContent = `出典限定の補足: ${describeDtcDefinitionApplicabilityReason(sourceSpecificDtcContext.applicability.reason, "選択車両はこの公式出典の車種限定候補の対象外です。")}汎用DTCの診断内容を維持し、出典限定の手順は適用しません。${sourceSpecificDtcContext.scopeSummary ? ` 候補: ${sourceSpecificDtcContext.scopeSummary}` : ""}`;
     wrapper.appendChild(sourceSpecificMismatch);
   }
 
