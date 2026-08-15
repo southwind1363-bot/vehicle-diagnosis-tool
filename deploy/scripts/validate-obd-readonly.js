@@ -4933,6 +4933,40 @@ const sameAttemptFreezeFrameScan = obd.buildNativeConnectorScanSession({
   expected_readout_scopes: [{ readout_id: "freeze_frame_snapshot", scope_id: "7E8" }]
 });
 check(sameAttemptFreezeFrameScan.scanState === "completed" && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtc === "P0300" && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 82) && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1520), "Same-attempt freeze-frame PID envelopes lost values before session normalization");
+const aliasMultiEcuNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 762, { trigger_code: "P0300", freeze_frame_values: [{ id: "coolant_temp", value: 82, unit: "C" }] }),
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E9", 763, { freezeFrameTriggerEntries: [{ triggerCode: "P0171" }], pidValues: [{ id: "engine_speed", value: 1520, unit: "rpm" }] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("freeze_frame_snapshot")
+});
+const scopedSnapshotNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 764, { freeze_frame_ecu_snapshots: [{ values: [{ id: "coolant_temp", value: 82, unit: "C" }] }] }),
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E9", 765, { freezeFrameEcuSnapshots: [{ values: [{ id: "engine_speed", value: 1520, unit: "rpm" }] }] })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["freeze_frame_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("freeze_frame_snapshot")
+});
+check(
+  aliasMultiEcuNativeFreezeFrameScan.scanState === "completed"
+    && aliasMultiEcuNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.code === "P0300" && item.sourceEcu === "7E8")
+    && aliasMultiEcuNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.some((item) => item.code === "P0171" && item.sourceEcu === "7E9")
+    && aliasMultiEcuNativeFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 82 && item.sourceEcu === "7E8")
+    && aliasMultiEcuNativeFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1520 && item.sourceEcu === "7E9")
+    && !aliasMultiEcuNativeFreezeFrameScan.session?.livePidSnapshot?.monitorValues?.length
+    && aliasMultiEcuNativeFreezeFrameScan.session?.vehicleCommandEnabled === false
+    && aliasMultiEcuNativeFreezeFrameScan.wouldTransmit === false
+    && scopedSnapshotNativeFreezeFrameScan.scanState === "completed"
+    && scopedSnapshotNativeFreezeFrameScan.session?.freezeFrameSnapshot?.freezeFrameEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.monitorValues?.some((value) => value.id === "coolant_temp" && value.value === 82))
+    && scopedSnapshotNativeFreezeFrameScan.session?.freezeFrameSnapshot?.freezeFrameEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.monitorValues?.some((value) => value.id === "engine_speed" && value.value === 1520))
+    && scopedSnapshotNativeFreezeFrameScan.session?.vehicleCommandEnabled === false
+    && scopedSnapshotNativeFreezeFrameScan.wouldTransmit === false,
+  "Multi-ECU native freeze-frame aliases must retain only freeze-frame evidence with ECU scope"
+);
 const retriedFreezeFrameScan = obd.buildNativeConnectorScanSession({
   envelopes: [
     { ...scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 762, { monitor_values: [{ id: "coolant_temp", value: 60, unit: "C" }] }), readout_attempt: 0 },

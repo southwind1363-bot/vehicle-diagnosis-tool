@@ -2066,7 +2066,7 @@
         readout_ecu_ids: scopedData
           .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
           .filter(Boolean),
-        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues"], scopeId))
+        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
       };
     }
     if (readoutId === "readiness_snapshot") {
@@ -2148,11 +2148,15 @@
             ? data.trigger_dtc_entries
             : Array.isArray(data.triggerDtcEntries)
               ? data.triggerDtcEntries
-              : Array.isArray(data.associated_dtc_entries)
-                ? data.associated_dtc_entries
-                : Array.isArray(data.associatedDtcEntries)
-                  ? data.associatedDtcEntries
-                  : [];
+              : Array.isArray(data.freeze_frame_trigger_entries)
+                ? data.freeze_frame_trigger_entries
+                : Array.isArray(data.freezeFrameTriggerEntries)
+                  ? data.freezeFrameTriggerEntries
+                  : Array.isArray(data.associated_dtc_entries)
+                    ? data.associated_dtc_entries
+                    : Array.isArray(data.associatedDtcEntries)
+                      ? data.associatedDtcEntries
+                      : [];
           const fallbackCode = data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.freeze_dtc || data.freezeDtc || data.associated_dtc || data.associatedDtc || data.dtc || null;
           const rows = fallbackCode && !entries.some((item) => String(item?.code || item?.dtc || item || "").trim().toUpperCase() === String(fallbackCode).trim().toUpperCase())
             ? [...entries, { code: fallbackCode }]
@@ -2168,7 +2172,17 @@
             };
           }).filter((item) => item.code);
         }),
-        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
+        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues"], scopeId)),
+        freeze_frame_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
+          const snapshots = Array.isArray(data.freeze_frame_ecu_snapshots)
+            ? data.freeze_frame_ecu_snapshots
+            : Array.isArray(data.freezeFrameEcuSnapshots)
+              ? data.freezeFrameEcuSnapshots
+              : [];
+          return snapshots.map((snapshot) => snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(snapshot)
+            ? { ...snapshot, source_ecu: scopeId }
+            : snapshot);
+        }).filter(Boolean)
       };
     }
     return buildNativeConnectorSnapshotInput(successfulEntries.at(-1).envelope, successfulEntries.at(-1).evaluation);
