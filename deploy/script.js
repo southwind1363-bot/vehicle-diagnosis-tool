@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.83";
+const APP_VERSION = "3.9.84";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11043,6 +11043,12 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     const utc = new Date(Date.UTC(year, month - 1, day));
     return utc.getUTCFullYear() === year && utc.getUTCMonth() === month - 1 && utc.getUTCDate() === day ? `${match[1]}-${match[2]}-${match[3]}` : null;
   };
+  const normalizeDtcState = (value) => {
+    const normalized = normalize(value).replace(/[\s_-]+/g, "");
+    if (normalized === "current") return "current";
+    if (normalized === "history") return "history";
+    return null;
+  };
   const makers = (Array.isArray(filter.makers) ? filter.makers : []).map(normalize).filter(Boolean);
   const models = (Array.isArray(filter.models) ? filter.models : []).map(normalizeModel).filter(Boolean);
   const engineValues = Array.isArray(filter.engines)
@@ -11069,6 +11075,10 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     ? filter.ecus
     : [filter.ecu ?? filter.ecu_name ?? filter.ecuName ?? filter.reporting_ecu ?? filter.reportingEcu];
   const ecus = ecuValues.map(normalizeEcu).filter(Boolean);
+  const dtcStateValues = Array.isArray(filter.dtc_states)
+    ? filter.dtc_states
+    : Array.isArray(filter.dtcStates) ? filter.dtcStates : [filter.dtc_state ?? filter.dtcState];
+  const dtcStates = dtcStateValues.map(normalizeDtcState).filter(Boolean);
   const yearFrom = Number(filter.year_from ?? filter.yearFrom);
   const yearTo = Number(filter.year_to ?? filter.yearTo);
   const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -11112,6 +11122,9 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   const ecu = normalizeEcu(vehicleProfile?.targetEcu ?? vehicleProfile?.target_ecu ?? vehicleProfile?.ecuName ?? vehicleProfile?.ecu_name ?? vehicleProfile?.ecu ?? vehicleProfile?.module ?? vehicleProfile?.moduleName ?? vehicleProfile?.module_name);
   if (ecus.length && !ecu) return { status: "unverified", reason: "ecu_confirmation_required" };
   if (ecus.length && !ecus.includes(ecu)) return { status: "mismatch", reason: "ecu_out_of_scope" };
+  const reportedDtcState = normalizeDtcState(vehicleProfile?.dtcReportedStatus ?? vehicleProfile?.dtc_reported_status ?? vehicleProfile?.reportedStatus ?? vehicleProfile?.reported_status);
+  if (dtcStates.length && !reportedDtcState) return { status: "unverified", reason: "dtc_state_confirmation_required" };
+  if (dtcStates.length && !dtcStates.includes(reportedDtcState)) return { status: "mismatch", reason: "dtc_state_out_of_scope" };
   const productionPeriod = filter.production_period || filter.productionPeriod || null;
   const productionDate = normalizeProductionDate(vehicleProfile?.productionDate ?? vehicleProfile?.production_date ?? vehicleProfile?.buildDate ?? vehicleProfile?.build_date ?? vehicleProfile?.manufactureDate ?? vehicleProfile?.manufacture_date);
   const productionFrom = normalizeProductionDate(productionPeriod?.from ?? productionPeriod?.start);
@@ -11135,15 +11148,22 @@ function withReportedDtcEcu(vehicleProfile = null, dtc = null) {
     ?? vehicleProfile.module
     ?? vehicleProfile.moduleName
     ?? vehicleProfile.module_name;
-  if (String(explicitEcu || "").trim()) return vehicleProfile;
+  const reportedDtcStatus = dtc?.reportedStatus ?? dtc?.reported_status ?? null;
+  const hasReportedDtcStatus = !String(vehicleProfile.dtcReportedStatus ?? vehicleProfile.dtc_reported_status ?? vehicleProfile.reportedStatus ?? vehicleProfile.reported_status ?? "").trim()
+    && String(reportedDtcStatus || "").trim();
+  if (String(explicitEcu || "").trim()) {
+    return hasReportedDtcStatus ? { ...vehicleProfile, dtcReportedStatus: reportedDtcStatus } : vehicleProfile;
+  }
   const reportedEcuName = dtc?.ecuName
     ?? dtc?.ecu_name
     ?? dtc?.sourceEcuName
     ?? dtc?.source_ecu_name
     ?? dtc?.moduleName
     ?? dtc?.module_name;
-  if (!String(reportedEcuName || "").trim()) return vehicleProfile;
-  return { ...vehicleProfile, ecuName: reportedEcuName };
+  if (!String(reportedEcuName || "").trim()) {
+    return hasReportedDtcStatus ? { ...vehicleProfile, dtcReportedStatus: reportedDtcStatus } : vehicleProfile;
+  }
+  return { ...vehicleProfile, ...(hasReportedDtcStatus ? { dtcReportedStatus: reportedDtcStatus } : {}), ecuName: reportedEcuName };
 }
 
 function buildDtcDefinitionScopeSummary(definitions) {
@@ -11177,6 +11197,10 @@ function buildDtcDefinitionScopeSummary(definitions) {
         ? filter.ecus
         : [filter.ecu ?? filter.ecu_name ?? filter.ecuName ?? filter.reporting_ecu ?? filter.reportingEcu];
       const ecus = ecuValues.map((value) => String(value || "").trim()).filter(Boolean);
+      const dtcStateValues = Array.isArray(filter.dtc_states)
+        ? filter.dtc_states
+        : Array.isArray(filter.dtcStates) ? filter.dtcStates : [filter.dtc_state ?? filter.dtcState];
+      const dtcStates = dtcStateValues.map((value) => String(value || "").trim().toLowerCase()).filter(Boolean);
       const yearFrom = Number(filter.year_from ?? filter.yearFrom);
       const yearTo = Number(filter.year_to ?? filter.yearTo);
       const rawModelYearScopes = Array.isArray(filter.model_year_scopes)
@@ -11206,7 +11230,7 @@ function buildDtcDefinitionScopeSummary(definitions) {
       return summaryScopes.map((scope) => {
         const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
         const scopeMakers = scope.makers.length ? scope.makers : makers;
-        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${electrifications.length ? ` 電動化 ${electrifications.join("/")}` : ""}${markets.length ? ` 市場 ${markets.join("/")}` : ""}${ecus.length ? ` ECU ${ecus.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
+        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${electrifications.length ? ` 電動化 ${electrifications.join("/")}` : ""}${markets.length ? ` 市場 ${markets.join("/")}` : ""}${ecus.length ? ` ECU ${ecus.join("/")}` : ""}${dtcStates.length ? ` DTC状態 ${dtcStates.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
       });
     }))];
   if (!scopes.length) return "";
