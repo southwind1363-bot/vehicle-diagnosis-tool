@@ -4352,6 +4352,41 @@ const nativeElmAssociatedFreezeFrameImport = obd.buildNativeConnectorDiagnosticI
   data: { associatedDtc: "P0420" }
 });
 check(nativeElmAssociatedFreezeFrameImport.accepted === true && nativeElmAssociatedFreezeFrameImport.session?.freezeFrameSnapshot?.triggerDtc === "P0420" && nativeElmAssociatedFreezeFrameImport.session?.freezeFrameSnapshot?.sourceEcu === "7E8" && nativeElmAssociatedFreezeFrameImport.session?.vehicleCommandEnabled === false, "iPhone associated-DTC freeze-frame alias did not reach the read-only diagnostic session");
+const nativeElmTriggerCodeFreezeFrameImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  readout_id: "freeze_frame_snapshot",
+  readout_scope_id: "7E8",
+  readout_attempt: 0,
+  data: { trigger_code: "P0420" }
+});
+const nativeElmFreezeFrameValuesImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  readout_id: "freeze_frame_snapshot",
+  readout_scope_id: "7E8",
+  readout_attempt: 0,
+  data: { freeze_frame_values: [{ id: "coolant_temp", value: 82, unit: "C" }] }
+});
+const nativeElmEmptyFreezeFrameEvaluation = obd.evaluateNativeConnectorEnvelope({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  data: {}
+});
+check(
+  nativeElmTriggerCodeFreezeFrameImport.accepted === true
+    && nativeElmTriggerCodeFreezeFrameImport.session?.freezeFrameSnapshot?.triggerDtc === "P0420"
+    && nativeElmTriggerCodeFreezeFrameImport.session?.freezeFrameSnapshot?.sourceEcu === "7E8"
+    && nativeElmTriggerCodeFreezeFrameImport.session?.vehicleCommandEnabled === false
+    && nativeElmTriggerCodeFreezeFrameImport.wouldTransmit === false
+    && nativeElmFreezeFrameValuesImport.accepted === true
+    && nativeElmFreezeFrameValuesImport.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 82 && item.sourceEcu === "7E8")
+    && nativeElmFreezeFrameValuesImport.session?.vehicleCommandEnabled === false
+    && nativeElmFreezeFrameValuesImport.wouldTransmit === false
+    && nativeElmEmptyFreezeFrameEvaluation.accepted === false
+    && nativeElmEmptyFreezeFrameEvaluation.errors.includes("invalid_data_shape"),
+  "Native connector freeze-frame aliases must retain trigger/value evidence without accepting empty data"
+);
 check(nativeElmReadinessGoldenEnvelope.intent === "read_readiness" && nativeElmReadinessGoldenEvaluation.accepted === true && nativeElmReadinessGoldenEvaluation.readoutId === "readiness_snapshot" && nativeElmReadinessGoldenImport.session?.readinessSnapshot?.milOn === true && nativeElmReadinessGoldenImport.vehicleCommandEnabled === false && nativeElmReadinessGoldenImport.wouldTransmit === false && nativeElmLegacyReadinessEvaluation.accepted === true && nativeElmLegacyReadinessEvaluation.readoutId === "readiness_snapshot" && nativeElmLegacyReadinessImport.session?.readinessSnapshot?.milOn === true && nativeElmLegacyReadinessImport.vehicleCommandEnabled === false && nativeElmLegacyReadinessImport.wouldTransmit === false, "Dedicated and legacy readiness intents must normalize into a safe readiness diagnostic session");
 check(
   nativeElmReadinessGoldenEvaluation.accepted === true

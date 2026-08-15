@@ -1888,7 +1888,7 @@
       read_stored_dtc: ["dtcs", "codes"],
       read_pending_dtc: ["dtcs", "codes"],
       read_permanent_dtc: ["dtcs", "codes"],
-      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "trigger_dtc", "triggerDtc", "trigger_dtc_entries", "triggerDtcEntries", "associated_dtc", "associatedDtc", "associated_dtc_entries", "associatedDtcEntries"],
+      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
       read_onboard_monitor: ["tests", "items"],
@@ -2066,7 +2066,7 @@
         readout_ecu_ids: scopedData
           .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
           .filter(Boolean),
-        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
+        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues"], scopeId))
       };
     }
     if (readoutId === "readiness_snapshot") {
@@ -2153,13 +2153,13 @@
                 : Array.isArray(data.associatedDtcEntries)
                   ? data.associatedDtcEntries
                   : [];
-          const fallbackCode = data.trigger_dtc || data.triggerDtc || data.associated_dtc || data.associatedDtc || data.dtc || null;
+          const fallbackCode = data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.freeze_dtc || data.freezeDtc || data.associated_dtc || data.associatedDtc || data.dtc || null;
           const rows = fallbackCode && !entries.some((item) => String(item?.code || item?.dtc || item || "").trim().toUpperCase() === String(fallbackCode).trim().toUpperCase())
             ? [...entries, { code: fallbackCode }]
             : entries;
           return rows.map((row) => {
             const item = row && typeof row === "object" && !Array.isArray(row) ? row : { code: row };
-            const code = item.code || item.dtc || item.trigger_dtc || item.triggerDtc || item.associated_dtc || item.associatedDtc || null;
+            const code = item.code || item.dtc || item.trigger_dtc || item.triggerDtc || item.trigger_code || item.triggerCode || item.freeze_dtc || item.freezeDtc || item.associated_dtc || item.associatedDtc || null;
             const itemScopeId = readNativeConnectorDataScopeId(item) || (scopeId !== "LEGACY" ? scopeId : null);
             return {
               code,
