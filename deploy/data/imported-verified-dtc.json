@@ -3418,5 +3418,26 @@
     "last_verified_date": "2026-08-15",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-u1624-gm-gmc-hummer-ev-suv-k124-2024-pit6056b",
+    "code": "U1624",
+    "title": "K124 image processing module U1624 current/history context",
+    "system": "Network / K124 image processing module (source-specific)",
+    "applicability_note": "GM PIT6056B documents an intermittent startup Super Cruise unavailable concern with U1624 set current in the K124 Image Processing Module only for the specified North American 2024 GMC HUMMER EV SUV build range equipped with UKL Super Cruise. The bulletin states that a history U1624 may have recovered and that a persistent current U1624 requires normal GM SI diagnostics. Confirm VIN, market, model year, production date, UKL equipment, reporting K124 module, DTC status, symptom duration, concurrent DTCs, and current GM service information before using this source-specific readout context.",
+    "vehicle_filter": {"makers": ["GMC"], "models": ["HUMMER EV SUV"], "year_from": 2024, "year_to": 2024, "production_period": {"to": "2024-04-05"}, "ecus": ["K124"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting K124 module details, Super Cruise symptom timing, ignition/startup state, 12 V battery history, VIN, North American market, UKL equipment, model-year and production-date evidence before diagnosis.", "Do not clear DTCs, remove fuses, reset the K73 telematics module, disconnect modules, command Super Cruise functions, replace K124/K73 modules, program modules, or start active tests from this tool; first confirm PIT6056B applicability and the DTC current/history state.", "Use current GM service information and qualified ADAS/network diagnostic procedures after the documented vehicle scope and DTC state are confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific context to a different production range, market, model, ECU, option set, or U1624 status without confirmed PIT6056B applicability.", "Do not infer a K124, K73, Ethernet, fuse, battery, software, or component failure from U1624 alone.", "Do not treat a history code, source bulletin, or this readout context as authorization to clear DTCs, reset modules, remove fuses, program, replace parts, or run active tests."],
+    "required_tools": ["Compatible scan tool", "GM service information", "Qualified ADAS and network diagnostic equipment"],
+    "safety_notes": ["Super Cruise and related image-processing, telematics, network, and power operations can affect driver-assistance availability and vehicle recovery requirements. Do not clear, reset, de-power, program, replace, or command related systems without the GM procedure, correct equipment, stable power support, qualified personnel, a safe work area, and a recovery plan."],
+    "confidence": "GM PIT6056B source-specific U1624 K124 readout context; VIN, North American market, 2024 GMC HUMMER EV SUV production date, UKL equipment, reporting ECU, DTC current/history state, and current GM procedure confirmation required.",
+    "source": "GM Preliminary Information PIT6056B / NHTSA MC-11034768",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2026/MC-11034768-0001.pdf",
+    "source_date": "2026-06-23",
+    "last_verified_date": "2026-08-16",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]

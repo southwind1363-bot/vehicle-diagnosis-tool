@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent": 75,
-  "current_basis": "P系2942件、U系572件、B系69件、C系45件、個別DTC定義3698件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+  "current_basis": "P系2942件、U系573件、B系69件、C系45件、個別DTC定義3699件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "GM Customer Satisfaction Program 18316の2018 Express/Savana RPO JH9 C0050-0FをVINキャンペーン・ブレーキ仕様・EBCM・read-only適用確認つきで追加",
@@ -60,6 +60,7 @@
         ,"Subaru 06-44-12RのBRZ C1249とForester/Impreza C1531を報告ECU・ブレーキ安全条件つきで追加"
         ,"GM PIT5832Vの2025-26 Terrain current U1962をモジュール交換履歴・SDAC・セキュリティ安全条件・read-only適用確認つきで追加"
         ,"GM PIT6432の2026 Silverado/Sierra SDGM U3000-49をDTC状態・ゲートウェイ安全条件・read-only適用確認つきで追加"
+        ,"GM PIT6056Bの2024 HUMMER EV SUV K124 U1624を生産日・UKL・current/history状態・ADAS安全条件つきのread-only適用確認として追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",
@@ -69,7 +70,7 @@
         "next_build":  "B/C系とメーカー固有を、出典確認済みデータとして別レイヤーで追加する。",
         "safety_gate":  "コード名だけで原因断定しない",
         "source":  "ローカル検証集計と開発ロードマップ",
-        "source_date":  "2026-08-15",
+        "source_date":  "2026-08-16",
         "eta_target":  "2026-Q3 見込み"
     },
     {

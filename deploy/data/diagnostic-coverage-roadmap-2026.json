@@ -28,7 +28,7 @@
     "progress_percent": 60,
     "target_state": "通信系DTCを電源、アース、CAN/LIN、ECU間通信、ゲートウェイ観点へ整理する",
     "priority": 2,
-  "current_count_note": "U系親DTC 572件 / 個別DTC定義592件・出典限定71件 (Mazda 2014-18 Mazda3 U3003-16 / 2014-21 Mazda6 body-repair ground U0121-00/U0401/U0415-00/U2005-86、Mazda 2017-23 CX-5 FSC/parking assist U045A-68、Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2025-26 Terrain current U1962 SDAC、GM 2026 Silverado/Sierra SDGM U3000-49、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Ford 2024-25 Ranger PCM U012D/U0284/U042E、Ford 2025 Ranger/Ranger Raptor ABS U3012-68、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68、Acura 2024 ZDX BECM U3577-U3580/U35AF、GM 2025-26 Yukon/Yukon XL IVD/IVE U164Eを出典限定で追加)",
+  "current_count_note": "U系親DTC 573件 / 個別DTC定義593件・出典限定72件 (Mazda 2014-18 Mazda3 U3003-16 / 2014-21 Mazda6 body-repair ground U0121-00/U0401/U0415-00/U2005-86、Mazda 2017-23 CX-5 FSC/parking assist U045A-68、Mazda 2019-23 connected-services/telematics、Toyota 2022 Tundra Lane Control、GM 2025-26 Terrain current U1962 SDAC、GM 2026 Silverado/Sierra SDGM U3000-49、GM 2024 HUMMER EV SUV K124 U1624 current/history、GM 2026 Equinox/Terrain 1.5 LSD B75 MAF、GM 2026 K160 Brake U0028-88/U0037-88、GM 2024-26 B174W ACP2 U1615/U1616/U197A/U3000-98/U0499/U0235、Ford/Lincoln 2025-26 PSCM U3008-1B/U3009-1B、Ford 2024-25 Ranger PCM U012D/U0284/U042E、Ford 2025 Ranger/Ranger Raptor ABS U3012-68、Mazda 2025-26 CX-70/2024-26 CX-90 VCM U0415-68、Acura 2024 ZDX BECM U3577-U3580/U35AF、GM 2025-26 Yukon/Yukon XL IVD/IVE U164Eを出典限定で追加)",
     "next_actions": [
       "通信DTCを電源電圧、アース、終端抵抗、通信波形、同時コードへ紐付ける",
       "CAN FD / DoIP / ゲートウェイECUの現行車向け観察項目を増やす",
@@ -37,7 +37,7 @@
     "blocked_until": [],
     "safety_note": "通信線測定はショートや誤接続を避け、メーカー整備書の測定条件を優先する。",
     "source": "ローカル検証集計",
-  "source_date": "2026-08-15",
+    "source_date": "2026-08-16",
     "eta_target": "2026-Q3 見込み",
     "service_manual_required": true
   },
