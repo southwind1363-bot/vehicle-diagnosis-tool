@@ -3353,5 +3353,26 @@
     "last_verified_date": "2026-08-13",
     "service_manual_required": true,
     "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-u1962-gmc-terrain-2025-2026-pit5832v",
+    "code": "U1962",
+    "title": "Current U1962 after module replacement with SDAC context",
+    "system": "Network / Serial Data Authentication Configuration (source-specific)",
+    "applicability_note": "GM PIT5832V documents current, not history, U1962 after a module replacement on 2025-2026 GMC Terrain vehicles. The source describes Serial Data Authentication Configuration (SDAC) as a security handshake that can fail after replacement or programming and may disable vehicle features. Confirm VIN, market, exact model year, module-replacement history, reporting ECU, current-versus-history DTC state, concurrent lost-communication DTCs, warning indicators, and current GM service information before using this source-specific context.",
+    "vehicle_filter": {"makers": ["GMC"], "models": ["Terrain"], "year_from": 2025, "year_to": 2026, "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["Save all current and history DTCs, reporting ECU details, U1962 state, module-replacement and programming history, warning indicators, freeze-frame/snapshot data, VIN, market, model-year evidence, and available all-module scan results before diagnosis.", "If lost-communication DTCs are current, record and diagnose them before treating U1962 as an SDAC context. Do not clear DTCs, run SDAC, program modules, perform theft relearn or pairing, reset modules, remove fuses or battery cables, disconnect modules, replace parts, or start active tests from this tool; first confirm the documented GMC Terrain scope and PIT5832V applicability.", "Use current GM service information and qualified diagnostic procedures after applicability is confirmed."],
+    "measurement_points": [],
+    "common_mistakes": ["Do not apply this source-specific definition to another model, model year, history-only U1962, a vehicle without module-replacement context, or an unconfirmed reporting ECU.", "Do not infer a gateway, ECU, security-code, wiring, battery, programming, or component failure from U1962 alone."],
+    "required_tools": ["Compatible scan tool", "GM service information", "Qualified module-programming and electrical-system diagnostic equipment where GM procedures require it"],
+    "safety_notes": ["Security, immobilizer, SRS-indicator, no-start, gateway, and programming contexts can create loss-of-function or recovery risks. Do not clear, program, authenticate, reset, de-power, disconnect, replace, or command related systems without GM procedures, correct equipment, stable power support, qualified personnel, a safe work area, and a recovery plan."],
+    "confidence": "GM PIT5832V source-specific current-U1962 SDAC context; VIN, market, 2025-2026 GMC Terrain model, module-replacement history, reporting ECU, DTC state, concurrent DTCs, and current GM procedure confirmation required.",
+    "source": "GM Preliminary Information PIT5832V / NHTSA MC-11019872",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11019872-0001.pdf",
+    "source_date": "2025-06-25",
+    "last_verified_date": "2026-08-15",
+    "service_manual_required": true,
+    "imported_definition_only": true
   }
 ]
