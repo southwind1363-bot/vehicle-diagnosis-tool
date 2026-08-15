@@ -3356,6 +3356,7 @@
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable,
+        freeze_frame_available: freezeFrameAvailable,
         ...(extendedDataRecordNumber !== null ? {
           extendedDataRecordNumber,
           extended_data_record_number: extendedDataRecordNumber,
@@ -18214,6 +18215,7 @@
         ecuName,
         ecu_name: ecuName,
         freezeFrameAvailable,
+        freeze_frame_available: freezeFrameAvailable,
         ...(extendedDataRecordNumber !== null ? {
           extendedDataRecordNumber,
           extended_data_record_number: extendedDataRecordNumber,
