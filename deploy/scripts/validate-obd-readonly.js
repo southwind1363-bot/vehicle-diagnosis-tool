@@ -4368,6 +4368,33 @@ const nativeElmFreezeFrameValuesImport = obd.buildNativeConnectorDiagnosticImpor
   readout_attempt: 0,
   data: { freeze_frame_values: [{ id: "coolant_temp", value: 82, unit: "C" }] }
 });
+const nativeElmFreezeFrameArrayImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  readout_id: "freeze_frame_snapshot",
+  readout_scope_id: "7E8",
+  readout_attempt: 0,
+  data: { freezeFrame: [{ id: "engine_speed", value: 1520, unit: "rpm" }] }
+});
+const nativeElmMalformedFreezeFrameEvaluation = obd.evaluateNativeConnectorEnvelope({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  data: { freeze_frame: true }
+});
+const nativeElmNullFreezeFrameImport = obd.buildNativeConnectorDiagnosticImport({
+  ...nativeElmEnvelope,
+  intent: "read_freeze_frame",
+  readout_id: "freeze_frame_snapshot",
+  readout_scope_id: "7E8",
+  readout_attempt: 0,
+  data: { freeze_frame: null, trigger_code: "P0420" }
+});
+const bridgeFreezeFrameArrayAliasSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
+  intent: "read_freeze_frame",
+  ok: true,
+  blocked: false,
+  data: { freeze_frame: [{ id: "engine_speed", value: 1520, unit: "rpm" }] }
+});
 const nativeElmEmptyFreezeFrameEvaluation = obd.evaluateNativeConnectorEnvelope({
   ...nativeElmEnvelope,
   intent: "read_freeze_frame",
@@ -4383,6 +4410,20 @@ check(
     && nativeElmFreezeFrameValuesImport.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 82 && item.sourceEcu === "7E8")
     && nativeElmFreezeFrameValuesImport.session?.vehicleCommandEnabled === false
     && nativeElmFreezeFrameValuesImport.wouldTransmit === false
+    && nativeElmFreezeFrameArrayImport.accepted === true
+    && nativeElmFreezeFrameArrayImport.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1520 && item.sourceEcu === "7E8")
+    && nativeElmFreezeFrameArrayImport.session?.vehicleCommandEnabled === false
+    && nativeElmFreezeFrameArrayImport.wouldTransmit === false
+    && nativeElmMalformedFreezeFrameEvaluation.accepted === false
+    && nativeElmMalformedFreezeFrameEvaluation.errors.includes("invalid_data_shape")
+    && nativeElmNullFreezeFrameImport.accepted === true
+    && nativeElmNullFreezeFrameImport.session?.freezeFrameSnapshot?.triggerDtc === "P0420"
+    && nativeElmNullFreezeFrameImport.session?.vehicleCommandEnabled === false
+    && nativeElmNullFreezeFrameImport.wouldTransmit === false
+    && bridgeFreezeFrameArrayAliasSnapshot.freezeFrameReadoutStatus === "reported"
+    && bridgeFreezeFrameArrayAliasSnapshot.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1520)
+    && bridgeFreezeFrameArrayAliasSnapshot.vehicleCommandEnabled === false
+    && bridgeFreezeFrameArrayAliasSnapshot.wouldTransmit === false
     && nativeElmEmptyFreezeFrameEvaluation.accepted === false
     && nativeElmEmptyFreezeFrameEvaluation.errors.includes("invalid_data_shape"),
   "Native connector freeze-frame aliases must retain trigger/value evidence without accepting empty data"
@@ -4935,7 +4976,7 @@ const sameAttemptFreezeFrameScan = obd.buildNativeConnectorScanSession({
 check(sameAttemptFreezeFrameScan.scanState === "completed" && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtc === "P0300" && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 82) && sameAttemptFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1520), "Same-attempt freeze-frame PID envelopes lost values before session normalization");
 const aliasMultiEcuNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
   envelopes: [
-    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 762, { trigger_code: "P0300", freeze_frame_values: [{ id: "coolant_temp", value: 82, unit: "C" }] }),
+    scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 762, { trigger_code: "P0300", freeze_frame: [{ id: "coolant_temp", value: 82, unit: "C" }] }),
     scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E9", 763, { freezeFrameTriggerEntries: [{ triggerCode: "P0171" }], pidValues: [{ id: "engine_speed", value: 1520, unit: "rpm" }] })
   ],
   scan_state: "completed",

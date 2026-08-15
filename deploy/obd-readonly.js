@@ -1888,7 +1888,7 @@
       read_stored_dtc: ["dtcs", "codes"],
       read_pending_dtc: ["dtcs", "codes"],
       read_permanent_dtc: ["dtcs", "codes"],
-      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"],
+      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
       read_onboard_monitor: ["tests", "items"],
@@ -1896,9 +1896,17 @@
       read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
     };
     const requiredDataKeys = requiredDataKeysByIntent[intent] || [];
+    const freezeFrameValueArrayAliases = [
+      "monitor_values", "monitorValues", "values", "items",
+      "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues",
+      "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots"
+    ];
+    const malformedFreezeFrameValueAlias = intent === "read_freeze_frame"
+      && Boolean(data)
+      && freezeFrameValueArrayAliases.some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const dataShapeValid = !knownReadIntent
-      || Boolean(data && requiredDataKeys.some((key) => Object.hasOwn(data, key)))
-      || (responseStatusExplicit && !responseSucceeded && Boolean(data));
+      || (!malformedFreezeFrameValueAlias && Boolean(data && requiredDataKeys.some((key) => Object.hasOwn(data, key)))
+        || (responseStatusExplicit && !responseSucceeded && Boolean(data)));
     let payloadSize = 0;
     try {
       payloadSize = data ? getUtf8ByteLength(JSON.stringify(data)) : 0;
@@ -2172,7 +2180,7 @@
             };
           }).filter((item) => item.code);
         }),
-        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues"], scopeId)),
+        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues"], scopeId)),
         freeze_frame_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
           const snapshots = Array.isArray(data.freeze_frame_ecu_snapshots)
             ? data.freeze_frame_ecu_snapshots
@@ -4477,7 +4485,7 @@
   function normalizeBridgeFreezeFrameSnapshot(response = {}) {
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedFreezeFramePayload = Boolean(nestedData && [
-      "values", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "monitor_values", "monitorValues", "pid_values", "pidValues",
+      "values", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "monitor_values", "monitorValues", "pid_values", "pidValues",
       "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
       "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc",
       "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"
@@ -4485,7 +4493,7 @@
     // Never combine outer and nested freeze-frame evidence; outer values only complete an otherwise empty envelope.
     const outerFreezeFrameFallback = nestedData && !hasNestedFreezeFramePayload
       ? {
-        values: response.values ?? response.freeze_frame_values ?? response.freezeFrameValues ?? response.freeze_frame_rows ?? response.freezeFrameRows ?? response.monitor_values ?? response.monitorValues ?? response.pid_values ?? response.pidValues,
+        values: response.values ?? response.freeze_frame ?? response.freezeFrame ?? response.freeze_frame_values ?? response.freezeFrameValues ?? response.freeze_frame_rows ?? response.freezeFrameRows ?? response.monitor_values ?? response.monitorValues ?? response.pid_values ?? response.pidValues,
         freeze_frame_ecu_snapshots: response.freeze_frame_ecu_snapshots ?? response.freezeFrameEcuSnapshots,
         trigger_dtc: response.trigger_dtc ?? response.triggerDtc ?? response.trigger_code ?? response.triggerCode ?? response.freeze_dtc ?? response.freezeDtc ?? response.associated_dtc ?? response.associatedDtc ?? response.dtc,
         trigger_dtc_entries: response.trigger_dtc_entries ?? response.triggerDtcEntries ?? response.freeze_frame_trigger_entries ?? response.freezeFrameTriggerEntries ?? response.associated_dtc_entries ?? response.associatedDtcEntries,
@@ -4511,7 +4519,7 @@
         : [];
     const malformedFreezeFrameAlias = [
       "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
-      "values",
+      "values", "freeze_frame", "freezeFrame",
       "freeze_frame_values", "freezeFrameValues",
       "freeze_frame_rows", "freezeFrameRows",
       "monitor_values", "monitorValues",
@@ -4519,7 +4527,11 @@
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const freezeFrameValues = (Array.isArray(data.values)
       ? data.values
-      : Array.isArray(data.freeze_frame_values)
+      : Array.isArray(data.freeze_frame)
+        ? data.freeze_frame
+        : Array.isArray(data.freezeFrame)
+          ? data.freezeFrame
+          : Array.isArray(data.freeze_frame_values)
         ? data.freeze_frame_values
         : Array.isArray(data.freezeFrameValues)
           ? data.freezeFrameValues
@@ -4554,7 +4566,7 @@
       && typeof snapshot === "object"
       && !Array.isArray(snapshot)
       && [
-        snapshot.values, snapshot.freeze_frame_values, snapshot.freezeFrameValues,
+        snapshot.values, snapshot.freeze_frame, snapshot.freezeFrame, snapshot.freeze_frame_values, snapshot.freezeFrameValues,
         snapshot.monitor_values, snapshot.monitorValues,
         snapshot.trigger_dtc_entries, snapshot.triggerDtcEntries,
         snapshot.uds_dtc_snapshot_records, snapshot.udsDtcSnapshotRecords,
@@ -4565,7 +4577,7 @@
       ? { ...readBridgeSnapshotSafety(response, false), ok: false, blocked: true, unparsed: true }
       : readBridgeSnapshotSafety(
         response,
-        errorCodes.length === 0 && (hasFreezeFrameEcuSnapshotEvidence || [data.values, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray))
+        errorCodes.length === 0 && (hasFreezeFrameEcuSnapshotEvidence || [data.values, data.freeze_frame, data.freezeFrame, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray))
       );
     const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, unparsed: true }
