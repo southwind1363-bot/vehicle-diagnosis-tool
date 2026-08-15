@@ -3338,6 +3338,7 @@
       const functionalUnitRaw = readDtcFunctionalUnitRawAlias(rowValue);
       const functionalGroupRaw = readDtcFunctionalGroupRawAlias(rowValue);
       const severityAvailabilityMask = readDtcSeverityAvailabilityMaskAlias(rowValue);
+      const freezeFrameAvailable = [rowValue.freeze_frame_available, rowValue.freezeFrameAvailable, rowValue.freezeFrame, rowValue.freeze_frame].some(isExplicitTrueFlag);
       return codeReferences.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -3354,7 +3355,7 @@
         ecu: rowEcu || fallbackEcu,
         ecuName,
         ecu_name: ecuName,
-        freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
+        freezeFrameAvailable,
         ...(extendedDataRecordNumber !== null ? {
           extendedDataRecordNumber,
           extended_data_record_number: extendedDataRecordNumber,
@@ -18195,6 +18196,7 @@
       const functionalUnitRaw = readDtcFunctionalUnitRawAlias(rowValue);
       const functionalGroupRaw = readDtcFunctionalGroupRawAlias(rowValue);
       const severityAvailabilityMask = readDtcSeverityAvailabilityMaskAlias(rowValue);
+      const freezeFrameAvailable = [rowValue.freeze_frame_available, rowValue.freezeFrameAvailable, rowValue.freezeFrame, rowValue.freeze_frame].some(isExplicitTrueFlag);
       return codes.map(({ code, subcode, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -18211,7 +18213,7 @@
         ecu: rowEcu || sourceEcu,
         ecuName,
         ecu_name: ecuName,
-        freezeFrameAvailable: rowValue.freeze_frame_available === true || rowValue.freezeFrameAvailable === true || rowValue.freezeFrame === true || rowValue.freeze_frame === true,
+        freezeFrameAvailable,
         ...(extendedDataRecordNumber !== null ? {
           extendedDataRecordNumber,
           extended_data_record_number: extendedDataRecordNumber,
