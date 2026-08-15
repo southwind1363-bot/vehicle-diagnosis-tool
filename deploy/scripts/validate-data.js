@@ -95,6 +95,18 @@ function hasDisjointSourceSpecificDtcDefinitions(rows) {
   return rows.every((row, index) => rows.slice(index + 1).every((other) => !dtcVehicleFiltersOverlap(row.vehicle_filter, other.vehicle_filter)));
 }
 
+const disjointSourceSpecificDtcFixture = [
+  { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], year_from: 2025, year_to: 2025, scope_confirmation_required: true } },
+  { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], year_from: 2026, year_to: 2026, scope_confirmation_required: true } }
+];
+if (!hasDisjointSourceSpecificDtcDefinitions(disjointSourceSpecificDtcFixture)
+  || hasDisjointSourceSpecificDtcDefinitions([
+    ...disjointSourceSpecificDtcFixture.slice(0, 1),
+    { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], year_from: 2025, year_to: 2026, scope_confirmation_required: true } }
+  ])) {
+  reportError("Source-specific DTC overlap validation is not enforcing disjoint vehicle-year scopes");
+}
+
 function hasScopedGenericSourceSpecificDtcDefinitions(rows) {
   if (!Array.isArray(rows) || rows.length < 2) return false;
   const genericRows = rows.filter((row) => row.file === "obd-codes.json"

@@ -59,6 +59,7 @@
         ,"Honda 25-081の2024 Prologue K160 C2A22を制動警告・報告ECU・ブレーキ安全条件つきで追加"
         ,"Subaru 06-44-12RのBRZ C1249とForester/Impreza C1531を報告ECU・ブレーキ安全条件つきで追加"
         ,"GM PIT5832Vの2025-26 Terrain current U1962をモジュール交換履歴・SDAC・セキュリティ安全条件・read-only適用確認つきで追加"
+        ,"GM PIT6432の2026 Silverado/Sierra SDGM U3000-49をDTC状態・ゲートウェイ安全条件・read-only適用確認つきで追加"
                  ],
         "missing":  [
                         "B系と残りC系の個別定義",
