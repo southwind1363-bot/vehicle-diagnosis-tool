@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.86";
+const APP_VERSION = "3.9.87";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6082,7 +6082,7 @@ function renderObdDeveloperReadout(session) {
   if (monitorValues.length) renderObdMonitorValues(monitorValues, session.livePidSnapshot.monitorInsights || []);
   if (codes.length) {
     obdDetectedCodes.innerHTML = "";
-    [...new Map(codes.map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, codes, session.vehicleProfile || session.vehicle_profile || null)));
+    [...new Map(codes.map((item) => [buildObdDtcDisplayKey(item), item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, codes, session.vehicleProfile || session.vehicle_profile || null)));
     obdImportStatus.textContent = `${codes.length}件の車両DTCを読取りました。`;
   }
   renderObdDeveloperSessionSummary(session);
@@ -6224,7 +6224,7 @@ function renderObdBridgeReadout(parts = {}) {
   }
   if (currentCodes.length) {
     obdDetectedCodes.innerHTML = "";
-    [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, dtcSnapshot.dtcs, session.vehicleProfile || session.vehicle_profile || null)));
+    [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [buildObdDtcDisplayKey(item), item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, dtcSnapshot.dtcs, session.vehicleProfile || session.vehicle_profile || null)));
     const statusSummary = formatObdBridgeDtcStatusSummary(dtcSnapshot.dtcs);
     obdImportStatus.textContent = `${currentCodes.length}件のブリッジDTCを読取りました。累計${dtcSnapshot.dtcs.length}件です。${statusSummary}`;
   } else if (currentDtcReadoutStatus === "unparsed") {
@@ -9393,7 +9393,7 @@ function analyzeObdScannerImport(options = {}) {
   } else {
     obdImportStatus.textContent = `${coreReadinessHeadline}${sourcePrefix}${mergedCodes.length}件のDTCを検出しました。登録済みデータを日本語で表示します。${detailNote}`;
     const displayedDtcs = mergedDtcs.length
-      ? [...new Map(mergedDtcs.filter((item) => item?.code).map((item) => [`${item.code}:${item.subcode || item.sub_code || ""}:${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}`, item])).values()]
+      ? [...new Map(mergedDtcs.filter((item) => item?.code).map((item) => [buildObdDtcDisplayKey(item), item])).values()]
       : mergedCodes;
     displayedDtcs.forEach((item) => {
       obdDetectedCodes.appendChild(createObdDtcCard(item, displayedDtcs, summarySource?.vehicleProfile || summarySource?.vehicle_profile || null));
@@ -9449,6 +9449,16 @@ function analyzeObdScannerImport(options = {}) {
     renderObdWorkflowGuide();
     renderObdDeveloperSessionSummary(obdDevSession.lastSession);
   }
+}
+
+function buildObdDtcDisplayKey(item = null) {
+  const dtc = item && typeof item === "object" ? item : {};
+  const code = String(dtc.code || "").trim().toUpperCase();
+  const subcode = String(dtc.subcode || dtc.sub_code || "").trim().toUpperCase();
+  const ecu = String(dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || "").trim().toUpperCase();
+  const status = String(dtc.status || dtc.kind || dtc.dtc_status || dtc.dtcStatus || "").trim().toLowerCase();
+  const reportedStatus = String(dtc.reportedStatus || dtc.reported_status || "").replace(/\s+/g, " ").trim().toLowerCase();
+  return `${code}:${subcode}:${ecu}:${status}:${reportedStatus}`;
 }
 
 function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride = null) {
