@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.10.8";
+const APP_VERSION = "3.10.9";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8095,6 +8095,21 @@ function formatDtcIdentityComparisonSummary(summary, fallback = NO_DATA) {
   return available ? "変化なし" : "DTC詳細比較不可";
 }
 
+function formatDtcStatusByteComparisonSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const available = summary.dtcStatusByteComparisonAvailable === true || summary.dtc_status_byte_comparison_available === true;
+  const added = Array.isArray(summary.dtcStatusByteAddedKeys) ? summary.dtcStatusByteAddedKeys : Array.isArray(summary.dtc_status_byte_added_keys) ? summary.dtc_status_byte_added_keys : [];
+  const removed = Array.isArray(summary.dtcStatusByteRemovedKeys) ? summary.dtcStatusByteRemovedKeys : Array.isArray(summary.dtc_status_byte_removed_keys) ? summary.dtc_status_byte_removed_keys : [];
+  const displayKey = (key) => {
+    const [code, , , , , ecu, statusByte, memory] = String(key || "").split("|");
+    const status = statusByte && statusByte !== "-" ? `0x${statusByte}` : "状態未報告";
+    const selection = memory && memory !== "-" ? `/M${memory}` : "";
+    return `${code || "DTC"}${ecu && ecu !== "-" ? `@${ecu}` : ""}:${status}${selection}`;
+  };
+  if (added.length || removed.length) return `DTC状態:${[...added.map((key) => `+${displayKey(key)}`), ...removed.map((key) => `-${displayKey(key)}`)].slice(0, 3).join(",")}`;
+  return available ? "変化なし" : "DTC状態詳細比較不可";
+}
+
 function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   const issueCountValue = summary.issueCount ?? summary.issue_count;
@@ -8322,6 +8337,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const coreReadoutInventoryComparisonSummary = session.importedCoreReadoutInventoryComparisonSummary || session.imported_core_readout_inventory_comparison_summary || null;
   const observedEcuComparisonLabel = formatObservedEcuComparisonSummary(session.importedCoreComparisonSummary || session.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const dtcIdentityComparisonLabel = formatDtcIdentityComparisonSummary(session.importedCoreComparisonSummary || session.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
+  const dtcStatusByteComparisonLabel = formatDtcStatusByteComparisonSummary(session.importedCoreComparisonSummary || session.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(coreReadoutInventorySummary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(coreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualitySummary = core.readoutQualitySummary || core.readout_quality_summary || flow.readoutQualitySummary || flow.readout_quality_summary || null;
@@ -8385,6 +8401,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取内訳", coreReadoutInventoryLabel, coreReadoutInventorySummary?.missingReadoutCount || coreReadoutInventorySummary?.missing_readout_count ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "DTC比較", dtcIdentityComparisonLabel, dtcIdentityComparisonLabel !== "変化なし" && dtcIdentityComparisonLabel !== NO_DATA ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "DTC状態比較", dtcStatusByteComparisonLabel, dtcStatusByteComparisonLabel !== "変化なし" && dtcStatusByteComparisonLabel !== NO_DATA ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "ECU応答比較", observedEcuComparisonLabel, observedEcuComparisonLabel !== "変化なし" && observedEcuComparisonLabel !== NO_DATA ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "在庫比較", coreReadoutInventoryComparisonLabel, coreReadoutInventoryComparisonSummary?.valueCountsChanged === true || coreReadoutInventoryComparisonSummary?.value_counts_changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取品質", readoutQualityLabel, readoutQualitySummary?.reviewRequired || readoutQualitySummary?.review_required ? "pending" : "");
@@ -8598,6 +8615,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary, NO_DATA);
   const observedEcuComparisonLabel = formatObservedEcuComparisonSummary(session?.importedCoreComparisonSummary || session?.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const dtcIdentityComparisonLabel = formatDtcIdentityComparisonSummary(session?.importedCoreComparisonSummary || session?.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
+  const dtcStatusByteComparisonLabel = formatDtcStatusByteComparisonSummary(session?.importedCoreComparisonSummary || session?.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
@@ -8684,6 +8702,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ...(adapterInitializationLabel ? [["VCI初期化", adapterInitializationLabel]] : []),
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC比較", dtcIdentityComparisonLabel],
+    ["DTC状態比較", dtcStatusByteComparisonLabel],
     ["UDS DTC extended raw records", udsDtcExtendedDataRecordCount ? `${udsDtcExtendedDataRecordCount} (raw evidence)` : NO_DATA],
     ["UDS DTC extended raw response envelopes", udsDtcExtendedDataRecordResponseCount ? `${udsDtcExtendedDataRecordResponseCount} (raw evidence)` : NO_DATA],
     ["UDS DTC fault counter records", udsDtcFaultDetectionCounterCount ? `${udsDtcFaultDetectionCounterCount} (raw evidence)` : NO_DATA],

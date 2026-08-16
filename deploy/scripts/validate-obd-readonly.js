@@ -17884,6 +17884,29 @@ const dtcIdentityComparisonSession = obd.buildDiagnosticScanSession({
   }
 });
 check(dtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.keys?.join(",") === "P0300|-|generic_obd|stored|current|7E8" && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonAvailable === true && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityKeysChanged === true && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityAddedKeys?.join(",") === "P0300|-|generic_obd|stored|current|7E8" && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.join(",") === "P0300|-|generic_obd|stored|history|7E8" && dtcIdentityComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_identities") && dtcIdentityComparisonSession.vehicleCommandEnabled === false && dtcIdentityComparisonSession.wouldTransmit === false, "DTC identities were not compared with read-only evidence");
+check(source.includes('function buildDtcStatusByteSummary(dtcSnapshot = {})') && appSource.includes('function formatDtcStatusByteComparisonSummary(summary, fallback = NO_DATA)') && appSource.includes('DTC状態詳細比較不可'), "DTC status-byte comparison summary should retain explicit read-only evidence and display an unavailable state");
+const dtcStatusByteComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    dtc_readout_status: "reported",
+    source_ecu: "7E8",
+    dtc_memory_selection: "02",
+    dtcs: [{ code: "123456", code_format: "uds_3byte", status: "stored", reported_status: "current", status_byte: "2F" }]
+  },
+  core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_status_byte_summary: {
+      schema_version: "dtc_status_byte_summary_v1",
+      evidence_recorded: true,
+      dtc_keys: ["123456|-|uds_3byte|stored|current|7E8|8A|01"]
+    }
+  }
+});
+check(dtcStatusByteComparisonSession.coreSessionStatus?.dtcStatusByteSummary?.keys?.join(",") === "123456|-|uds_3byte|stored|current|7E8|2F|02" && dtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteComparisonAvailable === true && dtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteKeysChanged === true && dtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteAddedKeys?.join(",") === "123456|-|uds_3byte|stored|current|7E8|2F|02" && dtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteRemovedKeys?.join(",") === "123456|-|uds_3byte|stored|current|7E8|8A|01" && dtcStatusByteComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_status_bytes") && dtcStatusByteComparisonSession.importedSessionComparisonSummary?.changedIdSummaries?.some((item) => item.kind === "dtc_status_byte") && dtcStatusByteComparisonSession.vehicleCommandEnabled === false && dtcStatusByteComparisonSession.wouldTransmit === false, "DTC status-byte evidence was not compared separately from DTC identity");
+const legacyDtcStatusByteComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "123456", code_format: "uds_3byte", status: "stored", status_byte: "2F" }] },
+  core_session_status: { schema_version: "core_session_status_v1", dtc_identity_summary: { evidence_recorded: true, dtc_keys: ["123456|-|uds_3byte|stored|unreported|-" ] } }
+});
+check(legacyDtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteComparisonAvailable === false && legacyDtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteKeysChanged === false && legacyDtcStatusByteComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_status_bytes") === false && legacyDtcStatusByteComparisonSession.vehicleCommandEnabled === false, "Legacy DTC identities were treated as status-byte changes");
 const legacyDtcIdentityComparisonSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0300", status: "stored" }] },
   core_session_status: { schema_version: "core_session_status_v1", dtc_status_summary: { counts: [{ status: "stored", count: 1 }] } }
