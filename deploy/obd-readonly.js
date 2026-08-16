@@ -11510,6 +11510,33 @@
     const importedChecklistReviewIds = readStringList(importedFlow, "checklistReviewIds");
     const currentChecklistReviewIds = readStringList(currentFlow, "checklistReviewIds");
     const diffIds = (left = [], right = []) => left.filter((id) => !right.includes(id));
+    const readReportedDtcStateCounts = (flow = {}) => {
+      const summary = readAliasValue(flow, "dtcReportedStatusSummary");
+      const rawCounts = Array.isArray(summary?.counts)
+        ? summary.counts
+        : Array.isArray(summary?.status_counts) ? summary.status_counts : [];
+      const countsByStatus = new Map();
+      rawCounts.forEach((item) => {
+        const status = normalizeDtcReportedStatus(item?.status);
+        const count = Number(item?.count);
+        if (!status || !Number.isSafeInteger(count) || count <= 0 || count > 10000) return;
+        countsByStatus.set(status, (countsByStatus.get(status) || 0) + count);
+      });
+      return [...countsByStatus.entries()]
+        .map(([status, count]) => ({ status, count }))
+        .sort((left, right) => left.status.localeCompare(right.status));
+    };
+    const importedReportedDtcStateCounts = readReportedDtcStateCounts(importedFlow);
+    const currentReportedDtcStateCounts = readReportedDtcStateCounts(currentFlow);
+    const importedReportedDtcStateCountById = new Map(importedReportedDtcStateCounts.map((item) => [item.status, item.count]));
+    const currentReportedDtcStateCountById = new Map(currentReportedDtcStateCounts.map((item) => [item.status, item.count]));
+    const importedReportedDtcStateIds = importedReportedDtcStateCounts.map((item) => item.status);
+    const currentReportedDtcStateIds = currentReportedDtcStateCounts.map((item) => item.status);
+    const importedReportedDtcStateTotalCount = importedReportedDtcStateCounts.reduce((total, item) => total + item.count, 0);
+    const currentReportedDtcStateTotalCount = currentReportedDtcStateCounts.reduce((total, item) => total + item.count, 0);
+    const reportedDtcStateCountChangedIds = [...new Set([...importedReportedDtcStateIds, ...currentReportedDtcStateIds])]
+      .filter((status) => (importedReportedDtcStateCountById.get(status) || 0) !== (currentReportedDtcStateCountById.get(status) || 0))
+      .sort();
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readVehicleApplicabilityEvidenceSummary = (flow = {}) => {
@@ -11601,6 +11628,24 @@
     return {
       schemaVersion: "imported_core_comparison_v1",
       schema_version: "imported_core_comparison_v1",
+      importedReportedDtcStateCounts,
+      imported_reported_dtc_state_counts: importedReportedDtcStateCounts.map((item) => ({ ...item })),
+      currentReportedDtcStateCounts,
+      current_reported_dtc_state_counts: currentReportedDtcStateCounts.map((item) => ({ ...item })),
+      importedReportedDtcStateTotalCount,
+      imported_reported_dtc_state_total_count: importedReportedDtcStateTotalCount,
+      currentReportedDtcStateTotalCount,
+      current_reported_dtc_state_total_count: currentReportedDtcStateTotalCount,
+      reportedDtcStateTotalDelta: currentReportedDtcStateTotalCount - importedReportedDtcStateTotalCount,
+      reported_dtc_state_total_delta: currentReportedDtcStateTotalCount - importedReportedDtcStateTotalCount,
+      reportedDtcStateCountsChanged: reportedDtcStateCountChangedIds.length > 0,
+      reported_dtc_state_counts_changed: reportedDtcStateCountChangedIds.length > 0,
+      reportedDtcStateCountChangedIds,
+      reported_dtc_state_count_changed_ids: [...reportedDtcStateCountChangedIds],
+      reportedDtcStateAddedIds: diffIds(currentReportedDtcStateIds, importedReportedDtcStateIds),
+      reported_dtc_state_added_ids: diffIds(currentReportedDtcStateIds, importedReportedDtcStateIds),
+      reportedDtcStateRemovedIds: diffIds(importedReportedDtcStateIds, currentReportedDtcStateIds),
+      reported_dtc_state_removed_ids: diffIds(importedReportedDtcStateIds, currentReportedDtcStateIds),
       importedStatus,
       imported_status: importedStatus,
       currentStatus,
@@ -14122,7 +14167,7 @@
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.pendingReadoutDelta || comparison.attemptedReadoutDelta || comparison.blockerCountDelta || comparison.failedReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.issueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || comparison.onboardMonitorFailedDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.pendingReadoutDelta || comparison.attemptedReadoutDelta || comparison.blockerCountDelta || comparison.failedReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.issueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || comparison.onboardMonitorFailedDelta || comparison.reportedDtcStateTotalDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
@@ -14163,6 +14208,7 @@
       || comparison.checklistReviewIdsChanged === true
       || comparison.vehicleApplicabilityChecklistChanged === true
       || comparison.vehicleApplicabilityEvidenceChanged === true
+      || comparison.reportedDtcStateCountsChanged === true
       || comparison.reviewRequiredChanged === true
       || comparison.readyForInterpretationChanged === true
       || comparison.issueIdsChanged === true
@@ -14191,6 +14237,7 @@
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true || comparison.vehicleApplicabilityEvidenceChanged === true ? "analysis_checklist" : null,
+      comparison.reportedDtcStateCountsChanged === true ? "dtc_reported_states" : null,
       comparison.reviewRequiredChanged === true || comparison.readyForInterpretationChanged === true || comparison.issueIdsChanged === true || comparison.issueCountsChanged === true || Number(comparison.issueCountDelta || 0) !== 0 ? "readout_quality" : null,
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
@@ -14226,7 +14273,8 @@
         "readoutAddedIds", "bridgeIntentAddedIds", "safetyFlagChangedIds",
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
-        "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds"
+        "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14240,7 +14288,8 @@
         "readoutRemovedIds", "bridgeIntentRemovedIds", "safetyFlagChangedIds",
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
-        "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds"
+        "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];

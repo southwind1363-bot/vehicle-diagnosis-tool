@@ -17729,6 +17729,14 @@ check("vehicleApplicabilityEvidenceChanged" in scanSessionBridgeDiagnosticImport
 check(Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.checklistBlockedAddedIds) && Array.isArray(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.checklistReviewRemovedIds), "Diagnostic scan session did not expose imported core checklist added and removed ids");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.requestPlanMappedDelta) && Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.requestPlanUnmappedDelta), "Diagnostic scan session did not expose imported core request plan mapping delta");
 check("nextReadoutDetailsChanged" in scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary, "Diagnostic scan session did not expose imported core next readout detail change flag");
+const reportedDtcStateComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtcs: [{ code: "P0300", status: "stored", reported_status: "current" }] },
+  imported_core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_reported_status_summary: { status_counts: [{ status: "history", count: 1 }] }
+  }
+});
+check(reportedDtcStateComparisonSession.importedCoreComparisonSummary?.importedReportedDtcStateCounts?.map((item) => `${item.status}:${item.count}`).join(",") === "history:1" && reportedDtcStateComparisonSession.importedCoreComparisonSummary?.currentReportedDtcStateCounts?.map((item) => `${item.status}:${item.count}`).join(",") === "current:1" && reportedDtcStateComparisonSession.importedCoreComparisonSummary?.reportedDtcStateCountsChanged === true && reportedDtcStateComparisonSession.importedCoreComparisonSummary?.reportedDtcStateAddedIds?.join(",") === "current" && reportedDtcStateComparisonSession.imported_core_comparison_summary?.reported_dtc_state_removed_ids?.join(",") === "history" && reportedDtcStateComparisonSession.vehicleCommandEnabled === false, "Diagnostic scan session did not compare imported scanner-reported DTC states without enabling vehicle commands");
 const scanSessionSnakeCoreWorkflowImport = obd.buildDiagnosticScanSession({
   session_id: "shop-test-snake-core-workflow-import",
   core_session_status: {
