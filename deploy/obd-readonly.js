@@ -5942,6 +5942,29 @@
       String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-"
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const recordedEcuInfoItemKeys = ecuInfoItemEvidenceRecorded ? ecuInfoItemKeys : [];
+    const supportedPidEcuSnapshots = Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots)
+      ? supportedPidMatrix.supportedPidEcuSnapshots
+      : Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots)
+        ? supportedPidMatrix.supported_pid_ecu_snapshots
+        : [];
+    const supportedPidResponseUnavailable = ["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status)
+      || supportedPidMatrix?.blocked === true
+      || supportedPidMatrix?.isBlocked === true
+      || supportedPidMatrix?.is_blocked === true;
+    const supportedPidEvidenceRecorded = !supportedPidResponseUnavailable
+      && String(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || "").trim().toLowerCase() === "reported"
+      && (supportedPidEcuSnapshots.length === 0 || supportedPidEcuSnapshots.every((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported"));
+    const supportedPidEntries = supportedPidEcuSnapshots.length > 0
+      ? supportedPidEcuSnapshots.flatMap((snapshot) => (Array.isArray(snapshot?.supportedPids) ? snapshot.supportedPids : Array.isArray(snapshot?.supported_pids) ? snapshot.supported_pids : [])
+        .map((pid) => ({ pid, sourceEcu: snapshot?.sourceEcu || snapshot?.source_ecu || null })))
+      : (Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedPids : Array.isArray(supportedPidMatrix?.supported_pids) ? supportedPidMatrix.supported_pids : [])
+        .map((pid) => ({ pid, sourceEcu: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu || null }));
+    const supportedPidKeys = [...new Set(supportedPidEntries.map((entry) => {
+      const pid = normalizeSupportedPidCode(entry?.pid);
+      const sourceEcu = String(entry?.sourceEcu || entry?.source_ecu || "").trim().toUpperCase() || "-";
+      return pid ? pid + "|" + sourceEcu : null;
+    }).filter(Boolean))].sort();
+    const recordedSupportedPidKeys = supportedPidEvidenceRecorded ? supportedPidKeys : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -6017,6 +6040,12 @@
       ecu_info_item_evidence_recorded: ecuInfoItemEvidenceRecorded,
       hasOnboardMonitorTests: countsById.onboard_monitor_snapshot > 0,
       hasSupportedPids: countsById.supported_pid_matrix > 0,
+      supportedPidCount,
+      supported_pid_count: supportedPidCount,
+      supportedPidKeys: recordedSupportedPidKeys,
+      supported_pid_keys: [...recordedSupportedPidKeys],
+      supportedPidEvidenceRecorded,
+      supported_pid_evidence_recorded: supportedPidEvidenceRecorded,
       readinessIncompleteCount: isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? numericCount(readinessSnapshot?.incompleteCount) : 0,
       ecuInfoMissingKeyCount: isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? numericCount(ecuInfoSnapshot?.keyItemSummary?.missingCount) : 0,
       rawPidUndecodedCount: (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? numericCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount) : 0)
@@ -12919,6 +12948,9 @@
       readinessMonitorCount: ["readiness_monitor_count"],
       readinessMonitorKeys: ["readiness_monitor_keys"],
       readinessMonitorEvidenceRecorded: ["readiness_monitor_evidence_recorded"],
+      supportedPidCount: ["supported_pid_count"],
+      supportedPidKeys: ["supported_pid_keys"],
+      supportedPidEvidenceRecorded: ["supported_pid_evidence_recorded"],
       freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
       freezeFrameTriggerKeys: ["freeze_frame_trigger_keys"],
       freezeFrameTriggerEvidenceRecorded: ["freeze_frame_trigger_evidence_recorded"],
@@ -13016,6 +13048,16 @@
     const currentEcuInfoItemKeys = readEcuInfoKeys(currentSummary);
     const ecuInfoItemAddedKeys = ecuInfoItemComparisonAvailable ? diffIds(currentEcuInfoItemKeys, importedEcuInfoItemKeys) : [];
     const ecuInfoItemRemovedKeys = ecuInfoItemComparisonAvailable ? diffIds(importedEcuInfoItemKeys, currentEcuInfoItemKeys) : [];
+    const readSupportedPidKeys = (summary) => Array.isArray(readField(summary, "supportedPidKeys"))
+      ? [...new Set(readField(summary, "supportedPidKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      : [];
+    const importedSupportedPidEvidenceRecorded = readBoolean(importedInventory, "supportedPidEvidenceRecorded");
+    const currentSupportedPidEvidenceRecorded = readBoolean(currentSummary, "supportedPidEvidenceRecorded");
+    const supportedPidComparisonAvailable = importedSupportedPidEvidenceRecorded && currentSupportedPidEvidenceRecorded;
+    const importedSupportedPidKeys = readSupportedPidKeys(importedInventory);
+    const currentSupportedPidKeys = readSupportedPidKeys(currentSummary);
+    const supportedPidAddedKeys = supportedPidComparisonAvailable ? diffIds(currentSupportedPidKeys, importedSupportedPidKeys) : [];
+    const supportedPidRemovedKeys = supportedPidComparisonAvailable ? diffIds(importedSupportedPidKeys, currentSupportedPidKeys) : [];
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
     const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
     const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
@@ -13226,7 +13268,27 @@
       ecuInfoItemAddedKeys,
       ecu_info_item_added_keys: ecuInfoItemAddedKeys,
       ecuInfoItemRemovedKeys,
-      ecu_info_item_removed_keys: ecuInfoItemRemovedKeys
+      ecu_info_item_removed_keys: ecuInfoItemRemovedKeys,
+      importedSupportedPidCount: readCount(importedInventory, "supportedPidCount"),
+      imported_supported_pid_count: readCount(importedInventory, "supportedPidCount"),
+      currentSupportedPidCount: readCount(currentSummary, "supportedPidCount"),
+      current_supported_pid_count: readCount(currentSummary, "supportedPidCount"),
+      importedSupportedPidEvidenceRecorded,
+      imported_supported_pid_evidence_recorded: importedSupportedPidEvidenceRecorded,
+      currentSupportedPidEvidenceRecorded,
+      current_supported_pid_evidence_recorded: currentSupportedPidEvidenceRecorded,
+      supportedPidComparisonAvailable,
+      supported_pid_comparison_available: supportedPidComparisonAvailable,
+      importedSupportedPidKeys,
+      imported_supported_pid_keys: importedSupportedPidKeys,
+      currentSupportedPidKeys,
+      current_supported_pid_keys: currentSupportedPidKeys,
+      supportedPidKeysChanged: supportedPidComparisonAvailable && importedSupportedPidKeys.join("|") !== currentSupportedPidKeys.join("|"),
+      supported_pid_keys_changed: supportedPidComparisonAvailable && importedSupportedPidKeys.join("|") !== currentSupportedPidKeys.join("|"),
+      supportedPidAddedKeys,
+      supported_pid_added_keys: supportedPidAddedKeys,
+      supportedPidRemovedKeys,
+      supported_pid_removed_keys: supportedPidRemovedKeys
     };
   }
 
@@ -13296,6 +13358,12 @@
       ecu_info_item_keys: normalizeIds(summary.ecuInfoItemKeys || summary.ecu_info_item_keys),
       ecuInfoItemEvidenceRecorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
       ecu_info_item_evidence_recorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
+      supportedPidCount: toCount("supportedPidCount", "supported_pid_count", 0),
+      supported_pid_count: toCount("supportedPidCount", "supported_pid_count", 0),
+      supportedPidKeys: normalizeIds(summary.supportedPidKeys || summary.supported_pid_keys),
+      supported_pid_keys: normalizeIds(summary.supportedPidKeys || summary.supported_pid_keys),
+      supportedPidEvidenceRecorded: pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
+      supported_pid_evidence_recorded: pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
       hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
@@ -14443,6 +14511,7 @@
       || comparison.freezeFrameTriggerKeysChanged === true
       || comparison.readinessMonitorKeysChanged === true
       || comparison.ecuInfoItemKeysChanged === true
+      || comparison.supportedPidKeysChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -14465,6 +14534,7 @@
       Number(comparison.freezeFrameTriggerCountDelta || 0) !== 0 || comparison.freezeFrameTriggerKeysChanged === true ? "freeze_frame_triggers" : null,
       comparison.readinessMonitorKeysChanged === true ? "readiness_monitor_states" : null,
       comparison.ecuInfoItemKeysChanged === true ? "ecu_info_items" : null,
+      comparison.supportedPidKeysChanged === true ? "supported_pids" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,

@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.10.2";
+const APP_VERSION = "3.10.3";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7973,6 +7973,11 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const currentEcuInfoItemCount = Number(summary.currentEcuInfoItemCount ?? summary.current_ecu_info_item_count ?? 0);
   const addedEcuInfoItemKeys = Array.isArray(summary.ecuInfoItemAddedKeys) ? summary.ecuInfoItemAddedKeys : Array.isArray(summary.ecu_info_item_added_keys) ? summary.ecu_info_item_added_keys : [];
   const removedEcuInfoItemKeys = Array.isArray(summary.ecuInfoItemRemovedKeys) ? summary.ecuInfoItemRemovedKeys : Array.isArray(summary.ecu_info_item_removed_keys) ? summary.ecu_info_item_removed_keys : [];
+  const supportedPidComparisonAvailable = summary.supportedPidComparisonAvailable === true || summary.supported_pid_comparison_available === true;
+  const importedSupportedPidCount = Number(summary.importedSupportedPidCount ?? summary.imported_supported_pid_count ?? 0);
+  const currentSupportedPidCount = Number(summary.currentSupportedPidCount ?? summary.current_supported_pid_count ?? 0);
+  const addedSupportedPidKeys = Array.isArray(summary.supportedPidAddedKeys) ? summary.supportedPidAddedKeys : Array.isArray(summary.supported_pid_added_keys) ? summary.supported_pid_added_keys : [];
+  const removedSupportedPidKeys = Array.isArray(summary.supportedPidRemovedKeys) ? summary.supportedPidRemovedKeys : Array.isArray(summary.supported_pid_removed_keys) ? summary.supported_pid_removed_keys : [];
   const readinessIncompleteDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
   const ecuInfoMissingKeyDeltaValue = summary.ecuInfoMissingKeyDelta ?? summary.ecu_info_missing_key_delta;
   const rawDelta = Number.isFinite(Number(rawPidUndecodedDeltaValue)) ? Number(rawPidUndecodedDeltaValue) : 0;
@@ -8011,6 +8016,11 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
     parts.push(`ECU項目:${[...addedEcuInfoItemKeys.map((key) => `+${displayEcuInfoKey(key)}`), ...removedEcuInfoItemKeys.map((key) => `-${displayEcuInfoKey(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!ecuInfoItemComparisonAvailable && (importedEcuInfoItemCount > 0 || currentEcuInfoItemCount > 0)) parts.push("ECU詳細比較不可");
+  if (addedSupportedPidKeys.length || removedSupportedPidKeys.length) {
+    const displaySupportedPidKey = (key) => String(key || "").split("|")[0] || "PID";
+    parts.push(`PID対応:${[...addedSupportedPidKeys.map((key) => `+${displaySupportedPidKey(key)}`), ...removedSupportedPidKeys.map((key) => `-${displaySupportedPidKey(key)}`)].slice(0, 3).join(",")}`);
+  }
+  if (!supportedPidComparisonAvailable && (importedSupportedPidCount > 0 || currentSupportedPidCount > 0)) parts.push("PID詳細比較不可");
   if (readinessDelta) parts.push(`RDY未完${readinessDelta > 0 ? "+" : ""}${readinessDelta}`);
   if (ecuDelta) parts.push(`ECU不足${ecuDelta > 0 ? "+" : ""}${ecuDelta}`);
   return parts.length ? parts.join(" / ") : "変化なし";
