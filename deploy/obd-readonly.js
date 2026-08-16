@@ -5899,6 +5899,31 @@
       || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
     );
     const recordedFreezeFrameTriggerKeys = freezeFrameTriggerEvidenceRecorded ? freezeFrameTriggerKeys : [];
+    const readinessEcuSnapshots = Array.isArray(readinessSnapshot?.readinessEcuSnapshots)
+      ? readinessSnapshot.readinessEcuSnapshots
+      : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
+        ? readinessSnapshot.readiness_ecu_snapshots
+        : [];
+    const readinessResponseUnavailable = ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
+      || readinessSnapshot?.blocked === true
+      || readinessSnapshot?.isBlocked === true
+      || readinessSnapshot?.is_blocked === true;
+    const readinessMonitorEntries = readinessEcuSnapshots.length > 0
+      ? readinessEcuSnapshots.flatMap((snapshot) => Array.isArray(snapshot?.monitors) ? snapshot.monitors : [])
+      : Array.isArray(readinessSnapshot?.monitors)
+        ? readinessSnapshot.monitors
+        : [];
+    const readinessMonitorEvidenceRecorded = !readinessResponseUnavailable
+      && String(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported"
+      && (readinessEcuSnapshots.length === 0 || readinessEcuSnapshots.every((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported"));
+    const readinessStateToken = (value, positive, negative) => value === true ? positive : value === false ? negative : "unknown";
+    const readinessMonitorKeys = [...new Set(readinessMonitorEntries.map((monitor) => [
+      String(monitor?.id || monitor?.monitorId || monitor?.monitor_id || "").trim().toLowerCase(),
+      String(monitor?.sourceEcu || monitor?.source_ecu || readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu || "").trim().toUpperCase() || "-",
+      readinessStateToken(monitor?.supported, "supported", "not_supported"),
+      readinessStateToken(monitor?.complete, "complete", "not_complete")
+    ].join("|")).filter((key) => !key.startsWith("|")))].sort();
+    const recordedReadinessMonitorKeys = readinessMonitorEvidenceRecorded ? readinessMonitorKeys : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -5959,6 +5984,12 @@
       hasFreezeFrameTriggerEvidence: recordedFreezeFrameTriggerCount > 0,
       has_freeze_frame_trigger_evidence: recordedFreezeFrameTriggerCount > 0,
       hasReadinessMonitors: countsById.readiness_snapshot > 0,
+      readinessMonitorCount,
+      readiness_monitor_count: readinessMonitorCount,
+      readinessMonitorKeys: recordedReadinessMonitorKeys,
+      readiness_monitor_keys: [...recordedReadinessMonitorKeys],
+      readinessMonitorEvidenceRecorded,
+      readiness_monitor_evidence_recorded: readinessMonitorEvidenceRecorded,
       hasEcuInfoItems: countsById.ecu_info_snapshot > 0,
       hasOnboardMonitorTests: countsById.onboard_monitor_snapshot > 0,
       hasSupportedPids: countsById.supported_pid_matrix > 0,
@@ -12858,6 +12889,9 @@
       pendingReadoutCount: ["pending_readout_count", "pending_count"],
       rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],
       readinessIncompleteCount: ["readiness_incomplete_count"],
+      readinessMonitorCount: ["readiness_monitor_count"],
+      readinessMonitorKeys: ["readiness_monitor_keys"],
+      readinessMonitorEvidenceRecorded: ["readiness_monitor_evidence_recorded"],
       freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
       freezeFrameTriggerKeys: ["freeze_frame_trigger_keys"],
       freezeFrameTriggerEvidenceRecorded: ["freeze_frame_trigger_evidence_recorded"],
@@ -12935,6 +12969,16 @@
     const currentFreezeFrameTriggerKeys = readTriggerKeys(currentSummary);
     const freezeFrameTriggerAddedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(currentFreezeFrameTriggerKeys, importedFreezeFrameTriggerKeys) : [];
     const freezeFrameTriggerRemovedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(importedFreezeFrameTriggerKeys, currentFreezeFrameTriggerKeys) : [];
+    const readReadinessKeys = (summary) => Array.isArray(readField(summary, "readinessMonitorKeys"))
+      ? [...new Set(readField(summary, "readinessMonitorKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      : [];
+    const importedReadinessMonitorEvidenceRecorded = readBoolean(importedInventory, "readinessMonitorEvidenceRecorded");
+    const currentReadinessMonitorEvidenceRecorded = readBoolean(currentSummary, "readinessMonitorEvidenceRecorded");
+    const readinessMonitorComparisonAvailable = importedReadinessMonitorEvidenceRecorded && currentReadinessMonitorEvidenceRecorded;
+    const importedReadinessMonitorKeys = readReadinessKeys(importedInventory);
+    const currentReadinessMonitorKeys = readReadinessKeys(currentSummary);
+    const readinessMonitorAddedKeys = readinessMonitorComparisonAvailable ? diffIds(currentReadinessMonitorKeys, importedReadinessMonitorKeys) : [];
+    const readinessMonitorRemovedKeys = readinessMonitorComparisonAvailable ? diffIds(importedReadinessMonitorKeys, currentReadinessMonitorKeys) : [];
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
     const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
     const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
@@ -13105,7 +13149,27 @@
       freezeFrameTriggerRemovedKeys,
       freeze_frame_trigger_removed_keys: freezeFrameTriggerRemovedKeys,
       freezeFrameTriggerCountDelta: freezeFrameTriggerComparisonAvailable ? readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount") : null,
-      freeze_frame_trigger_count_delta: freezeFrameTriggerComparisonAvailable ? readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount") : null
+      freeze_frame_trigger_count_delta: freezeFrameTriggerComparisonAvailable ? readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount") : null,
+      importedReadinessMonitorCount: readCount(importedInventory, "readinessMonitorCount"),
+      imported_readiness_monitor_count: readCount(importedInventory, "readinessMonitorCount"),
+      currentReadinessMonitorCount: readCount(currentSummary, "readinessMonitorCount"),
+      current_readiness_monitor_count: readCount(currentSummary, "readinessMonitorCount"),
+      importedReadinessMonitorEvidenceRecorded,
+      imported_readiness_monitor_evidence_recorded: importedReadinessMonitorEvidenceRecorded,
+      currentReadinessMonitorEvidenceRecorded,
+      current_readiness_monitor_evidence_recorded: currentReadinessMonitorEvidenceRecorded,
+      readinessMonitorComparisonAvailable,
+      readiness_monitor_comparison_available: readinessMonitorComparisonAvailable,
+      importedReadinessMonitorKeys,
+      imported_readiness_monitor_keys: importedReadinessMonitorKeys,
+      currentReadinessMonitorKeys,
+      current_readiness_monitor_keys: currentReadinessMonitorKeys,
+      readinessMonitorKeysChanged: readinessMonitorComparisonAvailable && importedReadinessMonitorKeys.join("|") !== currentReadinessMonitorKeys.join("|"),
+      readiness_monitor_keys_changed: readinessMonitorComparisonAvailable && importedReadinessMonitorKeys.join("|") !== currentReadinessMonitorKeys.join("|"),
+      readinessMonitorAddedKeys,
+      readiness_monitor_added_keys: readinessMonitorAddedKeys,
+      readinessMonitorRemovedKeys,
+      readiness_monitor_removed_keys: readinessMonitorRemovedKeys
     };
   }
 
@@ -13163,6 +13227,12 @@
       freeze_frame_trigger_keys: normalizeIds(summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys),
       freezeFrameTriggerEvidenceRecorded: pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
       freeze_frame_trigger_evidence_recorded: pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
+      readinessMonitorCount: toCount("readinessMonitorCount", "readiness_monitor_count", toCount("readinessIncompleteCount", "readiness_incomplete_count", 0)),
+      readiness_monitor_count: toCount("readinessMonitorCount", "readiness_monitor_count", toCount("readinessIncompleteCount", "readiness_incomplete_count", 0)),
+      readinessMonitorKeys: normalizeIds(summary.readinessMonitorKeys || summary.readiness_monitor_keys),
+      readiness_monitor_keys: normalizeIds(summary.readinessMonitorKeys || summary.readiness_monitor_keys),
+      readinessMonitorEvidenceRecorded: pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
+      readiness_monitor_evidence_recorded: pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
       hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
@@ -14308,6 +14378,7 @@
       || comparison.nextPendingReadoutChanged === true
       || comparison.valueCountsChanged === true
       || comparison.freezeFrameTriggerKeysChanged === true
+      || comparison.readinessMonitorKeysChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -14328,6 +14399,7 @@
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
       comparison.nextPendingReadoutChanged === true ? "next_readout" : null,
       Number(comparison.freezeFrameTriggerCountDelta || 0) !== 0 || comparison.freezeFrameTriggerKeysChanged === true ? "freeze_frame_triggers" : null,
+      comparison.readinessMonitorKeysChanged === true ? "readiness_monitor_states" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
