@@ -2533,6 +2533,16 @@ const scannerTextMode09LeadingZeroBitmap = obd.analyzeScannerText("0900: 49 00 0
 check(scannerTextMode09LeadingZeroBitmap?.ecuInfoSnapshot?.supportInfoTypesSummary?.ids?.includes("11") && !scannerTextMode09LeadingZeroBitmap?.ecuInfoSnapshot?.supportInfoTypesSummary?.ids?.includes("01"), "Mode 09 supported-info bitmap leading zeros changed information-type positions");
 const scannerTextMode09PerformanceCounters = obd.analyzeScannerText("0908: 49 08 01 00 00 00 01\n090B: 49 0B 01 00 00 00 02");
 check(scannerTextMode09PerformanceCounters?.ecuInfoSnapshot?.items?.some((item) => item.id === "in_use_performance_tracking_spark" && item.value === "00 00 00 01") && scannerTextMode09PerformanceCounters?.ecuInfoSnapshot?.items?.some((item) => item.id === "in_use_performance_tracking_compression" && item.value === "00 00 00 02"), "Mode 09 performance counters were not retained as non-inferred raw values");
+const multiEcuMode09SupportSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: {
+    ecu_info_readout_status: "reported",
+    items: [
+      { id: "supported_info_types_00", value: "10 00 00 00", source_ecu: "7E8" },
+      { id: "supported_info_types_00", value: "04 00 00 00", source_ecu: "7E9" }
+    ]
+  }
+});
+check(multiEcuMode09SupportSession?.ecuInfoSnapshot?.supportInfoTypesCaptured === true && multiEcuMode09SupportSession?.ecuInfoSnapshot?.supportInfoTypesSummary?.ids?.join(",") === "04,06" && multiEcuMode09SupportSession?.coreReadoutInventorySummary?.mode09SupportedTypeKeys?.join(",") === "04|7E8,06|7E9" && !multiEcuMode09SupportSession?.warnings?.includes("mode09_supported_types_unknown") && multiEcuMode09SupportSession?.vehicleCommandEnabled === false && multiEcuMode09SupportSession?.wouldTransmit === false, "Multi-ECU Mode 09 support bitmaps were not merged while retaining ECU-scoped evidence");
 const multiEcuMode09Session = obd.buildDiagnosticScanSession({
   ecu_info_snapshot: {
     source: "native_connector",

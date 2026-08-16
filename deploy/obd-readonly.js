@@ -20925,10 +20925,23 @@
     const keyItems = expectedItems.filter((item) => keyItemIds.has(item.id));
     const capturedKeyItems = keyItems.filter((item) => item.captured);
     const missingKeyItems = keyItems.filter((item) => !item.captured);
-    const supportedInfoTypesItem = items.find((item) => item.id === "supported_info_types_00");
+    const supportedInfoTypesItems = items.filter((item) => item.id === "supported_info_types_00" && parseObdHexBytes(item?.value).length > 0);
+    const supportedInfoTypesItem = supportedInfoTypesItems[0] || null;
     const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured)
-      || parseObdHexBytes(supportedInfoTypesItem?.value).length > 0;
-    const supportedInfoTypesSummary = decodeMode09SupportedInfoTypes(supportedInfoTypesItem?.value);
+      || supportedInfoTypesItems.length > 0;
+    const supportedInfoTypesById = new Map();
+    supportedInfoTypesItems.forEach((item) => {
+      const decoded = decodeMode09SupportedInfoTypes(item?.value);
+      decoded.ids.forEach((infoType, index) => {
+        if (!supportedInfoTypesById.has(infoType)) supportedInfoTypesById.set(infoType, decoded.labels[index] || `情報タイプ ${infoType}`);
+      });
+    });
+    const supportedInfoTypeIds = [...supportedInfoTypesById.keys()].sort();
+    const supportedInfoTypesSummary = {
+      count: supportedInfoTypeIds.length,
+      ids: supportedInfoTypeIds,
+      labels: supportedInfoTypeIds.map((infoType) => supportedInfoTypesById.get(infoType) || `情報タイプ ${infoType}`)
+    };
     const explicitEcuInfoResponseFormat = readEcuInfoResponseFormatAlias(sourceInput);
     const protocolEvidence = `${protocolProvenance.diagnosticProtocol || ""} ${protocol || ""}`;
     const ecuInfoResponseFormat = explicitEcuInfoResponseFormat
