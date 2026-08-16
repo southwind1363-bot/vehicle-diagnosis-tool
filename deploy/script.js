@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.11.9";
+const APP_VERSION = "3.12.0";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4889,6 +4889,11 @@ function beginWebSerialReadoutProfile(readoutProfile) {
   obdDevSession.ecuInfoReadoutResponses = [];
   obdDevSession.lastSession = null;
   obdDevSession.readoutProfile = readoutProfile;
+  obdScannerText.value = "";
+  obdDetectedCodes.innerHTML = "";
+  renderObdMonitorValues([], []);
+  hideResult();
+  renderObdDeveloperSessionSummary(null);
   return true;
 }
 
@@ -6181,10 +6186,12 @@ function renderObdDeveloperReadout(session) {
   obdScannerText.value = obdDevSession.lastRawText;
   analyzeObdScannerImport({ mergeWithCurrentSession: true });
   if (monitorValues.length) renderObdMonitorValues(monitorValues, session.livePidSnapshot.monitorInsights || []);
+  obdDetectedCodes.innerHTML = "";
   if (codes.length) {
-    obdDetectedCodes.innerHTML = "";
     [...new Map(codes.map((item) => [buildObdDtcDisplayKey(item), item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, codes, session.vehicleProfile || session.vehicle_profile || null)));
     obdImportStatus.textContent = `${codes.length}件の車両DTCを読取りました。`;
+  } else if ((session.dtcSnapshot?.dtcReadoutStatus || session.dtcSnapshot?.dtc_readout_status) === "reported") {
+    obdImportStatus.textContent = "車両DTCを読取りました。DTCは0件です。";
   }
   renderObdDeveloperSessionSummary(session);
   renderObdStageView("results");
