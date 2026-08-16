@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.99";
+const APP_VERSION = "3.10.0";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7958,6 +7958,9 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const snakeNextPendingReadoutChanged = summary.next_pending_readout_changed === true && summary.nextPendingReadoutChanged !== true;
   const rawPidUndecodedDeltaValue = summary.rawPidUndecodedDelta ?? summary.raw_pid_undecoded_delta;
   const freezeFrameTriggerDeltaValue = summary.freezeFrameTriggerCountDelta ?? summary.freeze_frame_trigger_count_delta;
+  const freezeFrameTriggerComparisonAvailable = summary.freezeFrameTriggerComparisonAvailable === true || summary.freeze_frame_trigger_comparison_available === true;
+  const importedFreezeFrameTriggerCount = Number(summary.importedFreezeFrameTriggerCount ?? summary.imported_freeze_frame_trigger_count ?? 0);
+  const currentFreezeFrameTriggerCount = Number(summary.currentFreezeFrameTriggerCount ?? summary.current_freeze_frame_trigger_count ?? 0);
   const addedFreezeFrameTriggerKeys = Array.isArray(summary.freezeFrameTriggerAddedKeys) ? summary.freezeFrameTriggerAddedKeys : Array.isArray(summary.freeze_frame_trigger_added_keys) ? summary.freeze_frame_trigger_added_keys : [];
   const removedFreezeFrameTriggerKeys = Array.isArray(summary.freezeFrameTriggerRemovedKeys) ? summary.freezeFrameTriggerRemovedKeys : Array.isArray(summary.freeze_frame_trigger_removed_keys) ? summary.freeze_frame_trigger_removed_keys : [];
   const readinessIncompleteDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
@@ -7984,6 +7987,7 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
     const displayKey = (key) => String(key || "").split("|")[0] || "DTC";
     parts.push(`FF起点:${[...addedFreezeFrameTriggerKeys.map((key) => `+${displayKey(key)}`), ...removedFreezeFrameTriggerKeys.map((key) => `-${displayKey(key)}`)].slice(0, 3).join(",")}`);
   }
+  if (!freezeFrameTriggerComparisonAvailable && (importedFreezeFrameTriggerCount > 0 || currentFreezeFrameTriggerCount > 0)) parts.push("FF起点詳細比較不可");
   if (readinessDelta) parts.push(`RDY未完${readinessDelta > 0 ? "+" : ""}${readinessDelta}`);
   if (ecuDelta) parts.push(`ECU不足${ecuDelta > 0 ? "+" : ""}${ecuDelta}`);
   return parts.length ? parts.join(" / ") : "変化なし";
