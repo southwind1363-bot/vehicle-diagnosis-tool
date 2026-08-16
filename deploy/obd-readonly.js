@@ -5997,6 +5997,27 @@
       String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-"
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const recordedEcuInfoItemKeys = ecuInfoItemEvidenceRecorded ? ecuInfoItemKeys : [];
+    const comparableEcuInfoValueIds = new Set(["calibration_id", "calibration_verification_number"]);
+    const normalizeComparableEcuInfoValue = (value) => {
+      if (Array.isArray(value)) {
+        const values = value.map(normalizeComparableEcuInfoValue).filter(Boolean);
+        return values.length ? values.join(",").slice(0, 240) : null;
+      }
+      if (value === null || value === undefined || typeof value === "object") return null;
+      const text = String(value).replace(/\s+/g, " ").trim();
+      return text && redactSensitiveText(text) === text ? text.slice(0, 240) : null;
+    };
+    const ecuInfoKeyValueKeys = [...new Set((Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).map((item) => {
+      const id = String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase();
+      if (!comparableEcuInfoValueIds.has(id) || item?.sensitiveIdentifierRedacted === true || item?.sensitive_identifier_redacted === true) return null;
+      const value = normalizeComparableEcuInfoValue(item?.value);
+      if (!value) return null;
+      const infoType = String(item?.infoType || item?.info_type || item?.dataIdentifier || item?.data_identifier || "-").trim().toUpperCase() || "-";
+      const sourceEcu = String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
+      return [id, infoType, sourceEcu, value].join("|");
+    }).filter(Boolean))].sort();
+    const ecuInfoKeyValueEvidenceRecorded = ecuInfoItemEvidenceRecorded;
+    const recordedEcuInfoKeyValueKeys = ecuInfoKeyValueEvidenceRecorded ? ecuInfoKeyValueKeys : [];
     const supportedPidEcuSnapshots = Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots)
       ? supportedPidMatrix.supportedPidEcuSnapshots
       : Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots)
@@ -6118,6 +6139,12 @@
       ecu_info_item_keys: [...recordedEcuInfoItemKeys],
       ecuInfoItemEvidenceRecorded,
       ecu_info_item_evidence_recorded: ecuInfoItemEvidenceRecorded,
+      ecuInfoKeyValueCount: recordedEcuInfoKeyValueKeys.length,
+      ecu_info_key_value_count: recordedEcuInfoKeyValueKeys.length,
+      ecuInfoKeyValueKeys: recordedEcuInfoKeyValueKeys,
+      ecu_info_key_value_keys: [...recordedEcuInfoKeyValueKeys],
+      ecuInfoKeyValueEvidenceRecorded,
+      ecu_info_key_value_evidence_recorded: ecuInfoKeyValueEvidenceRecorded,
       hasOnboardMonitorTests: countsById.onboard_monitor_snapshot > 0,
       hasSupportedPids: countsById.supported_pid_matrix > 0,
       supportedPidCount,
@@ -13200,6 +13227,9 @@
       ecuInfoItemCount: ["ecu_info_item_count"],
       ecuInfoItemKeys: ["ecu_info_item_keys"],
       ecuInfoItemEvidenceRecorded: ["ecu_info_item_evidence_recorded"],
+      ecuInfoKeyValueCount: ["ecu_info_key_value_count"],
+      ecuInfoKeyValueKeys: ["ecu_info_key_value_keys"],
+      ecuInfoKeyValueEvidenceRecorded: ["ecu_info_key_value_evidence_recorded"],
       emptyIds: ["empty_ids"],
       emptyReadoutCount: ["empty_readout_count", "empty_count"],
       failedReadoutCount: ["failed_readout_count"],
@@ -13345,6 +13375,22 @@
     const currentEcuInfoItemKeys = readEcuInfoKeys(currentSummary);
     const ecuInfoItemAddedKeys = ecuInfoItemComparisonAvailable ? diffIds(currentEcuInfoItemKeys, importedEcuInfoItemKeys) : [];
     const ecuInfoItemRemovedKeys = ecuInfoItemComparisonAvailable ? diffIds(importedEcuInfoItemKeys, currentEcuInfoItemKeys) : [];
+    const comparableEcuInfoKeyValueIds = new Set(["calibration_id", "calibration_verification_number"]);
+    const readEcuInfoKeyValueKeys = (summary) => Array.isArray(readField(summary, "ecuInfoKeyValueKeys"))
+      ? [...new Set(readField(summary, "ecuInfoKeyValueKeys").map((key) => {
+        const normalized = String(key || "").trim();
+        const [id, infoType, sourceEcu, value, ...extra] = normalized.split("|");
+        if (extra.length > 0 || !comparableEcuInfoKeyValueIds.has(String(id || "").trim().toLowerCase()) || !infoType || !sourceEcu || !value) return null;
+        return redactSensitiveText(normalized) === normalized ? normalized : null;
+      }).filter(Boolean))].sort()
+      : [];
+    const importedEcuInfoKeyValueEvidenceRecorded = readBoolean(importedInventory, "ecuInfoKeyValueEvidenceRecorded");
+    const currentEcuInfoKeyValueEvidenceRecorded = readBoolean(currentSummary, "ecuInfoKeyValueEvidenceRecorded");
+    const ecuInfoKeyValueComparisonAvailable = importedEcuInfoKeyValueEvidenceRecorded && currentEcuInfoKeyValueEvidenceRecorded;
+    const importedEcuInfoKeyValueKeys = readEcuInfoKeyValueKeys(importedInventory);
+    const currentEcuInfoKeyValueKeys = readEcuInfoKeyValueKeys(currentSummary);
+    const ecuInfoKeyValueAddedKeys = ecuInfoKeyValueComparisonAvailable ? diffIds(currentEcuInfoKeyValueKeys, importedEcuInfoKeyValueKeys) : [];
+    const ecuInfoKeyValueRemovedKeys = ecuInfoKeyValueComparisonAvailable ? diffIds(importedEcuInfoKeyValueKeys, currentEcuInfoKeyValueKeys) : [];
     const readSupportedPidKeys = (summary) => Array.isArray(readField(summary, "supportedPidKeys"))
       ? [...new Set(readField(summary, "supportedPidKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
@@ -13620,6 +13666,26 @@
       ecu_info_item_added_keys: ecuInfoItemAddedKeys,
       ecuInfoItemRemovedKeys,
       ecu_info_item_removed_keys: ecuInfoItemRemovedKeys,
+      importedEcuInfoKeyValueCount: readCount(importedInventory, "ecuInfoKeyValueCount", "ecuInfoKeyValueKeys"),
+      imported_ecu_info_key_value_count: readCount(importedInventory, "ecuInfoKeyValueCount", "ecuInfoKeyValueKeys"),
+      currentEcuInfoKeyValueCount: readCount(currentSummary, "ecuInfoKeyValueCount", "ecuInfoKeyValueKeys"),
+      current_ecu_info_key_value_count: readCount(currentSummary, "ecuInfoKeyValueCount", "ecuInfoKeyValueKeys"),
+      importedEcuInfoKeyValueEvidenceRecorded,
+      imported_ecu_info_key_value_evidence_recorded: importedEcuInfoKeyValueEvidenceRecorded,
+      currentEcuInfoKeyValueEvidenceRecorded,
+      current_ecu_info_key_value_evidence_recorded: currentEcuInfoKeyValueEvidenceRecorded,
+      ecuInfoKeyValueComparisonAvailable,
+      ecu_info_key_value_comparison_available: ecuInfoKeyValueComparisonAvailable,
+      importedEcuInfoKeyValueKeys,
+      imported_ecu_info_key_value_keys: importedEcuInfoKeyValueKeys,
+      currentEcuInfoKeyValueKeys,
+      current_ecu_info_key_value_keys: currentEcuInfoKeyValueKeys,
+      ecuInfoKeyValueKeysChanged: ecuInfoKeyValueComparisonAvailable && importedEcuInfoKeyValueKeys.join("|") !== currentEcuInfoKeyValueKeys.join("|"),
+      ecu_info_key_value_keys_changed: ecuInfoKeyValueComparisonAvailable && importedEcuInfoKeyValueKeys.join("|") !== currentEcuInfoKeyValueKeys.join("|"),
+      ecuInfoKeyValueAddedKeys,
+      ecu_info_key_value_added_keys: ecuInfoKeyValueAddedKeys,
+      ecuInfoKeyValueRemovedKeys,
+      ecu_info_key_value_removed_keys: ecuInfoKeyValueRemovedKeys,
       importedSupportedPidCount: readCount(importedInventory, "supportedPidCount"),
       imported_supported_pid_count: readCount(importedInventory, "supportedPidCount"),
       currentSupportedPidCount: readCount(currentSummary, "supportedPidCount"),
@@ -13741,6 +13807,12 @@
       ecu_info_item_keys: normalizeIds(summary.ecuInfoItemKeys || summary.ecu_info_item_keys),
       ecuInfoItemEvidenceRecorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
       ecu_info_item_evidence_recorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
+      ecuInfoKeyValueCount: toCount("ecuInfoKeyValueCount", "ecu_info_key_value_count", 0),
+      ecu_info_key_value_count: toCount("ecuInfoKeyValueCount", "ecu_info_key_value_count", 0),
+      ecuInfoKeyValueKeys: normalizeIds(summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys),
+      ecu_info_key_value_keys: normalizeIds(summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys),
+      ecuInfoKeyValueEvidenceRecorded: pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
+      ecu_info_key_value_evidence_recorded: pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
       supportedPidCount: toCount("supportedPidCount", "supported_pid_count", 0),
       supported_pid_count: toCount("supportedPidCount", "supported_pid_count", 0),
       supportedPidKeys: normalizeIds(summary.supportedPidKeys || summary.supported_pid_keys),
@@ -14905,6 +14977,7 @@
       || comparison.freezeFrameTriggerKeysChanged === true
       || comparison.readinessMonitorKeysChanged === true
       || comparison.ecuInfoItemKeysChanged === true
+      || comparison.ecuInfoKeyValueKeysChanged === true
       || comparison.supportedPidKeysChanged === true
       || comparison.onboardMonitorTestKeysChanged === true
       || comparison.completeChanged === true
@@ -14934,6 +15007,7 @@
       Number(comparison.freezeFrameTriggerCountDelta || 0) !== 0 || comparison.freezeFrameTriggerKeysChanged === true ? "freeze_frame_triggers" : null,
       comparison.readinessMonitorKeysChanged === true ? "readiness_monitor_states" : null,
       comparison.ecuInfoItemKeysChanged === true ? "ecu_info_items" : null,
+      comparison.ecuInfoKeyValueKeysChanged === true ? "ecu_info_key_values" : null,
       comparison.supportedPidKeysChanged === true ? "supported_pids" : null,
       comparison.onboardMonitorTestKeysChanged === true ? "onboard_monitor_states" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
@@ -14968,7 +15042,7 @@
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
-        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys"
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys", "ecuInfoKeyValueAddedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14983,7 +15057,7 @@
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
-        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys"
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys", "ecuInfoKeyValueRemovedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -15133,6 +15207,7 @@
       if (reasonIds.includes("next_readout_guard_safety")) return "readout_guard_safety";
       if (reasonIds.includes("blocked_reasons")) return "blocked_reason";
       if (reasonIds.includes("dtc_status_bytes")) return "dtc_status_byte";
+      if (reasonIds.includes("ecu_info_key_values")) return "ecu_info_key_value";
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
       if (reasonIds.includes("observed_ecu_responses")) return "ecu_response";
       if (reasonIds.includes("dtc_identities")) return "dtc_identity";

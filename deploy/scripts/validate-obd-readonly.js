@@ -17814,6 +17814,29 @@ const legacyEcuInfoItemInventoryComparisonSession = obd.buildDiagnosticScanSessi
   core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", ecu_info_item_count: 1 }
 });
 check(legacyEcuInfoItemInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoItemComparisonAvailable === false && legacyEcuInfoItemInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoItemKeysChanged === false && legacyEcuInfoItemInventoryComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("ecu_info_items") === false && legacyEcuInfoItemInventoryComparisonSession.vehicleCommandEnabled === false, "Legacy ECU item totals were treated as detailed item changes");
+check(source.includes('const comparableEcuInfoValueIds = new Set(["calibration_id", "calibration_verification_number"])') && appSource.includes("ECU値詳細比較不可"), "ECU key value comparison should be limited to CALID/CVN and expose an unavailable state");
+const ecuInfoKeyValueComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: {
+    ecu_info_readout_status: "reported",
+    source_ecu: "7E8",
+    items: [
+      { id: "calibration_id", info_type: "04", value: "CAL-NEW-01" },
+      { id: "calibration_verification_number", info_type: "06", value: "CVN-NEW-01" },
+      { id: "vin", info_type: "02", value: "JTDKN3DU0A0123456" }
+    ]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    ecu_info_key_value_evidence_recorded: true,
+    ecu_info_key_value_keys: ["calibration_id|04|7E8|CAL-OLD-01", "calibration_verification_number|06|7E8|CVN-OLD-01", "vin|02|7E8|JTDKN3DU0A0123456"]
+  }
+});
+check(ecuInfoKeyValueComparisonSession.coreReadoutInventorySummary?.ecuInfoKeyValueKeys?.join(",") === "calibration_id|04|7E8|CAL-NEW-01,calibration_verification_number|06|7E8|CVN-NEW-01" && ecuInfoKeyValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoKeyValueComparisonAvailable === true && ecuInfoKeyValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoKeyValueKeysChanged === true && ecuInfoKeyValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoKeyValueAddedKeys?.join(",") === "calibration_id|04|7E8|CAL-NEW-01,calibration_verification_number|06|7E8|CVN-NEW-01" && ecuInfoKeyValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("ecu_info_key_values") && ecuInfoKeyValueComparisonSession.importedSessionComparisonSummary?.changedIdSummaries?.some((item) => item.kind === "ecu_info_key_value") && !JSON.stringify(ecuInfoKeyValueComparisonSession).includes("JTDKN3DU0A0123456") && ecuInfoKeyValueComparisonSession.vehicleCommandEnabled === false && ecuInfoKeyValueComparisonSession.wouldTransmit === false, "ECU CALID/CVN values were not compared separately while excluding VIN under read-only safety");
+const legacyEcuInfoKeyValueComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: { ecu_info_readout_status: "reported", items: [{ id: "calibration_id", info_type: "04", value: "CAL-NEW-01" }] },
+  core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", ecu_info_item_evidence_recorded: true, ecu_info_item_keys: ["calibration_id|04|-"] }
+});
+check(legacyEcuInfoKeyValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoKeyValueComparisonAvailable === false && legacyEcuInfoKeyValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoKeyValueKeysChanged === false && legacyEcuInfoKeyValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("ecu_info_key_values") === false && legacyEcuInfoKeyValueComparisonSession.vehicleCommandEnabled === false, "Legacy ECU item evidence was treated as a CALID/CVN value change");
 const supportedPidInventoryComparisonSession = obd.buildDiagnosticScanSession({
   supported_pid_matrix: {
     supported_pid_readout_status: "reported",
