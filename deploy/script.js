@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.11.8";
+const APP_VERSION = "3.11.9";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4835,7 +4835,7 @@ async function readObdDeveloperDtc() {
 
 async function readObdDeveloperCoreScan() {
   if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
-  obdDevSession.readoutProfile = "initial_diagnostic";
+  if (!beginWebSerialReadoutProfile("initial_diagnostic")) return;
   obdDevSession.coreScanInProgress = true;
   obdDevSession.coreScanStopReason = null;
   renderObdDeveloperGate();
@@ -4871,9 +4871,30 @@ async function readObdDeveloperCoreScan() {
   }
 }
 
+function beginWebSerialReadoutProfile(readoutProfile) {
+  if (!["initial_diagnostic", "quick_condition"].includes(readoutProfile)) return false;
+  const vehicleProfile = buildSelectedObdVehicleProfile();
+  obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
+  obdDevSession.vehicleProfile = vehicleProfile;
+  obdDevSession.vehicleApplicability = buildSelectedObdVehicleApplicability(vehicleProfile);
+  obdDevSession.observationContext = buildSelectedObdObservationContext();
+  obdDevSession.lastRawText = "";
+  obdDevSession.supportedPidDiscoveryComplete = false;
+  obdDevSession.supportedPidSet = [];
+  obdDevSession.supportedPidReadoutResponses = [];
+  obdDevSession.readoutAttempts = [];
+  obdDevSession.livePidTimeline = [];
+  obdDevSession.freezeFrameReadoutResponses = [];
+  obdDevSession.freezeFrameCapabilityResponse = null;
+  obdDevSession.ecuInfoReadoutResponses = [];
+  obdDevSession.lastSession = null;
+  obdDevSession.readoutProfile = readoutProfile;
+  return true;
+}
+
 async function readObdDeveloperQuickCondition() {
   if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
-  obdDevSession.readoutProfile = "quick_condition";
+  if (!beginWebSerialReadoutProfile("quick_condition")) return;
   obdDevSession.coreScanInProgress = true;
   obdDevSession.coreScanStopReason = null;
   renderObdDeveloperGate();
