@@ -17949,6 +17949,28 @@ const legacyDtcStatusByteComparisonSession = obd.buildDiagnosticScanSession({
   core_session_status: { schema_version: "core_session_status_v1", dtc_identity_summary: { evidence_recorded: true, dtc_keys: ["123456|-|uds_3byte|stored|unreported|-" ] } }
 });
 check(legacyDtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteComparisonAvailable === false && legacyDtcStatusByteComparisonSession.importedCoreComparisonSummary?.dtcStatusByteKeysChanged === false && legacyDtcStatusByteComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_status_bytes") === false && legacyDtcStatusByteComparisonSession.vehicleCommandEnabled === false, "Legacy DTC identities were treated as status-byte changes");
+check(source.includes('function buildDtcMetadataEvidenceSummary(dtcSnapshot = {})') && appSource.includes('function formatDtcMetadataComparisonSummary(summary, fallback = NO_DATA)') && appSource.includes('DTC報告詳細比較不可'), "DTC metadata comparison should retain explicit read-only evidence and display an unavailable state");
+const dtcMetadataComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    dtc_readout_status: "reported",
+    source_ecu: "7E8",
+    dtcs: [{ code: "P0300", status: "stored", reported_status: "current", severity: "0x03", occurrence_count: 4 }]
+  },
+  core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_metadata_evidence_summary: {
+      schema_version: "dtc_metadata_evidence_summary_v1",
+      evidence_recorded: true,
+      dtc_keys: ["P0300|-|generic_obd|stored|current|7E8|0x03|2"]
+    }
+  }
+});
+check(dtcMetadataComparisonSession.coreSessionStatus?.dtcMetadataEvidenceSummary?.keys?.join(",") === "P0300|-|generic_obd|stored|current|7E8|0x03|4" && dtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataComparisonAvailable === true && dtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataKeysChanged === true && dtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataAddedKeys?.join(",") === "P0300|-|generic_obd|stored|current|7E8|0x03|4" && dtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataRemovedKeys?.join(",") === "P0300|-|generic_obd|stored|current|7E8|0x03|2" && dtcMetadataComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_metadata") && dtcMetadataComparisonSession.importedSessionComparisonSummary?.changedIdSummaries?.some((item) => item.kind === "dtc_metadata") && dtcMetadataComparisonSession.vehicleCommandEnabled === false && dtcMetadataComparisonSession.wouldTransmit === false, "DTC severity and occurrence evidence was not compared separately under read-only safety");
+const legacyDtcMetadataComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0300", status: "stored", severity: "0x03", occurrence_count: 4 }] },
+  core_session_status: { schema_version: "core_session_status_v1", dtc_status_byte_summary: { evidence_recorded: true, dtc_keys: ["P0300|-|generic_obd|stored|unreported|-|2F|-"] } }
+});
+check(legacyDtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataComparisonAvailable === false && legacyDtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataKeysChanged === false && legacyDtcMetadataComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_metadata") === false && legacyDtcMetadataComparisonSession.vehicleCommandEnabled === false, "Legacy DTC status-byte evidence was treated as DTC metadata changes");
 const legacyDtcIdentityComparisonSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0300", status: "stored" }] },
   core_session_status: { schema_version: "core_session_status_v1", dtc_status_summary: { counts: [{ status: "stored", count: 1 }] } }
