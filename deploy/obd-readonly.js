@@ -24659,6 +24659,7 @@
           code: normalizeLinkPart(entry?.code || entry?.dtc),
           subcode: normalizeLinkPart(entry?.subcode || entry?.sub_code),
           codeFormat: normalizeLinkCodeFormat(entry?.codeFormat || entry?.code_format),
+          reportedStatus: normalizeDtcReportedStatus(entry?.reportedStatus || entry?.reported_status),
           sourceEcu: normalizeLinkPart(entry?.sourceEcu || entry?.source_ecu),
           sourceEcuName: entry?.sourceEcuName || entry?.source_ecu_name || null,
           frameNumber: frameInput !== undefined && frameInput !== null && frameInput !== "" && Number.isInteger(frameNumber) ? frameNumber : null
@@ -24668,7 +24669,7 @@
     if (!triggerEntries.length) return cleanSnapshot;
 
     const uniqueTriggerEntries = [...new Map(triggerEntries.map((entry) => [
-      `${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
+      `${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
       entry
     ])).values()];
     const udsSnapshotRecords = (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords)
@@ -24692,9 +24693,10 @@
       const code = normalizeLinkPart(row?.code || row?.dtc);
       const subcode = normalizeLinkPart(row?.subcode || row?.sub_code);
       const codeFormat = normalizeLinkCodeFormat(row?.codeFormat || row?.code_format);
+      const reportedStatus = normalizeDtcReportedStatus(row?.reportedStatus || row?.reported_status);
       const ecu = normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu);
-      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && entry.sourceEcu === ecu && (!entry.codeFormat || !codeFormat || entry.codeFormat === codeFormat));
-      matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`));
+      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && entry.sourceEcu === ecu && (!entry.codeFormat || !codeFormat || entry.codeFormat === codeFormat) && (!entry.reportedStatus || entry.reportedStatus === reportedStatus));
+      matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`));
       if (!matches.length) return row;
       const freezeFrameMatches = matches.map((entry) => {
         const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && record.sourceEcu === entry.sourceEcu && record.frameNumber === entry.frameNumber && (!entry.codeFormat || !record.codeFormat || entry.codeFormat === record.codeFormat));
@@ -24706,6 +24708,7 @@
           source_ecu: entry.sourceEcu || null,
           sourceEcuName: entry.sourceEcuName,
           source_ecu_name: entry.sourceEcuName,
+          ...(entry.reportedStatus ? { reportedStatus: entry.reportedStatus, reported_status: entry.reportedStatus } : {}),
           ...(udsRecord?.snapshotRecordType ? { snapshotRecordType: udsRecord.snapshotRecordType, snapshot_record_type: udsRecord.snapshotRecordType } : {}),
           ...(udsRecord?.statusByte ? { statusByte: udsRecord.statusByte, status_byte: udsRecord.statusByte } : {})
         };
@@ -24731,8 +24734,8 @@
     const freezeFrameLinkSummary = {
       schemaVersion: "dtc_freeze_frame_link_summary_v1",
       schema_version: "dtc_freeze_frame_link_summary_v1",
-      matchPolicy: "exact_code_subcode_ecu",
-      match_policy: "exact_code_subcode_ecu",
+      matchPolicy: "exact_code_subcode_ecu_reported_state_when_available",
+      match_policy: "exact_code_subcode_ecu_reported_state_when_available",
       triggerEntryCount: uniqueTriggerEntries.length,
       trigger_entry_count: uniqueTriggerEntries.length,
       matchedDtcCount,
