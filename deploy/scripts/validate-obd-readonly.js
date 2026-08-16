@@ -17829,6 +17829,27 @@ const legacyObservedEcuComparisonSession = obd.buildDiagnosticScanSession({
   core_session_status: { schema_version: "core_session_status_v1", observed_ecu_summary: { ecu_ids: ["7E8"] } }
 });
 check(legacyObservedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuComparisonAvailable === false && legacyObservedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuKeysChanged === false && legacyObservedEcuComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("observed_ecu_responses") === false && legacyObservedEcuComparisonSession.vehicleCommandEnabled === false, "Legacy observed ECU summaries were treated as response-state changes");
+const dtcIdentityComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    dtc_readout_status: "reported",
+    source_ecu: "7E8",
+    dtcs: [{ code: "P0300", status: "stored", reported_status: "current" }]
+  },
+  core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_identity_summary: {
+      schema_version: "dtc_identity_summary_v1",
+      evidence_recorded: true,
+      dtc_keys: ["P0300|-|generic_obd|stored|history|7E8"]
+    }
+  }
+});
+check(dtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.keys?.join(",") === "P0300|-|generic_obd|stored|current|7E8" && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonAvailable === true && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityKeysChanged === true && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityAddedKeys?.join(",") === "P0300|-|generic_obd|stored|current|7E8" && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.join(",") === "P0300|-|generic_obd|stored|history|7E8" && dtcIdentityComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_identities") && dtcIdentityComparisonSession.vehicleCommandEnabled === false && dtcIdentityComparisonSession.wouldTransmit === false, "DTC identities were not compared with read-only evidence");
+const legacyDtcIdentityComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0300", status: "stored" }] },
+  core_session_status: { schema_version: "core_session_status_v1", dtc_status_summary: { counts: [{ status: "stored", count: 1 }] } }
+});
+check(legacyDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonAvailable === false && legacyDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityKeysChanged === false && legacyDtcIdentityComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_identities") === false && legacyDtcIdentityComparisonSession.vehicleCommandEnabled === false, "Legacy DTC totals were treated as detailed DTC changes");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.capturedReadoutDelta), "Diagnostic scan session did not expose imported core captured readout delta");

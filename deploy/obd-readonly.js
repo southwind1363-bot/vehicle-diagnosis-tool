@@ -10010,6 +10010,44 @@
     };
   }
 
+  function buildDtcIdentitySummary(dtcSnapshot = {}) {
+    const readoutStatus = String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").trim().toLowerCase();
+    const rows = Array.isArray(dtcSnapshot?.dtcs) ? dtcSnapshot.dtcs : null;
+    const evidenceRecorded = Array.isArray(rows)
+      && readoutStatus === "reported"
+      && dtcSnapshot?.blocked !== true
+      && dtcSnapshot?.isBlocked !== true
+      && dtcSnapshot?.is_blocked !== true;
+    const sourceEcu = String(dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
+    const keys = evidenceRecorded
+      ? [...new Set(rows.map((row) => {
+        const code = String(row?.code || row?.dtc || "").trim().toUpperCase().slice(0, 16);
+        if (!code) return null;
+        const subcode = readDtcSubcodeAlias(row) || "-";
+        const codeFormat = String(row?.codeFormat || row?.code_format || (row?.manufacturerSpecific === true || row?.manufacturer_specific === true ? "manufacturer_specific" : "generic_obd"))
+          .trim().toLowerCase().replace(/[\s-]+/g, "_").slice(0, 48) || "generic_obd";
+        const status = normalizeDtcReadoutCategory(row?.status || row?.dtcStatus || row?.dtc_status || "unknown");
+        const reportedStatus = normalizeDtcReportedStatus(row?.reportedStatus || row?.reported_status) || "unreported";
+        const ecu = String(row?.ecu || row?.ecuId || row?.ecu_id || row?.address || sourceEcu).trim().toUpperCase().slice(0, 64) || "-";
+        return `${code}|${subcode}|${codeFormat}|${status}|${reportedStatus}|${ecu}`;
+      }).filter(Boolean))].sort()
+      : [];
+    return {
+      schemaVersion: "dtc_identity_summary_v1",
+      schema_version: "dtc_identity_summary_v1",
+      dtcCount: keys.length,
+      dtc_count: keys.length,
+      evidenceRecorded,
+      evidence_recorded: evidenceRecorded,
+      keys,
+      dtc_keys: [...keys],
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function buildCoreSessionStatus({
     readoutCoverage = null,
     vehicleApplicability = null,
@@ -10044,6 +10082,7 @@
       || dtcSnapshot?.dtc_reported_status_summary
       || buildDtcReportedStatusSummary(["blocked", "unparsed"].includes(String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").trim().toLowerCase()) ? [] : dtcSnapshot?.dtcs || []);
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
+    const dtcIdentitySummary = buildDtcIdentitySummary(dtcSnapshot || {});
     const readoutRequestContext = {
       diagnosticProtocol: readoutRequestProtocolValues.find((value) => /\buds\b/i.test(String(value))) || readoutRequestProtocolValues[0] || null,
       ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null,
@@ -10865,6 +10904,8 @@
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       observedEcuSummary,
       observed_ecu_summary: observedEcuSummary,
+      dtcIdentitySummary,
+      dtc_identity_summary: dtcIdentitySummary,
       sessionCaptureIntegritySummary: normalizedSessionCaptureIntegritySummary,
       session_capture_integrity_summary: normalizedSessionCaptureIntegritySummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
@@ -10923,6 +10964,8 @@
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
       observedEcuSummary,
       observed_ecu_summary: observedEcuSummary,
+      dtcIdentitySummary,
+      dtc_identity_summary: dtcIdentitySummary,
       sessionCaptureIntegritySummary: normalizedSessionCaptureIntegritySummary,
       session_capture_integrity_summary: normalizedSessionCaptureIntegritySummary,
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
@@ -11703,6 +11746,20 @@
     const observedEcuComparisonAvailable = importedObservedEcuEvidence.evidenceRecorded && currentObservedEcuEvidence.evidenceRecorded;
     const observedEcuAddedKeys = observedEcuComparisonAvailable ? diffIds(currentObservedEcuEvidence.keys, importedObservedEcuEvidence.keys) : [];
     const observedEcuRemovedKeys = observedEcuComparisonAvailable ? diffIds(importedObservedEcuEvidence.keys, currentObservedEcuEvidence.keys) : [];
+    const readDtcIdentityEvidence = (summary = {}, flow = {}) => {
+      const identitySummary = readAliasValue(summary, "dtcIdentitySummary") || readAliasValue(flow, "dtcIdentitySummary");
+      const evidenceRecorded = readAliasValue(identitySummary, "evidenceRecorded") === true;
+      const keyList = identitySummary?.keys || identitySummary?.dtc_keys;
+      const keys = Array.isArray(keyList)
+        ? [...new Set(keyList.map((key) => String(key || "").trim()).filter(Boolean))].sort()
+        : [];
+      return { evidenceRecorded, keys };
+    };
+    const importedDtcIdentityEvidence = readDtcIdentityEvidence(importedCoreSessionStatus, importedFlow);
+    const currentDtcIdentityEvidence = readDtcIdentityEvidence(currentCoreSessionStatus, currentFlow);
+    const dtcIdentityComparisonAvailable = importedDtcIdentityEvidence.evidenceRecorded && currentDtcIdentityEvidence.evidenceRecorded;
+    const dtcIdentityAddedKeys = dtcIdentityComparisonAvailable ? diffIds(currentDtcIdentityEvidence.keys, importedDtcIdentityEvidence.keys) : [];
+    const dtcIdentityRemovedKeys = dtcIdentityComparisonAvailable ? diffIds(importedDtcIdentityEvidence.keys, currentDtcIdentityEvidence.keys) : [];
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readVehicleApplicabilityEvidenceSummary = (flow = {}) => {
@@ -11824,6 +11881,18 @@
       observed_ecu_added_keys: [...observedEcuAddedKeys],
       observedEcuRemovedKeys,
       observed_ecu_removed_keys: [...observedEcuRemovedKeys],
+      importedDtcIdentityKeys: [...importedDtcIdentityEvidence.keys],
+      imported_dtc_identity_keys: [...importedDtcIdentityEvidence.keys],
+      currentDtcIdentityKeys: [...currentDtcIdentityEvidence.keys],
+      current_dtc_identity_keys: [...currentDtcIdentityEvidence.keys],
+      dtcIdentityComparisonAvailable,
+      dtc_identity_comparison_available: dtcIdentityComparisonAvailable,
+      dtcIdentityKeysChanged: dtcIdentityComparisonAvailable && dtcIdentityAddedKeys.length + dtcIdentityRemovedKeys.length > 0,
+      dtc_identity_keys_changed: dtcIdentityComparisonAvailable && dtcIdentityAddedKeys.length + dtcIdentityRemovedKeys.length > 0,
+      dtcIdentityAddedKeys,
+      dtc_identity_added_keys: [...dtcIdentityAddedKeys],
+      dtcIdentityRemovedKeys,
+      dtc_identity_removed_keys: [...dtcIdentityRemovedKeys],
       importedStatus,
       imported_status: importedStatus,
       currentStatus,
@@ -14591,6 +14660,7 @@
       || comparison.vehicleApplicabilityEvidenceChanged === true
       || comparison.reportedDtcStateCountsChanged === true
       || comparison.observedEcuKeysChanged === true
+      || comparison.dtcIdentityKeysChanged === true
       || comparison.reviewRequiredChanged === true
       || comparison.readyForInterpretationChanged === true
       || comparison.issueIdsChanged === true
@@ -14626,6 +14696,7 @@
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true || comparison.vehicleApplicabilityEvidenceChanged === true ? "analysis_checklist" : null,
       comparison.reportedDtcStateCountsChanged === true ? "dtc_reported_states" : null,
       comparison.observedEcuKeysChanged === true ? "observed_ecu_responses" : null,
+      comparison.dtcIdentityKeysChanged === true ? "dtc_identities" : null,
       comparison.reviewRequiredChanged === true || comparison.readyForInterpretationChanged === true || comparison.issueIdsChanged === true || comparison.issueCountsChanged === true || Number(comparison.issueCountDelta || 0) !== 0 ? "readout_quality" : null,
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
@@ -14667,7 +14738,7 @@
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
-        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys"
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14682,7 +14753,7 @@
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
-        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys"
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14833,6 +14904,7 @@
       if (reasonIds.includes("blocked_reasons")) return "blocked_reason";
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
       if (reasonIds.includes("observed_ecu_responses")) return "ecu_response";
+      if (reasonIds.includes("dtc_identities")) return "dtc_identity";
       return "other";
     };
     const changedIdSummaries = [...new Set([...addedIds, ...removedIds])].map((id) => {
