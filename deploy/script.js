@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.11.4";
+const APP_VERSION = "3.11.5";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7994,6 +7994,11 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const currentEcuInfoKeyValueCount = Number(summary.currentEcuInfoKeyValueCount ?? summary.current_ecu_info_key_value_count ?? 0);
   const addedEcuInfoKeyValueKeys = Array.isArray(summary.ecuInfoKeyValueAddedKeys) ? summary.ecuInfoKeyValueAddedKeys : Array.isArray(summary.ecu_info_key_value_added_keys) ? summary.ecu_info_key_value_added_keys : [];
   const removedEcuInfoKeyValueKeys = Array.isArray(summary.ecuInfoKeyValueRemovedKeys) ? summary.ecuInfoKeyValueRemovedKeys : Array.isArray(summary.ecu_info_key_value_removed_keys) ? summary.ecu_info_key_value_removed_keys : [];
+  const mode09SupportedTypeComparisonAvailable = summary.mode09SupportedTypeComparisonAvailable === true || summary.mode09_supported_type_comparison_available === true;
+  const importedMode09SupportedTypeCount = Number(summary.importedMode09SupportedTypeCount ?? summary.imported_mode09_supported_type_count ?? 0);
+  const currentMode09SupportedTypeCount = Number(summary.currentMode09SupportedTypeCount ?? summary.current_mode09_supported_type_count ?? 0);
+  const addedMode09SupportedTypeKeys = Array.isArray(summary.mode09SupportedTypeAddedKeys) ? summary.mode09SupportedTypeAddedKeys : Array.isArray(summary.mode09_supported_type_added_keys) ? summary.mode09_supported_type_added_keys : [];
+  const removedMode09SupportedTypeKeys = Array.isArray(summary.mode09SupportedTypeRemovedKeys) ? summary.mode09SupportedTypeRemovedKeys : Array.isArray(summary.mode09_supported_type_removed_keys) ? summary.mode09_supported_type_removed_keys : [];
   const supportedPidComparisonAvailable = summary.supportedPidComparisonAvailable === true || summary.supported_pid_comparison_available === true;
   const importedSupportedPidCount = Number(summary.importedSupportedPidCount ?? summary.imported_supported_pid_count ?? 0);
   const currentSupportedPidCount = Number(summary.currentSupportedPidCount ?? summary.current_supported_pid_count ?? 0);
@@ -8081,6 +8086,14 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
     parts.push(`ECU値:${[...addedEcuInfoKeyValueKeys.map((key) => `+${displayEcuInfoKeyValue(key)}`), ...removedEcuInfoKeyValueKeys.map((key) => `-${displayEcuInfoKeyValue(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!ecuInfoKeyValueComparisonAvailable && (importedEcuInfoKeyValueCount > 0 || currentEcuInfoKeyValueCount > 0)) parts.push("ECU値詳細比較不可");
+  if (addedMode09SupportedTypeKeys.length || removedMode09SupportedTypeKeys.length) {
+    const displayMode09SupportedTypeKey = (key) => {
+      const [infoType, ecu] = String(key || "").split("|");
+      return `${infoType || "情報"}${ecu && ecu !== "-" ? `@${ecu}` : ""}`;
+    };
+    parts.push(`Mode09対応:${[...addedMode09SupportedTypeKeys.map((key) => `+${displayMode09SupportedTypeKey(key)}`), ...removedMode09SupportedTypeKeys.map((key) => `-${displayMode09SupportedTypeKey(key)}`)].slice(0, 3).join(",")}`);
+  }
+  if (!mode09SupportedTypeComparisonAvailable && (importedMode09SupportedTypeCount > 0 || currentMode09SupportedTypeCount > 0)) parts.push("Mode09対応詳細比較不可");
   if (addedSupportedPidKeys.length || removedSupportedPidKeys.length) {
     const displaySupportedPidKey = (key) => String(key || "").split("|")[0] || "PID";
     parts.push(`PID対応:${[...addedSupportedPidKeys.map((key) => `+${displaySupportedPidKey(key)}`), ...removedSupportedPidKeys.map((key) => `-${displaySupportedPidKey(key)}`)].slice(0, 3).join(",")}`);

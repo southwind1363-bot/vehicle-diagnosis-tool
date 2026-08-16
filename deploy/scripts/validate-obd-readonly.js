@@ -17903,6 +17903,30 @@ const legacyLivePidValueComparisonSession = obd.buildDiagnosticScanSession({
   core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", supported_pid_count: 1 }
 });
 check(legacyLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonAvailable === false && legacyLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueKeysChanged === false && legacyLivePidValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("live_pid_values") === false && legacyLivePidValueComparisonSession.vehicleCommandEnabled === false, "Legacy PID totals were treated as numeric live PID changes");
+check(source.includes("const mode09SupportedTypeEvidenceRecorded = ecuInfoItemEvidenceRecorded") && appSource.includes("Mode09対応詳細比較不可"), "Mode09 supported type comparison should require explicit read-only evidence and expose unavailable states");
+const mode09SupportedTypeComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: {
+    ecu_info_readout_status: "reported",
+    source_ecu: "7E8",
+    items: [{ id: "supported_info_types_00", value: "A0 00 00 00" }]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    mode09_supported_type_evidence_recorded: true,
+    mode09_supported_type_keys: ["01|7E8", "02|7E8"]
+  }
+});
+check(mode09SupportedTypeComparisonSession.coreReadoutInventorySummary?.mode09SupportedTypeKeys?.join(",") === "01|7E8,03|7E8" && mode09SupportedTypeComparisonSession.importedCoreReadoutInventoryComparisonSummary?.mode09SupportedTypeComparisonAvailable === true && mode09SupportedTypeComparisonSession.importedCoreReadoutInventoryComparisonSummary?.mode09SupportedTypeKeysChanged === true && mode09SupportedTypeComparisonSession.importedCoreReadoutInventoryComparisonSummary?.mode09SupportedTypeAddedKeys?.join(",") === "03|7E8" && mode09SupportedTypeComparisonSession.importedCoreReadoutInventoryComparisonSummary?.mode09SupportedTypeRemovedKeys?.join(",") === "02|7E8" && mode09SupportedTypeComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("mode09_supported_types") && mode09SupportedTypeComparisonSession.importedSessionComparisonSummary?.changedIdSummaries?.some((item) => item.kind === "mode09_supported_type") && mode09SupportedTypeComparisonSession.vehicleCommandEnabled === false && mode09SupportedTypeComparisonSession.wouldTransmit === false, "Reported Mode09 supported types were not compared under read-only safety");
+const missingMode09SupportedTypeComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: { ecu_info_readout_status: "reported", items: [{ id: "calibration_id", value: "CAL-MODE09-MISSING" }] },
+  core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", mode09_supported_type_evidence_recorded: true, mode09_supported_type_keys: ["01|7E8"] }
+});
+check(missingMode09SupportedTypeComparisonSession.coreReadoutInventorySummary?.mode09SupportedTypeEvidenceRecorded === false && missingMode09SupportedTypeComparisonSession.importedCoreReadoutInventoryComparisonSummary?.mode09SupportedTypeComparisonAvailable === false && missingMode09SupportedTypeComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("mode09_supported_types") === false && missingMode09SupportedTypeComparisonSession.vehicleCommandEnabled === false, "Missing Mode09 type 00 evidence was treated as supported type removal");
+const legacyMode09SupportedTypeComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: { ecu_info_readout_status: "reported", items: [{ id: "supported_info_types_00", value: "80 00 00 00" }] },
+  core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", ecu_info_item_count: 1 }
+});
+check(legacyMode09SupportedTypeComparisonSession.importedCoreReadoutInventoryComparisonSummary?.mode09SupportedTypeComparisonAvailable === false && legacyMode09SupportedTypeComparisonSession.importedCoreReadoutInventoryComparisonSummary?.mode09SupportedTypeKeysChanged === false && legacyMode09SupportedTypeComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("mode09_supported_types") === false && legacyMode09SupportedTypeComparisonSession.vehicleCommandEnabled === false, "Legacy ECU info totals were treated as Mode09 support changes");
 check(source.includes("const normalizeOnboardMonitorReportedNumber = (value)") && appSource.includes("M06値詳細比較不可"), "Mode 06 value comparison should retain explicit numeric evidence and an unavailable state");
 const onboardMonitorValueComparisonSession = obd.buildDiagnosticScanSession({
   onboard_monitor_snapshot: {
