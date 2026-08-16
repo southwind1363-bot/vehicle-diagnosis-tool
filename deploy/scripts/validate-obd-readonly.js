@@ -17875,6 +17875,34 @@ const legacyOnboardMonitorInventoryComparisonSession = obd.buildDiagnosticScanSe
   core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", onboard_monitor_test_count: 1 }
 });
 check(legacyOnboardMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorComparisonAvailable === false && legacyOnboardMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorTestKeysChanged === false && legacyOnboardMonitorInventoryComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("onboard_monitor_states") === false && legacyOnboardMonitorInventoryComparisonSession.vehicleCommandEnabled === false, "Legacy Mode 06 totals were treated as detailed test state changes");
+check(source.includes("const livePidValueEvidenceRecorded = !livePidResponseUnavailable") && appSource.includes("PID値詳細比較不可") && appSource.includes("PID単位不一致のため比較不可"), "Live PID value comparison should require explicit read-only evidence and expose unavailable states");
+const livePidValueComparisonSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    live_pid_readout_status: "reported",
+    source_ecu: "7E8",
+    observation_condition: "warm",
+    protocol: "ISO15765-4",
+    monitor_values: [{ id: "engine_speed", value: 1200, unit: "rpm" }]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    live_pid_value_evidence_recorded: true,
+    live_pid_observation_condition: "warm",
+    live_pid_diagnostic_protocol: "ISO15765-4",
+    live_pid_value_keys: ["engine_speed|7E8|rpm|800"]
+  }
+});
+check(livePidValueComparisonSession.coreReadoutInventorySummary?.livePidValueKeys?.join(",") === "engine_speed|7E8|rpm|1200" && livePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonAvailable === true && livePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueKeysChanged === true && livePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueAddedKeys?.join(",") === "engine_speed|7E8|rpm|1200" && livePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueRemovedKeys?.join(",") === "engine_speed|7E8|rpm|800" && livePidValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("live_pid_values") && livePidValueComparisonSession.importedSessionComparisonSummary?.changedIdSummaries?.some((item) => item.kind === "live_pid_value") && livePidValueComparisonSession.vehicleCommandEnabled === false && livePidValueComparisonSession.wouldTransmit === false, "Comparable live PID measurements were not compared under read-only safety");
+const livePidValueUnitMismatchSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: { live_pid_readout_status: "reported", source_ecu: "7E8", observation_condition: "warm", protocol: "ISO15765-4", monitor_values: [{ id: "engine_speed", value: 1200, unit: "rpm" }] },
+  core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", live_pid_value_evidence_recorded: true, live_pid_observation_condition: "warm", live_pid_diagnostic_protocol: "ISO15765-4", live_pid_value_keys: ["engine_speed|7E8|km/h|800"] }
+});
+check(livePidValueUnitMismatchSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonAvailable === false && livePidValueUnitMismatchSession.importedCoreReadoutInventoryComparisonSummary?.livePidUnitMismatchKeys?.join(",") === "engine_speed|7E8" && livePidValueUnitMismatchSession.importedSessionComparisonSummary?.changedReasonIds?.includes("live_pid_values") === false && livePidValueUnitMismatchSession.vehicleCommandEnabled === false, "Live PID unit mismatches were treated as measurement changes");
+const legacyLivePidValueComparisonSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: { live_pid_readout_status: "reported", observation_condition: "warm", protocol: "ISO15765-4", monitor_values: [{ id: "engine_speed", value: 1200, unit: "rpm" }] },
+  core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", supported_pid_count: 1 }
+});
+check(legacyLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonAvailable === false && legacyLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueKeysChanged === false && legacyLivePidValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("live_pid_values") === false && legacyLivePidValueComparisonSession.vehicleCommandEnabled === false, "Legacy PID totals were treated as numeric live PID changes");
 check(source.includes("const normalizeOnboardMonitorReportedNumber = (value)") && appSource.includes("M06値詳細比較不可"), "Mode 06 value comparison should retain explicit numeric evidence and an unavailable state");
 const onboardMonitorValueComparisonSession = obd.buildDiagnosticScanSession({
   onboard_monitor_snapshot: {

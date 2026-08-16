@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.11.3";
+const APP_VERSION = "3.11.4";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7957,6 +7957,12 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const changedFailedReasonIds = Array.isArray(summary.changedFailedReasonIds) ? summary.changedFailedReasonIds : Array.isArray(summary.changed_failed_reason_ids) ? summary.changed_failed_reason_ids : [];
   const snakeNextPendingReadoutChanged = summary.next_pending_readout_changed === true && summary.nextPendingReadoutChanged !== true;
   const rawPidUndecodedDeltaValue = summary.rawPidUndecodedDelta ?? summary.raw_pid_undecoded_delta;
+  const livePidValueComparisonAvailable = summary.livePidValueComparisonAvailable === true || summary.live_pid_value_comparison_available === true;
+  const importedLivePidValueCount = Number(summary.importedLivePidValueCount ?? summary.imported_live_pid_value_count ?? 0);
+  const currentLivePidValueCount = Number(summary.currentLivePidValueCount ?? summary.current_live_pid_value_count ?? 0);
+  const addedLivePidValueKeys = Array.isArray(summary.livePidValueAddedKeys) ? summary.livePidValueAddedKeys : Array.isArray(summary.live_pid_value_added_keys) ? summary.live_pid_value_added_keys : [];
+  const removedLivePidValueKeys = Array.isArray(summary.livePidValueRemovedKeys) ? summary.livePidValueRemovedKeys : Array.isArray(summary.live_pid_value_removed_keys) ? summary.live_pid_value_removed_keys : [];
+  const livePidUnitMismatchKeys = Array.isArray(summary.livePidUnitMismatchKeys) ? summary.livePidUnitMismatchKeys : Array.isArray(summary.live_pid_unit_mismatch_keys) ? summary.live_pid_unit_mismatch_keys : [];
   const freezeFrameTriggerDeltaValue = summary.freezeFrameTriggerCountDelta ?? summary.freeze_frame_trigger_count_delta;
   const freezeFrameTriggerComparisonAvailable = summary.freezeFrameTriggerComparisonAvailable === true || summary.freeze_frame_trigger_comparison_available === true;
   const importedFreezeFrameTriggerCount = Number(summary.importedFreezeFrameTriggerCount ?? summary.imported_freeze_frame_trigger_count ?? 0);
@@ -8022,6 +8028,15 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
     parts.push(`次${formatCoreReadoutLabel(nextId, nextId || "なし")}`);
   }
   if (rawDelta) parts.push(`raw${rawDelta > 0 ? "+" : ""}${rawDelta}`);
+  if (addedLivePidValueKeys.length || removedLivePidValueKeys.length) {
+    const displayLivePidValueKey = (key) => {
+      const [id, ecu, unit, value] = String(key || "").split("|");
+      return `${id || "PID"}${ecu && ecu !== "-" ? `@${ecu}` : ""}:${value || "?"}${unit || ""}`;
+    };
+    parts.push(`PID値:${[...addedLivePidValueKeys.map((key) => `+${displayLivePidValueKey(key)}`), ...removedLivePidValueKeys.map((key) => `-${displayLivePidValueKey(key)}`)].slice(0, 3).join(",")}`);
+  }
+  if (livePidUnitMismatchKeys.length) parts.push("PID単位不一致のため比較不可");
+  if (!livePidValueComparisonAvailable && !livePidUnitMismatchKeys.length && (importedLivePidValueCount > 0 || currentLivePidValueCount > 0)) parts.push("PID値詳細比較不可");
   if (freezeFrameTriggerDelta) parts.push(`FF起点${freezeFrameTriggerDelta > 0 ? "+" : ""}${freezeFrameTriggerDelta}`);
   if (addedFreezeFrameTriggerKeys.length || removedFreezeFrameTriggerKeys.length) {
     const displayKey = (key) => String(key || "").split("|")[0] || "DTC";

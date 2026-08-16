@@ -5888,6 +5888,23 @@
     const nextPendingReadoutId = pendingIds[0] || null;
     const nextPendingReadout = nextPendingReadoutId ? itemById[nextPendingReadoutId] || null : null;
     const totalValueCount = items.reduce((total, item) => total + item.count, 0);
+    const livePidResponseUnavailable = ["unparsed", "blocked"].includes(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status)
+      || livePidSnapshot?.blocked === true
+      || livePidSnapshot?.isBlocked === true
+      || livePidSnapshot?.is_blocked === true;
+    const livePidObservationCondition = normalizeLivePidObservationCondition(livePidSnapshot?.observationCondition || livePidSnapshot?.observation_condition);
+    const livePidDiagnosticProtocol = normalizeProtocolProvenanceValue(livePidSnapshot?.protocol || livePidSnapshot?.obd_protocol || livePidSnapshot?.diagnosticProtocol || livePidSnapshot?.diagnostic_protocol || null);
+    const livePidValueEvidenceRecorded = !livePidResponseUnavailable
+      && String(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status || "").trim().toLowerCase() === "reported";
+    const livePidValueKeys = [...new Set((Array.isArray(livePidSnapshot?.monitorValues) ? livePidSnapshot.monitorValues : Array.isArray(livePidSnapshot?.monitor_values) ? livePidSnapshot.monitor_values : []).map((value) => {
+      const id = String(value?.id || value?.monitorId || value?.monitor_id || value?.pid || "").trim().toLowerCase().replace(/\|/g, " ").slice(0, 96);
+      const numericValue = Number(value?.value);
+      const unit = String(value?.unit || "").trim().toLowerCase().replace(/\|/g, " ").slice(0, 48);
+      if (!id || !Number.isFinite(numericValue) || !unit) return null;
+      const sourceEcu = String(value?.sourceEcu || value?.source_ecu || livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu || "").trim().toUpperCase().replace(/\|/g, " ").slice(0, 64) || "-";
+      return [id, sourceEcu, unit, String(numericValue)].join("|");
+    }).filter(Boolean))].sort();
+    const recordedLivePidValueKeys = livePidValueEvidenceRecorded ? livePidValueKeys : [];
     const freezeFrameResponseUnavailable = ["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status)
       || freezeFrameSnapshot?.blocked === true
       || freezeFrameSnapshot?.isBlocked === true
@@ -6115,6 +6132,16 @@
       valueCaptureComplete: pendingIds.length === 0,
       hasDtcCodes: countsById.dtc_snapshot > 0,
       hasLivePidValues: countsById.live_pid_snapshot > 0,
+      livePidValueCount: recordedLivePidValueKeys.length,
+      live_pid_value_count: recordedLivePidValueKeys.length,
+      livePidValueKeys: recordedLivePidValueKeys,
+      live_pid_value_keys: [...recordedLivePidValueKeys],
+      livePidValueEvidenceRecorded,
+      live_pid_value_evidence_recorded: livePidValueEvidenceRecorded,
+      livePidObservationCondition,
+      live_pid_observation_condition: livePidObservationCondition,
+      livePidDiagnosticProtocol,
+      live_pid_diagnostic_protocol: livePidDiagnosticProtocol,
       hasFreezeFrameValues: countsById.freeze_frame_snapshot > 0,
       freezeFrameValueCount: recordedFreezeFrameValueKeys.length,
       freeze_frame_value_count: recordedFreezeFrameValueKeys.length,
@@ -13397,6 +13424,11 @@
       failedReadoutCount: ["failed_readout_count"],
       failedReadoutIds: ["failed_readout_ids"],
       failedReadoutReasonById: ["failed_readout_reason_by_id"],
+      livePidValueCount: ["live_pid_value_count"],
+      livePidValueKeys: ["live_pid_value_keys"],
+      livePidValueEvidenceRecorded: ["live_pid_value_evidence_recorded"],
+      livePidObservationCondition: ["live_pid_observation_condition"],
+      livePidDiagnosticProtocol: ["live_pid_diagnostic_protocol"],
       missingIds: ["missing_ids"],
       missingReadoutCount: ["missing_readout_count", "missing_count"],
       nextPendingReadoutId: ["next_pending_readout_id"],
@@ -13490,6 +13522,41 @@
       const value = readField(summary, field);
       return value === true || ["true", "1", "yes"].includes(String(value || "").trim().toLowerCase());
     };
+    const readLivePidValueKeys = (summary) => Array.isArray(readField(summary, "livePidValueKeys"))
+      ? [...new Set(readField(summary, "livePidValueKeys").map((key) => {
+        const [id, sourceEcu, unit, value, ...extra] = String(key || "").trim().split("|");
+        const numericValue = Number(value);
+        if (extra.length > 0 || !id || !sourceEcu || !unit || !Number.isFinite(numericValue)) return null;
+        return [id.slice(0, 96), sourceEcu.slice(0, 64), unit.slice(0, 48), String(numericValue)].join("|");
+      }).filter(Boolean))].sort()
+      : [];
+    const importedLivePidValueEvidenceRecorded = readBoolean(importedInventory, "livePidValueEvidenceRecorded");
+    const currentLivePidValueEvidenceRecorded = readBoolean(currentSummary, "livePidValueEvidenceRecorded");
+    const importedLivePidObservationCondition = normalizeLivePidObservationCondition(readField(importedInventory, "livePidObservationCondition"));
+    const currentLivePidObservationCondition = normalizeLivePidObservationCondition(readField(currentSummary, "livePidObservationCondition"));
+    const importedLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(importedInventory, "livePidDiagnosticProtocol"));
+    const currentLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(currentSummary, "livePidDiagnosticProtocol"));
+    const importedLivePidValueKeys = readLivePidValueKeys(importedInventory);
+    const currentLivePidValueKeys = readLivePidValueKeys(currentSummary);
+    const readLivePidUnitsByMeasurement = (keys = []) => new Map(keys.map((key) => {
+      const [id, sourceEcu, unit] = key.split("|");
+      return [`${id}|${sourceEcu}`, unit];
+    }));
+    const importedLivePidUnitsByMeasurement = readLivePidUnitsByMeasurement(importedLivePidValueKeys);
+    const currentLivePidUnitsByMeasurement = readLivePidUnitsByMeasurement(currentLivePidValueKeys);
+    const livePidUnitMismatchKeys = [...new Set([...importedLivePidUnitsByMeasurement.keys(), ...currentLivePidUnitsByMeasurement.keys()])]
+      .filter((key) => importedLivePidUnitsByMeasurement.has(key) && currentLivePidUnitsByMeasurement.has(key) && importedLivePidUnitsByMeasurement.get(key) !== currentLivePidUnitsByMeasurement.get(key))
+      .sort();
+    const livePidValueComparisonAvailable = importedLivePidValueEvidenceRecorded
+      && currentLivePidValueEvidenceRecorded
+      && importedLivePidObservationCondition !== "unspecified"
+      && currentLivePidObservationCondition !== "unspecified"
+      && importedLivePidObservationCondition === currentLivePidObservationCondition
+      && Boolean(importedLivePidDiagnosticProtocol)
+      && importedLivePidDiagnosticProtocol === currentLivePidDiagnosticProtocol
+      && livePidUnitMismatchKeys.length === 0;
+    const livePidValueAddedKeys = livePidValueComparisonAvailable ? diffIds(currentLivePidValueKeys, importedLivePidValueKeys) : [];
+    const livePidValueRemovedKeys = livePidValueComparisonAvailable ? diffIds(importedLivePidValueKeys, currentLivePidValueKeys) : [];
     const readTriggerKeys = (summary) => Array.isArray(readField(summary, "freezeFrameTriggerKeys"))
       ? [...new Set(readField(summary, "freezeFrameTriggerKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
@@ -13779,6 +13846,36 @@
       freeze_frame_uds_record_removed_keys: freezeFrameUdsRecordRemovedKeys,
       freezeFrameUdsRecordCountDelta: freezeFrameUdsRecordComparisonAvailable ? readCount(currentSummary, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") - readCount(importedInventory, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") : null,
       freeze_frame_uds_record_count_delta: freezeFrameUdsRecordComparisonAvailable ? readCount(currentSummary, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") - readCount(importedInventory, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") : null,
+      importedLivePidValueCount: readCount(importedInventory, "livePidValueCount", "livePidValueKeys"),
+      imported_live_pid_value_count: readCount(importedInventory, "livePidValueCount", "livePidValueKeys"),
+      currentLivePidValueCount: readCount(currentSummary, "livePidValueCount", "livePidValueKeys"),
+      current_live_pid_value_count: readCount(currentSummary, "livePidValueCount", "livePidValueKeys"),
+      importedLivePidValueEvidenceRecorded,
+      imported_live_pid_value_evidence_recorded: importedLivePidValueEvidenceRecorded,
+      currentLivePidValueEvidenceRecorded,
+      current_live_pid_value_evidence_recorded: currentLivePidValueEvidenceRecorded,
+      importedLivePidObservationCondition,
+      imported_live_pid_observation_condition: importedLivePidObservationCondition,
+      currentLivePidObservationCondition,
+      current_live_pid_observation_condition: currentLivePidObservationCondition,
+      importedLivePidDiagnosticProtocol,
+      imported_live_pid_diagnostic_protocol: importedLivePidDiagnosticProtocol,
+      currentLivePidDiagnosticProtocol,
+      current_live_pid_diagnostic_protocol: currentLivePidDiagnosticProtocol,
+      livePidUnitMismatchKeys,
+      live_pid_unit_mismatch_keys: [...livePidUnitMismatchKeys],
+      livePidValueComparisonAvailable,
+      live_pid_value_comparison_available: livePidValueComparisonAvailable,
+      importedLivePidValueKeys,
+      imported_live_pid_value_keys: importedLivePidValueKeys,
+      currentLivePidValueKeys,
+      current_live_pid_value_keys: currentLivePidValueKeys,
+      livePidValueKeysChanged: livePidValueComparisonAvailable && importedLivePidValueKeys.join("|") !== currentLivePidValueKeys.join("|"),
+      live_pid_value_keys_changed: livePidValueComparisonAvailable && importedLivePidValueKeys.join("|") !== currentLivePidValueKeys.join("|"),
+      livePidValueAddedKeys,
+      live_pid_value_added_keys: livePidValueAddedKeys,
+      livePidValueRemovedKeys,
+      live_pid_value_removed_keys: livePidValueRemovedKeys,
       importedFreezeFrameTriggerCount: readCount(importedInventory, "freezeFrameTriggerCount"),
       imported_freeze_frame_trigger_count: readCount(importedInventory, "freezeFrameTriggerCount"),
       currentFreezeFrameTriggerCount: readCount(currentSummary, "freezeFrameTriggerCount"),
@@ -13972,6 +14069,16 @@
       attempted_readout_count: toCount("attemptedReadoutCount", "attempted_readout_count", attemptedIds.length),
       totalValueCount,
       total_value_count: totalValueCount,
+      livePidValueCount: toCount("livePidValueCount", "live_pid_value_count", 0),
+      live_pid_value_count: toCount("livePidValueCount", "live_pid_value_count", 0),
+      livePidValueKeys: normalizeIds(summary.livePidValueKeys || summary.live_pid_value_keys),
+      live_pid_value_keys: normalizeIds(summary.livePidValueKeys || summary.live_pid_value_keys),
+      livePidValueEvidenceRecorded: pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
+      live_pid_value_evidence_recorded: pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
+      livePidObservationCondition: normalizeLivePidObservationCondition(pickDefined(summary.livePidObservationCondition, summary.live_pid_observation_condition, "unspecified")),
+      live_pid_observation_condition: normalizeLivePidObservationCondition(pickDefined(summary.livePidObservationCondition, summary.live_pid_observation_condition, "unspecified")),
+      livePidDiagnosticProtocol: normalizeProtocolProvenanceValue(pickDefined(summary.livePidDiagnosticProtocol, summary.live_pid_diagnostic_protocol, null)),
+      live_pid_diagnostic_protocol: normalizeProtocolProvenanceValue(pickDefined(summary.livePidDiagnosticProtocol, summary.live_pid_diagnostic_protocol, null)),
       freezeFrameValueCount: toCount("freezeFrameValueCount", "freeze_frame_value_count", 0),
       freeze_frame_value_count: toCount("freezeFrameValueCount", "freeze_frame_value_count", 0),
       freezeFrameValueKeys: normalizeIds(summary.freezeFrameValueKeys || summary.freeze_frame_value_keys),
@@ -15161,6 +15268,7 @@
       || comparison.dtcStatusByteKeysChanged === true
       || comparison.dtcMetadataKeysChanged === true
       || comparison.dtcFaultDetectionCounterKeysChanged === true
+      || comparison.livePidValueKeysChanged === true
       || comparison.reviewRequiredChanged === true
       || comparison.readyForInterpretationChanged === true
       || comparison.issueIdsChanged === true
@@ -15204,6 +15312,7 @@
       comparison.dtcStatusByteKeysChanged === true ? "dtc_status_bytes" : null,
       comparison.dtcMetadataKeysChanged === true ? "dtc_metadata" : null,
       comparison.dtcFaultDetectionCounterKeysChanged === true ? "dtc_fault_detection_counters" : null,
+      comparison.livePidValueKeysChanged === true ? "live_pid_values" : null,
       comparison.reviewRequiredChanged === true || comparison.readyForInterpretationChanged === true || comparison.issueIdsChanged === true || comparison.issueCountsChanged === true || Number(comparison.issueCountDelta || 0) !== 0 ? "readout_quality" : null,
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
@@ -15249,7 +15358,7 @@
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
-        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "dtcMetadataAddedKeys", "dtcFaultDetectionCounterAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys", "ecuInfoKeyValueAddedKeys", "onboardMonitorValueAddedKeys"
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "dtcMetadataAddedKeys", "dtcFaultDetectionCounterAddedKeys", "livePidValueAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys", "ecuInfoKeyValueAddedKeys", "onboardMonitorValueAddedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -15264,7 +15373,7 @@
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
-        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "dtcMetadataRemovedKeys", "dtcFaultDetectionCounterRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys", "ecuInfoKeyValueRemovedKeys", "onboardMonitorValueRemovedKeys"
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "dtcMetadataRemovedKeys", "dtcFaultDetectionCounterRemovedKeys", "livePidValueRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys", "ecuInfoKeyValueRemovedKeys", "onboardMonitorValueRemovedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -15416,6 +15525,7 @@
       if (reasonIds.includes("dtc_status_bytes")) return "dtc_status_byte";
       if (reasonIds.includes("dtc_metadata")) return "dtc_metadata";
       if (reasonIds.includes("dtc_fault_detection_counters")) return "dtc_fault_detection_counter";
+      if (reasonIds.includes("live_pid_values")) return "live_pid_value";
       if (reasonIds.includes("ecu_info_key_values")) return "ecu_info_key_value";
       if (reasonIds.includes("onboard_monitor_values")) return "onboard_monitor_value";
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
