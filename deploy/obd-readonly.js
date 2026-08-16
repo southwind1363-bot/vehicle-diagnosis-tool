@@ -17132,10 +17132,15 @@
       ? Math.max(0, ...attempts.map((attempt) => Number(attempt.maxResponseElapsedMs ?? attempt.max_response_elapsed_ms) || 0))
       : duration("maxResponseElapsedMs", "max_response_elapsed_ms", 60000);
     const latestAttempt = attempts.at(-1) || normalizeAttempt(input.latestAttempt || input.latest_attempt || null);
+    const readoutProfile = ["initial_diagnostic", "quick_condition"].includes(String(input.readoutProfile || input.readout_profile || ""))
+      ? String(input.readoutProfile || input.readout_profile)
+      : null;
     return {
       schemaVersion: "web_serial_readout_execution_v2",
       schema_version: "web_serial_readout_execution_v2",
       source: "web_serial",
+      readoutProfile,
+      readout_profile: readoutProfile,
       attemptCount,
       attempt_count: attemptCount,
       completedCount,

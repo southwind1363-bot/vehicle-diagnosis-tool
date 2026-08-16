@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.11.7";
+const APP_VERSION = "3.11.8";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -442,6 +442,7 @@ const obdDevModeBadge = document.querySelector("#obdDevModeBadge");
 const obdDevControls = document.querySelector("#obdDevControls");
 const obdDevIdentifyButton = document.querySelector("#obdDevIdentifyButton");
 const obdDevCoreScanButton = document.querySelector("#obdDevCoreScanButton");
+const obdDevQuickConditionButton = document.querySelector("#obdDevQuickConditionButton");
 const obdDevReadDtcButton = document.querySelector("#obdDevReadDtcButton");
 const obdDevReadFreezeFrameButton = document.querySelector("#obdDevReadFreezeFrameButton");
 const obdDevReadReadinessButton = document.querySelector("#obdDevReadReadinessButton");
@@ -511,6 +512,7 @@ let activeObdStage = "setup";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"]);
 const WEB_SERIAL_DEFAULT_FREEZE_FRAME_PID_COMMANDS = Object.freeze(["020C", "0205", "020F", "020D", "020E", "0204", "0203", "020A", "020B", "0223", "0259", "0210", "0211", "0206", "0207", "021F", "0242"]);
+const WEB_SERIAL_QUICK_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010D", "0142"]);
 const WEB_SERIAL_READ_ONLY_COMMANDS = Object.freeze([
   "ATZ", "ATE0", "ATL0", "ATS0", "ATH1", "ATSP0", "ATI", "AT@1", "ATDP", "ATDPN",
   "03", "07", "0A", "0100", "0101", "0120", "0140", "0160", "0180", "01A0", "01C0", "01E0", "0200", "0202", "06", "0900", "0904", "0906", "0908", "090A", "090B",
@@ -529,6 +531,7 @@ const obdDevSession = {
   initializing: false,
   coreScanInProgress: false,
   coreScanStopReason: null,
+  readoutProfile: null,
   connectionState: "disconnected",
   lastDisconnectReason: null,
   disconnectedAt: null,
@@ -675,12 +678,13 @@ obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
 obdDevConnectButton.addEventListener("click", handleObdPrimaryAction);
 obdDevIdentifyButton.addEventListener("click", identifyObdDeveloperVci);
 obdDevCoreScanButton.addEventListener("click", readObdDeveloperCoreScan);
-obdDevReadDtcButton.addEventListener("click", readObdDeveloperDtc);
-obdDevReadFreezeFrameButton.addEventListener("click", readObdDeveloperFreezeFrame);
-obdDevReadReadinessButton.addEventListener("click", readObdDeveloperReadiness);
-obdDevSnapshotButton.addEventListener("click", readObdDeveloperLiveSnapshot);
-obdDevReadEcuInfoButton.addEventListener("click", readObdDeveloperEcuInfo);
-obdDevReadOnboardMonitorButton.addEventListener("click", readObdDeveloperOnboardMonitor);
+obdDevQuickConditionButton.addEventListener("click", readObdDeveloperQuickCondition);
+obdDevReadDtcButton.addEventListener("click", () => { clearWebSerialReadoutProfile(); void readObdDeveloperDtc(); });
+obdDevReadFreezeFrameButton.addEventListener("click", () => { clearWebSerialReadoutProfile(); void readObdDeveloperFreezeFrame(); });
+obdDevReadReadinessButton.addEventListener("click", () => { clearWebSerialReadoutProfile(); void readObdDeveloperReadiness(); });
+obdDevSnapshotButton.addEventListener("click", () => { clearWebSerialReadoutProfile(); void readObdDeveloperLiveSnapshot(); });
+obdDevReadEcuInfoButton.addEventListener("click", () => { clearWebSerialReadoutProfile(); void readObdDeveloperEcuInfo(); });
+obdDevReadOnboardMonitorButton.addEventListener("click", () => { clearWebSerialReadoutProfile(); void readObdDeveloperOnboardMonitor(); });
 obdDevBridgeStatusButton.addEventListener("click", startGeneralBridgeCheck);
 obdDevBridgeVciButton.addEventListener("click", listObdLocalBridgeVci);
 obdDevBridgeDtcButton.addEventListener("click", readObdLocalBridgeDtc);
@@ -4398,6 +4402,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady, nativeConnectorRoute });
   obdDevIdentifyButton.disabled = !unlocked || !connected || serialBusy;
   obdDevCoreScanButton.disabled = !unlocked || !connected || serialBusy;
+  obdDevQuickConditionButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadDtcButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadFreezeFrameButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadReadinessButton.disabled = !unlocked || !connected || serialBusy;
@@ -4576,6 +4581,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.supportedPidReadoutResponses = [];
     obdDevSession.readoutAttempts = [];
     obdDevSession.coreScanStopReason = null;
+    obdDevSession.readoutProfile = null;
     obdDevSession.livePidTimeline = [];
     obdDevSession.freezeFrameReadoutResponses = [];
     obdDevSession.freezeFrameCapabilityResponse = null;
@@ -4829,6 +4835,7 @@ async function readObdDeveloperDtc() {
 
 async function readObdDeveloperCoreScan() {
   if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
+  obdDevSession.readoutProfile = "initial_diagnostic";
   obdDevSession.coreScanInProgress = true;
   obdDevSession.coreScanStopReason = null;
   renderObdDeveloperGate();
@@ -4856,6 +4863,41 @@ async function readObdDeveloperCoreScan() {
       obdDevStatus.textContent = `基本読取完了: 未完了 ${incompleteLabels.join(" / ")}`;
     } else {
       obdDevStatus.textContent = "基本読取を完了しました。";
+    }
+  } finally {
+    obdDevSession.coreScanInProgress = false;
+    obdDevSession.coreScanStopReason = null;
+    renderObdDeveloperGate();
+  }
+}
+
+async function readObdDeveloperQuickCondition() {
+  if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
+  obdDevSession.readoutProfile = "quick_condition";
+  obdDevSession.coreScanInProgress = true;
+  obdDevSession.coreScanStopReason = null;
+  renderObdDeveloperGate();
+  const readSteps = [
+    { label: "DTC", read: readObdDeveloperDtc },
+    { label: "レディネス", read: readObdDeveloperReadiness },
+    { label: "クイックライブ値", read: readObdDeveloperQuickLiveSnapshot }
+  ];
+  const incompleteLabels = [];
+  try {
+    for (const readStep of readSteps) {
+      if (!obdDevSession.port) break;
+      const readCompleted = await readStep.read();
+      if (obdDevSession.port && readCompleted !== true) incompleteLabels.push(readStep.label);
+      if (obdDevSession.coreScanStopReason) break;
+    }
+    if (!obdDevSession.port) {
+      obdDevStatus.textContent = "クイック状態確認を切断により停止しました。";
+    } else if (obdDevSession.coreScanStopReason) {
+      obdDevStatus.textContent = `クイック状態確認を停止しました: ${formatWebSerialStopReason(obdDevSession.coreScanStopReason)}。接続状態を確認してから再試行してください。`;
+    } else if (incompleteLabels.length) {
+      obdDevStatus.textContent = `クイック状態確認完了: 未完了 ${incompleteLabels.join(" / ")}`;
+    } else {
+      obdDevStatus.textContent = "クイック状態確認を完了しました。追加診断には基本読取を実行してください。";
     }
   } finally {
     obdDevSession.coreScanInProgress = false;
@@ -4934,6 +4976,19 @@ async function readObdDeveloperLiveSnapshot() {
     return true;
   }
   return runObdDeveloperRead("ライブデータ読取", supportedCommands);
+}
+
+async function readObdDeveloperQuickLiveSnapshot() {
+  const supportReadCompleted = await readObdDeveloperSupportedPidMaps();
+  if (!supportReadCompleted) return false;
+  const supportedPids = new Set(obdDevSession.supportedPidSet);
+  const supportedCommands = WEB_SERIAL_QUICK_LIVE_PID_COMMANDS.filter((command) => supportedPids.has(command.slice(2)));
+  if (!supportedCommands.length) {
+    obdDevStatus.textContent = "クイック表示用の対応PIDが確認できないため、ライブデータ要求を送りませんでした。";
+    renderObdDeveloperGate();
+    return true;
+  }
+  return runObdDeveloperRead("クイックライブ値読取", supportedCommands);
 }
 
 async function readObdDeveloperSupportedPidMaps() {
@@ -5701,10 +5756,15 @@ function buildWebSerialReadoutSummary() {
   const countByStatus = (status) => attempts.filter((item) => item?.status === status).length;
   const total = (key) => attempts.reduce((sum, attempt) => sum + (Number(attempt?.[key]) || 0), 0);
   const latestAttempt = attempts.at(-1) || null;
+  const readoutProfile = ["initial_diagnostic", "quick_condition"].includes(obdDevSession.readoutProfile)
+    ? obdDevSession.readoutProfile
+    : null;
   return {
     schemaVersion: "web_serial_readout_execution_v2",
     schema_version: "web_serial_readout_execution_v2",
     source: "web_serial",
+    readoutProfile,
+    readout_profile: readoutProfile,
     attemptCount: attempts.length,
     attempt_count: attempts.length,
     completedCount: countByStatus("completed"),
@@ -6686,6 +6746,12 @@ function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA) {
   const emptyResponseCount = Number(summary.emptyResponseCount ?? summary.empty_response_count ?? 0) || 0;
   const unrecognizedResponseCount = Number(summary.unrecognizedResponseCount ?? summary.unrecognized_response_count ?? 0) || 0;
   const latestAttempt = summary.latestAttempt || summary.latest_attempt || null;
+  const readoutProfile = summary.readoutProfile || summary.readout_profile || null;
+  const profileLabel = readoutProfile === "initial_diagnostic"
+    ? "基本読取"
+    : readoutProfile === "quick_condition"
+      ? "クイック状態確認"
+      : "";
   const latestLabel = latestAttempt?.label ? ` 最終:${latestAttempt.label}` : "";
   const responseQuality = [
     negativeResponseCount > 0 ? `NRC ${negativeResponseCount}` : "",
@@ -6696,7 +6762,11 @@ function formatWebSerialReadoutSummary(summary = null, fallback = NO_DATA) {
     emptyResponseCount > 0 ? `空応答 ${emptyResponseCount}` : "",
     unrecognizedResponseCount > 0 ? `未解釈 ${unrecognizedResponseCount}` : ""
   ].filter(Boolean);
-  return `${attemptCount}工程 / 完了${completedCount} / 部分${partialCount} / 未完了${incompleteCount} / 失敗${failedCount}${latestLabel}${responseQuality.length ? ` / ${responseQuality.join(" / ")}` : ""}`;
+  return `${profileLabel ? `${profileLabel} / ` : ""}${attemptCount}工程 / 完了${completedCount} / 部分${partialCount} / 未完了${incompleteCount} / 失敗${failedCount}${latestLabel}${responseQuality.length ? ` / ${responseQuality.join(" / ")}` : ""}`;
+}
+
+function clearWebSerialReadoutProfile() {
+  if (!obdDevSession.coreScanInProgress) obdDevSession.readoutProfile = null;
 }
 
 function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fallback = NO_DATA) {
