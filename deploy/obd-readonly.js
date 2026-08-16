@@ -18276,11 +18276,18 @@
       const codeFormat = normalizeDtcIdentityFormat(row);
       return !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
     });
+    const reportedStatusIdentity = (row) => `${row.code}::${row.subcode || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}`;
+    const explicitReportedStatusIdentities = new Set(deduplicatedRows
+      .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim())
+      .map(reportedStatusIdentity));
     const byCode = new Map();
-    deduplicatedRows.forEach((row) => {
-      const key = `${row.code}::${row.subcode || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}`;
+    deduplicatedRows
+      .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim() || !explicitReportedStatusIdentities.has(reportedStatusIdentity(row)))
+      .forEach((row) => {
+      const reportedStatus = String(row.reportedStatus ?? row.reported_status ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+      const key = `${row.code}::${row.subcode || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}::${reportedStatus}`;
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
-    });
+      });
 
     const normalizedDtcs = [...byCode.values()];
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
@@ -20700,12 +20707,22 @@
       const typedFormats = typedCodeFormatsByKey.get(key);
       return !["", "unknown"].includes(status) || !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
     });
-    const byCodeAndStatus = new Map();
-    normalizedRows.forEach((row) => {
+    const reportedStatusIdentity = (row) => {
       const ecu = row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "";
-      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;
+      return `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;
+    };
+    const explicitReportedStatusIdentities = new Set(normalizedRows
+      .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim())
+      .map(reportedStatusIdentity));
+    const byCodeAndStatus = new Map();
+    normalizedRows
+      .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim() || !explicitReportedStatusIdentities.has(reportedStatusIdentity(row)))
+      .forEach((row) => {
+      const ecu = row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "";
+      const reportedStatus = String(row.reportedStatus ?? row.reported_status ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}::${reportedStatus}`;
       if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
-    });
+      });
     const mergedRows = [...byCodeAndStatus.values()];
     const codes = [...new Set(mergedRows.map((row) => row.code))];
     const codeCount = codes.length;
