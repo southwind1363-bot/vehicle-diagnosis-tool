@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.96";
+const APP_VERSION = "3.9.97";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7957,9 +7957,11 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const changedFailedReasonIds = Array.isArray(summary.changedFailedReasonIds) ? summary.changedFailedReasonIds : Array.isArray(summary.changed_failed_reason_ids) ? summary.changed_failed_reason_ids : [];
   const snakeNextPendingReadoutChanged = summary.next_pending_readout_changed === true && summary.nextPendingReadoutChanged !== true;
   const rawPidUndecodedDeltaValue = summary.rawPidUndecodedDelta ?? summary.raw_pid_undecoded_delta;
+  const freezeFrameTriggerDeltaValue = summary.freezeFrameTriggerCountDelta ?? summary.freeze_frame_trigger_count_delta;
   const readinessIncompleteDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
   const ecuInfoMissingKeyDeltaValue = summary.ecuInfoMissingKeyDelta ?? summary.ecu_info_missing_key_delta;
   const rawDelta = Number.isFinite(Number(rawPidUndecodedDeltaValue)) ? Number(rawPidUndecodedDeltaValue) : 0;
+  const freezeFrameTriggerDelta = Number.isFinite(Number(freezeFrameTriggerDeltaValue)) ? Number(freezeFrameTriggerDeltaValue) : 0;
   const readinessDelta = Number.isFinite(Number(readinessIncompleteDeltaValue)) ? Number(readinessIncompleteDeltaValue) : 0;
   const ecuDelta = Number.isFinite(Number(ecuInfoMissingKeyDeltaValue)) ? Number(ecuInfoMissingKeyDeltaValue) : 0;
   const parts = [];
@@ -7975,6 +7977,7 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
     parts.push(`次${formatCoreReadoutLabel(nextId, nextId || "なし")}`);
   }
   if (rawDelta) parts.push(`raw${rawDelta > 0 ? "+" : ""}${rawDelta}`);
+  if (freezeFrameTriggerDelta) parts.push(`FF起点${freezeFrameTriggerDelta > 0 ? "+" : ""}${freezeFrameTriggerDelta}`);
   if (readinessDelta) parts.push(`RDY未完${readinessDelta > 0 ? "+" : ""}${readinessDelta}`);
   if (ecuDelta) parts.push(`ECU不足${ecuDelta > 0 ? "+" : ""}${ecuDelta}`);
   return parts.length ? parts.join(" / ") : "変化なし";

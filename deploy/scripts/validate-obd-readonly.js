@@ -5162,7 +5162,7 @@ const triggerOnlyNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
   expected_readouts: ["freeze_frame_snapshot"],
   expected_readout_scopes: nativeScopeManifest("freeze_frame_snapshot")
 });
-check(triggerOnlyNativeFreezeFrameScan.scanState === "completed" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.length === 0 && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.length === 2 && triggerOnlyNativeFreezeFrameScan.session?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.countsById?.freeze_frame_snapshot === 0 && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.itemById?.freeze_frame_snapshot?.status === "captured", "Trigger-only native freeze frame evidence was treated as missing or counted as PID values");
+check(triggerOnlyNativeFreezeFrameScan.scanState === "completed" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.monitorValues?.length === 0 && triggerOnlyNativeFreezeFrameScan.session?.freezeFrameSnapshot?.triggerDtcEntries?.length === 2 && triggerOnlyNativeFreezeFrameScan.session?.readoutCoverage?.itemById?.freeze_frame_snapshot?.status === "captured" && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.countsById?.freeze_frame_snapshot === 0 && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.freezeFrameTriggerCount === 2 && triggerOnlyNativeFreezeFrameScan.session?.coreReadoutInventorySummary?.itemById?.freeze_frame_snapshot?.status === "captured", "Trigger-only native freeze frame evidence was treated as missing or counted as PID values");
 const associatedMultiEcuNativeFreezeFrameScan = obd.buildNativeConnectorScanSession({
   envelopes: [
     scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 740, { associated_dtc: "P0300", monitor_values: [] }),
@@ -17718,6 +17718,18 @@ check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryCom
 check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventorySummary?.failedReadoutReasonById?.live_pid_snapshot === "unparsed_response" && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedFailedIds?.includes("live_pid_snapshot") && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.changedFailedReasonIds?.includes("live_pid_snapshot"), "Diagnostic scan session did not compare snake_case imported readout failure reasons");
 check(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedNextPendingReadoutId === "freeze_frame_snapshot" && scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.importedCountsById?.freeze_frame_snapshot === 3, "Diagnostic scan session did not read snake_case imported core readout inventory cursor or counts_by_id");
 check(Number.isFinite(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.rawPidUndecodedDelta) && Number.isFinite(scanSessionSnakeCoreReadoutInventoryImport.importedCoreReadoutInventoryComparisonSummary?.ecuInfoMissingKeyDelta), "Diagnostic scan session did not read snake_case imported core readout inventory quality counts");
+const freezeFrameTriggerInventoryComparisonSession = obd.buildDiagnosticScanSession({
+  freeze_frame_snapshot: {
+    freeze_frame_readout_status: "reported",
+    trigger_dtc_entries: [{ code: "P0300" }, { code: "P0171" }],
+    monitor_values: []
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    freeze_frame_trigger_count: 1
+  }
+});
+check(freezeFrameTriggerInventoryComparisonSession.coreReadoutInventorySummary?.freezeFrameTriggerCount === 2 && freezeFrameTriggerInventoryComparisonSession.coreReadoutInventorySummary?.countsById?.freeze_frame_snapshot === 0 && freezeFrameTriggerInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.importedFreezeFrameTriggerCount === 1 && freezeFrameTriggerInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.currentFreezeFrameTriggerCount === 2 && freezeFrameTriggerInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameTriggerCountDelta === 1 && freezeFrameTriggerInventoryComparisonSession.vehicleCommandEnabled === false && freezeFrameTriggerInventoryComparisonSession.wouldTransmit === false, "Freeze-frame trigger evidence count was not compared separately from PID values under read-only safety");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.capturedReadoutDelta), "Diagnostic scan session did not expose imported core captured readout delta");

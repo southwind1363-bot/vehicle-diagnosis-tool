@@ -5775,6 +5775,16 @@
         .find((pids) => Array.isArray(pids)) || [])).size;
     };
     const supportedPidCount = countSupportedPids(supportedPidMatrix);
+    const freezeFrameTriggerEntries = Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
+      ? freezeFrameSnapshot.triggerDtcEntries
+      : Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries)
+        ? freezeFrameSnapshot.trigger_dtc_entries
+        : [];
+    const freezeFrameTriggerCount = freezeFrameTriggerEntries.length > 0
+      ? freezeFrameTriggerEntries.length
+      : freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc
+        ? 1
+        : 0;
     const definitions = [
       { id: "dtc_snapshot", count: countItems(dtcSnapshot?.codes), valueKey: "dtcCount" },
       { id: "live_pid_snapshot", count: countItems(livePidSnapshot?.monitorValues), valueKey: "livePidValueCount" },
@@ -5870,6 +5880,11 @@
     const nextPendingReadoutId = pendingIds[0] || null;
     const nextPendingReadout = nextPendingReadoutId ? itemById[nextPendingReadoutId] || null : null;
     const totalValueCount = items.reduce((total, item) => total + item.count, 0);
+    const freezeFrameResponseUnavailable = ["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status)
+      || freezeFrameSnapshot?.blocked === true
+      || freezeFrameSnapshot?.isBlocked === true
+      || freezeFrameSnapshot?.is_blocked === true;
+    const recordedFreezeFrameTriggerCount = freezeFrameResponseUnavailable ? 0 : freezeFrameTriggerCount;
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -5921,6 +5936,10 @@
       hasDtcCodes: countsById.dtc_snapshot > 0,
       hasLivePidValues: countsById.live_pid_snapshot > 0,
       hasFreezeFrameValues: countsById.freeze_frame_snapshot > 0,
+      freezeFrameTriggerCount: recordedFreezeFrameTriggerCount,
+      freeze_frame_trigger_count: recordedFreezeFrameTriggerCount,
+      hasFreezeFrameTriggerEvidence: recordedFreezeFrameTriggerCount > 0,
+      has_freeze_frame_trigger_evidence: recordedFreezeFrameTriggerCount > 0,
       hasReadinessMonitors: countsById.readiness_snapshot > 0,
       hasEcuInfoItems: countsById.ecu_info_snapshot > 0,
       hasOnboardMonitorTests: countsById.onboard_monitor_snapshot > 0,
@@ -12821,6 +12840,7 @@
       pendingReadoutCount: ["pending_readout_count", "pending_count"],
       rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],
       readinessIncompleteCount: ["readiness_incomplete_count"],
+      freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
       totalValueCount: ["total_value_count"]
     };
     const readField = (summary = {}, field) => {
@@ -13029,7 +13049,13 @@
       ecuInfoMissingKeyDelta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
       ecu_info_missing_key_delta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
       rawPidUndecodedDelta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount"),
-      raw_pid_undecoded_delta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount")
+      raw_pid_undecoded_delta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount"),
+      importedFreezeFrameTriggerCount: readCount(importedInventory, "freezeFrameTriggerCount"),
+      imported_freeze_frame_trigger_count: readCount(importedInventory, "freezeFrameTriggerCount"),
+      currentFreezeFrameTriggerCount: readCount(currentSummary, "freezeFrameTriggerCount"),
+      current_freeze_frame_trigger_count: readCount(currentSummary, "freezeFrameTriggerCount"),
+      freezeFrameTriggerCountDelta: readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount"),
+      freeze_frame_trigger_count_delta: readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount")
     };
   }
 
@@ -13081,6 +13107,10 @@
       attempted_readout_count: toCount("attemptedReadoutCount", "attempted_readout_count", attemptedIds.length),
       totalValueCount,
       total_value_count: totalValueCount,
+      freezeFrameTriggerCount: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
+      freeze_frame_trigger_count: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
+      hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
+      has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
       counts_by_id: countsById,
       itemById,
