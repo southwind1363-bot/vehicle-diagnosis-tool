@@ -5785,6 +5785,14 @@
       : freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc
         ? 1
         : 0;
+    const freezeFrameTriggerKeys = [...new Set(freezeFrameTriggerEntries.map((entry) => [
+      String(entry?.code || entry?.dtc || "").trim().toUpperCase(),
+      String(entry?.subcode || entry?.sub_code || "").trim().toUpperCase() || "-",
+      String(entry?.codeFormat || entry?.code_format || "generic_obd").trim().toLowerCase().replace(/[\s-]+/g, "_") || "generic_obd",
+      normalizeDtcReportedStatus(entry?.reportedStatus || entry?.reported_status) || "unreported",
+      Number.isInteger(entry?.frameNumber) ? String(entry.frameNumber) : Number.isInteger(entry?.frame_number) ? String(entry.frame_number) : "-",
+      String(entry?.sourceEcu || entry?.source_ecu || "").trim().toUpperCase() || "-"
+    ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const definitions = [
       { id: "dtc_snapshot", count: countItems(dtcSnapshot?.codes), valueKey: "dtcCount" },
       { id: "live_pid_snapshot", count: countItems(livePidSnapshot?.monitorValues), valueKey: "livePidValueCount" },
@@ -5885,6 +5893,12 @@
       || freezeFrameSnapshot?.isBlocked === true
       || freezeFrameSnapshot?.is_blocked === true;
     const recordedFreezeFrameTriggerCount = freezeFrameResponseUnavailable ? 0 : freezeFrameTriggerCount;
+    const freezeFrameTriggerEvidenceRecorded = !freezeFrameResponseUnavailable && (
+      String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported"
+      || freezeFrameTriggerEntries.length > 0
+      || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
+    );
+    const recordedFreezeFrameTriggerKeys = freezeFrameTriggerEvidenceRecorded ? freezeFrameTriggerKeys : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -5938,6 +5952,10 @@
       hasFreezeFrameValues: countsById.freeze_frame_snapshot > 0,
       freezeFrameTriggerCount: recordedFreezeFrameTriggerCount,
       freeze_frame_trigger_count: recordedFreezeFrameTriggerCount,
+      freezeFrameTriggerKeys: recordedFreezeFrameTriggerKeys,
+      freeze_frame_trigger_keys: [...recordedFreezeFrameTriggerKeys],
+      freezeFrameTriggerEvidenceRecorded,
+      freeze_frame_trigger_evidence_recorded: freezeFrameTriggerEvidenceRecorded,
       hasFreezeFrameTriggerEvidence: recordedFreezeFrameTriggerCount > 0,
       has_freeze_frame_trigger_evidence: recordedFreezeFrameTriggerCount > 0,
       hasReadinessMonitors: countsById.readiness_snapshot > 0,
@@ -12841,6 +12859,8 @@
       rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],
       readinessIncompleteCount: ["readiness_incomplete_count"],
       freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
+      freezeFrameTriggerKeys: ["freeze_frame_trigger_keys"],
+      freezeFrameTriggerEvidenceRecorded: ["freeze_frame_trigger_evidence_recorded"],
       totalValueCount: ["total_value_count"]
     };
     const readField = (summary = {}, field) => {
@@ -12901,6 +12921,20 @@
       ...Object.keys(currentFailedReasonById)
     ])].sort();
     const changedFailedReasonIds = failedReasonIds.filter((id) => (importedFailedReasonById[id] || null) !== (currentFailedReasonById[id] || null));
+    const readBoolean = (summary, field) => {
+      const value = readField(summary, field);
+      return value === true || ["true", "1", "yes"].includes(String(value || "").trim().toLowerCase());
+    };
+    const readTriggerKeys = (summary) => Array.isArray(readField(summary, "freezeFrameTriggerKeys"))
+      ? [...new Set(readField(summary, "freezeFrameTriggerKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      : [];
+    const importedFreezeFrameTriggerEvidenceRecorded = readBoolean(importedInventory, "freezeFrameTriggerEvidenceRecorded");
+    const currentFreezeFrameTriggerEvidenceRecorded = readBoolean(currentSummary, "freezeFrameTriggerEvidenceRecorded");
+    const freezeFrameTriggerComparisonAvailable = importedFreezeFrameTriggerEvidenceRecorded && currentFreezeFrameTriggerEvidenceRecorded;
+    const importedFreezeFrameTriggerKeys = readTriggerKeys(importedInventory);
+    const currentFreezeFrameTriggerKeys = readTriggerKeys(currentSummary);
+    const freezeFrameTriggerAddedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(currentFreezeFrameTriggerKeys, importedFreezeFrameTriggerKeys) : [];
+    const freezeFrameTriggerRemovedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(importedFreezeFrameTriggerKeys, currentFreezeFrameTriggerKeys) : [];
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
     const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
     const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
@@ -13054,8 +13088,24 @@
       imported_freeze_frame_trigger_count: readCount(importedInventory, "freezeFrameTriggerCount"),
       currentFreezeFrameTriggerCount: readCount(currentSummary, "freezeFrameTriggerCount"),
       current_freeze_frame_trigger_count: readCount(currentSummary, "freezeFrameTriggerCount"),
-      freezeFrameTriggerCountDelta: readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount"),
-      freeze_frame_trigger_count_delta: readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount")
+      importedFreezeFrameTriggerEvidenceRecorded,
+      imported_freeze_frame_trigger_evidence_recorded: importedFreezeFrameTriggerEvidenceRecorded,
+      currentFreezeFrameTriggerEvidenceRecorded,
+      current_freeze_frame_trigger_evidence_recorded: currentFreezeFrameTriggerEvidenceRecorded,
+      freezeFrameTriggerComparisonAvailable,
+      freeze_frame_trigger_comparison_available: freezeFrameTriggerComparisonAvailable,
+      importedFreezeFrameTriggerKeys,
+      imported_freeze_frame_trigger_keys: importedFreezeFrameTriggerKeys,
+      currentFreezeFrameTriggerKeys,
+      current_freeze_frame_trigger_keys: currentFreezeFrameTriggerKeys,
+      freezeFrameTriggerKeysChanged: freezeFrameTriggerComparisonAvailable && importedFreezeFrameTriggerKeys.join("|") !== currentFreezeFrameTriggerKeys.join("|"),
+      freeze_frame_trigger_keys_changed: freezeFrameTriggerComparisonAvailable && importedFreezeFrameTriggerKeys.join("|") !== currentFreezeFrameTriggerKeys.join("|"),
+      freezeFrameTriggerAddedKeys,
+      freeze_frame_trigger_added_keys: freezeFrameTriggerAddedKeys,
+      freezeFrameTriggerRemovedKeys,
+      freeze_frame_trigger_removed_keys: freezeFrameTriggerRemovedKeys,
+      freezeFrameTriggerCountDelta: freezeFrameTriggerComparisonAvailable ? readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount") : null,
+      freeze_frame_trigger_count_delta: freezeFrameTriggerComparisonAvailable ? readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount") : null
     };
   }
 
@@ -13109,6 +13159,10 @@
       total_value_count: totalValueCount,
       freezeFrameTriggerCount: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
       freeze_frame_trigger_count: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
+      freezeFrameTriggerKeys: normalizeIds(summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys),
+      freeze_frame_trigger_keys: normalizeIds(summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys),
+      freezeFrameTriggerEvidenceRecorded: pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
+      freeze_frame_trigger_evidence_recorded: pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
       hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
@@ -14253,6 +14307,7 @@
       || comparison.failedReasonIdsChanged === true
       || comparison.nextPendingReadoutChanged === true
       || comparison.valueCountsChanged === true
+      || comparison.freezeFrameTriggerKeysChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -14272,7 +14327,7 @@
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
       comparison.nextPendingReadoutChanged === true ? "next_readout" : null,
-      Number(comparison.freezeFrameTriggerCountDelta || 0) !== 0 ? "freeze_frame_triggers" : null,
+      Number(comparison.freezeFrameTriggerCountDelta || 0) !== 0 || comparison.freezeFrameTriggerKeysChanged === true ? "freeze_frame_triggers" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
