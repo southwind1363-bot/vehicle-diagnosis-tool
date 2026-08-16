@@ -5899,6 +5899,28 @@
       || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
     );
     const recordedFreezeFrameTriggerKeys = freezeFrameTriggerEvidenceRecorded ? freezeFrameTriggerKeys : [];
+    const freezeFrameValueEntries = Array.isArray(freezeFrameSnapshot?.monitorValues)
+      ? freezeFrameSnapshot.monitorValues
+      : Array.isArray(freezeFrameSnapshot?.monitor_values)
+        ? freezeFrameSnapshot.monitor_values
+        : [];
+    const freezeFrameValueEvidenceRecorded = !freezeFrameResponseUnavailable
+      && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported";
+    const freezeFrameValueKeys = [...new Set(freezeFrameValueEntries.map((value) => {
+      const id = String(value?.id || value?.monitorId || value?.monitor_id || value?.pid || "").trim().toLowerCase();
+      const rawValue = value?.value;
+      if (!id || rawValue === undefined || rawValue === null || String(rawValue).trim() === "") return null;
+      const frameNumber = Number.isInteger(value?.freezeFrameNumber)
+        ? String(value.freezeFrameNumber)
+        : Number.isInteger(value?.freeze_frame_number)
+          ? String(value.freeze_frame_number)
+          : "-";
+      const sourceEcu = String(value?.sourceEcu || value?.source_ecu || freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
+      const unit = String(value?.unit || "").trim().toLowerCase().replace(/\|/g, " ") || "-";
+      const reportedValue = String(rawValue).trim().replace(/\|/g, " ").slice(0, 96);
+      return [id, frameNumber, sourceEcu, unit, reportedValue].join("|");
+    }).filter(Boolean))].sort();
+    const recordedFreezeFrameValueKeys = freezeFrameValueEvidenceRecorded ? freezeFrameValueKeys : [];
     const readinessEcuSnapshots = Array.isArray(readinessSnapshot?.readinessEcuSnapshots)
       ? readinessSnapshot.readinessEcuSnapshots
       : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
@@ -6029,6 +6051,12 @@
       hasDtcCodes: countsById.dtc_snapshot > 0,
       hasLivePidValues: countsById.live_pid_snapshot > 0,
       hasFreezeFrameValues: countsById.freeze_frame_snapshot > 0,
+      freezeFrameValueCount: recordedFreezeFrameValueKeys.length,
+      freeze_frame_value_count: recordedFreezeFrameValueKeys.length,
+      freezeFrameValueKeys: recordedFreezeFrameValueKeys,
+      freeze_frame_value_keys: [...recordedFreezeFrameValueKeys],
+      freezeFrameValueEvidenceRecorded,
+      freeze_frame_value_evidence_recorded: freezeFrameValueEvidenceRecorded,
       freezeFrameTriggerCount: recordedFreezeFrameTriggerCount,
       freeze_frame_trigger_count: recordedFreezeFrameTriggerCount,
       freezeFrameTriggerKeys: recordedFreezeFrameTriggerKeys,
@@ -13080,6 +13108,9 @@
       supportedPidCount: ["supported_pid_count"],
       supportedPidKeys: ["supported_pid_keys"],
       supportedPidEvidenceRecorded: ["supported_pid_evidence_recorded"],
+      freezeFrameValueCount: ["freeze_frame_value_count"],
+      freezeFrameValueKeys: ["freeze_frame_value_keys"],
+      freezeFrameValueEvidenceRecorded: ["freeze_frame_value_evidence_recorded"],
       freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
       freezeFrameTriggerKeys: ["freeze_frame_trigger_keys"],
       freezeFrameTriggerEvidenceRecorded: ["freeze_frame_trigger_evidence_recorded"],
@@ -13157,6 +13188,16 @@
     const currentFreezeFrameTriggerKeys = readTriggerKeys(currentSummary);
     const freezeFrameTriggerAddedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(currentFreezeFrameTriggerKeys, importedFreezeFrameTriggerKeys) : [];
     const freezeFrameTriggerRemovedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(importedFreezeFrameTriggerKeys, currentFreezeFrameTriggerKeys) : [];
+    const readFreezeFrameValueKeys = (summary) => Array.isArray(readField(summary, "freezeFrameValueKeys"))
+      ? [...new Set(readField(summary, "freezeFrameValueKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      : [];
+    const importedFreezeFrameValueEvidenceRecorded = readBoolean(importedInventory, "freezeFrameValueEvidenceRecorded");
+    const currentFreezeFrameValueEvidenceRecorded = readBoolean(currentSummary, "freezeFrameValueEvidenceRecorded");
+    const freezeFrameValueComparisonAvailable = importedFreezeFrameValueEvidenceRecorded && currentFreezeFrameValueEvidenceRecorded;
+    const importedFreezeFrameValueKeys = readFreezeFrameValueKeys(importedInventory);
+    const currentFreezeFrameValueKeys = readFreezeFrameValueKeys(currentSummary);
+    const freezeFrameValueAddedKeys = freezeFrameValueComparisonAvailable ? diffIds(currentFreezeFrameValueKeys, importedFreezeFrameValueKeys) : [];
+    const freezeFrameValueRemovedKeys = freezeFrameValueComparisonAvailable ? diffIds(importedFreezeFrameValueKeys, currentFreezeFrameValueKeys) : [];
     const readReadinessKeys = (summary) => Array.isArray(readField(summary, "readinessMonitorKeys"))
       ? [...new Set(readField(summary, "readinessMonitorKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
@@ -13346,6 +13387,28 @@
       ecu_info_missing_key_delta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
       rawPidUndecodedDelta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount"),
       raw_pid_undecoded_delta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount"),
+      importedFreezeFrameValueCount: readCount(importedInventory, "freezeFrameValueCount", "freezeFrameValueKeys"),
+      imported_freeze_frame_value_count: readCount(importedInventory, "freezeFrameValueCount", "freezeFrameValueKeys"),
+      currentFreezeFrameValueCount: readCount(currentSummary, "freezeFrameValueCount", "freezeFrameValueKeys"),
+      current_freeze_frame_value_count: readCount(currentSummary, "freezeFrameValueCount", "freezeFrameValueKeys"),
+      importedFreezeFrameValueEvidenceRecorded,
+      imported_freeze_frame_value_evidence_recorded: importedFreezeFrameValueEvidenceRecorded,
+      currentFreezeFrameValueEvidenceRecorded,
+      current_freeze_frame_value_evidence_recorded: currentFreezeFrameValueEvidenceRecorded,
+      freezeFrameValueComparisonAvailable,
+      freeze_frame_value_comparison_available: freezeFrameValueComparisonAvailable,
+      importedFreezeFrameValueKeys,
+      imported_freeze_frame_value_keys: importedFreezeFrameValueKeys,
+      currentFreezeFrameValueKeys,
+      current_freeze_frame_value_keys: currentFreezeFrameValueKeys,
+      freezeFrameValueKeysChanged: freezeFrameValueComparisonAvailable && importedFreezeFrameValueKeys.join("|") !== currentFreezeFrameValueKeys.join("|"),
+      freeze_frame_value_keys_changed: freezeFrameValueComparisonAvailable && importedFreezeFrameValueKeys.join("|") !== currentFreezeFrameValueKeys.join("|"),
+      freezeFrameValueAddedKeys,
+      freeze_frame_value_added_keys: freezeFrameValueAddedKeys,
+      freezeFrameValueRemovedKeys,
+      freeze_frame_value_removed_keys: freezeFrameValueRemovedKeys,
+      freezeFrameValueCountDelta: freezeFrameValueComparisonAvailable ? readCount(currentSummary, "freezeFrameValueCount", "freezeFrameValueKeys") - readCount(importedInventory, "freezeFrameValueCount", "freezeFrameValueKeys") : null,
+      freeze_frame_value_count_delta: freezeFrameValueComparisonAvailable ? readCount(currentSummary, "freezeFrameValueCount", "freezeFrameValueKeys") - readCount(importedInventory, "freezeFrameValueCount", "freezeFrameValueKeys") : null,
       importedFreezeFrameTriggerCount: readCount(importedInventory, "freezeFrameTriggerCount"),
       imported_freeze_frame_trigger_count: readCount(importedInventory, "freezeFrameTriggerCount"),
       currentFreezeFrameTriggerCount: readCount(currentSummary, "freezeFrameTriggerCount"),
@@ -13499,6 +13562,12 @@
       attempted_readout_count: toCount("attemptedReadoutCount", "attempted_readout_count", attemptedIds.length),
       totalValueCount,
       total_value_count: totalValueCount,
+      freezeFrameValueCount: toCount("freezeFrameValueCount", "freeze_frame_value_count", 0),
+      freeze_frame_value_count: toCount("freezeFrameValueCount", "freeze_frame_value_count", 0),
+      freezeFrameValueKeys: normalizeIds(summary.freezeFrameValueKeys || summary.freeze_frame_value_keys),
+      freeze_frame_value_keys: normalizeIds(summary.freezeFrameValueKeys || summary.freeze_frame_value_keys),
+      freezeFrameValueEvidenceRecorded: pickDefined(summary.freezeFrameValueEvidenceRecorded, summary.freeze_frame_value_evidence_recorded, false) === true,
+      freeze_frame_value_evidence_recorded: pickDefined(summary.freezeFrameValueEvidenceRecorded, summary.freeze_frame_value_evidence_recorded, false) === true,
       freezeFrameTriggerCount: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
       freeze_frame_trigger_count: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
       freezeFrameTriggerKeys: normalizeIds(summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys),
@@ -14617,7 +14686,7 @@
     ];
     const comparisons = sectionInputs.map((item) => item.comparison).filter(Boolean);
     if (!comparisons.length) return null;
-    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.pendingReadoutDelta || comparison.attemptedReadoutDelta || comparison.blockerCountDelta || comparison.failedReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.freezeFrameTriggerCountDelta || comparison.issueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || comparison.onboardMonitorFailedDelta || comparison.reportedDtcStateTotalDelta || 0) !== 0;
+    const hasComparisonMetricChanges = (comparison = {}) => Number(comparison.completionDelta || comparison.requiredCountDelta || comparison.capturedCountDelta || comparison.missingCountDelta || comparison.pendingCountDelta || comparison.emptyCountDelta || comparison.requiredReadoutDelta || comparison.capturedReadoutDelta || comparison.missingReadoutDelta || comparison.emptyReadoutDelta || comparison.pendingReadoutDelta || comparison.attemptedReadoutDelta || comparison.blockerCountDelta || comparison.failedReadoutDelta || comparison.totalCountDelta || comparison.mappedCountDelta || comparison.unmappedCountDelta || comparison.blockedReasonCountDelta || comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || comparison.totalValueCountDelta || comparison.freezeFrameValueCountDelta || comparison.freezeFrameTriggerCountDelta || comparison.issueCountDelta || comparison.rawPidUndecodedDelta || comparison.readinessIncompleteDelta || comparison.ecuInfoMissingKeyDelta || comparison.onboardMonitorFailedDelta || comparison.reportedDtcStateTotalDelta || 0) !== 0;
     const hasSectionChanges = (comparison = {}) => comparison.statusChanged === true
       || comparison.stateChanged === true
       || comparison.readyForAnalysisChanged === true
@@ -14675,6 +14744,7 @@
       || comparison.failedReasonIdsChanged === true
       || comparison.nextPendingReadoutChanged === true
       || comparison.valueCountsChanged === true
+      || comparison.freezeFrameValueKeysChanged === true
       || comparison.freezeFrameTriggerKeysChanged === true
       || comparison.readinessMonitorKeysChanged === true
       || comparison.ecuInfoItemKeysChanged === true
@@ -14701,6 +14771,7 @@
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
       comparison.nextPendingReadoutChanged === true ? "next_readout" : null,
+      Number(comparison.freezeFrameValueCountDelta || 0) !== 0 || comparison.freezeFrameValueKeysChanged === true ? "freeze_frame_values" : null,
       Number(comparison.freezeFrameTriggerCountDelta || 0) !== 0 || comparison.freezeFrameTriggerKeysChanged === true ? "freeze_frame_triggers" : null,
       comparison.readinessMonitorKeysChanged === true ? "readiness_monitor_states" : null,
       comparison.ecuInfoItemKeysChanged === true ? "ecu_info_items" : null,
@@ -14738,7 +14809,7 @@
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
-        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys"
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "freezeFrameValueAddedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14753,7 +14824,7 @@
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
-        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys"
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "freezeFrameValueRemovedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14905,6 +14976,7 @@
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
       if (reasonIds.includes("observed_ecu_responses")) return "ecu_response";
       if (reasonIds.includes("dtc_identities")) return "dtc_identity";
+      if (reasonIds.includes("freeze_frame_values")) return "freeze_frame_value";
       return "other";
     };
     const changedIdSummaries = [...new Set([...addedIds, ...removedIds])].map((id) => {
