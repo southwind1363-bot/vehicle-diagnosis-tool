@@ -8960,7 +8960,7 @@
           vehicleApplicabilityEcuMatchSummary
         )
     );
-    const coreSessionStatus = normalizeCoreSessionStatusAliases(parts.coreSessionStatus || parts.core_session_status || null)
+    const coreSessionStatus = normalizeCoreSessionStatusAliases(parts.coreSessionStatus || parts.core_session_status || null, dtcSnapshot)
       || buildCoreSessionStatus({
         readoutCoverage: resolvedReadoutCoverage,
         vehicleApplicability: resolvedMetadata.vehicleApplicability,
@@ -8976,7 +8976,7 @@
         warnings: resolvedWarnings,
         nextReadoutCandidates: resolvedNextReadoutCandidates
       });
-    const diagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(parts.diagnosticFlowSummary || parts.diagnostic_flow_summary || null)
+    const diagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(parts.diagnosticFlowSummary || parts.diagnostic_flow_summary || null, coreSessionStatus)
       || buildDiagnosticFlowSummary(coreSessionStatus);
     const readoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(parts.readoutCompletionSummary || parts.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || coreSessionStatus.readout_completion_summary || null);
     const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.analysisReadinessSummary || parts.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || coreSessionStatus.analysis_readiness_summary || null);
@@ -9900,6 +9900,9 @@
     const dtcStatusSummary = dtcSnapshot?.dtcStatusSummary
       || dtcSnapshot?.dtc_status_summary
       || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
+    const dtcReportedStatusSummary = dtcSnapshot?.dtcReportedStatusSummary
+      || dtcSnapshot?.dtc_reported_status_summary
+      || buildDtcReportedStatusSummary(["blocked", "unparsed"].includes(String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").trim().toLowerCase()) ? [] : dtcSnapshot?.dtcs || []);
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const readoutRequestContext = {
       diagnosticProtocol: readoutRequestProtocolValues.find((value) => /\buds\b/i.test(String(value))) || readoutRequestProtocolValues[0] || null,
@@ -10822,6 +10825,8 @@
       readout_quality_summary: readoutQualitySummary,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReportedStatusSummary,
+      dtc_reported_status_summary: dtcReportedStatusSummary,
       dtcStatusReadoutPlan,
       dtc_status_readout_plan: dtcStatusReadoutPlan,
       nextPendingReadoutId,
@@ -10953,6 +10958,7 @@
     const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
     const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || readiness.readoutQualitySummary || readiness.readout_quality_summary || {};
     const dtcStatusSummary = coreSessionStatus?.dtcStatusSummary || coreSessionStatus?.dtc_status_summary || {};
+    const dtcReportedStatusSummary = coreSessionStatus?.dtcReportedStatusSummary || coreSessionStatus?.dtc_reported_status_summary || {};
     const readoutQualityChecklist = diagnosticChecklistById.readout_quality || null;
     const applicabilityStatus = coreSessionStatus?.applicabilityStatus || coreSessionStatus?.applicability_status || vehicleApplicabilityChecklist?.applicabilityStatus || vehicleApplicabilityChecklist?.applicability_status || "unknown";
     const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
@@ -11348,6 +11354,8 @@
       readout_quality_summary: readoutQualitySummary && typeof readoutQualitySummary === "object" ? { ...readoutQualitySummary } : {},
       dtcStatusSummary: dtcStatusSummary && typeof dtcStatusSummary === "object" ? { ...dtcStatusSummary } : {},
       dtc_status_summary: dtcStatusSummary && typeof dtcStatusSummary === "object" ? { ...dtcStatusSummary } : {},
+      dtcReportedStatusSummary: dtcReportedStatusSummary && typeof dtcReportedStatusSummary === "object" ? { ...dtcReportedStatusSummary } : {},
+      dtc_reported_status_summary: dtcReportedStatusSummary && typeof dtcReportedStatusSummary === "object" ? { ...dtcReportedStatusSummary } : {},
       readoutQualityReviewRequired: pickDefined(readoutQualitySummary?.reviewRequired, readoutQualitySummary?.review_required) === true || readoutQualityChecklist?.state === "review",
       readout_quality_review_required: pickDefined(readoutQualitySummary?.reviewRequired, readoutQualitySummary?.review_required) === true || readoutQualityChecklist?.state === "review",
       readoutQualityIssueCount: Number.isFinite(Number(readAliasValue(readoutQualitySummary, "issueCount"))) ? Number(readAliasValue(readoutQualitySummary, "issueCount")) : 0,
@@ -11837,7 +11845,7 @@
     };
   }
 
-  function normalizeCoreSessionStatusAliases(summary = null) {
+  function normalizeCoreSessionStatusAliases(summary = null, fallbackDtcSnapshot = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
     const schemaVersion = summary.schemaVersion || summary.schema_version || "core_session_status_v1";
     const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
@@ -11871,6 +11879,9 @@
     const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
     const dtcStatusSummary = normalizeObject("dtcStatusSummary", "dtc_status_summary");
+    const dtcReportedStatusSummary = fallbackDtcSnapshot?.dtcReportedStatusSummary
+      || fallbackDtcSnapshot?.dtc_reported_status_summary
+      || normalizeObject("dtcReportedStatusSummary", "dtc_reported_status_summary");
     const dtcStatusReadoutPlan = summary.dtcStatusReadoutPlan || summary.dtc_status_readout_plan || null;
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
@@ -11950,6 +11961,8 @@
       readout_quality_summary: readoutQualitySummary,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReportedStatusSummary,
+      dtc_reported_status_summary: dtcReportedStatusSummary,
       dtcStatusReadoutPlan,
       dtc_status_readout_plan: dtcStatusReadoutPlan,
       nextPendingReadoutId: pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutIds[0], null),
@@ -12023,7 +12036,7 @@
     };
   }
 
-  function normalizeDiagnosticFlowSummaryAliases(summary = null) {
+  function normalizeDiagnosticFlowSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
     const schemaVersion = summary.schemaVersion || summary.schema_version || "diagnostic_flow_summary_v1";
     const toCount = (camelKey, snakeKey, fallback = 0) => {
@@ -12059,6 +12072,11 @@
     const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
     const dtcStatusSummary = summary.dtcStatusSummary || summary.dtc_status_summary || {};
+    const dtcReportedStatusSummary = fallbackCoreSessionStatus?.dtcReportedStatusSummary
+      || fallbackCoreSessionStatus?.dtc_reported_status_summary
+      || summary.dtcReportedStatusSummary
+      || summary.dtc_reported_status_summary
+      || {};
     const vehicleApplicabilityChecklist = summary.vehicleApplicabilityChecklist || summary.vehicle_applicability_checklist || null;
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || {};
     const vehicleApplicabilityEvidenceSummary = summary.vehicleApplicabilityEvidenceSummary
@@ -12163,6 +12181,8 @@
       readout_quality_summary: readoutQualitySummary,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReportedStatusSummary,
+      dtc_reported_status_summary: dtcReportedStatusSummary,
       readoutQualityReviewRequired: pickDefined(summary.readoutQualityReviewRequired, summary.readout_quality_review_required, false) === true,
       readout_quality_review_required: pickDefined(summary.readout_quality_review_required, summary.readoutQualityReviewRequired, false) === true,
       readoutQualityIssueCount: toCount("readoutQualityIssueCount", "readout_quality_issue_count", readoutQualityIssueIds.length),
