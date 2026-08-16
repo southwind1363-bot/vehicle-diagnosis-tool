@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.10.7";
+const APP_VERSION = "3.10.8";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7968,6 +7968,11 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const currentFreezeFrameValueCount = Number(summary.currentFreezeFrameValueCount ?? summary.current_freeze_frame_value_count ?? 0);
   const addedFreezeFrameValueKeys = Array.isArray(summary.freezeFrameValueAddedKeys) ? summary.freezeFrameValueAddedKeys : Array.isArray(summary.freeze_frame_value_added_keys) ? summary.freeze_frame_value_added_keys : [];
   const removedFreezeFrameValueKeys = Array.isArray(summary.freezeFrameValueRemovedKeys) ? summary.freezeFrameValueRemovedKeys : Array.isArray(summary.freeze_frame_value_removed_keys) ? summary.freeze_frame_value_removed_keys : [];
+  const freezeFrameUdsRecordComparisonAvailable = summary.freezeFrameUdsRecordComparisonAvailable === true || summary.freeze_frame_uds_record_comparison_available === true;
+  const importedFreezeFrameUdsRecordCount = Number(summary.importedFreezeFrameUdsRecordCount ?? summary.imported_freeze_frame_uds_record_count ?? 0);
+  const currentFreezeFrameUdsRecordCount = Number(summary.currentFreezeFrameUdsRecordCount ?? summary.current_freeze_frame_uds_record_count ?? 0);
+  const addedFreezeFrameUdsRecordKeys = Array.isArray(summary.freezeFrameUdsRecordAddedKeys) ? summary.freezeFrameUdsRecordAddedKeys : Array.isArray(summary.freeze_frame_uds_record_added_keys) ? summary.freeze_frame_uds_record_added_keys : [];
+  const removedFreezeFrameUdsRecordKeys = Array.isArray(summary.freezeFrameUdsRecordRemovedKeys) ? summary.freezeFrameUdsRecordRemovedKeys : Array.isArray(summary.freeze_frame_uds_record_removed_keys) ? summary.freeze_frame_uds_record_removed_keys : [];
   const readinessMonitorComparisonAvailable = summary.readinessMonitorComparisonAvailable === true || summary.readiness_monitor_comparison_available === true;
   const importedReadinessMonitorCount = Number(summary.importedReadinessMonitorCount ?? summary.imported_readiness_monitor_count ?? 0);
   const currentReadinessMonitorCount = Number(summary.currentReadinessMonitorCount ?? summary.current_readiness_monitor_count ?? 0);
@@ -8021,6 +8026,14 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
     parts.push(`FF値:${[...addedFreezeFrameValueKeys.map((key) => `+${displayFreezeFrameValueKey(key)}`), ...removedFreezeFrameValueKeys.map((key) => `-${displayFreezeFrameValueKey(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!freezeFrameValueComparisonAvailable && (importedFreezeFrameValueCount > 0 || currentFreezeFrameValueCount > 0)) parts.push("FF値詳細比較不可");
+  if (addedFreezeFrameUdsRecordKeys.length || removedFreezeFrameUdsRecordKeys.length) {
+    const displayFreezeFrameUdsRecordKey = (key) => {
+      const [kind, code, , , , recordNumber] = String(key || "").split("|");
+      return kind === "snapshot" ? `${code || "DTC"}#${recordNumber || "?"}` : `保存#${recordNumber || "?"}`;
+    };
+    parts.push(`UDS FF:${[...addedFreezeFrameUdsRecordKeys.map((key) => `+${displayFreezeFrameUdsRecordKey(key)}`), ...removedFreezeFrameUdsRecordKeys.map((key) => `-${displayFreezeFrameUdsRecordKey(key)}`)].slice(0, 3).join(",")}`);
+  }
+  if (!freezeFrameUdsRecordComparisonAvailable && (importedFreezeFrameUdsRecordCount > 0 || currentFreezeFrameUdsRecordCount > 0)) parts.push("UDS FF詳細比較不可");
   if (addedReadinessMonitorKeys.length || removedReadinessMonitorKeys.length) {
     const displayReadinessKey = (key) => {
       const [id, , , complete] = String(key || "").split("|");
