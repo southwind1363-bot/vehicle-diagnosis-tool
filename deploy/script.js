@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.95";
+const APP_VERSION = "3.9.96";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3404,7 +3404,7 @@ function getObdAutoStage() {
   const hasReadout = Boolean(
     dtcSnapshot?.dtcs?.length
     || livePidSnapshot?.monitorValues?.length
-    || freezeFrameSnapshot?.monitorValues?.length
+    || hasObdFreezeFrameEvidence(freezeFrameSnapshot)
     || ecuInfoSnapshot?.itemCount
     || readinessSnapshot?.monitorCount
     || onboardMonitorSnapshot?.testCount
@@ -4226,6 +4226,26 @@ function buildDiagnosticCoreProgressSnapshot() {
     recentDoneLabels,
     nextLabel
   };
+}
+
+function getObdFreezeFrameTriggerEntries(snapshot = null) {
+  const entries = Array.isArray(snapshot?.triggerDtcEntries)
+    ? snapshot.triggerDtcEntries
+    : Array.isArray(snapshot?.trigger_dtc_entries) ? snapshot.trigger_dtc_entries : [];
+  return entries.filter((entry) => String(entry?.code || entry?.dtc || "").trim());
+}
+
+function hasObdFreezeFrameEvidence(snapshot = null) {
+  return Boolean(snapshot?.monitorValues?.length || snapshot?.monitor_values?.length || snapshot?.triggerDtc || snapshot?.trigger_dtc || getObdFreezeFrameTriggerEntries(snapshot).length);
+}
+
+function formatObdFreezeFrameTriggerEntry(entry = null) {
+  const code = String(entry?.code || entry?.dtc || "").trim().toUpperCase();
+  if (!code) return "起点DTC未記録";
+  const reportedStatus = String(entry?.reportedStatus ?? entry?.reported_status ?? "").trim();
+  const frameNumber = entry?.frameNumber ?? entry?.frame_number ?? null;
+  const ecu = String(entry?.sourceEcu ?? entry?.source_ecu ?? "").trim();
+  return `${code}${reportedStatus ? ` / ${reportedStatus}` : ""}${Number.isInteger(Number(frameNumber)) ? ` / #${Number(frameNumber)}` : ""}${ecu ? ` / ${ecu}` : ""}`;
 }
 
 function renderObdProgressOverview() {
@@ -7484,7 +7504,8 @@ function renderObdBridgeSessionDetails(session = null) {
   }
 
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
-  if (freezeFrameValues.length) {
+  const freezeFrameTriggerEntries = getObdFreezeFrameTriggerEntries(freezeFrameSnapshot);
+  if (freezeFrameValues.length || freezeFrameTriggerEntries.length) {
     const freezeExpectedSummary = summarizeObdExpectedItems(freezeFrameSnapshot?.expectedItems || []);
     const freezeFrameEcuSnapshots = freezeFrameSnapshot?.freezeFrameEcuSnapshots || freezeFrameSnapshot?.freeze_frame_ecu_snapshots || [];
     const freezeFrameEcuScopeLines = freezeFrameEcuSnapshots.length > 1
@@ -7500,8 +7521,14 @@ function renderObdBridgeSessionDetails(session = null) {
       : [];
     const lines = [];
     lines.push(...freezeFrameEcuScopeLines);
-    if (freezeFrameSnapshot?.triggerDtc) lines.push(`起点DTC: ${freezeFrameSnapshot.triggerDtc}`);
-    lines.push(`要約: ${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}`);
+    if (freezeFrameTriggerEntries.length) {
+      lines.push(`起点DTC: ${freezeFrameTriggerEntries.slice(0, 4).map(formatObdFreezeFrameTriggerEntry).join(" / ")}`);
+    } else if (freezeFrameSnapshot?.triggerDtc) {
+      lines.push(`起点DTC: ${freezeFrameSnapshot.triggerDtc}`);
+    }
+    lines.push(freezeFrameValues.length
+      ? `要約: ${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}`
+      : "読取値: 未出力 (起点情報のみ取得)");
     if (freezeExpectedSummary.totalCount) {
       lines.push(`取得状況: ${freezeExpectedSummary.capturedCount}/${freezeExpectedSummary.totalCount}`);
     }
@@ -8378,6 +8405,12 @@ function renderObdDeveloperSessionSummary(session = null) {
   const ecuInfoReadoutStatusLabel = formatObdReadoutStatus(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, NO_DATA);
   const ecuInfoResponseFormatLabel = formatObdEcuInfoResponseFormat(ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format, NO_DATA);
   const freezeFrameReadoutStatusLabel = formatObdReadoutStatus(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status, NO_DATA);
+  const freezeFrameTriggerEntries = getObdFreezeFrameTriggerEntries(freezeFrameSnapshot);
+  const freezeFrameSummaryLabel = freezeFrameSnapshot?.monitorValues?.length
+    ? `${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}${freezeFrameSnapshot?.triggerDtc ? ` / 起点${freezeFrameSnapshot.triggerDtc}` : ""}`
+    : freezeFrameTriggerEntries.length
+      ? `起点 ${freezeFrameTriggerEntries.length}件 / 値未出力`
+      : 0;
   const freezeFrameTriggerNumber = freezeFrameSnapshot?.triggerFrameNumber ?? freezeFrameSnapshot?.trigger_frame_number ?? null;
   const udsDtcSnapshotRecordCount = Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords || freezeFrameSnapshot?.uds_dtc_snapshot_records)
     ? (freezeFrameSnapshot.udsDtcSnapshotRecords || freezeFrameSnapshot.uds_dtc_snapshot_records).length
@@ -8558,9 +8591,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
     ["Mode09対応", ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],
     ["Mode09対応タイプ00", ecuInfoSnapshot?.supportInfoTypesCaptured === false ? "未取得" : "取得済み"],
-    ["FF", freezeFrameSnapshot?.monitorValues?.length
-      ? `${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}${freezeFrameSnapshot?.triggerDtc ? ` / 起点${freezeFrameSnapshot.triggerDtc}` : ""}`
-      : 0],
+    ["FF", freezeFrameSummaryLabel],
     ["FF読取状態", freezeFrameReadoutStatusLabel],
     ["FF起点番号", freezeFrameTriggerNumber === null ? NO_DATA : `#${freezeFrameTriggerNumber}`],
     ["FF番号", freezeFrameNumbersLabel],
@@ -9337,6 +9368,7 @@ function analyzeObdScannerImport(options = {}) {
   const summaryEcuResponseSummary = summarySource.ecuResponseSummary || summarySource.ecu_response_summary || null;
   const summaryOnboardMonitorSnapshot = summarySource.onboardMonitorSnapshot || summarySource.onboard_monitor_snapshot || null;
   const summaryFreezeFrameSnapshot = summarySource.freezeFrameSnapshot || summarySource.freeze_frame_snapshot || null;
+  const summaryFreezeFrameTriggerEntries = getObdFreezeFrameTriggerEntries(summaryFreezeFrameSnapshot);
   const readinessNoteSummary = formatObdBridgeReadinessSummary(summaryReadinessSnapshot);
   if (readinessNoteSummary !== NO_DATA) {
     notes.push(`レディネス${readinessNoteSummary}`);
@@ -9384,7 +9416,11 @@ function analyzeObdScannerImport(options = {}) {
     notes.push(`FF ${summaryFreezeFrameSnapshot.monitorValues.length}項目`);
   }
   if (summaryEcuInfoSnapshot?.keyItemSummary?.totalCount > 0) notes.push(`主要ECU情報${formatObdBridgeEcuKeySummary(summaryEcuInfoSnapshot.keyItemSummary)}`);
-  if (summaryFreezeFrameSnapshot?.triggerDtc) notes.push(`FF起点${summaryFreezeFrameSnapshot.triggerDtc}`);
+  if (summaryFreezeFrameTriggerEntries.length) {
+    notes.push(`FF起点${summaryFreezeFrameTriggerEntries.slice(0, 3).map(formatObdFreezeFrameTriggerEntry).join(" / ")}`);
+  } else if (summaryFreezeFrameSnapshot?.triggerDtc) {
+    notes.push(`FF起点${summaryFreezeFrameSnapshot.triggerDtc}`);
+  }
   if (summaryFreezeFrameSnapshot?.monitorValueSummary?.totalCount > 0) notes.push(`FF要約${formatObdBridgeMonitorSummary(summaryFreezeFrameSnapshot.monitorValueSummary)}`);
   const warningLabels = getNonBlockingWarningLabels(summarySource, 2);
   if (warningLabels.length) {
