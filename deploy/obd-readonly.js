@@ -10245,6 +10245,47 @@
     };
   }
 
+  function buildDtcFaultDetectionCounterSummary(dtcSnapshot = {}) {
+    const readoutStatus = String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").trim().toLowerCase();
+    const rows = Array.isArray(dtcSnapshot?.dtcs) ? dtcSnapshot.dtcs : null;
+    const baseEvidenceRecorded = Array.isArray(rows)
+      && readoutStatus === "reported"
+      && dtcSnapshot?.blocked !== true
+      && dtcSnapshot?.isBlocked !== true
+      && dtcSnapshot?.is_blocked !== true;
+    const sourceEcu = String(dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
+    const keys = baseEvidenceRecorded
+      ? [...new Set(rows.map((row) => {
+        const faultDetectionCounter = readDtcFaultDetectionCounterRawAlias(row);
+        if (!faultDetectionCounter) return null;
+        const code = String(row?.code || row?.dtc || "").trim().toUpperCase().slice(0, 16);
+        if (!code) return null;
+        const subcode = readDtcSubcodeAlias(row) || "-";
+        const codeFormat = String(row?.codeFormat || row?.code_format || (row?.manufacturerSpecific === true || row?.manufacturer_specific === true ? "manufacturer_specific" : "generic_obd"))
+          .trim().toLowerCase().replace(/[\s-]+/g, "_").slice(0, 48) || "generic_obd";
+        const status = normalizeDtcReadoutCategory(row?.status || row?.dtcStatus || row?.dtc_status || "unknown");
+        const reportedStatus = normalizeDtcReportedStatus(row?.reportedStatus || row?.reported_status) || "unreported";
+        const ecu = String(row?.ecu || row?.ecuId || row?.ecu_id || row?.address || sourceEcu).trim().toUpperCase().slice(0, 64) || "-";
+        return `${code}|${subcode}|${codeFormat}|${status}|${reportedStatus}|${ecu}|${faultDetectionCounter}`;
+      }).filter(Boolean))].sort()
+      : [];
+    const evidenceRecorded = baseEvidenceRecorded && keys.length > 0;
+    return {
+      schemaVersion: "dtc_fault_detection_counter_summary_v1",
+      schema_version: "dtc_fault_detection_counter_summary_v1",
+      dtcCount: keys.length,
+      dtc_count: keys.length,
+      evidenceRecorded,
+      evidence_recorded: evidenceRecorded,
+      keys,
+      dtc_keys: [...keys],
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function buildCoreSessionStatus({
     readoutCoverage = null,
     vehicleApplicability = null,
@@ -10282,6 +10323,7 @@
     const dtcIdentitySummary = buildDtcIdentitySummary(dtcSnapshot || {});
     const dtcStatusByteSummary = buildDtcStatusByteSummary(dtcSnapshot || {});
     const dtcMetadataEvidenceSummary = buildDtcMetadataEvidenceSummary(dtcSnapshot || {});
+    const dtcFaultDetectionCounterSummary = buildDtcFaultDetectionCounterSummary(dtcSnapshot || {});
     const readoutRequestContext = {
       diagnosticProtocol: readoutRequestProtocolValues.find((value) => /\buds\b/i.test(String(value))) || readoutRequestProtocolValues[0] || null,
       ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null,
@@ -11109,6 +11151,8 @@
       dtc_status_byte_summary: dtcStatusByteSummary,
       dtcMetadataEvidenceSummary,
       dtc_metadata_evidence_summary: dtcMetadataEvidenceSummary,
+      dtcFaultDetectionCounterSummary,
+      dtc_fault_detection_counter_summary: dtcFaultDetectionCounterSummary,
       sessionCaptureIntegritySummary: normalizedSessionCaptureIntegritySummary,
       session_capture_integrity_summary: normalizedSessionCaptureIntegritySummary,
       missingReadoutCount: analysisBlockerSummary.missingReadoutCount,
@@ -11173,6 +11217,8 @@
       dtc_status_byte_summary: dtcStatusByteSummary,
       dtcMetadataEvidenceSummary,
       dtc_metadata_evidence_summary: dtcMetadataEvidenceSummary,
+      dtcFaultDetectionCounterSummary,
+      dtc_fault_detection_counter_summary: dtcFaultDetectionCounterSummary,
       sessionCaptureIntegritySummary: normalizedSessionCaptureIntegritySummary,
       session_capture_integrity_summary: normalizedSessionCaptureIntegritySummary,
       includeInfrastructure: normalizedCoverage.includeInfrastructure === true,
@@ -11995,6 +12041,20 @@
     const dtcMetadataComparisonAvailable = importedDtcMetadataEvidence.evidenceRecorded && currentDtcMetadataEvidence.evidenceRecorded;
     const dtcMetadataAddedKeys = dtcMetadataComparisonAvailable ? diffIds(currentDtcMetadataEvidence.keys, importedDtcMetadataEvidence.keys) : [];
     const dtcMetadataRemovedKeys = dtcMetadataComparisonAvailable ? diffIds(importedDtcMetadataEvidence.keys, currentDtcMetadataEvidence.keys) : [];
+    const readDtcFaultDetectionCounterEvidence = (summary = {}, flow = {}) => {
+      const counterSummary = readAliasValue(summary, "dtcFaultDetectionCounterSummary") || readAliasValue(flow, "dtcFaultDetectionCounterSummary");
+      const evidenceRecorded = readAliasValue(counterSummary, "evidenceRecorded") === true;
+      const keyList = counterSummary?.keys || counterSummary?.dtc_keys;
+      const keys = Array.isArray(keyList)
+        ? [...new Set(keyList.map((key) => String(key || "").trim()).filter(Boolean))].sort()
+        : [];
+      return { evidenceRecorded, keys };
+    };
+    const importedDtcFaultDetectionCounterEvidence = readDtcFaultDetectionCounterEvidence(importedCoreSessionStatus, importedFlow);
+    const currentDtcFaultDetectionCounterEvidence = readDtcFaultDetectionCounterEvidence(currentCoreSessionStatus, currentFlow);
+    const dtcFaultDetectionCounterComparisonAvailable = importedDtcFaultDetectionCounterEvidence.evidenceRecorded && currentDtcFaultDetectionCounterEvidence.evidenceRecorded;
+    const dtcFaultDetectionCounterAddedKeys = dtcFaultDetectionCounterComparisonAvailable ? diffIds(currentDtcFaultDetectionCounterEvidence.keys, importedDtcFaultDetectionCounterEvidence.keys) : [];
+    const dtcFaultDetectionCounterRemovedKeys = dtcFaultDetectionCounterComparisonAvailable ? diffIds(importedDtcFaultDetectionCounterEvidence.keys, currentDtcFaultDetectionCounterEvidence.keys) : [];
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readVehicleApplicabilityEvidenceSummary = (flow = {}) => {
@@ -12152,6 +12212,18 @@
       dtc_metadata_added_keys: [...dtcMetadataAddedKeys],
       dtcMetadataRemovedKeys,
       dtc_metadata_removed_keys: [...dtcMetadataRemovedKeys],
+      importedDtcFaultDetectionCounterKeys: [...importedDtcFaultDetectionCounterEvidence.keys],
+      imported_dtc_fault_detection_counter_keys: [...importedDtcFaultDetectionCounterEvidence.keys],
+      currentDtcFaultDetectionCounterKeys: [...currentDtcFaultDetectionCounterEvidence.keys],
+      current_dtc_fault_detection_counter_keys: [...currentDtcFaultDetectionCounterEvidence.keys],
+      dtcFaultDetectionCounterComparisonAvailable,
+      dtc_fault_detection_counter_comparison_available: dtcFaultDetectionCounterComparisonAvailable,
+      dtcFaultDetectionCounterKeysChanged: dtcFaultDetectionCounterComparisonAvailable && dtcFaultDetectionCounterAddedKeys.length + dtcFaultDetectionCounterRemovedKeys.length > 0,
+      dtc_fault_detection_counter_keys_changed: dtcFaultDetectionCounterComparisonAvailable && dtcFaultDetectionCounterAddedKeys.length + dtcFaultDetectionCounterRemovedKeys.length > 0,
+      dtcFaultDetectionCounterAddedKeys,
+      dtc_fault_detection_counter_added_keys: [...dtcFaultDetectionCounterAddedKeys],
+      dtcFaultDetectionCounterRemovedKeys,
+      dtc_fault_detection_counter_removed_keys: [...dtcFaultDetectionCounterRemovedKeys],
       importedStatus,
       imported_status: importedStatus,
       currentStatus,
@@ -15088,6 +15160,7 @@
       || comparison.dtcIdentityKeysChanged === true
       || comparison.dtcStatusByteKeysChanged === true
       || comparison.dtcMetadataKeysChanged === true
+      || comparison.dtcFaultDetectionCounterKeysChanged === true
       || comparison.reviewRequiredChanged === true
       || comparison.readyForInterpretationChanged === true
       || comparison.issueIdsChanged === true
@@ -15130,6 +15203,7 @@
       comparison.dtcIdentityKeysChanged === true ? "dtc_identities" : null,
       comparison.dtcStatusByteKeysChanged === true ? "dtc_status_bytes" : null,
       comparison.dtcMetadataKeysChanged === true ? "dtc_metadata" : null,
+      comparison.dtcFaultDetectionCounterKeysChanged === true ? "dtc_fault_detection_counters" : null,
       comparison.reviewRequiredChanged === true || comparison.readyForInterpretationChanged === true || comparison.issueIdsChanged === true || comparison.issueCountsChanged === true || Number(comparison.issueCountDelta || 0) !== 0 ? "readout_quality" : null,
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
@@ -15175,7 +15249,7 @@
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
-        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "dtcMetadataAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys", "ecuInfoKeyValueAddedKeys", "onboardMonitorValueAddedKeys"
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "dtcMetadataAddedKeys", "dtcFaultDetectionCounterAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys", "ecuInfoKeyValueAddedKeys", "onboardMonitorValueAddedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -15190,7 +15264,7 @@
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
-        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "dtcMetadataRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys", "ecuInfoKeyValueRemovedKeys", "onboardMonitorValueRemovedKeys"
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "dtcMetadataRemovedKeys", "dtcFaultDetectionCounterRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys", "ecuInfoKeyValueRemovedKeys", "onboardMonitorValueRemovedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -15341,6 +15415,7 @@
       if (reasonIds.includes("blocked_reasons")) return "blocked_reason";
       if (reasonIds.includes("dtc_status_bytes")) return "dtc_status_byte";
       if (reasonIds.includes("dtc_metadata")) return "dtc_metadata";
+      if (reasonIds.includes("dtc_fault_detection_counters")) return "dtc_fault_detection_counter";
       if (reasonIds.includes("ecu_info_key_values")) return "ecu_info_key_value";
       if (reasonIds.includes("onboard_monitor_values")) return "onboard_monitor_value";
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";

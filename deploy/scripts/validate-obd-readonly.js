@@ -17971,6 +17971,28 @@ const legacyDtcMetadataComparisonSession = obd.buildDiagnosticScanSession({
   core_session_status: { schema_version: "core_session_status_v1", dtc_status_byte_summary: { evidence_recorded: true, dtc_keys: ["P0300|-|generic_obd|stored|unreported|-|2F|-"] } }
 });
 check(legacyDtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataComparisonAvailable === false && legacyDtcMetadataComparisonSession.importedCoreComparisonSummary?.dtcMetadataKeysChanged === false && legacyDtcMetadataComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_metadata") === false && legacyDtcMetadataComparisonSession.vehicleCommandEnabled === false, "Legacy DTC status-byte evidence was treated as DTC metadata changes");
+check(source.includes('function buildDtcFaultDetectionCounterSummary(dtcSnapshot = {})') && appSource.includes('function formatDtcFaultDetectionCounterComparisonSummary(summary, fallback = NO_DATA)') && appSource.includes('DTC検出回数比較不可'), "DTC fault detection counter comparison should retain explicit read-only evidence and display an unavailable state");
+const dtcFaultDetectionCounterComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    dtc_readout_status: "reported",
+    source_ecu: "7E8",
+    dtcs: [{ code: "123456", code_format: "uds_3byte", fault_detection_counter_raw: "04" }]
+  },
+  core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_fault_detection_counter_summary: {
+      schema_version: "dtc_fault_detection_counter_summary_v1",
+      evidence_recorded: true,
+      dtc_keys: ["123456|-|uds_3byte|unknown|unreported|7E8|02"]
+    }
+  }
+});
+check(dtcFaultDetectionCounterComparisonSession.coreSessionStatus?.dtcFaultDetectionCounterSummary?.keys?.join(",") === "123456|-|uds_3byte|unknown|unreported|7E8|04" && dtcFaultDetectionCounterComparisonSession.importedCoreComparisonSummary?.dtcFaultDetectionCounterComparisonAvailable === true && dtcFaultDetectionCounterComparisonSession.importedCoreComparisonSummary?.dtcFaultDetectionCounterKeysChanged === true && dtcFaultDetectionCounterComparisonSession.importedCoreComparisonSummary?.dtcFaultDetectionCounterAddedKeys?.join(",") === "123456|-|uds_3byte|unknown|unreported|7E8|04" && dtcFaultDetectionCounterComparisonSession.importedCoreComparisonSummary?.dtcFaultDetectionCounterRemovedKeys?.join(",") === "123456|-|uds_3byte|unknown|unreported|7E8|02" && dtcFaultDetectionCounterComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_fault_detection_counters") && dtcFaultDetectionCounterComparisonSession.importedSessionComparisonSummary?.changedIdSummaries?.some((item) => item.kind === "dtc_fault_detection_counter") && dtcFaultDetectionCounterComparisonSession.vehicleCommandEnabled === false && dtcFaultDetectionCounterComparisonSession.wouldTransmit === false, "DTC fault detection counter evidence was not compared separately under read-only safety");
+const legacyDtcFaultDetectionCounterComparisonSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "123456", code_format: "uds_3byte", fault_detection_counter_raw: "04" }] },
+  core_session_status: { schema_version: "core_session_status_v1", dtc_metadata_evidence_summary: { evidence_recorded: true, dtc_keys: ["123456|-|uds_3byte|unknown|unreported|-|-|4"] } }
+});
+check(legacyDtcFaultDetectionCounterComparisonSession.importedCoreComparisonSummary?.dtcFaultDetectionCounterComparisonAvailable === false && legacyDtcFaultDetectionCounterComparisonSession.importedCoreComparisonSummary?.dtcFaultDetectionCounterKeysChanged === false && legacyDtcFaultDetectionCounterComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_fault_detection_counters") === false && legacyDtcFaultDetectionCounterComparisonSession.vehicleCommandEnabled === false, "Legacy DTC metadata evidence was treated as fault detection counter changes");
 const legacyDtcIdentityComparisonSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0300", status: "stored" }] },
   core_session_status: { schema_version: "core_session_status_v1", dtc_status_summary: { counts: [{ status: "stored", count: 1 }] } }
