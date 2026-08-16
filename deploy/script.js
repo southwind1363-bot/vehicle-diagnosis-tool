@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.94";
+const APP_VERSION = "3.9.95";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9677,9 +9677,12 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
       .map((item) => item?.frameNumber ?? item?.frame_number ?? null)
       .filter((item) => Number.isInteger(Number(item)))
       .map((item) => `#${Number(item)}`))];
+    const freezeFrameReportedStatuses = [...new Set(freezeFrameMatches
+      .map((item) => item?.reportedStatus ?? item?.reported_status ?? null)
+      .filter(Boolean))];
     const matchedFreezeFrame = document.createElement("p");
     matchedFreezeFrame.className = "obd-dtc-check";
-    matchedFreezeFrame.textContent = `フリーズフレーム: DTC / サブコード / ECU 一致確認済み${frames.length ? ` (${frames.join(", ")})` : ""}`;
+    matchedFreezeFrame.textContent = `フリーズフレーム: DTC / サブコード / ECU 一致確認済み${frames.length ? ` (${frames.join(", ")})` : ""}${freezeFrameReportedStatuses.length ? ` / 診断機報告状態 ${freezeFrameReportedStatuses.join(", ")}` : ""}`;
     wrapper.appendChild(matchedFreezeFrame);
     const udsSnapshotEvidence = [...new Set(freezeFrameMatches
       .map((item) => {
