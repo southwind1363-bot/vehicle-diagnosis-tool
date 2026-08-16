@@ -127,6 +127,49 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertFalse(archive.completionManifest.wouldTransmit)
     }
 
+    func testStartingAnotherReadoutClearsThePreviousArchiveAndPreview() throws {
+        let coordinator = NativeConnectorReadoutCoordinator()
+        let envelope = NativeConnectorEnvelopeFactory.dtcs(
+            context: context,
+            sequence: 1,
+            intent: "read_stored_dtc",
+            scopeID: "7E8",
+            dtcs: [OBD2DTC(code: "P0300", status: "stored")]
+        )
+        let manifest = NativeConnectorCompletionManifest(
+            schemaVersion: "native_connector_completion_manifest_v1",
+            recordType: "completion_manifest",
+            platform: "ios",
+            interfaceID: "user-vci-elm327",
+            scanID: context.scanID,
+            vehicleContextID: context.vehicleContextID,
+            capturedAt: "2026-08-17T00:00:00Z",
+            scanState: .completed,
+            expectedIntents: ["read_stored_dtc"],
+            expectedReadouts: ["stored_dtc_snapshot"],
+            expectedReadoutScopes: [NativeConnectorReadoutScope(readoutID: "stored_dtc_snapshot", scopeID: "7E8")],
+            connectionSegments: [NativeConnectorConnectionSegment(connectionID: context.connectionID, connectionSequence: 0, firstSequence: 1, lastSequence: 1, envelopeCount: 1)],
+            interruption: nil,
+            readOnly: true,
+            vehicleCommandEnabled: false,
+            executionEnabled: false,
+            wouldTransmit: false,
+            retainedRawPayload: false
+        )
+
+        coordinator.connector(coordinator.connector, didEmit: envelope)
+        coordinator.connector(coordinator.connector, didComplete: manifest)
+        XCTAssertNoThrow(try coordinator.exportCompletedArchive())
+
+        coordinator.beginQuickReadout()
+
+        XCTAssertNil(coordinator.completedArchive)
+        XCTAssertEqual(coordinator.capturedEnvelopeCount, 0)
+        XCTAssertEqual(coordinator.readoutPreview, .empty)
+        XCTAssertNil(coordinator.archiveError)
+        XCTAssertThrowsError(try coordinator.exportCompletedArchive())
+    }
+
     func testCoordinatorBuildsDeduplicatedPreviewFromAcceptedEnvelopes() {
         let coordinator = NativeConnectorReadoutCoordinator()
         let dtc = NativeConnectorEnvelopeFactory.dtcs(
