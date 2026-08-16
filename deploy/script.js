@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.10.4";
+const APP_VERSION = "3.10.5";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8039,6 +8039,21 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   return parts.length ? parts.join(" / ") : "変化なし";
 }
 
+function formatObservedEcuComparisonSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const available = summary.observedEcuComparisonAvailable === true || summary.observed_ecu_comparison_available === true;
+  const added = Array.isArray(summary.observedEcuAddedKeys) ? summary.observedEcuAddedKeys : Array.isArray(summary.observed_ecu_added_keys) ? summary.observed_ecu_added_keys : [];
+  const removed = Array.isArray(summary.observedEcuRemovedKeys) ? summary.observedEcuRemovedKeys : Array.isArray(summary.observed_ecu_removed_keys) ? summary.observed_ecu_removed_keys : [];
+  const displayKey = (key) => {
+    const [ecu, readoutId, status] = String(key || "").split("|");
+    const readoutLabels = { dtc_snapshot: "DTC", ecu_response_summary: "ECU応答", live_pid_snapshot: "ライブ", freeze_frame_snapshot: "FF", readiness_snapshot: "RDY", ecu_info_snapshot: "ECU情報", onboard_monitor_snapshot: "M06", supported_pid_matrix: "PID" };
+    const statusLabels = { reported: "応答", negative_response: "負応答", pending_response: "保留応答", unparsed: "未解析", no_response: "無応答", unknown: "不明" };
+    return `${ecu || "ECU"}:${readoutLabels[readoutId] || readoutId || "読取"}:${statusLabels[status] || "不明"}`;
+  };
+  if (added.length || removed.length) return `ECU応答:${[...added.map((key) => `+${displayKey(key)}`), ...removed.map((key) => `-${displayKey(key)}`)].slice(0, 3).join(",")}`;
+  return available ? "変化なし" : "ECU応答詳細比較不可";
+}
+
 function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   const issueCountValue = summary.issueCount ?? summary.issue_count;
@@ -8264,6 +8279,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventorySummary = session.coreReadoutInventorySummary || session.core_readout_inventory_summary || null;
   const coreReadoutInventoryComparisonSummary = session.importedCoreReadoutInventoryComparisonSummary || session.imported_core_readout_inventory_comparison_summary || null;
+  const observedEcuComparisonLabel = formatObservedEcuComparisonSummary(session.importedCoreComparisonSummary || session.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(coreReadoutInventorySummary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(coreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualitySummary = core.readoutQualitySummary || core.readout_quality_summary || flow.readoutQualitySummary || flow.readout_quality_summary || null;
@@ -8326,6 +8342,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "読取差分", changedIdDisplayLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "差分確認", changedIdReviewTargetActionLabel, changedIdDisplaySummary?.hasChangedIds === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取内訳", coreReadoutInventoryLabel, coreReadoutInventorySummary?.missingReadoutCount || coreReadoutInventorySummary?.missing_readout_count ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "ECU応答比較", observedEcuComparisonLabel, observedEcuComparisonLabel !== "変化なし" && observedEcuComparisonLabel !== NO_DATA ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "在庫比較", coreReadoutInventoryComparisonLabel, coreReadoutInventoryComparisonSummary?.valueCountsChanged === true || coreReadoutInventoryComparisonSummary?.value_counts_changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取品質", readoutQualityLabel, readoutQualitySummary?.reviewRequired || readoutQualitySummary?.review_required ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
@@ -8536,6 +8553,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary || session?.core_readout_inventory_summary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary, NO_DATA);
+  const observedEcuComparisonLabel = formatObservedEcuComparisonSummary(session?.importedCoreComparisonSummary || session?.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
@@ -8643,6 +8661,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["ECU応答", session?.ecuResponseSummary?.ecus?.length ?? 0],
     ["応答ECU", observedEcuLabel],
     ["ECU由来", observedEcuSourceCoverageLabel],
+    ["ECU応答比較", observedEcuComparisonLabel],
     ["ECU情報", ecuInfoSnapshot?.itemCount ?? 0],
     ["ECU情報状態", ecuInfoReadoutStatusLabel],
     ["ECU情報応答形式", ecuInfoResponseFormatLabel],

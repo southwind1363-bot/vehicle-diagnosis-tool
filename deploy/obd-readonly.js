@@ -11677,6 +11677,32 @@
     const reportedDtcStateCountChangedIds = [...new Set([...importedReportedDtcStateIds, ...currentReportedDtcStateIds])]
       .filter((status) => (importedReportedDtcStateCountById.get(status) || 0) !== (currentReportedDtcStateCountById.get(status) || 0))
       .sort();
+    const readObservedEcuEvidence = (summary = {}, flow = {}) => {
+      const observed = readAliasValue(summary, "observedEcuSummary") || readAliasValue(flow, "observedEcuSummary");
+      const ecus = Array.isArray(observed?.ecus) ? observed.ecus : null;
+      const normalizePart = (value, fallback) => {
+        const normalized = String(value || "").trim();
+        return normalized ? normalized.slice(0, 64) : fallback;
+      };
+      const knownStatuses = new Set(["reported", "negative_response", "pending_response", "unparsed", "no_response", "unknown"]);
+      const entries = ecus === null ? [] : ecus.map((entry) => {
+        const statusById = entry?.readoutStatusById || entry?.readout_status_by_id;
+        if (!entry || typeof entry !== "object" || !statusById || typeof statusById !== "object" || Array.isArray(statusById)) return null;
+        const ecuId = normalizePart(entry.id || entry.ecuId || entry.ecu_id || entry.address, "unknown_ecu");
+        return Object.entries(statusById).map(([readoutId, status]) => {
+          const normalizedStatus = String(status || "").trim().toLowerCase();
+          return `${ecuId}|${normalizePart(readoutId, "unknown_readout")}|${knownStatuses.has(normalizedStatus) ? normalizedStatus : "unknown"}`;
+        });
+      });
+      const evidenceRecorded = Array.isArray(ecus) && entries.every(Boolean);
+      const keys = evidenceRecorded ? [...new Set(entries.flat().filter(Boolean))].sort() : [];
+      return { evidenceRecorded, keys };
+    };
+    const importedObservedEcuEvidence = readObservedEcuEvidence(importedCoreSessionStatus, importedFlow);
+    const currentObservedEcuEvidence = readObservedEcuEvidence(currentCoreSessionStatus, currentFlow);
+    const observedEcuComparisonAvailable = importedObservedEcuEvidence.evidenceRecorded && currentObservedEcuEvidence.evidenceRecorded;
+    const observedEcuAddedKeys = observedEcuComparisonAvailable ? diffIds(currentObservedEcuEvidence.keys, importedObservedEcuEvidence.keys) : [];
+    const observedEcuRemovedKeys = observedEcuComparisonAvailable ? diffIds(importedObservedEcuEvidence.keys, currentObservedEcuEvidence.keys) : [];
     const importedVehicleApplicabilityChecklistState = importedFlow.vehicleApplicabilityChecklist?.state || null;
     const currentVehicleApplicabilityChecklistState = currentFlow.vehicleApplicabilityChecklist?.state || null;
     const readVehicleApplicabilityEvidenceSummary = (flow = {}) => {
@@ -11786,6 +11812,18 @@
       reported_dtc_state_added_ids: diffIds(currentReportedDtcStateIds, importedReportedDtcStateIds),
       reportedDtcStateRemovedIds: diffIds(importedReportedDtcStateIds, currentReportedDtcStateIds),
       reported_dtc_state_removed_ids: diffIds(importedReportedDtcStateIds, currentReportedDtcStateIds),
+      importedObservedEcuKeys: [...importedObservedEcuEvidence.keys],
+      imported_observed_ecu_keys: [...importedObservedEcuEvidence.keys],
+      currentObservedEcuKeys: [...currentObservedEcuEvidence.keys],
+      current_observed_ecu_keys: [...currentObservedEcuEvidence.keys],
+      observedEcuComparisonAvailable,
+      observed_ecu_comparison_available: observedEcuComparisonAvailable,
+      observedEcuKeysChanged: observedEcuComparisonAvailable && observedEcuAddedKeys.length + observedEcuRemovedKeys.length > 0,
+      observed_ecu_keys_changed: observedEcuComparisonAvailable && observedEcuAddedKeys.length + observedEcuRemovedKeys.length > 0,
+      observedEcuAddedKeys,
+      observed_ecu_added_keys: [...observedEcuAddedKeys],
+      observedEcuRemovedKeys,
+      observed_ecu_removed_keys: [...observedEcuRemovedKeys],
       importedStatus,
       imported_status: importedStatus,
       currentStatus,
@@ -14552,6 +14590,7 @@
       || comparison.vehicleApplicabilityChecklistChanged === true
       || comparison.vehicleApplicabilityEvidenceChanged === true
       || comparison.reportedDtcStateCountsChanged === true
+      || comparison.observedEcuKeysChanged === true
       || comparison.reviewRequiredChanged === true
       || comparison.readyForInterpretationChanged === true
       || comparison.issueIdsChanged === true
@@ -14586,6 +14625,7 @@
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true || comparison.vehicleApplicabilityEvidenceChanged === true ? "analysis_checklist" : null,
       comparison.reportedDtcStateCountsChanged === true ? "dtc_reported_states" : null,
+      comparison.observedEcuKeysChanged === true ? "observed_ecu_responses" : null,
       comparison.reviewRequiredChanged === true || comparison.readyForInterpretationChanged === true || comparison.issueIdsChanged === true || comparison.issueCountsChanged === true || Number(comparison.issueCountDelta || 0) !== 0 ? "readout_quality" : null,
       comparison.completeChanged === true || comparison.requiredIdsChanged === true || comparison.capturedIdsChanged === true || comparison.missingIdsChanged === true || comparison.pendingIdsChanged === true || comparison.emptyIdsChanged === true || comparison.attemptedIdsChanged === true ? "readout_completion" : null,
       comparison.failedIdsChanged === true || comparison.failedReasonIdsChanged === true || Number(comparison.failedReadoutDelta || 0) !== 0 ? "readout_failures" : null,
@@ -14627,7 +14667,7 @@
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
-        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds"
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14642,7 +14682,7 @@
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
-        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds"
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -14792,6 +14832,7 @@
       if (reasonIds.includes("next_readout_guard_safety")) return "readout_guard_safety";
       if (reasonIds.includes("blocked_reasons")) return "blocked_reason";
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
+      if (reasonIds.includes("observed_ecu_responses")) return "ecu_response";
       return "other";
     };
     const changedIdSummaries = [...new Set([...addedIds, ...removedIds])].map((id) => {

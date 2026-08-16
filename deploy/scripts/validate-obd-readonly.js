@@ -17813,6 +17813,22 @@ const legacyOnboardMonitorInventoryComparisonSession = obd.buildDiagnosticScanSe
   core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", onboard_monitor_test_count: 1 }
 });
 check(legacyOnboardMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorComparisonAvailable === false && legacyOnboardMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorTestKeysChanged === false && legacyOnboardMonitorInventoryComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("onboard_monitor_states") === false && legacyOnboardMonitorInventoryComparisonSession.vehicleCommandEnabled === false, "Legacy Mode 06 totals were treated as detailed test state changes");
+const observedEcuComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_response_summary: { ecus: [{ id: "7E8", status: "responded" }] },
+  core_session_status: {
+    schema_version: "core_session_status_v1",
+    observed_ecu_summary: {
+      schema_version: "observed_ecu_summary_v1",
+      ecus: [{ id: "7E8", readout_status_by_id: { ecu_response_summary: "no_response" } }]
+    }
+  }
+});
+check(observedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuComparisonAvailable === true && observedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuKeysChanged === true && observedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuAddedKeys?.join(",") === "7E8|ecu_response_summary|reported" && observedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuRemovedKeys?.join(",") === "7E8|ecu_response_summary|no_response" && observedEcuComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("observed_ecu_responses") && observedEcuComparisonSession.vehicleCommandEnabled === false && observedEcuComparisonSession.wouldTransmit === false, "Observed ECU response states were not compared with read-only evidence");
+const legacyObservedEcuComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_response_summary: { ecus: [{ id: "7E8", status: "responded" }] },
+  core_session_status: { schema_version: "core_session_status_v1", observed_ecu_summary: { ecu_ids: ["7E8"] } }
+});
+check(legacyObservedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuComparisonAvailable === false && legacyObservedEcuComparisonSession.importedCoreComparisonSummary?.observedEcuKeysChanged === false && legacyObservedEcuComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("observed_ecu_responses") === false && legacyObservedEcuComparisonSession.vehicleCommandEnabled === false, "Legacy observed ECU summaries were treated as response-state changes");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.capturedReadoutDelta), "Diagnostic scan session did not expose imported core captured readout delta");
