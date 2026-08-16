@@ -23136,12 +23136,15 @@
           ...(ecuName ? { source_ecu_name: ecuName } : {})
         };
       };
-      if (isFreezeFrameRow && !freezeFrameTriggerDtc) {
+      if (isFreezeFrameRow) {
+        recordReadoutMetadata("freeze_frame", rowCapturedAt, rowProtocol);
         const triggerEntry = readFreezeFrameTriggerEntry();
         if (triggerEntry) {
-          freezeFrameTriggerDtc = triggerEntry.code;
-          freezeFrameTriggerFrameNumber = triggerEntry.frame_number ?? null;
-          freezeFrameTriggerDtcEntries = [triggerEntry];
+          if (!freezeFrameTriggerDtc) {
+            freezeFrameTriggerDtc = triggerEntry.code;
+            freezeFrameTriggerFrameNumber = triggerEntry.frame_number ?? null;
+          }
+          freezeFrameTriggerDtcEntries.push(triggerEntry);
         }
       }
       if (dtcReadoutKind && (hasDtcCode || isExplicitEmptyDtcReadout(cellAt(statusIndex, 80)))) {
@@ -23315,16 +23318,7 @@
           ...(Number.isInteger(frameNumber) && frameNumber >= 0 && frameNumber <= 255 ? { freeze_frame_number: frameNumber } : {})
         };
         if (isFreezeFrameRow) {
-          recordReadoutMetadata("freeze_frame", rowCapturedAt, rowProtocol);
           freezeFrameValues.push(row);
-          if (!freezeFrameTriggerDtc) {
-            const triggerEntry = readFreezeFrameTriggerEntry();
-            if (triggerEntry) {
-              freezeFrameTriggerDtc = triggerEntry.code;
-              freezeFrameTriggerFrameNumber = triggerEntry.frame_number ?? frameNumber;
-              freezeFrameTriggerDtcEntries = [triggerEntry];
-            }
-          }
         } else {
           monitorValues.push(row);
           if (rowCapturedAt) {
@@ -23369,7 +23363,7 @@
         source
       }
       : null;
-    const freezeFrameSnapshot = freezeFrameValues.length
+    const freezeFrameSnapshot = freezeFrameValues.length || freezeFrameTriggerDtcEntries.length
       ? normalizeFreezeFrameSnapshot({ source, ...readoutMetadata("freeze_frame"), values: freezeFrameValues, trigger_dtc: freezeFrameTriggerDtc, ...(freezeFrameTriggerDtcEntries.length ? { trigger_dtc_entries: freezeFrameTriggerDtcEntries } : {}), ...(freezeFrameTriggerFrameNumber === null ? {} : { trigger_frame_number: freezeFrameTriggerFrameNumber }), freezeFrameReadoutStatus: "reported" })
       : null;
     const readinessSnapshot = readinessMonitors.length
