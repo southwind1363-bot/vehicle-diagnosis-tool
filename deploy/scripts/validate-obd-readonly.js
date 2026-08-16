@@ -3594,7 +3594,7 @@ check(appSource.includes('const changedIdReviewTargetActionLabel = formatChanged
 check(appSource.includes('const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);') && appSource.includes('["差分確認", changedIdReviewTargetActionLabel]'), "OBD session summary should show primary review target action ids");
 check(appSource.includes('const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, "");') && appSource.includes('notes.push(`差分確認 ${changedIdReviewTargetActionNote}`);'), "OBD analysis notes should include primary review target action ids");
 check(appSource.includes('function formatCoreReadoutInventorySummary(summary, fallback = NO_DATA)') && appSource.includes('countsById') && appSource.includes('summary.counts_by_id') && appSource.includes('summary.total_value_count') && appSource.includes('errorReadoutCountValue') && appSource.includes('読取失敗${errorReadoutCount}') && appSource.includes('function formatReadoutErrorCodes(errorCodes = [])') && appSource.includes('通信タイムアウト') && appSource.includes('応答未観測'), "OBD app should format core readout inventory summaries for display");
-check(appSource.includes('function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA)') && appSource.includes('changedValueCountIds') && appSource.includes('summary.changed_value_count_ids') && appSource.includes('summary.total_value_count_delta') && appSource.includes('freeze_frame_trigger_comparison_available') && appSource.includes('FF起点詳細比較不可') && appSource.includes('readiness_monitor_comparison_available') && appSource.includes('RDY詳細比較不可'), "OBD app should format imported core readout inventory comparisons for display");
+check(appSource.includes('function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA)') && appSource.includes('changedValueCountIds') && appSource.includes('summary.changed_value_count_ids') && appSource.includes('summary.total_value_count_delta') && appSource.includes('freeze_frame_trigger_comparison_available') && appSource.includes('FF起点詳細比較不可') && appSource.includes('readiness_monitor_comparison_available') && appSource.includes('RDY詳細比較不可') && appSource.includes('ecu_info_item_comparison_available') && appSource.includes('ECU詳細比較不可'), "OBD app should format imported core readout inventory comparisons for display");
 check(appSource.includes('const attemptedReadoutCountValue = summary.attemptedReadoutCount ?? summary.attempted_readout_count;') && appSource.includes('const pendingReadoutCountValue = summary.pendingReadoutCount ?? summary.pending_readout_count;'), "OBD app should show attempted and pending core readout inventory counts");
 check(appSource.includes('const pendingReadoutDeltaValue = summary.pendingReadoutDelta ?? summary.pending_readout_delta;') && appSource.includes('summary.next_pending_readout_changed'), "OBD app should show pending and next-readout inventory comparison changes");
 check(appSource.includes('function formatReadoutQualitySummary(summary, fallback = NO_DATA)') && appSource.includes('rawPidUndecodedCount') && appSource.includes('onboardMonitorFailedCount'), "OBD app should format readout quality summaries");
@@ -17756,6 +17756,25 @@ const legacyReadinessMonitorInventoryComparisonSession = obd.buildDiagnosticScan
   core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", readiness_monitor_count: 1 }
 });
 check(legacyReadinessMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.readinessMonitorComparisonAvailable === false && legacyReadinessMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.readinessMonitorKeysChanged === false && legacyReadinessMonitorInventoryComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("readiness_monitor_states") === false && legacyReadinessMonitorInventoryComparisonSession.vehicleCommandEnabled === false, "Legacy readiness totals were treated as detailed monitor state changes");
+const ecuInfoItemInventoryComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: {
+    ecu_info_readout_status: "reported",
+    source_ecu: "7E8",
+    items: [{ id: "ecu_name", info_type: "0A", value: "ENGINE" }, { id: "calibration_id", info_type: "04", value: "CAL-123" }]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    ecu_info_item_count: 1,
+    ecu_info_item_evidence_recorded: true,
+    ecu_info_item_keys: ["ecu_name|0A|7E8"]
+  }
+});
+check(ecuInfoItemInventoryComparisonSession.coreReadoutInventorySummary?.ecuInfoItemKeys?.join(",") === "calibration_id|04|7E8,ecu_name|0A|7E8" && ecuInfoItemInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoItemComparisonAvailable === true && ecuInfoItemInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoItemKeysChanged === true && ecuInfoItemInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoItemAddedKeys?.join(",") === "calibration_id|04|7E8" && ecuInfoItemInventoryComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("ecu_info_items") && ecuInfoItemInventoryComparisonSession.vehicleCommandEnabled === false && ecuInfoItemInventoryComparisonSession.wouldTransmit === false, "ECU info item identities were not compared separately from aggregate counts under read-only safety");
+const legacyEcuInfoItemInventoryComparisonSession = obd.buildDiagnosticScanSession({
+  ecu_info_snapshot: { ecu_info_readout_status: "reported", items: [{ id: "ecu_name", info_type: "0A", value: "ENGINE" }] },
+  core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", ecu_info_item_count: 1 }
+});
+check(legacyEcuInfoItemInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoItemComparisonAvailable === false && legacyEcuInfoItemInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.ecuInfoItemKeysChanged === false && legacyEcuInfoItemInventoryComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("ecu_info_items") === false && legacyEcuInfoItemInventoryComparisonSession.vehicleCommandEnabled === false, "Legacy ECU item totals were treated as detailed item changes");
 check(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.schemaVersion === "imported_core_comparison_v1", "Diagnostic scan session did not compare imported and recalculated core session status");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.pendingReadoutDelta), "Diagnostic scan session did not expose imported core pending readout delta");
 check(Number.isFinite(scanSessionBridgeDiagnosticImportAlias.importedCoreComparisonSummary?.capturedReadoutDelta), "Diagnostic scan session did not expose imported core captured readout delta");

@@ -5924,6 +5924,24 @@
       readinessStateToken(monitor?.complete, "complete", "not_complete")
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const recordedReadinessMonitorKeys = readinessMonitorEvidenceRecorded ? readinessMonitorKeys : [];
+    const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
+      ? ecuInfoSnapshot.ecuInfoEcuSnapshots
+      : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
+        ? ecuInfoSnapshot.ecu_info_ecu_snapshots
+        : [];
+    const ecuInfoResponseUnavailable = ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
+      || ecuInfoSnapshot?.blocked === true
+      || ecuInfoSnapshot?.isBlocked === true
+      || ecuInfoSnapshot?.is_blocked === true;
+    const ecuInfoItemEvidenceRecorded = !ecuInfoResponseUnavailable
+      && String(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported"
+      && (ecuInfoEcuSnapshots.length === 0 || ecuInfoEcuSnapshots.every((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported"));
+    const ecuInfoItemKeys = [...new Set((Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).map((item) => [
+      String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase(),
+      String(item?.infoType || item?.info_type || item?.dataIdentifier || item?.data_identifier || "-").trim().toUpperCase() || "-",
+      String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-"
+    ].join("|")).filter((key) => !key.startsWith("|")))].sort();
+    const recordedEcuInfoItemKeys = ecuInfoItemEvidenceRecorded ? ecuInfoItemKeys : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -5991,6 +6009,12 @@
       readinessMonitorEvidenceRecorded,
       readiness_monitor_evidence_recorded: readinessMonitorEvidenceRecorded,
       hasEcuInfoItems: countsById.ecu_info_snapshot > 0,
+      ecuInfoItemCount: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
+      ecu_info_item_count: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
+      ecuInfoItemKeys: recordedEcuInfoItemKeys,
+      ecu_info_item_keys: [...recordedEcuInfoItemKeys],
+      ecuInfoItemEvidenceRecorded,
+      ecu_info_item_evidence_recorded: ecuInfoItemEvidenceRecorded,
       hasOnboardMonitorTests: countsById.onboard_monitor_snapshot > 0,
       hasSupportedPids: countsById.supported_pid_matrix > 0,
       readinessIncompleteCount: isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? numericCount(readinessSnapshot?.incompleteCount) : 0,
@@ -12876,6 +12900,9 @@
       capturedReadoutCount: ["captured_readout_count", "captured_count"],
       countsById: ["counts_by_id"],
       ecuInfoMissingKeyCount: ["ecu_info_missing_key_count", "mode09_key_items_missing_count"],
+      ecuInfoItemCount: ["ecu_info_item_count"],
+      ecuInfoItemKeys: ["ecu_info_item_keys"],
+      ecuInfoItemEvidenceRecorded: ["ecu_info_item_evidence_recorded"],
       emptyIds: ["empty_ids"],
       emptyReadoutCount: ["empty_readout_count", "empty_count"],
       failedReadoutCount: ["failed_readout_count"],
@@ -12979,6 +13006,16 @@
     const currentReadinessMonitorKeys = readReadinessKeys(currentSummary);
     const readinessMonitorAddedKeys = readinessMonitorComparisonAvailable ? diffIds(currentReadinessMonitorKeys, importedReadinessMonitorKeys) : [];
     const readinessMonitorRemovedKeys = readinessMonitorComparisonAvailable ? diffIds(importedReadinessMonitorKeys, currentReadinessMonitorKeys) : [];
+    const readEcuInfoKeys = (summary) => Array.isArray(readField(summary, "ecuInfoItemKeys"))
+      ? [...new Set(readField(summary, "ecuInfoItemKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      : [];
+    const importedEcuInfoItemEvidenceRecorded = readBoolean(importedInventory, "ecuInfoItemEvidenceRecorded");
+    const currentEcuInfoItemEvidenceRecorded = readBoolean(currentSummary, "ecuInfoItemEvidenceRecorded");
+    const ecuInfoItemComparisonAvailable = importedEcuInfoItemEvidenceRecorded && currentEcuInfoItemEvidenceRecorded;
+    const importedEcuInfoItemKeys = readEcuInfoKeys(importedInventory);
+    const currentEcuInfoItemKeys = readEcuInfoKeys(currentSummary);
+    const ecuInfoItemAddedKeys = ecuInfoItemComparisonAvailable ? diffIds(currentEcuInfoItemKeys, importedEcuInfoItemKeys) : [];
+    const ecuInfoItemRemovedKeys = ecuInfoItemComparisonAvailable ? diffIds(importedEcuInfoItemKeys, currentEcuInfoItemKeys) : [];
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
     const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
     const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
@@ -13169,7 +13206,27 @@
       readinessMonitorAddedKeys,
       readiness_monitor_added_keys: readinessMonitorAddedKeys,
       readinessMonitorRemovedKeys,
-      readiness_monitor_removed_keys: readinessMonitorRemovedKeys
+      readiness_monitor_removed_keys: readinessMonitorRemovedKeys,
+      importedEcuInfoItemCount: readCount(importedInventory, "ecuInfoItemCount"),
+      imported_ecu_info_item_count: readCount(importedInventory, "ecuInfoItemCount"),
+      currentEcuInfoItemCount: readCount(currentSummary, "ecuInfoItemCount"),
+      current_ecu_info_item_count: readCount(currentSummary, "ecuInfoItemCount"),
+      importedEcuInfoItemEvidenceRecorded,
+      imported_ecu_info_item_evidence_recorded: importedEcuInfoItemEvidenceRecorded,
+      currentEcuInfoItemEvidenceRecorded,
+      current_ecu_info_item_evidence_recorded: currentEcuInfoItemEvidenceRecorded,
+      ecuInfoItemComparisonAvailable,
+      ecu_info_item_comparison_available: ecuInfoItemComparisonAvailable,
+      importedEcuInfoItemKeys,
+      imported_ecu_info_item_keys: importedEcuInfoItemKeys,
+      currentEcuInfoItemKeys,
+      current_ecu_info_item_keys: currentEcuInfoItemKeys,
+      ecuInfoItemKeysChanged: ecuInfoItemComparisonAvailable && importedEcuInfoItemKeys.join("|") !== currentEcuInfoItemKeys.join("|"),
+      ecu_info_item_keys_changed: ecuInfoItemComparisonAvailable && importedEcuInfoItemKeys.join("|") !== currentEcuInfoItemKeys.join("|"),
+      ecuInfoItemAddedKeys,
+      ecu_info_item_added_keys: ecuInfoItemAddedKeys,
+      ecuInfoItemRemovedKeys,
+      ecu_info_item_removed_keys: ecuInfoItemRemovedKeys
     };
   }
 
@@ -13233,6 +13290,12 @@
       readiness_monitor_keys: normalizeIds(summary.readinessMonitorKeys || summary.readiness_monitor_keys),
       readinessMonitorEvidenceRecorded: pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
       readiness_monitor_evidence_recorded: pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
+      ecuInfoItemCount: toCount("ecuInfoItemCount", "ecu_info_item_count", 0),
+      ecu_info_item_count: toCount("ecuInfoItemCount", "ecu_info_item_count", 0),
+      ecuInfoItemKeys: normalizeIds(summary.ecuInfoItemKeys || summary.ecu_info_item_keys),
+      ecu_info_item_keys: normalizeIds(summary.ecuInfoItemKeys || summary.ecu_info_item_keys),
+      ecuInfoItemEvidenceRecorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
+      ecu_info_item_evidence_recorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
       hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
@@ -14379,6 +14442,7 @@
       || comparison.valueCountsChanged === true
       || comparison.freezeFrameTriggerKeysChanged === true
       || comparison.readinessMonitorKeysChanged === true
+      || comparison.ecuInfoItemKeysChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -14400,6 +14464,7 @@
       comparison.nextPendingReadoutChanged === true ? "next_readout" : null,
       Number(comparison.freezeFrameTriggerCountDelta || 0) !== 0 || comparison.freezeFrameTriggerKeysChanged === true ? "freeze_frame_triggers" : null,
       comparison.readinessMonitorKeysChanged === true ? "readiness_monitor_states" : null,
+      comparison.ecuInfoItemKeysChanged === true ? "ecu_info_items" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
