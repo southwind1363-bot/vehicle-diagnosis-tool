@@ -18007,6 +18007,36 @@
     };
   }
 
+  function buildDtcReportedStatusSummary(dtcs = []) {
+    const countsByStatus = new Map();
+    (Array.isArray(dtcs) ? dtcs : []).forEach((row) => {
+      const status = normalizeDtcReportedStatus(row?.reportedStatus ?? row?.reported_status);
+      if (!status) return;
+      countsByStatus.set(status, (countsByStatus.get(status) || 0) + 1);
+    });
+    const counts = [...countsByStatus.entries()]
+      .map(([status, count]) => ({ status, count }))
+      .sort((left, right) => left.status.localeCompare(right.status));
+    const statuses = counts.map((item) => item.status);
+    const totalCount = counts.reduce((total, item) => total + item.count, 0);
+    return {
+      schemaVersion: "dtc_reported_status_summary_v1",
+      schema_version: "dtc_reported_status_summary_v1",
+      statuses,
+      reported_statuses: [...statuses],
+      counts,
+      status_counts: counts.map((item) => ({ ...item })),
+      statusCount: counts.length,
+      status_count: counts.length,
+      totalCount,
+      total_count: totalCount,
+      retainedRawText: false,
+      retained_raw_text: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function buildDtcMetadataSummary({
     dtcs = [],
     statusAvailabilityMask = null,
@@ -18346,6 +18376,7 @@
     const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
+    const dtcReportedStatusSummary = buildDtcReportedStatusSummary(dtcReadoutStatus === "reported" ? normalizedDtcs : []);
     const dtcResponseFormats = inferUdsDtcResponseFormats({
       formats: readDtcResponseFormatAliases(sourceInput),
       dtcs: normalizedDtcs,
@@ -18415,6 +18446,8 @@
       unknown_count: unknownCount,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReportedStatusSummary,
+      dtc_reported_status_summary: dtcReportedStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
       dtcResponseFormat,
@@ -20755,6 +20788,7 @@
         : childReadoutStatuses.includes("reported")
           ? "reported"
           : "unknown";
+    const dtcReportedStatusSummary = buildDtcReportedStatusSummary(dtcReadoutStatus === "reported" ? mergedRows : []);
     const dtcStatusAvailabilityMasks = [...new Set(
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
@@ -20867,6 +20901,8 @@
       unknown_count: unknownCount,
       dtcStatusSummary,
       dtc_status_summary: dtcStatusSummary,
+      dtcReportedStatusSummary,
+      dtc_reported_status_summary: dtcReportedStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
       dtcResponseFormat,

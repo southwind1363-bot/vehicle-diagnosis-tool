@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.9.88";
+const APP_VERSION = "3.9.89";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6314,6 +6314,19 @@ function formatObdReportedDtcEcuCountSummary(snapshot = null, fallback = "") {
   return entries.length ? entries.join(" / ") : fallback;
 }
 
+function formatObdReportedDtcStatusSummary(snapshot = null, fallback = "") {
+  const summary = snapshot?.dtcReportedStatusSummary || snapshot?.dtc_reported_status_summary || null;
+  const counts = Array.isArray(summary?.counts)
+    ? summary.counts
+    : Array.isArray(summary?.status_counts) ? summary.status_counts : [];
+  const entries = counts.flatMap((item) => {
+    const status = String(item?.status || "").trim();
+    const count = Number(item?.count);
+    return status && Number.isSafeInteger(count) && count > 0 ? [`${status} ${count}件`] : [];
+  });
+  return entries.length ? entries.join(" / ") : fallback;
+}
+
 function formatObdBridgeDtcStatusLabel(status = "unknown") {
   return {
     stored: "保存",
@@ -8329,6 +8342,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     || session?.diagnostic_flow_summary?.dtc_status_summary
     || null;
   const dtcReadoutStatusLabel = formatObdDtcReadoutStatusSummary(dtcReadoutStatusSummary, NO_DATA);
+  const reportedDtcStatusLabel = formatObdReportedDtcStatusSummary(dtcSnapshot, NO_DATA);
   const dtcResponseStatusLabel = formatObdReadoutStatus(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status, NO_DATA);
   const dtcResponseFormats = dtcSnapshot?.dtcResponseFormats || dtcSnapshot?.dtc_response_formats || [dtcSnapshot?.dtcResponseFormat || dtcSnapshot?.dtc_response_format].filter(Boolean);
   const dtcResponseFormatLabel = formatObdDtcResponseFormat(dtcResponseFormats, NO_DATA);
@@ -8522,6 +8536,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["UDS DTC stored data raw records", udsDtcStoredDataRecordCount ? `${udsDtcStoredDataRecordCount} (raw evidence)` : NO_DATA],
     ...(reportedDtcEcuCountLabel !== NO_DATA ? [["ECU報告DTC件数", `${reportedDtcEcuCountLabel} (個別DTC詳細未展開)`]] : []),
     ["DTC内訳", dtcStatusSummary || NO_DATA],
+    ["DTC診断機報告状態", reportedDtcStatusLabel],
     ["DTC応答状態", dtcResponseStatusLabel],
     ["DTC応答形式", dtcResponseFormatLabel],
     ["UDS DTCサブ機能", formatUdsDtcSubfunction(dtcResponseSubfunction)],
