@@ -3879,7 +3879,7 @@ const bridgeReportedEmptyReadinessSession = obd.mergeDiagnosticInputs({
   bridgeImport: { readinessSnapshot: { readiness_readout_status: "reported", monitors: [] } }
 });
 check(mergedScannerSnapshotSession?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && mergedScannerSnapshotSession?.live_pid_snapshot?.monitor_values?.some((item) => item.id === "coolant_temp" && item.value === 85) && mergedScannerSnapshotSession?.livePidSnapshot?.livePidReadoutStatus === "reported" && mergedScannerSnapshotSession?.livePidSnapshot?.vehicleCommandEnabled === false && mergedScannerSnapshotSession.readinessSnapshot?.milOn === null && mergedScannerSnapshotSession.readinessSnapshot?.monitors?.some((item) => item.id === "fuel_system" && item.status === "not_complete") && mergedScannerSnapshotSession?.vehicleCommandEnabled === false && bridgeReportedEmptyReadinessSession?.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeReportedEmptyReadinessSession.readinessSnapshot?.monitors?.length === 0 && bridgeReportedEmptyReadinessSession?.vehicleCommandEnabled === false, "Merged scanner snapshots did not expose typed live PID snapshots or preserve reported bridge emptiness");
-check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && /^\d+\.\d+\.\d+$/.test(appVersion) && appSource.includes('const APP_LAST_UPDATED = "2026-08-15";'), "OBD app should retain typed scanner text live PID snapshots");
+check(appSource.includes('livePidSnapshot: analysis.livePidSnapshot || analysis.live_pid_snapshot || {') && /^\d+\.\d+\.\d+$/.test(appVersion) && /const APP_LAST_UPDATED = "\d{4}-\d{2}-\d{2}";/.test(appSource), "OBD app should retain typed scanner text live PID snapshots");
 check(appSource.includes('if (isMobileDevice()) return "user-vci-elm327";') && appSource.includes('スマホ用 ELM327 を優先') && !appSource.includes('if (isMobileDevice()) return "user-vci-thinkcar-bluetooth";'), "Mobile automatic interface selection should prioritize ELM327 without claiming direct iPhone transport");
 check(appSource.includes('window.ObdReadOnly.getElmTransportProfile({ platform: "ios" })') && appSource.includes('profile.adapterTransport} / ${profile.compatibilityStatus} / ${profile.connectorStatus}'), "iPhone ELM connection guide should expose the unverified transport profile");
 check(/^\d+\.\d+\.\d+$/.test(cacheVersion) && appVersion === cacheVersion && offlineAssets.version === appVersion, "OBD offline cache version should match the active app version");
@@ -17875,6 +17875,25 @@ const legacyOnboardMonitorInventoryComparisonSession = obd.buildDiagnosticScanSe
   core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", onboard_monitor_test_count: 1 }
 });
 check(legacyOnboardMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorComparisonAvailable === false && legacyOnboardMonitorInventoryComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorTestKeysChanged === false && legacyOnboardMonitorInventoryComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("onboard_monitor_states") === false && legacyOnboardMonitorInventoryComparisonSession.vehicleCommandEnabled === false, "Legacy Mode 06 totals were treated as detailed test state changes");
+check(source.includes("const normalizeOnboardMonitorReportedNumber = (value)") && appSource.includes("M06値詳細比較不可"), "Mode 06 value comparison should retain explicit numeric evidence and an unavailable state");
+const onboardMonitorValueComparisonSession = obd.buildDiagnosticScanSession({
+  onboard_monitor_snapshot: {
+    onboard_monitor_readout_status: "reported",
+    source_ecu: "7E8",
+    tests: [{ test_id: "01", component_id: "01", value: 12, min: 0, max: 10 }]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    onboard_monitor_value_evidence_recorded: true,
+    onboard_monitor_value_keys: ["01|01|7E8|10|0|10"]
+  }
+});
+check(onboardMonitorValueComparisonSession.coreReadoutInventorySummary?.onboardMonitorValueKeys?.join(",") === "01|01|7E8|12|0|10" && onboardMonitorValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorValueComparisonAvailable === true && onboardMonitorValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorValueKeysChanged === true && onboardMonitorValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorValueAddedKeys?.join(",") === "01|01|7E8|12|0|10" && onboardMonitorValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("onboard_monitor_values") && onboardMonitorValueComparisonSession.importedSessionComparisonSummary?.changedIdSummaries?.some((item) => item.kind === "onboard_monitor_value") && onboardMonitorValueComparisonSession.vehicleCommandEnabled === false && onboardMonitorValueComparisonSession.wouldTransmit === false, "Mode 06 numeric values were not compared separately from test state under read-only safety");
+const legacyOnboardMonitorValueComparisonSession = obd.buildDiagnosticScanSession({
+  onboard_monitor_snapshot: { onboard_monitor_readout_status: "reported", tests: [{ test_id: "01", component_id: "01", value: 12, min: 0, max: 10 }] },
+  core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", onboard_monitor_test_count: 1, onboard_monitor_evidence_recorded: true }
+});
+check(legacyOnboardMonitorValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorValueComparisonAvailable === false && legacyOnboardMonitorValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.onboardMonitorValueKeysChanged === false && legacyOnboardMonitorValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("onboard_monitor_values") === false && legacyOnboardMonitorValueComparisonSession.vehicleCommandEnabled === false, "Legacy Mode 06 state evidence was treated as a numeric value change");
 const observedEcuComparisonSession = obd.buildDiagnosticScanSession({
   ecu_response_summary: { ecus: [{ id: "7E8", status: "responded" }] },
   core_session_status: {

@@ -6054,6 +6054,17 @@
       String(test?.status || (test?.passed === true ? "pass" : test?.passed === false ? "fail" : "unknown")).trim().toLowerCase() || "unknown"
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const recordedOnboardMonitorTestKeys = onboardMonitorEvidenceRecorded ? onboardMonitorTestKeys : [];
+    const normalizeOnboardMonitorReportedNumber = (value) => Number.isFinite(Number(value)) ? String(Number(value)) : "-";
+    const onboardMonitorValueKeys = [...new Set((Array.isArray(onboardMonitorSnapshot?.tests) ? onboardMonitorSnapshot.tests : []).map((test) => {
+      const testId = String(test?.testId || test?.test_id || "").trim().toUpperCase();
+      const componentId = String(test?.componentId || test?.component_id || "").trim().toUpperCase();
+      const value = normalizeOnboardMonitorReportedNumber(test?.value);
+      if (!testId || !componentId || value === "-") return null;
+      const sourceEcu = String(test?.sourceEcu || test?.source_ecu || onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
+      return [testId, componentId, sourceEcu, value, normalizeOnboardMonitorReportedNumber(test?.min), normalizeOnboardMonitorReportedNumber(test?.max)].join("|");
+    }).filter(Boolean))].sort();
+    const onboardMonitorValueEvidenceRecorded = onboardMonitorEvidenceRecorded;
+    const recordedOnboardMonitorValueKeys = onboardMonitorValueEvidenceRecorded ? onboardMonitorValueKeys : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -6159,6 +6170,12 @@
       onboard_monitor_test_keys: [...recordedOnboardMonitorTestKeys],
       onboardMonitorEvidenceRecorded,
       onboard_monitor_evidence_recorded: onboardMonitorEvidenceRecorded,
+      onboardMonitorValueCount: recordedOnboardMonitorValueKeys.length,
+      onboard_monitor_value_count: recordedOnboardMonitorValueKeys.length,
+      onboardMonitorValueKeys: recordedOnboardMonitorValueKeys,
+      onboard_monitor_value_keys: [...recordedOnboardMonitorValueKeys],
+      onboardMonitorValueEvidenceRecorded,
+      onboard_monitor_value_evidence_recorded: onboardMonitorValueEvidenceRecorded,
       readinessIncompleteCount: isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? numericCount(readinessSnapshot?.incompleteCount) : 0,
       ecuInfoMissingKeyCount: isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? numericCount(ecuInfoSnapshot?.keyItemSummary?.missingCount) : 0,
       rawPidUndecodedCount: (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? numericCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount) : 0)
@@ -13242,6 +13259,9 @@
       onboardMonitorTestCount: ["onboard_monitor_test_count"],
       onboardMonitorTestKeys: ["onboard_monitor_test_keys"],
       onboardMonitorEvidenceRecorded: ["onboard_monitor_evidence_recorded"],
+      onboardMonitorValueCount: ["onboard_monitor_value_count"],
+      onboardMonitorValueKeys: ["onboard_monitor_value_keys"],
+      onboardMonitorValueEvidenceRecorded: ["onboard_monitor_value_evidence_recorded"],
       pendingIds: ["pending_ids"],
       pendingReadoutCount: ["pending_readout_count", "pending_count"],
       rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],
@@ -13411,6 +13431,16 @@
     const currentOnboardMonitorTestKeys = readOnboardMonitorKeys(currentSummary);
     const onboardMonitorTestAddedKeys = onboardMonitorComparisonAvailable ? diffIds(currentOnboardMonitorTestKeys, importedOnboardMonitorTestKeys) : [];
     const onboardMonitorTestRemovedKeys = onboardMonitorComparisonAvailable ? diffIds(importedOnboardMonitorTestKeys, currentOnboardMonitorTestKeys) : [];
+    const readOnboardMonitorValueKeys = (summary) => Array.isArray(readField(summary, "onboardMonitorValueKeys"))
+      ? [...new Set(readField(summary, "onboardMonitorValueKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      : [];
+    const importedOnboardMonitorValueEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorValueEvidenceRecorded");
+    const currentOnboardMonitorValueEvidenceRecorded = readBoolean(currentSummary, "onboardMonitorValueEvidenceRecorded");
+    const onboardMonitorValueComparisonAvailable = importedOnboardMonitorValueEvidenceRecorded && currentOnboardMonitorValueEvidenceRecorded;
+    const importedOnboardMonitorValueKeys = readOnboardMonitorValueKeys(importedInventory);
+    const currentOnboardMonitorValueKeys = readOnboardMonitorValueKeys(currentSummary);
+    const onboardMonitorValueAddedKeys = onboardMonitorValueComparisonAvailable ? diffIds(currentOnboardMonitorValueKeys, importedOnboardMonitorValueKeys) : [];
+    const onboardMonitorValueRemovedKeys = onboardMonitorValueComparisonAvailable ? diffIds(importedOnboardMonitorValueKeys, currentOnboardMonitorValueKeys) : [];
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
     const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
     const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
@@ -13725,7 +13755,27 @@
       onboardMonitorTestAddedKeys,
       onboard_monitor_test_added_keys: onboardMonitorTestAddedKeys,
       onboardMonitorTestRemovedKeys,
-      onboard_monitor_test_removed_keys: onboardMonitorTestRemovedKeys
+      onboard_monitor_test_removed_keys: onboardMonitorTestRemovedKeys,
+      importedOnboardMonitorValueCount: readCount(importedInventory, "onboardMonitorValueCount", "onboardMonitorValueKeys"),
+      imported_onboard_monitor_value_count: readCount(importedInventory, "onboardMonitorValueCount", "onboardMonitorValueKeys"),
+      currentOnboardMonitorValueCount: readCount(currentSummary, "onboardMonitorValueCount", "onboardMonitorValueKeys"),
+      current_onboard_monitor_value_count: readCount(currentSummary, "onboardMonitorValueCount", "onboardMonitorValueKeys"),
+      importedOnboardMonitorValueEvidenceRecorded,
+      imported_onboard_monitor_value_evidence_recorded: importedOnboardMonitorValueEvidenceRecorded,
+      currentOnboardMonitorValueEvidenceRecorded,
+      current_onboard_monitor_value_evidence_recorded: currentOnboardMonitorValueEvidenceRecorded,
+      onboardMonitorValueComparisonAvailable,
+      onboard_monitor_value_comparison_available: onboardMonitorValueComparisonAvailable,
+      importedOnboardMonitorValueKeys,
+      imported_onboard_monitor_value_keys: importedOnboardMonitorValueKeys,
+      currentOnboardMonitorValueKeys,
+      current_onboard_monitor_value_keys: currentOnboardMonitorValueKeys,
+      onboardMonitorValueKeysChanged: onboardMonitorValueComparisonAvailable && importedOnboardMonitorValueKeys.join("|") !== currentOnboardMonitorValueKeys.join("|"),
+      onboard_monitor_value_keys_changed: onboardMonitorValueComparisonAvailable && importedOnboardMonitorValueKeys.join("|") !== currentOnboardMonitorValueKeys.join("|"),
+      onboardMonitorValueAddedKeys,
+      onboard_monitor_value_added_keys: onboardMonitorValueAddedKeys,
+      onboardMonitorValueRemovedKeys,
+      onboard_monitor_value_removed_keys: onboardMonitorValueRemovedKeys
     };
   }
 
@@ -13825,6 +13875,12 @@
       onboard_monitor_test_keys: normalizeIds(summary.onboardMonitorTestKeys || summary.onboard_monitor_test_keys),
       onboardMonitorEvidenceRecorded: pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
       onboard_monitor_evidence_recorded: pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
+      onboardMonitorValueCount: toCount("onboardMonitorValueCount", "onboard_monitor_value_count", 0),
+      onboard_monitor_value_count: toCount("onboardMonitorValueCount", "onboard_monitor_value_count", 0),
+      onboardMonitorValueKeys: normalizeIds(summary.onboardMonitorValueKeys || summary.onboard_monitor_value_keys),
+      onboard_monitor_value_keys: normalizeIds(summary.onboardMonitorValueKeys || summary.onboard_monitor_value_keys),
+      onboardMonitorValueEvidenceRecorded: pickDefined(summary.onboardMonitorValueEvidenceRecorded, summary.onboard_monitor_value_evidence_recorded, false) === true,
+      onboard_monitor_value_evidence_recorded: pickDefined(summary.onboardMonitorValueEvidenceRecorded, summary.onboard_monitor_value_evidence_recorded, false) === true,
       hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
@@ -14980,6 +15036,7 @@
       || comparison.ecuInfoKeyValueKeysChanged === true
       || comparison.supportedPidKeysChanged === true
       || comparison.onboardMonitorTestKeysChanged === true
+      || comparison.onboardMonitorValueKeysChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -15010,6 +15067,7 @@
       comparison.ecuInfoKeyValueKeysChanged === true ? "ecu_info_key_values" : null,
       comparison.supportedPidKeysChanged === true ? "supported_pids" : null,
       comparison.onboardMonitorTestKeysChanged === true ? "onboard_monitor_states" : null,
+      comparison.onboardMonitorValueKeysChanged === true ? "onboard_monitor_values" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
@@ -15042,7 +15100,7 @@
         "requestPlanAddedIds", "requestPlanBridgeIntentAddedIds",
         "requestPlanNextRequestAddedIds", "requestPlanNextBridgeIntentAddedIds",
         "primaryBlockingReasonAddedIds", "primaryBlockingReadoutAddedIds", "primaryBlockingBridgeIntentAddedIds",
-        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys", "ecuInfoKeyValueAddedKeys"
+        "reportedDtcStateAddedIds", "reportedDtcStateCountChangedIds", "observedEcuAddedKeys", "dtcIdentityAddedKeys", "dtcStatusByteAddedKeys", "freezeFrameValueAddedKeys", "freezeFrameUdsRecordAddedKeys", "ecuInfoKeyValueAddedKeys", "onboardMonitorValueAddedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -15057,7 +15115,7 @@
         "requestPlanRemovedIds", "requestPlanBridgeIntentRemovedIds",
         "requestPlanNextRequestRemovedIds", "requestPlanNextBridgeIntentRemovedIds",
         "primaryBlockingReasonRemovedIds", "primaryBlockingReadoutRemovedIds", "primaryBlockingBridgeIntentRemovedIds",
-        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys", "ecuInfoKeyValueRemovedKeys"
+        "reportedDtcStateRemovedIds", "reportedDtcStateCountChangedIds", "observedEcuRemovedKeys", "dtcIdentityRemovedKeys", "dtcStatusByteRemovedKeys", "freezeFrameValueRemovedKeys", "freezeFrameUdsRecordRemovedKeys", "ecuInfoKeyValueRemovedKeys", "onboardMonitorValueRemovedKeys"
       ]),
       ...readApplicabilityStateChangedIds(comparison)
     ])];
@@ -15208,6 +15266,7 @@
       if (reasonIds.includes("blocked_reasons")) return "blocked_reason";
       if (reasonIds.includes("dtc_status_bytes")) return "dtc_status_byte";
       if (reasonIds.includes("ecu_info_key_values")) return "ecu_info_key_value";
+      if (reasonIds.includes("onboard_monitor_values")) return "onboard_monitor_value";
       if (reasonIds.includes("analysis_checklist")) return "analysis_checklist_id";
       if (reasonIds.includes("observed_ecu_responses")) return "ecu_response";
       if (reasonIds.includes("dtc_identities")) return "dtc_identity";
