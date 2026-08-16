@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.10.3";
+const APP_VERSION = "3.10.4";
 const APP_LAST_UPDATED = "2026-08-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7978,6 +7978,11 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
   const currentSupportedPidCount = Number(summary.currentSupportedPidCount ?? summary.current_supported_pid_count ?? 0);
   const addedSupportedPidKeys = Array.isArray(summary.supportedPidAddedKeys) ? summary.supportedPidAddedKeys : Array.isArray(summary.supported_pid_added_keys) ? summary.supported_pid_added_keys : [];
   const removedSupportedPidKeys = Array.isArray(summary.supportedPidRemovedKeys) ? summary.supportedPidRemovedKeys : Array.isArray(summary.supported_pid_removed_keys) ? summary.supported_pid_removed_keys : [];
+  const onboardMonitorComparisonAvailable = summary.onboardMonitorComparisonAvailable === true || summary.onboard_monitor_comparison_available === true;
+  const importedOnboardMonitorTestCount = Number(summary.importedOnboardMonitorTestCount ?? summary.imported_onboard_monitor_test_count ?? 0);
+  const currentOnboardMonitorTestCount = Number(summary.currentOnboardMonitorTestCount ?? summary.current_onboard_monitor_test_count ?? 0);
+  const addedOnboardMonitorTestKeys = Array.isArray(summary.onboardMonitorTestAddedKeys) ? summary.onboardMonitorTestAddedKeys : Array.isArray(summary.onboard_monitor_test_added_keys) ? summary.onboard_monitor_test_added_keys : [];
+  const removedOnboardMonitorTestKeys = Array.isArray(summary.onboardMonitorTestRemovedKeys) ? summary.onboardMonitorTestRemovedKeys : Array.isArray(summary.onboard_monitor_test_removed_keys) ? summary.onboard_monitor_test_removed_keys : [];
   const readinessIncompleteDeltaValue = summary.readinessIncompleteDelta ?? summary.readiness_incomplete_delta;
   const ecuInfoMissingKeyDeltaValue = summary.ecuInfoMissingKeyDelta ?? summary.ecu_info_missing_key_delta;
   const rawDelta = Number.isFinite(Number(rawPidUndecodedDeltaValue)) ? Number(rawPidUndecodedDeltaValue) : 0;
@@ -8021,6 +8026,14 @@ function formatCoreReadoutInventoryComparisonSummary(summary, fallback = NO_DATA
     parts.push(`PID対応:${[...addedSupportedPidKeys.map((key) => `+${displaySupportedPidKey(key)}`), ...removedSupportedPidKeys.map((key) => `-${displaySupportedPidKey(key)}`)].slice(0, 3).join(",")}`);
   }
   if (!supportedPidComparisonAvailable && (importedSupportedPidCount > 0 || currentSupportedPidCount > 0)) parts.push("PID詳細比較不可");
+  if (addedOnboardMonitorTestKeys.length || removedOnboardMonitorTestKeys.length) {
+    const displayOnboardMonitorKey = (key) => {
+      const [testId, componentId, , status] = String(key || "").split("|");
+      return (testId || "TID") + "-" + (componentId || "CID") + ":" + (status === "pass" ? "合格" : status === "fail" ? "範囲外" : "不明");
+    };
+    parts.push("M06状態:" + [...addedOnboardMonitorTestKeys.map((key) => "+" + displayOnboardMonitorKey(key)), ...removedOnboardMonitorTestKeys.map((key) => "-" + displayOnboardMonitorKey(key))].slice(0, 3).join(","));
+  }
+  if (!onboardMonitorComparisonAvailable && (importedOnboardMonitorTestCount > 0 || currentOnboardMonitorTestCount > 0)) parts.push("M06詳細比較不可");
   if (readinessDelta) parts.push(`RDY未完${readinessDelta > 0 ? "+" : ""}${readinessDelta}`);
   if (ecuDelta) parts.push(`ECU不足${ecuDelta > 0 ? "+" : ""}${ecuDelta}`);
   return parts.length ? parts.join(" / ") : "変化なし";

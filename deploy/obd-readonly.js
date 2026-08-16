@@ -5965,6 +5965,19 @@
       return pid ? pid + "|" + sourceEcu : null;
     }).filter(Boolean))].sort();
     const recordedSupportedPidKeys = supportedPidEvidenceRecorded ? supportedPidKeys : [];
+    const onboardMonitorResponseUnavailable = ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
+      || onboardMonitorSnapshot?.blocked === true
+      || onboardMonitorSnapshot?.isBlocked === true
+      || onboardMonitorSnapshot?.is_blocked === true;
+    const onboardMonitorEvidenceRecorded = !onboardMonitorResponseUnavailable
+      && String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() === "reported";
+    const onboardMonitorTestKeys = [...new Set((Array.isArray(onboardMonitorSnapshot?.tests) ? onboardMonitorSnapshot.tests : []).map((test) => [
+      String(test?.testId || test?.test_id || "").trim().toUpperCase(),
+      String(test?.componentId || test?.component_id || "").trim().toUpperCase(),
+      String(test?.sourceEcu || test?.source_ecu || onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu || "").trim().toUpperCase() || "-",
+      String(test?.status || (test?.passed === true ? "pass" : test?.passed === false ? "fail" : "unknown")).trim().toLowerCase() || "unknown"
+    ].join("|")).filter((key) => !key.startsWith("|")))].sort();
+    const recordedOnboardMonitorTestKeys = onboardMonitorEvidenceRecorded ? onboardMonitorTestKeys : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -6046,6 +6059,12 @@
       supported_pid_keys: [...recordedSupportedPidKeys],
       supportedPidEvidenceRecorded,
       supported_pid_evidence_recorded: supportedPidEvidenceRecorded,
+      onboardMonitorTestCount: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)),
+      onboard_monitor_test_count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)),
+      onboardMonitorTestKeys: recordedOnboardMonitorTestKeys,
+      onboard_monitor_test_keys: [...recordedOnboardMonitorTestKeys],
+      onboardMonitorEvidenceRecorded,
+      onboard_monitor_evidence_recorded: onboardMonitorEvidenceRecorded,
       readinessIncompleteCount: isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? numericCount(readinessSnapshot?.incompleteCount) : 0,
       ecuInfoMissingKeyCount: isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? numericCount(ecuInfoSnapshot?.keyItemSummary?.missingCount) : 0,
       rawPidUndecodedCount: (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? numericCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount) : 0)
@@ -12941,6 +12960,9 @@
       missingReadoutCount: ["missing_readout_count", "missing_count"],
       nextPendingReadoutId: ["next_pending_readout_id"],
       onboardMonitorFailedCount: ["onboard_monitor_failed_count"],
+      onboardMonitorTestCount: ["onboard_monitor_test_count"],
+      onboardMonitorTestKeys: ["onboard_monitor_test_keys"],
+      onboardMonitorEvidenceRecorded: ["onboard_monitor_evidence_recorded"],
       pendingIds: ["pending_ids"],
       pendingReadoutCount: ["pending_readout_count", "pending_count"],
       rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],
@@ -13058,6 +13080,16 @@
     const currentSupportedPidKeys = readSupportedPidKeys(currentSummary);
     const supportedPidAddedKeys = supportedPidComparisonAvailable ? diffIds(currentSupportedPidKeys, importedSupportedPidKeys) : [];
     const supportedPidRemovedKeys = supportedPidComparisonAvailable ? diffIds(importedSupportedPidKeys, currentSupportedPidKeys) : [];
+    const readOnboardMonitorKeys = (summary) => Array.isArray(readField(summary, "onboardMonitorTestKeys"))
+      ? [...new Set(readField(summary, "onboardMonitorTestKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+      : [];
+    const importedOnboardMonitorEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorEvidenceRecorded");
+    const currentOnboardMonitorEvidenceRecorded = readBoolean(currentSummary, "onboardMonitorEvidenceRecorded");
+    const onboardMonitorComparisonAvailable = importedOnboardMonitorEvidenceRecorded && currentOnboardMonitorEvidenceRecorded;
+    const importedOnboardMonitorTestKeys = readOnboardMonitorKeys(importedInventory);
+    const currentOnboardMonitorTestKeys = readOnboardMonitorKeys(currentSummary);
+    const onboardMonitorTestAddedKeys = onboardMonitorComparisonAvailable ? diffIds(currentOnboardMonitorTestKeys, importedOnboardMonitorTestKeys) : [];
+    const onboardMonitorTestRemovedKeys = onboardMonitorComparisonAvailable ? diffIds(importedOnboardMonitorTestKeys, currentOnboardMonitorTestKeys) : [];
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
     const currentTotalValueCount = readCount(currentSummary, "totalValueCount");
     const importedCapturedReadoutCount = readCount(importedInventory, "capturedReadoutCount", "capturedIds");
@@ -13288,7 +13320,27 @@
       supportedPidAddedKeys,
       supported_pid_added_keys: supportedPidAddedKeys,
       supportedPidRemovedKeys,
-      supported_pid_removed_keys: supportedPidRemovedKeys
+      supported_pid_removed_keys: supportedPidRemovedKeys,
+      importedOnboardMonitorTestCount: readCount(importedInventory, "onboardMonitorTestCount"),
+      imported_onboard_monitor_test_count: readCount(importedInventory, "onboardMonitorTestCount"),
+      currentOnboardMonitorTestCount: readCount(currentSummary, "onboardMonitorTestCount"),
+      current_onboard_monitor_test_count: readCount(currentSummary, "onboardMonitorTestCount"),
+      importedOnboardMonitorEvidenceRecorded,
+      imported_onboard_monitor_evidence_recorded: importedOnboardMonitorEvidenceRecorded,
+      currentOnboardMonitorEvidenceRecorded,
+      current_onboard_monitor_evidence_recorded: currentOnboardMonitorEvidenceRecorded,
+      onboardMonitorComparisonAvailable,
+      onboard_monitor_comparison_available: onboardMonitorComparisonAvailable,
+      importedOnboardMonitorTestKeys,
+      imported_onboard_monitor_test_keys: importedOnboardMonitorTestKeys,
+      currentOnboardMonitorTestKeys,
+      current_onboard_monitor_test_keys: currentOnboardMonitorTestKeys,
+      onboardMonitorTestKeysChanged: onboardMonitorComparisonAvailable && importedOnboardMonitorTestKeys.join("|") !== currentOnboardMonitorTestKeys.join("|"),
+      onboard_monitor_test_keys_changed: onboardMonitorComparisonAvailable && importedOnboardMonitorTestKeys.join("|") !== currentOnboardMonitorTestKeys.join("|"),
+      onboardMonitorTestAddedKeys,
+      onboard_monitor_test_added_keys: onboardMonitorTestAddedKeys,
+      onboardMonitorTestRemovedKeys,
+      onboard_monitor_test_removed_keys: onboardMonitorTestRemovedKeys
     };
   }
 
@@ -13364,6 +13416,12 @@
       supported_pid_keys: normalizeIds(summary.supportedPidKeys || summary.supported_pid_keys),
       supportedPidEvidenceRecorded: pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
       supported_pid_evidence_recorded: pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
+      onboardMonitorTestCount: toCount("onboardMonitorTestCount", "onboard_monitor_test_count", 0),
+      onboard_monitor_test_count: toCount("onboardMonitorTestCount", "onboard_monitor_test_count", 0),
+      onboardMonitorTestKeys: normalizeIds(summary.onboardMonitorTestKeys || summary.onboard_monitor_test_keys),
+      onboard_monitor_test_keys: normalizeIds(summary.onboardMonitorTestKeys || summary.onboard_monitor_test_keys),
+      onboardMonitorEvidenceRecorded: pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
+      onboard_monitor_evidence_recorded: pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
       hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
@@ -14512,6 +14570,7 @@
       || comparison.readinessMonitorKeysChanged === true
       || comparison.ecuInfoItemKeysChanged === true
       || comparison.supportedPidKeysChanged === true
+      || comparison.onboardMonitorTestKeysChanged === true
       || comparison.completeChanged === true
       || hasComparisonMetricChanges(comparison);
     const getSectionChangeReasonIds = (comparison = {}) => [
@@ -14535,6 +14594,7 @@
       comparison.readinessMonitorKeysChanged === true ? "readiness_monitor_states" : null,
       comparison.ecuInfoItemKeysChanged === true ? "ecu_info_items" : null,
       comparison.supportedPidKeysChanged === true ? "supported_pids" : null,
+      comparison.onboardMonitorTestKeysChanged === true ? "onboard_monitor_states" : null,
       comparison.valueCountsChanged === true || Number(comparison.totalValueCountDelta || 0) !== 0 ? "readout_inventory_values" : null,
       Number(comparison.completionDelta || 0) !== 0 ? "completion_percent" : null,
       Number(comparison.requiredCountDelta || comparison.requiredReadoutDelta || 0) !== 0 ? "required_readouts" : null,
