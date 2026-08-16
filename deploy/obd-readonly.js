@@ -20925,8 +20925,9 @@
     const keyItems = expectedItems.filter((item) => keyItemIds.has(item.id));
     const capturedKeyItems = keyItems.filter((item) => item.captured);
     const missingKeyItems = keyItems.filter((item) => !item.captured);
-    const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured);
     const supportedInfoTypesItem = items.find((item) => item.id === "supported_info_types_00");
+    const supportedInfoTypesCaptured = expectedItems.some((item) => item.id === "supported_info_types_00" && item.captured)
+      || parseObdHexBytes(supportedInfoTypesItem?.value).length > 0;
     const supportedInfoTypesSummary = decodeMode09SupportedInfoTypes(supportedInfoTypesItem?.value);
     const explicitEcuInfoResponseFormat = readEcuInfoResponseFormatAlias(sourceInput);
     const protocolEvidence = `${protocolProvenance.diagnosticProtocol || ""} ${protocol || ""}`;
