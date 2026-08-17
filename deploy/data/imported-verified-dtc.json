@@ -3910,7 +3910,7 @@
     "title": "DCM B15A8:04 current/history context",
     "system": "ボディ / データコミュニケーションモジュール（DCM・出典限定）",
     "applicability_note": "Lexus L-SB-0036-21 Rev1は、米国向け2020-2021年ES 350、ES 300h、UX 200、UX 250hでB15A804がcurrentまたはhistoryに存在する事象を記載しています。VIN、市場、年式、グレード、報告DCM、DTC状態、SOS LED、Connected Services状態、12 V電源状態、同時DTCおよび現行Lexus整備情報を確認してください。",
-    "vehicle_filter": {"makers": ["Lexus"], "models": ["ES 350", "ES 300h", "UX 200", "UX 250h"], "year_from": 2020, "year_to": 2021, "ecus": ["DCM"], "scope_confirmation_required": true},
+    "vehicle_filter": {"makers": ["Lexus"], "models": ["ES 350", "ES 300h", "UX 200", "UX 250h"], "year_from": 2020, "year_to": 2021, "ecus": ["DCM"], "dtc_states": ["current", "history"], "scope_confirmation_required": true},
     "possible_causes": [],
     "check_order": ["全current/history DTC、報告DCM、SOS LED、Connected Services状態、12 V電源状態、フリーズフレーム、VIN、市場、年式およびグレードを消去前に保存する。", "DTC消去、DCMリセット、バッテリー遮断、DCMファームウェア更新、テレマティクス登録解除・再登録、遠隔始動、ドアロック操作、ECU初期化、プログラムまたは作動試験をこのツールから行わず、L-SB-0036-21 Rev1の適用と現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、安定化電源および資格を持つテレマティクス診断手順を使用する。"],
     "measurement_points": [],
