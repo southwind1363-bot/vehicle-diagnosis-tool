@@ -105,7 +105,7 @@ public enum NativeConnectorEnvelopeFactory {
         if let protocolNumber = normalizedProtocolNumber(for: protocolNumber) {
             data["adapter_protocol_number"] = .string(protocolNumber)
         }
-        return make(context: context, sequence: sequence, intent: "adapter_identity", data: data)
+        return make(context: context, sequence: sequence, intent: "adapter_identity", data: data, readoutID: "adapter_identity")
     }
 
     private static func adapterFamily(for adapterName: String?) -> String {

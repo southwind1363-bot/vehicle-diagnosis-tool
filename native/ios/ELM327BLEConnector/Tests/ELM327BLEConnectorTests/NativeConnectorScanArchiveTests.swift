@@ -53,6 +53,28 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         XCTAssertThrowsError(try builder.append(envelope(sequence: 3)))
     }
 
+    func testAdapterIdentityUsesTheSameReadoutIDAsItsCompletionManifest() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        let adapter = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "ISO 15765-4",
+            protocolNumber: "A6"
+        )
+
+        try builder.append(adapter)
+        try builder.complete(with: manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+
+        XCTAssertEqual(try builder.export().envelopes.first?.readoutID, "adapter_identity")
+    }
+
     func testReadoutProfileRejectsCompletedScopeMismatchButAllowsInterruptedCapture() throws {
         let initialReadouts = ["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "freeze_frame_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix", "ecu_info_snapshot", "readiness_snapshot"]
         let initialIntents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_freeze_frame", "read_onboard_monitor", "read_supported_pids", "read_ecu_info", "read_readiness"]

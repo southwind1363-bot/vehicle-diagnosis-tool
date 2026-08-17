@@ -264,7 +264,7 @@ public final class NativeConnectorScanArchiveBuilder {
     }
 
     private static func isEnvelopeReadoutConsistent(intent: String, readoutID: String?) -> Bool {
-        if intent == "adapter_identity" { return readoutID == nil }
+        if intent == "adapter_identity" { return readoutID == nil || readoutID == "adapter_identity" }
         return isManifestReadoutConsistent(intent: intent, readoutID: readoutID)
     }
 

@@ -15,6 +15,8 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertTrue(json.contains("\"adapter_family\":\"STN\""))
         XCTAssertTrue(json.contains("\"adapter_protocol_hint\":\"ISO 15765-4\""))
         XCTAssertTrue(json.contains("\"adapter_protocol_number\":\"A6\""))
+        XCTAssertTrue(json.contains("\"readout_id\":\"adapter_identity\""))
+        XCTAssertEqual(envelope.readoutID, "adapter_identity")
         XCTAssertFalse(json.contains("adapter_name"))
         XCTAssertFalse(json.contains("979867700221"))
     }
