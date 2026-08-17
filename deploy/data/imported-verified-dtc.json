@@ -3882,6 +3882,28 @@
     "imported_definition_only": true
   },
   {
+    "id": "verified-import-b15cc-49-lexus-dcm-2020-2021-lsb003621",
+    "code": "B15CC",
+    "subcode": "49",
+    "title": "DCM backup battery malfunction context",
+    "system": "ボディ / データコミュニケーションモジュール・バックアップバッテリー（DCM・出典限定）",
+    "applicability_note": "Lexus L-SB-0036-21 Rev1は、米国向け2020-2021年ES 350、ES 300h、UX 200、UX 250hおよび2021年ES 250のDCM事象でB15CC49 backup battery malfunctionを記載しています。VIN、市場、年式、グレード、報告DCM、DTC状態、SOS LED、Connected Services状態、12 V電源状態、同時DTCおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "model_year_scopes": [{"models": ["ES 350", "ES 300h", "UX 200", "UX 250h"], "year_from": 2020, "year_to": 2021}, {"models": ["ES 250"], "year_from": 2021, "year_to": 2021}], "ecus": ["DCM"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["全DTC、報告DCM、SOS LED、Connected Services状態、12 V電源状態、フリーズフレーム、VIN、市場、年式およびグレードを消去前に保存する。", "DTC消去、DCMリセット、バッテリー遮断、DCMファームウェア更新、テレマティクス登録解除・再登録、バックアップバッテリー脱着、遠隔始動、ドアロック操作、ECU初期化、プログラムまたは作動試験をこのツールから行わず、L-SB-0036-21 Rev1の適用と現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、安定化電源および資格を持つテレマティクス診断手順を使用する。"],
+    "measurement_points": [],
+    "common_mistakes": ["この定義を別市場、別年式、対象外モデル、別DCM、またはB15CCの別サブコードへ流用しない。", "B15CC:49だけからDCM、バックアップバッテリー、12 Vバッテリー、通信回線、アカウント、ソフトウェアまたは部品不良を断定しない。", "この読取定義をDTC消去、DCMリセット、バッテリー遮断、ファーム更新、登録変更、バックアップバッテリー脱着または遠隔操作の許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定テレマティクス診断設備", "安定化電源"],
+    "safety_notes": ["DCM、電源、遠隔サービス、ドアロックおよび遠隔始動に関わる系統です。DTC消去、DCMリセット、バッテリー遮断、ファーム更新、登録変更、バックアップバッテリー脱着、遠隔操作、初期化またはプログラムは、Lexus手順、適切な設備、安定化電源、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0036-21 Rev1の対象車・DCM B15CC:49出典限定定義。VIN、市場、年式、グレード、報告ECU、DTC状態および現行整備書確認必須。",
+    "source": "Lexus Service Bulletin L-SB-0036-21 Rev1 / NHTSA MC-10211805",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2022/MC-10211805-9999.pdf",
+    "source_date": "2022-04-11",
+    "last_verified_date": "2026-08-17",
+    "service_manual_required": true,
+    "imported_definition_only": true
+  },
+  {
     "id": "verified-import-b15a8-04-lexus-dcm-2020-2021-lsb003621",
     "code": "B15A8",
     "subcode": "04",
