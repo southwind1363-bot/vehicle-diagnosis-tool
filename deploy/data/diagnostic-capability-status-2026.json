@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent": 75,
-  "current_basis": "P系2942件、U系573件、B系87件、C系51件、個別DTC定義3728件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+  "current_basis": "P系2942件、U系573件、B系87件、C系51件、個別DTC定義3731件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "GM Customer Satisfaction Program 18316の2018 Express/Savana RPO JH9 C0050-0FをVINキャンペーン・ブレーキ仕様・EBCM・read-only適用確認つきで追加",
@@ -24,7 +24,7 @@
     "Lexus L-SB-0028-24の2023-24 RX 500h/2024 TX 500h TCM P2797-62を市場・モデル別年式・MIL条件・read-only適用確認つきで追加",
     "Lexus L-SB-0051-24 Rev1の2019-21 ES 300h/UX 200・2021 ES 250 P2681-11/P2681-15を米国市場・指定エンジン・MID警告・read-only適用確認つきで追加",
     "Lexus L-SB-0007-25の2022-24 LX 600 ECM/PCM P0300-00/P0300-27/P0300-85を米国/メキシコ市場・MIL・VIN適用確認・read-only条件つきで追加",
-    "Lexus L-SB-0009-24 Rev1の2021-24 ES 250/2022-24 NX 250 P0301-00を米国市場・A25A-FKS・冷間フリーズフレーム・read-only適用確認つきで追加",
+    "Lexus L-SB-0009-24 Rev1の2021-24 ES 250/2022-24 NX 250 P0300-P0304:00を米国市場・A25A-FKS・冷間フリーズフレーム・read-only適用確認つきで追加",
     "Lexus L-SB-0024-25の2023-25 RX/2024-25 TX BSM C1AB4-13/C1AB5-13を米国市場・モデル別年式・ADAS安全条件・read-only適用確認つきで追加",
         "Toyota 24TC05のP05CE-00を車種・年式・生産期間・TIS適用確認つきで追加",
         "Hyundai T8XのVenue IVT対象5コードを車種・生産期間・WEBDCS適用確認つきで追加",

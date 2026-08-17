@@ -4072,6 +4072,16 @@
     "confidence": "Lexus L-SB-0007-25のLX 600 P0300:85出典限定定義。VIN、市場、年式、報告ECU、MIL状態、キャリブレーションおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0007-25 / NHTSA MC-11014206", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11014206-0001.pdf", "source_date": "2025-01-28", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
   },
   {
+    "id": "verified-import-p0300-00-lexus-es-nx-250-2021-2024-lsb000924",
+    "code": "P0300", "subcode": "00", "title": "Random/multiple cylinder misfire detected", "system": "パワートレイン / エンジン制御・複数気筒失火（出典限定）",
+    "applicability_note": "Lexus L-SB-0009-24 Rev1は、米国向け2021-2024年ES 250および2022-2024年NX 250で、A25A-FKS、冷間始動時のMIL点灯、冷却水温14-41 Fのフリーズフレーム、およびP030000を記載しています。VIN、市場、年式、エンジン型式、報告ECU、MIL状態、冷却水温、フリーズフレーム、同時DTCおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "model_year_scopes": [{"models": ["ES 250"], "year_from": 2021, "year_to": 2024}, {"models": ["NX 250"], "year_from": 2022, "year_to": 2024}], "markets": ["us"], "engines": ["A25A-FKS"], "scope_confirmation_required": true},
+    "possible_causes": [], "check_order": ["全DTC、報告ECU、MIL状態、冷却水温、冷間始動条件、フリーズフレーム、VIN、市場、年式およびエンジン型式を消去前に保存する。", "DTC消去、圧縮測定、点火・燃料・吸気系作動試験、バルブ・カムシャフト作業、部品交換、ECU初期化または書込みをこのツールから行わず、L-SB-0009-24 Rev1の適用と現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、エンジン機械系安全手順および資格を持つ担当者の手順を使用する。"],
+    "measurement_points": [], "common_mistakes": ["対象外市場、別年式、別エンジン、冷間条件外またはP0300の別サブコードへ流用しない。", "P0300:00だけから点火、燃料、圧縮、バルブ、カムシャフトまたは部品不良を断定しない。", "この読取定義をDTC消去、圧縮測定、部品交換または書込みの許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定エンジン診断設備"], "safety_notes": ["エンジン機械系、燃料、点火および高温部に関わる系統です。DTC消去、作動、測定、脱着、部品交換または書込みは、Lexus手順、適切な設備、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0009-24 Rev1のES 250/NX 250 P0300:00冷間始動出典限定定義。VIN、米国市場、年式、A25A-FKS、MIL、冷却水温・フリーズフレームおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0009-24 Rev1 / NHTSA MC-11020669", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11020669-0001.pdf", "source_date": "2025-06-25", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
+  },
+  {
     "id": "verified-import-p0301-00-lexus-es-nx-250-2021-2024-lsb000924",
     "code": "P0301", "subcode": "00", "title": "Cylinder 1 Misfire Detected", "system": "パワートレイン / エンジン制御・第1気筒失火（出典限定）",
     "applicability_note": "Lexus L-SB-0009-24 Rev1は、米国向け2021-2024年ES 250および2022-2024年NX 250で、A25A-FKS、冷間始動時のMIL点灯、冷却水温14-41 Fのフリーズフレーム、およびP030100を記載しています。VIN、市場、年式、エンジン型式、報告ECU、MIL状態、冷却水温、フリーズフレーム、同時DTCおよび現行Lexus整備情報を確認してください。",
@@ -4080,6 +4090,36 @@
     "measurement_points": [], "common_mistakes": ["対象外市場、別年式、別エンジン、冷間条件外またはP0301の別サブコードへ流用しない。", "P0301:00だけから点火、燃料、圧縮、バルブ、カムシャフトまたは部品不良を断定しない。", "この読取定義をDTC消去、圧縮測定、部品交換または書込みの許可と扱わない。"],
     "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定エンジン診断設備"], "safety_notes": ["エンジン機械系、燃料、点火および高温部に関わる系統です。DTC消去、作動、測定、脱着、部品交換または書込みは、Lexus手順、適切な設備、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
     "confidence": "Lexus L-SB-0009-24 Rev1のES 250/NX 250 P0301:00冷間始動出典限定定義。VIN、米国市場、年式、A25A-FKS、MIL、冷却水温・フリーズフレームおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0009-24 Rev1 / NHTSA MC-11020669", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11020669-0001.pdf", "source_date": "2025-06-25", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p0302-00-lexus-es-nx-250-2021-2024-lsb000924",
+    "code": "P0302", "subcode": "00", "title": "Cylinder 2 Misfire Detected", "system": "パワートレイン / エンジン制御・第2気筒失火（出典限定）",
+    "applicability_note": "Lexus L-SB-0009-24 Rev1は、米国向け2021-2024年ES 250および2022-2024年NX 250で、A25A-FKS、冷間始動時のMIL点灯、冷却水温14-41 Fのフリーズフレーム、およびP030200を記載しています。VIN、市場、年式、エンジン型式、報告ECU、MIL状態、冷却水温、フリーズフレーム、同時DTCおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "model_year_scopes": [{"models": ["ES 250"], "year_from": 2021, "year_to": 2024}, {"models": ["NX 250"], "year_from": 2022, "year_to": 2024}], "markets": ["us"], "engines": ["A25A-FKS"], "scope_confirmation_required": true},
+    "possible_causes": [], "check_order": ["全DTC、報告ECU、MIL状態、冷却水温、冷間始動条件、フリーズフレーム、VIN、市場、年式およびエンジン型式を消去前に保存する。", "DTC消去、圧縮測定、点火・燃料・吸気系作動試験、バルブ・カムシャフト作業、部品交換、ECU初期化または書込みをこのツールから行わず、L-SB-0009-24 Rev1の適用と現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、エンジン機械系安全手順および資格を持つ担当者の手順を使用する。"],
+    "measurement_points": [], "common_mistakes": ["対象外市場、別年式、別エンジン、冷間条件外またはP0302の別サブコードへ流用しない。", "P0302:00だけから点火、燃料、圧縮、バルブ、カムシャフトまたは部品不良を断定しない。", "この読取定義をDTC消去、圧縮測定、部品交換または書込みの許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定エンジン診断設備"], "safety_notes": ["エンジン機械系、燃料、点火および高温部に関わる系統です。DTC消去、作動、測定、脱着、部品交換または書込みは、Lexus手順、適切な設備、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0009-24 Rev1のES 250/NX 250 P0302:00冷間始動出典限定定義。VIN、米国市場、年式、A25A-FKS、MIL、冷却水温・フリーズフレームおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0009-24 Rev1 / NHTSA MC-11020669", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11020669-0001.pdf", "source_date": "2025-06-25", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p0303-00-lexus-es-nx-250-2021-2024-lsb000924",
+    "code": "P0303", "subcode": "00", "title": "Cylinder 3 Misfire Detected", "system": "パワートレイン / エンジン制御・第3気筒失火（出典限定）",
+    "applicability_note": "Lexus L-SB-0009-24 Rev1は、米国向け2021-2024年ES 250および2022-2024年NX 250で、A25A-FKS、冷間始動時のMIL点灯、冷却水温14-41 Fのフリーズフレーム、およびP030300を記載しています。VIN、市場、年式、エンジン型式、報告ECU、MIL状態、冷却水温、フリーズフレーム、同時DTCおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "model_year_scopes": [{"models": ["ES 250"], "year_from": 2021, "year_to": 2024}, {"models": ["NX 250"], "year_from": 2022, "year_to": 2024}], "markets": ["us"], "engines": ["A25A-FKS"], "scope_confirmation_required": true},
+    "possible_causes": [], "check_order": ["全DTC、報告ECU、MIL状態、冷却水温、冷間始動条件、フリーズフレーム、VIN、市場、年式およびエンジン型式を消去前に保存する。", "DTC消去、圧縮測定、点火・燃料・吸気系作動試験、バルブ・カムシャフト作業、部品交換、ECU初期化または書込みをこのツールから行わず、L-SB-0009-24 Rev1の適用と現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、エンジン機械系安全手順および資格を持つ担当者の手順を使用する。"],
+    "measurement_points": [], "common_mistakes": ["対象外市場、別年式、別エンジン、冷間条件外またはP0303の別サブコードへ流用しない。", "P0303:00だけから点火、燃料、圧縮、バルブ、カムシャフトまたは部品不良を断定しない。", "この読取定義をDTC消去、圧縮測定、部品交換または書込みの許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定エンジン診断設備"], "safety_notes": ["エンジン機械系、燃料、点火および高温部に関わる系統です。DTC消去、作動、測定、脱着、部品交換または書込みは、Lexus手順、適切な設備、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0009-24 Rev1のES 250/NX 250 P0303:00冷間始動出典限定定義。VIN、米国市場、年式、A25A-FKS、MIL、冷却水温・フリーズフレームおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0009-24 Rev1 / NHTSA MC-11020669", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11020669-0001.pdf", "source_date": "2025-06-25", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p0304-00-lexus-es-nx-250-2021-2024-lsb000924",
+    "code": "P0304", "subcode": "00", "title": "Cylinder 4 Misfire Detected", "system": "パワートレイン / エンジン制御・第4気筒失火（出典限定）",
+    "applicability_note": "Lexus L-SB-0009-24 Rev1は、米国向け2021-2024年ES 250および2022-2024年NX 250で、A25A-FKS、冷間始動時のMIL点灯、冷却水温14-41 Fのフリーズフレーム、およびP030400を記載しています。VIN、市場、年式、エンジン型式、報告ECU、MIL状態、冷却水温、フリーズフレーム、同時DTCおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "model_year_scopes": [{"models": ["ES 250"], "year_from": 2021, "year_to": 2024}, {"models": ["NX 250"], "year_from": 2022, "year_to": 2024}], "markets": ["us"], "engines": ["A25A-FKS"], "scope_confirmation_required": true},
+    "possible_causes": [], "check_order": ["全DTC、報告ECU、MIL状態、冷却水温、冷間始動条件、フリーズフレーム、VIN、市場、年式およびエンジン型式を消去前に保存する。", "DTC消去、圧縮測定、点火・燃料・吸気系作動試験、バルブ・カムシャフト作業、部品交換、ECU初期化または書込みをこのツールから行わず、L-SB-0009-24 Rev1の適用と現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、エンジン機械系安全手順および資格を持つ担当者の手順を使用する。"],
+    "measurement_points": [], "common_mistakes": ["対象外市場、別年式、別エンジン、冷間条件外またはP0304の別サブコードへ流用しない。", "P0304:00だけから点火、燃料、圧縮、バルブ、カムシャフトまたは部品不良を断定しない。", "この読取定義をDTC消去、圧縮測定、部品交換または書込みの許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定エンジン診断設備"], "safety_notes": ["エンジン機械系、燃料、点火および高温部に関わる系統です。DTC消去、作動、測定、脱着、部品交換または書込みは、Lexus手順、適切な設備、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0009-24 Rev1のES 250/NX 250 P0304:00冷間始動出典限定定義。VIN、米国市場、年式、A25A-FKS、MIL、冷却水温・フリーズフレームおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0009-24 Rev1 / NHTSA MC-11020669", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11020669-0001.pdf", "source_date": "2025-06-25", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
   },
   {
     "id": "verified-import-u1624-gm-gmc-hummer-ev-suv-k124-2024-pit6056b",
