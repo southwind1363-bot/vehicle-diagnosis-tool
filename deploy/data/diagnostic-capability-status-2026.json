@@ -22,6 +22,7 @@
     "NHTSA ODI PE14-001の2007-08 Camry Hybrid C1202/C1247/C1252/C1253/C1256/C1391を報告ECU・ブレーキ安全条件・read-only適用確認つきで追加",
     "Lexus L-SB-0036-21 Rev1の2020-21 ES/UX DCM B15A8-04/B15CC-49を状態確認・テレマティクス安全条件・read-only適用確認つきで追加",
     "Lexus L-SB-0028-24の2023-24 RX 500h/2024 TX 500h TCM P2797-62を市場・モデル別年式・MIL条件・read-only適用確認つきで追加",
+    "Lexus L-SB-0051-24 Rev1の2019-21 ES 300h/UX 200・2021 ES 250 P2681-11/P2681-15を米国市場・指定エンジン・MID警告・read-only適用確認つきで追加",
     "Lexus L-SB-0024-25の2023-25 RX/2024-25 TX BSM C1AB4-13/C1AB5-13を米国市場・モデル別年式・ADAS安全条件・read-only適用確認つきで追加",
         "Toyota 24TC05のP05CE-00を車種・年式・生産期間・TIS適用確認つきで追加",
         "Hyundai T8XのVenue IVT対象5コードを車種・生産期間・WEBDCS適用確認つきで追加",
