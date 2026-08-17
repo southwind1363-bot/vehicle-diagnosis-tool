@@ -4644,7 +4644,7 @@
         vehicleCommandEnabled: false,
         vehicle_command_enabled: false,
         errorCodes,
-        error_codes: [...errorCodes]
+        error_codes: Array.from(errorCodes)
       };
     }
     return {
@@ -5016,7 +5016,7 @@
     const hasNestedEcuInfoPayload = Boolean(nestedData && ([
       "values", "items", "ecu_info", "ecu_info_items", "ecu_info_rows", "ecuInfo", "ecuInfoItems", "ecuInfoRows",
       "mode09_items", "mode09Items", "mode_09_items", "mode09_values", "mode09Values", "mode_09_values",
-      "info_values", "infoValues", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers"
+      "info_values", "infoValues", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers", "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined) || collectEcuInfoRows(nestedData).length > 0));
     // Never combine outer and nested ECU identity evidence; outer rows only complete an otherwise empty envelope.
     const outerEcuInfoFallback = nestedData && !hasNestedEcuInfoPayload
@@ -5061,10 +5061,11 @@
     ];
     const malformedEcuInfoAlias = ecuInfoArrayAliases.some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const rawEcuInfoResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const hasItemEvidence = items.length > 0;
     const explicitReadoutStatus = String(data.ecu_info_readout_status || data.ecuInfoReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
-    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasItemEvidence));
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (rawEcuInfoResponse !== null || hasExplicitReadoutStatus || hasItemEvidence));
     const resolvedBridgeSafety = malformedEcuInfoAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
@@ -5072,6 +5073,21 @@
       : bridgeSafety;
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
+    if (rawEcuInfoResponse !== null) {
+      const decoded = decodeEcuInfoResponse({ raw: rawEcuInfoResponse, source: "local_bridge", source_ecu: sourceEcu, source_ecu_name: sourceEcuName, captured_at: capturedAt, protocol });
+      return {
+        ...decoded,
+        intent: "read_ecu_info",
+        ok: resolvedBridgeSafety.ok,
+        blocked: resolvedBridgeSafety.blocked,
+        wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+        would_transmit: resolvedBridgeSafety.wouldTransmit,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        errorCodes,
+        error_codes: [...errorCodes]
+      };
+    }
     return {
       ...normalizeEcuInfoSnapshot({
         ...data,
