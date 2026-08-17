@@ -127,7 +127,7 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
         XCTAssertFalse(archive.completionManifest.wouldTransmit)
     }
 
-    func testStartingAnotherReadoutClearsThePreviousArchiveAndPreview() throws {
+    func testReadoutStartWhenNotReadyKeepsThePreviousArchiveAndPreview() throws {
         let coordinator = NativeConnectorReadoutCoordinator()
         let envelope = NativeConnectorEnvelopeFactory.dtcs(
             context: context,
@@ -163,11 +163,10 @@ final class NativeConnectorReadoutCoordinatorTests: XCTestCase {
 
         coordinator.beginQuickReadout()
 
-        XCTAssertNil(coordinator.completedArchive)
-        XCTAssertEqual(coordinator.capturedEnvelopeCount, 0)
-        XCTAssertEqual(coordinator.readoutPreview, .empty)
+        XCTAssertEqual(try coordinator.exportCompletedArchive().completionManifest, manifest)
+        XCTAssertEqual(coordinator.capturedEnvelopeCount, 1)
+        XCTAssertEqual(coordinator.readoutPreview.storedDTCs.map(\.code), ["P0300"])
         XCTAssertNil(coordinator.archiveError)
-        XCTAssertThrowsError(try coordinator.exportCompletedArchive())
     }
 
     func testCoordinatorBuildsDeduplicatedPreviewFromAcceptedEnvelopes() {

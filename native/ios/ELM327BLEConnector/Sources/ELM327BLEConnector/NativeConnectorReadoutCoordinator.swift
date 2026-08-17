@@ -51,11 +51,13 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
     }
 
     public func beginInitialReadout() {
+        guard connectorState == .ready else { return }
         resetReadoutState()
         connector.runInitialReadout()
     }
 
     public func beginQuickReadout() {
+        guard connectorState == .ready else { return }
         resetReadoutState()
         connector.runQuickReadout()
     }
