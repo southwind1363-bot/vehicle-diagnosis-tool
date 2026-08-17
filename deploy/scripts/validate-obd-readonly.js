@@ -608,10 +608,10 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   check(Boolean(bridgeSupportedPidSnapshotFunctionSource), "normalizeBridgeSupportedPidSnapshot is missing from obd-readonly.js");
   if (bridgeSupportedPidSnapshotFunctionSource) {
     const functionBody = bridgeSupportedPidSnapshotFunctionSource[0];
-    check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);') && functionBody.includes('const outerSupportedPidFallback = nestedData && !hasNestedSupportedPidPayload') && functionBody.includes('Never union outer and nested PID evidence'), "normalizeBridgeSupportedPidSnapshot should normalize supported PID aliases without merging nested and outer evidence");
+    check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);') && functionBody.includes('const rawSupportedPidResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const shouldDecodeRawSupportedPids = rawSupportedPidResponse !== null && !hasStructuredSupportedPidInput;') && functionBody.includes('const outerSupportedPidFallback = nestedData && !hasNestedSupportedPidPayload') && functionBody.includes('Never union outer and nested PID evidence'), "normalizeBridgeSupportedPidSnapshot should normalize supported PID aliases and raw responses without merging nested and outer evidence");
     check(functionBody.includes('...buildSupportedPidMatrix({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeSupportedPidSnapshot should reuse the supported PID matrix builder");
     check(functionBody.includes('const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);') && functionBody.includes('protocol,') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeSupportedPidSnapshot should pass protocol and supported PID rows into the matrix builder");
-    check(functionBody.includes('const errorCodes = readBridgeResponseErrorCodes(response);') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('hasBridgeSupportedPidEvidence(data)') && functionBody.includes('hasBridgeSupportedPidSnapshotEvidence(supportedPidEcuSnapshots)') && functionBody.includes('const resolvedBridgeSafety = malformedSupportedPidAlias') && functionBody.includes('intent: "read_supported_pids"') && functionBody.includes('supported_pid_readout_status: readoutStatus') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety('), "normalizeBridgeSupportedPidSnapshot should preserve bridge failure status");
+    check(functionBody.includes('const errorCodes = readBridgeResponseErrorCodes(response);') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('hasBridgeSupportedPidEvidence(data)') && functionBody.includes('hasBridgeSupportedPidSnapshotEvidence(supportedPidEcuSnapshots)') && functionBody.includes('const decoded = decodeSupportedPidResponse({') && functionBody.includes('const resolvedBridgeSafety = malformedSupportedPidAlias') && functionBody.includes('intent: "read_supported_pids"') && functionBody.includes('supported_pid_readout_status: readoutStatus') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('readBridgeSnapshotSafety('), "normalizeBridgeSupportedPidSnapshot should preserve bridge failure status");
   }
   check(Boolean(bridgeFreezeFrameSnapshotFunctionSource), "normalizeBridgeFreezeFrameSnapshot is missing from obd-readonly.js");
   if (bridgeFreezeFrameSnapshotFunctionSource) {
@@ -8567,6 +8567,15 @@ check(bridgeSupportedPidSnapshot.intent === "read_supported_pids" && bridgeSuppo
 check(bridgeSupportedPidSnapshot.supportedPids.join(",") === "0C,05,40", "ブリッジ対応PID応答を整形できません");
 check(bridgeSupportedPidSnapshot.supportedCount === 2, "ブリッジ対応PID件数を集計できません");
 check(bridgeSupportedPidSnapshot.supported_pids.join(",") === "0C,05,40" && bridgeSupportedPidSnapshot.supported_count === bridgeSupportedPidSnapshot.supportedCount, "Bridge supported PID matrix did not expose snake_case PID aliases");
+const bridgeRawSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  source_ecu_name: "Engine",
+  data: { raw: "41 00 00 10 00 00" }
+});
+check(bridgeRawSupportedPidSnapshot.supportedPidReadoutStatus === "reported" && bridgeRawSupportedPidSnapshot.supportedPids?.includes("0C") && bridgeRawSupportedPidSnapshot.sourceEcu === "7E8" && bridgeRawSupportedPidSnapshot.sourceEcuName === "Engine" && bridgeRawSupportedPidSnapshot.retainedRawText === false && bridgeRawSupportedPidSnapshot.vehicleCommandEnabled === false && bridgeRawSupportedPidSnapshot.wouldTransmit === false, "Bridge raw Mode 01 supported-PID responses were not decoded into a read-only matrix");
 const bridgeOuterMetadataSupportedPidSnapshot = obd.normalizeBridgeSupportedPidSnapshot({
   ok: true,
   blocked: false,
