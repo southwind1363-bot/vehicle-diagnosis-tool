@@ -7,7 +7,7 @@
     "source": "SAE International",
     "source_url": "https://saemobilus.sae.org/standards/j2012_202509-diagnostic-trouble-code-definitions",
     "source_date": "2025-09-01",
-    "last_verified_date": "2026-08-06",
+    "last_verified_date": "2026-08-17",
     "service_manual_required": true
   },
   {
@@ -18,7 +18,7 @@
     "source": "SAE International",
     "source_url": "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
     "source_date": "2025-10-24",
-    "last_verified_date": "2026-08-06",
+    "last_verified_date": "2026-08-17",
     "service_manual_required": true
   },
   {
@@ -29,7 +29,7 @@
     "source": "SAE International",
     "source_url": "https://saemobilus.sae.org/standards/j1979da_202607-j1979-da-digital-annex-e-e-diagnostic-test-modes",
     "source_date": "2026-07-16",
-    "last_verified_date": "2026-08-06",
+    "last_verified_date": "2026-08-17",
     "service_manual_required": true
   },
   {
