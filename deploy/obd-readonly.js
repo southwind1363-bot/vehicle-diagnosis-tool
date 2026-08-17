@@ -26046,8 +26046,8 @@
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput), livePidSnapshotInput, ["livePidReadoutStatus", "live_pid_readout_status"]);
-    const livePidTimeline = normalizeLivePidTimeline(livePidTimelineInput);
-    const livePidTimelineSummary = buildLivePidTimelineSummary(livePidTimeline);
+    let livePidTimeline = normalizeLivePidTimeline(livePidTimelineInput);
+    let livePidTimelineSummary = buildLivePidTimelineSummary(livePidTimeline);
     const allowLivePidTimelineFallback = !hasObjectContent(livePidSnapshotInput)
       || (!['reported', 'unparsed', 'blocked'].includes(normalizedLivePidSnapshot.livePidReadoutStatus || normalizedLivePidSnapshot.live_pid_readout_status || '')
         && normalizedLivePidSnapshot.blocked !== true
@@ -26228,6 +26228,18 @@
     const hasNativeConnectorContext = Boolean(nativeConnectorScanLifecycle || nativeConnectorBoundary || String(sessionInput.source || sessionInput.source_type || "") === "native_connector");
     const hasWebSerialInfrastructureContext = String(connectionStatus?.source || connectionStatusInput?.source || "").toLowerCase() === "web_serial";
     const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext && !hasWebSerialInfrastructureContext;
+    const hasSessionAdapterIdentity = Boolean(adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion);
+    const singleSampleNeedsAdapterIdentity = livePidTimeline.samples.length === 1
+      && !normalizeLivePidTimelineAdapterIdentity(livePidTimeline.samples[0]?.adapterIdentity || livePidTimeline.samples[0]?.adapter_identity);
+    if (hasSessionAdapterIdentity && singleSampleNeedsAdapterIdentity) {
+      livePidTimeline = normalizeLivePidTimeline({
+        samples: [{
+          ...livePidTimeline.samples[0],
+          adapterIdentity
+        }]
+      });
+      livePidTimelineSummary = buildLivePidTimelineSummary(livePidTimeline);
+    }
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
     const hasEcuInfoSnapshotInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorSnapshotInput = hasObjectContent(onboardMonitorSnapshotInput);
