@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.3";
+const APP_VERSION = "3.12.4";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7699,6 +7699,16 @@ function renderObdBridgeSessionDetails(session = null) {
 function buildLivePidTimelineChartRows(timeline = null) {
   const samples = Array.isArray(timeline?.samples) ? timeline.samples : [];
   const latestCondition = samples.at(-1)?.observationCondition || samples.at(-1)?.observation_condition || "unspecified";
+  const adapterIdentityKey = (sample) => {
+    const identity = sample?.adapterIdentity || sample?.adapter_identity || {};
+    return [
+      identity.adapterFamily || identity.adapter_family || "",
+      identity.adapterName || identity.adapter_name || "",
+      identity.firmwareVersion || identity.firmware_version || ""
+    ].map((value) => String(value).trim().toLocaleLowerCase("en-US")).join("|");
+  };
+  const latestAdapterIdentityKey = adapterIdentityKey(samples.at(-1));
+  const hasLatestAdapterIdentity = Boolean(latestAdapterIdentityKey.replaceAll("|", ""));
   const rowsByKey = new Map();
   const normalizeUnit = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
   const normalizeCanAddressKey = (value) => {
@@ -7707,7 +7717,11 @@ function buildLivePidTimelineChartRows(timeline = null) {
     return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
   };
   samples
-    .filter((sample) => (sample?.observationCondition || sample?.observation_condition || "unspecified") === latestCondition)
+    .filter((sample) => {
+      if ((sample?.observationCondition || sample?.observation_condition || "unspecified") !== latestCondition) return false;
+      const sampleAdapterIdentityKey = adapterIdentityKey(sample);
+      return !hasLatestAdapterIdentity || !sampleAdapterIdentityKey.replaceAll("|", "") || sampleAdapterIdentityKey === latestAdapterIdentityKey;
+    })
     .forEach((sample) => {
       (sample?.monitorValues || sample?.monitor_values || []).forEach((item) => {
         if (!item?.id || !Number.isFinite(item.value)) return;
