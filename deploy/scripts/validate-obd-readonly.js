@@ -4692,6 +4692,27 @@ const nativeCompletionManifest = Object.freeze({
 });
 const manifestNativeScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeCompletionManifest });
 check(nativeConnectorContract.completionManifestSchemaVersion === "native_connector_completion_manifest_v1" && nativeConnectorContract.completionManifestRecordType === "completion_manifest" && manifestNativeScanSession.ok === true && manifestNativeScanSession.scanState === "completed" && manifestNativeScanSession.partial === false && manifestNativeScanSession.completionManifest?.recordType === "completion_manifest" && manifestNativeScanSession.readoutProfile === "initial_diagnostic" && manifestNativeScanSession.session?.nativeConnectorReadoutProfile === "initial_diagnostic" && manifestNativeScanSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && manifestNativeScanSession.vehicleCommandEnabled === false, "Native connector terminal manifest did not produce a complete read-only session");
+const nativeAdapterIdentityCompletionBatch = [
+  nativeEnvelope("adapter_identity", "2026-07-20T07:10:00Z", { adapter_family: "ELM327", vehicle_command_enabled: false }, "user-vci-elm327", { sequence: 0 }),
+  nativeEnvelope("adapter_identity", "2026-07-20T07:10:01Z", { adapter_family: "ELM327", adapter_protocol_hint: "ISO 15765-4", vehicle_command_enabled: false }, "user-vci-elm327", { sequence: 1 }),
+  nativeEnvelope("adapter_identity", "2026-07-20T07:10:02Z", { adapter_family: "ELM327", adapter_protocol_hint: "ISO 15765-4", adapter_protocol_number: "A6", vehicle_command_enabled: false }, "user-vci-elm327", { sequence: 2 }),
+  nativeEnvelope("read_stored_dtc", "2026-07-20T07:10:03Z", { dtcs: [], dtc_readout_status: "reported" }, "user-vci-elm327", { sequence: 3 })
+];
+const nativeAdapterIdentityCompletionSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({
+  envelopes: nativeAdapterIdentityCompletionBatch,
+  completion_manifest: (() => {
+    const manifest = {
+      ...nativeCompletionManifest,
+    captured_at: "2026-07-20T07:10:04Z",
+    expected_intents: ["adapter_identity", "read_stored_dtc"],
+    expected_readouts: ["adapter_identity", "stored_dtc_snapshot"],
+    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: 0, last_sequence: 3, envelope_count: 4 }]
+    };
+    delete manifest.readout_profile;
+    return manifest;
+  })()
+});
+check(nativeAdapterIdentityCompletionSession.ok === true && nativeAdapterIdentityCompletionSession.scanState === "completed" && nativeAdapterIdentityCompletionSession.session?.adapterIdentity?.adapterFamily === "ELM327" && nativeAdapterIdentityCompletionSession.session?.adapterIdentity?.adapterProtocolHint === "ISO 15765-4" && nativeAdapterIdentityCompletionSession.session?.adapterIdentity?.adapterProtocolNumber === "A6" && nativeAdapterIdentityCompletionSession.session?.dtcSnapshot?.dtcReadoutStatus === "reported" && nativeAdapterIdentityCompletionSession.vehicleCommandEnabled === false && nativeAdapterIdentityCompletionSession.wouldTransmit === false, "Native completion imports must retain the final normalized adapter identity without promoting vehicle commands");
 const nativeBleGattCompletionManifest = { ...nativeCompletionManifest, adapter_transport: "ble_gatt" };
 const nativeBleGattManifestScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch.map((envelope) => ({ ...envelope, adapter_transport: "ble_gatt" })), completion_manifest: nativeBleGattCompletionManifest });
 const nativeManifestTransportMismatch = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeBleGattCompletionManifest });
