@@ -3253,7 +3253,7 @@
       "stored_dtcs", "storedDtcs", "stored_dtc_codes", "storedDtcCodes", "stored_codes", "storedCodes",
       "pending_dtcs", "pendingDtcs", "pending_dtc_codes", "pendingDtcCodes", "pending_codes", "pendingCodes",
       "permanent_dtcs", "permanentDtcs", "permanent_dtc_codes", "permanentDtcCodes", "permanent_codes", "permanentCodes",
-      "ecu_responses", "ecuResponses"
+      "ecu_responses", "ecuResponses", "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined));
     // Never combine outer and nested DTC evidence; outer code groups only complete an otherwise empty envelope.
     const outerDtcFallback = nestedData && !hasNestedDtcPayload
@@ -3310,17 +3310,18 @@
       data.permanent_dtcs, data.permanentDtcs, data.permanent_dtc_codes, data.permanentDtcCodes, data.permanent_codes, data.permanentCodes
     ].some(Array.isArray);
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const rawDtcResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const ecuRows = Array.isArray(data.ecu_responses) ? data.ecu_responses : Array.isArray(data.ecuResponses) ? data.ecuResponses : [];
     const malformedEcuDtcAlias = ecuRows.some((ecuRow) => ecuRow && typeof ecuRow === "object" && !Array.isArray(ecuRow) && [
       "dtcs", "codes",
       "dtc_codes", "dtcCodes"
     ].some((key) => ecuRow[key] !== undefined && ecuRow[key] !== null && !Array.isArray(ecuRow[key])));
-    const hasDtcRowEvidence = dtcRows.length > 0 || typedDtcRowGroups.some((group) => group.rows.length > 0) || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.codes) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
+    const hasDtcRowEvidence = rawDtcResponse !== null || dtcRows.length > 0 || typedDtcRowGroups.some((group) => group.rows.length > 0) || ecuRows.some((ecuRow) => Array.isArray(ecuRow?.dtcs) || Array.isArray(ecuRow?.codes) || Array.isArray(ecuRow?.dtc_codes) || Array.isArray(ecuRow?.dtcCodes));
     const explicitReadoutStatus = String(data.dtc_readout_status || data.dtcReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(
       response,
-      errorCodes.length === 0 && (hasExplicitReadoutStatus || hasDtcArrayEvidence)
+      errorCodes.length === 0 && (rawDtcResponse !== null || hasExplicitReadoutStatus || hasDtcArrayEvidence)
     );
     const resolvedBridgeSafety = malformedDtcAlias || malformedEcuDtcAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
@@ -3333,6 +3334,29 @@
         ? data.intent
         : "read_stored_dtc";
     const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";
+    if (rawDtcResponse !== null) {
+      const decoded = decodeObdDtcResponse({
+        raw: rawDtcResponse,
+        source: "local_bridge",
+        source_ecu: sourceEcu,
+        source_ecu_name: sourceEcuName,
+        captured_at: data.captured_at || data.capturedAt || data.timestamp || response.captured_at || response.capturedAt || response.timestamp || null,
+        protocol: readBridgeProtocol(data) || readBridgeProtocol(response),
+        status: defaultStatus
+      });
+      return {
+        ...decoded,
+        intent,
+        ok: resolvedBridgeSafety.ok,
+        blocked: resolvedBridgeSafety.blocked,
+        wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+        would_transmit: resolvedBridgeSafety.wouldTransmit,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        errorCodes,
+        error_codes: Array.from(errorCodes)
+      };
+    }
     const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) => rows.flatMap((row) => {
       if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName, ecu_name: fallbackEcuName }));
       if (!row || typeof row !== "object") return [];
