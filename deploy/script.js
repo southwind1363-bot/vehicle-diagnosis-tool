@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.0";
+const APP_VERSION = "3.12.1";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9251,13 +9251,16 @@ function renderObdCoverageRoadmap(items) {
     const eta = document.createElement("p");
     eta.textContent = `使える状態の目標: ${item.eta_target || "時期未定"}`;
 
+    const measured = document.createElement("p");
+    measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-button";
     button.disabled = true;
     button.textContent = item.blocked_until?.length ? "ソース確認待ち" : "拡張中";
 
-    card.append(head, current, target, next, remaining, eta, button);
+    card.append(head, current, target, next, remaining, eta, measured, button);
     obdCoverageRoadmapGrid.appendChild(card);
   });
 }
@@ -9302,13 +9305,16 @@ function renderObdCapabilityStatus(items) {
     const eta = document.createElement("p");
     eta.textContent = `使える状態の目標: ${item.eta_target || "時期未定"}`;
 
+    const measured = document.createElement("p");
+    measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "secondary-button";
     button.disabled = true;
     button.textContent = item.safety_gate || "確認中";
 
-    card.append(head, status, progressDetail, missing, next, eta, button);
+    card.append(head, status, progressDetail, missing, next, eta, measured, button);
     obdCapabilityStatusGrid.appendChild(card);
   });
 }
