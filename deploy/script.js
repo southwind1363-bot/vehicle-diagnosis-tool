@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.26";
+const APP_VERSION = "3.12.27";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11500,6 +11500,10 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
   };
   const makers = (Array.isArray(filter.makers) ? filter.makers : []).map(normalize).filter(Boolean);
   const models = (Array.isArray(filter.models) ? filter.models : []).map(normalizeModel).filter(Boolean);
+  const modelCodeValues = Array.isArray(filter.model_codes)
+    ? filter.model_codes
+    : [filter.model_code ?? filter.modelCode ?? filter.chassis_code ?? filter.chassisCode];
+  const modelCodes = modelCodeValues.map(normalizeModel).filter(Boolean);
   const engineValues = Array.isArray(filter.engines)
     ? filter.engines
     : [filter.engine ?? filter.engine_code ?? filter.engineCode];
@@ -11553,6 +11557,9 @@ function evaluateDtcDefinitionApplicability(definition, vehicleProfile = null) {
     return scopeMakerMatches && (scope.models.includes("all") || scope.models.includes(model)) && year >= scope.yearFrom && year <= scope.yearTo;
   });
   if (!matched) return { status: "mismatch" };
+  const modelCode = normalizeModel(vehicleProfile?.modelCode ?? vehicleProfile?.model_code ?? vehicleProfile?.chassisCode ?? vehicleProfile?.chassis_code ?? vehicleProfile?.vehicleModelCode ?? vehicleProfile?.vehicle_model_code);
+  if (modelCodes.length && !modelCode) return { status: "unverified", reason: "model_code_confirmation_required" };
+  if (modelCodes.length && !modelCodes.includes(modelCode)) return { status: "mismatch", reason: "model_code_out_of_scope" };
   const engine = normalizeEngine(vehicleProfile?.engineCode ?? vehicleProfile?.engine_code ?? vehicleProfile?.engine ?? vehicleProfile?.engineModel ?? vehicleProfile?.engine_model ?? vehicleProfile?.engineType ?? vehicleProfile?.engine_type ?? vehicleProfile?.powertrainCode ?? vehicleProfile?.powertrain_code);
   if (engines.length && !engine) return { status: "unverified", reason: "engine_confirmation_required" };
   if (engines.length && !engines.includes(engine)) return { status: "mismatch", reason: "engine_out_of_scope" };
@@ -11622,6 +11629,10 @@ function buildDtcDefinitionScopeSummary(definitions) {
       if (!filter || typeof filter !== "object") return [];
       const makers = (Array.isArray(filter.makers) ? filter.makers : []).map((value) => String(value || "").trim()).filter(Boolean);
       const models = (Array.isArray(filter.models) ? filter.models : []).map((value) => String(value || "").trim()).filter(Boolean);
+      const modelCodeValues = Array.isArray(filter.model_codes)
+        ? filter.model_codes
+        : [filter.model_code ?? filter.modelCode ?? filter.chassis_code ?? filter.chassisCode];
+      const modelCodes = modelCodeValues.map((value) => String(value || "").trim()).filter(Boolean);
       const engineValues = Array.isArray(filter.engines)
         ? filter.engines
         : [filter.engine ?? filter.engine_code ?? filter.engineCode];
@@ -11679,7 +11690,7 @@ function buildDtcDefinitionScopeSummary(definitions) {
       return summaryScopes.map((scope) => {
         const years = scope.yearFrom === scope.yearTo ? String(scope.yearFrom) : `${scope.yearFrom}-${scope.yearTo}`;
         const scopeMakers = scope.makers.length ? scope.makers : makers;
-        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${electrifications.length ? ` 電動化 ${electrifications.join("/")}` : ""}${markets.length ? ` 市場 ${markets.join("/")}` : ""}${ecus.length ? ` ECU ${ecus.join("/")}` : ""}${dtcStates.length ? ` DTC状態 ${dtcStates.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
+        return `${scopeMakers.join("/")} ${scope.models.join("/")} ${years}${modelCodes.length ? ` 型式 ${modelCodes.join("/")}` : ""}${engines.length ? ` エンジン ${engines.join("/")}` : ""}${transmissions.length ? ` 変速機 ${transmissions.join("/")}` : ""}${electrifications.length ? ` 電動化 ${electrifications.join("/")}` : ""}${markets.length ? ` 市場 ${markets.join("/")}` : ""}${ecus.length ? ` ECU ${ecus.join("/")}` : ""}${dtcStates.length ? ` DTC状態 ${dtcStates.join("/")}` : ""}${productionRange ? ` 生産 ${productionRange}` : ""}${drivetrains.length ? ` 駆動 ${drivetrains.join("/")}` : ""}${additionalScope}`;
       });
     }))];
   if (!scopes.length) return "";
