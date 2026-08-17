@@ -273,11 +273,13 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     }
 
     func beginInitialReadout() {
+        guard canStartReadout else { return }
         exportURL = nil
         coordinator.beginInitialReadout()
     }
 
     func beginQuickReadout() {
+        guard canStartReadout else { return }
         exportURL = nil
         coordinator.beginQuickReadout()
     }

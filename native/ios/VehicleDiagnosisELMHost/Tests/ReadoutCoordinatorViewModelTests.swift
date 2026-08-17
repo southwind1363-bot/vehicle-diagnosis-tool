@@ -191,6 +191,9 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         XCTAssertEqual((object?["envelopes"] as? [[String: Any]])?.count, 1)
         XCTAssertNil(object?["raw_frames"])
         XCTAssertNil(viewModel.errorMessage)
+
+        viewModel.beginQuickReadout()
+        XCTAssertEqual(viewModel.exportURL, url)
     }
 
     @MainActor
