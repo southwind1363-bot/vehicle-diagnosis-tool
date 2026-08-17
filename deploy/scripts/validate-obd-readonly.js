@@ -8818,6 +8818,16 @@ const bridgePayloadAliasSession = obd.buildDiagnosticScanSession({ dtc_snapshot:
 check(bridgePayloadAliasDtcSnapshot.dtcs?.some((item) => item.code === "P0420") && bridgeResultAliasLivePidSnapshot.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 850) && bridgePayloadAliasSupportedPidSnapshot.supportedPids?.join(",") === "05,0C" && bridgeResultAliasFreezeFrameSnapshot.monitorValues?.some((item) => item.id === "coolant_temp" && item.value === 71) && bridgePayloadAliasReadinessSnapshot.incompleteCount === 1 && bridgeResultAliasEcuInfoSnapshot.items?.some((item) => item.id === "calibration_id" && item.value === "CAL-RESULT") && bridgePayloadAliasOnboardMonitorSnapshot.tests?.length === 1, "Bridge payload/result aliases were not normalized for core readouts");
 check([bridgePayloadAliasDtcSnapshot, bridgeResultAliasLivePidSnapshot, bridgePayloadAliasSupportedPidSnapshot, bridgeResultAliasFreezeFrameSnapshot, bridgePayloadAliasReadinessSnapshot, bridgeResultAliasEcuInfoSnapshot, bridgePayloadAliasOnboardMonitorSnapshot].every((snapshot) => snapshot.vehicleCommandEnabled === false && snapshot.vehicle_command_enabled === false && snapshot.wouldTransmit === false && snapshot.would_transmit === false), "Core bridge readout snapshots must carry an explicit read-only safety contract");
 check(bridgePayloadAliasSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0420") && bridgePayloadAliasSession.livePidSnapshot?.monitorValues?.some((item) => item.value === 850) && bridgePayloadAliasSession.supportedPidMatrix?.supportedPids?.join(",") === "05,0C" && bridgePayloadAliasSession.freezeFrameSnapshot?.monitorValues?.some((item) => item.value === 71) && bridgePayloadAliasSession.readinessSnapshot?.incompleteCount === 1 && bridgePayloadAliasSession.ecuInfoSnapshot?.items?.some((item) => item.value === "CAL-RESULT") && bridgePayloadAliasSession.onboardMonitorSnapshot?.tests?.length === 1 && bridgePayloadAliasSession.vehicleCommandEnabled === false && bridgePayloadAliasSession.wouldTransmit === false, "Bridge payload/result aliases were not retained in the read-only diagnostic session");
+const bridgeRawReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  data: { raw: "41 01 81 07 22 00" }
+});
+check(bridgeRawReadinessSnapshot.readinessReadoutStatus === "reported" && bridgeRawReadinessSnapshot.sourceEcu === "7E8" && bridgeRawReadinessSnapshot.milOn === true && bridgeRawReadinessSnapshot.monitors?.length > 0 && bridgeRawReadinessSnapshot.vehicleCommandEnabled === false && bridgeRawReadinessSnapshot.wouldTransmit === false, "Bridge raw Mode 01 PID 01 responses were not decoded into a read-only readiness snapshot");
+const bridgeRawReadinessMalformedSnapshot = obd.normalizeBridgeReadinessSnapshot({ ok: true, blocked: false, would_transmit: false, data: { raw: "41 01 80" } });
+check(bridgeRawReadinessMalformedSnapshot.readinessReadoutStatus === "unparsed" && bridgeRawReadinessMalformedSnapshot.vehicleCommandEnabled === false && bridgeRawReadinessMalformedSnapshot.wouldTransmit === false, "Malformed bridge raw Mode 01 PID 01 responses must remain unparsed and read-only");
 const bridgeReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,

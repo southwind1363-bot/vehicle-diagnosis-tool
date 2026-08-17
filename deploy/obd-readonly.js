@@ -4675,7 +4675,7 @@
       "status_byte_a", "status_byte_b", "status_byte_c", "status_byte_d",
       "statusByteA", "statusByteB", "statusByteC", "statusByteD",
       "monitors", "values", "monitor_values", "monitorValues", "readiness_values", "readinessValues", "pid_values", "pidValues", "readiness_rows", "readinessRows",
-      "readinessEcuSnapshots", "readiness_ecu_snapshots"
+      "readinessEcuSnapshots", "readiness_ecu_snapshots", "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined));
     // Do not combine nested and outer readiness payloads: outer fields only fill an empty nested envelope.
     const outerReadinessValueFallback = nestedData && !hasNestedReadinessPayload
@@ -4781,9 +4781,11 @@
             data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
           ].filter(Boolean);
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const rawReadinessResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const explicitReadoutStatus = String(data.readiness_readout_status || data.readinessReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || readinessEcuSnapshotRows.length > 0 || [data.monitors, data.values, data.monitor_values, data.monitorValues, data.readiness_values, data.readinessValues, data.pid_values, data.pidValues, data.readiness_rows, data.readinessRows, response.monitorValues].some(Array.isArray)
+      || rawReadinessResponse !== null
       || [data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d, data.readinessStatusByteA, data.readinessStatusByteB, data.readinessStatusByteC, data.readinessStatusByteD, data.status_byte_a, data.status_byte_b, data.status_byte_c, data.status_byte_d, data.statusByteA, data.statusByteB, data.statusByteC, data.statusByteD].some((value) => value !== undefined)));
     const resolvedBridgeSafety = malformedReadinessAlias || malformedReadinessEcuAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
@@ -4821,6 +4823,15 @@
       errorCodes,
       error_codes: [...errorCodes]
     });
+    if (rawReadinessResponse !== null) {
+      return withBridgeMetadata(decodeReadinessResponse({
+        raw: rawReadinessResponse,
+        source: "local_bridge",
+        source_ecu: sourceEcu,
+        captured_at: capturedAt,
+        protocol
+      }));
+    }
     const readinessRowIds = new Set(["mil_status", "monitor_status_mil", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d"]);
     const hasDirectMonitorRows = rows.some((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return false;
