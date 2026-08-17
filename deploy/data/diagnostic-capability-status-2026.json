@@ -66,6 +66,7 @@
         ,"Subaru 07-90-15の2015 Legacy/Outback SRVD B2350を始動時電圧・報告ECU・ADAS安全条件つきで追加"
         ,"American Honda 25-025の2024 ZDX BECM P2C8A/P2C8B/U3577-U3580/U35AFを全コード同時・高電圧安全条件・適用確認つきで追加"
         ,"GM PIP6070Bの2024-26 Envision 2.0 LSY P06DDを北米・DTC状態・油量/オイル消費確認・エンジン安全条件つきで追加"
+        ,"GM PIP6044の2024-25 Traverse/2025 Enclave/Acadia 2.5 LK0 P06DDを北米・DTC状態・暖機アイドル油圧観察・エンジン安全条件つきで追加"
         ,"GM PIT6393Jの2025-26 Yukon/Yukon XL IVD/IVE U164Eを北米・報告ECU・ソフトウェア適用確認つきで追加"
         ,"GM PIT6396Aの2020-23 Silverado/Sierra K111交換後P2535/P12A6/P10DA/C111B/P157Aを北米・エンジン・非N2N・部品番号・read-only条件つきで追加"
         ,"Kia ELE394の2022-25 HEV/PHEV AVN5.0W P17A0:00を車種別年式・AVN/ECU・同時AVN DTC・read-only条件つきで追加"
