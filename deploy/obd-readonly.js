@@ -24088,6 +24088,7 @@
     const readinessStatusHeaderNames = new Set(["status", "dtcstatus", "state", "状態", "ステータス"]);
     const vehicleProfileHeaderNames = new Set(["make", "maker", "manufacturer", "brand", "model", "modelname", "modelcode", "chassiscode", "framecode", "year", "modelyear", "registrationyear", "productiondate", "builddate", "manufacturedate", "manufacturingdate", "productionday", "enginecode", "enginemodel", "enginetype", "powertraincode", "transmission", "transmissiontype", "gearbox", "transaxle", "drivetrain", "drivetype", "drivetraintype", "drivenwheels", "fueltype", "fuel", "powertraintype", "electrification", "hybridsystem", "evsystem"]);
     const readoutInterfaceHeaderNames = new Set(["readoutinterface", "interfacelabel", "vcilabel", "scannerlabel", "devicemodel", "interfacemodel", "vcimodel", "readoutroute", "interfaceroute", "platform", "hostplatform"]);
+    const adapterIdentityHeaderNames = new Set(["adaptername", "adapterfamily", "firmwareversion", "adapterfirmware", "アダプター名", "アダプタ名", "アダプター系統", "アダプタ系統", "ファームウェア", "ファームウェアバージョン"]);
     const headerCandidate = lines.slice(0, 24)
       .map((line, index) => {
         const headerLine = line.replace(/^\uFEFF/, "");
@@ -24104,11 +24105,12 @@
           && normalizedHeaders.some((header) => readinessStatusHeaderNames.has(header));
         const hasVehicleProfileColumns = normalizedHeaders.some((header) => vehicleProfileHeaderNames.has(header));
         const hasReadoutInterfaceColumns = normalizedHeaders.some((header) => readoutInterfaceHeaderNames.has(header));
+        const hasAdapterIdentityColumns = normalizedHeaders.some((header) => adapterIdentityHeaderNames.has(header));
         const sectionHint = lines.slice(0, index).at(-1) || "";
         const hasEcuResponseColumns = /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint)
           && normalizedHeaders.some((header) => ["ecu", "module", "controlmodule", "system", "address", "ecuresponseid", "ecuid", "moduleid", "responseid"].includes(header))
           && normalizedHeaders.some((header) => readinessStatusHeaderNames.has(header));
-        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns && !hasReadinessColumns && !hasEcuResponseColumns && !hasVehicleProfileColumns && !hasReadoutInterfaceColumns)) return null;
+        if (!headers?.length || (!hasStructuralHeader && !hasMeasurementColumns && !hasReadinessColumns && !hasEcuResponseColumns && !hasVehicleProfileColumns && !hasReadoutInterfaceColumns && !hasAdapterIdentityColumns)) return null;
         return { index, delimiter, headers };
       })
       .find(Boolean);
@@ -24166,6 +24168,9 @@
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
     const readoutPlatformIndex = findIndex("platform", "host platform");
+    const adapterNameIndex = findIndex("adapter name", "アダプター名", "アダプタ名");
+    const adapterFamilyIndex = findIndex("adapter family", "アダプター系統", "アダプタ系統");
+    const adapterFirmwareVersionIndex = findIndex("firmware version", "adapter firmware", "ファームウェア", "ファームウェアバージョン");
     const hasExplicitReadinessColumns = Number.isInteger(readinessMonitorIndex) && Number.isInteger(statusIndex)
       && (Number.isInteger(readoutKindIndex) || /(?:readiness|i\/?m\s*readiness|mode\s*0?1\s*pid\s*0?1|レディネス)/i.test(sectionHint));
     const hasExplicitEcuInfoColumns = Number.isInteger(valueIndex) && (Number.isInteger(ecuInfoIdIndex) || Number.isInteger(labelIndex))
@@ -24179,7 +24184,8 @@
     const hasExplicitDtcReadoutStatusColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(statusIndex);
     const hasExplicitVehicleProfileColumns = [vehicleMakerIndex, vehicleModelIndex, vehicleModelCodeIndex, vehicleYearIndex, vehicleProductionDateIndex, vehicleEngineCodeIndex, vehicleTransmissionIndex, vehicleDrivetrainIndex, vehicleFuelTypeIndex, vehicleElectrificationIndex].some(Number.isInteger);
     const hasExplicitReadoutInterfaceColumns = [readoutInterfaceLabelIndex, readoutDeviceModelIndex, readoutRouteIndex, readoutPlatformIndex].some(Number.isInteger);
-    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns && !hasExplicitVehicleProfileColumns && !hasExplicitReadoutInterfaceColumns) return null;
+    const hasExplicitAdapterIdentityColumns = [adapterNameIndex, adapterFamilyIndex, adapterFirmwareVersionIndex].some(Number.isInteger);
+    if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns && !hasExplicitVehicleProfileColumns && !hasExplicitReadoutInterfaceColumns && !hasExplicitAdapterIdentityColumns) return null;
     const source = "scanner_csv_import";
     const sanitizeCell = (cell, length = 160) => redactSensitiveText(String(cell || "")).replace(/\s+/g, " ").trim().slice(0, length);
     const normalizeStatus = (cell) => {
@@ -24215,6 +24221,7 @@
     const ecuResponseRows = [];
     const vehicleProfileValues = {};
     const readoutInterfaceValues = {};
+    const adapterIdentityValues = {};
     const observedProtocols = new Set();
     const readoutMetadataById = new Map();
     const recordReadoutMetadata = (id, rowCapturedAt, rowProtocol) => {
@@ -24269,6 +24276,9 @@
       if (!readoutInterfaceValues.deviceModel) readoutInterfaceValues.deviceModel = cellAt(readoutDeviceModelIndex, 120) || null;
       if (!readoutInterfaceValues.route) readoutInterfaceValues.route = cellAt(readoutRouteIndex, 80) || null;
       if (!readoutInterfaceValues.platform) readoutInterfaceValues.platform = cellAt(readoutPlatformIndex, 80) || null;
+      if (!adapterIdentityValues.adapterName) adapterIdentityValues.adapterName = cellAt(adapterNameIndex, 160) || null;
+      if (!adapterIdentityValues.adapterFamily) adapterIdentityValues.adapterFamily = cellAt(adapterFamilyIndex, 120) || null;
+      if (!adapterIdentityValues.firmwareVersion) adapterIdentityValues.firmwareVersion = cellAt(adapterFirmwareVersionIndex, 120) || null;
       if (!capturedAt) capturedAt = rowCapturedAt;
       const rowCapturedAtMilliseconds = /^\d{4}-\d{2}-\d{2}T/.test(rowCapturedAt || "") ? Date.parse(rowCapturedAt) : Number.NaN;
       if (Number.isFinite(rowCapturedAtMilliseconds)) {
@@ -24456,6 +24466,19 @@
           hostplatform: "platform"
         }[label.toLowerCase().replace(/[\s_\-./()]+/g, "")];
         if (interfaceField && !readoutInterfaceValues[interfaceField]) readoutInterfaceValues[interfaceField] = rawValue;
+        const adapterIdentityField = {
+          adaptername: "adapterName",
+          "アダプター名": "adapterName",
+          "アダプタ名": "adapterName",
+          adapterfamily: "adapterFamily",
+          "アダプター系統": "adapterFamily",
+          "アダプタ系統": "adapterFamily",
+          firmwareversion: "firmwareVersion",
+          adapterfirmware: "firmwareVersion",
+          "ファームウェア": "firmwareVersion",
+          "ファームウェアバージョン": "firmwareVersion"
+        }[label.toLowerCase().replace(/[\s_\-./()]+/g, "")];
+        if (adapterIdentityField && !adapterIdentityValues[adapterIdentityField]) adapterIdentityValues[adapterIdentityField] = rawValue;
         return;
       }
       if (isEcuResponseRow || isEcuResponseSection) {
@@ -24608,7 +24631,7 @@
       })
       : null;
     const ecuResponseSummary = ecuResponseRows.length ? normalizeEcuResponseSummary({ source, ...readoutMetadata("ecu_response"), ecus: ecuResponseRows }) : null;
-    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean) && !Object.values(readoutInterfaceValues).some(Boolean)) return null;
+    if (!dtcSnapshot && !livePidSnapshot && !freezeFrameSnapshot && !readinessSnapshot && !ecuInfoSnapshot && !onboardMonitorSnapshot && !supportedPidMatrix && !ecuResponseSummary && !Object.values(vehicleProfileValues).some(Boolean) && !Object.values(readoutInterfaceValues).some(Boolean) && !Object.values(adapterIdentityValues).some(Boolean)) return null;
     const normalizedVehicleProfile = normalizeVehicleProfileInput(vehicleProfileValues) || {};
     const csvVehicleProfile = normalizedVehicleProfile.maker || normalizedVehicleProfile.model || normalizedVehicleProfile.modelCode || normalizedVehicleProfile.year || normalizedVehicleProfile.productionDate || normalizedVehicleProfile.engineCode || normalizedVehicleProfile.transmission || normalizedVehicleProfile.drivetrain || normalizedVehicleProfile.fuelType || normalizedVehicleProfile.electrification
       ? {
@@ -24634,6 +24657,7 @@
     const csvReadoutInterface = normalizedReadoutInterface.label || normalizedReadoutInterface.deviceModel || normalizedReadoutInterface.route || normalizedReadoutInterface.platform
       ? normalizedReadoutInterface
       : null;
+    const csvAdapterIdentity = normalizeLivePidTimelineAdapterIdentity(adapterIdentityValues);
     const hadSensitiveIdentifier = text !== redactSensitiveText(text)
       || ecuInfoSnapshot?.hadSensitiveIdentifier === true;
     const observedProtocolList = [...observedProtocols];
@@ -24711,6 +24735,7 @@
       ecuResponseSummary: ecuResponseSummary || undefined,
       vehicleProfile: csvVehicleProfile || undefined,
       readoutInterface: csvReadoutInterface || undefined,
+      adapterIdentity: csvAdapterIdentity || undefined,
       importClassification,
       sourceLength: text.length,
       hadSensitiveIdentifier
@@ -25802,6 +25827,14 @@
         platform: readoutInterface.platform || candidate.platform || null
       }), {});
     const readoutInterface = Object.values(mergedReadoutInterface).some(Boolean) ? normalizeReadoutInterfaceSnapshot(mergedReadoutInterface) : undefined;
+    const mergedAdapterIdentity = tableSessions
+      .map((session) => session.adapterIdentity || session.adapter_identity || {})
+      .reduce((adapterIdentity, candidate) => ({
+        adapterName: adapterIdentity.adapterName || adapterIdentity.adapter_name || candidate.adapterName || candidate.adapter_name || null,
+        adapterFamily: adapterIdentity.adapterFamily || adapterIdentity.adapter_family || candidate.adapterFamily || candidate.adapter_family || null,
+        firmwareVersion: adapterIdentity.firmwareVersion || adapterIdentity.firmware_version || candidate.firmwareVersion || candidate.firmware_version || null
+      }), {});
+    const adapterIdentity = normalizeLivePidTimelineAdapterIdentity(mergedAdapterIdentity) || undefined;
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
@@ -25815,6 +25848,7 @@
       ecuResponseSummary,
       vehicleProfile,
       readoutInterface,
+      adapterIdentity,
       importClassification: {
         schemaVersion: "scanner_csv_import_v1",
         schema_version: "scanner_csv_import_v1",
