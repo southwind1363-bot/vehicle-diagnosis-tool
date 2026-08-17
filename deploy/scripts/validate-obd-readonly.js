@@ -4713,6 +4713,20 @@ const nativeAdapterIdentityCompletionSession = obd.buildNativeConnectorScanSessi
   })()
 });
 check(nativeAdapterIdentityCompletionSession.ok === true && nativeAdapterIdentityCompletionSession.scanState === "completed" && nativeAdapterIdentityCompletionSession.session?.adapterIdentity?.adapterFamily === "ELM327" && nativeAdapterIdentityCompletionSession.session?.adapterIdentity?.adapterProtocolHint === "ISO 15765-4" && nativeAdapterIdentityCompletionSession.session?.adapterIdentity?.adapterProtocolNumber === "A6" && nativeAdapterIdentityCompletionSession.session?.dtcSnapshot?.dtcReadoutStatus === "reported" && nativeAdapterIdentityCompletionSession.vehicleCommandEnabled === false && nativeAdapterIdentityCompletionSession.wouldTransmit === false, "Native completion imports must retain the final normalized adapter identity without promoting vehicle commands");
+const nativeInitialAdapterIdentityCompletionBatch = [
+  ...nativeAdapterIdentityCompletionBatch.slice(0, 3).map((envelope, index) => ({ ...envelope, captured_at: `2026-07-20T06:59:0${index}Z` })),
+  ...nativeScanBatch.map((envelope) => ({ ...envelope, sequence: envelope.sequence + 3 }))
+];
+const nativeInitialAdapterIdentityCompletionSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({
+  envelopes: nativeInitialAdapterIdentityCompletionBatch,
+  completion_manifest: {
+    ...nativeCompletionManifest,
+    expected_intents: ["adapter_identity", ...nativeExpectedIntents],
+    expected_readouts: ["adapter_identity", ...nativeExpectedReadouts],
+    connection_segments: [{ connection_id: nativeBoundary.connectionId, connection_sequence: 0, first_sequence: 0, last_sequence: 12, envelope_count: 13 }]
+  }
+});
+check(nativeInitialAdapterIdentityCompletionSession.ok === true && nativeInitialAdapterIdentityCompletionSession.scanState === "completed" && nativeInitialAdapterIdentityCompletionSession.readoutProfile === "initial_diagnostic" && nativeInitialAdapterIdentityCompletionSession.completedReadouts.includes("adapter_identity") && nativeInitialAdapterIdentityCompletionSession.session?.adapterIdentity?.adapterProtocolNumber === "A6" && nativeInitialAdapterIdentityCompletionSession.session?.nativeConnectorScanLifecycle?.scanState === "completed" && nativeInitialAdapterIdentityCompletionSession.vehicleCommandEnabled === false && nativeInitialAdapterIdentityCompletionSession.wouldTransmit === false, "Initial iPhone diagnostic archives must complete with adapter identity and every required readout");
 const nativeBleGattCompletionManifest = { ...nativeCompletionManifest, adapter_transport: "ble_gatt" };
 const nativeBleGattManifestScanSession = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch.map((envelope) => ({ ...envelope, adapter_transport: "ble_gatt" })), completion_manifest: nativeBleGattCompletionManifest });
 const nativeManifestTransportMismatch = obd.buildNativeConnectorScanSessionFromCompletionManifest({ envelopes: nativeScanBatch, completion_manifest: nativeBleGattCompletionManifest });
