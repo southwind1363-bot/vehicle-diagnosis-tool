@@ -4109,6 +4109,22 @@
     };
   }
 
+  function normalizeLivePidTimelineAdapterIdentity(value = {}) {
+    const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+    const adapterName = String(source.adapterName || source.adapter_name || source.name || "").trim().slice(0, 160) || null;
+    const adapterFamily = String(source.adapterFamily || source.adapter_family || source.family || "").trim().slice(0, 120) || null;
+    const firmwareVersion = String(source.firmwareVersion || source.firmware_version || source.firmware || source.version || "").trim().slice(0, 120) || null;
+    if (!adapterName && !adapterFamily && !firmwareVersion) return null;
+    return {
+      adapterName,
+      adapter_name: adapterName,
+      adapterFamily,
+      adapter_family: adapterFamily,
+      firmwareVersion,
+      firmware_version: firmwareVersion
+    };
+  }
+
   function normalizeLivePidTimeline(input = {}) {
     const source = input && typeof input === "object" ? input : {};
     const sampleInput = Array.isArray(input)
@@ -4181,6 +4197,9 @@
           || null;
         const protocol = snapshot.protocol || snapshot.obd_protocol || item.protocol || item.obd_protocol || null;
         const observationCondition = normalizeLivePidObservationCondition(item.observationCondition || item.observation_condition || snapshot.observationCondition || snapshot.observation_condition);
+        const adapterIdentity = normalizeLivePidTimelineAdapterIdentity(
+          item.adapterIdentity || item.adapter_identity || snapshot.adapterIdentity || snapshot.adapter_identity
+        );
         if (snapshot.livePidReadoutStatus !== "reported" || snapshot.blocked || snapshot.wouldTransmit || !capturedAt || !snapshot.monitorValues.length) return null;
         return {
           capturedAt,
@@ -4189,6 +4208,8 @@
           observation_condition: observationCondition,
           protocol,
           obd_protocol: protocol,
+          adapterIdentity,
+          adapter_identity: adapterIdentity,
           monitorValues: cloneBridgeArrayItems(snapshot.monitorValues),
           monitor_values: cloneBridgeArrayItems(snapshot.monitorValues),
           monitorValueSummary: snapshot.monitorValueSummary,
@@ -4246,6 +4267,17 @@
     const capturedAtDiffers = Boolean(hasVerifiedCaptureTimestamps && previousSample.capturedAt !== latestSample.capturedAt);
     const protocolMatches = Boolean(previousSample && latestSample && (!previousSample.protocol || !latestSample.protocol || previousSample.protocol === latestSample.protocol));
     const comparisonAvailable = observationConditionMatches && capturedAtDiffers && protocolMatches;
+    const adapterIdentityKey = (identity) => [
+      identity?.adapterFamily || identity?.adapter_family || "",
+      identity?.adapterName || identity?.adapter_name || "",
+      identity?.firmwareVersion || identity?.firmware_version || ""
+    ].map((value) => String(value).trim().toLocaleLowerCase("en-US")).join("|");
+    const previousAdapterIdentity = previousSample?.adapterIdentity || previousSample?.adapter_identity || null;
+    const latestAdapterIdentity = latestSample?.adapterIdentity || latestSample?.adapter_identity || null;
+    const previousAdapterIdentityKey = adapterIdentityKey(previousAdapterIdentity);
+    const latestAdapterIdentityKey = adapterIdentityKey(latestAdapterIdentity);
+    const adapterIdentityComparisonAvailable = Boolean(previousAdapterIdentityKey.replaceAll("|", "") && latestAdapterIdentityKey.replaceAll("|", ""));
+    const adapterIdentityChanged = Boolean(adapterIdentityComparisonAvailable && previousAdapterIdentityKey !== latestAdapterIdentityKey);
     const monitorComparisonEcu = (item) => {
       const sourceEcu = String(item?.sourceEcu || item?.source_ecu || "").trim();
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
@@ -4296,6 +4328,14 @@
       sample_count: timeline.sampleCount,
       comparisonAvailable,
       comparison_available: comparisonAvailable,
+      adapterIdentityComparisonAvailable,
+      adapter_identity_comparison_available: adapterIdentityComparisonAvailable,
+      adapterIdentityChanged,
+      adapter_identity_changed: adapterIdentityChanged,
+      previousAdapterIdentity,
+      previous_adapter_identity: previousAdapterIdentity,
+      latestAdapterIdentity,
+      latest_adapter_identity: latestAdapterIdentity,
       comparisonBlockedByCondition: Boolean(previousSample && latestSample && !observationConditionMatches),
       comparison_blocked_by_condition: Boolean(previousSample && latestSample && !observationConditionMatches),
       comparisonBlockedByUnrecordedCondition: Boolean(previousSample && latestSample && !observationConditionsRecorded),
