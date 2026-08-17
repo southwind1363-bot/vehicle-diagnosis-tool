@@ -21662,6 +21662,11 @@ const scannerCsvAdapterTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
 ].join("\n"));
 const scannerCsvAdapterTimelineRoundTrip = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerCsvAdapterTimelineSession) });
 check(scannerCsvAdapterTimelineSession?.adapterIdentity?.adapterName === "ELM327 Mini" && scannerCsvAdapterTimelineSession.adapterIdentity?.adapterFamily === "ELM327" && scannerCsvAdapterTimelineSession.adapterIdentity?.firmwareVersion === "1.5" && scannerCsvAdapterTimelineSession.livePidTimeline?.samples?.[0]?.adapterIdentity?.adapterFamily === "ELM327" && scannerCsvAdapterTimelineRoundTrip?.livePidTimeline?.samples?.[0]?.adapterIdentity?.adapterName === "ELM327 Mini" && scannerCsvAdapterTimelineRoundTrip?.vehicleCommandEnabled === false, "Structured CSV import did not retain a declared adapter identity with a single read-only live PID sample");
+const scannerJapaneseCsvAdapterTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
+  "PID\tパラメーター\t測定値\t単位\t取得時刻\t観察条件\tアダプター名\tアダプター系統\tファームウェア",
+  "0C\tエンジン回転数\t800\trpm\t2026-08-17T00:00:00Z\t暖機後\tELM327 Mini\tELM327\t1.5"
+].join("\n"));
+check(scannerJapaneseCsvAdapterTimelineSession?.adapterIdentity?.adapterName === "ELM327 Mini" && scannerJapaneseCsvAdapterTimelineSession.adapterIdentity?.adapterFamily === "ELM327" && scannerJapaneseCsvAdapterTimelineSession.adapterIdentity?.firmwareVersion === "1.5" && scannerJapaneseCsvAdapterTimelineSession.livePidTimeline?.samples?.[0]?.observationCondition === "warm" && scannerJapaneseCsvAdapterTimelineSession.livePidTimeline?.samples?.[0]?.adapterIdentity?.adapterFamily === "ELM327" && scannerJapaneseCsvAdapterTimelineSession?.vehicleCommandEnabled === false, "Japanese CSV adapter identity headers did not retain a read-only live PID provenance");
 const scannerCsvCompleteReportSession = obd.buildDiagnosticScanSessionFromCsv([
   "Vehicle Information", "Item\tValue", "Make\tToyota", "Model\tPrius", "Model Year\t2023",
   "Device Information", "Item\tValue", "Scanner Label\tTHINKCAR TCMa", "Device Model\tTCMa", "Platform\tiOS",
