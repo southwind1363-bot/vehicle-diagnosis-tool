@@ -125,6 +125,12 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testReadoutLabelNamesTheRetainedAdapterIdentity() {
+        let viewModel = ReadoutCoordinatorViewModel()
+        XCTAssertEqual(viewModel.readoutLabel(intent: "adapter_identity", readoutID: "adapter_identity"), "アダプター識別")
+    }
+
+    @MainActor
     func testCompletedArchiveWritesAShareableValidatedJSONFile() async throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "44444444-4444-4444-8444-444444444444")!,

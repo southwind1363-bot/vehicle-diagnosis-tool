@@ -186,6 +186,7 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
 
     func readoutLabel(intent: String, readoutID: String?) -> String {
         switch readoutID ?? intent {
+        case "adapter_identity": return "アダプター識別"
         case "stored_dtc_snapshot": return "保存DTC"
         case "pending_dtc_snapshot": return "保留DTC"
         case "permanent_dtc_snapshot": return "永久DTC"
