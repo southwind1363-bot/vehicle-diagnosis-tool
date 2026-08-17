@@ -4545,6 +4545,21 @@ const nativeElmImport = obd.buildNativeConnectorDiagnosticImport(nativeElmEnvelo
 check(nativeElmImport.ok === true && nativeElmImport.accepted === true && nativeElmImport.blocked === false && nativeElmImport.session?.source === "native_connector" && nativeElmImport.session?.sessionId === "native-single-1784527200000-read_stored_dtc", "iPhoneコネクタ結果を独立した診断セッションへ取り込めません");
 check(nativeElmImport.session?.dtcSnapshot?.codes?.includes("P0300") && nativeElmImport.session?.dtcSnapshot?.dtcs?.some((item) => item.status === "stored"), "iPhoneコネクタDTCが診断セッションへ正規化されていません");
 check(nativeElmImport.session?.readoutInterface?.route === "native_connector_readout" && nativeElmImport.session?.vehicleCommandEnabled === false && nativeElmImport.session?.wouldTransmit === false && !JSON.stringify(nativeElmImport).includes("do-not-retain") && !Object.hasOwn(nativeElmImport, "data"), "iPhoneコネクタ取込が識別情報または生payloadを保持しています");
+const nativeElmAdapterIdentityEnvelope = {
+  ...nativeElmEnvelope,
+  adapter_transport: "ble_gatt",
+  intent: "adapter_identity",
+  readout_id: "adapter_identity",
+  data: {
+    adapter_family: "ELM327",
+    adapter_protocol_hint: "ISO 15765-4",
+    adapter_protocol_number: "A6",
+    vehicle_command_enabled: false
+  }
+};
+const nativeElmAdapterIdentityEvaluation = obd.evaluateNativeConnectorEnvelope(nativeElmAdapterIdentityEnvelope);
+const nativeElmAdapterIdentityImport = obd.buildNativeConnectorDiagnosticImport(nativeElmAdapterIdentityEnvelope);
+check(nativeElmAdapterIdentityEvaluation.accepted === true && nativeElmAdapterIdentityEvaluation.readoutId === "adapter_identity" && nativeElmAdapterIdentityImport.session?.adapterIdentity?.adapterFamily === "ELM327" && nativeElmAdapterIdentityImport.session?.readoutInterface?.adapterTransport === "ble_gatt" && nativeElmAdapterIdentityImport.session?.vehicleCommandEnabled === false && nativeElmAdapterIdentityImport.session?.wouldTransmit === false, "iPhone adapter identity readout ID did not retain its typed read-only diagnostic session");
 const nativeTrustedTimestampImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmEnvelope, data: { dtcs: [], captured_at: "2040-01-01T00:00:00Z" } });
 check(nativeTrustedTimestampImport.session?.dtcSnapshot?.capturedAt === "2026-07-20T06:00:00.000Z" && nativeTrustedTimestampImport.session?.startedAt === "2026-07-20T06:00:00.000Z" && nativeTrustedTimestampImport.session?.endedAt === "2026-07-20T06:00:00.000Z", "iPhoneコネクタdata内の未検証時刻がenvelope時刻を上書きしています");
 const nativeReadinessImport = obd.buildNativeConnectorDiagnosticImport({
