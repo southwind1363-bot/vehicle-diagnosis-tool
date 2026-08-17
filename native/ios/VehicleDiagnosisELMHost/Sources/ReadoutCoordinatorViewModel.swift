@@ -13,9 +13,9 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
 
         var label: String {
             let properties = [
-                candidate.supportsWrite ? "write" : nil,
-                candidate.supportsWriteWithoutResponse ? "write-no-response" : nil,
-                candidate.supportsNotify ? "notify" : nil
+                candidate.supportsWrite ? "送信" : nil,
+                candidate.supportsWriteWithoutResponse ? "応答なし送信" : nil,
+                candidate.supportsNotify ? "通知受信" : nil
             ].compactMap { $0 }.joined(separator: ", ")
             return "\(id) [\(properties)]"
         }

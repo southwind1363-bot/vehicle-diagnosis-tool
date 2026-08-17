@@ -127,7 +127,7 @@ struct ReadoutCoordinatorView: View {
                 }
 
                 if !viewModel.readoutPreview.liveTextValues.isEmpty {
-                    Section("Live status") {
+                    Section("ライブ状態") {
                         ForEach(viewModel.readoutPreview.liveTextValues) { value in
                             LabeledContent("\(value.monitorID) / PID \(value.pid)", value: "\(value.displayValue) / \(value.sourceScopeID)")
                         }
@@ -143,7 +143,7 @@ struct ReadoutCoordinatorView: View {
                 }
 
                 if !viewModel.readoutPreview.freezeFrameTextValues.isEmpty {
-                    Section("Freeze frame status") {
+                    Section("フリーズフレーム状態") {
                         ForEach(viewModel.readoutPreview.freezeFrameTextValues) { value in
                             LabeledContent("\(value.monitorID) / PID \(value.pid)", value: "\(value.displayValue) / \(value.sourceScopeID)")
                         }
@@ -151,7 +151,7 @@ struct ReadoutCoordinatorView: View {
                 }
 
                 if !viewModel.readoutPreview.freezeFrameTriggerDTCs.isEmpty {
-                    Section("Freeze frame trigger") {
+                    Section("フリーズフレーム発生DTC") {
                         ForEach(viewModel.readoutPreview.freezeFrameTriggerDTCs) { dtc in
                             LabeledContent(dtc.code, value: dtc.sourceScopeID)
                         }
