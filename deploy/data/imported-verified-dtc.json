@@ -4036,6 +4036,42 @@
     "imported_definition_only": true
   },
   {
+    "id": "verified-import-p0300-00-lexus-lx600-2022-2024-lsb000725",
+    "code": "P0300",
+    "subcode": "00",
+    "title": "Random/Multiple Cylinder Misfire Detected",
+    "system": "パワートレイン / エンジン制御・失火（出典限定）",
+    "applicability_note": "Lexus L-SB-0007-25は、米国およびメキシコ向け2022-2024年LX 600で、MIL点灯、ECM/PCMのP030000を記載しています。資料は生産変更有効VINより前の車両だけに適用します。VIN、市場、年式、報告ECM/PCM、MIL状態、DTC状態、フリーズフレーム、同時DTC、キャリブレーションIDおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "models": ["LX 600"], "year_from": 2022, "year_to": 2024, "markets": ["us", "mexico"], "ecus": ["ECM", "PCM"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["全DTC、報告ECM/PCM、MIL状態、フリーズフレーム、VIN、市場、年式およびキャリブレーションIDを消去前に保存する。", "DTC消去、ECM/PCMリプログラム、点火・燃料・吸気系作動試験、部品交換、ECU初期化または書込みをこのツールから行わず、L-SB-0007-25の適用VINと現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、安定化電源および資格を持つエンジン診断手順を使用する。"],
+    "measurement_points": [], "common_mistakes": ["対象外VIN、別市場、別年式、別ECUまたはP0300の別サブコードへ流用しない。", "P0300:00だけから点火、燃料、吸気、ECM/PCMまたは部品不良を断定しない。", "この読取定義をDTC消去、ECM書換え、作動試験または部品交換の許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定ECM診断設備", "安定化電源"],
+    "safety_notes": ["エンジン制御、燃料、点火およびECM/PCMプログラムに関わる系統です。DTC消去、書換え、作動、測定、脱着または部品交換は、Lexus手順、適切な設備、安定化電源、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0007-25のLX 600 P0300:00出典限定定義。VIN、市場、年式、報告ECU、MIL状態、キャリブレーションおよび現行整備書確認必須。",
+    "source": "Lexus Service Bulletin L-SB-0007-25 / NHTSA MC-11014206", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11014206-0001.pdf", "source_date": "2025-01-28", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p0300-27-lexus-lx600-2022-2024-lsb000725",
+    "code": "P0300", "subcode": "27", "title": "Random/Multiple Cylinder Misfire Detected (Emission) Signal Rate of Change Above Threshold", "system": "パワートレイン / エンジン制御・失火（出典限定）",
+    "applicability_note": "Lexus L-SB-0007-25は、米国およびメキシコ向け2022-2024年LX 600で、MIL点灯、ECM/PCMのP030027を記載しています。資料は生産変更有効VINより前の車両だけに適用します。VIN、市場、年式、報告ECM/PCM、MIL状態、DTC状態、フリーズフレーム、同時DTC、キャリブレーションIDおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "models": ["LX 600"], "year_from": 2022, "year_to": 2024, "markets": ["us", "mexico"], "ecus": ["ECM", "PCM"], "scope_confirmation_required": true},
+    "possible_causes": [], "check_order": ["全DTC、報告ECM/PCM、MIL状態、フリーズフレーム、VIN、市場、年式およびキャリブレーションIDを消去前に保存する。", "DTC消去、ECM/PCMリプログラム、点火・燃料・吸気系作動試験、部品交換、ECU初期化または書込みをこのツールから行わず、L-SB-0007-25の適用VINと現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、安定化電源および資格を持つエンジン診断手順を使用する。"],
+    "measurement_points": [], "common_mistakes": ["対象外VIN、別市場、別年式、別ECUまたはP0300の別サブコードへ流用しない。", "P0300:27だけから点火、燃料、吸気、ECM/PCMまたは部品不良を断定しない。", "この読取定義をDTC消去、ECM書換え、作動試験または部品交換の許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定ECM診断設備", "安定化電源"], "safety_notes": ["エンジン制御、燃料、点火およびECM/PCMプログラムに関わる系統です。DTC消去、書換え、作動、測定、脱着または部品交換は、Lexus手順、適切な設備、安定化電源、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0007-25のLX 600 P0300:27出典限定定義。VIN、市場、年式、報告ECU、MIL状態、キャリブレーションおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0007-25 / NHTSA MC-11014206", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11014206-0001.pdf", "source_date": "2025-01-28", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
+  },
+  {
+    "id": "verified-import-p0300-85-lexus-lx600-2022-2024-lsb000725",
+    "code": "P0300", "subcode": "85", "title": "Random/Multiple Cylinder Misfire Detected (Over Temperature) Signal Above Allowable Range", "system": "パワートレイン / エンジン制御・失火（出典限定）",
+    "applicability_note": "Lexus L-SB-0007-25は、米国およびメキシコ向け2022-2024年LX 600で、MIL点灯、ECM/PCMのP030085を記載しています。資料は生産変更有効VINより前の車両だけに適用します。VIN、市場、年式、報告ECM/PCM、MIL状態、DTC状態、フリーズフレーム、同時DTC、キャリブレーションIDおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "models": ["LX 600"], "year_from": 2022, "year_to": 2024, "markets": ["us", "mexico"], "ecus": ["ECM", "PCM"], "scope_confirmation_required": true},
+    "possible_causes": [], "check_order": ["全DTC、報告ECM/PCM、MIL状態、フリーズフレーム、VIN、市場、年式およびキャリブレーションIDを消去前に保存する。", "DTC消去、ECM/PCMリプログラム、点火・燃料・吸気系作動試験、部品交換、ECU初期化または書込みをこのツールから行わず、L-SB-0007-25の適用VINと現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、安定化電源および資格を持つエンジン診断手順を使用する。"],
+    "measurement_points": [], "common_mistakes": ["対象外VIN、別市場、別年式、別ECUまたはP0300の別サブコードへ流用しない。", "P0300:85だけから点火、燃料、吸気、ECM/PCMまたは部品不良を断定しない。", "この読取定義をDTC消去、ECM書換え、作動試験または部品交換の許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定ECM診断設備", "安定化電源"], "safety_notes": ["エンジン制御、燃料、点火およびECM/PCMプログラムに関わる系統です。DTC消去、書換え、作動、測定、脱着または部品交換は、Lexus手順、適切な設備、安定化電源、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0007-25のLX 600 P0300:85出典限定定義。VIN、市場、年式、報告ECU、MIL状態、キャリブレーションおよび現行整備書確認必須。", "source": "Lexus Service Bulletin L-SB-0007-25 / NHTSA MC-11014206", "source_url": "https://static.nhtsa.gov/odi/tsbs/2025/MC-11014206-0001.pdf", "source_date": "2025-01-28", "last_verified_date": "2026-08-17", "service_manual_required": true, "imported_definition_only": true
+  },
+  {
     "id": "verified-import-u1624-gm-gmc-hummer-ev-suv-k124-2024-pit6056b",
     "code": "U1624",
     "title": "K124 image processing module U1624 current/history context",
