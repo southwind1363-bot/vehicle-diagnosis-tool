@@ -3954,7 +3954,7 @@
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedLivePidPayload = Boolean(nestedData && [
       "values", "monitor_values", "monitorValues", "pid_values", "pidValues", "live_pid_values", "livePidValues", "live_data", "liveData", "items",
-      "monitorValueSummary", "monitor_value_summary", "monitorInsights", "monitor_insights", "insights"
+      "monitorValueSummary", "monitor_value_summary", "monitorInsights", "monitor_insights", "insights", "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined));
     // Never combine outer and nested live PID evidence; outer values only complete an otherwise empty envelope.
     const outerLivePidFallback = nestedData && !hasNestedLivePidPayload
@@ -3989,6 +3989,8 @@
       || Array.isArray(data.liveData)
       || Array.isArray(data.items);
     const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);
+    const rawLivePidResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
+    const shouldDecodeRawLivePid = rawLivePidResponse !== null && !hasBridgeValueList;
     const malformedLivePidAlias = [
       "values",
       "monitor_values", "monitorValues",
@@ -3997,7 +3999,7 @@
       "live_data", "liveData",
       "items"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
-    const bridgeSafety = readBridgeSnapshotSafety(response, hasBridgeValueList || hasBridgeValueSummary);
+    const bridgeSafety = readBridgeSnapshotSafety(response, shouldDecodeRawLivePid || hasBridgeValueList || hasBridgeValueSummary);
     const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedLivePidAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
@@ -4074,6 +4076,27 @@
       || response.captured_timestamp
       || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
+    if (shouldDecodeRawLivePid) {
+      const decoded = decodeLivePidResponse({
+        raw: rawLivePidResponse,
+        source: "local_bridge",
+        source_ecu: sourceEcu,
+        source_ecu_name: sourceEcuName,
+        captured_at: capturedAt,
+        protocol
+      });
+      return {
+        ...decoded,
+        ok: resolvedBridgeSafety.ok,
+        blocked: resolvedBridgeSafety.blocked,
+        wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+        would_transmit: resolvedBridgeSafety.wouldTransmit,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        errorCodes,
+        error_codes: Array.from(errorCodes)
+      };
+    }
     const protocolProvenance = {
       primaryProtocol: normalizeProtocolProvenanceValue(protocol),
       primary_protocol: normalizeProtocolProvenanceValue(protocol),
@@ -5420,10 +5443,22 @@
         captured_at: livePidSnapshotInput.data.captured_at || livePidSnapshotInput.data.capturedAt || livePidSnapshotInput.captured_at || livePidSnapshotInput.capturedAt || null
       }
       : livePidSnapshotInput;
+    const livePidResponseHasStructuredValues = [
+      livePidResponseInput?.values,
+      livePidResponseInput?.monitor_values,
+      livePidResponseInput?.monitorValues,
+      livePidResponseInput?.pid_values,
+      livePidResponseInput?.pidValues,
+      livePidResponseInput?.live_pid_values,
+      livePidResponseInput?.livePidValues,
+      livePidResponseInput?.live_data,
+      livePidResponseInput?.liveData,
+      livePidResponseInput?.items
+    ].some(Array.isArray);
     const livePidSnapshot = hasLivePidSnapshotInput
       ? (livePidSnapshotInput?.monitorValues
           ? livePidSnapshotInput
-          : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
+          : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes)) && !livePidResponseHasStructuredValues
             ? decodeLivePidResponse(livePidResponseInput)
             : normalizeBridgeLivePidSnapshot(livePidSnapshotInput))
       : null;
@@ -22400,6 +22435,7 @@
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const values = [];
     const sourceEcu = readObdResponseSourceEcu(input);
+    const sourceEcuName = input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName || null;
     for (let index = 0; index < bytes.length - 2; index++) {
       if (bytes[index] !== 0x41) continue;
       const pid = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
@@ -22421,6 +22457,8 @@
       would_transmit: false,
       data: {
         protocol: input.protocol || input.obd_protocol || null,
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+        ...(sourceEcuName ? { source_ecu_name: sourceEcuName } : {}),
         supported_pids: [],
         values,
         live_pid_readout_status: readoutStatus,
