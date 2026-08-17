@@ -21680,6 +21680,13 @@ const scannerJapaneseCsvAdapterTimelineSession = obd.buildDiagnosticScanSessionF
   "0C\tエンジン回転数\t800\trpm\t2026-08-17T00:00:00Z\t暖機後\tELM327 Mini\tELM327\t1.5"
 ].join("\n"));
 check(scannerJapaneseCsvAdapterTimelineSession?.adapterIdentity?.adapterName === "ELM327 Mini" && scannerJapaneseCsvAdapterTimelineSession.adapterIdentity?.adapterFamily === "ELM327" && scannerJapaneseCsvAdapterTimelineSession.adapterIdentity?.firmwareVersion === "1.5" && scannerJapaneseCsvAdapterTimelineSession.livePidTimeline?.samples?.[0]?.observationCondition === "warm" && scannerJapaneseCsvAdapterTimelineSession.livePidTimeline?.samples?.[0]?.adapterIdentity?.adapterFamily === "ELM327" && scannerJapaneseCsvAdapterTimelineSession?.vehicleCommandEnabled === false, "Japanese CSV adapter identity headers did not retain a read-only live PID provenance");
+const scannerCsvRowAdapterTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
+  "PID\tParameter\tValue\tUnit\tCaptured At\tObservation Condition\tAdapter Name\tAdapter Family\tFirmware Version",
+  "0C\tEngine Speed\t800\trpm\t2026-08-17T00:00:00Z\twarm\tELM327 Mini\tELM327\t1.5",
+  "0C\tEngine Speed\t900\trpm\t2026-08-17T00:00:00Z\twarm\tPass-Thru\tJ2534\t1.0"
+].join("\n"));
+const scannerCsvRowAdapterTimelineRoundTrip = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerCsvRowAdapterTimelineSession) });
+check(scannerCsvRowAdapterTimelineSession?.adapterIdentity?.ok === false && !scannerCsvRowAdapterTimelineSession.adapterIdentity?.adapterFamily && scannerCsvRowAdapterTimelineSession.livePidTimeline?.sampleCount === 2 && scannerCsvRowAdapterTimelineSession.livePidTimeline?.samples?.map((sample) => sample.adapterIdentity?.adapterFamily).join(",") === "ELM327,J2534" && scannerCsvRowAdapterTimelineRoundTrip?.livePidTimeline?.samples?.map((sample) => sample.adapterIdentity?.adapterName).join(",") === "ELM327 Mini,Pass-Thru" && scannerCsvRowAdapterTimelineSession?.vehicleCommandEnabled === false && scannerCsvRowAdapterTimelineRoundTrip?.wouldTransmit === false, "Row-level CSV adapter identity must separate same-time live PID history without enabling vehicle commands");
 const scannerCsvCompleteReportSession = obd.buildDiagnosticScanSessionFromCsv([
   "Vehicle Information", "Item\tValue", "Make\tToyota", "Model\tPrius", "Model Year\t2023",
   "Device Information", "Item\tValue", "Scanner Label\tTHINKCAR TCMa", "Device Model\tTCMa", "Platform\tiOS",

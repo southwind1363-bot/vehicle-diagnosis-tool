@@ -24222,6 +24222,12 @@
     const vehicleProfileValues = {};
     const readoutInterfaceValues = {};
     const adapterIdentityValues = {};
+    const adapterIdentityCandidates = [];
+    const adapterIdentityKey = (identity) => [
+      identity?.adapterFamily || identity?.adapter_family || "",
+      identity?.adapterName || identity?.adapter_name || "",
+      identity?.firmwareVersion || identity?.firmware_version || ""
+    ].map((item) => String(item).trim().toLocaleLowerCase("en-US")).join("|");
     const observedProtocols = new Set();
     const readoutMetadataById = new Map();
     const recordReadoutMetadata = (id, rowCapturedAt, rowProtocol) => {
@@ -24276,9 +24282,15 @@
       if (!readoutInterfaceValues.deviceModel) readoutInterfaceValues.deviceModel = cellAt(readoutDeviceModelIndex, 120) || null;
       if (!readoutInterfaceValues.route) readoutInterfaceValues.route = cellAt(readoutRouteIndex, 80) || null;
       if (!readoutInterfaceValues.platform) readoutInterfaceValues.platform = cellAt(readoutPlatformIndex, 80) || null;
-      if (!adapterIdentityValues.adapterName) adapterIdentityValues.adapterName = cellAt(adapterNameIndex, 160) || null;
-      if (!adapterIdentityValues.adapterFamily) adapterIdentityValues.adapterFamily = cellAt(adapterFamilyIndex, 120) || null;
-      if (!adapterIdentityValues.firmwareVersion) adapterIdentityValues.firmwareVersion = cellAt(adapterFirmwareVersionIndex, 120) || null;
+      const rowAdapterIdentity = normalizeLivePidTimelineAdapterIdentity({
+        adapterName: cellAt(adapterNameIndex, 160) || null,
+        adapterFamily: cellAt(adapterFamilyIndex, 120) || null,
+        firmwareVersion: cellAt(adapterFirmwareVersionIndex, 120) || null
+      });
+      if (rowAdapterIdentity) adapterIdentityCandidates.push(rowAdapterIdentity);
+      if (!adapterIdentityValues.adapterName) adapterIdentityValues.adapterName = rowAdapterIdentity?.adapterName || null;
+      if (!adapterIdentityValues.adapterFamily) adapterIdentityValues.adapterFamily = rowAdapterIdentity?.adapterFamily || null;
+      if (!adapterIdentityValues.firmwareVersion) adapterIdentityValues.firmwareVersion = rowAdapterIdentity?.firmwareVersion || null;
       if (!capturedAt) capturedAt = rowCapturedAt;
       const rowCapturedAtMilliseconds = /^\d{4}-\d{2}-\d{2}T/.test(rowCapturedAt || "") ? Date.parse(rowCapturedAt) : Number.NaN;
       if (Number.isFinite(rowCapturedAtMilliseconds)) {
@@ -24560,8 +24572,8 @@
         } else {
           monitorValues.push(row);
           if (rowCapturedAt) {
-            const sampleKey = `${rowCapturedAt}::${rowObservationCondition}::${rowProtocol || protocol || ""}`;
-            const sample = livePidSamplesByCapturedAt.get(sampleKey) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, observationCondition: rowObservationCondition, values: [] };
+            const sampleKey = `${rowCapturedAt}::${rowObservationCondition}::${rowProtocol || protocol || ""}::${adapterIdentityKey(rowAdapterIdentity)}`;
+            const sample = livePidSamplesByCapturedAt.get(sampleKey) || { capturedAt: rowCapturedAt, protocol: rowProtocol || protocol || null, observationCondition: rowObservationCondition, adapterIdentity: rowAdapterIdentity, values: [] };
             sample.values.push(row);
             livePidSamplesByCapturedAt.set(sampleKey, sample);
           }
@@ -24572,7 +24584,10 @@
     const dtcSnapshot = dtcs.length || reportedDtcStatuses.size
       ? normalizeDtcSnapshot({ source, ...readoutMetadata("dtc"), dtcs, ...(dtcStatusAvailabilityMask ? { dtc_status_availability_mask: dtcStatusAvailabilityMask } : {}), ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
       : null;
-    const csvAdapterIdentity = normalizeLivePidTimelineAdapterIdentity(adapterIdentityValues);
+    const declaredAdapterIdentity = normalizeLivePidTimelineAdapterIdentity(adapterIdentityValues);
+    if (declaredAdapterIdentity) adapterIdentityCandidates.push(declaredAdapterIdentity);
+    const distinctAdapterIdentityKeys = [...new Set(adapterIdentityCandidates.map(adapterIdentityKey))];
+    const csvAdapterIdentity = distinctAdapterIdentityKeys.length === 1 ? adapterIdentityCandidates[0] : null;
     const livePidTimelineSamples = [...livePidSamplesByCapturedAt.values()].sort((left, right) => {
       const leftTime = /^\d{4}-\d{2}-\d{2}T/.test(left.capturedAt) ? Date.parse(left.capturedAt) : Number.NaN;
       const rightTime = /^\d{4}-\d{2}-\d{2}T/.test(right.capturedAt) ? Date.parse(right.capturedAt) : Number.NaN;
@@ -24584,7 +24599,7 @@
           captured_at: sample.capturedAt,
           protocol: sample.protocol,
           observation_condition: sample.observationCondition,
-          ...(csvAdapterIdentity ? { adapter_identity: csvAdapterIdentity } : {}),
+          ...(sample.adapterIdentity || csvAdapterIdentity ? { adapter_identity: sample.adapterIdentity || csvAdapterIdentity } : {}),
           live_pid_snapshot: normalizeBridgeLivePidSnapshot({ source, captured_at: sample.capturedAt, protocol: sample.protocol, values: sample.values })
         }))
       })
