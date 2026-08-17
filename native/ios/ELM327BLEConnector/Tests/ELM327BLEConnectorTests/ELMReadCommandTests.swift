@@ -33,6 +33,27 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(ELMReadCommand.initialLivePIDCommands.contains(.commandedDieselExhaustFluid))
     }
 
+    func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory() {
+        let initialReadoutIDs = Set(ELMReadCommand.initialReadoutCommands.compactMap(\.readoutID))
+        let liveReadoutIDs = Set(ELMReadCommand.initialLivePIDCommands.compactMap(\.readoutID))
+
+        XCTAssertEqual(
+            initialReadoutIDs.union(liveReadoutIDs),
+            [
+                "adapter_identity",
+                "stored_dtc_snapshot",
+                "pending_dtc_snapshot",
+                "permanent_dtc_snapshot",
+                "onboard_monitor_snapshot",
+                "freeze_frame_snapshot",
+                "ecu_info_snapshot",
+                "supported_pid_matrix",
+                "readiness_snapshot",
+                "live_pid_snapshot"
+            ]
+        )
+    }
+
     func testQuickReadoutPlanKeepsOnlyTheFastReadOnlyCore() {
         XCTAssertEqual(
             ELMReadCommand.quickReadoutCommands,
