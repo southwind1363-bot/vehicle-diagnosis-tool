@@ -800,7 +800,9 @@ public final class ELM327BLEConnector: NSObject {
     }
 
     private func plan(commands: [ELMReadCommand]) {
-        commands.filter { !$0.isAdapterSetup }.forEach { command in
+        commands.forEach { command in
+            // Setup commands are excluded unless they emit a retained readout envelope.
+            guard !command.isAdapterSetup || command.readoutID != nil else { return }
             plannedIntents.insert(command.intent)
             if let readoutID = command.readoutID { plannedReadoutIDs.insert(readoutID) }
         }
