@@ -24572,6 +24572,7 @@
     const dtcSnapshot = dtcs.length || reportedDtcStatuses.size
       ? normalizeDtcSnapshot({ source, ...readoutMetadata("dtc"), dtcs, ...(dtcStatusAvailabilityMask ? { dtc_status_availability_mask: dtcStatusAvailabilityMask } : {}), ...(reportedDtcStatuses.size ? { dtcReadoutStatus: "reported", reportedStatuses: [...reportedDtcStatuses] } : {}) })
       : null;
+    const csvAdapterIdentity = normalizeLivePidTimelineAdapterIdentity(adapterIdentityValues);
     const livePidTimelineSamples = [...livePidSamplesByCapturedAt.values()].sort((left, right) => {
       const leftTime = /^\d{4}-\d{2}-\d{2}T/.test(left.capturedAt) ? Date.parse(left.capturedAt) : Number.NaN;
       const rightTime = /^\d{4}-\d{2}-\d{2}T/.test(right.capturedAt) ? Date.parse(right.capturedAt) : Number.NaN;
@@ -24583,6 +24584,7 @@
           captured_at: sample.capturedAt,
           protocol: sample.protocol,
           observation_condition: sample.observationCondition,
+          ...(csvAdapterIdentity ? { adapter_identity: csvAdapterIdentity } : {}),
           live_pid_snapshot: normalizeBridgeLivePidSnapshot({ source, captured_at: sample.capturedAt, protocol: sample.protocol, values: sample.values })
         }))
       })
@@ -24657,7 +24659,6 @@
     const csvReadoutInterface = normalizedReadoutInterface.label || normalizedReadoutInterface.deviceModel || normalizedReadoutInterface.route || normalizedReadoutInterface.platform
       ? normalizedReadoutInterface
       : null;
-    const csvAdapterIdentity = normalizeLivePidTimelineAdapterIdentity(adapterIdentityValues);
     const hadSensitiveIdentifier = text !== redactSensitiveText(text)
       || ecuInfoSnapshot?.hadSensitiveIdentifier === true;
     const observedProtocolList = [...observedProtocols];
@@ -25598,7 +25599,10 @@
       const hasEcuResponses = /(?:ecu\s*responses?|module\s*responses?|ecu応答)/i.test(sectionHint)
         && has("ecu", "module", "controlmodule", "system", "address", "ecuresponseid", "ecuid", "moduleid", "responseid", "ecu応答id")
         && has("status", "dtcstatus", "state", "状態", "ステータス");
-      return hasDtcOrPid || hasMeasurement || hasReadiness || hasMode06 || hasEcuInfo || hasSupportedPid || hasEcuResponses;
+      const hasDeviceInformation = /(?:device|adapter|scanner|readout|interface|vci|機器|読取器|アダプター|アダプタ)/i.test(sectionHint)
+        && has("item", "項目")
+        && has("value", "reading", "result", "measuredvalue", "measurement", "値", "測定値", "結果", "読取値");
+      return hasDtcOrPid || hasMeasurement || hasReadiness || hasMode06 || hasEcuInfo || hasSupportedPid || hasEcuResponses || hasDeviceInformation;
     };
     const headerIndexes = lines.map((line, index) => isTableHeader(line, index) ? index : -1).filter((index) => index >= 0);
     if (headerIndexes.length < 2) return buildDiagnosticScanSessionFromCsvTable(text, options);
@@ -25619,9 +25623,27 @@
     const livePidSnapshots = tableSessions
       .map((session) => session.livePidSnapshot)
       .filter((snapshot) => snapshot && (snapshot.livePidReadoutStatus === "reported" || Number(snapshot.valueCount) > 0));
+    const adapterIdentityCandidates = tableSessions
+      .map((session) => normalizeLivePidTimelineAdapterIdentity(session.adapterIdentity || session.adapter_identity || {}))
+      .filter(Boolean);
+    const adapterIdentityKey = (identity) => [
+      identity?.adapterFamily || identity?.adapter_family || "",
+      identity?.adapterName || identity?.adapter_name || "",
+      identity?.firmwareVersion || identity?.firmware_version || ""
+    ].map((value) => String(value).trim().toLocaleLowerCase("en-US")).join("|");
+    const distinctAdapterIdentityKeys = [...new Set(adapterIdentityCandidates.map(adapterIdentityKey))];
+    const declaredAdapterIdentity = distinctAdapterIdentityKeys.length === 1 ? adapterIdentityCandidates[0] : undefined;
     const livePidTimelineInputSamples = tableSessions.flatMap((session) => {
       const samples = session.livePidTimeline?.samples || session.live_pid_timeline?.samples || [];
-      if (samples.length) return samples;
+      const sessionAdapterIdentity = normalizeLivePidTimelineAdapterIdentity(session.adapterIdentity || session.adapter_identity || {});
+      if (samples.length) return samples.map((sample) => {
+        const sampleAdapterIdentity = normalizeLivePidTimelineAdapterIdentity(sample?.adapterIdentity || sample?.adapter_identity || {});
+        const adapterIdentity = sampleAdapterIdentity || sessionAdapterIdentity || declaredAdapterIdentity;
+        return {
+          ...sample,
+          ...(adapterIdentity ? { adapterIdentity } : {})
+        };
+      });
       const snapshot = session.livePidSnapshot || session.live_pid_snapshot || null;
       const capturedAt = snapshot?.capturedAt || snapshot?.captured_at || null;
       return snapshot?.livePidReadoutStatus === "reported" && capturedAt
@@ -25629,6 +25651,7 @@
           captured_at: capturedAt,
           protocol: snapshot.protocol || snapshot.obd_protocol || null,
           observation_condition: snapshot.observationCondition || snapshot.observation_condition || "unspecified",
+          ...(sessionAdapterIdentity || declaredAdapterIdentity ? { adapterIdentity: sessionAdapterIdentity || declaredAdapterIdentity } : {}),
           live_pid_snapshot: snapshot
         }]
         : [];
@@ -25638,10 +25661,11 @@
       const capturedAt = sample?.capturedAt || sample?.captured_at || null;
       const protocol = sample?.protocol || sample?.obd_protocol || null;
       const observationCondition = normalizeLivePidObservationCondition(sample?.observationCondition || sample?.observation_condition);
+      const adapterIdentity = normalizeLivePidTimelineAdapterIdentity(sample?.adapterIdentity || sample?.adapter_identity || {});
       const monitorValues = sample?.monitorValues || sample?.monitor_values || sample?.livePidSnapshot?.monitorValues || sample?.live_pid_snapshot?.monitor_values || [];
       if (!capturedAt || !Array.isArray(monitorValues) || !monitorValues.length) return;
-      const key = `${capturedAt}::${protocol || ""}::${observationCondition}`;
-      const group = livePidTimelineGroups.get(key) || { capturedAt, protocol, observationCondition, monitorValues: [], index };
+      const key = `${capturedAt}::${protocol || ""}::${observationCondition}::${adapterIdentityKey(adapterIdentity)}`;
+      const group = livePidTimelineGroups.get(key) || { capturedAt, protocol, observationCondition, adapterIdentity, monitorValues: [], index };
       group.monitorValues.push(...monitorValues);
       livePidTimelineGroups.set(key, group);
     });
@@ -25656,6 +25680,7 @@
           captured_at: sample.capturedAt,
           protocol: sample.protocol,
           observation_condition: sample.observationCondition,
+          ...(sample.adapterIdentity ? { adapter_identity: sample.adapterIdentity } : {}),
           live_pid_snapshot: {
             source: "scanner_csv_import",
             captured_at: sample.capturedAt,
@@ -25827,14 +25852,7 @@
         platform: readoutInterface.platform || candidate.platform || null
       }), {});
     const readoutInterface = Object.values(mergedReadoutInterface).some(Boolean) ? normalizeReadoutInterfaceSnapshot(mergedReadoutInterface) : undefined;
-    const mergedAdapterIdentity = tableSessions
-      .map((session) => session.adapterIdentity || session.adapter_identity || {})
-      .reduce((adapterIdentity, candidate) => ({
-        adapterName: adapterIdentity.adapterName || adapterIdentity.adapter_name || candidate.adapterName || candidate.adapter_name || null,
-        adapterFamily: adapterIdentity.adapterFamily || adapterIdentity.adapter_family || candidate.adapterFamily || candidate.adapter_family || null,
-        firmwareVersion: adapterIdentity.firmwareVersion || adapterIdentity.firmware_version || candidate.firmwareVersion || candidate.firmware_version || null
-      }), {});
-    const adapterIdentity = normalizeLivePidTimelineAdapterIdentity(mergedAdapterIdentity) || undefined;
+    const adapterIdentity = declaredAdapterIdentity;
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],

@@ -14686,6 +14686,13 @@ const changedAdapterTimeline = obd.normalizeLivePidTimeline({
 const changedAdapterSummary = obd.buildLivePidTimelineSummary(changedAdapterTimeline);
 const changedAdapterRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ live_pid_timeline: changedAdapterTimeline }))));
 check(changedAdapterSummary.comparisonAvailable === true && changedAdapterSummary.adapterIdentityComparisonAvailable === true && changedAdapterSummary.adapterIdentityChanged === true && changedAdapterSummary.previousAdapterIdentity?.adapterFamily === "ELM327" && changedAdapterSummary.latestAdapterIdentity?.adapterFamily === "J2534" && changedAdapterRoundTrip?.livePidTimelineSummary?.adapterIdentityChanged === true && changedAdapterRoundTrip?.vehicleCommandEnabled === false, "Live PID comparison did not preserve a changed adapter identity through read-only export");
+const sameTimeChangedAdapterTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-08-17T00:00:00Z", observation_condition: "warm", adapter_identity: { adapter_family: "ELM327" }, live_pid_snapshot: decodedLivePids },
+    { captured_at: "2026-08-17T00:00:00Z", observation_condition: "warm", adapter_identity: { adapter_family: "J2534" }, live_pid_snapshot: decodedLivePids }
+  ]
+});
+check(sameTimeChangedAdapterTimeline.sampleCount === 2 && sameTimeChangedAdapterTimeline.samples?.[0]?.adapterIdentity?.adapterFamily === "ELM327" && sameTimeChangedAdapterTimeline.samples?.[1]?.adapterIdentity?.adapterFamily === "J2534" && sameTimeChangedAdapterTimeline.vehicle_command_enabled === false, "Live PID history merged same-time samples from different adapters");
 const unknownAdapterTimelineSummary = obd.buildLivePidTimelineSummary(obd.normalizeLivePidTimeline({
   samples: [
     { captured_at: "2026-07-17T00:00:00Z", observation_condition: "warm", live_pid_snapshot: decodedLivePids },
@@ -21658,10 +21665,16 @@ const scannerCsvReadoutInterfaceSession = obd.buildDiagnosticScanSessionFromCsv(
 check(scannerCsvReadoutInterfaceSession?.readoutInterface?.label === "THINKCAR TCMa" && scannerCsvReadoutInterfaceSession.readoutInterface?.deviceModel === "TCMa" && scannerCsvReadoutInterfaceSession.readoutInterface?.platform === "iOS" && scannerCsvReadoutInterfaceSession?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored") && scannerCsvReadoutInterfaceSession?.vehicleCommandEnabled === false && scannerCsvReadoutInterfaceSession?.retainedRawText === false, "Structured CSV import did not retain shared readout-interface information with DTC data in one read-only session");
 const scannerCsvAdapterTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
   "Device Information", "Item\tValue", "Adapter Name\tELM327 Mini", "Adapter Family\tELM327", "Firmware Version\t1.5",
-  "Live Data", "PID\tParameter\tValue\tUnit\tCaptured At\tObservation Condition", "0C\tEngine Speed\t800\trpm\t2026-08-17T00:00:00Z\twarm"
+  "Live Data", "PID\tParameter\tValue\tUnit\tCaptured At\tObservation Condition", "0C\tEngine Speed\t800\trpm\t2026-08-17T00:00:00Z\twarm", "0C\tEngine Speed\t900\trpm\t2026-08-17T00:00:05Z\twarm"
 ].join("\n"));
 const scannerCsvAdapterTimelineRoundTrip = obd.buildDiagnosticScanSession({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scannerCsvAdapterTimelineSession) });
-check(scannerCsvAdapterTimelineSession?.adapterIdentity?.adapterName === "ELM327 Mini" && scannerCsvAdapterTimelineSession.adapterIdentity?.adapterFamily === "ELM327" && scannerCsvAdapterTimelineSession.adapterIdentity?.firmwareVersion === "1.5" && scannerCsvAdapterTimelineSession.livePidTimeline?.samples?.[0]?.adapterIdentity?.adapterFamily === "ELM327" && scannerCsvAdapterTimelineRoundTrip?.livePidTimeline?.samples?.[0]?.adapterIdentity?.adapterName === "ELM327 Mini" && scannerCsvAdapterTimelineRoundTrip?.vehicleCommandEnabled === false, "Structured CSV import did not retain a declared adapter identity with a single read-only live PID sample");
+check(scannerCsvAdapterTimelineSession?.adapterIdentity?.adapterName === "ELM327 Mini" && scannerCsvAdapterTimelineSession.adapterIdentity?.adapterFamily === "ELM327" && scannerCsvAdapterTimelineSession.adapterIdentity?.firmwareVersion === "1.5" && scannerCsvAdapterTimelineSession.livePidTimeline?.sampleCount === 2 && scannerCsvAdapterTimelineSession.livePidTimeline?.samples?.every((sample) => sample.adapterIdentity?.adapterFamily === "ELM327") && scannerCsvAdapterTimelineSession.livePidTimelineSummary?.adapterIdentityComparisonAvailable === true && scannerCsvAdapterTimelineSession.livePidTimelineSummary?.adapterIdentityChanged === false && scannerCsvAdapterTimelineRoundTrip?.livePidTimeline?.samples?.every((sample) => sample.adapterIdentity?.adapterName === "ELM327 Mini") && scannerCsvAdapterTimelineRoundTrip?.vehicleCommandEnabled === false, "Structured CSV import did not retain a declared adapter identity with read-only live PID history");
+const scannerCsvMixedAdapterTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
+  "Device Information", "Item\tValue", "Adapter Family\tELM327",
+  "Device Information", "Item\tValue", "Adapter Family\tJ2534",
+  "Live Data", "PID\tParameter\tValue\tUnit\tCaptured At\tObservation Condition", "0C\tEngine Speed\t800\trpm\t2026-08-17T00:00:00Z\twarm", "0C\tEngine Speed\t900\trpm\t2026-08-17T00:00:05Z\twarm"
+].join("\n"));
+check(scannerCsvMixedAdapterTimelineSession?.adapterIdentity?.ok === false && !scannerCsvMixedAdapterTimelineSession.adapterIdentity?.adapterFamily && scannerCsvMixedAdapterTimelineSession?.livePidTimeline?.sampleCount === 2 && scannerCsvMixedAdapterTimelineSession.livePidTimeline?.samples?.every((sample) => sample.adapterIdentity === null) && scannerCsvMixedAdapterTimelineSession?.vehicleCommandEnabled === false, "Mixed adapter CSV metadata must not be inferred onto live PID history");
 const scannerJapaneseCsvAdapterTimelineSession = obd.buildDiagnosticScanSessionFromCsv([
   "PID\tパラメーター\t測定値\t単位\t取得時刻\t観察条件\tアダプター名\tアダプター系統\tファームウェア",
   "0C\tエンジン回転数\t800\trpm\t2026-08-17T00:00:00Z\t暖機後\tELM327 Mini\tELM327\t1.5"
