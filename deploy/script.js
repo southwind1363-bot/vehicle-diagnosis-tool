@@ -240,7 +240,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.8";
+const APP_VERSION = "3.12.9";
 const APP_LAST_UPDATED = "2026-08-17";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4569,7 +4569,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.bridgeStatus = null;
     obdDevSession.bridgeVciList = null;
     obdDevSession.adapterIdentity = null;
-    obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({ status: "in_progress" });
+    obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({ status: "in_progress", baudRate });
     obdDevSession.lastRawText = "";
     obdDevSession.connectedAt = new Date().toISOString();
     obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
@@ -4676,6 +4676,7 @@ async function initializeElmDeveloperAdapter() {
     } catch (error) {
       obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
         status: "failed",
+        baudRate: obdDevSession.adapterInitializationSummary?.baudRate,
         attemptedSetupStepCount: completedStepCount + 1,
         completedSetupStepCount: completedStepCount,
         failedSetupStep: step,
@@ -4687,6 +4688,7 @@ async function initializeElmDeveloperAdapter() {
     if (outcome.commandStatus !== "completed") {
       obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
         status: "failed",
+        baudRate: obdDevSession.adapterInitializationSummary?.baudRate,
         attemptedSetupStepCount: completedStepCount + 1,
         completedSetupStepCount: completedStepCount,
         failedSetupStep: step,
@@ -4699,6 +4701,7 @@ async function initializeElmDeveloperAdapter() {
   }
   obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
     status: "completed",
+    baudRate: obdDevSession.adapterInitializationSummary?.baudRate,
     attemptedSetupStepCount: initSteps.length,
     completedSetupStepCount: initSteps.length
   });
@@ -5864,6 +5867,10 @@ function buildWebSerialAdapterInitializationSummary(options = {}) {
   const stopReason = typeof options?.stopReason === "string" && options.stopReason.trim()
     ? options.stopReason.trim().slice(0, 40)
     : null;
+  const baudRate = Number(options?.baudRate);
+  const normalizedBaudRate = Number.isInteger(baudRate) && baudRate >= 1200 && baudRate <= 1000000
+    ? baudRate
+    : null;
   return {
     schemaVersion: "web_serial_adapter_initialization_v1",
     schema_version: "web_serial_adapter_initialization_v1",
@@ -5874,6 +5881,7 @@ function buildWebSerialAdapterInitializationSummary(options = {}) {
     attempted_setup_step_count: attemptedSetupStepCount,
     completedSetupStepCount,
     completed_setup_step_count: completedSetupStepCount,
+    ...(normalizedBaudRate ? { baudRate: normalizedBaudRate, baud_rate: normalizedBaudRate } : {}),
     ...(failedSetupStep ? { failedSetupStep, failed_setup_step: failedSetupStep } : {}),
     ...(stopReason ? { stopReason, stop_reason: stopReason } : {}),
     retainedRawText: false,
@@ -5898,12 +5906,14 @@ function getWebSerialAdapterInitializationStopReason(error) {
 
 function formatWebSerialAdapterInitializationSummary(summary = null) {
   const status = summary?.initializationStatus || summary?.initialization_status;
-  if (status === "completed") return `完了 (${summary.completedSetupStepCount ?? summary.completed_setup_step_count ?? 0}/${summary.attemptedSetupStepCount ?? summary.attempted_setup_step_count ?? 0})`;
+  const baudRate = summary?.baudRate || summary?.baud_rate || null;
+  const baudRateLabel = Number.isInteger(Number(baudRate)) ? ` / ${Number(baudRate)} bps` : "";
+  if (status === "completed") return `完了 (${summary.completedSetupStepCount ?? summary.completed_setup_step_count ?? 0}/${summary.attemptedSetupStepCount ?? summary.attempted_setup_step_count ?? 0}${baudRateLabel})`;
   if (status === "in_progress") return "実行中";
   if (status === "failed") {
     const step = summary?.failedSetupStep || summary?.failed_setup_step;
     const label = WEB_SERIAL_ADAPTER_INITIALIZATION_STEPS[step] || "設定応答";
-    return `停止: ${label}`;
+    return `停止: ${label}${baudRateLabel}`;
   }
   return null;
 }
