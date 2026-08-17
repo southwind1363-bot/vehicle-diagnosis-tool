@@ -72,6 +72,13 @@ function isDtcVehicleFilter(value) {
   return scopes.length > 0 && scopes.every(isDtcVehicleModelYearScope);
 }
 
+function getDtcVehicleFilterModelCodes(value) {
+  const modelCodes = Array.isArray(value?.model_codes)
+    ? value.model_codes
+    : Array.isArray(value?.modelCodes) ? value.modelCodes : [value?.model_code ?? value?.modelCode ?? value?.chassis_code ?? value?.chassisCode];
+  return modelCodes.filter(isNonEmptyString);
+}
+
 function dtcVehicleFiltersOverlap(left, right) {
   if (!isDtcVehicleFilter(left) || !isDtcVehicleFilter(right)) return true;
   const normalize = (value) => String(value || "").trim().toLocaleLowerCase("en-US");
@@ -79,6 +86,10 @@ function dtcVehicleFiltersOverlap(left, right) {
   const leftMakers = new Set(left.makers.map(normalize));
   const sameMaker = right.makers.some((value) => leftMakers.has(normalize(value)));
   if (!sameMaker) return false;
+  const leftModelCodes = new Set(getDtcVehicleFilterModelCodes(left).map(normalizeModel));
+  const rightModelCodes = getDtcVehicleFilterModelCodes(right).map(normalizeModel);
+  const sameModelCode = !leftModelCodes.size || !rightModelCodes.length || rightModelCodes.some((value) => leftModelCodes.has(value));
+  if (!sameModelCode) return false;
   return getDtcVehicleFilterScopes(left).some((leftScope) => {
     const leftModels = new Set(leftScope.models.map(normalizeModel));
     return getDtcVehicleFilterScopes(right).some((rightScope) => {
@@ -105,6 +116,18 @@ if (!hasDisjointSourceSpecificDtcDefinitions(disjointSourceSpecificDtcFixture)
     { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], year_from: 2025, year_to: 2026, scope_confirmation_required: true } }
   ])) {
   reportError("Source-specific DTC overlap validation is not enforcing disjoint vehicle-year scopes");
+}
+
+const disjointModelCodeDtcFixture = [
+  { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], model_codes: ["AA1"], year_from: 2025, year_to: 2025, scope_confirmation_required: true } },
+  { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], model_codes: ["BB2"], year_from: 2025, year_to: 2025, scope_confirmation_required: true } }
+];
+if (!hasDisjointSourceSpecificDtcDefinitions(disjointModelCodeDtcFixture)
+  || hasDisjointSourceSpecificDtcDefinitions([
+    ...disjointModelCodeDtcFixture.slice(0, 1),
+    { file: "imported-verified-dtc.json", imported_definition_only: true, vehicle_filter: { makers: ["Test"], models: ["Model"], model_codes: ["AA1"], year_from: 2025, year_to: 2025, scope_confirmation_required: true } }
+  ])) {
+  reportError("Source-specific DTC overlap validation is not enforcing disjoint model-code scopes");
 }
 
 function hasScopedGenericSourceSpecificDtcDefinitions(rows) {
