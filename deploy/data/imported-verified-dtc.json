@@ -3926,6 +3926,28 @@
     "imported_definition_only": true
   },
   {
+    "id": "verified-import-p2797-62-lexus-rx-tx-500h-2023-2024-lsb002824",
+    "code": "P2797",
+    "subcode": "62",
+    "title": "Electromagnetic Oil Pump Component Internal Failure",
+    "system": "パワートレイン / ハイブリッドトランスミッション・電磁オイルポンプ（出典限定）",
+    "applicability_note": "Lexus L-SB-0028-24は、米国およびメキシコ向け2023-2024年RX 500hおよび2024年TX 500hで、MIL点灯とTCMのDTC P279762を記載しています。VIN、市場、年式、グレード、報告TCM、MIL状態、DTC状態、フリーズフレーム、同時DTCおよび現行Lexus整備情報を確認してください。",
+    "vehicle_filter": {"makers": ["Lexus"], "model_year_scopes": [{"models": ["RX 500h"], "year_from": 2023, "year_to": 2024}, {"models": ["TX 500h"], "year_from": 2024, "year_to": 2024}], "markets": ["us", "mexico"], "ecus": ["TCM"], "scope_confirmation_required": true},
+    "possible_causes": [],
+    "check_order": ["MIL状態、全DTC、報告TCM、フリーズフレーム、VIN、市場、年式、グレードおよび現在のTCMキャリブレーション情報を消去前に保存する。", "DTC消去、TCMリプログラム、冷却ファンの切断・作動、オイルポンプ作動、部品交換、ECU初期化、プログラムまたは作動試験をこのツールから行わず、L-SB-0028-24の適用と現行Lexus整備書を確認する。", "適用確認後は、Lexus指定の診断機器、整備情報、安定化電源および資格を持つハイブリッドトランスミッション診断手順を使用する。"],
+    "measurement_points": [],
+    "common_mistakes": ["この定義を別市場、別年式、RX 500h/TX 500h以外、別TCM、またはP2797の別サブコードへ流用しない。", "P2797:62だけからオイルポンプ、TCM、トランスミッション、ハーネス、ソフトウェアまたは部品不良を断定しない。", "この読取定義をDTC消去、TCMリプログラム、冷却ファン操作、作動試験または部品交換の許可と扱わない。"],
+    "required_tools": ["対応スキャンツール", "Lexus整備情報", "Lexus指定TCM診断設備", "安定化電源"],
+    "safety_notes": ["ハイブリッドトランスミッション、冷却ファン、電源およびTCMプログラムに関わる系統です。DTC消去、リプログラム、冷却ファン操作、作動、測定、脱着、部品交換、初期化またはプログラムは、Lexus手順、適切な設備、安定化電源、資格を持つ担当者、安全な作業環境および復旧計画なしに実行しない。"],
+    "confidence": "Lexus L-SB-0028-24の対象車・TCM P2797:62出典限定定義。VIN、市場、年式、グレード、報告ECU、MIL状態、DTC状態および現行整備書確認必須。",
+    "source": "Lexus Service Bulletin L-SB-0028-24 / NHTSA MC-11005022",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2024/MC-11005022-0001.pdf",
+    "source_date": "2024-06-04",
+    "last_verified_date": "2026-08-17",
+    "service_manual_required": true,
+    "imported_definition_only": true
+  },
+  {
     "id": "verified-import-u1624-gm-gmc-hummer-ev-suv-k124-2024-pit6056b",
     "code": "U1624",
     "title": "K124 image processing module U1624 current/history context",

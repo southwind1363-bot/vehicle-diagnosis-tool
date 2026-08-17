@@ -5,7 +5,7 @@
         "target_level":  "ハイスペック診断機の基礎データ",
         "current_status":  "拡張中",
         "progress_percent": 75,
-  "current_basis": "P系2942件、U系573件、B系87件、C系51件、個別DTC定義3723件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
+  "current_basis": "P系2942件、U系573件、B系87件、C系51件、個別DTC定義3724件、ファミリーフロー16件、保存/保留/永久DTCの状態別保持、ブリッジDTC統合あり",
         "done":  [
                      "P/U系の個別定義を大量追加",
                      "GM Customer Satisfaction Program 18316の2018 Express/Savana RPO JH9 C0050-0FをVINキャンペーン・ブレーキ仕様・EBCM・read-only適用確認つきで追加",
@@ -21,6 +21,7 @@
     "Toyota T-SB-0035-13 Rev1の2012 Corolla SRS B1603/B1608/B1612/B1613/B1617/B1618/B1623/B1628/B1632/B1633/B1637/B1638/B1642/B1643/B1647/B1648を市場・年式・SRS安全条件つきで追加",
     "NHTSA ODI PE14-001の2007-08 Camry Hybrid C1202/C1247/C1252/C1253/C1256/C1391を報告ECU・ブレーキ安全条件・read-only適用確認つきで追加",
     "Lexus L-SB-0036-21 Rev1の2020-21 ES/UX DCM B15A8-04/B15CC-49を状態確認・テレマティクス安全条件・read-only適用確認つきで追加",
+    "Lexus L-SB-0028-24の2023-24 RX 500h/2024 TX 500h TCM P2797-62を市場・モデル別年式・MIL条件・read-only適用確認つきで追加",
         "Toyota 24TC05のP05CE-00を車種・年式・生産期間・TIS適用確認つきで追加",
         "Hyundai T8XのVenue IVT対象5コードを車種・生産期間・WEBDCS適用確認つきで追加",
         "FCA B2AのRAM SCCM対象3サブコードを車種・年式・VINリコール適用確認つきで追加",
