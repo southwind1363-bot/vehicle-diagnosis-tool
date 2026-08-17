@@ -4529,6 +4529,7 @@
       "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
       "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc",
       "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"
+      , "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined));
     // Never combine outer and nested freeze-frame evidence; outer values only complete an otherwise empty envelope.
     const outerFreezeFrameFallback = nestedData && !hasNestedFreezeFramePayload
@@ -4613,11 +4614,12 @@
         snapshot.uds_dtc_stored_data_records, snapshot.udsDtcStoredDataRecords
       ].some((value) => Array.isArray(value) && value.length > 0));
     const errorCodes = readBridgeResponseErrorCodes(response);
+    const rawFreezeFrameResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const bridgeSafety = malformedFreezeFrameAlias
       ? { ...readBridgeSnapshotSafety(response, false), ok: false, blocked: true, unparsed: true }
       : readBridgeSnapshotSafety(
         response,
-        errorCodes.length === 0 && (hasFreezeFrameEcuSnapshotEvidence || [data.values, data.freeze_frame, data.freezeFrame, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray))
+        errorCodes.length === 0 && (rawFreezeFrameResponse !== null || hasFreezeFrameEcuSnapshotEvidence || [data.values, data.freeze_frame, data.freezeFrame, data.freeze_frame_values, data.freezeFrameValues, data.freeze_frame_rows, data.freezeFrameRows, data.monitor_values, data.monitorValues, data.pid_values, data.pidValues].some(Array.isArray))
       );
     const resolvedBridgeSafety = errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, unparsed: true }
@@ -4628,6 +4630,23 @@
       primary_protocol: normalizeProtocolProvenanceValue(protocol),
       ...mergeProtocolProvenance(data, response)
     };
+    if (rawFreezeFrameResponse !== null) {
+      const decoded = decodeFreezeFrameResponse({ raw: rawFreezeFrameResponse, source: "local_bridge", source_ecu: sourceEcu, captured_at: data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, protocol });
+      return {
+        ...decoded,
+        protocolProvenance,
+        protocol_provenance: protocolProvenance,
+        intent: "read_freeze_frame",
+        ok: resolvedBridgeSafety.ok,
+        blocked: resolvedBridgeSafety.blocked,
+        wouldTransmit: resolvedBridgeSafety.wouldTransmit,
+        would_transmit: resolvedBridgeSafety.wouldTransmit,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        errorCodes,
+        error_codes: [...errorCodes]
+      };
+    }
     return {
       ...normalizeFreezeFrameSnapshot({
       source: "local_bridge",

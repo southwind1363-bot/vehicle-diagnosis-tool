@@ -8709,6 +8709,10 @@ const supportedPidMatrixValueAliases = obd.buildSupportedPidMatrix({
   pidList: [{ pid_id: "0c" }, { pidId: "05" }, { value: "40" }]
 });
 check(supportedPidMatrixValueAliases.supportedPids.join(",") === "0C,05,40", "Supported PID matrix did not accept pid_id, pidId, and value row aliases");
+const bridgeRawFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({ ok: true, blocked: false, would_transmit: false, source_ecu: "7E8", data: { raw: "42 02 00 01 71 42 0C 00 1A F8" } });
+check(bridgeRawFreezeFrameSnapshot.freezeFrameReadoutStatus === "reported" && bridgeRawFreezeFrameSnapshot.sourceEcu === "7E8" && bridgeRawFreezeFrameSnapshot.triggerDtc === "P0171" && bridgeRawFreezeFrameSnapshot.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 1726) && bridgeRawFreezeFrameSnapshot.vehicleCommandEnabled === false && bridgeRawFreezeFrameSnapshot.wouldTransmit === false, "Bridge raw Mode 02 responses were not decoded into a read-only freeze-frame snapshot");
+const bridgeRawFreezeFrameMalformedSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({ ok: true, blocked: false, would_transmit: false, data: { raw: "42 0C 00 1A" } });
+check(bridgeRawFreezeFrameMalformedSnapshot.freezeFrameReadoutStatus === "unparsed" && bridgeRawFreezeFrameMalformedSnapshot.vehicleCommandEnabled === false && bridgeRawFreezeFrameMalformedSnapshot.wouldTransmit === false, "Malformed bridge raw Mode 02 responses must remain unparsed and read-only");
 const bridgeFreezeFrameSnapshot = obd.normalizeBridgeFreezeFrameSnapshot({
   ok: true,
   blocked: false,
