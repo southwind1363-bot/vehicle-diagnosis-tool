@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2807件",
+  validationCheckLabel: "OBD安全検証 2808件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web SerialのMode 02対応PID応答を起点ECU単位で確認",
+  recentMilestone: "Web SerialのMode 09情報を対応タイプ・ECU単位で完了確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.61";
+const APP_VERSION = "3.12.62";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4825,6 +4825,48 @@ function hasWebSerialSupportedPidPage(snapshot, basePid) {
     && pageBases.some((page) => String(page || "").trim().toUpperCase().padStart(2, "0") === normalizedBasePid);
 }
 
+function decodeWebSerialMode09SupportedInfoTypes(value) {
+  const bytes = String(value || "").toUpperCase().match(/[0-9A-F]{2}/g)?.slice(0, 4) || [];
+  if (bytes.length !== 4) return new Set();
+  const supported = new Set();
+  bytes.forEach((byte, byteIndex) => {
+    const numericByte = Number.parseInt(byte, 16);
+    for (let bitIndex = 0; bitIndex < 8; bitIndex += 1) {
+      if ((numericByte & (1 << (7 - bitIndex))) !== 0) {
+        supported.add((byteIndex * 8 + bitIndex + 1).toString(16).toUpperCase().padStart(2, "0"));
+      }
+    }
+  });
+  return supported;
+}
+
+function hasWebSerialEcuInfoTypeCoverage(snapshot, commands = []) {
+  if (!isWebSerialReadoutReported(snapshot, "ecuInfoReadoutStatus", "ecu_info_readout_status")) return false;
+  const requestedInfoTypes = [...new Set((Array.isArray(commands) ? commands : [])
+    .map((command) => String(command || "").trim().toUpperCase())
+    .filter((command) => /^09[0-9A-F]{2}$/.test(command) && command !== "0900")
+    .map((command) => command.slice(2)))];
+  if (!requestedInfoTypes.length) return true;
+  const items = Array.isArray(snapshot?.items) ? snapshot.items : Array.isArray(snapshot?.values) ? snapshot.values : [];
+  const supportItems = items.filter((item) => String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase() === "supported_info_types_00");
+  const normalizeScope = (item) => String(item?.sourceEcu || item?.source_ecu || snapshot?.sourceEcu || snapshot?.source_ecu || "").trim().toUpperCase();
+  return requestedInfoTypes.every((infoType) => {
+    const expectedScopes = new Set(supportItems
+      .filter((item) => decodeWebSerialMode09SupportedInfoTypes(item?.value).has(infoType))
+      .map(normalizeScope)
+      .filter(Boolean));
+    const reportedItems = items.filter((item) => {
+      const itemInfoType = String(item?.infoType || item?.info_type || "").trim().toUpperCase();
+      const value = item?.value ?? item?.displayValue ?? item?.display_value ?? null;
+      return itemInfoType === infoType && String(value ?? "").trim() !== "";
+    });
+    if (!reportedItems.length) return false;
+    if (!expectedScopes.size) return true;
+    const reportedScopes = new Set(reportedItems.map(normalizeScope).filter(Boolean));
+    return [...expectedScopes].every((scope) => reportedScopes.has(scope));
+  });
+}
+
 async function readObdDeveloperDtc() {
   const storedReadCompleted = await runObdDeveloperRead("保存DTC読取", ["03"]);
   if (!storedReadCompleted || !hasWebSerialDtcStatusReport("stored")) return false;
@@ -4985,7 +5027,8 @@ async function readObdDeveloperEcuInfo() {
     return true;
   }
   const readCompleted = await runObdDeveloperRead("ECU情報読取", supportedCommands);
-  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.ecuInfoSnapshot, "ecuInfoReadoutStatus", "ecu_info_readout_status");
+  const completedSnapshot = obdDevSession.lastSession?.ecuInfoSnapshot;
+  return readCompleted && hasWebSerialEcuInfoTypeCoverage(completedSnapshot, supportedCommands);
 }
 
 async function readObdDeveloperOnboardMonitor() {
