@@ -6569,6 +6569,11 @@
     const nextPendingReadoutId = pendingIds[0] || null;
     const nextPendingReadout = nextPendingReadoutId ? itemById[nextPendingReadoutId] || null : null;
     const totalValueCount = items.reduce((total, item) => total + item.count, 0);
+    const livePidEcuSnapshots = Array.isArray(livePidSnapshot?.livePidEcuSnapshots)
+      ? livePidSnapshot.livePidEcuSnapshots
+      : Array.isArray(livePidSnapshot?.live_pid_ecu_snapshots)
+        ? livePidSnapshot.live_pid_ecu_snapshots
+        : [];
     const livePidResponseUnavailable = ["unparsed", "blocked"].includes(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status)
       || livePidSnapshot?.blocked === true
       || livePidSnapshot?.isBlocked === true
@@ -6586,6 +6591,23 @@
       return [id, sourceEcu, unit, String(numericValue)].join("|");
     }).filter(Boolean))].sort();
     const recordedLivePidValueKeys = livePidValueEvidenceRecorded ? livePidValueKeys : [];
+    const normalizeLivePidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+    const readLivePidEcuId = (snapshot = {}) => normalizeLivePidEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
+    const reportedLivePidEcuIds = [...new Set(livePidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.livePidReadoutStatus || snapshot?.live_pid_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readLivePidEcuId)
+      .filter(Boolean))].sort();
+    const unresolvedLivePidEcuIds = [...new Set(livePidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.livePidReadoutStatus || snapshot?.live_pid_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readLivePidEcuId)
+      .filter(Boolean))].sort();
+    const livePidValueReportedEcuEvidenceRecorded = livePidValueEvidenceRecorded
+      || (livePidSnapshot?.blocked !== true && livePidSnapshot?.isBlocked !== true && livePidSnapshot?.is_blocked !== true
+        && String(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status || "").trim().toLowerCase() === "unparsed"
+        && reportedLivePidEcuIds.length > 0);
+    const livePidValueReportedEcuKeys = livePidValueReportedEcuEvidenceRecorded
+      ? livePidValueKeys.filter((key) => livePidValueEvidenceRecorded || reportedLivePidEcuIds.includes(normalizeLivePidEcuId(String(key || "").split("|")[1])))
+      : [];
     const freezeFrameResponseUnavailable = ["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status)
       || freezeFrameSnapshot?.blocked === true
       || freezeFrameSnapshot?.isBlocked === true
@@ -6902,6 +6924,14 @@
       live_pid_value_keys: [...recordedLivePidValueKeys],
       livePidValueEvidenceRecorded,
       live_pid_value_evidence_recorded: livePidValueEvidenceRecorded,
+      livePidValueReportedEcuEvidenceRecorded,
+      live_pid_value_reported_ecu_evidence_recorded: livePidValueReportedEcuEvidenceRecorded,
+      livePidValueReportedEcuIds: reportedLivePidEcuIds,
+      live_pid_value_reported_ecu_ids: [...reportedLivePidEcuIds],
+      livePidValueUnresolvedEcuIds: unresolvedLivePidEcuIds,
+      live_pid_value_unresolved_ecu_ids: [...unresolvedLivePidEcuIds],
+      livePidValueReportedEcuKeys: livePidValueReportedEcuKeys,
+      live_pid_value_reported_ecu_keys: [...livePidValueReportedEcuKeys],
       livePidObservationCondition,
       live_pid_observation_condition: livePidObservationCondition,
       livePidDiagnosticProtocol,
@@ -14561,6 +14591,10 @@
       livePidValueCount: ["live_pid_value_count"],
       livePidValueKeys: ["live_pid_value_keys"],
       livePidValueEvidenceRecorded: ["live_pid_value_evidence_recorded"],
+      livePidValueReportedEcuEvidenceRecorded: ["live_pid_value_reported_ecu_evidence_recorded"],
+      livePidValueReportedEcuIds: ["live_pid_value_reported_ecu_ids"],
+      livePidValueUnresolvedEcuIds: ["live_pid_value_unresolved_ecu_ids"],
+      livePidValueReportedEcuKeys: ["live_pid_value_reported_ecu_keys"],
       livePidObservationCondition: ["live_pid_observation_condition"],
       livePidDiagnosticProtocol: ["live_pid_diagnostic_protocol"],
       missingIds: ["missing_ids"],
@@ -14682,8 +14716,44 @@
     const currentLivePidObservationCondition = normalizeLivePidObservationCondition(readField(currentSummary, "livePidObservationCondition"));
     const importedLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(importedInventory, "livePidDiagnosticProtocol"));
     const currentLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(currentSummary, "livePidDiagnosticProtocol"));
-    const importedLivePidValueKeys = readLivePidValueKeys(importedInventory);
-    const currentLivePidValueKeys = readLivePidValueKeys(currentSummary);
+    const readLivePidValueReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
+        || String(value || "").trim().toUpperCase()
+        || null;
+      const explicitIds = readIds(summary, "livePidValueReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitIds)].sort()
+        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[1])).filter(Boolean))].sort();
+      const explicitKeys = readIds(summary, "livePidValueReportedEcuKeys");
+      const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
+      return {
+        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "livePidValueReportedEcuEvidenceRecorded"),
+        reportedEcuIds,
+        reportedEcuKeys
+      };
+    };
+    const importedAllLivePidValueKeys = readLivePidValueKeys(importedInventory);
+    const currentAllLivePidValueKeys = readLivePidValueKeys(currentSummary);
+    const importedLivePidValueReportedEcuScope = readLivePidValueReportedEcuScope(importedInventory, importedLivePidValueEvidenceRecorded, importedAllLivePidValueKeys);
+    const currentLivePidValueReportedEcuScope = readLivePidValueReportedEcuScope(currentSummary, currentLivePidValueEvidenceRecorded, currentAllLivePidValueKeys);
+    const completeLivePidValueComparisonEvidenceRecorded = importedLivePidValueEvidenceRecorded && currentLivePidValueEvidenceRecorded;
+    const comparableLivePidValueEcuIds = completeLivePidValueComparisonEvidenceRecorded
+      ? []
+      : importedLivePidValueReportedEcuScope.evidenceRecorded && currentLivePidValueReportedEcuScope.evidenceRecorded
+        ? importedLivePidValueReportedEcuScope.reportedEcuIds.filter((id) => currentLivePidValueReportedEcuScope.reportedEcuIds.includes(id))
+        : [];
+    const reportedEcuLivePidValueComparisonEvidenceRecorded = !completeLivePidValueComparisonEvidenceRecorded && comparableLivePidValueEcuIds.length > 0;
+    const livePidValueComparisonEvidenceRecorded = completeLivePidValueComparisonEvidenceRecorded || reportedEcuLivePidValueComparisonEvidenceRecorded;
+    const filterLivePidValueKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[1]) || String(key || "").split("|")[1]?.trim().toUpperCase();
+      return comparableLivePidValueEcuIds.includes(ecu);
+    });
+    const importedLivePidValueKeys = completeLivePidValueComparisonEvidenceRecorded
+      ? importedAllLivePidValueKeys
+      : reportedEcuLivePidValueComparisonEvidenceRecorded ? filterLivePidValueKeysByScope(importedLivePidValueReportedEcuScope) : [];
+    const currentLivePidValueKeys = completeLivePidValueComparisonEvidenceRecorded
+      ? currentAllLivePidValueKeys
+      : reportedEcuLivePidValueComparisonEvidenceRecorded ? filterLivePidValueKeysByScope(currentLivePidValueReportedEcuScope) : [];
     const readLivePidUnitsByMeasurement = (keys = []) => new Map(keys.map((key) => {
       const [id, sourceEcu, unit] = key.split("|");
       return [`${id}|${sourceEcu}`, unit];
@@ -14693,8 +14763,7 @@
     const livePidUnitMismatchKeys = [...new Set([...importedLivePidUnitsByMeasurement.keys(), ...currentLivePidUnitsByMeasurement.keys()])]
       .filter((key) => importedLivePidUnitsByMeasurement.has(key) && currentLivePidUnitsByMeasurement.has(key) && importedLivePidUnitsByMeasurement.get(key) !== currentLivePidUnitsByMeasurement.get(key))
       .sort();
-    const livePidValueComparisonAvailable = importedLivePidValueEvidenceRecorded
-      && currentLivePidValueEvidenceRecorded
+    const livePidValueComparisonAvailable = livePidValueComparisonEvidenceRecorded
       && importedLivePidObservationCondition !== "unspecified"
       && currentLivePidObservationCondition !== "unspecified"
       && importedLivePidObservationCondition === currentLivePidObservationCondition
@@ -14703,6 +14772,13 @@
       && livePidUnitMismatchKeys.length === 0;
     const livePidValueAddedKeys = livePidValueComparisonAvailable ? diffIds(currentLivePidValueKeys, importedLivePidValueKeys) : [];
     const livePidValueRemovedKeys = livePidValueComparisonAvailable ? diffIds(importedLivePidValueKeys, currentLivePidValueKeys) : [];
+    const hasLivePidValueEcuScopeEvidence = [
+      ...importedLivePidValueReportedEcuScope.reportedEcuIds,
+      ...currentLivePidValueReportedEcuScope.reportedEcuIds,
+      ...readIds(importedInventory, "livePidValueUnresolvedEcuIds"),
+      ...readIds(currentSummary, "livePidValueUnresolvedEcuIds")
+    ].length > 0;
+    const restrictLivePidComparisonToScopedEvidence = !completeLivePidValueComparisonEvidenceRecorded && hasLivePidValueEcuScopeEvidence;
     const readTriggerKeys = (summary) => Array.isArray(readField(summary, "freezeFrameTriggerKeys"))
       ? [...new Set(readField(summary, "freezeFrameTriggerKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
@@ -14955,6 +15031,7 @@
     ].length > 0;
     const restrictSupportedPidComparisonToScopedEvidence = !completeSupportedPidComparisonAvailable && hasSupportedPidEcuScopeEvidence;
     const nonComparableValueCountIds = new Set([
+      restrictLivePidComparisonToScopedEvidence ? "live_pid_snapshot" : null,
       !completeFreezeFrameValueComparisonAvailable ? "freeze_frame_snapshot" : null,
       !completeReadinessMonitorComparisonAvailable ? "readiness_snapshot" : null,
       restrictEcuInfoComparisonToScopedEvidence ? "ecu_info_snapshot" : null,
@@ -15190,6 +15267,10 @@
       imported_live_pid_value_evidence_recorded: importedLivePidValueEvidenceRecorded,
       currentLivePidValueEvidenceRecorded,
       current_live_pid_value_evidence_recorded: currentLivePidValueEvidenceRecorded,
+      importedLivePidValueReportedEcuEvidenceRecorded: importedLivePidValueReportedEcuScope.evidenceRecorded,
+      imported_live_pid_value_reported_ecu_evidence_recorded: importedLivePidValueReportedEcuScope.evidenceRecorded,
+      currentLivePidValueReportedEcuEvidenceRecorded: currentLivePidValueReportedEcuScope.evidenceRecorded,
+      current_live_pid_value_reported_ecu_evidence_recorded: currentLivePidValueReportedEcuScope.evidenceRecorded,
       importedLivePidObservationCondition,
       imported_live_pid_observation_condition: importedLivePidObservationCondition,
       currentLivePidObservationCondition,
@@ -15202,6 +15283,10 @@
       live_pid_unit_mismatch_keys: [...livePidUnitMismatchKeys],
       livePidValueComparisonAvailable,
       live_pid_value_comparison_available: livePidValueComparisonAvailable,
+      livePidValueComparisonScope: livePidValueComparisonAvailable && completeLivePidValueComparisonEvidenceRecorded ? "complete" : livePidValueComparisonAvailable && reportedEcuLivePidValueComparisonEvidenceRecorded ? "reported_ecus" : "unavailable",
+      live_pid_value_comparison_scope: livePidValueComparisonAvailable && completeLivePidValueComparisonEvidenceRecorded ? "complete" : livePidValueComparisonAvailable && reportedEcuLivePidValueComparisonEvidenceRecorded ? "reported_ecus" : "unavailable",
+      livePidValueComparableEcuIds: comparableLivePidValueEcuIds,
+      live_pid_value_comparable_ecu_ids: [...comparableLivePidValueEcuIds],
       importedLivePidValueKeys,
       imported_live_pid_value_keys: importedLivePidValueKeys,
       currentLivePidValueKeys,
@@ -15455,6 +15540,14 @@
       live_pid_value_keys: normalizeIds(summary.livePidValueKeys || summary.live_pid_value_keys),
       livePidValueEvidenceRecorded: pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
       live_pid_value_evidence_recorded: pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
+      livePidValueReportedEcuEvidenceRecorded: pickDefined(summary.livePidValueReportedEcuEvidenceRecorded, summary.live_pid_value_reported_ecu_evidence_recorded, summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
+      live_pid_value_reported_ecu_evidence_recorded: pickDefined(summary.livePidValueReportedEcuEvidenceRecorded, summary.live_pid_value_reported_ecu_evidence_recorded, summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
+      livePidValueReportedEcuIds: normalizeIds(summary.livePidValueReportedEcuIds || summary.live_pid_value_reported_ecu_ids),
+      live_pid_value_reported_ecu_ids: normalizeIds(summary.livePidValueReportedEcuIds || summary.live_pid_value_reported_ecu_ids),
+      livePidValueUnresolvedEcuIds: normalizeIds(summary.livePidValueUnresolvedEcuIds || summary.live_pid_value_unresolved_ecu_ids),
+      live_pid_value_unresolved_ecu_ids: normalizeIds(summary.livePidValueUnresolvedEcuIds || summary.live_pid_value_unresolved_ecu_ids),
+      livePidValueReportedEcuKeys: normalizeIds(summary.livePidValueReportedEcuKeys || summary.live_pid_value_reported_ecu_keys || (pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true ? summary.livePidValueKeys || summary.live_pid_value_keys : [])),
+      live_pid_value_reported_ecu_keys: normalizeIds(summary.livePidValueReportedEcuKeys || summary.live_pid_value_reported_ecu_keys || (pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true ? summary.livePidValueKeys || summary.live_pid_value_keys : [])),
       livePidObservationCondition: normalizeLivePidObservationCondition(pickDefined(summary.livePidObservationCondition, summary.live_pid_observation_condition, "unspecified")),
       live_pid_observation_condition: normalizeLivePidObservationCondition(pickDefined(summary.livePidObservationCondition, summary.live_pid_observation_condition, "unspecified")),
       livePidDiagnosticProtocol: normalizeProtocolProvenanceValue(pickDefined(summary.livePidDiagnosticProtocol, summary.live_pid_diagnostic_protocol, null)),
