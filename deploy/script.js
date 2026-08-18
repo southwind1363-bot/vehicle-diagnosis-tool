@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2798件",
+  validationCheckLabel: "OBD安全検証 2801件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial再読取の最新readiness・Mode06結果で過去値残留を防止",
+  recentMilestone: "Web Serial再読取の保存・保留・永久DTCを状態別に最新試行へ置換",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.55";
+const APP_VERSION = "3.12.56";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5300,12 +5300,30 @@ function isWebSerialExpectedEmptyResponse(command, response) {
   return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING") || isWebSerialInformationalResponseLine(line) || (hasBusInit && line === "OK"));
 }
 
-function buildWebSerialDtcResponseOverrides(commandResponses = []) {
+function buildWebSerialDtcResponseOverrides(commandResponses = [], attemptedCommands = []) {
   const dtcCommandMetadata = {
     "03": { key: "storedDtcResponse", status: "stored", intent: "read_stored_dtc" },
     "07": { key: "pendingDtcResponse", status: "pending", intent: "read_pending_dtc" },
     "0A": { key: "permanentDtcResponse", status: "permanent", intent: "read_permanent_dtc" }
   };
+  const attemptedOverrides = (Array.isArray(attemptedCommands) ? attemptedCommands : []).reduce((overrides, value) => {
+    const command = String(value || "").trim().toUpperCase();
+    const metadata = dtcCommandMetadata[command];
+    if (!metadata) return overrides;
+    return {
+      ...overrides,
+      [metadata.key]: {
+        source: "web_serial",
+        intent: metadata.intent,
+        dtcs: [],
+        reportedStatuses: [],
+        dtcReadoutStatus: "unknown",
+        retainedRawText: false,
+        wouldTransmit: false,
+        vehicleCommandEnabled: false
+      }
+    };
+  }, {});
   return (Array.isArray(commandResponses) ? commandResponses : []).reduce((overrides, item) => {
     const command = String(item?.command || "").trim().toUpperCase();
     const metadata = dtcCommandMetadata[command];
@@ -5334,7 +5352,7 @@ function buildWebSerialDtcResponseOverrides(commandResponses = []) {
           vehicleCommandEnabled: false
         }
     };
-  }, {});
+  }, attemptedOverrides);
 }
 
 function isWebSerialFreezeFrameCommand(command) {
@@ -5709,6 +5727,7 @@ async function runObdDeveloperRead(label, commands) {
     const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { attemptedCommandCount });
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
     retainObdDeveloperReadout(commandResponses, chunks, {
+      attemptedCommands: commands.slice(0, attemptedCommandCount),
       replaceLivePidSnapshot,
       replaceReadinessSnapshot,
       replaceOnboardMonitorSnapshot
@@ -5727,6 +5746,7 @@ async function runObdDeveloperRead(label, commands) {
     const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, {
       persistEmptyAttempt: true,
       connectionStatus: buildWebSerialConnectionStatus(outcome),
+      attemptedCommands: commands.slice(0, attemptedCommandCount),
       replaceLivePidSnapshot,
       replaceReadinessSnapshot,
       replaceOnboardMonitorSnapshot
@@ -6031,7 +6051,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
   updateWebSerialFreezeFrameCapabilityResponse(commandResponses);
   const capturedAt = new Date().toISOString();
-  const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses);
+  const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses, options?.attemptedCommands);
   const supportedPidResponseOverride = buildWebSerialSupportedPidResponseOverride(updateWebSerialSupportedPidReadoutResponses(commandResponses));
   const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));
   const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses));
