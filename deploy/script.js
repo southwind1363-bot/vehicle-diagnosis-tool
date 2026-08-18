@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2801件",
+  validationCheckLabel: "OBD安全検証 2803件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial再読取の保存・保留・永久DTCを状態別に最新試行へ置換",
+  recentMilestone: "Web Serial再読取のFF・ECU情報を先頭確認から最新読取束へ置換",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.56";
+const APP_VERSION = "3.12.57";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5360,7 +5360,7 @@ function isWebSerialFreezeFrameCommand(command) {
   return /^02[0-9A-F]{2}$/.test(normalizedCommand) && normalizedCommand !== "0200";
 }
 
-function resolveWebSerialFreezeFrameCapabilityResponse(previous = null, commandResponses = []) {
+function resolveWebSerialFreezeFrameCapabilityResponse(previous = null, commandResponses = [], attemptedCommands = []) {
   const responses = (Array.isArray(commandResponses) ? commandResponses : [])
     .map((item) => ({
       command: String(item?.command || "").trim().toUpperCase(),
@@ -5368,12 +5368,14 @@ function resolveWebSerialFreezeFrameCapabilityResponse(previous = null, commandR
     }))
     .filter((item) => item.response);
   const currentCapability = responses.find((item) => item.command === "0200")?.response || null;
-  if (responses.some((item) => item.command === "0202")) return currentCapability;
+  const triggerReadAttempted = (Array.isArray(attemptedCommands) ? attemptedCommands : [])
+    .some((command) => String(command || "").trim().toUpperCase() === "0202");
+  if (triggerReadAttempted || responses.some((item) => item.command === "0202")) return currentCapability;
   return currentCapability || (typeof previous === "string" && previous.trim() ? previous : null);
 }
 
-function updateWebSerialFreezeFrameCapabilityResponse(commandResponses = []) {
-  const resolved = resolveWebSerialFreezeFrameCapabilityResponse(obdDevSession.freezeFrameCapabilityResponse, commandResponses);
+function updateWebSerialFreezeFrameCapabilityResponse(commandResponses = [], attemptedCommands = []) {
+  const resolved = resolveWebSerialFreezeFrameCapabilityResponse(obdDevSession.freezeFrameCapabilityResponse, commandResponses, attemptedCommands);
   obdDevSession.freezeFrameCapabilityResponse = resolved;
   return resolved;
 }
@@ -5445,15 +5447,17 @@ function getWebSerialFreezeFrameSupportedPidsForTriggerScopes(response = "", fre
   }, new Set());
 }
 
-function mergeWebSerialFreezeFrameReadoutResponses(previous = [], commandResponses = []) {
+function mergeWebSerialFreezeFrameReadoutResponses(previous = [], commandResponses = [], attemptedCommands = []) {
   const currentResponses = (Array.isArray(commandResponses) ? commandResponses : [])
     .map((item) => ({
       command: String(item?.command || "").trim().toUpperCase(),
       response: String(item?.response || "").trim()
     }))
     .filter((item) => isWebSerialFreezeFrameCommand(item.command) && item.response);
-  if (!currentResponses.length) return Array.isArray(previous) ? previous : [];
-  const previousResponses = currentResponses.some((item) => item.command === "0202")
+  const triggerReadAttempted = (Array.isArray(attemptedCommands) ? attemptedCommands : [])
+    .some((command) => String(command || "").trim().toUpperCase() === "0202");
+  if (!currentResponses.length) return triggerReadAttempted ? [] : (Array.isArray(previous) ? previous : []);
+  const previousResponses = triggerReadAttempted || currentResponses.some((item) => item.command === "0202")
     ? []
     : (Array.isArray(previous) ? previous : []);
   const responseByCommand = new Map(previousResponses.map((item) => [String(item?.command || "").trim().toUpperCase(), item]));
@@ -5461,8 +5465,8 @@ function mergeWebSerialFreezeFrameReadoutResponses(previous = [], commandRespons
   return [...responseByCommand.values()];
 }
 
-function updateWebSerialFreezeFrameReadoutResponses(commandResponses = []) {
-  const merged = mergeWebSerialFreezeFrameReadoutResponses(obdDevSession.freezeFrameReadoutResponses, commandResponses);
+function updateWebSerialFreezeFrameReadoutResponses(commandResponses = [], attemptedCommands = []) {
+  const merged = mergeWebSerialFreezeFrameReadoutResponses(obdDevSession.freezeFrameReadoutResponses, commandResponses, attemptedCommands);
   obdDevSession.freezeFrameReadoutResponses = merged;
   return merged;
 }
@@ -5501,15 +5505,17 @@ function isWebSerialEcuInfoCommand(command) {
     .has(String(command || "").trim().toUpperCase());
 }
 
-function mergeWebSerialEcuInfoReadoutResponses(previous = [], commandResponses = []) {
+function mergeWebSerialEcuInfoReadoutResponses(previous = [], commandResponses = [], attemptedCommands = []) {
   const currentResponses = (Array.isArray(commandResponses) ? commandResponses : [])
     .map((item) => ({
       command: String(item?.command || "").trim().toUpperCase(),
       response: String(item?.response || "").trim()
     }))
     .filter((item) => isWebSerialEcuInfoCommand(item.command) && item.response);
-  if (!currentResponses.length) return Array.isArray(previous) ? previous : [];
-  const previousResponses = currentResponses.some((item) => item.command === "0900")
+  const supportReadAttempted = (Array.isArray(attemptedCommands) ? attemptedCommands : [])
+    .some((command) => String(command || "").trim().toUpperCase() === "0900");
+  if (!currentResponses.length) return supportReadAttempted ? [] : (Array.isArray(previous) ? previous : []);
+  const previousResponses = supportReadAttempted || currentResponses.some((item) => item.command === "0900")
     ? []
     : (Array.isArray(previous) ? previous : []);
   const responseByCommand = new Map(previousResponses.map((item) => [String(item?.command || "").trim().toUpperCase(), item]));
@@ -5517,8 +5523,8 @@ function mergeWebSerialEcuInfoReadoutResponses(previous = [], commandResponses =
   return [...responseByCommand.values()];
 }
 
-function updateWebSerialEcuInfoReadoutResponses(commandResponses = []) {
-  const merged = mergeWebSerialEcuInfoReadoutResponses(obdDevSession.ecuInfoReadoutResponses, commandResponses);
+function updateWebSerialEcuInfoReadoutResponses(commandResponses = [], attemptedCommands = []) {
+  const merged = mergeWebSerialEcuInfoReadoutResponses(obdDevSession.ecuInfoReadoutResponses, commandResponses, attemptedCommands);
   obdDevSession.ecuInfoReadoutResponses = merged;
   return merged;
 }
@@ -6049,12 +6055,14 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   if (hasCommandResponses) appendObdDeveloperLog(chunks.join("\n"));
   const adapterIdentity = buildWebSerialAdapterIdentity(commandResponses);
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
-  updateWebSerialFreezeFrameCapabilityResponse(commandResponses);
+  const attemptedCommands = Array.isArray(options?.attemptedCommands) ? options.attemptedCommands : [];
+  const attemptedCommandSet = new Set(attemptedCommands.map((command) => String(command || "").trim().toUpperCase()));
+  updateWebSerialFreezeFrameCapabilityResponse(commandResponses, attemptedCommands);
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses, options?.attemptedCommands);
   const supportedPidResponseOverride = buildWebSerialSupportedPidResponseOverride(updateWebSerialSupportedPidReadoutResponses(commandResponses));
-  const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses));
-  const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses));
+  const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses, attemptedCommands));
+  const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses, attemptedCommands));
   const readinessResponseOverride = buildWebSerialReadinessResponseOverride(commandResponses);
   const onboardMonitorResponseOverride = buildWebSerialOnboardMonitorResponseOverride(commandResponses);
   const vehicleProfile = obdDevSession.vehicleProfile || buildSelectedObdVehicleProfile();
@@ -6092,6 +6100,8 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     || commandResponses.some((item) => obdDevSession.selectedPidList.includes(String(item?.command || "").trim().toUpperCase()));
   const latestSnapshotOverrides = {
     ...(requestedLivePidValues ? { livePidSnapshot: currentLivePidSnapshot } : {}),
+    ...(attemptedCommandSet.has("0202") ? { freezeFrameSnapshot: currentAttemptSession.freezeFrameSnapshot } : {}),
+    ...(attemptedCommandSet.has("0900") ? { ecuInfoSnapshot: currentAttemptSession.ecuInfoSnapshot } : {}),
     ...(options?.replaceReadinessSnapshot === true ? { readinessSnapshot: currentAttemptSession.readinessSnapshot } : {}),
     ...(options?.replaceOnboardMonitorSnapshot === true ? { onboardMonitorSnapshot: currentAttemptSession.onboardMonitorSnapshot } : {})
   };
