@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2875件",
+  validationCheckLabel: "OBD安全検証 2877件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "部分UDS FF記録を正常応答ECUで比較",
+  recentMilestone: "Web Serial機器選択キャンセルを安全終了",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.93";
+const APP_VERSION = "3.12.94";
 const APP_LAST_UPDATED = "2026-08-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4574,10 +4574,21 @@ async function connectObdDeveloperVci() {
     if (obdDevSession.port) setObdDeveloperConnectionState("ready");
   } catch (error) {
     obdDevSession.initializing = false;
+    if (isWebSerialPortSelectionCancelled(error) && !obdDevSession.port) {
+      setObdDeveloperConnectionState("disconnected", "port_selection_cancelled");
+      clearRequestedInterfaceSelection();
+      obdDevStatus.textContent = "VCI選択をキャンセルしました。車両への送信は行っていません。";
+      renderObdDeveloperGate();
+      return;
+    }
     const failureMessage = formatWebSerialAdapterInitializationFailure(obdDevSession.adapterInitializationSummary, error);
     await disconnectObdDeveloperVci({ reason: "connection_failed", statusMessage: failureMessage });
     retainWebSerialConnectionAttempt();
   }
+}
+
+function isWebSerialPortSelectionCancelled(error) {
+  return String(error?.name || "").trim() === "NotFoundError";
 }
 
 function setObdDeveloperConnectionState(state, reason = null) {
