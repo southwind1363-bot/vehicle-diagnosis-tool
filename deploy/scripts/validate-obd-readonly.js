@@ -5890,9 +5890,10 @@ const bridgeRawDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   would_transmit: false,
   intent: "read_stored_dtc",
   source_ecu: "7E8",
+  source_ecu_name: "Engine",
   data: { raw: "43 03 00 01 71" }
 });
-check(bridgeRawDtcSnapshot.dtcReadoutStatus === "reported" && bridgeRawDtcSnapshot.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E8") && bridgeRawDtcSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && bridgeRawDtcSnapshot.retainedRawText === false && bridgeRawDtcSnapshot.vehicleCommandEnabled === false && bridgeRawDtcSnapshot.wouldTransmit === false, "Bridge raw Mode 03 responses were not decoded into a read-only DTC snapshot");
+check(bridgeRawDtcSnapshot.dtcReadoutStatus === "reported" && bridgeRawDtcSnapshot.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E8" && item.ecuName === "Engine") && bridgeRawDtcSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8" && item.ecuName === "Engine") && bridgeRawDtcSnapshot.retainedRawText === false && bridgeRawDtcSnapshot.vehicleCommandEnabled === false && bridgeRawDtcSnapshot.wouldTransmit === false, "Bridge raw Mode 03 responses were not decoded into a read-only DTC snapshot");
 const bridgeOuterMetadataDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   ok: true,
   blocked: false,

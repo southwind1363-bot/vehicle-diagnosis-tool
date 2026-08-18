@@ -3344,8 +3344,21 @@
         protocol: readBridgeProtocol(data) || readBridgeProtocol(response),
         status: defaultStatus
       });
+      const inheritedDtcs = Array.isArray(decoded.dtcs)
+        ? decoded.dtcs.map((row) => {
+          if (!row || typeof row !== "object" || Array.isArray(row) || !sourceEcuName) return row;
+          const rowEcu = row.ecu || row.source_ecu || row.sourceEcu || row.address || null;
+          const rowEcuName = row.ecuName || row.ecu_name || row.sourceEcuName || row.source_ecu_name || null;
+          const matchesSourceEcu = !rowEcu || !sourceEcu || rowEcu === sourceEcu;
+          return rowEcuName || !matchesSourceEcu
+            ? row
+            : { ...row, ecuName: sourceEcuName, ecu_name: sourceEcuName };
+        })
+        : decoded.dtcs;
       return {
         ...decoded,
+        ...(sourceEcuName && !decoded.sourceEcuName ? { sourceEcuName, source_ecu_name: sourceEcuName } : {}),
+        dtcs: inheritedDtcs,
         intent,
         ok: resolvedBridgeSafety.ok,
         blocked: resolvedBridgeSafety.blocked,
