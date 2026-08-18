@@ -593,7 +593,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   check(Boolean(bridgeLivePidSnapshotFunctionSource), "normalizeBridgeLivePidSnapshot is missing from obd-readonly.js");
   if (bridgeLivePidSnapshotFunctionSource) {
     const functionBody = bridgeLivePidSnapshotFunctionSource[0];
-    check(functionBody.includes('Array.isArray(data.values)') && functionBody.includes('Array.isArray(data.monitor_values)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('const rawLivePidResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const decoded = decodeLivePidResponse({'), "normalizeBridgeLivePidSnapshot should accept live PID aliases and decode raw read-only responses");
+    check(functionBody.includes('Array.isArray(data.values)') && functionBody.includes('Array.isArray(data.monitor_values)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('const rawLivePidResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const getEcuRawLivePidResponse = (row) =>') && functionBody.includes('const rawEcuLivePidMonitorValues = livePidEcuSnapshots.flatMap((ecuRow) => {') && functionBody.includes('const decoded = decodeLivePidResponse({'), "normalizeBridgeLivePidSnapshot should accept live PID aliases and decode raw read-only responses");
     check(functionBody.includes('Array.isArray(data.live_pid_values)') && functionBody.includes('Array.isArray(data.liveData)') && functionBody.includes('Array.isArray(data.items)'), "normalizeBridgeLivePidSnapshot should accept live data array aliases");
     check(functionBody.includes('.map((row, index) => normalizeBridgePidValue(row, index))') && functionBody.includes('.filter(Boolean)'), "normalizeBridgeLivePidSnapshot should normalize and filter PID value rows");
     check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeLivePidSnapshot should carry supported PID context and snake_case alias");
@@ -603,7 +603,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";') && functionBody.includes('observation_condition: observationCondition') && functionBody.includes('captured_at: capturedAt') && functionBody.includes('monitor_values: monitorValues') && functionBody.includes('retained_raw_text: false'), "normalizeBridgeLivePidSnapshot should retain safe observation conditions with capture, values, and retention aliases");
     check(functionBody.includes('data.timestamp') && functionBody.includes('response.timestamp') && functionBody.includes('const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);') && functionBody.includes('protocol,'), "normalizeBridgeLivePidSnapshot should retain outer bridge capture and protocol metadata");
     check(functionBody.includes('retainedRawText: false'), "normalizeBridgeLivePidSnapshot should not retain raw bridge text");
-    check(functionBody.includes('const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);') && functionBody.includes('const shouldDecodeRawLivePid = rawLivePidResponse !== null && !hasBridgeValueList;') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, shouldDecodeRawLivePid || hasBridgeValueList || hasBridgeValueSummary);') && functionBody.includes('const resolvedBridgeSafety = malformedLivePidAlias') && functionBody.includes('const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed') && functionBody.includes('? getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit'), "normalizeBridgeLivePidSnapshot should prioritize bridge failure states over reported status");
+    check(functionBody.includes('const hasBridgeValueSummary = Boolean(data.monitorValueSummary || data.monitor_value_summary);') && functionBody.includes('const shouldDecodeRawLivePid = rawLivePidResponse !== null && !hasBridgeValueList;') && functionBody.includes('const hasRawEcuLivePidResponse = livePidEcuSnapshots.some') && functionBody.includes('const bridgeSafety = readBridgeSnapshotSafety(response, shouldDecodeRawLivePid || hasRawEcuLivePidResponse || hasBridgeValueList || hasBridgeValueSummary);') && functionBody.includes('const resolvedBridgeSafety = malformedLivePidAlias') && functionBody.includes('const rawEcuReadoutUnparsed = [...decodedRawEcuLivePidSnapshots.values()].some') && functionBody.includes('const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed') && functionBody.includes('? getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit'), "normalizeBridgeLivePidSnapshot should prioritize bridge failure states over reported status");
   }
   check(Boolean(bridgeSupportedPidSnapshotFunctionSource), "normalizeBridgeSupportedPidSnapshot is missing from obd-readonly.js");
   if (bridgeSupportedPidSnapshotFunctionSource) {
@@ -5884,6 +5884,24 @@ const bridgeRawLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
   data: { raw: "41 0C 1F 40 41 05 5A" }
 });
 check(bridgeRawLivePidSnapshot.livePidReadoutStatus === "reported" && bridgeRawLivePidSnapshot.monitorValues?.some((item) => item.pid === "0C" && item.value === 2000 && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && bridgeRawLivePidSnapshot.monitorValues?.some((item) => item.pid === "05" && item.value === 50) && bridgeRawLivePidSnapshot.retainedRawText === false && bridgeRawLivePidSnapshot.vehicleCommandEnabled === false && bridgeRawLivePidSnapshot.wouldTransmit === false, "Bridge raw Mode 01 responses were not decoded into a read-only live PID snapshot");
+const bridgeRawPerEcuLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    live_pid_ecu_snapshots: [
+      { source_ecu: "7E8", source_ecu_name: "Engine", raw: "41 0C 1F 40" },
+      { source_ecu: "7E9", source_ecu_name: "Transmission", raw: "41 05 5A" }
+    ]
+  }
+});
+const bridgeUnparsedRawEcuLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { live_pid_ecu_snapshots: [{ source_ecu: "7E8", raw: "41" }] }
+});
+check(bridgeRawPerEcuLivePidSnapshot.livePidReadoutStatus === "reported" && bridgeRawPerEcuLivePidSnapshot.monitorValues?.some((item) => item.pid === "0C" && item.value === 2000 && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && bridgeRawPerEcuLivePidSnapshot.monitorValues?.some((item) => item.pid === "05" && item.value === 50 && item.sourceEcu === "7E9" && item.sourceEcuName === "Transmission") && bridgeRawPerEcuLivePidSnapshot.readoutEcuIds?.join(",") === "7E8,7E9" && bridgeRawPerEcuLivePidSnapshot.retainedRawText === false && bridgeRawPerEcuLivePidSnapshot.vehicleCommandEnabled === false && bridgeRawPerEcuLivePidSnapshot.wouldTransmit === false && bridgeUnparsedRawEcuLivePidSnapshot.livePidReadoutStatus === "unparsed" && bridgeUnparsedRawEcuLivePidSnapshot.monitorValues?.length === 0 && bridgeUnparsedRawEcuLivePidSnapshot.readoutEcuIds?.join(",") === "7E8" && bridgeUnparsedRawEcuLivePidSnapshot.vehicleCommandEnabled === false, "Bridge per-ECU raw Mode 01 responses were not decoded into scoped read-only PID values");
 const bridgeRawDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   ok: true,
   blocked: false,

@@ -3994,7 +3994,9 @@
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedLivePidPayload = Boolean(nestedData && [
       "values", "monitor_values", "monitorValues", "pid_values", "pidValues", "live_pid_values", "livePidValues", "live_data", "liveData", "items",
-      "monitorValueSummary", "monitor_value_summary", "monitorInsights", "monitor_insights", "insights", "raw", "response", "bytes"
+      "monitorValueSummary", "monitor_value_summary", "monitorInsights", "monitor_insights", "insights",
+      "live_pid_ecu_snapshots", "livePidEcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses",
+      "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined));
     // Never combine outer and nested live PID evidence; outer values only complete an otherwise empty envelope.
     const outerLivePidFallback = nestedData && !hasNestedLivePidPayload
@@ -4018,6 +4020,28 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
+    const livePidEcuSnapshots = [
+      data.live_pid_ecu_snapshots,
+      data.livePidEcuSnapshots,
+      data.ecu_snapshots,
+      data.ecuSnapshots,
+      data.ecu_responses,
+      data.ecuResponses
+    ].find(Array.isArray) || [];
+    const getEcuRawLivePidResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
+    const getEcuLivePidValues = (row) => [
+      row?.values,
+      row?.monitor_values,
+      row?.monitorValues,
+      row?.pid_values,
+      row?.pidValues,
+      row?.live_pid_values,
+      row?.livePidValues,
+      row?.live_data,
+      row?.liveData,
+      row?.items
+    ].find(Array.isArray) || [];
+    const hasRawEcuLivePidResponse = livePidEcuSnapshots.some((row) => getEcuRawLivePidResponse(row) !== null && getEcuLivePidValues(row).length === 0);
     const hasBridgeValueList = Array.isArray(data.values)
       || Array.isArray(data.monitor_values)
       || Array.isArray(data.monitorValues)
@@ -4039,7 +4063,7 @@
       "live_data", "liveData",
       "items"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
-    const bridgeSafety = readBridgeSnapshotSafety(response, shouldDecodeRawLivePid || hasBridgeValueList || hasBridgeValueSummary);
+    const bridgeSafety = readBridgeSnapshotSafety(response, shouldDecodeRawLivePid || hasRawEcuLivePidResponse || hasBridgeValueList || hasBridgeValueSummary);
     const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedLivePidAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
@@ -4081,9 +4105,27 @@
             ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
           };
       });
-    const monitorValues = values
+    const structuredMonitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean);
+    const decodedRawEcuLivePidSnapshots = new Map();
+    const rawEcuLivePidMonitorValues = livePidEcuSnapshots.flatMap((ecuRow) => {
+      const raw = getEcuRawLivePidResponse(ecuRow);
+      if (raw === null || getEcuLivePidValues(ecuRow).length > 0) return [];
+      const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
+      const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.module_name || ecuRow?.moduleName || ecuRow?.name || ecuRow?.label || null;
+      const decoded = decodeLivePidResponse({
+        raw,
+        source: "local_bridge",
+        source_ecu: ecu,
+        source_ecu_name: ecuName,
+        captured_at: ecuRow?.captured_at || ecuRow?.capturedAt || data.captured_at || data.capturedAt || data.timestamp || response.captured_at || response.capturedAt || response.timestamp || null,
+        protocol: readBridgeProtocol(ecuRow) || readBridgeProtocol(data) || readBridgeProtocol(response)
+      });
+      decodedRawEcuLivePidSnapshots.set(ecuRow, decoded);
+      return Array.isArray(decoded.monitorValues) ? decoded.monitorValues : [];
+    });
+    const monitorValues = [...structuredMonitorValues, ...rawEcuLivePidMonitorValues];
     const observedSourceEcus = [...new Set(monitorValues.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set(monitorValues
@@ -4095,13 +4137,17 @@
       ...(Array.isArray(data.readoutEcuIds) ? data.readoutEcuIds : []),
       ...(Array.isArray(data.readout_ecu_ids) ? data.readout_ecu_ids : []),
       resolvedSourceEcu,
+      ...livePidEcuSnapshots.map((row) => row?.source_ecu || row?.sourceEcu || row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null),
       ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null)
     ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
+    const rawEcuReadoutUnparsed = [...decodedRawEcuLivePidSnapshots.values()].some((snapshot) => snapshot?.livePidReadoutStatus !== "reported");
     const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
       ? getBridgeReadoutStatus(resolvedBridgeSafety)
       : ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
         ? String(explicitReadoutStatus).trim().toLowerCase()
+        : rawEcuReadoutUnparsed && monitorValues.length === 0
+          ? "unparsed"
         : resolvedBridgeSafety.ok ? "reported" : "unknown";
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at
