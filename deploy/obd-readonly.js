@@ -25051,6 +25051,12 @@
     const trustedImportedCoreSessionStatus = isTrustedBridgeSessionExport
       ? pick("importedCoreSessionStatus", "imported_core_session_status")
       : null;
+    const trustedImportedDiagnosticFlowSummary = isTrustedBridgeSessionExport
+      ? pick("importedDiagnosticFlowSummary", "imported_diagnostic_flow_summary")
+      : null;
+    const trustedImportedAnalysisReadinessSummary = isTrustedBridgeSessionExport
+      ? pick("importedAnalysisReadinessSummary", "imported_analysis_readiness_summary")
+      : null;
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
@@ -25443,6 +25449,8 @@
       nextReadoutCandidates: trustedNextReadoutCandidates || undefined,
       nextReadoutReasonSummary: trustedNextReadoutReasonSummary || undefined,
       importedCoreSessionStatus: trustedImportedCoreSessionStatus || undefined,
+      importedDiagnosticFlowSummary: trustedImportedDiagnosticFlowSummary || undefined,
+      importedAnalysisReadinessSummary: trustedImportedAnalysisReadinessSummary || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       observationContext: scannerJsonObservationContext || undefined,
