@@ -23152,13 +23152,27 @@
           const rawCount = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count ?? null;
           const codeCount = Number.isSafeInteger(Number(rawCount)) && Number(rawCount) >= 0 && Number(rawCount) <= 10000 ? Number(rawCount) : null;
           const rowIntent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(row.intent) ? row.intent : intent;
+          const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
+          const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
+            source: snapshot?.source || "merged_dtc_snapshots",
+            source_ecu: ecu,
+            source_ecu_name: ecuName,
+            ...(rowIntent ? { intent: rowIntent } : {}),
+            status: rowIntent === "read_pending_dtc" ? "pending" : rowIntent === "read_permanent_dtc" ? "permanent" : rowIntent ? "stored" : "unknown",
+            dtc_readout_status: responseStatus,
+            dtcs: childDtcInputs,
+            ecu_responses: []
+          }) : null;
+          const childDtcs = Array.isArray(childDtcSnapshot?.dtcs) ? childDtcSnapshot.dtcs : [];
           return ecu ? [`${normalizeDtcMergeEcu(ecu)}::${rowIntent || responseStatus}`, {
             ecu,
             ecuName,
             ecu_name: ecuName,
             status: responseStatus,
             ...(rowIntent ? { intent: rowIntent } : {}),
-            ...(codeCount !== null ? { codeCount, code_count: codeCount } : {})
+            ...(codeCount !== null ? { codeCount, code_count: codeCount } : {}),
+            dtcs: childDtcs,
+            codes: [...new Set(childDtcs.map((item) => item.code))]
           }] : null;
         });
       }).filter(Boolean)
@@ -23273,7 +23287,14 @@
       dtc_negative_response_codes: [...dtcNegativeResponseCodes],
       dtcMetadataSummary,
       dtc_metadata_summary: dtcMetadataSummary,
-      retainedRawText: false
+      retainedRawText: false,
+      retained_raw_text: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
   }
 
