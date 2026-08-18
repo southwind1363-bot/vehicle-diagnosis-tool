@@ -6805,6 +6805,23 @@
       return pid ? pid + "|" + sourceEcu : null;
     }).filter(Boolean))].sort();
     const recordedSupportedPidKeys = supportedPidEvidenceRecorded ? supportedPidKeys : [];
+    const normalizeSupportedPidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+    const readSupportedPidEcuId = (snapshot = {}) => normalizeSupportedPidEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
+    const reportedSupportedPidEcuIds = [...new Set(supportedPidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readSupportedPidEcuId)
+      .filter(Boolean))].sort();
+    const unresolvedSupportedPidEcuIds = [...new Set(supportedPidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readSupportedPidEcuId)
+      .filter(Boolean))].sort();
+    const supportedPidReportedEcuEvidenceRecorded = supportedPidEvidenceRecorded
+      || (supportedPidMatrix?.blocked !== true && supportedPidMatrix?.isBlocked !== true && supportedPidMatrix?.is_blocked !== true
+        && String(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || "").trim().toLowerCase() === "unparsed"
+        && reportedSupportedPidEcuIds.length > 0);
+    const supportedPidReportedEcuKeys = supportedPidReportedEcuEvidenceRecorded
+      ? supportedPidKeys.filter((key) => supportedPidEvidenceRecorded || reportedSupportedPidEcuIds.includes(normalizeSupportedPidEcuId(String(key || "").split("|")[1])))
+      : [];
     const onboardMonitorResponseUnavailable = ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
       || onboardMonitorSnapshot?.blocked === true
       || onboardMonitorSnapshot?.isBlocked === true
@@ -6968,6 +6985,14 @@
       supported_pid_keys: [...recordedSupportedPidKeys],
       supportedPidEvidenceRecorded,
       supported_pid_evidence_recorded: supportedPidEvidenceRecorded,
+      supportedPidReportedEcuEvidenceRecorded,
+      supported_pid_reported_ecu_evidence_recorded: supportedPidReportedEcuEvidenceRecorded,
+      supportedPidReportedEcuIds: reportedSupportedPidEcuIds,
+      supported_pid_reported_ecu_ids: [...reportedSupportedPidEcuIds],
+      supportedPidUnresolvedEcuIds: unresolvedSupportedPidEcuIds,
+      supported_pid_unresolved_ecu_ids: [...unresolvedSupportedPidEcuIds],
+      supportedPidReportedEcuKeys: supportedPidReportedEcuKeys,
+      supported_pid_reported_ecu_keys: [...supportedPidReportedEcuKeys],
       onboardMonitorTestCount: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)),
       onboard_monitor_test_count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)),
       onboardMonitorTestKeys: recordedOnboardMonitorTestKeys,
@@ -14562,6 +14587,10 @@
       supportedPidCount: ["supported_pid_count"],
       supportedPidKeys: ["supported_pid_keys"],
       supportedPidEvidenceRecorded: ["supported_pid_evidence_recorded"],
+      supportedPidReportedEcuEvidenceRecorded: ["supported_pid_reported_ecu_evidence_recorded"],
+      supportedPidReportedEcuIds: ["supported_pid_reported_ecu_ids"],
+      supportedPidUnresolvedEcuIds: ["supported_pid_unresolved_ecu_ids"],
+      supportedPidReportedEcuKeys: ["supported_pid_reported_ecu_keys"],
       freezeFrameValueCount: ["freeze_frame_value_count"],
       freezeFrameValueKeys: ["freeze_frame_value_keys"],
       freezeFrameValueEvidenceRecorded: ["freeze_frame_value_evidence_recorded"],
@@ -14843,12 +14872,6 @@
     const ecuInfoMissingKeyDelta = restrictEcuInfoComparisonToScopedEvidence
       ? null
       : readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount");
-    const nonComparableValueCountIds = new Set([
-      !completeFreezeFrameValueComparisonAvailable ? "freeze_frame_snapshot" : null,
-      !completeReadinessMonitorComparisonAvailable ? "readiness_snapshot" : null,
-      restrictEcuInfoComparisonToScopedEvidence ? "ecu_info_snapshot" : null
-    ].filter(Boolean));
-    const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
     const comparableEcuInfoKeyValueIds = new Set(["calibration_id", "calibration_verification_number"]);
     const readEcuInfoKeyValueKeys = (summary) => Array.isArray(readField(summary, "ecuInfoKeyValueKeys"))
       ? [...new Set(readField(summary, "ecuInfoKeyValueKeys").map((key) => {
@@ -14884,11 +14907,60 @@
       : [];
     const importedSupportedPidEvidenceRecorded = readBoolean(importedInventory, "supportedPidEvidenceRecorded");
     const currentSupportedPidEvidenceRecorded = readBoolean(currentSummary, "supportedPidEvidenceRecorded");
-    const supportedPidComparisonAvailable = importedSupportedPidEvidenceRecorded && currentSupportedPidEvidenceRecorded;
-    const importedSupportedPidKeys = readSupportedPidKeys(importedInventory);
-    const currentSupportedPidKeys = readSupportedPidKeys(currentSummary);
+    const readSupportedPidReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
+        || String(value || "").trim().toUpperCase()
+        || null;
+      const explicitIds = readIds(summary, "supportedPidReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitIds)].sort()
+        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[1])).filter(Boolean))].sort();
+      const explicitKeys = readIds(summary, "supportedPidReportedEcuKeys");
+      const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
+      return {
+        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "supportedPidReportedEcuEvidenceRecorded"),
+        reportedEcuIds,
+        reportedEcuKeys
+      };
+    };
+    const importedAllSupportedPidKeys = readSupportedPidKeys(importedInventory);
+    const currentAllSupportedPidKeys = readSupportedPidKeys(currentSummary);
+    const importedSupportedPidReportedEcuScope = readSupportedPidReportedEcuScope(importedInventory, importedSupportedPidEvidenceRecorded, importedAllSupportedPidKeys);
+    const currentSupportedPidReportedEcuScope = readSupportedPidReportedEcuScope(currentSummary, currentSupportedPidEvidenceRecorded, currentAllSupportedPidKeys);
+    const completeSupportedPidComparisonAvailable = importedSupportedPidEvidenceRecorded && currentSupportedPidEvidenceRecorded;
+    const comparableSupportedPidEcuIds = completeSupportedPidComparisonAvailable
+      ? []
+      : importedSupportedPidReportedEcuScope.evidenceRecorded && currentSupportedPidReportedEcuScope.evidenceRecorded
+        ? importedSupportedPidReportedEcuScope.reportedEcuIds.filter((id) => currentSupportedPidReportedEcuScope.reportedEcuIds.includes(id))
+        : [];
+    const reportedEcuSupportedPidComparisonAvailable = !completeSupportedPidComparisonAvailable && comparableSupportedPidEcuIds.length > 0;
+    const supportedPidComparisonAvailable = completeSupportedPidComparisonAvailable || reportedEcuSupportedPidComparisonAvailable;
+    const filterSupportedPidKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[1]) || String(key || "").split("|")[1]?.trim().toUpperCase();
+      return comparableSupportedPidEcuIds.includes(ecu);
+    });
+    const importedSupportedPidKeys = completeSupportedPidComparisonAvailable
+      ? importedAllSupportedPidKeys
+      : reportedEcuSupportedPidComparisonAvailable ? filterSupportedPidKeysByScope(importedSupportedPidReportedEcuScope) : [];
+    const currentSupportedPidKeys = completeSupportedPidComparisonAvailable
+      ? currentAllSupportedPidKeys
+      : reportedEcuSupportedPidComparisonAvailable ? filterSupportedPidKeysByScope(currentSupportedPidReportedEcuScope) : [];
     const supportedPidAddedKeys = supportedPidComparisonAvailable ? diffIds(currentSupportedPidKeys, importedSupportedPidKeys) : [];
     const supportedPidRemovedKeys = supportedPidComparisonAvailable ? diffIds(importedSupportedPidKeys, currentSupportedPidKeys) : [];
+    const hasSupportedPidEcuScopeEvidence = [
+      ...importedSupportedPidReportedEcuScope.reportedEcuIds,
+      ...currentSupportedPidReportedEcuScope.reportedEcuIds,
+      ...readIds(importedInventory, "supportedPidUnresolvedEcuIds"),
+      ...readIds(currentSummary, "supportedPidUnresolvedEcuIds")
+    ].length > 0;
+    const restrictSupportedPidComparisonToScopedEvidence = !completeSupportedPidComparisonAvailable && hasSupportedPidEcuScopeEvidence;
+    const nonComparableValueCountIds = new Set([
+      !completeFreezeFrameValueComparisonAvailable ? "freeze_frame_snapshot" : null,
+      !completeReadinessMonitorComparisonAvailable ? "readiness_snapshot" : null,
+      restrictEcuInfoComparisonToScopedEvidence ? "ecu_info_snapshot" : null,
+      restrictSupportedPidComparisonToScopedEvidence ? "supported_pid_matrix" : null
+    ].filter(Boolean));
+    const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
     const readOnboardMonitorKeys = (summary) => Array.isArray(readField(summary, "onboardMonitorTestKeys"))
       ? [...new Set(readField(summary, "onboardMonitorTestKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
@@ -15266,8 +15338,16 @@
       imported_supported_pid_evidence_recorded: importedSupportedPidEvidenceRecorded,
       currentSupportedPidEvidenceRecorded,
       current_supported_pid_evidence_recorded: currentSupportedPidEvidenceRecorded,
+      importedSupportedPidReportedEcuEvidenceRecorded: importedSupportedPidReportedEcuScope.evidenceRecorded,
+      imported_supported_pid_reported_ecu_evidence_recorded: importedSupportedPidReportedEcuScope.evidenceRecorded,
+      currentSupportedPidReportedEcuEvidenceRecorded: currentSupportedPidReportedEcuScope.evidenceRecorded,
+      current_supported_pid_reported_ecu_evidence_recorded: currentSupportedPidReportedEcuScope.evidenceRecorded,
       supportedPidComparisonAvailable,
       supported_pid_comparison_available: supportedPidComparisonAvailable,
+      supportedPidComparisonScope: completeSupportedPidComparisonAvailable ? "complete" : reportedEcuSupportedPidComparisonAvailable ? "reported_ecus" : "unavailable",
+      supported_pid_comparison_scope: completeSupportedPidComparisonAvailable ? "complete" : reportedEcuSupportedPidComparisonAvailable ? "reported_ecus" : "unavailable",
+      supportedPidComparableEcuIds: comparableSupportedPidEcuIds,
+      supported_pid_comparable_ecu_ids: [...comparableSupportedPidEcuIds],
       importedSupportedPidKeys,
       imported_supported_pid_keys: importedSupportedPidKeys,
       currentSupportedPidKeys,
@@ -15451,6 +15531,14 @@
       supported_pid_keys: normalizeIds(summary.supportedPidKeys || summary.supported_pid_keys),
       supportedPidEvidenceRecorded: pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
       supported_pid_evidence_recorded: pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
+      supportedPidReportedEcuEvidenceRecorded: pickDefined(summary.supportedPidReportedEcuEvidenceRecorded, summary.supported_pid_reported_ecu_evidence_recorded, summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
+      supported_pid_reported_ecu_evidence_recorded: pickDefined(summary.supportedPidReportedEcuEvidenceRecorded, summary.supported_pid_reported_ecu_evidence_recorded, summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true,
+      supportedPidReportedEcuIds: normalizeIds(summary.supportedPidReportedEcuIds || summary.supported_pid_reported_ecu_ids),
+      supported_pid_reported_ecu_ids: normalizeIds(summary.supportedPidReportedEcuIds || summary.supported_pid_reported_ecu_ids),
+      supportedPidUnresolvedEcuIds: normalizeIds(summary.supportedPidUnresolvedEcuIds || summary.supported_pid_unresolved_ecu_ids),
+      supported_pid_unresolved_ecu_ids: normalizeIds(summary.supportedPidUnresolvedEcuIds || summary.supported_pid_unresolved_ecu_ids),
+      supportedPidReportedEcuKeys: normalizeIds(summary.supportedPidReportedEcuKeys || summary.supported_pid_reported_ecu_keys || (pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true ? summary.supportedPidKeys || summary.supported_pid_keys : [])),
+      supported_pid_reported_ecu_keys: normalizeIds(summary.supportedPidReportedEcuKeys || summary.supported_pid_reported_ecu_keys || (pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true ? summary.supportedPidKeys || summary.supported_pid_keys : [])),
       onboardMonitorTestCount: toCount("onboardMonitorTestCount", "onboard_monitor_test_count", 0),
       onboard_monitor_test_count: toCount("onboardMonitorTestCount", "onboard_monitor_test_count", 0),
       onboardMonitorTestKeys: normalizeIds(summary.onboardMonitorTestKeys || summary.onboard_monitor_test_keys),
