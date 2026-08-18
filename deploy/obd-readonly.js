@@ -6794,6 +6794,10 @@
     }).filter(Boolean))].sort();
     const ecuInfoKeyValueEvidenceRecorded = ecuInfoItemEvidenceRecorded;
     const recordedEcuInfoKeyValueKeys = ecuInfoKeyValueEvidenceRecorded ? ecuInfoKeyValueKeys : [];
+    const ecuInfoKeyValueReportedEcuEvidenceRecorded = ecuInfoItemReportedEcuEvidenceRecorded;
+    const ecuInfoKeyValueReportedEcuKeys = ecuInfoKeyValueReportedEcuEvidenceRecorded
+      ? ecuInfoKeyValueKeys.filter((key) => ecuInfoKeyValueEvidenceRecorded || reportedEcuInfoEcuIds.includes(normalizeEcuInfoEcuId(String(key || "").split("|")[2])))
+      : [];
     const mode09SupportedTypeItems = (Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).filter((item) => {
       const id = String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase();
       return id === "supported_info_types_00" && parseObdHexBytes(item?.value).length > 0;
@@ -7026,6 +7030,10 @@
       ecu_info_key_value_keys: [...recordedEcuInfoKeyValueKeys],
       ecuInfoKeyValueEvidenceRecorded,
       ecu_info_key_value_evidence_recorded: ecuInfoKeyValueEvidenceRecorded,
+      ecuInfoKeyValueReportedEcuEvidenceRecorded,
+      ecu_info_key_value_reported_ecu_evidence_recorded: ecuInfoKeyValueReportedEcuEvidenceRecorded,
+      ecuInfoKeyValueReportedEcuKeys: ecuInfoKeyValueReportedEcuKeys,
+      ecu_info_key_value_reported_ecu_keys: [...ecuInfoKeyValueReportedEcuKeys],
       mode09SupportedTypeCount: recordedMode09SupportedTypeKeys.length,
       mode09_supported_type_count: recordedMode09SupportedTypeKeys.length,
       mode09SupportedTypeKeys: recordedMode09SupportedTypeKeys,
@@ -14615,6 +14623,8 @@
       ecuInfoKeyValueCount: ["ecu_info_key_value_count"],
       ecuInfoKeyValueKeys: ["ecu_info_key_value_keys"],
       ecuInfoKeyValueEvidenceRecorded: ["ecu_info_key_value_evidence_recorded"],
+      ecuInfoKeyValueReportedEcuEvidenceRecorded: ["ecu_info_key_value_reported_ecu_evidence_recorded"],
+      ecuInfoKeyValueReportedEcuKeys: ["ecu_info_key_value_reported_ecu_keys"],
       mode09SupportedTypeCount: ["mode09_supported_type_count"],
       mode09SupportedTypeKeys: ["mode09_supported_type_keys"],
       mode09SupportedTypeEvidenceRecorded: ["mode09_supported_type_evidence_recorded"],
@@ -14999,9 +15009,25 @@
       : [];
     const importedEcuInfoKeyValueEvidenceRecorded = readBoolean(importedInventory, "ecuInfoKeyValueEvidenceRecorded");
     const currentEcuInfoKeyValueEvidenceRecorded = readBoolean(currentSummary, "ecuInfoKeyValueEvidenceRecorded");
-    const ecuInfoKeyValueComparisonAvailable = importedEcuInfoKeyValueEvidenceRecorded && currentEcuInfoKeyValueEvidenceRecorded;
-    const importedEcuInfoKeyValueKeys = readEcuInfoKeyValueKeys(importedInventory);
-    const currentEcuInfoKeyValueKeys = readEcuInfoKeyValueKeys(currentSummary);
+    const completeEcuInfoKeyValueComparisonAvailable = importedEcuInfoKeyValueEvidenceRecorded && currentEcuInfoKeyValueEvidenceRecorded;
+    const reportedEcuInfoKeyValueComparisonAvailable = !completeEcuInfoKeyValueComparisonAvailable
+      && reportedEcuInfoItemComparisonAvailable
+      && readBoolean(importedInventory, "ecuInfoKeyValueReportedEcuEvidenceRecorded")
+      && readBoolean(currentSummary, "ecuInfoKeyValueReportedEcuEvidenceRecorded");
+    const ecuInfoKeyValueComparisonAvailable = completeEcuInfoKeyValueComparisonAvailable || reportedEcuInfoKeyValueComparisonAvailable;
+    const readReportedEcuInfoKeyValueKeys = (summary) => Array.isArray(readField(summary, "ecuInfoKeyValueReportedEcuKeys"))
+      ? readEcuInfoKeyValueKeys({ ecuInfoKeyValueKeys: readField(summary, "ecuInfoKeyValueReportedEcuKeys") })
+      : [];
+    const filterEcuInfoKeyValueKeysByScope = (keys) => keys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[2]) || String(key || "").split("|")[2]?.trim().toUpperCase();
+      return comparableEcuInfoItemEcuIds.includes(ecu);
+    });
+    const importedEcuInfoKeyValueKeys = completeEcuInfoKeyValueComparisonAvailable
+      ? readEcuInfoKeyValueKeys(importedInventory)
+      : reportedEcuInfoKeyValueComparisonAvailable ? filterEcuInfoKeyValueKeysByScope(readReportedEcuInfoKeyValueKeys(importedInventory)) : [];
+    const currentEcuInfoKeyValueKeys = completeEcuInfoKeyValueComparisonAvailable
+      ? readEcuInfoKeyValueKeys(currentSummary)
+      : reportedEcuInfoKeyValueComparisonAvailable ? filterEcuInfoKeyValueKeysByScope(readReportedEcuInfoKeyValueKeys(currentSummary)) : [];
     const ecuInfoKeyValueAddedKeys = ecuInfoKeyValueComparisonAvailable ? diffIds(currentEcuInfoKeyValueKeys, importedEcuInfoKeyValueKeys) : [];
     const ecuInfoKeyValueRemovedKeys = ecuInfoKeyValueComparisonAvailable ? diffIds(importedEcuInfoKeyValueKeys, currentEcuInfoKeyValueKeys) : [];
     const readMode09SupportedTypeKeys = (summary) => Array.isArray(readField(summary, "mode09SupportedTypeKeys"))
@@ -15479,6 +15505,10 @@
       current_ecu_info_key_value_evidence_recorded: currentEcuInfoKeyValueEvidenceRecorded,
       ecuInfoKeyValueComparisonAvailable,
       ecu_info_key_value_comparison_available: ecuInfoKeyValueComparisonAvailable,
+      ecuInfoKeyValueComparisonScope: completeEcuInfoKeyValueComparisonAvailable ? "complete" : reportedEcuInfoKeyValueComparisonAvailable ? "reported_ecus" : "unavailable",
+      ecu_info_key_value_comparison_scope: completeEcuInfoKeyValueComparisonAvailable ? "complete" : reportedEcuInfoKeyValueComparisonAvailable ? "reported_ecus" : "unavailable",
+      ecuInfoKeyValueComparableEcuIds: comparableEcuInfoItemEcuIds,
+      ecu_info_key_value_comparable_ecu_ids: [...comparableEcuInfoItemEcuIds],
       importedEcuInfoKeyValueKeys,
       imported_ecu_info_key_value_keys: importedEcuInfoKeyValueKeys,
       currentEcuInfoKeyValueKeys,
@@ -15716,6 +15746,10 @@
       ecu_info_key_value_keys: normalizeIds(summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys),
       ecuInfoKeyValueEvidenceRecorded: pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
       ecu_info_key_value_evidence_recorded: pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
+      ecuInfoKeyValueReportedEcuEvidenceRecorded: pickDefined(summary.ecuInfoKeyValueReportedEcuEvidenceRecorded, summary.ecu_info_key_value_reported_ecu_evidence_recorded, summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
+      ecu_info_key_value_reported_ecu_evidence_recorded: pickDefined(summary.ecuInfoKeyValueReportedEcuEvidenceRecorded, summary.ecu_info_key_value_reported_ecu_evidence_recorded, summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true,
+      ecuInfoKeyValueReportedEcuKeys: normalizeIds(summary.ecuInfoKeyValueReportedEcuKeys || summary.ecu_info_key_value_reported_ecu_keys || (pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true ? summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys : [])),
+      ecu_info_key_value_reported_ecu_keys: normalizeIds(summary.ecuInfoKeyValueReportedEcuKeys || summary.ecu_info_key_value_reported_ecu_keys || (pickDefined(summary.ecuInfoKeyValueEvidenceRecorded, summary.ecu_info_key_value_evidence_recorded, false) === true ? summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys : [])),
       mode09SupportedTypeCount: toCount("mode09SupportedTypeCount", "mode09_supported_type_count", 0),
       mode09_supported_type_count: toCount("mode09SupportedTypeCount", "mode09_supported_type_count", 0),
       mode09SupportedTypeKeys: normalizeIds(summary.mode09SupportedTypeKeys || summary.mode09_supported_type_keys),
