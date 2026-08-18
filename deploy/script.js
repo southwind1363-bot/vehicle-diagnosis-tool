@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2805件",
+  validationCheckLabel: "OBD安全検証 2806件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial基本スキャンの完了判定を正規化済み読取状態へ統一",
+  recentMilestone: "Web Serial対応PIDの要求ページごとの取得確認を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.59";
+const APP_VERSION = "3.12.60";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4812,6 +4812,19 @@ function hasWebSerialDtcStatusReport(status) {
   return reportedStatuses.includes(status);
 }
 
+function hasWebSerialSupportedPidPage(snapshot, basePid) {
+  const pageSummary = snapshot?.supportedPidPageSummary || snapshot?.supported_pid_page_summary || null;
+  const pageBases = snapshot?.supportedPidPageBases
+    || snapshot?.supported_pid_page_bases
+    || pageSummary?.pageBases
+    || pageSummary?.page_bases
+    || [];
+  const normalizedBasePid = String(basePid || "").trim().toUpperCase().padStart(2, "0");
+  return /^[0-9A-F]{2}$/.test(normalizedBasePid)
+    && Array.isArray(pageBases)
+    && pageBases.some((page) => String(page || "").trim().toUpperCase().padStart(2, "0") === normalizedBasePid);
+}
+
 async function readObdDeveloperDtc() {
   const storedReadCompleted = await runObdDeveloperRead("保存DTC読取", ["03"]);
   if (!storedReadCompleted || !hasWebSerialDtcStatusReport("stored")) return false;
@@ -5014,11 +5027,13 @@ async function readObdDeveloperQuickLiveSnapshot() {
 
 async function readObdDeveloperSupportedPidMaps() {
   if (obdDevSession.supportedPidDiscoveryComplete) return true;
-  if (!await runObdDeveloperRead("対応PID確認", ["0100"])) return false;
+  const baseReadCompleted = await runObdDeveloperRead("対応PID確認", ["0100"]);
+  if (!baseReadCompleted || !hasWebSerialSupportedPidPage(obdDevSession.lastSession?.supportedPidMatrix, "00")) return false;
   for (const basePid of ["20", "40", "60", "80", "A0", "C0", "E0"]) {
     const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
     if (!supportedPids.has(basePid)) break;
-    if (!await runObdDeveloperRead("対応PID確認", [`01${basePid}`])) return false;
+    const pageReadCompleted = await runObdDeveloperRead("対応PID確認", [`01${basePid}`]);
+    if (!pageReadCompleted || !hasWebSerialSupportedPidPage(obdDevSession.lastSession?.supportedPidMatrix, basePid)) return false;
   }
   const supportedPidMatrix = obdDevSession.lastSession?.supportedPidMatrix || null;
   obdDevSession.supportedPidSet = supportedPidMatrix?.supportedPidReadoutStatus === "reported"
