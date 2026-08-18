@@ -5964,6 +5964,14 @@
           ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
           : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput))
       : null;
+    const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
+      ? ecuInfoSnapshot.ecuInfoEcuSnapshots
+      : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
+        ? ecuInfoSnapshot.ecu_info_ecu_snapshots
+        : [];
+    const reportedScopedEcuInfoItemCount = ecuInfoEcuSnapshots
+      .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported")
+      .reduce((total, snapshot) => total + (Number(snapshot?.itemCount || snapshot?.item_count) || 0), 0);
     const onboardMonitorSnapshot = hasOnboardMonitorSnapshotInput
       ? (onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput))
       : null;
@@ -6098,6 +6106,7 @@
         readoutStatus: ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || null,
         safetyInput: ecuInfoSnapshotSafetyInput,
         responseUnavailable: isUnavailableReadout(ecuInfoSnapshot, ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status, ecuInfoSnapshotSafetyInput),
+        retainCountWhenUnavailable: reportedScopedEcuInfoItemCount > 0,
         label: "ECU情報",
         available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status) || isUnknownWithoutEvidence(ecuInfoSnapshot, "items", ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
           ? false
@@ -6131,9 +6140,9 @@
         available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids) || scopedSupportedPids.length > 0),
         count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : scopedSupportedPids.length
       }
-    ].map(({ responseUnavailable, capturedEvidence = false, inputPresent = false, readoutStatus = null, safetyInput = {}, ...item }) => {
+    ].map(({ responseUnavailable, retainCountWhenUnavailable = false, capturedEvidence = false, inputPresent = false, readoutStatus = null, safetyInput = {}, ...item }) => {
       const available = responseUnavailable ? false : item.available;
-      const count = responseUnavailable ? 0 : item.count;
+      const count = responseUnavailable && !retainCountWhenUnavailable ? 0 : item.count;
       const normalizedReadoutStatus = String(readoutStatus || "").trim().toLowerCase();
       const errorCodes = [...new Set([
         ...readBridgeResponseErrorCodes(safetyInput),
@@ -7512,7 +7521,29 @@
     const readableLivePidSnapshot = isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot : {};
     const readableFreezeFrameSnapshot = isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot : {};
     const readableReadinessSnapshot = isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? readinessSnapshot : {};
-    const readableEcuInfoSnapshot = isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? ecuInfoSnapshot : {};
+    const sourceEcuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
+      ? ecuInfoSnapshot.ecuInfoEcuSnapshots
+      : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
+        ? ecuInfoSnapshot.ecu_info_ecu_snapshots
+        : [];
+    const reportedEcuInfoAddresses = sourceEcuInfoEcuSnapshots
+      .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported")
+      .map((snapshot) => normalizeComparableCanEcuAddress(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || null))
+      .filter(Boolean);
+    const scopedReportedEcuInfoItems = (Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).filter((item) => {
+      const itemAddress = normalizeComparableCanEcuAddress(item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || null);
+      return itemAddress && reportedEcuInfoAddresses.some((reportedAddress) => isComparableCanEcuAddressMatch(reportedAddress, itemAddress));
+    });
+    const readableEcuInfoSnapshot = isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"])
+      ? ecuInfoSnapshot
+      : sourceEcuInfoEcuSnapshots.length > 0
+        ? {
+          ...ecuInfoSnapshot,
+          items: scopedReportedEcuInfoItems,
+          ecuInfoEcuSnapshots: sourceEcuInfoEcuSnapshots,
+          ecu_info_ecu_snapshots: sourceEcuInfoEcuSnapshots
+        }
+        : {};
     const readableOnboardMonitorSnapshot = isReadableDiagnosticSnapshot(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]) ? onboardMonitorSnapshot : {};
     const readableSupportedPidMatrix = isReadableDiagnosticSnapshot(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"]) ? supportedPidMatrix : {};
     dtcSnapshot = readableDtcSnapshot;
@@ -21592,6 +21623,35 @@
       };
     }).filter(Boolean);
     const scopedItemCount = ecuInfoEcuSnapshots.reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
+    const ecuInfoEcuOutcomeGroups = new Map();
+    ecuInfoEcuSnapshots.forEach((snapshot) => {
+      const sourceAddress = snapshot.sourceEcu || snapshot.source_ecu || null;
+      const comparableAddress = normalizeComparableCanEcuAddress(sourceAddress);
+      const identity = comparableAddress?.startsWith("18DA")
+        ? `18DA${[comparableAddress.slice(4, 6), comparableAddress.slice(6, 8)].sort().join("")}`
+        : comparableAddress || String(sourceAddress || "").trim().toUpperCase();
+      if (!identity) return;
+      const group = ecuInfoEcuOutcomeGroups.get(identity) || [];
+      group.push(snapshot);
+      ecuInfoEcuOutcomeGroups.set(identity, group);
+    });
+    const ecuInfoEcuStatuses = [...ecuInfoEcuOutcomeGroups.values()].map((outcomes) => {
+      const statuses = outcomes.map((snapshot) => snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || "unknown");
+      if (statuses.includes("blocked")) return "blocked";
+      const terminalUnparsed = outcomes.some((snapshot) => {
+        const status = snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || "unknown";
+        const negativeCode = snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code || null;
+        return status === "unparsed" && negativeCode !== "78";
+      });
+      if (terminalUnparsed) return "unparsed";
+      if (statuses.includes("reported")) return "reported";
+      if (statuses.includes("unparsed")) return "unparsed";
+      return "unknown";
+    });
+    const reportedEcuCount = ecuInfoEcuStatuses.filter((status) => status === "reported").length;
+    const blockedEcuCount = ecuInfoEcuStatuses.filter((status) => status === "blocked").length;
+    const unparsedEcuCount = ecuInfoEcuStatuses.filter((status) => status === "unparsed").length;
+    const unknownEcuCount = ecuInfoEcuStatuses.filter((status) => status === "unknown").length;
     const hadSensitiveIdentifier = sourceInput.hadSensitiveIdentifier === true
       || sourceInput.had_sensitive_identifier === true
       || redactedItems.length > 0;
@@ -21657,11 +21717,45 @@
       sourceInput.readoutStatus,
       sourceInput.readout_status
     );
-    const normalizedReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
+    const baseReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
       ? String(explicitReadoutStatus).trim().toLowerCase()
       : items.length > 0
         ? "reported"
         : "unknown";
+    const normalizedReadoutStatus = blockedEcuCount > 0
+      ? "blocked"
+      : unparsedEcuCount > 0
+        ? "unparsed"
+        : unknownEcuCount > 0
+          ? "unknown"
+          : baseReadoutStatus;
+    const pendingResponseCount = ecuInfoEcuSnapshots.filter((snapshot) => (snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code) === "78").length;
+    const resolvedPendingResponseCount = [...ecuInfoEcuOutcomeGroups.values()].filter((outcomes) =>
+      outcomes.some((snapshot) => (snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code) === "78")
+      && outcomes.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported")
+    ).length;
+    const ecuInfoEcuAggregateSummary = ecuInfoEcuStatuses.length ? {
+      schemaVersion: "ecu_info_ecu_aggregate_summary_v1",
+      schema_version: "ecu_info_ecu_aggregate_summary_v1",
+      ecuCount: ecuInfoEcuStatuses.length,
+      ecu_count: ecuInfoEcuStatuses.length,
+      responseCount: ecuInfoEcuSnapshots.length,
+      response_count: ecuInfoEcuSnapshots.length,
+      reportedEcuCount,
+      reported_ecu_count: reportedEcuCount,
+      blockedEcuCount,
+      blocked_ecu_count: blockedEcuCount,
+      unparsedEcuCount,
+      unparsed_ecu_count: unparsedEcuCount,
+      unknownEcuCount,
+      unknown_ecu_count: unknownEcuCount,
+      pendingResponseCount,
+      pending_response_count: pendingResponseCount,
+      resolvedPendingResponseCount,
+      resolved_pending_response_count: resolvedPendingResponseCount,
+      allReported: reportedEcuCount === ecuInfoEcuStatuses.length,
+      all_reported: reportedEcuCount === ecuInfoEcuStatuses.length
+    } : null;
     const ecuInfoNegativeResponseService = normalizeNegativeResponseByte(sourceInput.ecuInfoNegativeResponseService || sourceInput.ecu_info_negative_response_service);
     const ecuInfoNegativeResponseCode = normalizeNegativeResponseByte(sourceInput.ecuInfoNegativeResponseCode || sourceInput.ecu_info_negative_response_code);
     const keyItemSummary = {
@@ -21715,6 +21809,8 @@
       items,
       ecuInfoEcuSnapshots,
       ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
+      ecuInfoEcuAggregateSummary,
+      ecu_info_ecu_aggregate_summary: ecuInfoEcuAggregateSummary,
       expectedItems,
       expected_items: expectedItems,
       keyItemSummary,
@@ -23243,24 +23339,38 @@
       const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
       return ecuInfoItemCatalog.some((item) => item.infoType === infoType);
     };
-    const hasMode09Frame = bytes.some((byte, index) => isKnownMode09FrameStart(index));
-    const rawUdsDidValues = hasMode09Frame ? [] : decodeRawUdsDataByIdentifierResponse(bytes, input);
+    const mode09FrameIndexes = bytes.map((byte, index) => isKnownMode09FrameStart(index) ? index : -1).filter((index) => index >= 0);
+    const getMode09FrameEnd = (index) => mode09FrameIndexes.find((nextIndex) => nextIndex > index) ?? bytes.length;
+    const isCompleteMode09Frame = (index) => {
+      if (!isKnownMode09FrameStart(index)) return false;
+      const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
+      const catalogItem = ecuInfoItemCatalog.find((item) => item.infoType === infoType);
+      const payloadLength = getMode09FrameEnd(index) - (index + 2);
+      if (infoType === "00") return payloadLength === 4 || payloadLength >= 5;
+      if (catalogItem?.valueType === "counter_set") return payloadLength >= 3;
+      return payloadLength >= 2;
+    };
+    const completeMode09FrameIndexes = mode09FrameIndexes.filter(isCompleteMode09Frame);
+    const hasKnownMode09Frame = mode09FrameIndexes.length > 0;
+    const hasMode09Frame = completeMode09FrameIndexes.length > 0;
+    const rawUdsDidValues = hasKnownMode09Frame ? [] : decodeRawUdsDataByIdentifierResponse(bytes, input);
     const hasUdsDidResponse = rawUdsDidValues.length > 0 || udsDidNegativeResponse || (protocolDeclaresUds && bytes.includes(0x62)) || bytes[0] === 0x62;
-    const readoutStatus = hasMode09Frame || rawUdsDidValues.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
-    const ecuInfoResponseFormat = hasMode09Frame
+    const ecuInfoResponseFormat = hasKnownMode09Frame
       ? "obd_mode09"
       : hasUdsDidResponse
         ? "uds_read_data_by_identifier"
         : null;
 
     for (let index = 0; index < bytes.length - 2; index++) {
-      if (!isKnownMode09FrameStart(index)) continue;
+      if (!isCompleteMode09Frame(index)) continue;
       const infoType = bytes[index + 1].toString(16).toUpperCase().padStart(2, "0");
-      const nextSegment = bytes.findIndex((byte, nextIndex) => nextIndex > index && isKnownMode09FrameStart(nextIndex));
-      const end = nextSegment > index ? nextSegment : bytes.length;
+      const end = getMode09FrameEnd(index);
       const catalogItem = ecuInfoItemCatalog.find((item) => item.infoType === infoType);
       if (!catalogItem) continue;
-      const payload = trimEcuInfoPayload(bytes.slice(index + 2, end), infoType === "00" || catalogItem.valueType === "counter_set");
+      const rawPayload = bytes.slice(index + 2, end);
+      const payload = infoType === "00"
+        ? rawPayload.length >= 5 ? rawPayload.slice(-4) : rawPayload.slice(0, 4)
+        : trimEcuInfoPayload(rawPayload, catalogItem.valueType === "counter_set");
       values.push({
         id: catalogItem.id,
         info_type: infoType,
@@ -23269,6 +23379,11 @@
       });
     }
     values.push(...rawUdsDidValues);
+    const decodedMode09ValueCount = values.filter((item) => item?.service !== "22" && item?.value !== null && item?.value !== "").length;
+    const allMode09FramesDecoded = hasMode09Frame
+      && completeMode09FrameIndexes.length === mode09FrameIndexes.length
+      && decodedMode09ValueCount === completeMode09FrameIndexes.length;
+    const readoutStatus = allMode09FramesDecoded || rawUdsDidValues.length ? "reported" : hasObdResponseInput(input) ? "unparsed" : "unknown";
 
     return normalizeEcuInfoSnapshot({
       source: input.source || "obd_response_decoder",
@@ -24037,11 +24152,12 @@
         }));
         if (snapshots.length === 1) return snapshots[0];
         const values = snapshots.flatMap((snapshot) => snapshot.items || []);
-        const readoutStatus = snapshots.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported")
-          ? "reported"
-          : snapshots.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "unparsed")
+        const readoutStatuses = snapshots.map((snapshot) => snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || "unknown");
+        const readoutStatus = readoutStatuses.includes("blocked")
+          ? "blocked"
+          : readoutStatuses.some((status) => status !== "reported")
             ? "unparsed"
-            : "unknown";
+            : readoutStatuses.length ? "reported" : "unknown";
         const negativeResponses = snapshots.filter((snapshot) => (snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service) === "22");
         const negativeResponseCodes = [...new Set(negativeResponses.map((snapshot) => snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code).filter(Boolean))];
         return normalizeEcuInfoSnapshot({
