@@ -25057,6 +25057,21 @@
     const trustedImportedAnalysisReadinessSummary = isTrustedBridgeSessionExport
       ? pick("importedAnalysisReadinessSummary", "imported_analysis_readiness_summary")
       : null;
+    const trustedImportedReadoutCompletionSummary = isTrustedBridgeSessionExport
+      ? pick("importedReadoutCompletionSummary", "imported_readout_completion_summary")
+      : null;
+    const trustedImportedReadoutQualitySummary = isTrustedBridgeSessionExport
+      ? pick("importedReadoutQualitySummary", "imported_readout_quality_summary")
+      : null;
+    const trustedImportedReadoutRequestPlanGateSummary = isTrustedBridgeSessionExport
+      ? pick("importedReadoutRequestPlanGateSummary", "imported_readout_request_plan_gate_summary")
+      : null;
+    const trustedImportedNextReadoutGuardSummary = isTrustedBridgeSessionExport
+      ? pick("importedNextReadoutGuardSummary", "imported_next_readout_guard_summary")
+      : null;
+    const trustedImportedCoreReadoutInventorySummary = isTrustedBridgeSessionExport
+      ? pick("importedCoreReadoutInventorySummary", "imported_core_readout_inventory_summary")
+      : null;
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
@@ -25451,6 +25466,11 @@
       importedCoreSessionStatus: trustedImportedCoreSessionStatus || undefined,
       importedDiagnosticFlowSummary: trustedImportedDiagnosticFlowSummary || undefined,
       importedAnalysisReadinessSummary: trustedImportedAnalysisReadinessSummary || undefined,
+      importedReadoutCompletionSummary: trustedImportedReadoutCompletionSummary || undefined,
+      importedReadoutQualitySummary: trustedImportedReadoutQualitySummary || undefined,
+      importedReadoutRequestPlanGateSummary: trustedImportedReadoutRequestPlanGateSummary || undefined,
+      importedNextReadoutGuardSummary: trustedImportedNextReadoutGuardSummary || undefined,
+      importedCoreReadoutInventorySummary: trustedImportedCoreReadoutInventorySummary || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       observationContext: scannerJsonObservationContext || undefined,
