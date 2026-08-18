@@ -20475,6 +20475,21 @@
         freeze_frame_scope: "single_ecu"
       };
     }).filter(Boolean);
+    const reportedFreezeFrameEcuSnapshots = freezeFrameEcuSnapshots.filter((snapshot) =>
+      String(snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status || "unknown").trim().toLowerCase() === "reported"
+    );
+    const matchesReportedFreezeFrameEcu = (row) => {
+      if (freezeFrameEcuSnapshots.length === 0) return true;
+      const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
+      if (!rowSource) return reportedFreezeFrameEcuSnapshots.length === freezeFrameEcuSnapshots.length;
+      const rowAddress = normalizeComparableCanEcuAddress(rowSource);
+      return reportedFreezeFrameEcuSnapshots.some((snapshot) => {
+        const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
+        if (reportedSource === rowSource) return true;
+        const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
+        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+      });
+    };
     const udsDtcSnapshotRecordInputs = Array.isArray(sourceInput.udsDtcSnapshotRecords)
       ? sourceInput.udsDtcSnapshotRecords
       : Array.isArray(sourceInput.uds_dtc_snapshot_records)
@@ -20542,12 +20557,14 @@
         source_ecu: recordEcu
       };
     }).filter(Boolean);
-    const udsDtcSnapshotRecords = localUdsDtcSnapshotRecords.length
-      ? localUdsDtcSnapshotRecords
-      : freezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.udsDtcSnapshotRecords || snapshot.uds_dtc_snapshot_records || []);
-    const udsDtcStoredDataRecords = localUdsDtcStoredDataRecords.length
-      ? localUdsDtcStoredDataRecords
-      : freezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.udsDtcStoredDataRecords || snapshot.uds_dtc_stored_data_records || []);
+    const reportedLocalUdsDtcSnapshotRecords = localUdsDtcSnapshotRecords.filter(matchesReportedFreezeFrameEcu);
+    const reportedLocalUdsDtcStoredDataRecords = localUdsDtcStoredDataRecords.filter(matchesReportedFreezeFrameEcu);
+    const udsDtcSnapshotRecords = reportedLocalUdsDtcSnapshotRecords.length
+      ? reportedLocalUdsDtcSnapshotRecords
+      : reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.udsDtcSnapshotRecords || snapshot.uds_dtc_snapshot_records || []);
+    const udsDtcStoredDataRecords = reportedLocalUdsDtcStoredDataRecords.length
+      ? reportedLocalUdsDtcStoredDataRecords
+      : reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.udsDtcStoredDataRecords || snapshot.uds_dtc_stored_data_records || []);
     const rows = (Array.isArray(sourceInput.values)
       ? sourceInput.values
       : Array.isArray(sourceInput.freeze_frame)
@@ -20590,6 +20607,7 @@
     const localMonitorValues = rows
       .map((row, index) => normalizeBridgePidValue(row, index))
       .filter(Boolean)
+      .filter(matchesReportedFreezeFrameEcu)
       .map((item) => {
         const catalogItem = freezeFrameItemCatalog.find((entry) => entry.monitorId === item.id || entry.pid === item.pid);
         return {
@@ -20601,7 +20619,7 @@
       });
     const monitorValues = localMonitorValues.length
       ? localMonitorValues
-      : freezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
+      : reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
     const expectedItems = freezeFrameItemCatalog.map((item) => {
       const capturedValues = monitorValues.filter((value) => value.id === item.monitorId || value.pid === item.pid);
       const capturedEcuIds = [...new Set(capturedValues.map((value) => value.sourceEcu || value.source_ecu || null).filter(Boolean))].sort();
@@ -20620,7 +20638,7 @@
         interpretationNote: item.interpretationNote
       };
     });
-    const triggerCodeValues = [
+    const triggerCodeValues = (matchesReportedFreezeFrameEcu(sourceInput) ? [
       sourceInput.trigger_dtc,
       sourceInput.triggerDtc,
       sourceInput.triggerCode,
@@ -20632,7 +20650,7 @@
       sourceInput.dtc,
       sourceInput.dtcCode,
       sourceInput.dtc_code
-    ].filter((value) => value !== undefined && value !== null && value !== "");
+    ] : []).filter((value) => value !== undefined && value !== null && value !== "");
     const triggerDtcFormat = pickDefined(
       sourceInput.trigger_dtc_format,
       sourceInput.triggerDtcFormat,
@@ -20743,8 +20761,8 @@
       };
     };
     const explicitTriggerDtcEntries = [...new Map([
-      ...triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean),
-      ...freezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || [])
+      ...triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).filter(matchesReportedFreezeFrameEcu),
+      ...reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || [])
     ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}`, item])).values()];
     const readoutEcuIds = [...new Set([
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
