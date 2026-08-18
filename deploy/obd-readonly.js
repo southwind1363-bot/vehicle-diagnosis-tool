@@ -5969,9 +5969,12 @@
       : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
         ? ecuInfoSnapshot.ecu_info_ecu_snapshots
         : [];
-    const reportedScopedEcuInfoItemCount = ecuInfoEcuSnapshots
-      .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported")
-      .reduce((total, snapshot) => total + (Number(snapshot?.itemCount || snapshot?.item_count) || 0), 0);
+    const declaredReportedScopedEcuInfoItemCount = pickDefined(ecuInfoSnapshot?.reportedScopedItemCount, ecuInfoSnapshot?.reported_scoped_item_count);
+    const reportedScopedEcuInfoItemCount = Number.isFinite(Number(declaredReportedScopedEcuInfoItemCount))
+      ? Math.max(0, Math.round(Number(declaredReportedScopedEcuInfoItemCount)))
+      : ecuInfoEcuSnapshots
+        .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported")
+        .reduce((total, snapshot) => total + (Number(snapshot?.itemCount || snapshot?.item_count) || 0), 0);
     const onboardMonitorSnapshot = hasOnboardMonitorSnapshotInput
       ? (onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput))
       : null;
@@ -6111,11 +6114,13 @@
         available: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status) || isUnknownWithoutEvidence(ecuInfoSnapshot, "items", ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
           ? false
           : ecuInfoSnapshot?.blocked === false || Array.isArray(ecuInfoSnapshot?.items),
-        count: Math.max(
-          Number(ecuInfoSnapshot?.itemCount || ecuInfoSnapshot?.item_count) || 0,
-          Number(ecuInfoSnapshot?.scopedItemCount || ecuInfoSnapshot?.scoped_item_count) || 0,
-          Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items.length : 0
-        )
+        count: ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
+          ? reportedScopedEcuInfoItemCount
+          : Math.max(
+            Number(ecuInfoSnapshot?.itemCount || ecuInfoSnapshot?.item_count) || 0,
+            Number(ecuInfoSnapshot?.scopedItemCount || ecuInfoSnapshot?.scoped_item_count) || 0,
+            Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items.length : 0
+          )
       },
       {
         id: "onboard_monitor_snapshot",
@@ -21623,6 +21628,10 @@
       };
     }).filter(Boolean);
     const scopedItemCount = ecuInfoEcuSnapshots.reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
+    const reportedScopedItemCount = ecuInfoEcuSnapshots
+      .filter((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported")
+      .reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
+    const unreportedScopedItemCount = Math.max(0, scopedItemCount - reportedScopedItemCount);
     const ecuInfoEcuOutcomeGroups = new Map();
     ecuInfoEcuSnapshots.forEach((snapshot) => {
       const sourceAddress = snapshot.sourceEcu || snapshot.source_ecu || null;
@@ -21798,6 +21807,10 @@
       item_count: items.length,
       scopedItemCount,
       scoped_item_count: scopedItemCount,
+      reportedScopedItemCount,
+      reported_scoped_item_count: reportedScopedItemCount,
+      unreportedScopedItemCount,
+      unreported_scoped_item_count: unreportedScopedItemCount,
       expectedItemCount: expectedItems.length,
       expected_item_count: expectedItems.length,
       hadSensitiveIdentifier,
