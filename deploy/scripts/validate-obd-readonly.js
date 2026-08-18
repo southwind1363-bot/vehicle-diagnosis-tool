@@ -5291,6 +5291,24 @@ const groupedLivePidRetryScan = obd.buildNativeConnectorScanSession({
   expected_readout_scopes: [{ readout_id: "live_pid_snapshot", scope_id: "7E8" }]
 });
 check(groupedLivePidRetryScan.scanState === "completed" && groupedLivePidRetryScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.value === 800) && groupedLivePidRetryScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.value === 85) && !groupedLivePidRetryScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.value === 700 || item.value === 60) && groupedLivePidRetryScan.session?.livePidTimeline?.sampleCount === 2 && groupedLivePidRetryScan.session?.livePidTimeline?.samples?.every((item) => item.monitorValues?.every((value) => value.value === 800 || value.value === 85)), "Live PID retry grouping retained superseded samples or lost selected-attempt values");
+const multiEcuNativeRawLivePidScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "live_pid_snapshot", "7E8", 751, { raw: "41 0C 1F 40" }),
+    scopedNativeReadEnvelope("read_live_pid_snapshot", "live_pid_snapshot", "7E9", 752, { raw: "41 05 50" })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["live_pid_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("live_pid_snapshot")
+});
+const multiEcuNativeRawLivePidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuNativeRawLivePidScan.session)));
+check(multiEcuNativeRawLivePidScan.scanState === "completed" && multiEcuNativeRawLivePidScan.session?.livePidSnapshot?.livePidReadoutStatus === "reported" && multiEcuNativeRawLivePidScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.pid === "0C" && item.value === 2000 && item.sourceEcu === "7E8") && multiEcuNativeRawLivePidScan.session?.livePidSnapshot?.monitorValues?.some((item) => item.pid === "05" && item.value === 40 && item.sourceEcu === "7E9") && multiEcuNativeRawLivePidScan.session?.livePidSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiEcuNativeRawLivePidRoundTrip?.livePidSnapshot?.monitorValues?.some((item) => item.pid === "0C" && item.sourceEcu === "7E8") && multiEcuNativeRawLivePidScan.session?.vehicleCommandEnabled === false && multiEcuNativeRawLivePidRoundTrip?.wouldTransmit === false, "Raw multi-ECU native live PID responses were not decoded with ECU boundaries through read-only export");
+const unparsedEcuRawLivePidNativeScan = obd.buildNativeConnectorScanSession({
+  envelopes: [scopedNativeReadEnvelope("read_live_pid_snapshot", "live_pid_snapshot", "7E8", 753, { raw: "41 0C" })],
+  scan_state: "completed",
+  expected_readouts: ["live_pid_snapshot"],
+  expected_readout_scopes: [{ readout_id: "live_pid_snapshot", scope_id: "7E8" }]
+});
+check(unparsedEcuRawLivePidNativeScan.session?.livePidSnapshot?.livePidReadoutStatus === "unparsed" && unparsedEcuRawLivePidNativeScan.session?.livePidSnapshot?.monitorValues?.length === 0 && unparsedEcuRawLivePidNativeScan.session?.vehicleCommandEnabled === false && unparsedEcuRawLivePidNativeScan.wouldTransmit === false, "Incomplete native ECU-scoped raw live PID evidence was treated as reported");
 const multiEcuNativeReadinessScan = obd.buildNativeConnectorScanSession({
   envelopes: [
     scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E8", 730, { pid: "01", mil_on: false, monitors: [{ id: "misfire", status: "complete" }] }),

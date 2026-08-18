@@ -1899,7 +1899,7 @@
         "raw", "response", "bytes"
       ],
       read_readiness: ["monitors", "readiness_ecu_snapshots", "readinessEcuSnapshots", "raw", "response", "bytes"],
-      read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
+      read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors", "raw", "response", "bytes"]
     };
     const requiredDataKeys = requiredDataKeysByIntent[intent] || [];
     const freezeFrameValueArrayAliases = [
@@ -2074,13 +2074,21 @@
       };
     }
     if (readoutId === "live_pid_snapshot") {
+      const livePidEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
+        const rows = [data.live_pid_ecu_snapshots, data.livePidEcuSnapshots, data.ecu_snapshots, data.ecuSnapshots, data.ecu_responses, data.ecuResponses].find(Array.isArray)
+          || (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
+        return rows.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
+          ? { ...row, source_ecu: scopeId }
+          : row).filter(Boolean);
+      });
       return {
         captured_at: capturedAt,
         protocol,
         readout_ecu_ids: scopedData
           .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
           .filter(Boolean),
-        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId))
+        monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items"], scopeId)),
+        live_pid_ecu_snapshots: livePidEcuSnapshots
       };
     }
     if (readoutId === "readiness_snapshot") {
