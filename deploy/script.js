@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2806件",
+  validationCheckLabel: "OBD安全検証 2807件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial対応PIDの要求ページごとの取得確認を追加",
+  recentMilestone: "Web SerialのMode 02対応PID応答を起点ECU単位で確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.60";
+const APP_VERSION = "3.12.61";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4942,7 +4942,8 @@ async function readObdDeveloperFreezeFrame() {
     renderObdDeveloperGate();
     return true;
   }
-  if (!await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"])) return false;
+  const capabilityReadCompleted = await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"]);
+  if (!capabilityReadCompleted || !hasWebSerialFreezeFrameCapabilityReport(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot)) return false;
   const supportedPids = getWebSerialFreezeFrameSupportedPidsForTriggerScopes(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot);
   if (!supportedPids.has("02")) {
     obdDevStatus.textContent = "Mode 02の対応PIDからフリーズフレーム起点DTCを確認できないため、値の追加要求を送りませんでした。";
@@ -5463,6 +5464,16 @@ function hasWebSerialFreezeFrameTriggerDtc(freezeFrameSnapshot = null) {
     const code = String(entry?.code || entry?.dtc || "").trim().toUpperCase();
     return code && code !== "P0000";
   });
+}
+
+function hasWebSerialFreezeFrameCapabilityReport(response = "", freezeFrameSnapshot = null) {
+  const rows = parseWebSerialFreezeFrameSupportedPidRows(response);
+  if (!rows.length) return false;
+  const triggerScopeIds = getWebSerialFreezeFrameTriggerScopeIds(freezeFrameSnapshot);
+  const scopedRows = rows.filter((row) => row.scopeId);
+  if (!triggerScopeIds.size || !scopedRows.length) return true;
+  const reportedScopeIds = new Set(scopedRows.map((row) => row.scopeId));
+  return [...triggerScopeIds].every((scopeId) => reportedScopeIds.has(scopeId));
 }
 
 function getWebSerialFreezeFrameSupportedPidsForTriggerScopes(response = "", freezeFrameSnapshot = null) {
