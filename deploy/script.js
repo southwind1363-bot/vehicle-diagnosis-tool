@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2795件",
+  validationCheckLabel: "OBD安全検証 2796件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serialのタイムアウト・通信失敗をライブ診断セッションの読取品質へ即時反映",
+  recentMilestone: "Web Serial再読取の最新PID結果で表示・カバレッジ・解析保留を一貫して再計算",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.53";
+const APP_VERSION = "3.12.54";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5688,6 +5688,7 @@ async function runObdDeveloperRead(label, commands) {
   const startedAt = new Date().toISOString();
   const chunks = [];
   const commandResponses = [];
+  const replaceLivePidSnapshot = commands.some((command) => obdDevSession.selectedPidList.includes(String(command || "").trim().toUpperCase()));
   let attemptedCommandCount = 0;
   let currentCommandStartedAt = null;
   try {
@@ -5705,7 +5706,7 @@ async function runObdDeveloperRead(label, commands) {
     }
     const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { attemptedCommandCount });
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
-    retainObdDeveloperReadout(commandResponses, chunks);
+    retainObdDeveloperReadout(commandResponses, chunks, { replaceLivePidSnapshot });
     if (outcome.stopScope === "scan" && obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = outcome.stopReason;
     obdDevStatus.textContent = outcome.readoutCompleted
       ? `${label}が完了しました。取れた値だけ表示します。`
@@ -5719,7 +5720,8 @@ async function runObdDeveloperRead(label, commands) {
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
     const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, {
       persistEmptyAttempt: true,
-      connectionStatus: buildWebSerialConnectionStatus(outcome)
+      connectionStatus: buildWebSerialConnectionStatus(outcome),
+      replaceLivePidSnapshot
     }));
     const transportFailed = timedOut || message.startsWith("elm_transport_");
     if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
@@ -6053,16 +6055,17 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     ...(onboardMonitorResponseOverride ? { onboardMonitorResponse: onboardMonitorResponseOverride } : {}),
     ...dtcResponseOverrides
   };
-  const scanSession = window.ObdReadOnly.buildScanSessionFromObdText(obdDevSession.lastRawText, scanSessionOptions);
   const currentAttemptSession = window.ObdReadOnly.buildScanSessionFromObdText(
     buildWebSerialAttemptTranscript(commandResponses),
     scanSessionOptions
   );
   const currentLivePidSnapshot = currentAttemptSession.livePidSnapshot;
-  const requestedLivePidValues = commandResponses.some((item) => obdDevSession.selectedPidList.includes(String(item?.command || "").trim().toUpperCase()));
-  const resolvedScanSession = requestedLivePidValues
-    ? { ...scanSession, livePidSnapshot: currentLivePidSnapshot, live_pid_snapshot: currentLivePidSnapshot }
-    : scanSession;
+  const requestedLivePidValues = options?.replaceLivePidSnapshot === true
+    || commandResponses.some((item) => obdDevSession.selectedPidList.includes(String(item?.command || "").trim().toUpperCase()));
+  const resolvedScanSession = window.ObdReadOnly.buildScanSessionFromObdText(
+    obdDevSession.lastRawText,
+    requestedLivePidValues ? { ...scanSessionOptions, livePidSnapshot: currentLivePidSnapshot } : scanSessionOptions
+  );
   const hasLivePidTimelineSample = currentLivePidSnapshot?.livePidReadoutStatus === "reported"
     && Array.isArray(currentLivePidSnapshot.monitorValues)
     && currentLivePidSnapshot.monitorValues.length > 0;
