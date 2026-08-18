@@ -20681,7 +20681,41 @@
     const expectedItemCount = expectedItems.length;
     const monitorInsights = analyzeMonitorValues(monitorValues);
     const freezeFrameNumberSummary = buildFreezeFrameNumberSummary(monitorValues);
-    const readoutStatus = sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (monitorValues.length || triggerDtcEntries.length || udsDtcSnapshotRecords.length || udsDtcStoredDataRecords.length ? "reported" : "unknown");
+    const explicitReadoutStatus = String(sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || "").trim().toLowerCase();
+    const freezeFrameEcuStatuses = freezeFrameEcuSnapshots.map((snapshot) => String(snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status || "unknown").trim().toLowerCase());
+    const freezeFrameStatusCandidates = [
+      ...(["reported", "unparsed", "blocked", "unknown"].includes(explicitReadoutStatus) ? [explicitReadoutStatus] : []),
+      ...freezeFrameEcuStatuses
+    ];
+    const readoutStatus = freezeFrameStatusCandidates.includes("blocked")
+      ? "blocked"
+      : freezeFrameStatusCandidates.includes("unparsed")
+        ? "unparsed"
+        : freezeFrameStatusCandidates.includes("unknown")
+          ? "unknown"
+          : freezeFrameStatusCandidates.includes("reported")
+            ? "reported"
+            : monitorValues.length || triggerDtcEntries.length || udsDtcSnapshotRecords.length || udsDtcStoredDataRecords.length ? "reported" : "unknown";
+    const reportedEcuCount = freezeFrameEcuStatuses.filter((status) => status === "reported").length;
+    const blockedEcuCount = freezeFrameEcuStatuses.filter((status) => status === "blocked").length;
+    const unparsedEcuCount = freezeFrameEcuStatuses.filter((status) => status === "unparsed").length;
+    const unknownEcuCount = freezeFrameEcuStatuses.filter((status) => status === "unknown").length;
+    const freezeFrameEcuAggregateSummary = freezeFrameEcuSnapshots.length ? {
+      schemaVersion: "freeze_frame_ecu_aggregate_summary_v1",
+      schema_version: "freeze_frame_ecu_aggregate_summary_v1",
+      ecuCount: freezeFrameEcuSnapshots.length,
+      ecu_count: freezeFrameEcuSnapshots.length,
+      reportedEcuCount,
+      reported_ecu_count: reportedEcuCount,
+      blockedEcuCount,
+      blocked_ecu_count: blockedEcuCount,
+      unparsedEcuCount,
+      unparsed_ecu_count: unparsedEcuCount,
+      unknownEcuCount,
+      unknown_ecu_count: unknownEcuCount,
+      allReported: reportedEcuCount === freezeFrameEcuSnapshots.length,
+      all_reported: reportedEcuCount === freezeFrameEcuSnapshots.length
+    } : null;
     const freezeFrameScope = freezeFrameEcuSnapshots.length > 1
       ? "multiple_ecus"
       : freezeFrameEcuSnapshots.length === 1 || resolvedSourceEcu
@@ -20713,6 +20747,8 @@
       freeze_frame_scope: freezeFrameScope,
       freezeFrameEcuSnapshots,
       freeze_frame_ecu_snapshots: freezeFrameEcuSnapshots,
+      freezeFrameEcuAggregateSummary,
+      freeze_frame_ecu_aggregate_summary: freezeFrameEcuAggregateSummary,
       triggerDtc,
       trigger_dtc: triggerDtc,
       triggerDtcEntries,
@@ -23966,10 +24002,19 @@
       if (explicitResponse) return explicitResponse;
       const rows = classified.responseBuckets.freezeFrameResponses || [];
       if (rows.length > 1) {
-        const snapshots = rows.map((row) => decodeFreezeFrameResponse({
-          raw: normalizeBucketResponse(row),
+        const rowsByEcu = new Map();
+        rows.forEach((row) => {
+          const sourceEcu = row?.ecu || row?.address || null;
+          const scopeKey = sourceEcu || "unscoped";
+          const grouped = rowsByEcu.get(scopeKey) || { sourceEcu, rawRows: [] };
+          const raw = normalizeBucketResponse(row);
+          if (raw) grouped.rawRows.push(raw);
+          rowsByEcu.set(scopeKey, grouped);
+        });
+        const snapshots = [...rowsByEcu.values()].map((group) => decodeFreezeFrameResponse({
+          raw: group.rawRows.join(" "),
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
-          ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
+          ...(group.sourceEcu ? { source_ecu: group.sourceEcu } : {})
         }));
         const values = snapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
         const triggerDtcEntries = snapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || []);
@@ -23983,6 +24028,7 @@
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           freeze_frame_readout_status: readoutStatus,
           readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
+          freeze_frame_ecu_snapshots: snapshots,
           trigger_dtc_entries: triggerDtcEntries,
           values
         });

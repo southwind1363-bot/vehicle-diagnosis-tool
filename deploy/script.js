@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2808件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web SerialのライブPIDをECU単位で完了確認",
+  recentMilestone: "Web SerialのフリーズフレームをECU単位で完了確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.64";
+const APP_VERSION = "3.12.65";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4828,6 +4828,13 @@ function hasWebSerialLivePidCoverage(snapshot) {
     : isWebSerialReadoutReported(snapshot, "livePidReadoutStatus", "live_pid_readout_status");
 }
 
+function hasWebSerialFreezeFrameCoverage(snapshot) {
+  const ecuSnapshots = snapshot?.freezeFrameEcuSnapshots || snapshot?.freeze_frame_ecu_snapshots || [];
+  return Array.isArray(ecuSnapshots) && ecuSnapshots.length > 0
+    ? ecuSnapshots.every((item) => isWebSerialReadoutReported(item, "freezeFrameReadoutStatus", "freeze_frame_readout_status"))
+    : isWebSerialReadoutReported(snapshot, "freezeFrameReadoutStatus", "freeze_frame_readout_status");
+}
+
 function hasWebSerialDtcStatusReport(status) {
   const reportedStatuses = obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.reportedStatuses || [];
   return reportedStatuses.includes(status);
@@ -4999,7 +5006,7 @@ async function readObdDeveloperQuickCondition() {
 async function readObdDeveloperFreezeFrame() {
   const readCompleted = await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"]);
   const freezeFrameSnapshot = obdDevSession.lastSession?.freezeFrameSnapshot;
-  if (!readCompleted || !isWebSerialReadoutReported(freezeFrameSnapshot, "freezeFrameReadoutStatus", "freeze_frame_readout_status")) return false;
+  if (!readCompleted || !hasWebSerialFreezeFrameCoverage(freezeFrameSnapshot)) return false;
   if (!hasWebSerialFreezeFrameTriggerDtc(freezeFrameSnapshot)) {
     obdDevStatus.textContent = "フリーズフレーム起点DTCがないため、追加PID要求を送りませんでした。";
     renderObdDeveloperGate();
@@ -5020,7 +5027,7 @@ async function readObdDeveloperFreezeFrame() {
     return true;
   }
   const valuesReadCompleted = await runObdDeveloperRead("フリーズフレーム値読取", supportedCommands);
-  return valuesReadCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.freezeFrameSnapshot, "freezeFrameReadoutStatus", "freeze_frame_readout_status");
+  return valuesReadCompleted && hasWebSerialFreezeFrameCoverage(obdDevSession.lastSession?.freezeFrameSnapshot);
 }
 
 async function readObdDeveloperReadiness() {
