@@ -575,7 +575,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   if (bridgeDtcSnapshotFunctionSource) {
     const functionBody = bridgeDtcSnapshotFunctionSource[0];
     check(functionBody.includes('const nestedData = getBridgeResponseDataEnvelope(response);') && source.includes('function getBridgeResponseDataEnvelope(response = {})') && source.includes('[response.data, response.payload?.data, response.result?.data, response.payload, response.result]') && functionBody.includes('response.source_ecu || response.sourceEcu') && functionBody.includes('response.source_ecu_name || response.sourceEcuName'), "normalizeBridgeDtcSnapshot should unwrap bridge response data envelopes with outer ECU provenance");
-    check(functionBody.includes('Array.isArray(data.dtcs)') && functionBody.includes('Array.isArray(data.dtc_codes)') && functionBody.includes('Array.isArray(data.dtcCodes)') && functionBody.includes('const rawDtcResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const decoded = decodeObdDtcResponse({'), "normalizeBridgeDtcSnapshot should accept DTC array aliases and decode raw read-only responses");
+    check(functionBody.includes('Array.isArray(data.dtcs)') && functionBody.includes('Array.isArray(data.dtc_codes)') && functionBody.includes('Array.isArray(data.dtcCodes)') && functionBody.includes('const rawDtcResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const getEcuRawDtcResponse = (row) =>') && functionBody.includes('const rawEcuDtcRows = ecuRows.flatMap((ecuRow) => {') && functionBody.includes('const decoded = decodeObdDtcResponse({'), "normalizeBridgeDtcSnapshot should accept DTC array aliases and decode raw read-only responses");
     check(functionBody.includes('const hasNestedDtcPayload = Boolean(nestedData') && functionBody.includes('const outerDtcFallback = nestedData && !hasNestedDtcPayload') && functionBody.includes('...outerDtcFallback'), "normalizeBridgeDtcSnapshot should only use outer DTC groups for an empty nested envelope");
     check(functionBody.includes('"read_stored_dtc"') && functionBody.includes('"read_pending_dtc"') && functionBody.includes('"read_permanent_dtc"'), "normalizeBridgeDtcSnapshot should preserve stored, pending, and permanent DTC intents");
     check(functionBody.includes('const defaultStatus = intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : "stored";'), "normalizeBridgeDtcSnapshot should derive DTC status from bridge intent");
@@ -5894,6 +5894,19 @@ const bridgeRawDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   data: { raw: "43 03 00 01 71" }
 });
 check(bridgeRawDtcSnapshot.dtcReadoutStatus === "reported" && bridgeRawDtcSnapshot.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E8" && item.ecuName === "Engine") && bridgeRawDtcSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8" && item.ecuName === "Engine") && bridgeRawDtcSnapshot.retainedRawText === false && bridgeRawDtcSnapshot.vehicleCommandEnabled === false && bridgeRawDtcSnapshot.wouldTransmit === false, "Bridge raw Mode 03 responses were not decoded into a read-only DTC snapshot");
+const bridgeRawPerEcuDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  intent: "read_stored_dtc",
+  data: {
+    ecu_responses: [
+      { ecu: "7E8", ecu_name: "Engine", raw: "43 03 00 01 71" },
+      { ecu: "7E9", ecu_name: "Transmission", raw: "43 07 00" }
+    ]
+  }
+});
+check(bridgeRawPerEcuDtcSnapshot.dtcReadoutStatus === "reported" && bridgeRawPerEcuDtcSnapshot.dtcs?.some((item) => item.code === "P0300" && item.ecu === "7E8" && item.ecuName === "Engine") && bridgeRawPerEcuDtcSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8" && item.ecuName === "Engine") && bridgeRawPerEcuDtcSnapshot.dtcs?.some((item) => item.code === "P0700" && item.ecu === "7E9" && item.ecuName === "Transmission") && bridgeRawPerEcuDtcSnapshot.ecuResponses?.some((item) => item.ecu === "7E8" && item.status === "reported" && item.codeCount === 2) && bridgeRawPerEcuDtcSnapshot.ecuResponses?.some((item) => item.ecu === "7E9" && item.status === "reported" && item.codeCount === 1) && bridgeRawPerEcuDtcSnapshot.retainedRawText === false && bridgeRawPerEcuDtcSnapshot.vehicleCommandEnabled === false && bridgeRawPerEcuDtcSnapshot.wouldTransmit === false, "Bridge per-ECU raw Mode 03 responses were not decoded into scoped read-only DTC rows");
 const bridgeOuterMetadataDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
   ok: true,
   blocked: false,
