@@ -654,7 +654,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('source_ecu_name: sourceEcuName') && functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should retain a parent ECU name without replacing an explicit Mode 06 row source");
     check(functionBody.includes('Array.isArray(data.mode06_tests)') && functionBody.includes('Array.isArray(data.mode06Rows)') && functionBody.includes('Array.isArray(data.onboardMonitorTests)'), "normalizeBridgeOnboardMonitorSnapshot should accept Mode 06 test aliases");
     check(functionBody.includes('const hasNestedOnboardMonitorPayload = Boolean(nestedData') && functionBody.includes('const outerOnboardMonitorFallback = nestedData && !hasNestedOnboardMonitorPayload') && functionBody.includes('...outerOnboardMonitorFallback'), "normalizeBridgeOnboardMonitorSnapshot should only use outer Mode 06 tests for an empty nested envelope");
-    check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('const hasTestEvidence = tests.length > 0;') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('readBridgeSnapshotSafety(response, errorCodes.length === 0 && (hasExplicitReadoutStatus || hasTestEvidence));'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge failure status");
+    check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('const rawOnboardMonitorResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const shouldDecodeRawOnboardMonitor = rawOnboardMonitorResponse !== null && !hasStructuredOnboardMonitorInput;') && functionBody.includes('const decoded = decodeOnboardMonitorResponse({') && functionBody.includes('const hasTestEvidence = tests.length > 0;') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('readBridgeSnapshotSafety(response, errorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasExplicitReadoutStatus || hasTestEvidence));'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge failure status");
   }
 };
 const bridgePidValueFunctionChecks = () => {
@@ -9671,6 +9671,15 @@ const bridgeOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
     captured_at: "2026-06-28T00:01:55Z"
   }
 });
+const bridgeRawOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  source_ecu: "7E8",
+  source_ecu_name: "Engine",
+  data: { raw: "46 01 02 00 01 00 00 00 02" }
+});
+check(bridgeRawOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "reported" && bridgeRawOnboardMonitorSnapshot.tests?.some((item) => item.testId === "01" && item.componentId === "02" && item.value === 1 && item.min === 0 && item.max === 2 && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && bridgeRawOnboardMonitorSnapshot.retainedRawText === false && bridgeRawOnboardMonitorSnapshot.vehicleCommandEnabled === false && bridgeRawOnboardMonitorSnapshot.wouldTransmit === false, "Bridge raw Mode 06 responses were not decoded into a read-only monitor snapshot");
 const bridgeOuterMetadataOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
