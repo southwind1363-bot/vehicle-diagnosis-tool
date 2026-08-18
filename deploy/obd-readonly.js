@@ -4170,7 +4170,54 @@
       decodedRawEcuLivePidSnapshots.set(ecuRow, decoded);
       return Array.isArray(decoded.monitorValues) ? decoded.monitorValues : [];
     });
-    const monitorValues = [...structuredMonitorValues, ...rawEcuLivePidMonitorValues];
+    const normalizedLivePidEcuSnapshots = livePidEcuSnapshots.map((ecuRow) => {
+      const decoded = decodedRawEcuLivePidSnapshots.get(ecuRow);
+      if (decoded) return decoded;
+      const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
+      if (!ecu) return null;
+      const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.module_name || ecuRow?.moduleName || ecuRow?.name || ecuRow?.label || null;
+      const scopedMonitorValues = getEcuLivePidValues(ecuRow)
+        .map((row, index) => normalizeBridgePidValue({
+          ...row,
+          source_ecu: row?.source_ecu || row?.sourceEcu || ecu,
+          source_ecu_name: row?.source_ecu_name || row?.sourceEcuName || ecuName
+        }, index))
+        .filter(Boolean);
+      const scopedSafety = readBridgeSnapshotSafety(ecuRow, scopedMonitorValues.length > 0);
+      const explicitScopedStatus = String(ecuRow?.livePidReadoutStatus || ecuRow?.live_pid_readout_status || ecuRow?.readoutStatus || ecuRow?.readout_status || "").trim().toLowerCase();
+      const scopedReadoutStatus = scopedSafety.blocked || scopedSafety.unparsed
+        ? getBridgeReadoutStatus(scopedSafety)
+        : ["reported", "unparsed", "blocked", "unknown"].includes(explicitScopedStatus)
+          ? explicitScopedStatus
+          : scopedMonitorValues.length > 0 ? "reported" : "unknown";
+      return {
+        source: "local_bridge",
+        sourceEcu: ecu,
+        source_ecu: ecu,
+        sourceEcuName: ecuName,
+        source_ecu_name: ecuName,
+        capturedAt: ecuRow?.captured_at || ecuRow?.capturedAt || null,
+        captured_at: ecuRow?.captured_at || ecuRow?.capturedAt || null,
+        protocol: readBridgeProtocol(ecuRow) || null,
+        monitorValues: scopedMonitorValues,
+        monitor_values: scopedMonitorValues,
+        monitorValueSummary: resolveMonitorValueSummary(scopedMonitorValues, ecuRow?.monitorValueSummary || ecuRow?.monitor_value_summary || null),
+        monitor_value_summary: resolveMonitorValueSummary(scopedMonitorValues, ecuRow?.monitorValueSummary || ecuRow?.monitor_value_summary || null),
+        livePidReadoutStatus: scopedReadoutStatus,
+        live_pid_readout_status: scopedReadoutStatus,
+        blocked: scopedSafety.blocked,
+        wouldTransmit: scopedSafety.wouldTransmit,
+        would_transmit: scopedSafety.wouldTransmit,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        retainedRawText: false,
+        retained_raw_text: false
+      };
+    }).filter(Boolean);
+    const scopedMonitorValues = normalizedLivePidEcuSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
+    const monitorValues = structuredMonitorValues.length > 0
+      ? structuredMonitorValues
+      : scopedMonitorValues.length > 0 ? scopedMonitorValues : rawEcuLivePidMonitorValues;
     const observedSourceEcus = [...new Set(monitorValues.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set(monitorValues
@@ -4186,14 +4233,43 @@
       ...monitorValues.map((item) => item.sourceEcu || item.source_ecu || null)
     ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
-    const rawEcuReadoutUnparsed = [...decodedRawEcuLivePidSnapshots.values()].some((snapshot) => snapshot?.livePidReadoutStatus !== "reported");
+    const livePidEcuStatuses = normalizedLivePidEcuSnapshots.map((snapshot) => snapshot.livePidReadoutStatus || snapshot.live_pid_readout_status || "unknown");
+    const reportedEcuCount = livePidEcuStatuses.filter((status) => status === "reported").length;
+    const blockedEcuCount = livePidEcuStatuses.filter((status) => status === "blocked").length;
+    const unparsedEcuCount = livePidEcuStatuses.filter((status) => status === "unparsed").length;
+    const unknownEcuCount = livePidEcuStatuses.filter((status) => status === "unknown").length;
     const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
       ? getBridgeReadoutStatus(resolvedBridgeSafety)
+      : blockedEcuCount > 0
+        ? "blocked"
+        : unparsedEcuCount > 0
+          ? "unparsed"
+          : unknownEcuCount > 0
+            ? "unknown"
       : ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
         ? String(explicitReadoutStatus).trim().toLowerCase()
-        : rawEcuReadoutUnparsed && monitorValues.length === 0
-          ? "unparsed"
-        : resolvedBridgeSafety.ok ? "reported" : "unknown";
+        : normalizedLivePidEcuSnapshots.length > 0 && reportedEcuCount === normalizedLivePidEcuSnapshots.length
+          ? "reported"
+          : resolvedBridgeSafety.ok ? "reported" : "unknown";
+    const livePidScope = normalizedLivePidEcuSnapshots.length > 1
+      ? "multiple_ecus"
+      : (resolvedSourceEcu || normalizedLivePidEcuSnapshots.length === 1) ? "single_ecu" : "unknown";
+    const livePidEcuAggregateSummary = normalizedLivePidEcuSnapshots.length ? {
+      schemaVersion: "live_pid_ecu_aggregate_summary_v1",
+      schema_version: "live_pid_ecu_aggregate_summary_v1",
+      ecuCount: normalizedLivePidEcuSnapshots.length,
+      ecu_count: normalizedLivePidEcuSnapshots.length,
+      reportedEcuCount,
+      reported_ecu_count: reportedEcuCount,
+      blockedEcuCount,
+      blocked_ecu_count: blockedEcuCount,
+      unparsedEcuCount,
+      unparsed_ecu_count: unparsedEcuCount,
+      unknownEcuCount,
+      unknown_ecu_count: unknownEcuCount,
+      allReported: reportedEcuCount === normalizedLivePidEcuSnapshots.length,
+      all_reported: reportedEcuCount === normalizedLivePidEcuSnapshots.length
+    } : null;
     const supportedPids = collectBridgeSupportedPids(data);
     const capturedAt = data.captured_at
       || data.capturedAt
@@ -4266,8 +4342,14 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      livePidScope,
+      live_pid_scope: livePidScope,
       readoutEcuIds,
       readout_ecu_ids: readoutEcuIds,
+      livePidEcuSnapshots: normalizedLivePidEcuSnapshots,
+      live_pid_ecu_snapshots: normalizedLivePidEcuSnapshots,
+      livePidEcuAggregateSummary,
+      live_pid_ecu_aggregate_summary: livePidEcuAggregateSummary,
       supportedPids,
       supported_pids: supportedPids,
       capturedAt,
@@ -23740,8 +23822,11 @@
             : "unknown";
         return {
           source: "obd_response_decoder",
+          ok: true,
+          blocked: false,
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           monitor_values: monitorValues,
+          live_pid_ecu_snapshots: snapshots,
           live_pid_readout_status: readoutStatus,
           retained_raw_text: false,
           would_transmit: false,
