@@ -13435,6 +13435,52 @@
     };
   }
 
+  function normalizeDtcEvidenceSummaryAliases(summary = null, fallbackSchemaVersion = "dtc_evidence_summary_v1") {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return null;
+    const normalizeList = (camelKey, snakeKey) => {
+      const values = Array.isArray(summary[camelKey]) ? summary[camelKey] : Array.isArray(summary[snakeKey]) ? summary[snakeKey] : [];
+      return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))].sort();
+    };
+    const schemaVersion = String(summary.schemaVersion || summary.schema_version || fallbackSchemaVersion).trim() || fallbackSchemaVersion;
+    const keys = normalizeList("keys", "dtc_keys");
+    const evidenceRecorded = pickDefined(summary.evidenceRecorded, summary.evidence_recorded, false) === true;
+    const completeEvidenceRecorded = evidenceRecorded || pickDefined(summary.completeEvidenceRecorded, summary.complete_evidence_recorded, false) === true;
+    const reportedEcuEvidenceRecorded = completeEvidenceRecorded || pickDefined(summary.reportedEcuEvidenceRecorded, summary.reported_ecu_evidence_recorded, false) === true;
+    const explicitReportedEcuIds = normalizeList("reportedEcuIds", "reported_ecu_ids");
+    const keyEcuIds = [...new Set(keys.map((key) => String(key || "").split("|")[5]?.trim().toUpperCase()).filter(Boolean))].sort();
+    const reportedEcuIds = explicitReportedEcuIds.length > 0 || !completeEvidenceRecorded ? explicitReportedEcuIds : keyEcuIds;
+    const unresolvedEcuIds = normalizeList("unresolvedEcuIds", "unresolved_ecu_ids");
+    const explicitReportedEcuKeys = normalizeList("reportedEcuKeys", "reported_ecu_keys");
+    const reportedEcuKeys = explicitReportedEcuKeys.length > 0 || !completeEvidenceRecorded ? explicitReportedEcuKeys : [...keys];
+    const rawDtcCount = pickDefined(summary.dtcCount, summary.dtc_count, keys.length);
+    const dtcCount = Number.isFinite(Number(rawDtcCount)) ? Math.max(0, Math.round(Number(rawDtcCount))) : keys.length;
+    return {
+      ...summary,
+      schemaVersion,
+      schema_version: schemaVersion,
+      dtcCount,
+      dtc_count: dtcCount,
+      evidenceRecorded,
+      evidence_recorded: evidenceRecorded,
+      keys,
+      dtc_keys: [...keys],
+      completeEvidenceRecorded,
+      complete_evidence_recorded: completeEvidenceRecorded,
+      reportedEcuEvidenceRecorded,
+      reported_ecu_evidence_recorded: reportedEcuEvidenceRecorded,
+      reportedEcuIds,
+      reported_ecu_ids: [...reportedEcuIds],
+      unresolvedEcuIds,
+      unresolved_ecu_ids: [...unresolvedEcuIds],
+      reportedEcuKeys,
+      reported_ecu_keys: [...reportedEcuKeys],
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function normalizeCoreSessionStatusAliases(summary = null, fallbackDtcSnapshot = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
     const schemaVersion = summary.schemaVersion || summary.schema_version || "core_session_status_v1";
@@ -13472,6 +13518,22 @@
     const dtcReportedStatusSummary = fallbackDtcSnapshot?.dtcReportedStatusSummary
       || fallbackDtcSnapshot?.dtc_reported_status_summary
       || normalizeObject("dtcReportedStatusSummary", "dtc_reported_status_summary");
+    const dtcIdentitySummary = normalizeDtcEvidenceSummaryAliases(
+      summary.dtcIdentitySummary || summary.dtc_identity_summary || analysisReadinessSummary?.dtcIdentitySummary || analysisReadinessSummary?.dtc_identity_summary || null,
+      "dtc_identity_summary_v1"
+    );
+    const dtcStatusByteSummary = normalizeDtcEvidenceSummaryAliases(
+      summary.dtcStatusByteSummary || summary.dtc_status_byte_summary || analysisReadinessSummary?.dtcStatusByteSummary || analysisReadinessSummary?.dtc_status_byte_summary || null,
+      "dtc_status_byte_summary_v1"
+    );
+    const dtcMetadataEvidenceSummary = normalizeDtcEvidenceSummaryAliases(
+      summary.dtcMetadataEvidenceSummary || summary.dtc_metadata_evidence_summary || analysisReadinessSummary?.dtcMetadataEvidenceSummary || analysisReadinessSummary?.dtc_metadata_evidence_summary || null,
+      "dtc_metadata_evidence_summary_v1"
+    );
+    const dtcFaultDetectionCounterSummary = normalizeDtcEvidenceSummaryAliases(
+      summary.dtcFaultDetectionCounterSummary || summary.dtc_fault_detection_counter_summary || analysisReadinessSummary?.dtcFaultDetectionCounterSummary || analysisReadinessSummary?.dtc_fault_detection_counter_summary || null,
+      "dtc_fault_detection_counter_summary_v1"
+    );
     const dtcStatusReadoutPlan = summary.dtcStatusReadoutPlan || summary.dtc_status_readout_plan || null;
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
@@ -13553,6 +13615,14 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReportedStatusSummary,
       dtc_reported_status_summary: dtcReportedStatusSummary,
+      dtcIdentitySummary,
+      dtc_identity_summary: dtcIdentitySummary,
+      dtcStatusByteSummary,
+      dtc_status_byte_summary: dtcStatusByteSummary,
+      dtcMetadataEvidenceSummary,
+      dtc_metadata_evidence_summary: dtcMetadataEvidenceSummary,
+      dtcFaultDetectionCounterSummary,
+      dtc_fault_detection_counter_summary: dtcFaultDetectionCounterSummary,
       dtcStatusReadoutPlan,
       dtc_status_readout_plan: dtcStatusReadoutPlan,
       nextPendingReadoutId: pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutIds[0], null),
@@ -13667,6 +13737,10 @@
       || summary.dtcReportedStatusSummary
       || summary.dtc_reported_status_summary
       || {};
+    const dtcIdentitySummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcIdentitySummary || fallbackCoreSessionStatus?.dtc_identity_summary || summary.dtcIdentitySummary || summary.dtc_identity_summary || null, "dtc_identity_summary_v1");
+    const dtcStatusByteSummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcStatusByteSummary || fallbackCoreSessionStatus?.dtc_status_byte_summary || summary.dtcStatusByteSummary || summary.dtc_status_byte_summary || null, "dtc_status_byte_summary_v1");
+    const dtcMetadataEvidenceSummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcMetadataEvidenceSummary || fallbackCoreSessionStatus?.dtc_metadata_evidence_summary || summary.dtcMetadataEvidenceSummary || summary.dtc_metadata_evidence_summary || null, "dtc_metadata_evidence_summary_v1");
+    const dtcFaultDetectionCounterSummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcFaultDetectionCounterSummary || fallbackCoreSessionStatus?.dtc_fault_detection_counter_summary || summary.dtcFaultDetectionCounterSummary || summary.dtc_fault_detection_counter_summary || null, "dtc_fault_detection_counter_summary_v1");
     const vehicleApplicabilityChecklist = summary.vehicleApplicabilityChecklist || summary.vehicle_applicability_checklist || null;
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || {};
     const vehicleApplicabilityEvidenceSummary = summary.vehicleApplicabilityEvidenceSummary
@@ -13773,6 +13847,14 @@
       dtc_status_summary: dtcStatusSummary,
       dtcReportedStatusSummary,
       dtc_reported_status_summary: dtcReportedStatusSummary,
+      dtcIdentitySummary,
+      dtc_identity_summary: dtcIdentitySummary,
+      dtcStatusByteSummary,
+      dtc_status_byte_summary: dtcStatusByteSummary,
+      dtcMetadataEvidenceSummary,
+      dtc_metadata_evidence_summary: dtcMetadataEvidenceSummary,
+      dtcFaultDetectionCounterSummary,
+      dtc_fault_detection_counter_summary: dtcFaultDetectionCounterSummary,
       readoutQualityReviewRequired: pickDefined(summary.readoutQualityReviewRequired, summary.readout_quality_review_required, false) === true,
       readout_quality_review_required: pickDefined(summary.readout_quality_review_required, summary.readoutQualityReviewRequired, false) === true,
       readoutQualityIssueCount: toCount("readoutQualityIssueCount", "readout_quality_issue_count", readoutQualityIssueIds.length),
@@ -15260,6 +15342,10 @@
     const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || null;
+    const dtcIdentitySummary = normalizeDtcEvidenceSummaryAliases(summary.dtcIdentitySummary || summary.dtc_identity_summary || null, "dtc_identity_summary_v1");
+    const dtcStatusByteSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcStatusByteSummary || summary.dtc_status_byte_summary || null, "dtc_status_byte_summary_v1");
+    const dtcMetadataEvidenceSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcMetadataEvidenceSummary || summary.dtc_metadata_evidence_summary || null, "dtc_metadata_evidence_summary_v1");
+    const dtcFaultDetectionCounterSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcFaultDetectionCounterSummary || summary.dtc_fault_detection_counter_summary || null, "dtc_fault_detection_counter_summary_v1");
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
@@ -15303,6 +15389,14 @@
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      dtcIdentitySummary,
+      dtc_identity_summary: dtcIdentitySummary,
+      dtcStatusByteSummary,
+      dtc_status_byte_summary: dtcStatusByteSummary,
+      dtcMetadataEvidenceSummary,
+      dtc_metadata_evidence_summary: dtcMetadataEvidenceSummary,
+      dtcFaultDetectionCounterSummary,
+      dtc_fault_detection_counter_summary: dtcFaultDetectionCounterSummary,
       missingReadoutCount,
       missing_readout_count: missingReadoutCount,
       emptyReadoutCount,
@@ -24954,6 +25048,9 @@
     const trustedNextReadoutReasonSummary = isTrustedBridgeSessionExport
       ? pick("nextReadoutReasonSummary", "next_readout_reason_summary")
       : null;
+    const trustedImportedCoreSessionStatus = isTrustedBridgeSessionExport
+      ? pick("importedCoreSessionStatus", "imported_core_session_status")
+      : null;
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
@@ -25345,6 +25442,7 @@
       readoutCoverage: trustedFailedReadoutCoverage || undefined,
       nextReadoutCandidates: trustedNextReadoutCandidates || undefined,
       nextReadoutReasonSummary: trustedNextReadoutReasonSummary || undefined,
+      importedCoreSessionStatus: trustedImportedCoreSessionStatus || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       observationContext: scannerJsonObservationContext || undefined,
