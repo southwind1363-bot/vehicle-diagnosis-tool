@@ -5301,6 +5301,24 @@ const multiEcuNativeReadinessScan = obd.buildNativeConnectorScanSession({
   expected_readout_scopes: nativeScopeManifest("readiness_snapshot")
 });
 check(multiEcuNativeReadinessScan.scanState === "completed" && multiEcuNativeReadinessScan.session?.readinessSnapshot?.readinessReadoutStatus === "reported" && multiEcuNativeReadinessScan.session?.readinessSnapshot?.monitors?.length === 0 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.monitorCount === 2 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.completeCount === 1 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.incompleteCount === 1 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.knownMonitors?.find((item) => item.id === "misfire")?.observedEcuIds?.join(",") === "7E8,7E9" && multiEcuNativeReadinessScan.session?.readinessSnapshot?.known_monitors?.find((item) => item.id === "misfire")?.observed_ecu_count === 2 && multiEcuNativeReadinessScan.session?.readinessSnapshot?.knownMonitors?.find((item) => item.id === "catalyst")?.observed === false && multiEcuNativeReadinessScan.session?.readinessSnapshot?.readinessEcuAggregateSummary?.allReported === true && multiEcuNativeReadinessScan.session?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && multiEcuNativeReadinessScan.session?.coreReadoutInventorySummary?.countsById?.readiness_snapshot === 2, "Multi-ECU native readiness observations were collapsed or treated as missing");
+const multiEcuNativeRawReadinessScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_readiness", "readiness_snapshot", "7E8", 749, { raw: "41 01 81 07 22 00" }),
+    scopedNativeReadEnvelope("read_readiness", "readiness_snapshot", "7E9", 750, { raw: "41 01 00 07 22 00" })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["readiness_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("readiness_snapshot")
+});
+const multiEcuNativeRawReadinessRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuNativeRawReadinessScan.session)));
+check(multiEcuNativeRawReadinessScan.scanState === "completed" && multiEcuNativeRawReadinessScan.session?.readinessSnapshot?.readinessReadoutStatus === "reported" && multiEcuNativeRawReadinessScan.session?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.readinessReadoutStatus === "reported" && item.milOn === true) && multiEcuNativeRawReadinessScan.session?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.readinessReadoutStatus === "reported" && item.milOn === false) && multiEcuNativeRawReadinessRoundTrip?.readinessSnapshot?.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.milOn === true) && multiEcuNativeRawReadinessScan.session?.vehicleCommandEnabled === false && multiEcuNativeRawReadinessRoundTrip?.wouldTransmit === false, "Raw multi-ECU native readiness responses were not decoded with ECU boundaries through read-only export");
+const unparsedEcuRawReadinessSnapshot = obd.normalizeBridgeReadinessSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { readiness_ecu_snapshots: [{ source_ecu: "7E8", raw: "41 01 80" }] }
+});
+check(unparsedEcuRawReadinessSnapshot.readinessReadoutStatus === "unparsed" && unparsedEcuRawReadinessSnapshot.sourceEcu === "7E8" && unparsedEcuRawReadinessSnapshot.vehicleCommandEnabled === false && unparsedEcuRawReadinessSnapshot.wouldTransmit === false, "Incomplete ECU-scoped raw readiness evidence was treated as reported");
 const partialNativeReadinessScan = obd.buildNativeConnectorScanSession({
   envelopes: [
     scopedNativeReadEnvelope("read_live_pid_snapshot", "readiness_snapshot", "7E8", 732, { pid: "01", monitors: [{ id: "misfire", status: "complete" }] }),

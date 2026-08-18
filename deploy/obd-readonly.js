@@ -1898,7 +1898,7 @@
         "onboard_monitor_ecu_snapshots", "onboardMonitorEcuSnapshots", "mode06_ecu_snapshots", "mode06EcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses",
         "raw", "response", "bytes"
       ],
-      read_readiness: ["monitors", "readiness_ecu_snapshots", "readinessEcuSnapshots"],
+      read_readiness: ["monitors", "readiness_ecu_snapshots", "readinessEcuSnapshots", "raw", "response", "bytes"],
       read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
     };
     const requiredDataKeys = requiredDataKeysByIntent[intent] || [];
@@ -2092,11 +2092,14 @@
           .filter(Boolean),
         readiness_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
           const rows = Array.isArray(data.readiness_ecu_snapshots) ? data.readiness_ecu_snapshots : Array.isArray(data.readinessEcuSnapshots) ? data.readinessEcuSnapshots : [data];
-          return rows.map((row) => ({
-            ...row,
-            readiness_readout_status: row.readiness_readout_status || row.readinessReadoutStatus || "reported",
-            ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {})
-          }));
+          return rows.map((row) => {
+            const rawResponse = row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
+            return {
+              ...row,
+              ...(row?.readiness_readout_status || row?.readinessReadoutStatus || rawResponse !== null ? {} : { readiness_readout_status: "reported" }),
+              ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {})
+            };
+          });
         })
       };
     }
@@ -5141,11 +5144,13 @@
         });
       }).filter((snapshot) => snapshot?.sourceEcu || snapshot?.source_ecu);
       if (readinessEcuSnapshots.length === 1) return withBridgeMetadata(readinessEcuSnapshots[0]);
+      const hasReportedReadinessEcu = readinessEcuSnapshots.some((snapshot) => snapshot.readinessReadoutStatus === "reported" || snapshot.readiness_readout_status === "reported");
+      const hasUnparsedReadinessEcu = readinessEcuSnapshots.some((snapshot) => snapshot.readinessReadoutStatus === "unparsed" || snapshot.readiness_readout_status === "unparsed");
       return withBridgeMetadata(normalizeReadinessSnapshot({
         source: "local_bridge",
         captured_at: capturedAt,
         protocol,
-        readiness_readout_status: bridgeReadoutStatus,
+        readiness_readout_status: hasUnparsedReadinessEcu && !hasReportedReadinessEcu ? "unparsed" : bridgeReadoutStatus,
         readiness_scope: "multiple_ecus",
         readiness_ecu_snapshots: readinessEcuSnapshots
       }));
@@ -26703,7 +26708,10 @@
       ? (!Number.isFinite(Number(readinessSnapshotInput.monitorCount)) || !Number.isFinite(Number(readinessSnapshotInput.incompleteCount)) || !Number.isFinite(Number(readinessSnapshotInput.completeCount)) ? normalizeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
-        : (readinessSnapshotInput?.data && typeof readinessSnapshotInput.data === "object" && !Array.isArray(readinessSnapshotInput.data))
+        : (readinessSnapshotInput?.raw || readinessSnapshotInput?.response || Array.isArray(readinessSnapshotInput?.bytes))
+          ? decodeReadinessResponse(readinessSnapshotInput)
+        : ((readinessSnapshotInput?.data && typeof readinessSnapshotInput.data === "object" && !Array.isArray(readinessSnapshotInput.data))
+          || [readinessSnapshotInput?.readiness_ecu_snapshots, readinessSnapshotInput?.readinessEcuSnapshots].some(Array.isArray))
           ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);
     const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
