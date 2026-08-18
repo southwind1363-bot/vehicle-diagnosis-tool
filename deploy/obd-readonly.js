@@ -2138,6 +2138,21 @@
       };
     }
     if (readoutId === "onboard_monitor_snapshot") {
+      const onboardMonitorEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
+        const rows = [
+          data.onboard_monitor_ecu_snapshots,
+          data.onboardMonitorEcuSnapshots,
+          data.mode06_ecu_snapshots,
+          data.mode06EcuSnapshots,
+          data.ecu_snapshots,
+          data.ecuSnapshots,
+          data.ecu_responses,
+          data.ecuResponses
+        ].find(Array.isArray) || (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
+        return rows.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
+          ? { ...row, source_ecu: scopeId }
+          : row).filter(Boolean);
+      });
       return {
         captured_at: capturedAt,
         protocol,
@@ -2145,7 +2160,8 @@
         readout_ecu_ids: scopedData
           .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
           .filter(Boolean),
-        tests: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["tests", "items", "mode06_tests", "mode06Tests"], scopeId))
+        tests: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["tests", "items", "mode06_tests", "mode06Tests"], scopeId)),
+        onboard_monitor_ecu_snapshots: onboardMonitorEcuSnapshots
       };
     }
     if (readoutId === "freeze_frame_snapshot") {

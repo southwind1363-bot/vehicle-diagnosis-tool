@@ -5435,6 +5435,16 @@ const multiEcuNativeMode06Scan = obd.buildNativeConnectorScanSession({
   expected_readout_scopes: nativeScopeManifest("onboard_monitor_snapshot")
 });
 check(multiEcuNativeMode06Scan.scanState === "completed" && multiEcuNativeMode06Scan.session?.onboardMonitorSnapshot?.tests?.length === 2 && multiEcuNativeMode06Scan.session?.onboardMonitorSnapshot?.tests?.some((item) => item.value === 0.2 && item.sourceEcu === "7E8") && multiEcuNativeMode06Scan.session?.onboardMonitorSnapshot?.tests?.some((item) => item.value === 1.3 && item.status === "fail" && item.sourceEcu === "7E9") && multiEcuNativeMode06Scan.session?.onboardMonitorSnapshot?.ecuTestSummary?.find((item) => item.ecu === "7E8")?.passedCount === 1 && multiEcuNativeMode06Scan.session?.onboardMonitorSnapshot?.ecu_test_summary?.find((item) => item.ecu === "7E9")?.failed_count === 1 && multiEcuNativeMode06Scan.session?.readoutCoverage?.itemById?.onboard_monitor_snapshot?.status === "captured", "Multi-ECU native Mode06 results lost source ECU identity or treated diagnostic failures as transport failures");
+const multiEcuNativeRawMode06Scan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_onboard_monitor", "onboard_monitor_snapshot", "7E8", 757, { raw: "46 01 02 00 01 00 00 00 02" }),
+    scopedNativeReadEnvelope("read_onboard_monitor", "onboard_monitor_snapshot", "7E9", 758, { raw: "46 03 04 00 06 00 01 00 05" })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["onboard_monitor_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("onboard_monitor_snapshot")
+});
+check(multiEcuNativeRawMode06Scan.scanState === "completed" && multiEcuNativeRawMode06Scan.session?.onboardMonitorSnapshot?.onboardMonitorReadoutStatus === "reported" && multiEcuNativeRawMode06Scan.session?.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.sourceEcu === "7E8") && multiEcuNativeRawMode06Scan.session?.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "03" && item.value === 6 && item.sourceEcu === "7E9") && multiEcuNativeRawMode06Scan.session?.onboardMonitorSnapshot?.readoutEcuIds?.join(",") === "7E8,7E9" && multiEcuNativeRawMode06Scan.session?.vehicleCommandEnabled === false && multiEcuNativeRawMode06Scan.session?.wouldTransmit === false, "Multi-ECU native raw Mode 06 responses were not retained as ECU-scoped read-only tests");
 check(multiEcuNativeMode06Scan.session?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && multiEcuNativeMode06Scan.session?.coreSessionStatus?.observedEcuSummary?.ecus?.every((item) => item.readoutIds?.includes("onboard_monitor_snapshot") && item.readoutIds?.includes("ecu_response_summary")) && multiEcuNativeMode06Scan.session?.coreSessionStatus?.observedEcuSummary?.sourceCoveragePercent === 100, "Multi-ECU native Mode06 results did not reach the observed ECU provenance summary");
 const nestedUnparsedNativeMode06Scan = obd.buildNativeConnectorScanSession({
   envelopes: [
