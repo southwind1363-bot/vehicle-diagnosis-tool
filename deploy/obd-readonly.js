@@ -6734,6 +6734,23 @@
       String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-"
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const recordedEcuInfoItemKeys = ecuInfoItemEvidenceRecorded ? ecuInfoItemKeys : [];
+    const normalizeEcuInfoEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+    const readEcuInfoEcuId = (snapshot = {}) => normalizeEcuInfoEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
+    const reportedEcuInfoEcuIds = [...new Set(ecuInfoEcuSnapshots
+      .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readEcuInfoEcuId)
+      .filter(Boolean))].sort();
+    const unresolvedEcuInfoEcuIds = [...new Set(ecuInfoEcuSnapshots
+      .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readEcuInfoEcuId)
+      .filter(Boolean))].sort();
+    const ecuInfoItemReportedEcuEvidenceRecorded = ecuInfoItemEvidenceRecorded
+      || (ecuInfoSnapshot?.blocked !== true && ecuInfoSnapshot?.isBlocked !== true && ecuInfoSnapshot?.is_blocked !== true
+        && String(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "unparsed"
+        && reportedEcuInfoEcuIds.length > 0);
+    const ecuInfoItemReportedEcuKeys = ecuInfoItemReportedEcuEvidenceRecorded
+      ? ecuInfoItemKeys.filter((key) => ecuInfoItemEvidenceRecorded || reportedEcuInfoEcuIds.includes(normalizeEcuInfoEcuId(String(key || "").split("|")[2])))
+      : [];
     const comparableEcuInfoValueIds = new Set(["calibration_id", "calibration_verification_number"]);
     const normalizeComparableEcuInfoValue = (value) => {
       if (Array.isArray(value)) {
@@ -6923,6 +6940,14 @@
       ecu_info_item_keys: [...recordedEcuInfoItemKeys],
       ecuInfoItemEvidenceRecorded,
       ecu_info_item_evidence_recorded: ecuInfoItemEvidenceRecorded,
+      ecuInfoItemReportedEcuEvidenceRecorded,
+      ecu_info_item_reported_ecu_evidence_recorded: ecuInfoItemReportedEcuEvidenceRecorded,
+      ecuInfoItemReportedEcuIds: reportedEcuInfoEcuIds,
+      ecu_info_item_reported_ecu_ids: [...reportedEcuInfoEcuIds],
+      ecuInfoItemUnresolvedEcuIds: unresolvedEcuInfoEcuIds,
+      ecu_info_item_unresolved_ecu_ids: [...unresolvedEcuInfoEcuIds],
+      ecuInfoItemReportedEcuKeys: ecuInfoItemReportedEcuKeys,
+      ecu_info_item_reported_ecu_keys: [...ecuInfoItemReportedEcuKeys],
       ecuInfoKeyValueCount: recordedEcuInfoKeyValueKeys.length,
       ecu_info_key_value_count: recordedEcuInfoKeyValueKeys.length,
       ecuInfoKeyValueKeys: recordedEcuInfoKeyValueKeys,
@@ -14493,6 +14518,10 @@
       ecuInfoItemCount: ["ecu_info_item_count"],
       ecuInfoItemKeys: ["ecu_info_item_keys"],
       ecuInfoItemEvidenceRecorded: ["ecu_info_item_evidence_recorded"],
+      ecuInfoItemReportedEcuEvidenceRecorded: ["ecu_info_item_reported_ecu_evidence_recorded"],
+      ecuInfoItemReportedEcuIds: ["ecu_info_item_reported_ecu_ids"],
+      ecuInfoItemUnresolvedEcuIds: ["ecu_info_item_unresolved_ecu_ids"],
+      ecuInfoItemReportedEcuKeys: ["ecu_info_item_reported_ecu_keys"],
       ecuInfoKeyValueCount: ["ecu_info_key_value_count"],
       ecuInfoKeyValueKeys: ["ecu_info_key_value_keys"],
       ecuInfoKeyValueEvidenceRecorded: ["ecu_info_key_value_evidence_recorded"],
@@ -14759,21 +14788,67 @@
     const readinessIncompleteDelta = readinessMonitorComparisonAvailable
       ? currentReadinessMonitorKeys.filter((key) => String(key).endsWith("|not_complete")).length - importedReadinessMonitorKeys.filter((key) => String(key).endsWith("|not_complete")).length
       : null;
-    const nonComparableValueCountIds = new Set([
-      !completeFreezeFrameValueComparisonAvailable ? "freeze_frame_snapshot" : null,
-      !completeReadinessMonitorComparisonAvailable ? "readiness_snapshot" : null
-    ].filter(Boolean));
-    const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
     const readEcuInfoKeys = (summary) => Array.isArray(readField(summary, "ecuInfoItemKeys"))
       ? [...new Set(readField(summary, "ecuInfoItemKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
     const importedEcuInfoItemEvidenceRecorded = readBoolean(importedInventory, "ecuInfoItemEvidenceRecorded");
     const currentEcuInfoItemEvidenceRecorded = readBoolean(currentSummary, "ecuInfoItemEvidenceRecorded");
-    const ecuInfoItemComparisonAvailable = importedEcuInfoItemEvidenceRecorded && currentEcuInfoItemEvidenceRecorded;
-    const importedEcuInfoItemKeys = readEcuInfoKeys(importedInventory);
-    const currentEcuInfoItemKeys = readEcuInfoKeys(currentSummary);
+    const readEcuInfoItemReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
+        || String(value || "").trim().toUpperCase()
+        || null;
+      const explicitIds = readIds(summary, "ecuInfoItemReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitIds)].sort()
+        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[2])).filter(Boolean))].sort();
+      const explicitKeys = readIds(summary, "ecuInfoItemReportedEcuKeys");
+      const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
+      return {
+        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "ecuInfoItemReportedEcuEvidenceRecorded"),
+        reportedEcuIds,
+        reportedEcuKeys
+      };
+    };
+    const importedAllEcuInfoItemKeys = readEcuInfoKeys(importedInventory);
+    const currentAllEcuInfoItemKeys = readEcuInfoKeys(currentSummary);
+    const importedEcuInfoItemReportedEcuScope = readEcuInfoItemReportedEcuScope(importedInventory, importedEcuInfoItemEvidenceRecorded, importedAllEcuInfoItemKeys);
+    const currentEcuInfoItemReportedEcuScope = readEcuInfoItemReportedEcuScope(currentSummary, currentEcuInfoItemEvidenceRecorded, currentAllEcuInfoItemKeys);
+    const completeEcuInfoItemComparisonAvailable = importedEcuInfoItemEvidenceRecorded && currentEcuInfoItemEvidenceRecorded;
+    const comparableEcuInfoItemEcuIds = completeEcuInfoItemComparisonAvailable
+      ? []
+      : importedEcuInfoItemReportedEcuScope.evidenceRecorded && currentEcuInfoItemReportedEcuScope.evidenceRecorded
+        ? importedEcuInfoItemReportedEcuScope.reportedEcuIds.filter((id) => currentEcuInfoItemReportedEcuScope.reportedEcuIds.includes(id))
+        : [];
+    const reportedEcuInfoItemComparisonAvailable = !completeEcuInfoItemComparisonAvailable && comparableEcuInfoItemEcuIds.length > 0;
+    const ecuInfoItemComparisonAvailable = completeEcuInfoItemComparisonAvailable || reportedEcuInfoItemComparisonAvailable;
+    const filterEcuInfoItemKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[2]) || String(key || "").split("|")[2]?.trim().toUpperCase();
+      return comparableEcuInfoItemEcuIds.includes(ecu);
+    });
+    const importedEcuInfoItemKeys = completeEcuInfoItemComparisonAvailable
+      ? importedAllEcuInfoItemKeys
+      : reportedEcuInfoItemComparisonAvailable ? filterEcuInfoItemKeysByScope(importedEcuInfoItemReportedEcuScope) : [];
+    const currentEcuInfoItemKeys = completeEcuInfoItemComparisonAvailable
+      ? currentAllEcuInfoItemKeys
+      : reportedEcuInfoItemComparisonAvailable ? filterEcuInfoItemKeysByScope(currentEcuInfoItemReportedEcuScope) : [];
     const ecuInfoItemAddedKeys = ecuInfoItemComparisonAvailable ? diffIds(currentEcuInfoItemKeys, importedEcuInfoItemKeys) : [];
     const ecuInfoItemRemovedKeys = ecuInfoItemComparisonAvailable ? diffIds(importedEcuInfoItemKeys, currentEcuInfoItemKeys) : [];
+    const hasEcuInfoItemEcuScopeEvidence = [
+      ...importedEcuInfoItemReportedEcuScope.reportedEcuIds,
+      ...currentEcuInfoItemReportedEcuScope.reportedEcuIds,
+      ...readIds(importedInventory, "ecuInfoItemUnresolvedEcuIds"),
+      ...readIds(currentSummary, "ecuInfoItemUnresolvedEcuIds")
+    ].length > 0;
+    const restrictEcuInfoComparisonToScopedEvidence = !completeEcuInfoItemComparisonAvailable && hasEcuInfoItemEcuScopeEvidence;
+    const ecuInfoMissingKeyDelta = restrictEcuInfoComparisonToScopedEvidence
+      ? null
+      : readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount");
+    const nonComparableValueCountIds = new Set([
+      !completeFreezeFrameValueComparisonAvailable ? "freeze_frame_snapshot" : null,
+      !completeReadinessMonitorComparisonAvailable ? "readiness_snapshot" : null,
+      restrictEcuInfoComparisonToScopedEvidence ? "ecu_info_snapshot" : null
+    ].filter(Boolean));
+    const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
     const comparableEcuInfoKeyValueIds = new Set(["calibration_id", "calibration_verification_number"]);
     const readEcuInfoKeyValueKeys = (summary) => Array.isArray(readField(summary, "ecuInfoKeyValueKeys"))
       ? [...new Set(readField(summary, "ecuInfoKeyValueKeys").map((key) => {
@@ -14979,8 +15054,8 @@
       value_counts_changed: comparableChangedValueCountIds.length > 0,
       readinessIncompleteDelta,
       readiness_incomplete_delta: readinessIncompleteDelta,
-      ecuInfoMissingKeyDelta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
-      ecu_info_missing_key_delta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
+      ecuInfoMissingKeyDelta,
+      ecu_info_missing_key_delta: ecuInfoMissingKeyDelta,
       rawPidUndecodedDelta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount"),
       raw_pid_undecoded_delta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount"),
       importedFreezeFrameValueCount: readCount(importedInventory, "freezeFrameValueCount", "freezeFrameValueKeys"),
@@ -15123,8 +15198,16 @@
       imported_ecu_info_item_evidence_recorded: importedEcuInfoItemEvidenceRecorded,
       currentEcuInfoItemEvidenceRecorded,
       current_ecu_info_item_evidence_recorded: currentEcuInfoItemEvidenceRecorded,
+      importedEcuInfoItemReportedEcuEvidenceRecorded: importedEcuInfoItemReportedEcuScope.evidenceRecorded,
+      imported_ecu_info_item_reported_ecu_evidence_recorded: importedEcuInfoItemReportedEcuScope.evidenceRecorded,
+      currentEcuInfoItemReportedEcuEvidenceRecorded: currentEcuInfoItemReportedEcuScope.evidenceRecorded,
+      current_ecu_info_item_reported_ecu_evidence_recorded: currentEcuInfoItemReportedEcuScope.evidenceRecorded,
       ecuInfoItemComparisonAvailable,
       ecu_info_item_comparison_available: ecuInfoItemComparisonAvailable,
+      ecuInfoItemComparisonScope: completeEcuInfoItemComparisonAvailable ? "complete" : reportedEcuInfoItemComparisonAvailable ? "reported_ecus" : "unavailable",
+      ecu_info_item_comparison_scope: completeEcuInfoItemComparisonAvailable ? "complete" : reportedEcuInfoItemComparisonAvailable ? "reported_ecus" : "unavailable",
+      ecuInfoItemComparableEcuIds: comparableEcuInfoItemEcuIds,
+      ecu_info_item_comparable_ecu_ids: [...comparableEcuInfoItemEcuIds],
       importedEcuInfoItemKeys,
       imported_ecu_info_item_keys: importedEcuInfoItemKeys,
       currentEcuInfoItemKeys,
@@ -15342,6 +15425,14 @@
       ecu_info_item_keys: normalizeIds(summary.ecuInfoItemKeys || summary.ecu_info_item_keys),
       ecuInfoItemEvidenceRecorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
       ecu_info_item_evidence_recorded: pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
+      ecuInfoItemReportedEcuEvidenceRecorded: pickDefined(summary.ecuInfoItemReportedEcuEvidenceRecorded, summary.ecu_info_item_reported_ecu_evidence_recorded, summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
+      ecu_info_item_reported_ecu_evidence_recorded: pickDefined(summary.ecuInfoItemReportedEcuEvidenceRecorded, summary.ecu_info_item_reported_ecu_evidence_recorded, summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true,
+      ecuInfoItemReportedEcuIds: normalizeIds(summary.ecuInfoItemReportedEcuIds || summary.ecu_info_item_reported_ecu_ids),
+      ecu_info_item_reported_ecu_ids: normalizeIds(summary.ecuInfoItemReportedEcuIds || summary.ecu_info_item_reported_ecu_ids),
+      ecuInfoItemUnresolvedEcuIds: normalizeIds(summary.ecuInfoItemUnresolvedEcuIds || summary.ecu_info_item_unresolved_ecu_ids),
+      ecu_info_item_unresolved_ecu_ids: normalizeIds(summary.ecuInfoItemUnresolvedEcuIds || summary.ecu_info_item_unresolved_ecu_ids),
+      ecuInfoItemReportedEcuKeys: normalizeIds(summary.ecuInfoItemReportedEcuKeys || summary.ecu_info_item_reported_ecu_keys || (pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true ? summary.ecuInfoItemKeys || summary.ecu_info_item_keys : [])),
+      ecu_info_item_reported_ecu_keys: normalizeIds(summary.ecuInfoItemReportedEcuKeys || summary.ecu_info_item_reported_ecu_keys || (pickDefined(summary.ecuInfoItemEvidenceRecorded, summary.ecu_info_item_evidence_recorded, false) === true ? summary.ecuInfoItemKeys || summary.ecu_info_item_keys : [])),
       ecuInfoKeyValueCount: toCount("ecuInfoKeyValueCount", "ecu_info_key_value_count", 0),
       ecu_info_key_value_count: toCount("ecuInfoKeyValueCount", "ecu_info_key_value_count", 0),
       ecuInfoKeyValueKeys: normalizeIds(summary.ecuInfoKeyValueKeys || summary.ecu_info_key_value_keys),
