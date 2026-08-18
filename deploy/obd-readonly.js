@@ -26502,7 +26502,14 @@
       };
     };
     const supportedPidEcuSnapshots = ecuSnapshotRows.map(normalizeEcuSnapshot).filter(Boolean);
-    supportedPidEcuSnapshots.forEach((snapshot) => {
+    const reportedSupportedPidEcuSnapshots = supportedPidEcuSnapshots.filter((snapshot) =>
+      String(snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status || "unknown").trim().toLowerCase() === "reported"
+    );
+    if (supportedPidEcuSnapshots.length > 0) {
+      supported.clear();
+      supportedPidPageBaseSet.clear();
+    }
+    reportedSupportedPidEcuSnapshots.forEach((snapshot) => {
       snapshot.supportedPids.forEach((pid) => supported.add(pid));
       snapshot.supportedPidPageBases.forEach((page) => supportedPidPageBaseSet.add(page));
     });
@@ -26512,7 +26519,7 @@
       .filter((definition) => definition.service === "01" && definition.pid)
       .map((definition) => {
         const normalizedPid = String(definition.pid).toUpperCase();
-        const supportedEcuIds = [...new Set(supportedPidEcuSnapshots
+        const supportedEcuIds = [...new Set(reportedSupportedPidEcuSnapshots
           .filter((snapshot) => snapshot.supportedPids.includes(normalizedPid))
           .map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu || null)
           .filter(Boolean))].sort();
