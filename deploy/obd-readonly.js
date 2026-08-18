@@ -1891,7 +1891,7 @@
       read_pending_dtc: ["dtcs", "codes"],
       read_permanent_dtc: ["dtcs", "codes"],
       read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries", "raw", "response", "bytes"],
-      read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
+      read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots", "raw", "response", "bytes"],
       read_ecu_info: ["items", "values", "ecu_info_items", "ecuInfoItems", "ecu_info_rows", "ecuInfoRows", "mode09_items", "mode09Items", "mode09_values", "mode09Values", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers", "ecu_info_ecu_snapshots", "ecuInfoEcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses", "raw", "response", "bytes"],
       read_onboard_monitor: [
         "tests", "items", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests",
@@ -2103,11 +2103,14 @@
     if (readoutId === "supported_pid_matrix") {
       const supportedPidEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
         const rows = Array.isArray(data.supported_pid_ecu_snapshots) ? data.supported_pid_ecu_snapshots : Array.isArray(data.supportedPidEcuSnapshots) ? data.supportedPidEcuSnapshots : [data];
-        return rows.map((row) => ({
-          ...row,
-          supported_pid_readout_status: row.supported_pid_readout_status || row.supportedPidReadoutStatus || "reported",
-          ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {})
-        }));
+        return rows.map((row) => {
+          const rawResponse = row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
+          return {
+            ...row,
+            ...(row?.supported_pid_readout_status || row?.supportedPidReadoutStatus || rawResponse !== null ? {} : { supported_pid_readout_status: "reported" }),
+            ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {})
+          };
+        });
       });
       const supportedPids = [...new Set(supportedPidEcuSnapshots.flatMap((row) => row.supported_pids || row.supportedPids || row.pids || []))]
         .map((pid) => String(pid?.pid || pid?.code || pid?.id || pid?.value || pid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0"))
@@ -4603,6 +4606,37 @@
       : {};
     const supportedPids = collectBridgeSupportedPids(data);
     const supportedPidEcuSnapshots = data.supported_pid_ecu_snapshots || data.supportedPidEcuSnapshots || data.ecu_snapshots || data.ecuSnapshots || [];
+    const getEcuRawSupportedPidResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
+    const hasEcuStructuredSupportedPidInput = (row) => [
+      row?.supported_pids, row?.supportedPids, row?.pids, row?.pid_list, row?.pidList, row?.supported_pid_rows, row?.supportedPidRows,
+      row?.supported_pid_list, row?.supportedPidList, row?.supportedPidsText, row?.supported_pids_text,
+      row?.supported_pid_page_bases, row?.supportedPidPageBases, row?.queried_pid_bases, row?.queriedPidBases, row?.supported_pid_pages, row?.supportedPidPages
+    ].some((value) => value !== undefined && value !== null);
+    const decodedRawEcuSupportedPidSnapshots = new Map();
+    const normalizedSupportedPidEcuSnapshots = Array.isArray(supportedPidEcuSnapshots)
+      ? supportedPidEcuSnapshots.map((row) => {
+        const raw = getEcuRawSupportedPidResponse(row);
+        if (raw === null || hasEcuStructuredSupportedPidInput(row)) return row;
+        const decoded = decodeSupportedPidResponse({
+          raw,
+          source: "local_bridge",
+          source_ecu: readObdResponseSourceEcu(row),
+          source_ecu_name: row?.source_ecu_name || row?.sourceEcuName || row?.ecu_name || row?.ecuName || row?.module_name || row?.moduleName || null,
+          captured_at: row?.captured_at || row?.capturedAt || data.captured_at || data.capturedAt || data.timestamp || response.captured_at || response.capturedAt || response.timestamp || null,
+          protocol: readBridgeProtocol(row) || readBridgeProtocol(data) || readBridgeProtocol(response)
+        });
+        decodedRawEcuSupportedPidSnapshots.set(row, decoded);
+        return {
+          ...row,
+          source_ecu: readObdResponseSourceEcu(row) || row?.source_ecu || row?.sourceEcu || row?.ecu || row?.address || null,
+          supported_pids: decoded.supportedPids || decoded.supported_pids || [],
+          supported_pid_page_bases: decoded.supportedPidPageBases || decoded.supported_pid_page_bases || [],
+          supported_pid_readout_status: decoded.supportedPidReadoutStatus || decoded.supported_pid_readout_status || "unparsed"
+        };
+      })
+      : [];
+    const hasRawEcuSupportedPidResponse = Array.isArray(supportedPidEcuSnapshots)
+      && supportedPidEcuSnapshots.some((row) => getEcuRawSupportedPidResponse(row) !== null && !hasEcuStructuredSupportedPidInput(row));
     const rawSupportedPidResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const hasStructuredSupportedPidInput = [
       data.supported_pids, data.supportedPids, data.pids, data.pid_list, data.pidList, data.supported_pid_rows, data.supportedPidRows,
@@ -4639,7 +4673,8 @@
       response,
       errorCodes.length === 0 && (
         shouldDecodeRawSupportedPids || hasExplicitReadoutStatus || hasBridgeSupportedPidEvidence(data)
-        || hasBridgeSupportedPidSnapshotEvidence(supportedPidEcuSnapshots)
+        || hasRawEcuSupportedPidResponse
+        || hasBridgeSupportedPidSnapshotEvidence(normalizedSupportedPidEcuSnapshots)
       )
     );
     const resolvedBridgeSafety = malformedSupportedPidAlias || malformedSupportedPidEcuAlias
@@ -4647,11 +4682,15 @@
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
         ? { ...bridgeSafety, ok: false, unparsed: true }
         : bridgeSafety;
+    const rawEcuReadoutUnparsed = [...decodedRawEcuSupportedPidSnapshots.values()].some((snapshot) => snapshot?.supportedPidReadoutStatus !== "reported");
+    const hasDecodedRawEcuSupportedPidEvidence = [...decodedRawEcuSupportedPidSnapshots.values()].some((snapshot) => snapshot?.supportedPidReadoutStatus === "reported");
     const readoutStatus = resolvedBridgeSafety.blocked || resolvedBridgeSafety.unparsed
       ? getBridgeReadoutStatus(resolvedBridgeSafety)
       : hasExplicitReadoutStatus
         ? explicitReadoutStatus
-        : getBridgeReadoutStatus(resolvedBridgeSafety);
+        : rawEcuReadoutUnparsed && !hasDecodedRawEcuSupportedPidEvidence && supportedPids.length === 0
+          ? "unparsed"
+          : getBridgeReadoutStatus(resolvedBridgeSafety);
     const blocked = resolvedBridgeSafety.blocked || readoutStatus === "blocked";
     const readoutOk = blocked ? false : readoutStatus === "reported" ? true : readoutStatus === "unparsed" ? false : undefined;
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
@@ -4693,7 +4732,7 @@
       source_ecu_name: data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null,
       supported_pid_page_bases: supportedPidPageBases,
       supported_pids: supportedPids,
-      supported_pid_ecu_snapshots: supportedPidEcuSnapshots
+      supported_pid_ecu_snapshots: normalizedSupportedPidEcuSnapshots
       }),
       protocolProvenance,
       protocol_provenance: protocolProvenance,
@@ -26696,7 +26735,13 @@
       ? (!Array.isArray(supportedPidMatrixInput.supportedPids) || !Array.isArray(supportedPidMatrixInput.items) ? buildSupportedPidMatrix(supportedPidMatrixInput) : supportedPidMatrixInput)
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
-      : (supportedPidMatrixInput?.data || Array.isArray(supportedPidMatrixInput?.supported_pids) || Array.isArray(supportedPidMatrixInput?.supportedPids))
+      : (supportedPidMatrixInput?.data
+        || Array.isArray(supportedPidMatrixInput?.supported_pids)
+        || Array.isArray(supportedPidMatrixInput?.supportedPids)
+        || Array.isArray(supportedPidMatrixInput?.supported_pid_ecu_snapshots)
+        || Array.isArray(supportedPidMatrixInput?.supportedPidEcuSnapshots)
+        || Array.isArray(supportedPidMatrixInput?.ecu_snapshots)
+        || Array.isArray(supportedPidMatrixInput?.ecuSnapshots))
         ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
         : buildSupportedPidMatrix(supportedPidMatrixInput)), supportedPidMatrixInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]), supportedPidMatrixInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]);
     const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(hasObjectContent(ecuResponseSummaryInput)
