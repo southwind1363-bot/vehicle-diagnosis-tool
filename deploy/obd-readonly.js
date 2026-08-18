@@ -6699,6 +6699,23 @@
       readinessStateToken(monitor?.complete, "complete", "not_complete")
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const recordedReadinessMonitorKeys = readinessMonitorEvidenceRecorded ? readinessMonitorKeys : [];
+    const normalizeReadinessEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+    const readReadinessEcuId = (snapshot = {}) => normalizeReadinessEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || null);
+    const reportedReadinessEcuIds = [...new Set(readinessEcuSnapshots
+      .filter((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readReadinessEcuId)
+      .filter(Boolean))].sort();
+    const unresolvedReadinessEcuIds = [...new Set(readinessEcuSnapshots
+      .filter((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readReadinessEcuId)
+      .filter(Boolean))].sort();
+    const readinessMonitorReportedEcuEvidenceRecorded = readinessMonitorEvidenceRecorded
+      || (readinessSnapshot?.blocked !== true && readinessSnapshot?.isBlocked !== true && readinessSnapshot?.is_blocked !== true
+        && String(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || "").trim().toLowerCase() === "unparsed"
+        && reportedReadinessEcuIds.length > 0);
+    const readinessMonitorReportedEcuKeys = readinessMonitorReportedEcuEvidenceRecorded
+      ? readinessMonitorKeys.filter((key) => readinessMonitorEvidenceRecorded || reportedReadinessEcuIds.includes(normalizeReadinessEcuId(String(key || "").split("|")[1])))
+      : [];
     const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
       ? ecuInfoSnapshot.ecuInfoEcuSnapshots
       : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
@@ -6891,6 +6908,14 @@
       readiness_monitor_keys: [...recordedReadinessMonitorKeys],
       readinessMonitorEvidenceRecorded,
       readiness_monitor_evidence_recorded: readinessMonitorEvidenceRecorded,
+      readinessMonitorReportedEcuEvidenceRecorded,
+      readiness_monitor_reported_ecu_evidence_recorded: readinessMonitorReportedEcuEvidenceRecorded,
+      readinessMonitorReportedEcuIds: reportedReadinessEcuIds,
+      readiness_monitor_reported_ecu_ids: [...reportedReadinessEcuIds],
+      readinessMonitorUnresolvedEcuIds: unresolvedReadinessEcuIds,
+      readiness_monitor_unresolved_ecu_ids: [...unresolvedReadinessEcuIds],
+      readinessMonitorReportedEcuKeys: readinessMonitorReportedEcuKeys,
+      readiness_monitor_reported_ecu_keys: [...readinessMonitorReportedEcuKeys],
       hasEcuInfoItems: countsById.ecu_info_snapshot > 0,
       ecuInfoItemCount: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
       ecu_info_item_count: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
@@ -14501,6 +14526,10 @@
       readinessMonitorCount: ["readiness_monitor_count"],
       readinessMonitorKeys: ["readiness_monitor_keys"],
       readinessMonitorEvidenceRecorded: ["readiness_monitor_evidence_recorded"],
+      readinessMonitorReportedEcuEvidenceRecorded: ["readiness_monitor_reported_ecu_evidence_recorded"],
+      readinessMonitorReportedEcuIds: ["readiness_monitor_reported_ecu_ids"],
+      readinessMonitorUnresolvedEcuIds: ["readiness_monitor_unresolved_ecu_ids"],
+      readinessMonitorReportedEcuKeys: ["readiness_monitor_reported_ecu_keys"],
       supportedPidCount: ["supported_pid_count"],
       supportedPidKeys: ["supported_pid_keys"],
       supportedPidEvidenceRecorded: ["supported_pid_evidence_recorded"],
@@ -14672,9 +14701,6 @@
     const freezeFrameValueAddedKeys = freezeFrameValueComparisonAvailable ? diffIds(currentFreezeFrameValueKeys, importedFreezeFrameValueKeys) : [];
     const freezeFrameValueRemovedKeys = freezeFrameValueComparisonAvailable ? diffIds(importedFreezeFrameValueKeys, currentFreezeFrameValueKeys) : [];
     const freezeFrameValueCountDelta = freezeFrameValueComparisonAvailable ? currentFreezeFrameValueKeys.length - importedFreezeFrameValueKeys.length : null;
-    const comparableChangedValueCountIds = completeFreezeFrameValueComparisonAvailable
-      ? changedValueCountIds
-      : changedValueCountIds.filter((id) => id !== "freeze_frame_snapshot");
     const readFreezeFrameUdsRecordKeys = (summary) => Array.isArray(readField(summary, "freezeFrameUdsRecordKeys"))
       ? [...new Set(readField(summary, "freezeFrameUdsRecordKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
@@ -14690,11 +14716,54 @@
       : [];
     const importedReadinessMonitorEvidenceRecorded = readBoolean(importedInventory, "readinessMonitorEvidenceRecorded");
     const currentReadinessMonitorEvidenceRecorded = readBoolean(currentSummary, "readinessMonitorEvidenceRecorded");
-    const readinessMonitorComparisonAvailable = importedReadinessMonitorEvidenceRecorded && currentReadinessMonitorEvidenceRecorded;
-    const importedReadinessMonitorKeys = readReadinessKeys(importedInventory);
-    const currentReadinessMonitorKeys = readReadinessKeys(currentSummary);
+    const readReadinessReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
+        || String(value || "").trim().toUpperCase()
+        || null;
+      const explicitIds = readIds(summary, "readinessMonitorReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitIds)].sort()
+        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[1])).filter(Boolean))].sort();
+      const explicitKeys = readIds(summary, "readinessMonitorReportedEcuKeys");
+      const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
+      return {
+        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "readinessMonitorReportedEcuEvidenceRecorded"),
+        reportedEcuIds,
+        reportedEcuKeys
+      };
+    };
+    const importedAllReadinessMonitorKeys = readReadinessKeys(importedInventory);
+    const currentAllReadinessMonitorKeys = readReadinessKeys(currentSummary);
+    const importedReadinessReportedEcuScope = readReadinessReportedEcuScope(importedInventory, importedReadinessMonitorEvidenceRecorded, importedAllReadinessMonitorKeys);
+    const currentReadinessReportedEcuScope = readReadinessReportedEcuScope(currentSummary, currentReadinessMonitorEvidenceRecorded, currentAllReadinessMonitorKeys);
+    const completeReadinessMonitorComparisonAvailable = importedReadinessMonitorEvidenceRecorded && currentReadinessMonitorEvidenceRecorded;
+    const comparableReadinessEcuIds = completeReadinessMonitorComparisonAvailable
+      ? []
+      : importedReadinessReportedEcuScope.evidenceRecorded && currentReadinessReportedEcuScope.evidenceRecorded
+        ? importedReadinessReportedEcuScope.reportedEcuIds.filter((id) => currentReadinessReportedEcuScope.reportedEcuIds.includes(id))
+        : [];
+    const reportedEcuReadinessMonitorComparisonAvailable = !completeReadinessMonitorComparisonAvailable && comparableReadinessEcuIds.length > 0;
+    const readinessMonitorComparisonAvailable = completeReadinessMonitorComparisonAvailable || reportedEcuReadinessMonitorComparisonAvailable;
+    const filterReadinessMonitorKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[1]) || String(key || "").split("|")[1]?.trim().toUpperCase();
+      return comparableReadinessEcuIds.includes(ecu);
+    });
+    const importedReadinessMonitorKeys = completeReadinessMonitorComparisonAvailable
+      ? importedAllReadinessMonitorKeys
+      : reportedEcuReadinessMonitorComparisonAvailable ? filterReadinessMonitorKeysByScope(importedReadinessReportedEcuScope) : [];
+    const currentReadinessMonitorKeys = completeReadinessMonitorComparisonAvailable
+      ? currentAllReadinessMonitorKeys
+      : reportedEcuReadinessMonitorComparisonAvailable ? filterReadinessMonitorKeysByScope(currentReadinessReportedEcuScope) : [];
     const readinessMonitorAddedKeys = readinessMonitorComparisonAvailable ? diffIds(currentReadinessMonitorKeys, importedReadinessMonitorKeys) : [];
     const readinessMonitorRemovedKeys = readinessMonitorComparisonAvailable ? diffIds(importedReadinessMonitorKeys, currentReadinessMonitorKeys) : [];
+    const readinessIncompleteDelta = readinessMonitorComparisonAvailable
+      ? currentReadinessMonitorKeys.filter((key) => String(key).endsWith("|not_complete")).length - importedReadinessMonitorKeys.filter((key) => String(key).endsWith("|not_complete")).length
+      : null;
+    const nonComparableValueCountIds = new Set([
+      !completeFreezeFrameValueComparisonAvailable ? "freeze_frame_snapshot" : null,
+      !completeReadinessMonitorComparisonAvailable ? "readiness_snapshot" : null
+    ].filter(Boolean));
+    const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
     const readEcuInfoKeys = (summary) => Array.isArray(readField(summary, "ecuInfoItemKeys"))
       ? [...new Set(readField(summary, "ecuInfoItemKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
@@ -14908,8 +14977,8 @@
       changed_value_count_ids: comparableChangedValueCountIds,
       valueCountsChanged: comparableChangedValueCountIds.length > 0,
       value_counts_changed: comparableChangedValueCountIds.length > 0,
-      readinessIncompleteDelta: readCount(currentSummary, "readinessIncompleteCount") - readCount(importedInventory, "readinessIncompleteCount"),
-      readiness_incomplete_delta: readCount(currentSummary, "readinessIncompleteCount") - readCount(importedInventory, "readinessIncompleteCount"),
+      readinessIncompleteDelta,
+      readiness_incomplete_delta: readinessIncompleteDelta,
       ecuInfoMissingKeyDelta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
       ecu_info_missing_key_delta: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedInventory, "ecuInfoMissingKeyCount"),
       rawPidUndecodedDelta: readCount(currentSummary, "rawPidUndecodedCount") - readCount(importedInventory, "rawPidUndecodedCount"),
@@ -15026,8 +15095,16 @@
       imported_readiness_monitor_evidence_recorded: importedReadinessMonitorEvidenceRecorded,
       currentReadinessMonitorEvidenceRecorded,
       current_readiness_monitor_evidence_recorded: currentReadinessMonitorEvidenceRecorded,
+      importedReadinessMonitorReportedEcuEvidenceRecorded: importedReadinessReportedEcuScope.evidenceRecorded,
+      imported_readiness_monitor_reported_ecu_evidence_recorded: importedReadinessReportedEcuScope.evidenceRecorded,
+      currentReadinessMonitorReportedEcuEvidenceRecorded: currentReadinessReportedEcuScope.evidenceRecorded,
+      current_readiness_monitor_reported_ecu_evidence_recorded: currentReadinessReportedEcuScope.evidenceRecorded,
       readinessMonitorComparisonAvailable,
       readiness_monitor_comparison_available: readinessMonitorComparisonAvailable,
+      readinessMonitorComparisonScope: completeReadinessMonitorComparisonAvailable ? "complete" : reportedEcuReadinessMonitorComparisonAvailable ? "reported_ecus" : "unavailable",
+      readiness_monitor_comparison_scope: completeReadinessMonitorComparisonAvailable ? "complete" : reportedEcuReadinessMonitorComparisonAvailable ? "reported_ecus" : "unavailable",
+      readinessMonitorComparableEcuIds: comparableReadinessEcuIds,
+      readiness_monitor_comparable_ecu_ids: [...comparableReadinessEcuIds],
       importedReadinessMonitorKeys,
       imported_readiness_monitor_keys: importedReadinessMonitorKeys,
       currentReadinessMonitorKeys,
@@ -15251,6 +15328,14 @@
       readiness_monitor_keys: normalizeIds(summary.readinessMonitorKeys || summary.readiness_monitor_keys),
       readinessMonitorEvidenceRecorded: pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
       readiness_monitor_evidence_recorded: pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
+      readinessMonitorReportedEcuEvidenceRecorded: pickDefined(summary.readinessMonitorReportedEcuEvidenceRecorded, summary.readiness_monitor_reported_ecu_evidence_recorded, summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
+      readiness_monitor_reported_ecu_evidence_recorded: pickDefined(summary.readinessMonitorReportedEcuEvidenceRecorded, summary.readiness_monitor_reported_ecu_evidence_recorded, summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true,
+      readinessMonitorReportedEcuIds: normalizeIds(summary.readinessMonitorReportedEcuIds || summary.readiness_monitor_reported_ecu_ids),
+      readiness_monitor_reported_ecu_ids: normalizeIds(summary.readinessMonitorReportedEcuIds || summary.readiness_monitor_reported_ecu_ids),
+      readinessMonitorUnresolvedEcuIds: normalizeIds(summary.readinessMonitorUnresolvedEcuIds || summary.readiness_monitor_unresolved_ecu_ids),
+      readiness_monitor_unresolved_ecu_ids: normalizeIds(summary.readinessMonitorUnresolvedEcuIds || summary.readiness_monitor_unresolved_ecu_ids),
+      readinessMonitorReportedEcuKeys: normalizeIds(summary.readinessMonitorReportedEcuKeys || summary.readiness_monitor_reported_ecu_keys || (pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true ? summary.readinessMonitorKeys || summary.readiness_monitor_keys : [])),
+      readiness_monitor_reported_ecu_keys: normalizeIds(summary.readinessMonitorReportedEcuKeys || summary.readiness_monitor_reported_ecu_keys || (pickDefined(summary.readinessMonitorEvidenceRecorded, summary.readiness_monitor_evidence_recorded, false) === true ? summary.readinessMonitorKeys || summary.readiness_monitor_keys : [])),
       ecuInfoItemCount: toCount("ecuInfoItemCount", "ecu_info_item_count", 0),
       ecu_info_item_count: toCount("ecuInfoItemCount", "ecu_info_item_count", 0),
       ecuInfoItemKeys: normalizeIds(summary.ecuInfoItemKeys || summary.ecu_info_item_keys),
