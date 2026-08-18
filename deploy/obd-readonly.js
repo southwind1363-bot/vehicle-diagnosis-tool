@@ -5695,6 +5695,17 @@
       decodedRawEcuOnboardMonitorSnapshots.set(ecuRow, decoded);
       return Array.isArray(decoded.tests) ? decoded.tests : [];
     });
+    const normalizedOnboardMonitorEcuSnapshots = onboardMonitorEcuSnapshots.map((ecuRow) => {
+      const decoded = decodedRawEcuOnboardMonitorSnapshots.get(ecuRow);
+      if (!decoded) return ecuRow;
+      return {
+        ...ecuRow,
+        ...decoded,
+        source_ecu: decoded.sourceEcu || decoded.source_ecu || ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.address || null,
+        source_ecu_name: decoded.sourceEcuName || decoded.source_ecu_name || ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || null,
+        tests: Array.isArray(decoded.tests) ? decoded.tests : []
+      };
+    });
     const tests = [...structuredTests, ...rawEcuOnboardMonitorTests];
     const rawEcuOnboardMonitorReadoutUnparsed = [...decodedRawEcuOnboardMonitorSnapshots.values()].some((snapshot) => snapshot?.onboardMonitorReadoutStatus !== "reported");
     if (shouldDecodeRawOnboardMonitor) {
@@ -5729,7 +5740,8 @@
           ...(Array.isArray(data.readout_ecu_ids) ? data.readout_ecu_ids : []),
           ...onboardMonitorEcuSnapshots.map((row) => row?.source_ecu || row?.sourceEcu || row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null)
         ].filter(Boolean),
-        tests
+        tests,
+        onboard_monitor_ecu_snapshots: normalizedOnboardMonitorEcuSnapshots
       }),
       protocolProvenance,
       protocol_provenance: protocolProvenance,
@@ -21930,6 +21942,21 @@
         onboard_monitor_scope: "single_ecu"
       };
     }).filter(Boolean);
+    const reportedOnboardMonitorEcuSnapshots = onboardMonitorEcuSnapshots.filter((snapshot) =>
+      String(snapshot.onboardMonitorReadoutStatus || snapshot.onboard_monitor_readout_status || "unknown").trim().toLowerCase() === "reported"
+    );
+    const matchesReportedOnboardMonitorEcu = (row) => {
+      if (onboardMonitorEcuSnapshots.length === 0) return true;
+      const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
+      if (!rowSource) return reportedOnboardMonitorEcuSnapshots.length === onboardMonitorEcuSnapshots.length;
+      const rowAddress = normalizeComparableCanEcuAddress(rowSource);
+      return reportedOnboardMonitorEcuSnapshots.some((snapshot) => {
+        const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
+        if (reportedSource === rowSource) return true;
+        const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
+        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+      });
+    };
     const directRows = (Array.isArray(sourceInput.tests)
       ? sourceInput.tests
       : Array.isArray(sourceInput.values)
@@ -21963,7 +21990,7 @@
                                   : []);
     const rows = (directRows.length > 0
       ? directRows
-      : onboardMonitorEcuSnapshots.flatMap((snapshot) => snapshot.tests || []))
+      : reportedOnboardMonitorEcuSnapshots.flatMap((snapshot) => snapshot.tests || []))
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = readObdResponseSourceEcu(row);
@@ -22009,7 +22036,8 @@
           interpretationNote: "Mode 06 TID/CID meaning and units are vehicle-specific. Confirm the test item in the service manual."
         };
       })
-      .filter(Boolean);
+      .filter(Boolean)
+      .filter(matchesReportedOnboardMonitorEcu);
 
     const readoutEcuIds = [...new Set([
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
