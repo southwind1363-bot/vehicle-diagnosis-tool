@@ -3335,7 +3335,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2814件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('未解析ECUの対応PIDを親読取計画から分離'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2820件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('部分DTC比較を正常応答ECUの範囲へ限定'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3893,7 +3893,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "未解析ECUの対応PIDを親読取計画から分離"'), "OBD core progress should describe the latest completed session-integrity milestone");
+check(appSource.includes('recentMilestone: "部分DTC比較を正常応答ECUの範囲へ限定"'), "OBD core progress should describe the latest completed session-integrity milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4221,7 +4221,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "未解析ECUの対応PIDを親読取計画から分離"'), "OBD core progress snapshot should show the latest completed session-integrity milestone");
+check(appSource.includes('recentMilestone: "部分DTC比較を正常応答ECUの範囲へ限定"'), "OBD core progress snapshot should show the latest completed session-integrity milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -18748,6 +18748,49 @@ const dtcIdentityComparisonSession = obd.buildDiagnosticScanSession({
   }
 });
 check(dtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.keys?.join(",") === "P0300|-|generic_obd|stored|current|7E8" && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonAvailable === true && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityKeysChanged === true && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityAddedKeys?.join(",") === "P0300|-|generic_obd|stored|current|7E8" && dtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.join(",") === "P0300|-|generic_obd|stored|history|7E8" && dtcIdentityComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_identities") && dtcIdentityComparisonSession.vehicleCommandEnabled === false && dtcIdentityComparisonSession.wouldTransmit === false, "DTC identities were not compared with read-only evidence");
+const buildPartialDtcIdentityComparisonInput = (reportedDtcs = [
+  { code: "P0171", status: "stored", reported_status: "current", ecu: "0x7e8" },
+  { code: "P0420", status: "pending", reported_status: "current", ecu: "0x7e8" },
+  { code: "P0100", status: "permanent", reported_status: "history", ecu: "0x7e8" }
+], reportedStatus = "reported") => ({
+  dtc_snapshot: {
+    dtc_readout_status: reportedStatus === "blocked" ? "blocked" : "unparsed",
+    blocked: reportedStatus === "blocked",
+    dtcs: reportedDtcs,
+    ecu_responses: [
+      { ecu: "7E8", status: reportedStatus, dtcs: reportedDtcs },
+      { ecu: "7E9", status: "unparsed", dtcs: [{ code: "P0300", status: "stored", reported_status: "current", ecu: "7E9" }] }
+    ]
+  },
+  core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_identity_summary: {
+      schema_version: "dtc_identity_summary_v1",
+      evidence_recorded: true,
+      dtc_keys: [
+        "P0100|-|generic_obd|permanent|history|7E8",
+        "P0171|-|generic_obd|stored|current|7E8",
+        "P0300|-|generic_obd|stored|current|7E9",
+        "P0420|-|generic_obd|pending|current|7E8"
+      ]
+    }
+  }
+});
+const partialDtcIdentityComparisonSession = obd.buildDiagnosticScanSession(buildPartialDtcIdentityComparisonInput());
+check(partialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.evidenceRecorded === false && partialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.reportedEcuEvidenceRecorded === true && partialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.reportedEcuIds?.join(",") === "7E8" && partialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.unresolvedEcuIds?.join(",") === "7E9" && partialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.reportedEcuKeys?.length === 3 && partialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.reportedEcuKeys?.some((key) => key.includes("P0300")) === false, "Partial DTC identity evidence did not retain only reported ECU rows");
+check(partialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonAvailable === true && partialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonScope === "reported_ecus" && partialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparableEcuIds?.join(",") === "7E8" && partialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityKeysChanged === false && partialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.some((key) => key.includes("P0300")) === false, "Partial DTC identity comparison treated an unresolved ECU as comparable");
+check(partialDtcIdentityComparisonSession.dtcSnapshot?.dtcReadoutStatus === "unparsed" && partialDtcIdentityComparisonSession.readoutCoverage?.itemById?.dtc_snapshot?.status === "missing" && partialDtcIdentityComparisonSession.coreSessionStatus?.capturedReadoutIds?.includes("dtc_snapshot") === false && partialDtcIdentityComparisonSession.vehicleCommandEnabled === false && partialDtcIdentityComparisonSession.wouldTransmit === false, "Partial DTC identity comparison promoted an incomplete readout or vehicle command");
+const changedPartialDtcIdentityComparisonSession = obd.buildDiagnosticScanSession(buildPartialDtcIdentityComparisonInput([
+  { code: "P0420", status: "pending", reported_status: "current", ecu: "7E8" },
+  { code: "P0100", status: "permanent", reported_status: "history", ecu: "7E8" },
+  { code: "P0455", status: "stored", reported_status: "current", ecu: "7E8" }
+]));
+check(changedPartialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityAddedKeys?.join(",") === "P0455|-|generic_obd|stored|current|7E8" && changedPartialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.join(",") === "P0171|-|generic_obd|stored|current|7E8" && changedPartialDtcIdentityComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("dtc_identities") && changedPartialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.some((key) => key.includes("P0300")) === false, "Partial DTC identity changes were not limited to the reported ECU scope");
+const emptyPartialDtcIdentityComparisonSession = obd.buildDiagnosticScanSession(buildPartialDtcIdentityComparisonInput([]));
+check(emptyPartialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.reportedEcuEvidenceRecorded === true && emptyPartialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonAvailable === true && emptyPartialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.length === 3 && emptyPartialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityRemovedKeys?.some((key) => key.includes("P0300")) === false, "A reported empty ECU DTC response was not compared without clearing unresolved ECU evidence");
+const blockedPartialDtcIdentityComparisonSession = obd.buildDiagnosticScanSession(buildPartialDtcIdentityComparisonInput([{ code: "P0171", status: "stored", ecu: "7E8" }], "blocked"));
+const partialDtcIdentityJsonRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(partialDtcIdentityComparisonSession)));
+check(blockedPartialDtcIdentityComparisonSession.coreSessionStatus?.dtcIdentitySummary?.reportedEcuEvidenceRecorded === false && blockedPartialDtcIdentityComparisonSession.importedCoreComparisonSummary?.dtcIdentityComparisonAvailable === false && partialDtcIdentityJsonRoundTrip?.coreSessionStatus?.dtcIdentitySummary?.reportedEcuIds?.join(",") === "7E8" && partialDtcIdentityJsonRoundTrip?.coreSessionStatus?.dtcIdentitySummary?.reportedEcuKeys?.length === 3 && partialDtcIdentityJsonRoundTrip?.dtcSnapshot?.dtcReadoutStatus === "unparsed" && partialDtcIdentityJsonRoundTrip?.vehicleCommandEnabled === false, "Blocked or JSON-imported partial DTC identity evidence crossed its safety boundary");
 check(source.includes('function buildDtcStatusByteSummary(dtcSnapshot = {})') && appSource.includes('function formatDtcStatusByteComparisonSummary(summary, fallback = NO_DATA)') && appSource.includes('DTC状態詳細比較不可'), "DTC status-byte comparison summary should retain explicit read-only evidence and display an unavailable state");
 const dtcStatusByteComparisonSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: {
@@ -22820,6 +22863,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2814");
+  console.log("OBD read-only safety checks: 2820");
   console.log("Errors: 0");
 }

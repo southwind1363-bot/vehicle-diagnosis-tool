@@ -10883,13 +10883,12 @@
   function buildDtcIdentitySummary(dtcSnapshot = {}) {
     const readoutStatus = String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").trim().toLowerCase();
     const rows = Array.isArray(dtcSnapshot?.dtcs) ? dtcSnapshot.dtcs : null;
-    const evidenceRecorded = Array.isArray(rows)
-      && readoutStatus === "reported"
-      && dtcSnapshot?.blocked !== true
-      && dtcSnapshot?.isBlocked !== true
-      && dtcSnapshot?.is_blocked !== true;
+    const blocked = dtcSnapshot?.blocked === true
+      || dtcSnapshot?.isBlocked === true
+      || dtcSnapshot?.is_blocked === true;
+    const evidenceRecorded = Array.isArray(rows) && readoutStatus === "reported" && !blocked;
     const sourceEcu = String(dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
-    const keys = evidenceRecorded
+    const allKeys = Array.isArray(rows)
       ? [...new Set(rows.map((row) => {
         const code = String(row?.code || row?.dtc || "").trim().toUpperCase().slice(0, 16);
         if (!code) return null;
@@ -10902,6 +10901,33 @@
         return `${code}|${subcode}|${codeFormat}|${status}|${reportedStatus}|${ecu}`;
       }).filter(Boolean))].sort()
       : [];
+    const keys = evidenceRecorded ? allKeys : [];
+    const normalizeEcuScopeId = (value) => normalizeComparableCanEcuAddress(value)
+      || String(value || "").trim().toUpperCase().slice(0, 64)
+      || null;
+    const ecuResponseRows = [dtcSnapshot?.ecuResponses, dtcSnapshot?.ecu_responses]
+      .filter(Array.isArray)
+      .flat();
+    const readEcuResponseScope = (row) => normalizeEcuScopeId(row?.ecu || row?.ecuId || row?.ecu_id || row?.address || row?.module || row?.moduleId || row?.module_id);
+    const isReportedEcuResponse = (row) => ["reported", "responded", "ok"].includes(String(row?.status || row?.responseStatus || row?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_"));
+    const reportedEcuIds = [...new Set([
+      ...ecuResponseRows.filter(isReportedEcuResponse).map(readEcuResponseScope),
+      ...(evidenceRecorded ? rows.map((row) => normalizeEcuScopeId(row?.ecu || row?.ecuId || row?.ecu_id || row?.address || sourceEcu)) : []),
+      ...(evidenceRecorded ? [normalizeEcuScopeId(sourceEcu === "-" ? null : sourceEcu)] : [])
+    ].filter(Boolean))].sort();
+    const unresolvedEcuIds = [...new Set(ecuResponseRows
+      .filter((row) => !isReportedEcuResponse(row))
+      .map(readEcuResponseScope)
+      .filter(Boolean))].sort();
+    const reportedEcuEvidenceRecorded = !blocked
+      && (evidenceRecorded || readoutStatus === "unparsed" && reportedEcuIds.length > 0);
+    const reportedEcuKeys = reportedEcuEvidenceRecorded
+      ? allKeys.filter((key) => {
+        if (evidenceRecorded) return true;
+        const ecu = normalizeEcuScopeId(String(key || "").split("|").at(-1));
+        return ecu && reportedEcuIds.includes(ecu);
+      })
+      : [];
     return {
       schemaVersion: "dtc_identity_summary_v1",
       schema_version: "dtc_identity_summary_v1",
@@ -10911,6 +10937,16 @@
       evidence_recorded: evidenceRecorded,
       keys,
       dtc_keys: [...keys],
+      completeEvidenceRecorded: evidenceRecorded,
+      complete_evidence_recorded: evidenceRecorded,
+      reportedEcuEvidenceRecorded,
+      reported_ecu_evidence_recorded: reportedEcuEvidenceRecorded,
+      reportedEcuIds,
+      reported_ecu_ids: [...reportedEcuIds],
+      unresolvedEcuIds,
+      unresolved_ecu_ids: [...unresolvedEcuIds],
+      reportedEcuKeys,
+      reported_ecu_keys: [...reportedEcuKeys],
       readOnly: true,
       read_only: true,
       wouldTransmit: false,
@@ -12765,13 +12801,53 @@
       const keys = Array.isArray(keyList)
         ? [...new Set(keyList.map((key) => String(key || "").trim()).filter(Boolean))].sort()
         : [];
-      return { evidenceRecorded, keys };
+      const completeEvidenceRecorded = evidenceRecorded || readAliasValue(identitySummary, "completeEvidenceRecorded") === true;
+      const reportedEcuEvidenceRecorded = completeEvidenceRecorded || readAliasValue(identitySummary, "reportedEcuEvidenceRecorded") === true;
+      const reportedEcuKeyList = identitySummary?.reportedEcuKeys || identitySummary?.reported_ecu_keys;
+      const reportedEcuKeys = Array.isArray(reportedEcuKeyList)
+        ? [...new Set(reportedEcuKeyList.map((key) => String(key || "").trim()).filter(Boolean))].sort()
+        : completeEvidenceRecorded ? [...keys] : [];
+      const reportedEcuIdList = identitySummary?.reportedEcuIds || identitySummary?.reported_ecu_ids;
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
+        || String(value || "").trim().toUpperCase().slice(0, 64)
+        || null;
+      const reportedEcuIds = Array.isArray(reportedEcuIdList)
+        ? [...new Set(reportedEcuIdList.map(normalizeScopeId).filter(Boolean))].sort()
+        : [];
+      return { evidenceRecorded, completeEvidenceRecorded, reportedEcuEvidenceRecorded, keys, reportedEcuKeys, reportedEcuIds };
     };
     const importedDtcIdentityEvidence = readDtcIdentityEvidence(importedCoreSessionStatus, importedFlow);
     const currentDtcIdentityEvidence = readDtcIdentityEvidence(currentCoreSessionStatus, currentFlow);
-    const dtcIdentityComparisonAvailable = importedDtcIdentityEvidence.evidenceRecorded && currentDtcIdentityEvidence.evidenceRecorded;
-    const dtcIdentityAddedKeys = dtcIdentityComparisonAvailable ? diffIds(currentDtcIdentityEvidence.keys, importedDtcIdentityEvidence.keys) : [];
-    const dtcIdentityRemovedKeys = dtcIdentityComparisonAvailable ? diffIds(importedDtcIdentityEvidence.keys, currentDtcIdentityEvidence.keys) : [];
+    const completeDtcIdentityComparisonAvailable = importedDtcIdentityEvidence.completeEvidenceRecorded && currentDtcIdentityEvidence.completeEvidenceRecorded;
+    const comparableDtcEcuIds = completeDtcIdentityComparisonAvailable
+      ? []
+      : importedDtcIdentityEvidence.completeEvidenceRecorded
+        ? [...currentDtcIdentityEvidence.reportedEcuIds]
+        : currentDtcIdentityEvidence.completeEvidenceRecorded
+          ? [...importedDtcIdentityEvidence.reportedEcuIds]
+          : importedDtcIdentityEvidence.reportedEcuIds.filter((ecuId) => currentDtcIdentityEvidence.reportedEcuIds.includes(ecuId));
+    const reportedEcuDtcIdentityComparisonAvailable = !completeDtcIdentityComparisonAvailable
+      && importedDtcIdentityEvidence.reportedEcuEvidenceRecorded
+      && currentDtcIdentityEvidence.reportedEcuEvidenceRecorded
+      && comparableDtcEcuIds.length > 0;
+    const normalizeDtcIdentityKeyForScope = (key) => {
+      const parts = String(key || "").split("|");
+      if (parts.length < 6) return String(key || "");
+      parts[parts.length - 1] = normalizeComparableCanEcuAddress(parts.at(-1)) || String(parts.at(-1) || "").trim().toUpperCase();
+      return parts.join("|");
+    };
+    const filterDtcIdentityKeysByScope = (evidence) => evidence.reportedEcuKeys
+      .filter((key) => comparableDtcEcuIds.includes(normalizeComparableCanEcuAddress(String(key || "").split("|").at(-1)) || String(key || "").split("|").at(-1)?.trim().toUpperCase()))
+      .map(normalizeDtcIdentityKeyForScope);
+    const importedDtcIdentityKeys = completeDtcIdentityComparisonAvailable
+      ? importedDtcIdentityEvidence.keys
+      : reportedEcuDtcIdentityComparisonAvailable ? filterDtcIdentityKeysByScope(importedDtcIdentityEvidence) : [];
+    const currentDtcIdentityKeys = completeDtcIdentityComparisonAvailable
+      ? currentDtcIdentityEvidence.keys
+      : reportedEcuDtcIdentityComparisonAvailable ? filterDtcIdentityKeysByScope(currentDtcIdentityEvidence) : [];
+    const dtcIdentityComparisonAvailable = completeDtcIdentityComparisonAvailable || reportedEcuDtcIdentityComparisonAvailable;
+    const dtcIdentityAddedKeys = dtcIdentityComparisonAvailable ? diffIds(currentDtcIdentityKeys, importedDtcIdentityKeys) : [];
+    const dtcIdentityRemovedKeys = dtcIdentityComparisonAvailable ? diffIds(importedDtcIdentityKeys, currentDtcIdentityKeys) : [];
     const readDtcStatusByteEvidence = (summary = {}, flow = {}) => {
       const statusByteSummary = readAliasValue(summary, "dtcStatusByteSummary") || readAliasValue(flow, "dtcStatusByteSummary");
       const evidenceRecorded = readAliasValue(statusByteSummary, "evidenceRecorded") === true;
@@ -12935,12 +13011,16 @@
       observed_ecu_added_keys: [...observedEcuAddedKeys],
       observedEcuRemovedKeys,
       observed_ecu_removed_keys: [...observedEcuRemovedKeys],
-      importedDtcIdentityKeys: [...importedDtcIdentityEvidence.keys],
-      imported_dtc_identity_keys: [...importedDtcIdentityEvidence.keys],
-      currentDtcIdentityKeys: [...currentDtcIdentityEvidence.keys],
-      current_dtc_identity_keys: [...currentDtcIdentityEvidence.keys],
+      importedDtcIdentityKeys: [...importedDtcIdentityKeys],
+      imported_dtc_identity_keys: [...importedDtcIdentityKeys],
+      currentDtcIdentityKeys: [...currentDtcIdentityKeys],
+      current_dtc_identity_keys: [...currentDtcIdentityKeys],
       dtcIdentityComparisonAvailable,
       dtc_identity_comparison_available: dtcIdentityComparisonAvailable,
+      dtcIdentityComparisonScope: completeDtcIdentityComparisonAvailable ? "complete" : reportedEcuDtcIdentityComparisonAvailable ? "reported_ecus" : "unavailable",
+      dtc_identity_comparison_scope: completeDtcIdentityComparisonAvailable ? "complete" : reportedEcuDtcIdentityComparisonAvailable ? "reported_ecus" : "unavailable",
+      dtcIdentityComparableEcuIds: [...comparableDtcEcuIds],
+      dtc_identity_comparable_ecu_ids: [...comparableDtcEcuIds],
       dtcIdentityKeysChanged: dtcIdentityComparisonAvailable && dtcIdentityAddedKeys.length + dtcIdentityRemovedKeys.length > 0,
       dtc_identity_keys_changed: dtcIdentityComparisonAvailable && dtcIdentityAddedKeys.length + dtcIdentityRemovedKeys.length > 0,
       dtcIdentityAddedKeys,
