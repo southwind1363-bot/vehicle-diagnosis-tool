@@ -19,7 +19,7 @@ const INTERFACE_CANDIDATE_DISPLAY_NAMES = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "CANable候補"
 });
 const BRIDGE_BACKED_IMPLEMENTATION_CHECK_BUILDERS = Object.freeze({
-  "user-vci-techstream-j2534": (item) => [
+  "user-vci-techstream-j2534": () => [
     {
       label: "VCI列挙表示",
       available: hasBridgeVciSupport()
@@ -27,13 +27,9 @@ const BRIDGE_BACKED_IMPLEMENTATION_CHECK_BUILDERS = Object.freeze({
     {
       label: "アダプター識別",
       available: hasBridgeAdapterIdentitySupport()
-    },
-    {
-      label: "実機読取",
-      available: item.connectionEnabled === true
     }
   ],
-  "user-vci-thinkcar-bluetooth": (item) => [
+  "user-vci-thinkcar-bluetooth": () => [
     {
       label: "VCI列挙表示",
       available: hasBridgeVciSupport()
@@ -41,13 +37,9 @@ const BRIDGE_BACKED_IMPLEMENTATION_CHECK_BUILDERS = Object.freeze({
     {
       label: "Bluetooth読取取込",
       available: hasBridgeBluetoothImportSupport()
-    },
-    {
-      label: "実機読取",
-      available: item.connectionEnabled === true
     }
   ],
-  "user-vci-rcmall-mks-canable-v2-pro": (item) => [
+  "user-vci-rcmall-mks-canable-v2-pro": () => [
     {
       label: "VCI列挙表示",
       available: hasBridgeVciSupport()
@@ -55,17 +47,12 @@ const BRIDGE_BACKED_IMPLEMENTATION_CHECK_BUILDERS = Object.freeze({
     {
       label: "CAN系読取取込の器",
       available: hasBridgeDiagnosticImportSupport()
-    },
-    {
-      label: "実機読取",
-      available: item.connectionEnabled === true
     }
   ]
 });
 const ELM327_IMPLEMENTATION_CHECK_LABELS = Object.freeze({
   webSerial: "Web Serial準備",
-  standardRead: "標準OBD読取要求",
-  liveConnection: "実機読取"
+  standardRead: "標準OBD読取要求"
 });
 const OEM_SCANNER_TOOL_HINTS = new Set(["Techstream", "CONSULT", "HDS", "IDS"]);
 
@@ -235,13 +222,13 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2793件",
+  validationCheckLabel: "OBD安全検証 2794件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "DTC・ECU応答の取得時刻、通信方式、読取時系列をセッション保存とJSON再取込で保持",
+  recentMilestone: "DTC・PID・FF・レディネス・ECU情報・Mode06のECU別生応答を同一scan sessionへ統合",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.51";
-const APP_LAST_UPDATED = "2026-08-17";
+const APP_VERSION = "3.12.52";
+const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -3612,16 +3599,10 @@ function buildLocalBridgeImplementationSnapshot() {
     }));
   const modelDone = modelChecks.filter((item) => item.available).length;
   const driverDone = driverChecks.filter((item) => item.available).length;
-  const totalCount = modelChecks.length + driverChecks.length;
-  const progressPercent = totalCount ? Math.round(((modelDone + driverDone) / totalCount) * 100) : 0;
-  const doneLabels = [
-    ...modelChecks.filter((item) => item.available).map((item) => item.label),
-    ...driverChecks.filter((item) => item.available).map((item) => `${item.label} 実機適合`)
-  ];
-  const missingLabels = [
-    ...modelChecks.filter((item) => !item.available).map((item) => item.label),
-    ...driverChecks.filter((item) => !item.available).map((item) => `${item.label} 実機適合`)
-  ];
+  const progressPercent = modelChecks.length ? Math.round((modelDone / modelChecks.length) * 100) : 0;
+  const doneLabels = modelChecks.filter((item) => item.available).map((item) => item.label);
+  const missingLabels = modelChecks.filter((item) => !item.available).map((item) => item.label);
+  const hardwareMissingLabels = driverChecks.filter((item) => !item.available).map((item) => `${item.label} 実機適合`);
 
   return {
     progressPercent,
@@ -3631,7 +3612,8 @@ function buildLocalBridgeImplementationSnapshot() {
     driverTotal: driverChecks.length,
     doneLabels,
     missingLabels,
-    currentBasis: `読取モデル ${modelDone}/${modelChecks.length}項目、実VCI適合 ${driverDone}/${driverChecks.length}系統を確認済み。`,
+    hardwareMissingLabels,
+    currentBasis: `ソフト実装 ${modelDone}/${modelChecks.length}項目。実VCI適合は別集計で ${driverDone}/${driverChecks.length}系統を確認済み。`,
     nextBuild: "J2534 / CANable / THINKCAR の実機読取差分を同じread-onlyブリッジ契約へ揃える。",
     etaTarget: "2026-Q3 見込み"
   };
@@ -3682,10 +3664,6 @@ function buildBridgeBackedInterfaceSnapshot(item = {}) {
     {
       label: "統合入力",
       available: hasBridgeMergeDiagnosticInputsSupport()
-    },
-    {
-      label: getInterfaceConnectionCheckLabel(item?.id),
-      available: item.connectionEnabled === true
     }
   ];
   const doneCount = checks.filter((check) => check.available).length;
@@ -3693,7 +3671,7 @@ function buildBridgeBackedInterfaceSnapshot(item = {}) {
   const progressPercent = checks.length ? Math.round((doneCount / checks.length) * 100) : 0;
   const guide = getInterfaceCandidateGuideByItem(item);
   const hardwareCompatibilityConfirmed = item?.hardwareCompatibilityConfirmed === true;
-  const implementationStatus = doneCount >= checks.length - 1
+  const implementationStatus = doneCount >= checks.length
     ? guide?.statusReady || "実機読取確認待ち"
     : doneCount >= 6
       ? guide?.statusMid || "read-only取込あり"
@@ -3710,7 +3688,7 @@ function buildBridgeBackedInterfaceSnapshot(item = {}) {
       ? `${guide.basisPrefix} ${doneCount}/${checks.length}項目を実装済み。${guide.basisSuffix || ""}`.trim()
       : `bridge候補の読取器 ${doneCount}/${checks.length}項目を実装済み。`} 実機適合: ${hardwareCompatibilityConfirmed ? "確認済み" : "未確認"}`,
     nextBuild: guide?.nextBuild || "実機読取応答を同じ read-only 契約へ揃える。",
-    etaTarget: doneCount >= checks.length - 1 ? "2026-Q3 見込み" : "2026-Q3 後半見込み"
+    etaTarget: doneCount >= checks.length ? "実機確認後" : "2026-Q3 後半見込み"
   };
 }
 
@@ -3904,10 +3882,6 @@ function getElm327ImplementationChecks(item, connectionProfile, preparedRequests
     {
       label: ELM327_IMPLEMENTATION_CHECK_LABELS.standardRead,
       available: ["read_stored_dtc", "read_live_pid_snapshot", "read_freeze_frame"].every((id) => preparedRequests.some((request) => request.id === id))
-    },
-    {
-      label: ELM327_IMPLEMENTATION_CHECK_LABELS.liveConnection,
-      available: item.connectionEnabled === true
     }
   ];
 }
@@ -4272,8 +4246,10 @@ function renderObdProgressOverview() {
   ]);
 
   const phaseProgress = averageProgressPercent(interfacePhases.map((item) => getInterfaceProgressState(item.id)?.progressPercent));
-  const candidateProgress = averageProgressPercent(interfaceCatalogStates.map((item) => item.progressPercent));
+  const candidateProgress = averageProgressPercent(interfaceCatalogStates.map((item) => item.implementationProgressPercent));
   const interfaceProgress = averageProgressPercent([phaseProgress, candidateProgress]);
+  const hardwareConfirmedCount = interfaceCatalogStates.filter((item) => item.hardwareCompatibilityConfirmed === true).length;
+  const vehicleReadoutConfirmedCount = interfaceCatalogStates.filter((item) => item.connectionEnabled === true).length;
   const capabilityProgress = averageProgressPercent(capabilityItems.map((item) => item.progress_percent));
   const coverageProgress = averageProgressPercent(coverageItems.map((item) => item.progress_percent));
   const readoutProgress = averageProgressPercent(
@@ -4322,9 +4298,9 @@ function renderObdProgressOverview() {
     {
       tone: "score",
       highlight: true,
-      title: "完成度",
+      title: "ソフト完成度",
       primary: `診断機全体 ${overallProgress}% / OBD2読取 ${readoutProgress}%`,
-      detail: `機能 ${capabilityProgress}% / 網羅 ${coverageProgress}% / 読取 ${interfaceProgress}%`
+      detail: `機能 ${capabilityProgress}% / 網羅 ${coverageProgress}% / インターフェース実装 ${interfaceProgress}%。実機適合は含めません。`
     },
     {
       tone: "breakdown",
@@ -4339,8 +4315,8 @@ function renderObdProgressOverview() {
     },
     {
       title: "対応インターフェース",
-      primary: `候補 ${interfaceCatalogStates.length}件 / 平均 ${candidateProgress}%`,
-      detail: `${autoRouteNote} / 遅れ: ${weakestInterfaces || "集計中"}`
+      primary: `ソフト平均 ${candidateProgress}% / 実機適合 ${hardwareConfirmedCount}/${interfaceCatalogStates.length}件`,
+      detail: `実車読取 ${vehicleReadoutConfirmedCount}/${interfaceCatalogStates.length}件 / ${autoRouteNote} / 実装遅れ: ${weakestInterfaces || "集計中"}`
     },
     {
       title: "読取機能",
@@ -9138,7 +9114,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     title.textContent = `${item.phase}. ${item.label}`;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
-    badge.textContent = `${progress.progressPercent || 0}%`;
+    badge.textContent = `${progress.progressPercent || 0}% ソフト`;
     head.append(title, badge);
 
     const role = document.createElement("p");
@@ -9149,6 +9125,19 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
 
     const status = document.createElement("p");
     status.textContent = `${item.currentAvailability || "確認中"} / ${progress.currentBasis || ""}`;
+
+    const phaseCandidateIds = item.id === "local_bridge"
+      ? ["user-vci-elm327", ...BRIDGE_BACKED_INTERFACE_IDS]
+      : Object.entries(OBD_INTERFACE_PROGRESS_BY_CATALOG_ID)
+        .filter(([, phaseId]) => phaseId === item.id)
+        .map(([catalogId]) => catalogId);
+    const phaseCandidates = interfaceCatalog.filter((candidate) => phaseCandidateIds.includes(candidate.id));
+    const hardwareConfirmed = phaseCandidates.filter((candidate) => candidate.hardwareCompatibilityConfirmed === true).length;
+    const vehicleReadoutConfirmed = phaseCandidates.filter((candidate) => candidate.connectionEnabled === true).length;
+    const hardware = document.createElement("p");
+    hardware.textContent = phaseCandidates.length
+      ? `実機適合 ${hardwareConfirmed}/${phaseCandidates.length} / 実車読取 ${vehicleReadoutConfirmed}/${phaseCandidates.length}`
+      : "実機適合: 対象VCI未選定";
 
     const next = document.createElement("p");
     next.textContent = progress.nextBuild || "";
@@ -9169,7 +9158,7 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
         startGeneralBridgeCheck();
       });
     }
-    card.append(head, role, scope, status, next, eta, button);
+    card.append(head, role, scope, status, hardware, next, eta, button);
     obdInterfaceRoadmapGrid.appendChild(card);
   });
 
