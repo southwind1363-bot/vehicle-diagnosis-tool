@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2803件",
+  validationCheckLabel: "OBD安全検証 2804件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial再読取のFF・ECU情報を先頭確認から最新読取束へ置換",
+  recentMilestone: "Web Serial再読取の対応PIDを0100先頭確認から最新ページ束へ置換",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.57";
+const APP_VERSION = "3.12.58";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5604,15 +5604,17 @@ function isWebSerialSupportedPidCommand(command) {
   return /^01(?:00|20|40|60|80|A0|C0|E0)$/.test(String(command || "").trim().toUpperCase());
 }
 
-function resolveWebSerialSupportedPidReadoutResponses(previous = [], commandResponses = []) {
+function resolveWebSerialSupportedPidReadoutResponses(previous = [], commandResponses = [], attemptedCommands = []) {
   const currentResponses = (Array.isArray(commandResponses) ? commandResponses : [])
     .map((item) => ({
       command: String(item?.command || "").trim().toUpperCase(),
       response: String(item?.response || "").trim()
     }))
     .filter((item) => isWebSerialSupportedPidCommand(item.command) && item.response);
-  if (!currentResponses.length) return Array.isArray(previous) ? previous : [];
-  const resolved = currentResponses.some((item) => item.command === "0100")
+  const baseReadAttempted = (Array.isArray(attemptedCommands) ? attemptedCommands : [])
+    .some((command) => String(command || "").trim().toUpperCase() === "0100");
+  if (!currentResponses.length) return baseReadAttempted ? [] : (Array.isArray(previous) ? previous : []);
+  const resolved = baseReadAttempted || currentResponses.some((item) => item.command === "0100")
     ? []
     : (Array.isArray(previous) ? previous : []).filter((item) => isWebSerialSupportedPidCommand(item?.command) && String(item?.response || "").trim());
   for (const item of currentResponses) {
@@ -5623,8 +5625,8 @@ function resolveWebSerialSupportedPidReadoutResponses(previous = [], commandResp
   return resolved;
 }
 
-function updateWebSerialSupportedPidReadoutResponses(commandResponses = []) {
-  const resolved = resolveWebSerialSupportedPidReadoutResponses(obdDevSession.supportedPidReadoutResponses, commandResponses);
+function updateWebSerialSupportedPidReadoutResponses(commandResponses = [], attemptedCommands = []) {
+  const resolved = resolveWebSerialSupportedPidReadoutResponses(obdDevSession.supportedPidReadoutResponses, commandResponses, attemptedCommands);
   obdDevSession.supportedPidReadoutResponses = resolved;
   return resolved;
 }
@@ -6060,7 +6062,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   updateWebSerialFreezeFrameCapabilityResponse(commandResponses, attemptedCommands);
   const capturedAt = new Date().toISOString();
   const dtcResponseOverrides = buildWebSerialDtcResponseOverrides(commandResponses, options?.attemptedCommands);
-  const supportedPidResponseOverride = buildWebSerialSupportedPidResponseOverride(updateWebSerialSupportedPidReadoutResponses(commandResponses));
+  const supportedPidResponseOverride = buildWebSerialSupportedPidResponseOverride(updateWebSerialSupportedPidReadoutResponses(commandResponses, attemptedCommands));
   const freezeFrameResponseOverride = buildWebSerialFreezeFrameResponseOverride(updateWebSerialFreezeFrameReadoutResponses(commandResponses, attemptedCommands));
   const ecuInfoResponseOverride = buildWebSerialEcuInfoResponseOverride(updateWebSerialEcuInfoReadoutResponses(commandResponses, attemptedCommands));
   const readinessResponseOverride = buildWebSerialReadinessResponseOverride(commandResponses);
@@ -6100,6 +6102,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     || commandResponses.some((item) => obdDevSession.selectedPidList.includes(String(item?.command || "").trim().toUpperCase()));
   const latestSnapshotOverrides = {
     ...(requestedLivePidValues ? { livePidSnapshot: currentLivePidSnapshot } : {}),
+    ...(attemptedCommandSet.has("0100") ? { supportedPidMatrix: currentAttemptSession.supportedPidMatrix } : {}),
     ...(attemptedCommandSet.has("0202") ? { freezeFrameSnapshot: currentAttemptSession.freezeFrameSnapshot } : {}),
     ...(attemptedCommandSet.has("0900") ? { ecuInfoSnapshot: currentAttemptSession.ecuInfoSnapshot } : {}),
     ...(options?.replaceReadinessSnapshot === true ? { readinessSnapshot: currentAttemptSession.readinessSnapshot } : {}),
