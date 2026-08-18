@@ -6663,6 +6663,13 @@
     const freezeFrameValueReportedEcuKeys = freezeFrameValueReportedEcuEvidenceRecorded
       ? freezeFrameValueKeys.filter((key) => freezeFrameValueEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[2])))
       : [];
+    const freezeFrameTriggerReportedEcuEvidenceRecorded = freezeFrameTriggerEvidenceRecorded
+      || (freezeFrameSnapshot?.blocked !== true && freezeFrameSnapshot?.isBlocked !== true && freezeFrameSnapshot?.is_blocked !== true
+        && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
+        && reportedFreezeFrameEcuIds.length > 0);
+    const freezeFrameTriggerReportedEcuKeys = freezeFrameTriggerReportedEcuEvidenceRecorded
+      ? freezeFrameTriggerKeys.filter((key) => freezeFrameTriggerEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[5])))
+      : [];
     const freezeFrameUdsSnapshotRecords = Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords)
       ? freezeFrameSnapshot.udsDtcSnapshotRecords
       : Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records)
@@ -7000,6 +7007,12 @@
       freeze_frame_trigger_keys: [...recordedFreezeFrameTriggerKeys],
       freezeFrameTriggerEvidenceRecorded,
       freeze_frame_trigger_evidence_recorded: freezeFrameTriggerEvidenceRecorded,
+      freezeFrameTriggerReportedEcuEvidenceRecorded,
+      freeze_frame_trigger_reported_ecu_evidence_recorded: freezeFrameTriggerReportedEcuEvidenceRecorded,
+      freezeFrameTriggerReportedEcuIds: reportedFreezeFrameEcuIds,
+      freeze_frame_trigger_reported_ecu_ids: [...reportedFreezeFrameEcuIds],
+      freezeFrameTriggerReportedEcuKeys: freezeFrameTriggerReportedEcuKeys,
+      freeze_frame_trigger_reported_ecu_keys: [...freezeFrameTriggerReportedEcuKeys],
       hasFreezeFrameTriggerEvidence: recordedFreezeFrameTriggerCount > 0,
       has_freeze_frame_trigger_evidence: recordedFreezeFrameTriggerCount > 0,
       hasReadinessMonitors: countsById.readiness_snapshot > 0,
@@ -14705,6 +14718,9 @@
       freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
       freezeFrameTriggerKeys: ["freeze_frame_trigger_keys"],
       freezeFrameTriggerEvidenceRecorded: ["freeze_frame_trigger_evidence_recorded"],
+      freezeFrameTriggerReportedEcuEvidenceRecorded: ["freeze_frame_trigger_reported_ecu_evidence_recorded"],
+      freezeFrameTriggerReportedEcuIds: ["freeze_frame_trigger_reported_ecu_ids"],
+      freezeFrameTriggerReportedEcuKeys: ["freeze_frame_trigger_reported_ecu_keys"],
       totalValueCount: ["total_value_count"]
     };
     const readField = (summary = {}, field) => {
@@ -14851,9 +14867,43 @@
       : [];
     const importedFreezeFrameTriggerEvidenceRecorded = readBoolean(importedInventory, "freezeFrameTriggerEvidenceRecorded");
     const currentFreezeFrameTriggerEvidenceRecorded = readBoolean(currentSummary, "freezeFrameTriggerEvidenceRecorded");
-    const freezeFrameTriggerComparisonAvailable = importedFreezeFrameTriggerEvidenceRecorded && currentFreezeFrameTriggerEvidenceRecorded;
-    const importedFreezeFrameTriggerKeys = readTriggerKeys(importedInventory);
-    const currentFreezeFrameTriggerKeys = readTriggerKeys(currentSummary);
+    const importedAllFreezeFrameTriggerKeys = readTriggerKeys(importedInventory);
+    const currentAllFreezeFrameTriggerKeys = readTriggerKeys(currentSummary);
+    const readFreezeFrameTriggerReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
+        || String(value || "").trim().toUpperCase()
+        || null;
+      const explicitIds = readIds(summary, "freezeFrameTriggerReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitIds)].sort()
+        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[5])).filter(Boolean))].sort();
+      const explicitKeys = readIds(summary, "freezeFrameTriggerReportedEcuKeys");
+      return {
+        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameTriggerReportedEcuEvidenceRecorded"),
+        reportedEcuIds,
+        reportedEcuKeys: explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys]
+      };
+    };
+    const importedFreezeFrameTriggerReportedEcuScope = readFreezeFrameTriggerReportedEcuScope(importedInventory, importedFreezeFrameTriggerEvidenceRecorded, importedAllFreezeFrameTriggerKeys);
+    const currentFreezeFrameTriggerReportedEcuScope = readFreezeFrameTriggerReportedEcuScope(currentSummary, currentFreezeFrameTriggerEvidenceRecorded, currentAllFreezeFrameTriggerKeys);
+    const completeFreezeFrameTriggerComparisonAvailable = importedFreezeFrameTriggerEvidenceRecorded && currentFreezeFrameTriggerEvidenceRecorded;
+    const comparableFreezeFrameTriggerEcuIds = completeFreezeFrameTriggerComparisonAvailable
+      ? []
+      : importedFreezeFrameTriggerReportedEcuScope.evidenceRecorded && currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded
+        ? importedFreezeFrameTriggerReportedEcuScope.reportedEcuIds.filter((id) => currentFreezeFrameTriggerReportedEcuScope.reportedEcuIds.includes(id))
+        : [];
+    const reportedEcuFreezeFrameTriggerComparisonAvailable = !completeFreezeFrameTriggerComparisonAvailable && comparableFreezeFrameTriggerEcuIds.length > 0;
+    const freezeFrameTriggerComparisonAvailable = completeFreezeFrameTriggerComparisonAvailable || reportedEcuFreezeFrameTriggerComparisonAvailable;
+    const filterFreezeFrameTriggerKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[5]) || String(key || "").split("|")[5]?.trim().toUpperCase();
+      return comparableFreezeFrameTriggerEcuIds.includes(ecu);
+    });
+    const importedFreezeFrameTriggerKeys = completeFreezeFrameTriggerComparisonAvailable
+      ? importedAllFreezeFrameTriggerKeys
+      : reportedEcuFreezeFrameTriggerComparisonAvailable ? filterFreezeFrameTriggerKeysByScope(importedFreezeFrameTriggerReportedEcuScope) : [];
+    const currentFreezeFrameTriggerKeys = completeFreezeFrameTriggerComparisonAvailable
+      ? currentAllFreezeFrameTriggerKeys
+      : reportedEcuFreezeFrameTriggerComparisonAvailable ? filterFreezeFrameTriggerKeysByScope(currentFreezeFrameTriggerReportedEcuScope) : [];
     const freezeFrameTriggerAddedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(currentFreezeFrameTriggerKeys, importedFreezeFrameTriggerKeys) : [];
     const freezeFrameTriggerRemovedKeys = freezeFrameTriggerComparisonAvailable ? diffIds(importedFreezeFrameTriggerKeys, currentFreezeFrameTriggerKeys) : [];
     const readFreezeFrameValueKeys = (summary) => Array.isArray(readField(summary, "freezeFrameValueKeys"))
@@ -15476,8 +15526,16 @@
       imported_freeze_frame_trigger_evidence_recorded: importedFreezeFrameTriggerEvidenceRecorded,
       currentFreezeFrameTriggerEvidenceRecorded,
       current_freeze_frame_trigger_evidence_recorded: currentFreezeFrameTriggerEvidenceRecorded,
+      importedFreezeFrameTriggerReportedEcuEvidenceRecorded: importedFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
+      imported_freeze_frame_trigger_reported_ecu_evidence_recorded: importedFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
+      currentFreezeFrameTriggerReportedEcuEvidenceRecorded: currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
+      current_freeze_frame_trigger_reported_ecu_evidence_recorded: currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
       freezeFrameTriggerComparisonAvailable,
       freeze_frame_trigger_comparison_available: freezeFrameTriggerComparisonAvailable,
+      freezeFrameTriggerComparisonScope: completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable",
+      freeze_frame_trigger_comparison_scope: completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable",
+      freezeFrameTriggerComparableEcuIds: comparableFreezeFrameTriggerEcuIds,
+      freeze_frame_trigger_comparable_ecu_ids: [...comparableFreezeFrameTriggerEcuIds],
       importedFreezeFrameTriggerKeys,
       imported_freeze_frame_trigger_keys: importedFreezeFrameTriggerKeys,
       currentFreezeFrameTriggerKeys,
@@ -15488,8 +15546,8 @@
       freeze_frame_trigger_added_keys: freezeFrameTriggerAddedKeys,
       freezeFrameTriggerRemovedKeys,
       freeze_frame_trigger_removed_keys: freezeFrameTriggerRemovedKeys,
-      freezeFrameTriggerCountDelta: freezeFrameTriggerComparisonAvailable ? readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount") : null,
-      freeze_frame_trigger_count_delta: freezeFrameTriggerComparisonAvailable ? readCount(currentSummary, "freezeFrameTriggerCount") - readCount(importedInventory, "freezeFrameTriggerCount") : null,
+      freezeFrameTriggerCountDelta: freezeFrameTriggerComparisonAvailable ? currentFreezeFrameTriggerKeys.length - importedFreezeFrameTriggerKeys.length : null,
+      freeze_frame_trigger_count_delta: freezeFrameTriggerComparisonAvailable ? currentFreezeFrameTriggerKeys.length - importedFreezeFrameTriggerKeys.length : null,
       importedReadinessMonitorCount: readCount(importedInventory, "readinessMonitorCount"),
       imported_readiness_monitor_count: readCount(importedInventory, "readinessMonitorCount"),
       currentReadinessMonitorCount: readCount(currentSummary, "readinessMonitorCount"),
@@ -15771,6 +15829,12 @@
       freeze_frame_trigger_keys: normalizeIds(summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys),
       freezeFrameTriggerEvidenceRecorded: pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
       freeze_frame_trigger_evidence_recorded: pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
+      freezeFrameTriggerReportedEcuEvidenceRecorded: pickDefined(summary.freezeFrameTriggerReportedEcuEvidenceRecorded, summary.freeze_frame_trigger_reported_ecu_evidence_recorded, summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
+      freeze_frame_trigger_reported_ecu_evidence_recorded: pickDefined(summary.freezeFrameTriggerReportedEcuEvidenceRecorded, summary.freeze_frame_trigger_reported_ecu_evidence_recorded, summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
+      freezeFrameTriggerReportedEcuIds: normalizeIds(summary.freezeFrameTriggerReportedEcuIds || summary.freeze_frame_trigger_reported_ecu_ids),
+      freeze_frame_trigger_reported_ecu_ids: normalizeIds(summary.freezeFrameTriggerReportedEcuIds || summary.freeze_frame_trigger_reported_ecu_ids),
+      freezeFrameTriggerReportedEcuKeys: normalizeIds(summary.freezeFrameTriggerReportedEcuKeys || summary.freeze_frame_trigger_reported_ecu_keys || (pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true ? summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys : [])),
+      freeze_frame_trigger_reported_ecu_keys: normalizeIds(summary.freezeFrameTriggerReportedEcuKeys || summary.freeze_frame_trigger_reported_ecu_keys || (pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true ? summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys : [])),
       readinessMonitorCount: toCount("readinessMonitorCount", "readiness_monitor_count", toCount("readinessIncompleteCount", "readiness_incomplete_count", 0)),
       readiness_monitor_count: toCount("readinessMonitorCount", "readiness_monitor_count", toCount("readinessIncompleteCount", "readiness_incomplete_count", 0)),
       readinessMonitorKeys: normalizeIds(summary.readinessMonitorKeys || summary.readiness_monitor_keys),
