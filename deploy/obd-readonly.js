@@ -3540,13 +3540,14 @@
       ...mergeProtocolProvenance(data, response)
     };
     const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
+    const bridgeDtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
     const normalizedEcuResponses = ecuRows.map((row) => {
       const decodedRawSnapshot = decodedRawEcuDtcSnapshots.get(row);
       return {
         ecu: row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null,
         ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
         ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
-        status: row?.status || row?.response_status || row?.responseStatus || decodedRawSnapshot?.dtcReadoutStatus || "unknown",
+        status: row?.status || row?.response_status || row?.responseStatus || decodedRawSnapshot?.dtcReadoutStatus || bridgeDtcReadoutStatus,
         codeCount: Number.isInteger(decodedRawSnapshot?.dtcCount) ? decodedRawSnapshot.dtcCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null
       };
     });
@@ -3558,14 +3559,36 @@
     const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
+    const isCompleteDtcEcuResponseStatus = (value) => ["reported", "responded", "ok"].includes(String(value || "unknown").trim().toLowerCase());
+    const ecuReadoutStatuses = normalizedEcuResponses.map((row) => String(row.status || "unknown").trim().toLowerCase());
+    const dtcReadoutStatus = bridgeDtcReadoutStatus === "blocked" || ecuReadoutStatuses.includes("blocked")
+      ? "blocked"
+      : bridgeDtcReadoutStatus === "unparsed" || ecuReadoutStatuses.some((status) => !isCompleteDtcEcuResponseStatus(status))
+        ? "unparsed"
+        : bridgeDtcReadoutStatus;
     const hasReportedDtcCount = normalizedEcuResponses.some((row) => Number.isSafeInteger(row?.codeCount) && row.codeCount > 0);
     const dtcStatusSummary = buildDtcStatusSummary({
-      reportedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false ? [defaultStatus] : [],
-      reportedCountOnlyStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false && normalizedDtcs.length === 0 && hasReportedDtcCount ? [defaultStatus] : [],
+      reportedStatuses: dtcReadoutStatus === "reported" ? [defaultStatus] : [],
+      reportedCountOnlyStatuses: dtcReadoutStatus === "reported" && normalizedDtcs.length === 0 && hasReportedDtcCount ? [defaultStatus] : [],
       dtcs: normalizedDtcs,
-      includeObservedStatuses: resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
+      includeObservedStatuses: dtcReadoutStatus === "reported"
     });
-    const dtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
+    const dtcEcuIds = [...new Set(normalizedEcuResponses.map((row) => row.ecu).filter(Boolean))];
+    const reportedEcuResponseCount = normalizedEcuResponses.filter((row) => isCompleteDtcEcuResponseStatus(row.status)).length;
+    const dtcEcuAggregateSummary = normalizedEcuResponses.length ? {
+      schemaVersion: "dtc_ecu_aggregate_summary_v1",
+      schema_version: "dtc_ecu_aggregate_summary_v1",
+      ecuCount: dtcEcuIds.length,
+      ecu_count: dtcEcuIds.length,
+      responseCount: normalizedEcuResponses.length,
+      response_count: normalizedEcuResponses.length,
+      reportedResponseCount: reportedEcuResponseCount,
+      reported_response_count: reportedEcuResponseCount,
+      incompleteResponseCount: normalizedEcuResponses.length - reportedEcuResponseCount,
+      incomplete_response_count: normalizedEcuResponses.length - reportedEcuResponseCount,
+      allReported: reportedEcuResponseCount === normalizedEcuResponses.length,
+      all_reported: reportedEcuResponseCount === normalizedEcuResponses.length
+    } : null;
     const dtcResponseFormats = inferUdsDtcResponseFormats({
       formats: readDtcResponseFormatAliases(data),
       dtcs: normalizedDtcs,
@@ -3671,6 +3694,8 @@
       source_ecu_name: sourceEcuName,
       ecuResponses: normalizedEcuResponses,
       ecu_responses: normalizedEcuResponses,
+      dtcEcuAggregateSummary,
+      dtc_ecu_aggregate_summary: dtcEcuAggregateSummary,
       capturedAt,
       captured_at: capturedAt,
       retainedRawText: false,
@@ -7476,8 +7501,14 @@
     supportedPidMatrix = {}
   } = {}) {
     const rows = [];
-    // Failed bridge responses may retain diagnostic rows, but they are not ECU observation evidence.
+    const dtcEcuResponseRows = [dtcSnapshot?.ecuResponses, dtcSnapshot?.ecu_responses]
+      .filter(Array.isArray)
+      .flat();
+    // Failed snapshots cannot contribute values; explicit non-positive ECU outcomes remain provenance evidence.
     const readableDtcSnapshot = isReadableDiagnosticSnapshot(dtcSnapshot, ["dtcReadoutStatus", "dtc_readout_status"]) ? dtcSnapshot : {};
+    const observedDtcEcuResponseRows = hasObjectContent(readableDtcSnapshot)
+      ? dtcEcuResponseRows
+      : dtcEcuResponseRows.filter((item) => ["negative_response", "pending_response", "unparsed", "no_response"].includes(String(item?.status || item?.responseStatus || item?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_")));
     const readableLivePidSnapshot = isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot : {};
     const readableFreezeFrameSnapshot = isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot : {};
     const readableReadinessSnapshot = isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? readinessSnapshot : {};
@@ -7519,9 +7550,7 @@
     add("dtc_snapshot", [
       { ecuId: dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu, ecuName: dtcSnapshot?.sourceEcuName || dtcSnapshot?.source_ecu_name },
       ...(dtcSnapshot?.dtcs || []).map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address, ecuName: item?.ecuName || item?.ecu_name })),
-      ...[dtcSnapshot?.ecuResponses, dtcSnapshot?.ecu_responses]
-        .filter(Array.isArray)
-        .flat()
+      ...observedDtcEcuResponseRows
         .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name, readoutStatus: item?.status || item?.responseStatus || item?.response_status || null }))
     ]);
     add("ecu_response_summary", (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
@@ -19958,7 +19987,7 @@
       .flat()
       .map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 120))
       .filter(Boolean))].slice(0, 16);
-    const ecuResponses = [...new Map(
+    const explicitEcuResponses = [...new Map(
       [sourceInput.ecuResponses, sourceInput.ecu_responses]
         .filter(Array.isArray)
         .flat()
@@ -20164,8 +20193,20 @@
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
     const unknownCount = normalizedDtcs.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
     const requestedReadoutStatus = String(sourceInput.dtcReadoutStatus || sourceInput.dtc_readout_status || "").trim().toLowerCase();
+    const isCompleteDtcEcuResponseStatus = (value) => ["reported", "responded", "ok"].includes(String(value || "unknown").trim().toLowerCase());
+    const explicitEcuReadoutStatuses = explicitEcuResponses.map((row) => String(row.status || "unknown").trim().toLowerCase());
+    const baseDtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
+      ? requestedReadoutStatus
+      : normalizedDtcs.length > 0 ? "reported" : "unknown";
+    const dtcReadoutStatus = baseDtcReadoutStatus === "blocked" || explicitEcuReadoutStatuses.includes("blocked")
+      ? "blocked"
+      : baseDtcReadoutStatus === "unparsed" || explicitEcuReadoutStatuses.some((status) => !isCompleteDtcEcuResponseStatus(status))
+        ? "unparsed"
+        : baseDtcReadoutStatus === "unknown" && explicitEcuReadoutStatuses.length > 0
+          ? "reported"
+          : baseDtcReadoutStatus;
     const dtcStatusSummary = buildDtcStatusSummary({
-      reportedStatuses: [
+      reportedStatuses: dtcReadoutStatus === "reported" ? [
         ...(Array.isArray(sourceInput.reportedStatuses) ? sourceInput.reportedStatuses : []),
         ...(Array.isArray(sourceInput.reported_statuses) ? sourceInput.reported_statuses : []),
         ...(Array.isArray(sourceInput.dtcStatusSummary?.reportedStatuses) ? sourceInput.dtcStatusSummary.reportedStatuses : []),
@@ -20175,19 +20216,55 @@
         sourceInput.dtc_status,
         sourceInput.readoutStatus,
         sourceInput.readout_status
-      ],
-      reportedCountOnlyStatuses: [
+      ] : [],
+      reportedCountOnlyStatuses: dtcReadoutStatus === "reported" ? [
         ...(Array.isArray(sourceInput.reportedCountOnlyStatuses) ? sourceInput.reportedCountOnlyStatuses : []),
         ...(Array.isArray(sourceInput.reported_count_only_statuses) ? sourceInput.reported_count_only_statuses : []),
         ...(Array.isArray(sourceInput.dtcStatusSummary?.reportedCountOnlyStatuses) ? sourceInput.dtcStatusSummary.reportedCountOnlyStatuses : []),
         ...(Array.isArray(sourceInput.dtc_status_summary?.reported_count_only_statuses) ? sourceInput.dtc_status_summary.reported_count_only_statuses : [])
-      ],
+      ] : [],
       dtcs: normalizedDtcs,
-      includeObservedStatuses: requestedReadoutStatus !== "blocked"
+      includeObservedStatuses: dtcReadoutStatus === "reported"
     });
-    const dtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
-      ? requestedReadoutStatus
-      : normalizedDtcs.length > 0 ? "reported" : "unknown";
+    const explicitIntent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(sourceInput.intent)
+      ? sourceInput.intent
+      : null;
+    const observedDtcStatuses = [...new Set(normalizedDtcs.map((item) => item.status).filter((status) => ["stored", "pending", "permanent"].includes(status)))];
+    const inferredIntent = explicitIntent || (observedDtcStatuses.length === 1
+      ? observedDtcStatuses[0] === "pending"
+        ? "read_pending_dtc"
+        : observedDtcStatuses[0] === "permanent" ? "read_permanent_dtc" : "read_stored_dtc"
+      : null);
+    const inferredStatus = inferredIntent === "read_pending_dtc" ? "pending" : inferredIntent === "read_permanent_dtc" ? "permanent" : inferredIntent ? "stored" : null;
+    const ecuResponses = explicitEcuResponses.length
+      ? explicitEcuResponses
+      : resolvedSourceEcu && inferredIntent
+        ? [{
+          ecu: resolvedSourceEcu,
+          ecuName: resolvedSourceEcuName,
+          ecu_name: resolvedSourceEcuName,
+          status: dtcReadoutStatus,
+          intent: inferredIntent,
+          codeCount: inferredStatus ? normalizedDtcs.filter((item) => item.status === inferredStatus).length : normalizedDtcs.length,
+          code_count: inferredStatus ? normalizedDtcs.filter((item) => item.status === inferredStatus).length : normalizedDtcs.length
+        }]
+        : [];
+    const dtcEcuIds = [...new Set(ecuResponses.map((row) => row.ecu).filter(Boolean))];
+    const reportedEcuResponseCount = ecuResponses.filter((row) => isCompleteDtcEcuResponseStatus(row.status)).length;
+    const dtcEcuAggregateSummary = ecuResponses.length ? {
+      schemaVersion: "dtc_ecu_aggregate_summary_v1",
+      schema_version: "dtc_ecu_aggregate_summary_v1",
+      ecuCount: dtcEcuIds.length,
+      ecu_count: dtcEcuIds.length,
+      responseCount: ecuResponses.length,
+      response_count: ecuResponses.length,
+      reportedResponseCount: reportedEcuResponseCount,
+      reported_response_count: reportedEcuResponseCount,
+      incompleteResponseCount: ecuResponses.length - reportedEcuResponseCount,
+      incomplete_response_count: ecuResponses.length - reportedEcuResponseCount,
+      allReported: reportedEcuResponseCount === ecuResponses.length,
+      all_reported: reportedEcuResponseCount === ecuResponses.length
+    } : null;
     const dtcReportedStatusSummary = buildDtcReportedStatusSummary(dtcReadoutStatus === "reported" ? normalizedDtcs : []);
     const dtcResponseFormats = inferUdsDtcResponseFormats({
       formats: readDtcResponseFormatAliases(sourceInput),
@@ -20220,6 +20297,7 @@
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
       source,
+      ...(inferredIntent ? { intent: inferredIntent } : {}),
       capturedAt,
       captured_at: capturedAt,
       ...(capturedAtValues.length ? { capturedAtValues, captured_at_values: [...capturedAtValues] } : {}),
@@ -20240,6 +20318,8 @@
       source_ecu_name: resolvedSourceEcuName,
       ecuResponses,
       ecu_responses: ecuResponses,
+      dtcEcuAggregateSummary,
+      dtc_ecu_aggregate_summary: dtcEcuAggregateSummary,
       codes,
       codeCount,
       code_count: codeCount,
@@ -22170,6 +22250,13 @@
                   : null;
     const udsResponseIndex = bytes.indexOf(0x59);
     const dtcResponseSubfunction = udsResponseIndex >= 0 ? normalizeUdsDtcSubfunction(bytes[udsResponseIndex + 1]) : null;
+    const requestedIntent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(input.intent)
+      ? input.intent
+      : serviceByte === 0x47 || negativeRequestedService === 0x07
+        ? "read_pending_dtc"
+        : serviceByte === 0x4A || negativeRequestedService === 0x0A
+          ? "read_permanent_dtc"
+          : serviceByte === 0x43 || negativeRequestedService === 0x03 ? "read_stored_dtc" : null;
     const udsDtcCountResponse = udsResponseIndex >= 0
       && [0x01, 0x07, 0x11, 0x12].includes(bytes[udsResponseIndex + 1])
       && udsResponseIndex + 5 < bytes.length
@@ -22211,6 +22298,7 @@
         ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
         captured_at: input.captured_at || input.capturedAt || null,
         protocol: input.protocol || input.obd_protocol || null,
+        intent: requestedIntent,
         dtc_readout_status: "unparsed",
         dtc_response_format: dtcResponseFormat,
         dtc_negative_response_service: requestedService,
@@ -22277,8 +22365,10 @@
     if (serviceByte === undefined) {
       return normalizeDtcSnapshot({
         source: input.source || "obd_response_decoder",
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
         capturedAt: input.captured_at || input.capturedAt || null,
         protocol: input.protocol || input.obd_protocol || null,
+        intent: requestedIntent,
         dtc_readout_status: hasResponseInput ? "unparsed" : "unknown",
         dtc_response_format: dtcResponseFormat,
         dtc_response_subfunction: dtcResponseSubfunction,
@@ -22294,6 +22384,7 @@
         ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
         captured_at: input.captured_at || input.capturedAt || null,
         protocol: input.protocol || input.obd_protocol || null,
+        intent: requestedIntent,
         dtc_readout_status: "unparsed",
         dtc_response_format: dtcResponseFormat,
         dtc_response_subfunction: dtcResponseSubfunction,
@@ -22314,6 +22405,7 @@
       ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
+      intent: requestedIntent,
       status,
       dtc_readout_status: "reported",
       dtc_response_format: dtcResponseFormat,
@@ -22696,26 +22788,48 @@
     const pendingCount = mergedRows.filter((item) => item.status === "pending").length;
     const permanentCount = mergedRows.filter((item) => item.status === "permanent").length;
     const unknownCount = mergedRows.filter((item) => !["stored", "pending", "permanent"].includes(item.status)).length;
+    const childEcuResponseRows = snapshots.flatMap((snapshot) => {
+      const snapshotIntent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(snapshot?.intent) ? snapshot.intent : null;
+      const rows = Array.isArray(snapshot?.ecuResponses)
+        ? snapshot.ecuResponses
+        : Array.isArray(snapshot?.ecu_responses) ? snapshot.ecu_responses : [];
+      return rows.map((row) => ({
+        ...row,
+        intent: ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(row?.intent) ? row.intent : snapshotIntent
+      }));
+    });
+    const dtcStatusByIntent = {
+      read_stored_dtc: "stored",
+      read_pending_dtc: "pending",
+      read_permanent_dtc: "permanent"
+    };
+    const isCompleteDtcEcuResponseStatus = (value) => ["reported", "responded", "ok"].includes(String(value || "unknown").trim().toLowerCase());
+    const incompleteDtcStatuses = new Set(childEcuResponseRows
+      .filter((row) => row.intent && !isCompleteDtcEcuResponseStatus(row.status))
+      .map((row) => dtcStatusByIntent[row.intent])
+      .filter(Boolean));
     const reportedRows = snapshots
       .filter((snapshot) => !["blocked", "unparsed"].includes(snapshot?.dtcReadoutStatus || snapshot?.dtc_readout_status || "unknown"))
-      .flatMap((snapshot) => Array.isArray(snapshot?.dtcs) ? snapshot.dtcs : []);
+      .flatMap((snapshot) => Array.isArray(snapshot?.dtcs) ? snapshot.dtcs : [])
+      .filter((row) => !incompleteDtcStatuses.has(row.status));
     const dtcStatusSummary = buildDtcStatusSummary({
       reportedStatuses: snapshots.flatMap((snapshot) => [
         ...(Array.isArray(snapshot?.dtcStatusSummary?.reportedStatuses) ? snapshot.dtcStatusSummary.reportedStatuses : []),
         ...(Array.isArray(snapshot?.dtc_status_summary?.reported_statuses) ? snapshot.dtc_status_summary.reported_statuses : [])
-      ]),
+      ]).filter((status) => !incompleteDtcStatuses.has(status)),
       reportedCountOnlyStatuses: snapshots.flatMap((snapshot) => [
         ...(Array.isArray(snapshot?.dtcStatusSummary?.reportedCountOnlyStatuses) ? snapshot.dtcStatusSummary.reportedCountOnlyStatuses : []),
         ...(Array.isArray(snapshot?.dtc_status_summary?.reported_count_only_statuses) ? snapshot.dtc_status_summary.reported_count_only_statuses : [])
-      ]),
+      ]).filter((status) => !incompleteDtcStatuses.has(status)),
       dtcs: reportedRows,
       includeObservedStatuses: true
     });
     const childReadoutStatuses = snapshots
       .map((snapshot) => snapshot?.dtcReadoutStatus || snapshot?.dtc_readout_status || "unknown");
-    const dtcReadoutStatus = childReadoutStatuses.includes("blocked")
+    const childEcuReadoutStatuses = childEcuResponseRows.map((row) => String(row.status || "unknown").trim().toLowerCase());
+    const dtcReadoutStatus = childReadoutStatuses.includes("blocked") || childEcuReadoutStatuses.includes("blocked")
       ? "blocked"
-      : childReadoutStatuses.includes("unparsed")
+      : childReadoutStatuses.includes("unparsed") || childEcuReadoutStatuses.some((status) => !isCompleteDtcEcuResponseStatus(status))
         ? "unparsed"
         : childReadoutStatuses.includes("reported")
           ? "reported"
@@ -22772,17 +22886,34 @@
           const responseStatus = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
           const rawCount = row.codeCount ?? row.code_count ?? row.dtcCount ?? row.dtc_count ?? null;
           const codeCount = Number.isSafeInteger(Number(rawCount)) && Number(rawCount) >= 0 && Number(rawCount) <= 10000 ? Number(rawCount) : null;
-          return ecu ? [`${normalizeDtcMergeEcu(ecu)}::${intent || responseStatus}`, {
+          const rowIntent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(row.intent) ? row.intent : intent;
+          return ecu ? [`${normalizeDtcMergeEcu(ecu)}::${rowIntent || responseStatus}`, {
             ecu,
             ecuName,
             ecu_name: ecuName,
             status: responseStatus,
-            ...(intent ? { intent } : {}),
+            ...(rowIntent ? { intent: rowIntent } : {}),
             ...(codeCount !== null ? { codeCount, code_count: codeCount } : {})
           }] : null;
         });
       }).filter(Boolean)
     ).values()];
+    const dtcEcuIds = [...new Set(ecuResponses.map((row) => row.ecu).filter(Boolean))];
+    const reportedEcuResponseCount = ecuResponses.filter((row) => isCompleteDtcEcuResponseStatus(row.status)).length;
+    const dtcEcuAggregateSummary = ecuResponses.length ? {
+      schemaVersion: "dtc_ecu_aggregate_summary_v1",
+      schema_version: "dtc_ecu_aggregate_summary_v1",
+      ecuCount: dtcEcuIds.length,
+      ecu_count: dtcEcuIds.length,
+      responseCount: ecuResponses.length,
+      response_count: ecuResponses.length,
+      reportedResponseCount: reportedEcuResponseCount,
+      reported_response_count: reportedEcuResponseCount,
+      incompleteResponseCount: ecuResponses.length - reportedEcuResponseCount,
+      incomplete_response_count: ecuResponses.length - reportedEcuResponseCount,
+      allReported: reportedEcuResponseCount === ecuResponses.length,
+      all_reported: reportedEcuResponseCount === ecuResponses.length
+    } : null;
     const errorCodes = readBridgeResponseErrorCodes({
       errors: snapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot))
     });
@@ -22847,6 +22978,8 @@
       dtc_response_subfunctions: [...dtcResponseSubfunctions],
       ecuResponses,
       ecu_responses: ecuResponses,
+      dtcEcuAggregateSummary,
+      dtc_ecu_aggregate_summary: dtcEcuAggregateSummary,
       errorCodes,
       error_codes: [...errorCodes],
       dtcStatusAvailabilityMask,
@@ -23780,9 +23913,13 @@
       if (explicitResponse) return explicitResponse;
       const rows = classified.responseBuckets[bucketName] || [];
       if (rows.length > 1) {
+        const intent = camelKey === "pendingDtcResponse"
+          ? "read_pending_dtc"
+          : camelKey === "permanentDtcResponse" ? "read_permanent_dtc" : "read_stored_dtc";
         return mergeDtcSnapshots(...rows.map((row) => decodeObdDtcResponse({
           raw: normalizeBucketResponse(row),
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
+          intent,
           ...(row?.ecu || row?.address ? { source_ecu: row.ecu || row.address } : {})
         })));
       }

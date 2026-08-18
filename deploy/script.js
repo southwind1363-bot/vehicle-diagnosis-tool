@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2808件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web SerialのフリーズフレームをECU単位で完了確認",
+  recentMilestone: "Web SerialのDTC状態をECU単位で完了確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.65";
+const APP_VERSION = "3.12.66";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4835,9 +4835,21 @@ function hasWebSerialFreezeFrameCoverage(snapshot) {
     : isWebSerialReadoutReported(snapshot, "freezeFrameReadoutStatus", "freeze_frame_readout_status");
 }
 
+function hasWebSerialDtcCoverage(statuses = []) {
+  const snapshot = obdDevSession.lastSession?.dtcSnapshot;
+  if (!isWebSerialReadoutReported(snapshot, "dtcReadoutStatus", "dtc_readout_status")) return false;
+  const requiredStatuses = [...new Set((Array.isArray(statuses) ? statuses : [statuses]).filter((status) => ["stored", "pending", "permanent"].includes(status)))];
+  const reportedStatuses = snapshot?.dtcStatusSummary?.reportedStatuses || snapshot?.dtc_status_summary?.reported_statuses || [];
+  if (!requiredStatuses.every((status) => reportedStatuses.includes(status))) return false;
+  const intentByStatus = { stored: "read_stored_dtc", pending: "read_pending_dtc", permanent: "read_permanent_dtc" };
+  const requiredIntents = new Set(requiredStatuses.map((status) => intentByStatus[status]));
+  const ecuResponses = snapshot?.ecuResponses || snapshot?.ecu_responses || [];
+  const scopedResponses = Array.isArray(ecuResponses) ? ecuResponses.filter((row) => requiredIntents.has(row?.intent)) : [];
+  return !scopedResponses.length || scopedResponses.every((row) => String(row?.status || "").trim().toLowerCase() === "reported");
+}
+
 function hasWebSerialDtcStatusReport(status) {
-  const reportedStatuses = obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.reportedStatuses || [];
-  return reportedStatuses.includes(status);
+  return hasWebSerialDtcCoverage([status]);
 }
 
 function hasWebSerialSupportedPidPage(snapshot, basePid) {
@@ -4901,7 +4913,7 @@ async function readObdDeveloperDtc() {
   await captureObdDeveloperProtocolAfterStoredDtc();
   if (!obdDevSession.port) return false;
   await runObdDeveloperRead("保留・永久DTC読取", ["07", "0A"]);
-  return obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
+  return hasWebSerialDtcCoverage(["stored", "pending", "permanent"]);
 }
 
 async function readObdDeveloperCoreScan() {
