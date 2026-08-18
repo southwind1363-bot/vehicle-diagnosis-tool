@@ -1887,9 +1887,9 @@
       bridge_status: ["status"],
       list_vci: ["devices"],
       adapter_identity: ["adapter_name", "adapterName", "adapter_family", "adapterFamily"],
-      read_stored_dtc: ["dtcs", "codes"],
-      read_pending_dtc: ["dtcs", "codes"],
-      read_permanent_dtc: ["dtcs", "codes"],
+      read_stored_dtc: ["dtcs", "codes", "raw", "response", "bytes"],
+      read_pending_dtc: ["dtcs", "codes", "raw", "response", "bytes"],
+      read_permanent_dtc: ["dtcs", "codes", "raw", "response", "bytes"],
       read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries", "raw", "response", "bytes"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots", "raw", "response", "bytes"],
       read_ecu_info: ["items", "values", "ecu_info_items", "ecuInfoItems", "ecu_info_rows", "ecuInfoRows", "mode09_items", "mode09Items", "mode09_values", "mode09Values", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers", "ecu_info_ecu_snapshots", "ecuInfoEcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses", "raw", "response", "bytes"],
@@ -2069,7 +2069,8 @@
           ecu: scopeId === "LEGACY" ? readNativeConnectorDataScopeId(data) : scopeId,
           ecu_name: data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || null,
           dtc_status: status,
-          dtcs: rowsWithScope(data, ["dtcs", "dtc_codes", "dtcCodes", "codes"], scopeId)
+          dtcs: rowsWithScope(data, ["dtcs", "dtc_codes", "dtcCodes", "codes"], scopeId),
+          ...(data.raw !== undefined ? { raw: data.raw } : data.response !== undefined ? { response: data.response } : Array.isArray(data.bytes) ? { bytes: data.bytes } : {})
         }))
       };
     }
@@ -3546,7 +3547,7 @@
         ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
         ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
         status: row?.status || row?.response_status || row?.responseStatus || decodedRawSnapshot?.dtcReadoutStatus || "unknown",
-        codeCount: Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Number.isInteger(decodedRawSnapshot?.dtcCount) ? decodedRawSnapshot.dtcCount : null
+        codeCount: Number.isInteger(decodedRawSnapshot?.dtcCount) ? decodedRawSnapshot.dtcCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null
       };
     });
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];

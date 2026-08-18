@@ -5202,6 +5202,24 @@ const scopedNativeReadEnvelope = (intent, readoutId, scopeId, sequence, data, ou
   ...outcome
 });
 const nativeScopeManifest = (readoutId) => ["7E8", "7E9"].map((scope_id) => ({ readout_id: readoutId, scope_id }));
+const multiEcuNativeRawStoredDtcScan = obd.buildNativeConnectorScanSession({
+  envelopes: [
+    scopedNativeReadEnvelope("read_stored_dtc", "stored_dtc_snapshot", "7E8", 754, { raw: "43 03 00" }),
+    scopedNativeReadEnvelope("read_stored_dtc", "stored_dtc_snapshot", "7E9", 755, { raw: "43 01 71" })
+  ],
+  scan_state: "completed",
+  expected_readouts: ["stored_dtc_snapshot"],
+  expected_readout_scopes: nativeScopeManifest("stored_dtc_snapshot")
+});
+const multiEcuNativeRawStoredDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuNativeRawStoredDtcScan.session)));
+check(multiEcuNativeRawStoredDtcScan.scanState === "completed" && multiEcuNativeRawStoredDtcScan.session?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300" && item.status === "stored" && item.ecu === "7E8") && multiEcuNativeRawStoredDtcScan.session?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.status === "stored" && item.ecu === "7E9") && multiEcuNativeRawStoredDtcScan.session?.dtcSnapshot?.ecuResponses?.some((item) => item.ecu === "7E8" && item.status === "reported" && item.codeCount === 1) && multiEcuNativeRawStoredDtcRoundTrip?.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E9") && multiEcuNativeRawStoredDtcScan.session?.vehicleCommandEnabled === false && multiEcuNativeRawStoredDtcRoundTrip?.wouldTransmit === false, "Raw multi-ECU native stored DTC responses were not decoded with ECU boundaries through read-only export");
+const unparsedEcuRawStoredDtcScan = obd.buildNativeConnectorScanSession({
+  envelopes: [scopedNativeReadEnvelope("read_stored_dtc", "stored_dtc_snapshot", "7E8", 756, { raw: "43 03" })],
+  scan_state: "completed",
+  expected_readouts: ["stored_dtc_snapshot"],
+  expected_readout_scopes: [{ readout_id: "stored_dtc_snapshot", scope_id: "7E8" }]
+});
+check(unparsedEcuRawStoredDtcScan.session?.dtcSnapshot?.dtcReadoutStatus === "unparsed" && unparsedEcuRawStoredDtcScan.session?.dtcSnapshot?.dtcs?.length === 0 && unparsedEcuRawStoredDtcScan.session?.vehicleCommandEnabled === false && unparsedEcuRawStoredDtcScan.wouldTransmit === false, "Incomplete native ECU-scoped raw stored DTC evidence was treated as reported");
 const sameAttemptFreezeFrameScan = obd.buildNativeConnectorScanSession({
   envelopes: [
     scopedNativeReadEnvelope("read_freeze_frame", "freeze_frame_snapshot", "7E8", 760, { trigger_dtc: "P0300", monitor_values: [{ id: "coolant_temp", value: 82, unit: "C" }] }),
