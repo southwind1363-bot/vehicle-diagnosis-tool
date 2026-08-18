@@ -21620,7 +21620,7 @@
       ...readBridgeProtocolProvenance(sourceInput)
     };
     const rows = collectEcuInfoRows(sourceInput);
-    const items = rows
+    const normalizedItems = rows
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = readObdResponseSourceEcu(row);
@@ -21637,7 +21637,7 @@
       })
       .map((row, index) => normalizeEcuInfoValue(row, index))
       .filter(Boolean);
-    const redactedItems = items.filter((item) => item.sensitiveIdentifierRedacted === true || item.sensitive_identifier_redacted === true);
+    const redactedItems = normalizedItems.filter((item) => item.sensitiveIdentifierRedacted === true || item.sensitive_identifier_redacted === true);
     const redactedItemIds = [...new Set(redactedItems.map((item) => item.id).filter(Boolean))];
     const normalizeNegativeResponseByte = (value) => {
       const parsedValue = typeof value === "number" ? value : Number.parseInt(String(value || "").trim().replace(/^0x/i, ""), 16);
@@ -21690,9 +21690,24 @@
         ecu_info_negative_response_code: negativeResponseCode
       };
     }).filter(Boolean);
+    const reportedEcuInfoEcuSnapshots = ecuInfoEcuSnapshots.filter((snapshot) =>
+      (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported"
+    );
+    const matchesReportedEcuInfoEcu = (row) => {
+      if (ecuInfoEcuSnapshots.length === 0) return true;
+      const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
+      if (!rowSource) return reportedEcuInfoEcuSnapshots.length === ecuInfoEcuSnapshots.length;
+      const rowAddress = normalizeComparableCanEcuAddress(rowSource);
+      return reportedEcuInfoEcuSnapshots.some((snapshot) => {
+        const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
+        if (reportedSource === rowSource) return true;
+        const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
+        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+      });
+    };
+    const items = normalizedItems.filter(matchesReportedEcuInfoEcu);
     const scopedItemCount = ecuInfoEcuSnapshots.reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
-    const reportedScopedItemCount = ecuInfoEcuSnapshots
-      .filter((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported")
+    const reportedScopedItemCount = reportedEcuInfoEcuSnapshots
       .reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
     const unreportedScopedItemCount = Math.max(0, scopedItemCount - reportedScopedItemCount);
     const ecuInfoEcuOutcomeGroups = new Map();
