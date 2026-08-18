@@ -6844,6 +6844,11 @@
     const supportedPidReportedEcuKeys = supportedPidReportedEcuEvidenceRecorded
       ? supportedPidKeys.filter((key) => supportedPidEvidenceRecorded || reportedSupportedPidEcuIds.includes(normalizeSupportedPidEcuId(String(key || "").split("|")[1])))
       : [];
+    const onboardMonitorEcuSnapshots = Array.isArray(onboardMonitorSnapshot?.onboardMonitorEcuSnapshots)
+      ? onboardMonitorSnapshot.onboardMonitorEcuSnapshots
+      : Array.isArray(onboardMonitorSnapshot?.onboard_monitor_ecu_snapshots)
+        ? onboardMonitorSnapshot.onboard_monitor_ecu_snapshots
+        : [];
     const onboardMonitorResponseUnavailable = ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
       || onboardMonitorSnapshot?.blocked === true
       || onboardMonitorSnapshot?.isBlocked === true
@@ -6868,6 +6873,26 @@
     }).filter(Boolean))].sort();
     const onboardMonitorValueEvidenceRecorded = onboardMonitorEvidenceRecorded;
     const recordedOnboardMonitorValueKeys = onboardMonitorValueEvidenceRecorded ? onboardMonitorValueKeys : [];
+    const normalizeOnboardMonitorEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+    const readOnboardMonitorEcuId = (snapshot = {}) => normalizeOnboardMonitorEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
+    const reportedOnboardMonitorEcuIds = [...new Set(onboardMonitorEcuSnapshots
+      .filter((snapshot) => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readOnboardMonitorEcuId)
+      .filter(Boolean))].sort();
+    const unresolvedOnboardMonitorEcuIds = [...new Set(onboardMonitorEcuSnapshots
+      .filter((snapshot) => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readOnboardMonitorEcuId)
+      .filter(Boolean))].sort();
+    const onboardMonitorReportedEcuEvidenceRecorded = onboardMonitorEvidenceRecorded
+      || (onboardMonitorSnapshot?.blocked !== true && onboardMonitorSnapshot?.isBlocked !== true && onboardMonitorSnapshot?.is_blocked !== true
+        && String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() === "unparsed"
+        && reportedOnboardMonitorEcuIds.length > 0);
+    const onboardMonitorReportedEcuTestKeys = onboardMonitorReportedEcuEvidenceRecorded
+      ? onboardMonitorTestKeys.filter((key) => onboardMonitorEvidenceRecorded || reportedOnboardMonitorEcuIds.includes(normalizeOnboardMonitorEcuId(String(key || "").split("|")[2])))
+      : [];
+    const onboardMonitorReportedEcuValueKeys = onboardMonitorReportedEcuEvidenceRecorded
+      ? onboardMonitorValueKeys.filter((key) => onboardMonitorEvidenceRecorded || reportedOnboardMonitorEcuIds.includes(normalizeOnboardMonitorEcuId(String(key || "").split("|")[2])))
+      : [];
     const percent = (count) => items.length > 0 ? Math.round((count / items.length) * 100) : 0;
     return {
       schemaVersion: "core_readout_inventory_v1",
@@ -7029,12 +7054,22 @@
       onboard_monitor_test_keys: [...recordedOnboardMonitorTestKeys],
       onboardMonitorEvidenceRecorded,
       onboard_monitor_evidence_recorded: onboardMonitorEvidenceRecorded,
+      onboardMonitorReportedEcuEvidenceRecorded,
+      onboard_monitor_reported_ecu_evidence_recorded: onboardMonitorReportedEcuEvidenceRecorded,
+      onboardMonitorReportedEcuIds: reportedOnboardMonitorEcuIds,
+      onboard_monitor_reported_ecu_ids: [...reportedOnboardMonitorEcuIds],
+      onboardMonitorUnresolvedEcuIds: unresolvedOnboardMonitorEcuIds,
+      onboard_monitor_unresolved_ecu_ids: [...unresolvedOnboardMonitorEcuIds],
+      onboardMonitorReportedEcuTestKeys: onboardMonitorReportedEcuTestKeys,
+      onboard_monitor_reported_ecu_test_keys: [...onboardMonitorReportedEcuTestKeys],
       onboardMonitorValueCount: recordedOnboardMonitorValueKeys.length,
       onboard_monitor_value_count: recordedOnboardMonitorValueKeys.length,
       onboardMonitorValueKeys: recordedOnboardMonitorValueKeys,
       onboard_monitor_value_keys: [...recordedOnboardMonitorValueKeys],
       onboardMonitorValueEvidenceRecorded,
       onboard_monitor_value_evidence_recorded: onboardMonitorValueEvidenceRecorded,
+      onboardMonitorReportedEcuValueKeys: onboardMonitorReportedEcuValueKeys,
+      onboard_monitor_reported_ecu_value_keys: [...onboardMonitorReportedEcuValueKeys],
       readinessIncompleteCount: isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? numericCount(readinessSnapshot?.incompleteCount) : 0,
       ecuInfoMissingKeyCount: isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? numericCount(ecuInfoSnapshot?.keyItemSummary?.missingCount) : 0,
       rawPidUndecodedCount: (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? numericCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount) : 0)
@@ -14604,9 +14639,14 @@
       onboardMonitorTestCount: ["onboard_monitor_test_count"],
       onboardMonitorTestKeys: ["onboard_monitor_test_keys"],
       onboardMonitorEvidenceRecorded: ["onboard_monitor_evidence_recorded"],
+      onboardMonitorReportedEcuEvidenceRecorded: ["onboard_monitor_reported_ecu_evidence_recorded"],
+      onboardMonitorReportedEcuIds: ["onboard_monitor_reported_ecu_ids"],
+      onboardMonitorUnresolvedEcuIds: ["onboard_monitor_unresolved_ecu_ids"],
+      onboardMonitorReportedEcuTestKeys: ["onboard_monitor_reported_ecu_test_keys"],
       onboardMonitorValueCount: ["onboard_monitor_value_count"],
       onboardMonitorValueKeys: ["onboard_monitor_value_keys"],
       onboardMonitorValueEvidenceRecorded: ["onboard_monitor_value_evidence_recorded"],
+      onboardMonitorReportedEcuValueKeys: ["onboard_monitor_reported_ecu_value_keys"],
       pendingIds: ["pending_ids"],
       pendingReadoutCount: ["pending_readout_count", "pending_count"],
       rawPidUndecodedCount: ["raw_pid_undecoded_count", "raw_pid_values_need_conversion_count"],
@@ -15037,25 +15077,79 @@
       restrictEcuInfoComparisonToScopedEvidence ? "ecu_info_snapshot" : null,
       restrictSupportedPidComparisonToScopedEvidence ? "supported_pid_matrix" : null
     ].filter(Boolean));
-    const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
     const readOnboardMonitorKeys = (summary) => Array.isArray(readField(summary, "onboardMonitorTestKeys"))
       ? [...new Set(readField(summary, "onboardMonitorTestKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
     const importedOnboardMonitorEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorEvidenceRecorded");
     const currentOnboardMonitorEvidenceRecorded = readBoolean(currentSummary, "onboardMonitorEvidenceRecorded");
-    const onboardMonitorComparisonAvailable = importedOnboardMonitorEvidenceRecorded && currentOnboardMonitorEvidenceRecorded;
-    const importedOnboardMonitorTestKeys = readOnboardMonitorKeys(importedInventory);
-    const currentOnboardMonitorTestKeys = readOnboardMonitorKeys(currentSummary);
-    const onboardMonitorTestAddedKeys = onboardMonitorComparisonAvailable ? diffIds(currentOnboardMonitorTestKeys, importedOnboardMonitorTestKeys) : [];
-    const onboardMonitorTestRemovedKeys = onboardMonitorComparisonAvailable ? diffIds(importedOnboardMonitorTestKeys, currentOnboardMonitorTestKeys) : [];
+    const importedAllOnboardMonitorTestKeys = readOnboardMonitorKeys(importedInventory);
+    const currentAllOnboardMonitorTestKeys = readOnboardMonitorKeys(currentSummary);
     const readOnboardMonitorValueKeys = (summary) => Array.isArray(readField(summary, "onboardMonitorValueKeys"))
       ? [...new Set(readField(summary, "onboardMonitorValueKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
     const importedOnboardMonitorValueEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorValueEvidenceRecorded");
     const currentOnboardMonitorValueEvidenceRecorded = readBoolean(currentSummary, "onboardMonitorValueEvidenceRecorded");
-    const onboardMonitorValueComparisonAvailable = importedOnboardMonitorValueEvidenceRecorded && currentOnboardMonitorValueEvidenceRecorded;
-    const importedOnboardMonitorValueKeys = readOnboardMonitorValueKeys(importedInventory);
-    const currentOnboardMonitorValueKeys = readOnboardMonitorValueKeys(currentSummary);
+    const importedAllOnboardMonitorValueKeys = readOnboardMonitorValueKeys(importedInventory);
+    const currentAllOnboardMonitorValueKeys = readOnboardMonitorValueKeys(currentSummary);
+    const readOnboardMonitorReportedEcuScope = (summary, completeEvidenceRecorded, allTestKeys, allValueKeys) => {
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
+        || String(value || "").trim().toUpperCase()
+        || null;
+      const explicitIds = readIds(summary, "onboardMonitorReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitIds)].sort()
+        : [...new Set([...allTestKeys, ...allValueKeys].map((key) => normalizeScopeId(String(key || "").split("|")[2])).filter(Boolean))].sort();
+      const explicitTestKeys = readIds(summary, "onboardMonitorReportedEcuTestKeys");
+      const explicitValueKeys = readIds(summary, "onboardMonitorReportedEcuValueKeys");
+      return {
+        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "onboardMonitorReportedEcuEvidenceRecorded"),
+        reportedEcuIds,
+        reportedEcuTestKeys: explicitTestKeys.length > 0 || !completeEvidenceRecorded ? explicitTestKeys : [...allTestKeys],
+        reportedEcuValueKeys: explicitValueKeys.length > 0 || !completeEvidenceRecorded ? explicitValueKeys : [...allValueKeys]
+      };
+    };
+    const importedOnboardMonitorReportedEcuScope = readOnboardMonitorReportedEcuScope(importedInventory, importedOnboardMonitorEvidenceRecorded || importedOnboardMonitorValueEvidenceRecorded, importedAllOnboardMonitorTestKeys, importedAllOnboardMonitorValueKeys);
+    const currentOnboardMonitorReportedEcuScope = readOnboardMonitorReportedEcuScope(currentSummary, currentOnboardMonitorEvidenceRecorded || currentOnboardMonitorValueEvidenceRecorded, currentAllOnboardMonitorTestKeys, currentAllOnboardMonitorValueKeys);
+    const completeOnboardMonitorComparisonAvailable = importedOnboardMonitorEvidenceRecorded && currentOnboardMonitorEvidenceRecorded;
+    const completeOnboardMonitorValueComparisonAvailable = importedOnboardMonitorValueEvidenceRecorded && currentOnboardMonitorValueEvidenceRecorded;
+    const comparableOnboardMonitorEcuIds = completeOnboardMonitorComparisonAvailable || completeOnboardMonitorValueComparisonAvailable
+      ? []
+      : importedOnboardMonitorReportedEcuScope.evidenceRecorded && currentOnboardMonitorReportedEcuScope.evidenceRecorded
+        ? importedOnboardMonitorReportedEcuScope.reportedEcuIds.filter((id) => currentOnboardMonitorReportedEcuScope.reportedEcuIds.includes(id))
+        : [];
+    const reportedOnboardMonitorScopeEvidenceRecorded = readBoolean(importedInventory, "onboardMonitorReportedEcuEvidenceRecorded")
+      && readBoolean(currentSummary, "onboardMonitorReportedEcuEvidenceRecorded");
+    const reportedEcuOnboardMonitorComparisonAvailable = !completeOnboardMonitorComparisonAvailable && reportedOnboardMonitorScopeEvidenceRecorded && comparableOnboardMonitorEcuIds.length > 0;
+    const reportedEcuOnboardMonitorValueComparisonAvailable = !completeOnboardMonitorValueComparisonAvailable && reportedOnboardMonitorScopeEvidenceRecorded && comparableOnboardMonitorEcuIds.length > 0;
+    const onboardMonitorComparisonAvailable = completeOnboardMonitorComparisonAvailable || reportedEcuOnboardMonitorComparisonAvailable;
+    const filterOnboardMonitorKeysByScope = (keys) => keys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[2]) || String(key || "").split("|")[2]?.trim().toUpperCase();
+      return comparableOnboardMonitorEcuIds.includes(ecu);
+    });
+    const importedOnboardMonitorTestKeys = completeOnboardMonitorComparisonAvailable
+      ? importedAllOnboardMonitorTestKeys
+      : reportedEcuOnboardMonitorComparisonAvailable ? filterOnboardMonitorKeysByScope(importedOnboardMonitorReportedEcuScope.reportedEcuTestKeys) : [];
+    const currentOnboardMonitorTestKeys = completeOnboardMonitorComparisonAvailable
+      ? currentAllOnboardMonitorTestKeys
+      : reportedEcuOnboardMonitorComparisonAvailable ? filterOnboardMonitorKeysByScope(currentOnboardMonitorReportedEcuScope.reportedEcuTestKeys) : [];
+    const onboardMonitorValueComparisonAvailable = completeOnboardMonitorValueComparisonAvailable || reportedEcuOnboardMonitorValueComparisonAvailable;
+    const importedOnboardMonitorValueKeys = completeOnboardMonitorValueComparisonAvailable
+      ? importedAllOnboardMonitorValueKeys
+      : reportedEcuOnboardMonitorValueComparisonAvailable ? filterOnboardMonitorKeysByScope(importedOnboardMonitorReportedEcuScope.reportedEcuValueKeys) : [];
+    const currentOnboardMonitorValueKeys = completeOnboardMonitorValueComparisonAvailable
+      ? currentAllOnboardMonitorValueKeys
+      : reportedEcuOnboardMonitorValueComparisonAvailable ? filterOnboardMonitorKeysByScope(currentOnboardMonitorReportedEcuScope.reportedEcuValueKeys) : [];
+    const hasOnboardMonitorEcuScopeEvidence = [
+      ...importedOnboardMonitorReportedEcuScope.reportedEcuIds,
+      ...currentOnboardMonitorReportedEcuScope.reportedEcuIds,
+      ...readIds(importedInventory, "onboardMonitorUnresolvedEcuIds"),
+      ...readIds(currentSummary, "onboardMonitorUnresolvedEcuIds")
+    ].length > 0;
+    const restrictOnboardMonitorComparisonToScopedEvidence = !completeOnboardMonitorComparisonAvailable && !completeOnboardMonitorValueComparisonAvailable && hasOnboardMonitorEcuScopeEvidence;
+    if (restrictOnboardMonitorComparisonToScopedEvidence) nonComparableValueCountIds.add("onboard_monitor_snapshot");
+    const comparableChangedValueCountIds = changedValueCountIds.filter((id) => !nonComparableValueCountIds.has(id));
+    const onboardMonitorTestAddedKeys = onboardMonitorComparisonAvailable ? diffIds(currentOnboardMonitorTestKeys, importedOnboardMonitorTestKeys) : [];
+    const onboardMonitorTestRemovedKeys = onboardMonitorComparisonAvailable ? diffIds(importedOnboardMonitorTestKeys, currentOnboardMonitorTestKeys) : [];
     const onboardMonitorValueAddedKeys = onboardMonitorValueComparisonAvailable ? diffIds(currentOnboardMonitorValueKeys, importedOnboardMonitorValueKeys) : [];
     const onboardMonitorValueRemovedKeys = onboardMonitorValueComparisonAvailable ? diffIds(importedOnboardMonitorValueKeys, currentOnboardMonitorValueKeys) : [];
     const importedTotalValueCount = readCount(importedInventory, "totalValueCount");
@@ -15451,8 +15545,16 @@
       imported_onboard_monitor_evidence_recorded: importedOnboardMonitorEvidenceRecorded,
       currentOnboardMonitorEvidenceRecorded,
       current_onboard_monitor_evidence_recorded: currentOnboardMonitorEvidenceRecorded,
+      importedOnboardMonitorReportedEcuEvidenceRecorded: importedOnboardMonitorReportedEcuScope.evidenceRecorded,
+      imported_onboard_monitor_reported_ecu_evidence_recorded: importedOnboardMonitorReportedEcuScope.evidenceRecorded,
+      currentOnboardMonitorReportedEcuEvidenceRecorded: currentOnboardMonitorReportedEcuScope.evidenceRecorded,
+      current_onboard_monitor_reported_ecu_evidence_recorded: currentOnboardMonitorReportedEcuScope.evidenceRecorded,
       onboardMonitorComparisonAvailable,
       onboard_monitor_comparison_available: onboardMonitorComparisonAvailable,
+      onboardMonitorComparisonScope: onboardMonitorComparisonAvailable && completeOnboardMonitorComparisonAvailable ? "complete" : onboardMonitorComparisonAvailable && reportedEcuOnboardMonitorComparisonAvailable ? "reported_ecus" : "unavailable",
+      onboard_monitor_comparison_scope: onboardMonitorComparisonAvailable && completeOnboardMonitorComparisonAvailable ? "complete" : onboardMonitorComparisonAvailable && reportedEcuOnboardMonitorComparisonAvailable ? "reported_ecus" : "unavailable",
+      onboardMonitorComparableEcuIds: comparableOnboardMonitorEcuIds,
+      onboard_monitor_comparable_ecu_ids: [...comparableOnboardMonitorEcuIds],
       importedOnboardMonitorTestKeys,
       imported_onboard_monitor_test_keys: importedOnboardMonitorTestKeys,
       currentOnboardMonitorTestKeys,
@@ -15473,6 +15575,8 @@
       current_onboard_monitor_value_evidence_recorded: currentOnboardMonitorValueEvidenceRecorded,
       onboardMonitorValueComparisonAvailable,
       onboard_monitor_value_comparison_available: onboardMonitorValueComparisonAvailable,
+      onboardMonitorValueComparisonScope: onboardMonitorValueComparisonAvailable && completeOnboardMonitorValueComparisonAvailable ? "complete" : onboardMonitorValueComparisonAvailable && reportedEcuOnboardMonitorValueComparisonAvailable ? "reported_ecus" : "unavailable",
+      onboard_monitor_value_comparison_scope: onboardMonitorValueComparisonAvailable && completeOnboardMonitorValueComparisonAvailable ? "complete" : onboardMonitorValueComparisonAvailable && reportedEcuOnboardMonitorValueComparisonAvailable ? "reported_ecus" : "unavailable",
       importedOnboardMonitorValueKeys,
       imported_onboard_monitor_value_keys: importedOnboardMonitorValueKeys,
       currentOnboardMonitorValueKeys,
@@ -15638,12 +15742,22 @@
       onboard_monitor_test_keys: normalizeIds(summary.onboardMonitorTestKeys || summary.onboard_monitor_test_keys),
       onboardMonitorEvidenceRecorded: pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
       onboard_monitor_evidence_recorded: pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
+      onboardMonitorReportedEcuEvidenceRecorded: pickDefined(summary.onboardMonitorReportedEcuEvidenceRecorded, summary.onboard_monitor_reported_ecu_evidence_recorded, summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
+      onboard_monitor_reported_ecu_evidence_recorded: pickDefined(summary.onboardMonitorReportedEcuEvidenceRecorded, summary.onboard_monitor_reported_ecu_evidence_recorded, summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true,
+      onboardMonitorReportedEcuIds: normalizeIds(summary.onboardMonitorReportedEcuIds || summary.onboard_monitor_reported_ecu_ids),
+      onboard_monitor_reported_ecu_ids: normalizeIds(summary.onboardMonitorReportedEcuIds || summary.onboard_monitor_reported_ecu_ids),
+      onboardMonitorUnresolvedEcuIds: normalizeIds(summary.onboardMonitorUnresolvedEcuIds || summary.onboard_monitor_unresolved_ecu_ids),
+      onboard_monitor_unresolved_ecu_ids: normalizeIds(summary.onboardMonitorUnresolvedEcuIds || summary.onboard_monitor_unresolved_ecu_ids),
+      onboardMonitorReportedEcuTestKeys: normalizeIds(summary.onboardMonitorReportedEcuTestKeys || summary.onboard_monitor_reported_ecu_test_keys || (pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true ? summary.onboardMonitorTestKeys || summary.onboard_monitor_test_keys : [])),
+      onboard_monitor_reported_ecu_test_keys: normalizeIds(summary.onboardMonitorReportedEcuTestKeys || summary.onboard_monitor_reported_ecu_test_keys || (pickDefined(summary.onboardMonitorEvidenceRecorded, summary.onboard_monitor_evidence_recorded, false) === true ? summary.onboardMonitorTestKeys || summary.onboard_monitor_test_keys : [])),
       onboardMonitorValueCount: toCount("onboardMonitorValueCount", "onboard_monitor_value_count", 0),
       onboard_monitor_value_count: toCount("onboardMonitorValueCount", "onboard_monitor_value_count", 0),
       onboardMonitorValueKeys: normalizeIds(summary.onboardMonitorValueKeys || summary.onboard_monitor_value_keys),
       onboard_monitor_value_keys: normalizeIds(summary.onboardMonitorValueKeys || summary.onboard_monitor_value_keys),
       onboardMonitorValueEvidenceRecorded: pickDefined(summary.onboardMonitorValueEvidenceRecorded, summary.onboard_monitor_value_evidence_recorded, false) === true,
       onboard_monitor_value_evidence_recorded: pickDefined(summary.onboardMonitorValueEvidenceRecorded, summary.onboard_monitor_value_evidence_recorded, false) === true,
+      onboardMonitorReportedEcuValueKeys: normalizeIds(summary.onboardMonitorReportedEcuValueKeys || summary.onboard_monitor_reported_ecu_value_keys || (pickDefined(summary.onboardMonitorValueEvidenceRecorded, summary.onboard_monitor_value_evidence_recorded, false) === true ? summary.onboardMonitorValueKeys || summary.onboard_monitor_value_keys : [])),
+      onboard_monitor_reported_ecu_value_keys: normalizeIds(summary.onboardMonitorReportedEcuValueKeys || summary.onboard_monitor_reported_ecu_value_keys || (pickDefined(summary.onboardMonitorValueEvidenceRecorded, summary.onboard_monitor_value_evidence_recorded, false) === true ? summary.onboardMonitorValueKeys || summary.onboard_monitor_value_keys : [])),
       hasFreezeFrameTriggerEvidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       has_freeze_frame_trigger_evidence: pickDefined(summary.hasFreezeFrameTriggerEvidence, summary.has_freeze_frame_trigger_evidence, toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0) > 0) === true,
       countsById,
