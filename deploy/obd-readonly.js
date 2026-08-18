@@ -1890,7 +1890,7 @@
       read_stored_dtc: ["dtcs", "codes"],
       read_pending_dtc: ["dtcs", "codes"],
       read_permanent_dtc: ["dtcs", "codes"],
-      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"],
+      read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries", "raw", "response", "bytes"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "values", "ecu_info_items", "ecuInfoItems", "ecu_info_rows", "ecuInfoRows", "mode09_items", "mode09Items", "mode09_values", "mode09Values", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers", "ecu_info_ecu_snapshots", "ecuInfoEcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses", "raw", "response", "bytes"],
       read_onboard_monitor: [
@@ -2216,7 +2216,7 @@
             ? data.freeze_frame_ecu_snapshots
             : Array.isArray(data.freezeFrameEcuSnapshots)
               ? data.freezeFrameEcuSnapshots
-              : [];
+              : (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
           return snapshots.map((snapshot) => snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(snapshot)
             ? { ...snapshot, source_ecu: scopeId }
             : snapshot);
