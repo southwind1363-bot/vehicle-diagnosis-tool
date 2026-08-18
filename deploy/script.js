@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2808件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web SerialのMode 09情報を対応タイプ・ECU単位で完了確認",
+  recentMilestone: "Web Serialのレディネス・Mode 06をECU単位で完了確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.62";
+const APP_VERSION = "3.12.63";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4807,6 +4807,20 @@ function isWebSerialReadoutReported(snapshot, camelStatusKey, snakeStatusKey) {
   return String(snapshot?.[camelStatusKey] || snapshot?.[snakeStatusKey] || "").trim().toLowerCase() === "reported";
 }
 
+function hasWebSerialReadinessCoverage(snapshot) {
+  const ecuSnapshots = snapshot?.readinessEcuSnapshots || snapshot?.readiness_ecu_snapshots || [];
+  return Array.isArray(ecuSnapshots) && ecuSnapshots.length > 0
+    ? ecuSnapshots.every((item) => isWebSerialReadoutReported(item, "readinessReadoutStatus", "readiness_readout_status"))
+    : isWebSerialReadoutReported(snapshot, "readinessReadoutStatus", "readiness_readout_status");
+}
+
+function hasWebSerialOnboardMonitorCoverage(snapshot) {
+  const ecuSnapshots = snapshot?.onboardMonitorEcuSnapshots || snapshot?.onboard_monitor_ecu_snapshots || [];
+  return Array.isArray(ecuSnapshots) && ecuSnapshots.length > 0
+    ? ecuSnapshots.every((item) => isWebSerialReadoutReported(item, "onboardMonitorReadoutStatus", "onboard_monitor_readout_status"))
+    : isWebSerialReadoutReported(snapshot, "onboardMonitorReadoutStatus", "onboard_monitor_readout_status");
+}
+
 function hasWebSerialDtcStatusReport(status) {
   const reportedStatuses = obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.reportedStatuses || [];
   return reportedStatuses.includes(status);
@@ -5004,7 +5018,7 @@ async function readObdDeveloperFreezeFrame() {
 
 async function readObdDeveloperReadiness() {
   const readCompleted = await runObdDeveloperRead("レディネス読取", ["0101"]);
-  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.readinessSnapshot, "readinessReadoutStatus", "readiness_readout_status");
+  return readCompleted && hasWebSerialReadinessCoverage(obdDevSession.lastSession?.readinessSnapshot);
 }
 
 async function readObdDeveloperEcuInfo() {
@@ -5033,7 +5047,7 @@ async function readObdDeveloperEcuInfo() {
 
 async function readObdDeveloperOnboardMonitor() {
   const readCompleted = await runObdDeveloperRead("Mode06読取", ["06"]);
-  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.onboardMonitorSnapshot, "onboardMonitorReadoutStatus", "onboard_monitor_readout_status");
+  return readCompleted && hasWebSerialOnboardMonitorCoverage(obdDevSession.lastSession?.onboardMonitorSnapshot);
 }
 
 async function readObdDeveloperPermanentDtc() {
@@ -6174,14 +6188,29 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     ...(supportedPidResponseOverride ? { supportedPidResponse: supportedPidResponseOverride } : {}),
     ...(freezeFrameResponseOverride ? { freezeFrameResponse: freezeFrameResponseOverride } : {}),
     ...(ecuInfoResponseOverride ? { ecuInfoResponse: ecuInfoResponseOverride } : {}),
-    ...(readinessResponseOverride ? { readinessResponse: readinessResponseOverride } : {}),
-    ...(onboardMonitorResponseOverride ? { onboardMonitorResponse: onboardMonitorResponseOverride } : {}),
     ...dtcResponseOverrides
   };
-  const currentAttemptSession = window.ObdReadOnly.buildScanSessionFromObdText(
+  const classifiedAttemptSession = window.ObdReadOnly.buildScanSessionFromObdText(
     buildWebSerialAttemptTranscript(commandResponses),
     scanSessionOptions
   );
+  const fallbackAttemptSession = readinessResponseOverride || onboardMonitorResponseOverride
+    ? window.ObdReadOnly.buildDiagnosticScanSession({
+      ...(readinessResponseOverride ? { readinessResponse: readinessResponseOverride } : {}),
+      ...(onboardMonitorResponseOverride ? { onboardMonitorResponse: onboardMonitorResponseOverride } : {})
+    })
+    : null;
+  const currentReadinessSnapshot = classifiedAttemptSession.readinessSnapshot?.readinessReadoutStatus !== "unknown"
+    ? classifiedAttemptSession.readinessSnapshot
+    : fallbackAttemptSession?.readinessSnapshot || classifiedAttemptSession.readinessSnapshot;
+  const currentOnboardMonitorSnapshot = classifiedAttemptSession.onboardMonitorSnapshot?.onboardMonitorReadoutStatus !== "unknown"
+    ? classifiedAttemptSession.onboardMonitorSnapshot
+    : fallbackAttemptSession?.onboardMonitorSnapshot || classifiedAttemptSession.onboardMonitorSnapshot;
+  const currentAttemptSession = {
+    ...classifiedAttemptSession,
+    readinessSnapshot: currentReadinessSnapshot,
+    onboardMonitorSnapshot: currentOnboardMonitorSnapshot
+  };
   const currentLivePidSnapshot = currentAttemptSession.livePidSnapshot;
   const requestedLivePidValues = options?.replaceLivePidSnapshot === true
     || commandResponses.some((item) => obdDevSession.selectedPidList.includes(String(item?.command || "").trim().toUpperCase()));
@@ -6190,8 +6219,12 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     ...(attemptedCommandSet.has("0100") ? { supportedPidMatrix: currentAttemptSession.supportedPidMatrix } : {}),
     ...(attemptedCommandSet.has("0202") ? { freezeFrameSnapshot: currentAttemptSession.freezeFrameSnapshot } : {}),
     ...(attemptedCommandSet.has("0900") ? { ecuInfoSnapshot: currentAttemptSession.ecuInfoSnapshot } : {}),
-    ...(options?.replaceReadinessSnapshot === true ? { readinessSnapshot: currentAttemptSession.readinessSnapshot } : {}),
-    ...(options?.replaceOnboardMonitorSnapshot === true ? { onboardMonitorSnapshot: currentAttemptSession.onboardMonitorSnapshot } : {})
+    ...(options?.replaceReadinessSnapshot === true
+      ? { readinessSnapshot: currentReadinessSnapshot }
+      : obdDevSession.lastSession?.readinessSnapshot ? { readinessSnapshot: obdDevSession.lastSession.readinessSnapshot } : {}),
+    ...(options?.replaceOnboardMonitorSnapshot === true
+      ? { onboardMonitorSnapshot: currentOnboardMonitorSnapshot }
+      : obdDevSession.lastSession?.onboardMonitorSnapshot ? { onboardMonitorSnapshot: obdDevSession.lastSession.onboardMonitorSnapshot } : {})
   };
   const resolvedScanSession = window.ObdReadOnly.buildScanSessionFromObdText(
     obdDevSession.lastRawText,

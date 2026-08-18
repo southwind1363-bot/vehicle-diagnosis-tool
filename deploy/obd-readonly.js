@@ -21562,7 +21562,32 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
-    const rows = (Array.isArray(sourceInput.tests)
+    const onboardMonitorEcuSnapshotInputs = [
+      sourceInput.onboardMonitorEcuSnapshots,
+      sourceInput.onboard_monitor_ecu_snapshots,
+      sourceInput.mode06EcuSnapshots,
+      sourceInput.mode06_ecu_snapshots
+    ].find(Array.isArray) || [];
+    const onboardMonitorEcuSnapshots = onboardMonitorEcuSnapshotInputs.map((snapshotInput) => {
+      if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
+      const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
+      if (!snapshotSourceEcu) return null;
+      const normalizedSnapshot = normalizeOnboardMonitorSnapshot({
+        ...snapshotInput,
+        onboardMonitorEcuSnapshots: [],
+        onboard_monitor_ecu_snapshots: [],
+        mode06EcuSnapshots: [],
+        mode06_ecu_snapshots: []
+      });
+      return {
+        ...normalizedSnapshot,
+        sourceEcu: snapshotSourceEcu,
+        source_ecu: snapshotSourceEcu,
+        onboardMonitorScope: "single_ecu",
+        onboard_monitor_scope: "single_ecu"
+      };
+    }).filter(Boolean);
+    const directRows = (Array.isArray(sourceInput.tests)
       ? sourceInput.tests
       : Array.isArray(sourceInput.values)
         ? sourceInput.values
@@ -21592,7 +21617,10 @@
                                 ? sourceInput.testRows
                                 : Array.isArray(sourceInput.items)
                                   ? sourceInput.items
-                                  : [])
+                                  : []);
+    const rows = (directRows.length > 0
+      ? directRows
+      : onboardMonitorEcuSnapshots.flatMap((snapshot) => snapshot.tests || []))
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = readObdResponseSourceEcu(row);
@@ -21644,6 +21672,7 @@
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
       ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
       sourceEcu,
+      ...onboardMonitorEcuSnapshots.map((item) => item.sourceEcu || item.source_ecu || null),
       ...tests.map((item) => item.sourceEcu || item.source_ecu || null)
     ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const observedSourceEcus = [...new Set(tests.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
@@ -21681,11 +21710,46 @@
       sourceInput.readoutStatus,
       sourceInput.readout_status
     );
-    const normalizedReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
-      ? String(explicitReadoutStatus).trim().toLowerCase()
-      : testCount > 0
-        ? "reported"
-        : "unknown";
+    const explicitNormalizedReadoutStatus = String(explicitReadoutStatus || "").trim().toLowerCase();
+    const onboardMonitorEcuStatuses = onboardMonitorEcuSnapshots.map((snapshot) => snapshot.onboardMonitorReadoutStatus || snapshot.onboard_monitor_readout_status || "unknown");
+    const reportedEcuCount = onboardMonitorEcuStatuses.filter((status) => status === "reported").length;
+    const blockedEcuCount = onboardMonitorEcuStatuses.filter((status) => status === "blocked").length;
+    const unparsedEcuCount = onboardMonitorEcuStatuses.filter((status) => status === "unparsed").length;
+    const unknownEcuCount = onboardMonitorEcuStatuses.filter((status) => status === "unknown").length;
+    const onboardMonitorScope = onboardMonitorEcuSnapshots.length > 1
+      ? "multiple_ecus"
+      : (sourceEcu || onboardMonitorEcuSnapshots.length === 1) ? "single_ecu" : "unknown";
+    const normalizedReadoutStatus = onboardMonitorEcuSnapshots.length > 0
+      ? ["blocked", "unparsed"].includes(explicitNormalizedReadoutStatus)
+        ? explicitNormalizedReadoutStatus
+        : blockedEcuCount > 0
+          ? "blocked"
+          : unparsedEcuCount > 0
+            ? "unparsed"
+            : reportedEcuCount === onboardMonitorEcuSnapshots.length
+              ? "reported"
+              : "unknown"
+      : ["reported", "unparsed", "blocked", "unknown"].includes(explicitNormalizedReadoutStatus)
+        ? explicitNormalizedReadoutStatus
+        : testCount > 0
+          ? "reported"
+          : "unknown";
+    const onboardMonitorEcuAggregateSummary = onboardMonitorEcuSnapshots.length ? {
+      schemaVersion: "onboard_monitor_ecu_aggregate_summary_v1",
+      schema_version: "onboard_monitor_ecu_aggregate_summary_v1",
+      ecuCount: onboardMonitorEcuSnapshots.length,
+      ecu_count: onboardMonitorEcuSnapshots.length,
+      reportedEcuCount,
+      reported_ecu_count: reportedEcuCount,
+      blockedEcuCount,
+      blocked_ecu_count: blockedEcuCount,
+      unparsedEcuCount,
+      unparsed_ecu_count: unparsedEcuCount,
+      unknownEcuCount,
+      unknown_ecu_count: unknownEcuCount,
+      allReported: reportedEcuCount === onboardMonitorEcuSnapshots.length,
+      all_reported: reportedEcuCount === onboardMonitorEcuSnapshots.length
+    } : null;
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
     const protocolProvenance = {
       primaryProtocol: normalizeProtocolProvenanceValue(protocol),
@@ -21712,8 +21776,14 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      onboardMonitorScope,
+      onboard_monitor_scope: onboardMonitorScope,
       readoutEcuIds,
       readout_ecu_ids: readoutEcuIds,
+      onboardMonitorEcuSnapshots,
+      onboard_monitor_ecu_snapshots: onboardMonitorEcuSnapshots,
+      onboardMonitorEcuAggregateSummary,
+      onboard_monitor_ecu_aggregate_summary: onboardMonitorEcuAggregateSummary,
       testCount,
       test_count: testCount,
       passedCount,
@@ -23768,6 +23838,7 @@
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
           onboard_monitor_readout_status: readoutStatus,
           readout_ecu_ids: snapshots.flatMap((snapshot) => snapshot.readoutEcuIds || snapshot.readout_ecu_ids || snapshot.sourceEcu || snapshot.source_ecu || []),
+          onboard_monitor_ecu_snapshots: snapshots,
           tests
         });
       }
