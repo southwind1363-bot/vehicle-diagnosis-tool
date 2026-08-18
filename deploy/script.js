@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2804件",
+  validationCheckLabel: "OBD安全検証 2805件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial再読取の対応PIDを0100先頭確認から最新ページ束へ置換",
+  recentMilestone: "Web Serial基本スキャンの完了判定を正規化済み読取状態へ統一",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.58";
+const APP_VERSION = "3.12.59";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4803,13 +4803,22 @@ function buildWebSerialAdapterIdentity(commandResponses = []) {
   };
 }
 
+function isWebSerialReadoutReported(snapshot, camelStatusKey, snakeStatusKey) {
+  return String(snapshot?.[camelStatusKey] || snapshot?.[snakeStatusKey] || "").trim().toLowerCase() === "reported";
+}
+
+function hasWebSerialDtcStatusReport(status) {
+  const reportedStatuses = obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.reportedStatuses || [];
+  return reportedStatuses.includes(status);
+}
+
 async function readObdDeveloperDtc() {
   const storedReadCompleted = await runObdDeveloperRead("保存DTC読取", ["03"]);
-  if (!storedReadCompleted) return obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
+  if (!storedReadCompleted || !hasWebSerialDtcStatusReport("stored")) return false;
   await captureObdDeveloperProtocolAfterStoredDtc();
   if (!obdDevSession.port) return false;
-  const remainingReadCompleted = await runObdDeveloperRead("保留・永久DTC読取", ["07", "0A"]);
-  return (storedReadCompleted && remainingReadCompleted) || obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
+  await runObdDeveloperRead("保留・永久DTC読取", ["07", "0A"]);
+  return obdDevSession.lastSession?.dtcSnapshot?.dtcStatusSummary?.complete === true;
 }
 
 async function readObdDeveloperCoreScan() {
@@ -4914,8 +4923,7 @@ async function readObdDeveloperQuickCondition() {
 async function readObdDeveloperFreezeFrame() {
   const readCompleted = await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"]);
   const freezeFrameSnapshot = obdDevSession.lastSession?.freezeFrameSnapshot;
-  const emptyFreezeFrameReadout = freezeFrameSnapshot?.freezeFrameReadoutStatus === "reported" && !(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc);
-  if (!readCompleted && !emptyFreezeFrameReadout) return false;
+  if (!readCompleted || !isWebSerialReadoutReported(freezeFrameSnapshot, "freezeFrameReadoutStatus", "freeze_frame_readout_status")) return false;
   if (!hasWebSerialFreezeFrameTriggerDtc(freezeFrameSnapshot)) {
     obdDevStatus.textContent = "フリーズフレーム起点DTCがないため、追加PID要求を送りませんでした。";
     renderObdDeveloperGate();
@@ -4934,17 +4942,20 @@ async function readObdDeveloperFreezeFrame() {
     renderObdDeveloperGate();
     return true;
   }
-  return runObdDeveloperRead("フリーズフレーム値読取", supportedCommands);
+  const valuesReadCompleted = await runObdDeveloperRead("フリーズフレーム値読取", supportedCommands);
+  return valuesReadCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.freezeFrameSnapshot, "freezeFrameReadoutStatus", "freeze_frame_readout_status");
 }
 
 async function readObdDeveloperReadiness() {
-  return runObdDeveloperRead("レディネス読取", ["0101"]);
+  const readCompleted = await runObdDeveloperRead("レディネス読取", ["0101"]);
+  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.readinessSnapshot, "readinessReadoutStatus", "readiness_readout_status");
 }
 
 async function readObdDeveloperEcuInfo() {
   const supportReadCompleted = await runObdDeveloperRead("ECU情報対応確認", ["0900"]);
-  if (!supportReadCompleted) return false;
-  const supportedInfoTypes = new Set(obdDevSession.lastSession?.ecuInfoSnapshot?.supportInfoTypesSummary?.ids || []);
+  const ecuInfoSnapshot = obdDevSession.lastSession?.ecuInfoSnapshot;
+  if (!supportReadCompleted || !isWebSerialReadoutReported(ecuInfoSnapshot, "ecuInfoReadoutStatus", "ecu_info_readout_status")) return false;
+  const supportedInfoTypes = new Set(ecuInfoSnapshot?.supportInfoTypesSummary?.ids || []);
   const supportedCommands = [
     ["04", "0904"],
     ["06", "0906"],
@@ -4959,15 +4970,18 @@ async function readObdDeveloperEcuInfo() {
     renderObdDeveloperGate();
     return true;
   }
-  return runObdDeveloperRead("ECU情報読取", supportedCommands);
+  const readCompleted = await runObdDeveloperRead("ECU情報読取", supportedCommands);
+  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.ecuInfoSnapshot, "ecuInfoReadoutStatus", "ecu_info_readout_status");
 }
 
 async function readObdDeveloperOnboardMonitor() {
-  return runObdDeveloperRead("Mode06読取", ["06"]);
+  const readCompleted = await runObdDeveloperRead("Mode06読取", ["06"]);
+  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.onboardMonitorSnapshot, "onboardMonitorReadoutStatus", "onboard_monitor_readout_status");
 }
 
 async function readObdDeveloperPermanentDtc() {
-  return runObdDeveloperRead("永久DTC読取", ["0A"]);
+  const readCompleted = await runObdDeveloperRead("永久DTC読取", ["0A"]);
+  return readCompleted && hasWebSerialDtcStatusReport("permanent");
 }
 
 async function readObdDeveloperLiveSnapshot() {
@@ -4980,7 +4994,8 @@ async function readObdDeveloperLiveSnapshot() {
     renderObdDeveloperGate();
     return true;
   }
-  return runObdDeveloperRead("ライブデータ読取", supportedCommands);
+  const readCompleted = await runObdDeveloperRead("ライブデータ読取", supportedCommands);
+  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.livePidSnapshot, "livePidReadoutStatus", "live_pid_readout_status");
 }
 
 async function readObdDeveloperQuickLiveSnapshot() {
@@ -4993,7 +5008,8 @@ async function readObdDeveloperQuickLiveSnapshot() {
     renderObdDeveloperGate();
     return true;
   }
-  return runObdDeveloperRead("クイックライブ値読取", supportedCommands);
+  const readCompleted = await runObdDeveloperRead("クイックライブ値読取", supportedCommands);
+  return readCompleted && isWebSerialReadoutReported(obdDevSession.lastSession?.livePidSnapshot, "livePidReadoutStatus", "live_pid_readout_status");
 }
 
 async function readObdDeveloperSupportedPidMaps() {
@@ -5009,7 +5025,7 @@ async function readObdDeveloperSupportedPidMaps() {
     ? [...new Set(supportedPidMatrix.supportedPids || [])]
     : [];
   obdDevSession.supportedPidDiscoveryComplete = supportedPidMatrix?.supportedPidReadoutStatus === "reported";
-  return true;
+  return obdDevSession.supportedPidDiscoveryComplete;
 }
 
 async function probeObdLocalBridge(contextLabel = "ローカルブリッジ") {
