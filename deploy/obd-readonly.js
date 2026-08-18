@@ -4239,10 +4239,28 @@
         retained_raw_text: false
       };
     }).filter(Boolean);
-    const scopedMonitorValues = normalizedLivePidEcuSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
-    const monitorValues = structuredMonitorValues.length > 0
-      ? structuredMonitorValues
-      : scopedMonitorValues.length > 0 ? scopedMonitorValues : rawEcuLivePidMonitorValues;
+    const reportedLivePidEcuSnapshots = normalizedLivePidEcuSnapshots.filter((snapshot) =>
+      (snapshot.livePidReadoutStatus || snapshot.live_pid_readout_status) === "reported"
+    );
+    const reportedScopedMonitorValues = reportedLivePidEcuSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
+    const reportedStructuredMonitorValues = normalizedLivePidEcuSnapshots.length > 0
+      ? structuredMonitorValues.filter((item) => {
+        const itemSource = String(item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || "").trim().toUpperCase();
+        if (!itemSource) return reportedLivePidEcuSnapshots.length === normalizedLivePidEcuSnapshots.length;
+        const itemAddress = normalizeComparableCanEcuAddress(itemSource);
+        return reportedLivePidEcuSnapshots.some((snapshot) => {
+          const reportedSource = String(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || "").trim().toUpperCase();
+          if (reportedSource === itemSource) return true;
+          const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
+          return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, itemAddress);
+        });
+      })
+      : structuredMonitorValues;
+    const monitorValues = normalizedLivePidEcuSnapshots.length > 0
+      ? (reportedStructuredMonitorValues.length > 0 ? reportedStructuredMonitorValues : reportedScopedMonitorValues)
+      : structuredMonitorValues.length > 0
+        ? structuredMonitorValues
+        : rawEcuLivePidMonitorValues;
     const observedSourceEcus = [...new Set(monitorValues.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const observedSourceEcuNames = [...new Set(monitorValues
