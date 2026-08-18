@@ -806,10 +806,11 @@
     Object.freeze({
       intent: "read_ecu_info",
       label: "ECU information snapshot",
-      dataShape: Object.freeze(["protocol", "values", "captured_at"]),
+      dataShape: Object.freeze(["protocol", "values", "ecu_info_ecu_snapshots", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,
         values: Object.freeze([]),
+        ecu_info_ecu_snapshots: Object.freeze([]),
         captured_at: null
       })
     }),
@@ -1891,7 +1892,7 @@
       read_permanent_dtc: ["dtcs", "codes"],
       read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
-      read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
+      read_ecu_info: ["items", "values", "ecu_info_items", "ecuInfoItems", "ecu_info_rows", "ecuInfoRows", "mode09_items", "mode09Items", "mode09_values", "mode09Values", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers", "ecu_info_ecu_snapshots", "ecuInfoEcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses", "raw", "response", "bytes"],
       read_onboard_monitor: [
         "tests", "items", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests",
         "onboard_monitor_ecu_snapshots", "onboardMonitorEcuSnapshots", "mode06_ecu_snapshots", "mode06EcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses",
@@ -2127,6 +2128,13 @@
       };
     }
     if (readoutId === "ecu_info_snapshot") {
+      const ecuInfoEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
+        const rows = [data.ecu_info_ecu_snapshots, data.ecuInfoEcuSnapshots, data.ecu_snapshots, data.ecuSnapshots, data.ecu_responses, data.ecuResponses].find(Array.isArray)
+          || (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
+        return rows.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
+          ? { ...row, source_ecu: scopeId }
+          : row).filter(Boolean);
+      });
       return {
         captured_at: capturedAt,
         protocol,
@@ -2134,7 +2142,8 @@
         readout_ecu_ids: scopedData
           .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
           .filter(Boolean),
-        items: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["items", "ecu_info_items", "ecuInfoItems"], scopeId))
+        items: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["items", "ecu_info_items", "ecuInfoItems"], scopeId)),
+        ecu_info_ecu_snapshots: ecuInfoEcuSnapshots
       };
     }
     if (readoutId === "onboard_monitor_snapshot") {
@@ -26679,7 +26688,8 @@
       ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
-        : (ecuInfoSnapshotInput?.data && typeof ecuInfoSnapshotInput.data === "object" && !Array.isArray(ecuInfoSnapshotInput.data))
+        : ((ecuInfoSnapshotInput?.data && typeof ecuInfoSnapshotInput.data === "object" && !Array.isArray(ecuInfoSnapshotInput.data))
+          || (String(sessionInput.source || sessionInput.source_type || "") === "native_connector" && [ecuInfoSnapshotInput?.ecu_info_ecu_snapshots, ecuInfoSnapshotInput?.ecuInfoEcuSnapshots].some(Array.isArray)))
           ? normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput)
           : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSafetyInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
     const supportedPidMatrix = preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
