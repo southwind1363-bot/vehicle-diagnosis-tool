@@ -3530,7 +3530,6 @@
       seen.add(key);
       return true;
     });
-    const codes = [...new Set(dtcs.map((item) => item.code))];
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
@@ -3539,18 +3538,50 @@
       primary_protocol: sanitizedPrimaryProtocol,
       ...mergeProtocolProvenance(data, response)
     };
-    const normalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
+    const allNormalizedDtcs = dtcs.map((item) => ({ ...item, source: "local_bridge" }));
     const bridgeDtcReadoutStatus = getBridgeReadoutStatus(resolvedBridgeSafety);
+    const isCompleteDtcEcuResponseStatus = (value) => ["reported", "responded", "ok"].includes(String(value || "unknown").trim().toLowerCase());
     const normalizedEcuResponses = ecuRows.map((row) => {
       const decodedRawSnapshot = decodedRawEcuDtcSnapshots.get(row);
+      const rowEcu = row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null;
+      const rowEcuName = row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null;
+      const rowDtcStatus = row?.dtc_status || row?.dtcStatus || row?.dtc_kind || row?.dtcKind || defaultStatus;
+      const rowInputs = Array.isArray(row?.dtcs) ? row.dtcs : Array.isArray(row?.codes) ? row.codes : Array.isArray(row?.dtc_codes) ? row.dtc_codes : Array.isArray(row?.dtcCodes) ? row.dtcCodes : [];
+      const hasStructuredRowDtcEvidence = [row?.dtcs, row?.codes, row?.dtc_codes, row?.dtcCodes].some(Array.isArray);
+      const rowStatus = row?.status || row?.response_status || row?.responseStatus || decodedRawSnapshot?.dtcReadoutStatus || (hasStructuredRowDtcEvidence ? "reported" : bridgeDtcReadoutStatus);
+      const childDtcs = [...new Map([
+        ...normalizeDtcRows(rowInputs, rowDtcStatus, rowEcu, rowEcuName),
+        ...(Array.isArray(decodedRawSnapshot?.dtcs) ? decodedRawSnapshot.dtcs.map((item) => inheritDtcEcuName(item, rowEcu, rowEcuName)) : [])
+      ].map((item) => [`${item.code}::${item.subcode || ""}::${normalizeDtcEntryCodeFormat(item)}::${item.status}`, { ...item, source: "local_bridge" }])).values()];
+      const explicitCodeCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null;
+      const codeCount = Number.isInteger(decodedRawSnapshot?.dtcCount) ? decodedRawSnapshot.dtcCount : childDtcs.length > 0 ? childDtcs.length : explicitCodeCount;
       return {
-        ecu: row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null,
-        ecuName: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
-        ecu_name: row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null,
-        status: row?.status || row?.response_status || row?.responseStatus || decodedRawSnapshot?.dtcReadoutStatus || bridgeDtcReadoutStatus,
-        codeCount: Number.isInteger(decodedRawSnapshot?.dtcCount) ? decodedRawSnapshot.dtcCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null
+        ecu: rowEcu,
+        ecuName: rowEcuName,
+        ecu_name: rowEcuName,
+        status: rowStatus,
+        codeCount,
+        code_count: codeCount,
+        dtcs: childDtcs,
+        codes: [...new Set(childDtcs.map((item) => item.code))]
       };
     });
+    const reportedDtcEcuResponses = normalizedEcuResponses.filter((row) => isCompleteDtcEcuResponseStatus(row.status));
+    const matchesReportedDtcEcu = (row) => {
+      if (normalizedEcuResponses.length === 0) return true;
+      if (reportedDtcEcuResponses.length === normalizedEcuResponses.length) return true;
+      const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
+      if (!rowSource) return reportedDtcEcuResponses.length === normalizedEcuResponses.length;
+      const rowAddress = normalizeComparableCanEcuAddress(rowSource);
+      return reportedDtcEcuResponses.some((responseRow) => {
+        const reportedSource = String(responseRow.ecu || "").trim().toUpperCase();
+        if (reportedSource === rowSource) return true;
+        const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
+        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+      });
+    };
+    const normalizedDtcs = allNormalizedDtcs.filter(matchesReportedDtcEcu);
+    const codes = [...new Set(normalizedDtcs.map((item) => item.code))];
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const udsDtcExtendedDataRecordResponses = readUdsDtcExtendedDataRecordResponseAliases(data, resolvedSourceEcu);
@@ -3559,7 +3590,6 @@
     const storedCount = normalizedDtcs.filter((item) => item.status === "stored").length;
     const pendingCount = normalizedDtcs.filter((item) => item.status === "pending").length;
     const permanentCount = normalizedDtcs.filter((item) => item.status === "permanent").length;
-    const isCompleteDtcEcuResponseStatus = (value) => ["reported", "responded", "ok"].includes(String(value || "unknown").trim().toLowerCase());
     const ecuReadoutStatuses = normalizedEcuResponses.map((row) => String(row.status || "unknown").trim().toLowerCase());
     const dtcReadoutStatus = bridgeDtcReadoutStatus === "blocked" || ecuReadoutStatuses.includes("blocked")
       ? "blocked"
@@ -20077,6 +20107,18 @@
           const responseServices = normalizeDtcEcuServiceList(row.responseServices, row.response_services);
           const negativeRequestedServices = normalizeDtcEcuServiceList(row.negativeRequestedServices, row.negative_requested_services, row.negativeServices, row.negative_services);
           const negativeResponseLabels = normalizeDtcEcuLabels(row.negativeResponseLabels, row.negative_response_labels);
+          const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
+          const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
+            source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
+            source_ecu: ecu,
+            source_ecu_name: ecuName,
+            ...(intent ? { intent } : {}),
+            status: intent === "read_pending_dtc" ? "pending" : intent === "read_permanent_dtc" ? "permanent" : intent ? "stored" : "unknown",
+            dtc_readout_status: status,
+            dtcs: childDtcInputs,
+            ecu_responses: []
+          }) : null;
+          const childDtcs = Array.isArray(childDtcSnapshot?.dtcs) ? childDtcSnapshot.dtcs : [];
           return ecu ? [`${normalizeDtcResponseEcu(ecu)}::${intent || status}`, {
             ecu,
             ecuName,
@@ -20097,7 +20139,9 @@
             negativeRequestedServices,
             negative_requested_services: negativeRequestedServices,
             negativeResponseLabels,
-            negative_response_labels: negativeResponseLabels
+            negative_response_labels: negativeResponseLabels,
+            dtcs: childDtcs,
+            codes: [...new Set(childDtcs.map((item) => item.code))]
           }] : null;
         })
         .filter(Boolean)
@@ -20128,7 +20172,10 @@
       ...(Array.isArray(sourceInput.permanent_dtc_codes) ? sourceInput.permanent_dtc_codes.map((row) => ({ value: row, status: "permanent" })) : []),
       ...(Array.isArray(sourceInput.permanentDtcCodes) ? sourceInput.permanentDtcCodes.map((row) => ({ value: row, status: "permanent" })) : []),
       ...(Array.isArray(sourceInput.permanent_codes) ? sourceInput.permanent_codes.map((row) => ({ value: row, status: "permanent" })) : []),
-      ...(Array.isArray(sourceInput.permanentCodes) ? sourceInput.permanentCodes.map((row) => ({ value: row, status: "permanent" })) : [])
+      ...(Array.isArray(sourceInput.permanentCodes) ? sourceInput.permanentCodes.map((row) => ({ value: row, status: "permanent" })) : []),
+      ...explicitEcuResponses
+        .filter((row) => ["reported", "responded", "ok"].includes(String(row.status || "unknown").trim().toLowerCase()))
+        .flatMap((row) => row.dtcs || [])
     ];
     const rows = rawRows.flatMap((row) => {
       if (typeof row === "string") {
@@ -20226,7 +20273,22 @@
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
       });
 
-    const normalizedDtcs = [...byCode.values()];
+    const allNormalizedDtcs = [...byCode.values()];
+    const reportedDtcEcuResponses = explicitEcuResponses.filter((row) => ["reported", "responded", "ok"].includes(String(row.status || "unknown").trim().toLowerCase()));
+    const matchesReportedDtcEcu = (row) => {
+      if (explicitEcuResponses.length === 0) return true;
+      if (reportedDtcEcuResponses.length === explicitEcuResponses.length) return true;
+      const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
+      if (!rowSource) return reportedDtcEcuResponses.length === explicitEcuResponses.length;
+      const rowAddress = normalizeComparableCanEcuAddress(rowSource);
+      return reportedDtcEcuResponses.some((responseRow) => {
+        const reportedSource = String(responseRow.ecu || "").trim().toUpperCase();
+        if (reportedSource === rowSource) return true;
+        const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
+        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+      });
+    };
+    const normalizedDtcs = allNormalizedDtcs.filter(matchesReportedDtcEcu);
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const resolvedSourceEcuName = sourceEcuName || (normalizedDtcs.length === 1 ? normalizedDtcs[0].ecuName || null : null);
