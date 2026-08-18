@@ -21025,6 +21025,21 @@
         readiness_scope: "single_ecu"
       };
     }).filter(Boolean);
+    const reportedReadinessEcuSnapshots = readinessEcuSnapshots.filter((snapshot) =>
+      String(snapshot.readinessReadoutStatus || snapshot.readiness_readout_status || "unknown").trim().toLowerCase() === "reported"
+    );
+    const matchesReportedReadinessEcu = (row) => {
+      if (readinessEcuSnapshots.length === 0) return true;
+      const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
+      if (!rowSource) return reportedReadinessEcuSnapshots.length === readinessEcuSnapshots.length;
+      const rowAddress = normalizeComparableCanEcuAddress(rowSource);
+      return reportedReadinessEcuSnapshots.some((snapshot) => {
+        const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
+        if (reportedSource === rowSource) return true;
+        const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
+        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+      });
+    };
     const readinessStatusBytes = normalizeReadinessStatusBytes(sourceInput);
     const explicitMonitors = Array.isArray(input)
       ? input
@@ -21115,7 +21130,7 @@
         diagnosticUse: catalogItem?.diagnosticUse || "",
         notCompleteNote: catalogItem?.notCompleteNote || ""
       };
-    });
+    }).filter(matchesReportedReadinessEcu);
     const observedMonitorEcus = [...new Set(normalized.map((monitor) => monitor.sourceEcu || monitor.source_ecu || null).filter(Boolean))];
     const sourceEcu = declaredSourceEcu || (observedMonitorEcus.length === 1 ? observedMonitorEcus[0] : null);
     const observedMonitorEcuNames = [...new Set(normalized.map((monitor) => monitor.sourceEcuName || monitor.source_ecu_name || null).filter(Boolean))];
@@ -21132,7 +21147,7 @@
         ? "single_ecu"
         : "unspecified";
     const observedReadinessMonitors = readinessScope === "multiple_ecus"
-      ? readinessEcuSnapshots.flatMap((snapshot) => snapshot.monitors || [])
+      ? reportedReadinessEcuSnapshots.flatMap((snapshot) => snapshot.monitors || [])
       : normalized;
     const knownMonitors = readinessMonitorCatalog.map((item) => {
       const observedMonitors = observedReadinessMonitors.filter((monitor) => monitor.id === item.id);
@@ -21167,7 +21182,7 @@
     const blockedEcuCount = readinessEcuStatuses.filter((status) => status === "blocked").length;
     const unparsedEcuCount = readinessEcuStatuses.filter((status) => status === "unparsed").length;
     const unknownEcuCount = readinessEcuStatuses.filter((status) => status === "unknown").length;
-    const sumEcuCount = (key) => readinessEcuSnapshots.reduce((sum, snapshot) => sum + Math.max(0, Number(snapshot?.[key]) || 0), 0);
+    const sumEcuCount = (key) => reportedReadinessEcuSnapshots.reduce((sum, snapshot) => sum + Math.max(0, Number(snapshot?.[key]) || 0), 0);
     const monitorCount = readinessScope === "multiple_ecus" ? sumEcuCount("monitorCount") : localMonitorCount;
     const completeCount = readinessScope === "multiple_ecus" ? sumEcuCount("completeCount") : localCompleteCount;
     const incompleteCount = readinessScope === "multiple_ecus" ? sumEcuCount("incompleteCount") : localIncompleteCount;
