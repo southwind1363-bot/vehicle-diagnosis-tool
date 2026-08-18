@@ -9680,6 +9680,16 @@ const bridgeRawOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapsho
   data: { raw: "46 01 02 00 01 00 00 00 02" }
 });
 check(bridgeRawOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "reported" && bridgeRawOnboardMonitorSnapshot.tests?.some((item) => item.testId === "01" && item.componentId === "02" && item.value === 1 && item.min === 0 && item.max === 2 && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && bridgeRawOnboardMonitorSnapshot.retainedRawText === false && bridgeRawOnboardMonitorSnapshot.vehicleCommandEnabled === false && bridgeRawOnboardMonitorSnapshot.wouldTransmit === false, "Bridge raw Mode 06 responses were not decoded into a read-only monitor snapshot");
+const bridgeRawCoreReadoutSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: bridgeRawDtcSnapshot,
+  live_pid_snapshot: bridgeRawLivePidSnapshot,
+  supported_pid_matrix: bridgeRawSupportedPidSnapshot,
+  freeze_frame_snapshot: bridgeRawFreezeFrameSnapshot,
+  readiness_snapshot: bridgeRawReadinessSnapshot,
+  ecu_info_snapshot: bridgeRawEcuInfoSnapshot,
+  onboard_monitor_snapshot: bridgeRawOnboardMonitorSnapshot
+});
+check(bridgeRawCoreReadoutSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0300") && bridgeRawCoreReadoutSession.livePidSnapshot?.monitorValues?.some((item) => item.pid === "0C" && item.value === 2000) && bridgeRawCoreReadoutSession.supportedPidMatrix?.supportedPids?.includes("0C") && bridgeRawCoreReadoutSession.freezeFrameSnapshot?.triggerDtc === "P0171" && bridgeRawCoreReadoutSession.readinessSnapshot?.readinessReadoutStatus === "reported" && bridgeRawCoreReadoutSession.ecuInfoSnapshot?.items?.some((item) => item.id === "calibration_id" && item.value === "CAL-1") && bridgeRawCoreReadoutSession.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.componentId === "02") && ["dtc_snapshot", "live_pid_snapshot", "supported_pid_matrix", "freeze_frame_snapshot", "readiness_snapshot", "ecu_info_snapshot", "onboard_monitor_snapshot"].every((id) => bridgeRawCoreReadoutSession.readoutCoverage?.capturedIds?.includes(id)) && bridgeRawCoreReadoutSession.vehicleCommandEnabled === false && bridgeRawCoreReadoutSession.wouldTransmit === false && bridgeRawCoreReadoutSession.retainedRawText === false, "Bridge raw core readouts did not remain complete and read-only after diagnostic session normalization");
 const bridgeOuterMetadataOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
   ok: true,
   blocked: false,
