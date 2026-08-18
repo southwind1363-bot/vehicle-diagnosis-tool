@@ -24115,11 +24115,12 @@
         const supportedPids = [...new Set(snapshots.flatMap((snapshot) => snapshot.supportedPids || snapshot.supported_pids || []))];
         const supportedPidPageBases = [...new Set(snapshots.flatMap((snapshot) => snapshot.supportedPidPageBases || snapshot.supported_pid_page_bases || []))];
         const supportedPidEcuSnapshots = snapshots.flatMap((snapshot) => snapshot.supportedPidEcuSnapshots || snapshot.supported_pid_ecu_snapshots || []);
-        const readoutStatus = snapshots.some((snapshot) => (snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status) === "reported")
-          ? "reported"
-          : snapshots.some((snapshot) => (snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status) === "unparsed")
+        const readoutStatuses = snapshots.map((snapshot) => snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status || "unknown");
+        const readoutStatus = readoutStatuses.includes("blocked")
+          ? "blocked"
+          : readoutStatuses.some((status) => status !== "reported")
             ? "unparsed"
-            : "unknown";
+            : readoutStatuses.length ? "reported" : "unknown";
         return {
           source: "obd_response_decoder",
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
@@ -26319,7 +26320,16 @@
     const supportedCount = items.filter((item) => item.supported).length;
     const unsupportedCount = items.filter((item) => !item.supported).length;
     const knownPidCount = items.length;
-    const readoutStatus = sourceInput.supportedPidReadoutStatus || sourceInput.supported_pid_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || (supportedPids.length || supportedPidPageBases.length ? "reported" : "unknown");
+    const requestedReadoutStatus = String(sourceInput.supportedPidReadoutStatus || sourceInput.supported_pid_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || "").trim().toLowerCase();
+    const baseReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
+      ? requestedReadoutStatus
+      : supportedPids.length || supportedPidPageBases.length ? "reported" : "unknown";
+    const ecuReadoutStatuses = supportedPidEcuSnapshots.map((snapshot) => String(snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status || "unknown").trim().toLowerCase());
+    const readoutStatus = baseReadoutStatus === "blocked" || ecuReadoutStatuses.includes("blocked")
+      ? "blocked"
+      : baseReadoutStatus === "unparsed" || ecuReadoutStatuses.some((status) => status !== "reported")
+        ? "unparsed"
+        : baseReadoutStatus;
     if (!supportedPidEcuSnapshots.length && sourceEcu) {
       supportedPidEcuSnapshots.push({
         sourceEcu,
@@ -26336,6 +26346,22 @@
         supported_pid_readout_status: readoutStatus
       });
     }
+    const supportedPidEcuIds = [...new Set(supportedPidEcuSnapshots.map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu).filter(Boolean))];
+    const reportedEcuResponseCount = supportedPidEcuSnapshots.filter((snapshot) => String(snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status || "unknown").trim().toLowerCase() === "reported").length;
+    const supportedPidEcuAggregateSummary = supportedPidEcuSnapshots.length ? {
+      schemaVersion: "supported_pid_ecu_aggregate_summary_v1",
+      schema_version: "supported_pid_ecu_aggregate_summary_v1",
+      ecuCount: supportedPidEcuIds.length,
+      ecu_count: supportedPidEcuIds.length,
+      responseCount: supportedPidEcuSnapshots.length,
+      response_count: supportedPidEcuSnapshots.length,
+      reportedResponseCount: reportedEcuResponseCount,
+      reported_response_count: reportedEcuResponseCount,
+      incompleteResponseCount: supportedPidEcuSnapshots.length - reportedEcuResponseCount,
+      incomplete_response_count: supportedPidEcuSnapshots.length - reportedEcuResponseCount,
+      allReported: reportedEcuResponseCount === supportedPidEcuSnapshots.length,
+      all_reported: reportedEcuResponseCount === supportedPidEcuSnapshots.length
+    } : null;
     const resolvedSourceEcu = sourceEcu || (supportedPidEcuSnapshots.length === 1 ? supportedPidEcuSnapshots[0].sourceEcu : null);
     const resolvedSourceEcuName = sourceEcuName || (supportedPidEcuSnapshots.length === 1 ? supportedPidEcuSnapshots[0].sourceEcuName || null : null);
     const supportedPidAggregationScopeInput = String(sourceInput.supportedPidAggregationScope || sourceInput.supported_pid_aggregation_scope || "").trim();
@@ -26380,6 +26406,8 @@
       supported_pid_page_summary: supportedPidPageSummary,
       supportedPidEcuSnapshots,
       supported_pid_ecu_snapshots: supportedPidEcuSnapshots,
+      supportedPidEcuAggregateSummary,
+      supported_pid_ecu_aggregate_summary: supportedPidEcuAggregateSummary,
       supportedPidAggregationScope,
       supported_pid_aggregation_scope: supportedPidAggregationScope,
       supportedCount,

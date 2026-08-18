@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 2808件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web SerialのDTC状態をECU単位で完了確認",
+  recentMilestone: "Web Serialの対応PIDページをECU単位で完了確認",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.66";
+const APP_VERSION = "3.12.67";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4853,6 +4853,7 @@ function hasWebSerialDtcStatusReport(status) {
 }
 
 function hasWebSerialSupportedPidPage(snapshot, basePid) {
+  if (!isWebSerialReadoutReported(snapshot, "supportedPidReadoutStatus", "supported_pid_readout_status")) return false;
   const pageSummary = snapshot?.supportedPidPageSummary || snapshot?.supported_pid_page_summary || null;
   const pageBases = snapshot?.supportedPidPageBases
     || snapshot?.supported_pid_page_bases
@@ -4860,9 +4861,25 @@ function hasWebSerialSupportedPidPage(snapshot, basePid) {
     || pageSummary?.page_bases
     || [];
   const normalizedBasePid = String(basePid || "").trim().toUpperCase().padStart(2, "0");
-  return /^[0-9A-F]{2}$/.test(normalizedBasePid)
+  const hasRequestedPage = /^[0-9A-F]{2}$/.test(normalizedBasePid)
     && Array.isArray(pageBases)
     && pageBases.some((page) => String(page || "").trim().toUpperCase().padStart(2, "0") === normalizedBasePid);
+  if (!hasRequestedPage) return false;
+  const ecuSnapshots = snapshot?.supportedPidEcuSnapshots || snapshot?.supported_pid_ecu_snapshots || [];
+  if (!Array.isArray(ecuSnapshots) || !ecuSnapshots.length) return true;
+  const readEcu = (row) => String(row?.sourceEcu || row?.source_ecu || "").trim().toUpperCase();
+  const expectedEcus = new Set((normalizedBasePid === "00"
+    ? ecuSnapshots
+    : ecuSnapshots.filter((row) => (row?.supportedPids || row?.supported_pids || []).some((pid) => String(pid || "").trim().toUpperCase().padStart(2, "0") === normalizedBasePid)))
+    .map(readEcu)
+    .filter(Boolean));
+  if (!expectedEcus.size) return true;
+  const reportedEcus = new Set(ecuSnapshots
+    .filter((row) => isWebSerialReadoutReported(row, "supportedPidReadoutStatus", "supported_pid_readout_status"))
+    .filter((row) => (row?.supportedPidPageBases || row?.supported_pid_page_bases || []).some((page) => String(page || "").trim().toUpperCase().padStart(2, "0") === normalizedBasePid))
+    .map(readEcu)
+    .filter(Boolean));
+  return [...expectedEcus].every((ecu) => reportedEcus.has(ecu));
 }
 
 function decodeWebSerialMode09SupportedInfoTypes(value) {
