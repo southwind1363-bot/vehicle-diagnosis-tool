@@ -654,7 +654,7 @@ const bridgeExtendedCoreReadoutNormalizerFunctionChecks = () => {
     check(functionBody.includes('const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;') && functionBody.includes('const sourceEcuName = data.source_ecu_name || data.sourceEcuName') && functionBody.includes('const shouldInheritEcuName = Boolean(sourceEcuName') && functionBody.includes('source_ecu_name: sourceEcuName') && functionBody.includes('...normalizeOnboardMonitorSnapshot({') && functionBody.includes('source: "local_bridge"'), "normalizeBridgeOnboardMonitorSnapshot should retain a parent ECU name without replacing an explicit Mode 06 row source");
     check(functionBody.includes('Array.isArray(data.mode06_tests)') && functionBody.includes('Array.isArray(data.mode06Rows)') && functionBody.includes('Array.isArray(data.onboardMonitorTests)'), "normalizeBridgeOnboardMonitorSnapshot should accept Mode 06 test aliases");
     check(functionBody.includes('const hasNestedOnboardMonitorPayload = Boolean(nestedData') && functionBody.includes('const outerOnboardMonitorFallback = nestedData && !hasNestedOnboardMonitorPayload') && functionBody.includes('...outerOnboardMonitorFallback'), "normalizeBridgeOnboardMonitorSnapshot should only use outer Mode 06 tests for an empty nested envelope");
-    check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety)') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('const rawOnboardMonitorResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const shouldDecodeRawOnboardMonitor = rawOnboardMonitorResponse !== null && !hasStructuredOnboardMonitorInput;') && functionBody.includes('const decoded = decodeOnboardMonitorResponse({') && functionBody.includes('const hasTestEvidence = tests.length > 0;') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('readBridgeSnapshotSafety(response, errorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasExplicitReadoutStatus || hasTestEvidence));'), "normalizeBridgeOnboardMonitorSnapshot should preserve bridge failure status");
+    check(functionBody.includes('intent: "read_onboard_monitor"') && functionBody.includes('onboard_monitor_readout_status: rawEcuOnboardMonitorReadoutUnparsed && tests.length === 0') && functionBody.includes('wouldTransmit: resolvedBridgeSafety.wouldTransmit') && functionBody.includes('const rawOnboardMonitorResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const shouldDecodeRawOnboardMonitor = rawOnboardMonitorResponse !== null && !hasStructuredOnboardMonitorInput;') && functionBody.includes('const getEcuRawOnboardMonitorResponse = (row) =>') && functionBody.includes('const rawEcuOnboardMonitorTests = onboardMonitorEcuSnapshots.flatMap((ecuRow) => {') && functionBody.includes('const hasTestEvidence = structuredTests.length > 0;') && functionBody.includes('const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);') && functionBody.includes('readBridgeSnapshotSafety(response, errorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse || hasExplicitReadoutStatus || hasTestEvidence));'), "normalizeBridgeOnboardMonitorSnapshot should preserve per-ECU raw Mode 06 results and bridge failure status");
   }
 };
 const bridgePidValueFunctionChecks = () => {
@@ -9726,6 +9726,27 @@ const bridgeRawOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapsho
   data: { raw: "46 01 02 00 01 00 00 00 02" }
 });
 check(bridgeRawOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "reported" && bridgeRawOnboardMonitorSnapshot.tests?.some((item) => item.testId === "01" && item.componentId === "02" && item.value === 1 && item.min === 0 && item.max === 2 && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && bridgeRawOnboardMonitorSnapshot.retainedRawText === false && bridgeRawOnboardMonitorSnapshot.vehicleCommandEnabled === false && bridgeRawOnboardMonitorSnapshot.wouldTransmit === false, "Bridge raw Mode 06 responses were not decoded into a read-only monitor snapshot");
+const bridgeRawPerEcuOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    mode06_ecu_snapshots: [
+      { source_ecu: "7E8", source_ecu_name: "Engine", raw: "46 01 02 00 01 00 00 00 02" },
+      { source_ecu: "7E9", source_ecu_name: "Transmission", raw: "46 03 04 00 06 00 01 00 05" }
+    ]
+  }
+});
+const bridgeUnparsedRawPerEcuOnboardMonitorSnapshot = obd.normalizeBridgeOnboardMonitorSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: { onboard_monitor_ecu_snapshots: [{ source_ecu: "7E8", raw: "46" }] }
+});
+const bridgeRawPerEcuOnboardMonitorRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ onboard_monitor_snapshot: bridgeRawPerEcuOnboardMonitorSnapshot }))));
+check(bridgeRawPerEcuOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "reported" && bridgeRawPerEcuOnboardMonitorSnapshot.tests?.some((item) => item.testId === "01" && item.componentId === "02" && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && bridgeRawPerEcuOnboardMonitorSnapshot.tests?.some((item) => item.testId === "03" && item.componentId === "04" && item.value === 6 && item.min === 1 && item.max === 5 && item.sourceEcu === "7E9" && item.sourceEcuName === "Transmission") && bridgeRawPerEcuOnboardMonitorSnapshot.readoutEcuIds?.join(",") === "7E8,7E9" && bridgeRawPerEcuOnboardMonitorSnapshot.vehicleCommandEnabled === false && bridgeRawPerEcuOnboardMonitorSnapshot.wouldTransmit === false, "Per-ECU raw Mode 06 bridge responses were not decoded with ECU scope");
+check(bridgeUnparsedRawPerEcuOnboardMonitorSnapshot.onboardMonitorReadoutStatus === "unparsed" && bridgeUnparsedRawPerEcuOnboardMonitorSnapshot.testCount === 0 && bridgeUnparsedRawPerEcuOnboardMonitorSnapshot.readoutEcuIds?.includes("7E8") && bridgeUnparsedRawPerEcuOnboardMonitorSnapshot.vehicleCommandEnabled === false && bridgeUnparsedRawPerEcuOnboardMonitorSnapshot.wouldTransmit === false, "Unparsed per-ECU raw Mode 06 bridge responses must not be reported as monitor tests");
+check(bridgeRawPerEcuOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && bridgeRawPerEcuOnboardMonitorRoundTrip?.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "03" && item.sourceEcu === "7E9" && item.sourceEcuName === "Transmission") && bridgeRawPerEcuOnboardMonitorRoundTrip?.vehicleCommandEnabled === false && bridgeRawPerEcuOnboardMonitorRoundTrip?.wouldTransmit === false, "Per-ECU raw Mode 06 scope was not retained through read-only export and JSON import");
 const bridgeRawCoreReadoutSession = obd.buildDiagnosticScanSession({
   dtc_snapshot: bridgeRawDtcSnapshot,
   live_pid_snapshot: bridgeRawLivePidSnapshot,

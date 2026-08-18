@@ -5360,7 +5360,9 @@
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedOnboardMonitorPayload = Boolean(nestedData && [
       "tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests",
-      "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests", "raw", "response", "bytes"
+      "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests",
+      "onboard_monitor_ecu_snapshots", "onboardMonitorEcuSnapshots", "mode06_ecu_snapshots", "mode06EcuSnapshots",
+      "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses", "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined));
     // Never combine outer and nested Mode 06 evidence; outer tests only complete an otherwise empty envelope.
     const outerOnboardMonitorFallback = nestedData && !hasNestedOnboardMonitorPayload
@@ -5382,7 +5384,33 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
-    const tests = (Array.isArray(data.tests)
+    const onboardMonitorEcuSnapshots = [
+      data.onboard_monitor_ecu_snapshots,
+      data.onboardMonitorEcuSnapshots,
+      data.mode06_ecu_snapshots,
+      data.mode06EcuSnapshots,
+      data.ecu_snapshots,
+      data.ecuSnapshots,
+      data.ecu_responses,
+      data.ecuResponses
+    ].find(Array.isArray) || [];
+    const getEcuRawOnboardMonitorResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
+    const getEcuOnboardMonitorTests = (row) => [
+      row?.tests,
+      row?.values,
+      row?.mode06_tests,
+      row?.mode06Tests,
+      row?.mode06_rows,
+      row?.mode06Rows,
+      row?.monitor_tests,
+      row?.monitorTests,
+      row?.test_rows,
+      row?.testRows,
+      row?.onboard_monitor_tests,
+      row?.onboardMonitorTests
+    ].find(Array.isArray) || [];
+    const hasRawEcuOnboardMonitorResponse = onboardMonitorEcuSnapshots.some((row) => getEcuRawOnboardMonitorResponse(row) !== null && getEcuOnboardMonitorTests(row).length === 0);
+    const structuredTests = (Array.isArray(data.tests)
       ? data.tests
       : Array.isArray(data.values)
         ? data.values
@@ -5424,16 +5452,16 @@
     const errorCodes = readBridgeResponseErrorCodes(response);
     const rawOnboardMonitorResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const malformedMode06Alias = ["tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
-    const hasTestEvidence = tests.length > 0;
+    const hasTestEvidence = structuredTests.length > 0;
     const hasStructuredOnboardMonitorInput = [data.tests, data.values, data.mode06_tests, data.mode06Tests, data.mode06_rows, data.mode06Rows, data.monitor_tests, data.monitorTests, data.test_rows, data.testRows, data.onboard_monitor_tests, data.onboardMonitorTests].some((value) => value !== undefined && value !== null);
     const shouldDecodeRawOnboardMonitor = rawOnboardMonitorResponse !== null && !hasStructuredOnboardMonitorInput;
     const explicitReadoutStatus = String(data.onboard_monitor_readout_status || data.onboardMonitorReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
-    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasExplicitReadoutStatus || hasTestEvidence));
+    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse || hasExplicitReadoutStatus || hasTestEvidence));
     const resolvedBridgeSafety = malformedMode06Alias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
-      ? { ...bridgeSafety, ok: false, blocked: hasTestEvidence || shouldDecodeRawOnboardMonitor, unparsed: !hasTestEvidence && !shouldDecodeRawOnboardMonitor }
+      ? { ...bridgeSafety, ok: false, blocked: hasTestEvidence || shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse, unparsed: !hasTestEvidence && !shouldDecodeRawOnboardMonitor && !hasRawEcuOnboardMonitorResponse }
       : bridgeSafety;
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
@@ -5442,6 +5470,25 @@
       primary_protocol: normalizeProtocolProvenanceValue(protocol),
       ...mergeProtocolProvenance(data, response)
     };
+    const decodedRawEcuOnboardMonitorSnapshots = new Map();
+    const rawEcuOnboardMonitorTests = onboardMonitorEcuSnapshots.flatMap((ecuRow) => {
+      const raw = getEcuRawOnboardMonitorResponse(ecuRow);
+      if (raw === null || getEcuOnboardMonitorTests(ecuRow).length > 0) return [];
+      const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
+      const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.module_name || ecuRow?.moduleName || ecuRow?.name || ecuRow?.label || null;
+      const decoded = decodeOnboardMonitorResponse({
+        raw,
+        source: "local_bridge",
+        source_ecu: ecu,
+        source_ecu_name: ecuName,
+        captured_at: ecuRow?.captured_at || ecuRow?.capturedAt || capturedAt,
+        protocol: readBridgeProtocol(ecuRow) || protocol
+      });
+      decodedRawEcuOnboardMonitorSnapshots.set(ecuRow, decoded);
+      return Array.isArray(decoded.tests) ? decoded.tests : [];
+    });
+    const tests = [...structuredTests, ...rawEcuOnboardMonitorTests];
+    const rawEcuOnboardMonitorReadoutUnparsed = [...decodedRawEcuOnboardMonitorSnapshots.values()].some((snapshot) => snapshot?.onboardMonitorReadoutStatus !== "reported");
     if (shouldDecodeRawOnboardMonitor) {
       const decoded = decodeOnboardMonitorResponse({ raw: rawOnboardMonitorResponse, source: "local_bridge", source_ecu: sourceEcu, source_ecu_name: sourceEcuName, captured_at: capturedAt, protocol });
       return {
@@ -5464,10 +5511,16 @@
         source: "local_bridge",
         captured_at: capturedAt,
         protocol,
-        onboard_monitor_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety),
+        onboard_monitor_readout_status: rawEcuOnboardMonitorReadoutUnparsed && tests.length === 0
+          ? "unparsed"
+          : getBridgeReadoutStatus(resolvedBridgeSafety),
         source_ecu: sourceEcu,
         source_ecu_name: sourceEcuName,
-        readout_ecu_ids: data.readoutEcuIds || data.readout_ecu_ids || [],
+        readout_ecu_ids: [
+          ...(Array.isArray(data.readoutEcuIds) ? data.readoutEcuIds : []),
+          ...(Array.isArray(data.readout_ecu_ids) ? data.readout_ecu_ids : []),
+          ...onboardMonitorEcuSnapshots.map((row) => row?.source_ecu || row?.sourceEcu || row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null)
+        ].filter(Boolean),
         tests
       }),
       protocolProvenance,
