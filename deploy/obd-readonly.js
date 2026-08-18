@@ -6703,6 +6703,13 @@
       })
     ].filter(Boolean))].sort();
     const recordedFreezeFrameUdsRecordKeys = freezeFrameUdsRecordEvidenceRecorded ? freezeFrameUdsRecordKeys : [];
+    const freezeFrameUdsRecordReportedEcuEvidenceRecorded = freezeFrameUdsRecordEvidenceRecorded
+      || (freezeFrameSnapshot?.blocked !== true && freezeFrameSnapshot?.isBlocked !== true && freezeFrameSnapshot?.is_blocked !== true
+        && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
+        && reportedFreezeFrameEcuIds.length > 0);
+    const freezeFrameUdsRecordReportedEcuKeys = freezeFrameUdsRecordReportedEcuEvidenceRecorded
+      ? freezeFrameUdsRecordKeys.filter((key) => freezeFrameUdsRecordEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[7])))
+      : [];
     const readinessEcuSnapshots = Array.isArray(readinessSnapshot?.readinessEcuSnapshots)
       ? readinessSnapshot.readinessEcuSnapshots
       : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
@@ -7001,6 +7008,12 @@
       freeze_frame_uds_record_keys: [...recordedFreezeFrameUdsRecordKeys],
       freezeFrameUdsRecordEvidenceRecorded,
       freeze_frame_uds_record_evidence_recorded: freezeFrameUdsRecordEvidenceRecorded,
+      freezeFrameUdsRecordReportedEcuEvidenceRecorded,
+      freeze_frame_uds_record_reported_ecu_evidence_recorded: freezeFrameUdsRecordReportedEcuEvidenceRecorded,
+      freezeFrameUdsRecordReportedEcuIds: reportedFreezeFrameEcuIds,
+      freeze_frame_uds_record_reported_ecu_ids: [...reportedFreezeFrameEcuIds],
+      freezeFrameUdsRecordReportedEcuKeys: freezeFrameUdsRecordReportedEcuKeys,
+      freeze_frame_uds_record_reported_ecu_keys: [...freezeFrameUdsRecordReportedEcuKeys],
       freezeFrameTriggerCount: recordedFreezeFrameTriggerCount,
       freeze_frame_trigger_count: recordedFreezeFrameTriggerCount,
       freezeFrameTriggerKeys: recordedFreezeFrameTriggerKeys,
@@ -14715,6 +14728,9 @@
       freezeFrameUdsRecordCount: ["freeze_frame_uds_record_count"],
       freezeFrameUdsRecordKeys: ["freeze_frame_uds_record_keys"],
       freezeFrameUdsRecordEvidenceRecorded: ["freeze_frame_uds_record_evidence_recorded"],
+      freezeFrameUdsRecordReportedEcuEvidenceRecorded: ["freeze_frame_uds_record_reported_ecu_evidence_recorded"],
+      freezeFrameUdsRecordReportedEcuIds: ["freeze_frame_uds_record_reported_ecu_ids"],
+      freezeFrameUdsRecordReportedEcuKeys: ["freeze_frame_uds_record_reported_ecu_keys"],
       freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
       freezeFrameTriggerKeys: ["freeze_frame_trigger_keys"],
       freezeFrameTriggerEvidenceRecorded: ["freeze_frame_trigger_evidence_recorded"],
@@ -14957,9 +14973,33 @@
       : [];
     const importedFreezeFrameUdsRecordEvidenceRecorded = readBoolean(importedInventory, "freezeFrameUdsRecordEvidenceRecorded");
     const currentFreezeFrameUdsRecordEvidenceRecorded = readBoolean(currentSummary, "freezeFrameUdsRecordEvidenceRecorded");
-    const freezeFrameUdsRecordComparisonAvailable = importedFreezeFrameUdsRecordEvidenceRecorded && currentFreezeFrameUdsRecordEvidenceRecorded;
-    const importedFreezeFrameUdsRecordKeys = readFreezeFrameUdsRecordKeys(importedInventory);
-    const currentFreezeFrameUdsRecordKeys = readFreezeFrameUdsRecordKeys(currentSummary);
+    const importedAllFreezeFrameUdsRecordKeys = readFreezeFrameUdsRecordKeys(importedInventory);
+    const currentAllFreezeFrameUdsRecordKeys = readFreezeFrameUdsRecordKeys(currentSummary);
+    const readFreezeFrameUdsRecordReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
+      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+      const explicitIds = readIds(summary, "freezeFrameUdsRecordReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitIds)].sort()
+        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[7])).filter(Boolean))].sort();
+      const explicitKeys = readIds(summary, "freezeFrameUdsRecordReportedEcuKeys");
+      return { evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameUdsRecordReportedEcuEvidenceRecorded"), reportedEcuIds, reportedEcuKeys: explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys] };
+    };
+    const importedFreezeFrameUdsRecordReportedEcuScope = readFreezeFrameUdsRecordReportedEcuScope(importedInventory, importedFreezeFrameUdsRecordEvidenceRecorded, importedAllFreezeFrameUdsRecordKeys);
+    const currentFreezeFrameUdsRecordReportedEcuScope = readFreezeFrameUdsRecordReportedEcuScope(currentSummary, currentFreezeFrameUdsRecordEvidenceRecorded, currentAllFreezeFrameUdsRecordKeys);
+    const completeFreezeFrameUdsRecordComparisonAvailable = importedFreezeFrameUdsRecordEvidenceRecorded && currentFreezeFrameUdsRecordEvidenceRecorded;
+    const comparableFreezeFrameUdsRecordEcuIds = completeFreezeFrameUdsRecordComparisonAvailable ? []
+      : importedFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded && currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded
+        ? importedFreezeFrameUdsRecordReportedEcuScope.reportedEcuIds.filter((id) => currentFreezeFrameUdsRecordReportedEcuScope.reportedEcuIds.includes(id)) : [];
+    const reportedEcuFreezeFrameUdsRecordComparisonAvailable = !completeFreezeFrameUdsRecordComparisonAvailable && comparableFreezeFrameUdsRecordEcuIds.length > 0;
+    const freezeFrameUdsRecordComparisonAvailable = completeFreezeFrameUdsRecordComparisonAvailable || reportedEcuFreezeFrameUdsRecordComparisonAvailable;
+    const filterFreezeFrameUdsRecordKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
+      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[7]) || String(key || "").split("|")[7]?.trim().toUpperCase();
+      return comparableFreezeFrameUdsRecordEcuIds.includes(ecu);
+    });
+    const importedFreezeFrameUdsRecordKeys = completeFreezeFrameUdsRecordComparisonAvailable ? importedAllFreezeFrameUdsRecordKeys
+      : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? filterFreezeFrameUdsRecordKeysByScope(importedFreezeFrameUdsRecordReportedEcuScope) : [];
+    const currentFreezeFrameUdsRecordKeys = completeFreezeFrameUdsRecordComparisonAvailable ? currentAllFreezeFrameUdsRecordKeys
+      : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? filterFreezeFrameUdsRecordKeysByScope(currentFreezeFrameUdsRecordReportedEcuScope) : [];
     const freezeFrameUdsRecordAddedKeys = freezeFrameUdsRecordComparisonAvailable ? diffIds(currentFreezeFrameUdsRecordKeys, importedFreezeFrameUdsRecordKeys) : [];
     const freezeFrameUdsRecordRemovedKeys = freezeFrameUdsRecordComparisonAvailable ? diffIds(importedFreezeFrameUdsRecordKeys, currentFreezeFrameUdsRecordKeys) : [];
     const readReadinessKeys = (summary) => Array.isArray(readField(summary, "readinessMonitorKeys"))
@@ -15466,8 +15506,16 @@
       imported_freeze_frame_uds_record_evidence_recorded: importedFreezeFrameUdsRecordEvidenceRecorded,
       currentFreezeFrameUdsRecordEvidenceRecorded,
       current_freeze_frame_uds_record_evidence_recorded: currentFreezeFrameUdsRecordEvidenceRecorded,
+      importedFreezeFrameUdsRecordReportedEcuEvidenceRecorded: importedFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
+      imported_freeze_frame_uds_record_reported_ecu_evidence_recorded: importedFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
+      currentFreezeFrameUdsRecordReportedEcuEvidenceRecorded: currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
+      current_freeze_frame_uds_record_reported_ecu_evidence_recorded: currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
       freezeFrameUdsRecordComparisonAvailable,
       freeze_frame_uds_record_comparison_available: freezeFrameUdsRecordComparisonAvailable,
+      freezeFrameUdsRecordComparisonScope: completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable",
+      freeze_frame_uds_record_comparison_scope: completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable",
+      freezeFrameUdsRecordComparableEcuIds: comparableFreezeFrameUdsRecordEcuIds,
+      freeze_frame_uds_record_comparable_ecu_ids: [...comparableFreezeFrameUdsRecordEcuIds],
       importedFreezeFrameUdsRecordKeys,
       imported_freeze_frame_uds_record_keys: importedFreezeFrameUdsRecordKeys,
       currentFreezeFrameUdsRecordKeys,
@@ -15478,8 +15526,8 @@
       freeze_frame_uds_record_added_keys: freezeFrameUdsRecordAddedKeys,
       freezeFrameUdsRecordRemovedKeys,
       freeze_frame_uds_record_removed_keys: freezeFrameUdsRecordRemovedKeys,
-      freezeFrameUdsRecordCountDelta: freezeFrameUdsRecordComparisonAvailable ? readCount(currentSummary, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") - readCount(importedInventory, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") : null,
-      freeze_frame_uds_record_count_delta: freezeFrameUdsRecordComparisonAvailable ? readCount(currentSummary, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") - readCount(importedInventory, "freezeFrameUdsRecordCount", "freezeFrameUdsRecordKeys") : null,
+      freezeFrameUdsRecordCountDelta: freezeFrameUdsRecordComparisonAvailable ? currentFreezeFrameUdsRecordKeys.length - importedFreezeFrameUdsRecordKeys.length : null,
+      freeze_frame_uds_record_count_delta: freezeFrameUdsRecordComparisonAvailable ? currentFreezeFrameUdsRecordKeys.length - importedFreezeFrameUdsRecordKeys.length : null,
       importedLivePidValueCount: readCount(importedInventory, "livePidValueCount", "livePidValueKeys"),
       imported_live_pid_value_count: readCount(importedInventory, "livePidValueCount", "livePidValueKeys"),
       currentLivePidValueCount: readCount(currentSummary, "livePidValueCount", "livePidValueKeys"),
@@ -15823,6 +15871,12 @@
       freeze_frame_uds_record_keys: normalizeIds(summary.freezeFrameUdsRecordKeys || summary.freeze_frame_uds_record_keys),
       freezeFrameUdsRecordEvidenceRecorded: pickDefined(summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true,
       freeze_frame_uds_record_evidence_recorded: pickDefined(summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true,
+      freezeFrameUdsRecordReportedEcuEvidenceRecorded: pickDefined(summary.freezeFrameUdsRecordReportedEcuEvidenceRecorded, summary.freeze_frame_uds_record_reported_ecu_evidence_recorded, summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true,
+      freeze_frame_uds_record_reported_ecu_evidence_recorded: pickDefined(summary.freezeFrameUdsRecordReportedEcuEvidenceRecorded, summary.freeze_frame_uds_record_reported_ecu_evidence_recorded, summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true,
+      freezeFrameUdsRecordReportedEcuIds: normalizeIds(summary.freezeFrameUdsRecordReportedEcuIds || summary.freeze_frame_uds_record_reported_ecu_ids),
+      freeze_frame_uds_record_reported_ecu_ids: normalizeIds(summary.freezeFrameUdsRecordReportedEcuIds || summary.freeze_frame_uds_record_reported_ecu_ids),
+      freezeFrameUdsRecordReportedEcuKeys: normalizeIds(summary.freezeFrameUdsRecordReportedEcuKeys || summary.freeze_frame_uds_record_reported_ecu_keys || (pickDefined(summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true ? summary.freezeFrameUdsRecordKeys || summary.freeze_frame_uds_record_keys : [])),
+      freeze_frame_uds_record_reported_ecu_keys: normalizeIds(summary.freezeFrameUdsRecordReportedEcuKeys || summary.freeze_frame_uds_record_reported_ecu_keys || (pickDefined(summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true ? summary.freezeFrameUdsRecordKeys || summary.freeze_frame_uds_record_keys : [])),
       freezeFrameTriggerCount: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
       freeze_frame_trigger_count: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
       freezeFrameTriggerKeys: normalizeIds(summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys),
