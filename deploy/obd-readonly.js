@@ -816,10 +816,11 @@
     Object.freeze({
       intent: "read_onboard_monitor",
       label: "On-board monitor snapshot",
-      dataShape: Object.freeze(["protocol", "tests", "captured_at"]),
+      dataShape: Object.freeze(["protocol", "tests", "onboard_monitor_ecu_snapshots", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,
         tests: Object.freeze([]),
+        onboard_monitor_ecu_snapshots: Object.freeze([]),
         captured_at: null
       })
     }),
@@ -1891,7 +1892,11 @@
       read_freeze_frame: ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots", "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc", "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"],
       read_supported_pids: ["supported_pids", "supportedPids", "pids", "supported_pid_ecu_snapshots", "supportedPidEcuSnapshots"],
       read_ecu_info: ["items", "ecu_info_items", "ecuInfoItems"],
-      read_onboard_monitor: ["tests", "items"],
+      read_onboard_monitor: [
+        "tests", "items", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests",
+        "onboard_monitor_ecu_snapshots", "onboardMonitorEcuSnapshots", "mode06_ecu_snapshots", "mode06EcuSnapshots", "ecu_snapshots", "ecuSnapshots", "ecu_responses", "ecuResponses",
+        "raw", "response", "bytes"
+      ],
       read_readiness: ["monitors", "readiness_ecu_snapshots", "readinessEcuSnapshots"],
       read_live_pid_snapshot: ["monitor_values", "monitorValues", "monitors"]
     };
@@ -26641,7 +26646,17 @@
       ? (!Number.isFinite(Number(onboardMonitorSnapshotInput.testCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.failedCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.passedCount)) ? normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput) : onboardMonitorSnapshotInput)
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
-        : (onboardMonitorSnapshotInput?.data && typeof onboardMonitorSnapshotInput.data === "object" && !Array.isArray(onboardMonitorSnapshotInput.data))
+        : ((onboardMonitorSnapshotInput?.data && typeof onboardMonitorSnapshotInput.data === "object" && !Array.isArray(onboardMonitorSnapshotInput.data))
+          || [
+            onboardMonitorSnapshotInput?.onboard_monitor_ecu_snapshots,
+            onboardMonitorSnapshotInput?.onboardMonitorEcuSnapshots,
+            onboardMonitorSnapshotInput?.mode06_ecu_snapshots,
+            onboardMonitorSnapshotInput?.mode06EcuSnapshots,
+            onboardMonitorSnapshotInput?.ecu_snapshots,
+            onboardMonitorSnapshotInput?.ecuSnapshots,
+            onboardMonitorSnapshotInput?.ecu_responses,
+            onboardMonitorSnapshotInput?.ecuResponses
+          ].some(Array.isArray))
           ? normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)
           : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSafetyInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
     const ecuInfoSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion

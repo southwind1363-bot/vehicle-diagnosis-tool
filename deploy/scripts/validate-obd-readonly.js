@@ -4708,6 +4708,18 @@ check(blockedNativeImport.ok === false && blockedNativeImport.blocked === true &
 const malformedNativeEvaluation = obd.evaluateNativeConnectorEnvelope({ ...nativeElmEnvelope, data: {} });
 check(malformedNativeEvaluation.accepted === false && malformedNativeEvaluation.dataShapeValid === false && malformedNativeEvaluation.errors.includes("invalid_data_shape"), "iPhoneコネクタ契約がintentに合わないdata形状を拒否していません");
 const malformedNativeImport = obd.buildNativeConnectorDiagnosticImport({ ...nativeElmEnvelope, data: {} });
+const nativePerEcuRawMode06Envelope = {
+  ...nativeElmEnvelope,
+  intent: "read_onboard_monitor",
+  data: {
+    onboard_monitor_ecu_snapshots: [
+      { source_ecu: "7E8", source_ecu_name: "Engine", raw: "46 01 02 00 01 00 00 00 02" }
+    ]
+  }
+};
+const nativePerEcuRawMode06Evaluation = obd.evaluateNativeConnectorEnvelope(nativePerEcuRawMode06Envelope);
+const nativePerEcuRawMode06Import = obd.buildNativeConnectorDiagnosticImport(nativePerEcuRawMode06Envelope);
+check(nativePerEcuRawMode06Evaluation.accepted === true && nativePerEcuRawMode06Evaluation.dataShapeValid === true && nativePerEcuRawMode06Evaluation.readoutScopeId === "7E8" && nativePerEcuRawMode06Import.session?.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.sourceEcu === "7E8" && item.sourceEcuName === "Engine") && nativePerEcuRawMode06Import.session?.onboardMonitorSnapshot?.readoutEcuIds?.includes("7E8") && nativePerEcuRawMode06Import.session?.vehicleCommandEnabled === false && nativePerEcuRawMode06Import.session?.wouldTransmit === false, "Native connector Mode 06 ECU-scoped raw responses were not accepted and normalized as read-only data");
 const failedNativeEnvelope = { ...nativeElmEnvelope, ok: false, blocked: false, errors: ["transport:timeout"] };
 const failedNativeEvaluation = obd.evaluateNativeConnectorEnvelope(failedNativeEnvelope);
 const failedNativeImport = obd.buildNativeConnectorDiagnosticImport(failedNativeEnvelope);
@@ -5491,7 +5503,7 @@ check(bridgeSchemas.some((item) => item.intent === "read_permanent_dtc" && Array
 check(bridgeSchemas.some((item) => item.intent === "read_freeze_frame" && Array.isArray(item.safeDefault.values)), "フリーズフレーム応答型がありません");
 check(bridgeSchemas.some((item) => item.intent === "read_supported_pids" && Array.isArray(item.safeDefault.supported_pids)), "対応PID応答型がありません");
 check(bridgeSchemas.some((item) => item.intent === "read_ecu_info" && Array.isArray(item.safeDefault.values)), "ECU info bridge response schema is missing");
-check(bridgeSchemas.some((item) => item.intent === "read_onboard_monitor" && Array.isArray(item.safeDefault.tests)), "On-board monitor bridge response schema is missing");
+check(bridgeSchemas.some((item) => item.intent === "read_onboard_monitor" && item.dataShape.includes("onboard_monitor_ecu_snapshots") && Array.isArray(item.safeDefault.tests) && Array.isArray(item.safeDefault.onboard_monitor_ecu_snapshots)), "On-board monitor bridge response schema is missing ECU-scoped read-only defaults");
 check(bridgeSchemas.some((item) => item.intent === "read_live_pid_snapshot" && Array.isArray(item.safeDefault.values)), "ライブPID応答型がありません");
 check(bridgeSchemas.some((item) => item.intent === "read_readiness" && item.requestVariants?.some((variant) => variant.readoutId === "readiness_snapshot" && variant.requestData?.pid === "01") && item.dataShape.includes("readiness_ecu_snapshots") && Array.isArray(item.safeDefault.readiness_ecu_snapshots)), "Bridge response schema did not expose the dedicated read-only readiness PID 01 variant");
 check(bridgeSchemas.some((item) => item.intent === "read_live_pid_snapshot" && item.requestVariants?.some((variant) => variant.readoutId === "readiness_snapshot" && variant.requestData?.pid === "01")), "Bridge response schema did not retain the legacy readiness PID 01 compatibility variant");
