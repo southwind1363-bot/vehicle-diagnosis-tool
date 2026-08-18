@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2796件",
+  validationCheckLabel: "OBD安全検証 2798件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial再読取の最新PID結果で表示・カバレッジ・解析保留を一貫して再計算",
+  recentMilestone: "Web Serial再読取の最新readiness・Mode06結果で過去値残留を防止",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.54";
+const APP_VERSION = "3.12.55";
 const APP_LAST_UPDATED = "2026-08-18";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5689,6 +5689,8 @@ async function runObdDeveloperRead(label, commands) {
   const chunks = [];
   const commandResponses = [];
   const replaceLivePidSnapshot = commands.some((command) => obdDevSession.selectedPidList.includes(String(command || "").trim().toUpperCase()));
+  const replaceReadinessSnapshot = commands.some((command) => String(command || "").trim().toUpperCase() === "0101");
+  const replaceOnboardMonitorSnapshot = commands.some((command) => String(command || "").trim().toUpperCase() === "06");
   let attemptedCommandCount = 0;
   let currentCommandStartedAt = null;
   try {
@@ -5706,7 +5708,11 @@ async function runObdDeveloperRead(label, commands) {
     }
     const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { attemptedCommandCount });
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
-    retainObdDeveloperReadout(commandResponses, chunks, { replaceLivePidSnapshot });
+    retainObdDeveloperReadout(commandResponses, chunks, {
+      replaceLivePidSnapshot,
+      replaceReadinessSnapshot,
+      replaceOnboardMonitorSnapshot
+    });
     if (outcome.stopScope === "scan" && obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = outcome.stopReason;
     obdDevStatus.textContent = outcome.readoutCompleted
       ? `${label}が完了しました。取れた値だけ表示します。`
@@ -5721,7 +5727,9 @@ async function runObdDeveloperRead(label, commands) {
     const partialReadoutRetained = Boolean(retainObdDeveloperReadout(commandResponses, chunks, {
       persistEmptyAttempt: true,
       connectionStatus: buildWebSerialConnectionStatus(outcome),
-      replaceLivePidSnapshot
+      replaceLivePidSnapshot,
+      replaceReadinessSnapshot,
+      replaceOnboardMonitorSnapshot
     }));
     const transportFailed = timedOut || message.startsWith("elm_transport_");
     if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
@@ -6062,9 +6070,14 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
   const currentLivePidSnapshot = currentAttemptSession.livePidSnapshot;
   const requestedLivePidValues = options?.replaceLivePidSnapshot === true
     || commandResponses.some((item) => obdDevSession.selectedPidList.includes(String(item?.command || "").trim().toUpperCase()));
+  const latestSnapshotOverrides = {
+    ...(requestedLivePidValues ? { livePidSnapshot: currentLivePidSnapshot } : {}),
+    ...(options?.replaceReadinessSnapshot === true ? { readinessSnapshot: currentAttemptSession.readinessSnapshot } : {}),
+    ...(options?.replaceOnboardMonitorSnapshot === true ? { onboardMonitorSnapshot: currentAttemptSession.onboardMonitorSnapshot } : {})
+  };
   const resolvedScanSession = window.ObdReadOnly.buildScanSessionFromObdText(
     obdDevSession.lastRawText,
-    requestedLivePidValues ? { ...scanSessionOptions, livePidSnapshot: currentLivePidSnapshot } : scanSessionOptions
+    { ...scanSessionOptions, ...latestSnapshotOverrides }
   );
   const hasLivePidTimelineSample = currentLivePidSnapshot?.livePidReadoutStatus === "reported"
     && Array.isArray(currentLivePidSnapshot.monitorValues)
