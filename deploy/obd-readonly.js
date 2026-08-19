@@ -3795,6 +3795,49 @@
       const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
       return value === undefined ? null : String(value).slice(0, 80);
     };
+    const normalizedSource = String(readConnectionText(data.source, response?.source) || "").trim().toLowerCase();
+    const providedDisplayStatus = readConnectionText(data.display_status, data.displayStatus);
+    if (normalizedSource === "web_serial" && providedDisplayStatus) {
+      const providedStatus = readConnectionText(data.status) || "disconnected";
+      const nextAction = readConnectionText(data.next_action, data.nextAction);
+      const connectionState = readConnectionText(data.connection_state, data.connectionState) || "disconnected";
+      const lastDisconnectReason = readConnectionText(data.last_disconnect_reason, data.lastDisconnectReason);
+      const vciConnected = data.vci_connected === true || data.vciConnected === true;
+      const vehicleConnectedInput = data.vehicle_connected ?? data.vehicleConnected;
+      const vehicleConnected = typeof vehicleConnectedInput === "boolean" ? vehicleConnectedInput : null;
+      const adapterInitializationSummary = data.adapter_initialization_summary && typeof data.adapter_initialization_summary === "object"
+        ? data.adapter_initialization_summary
+        : data.adapterInitializationSummary && typeof data.adapterInitializationSummary === "object"
+          ? data.adapterInitializationSummary
+          : null;
+      return {
+        source: "web_serial",
+        intent: "connection_status",
+        ok: data.ok === true && errorCodes.length === 0,
+        blocked: data.blocked === true,
+        wouldTransmit: false,
+        would_transmit: false,
+        readOnly: true,
+        read_only: true,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false,
+        status: providedStatus,
+        displayStatus: providedDisplayStatus,
+        display_status: providedDisplayStatus,
+        nextAction,
+        next_action: nextAction,
+        connectionState,
+        connection_state: connectionState,
+        vciConnected,
+        vci_connected: vciConnected,
+        vehicleConnected,
+        vehicle_connected: vehicleConnected,
+        ...(lastDisconnectReason ? { lastDisconnectReason, last_disconnect_reason: lastDisconnectReason } : {}),
+        ...(adapterInitializationSummary ? { adapterInitializationSummary, adapter_initialization_summary: adapterInitializationSummary } : {}),
+        retainedRawText: false,
+        retained_raw_text: false
+      };
+    }
     const status = readConnectionText(data.status) || "not_connected";
     const paired = data.paired === true || data.is_paired === true || data.isPaired === true;
     const vciConnected = data.vci_connected === true || data.vciConnected === true || data.vci_ready === true || data.vciReady === true;
