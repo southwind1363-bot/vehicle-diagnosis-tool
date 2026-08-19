@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2879件",
+  validationCheckLabel: "OBD安全検証 2882件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial再接続の旧状態混入を防止",
+  recentMilestone: "Web Serial接続失敗を段階別に記録",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.95";
+const APP_VERSION = "3.12.96";
 const APP_LAST_UPDATED = "2026-08-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4582,8 +4582,9 @@ async function connectObdDeveloperVci() {
       renderObdDeveloperGate();
       return;
     }
-    const failureMessage = formatWebSerialAdapterInitializationFailure(obdDevSession.adapterInitializationSummary, error);
-    await disconnectObdDeveloperVci({ reason: "connection_failed", statusMessage: failureMessage });
+    const failureReason = getWebSerialConnectionFailureReason(obdDevSession.connectionState, obdDevSession.adapterInitializationSummary);
+    const failureMessage = formatWebSerialConnectionFailure(failureReason, obdDevSession.adapterInitializationSummary, error);
+    await disconnectObdDeveloperVci({ reason: failureReason, statusMessage: failureMessage });
     retainWebSerialConnectionAttempt();
   }
 }
@@ -4608,6 +4609,16 @@ function resetWebSerialConnectionAttemptMetadata() {
 
 function isWebSerialPortSelectionCancelled(error) {
   return String(error?.name || "").trim() === "NotFoundError";
+}
+
+function getWebSerialConnectionFailureReason(connectionState, initializationSummary = null) {
+  const state = String(connectionState || "").trim().toLowerCase();
+  const initializationStatus = String(initializationSummary?.initializationStatus || initializationSummary?.initialization_status || "").trim().toLowerCase();
+  if (state === "selecting") return "port_selection_failed";
+  if (state === "opening") return "port_open_failed";
+  if (state === "initializing" && initializationStatus === "completed") return "adapter_identification_failed";
+  if (state === "initializing") return "adapter_initialization_failed";
+  return "connection_failed";
 }
 
 function setObdDeveloperConnectionState(state, reason = null) {
@@ -6114,6 +6125,13 @@ function formatWebSerialAdapterInitializationFailure(summary = null, error = nul
     : `読取を開始できませんでした: ${error?.message || error}`;
 }
 
+function formatWebSerialConnectionFailure(reason, summary = null, error = null) {
+  if (reason === "port_selection_failed") return "VCI選択を開始できませんでした。ブラウザのシリアル権限とHTTPS環境を確認してください。";
+  if (reason === "port_open_failed") return "VCIポートを開けませんでした。別アプリでの使用、通信速度、接続状態を確認してください。";
+  if (reason === "adapter_identification_failed") return "VCI識別応答を確認できませんでした。アダプター電源とファームウェア応答を確認してください。";
+  return formatWebSerialAdapterInitializationFailure(summary, error);
+}
+
 function retainWebSerialConnectionAttempt() {
   if (!hasBridgeDiagnosticScanSessionSupport()) return null;
   const capturedAt = new Date().toISOString();
@@ -6147,6 +6165,9 @@ function buildWebSerialConnectionStatus(outcome = null) {
   const vehicleLinkError = Number(latestAttempt?.unableToConnectCount) > 0;
   const adapterInitializationSummary = obdDevSession.adapterInitializationSummary;
   const adapterInitializationFailed = (adapterInitializationSummary?.initializationStatus || adapterInitializationSummary?.initialization_status) === "failed";
+  const retainedConnectionFailure = ["port_selection_failed", "port_open_failed", "adapter_identification_failed"].includes(obdDevSession.lastDisconnectReason)
+    ? obdDevSession.lastDisconnectReason
+    : null;
   const adapterConnected = Boolean(obdDevSession.port) && !transportError && !adapterInitializationFailed;
   const connectionState = String(obdDevSession.connectionState || "disconnected");
   const status = adapterInitializationFailed
@@ -6157,6 +6178,8 @@ function buildWebSerialConnectionStatus(outcome = null) {
       ? "vehicle_link_error"
       : adapterError
         ? "adapter_error"
+        : retainedConnectionFailure
+          ? retainedConnectionFailure
     : adapterConnected
       ? "adapter_connected"
       : "disconnected";
@@ -6168,7 +6191,7 @@ function buildWebSerialConnectionStatus(outcome = null) {
   return {
     source: "web_serial",
     intent: "connection_status",
-    ok: !adapterInitializationFailed && !transportError && !adapterError && !vehicleLinkError,
+    ok: !adapterInitializationFailed && !transportError && !adapterError && !vehicleLinkError && !retainedConnectionFailure,
     blocked: false,
     wouldTransmit: false,
     readOnly: true,
@@ -6180,6 +6203,12 @@ function buildWebSerialConnectionStatus(outcome = null) {
       ? "車両通信を確立できません"
       : adapterError
         ? "Web Serialアダプターエラー"
+        : retainedConnectionFailure === "port_selection_failed"
+          ? "Web Serial機器選択を開始できません"
+          : retainedConnectionFailure === "port_open_failed"
+            ? "Web Serialポートを開けません"
+            : retainedConnectionFailure === "adapter_identification_failed"
+              ? "Web Serialアダプターを識別できません"
         : displayStatus,
     nextAction: adapterInitializationFailed
       ? "アダプター電源、通信速度、初期化応答を確認してから、読取専用で再接続"
@@ -6187,6 +6216,12 @@ function buildWebSerialConnectionStatus(outcome = null) {
       ? "イグニッション状態、OBDコネクター接続、車両プロトコル、アダプター状態を確認してから、読取専用で再試行"
       : adapterError
         ? "アダプター電源、ファームウェア応答、シリアル設定を確認してから、読取専用で再試行"
+        : retainedConnectionFailure === "port_selection_failed"
+          ? "HTTPS環境とブラウザのシリアル権限を確認してから再選択"
+          : retainedConnectionFailure === "port_open_failed"
+            ? "別アプリの使用、通信速度、接続状態を確認してから再接続"
+            : retainedConnectionFailure === "adapter_identification_failed"
+              ? "アダプター電源とファームウェア応答を確認してから再接続"
         : transportError
       ? "アダプター接続と通信速度を確認してから、読取専用で再接続"
       : adapterConnected
