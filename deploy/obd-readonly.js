@@ -6049,6 +6049,13 @@
           ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
           : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput))
       : null;
+    const freezeFrameDirectValues = [
+      freezeFrameSnapshot?.monitorValues,
+      freezeFrameSnapshot?.monitor_values,
+      freezeFrameSnapshot?.values,
+      freezeFrameSnapshot?.freezeFrameValues,
+      freezeFrameSnapshot?.freeze_frame_values
+    ].find(Array.isArray) || null;
     const freezeFrameEcuSnapshots = Array.isArray(freezeFrameSnapshot?.freezeFrameEcuSnapshots)
       ? freezeFrameSnapshot.freezeFrameEcuSnapshots
       : Array.isArray(freezeFrameSnapshot?.freeze_frame_ecu_snapshots)
@@ -6088,6 +6095,11 @@
             ? decodeSupportedPidResponse(supportedPidMatrixInput)
             : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput))
       : null;
+    const supportedPidDirectValues = [
+      supportedPidMatrix?.supportedPids,
+      supportedPidMatrix?.supported_pids,
+      supportedPidMatrix?.pids
+    ].find(Array.isArray) || null;
     const readinessEcuSnapshots = Array.isArray(readinessSnapshot?.readinessEcuSnapshots)
       ? readinessSnapshot.readinessEcuSnapshots
       : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
@@ -6106,10 +6118,10 @@
         ? supportedPidMatrix.supported_pid_ecu_snapshots
         : [];
     const scopedSupportedPids = [...new Set(supportedPidEcuSnapshots.flatMap((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].find((pids) => Array.isArray(pids)) || []))];
-    const isUnknownWithoutEvidence = (snapshot, key, readoutStatus) => String(readoutStatus || "").trim().toLowerCase() === "unknown"
+    const isUnknownWithoutEvidence = (snapshot, keys, readoutStatus) => String(readoutStatus || "").trim().toLowerCase() === "unknown"
       && !snapshot?.capturedAt
       && !snapshot?.captured_at
-      && !(Array.isArray(snapshot?.[key]) && snapshot[key].length > 0);
+      && !(Array.isArray(keys) ? keys : [keys]).some((key) => Array.isArray(snapshot?.[key]) && snapshot[key].length > 0);
     const unavailableReadoutStatuses = new Set(["unparsed", "blocked", "not_supported", "unsupported", "unavailable"]);
     const isUnavailableReadout = (snapshot, readoutStatus, input = {}) => snapshot?.blocked === true
       || snapshot?.isBlocked === true
@@ -6187,11 +6199,11 @@
           || (Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) && freezeFrameSnapshot.uds_dtc_stored_data_records.length > 0)
           || freezeFrameEcuSnapshots.length > 0,
         label: "フリーズフレーム",
-        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, "monitorValues", freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameSnapshot?.monitorValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) || freezeFrameEcuSnapshots.length > 0),
-        count: (Array.isArray(freezeFrameSnapshot?.monitorValues) ? freezeFrameSnapshot.monitorValues.length : 0)
+        available: !["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && !isUnknownWithoutEvidence(freezeFrameSnapshot, ["monitorValues", "monitor_values", "values", "freezeFrameValues", "freeze_frame_values"], freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status) && (freezeFrameSnapshot?.blocked === false || Array.isArray(freezeFrameDirectValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) || freezeFrameEcuSnapshots.length > 0),
+        count: (Array.isArray(freezeFrameDirectValues) ? freezeFrameDirectValues.length : 0)
           + (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) ? freezeFrameSnapshot.udsDtcSnapshotRecords.length : Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) ? freezeFrameSnapshot.uds_dtc_snapshot_records.length : 0)
           + (Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) ? freezeFrameSnapshot.udsDtcStoredDataRecords.length : Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) ? freezeFrameSnapshot.uds_dtc_stored_data_records.length : 0)
-          + (Array.isArray(freezeFrameSnapshot?.monitorValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) ? 0 : freezeFrameEcuRecordCount)
+          + (Array.isArray(freezeFrameDirectValues) || Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) || Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords) || Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records) ? 0 : freezeFrameEcuRecordCount)
       },
       {
         id: "readiness_snapshot",
@@ -6245,8 +6257,8 @@
         responseUnavailable: isUnavailableReadout(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status, supportedPidMatrixSafetyInput),
         capturedEvidence: scopedSupportedPids.length > 0,
         label: "対応PID",
-        available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, "supportedPids", supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidMatrix?.supportedPids) || scopedSupportedPids.length > 0),
-        count: Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supportedPids.length : scopedSupportedPids.length
+        available: !["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && !isUnknownWithoutEvidence(supportedPidMatrix, ["supportedPids", "supported_pids", "pids"], supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status) && (supportedPidMatrix?.blocked === false || Array.isArray(supportedPidDirectValues) || scopedSupportedPids.length > 0),
+        count: Array.isArray(supportedPidDirectValues) ? supportedPidMatrix.supportedCount || supportedPidMatrix.supported_count || supportedPidDirectValues.length : scopedSupportedPids.length
       }
     ].map(({ responseUnavailable, retainCountWhenUnavailable = false, capturedEvidence = false, inputPresent = false, readoutStatus = null, safetyInput = {}, ...item }) => {
       const available = responseUnavailable ? false : item.available;
