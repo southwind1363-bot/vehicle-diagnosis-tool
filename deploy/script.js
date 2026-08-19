@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2877件",
+  validationCheckLabel: "OBD安全検証 2879件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial機器選択キャンセルを安全終了",
+  recentMilestone: "Web Serial再接続の旧状態混入を防止",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.94";
+const APP_VERSION = "3.12.95";
 const APP_LAST_UPDATED = "2026-08-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4526,6 +4526,7 @@ async function connectObdDeveloperVci() {
   }
 
   try {
+    resetWebSerialConnectionAttemptMetadata();
     setObdDeveloperConnectionState("selecting");
     obdDevSession.previewMode = null;
     clearRequestedInterfaceSelection();
@@ -4585,6 +4586,24 @@ async function connectObdDeveloperVci() {
     await disconnectObdDeveloperVci({ reason: "connection_failed", statusMessage: failureMessage });
     retainWebSerialConnectionAttempt();
   }
+}
+
+function resetWebSerialConnectionAttemptMetadata() {
+  obdDevSession.lastDisconnectReason = null;
+  obdDevSession.disconnectedAt = null;
+  obdDevSession.connectedAt = null;
+  obdDevSession.scanSessionId = null;
+  obdDevSession.vehicleProfile = null;
+  obdDevSession.vehicleApplicability = null;
+  obdDevSession.observationContext = null;
+  obdDevSession.bridgeEndpoint = null;
+  obdDevSession.bridgeStatus = null;
+  obdDevSession.bridgeVciList = null;
+  obdDevSession.adapterIdentity = null;
+  obdDevSession.adapterInitializationSummary = null;
+  obdDevSession.readoutAttempts = [];
+  obdDevSession.coreScanStopReason = null;
+  obdDevSession.readoutProfile = null;
 }
 
 function isWebSerialPortSelectionCancelled(error) {
