@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2884件",
+  validationCheckLabel: "OBD安全検証 2887件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial接続状態の再取込互換を強化",
+  recentMilestone: "再取込Web Serialの経路表示を修正",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.97";
+const APP_VERSION = "3.12.98";
 const APP_LAST_UPDATED = "2026-08-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6188,18 +6188,9 @@ function buildWebSerialConnectionStatus(outcome = null) {
     : adapterConnected
       ? "Web Serialアダプター接続中"
       : "Web Serial未接続";
-  return {
-    source: "web_serial",
-    intent: "connection_status",
-    ok: !adapterInitializationFailed && !transportError && !adapterError && !vehicleLinkError && !retainedConnectionFailure,
-    blocked: false,
-    wouldTransmit: false,
-    readOnly: true,
-    vehicleCommandEnabled: false,
-    status,
-    displayStatus: adapterInitializationFailed
-      ? "Web Serialアダプター初期化を完了できません"
-      : vehicleLinkError
+  const resolvedDisplayStatus = adapterInitializationFailed
+    ? "Web Serialアダプター初期化を完了できません"
+    : vehicleLinkError
       ? "車両通信を確立できません"
       : adapterError
         ? "Web Serialアダプターエラー"
@@ -6209,10 +6200,10 @@ function buildWebSerialConnectionStatus(outcome = null) {
             ? "Web Serialポートを開けません"
             : retainedConnectionFailure === "adapter_identification_failed"
               ? "Web Serialアダプターを識別できません"
-        : displayStatus,
-    nextAction: adapterInitializationFailed
-      ? "アダプター電源、通信速度、初期化応答を確認してから、読取専用で再接続"
-      : vehicleLinkError
+              : displayStatus;
+  const nextAction = adapterInitializationFailed
+    ? "アダプター電源、通信速度、初期化応答を確認してから、読取専用で再接続"
+    : vehicleLinkError
       ? "イグニッション状態、OBDコネクター接続、車両プロトコル、アダプター状態を確認してから、読取専用で再試行"
       : adapterError
         ? "アダプター電源、ファームウェア応答、シリアル設定を確認してから、読取専用で再試行"
@@ -6222,11 +6213,25 @@ function buildWebSerialConnectionStatus(outcome = null) {
             ? "別アプリの使用、通信速度、接続状態を確認してから再接続"
             : retainedConnectionFailure === "adapter_identification_failed"
               ? "アダプター電源とファームウェア応答を確認してから再接続"
-        : transportError
-      ? "アダプター接続と通信速度を確認してから、読取専用で再接続"
-      : adapterConnected
-        ? "読取専用でDTCまたは対応PIDを確認"
-        : "Web Serialで読取アダプターを選択",
+              : transportError
+                ? "アダプター接続と通信速度を確認してから、読取専用で再接続"
+                : adapterConnected
+                  ? "読取専用でDTCまたは対応PIDを確認"
+                  : "Web Serialで読取アダプターを選択";
+  return {
+    source: "web_serial",
+    intent: "connection_status",
+    ok: !adapterInitializationFailed && !transportError && !adapterError && !vehicleLinkError && !retainedConnectionFailure,
+    blocked: false,
+    wouldTransmit: false,
+    readOnly: true,
+    read_only: true,
+    vehicleCommandEnabled: false,
+    status,
+    displayStatus: resolvedDisplayStatus,
+    display_status: resolvedDisplayStatus,
+    nextAction,
+    next_action: nextAction,
     connectionState,
     connection_state: connectionState,
     vciConnected: adapterConnected,
@@ -7611,10 +7616,12 @@ function renderObdBridgeSessionDetails(session = null) {
   };
   const j2534StaticReadyVciCount = readJ2534StaticCount(connectionStatus?.staticReadyVciCount, connectionStatus?.static_ready_vci_count, obdDevSession.bridgeVciList?.staticReadyVciCount, obdDevSession.bridgeVciList?.static_ready_vci_count);
   const j2534StaticBlockedVciCount = readJ2534StaticCount(connectionStatus?.staticBlockedVciCount, connectionStatus?.static_blocked_vci_count, obdDevSession.bridgeVciList?.staticBlockedVciCount, obdDevSession.bridgeVciList?.static_blocked_vci_count);
-  if (connectionStatus?.displayStatus || vciDevices.length) {
+  const connectionDisplayStatus = connectionStatus?.displayStatus || connectionStatus?.display_status || null;
+  const connectionNextAction = connectionStatus?.nextAction || connectionStatus?.next_action || null;
+  if (connectionDisplayStatus || vciDevices.length) {
     const lines = [
-      `状態: ${connectionStatus?.displayStatus || NO_DATA}`,
-      `次動作: ${connectionStatus?.nextAction || NO_DATA}`,
+      `状態: ${connectionDisplayStatus || NO_DATA}`,
+      `次動作: ${connectionNextAction || NO_DATA}`,
       `Driver: ${vciDriverStatus}`
     ];
     if (j2534DriverReadinessLabel) lines.push(`J2534準備: ${j2534DriverReadinessLabel}`);
@@ -9149,16 +9156,20 @@ function renderObdDeveloperSessionSummary(session = null) {
   const captureProtocolLabel = formatSessionCaptureProtocolSummary(sessionCaptureIntegritySummary, NO_DATA);
   const hasRecoveredBridgeSession = Boolean(
     sessionConnectionStatus?.displayStatus
+    || sessionConnectionStatus?.display_status
     || (Array.isArray(sessionVciDevices) && sessionVciDevices.length > 0)
     || sessionAdapterIdentity?.adapterFamily
     || sessionAdapterIdentity?.adapterName
   );
+  const hasRecoveredWebSerialSession = String(sessionConnectionStatus?.source || "").trim().toLowerCase() === "web_serial";
   const connectionLabel = obdDevSession.port
     ? selectedInterfaceId === "user-vci-elm327"
       ? "Web Serial読取"
       : `${selectedInterface} 読取`
     : obdDevSession.bridgeEndpoint
       ? "ローカルブリッジ読取"
+      : hasRecoveredWebSerialSession
+        ? "Web Serial読取"
       : hasRecoveredBridgeSession
         ? "ローカルブリッジ読取"
       : obdDevSession.previewMode
@@ -9172,7 +9183,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["方式", selectedInterface],
     ["読取経路", readoutInterfaceLabel],
     ["車両", vehicleLabel],
-    ["状態", connectionStatus?.displayStatus || NO_DATA],
+    ["状態", connectionStatus?.displayStatus || connectionStatus?.display_status || NO_DATA],
     ...(adapterInitializationLabel ? [["VCI初期化", adapterInitializationLabel]] : []),
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC比較", dtcIdentityComparisonLabel],
@@ -9978,8 +9989,9 @@ function analyzeObdScannerImport(options = {}) {
   if (summaryEndedAt) {
     notes.push(`終了 ${formatDateTime(summaryEndedAt)}`);
   }
-  if (summaryConnectionStatus?.displayStatus) {
-    notes.push(`状態 ${summaryConnectionStatus.displayStatus}`);
+  const summaryConnectionDisplayStatus = summaryConnectionStatus?.displayStatus || summaryConnectionStatus?.display_status || null;
+  if (summaryConnectionDisplayStatus) {
+    notes.push(`状態 ${summaryConnectionDisplayStatus}`);
   }
   if (mergedSession?.adapterIdentity?.adapterFamily || mergedSession?.adapterIdentity?.adapterName) {
     notes.push(`Adapter ${mergedSession.adapterIdentity.adapterFamily || mergedSession.adapterIdentity.adapterName}`);
