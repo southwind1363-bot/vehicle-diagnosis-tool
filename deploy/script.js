@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2889件",
+  validationCheckLabel: "OBD安全検証 2891件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial再取込のブリッジ誤表示を解消",
+  recentMilestone: "再取込セッションの通信経路判定を強化",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.12.99";
+const APP_VERSION = "3.13.0";
 const APP_LAST_UPDATED = "2026-08-19";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7590,10 +7590,22 @@ function formatJ2534NextCheck(item = null, fallback = null) {
   }[nextCheck] || fallback;
 }
 
-function getRecoveredDiagnosticReadoutRoute(connectionStatus = null, vciDevices = [], adapterIdentity = null) {
-  const source = String(connectionStatus?.source || adapterIdentity?.source || "").trim().toLowerCase();
+function getRecoveredDiagnosticReadoutRoute(connectionStatus = null, vciDevices = [], adapterIdentity = null, readoutInterface = null, webSerialReadoutSummary = null) {
+  const source = String(
+    connectionStatus?.source
+    || connectionStatus?.sourceType
+    || connectionStatus?.source_type
+    || adapterIdentity?.source
+    || adapterIdentity?.sourceType
+    || adapterIdentity?.source_type
+    || ""
+  ).trim().toLowerCase();
   if (source === "web_serial") return "web_serial";
   if (source === "local_bridge" || source === "j2534_passthru") return "local_bridge";
+  const readoutRoute = String(readoutInterface?.readoutRoute || readoutInterface?.readout_route || "").trim().toLowerCase();
+  if (readoutRoute === "desktop_web_serial" || readoutRoute === "web_serial") return "web_serial";
+  if (["desktop_local_bridge", "local_bridge", "j2534_passthru"].includes(readoutRoute)) return "local_bridge";
+  if (webSerialReadoutSummary && typeof webSerialReadoutSummary === "object") return "web_serial";
   if ((Array.isArray(vciDevices) && vciDevices.length > 0) || adapterIdentity?.adapterFamily || adapterIdentity?.adapterName) return "local_bridge";
   return null;
 }
@@ -9162,7 +9174,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const capturedAtLabel = capturedAtValue ? formatDateTime(capturedAtValue) : NO_DATA;
   const captureIntegrityLabel = formatSessionCaptureIntegritySummary(sessionCaptureIntegritySummary, NO_DATA);
   const captureProtocolLabel = formatSessionCaptureProtocolSummary(sessionCaptureIntegritySummary, NO_DATA);
-  const recoveredReadoutRoute = getRecoveredDiagnosticReadoutRoute(sessionConnectionStatus, sessionVciDevices, sessionAdapterIdentity);
+  const recoveredReadoutRoute = getRecoveredDiagnosticReadoutRoute(sessionConnectionStatus, sessionVciDevices, sessionAdapterIdentity, sessionReadoutInterface, webSerialReadoutSummary);
   const hasRecoveredWebSerialSession = recoveredReadoutRoute === "web_serial";
   const hasRecoveredBridgeSession = recoveredReadoutRoute === "local_bridge";
   const connectionLabel = obdDevSession.port
