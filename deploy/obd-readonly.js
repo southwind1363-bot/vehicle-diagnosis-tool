@@ -6137,29 +6137,56 @@
       : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
         ? readinessSnapshot.readiness_ecu_snapshots
         : [];
-    const readinessEcuMonitorCount = readinessEcuSnapshots.reduce((total, snapshot) => {
+    const resolveScopedCoverageReadoutStatus = (snapshots, camelStatusKey, snakeStatusKey, parentStatus) => {
+      const normalizedParentStatus = String(parentStatus || "").trim().toLowerCase();
+      if (!Array.isArray(snapshots) || snapshots.length === 0) return normalizedParentStatus || null;
+      if (["blocked", "unparsed"].includes(normalizedParentStatus)) return normalizedParentStatus;
+      const statuses = snapshots.map((snapshot) => String(snapshot?.[camelStatusKey] || snapshot?.[snakeStatusKey] || (normalizedParentStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase());
+      if (statuses.includes("blocked")) return "blocked";
+      if (statuses.includes("unparsed")) return "unparsed";
+      return statuses.every((status) => status === "reported") ? "reported" : "unknown";
+    };
+    const readinessParentReadoutStatus = String(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || "").trim().toLowerCase();
+    const onboardMonitorParentReadoutStatus = String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").trim().toLowerCase();
+    const readinessCoverageReadoutStatus = resolveScopedCoverageReadoutStatus(
+      readinessEcuSnapshots,
+      "readinessReadoutStatus",
+      "readiness_readout_status",
+      readinessParentReadoutStatus
+    );
+    const onboardMonitorCoverageReadoutStatus = resolveScopedCoverageReadoutStatus(
+      onboardMonitorEcuSnapshots,
+      "onboardMonitorReadoutStatus",
+      "onboard_monitor_readout_status",
+      onboardMonitorParentReadoutStatus
+    );
+    const hasIncompleteScopedReadiness = readinessEcuSnapshots.length > 0 && readinessCoverageReadoutStatus !== "reported";
+    const hasIncompleteScopedOnboardMonitor = onboardMonitorEcuSnapshots.length > 0 && onboardMonitorCoverageReadoutStatus !== "reported";
+    const reportedReadinessEcuSnapshots = readinessEcuSnapshots.filter((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || (readinessParentReadoutStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase() === "reported");
+    const reportedOnboardMonitorEcuSnapshots = onboardMonitorEcuSnapshots.filter((snapshot) => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || (onboardMonitorParentReadoutStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase() === "reported");
+    const readinessEcuMonitorCount = reportedReadinessEcuSnapshots.reduce((total, snapshot) => {
       const monitors = [snapshot?.monitors, snapshot?.values, snapshot?.monitor_values, snapshot?.monitorValues, snapshot?.readiness_values, snapshot?.readinessValues].find(Array.isArray) || null;
       return total + (Array.isArray(monitors) ? (snapshot.monitorCount || snapshot.monitor_count || monitors.length) : 0);
     }, 0);
     const readinessDirectMonitorCount = Array.isArray(readinessDirectMonitors)
       ? readinessSnapshot.monitorCount || readinessSnapshot.monitor_count || readinessDirectMonitors.length
       : 0;
-    const readinessCoverageCount = readinessDirectMonitorCount > 0 || readinessEcuSnapshots.length === 0
-      ? readinessDirectMonitorCount
-      : readinessEcuMonitorCount;
+    const readinessCoverageCount = readinessEcuSnapshots.length > 0 ? readinessEcuMonitorCount : readinessDirectMonitorCount;
     const supportedPidEcuSnapshots = Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots)
       ? supportedPidMatrix.supportedPidEcuSnapshots
       : Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots)
         ? supportedPidMatrix.supported_pid_ecu_snapshots
         : [];
     const scopedSupportedPids = [...new Set(supportedPidEcuSnapshots.flatMap((snapshot) => [snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids].find((pids) => Array.isArray(pids)) || []))];
-    const onboardMonitorEcuTestCount = onboardMonitorEcuSnapshots.reduce((total, snapshot) => {
+    const onboardMonitorEcuTestCount = reportedOnboardMonitorEcuSnapshots.reduce((total, snapshot) => {
       const tests = [snapshot?.tests, snapshot?.values, snapshot?.mode06_tests, snapshot?.mode06Tests, snapshot?.monitor_tests, snapshot?.monitorTests, snapshot?.onboard_monitor_tests, snapshot?.onboardMonitorTests].find(Array.isArray) || null;
       return total + (Array.isArray(tests) ? (snapshot.testCount || snapshot.test_count || tests.length) : 0);
     }, 0);
-    const onboardMonitorCoverageCount = Array.isArray(onboardMonitorDirectTests)
-      ? onboardMonitorSnapshot.testCount || onboardMonitorSnapshot.test_count || onboardMonitorDirectTests.length
-      : onboardMonitorEcuTestCount;
+    const onboardMonitorCoverageCount = onboardMonitorEcuSnapshots.length > 0
+      ? onboardMonitorEcuTestCount
+      : Array.isArray(onboardMonitorDirectTests)
+        ? onboardMonitorSnapshot.testCount || onboardMonitorSnapshot.test_count || onboardMonitorDirectTests.length
+        : 0;
     const isUnknownWithoutEvidence = (snapshot, keys, readoutStatus) => String(readoutStatus || "").trim().toLowerCase() === "unknown"
       && !snapshot?.capturedAt
       && !snapshot?.captured_at
@@ -6250,12 +6277,12 @@
       {
         id: "readiness_snapshot",
         inputPresent: hasReadinessSnapshotInput,
-        readoutStatus: readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || null,
+        readoutStatus: readinessCoverageReadoutStatus,
         safetyInput: readinessSnapshotSafetyInput,
-        responseUnavailable: isUnavailableReadout(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, readinessSnapshotSafetyInput),
-        capturedEvidence: readinessEcuSnapshots.length > 0,
+        responseUnavailable: hasIncompleteScopedReadiness || isUnavailableReadout(readinessSnapshot, readinessCoverageReadoutStatus, readinessSnapshotSafetyInput),
+        capturedEvidence: reportedReadinessEcuSnapshots.length > 0,
         label: "レディネス",
-        available: ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status) || isUnknownWithoutEvidence(readinessSnapshot, ["monitors", "values", "monitor_values", "monitorValues", "readiness_values", "readinessValues", "pid_values", "pidValues", "readiness_rows", "readinessRows"], readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
+        available: hasIncompleteScopedReadiness || ["unparsed", "blocked"].includes(readinessCoverageReadoutStatus) || isUnknownWithoutEvidence(readinessSnapshot, ["monitors", "values", "monitor_values", "monitorValues", "readiness_values", "readinessValues", "pid_values", "pidValues", "readiness_rows", "readinessRows"], readinessCoverageReadoutStatus)
           ? false
           : readinessSnapshot?.blocked === false || Array.isArray(readinessDirectMonitors) || readinessEcuSnapshots.length > 0,
         count: readinessCoverageCount
@@ -6282,11 +6309,11 @@
       {
         id: "onboard_monitor_snapshot",
         inputPresent: hasOnboardMonitorSnapshotInput,
-        readoutStatus: onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || null,
+        readoutStatus: onboardMonitorCoverageReadoutStatus,
         safetyInput: onboardMonitorSnapshotSafetyInput,
-        responseUnavailable: isUnavailableReadout(onboardMonitorSnapshot, onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status, onboardMonitorSnapshotSafetyInput),
+        responseUnavailable: hasIncompleteScopedOnboardMonitor || isUnavailableReadout(onboardMonitorSnapshot, onboardMonitorCoverageReadoutStatus, onboardMonitorSnapshotSafetyInput),
         label: "Mode06",
-        available: ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status) || isUnknownWithoutEvidence(onboardMonitorSnapshot, ["tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"], onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
+        available: hasIncompleteScopedOnboardMonitor || ["unparsed", "blocked"].includes(onboardMonitorCoverageReadoutStatus) || isUnknownWithoutEvidence(onboardMonitorSnapshot, ["tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"], onboardMonitorCoverageReadoutStatus)
           ? false
           : onboardMonitorSnapshot?.blocked === false || Array.isArray(onboardMonitorDirectTests) || onboardMonitorEcuSnapshots.length > 0,
         count: onboardMonitorCoverageCount
