@@ -4148,6 +4148,9 @@
   }
 
   function normalizeBridgeLivePidSnapshot(response = {}) {
+    const firstLivePidArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedLivePidPayload = Boolean(nestedData && [
       "values", "monitor_values", "monitorValues", "pid_values", "pidValues", "live_pid_values", "livePidValues", "live_data", "liveData", "items",
@@ -4158,8 +4161,9 @@
     // Never combine outer and nested live PID evidence; outer values only complete an otherwise empty envelope.
     const outerLivePidFallback = nestedData && !hasNestedLivePidPayload
       ? {
-        values: response.values ?? response.monitor_values ?? response.monitorValues ?? response.pid_values ?? response.pidValues ?? response.live_pid_values ?? response.livePidValues ?? response.live_data ?? response.liveData ?? response.items,
-        monitor_value_summary: response.monitorValueSummary ?? response.monitor_value_summary,
+        values: firstLivePidArray(response.values, response.monitor_values, response.monitorValues, response.pid_values, response.pidValues, response.live_pid_values, response.livePidValues, response.live_data, response.liveData, response.items),
+        monitorValueSummary: response.monitorValueSummary,
+        monitor_value_summary: response.monitor_value_summary,
         monitor_insights: response.monitorInsights ?? response.monitor_insights ?? response.insights
       }
       : {};
@@ -4177,9 +4181,6 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
-    const firstLivePidArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
-      || values.find(Array.isArray)
-      || [];
     const livePidEcuSnapshots = firstLivePidArray(
       data.live_pid_ecu_snapshots,
       data.livePidEcuSnapshots,
@@ -4307,8 +4308,8 @@
         protocol: readBridgeProtocol(ecuRow) || null,
         monitorValues: scopedMonitorValues,
         monitor_values: scopedMonitorValues,
-        monitorValueSummary: resolveMonitorValueSummary(scopedMonitorValues, ecuRow?.monitorValueSummary || ecuRow?.monitor_value_summary || null),
-        monitor_value_summary: resolveMonitorValueSummary(scopedMonitorValues, ecuRow?.monitorValueSummary || ecuRow?.monitor_value_summary || null),
+        monitorValueSummary: resolveMonitorValueSummary(scopedMonitorValues, ecuRow?.monitorValueSummary, ecuRow?.monitor_value_summary),
+        monitor_value_summary: resolveMonitorValueSummary(scopedMonitorValues, ecuRow?.monitorValueSummary, ecuRow?.monitor_value_summary),
         livePidReadoutStatus: scopedReadoutStatus,
         live_pid_readout_status: scopedReadoutStatus,
         blocked: scopedSafety.blocked,
@@ -4435,7 +4436,7 @@
     };
     const observationConditionInput = data.observationCondition || data.observation_condition || "unspecified";
     const observationCondition = normalizeLivePidObservationCondition(observationConditionInput);
-    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary || data.monitor_value_summary || null);
+    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, data.monitorValueSummary, data.monitor_value_summary);
     const explicitMonitorInsights = cloneBridgeArrayItems(data.monitorInsights || data.monitor_insights || data.insights || []);
     const monitorInsights = [...new Map([
       ...explicitMonitorInsights,
@@ -4563,7 +4564,7 @@
             protocol: snapshotInput.protocol || snapshotInput.obd_protocol || null,
             capturedAt: snapshotInput.capturedAt || snapshotInput.captured_at || null,
             monitorValues: retainedMonitorValues,
-            monitorValueSummary: resolveMonitorValueSummary(retainedMonitorValues, snapshotInput.monitorValueSummary || snapshotInput.monitor_value_summary || null),
+            monitorValueSummary: resolveMonitorValueSummary(retainedMonitorValues, snapshotInput.monitorValueSummary, snapshotInput.monitor_value_summary),
             livePidReadoutStatus: "reported",
             blocked: false,
             wouldTransmit: false
@@ -6628,8 +6629,8 @@
       freezeFrameSnapshot?.freezeFrameValues,
       freezeFrameSnapshot?.freeze_frame_values
     );
-    const livePidMonitorValueSummary = resolveMonitorValueSummary(livePidValueEntries, livePidSnapshot?.monitorValueSummary || livePidSnapshot?.monitor_value_summary || null);
-    const freezeFrameMonitorValueSummary = resolveMonitorValueSummary(freezeFrameValueEntries, freezeFrameSnapshot?.monitorValueSummary || freezeFrameSnapshot?.monitor_value_summary || null);
+    const livePidMonitorValueSummary = resolveMonitorValueSummary(livePidValueEntries, livePidSnapshot?.monitorValueSummary, livePidSnapshot?.monitor_value_summary);
+    const freezeFrameMonitorValueSummary = resolveMonitorValueSummary(freezeFrameValueEntries, freezeFrameSnapshot?.monitorValueSummary, freezeFrameSnapshot?.monitor_value_summary);
     const ecuInfoItemEntries = firstPopulatedInventoryArray(ecuInfoSnapshot?.items, ecuInfoSnapshot?.values, ecuInfoSnapshot?.ecu_info_items, ecuInfoSnapshot?.ecuInfoItems);
     const onboardMonitorTestEntries = firstPopulatedInventoryArray(
       onboardMonitorSnapshot?.tests,
@@ -9520,7 +9521,13 @@
     const monitorValues = Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length
       ? directMonitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorValues);
-    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, directMonitorValueSummaryInput || livePidSnapshot.monitorValueSummary);
+    const monitorValueSummary = resolveMonitorValueSummary(
+      monitorValues,
+      parts.monitorValueSummary,
+      parts.monitor_value_summary,
+      livePidSnapshot.monitorValueSummary,
+      livePidSnapshot.monitor_value_summary
+    );
     const monitorInsights = Array.isArray(directMonitorInsightsInput) && directMonitorInsightsInput.length
       ? directMonitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorInsights);
@@ -10278,7 +10285,13 @@
       : Array.isArray(livePidSnapshot.monitorValues)
         ? livePidSnapshot.monitorValues.map((item) => (item && typeof item === "object" ? { ...item } : item))
         : [];
-    const monitorValueSummary = pickPresent(parts.monitorValueSummary, parts.monitor_value_summary, livePidSnapshot.monitorValueSummary, buildMonitorValueSummary(monitorValues));
+    const monitorValueSummary = resolveMonitorValueSummary(
+      monitorValues,
+      parts.monitorValueSummary,
+      parts.monitor_value_summary,
+      livePidSnapshot.monitorValueSummary,
+      livePidSnapshot.monitor_value_summary
+    );
     const monitorInsights = Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
@@ -11120,7 +11133,7 @@
     ].find((value) => Array.isArray(value) && value.length > 0)
       || [snapshot?.monitorValues, snapshot?.monitor_values, snapshot?.values].find(Array.isArray)
       || [];
-    return resolveMonitorValueSummary(monitorValues, snapshot?.monitorValueSummary || snapshot?.monitor_value_summary || null).undecodedRawCount;
+    return resolveMonitorValueSummary(monitorValues, snapshot?.monitorValueSummary, snapshot?.monitor_value_summary).undecodedRawCount;
   }
 
   function appendCommonCoreWarnings(warnings, {
@@ -12256,8 +12269,8 @@
       freezeFrameSnapshot?.freezeFrameValues,
       freezeFrameSnapshot?.freeze_frame_values
     );
-    const livePidQualityValueSummary = resolveMonitorValueSummary(livePidQualityValues, livePidSnapshot?.monitorValueSummary || livePidSnapshot?.monitor_value_summary || null);
-    const freezeFrameQualityValueSummary = resolveMonitorValueSummary(freezeFrameQualityValues, freezeFrameSnapshot?.monitorValueSummary || freezeFrameSnapshot?.monitor_value_summary || null);
+    const livePidQualityValueSummary = resolveMonitorValueSummary(livePidQualityValues, livePidSnapshot?.monitorValueSummary, livePidSnapshot?.monitor_value_summary);
+    const freezeFrameQualityValueSummary = resolveMonitorValueSummary(freezeFrameQualityValues, freezeFrameSnapshot?.monitorValueSummary, freezeFrameSnapshot?.monitor_value_summary);
     const normalizedWebSerialReadoutSummary = normalizeWebSerialReadoutSummary(webSerialReadoutSummary);
     const webSerialNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.negativeResponseCount, normalizedWebSerialReadoutSummary?.negative_response_count);
     const webSerialPendingNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.pendingNegativeResponseCount, normalizedWebSerialReadoutSummary?.pending_negative_response_count);
@@ -18520,7 +18533,12 @@
       readinessSnapshot: summary.readinessSnapshot || summary.readiness_snapshot || null,
       ecuInfoSnapshot: summary.ecuInfoSnapshot || summary.ecu_info_snapshot || null,
       onboardMonitorSnapshot: summary.onboardMonitorSnapshot || summary.onboard_monitor_snapshot || null,
-      livePidSnapshot: summary.livePidSnapshot || summary.live_pid_snapshot || { monitorValues: summary.monitorValues || summary.monitor_values || [], monitorValueSummary: summary.monitorValueSummary || summary.monitor_value_summary || null },
+      livePidSnapshot: summary.livePidSnapshot || summary.live_pid_snapshot || {
+        monitorValues: summary.monitorValues || [],
+        monitor_values: summary.monitor_values || [],
+        monitorValueSummary: summary.monitorValueSummary || null,
+        monitor_value_summary: summary.monitor_value_summary || null
+      },
       ecuResponseSummary: summary.ecuResponseSummary || summary.ecu_response_summary || null,
       supportedPidMatrix: summary.supportedPidMatrix || summary.supported_pid_matrix || null,
       webSerialReadoutSummary: summary.webSerialReadoutSummary || summary.web_serial_readout_summary || null,
@@ -18594,18 +18612,20 @@
     return input.readoutCoverage || input.readout_coverage || input.readoutCoverageResponse || input.readout_coverage_response || null;
   }
 
-  function resolveMonitorValueSummary(monitorValues = [], explicitSummary = null) {
+  function resolveMonitorValueSummary(monitorValues = [], ...explicitSummaries) {
     const calculated = buildMonitorValueSummary(monitorValues);
-    if (!explicitSummary || typeof explicitSummary !== "object") return calculated;
-    const readCount = (camelKey, snakeKey) => {
-      const value = explicitSummary[camelKey] ?? explicitSummary[snakeKey];
+    const summaries = explicitSummaries.filter((summary) => summary && typeof summary === "object" && !Array.isArray(summary));
+    if (!summaries.length) return calculated;
+    const readCount = (summary, camelKey, snakeKey) => {
+      const value = summary[camelKey] ?? summary[snakeKey];
       return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : 0;
     };
-    const undecodedRawCount = Math.max(calculated.undecodedRawCount, readCount("undecodedRawCount", "undecoded_raw_count"));
-    const numericCount = Math.max(calculated.numericCount, readCount("numericCount", "numeric_count"));
-    const textCount = Math.max(calculated.textCount, readCount("textCount", "text_count"));
-    const totalCount = Math.max(calculated.totalCount, readCount("totalCount", "total_count"), undecodedRawCount + numericCount + textCount);
-    const decodedCount = Math.min(totalCount, Math.max(calculated.decodedCount, readCount("decodedCount", "decoded_count"), totalCount - undecodedRawCount));
+    const maxExplicitCount = (camelKey, snakeKey) => Math.max(0, ...summaries.map((summary) => readCount(summary, camelKey, snakeKey)));
+    const undecodedRawCount = Math.max(calculated.undecodedRawCount, maxExplicitCount("undecodedRawCount", "undecoded_raw_count"));
+    const numericCount = Math.max(calculated.numericCount, maxExplicitCount("numericCount", "numeric_count"));
+    const textCount = Math.max(calculated.textCount, maxExplicitCount("textCount", "text_count"));
+    const totalCount = Math.max(calculated.totalCount, maxExplicitCount("totalCount", "total_count"), undecodedRawCount, numericCount + textCount);
+    const decodedCount = Math.min(totalCount, Math.max(calculated.decodedCount, maxExplicitCount("decodedCount", "decoded_count"), totalCount - undecodedRawCount));
     return {
       totalCount,
       total_count: totalCount,
@@ -19741,8 +19761,10 @@
     const exportSource = summary.source || summary.source_type || parts.source || parts.source_type || "local_bridge";
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const livePidSnapshot = summary.livePidSnapshot || summary.live_pid_snapshot || normalizeBridgeLivePidSnapshot({
-      monitor_values: summary.monitorValues || summary.monitor_values || [],
-      monitor_value_summary: summary.monitorValueSummary || summary.monitor_value_summary || null
+      monitorValues: summary.monitorValues || [],
+      monitor_values: summary.monitor_values || [],
+      monitorValueSummary: summary.monitorValueSummary || null,
+      monitor_value_summary: summary.monitor_value_summary || null
     });
     const livePidTimeline = normalizeLivePidTimeline(summary.livePidTimeline || summary.live_pid_timeline || parts.livePidTimeline || parts.live_pid_timeline || []);
     const webSerialReadoutSummary = normalizeWebSerialReadoutSummary(
@@ -19983,8 +20005,10 @@
     const summary = resolveBridgeSummary(parts);
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const livePidSnapshot = summary.livePidSnapshot || summary.live_pid_snapshot || normalizeBridgeLivePidSnapshot({
-      monitor_values: summary.monitorValues || summary.monitor_values || [],
-      monitor_value_summary: summary.monitorValueSummary || summary.monitor_value_summary || null
+      monitorValues: summary.monitorValues || [],
+      monitor_values: summary.monitor_values || [],
+      monitorValueSummary: summary.monitorValueSummary || null,
+      monitor_value_summary: summary.monitor_value_summary || null
     });
     const metadataFields = buildSummaryMetadataFields(summary);
     const directSessionMetadata = getSessionMetadataOverrides(parts);
@@ -20795,11 +20819,14 @@
     const dtcSnapshot = mergeDtcSnapshots(scannerDtcSnapshot, bridgeDtcSnapshot);
     const codes = dtcSnapshot.codes;
     const bridgeMonitorInsights = cloneBridgeArrayItems(bridgeMonitorInsightsInput);
-    const bridgeMonitorValueSummary = bridgeImport?.monitorValueSummary
-      || bridgeImport?.monitor_value_summary
-      || bridgeSession?.monitorValueSummary
-      || bridgeSession?.monitor_value_summary
-      || null;
+    const bridgeMonitorValueSummaryInputs = [
+      bridgeImport?.monitorValueSummary,
+      bridgeImport?.monitor_value_summary,
+      bridgeSession?.monitorValueSummary,
+      bridgeSession?.monitor_value_summary
+    ];
+    const hasBridgeMonitorValueSummary = bridgeMonitorValueSummaryInputs.some(hasObjectContent);
+    const bridgeMonitorValueSummary = resolveMonitorValueSummary([], ...bridgeMonitorValueSummaryInputs);
     const recalculatedMonitorValueSummary = buildMonitorValueSummary(monitorValues);
     const recalculatedMonitorInsights = analyzeMonitorValues(monitorValues);
     const monitorInsights = [...new Map([
@@ -20812,7 +20839,7 @@
         item
       ])
     ]).values()];
-    const monitorValueSummary = bridgeMonitorValueSummary
+    const monitorValueSummary = hasBridgeMonitorValueSummary
       ? {
         totalCount: Math.max(recalculatedMonitorValueSummary.totalCount || 0, bridgeMonitorValueSummary.totalCount || 0),
         decodedCount: Math.max(recalculatedMonitorValueSummary.decodedCount || 0, bridgeMonitorValueSummary.decodedCount || 0),
@@ -21892,6 +21919,8 @@
         captured_at: input.data.captured_at || input.data.capturedAt || input.captured_at || input.capturedAt,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol,
         freeze_frame_readout_status: input.data.freezeFrameReadoutStatus || input.data.freeze_frame_readout_status || input.freezeFrameReadoutStatus || input.freeze_frame_readout_status || null,
+        monitorValueSummary: input.data.monitorValueSummary || input.monitorValueSummary || null,
+        monitor_value_summary: input.data.monitor_value_summary || input.monitor_value_summary || null,
         associated_dtc: input.data.associated_dtc || input.data.associatedDtc || input.associated_dtc || input.associatedDtc || null,
         associated_dtc_entries: input.data.associated_dtc_entries || input.data.associatedDtcEntries || input.associated_dtc_entries || input.associatedDtcEntries || [],
         uds_dtc_snapshot_records: input.data.udsDtcSnapshotRecords || input.data.uds_dtc_snapshot_records || input.data.dtcSnapshotRecords || input.data.dtc_snapshot_records || input.udsDtcSnapshotRecords || input.uds_dtc_snapshot_records || input.dtcSnapshotRecords || input.dtc_snapshot_records || [],
@@ -22271,7 +22300,7 @@
       : triggerDtcEntries.length > 1
         ? null
         : inferredTriggerFrameNumber;
-    const monitorValueSummary = buildMonitorValueSummary(monitorValues);
+    const monitorValueSummary = resolveMonitorValueSummary(monitorValues, sourceInput.monitorValueSummary, sourceInput.monitor_value_summary);
     const capturedItemCount = monitorValues.length;
     const expectedItemCount = expectedItems.length;
     const monitorInsights = analyzeMonitorValues(monitorValues);
@@ -28630,9 +28659,12 @@
           source: sessionInput.source || sessionInput.source_type || "local_bridge",
           captured_at: sessionInput.captured_at || sessionInput.capturedAt || null,
           protocol: sessionInput.protocol || sessionInput.obd_protocol || null,
-          monitor_values: sessionInput.monitorValues || sessionInput.monitor_values || [],
-          monitor_value_summary: sessionInput.monitorValueSummary || sessionInput.monitor_value_summary || null,
-          monitor_insights: sessionInput.monitorInsights || sessionInput.monitor_insights || []
+          monitorValues: sessionInput.monitorValues || [],
+          monitor_values: sessionInput.monitor_values || [],
+          monitorValueSummary: sessionInput.monitorValueSummary || null,
+          monitor_value_summary: sessionInput.monitor_value_summary || null,
+          monitorInsights: sessionInput.monitorInsights || [],
+          monitor_insights: sessionInput.monitor_insights || []
         }
         : {});
     const livePidTimelineInput = sessionInput.livePidTimeline
@@ -29139,8 +29171,8 @@
       || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
       || null;
     const mergedMonitorValueSummary = mergeMonitorValueSummaries(
-      livePidSnapshot.monitorValueSummary || livePidSnapshot.monitor_value_summary,
-      freezeFrameSnapshot.monitorValueSummary || freezeFrameSnapshot.monitor_value_summary
+      resolveMonitorValueSummary([], livePidSnapshot.monitorValueSummary, livePidSnapshot.monitor_value_summary),
+      resolveMonitorValueSummary([], freezeFrameSnapshot.monitorValueSummary, freezeFrameSnapshot.monitor_value_summary)
     );
     const monitorValueSummary = resolveMonitorValueSummary([
       ...livePidSnapshot.monitorValues,
