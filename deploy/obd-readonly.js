@@ -11646,9 +11646,9 @@
     const dtcStatusSummary = dtcSnapshot?.dtcStatusSummary
       || dtcSnapshot?.dtc_status_summary
       || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
-    const dtcReportedStatusSummary = dtcSnapshot?.dtcReportedStatusSummary
-      || dtcSnapshot?.dtc_reported_status_summary
-      || buildDtcReportedStatusSummary(["blocked", "unparsed"].includes(String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").trim().toLowerCase()) ? [] : dtcSnapshot?.dtcs || []);
+    const normalizedDtcReportedStatusSnapshot = normalizeDtcReportedStatusSummaryAliasesOnSnapshot(dtcSnapshot);
+    const dtcReportedStatusSummary = normalizedDtcReportedStatusSnapshot?.dtcReportedStatusSummary
+      || buildDtcReportedStatusSummary([]);
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const dtcIdentitySummary = buildDtcIdentitySummary(dtcSnapshot || {});
     const dtcStatusByteSummary = buildDtcStatusByteSummary(dtcSnapshot || {});
@@ -12748,7 +12748,10 @@
     const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
     const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || readiness.readoutQualitySummary || readiness.readout_quality_summary || {};
     const dtcStatusSummary = coreSessionStatus?.dtcStatusSummary || coreSessionStatus?.dtc_status_summary || {};
-    const dtcReportedStatusSummary = coreSessionStatus?.dtcReportedStatusSummary || coreSessionStatus?.dtc_reported_status_summary || {};
+    const dtcReportedStatusSummary = normalizeDtcReportedStatusSummaryAliases(
+      coreSessionStatus?.dtcReportedStatusSummary,
+      coreSessionStatus?.dtc_reported_status_summary
+    );
     const readoutQualityChecklist = diagnosticChecklistById.readout_quality || null;
     const applicabilityStatus = coreSessionStatus?.applicabilityStatus || coreSessionStatus?.applicability_status || vehicleApplicabilityChecklist?.applicabilityStatus || vehicleApplicabilityChecklist?.applicability_status || "unknown";
     const vehicleApplicabilityReviewRequired = vehicleApplicabilityChecklist?.state === "review"
@@ -14009,9 +14012,15 @@
     const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
     const dtcStatusSummary = normalizeObject("dtcStatusSummary", "dtc_status_summary");
-    const dtcReportedStatusSummary = fallbackDtcSnapshot?.dtcReportedStatusSummary
-      || fallbackDtcSnapshot?.dtc_reported_status_summary
-      || normalizeObject("dtcReportedStatusSummary", "dtc_reported_status_summary");
+    const fallbackDtcReportedStatusAliases = [
+      fallbackDtcSnapshot?.dtcReportedStatusSummary,
+      fallbackDtcSnapshot?.dtc_reported_status_summary
+    ].filter(hasObjectContent);
+    const dtcReportedStatusSummary = normalizeDtcReportedStatusSummaryAliases(
+      ...(fallbackDtcReportedStatusAliases.length > 0
+        ? fallbackDtcReportedStatusAliases
+        : [summary.dtcReportedStatusSummary, summary.dtc_reported_status_summary])
+    );
     const selectDtcEvidenceSummaryAliases = (camelKey, snakeKey) => {
       const directAliases = [summary[camelKey], summary[snakeKey]].filter(hasObjectContent);
       return directAliases.length > 0
@@ -14224,11 +14233,15 @@
     const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
     const dtcStatusSummary = summary.dtcStatusSummary || summary.dtc_status_summary || {};
-    const dtcReportedStatusSummary = fallbackCoreSessionStatus?.dtcReportedStatusSummary
-      || fallbackCoreSessionStatus?.dtc_reported_status_summary
-      || summary.dtcReportedStatusSummary
-      || summary.dtc_reported_status_summary
-      || {};
+    const fallbackDtcReportedStatusAliases = [
+      fallbackCoreSessionStatus?.dtcReportedStatusSummary,
+      fallbackCoreSessionStatus?.dtc_reported_status_summary
+    ].filter(hasObjectContent);
+    const dtcReportedStatusSummary = normalizeDtcReportedStatusSummaryAliases(
+      ...(fallbackDtcReportedStatusAliases.length > 0
+        ? fallbackDtcReportedStatusAliases
+        : [summary.dtcReportedStatusSummary, summary.dtc_reported_status_summary])
+    );
     const selectDtcEvidenceSummaryAliases = (camelKey, snakeKey) => {
       const fallbackAliases = [fallbackCoreSessionStatus?.[camelKey], fallbackCoreSessionStatus?.[snakeKey]].filter(hasObjectContent);
       return fallbackAliases.length > 0 ? fallbackAliases : [summary[camelKey], summary[snakeKey]].filter(hasObjectContent);
@@ -21507,6 +21520,75 @@
     };
   }
 
+  function normalizeDtcReportedStatusSummaryAliases(...summaryInputs) {
+    const summaries = summaryInputs
+      .filter((summary) => summary && typeof summary === "object" && !Array.isArray(summary));
+    const countsByStatus = new Map();
+    summaries.flatMap((summary) => [
+      ...(Array.isArray(summary.counts) ? summary.counts : []),
+      ...(Array.isArray(summary.status_counts) ? summary.status_counts : [])
+    ]).forEach((item) => {
+      const status = normalizeDtcReportedStatus(item?.status);
+      const count = Number.isFinite(Number(item?.count)) ? Math.max(0, Math.round(Number(item.count))) : 0;
+      if (status) countsByStatus.set(status, Math.max(countsByStatus.get(status) || 0, count));
+    });
+    summaries.flatMap((summary) => [
+      ...(Array.isArray(summary.statuses) ? summary.statuses : []),
+      ...(Array.isArray(summary.reported_statuses) ? summary.reported_statuses : [])
+    ]).forEach((value) => {
+      const status = normalizeDtcReportedStatus(value);
+      if (status && !countsByStatus.has(status)) countsByStatus.set(status, 0);
+    });
+    const counts = [...countsByStatus.entries()]
+      .map(([status, count]) => ({ status, count }))
+      .sort((left, right) => left.status.localeCompare(right.status));
+    const statuses = counts.map((item) => item.status);
+    const explicitTotalCounts = summaries.flatMap((summary) => [summary.totalCount, summary.total_count])
+      .filter((value) => Number.isFinite(Number(value)))
+      .map((value) => Math.max(0, Math.round(Number(value))));
+    const totalCount = Math.max(counts.reduce((total, item) => total + item.count, 0), 0, ...explicitTotalCounts);
+    return {
+      schemaVersion: "dtc_reported_status_summary_v1",
+      schema_version: "dtc_reported_status_summary_v1",
+      statuses,
+      reported_statuses: [...statuses],
+      counts,
+      status_counts: counts.map((item) => ({ ...item })),
+      statusCount: statuses.length,
+      status_count: statuses.length,
+      totalCount,
+      total_count: totalCount,
+      retainedRawText: false,
+      retained_raw_text: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function normalizeDtcReportedStatusSummaryAliasesOnSnapshot(snapshot = {}) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return snapshot;
+    const dtcs = Array.isArray(snapshot.dtcs) ? snapshot.dtcs : [];
+    const readoutStatus = String(snapshot.dtcReadoutStatus || snapshot.dtc_readout_status || "").trim().toLowerCase();
+    const readable = !["blocked", "unparsed", "not_supported", "unsupported", "unavailable"].includes(readoutStatus);
+    const rowSummary = buildDtcReportedStatusSummary(readable ? dtcs : []);
+    if (!readable || rowSummary.totalCount > 0) {
+      return {
+        ...snapshot,
+        dtcReportedStatusSummary: rowSummary,
+        dtc_reported_status_summary: rowSummary
+      };
+    }
+    const summary = normalizeDtcReportedStatusSummaryAliases(
+      snapshot.dtcReportedStatusSummary,
+      snapshot.dtc_reported_status_summary
+    );
+    return {
+      ...snapshot,
+      dtcReportedStatusSummary: summary,
+      dtc_reported_status_summary: summary
+    };
+  }
+
   function buildDtcMetadataSummary({
     dtcs = [],
     statusAvailabilityMask = null,
@@ -21934,7 +22016,10 @@
       allReported: reportedEcuResponseCount === ecuResponses.length,
       all_reported: reportedEcuResponseCount === ecuResponses.length
     } : null;
-    const dtcReportedStatusSummary = buildDtcReportedStatusSummary(dtcReadoutStatus === "reported" ? normalizedDtcs : []);
+    const rowDtcReportedStatusSummary = buildDtcReportedStatusSummary(dtcReadoutStatus === "reported" ? normalizedDtcs : []);
+    const dtcReportedStatusSummary = dtcReadoutStatus === "reported" && rowDtcReportedStatusSummary.totalCount === 0
+      ? normalizeDtcReportedStatusSummaryAliases(sourceInput.dtcReportedStatusSummary, sourceInput.dtc_reported_status_summary)
+      : rowDtcReportedStatusSummary;
     const dtcResponseFormats = inferUdsDtcResponseFormats({
       formats: readDtcResponseFormatAliases(sourceInput),
       dtcs: normalizedDtcs,
@@ -24676,7 +24761,13 @@
         : childReadoutStatuses.includes("reported")
           ? "reported"
           : "unknown";
-    const dtcReportedStatusSummary = buildDtcReportedStatusSummary(dtcReadoutStatus === "reported" ? mergedRows : []);
+    const rowDtcReportedStatusSummary = buildDtcReportedStatusSummary(dtcReadoutStatus === "reported" ? mergedRows : []);
+    const dtcReportedStatusSummary = dtcReadoutStatus === "reported" && rowDtcReportedStatusSummary.totalCount === 0
+      ? normalizeDtcReportedStatusSummaryAliases(...snapshots.flatMap((snapshot) => [
+        snapshot?.dtcReportedStatusSummary,
+        snapshot?.dtc_reported_status_summary
+      ]))
+      : rowDtcReportedStatusSummary;
     const dtcStatusAvailabilityMasks = [...new Set(
       snapshots.flatMap((snapshot) => readDtcStatusAvailabilityMaskAliases(snapshot))
     )];
@@ -28848,6 +28939,7 @@
           ? normalizeBridgeDtcSnapshot(dtcSnapshotInput)
         : normalizeDtcSnapshot(dtcSnapshotInput)), dtcSnapshotSafetyInput, ["dtcReadoutStatus", "dtc_readout_status"]);
     dtcSnapshot = normalizeDtcStatusSummaryAliasesOnSnapshot(dtcSnapshot);
+    dtcSnapshot = normalizeDtcReportedStatusSummaryAliasesOnSnapshot(dtcSnapshot);
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
