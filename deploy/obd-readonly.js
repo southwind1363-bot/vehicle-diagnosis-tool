@@ -4974,7 +4974,7 @@
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedFreezeFramePayload = Boolean(nestedData && [
       "values", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "monitor_values", "monitorValues", "pid_values", "pidValues",
-      "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
+      "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "trigger_dtc", "triggerDtc", "trigger_code", "triggerCode", "freeze_dtc", "freezeDtc", "associated_dtc", "associatedDtc", "dtc",
       "trigger_dtc_entries", "triggerDtcEntries", "freeze_frame_trigger_entries", "freezeFrameTriggerEntries", "associated_dtc_entries", "associatedDtcEntries"
       , "raw", "response", "bytes"
@@ -4983,7 +4983,7 @@
     const outerFreezeFrameFallback = nestedData && !hasNestedFreezeFramePayload
       ? {
         values: response.values ?? response.freeze_frame ?? response.freezeFrame ?? response.freeze_frame_values ?? response.freezeFrameValues ?? response.freeze_frame_rows ?? response.freezeFrameRows ?? response.monitor_values ?? response.monitorValues ?? response.pid_values ?? response.pidValues,
-        freeze_frame_ecu_snapshots: response.freeze_frame_ecu_snapshots ?? response.freezeFrameEcuSnapshots,
+        freeze_frame_ecu_snapshots: response.freeze_frame_ecu_snapshots ?? response.freezeFrameEcuSnapshots ?? response.ecu_snapshots ?? response.ecuSnapshots,
         trigger_dtc: response.trigger_dtc ?? response.triggerDtc ?? response.trigger_code ?? response.triggerCode ?? response.freeze_dtc ?? response.freezeDtc ?? response.associated_dtc ?? response.associatedDtc ?? response.dtc,
         trigger_dtc_entries: response.trigger_dtc_entries ?? response.triggerDtcEntries ?? response.freeze_frame_trigger_entries ?? response.freezeFrameTriggerEntries ?? response.associated_dtc_entries ?? response.associatedDtcEntries,
         trigger_frame_number: response.trigger_frame_number ?? response.triggerFrameNumber ?? response.frame_number ?? response.frameNumber
@@ -5005,9 +5005,13 @@
       ? data.freezeFrameEcuSnapshots
       : Array.isArray(data.freeze_frame_ecu_snapshots)
         ? data.freeze_frame_ecu_snapshots
-        : [];
+        : Array.isArray(data.ecuSnapshots)
+          ? data.ecuSnapshots
+          : Array.isArray(data.ecu_snapshots)
+            ? data.ecu_snapshots
+            : [];
     const malformedFreezeFrameAlias = [
-      "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots",
+      "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "values", "freeze_frame", "freezeFrame",
       "freeze_frame_values", "freezeFrameValues",
       "freeze_frame_rows", "freezeFrameRows",
@@ -5142,13 +5146,14 @@
       "status_byte_a", "status_byte_b", "status_byte_c", "status_byte_d",
       "statusByteA", "statusByteB", "statusByteC", "statusByteD",
       "monitors", "values", "monitor_values", "monitorValues", "readiness_values", "readinessValues", "pid_values", "pidValues", "readiness_rows", "readinessRows",
-      "readinessEcuSnapshots", "readiness_ecu_snapshots", "raw", "response", "bytes"
+      "readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots", "raw", "response", "bytes"
     ].some((key) => nestedData[key] !== undefined));
     // Do not combine nested and outer readiness payloads: outer fields only fill an empty nested envelope.
     const outerReadinessValueFallback = nestedData && !hasNestedReadinessPayload
       ? {
         mil_on: response.mil_on ?? response.milStatus ?? response.mil,
         monitors: response.monitors,
+        readiness_ecu_snapshots: response.readiness_ecu_snapshots ?? response.readinessEcuSnapshots ?? response.ecu_snapshots ?? response.ecuSnapshots,
         readiness_status_byte_a: response.readiness_status_byte_a ?? response.readinessStatusByteA ?? response.status_byte_a ?? response.statusByteA,
         readiness_status_byte_b: response.readiness_status_byte_b ?? response.readinessStatusByteB ?? response.status_byte_b ?? response.statusByteB,
         readiness_status_byte_c: response.readiness_status_byte_c ?? response.readinessStatusByteC ?? response.status_byte_c ?? response.statusByteC,
@@ -5169,13 +5174,18 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
+    const hasGenericReadinessEcuSnapshotRows = [data.ecuSnapshots, data.ecu_snapshots].some(Array.isArray);
     const readinessEcuSnapshotRows = Array.isArray(data.readinessEcuSnapshots)
       ? data.readinessEcuSnapshots
       : Array.isArray(data.readiness_ecu_snapshots)
         ? data.readiness_ecu_snapshots
-        : [];
+        : Array.isArray(data.ecuSnapshots)
+          ? data.ecuSnapshots
+          : Array.isArray(data.ecu_snapshots)
+            ? data.ecu_snapshots
+            : [];
     const malformedReadinessAlias = [
-      "readinessEcuSnapshots", "readiness_ecu_snapshots",
+      "readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "monitors",
       "values",
       "monitor_values", "monitorValues",
@@ -5185,7 +5195,7 @@
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]))
       || (response.monitorValues !== undefined && response.monitorValues !== null && !Array.isArray(response.monitorValues));
     const malformedReadinessEcuAlias = readinessEcuSnapshotRows.some((snapshot) => snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) && [
-      "readinessEcuSnapshots", "readiness_ecu_snapshots",
+      "readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "monitors",
       "values",
       "monitor_values", "monitorValues",
@@ -5305,7 +5315,7 @@
       const rowKey = String(row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
       return !readinessRowIds.has(readinessRowIdAliases[rowKey] || row.id || row.name || row.label);
     });
-    if (Array.isArray(data.monitors) || hasDirectMonitorRows) {
+    if ((!hasGenericReadinessEcuSnapshotRows || readinessEcuSnapshotRows.length === 0) && (Array.isArray(data.monitors) || hasDirectMonitorRows)) {
       const directMonitorRows = Array.isArray(data.monitors) ? data.monitors : rows;
       const hasDirectReadinessEvidence = directMonitorRows.length > 0 || [
         data.mil_on, data.milStatus, data.mil,
@@ -5351,6 +5361,7 @@
             source_ecu_name: row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null,
             captured_at: row.captured_at || row.capturedAt || row.timestamp || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null,
             protocol: row.protocol || row.obd_protocol || row.communicationProtocol || row.communication_protocol || data.protocol || data.obd_protocol || data.communicationProtocol || data.communication_protocol || response.protocol || response.obd_protocol || null,
+            readiness_readout_status: row.readinessReadoutStatus || row.readiness_readout_status || row.readoutStatus || row.readout_status || data.readinessReadoutStatus || data.readiness_readout_status || data.readoutStatus || data.readout_status || null,
             readinessEcuSnapshots: [],
             readiness_ecu_snapshots: []
           }
@@ -6054,7 +6065,7 @@
       : livePidSnapshot;
     const freezeFrameSnapshot = hasFreezeFrameSnapshotInput
       ? (freezeFrameSnapshotInput?.schemaVersion
-          ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+          ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
           : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput))
       : null;
     const freezeFrameDirectValues = [
@@ -6075,7 +6086,7 @@
       + firstArrayLength(snapshot?.udsDtcSnapshotRecords, snapshot?.uds_dtc_snapshot_records)
       + firstArrayLength(snapshot?.udsDtcStoredDataRecords, snapshot?.uds_dtc_stored_data_records), 0);
     const readinessSnapshot = hasReadinessSnapshotInput
-      ? (readinessSnapshotInput?.schemaVersion ? readinessSnapshotInput : normalizeBridgeReadinessSnapshot(readinessSnapshotInput))
+      ? (readinessSnapshotInput?.schemaVersion ? (hasGenericReadinessEcuRows(readinessSnapshotInput) ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput) : normalizeBridgeReadinessSnapshot(readinessSnapshotInput))
       : null;
     const readinessDirectMonitors = [
       readinessSnapshot?.monitors,
@@ -9419,6 +9430,16 @@
     );
   }
 
+  function hasGenericFreezeFrameEcuRows(snapshot = {}) {
+    const source = snapshot?.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data) ? snapshot.data : snapshot;
+    return [source?.ecuSnapshots, source?.ecu_snapshots].some(Array.isArray);
+  }
+
+  function hasGenericReadinessEcuRows(snapshot = {}) {
+    const source = snapshot?.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data) ? snapshot.data : snapshot;
+    return [source?.ecuSnapshots, source?.ecu_snapshots].some(Array.isArray);
+  }
+
   function hasGenericLivePidEcuRows(snapshot = {}) {
     const source = snapshot?.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data) ? snapshot.data : snapshot;
     return [source?.ecuSnapshots, source?.ecu_snapshots, source?.ecuResponses, source?.ecu_responses].some(Array.isArray);
@@ -9558,7 +9579,7 @@
           : ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
@@ -9568,7 +9589,7 @@
         ? decodeSupportedPidResponse(supportedPidResponseInput)
         : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || {}));
     const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
-      ? readinessSnapshotInput
+      ? (hasGenericReadinessEcuRows(readinessSnapshotInput) ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
         : (Array.isArray(readinessSnapshotInput?.monitors)
@@ -10230,7 +10251,7 @@
       ? supportedPidMatrixInput
       : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } }));
     const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
-      ? readinessSnapshotInput
+      ? (hasGenericReadinessEcuRows(readinessSnapshotInput) ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : normalizeBridgeReadinessSnapshot(readinessSnapshotInput || {}));
     const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
@@ -10239,7 +10260,7 @@
       ? onboardMonitorSnapshotInput
       : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
@@ -21820,7 +21841,11 @@
       ? sourceInput.freezeFrameEcuSnapshots
       : Array.isArray(sourceInput.freeze_frame_ecu_snapshots)
         ? sourceInput.freeze_frame_ecu_snapshots
-        : [];
+        : Array.isArray(sourceInput.ecuSnapshots)
+          ? sourceInput.ecuSnapshots
+          : Array.isArray(sourceInput.ecu_snapshots)
+            ? sourceInput.ecu_snapshots
+            : [];
     const freezeFrameEcuSnapshots = freezeFrameEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
@@ -21828,7 +21853,9 @@
       const normalizedSnapshot = normalizeFreezeFrameSnapshot({
         ...snapshotInput,
         freezeFrameEcuSnapshots: [],
-        freeze_frame_ecu_snapshots: []
+        freeze_frame_ecu_snapshots: [],
+        ecuSnapshots: [],
+        ecu_snapshots: []
       });
       return {
         ...normalizedSnapshot,
@@ -22352,7 +22379,11 @@
       ? sourceInput.readinessEcuSnapshots
       : Array.isArray(sourceInput.readiness_ecu_snapshots)
         ? sourceInput.readiness_ecu_snapshots
-        : [];
+        : Array.isArray(sourceInput.ecuSnapshots)
+          ? sourceInput.ecuSnapshots
+          : Array.isArray(sourceInput.ecu_snapshots)
+            ? sourceInput.ecu_snapshots
+            : [];
     const readinessEcuSnapshots = readinessEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
@@ -22360,7 +22391,9 @@
       const normalizedSnapshot = normalizeReadinessSnapshot({
         ...snapshotInput,
         readinessEcuSnapshots: [],
-        readiness_ecu_snapshots: []
+        readiness_ecu_snapshots: [],
+        ecuSnapshots: [],
+        ecu_snapshots: []
       });
       const scopedMonitors = (normalizedSnapshot.monitors || []).map((monitor) => ({
         ...monitor,
@@ -22465,8 +22498,8 @@
             ? null
             : false)
         : readOptionalBooleanAlias(completeAlias);
-      const monitorSourceEcu = readObdResponseSourceEcu(monitor);
-      const monitorSourceEcuName = monitor?.source_ecu_name || monitor?.sourceEcuName || monitor?.ecu_name || monitor?.ecuName || monitor?.module_name || monitor?.moduleName || null;
+      const monitorSourceEcu = readObdResponseSourceEcu(monitor) || declaredSourceEcu;
+      const monitorSourceEcuName = monitor?.source_ecu_name || monitor?.sourceEcuName || monitor?.ecu_name || monitor?.ecuName || monitor?.module_name || monitor?.moduleName || declaredSourceEcuName;
       return {
         id,
         label: String(monitor?.label || monitor?.displayLabel || monitor?.display_label || catalogItem?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
@@ -28717,21 +28750,21 @@
       ? { ...ecuInfoSnapshotInput, blocked: true }
       : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) || !Array.isArray(freezeFrameSnapshotInput.monitorValues) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) || !Array.isArray(freezeFrameSnapshotInput.monitorValues) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
-        : (freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data))
+        : ((freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data)) || hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput))
           ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput)
           : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)), freezeFrameSafetyInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
     dtcSnapshot = linkReadableFreezeFrameToDtcSnapshot(dtcSnapshot, freezeFrameSnapshot);
     const readinessSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
-      ? (!Number.isFinite(Number(readinessSnapshotInput.monitorCount)) || !Number.isFinite(Number(readinessSnapshotInput.incompleteCount)) || !Number.isFinite(Number(readinessSnapshotInput.completeCount)) ? normalizeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
+      ? (hasGenericReadinessEcuRows(readinessSnapshotInput) ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput) : !Number.isFinite(Number(readinessSnapshotInput.monitorCount)) || !Number.isFinite(Number(readinessSnapshotInput.incompleteCount)) || !Number.isFinite(Number(readinessSnapshotInput.completeCount)) ? normalizeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
         : (readinessSnapshotInput?.raw || readinessSnapshotInput?.response || Array.isArray(readinessSnapshotInput?.bytes))
           ? decodeReadinessResponse(readinessSnapshotInput)
         : ((readinessSnapshotInput?.data && typeof readinessSnapshotInput.data === "object" && !Array.isArray(readinessSnapshotInput.data))
-          || [readinessSnapshotInput?.readiness_ecu_snapshots, readinessSnapshotInput?.readinessEcuSnapshots].some(Array.isArray))
+          || [readinessSnapshotInput?.readiness_ecu_snapshots, readinessSnapshotInput?.readinessEcuSnapshots, readinessSnapshotInput?.ecu_snapshots, readinessSnapshotInput?.ecuSnapshots].some(Array.isArray))
           ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);
     const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
