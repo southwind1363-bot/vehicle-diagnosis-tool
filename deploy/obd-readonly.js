@@ -6154,11 +6154,12 @@
       livePidCoverageSnapshot?.ecuResponses,
       livePidCoverageSnapshot?.ecu_responses
     ].find(Array.isArray) || [];
-    const supportedPidEcuSnapshots = Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots)
-      ? supportedPidMatrix.supportedPidEcuSnapshots
-      : Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots)
-        ? supportedPidMatrix.supported_pid_ecu_snapshots
-        : [];
+    const supportedPidEcuSnapshots = [
+      supportedPidMatrix?.supportedPidEcuSnapshots,
+      supportedPidMatrix?.supported_pid_ecu_snapshots,
+      supportedPidMatrix?.ecuSnapshots,
+      supportedPidMatrix?.ecu_snapshots
+    ].find(Array.isArray) || [];
     const resolveScopedCoverageReadoutStatus = (snapshots, camelStatusKey, snakeStatusKey, parentStatus, completeStatuses = ["reported"]) => {
       const normalizedParentStatus = String(parentStatus || "").trim().toLowerCase();
       if (!Array.isArray(snapshots) || snapshots.length === 0) return normalizedParentStatus || null;
@@ -27850,7 +27851,7 @@
         .map(normalizeSupportedPidCode)
         .filter((value) => value && isSupportedPidBase(parseInt(value, 16)))
       )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
-      const status = row.supportedPidReadoutStatus || row.supported_pid_readout_status || (pids.length || pageBases.length ? "reported" : "unknown");
+      const status = row.supportedPidReadoutStatus || row.supported_pid_readout_status || row.readoutStatus || row.readout_status || (pids.length || pageBases.length ? "reported" : "unknown");
       return {
         sourceEcu: ecu,
         source_ecu: ecu,
