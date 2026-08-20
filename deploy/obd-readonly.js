@@ -5993,7 +5993,7 @@
       ? (adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput))
       : null;
     const dtcSnapshot = hasDtcSnapshotInput
-      ? (dtcSnapshotInput?.codes ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput))
+      ? (dtcSnapshotInput?.codes && !needsDtcChildAggregation(dtcSnapshotInput) ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput))
       : hasTypedDtcSnapshotInput
         ? mergeDtcSnapshots(
           normalizeTypedDtcSnapshotInput(storedDtcSnapshotInput, "stored", "read_stored_dtc"),
@@ -9428,6 +9428,17 @@
     return [source?.ecuSnapshots, source?.ecu_snapshots].some(Array.isArray);
   }
 
+  function needsDtcChildAggregation(snapshot = {}) {
+    const source = snapshot?.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data) ? snapshot.data : snapshot;
+    const hasCode = (row) => typeof row === "string"
+      ? Boolean(row.trim())
+      : Boolean(row && typeof row === "object" && !Array.isArray(row) && String(row.code || row.dtc || row.dtc_code || row.dtcCode || "").trim());
+    const parentRows = [source?.codes, source?.dtcs, source?.dtc_codes, source?.dtcCodes].filter(Array.isArray).flat();
+    if (parentRows.some(hasCode)) return false;
+    const ecuRows = [source?.ecuResponses, source?.ecu_responses].find(Array.isArray) || [];
+    return ecuRows.some((ecuRow) => [ecuRow?.dtcs, ecuRow?.codes, ecuRow?.dtc_codes, ecuRow?.dtcCodes].filter(Array.isArray).flat().some(hasCode));
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
@@ -9450,7 +9461,7 @@
     const directMonitorInsightsInput = pickPresent(parts.monitorInsights, parts.monitor_insights, []);
     const hasDirectMonitorEvidence = (Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length > 0) || Boolean(directMonitorValueSummaryInput);
     const readoutCoverageInput = getReadoutCoverageInput(parts);
-    const dtcSnapshot = dtcSnapshotInput?.codes
+    const dtcSnapshot = dtcSnapshotInput?.codes && !needsDtcChildAggregation(dtcSnapshotInput)
       ? dtcSnapshotInput
       : hasTypedDtcSnapshotInput
         ? mergeDtcSnapshots(
@@ -28541,7 +28552,7 @@
     const supportedPidMatrixInput = sessionInput.supportedPidMatrix || sessionInput.supported_pid_matrix || sessionInput.supportedPidSnapshot || sessionInput.supported_pid_snapshot || sessionInput.supportedPidResponse || sessionInput.supported_pid_response || sessionInput.supportedPids || sessionInput.supported_pids || {};
     const readoutCoverageInput = getReadoutCoverageInput(sessionInput);
     let dtcSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(dtcSnapshotInput?.schemaVersion
-      ? (Array.isArray(dtcSnapshotInput.codes) && Array.isArray(dtcSnapshotInput.dtcs) ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput))
+      ? (Array.isArray(dtcSnapshotInput.codes) && Array.isArray(dtcSnapshotInput.dtcs) && !needsDtcChildAggregation(dtcSnapshotInput) ? dtcSnapshotInput : normalizeDtcSnapshot(dtcSnapshotInput))
       : hasTypedDtcSnapshotInput
         ? mergeDtcSnapshots(
           normalizeTypedDtcSnapshotInput(storedDtcSnapshotInput, "stored", "read_stored_dtc"),
