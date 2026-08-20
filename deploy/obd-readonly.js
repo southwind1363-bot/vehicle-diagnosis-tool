@@ -6598,40 +6598,72 @@
   } = {}) {
     const coverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const countItems = (items) => Array.isArray(items) ? items.length : 0;
+    const firstPopulatedInventoryArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+    const dtcCodeEntries = firstPopulatedInventoryArray(dtcSnapshot?.codes, dtcSnapshot?.dtcs, dtcSnapshot?.dtc_codes, dtcSnapshot?.dtcCodes);
+    const livePidValueEntries = firstPopulatedInventoryArray(
+      livePidSnapshot?.monitorValues,
+      livePidSnapshot?.monitor_values,
+      livePidSnapshot?.values,
+      livePidSnapshot?.pid_values,
+      livePidSnapshot?.pidValues,
+      livePidSnapshot?.live_pid_values,
+      livePidSnapshot?.livePidValues,
+      livePidSnapshot?.live_data,
+      livePidSnapshot?.liveData,
+      livePidSnapshot?.items
+    );
+    const freezeFrameValueEntries = firstPopulatedInventoryArray(
+      freezeFrameSnapshot?.monitorValues,
+      freezeFrameSnapshot?.monitor_values,
+      freezeFrameSnapshot?.values,
+      freezeFrameSnapshot?.freezeFrameValues,
+      freezeFrameSnapshot?.freeze_frame_values
+    );
+    const ecuInfoItemEntries = firstPopulatedInventoryArray(ecuInfoSnapshot?.items, ecuInfoSnapshot?.values, ecuInfoSnapshot?.ecu_info_items, ecuInfoSnapshot?.ecuInfoItems);
+    const onboardMonitorTestEntries = firstPopulatedInventoryArray(
+      onboardMonitorSnapshot?.tests,
+      onboardMonitorSnapshot?.values,
+      onboardMonitorSnapshot?.mode06_tests,
+      onboardMonitorSnapshot?.mode06Tests,
+      onboardMonitorSnapshot?.monitor_tests,
+      onboardMonitorSnapshot?.monitorTests,
+      onboardMonitorSnapshot?.onboard_monitor_tests,
+      onboardMonitorSnapshot?.onboardMonitorTests
+    );
     const numericCount = (...values) => {
       for (const value of values) {
         if (Number.isFinite(Number(value))) return Math.max(0, Math.round(Number(value)));
       }
       return 0;
     };
+    const unavailableInventoryStatuses = new Set(["unparsed", "blocked", "not_supported", "unsupported", "unavailable"]);
+    const isInventoryResponseUnavailable = (snapshot = {}, readoutStatus = null) => unavailableInventoryStatuses.has(String(readoutStatus || "").trim().toLowerCase())
+      || snapshot?.blocked === true
+      || snapshot?.isBlocked === true
+      || snapshot?.is_blocked === true
+      || Boolean(getExplicitReadoutFailureStatus(snapshot))
+      || hasReadoutTransportViolation(snapshot);
     const countReadinessMonitors = (snapshot = {}) => {
-      const directCount = numericCount(snapshot?.monitorCount, countItems(snapshot?.monitors));
-      const ecuSnapshots = Array.isArray(snapshot?.readinessEcuSnapshots)
-        ? snapshot.readinessEcuSnapshots
-        : Array.isArray(snapshot?.readiness_ecu_snapshots)
-          ? snapshot.readiness_ecu_snapshots
-          : [];
+      const directMonitors = firstPopulatedInventoryArray(snapshot?.monitors, snapshot?.values, snapshot?.monitor_values, snapshot?.monitorValues, snapshot?.readiness_values, snapshot?.readinessValues, snapshot?.pid_values, snapshot?.pidValues);
+      const directCount = Math.max(numericCount(snapshot?.monitorCount, snapshot?.monitor_count), countItems(directMonitors));
+      const ecuSnapshots = firstPopulatedInventoryArray(snapshot?.readinessEcuSnapshots, snapshot?.readiness_ecu_snapshots);
       if (directCount > 0 || ecuSnapshots.length === 0) return directCount;
-      return ecuSnapshots.reduce((total, ecuSnapshot) => total + numericCount(ecuSnapshot?.monitorCount, countItems(ecuSnapshot?.monitors)), 0);
+      return ecuSnapshots.reduce((total, ecuSnapshot) => total + Math.max(
+        numericCount(ecuSnapshot?.monitorCount, ecuSnapshot?.monitor_count),
+        countItems(firstPopulatedInventoryArray(ecuSnapshot?.monitors, ecuSnapshot?.values, ecuSnapshot?.monitor_values, ecuSnapshot?.monitorValues, ecuSnapshot?.readiness_values, ecuSnapshot?.readinessValues))
+      ), 0);
     };
     const readinessMonitorCount = countReadinessMonitors(readinessSnapshot);
     const countSupportedPids = (snapshot = {}) => {
-      const directPidCount = countItems(snapshot?.supportedPids);
-      const ecuSnapshots = Array.isArray(snapshot?.supportedPidEcuSnapshots)
-        ? snapshot.supportedPidEcuSnapshots
-        : Array.isArray(snapshot?.supported_pid_ecu_snapshots)
-          ? snapshot.supported_pid_ecu_snapshots
-          : [];
+      const directPidCount = countItems(firstPopulatedInventoryArray(snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids));
+      const ecuSnapshots = firstPopulatedInventoryArray(snapshot?.supportedPidEcuSnapshots, snapshot?.supported_pid_ecu_snapshots, snapshot?.ecuSnapshots, snapshot?.ecu_snapshots);
       if (directPidCount > 0 || ecuSnapshots.length === 0) return directPidCount;
-      return new Set(ecuSnapshots.flatMap((ecuSnapshot) => [ecuSnapshot?.supportedPids, ecuSnapshot?.supported_pids, ecuSnapshot?.pids]
-        .find((pids) => Array.isArray(pids)) || [])).size;
+      return new Set(ecuSnapshots.flatMap((ecuSnapshot) => firstPopulatedInventoryArray(ecuSnapshot?.supportedPids, ecuSnapshot?.supported_pids, ecuSnapshot?.pids))).size;
     };
     const supportedPidCount = countSupportedPids(supportedPidMatrix);
-    const freezeFrameTriggerEntries = Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
-      ? freezeFrameSnapshot.triggerDtcEntries
-      : Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries)
-        ? freezeFrameSnapshot.trigger_dtc_entries
-        : [];
+    const freezeFrameTriggerEntries = firstPopulatedInventoryArray(freezeFrameSnapshot?.triggerDtcEntries, freezeFrameSnapshot?.trigger_dtc_entries);
     const freezeFrameTriggerCount = freezeFrameTriggerEntries.length > 0
       ? freezeFrameTriggerEntries.length
       : freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc
@@ -6645,13 +6677,15 @@
       Number.isInteger(entry?.frameNumber) ? String(entry.frameNumber) : Number.isInteger(entry?.frame_number) ? String(entry.frame_number) : "-",
       String(entry?.sourceEcu || entry?.source_ecu || "").trim().toUpperCase() || "-"
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
+    const freezeFrameUdsSnapshotRecords = firstPopulatedInventoryArray(freezeFrameSnapshot?.udsDtcSnapshotRecords, freezeFrameSnapshot?.uds_dtc_snapshot_records);
+    const freezeFrameUdsStoredDataRecords = firstPopulatedInventoryArray(freezeFrameSnapshot?.udsDtcStoredDataRecords, freezeFrameSnapshot?.uds_dtc_stored_data_records);
     const definitions = [
-      { id: "dtc_snapshot", count: countItems(dtcSnapshot?.codes), valueKey: "dtcCount" },
-      { id: "live_pid_snapshot", count: countItems(livePidSnapshot?.monitorValues), valueKey: "livePidValueCount" },
-      { id: "freeze_frame_snapshot", count: countItems(freezeFrameSnapshot?.monitorValues) + countItems(freezeFrameSnapshot?.udsDtcSnapshotRecords || freezeFrameSnapshot?.uds_dtc_snapshot_records) + countItems(freezeFrameSnapshot?.udsDtcStoredDataRecords || freezeFrameSnapshot?.uds_dtc_stored_data_records), valueKey: "freezeFrameValueCount" },
+      { id: "dtc_snapshot", count: countItems(dtcCodeEntries), valueKey: "dtcCount" },
+      { id: "live_pid_snapshot", count: countItems(livePidValueEntries), valueKey: "livePidValueCount" },
+      { id: "freeze_frame_snapshot", count: countItems(freezeFrameValueEntries) + countItems(freezeFrameUdsSnapshotRecords) + countItems(freezeFrameUdsStoredDataRecords), valueKey: "freezeFrameValueCount" },
       { id: "readiness_snapshot", count: readinessMonitorCount, valueKey: "readinessMonitorCount" },
-      { id: "ecu_info_snapshot", count: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)), valueKey: "ecuInfoItemCount" },
-      { id: "onboard_monitor_snapshot", count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)), valueKey: "onboardMonitorTestCount" },
+      { id: "ecu_info_snapshot", count: Math.max(numericCount(ecuInfoSnapshot?.itemCount, ecuInfoSnapshot?.item_count), countItems(ecuInfoItemEntries), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)), valueKey: "ecuInfoItemCount" },
+      { id: "onboard_monitor_snapshot", count: Math.max(numericCount(onboardMonitorSnapshot?.testCount, onboardMonitorSnapshot?.test_count), countItems(onboardMonitorTestEntries)), valueKey: "onboardMonitorTestCount" },
       { id: "supported_pid_matrix", count: supportedPidCount, valueKey: "supportedPidCount" }
     ];
     const snapshotById = {
@@ -6681,10 +6715,7 @@
               : item.id === "supported_pid_matrix"
                 ? supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || null
                 : null;
-      const responseUnavailable = ["unparsed", "blocked"].includes(explicitReadoutStatus)
-        || snapshot?.blocked === true
-        || snapshot?.isBlocked === true
-        || snapshot?.is_blocked === true;
+      const responseUnavailable = isInventoryResponseUnavailable(snapshot, explicitReadoutStatus);
       const errorCodes = [...new Set([
         ...readBridgeResponseErrorCodes(snapshot),
         ...readBridgeResponseErrorCodes(coverageItem)
@@ -6745,15 +6776,12 @@
       : Array.isArray(livePidSnapshot?.live_pid_ecu_snapshots)
         ? livePidSnapshot.live_pid_ecu_snapshots
         : [];
-    const livePidResponseUnavailable = ["unparsed", "blocked"].includes(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status)
-      || livePidSnapshot?.blocked === true
-      || livePidSnapshot?.isBlocked === true
-      || livePidSnapshot?.is_blocked === true;
+    const livePidResponseUnavailable = isInventoryResponseUnavailable(livePidSnapshot, livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status);
     const livePidObservationCondition = normalizeLivePidObservationCondition(livePidSnapshot?.observationCondition || livePidSnapshot?.observation_condition);
     const livePidDiagnosticProtocol = normalizeProtocolProvenanceValue(livePidSnapshot?.protocol || livePidSnapshot?.obd_protocol || livePidSnapshot?.diagnosticProtocol || livePidSnapshot?.diagnostic_protocol || null);
     const livePidValueEvidenceRecorded = !livePidResponseUnavailable
       && String(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status || "").trim().toLowerCase() === "reported";
-    const livePidValueKeys = [...new Set((Array.isArray(livePidSnapshot?.monitorValues) ? livePidSnapshot.monitorValues : Array.isArray(livePidSnapshot?.monitor_values) ? livePidSnapshot.monitor_values : []).map((value) => {
+    const livePidValueKeys = [...new Set(livePidValueEntries.map((value) => {
       const id = String(value?.id || value?.monitorId || value?.monitor_id || value?.pid || "").trim().toLowerCase().replace(/\|/g, " ").slice(0, 96);
       const numericValue = Number(value?.value);
       const unit = String(value?.unit || "").trim().toLowerCase().replace(/\|/g, " ").slice(0, 48);
@@ -6779,10 +6807,7 @@
     const livePidValueReportedEcuKeys = livePidValueReportedEcuEvidenceRecorded
       ? livePidValueKeys.filter((key) => livePidValueEvidenceRecorded || reportedLivePidEcuIds.includes(normalizeLivePidEcuId(String(key || "").split("|")[1])))
       : [];
-    const freezeFrameResponseUnavailable = ["unparsed", "blocked"].includes(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status)
-      || freezeFrameSnapshot?.blocked === true
-      || freezeFrameSnapshot?.isBlocked === true
-      || freezeFrameSnapshot?.is_blocked === true;
+    const freezeFrameResponseUnavailable = isInventoryResponseUnavailable(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status);
     const recordedFreezeFrameTriggerCount = freezeFrameResponseUnavailable ? 0 : freezeFrameTriggerCount;
     const freezeFrameTriggerEvidenceRecorded = !freezeFrameResponseUnavailable && (
       String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported"
@@ -6790,11 +6815,6 @@
       || Boolean(freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc)
     );
     const recordedFreezeFrameTriggerKeys = freezeFrameTriggerEvidenceRecorded ? freezeFrameTriggerKeys : [];
-    const freezeFrameValueEntries = Array.isArray(freezeFrameSnapshot?.monitorValues)
-      ? freezeFrameSnapshot.monitorValues
-      : Array.isArray(freezeFrameSnapshot?.monitor_values)
-        ? freezeFrameSnapshot.monitor_values
-        : [];
     const freezeFrameValueEvidenceRecorded = !freezeFrameResponseUnavailable
       && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported";
     const freezeFrameValueKeys = [...new Set(freezeFrameValueEntries.map((value) => {
@@ -6812,11 +6832,7 @@
       return [id, frameNumber, sourceEcu, unit, reportedValue].join("|");
     }).filter(Boolean))].sort();
     const recordedFreezeFrameValueKeys = freezeFrameValueEvidenceRecorded ? freezeFrameValueKeys : [];
-    const freezeFrameEcuSnapshots = Array.isArray(freezeFrameSnapshot?.freezeFrameEcuSnapshots)
-      ? freezeFrameSnapshot.freezeFrameEcuSnapshots
-      : Array.isArray(freezeFrameSnapshot?.freeze_frame_ecu_snapshots)
-        ? freezeFrameSnapshot.freeze_frame_ecu_snapshots
-        : [];
+    const freezeFrameEcuSnapshots = firstPopulatedInventoryArray(freezeFrameSnapshot?.freezeFrameEcuSnapshots, freezeFrameSnapshot?.freeze_frame_ecu_snapshots);
     const normalizeFreezeFrameEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readFreezeFrameEcuId = (snapshot = {}) => normalizeFreezeFrameEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || null);
     const reportedFreezeFrameEcuIds = [...new Set(freezeFrameEcuSnapshots
@@ -6841,16 +6857,6 @@
     const freezeFrameTriggerReportedEcuKeys = freezeFrameTriggerReportedEcuEvidenceRecorded
       ? freezeFrameTriggerKeys.filter((key) => freezeFrameTriggerEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[5])))
       : [];
-    const freezeFrameUdsSnapshotRecords = Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords)
-      ? freezeFrameSnapshot.udsDtcSnapshotRecords
-      : Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records)
-        ? freezeFrameSnapshot.uds_dtc_snapshot_records
-        : [];
-    const freezeFrameUdsStoredDataRecords = Array.isArray(freezeFrameSnapshot?.udsDtcStoredDataRecords)
-      ? freezeFrameSnapshot.udsDtcStoredDataRecords
-      : Array.isArray(freezeFrameSnapshot?.uds_dtc_stored_data_records)
-        ? freezeFrameSnapshot.uds_dtc_stored_data_records
-        : [];
     const freezeFrameUdsRecordEvidenceRecorded = !freezeFrameResponseUnavailable
       && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported";
     const freezeFrameUdsRecordKeys = [...new Set([
@@ -6881,20 +6887,11 @@
     const freezeFrameUdsRecordReportedEcuKeys = freezeFrameUdsRecordReportedEcuEvidenceRecorded
       ? freezeFrameUdsRecordKeys.filter((key) => freezeFrameUdsRecordEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[7])))
       : [];
-    const readinessEcuSnapshots = Array.isArray(readinessSnapshot?.readinessEcuSnapshots)
-      ? readinessSnapshot.readinessEcuSnapshots
-      : Array.isArray(readinessSnapshot?.readiness_ecu_snapshots)
-        ? readinessSnapshot.readiness_ecu_snapshots
-        : [];
-    const readinessResponseUnavailable = ["unparsed", "blocked"].includes(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status)
-      || readinessSnapshot?.blocked === true
-      || readinessSnapshot?.isBlocked === true
-      || readinessSnapshot?.is_blocked === true;
+    const readinessEcuSnapshots = firstPopulatedInventoryArray(readinessSnapshot?.readinessEcuSnapshots, readinessSnapshot?.readiness_ecu_snapshots);
+    const readinessResponseUnavailable = isInventoryResponseUnavailable(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status);
     const readinessMonitorEntries = readinessEcuSnapshots.length > 0
-      ? readinessEcuSnapshots.flatMap((snapshot) => Array.isArray(snapshot?.monitors) ? snapshot.monitors : [])
-      : Array.isArray(readinessSnapshot?.monitors)
-        ? readinessSnapshot.monitors
-        : [];
+      ? readinessEcuSnapshots.flatMap((snapshot) => firstPopulatedInventoryArray(snapshot?.monitors, snapshot?.values, snapshot?.monitor_values, snapshot?.monitorValues, snapshot?.readiness_values, snapshot?.readinessValues))
+      : firstPopulatedInventoryArray(readinessSnapshot?.monitors, readinessSnapshot?.values, readinessSnapshot?.monitor_values, readinessSnapshot?.monitorValues, readinessSnapshot?.readiness_values, readinessSnapshot?.readinessValues);
     const readinessMonitorEvidenceRecorded = !readinessResponseUnavailable
       && String(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported"
       && (readinessEcuSnapshots.length === 0 || readinessEcuSnapshots.every((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || "").trim().toLowerCase() === "reported"));
@@ -6923,19 +6920,12 @@
     const readinessMonitorReportedEcuKeys = readinessMonitorReportedEcuEvidenceRecorded
       ? readinessMonitorKeys.filter((key) => readinessMonitorEvidenceRecorded || reportedReadinessEcuIds.includes(normalizeReadinessEcuId(String(key || "").split("|")[1])))
       : [];
-    const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
-      ? ecuInfoSnapshot.ecuInfoEcuSnapshots
-      : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
-        ? ecuInfoSnapshot.ecu_info_ecu_snapshots
-        : [];
-    const ecuInfoResponseUnavailable = ["unparsed", "blocked"].includes(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status)
-      || ecuInfoSnapshot?.blocked === true
-      || ecuInfoSnapshot?.isBlocked === true
-      || ecuInfoSnapshot?.is_blocked === true;
+    const ecuInfoEcuSnapshots = firstPopulatedInventoryArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots, ecuInfoSnapshot?.ecu_info_ecu_snapshots);
+    const ecuInfoResponseUnavailable = isInventoryResponseUnavailable(ecuInfoSnapshot, ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status);
     const ecuInfoItemEvidenceRecorded = !ecuInfoResponseUnavailable
       && String(ecuInfoSnapshot?.ecuInfoReadoutStatus || ecuInfoSnapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported"
       && (ecuInfoEcuSnapshots.length === 0 || ecuInfoEcuSnapshots.every((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported"));
-    const ecuInfoItemKeys = [...new Set((Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).map((item) => [
+    const ecuInfoItemKeys = [...new Set(ecuInfoItemEntries.map((item) => [
       String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase(),
       String(item?.infoType || item?.info_type || item?.dataIdentifier || item?.data_identifier || "-").trim().toUpperCase() || "-",
       String(item?.sourceEcu || item?.source_ecu || ecuInfoSnapshot?.sourceEcu || ecuInfoSnapshot?.source_ecu || "").trim().toUpperCase() || "-"
@@ -6968,7 +6958,7 @@
       const text = String(value).replace(/\s+/g, " ").trim();
       return text && redactSensitiveText(text) === text ? text.slice(0, 240) : null;
     };
-    const ecuInfoKeyValueKeys = [...new Set((Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).map((item) => {
+    const ecuInfoKeyValueKeys = [...new Set(ecuInfoItemEntries.map((item) => {
       const id = String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase();
       if (!comparableEcuInfoValueIds.has(id) || item?.sensitiveIdentifierRedacted === true || item?.sensitive_identifier_redacted === true) return null;
       const value = normalizeComparableEcuInfoValue(item?.value);
@@ -6983,7 +6973,7 @@
     const ecuInfoKeyValueReportedEcuKeys = ecuInfoKeyValueReportedEcuEvidenceRecorded
       ? ecuInfoKeyValueKeys.filter((key) => ecuInfoKeyValueEvidenceRecorded || reportedEcuInfoEcuIds.includes(normalizeEcuInfoEcuId(String(key || "").split("|")[2])))
       : [];
-    const mode09SupportedTypeItems = (Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).filter((item) => {
+    const mode09SupportedTypeItems = ecuInfoItemEntries.filter((item) => {
       const id = String(item?.id || item?.itemId || item?.item_id || "").trim().toLowerCase();
       return id === "supported_info_types_00" && parseObdHexBytes(item?.value).length > 0;
     });
@@ -7001,22 +6991,15 @@
     const mode09SupportedTypeReportedEcuKeys = mode09SupportedTypeReportedEcuEvidenceRecorded
       ? mode09SupportedTypeKeys.filter((key) => mode09SupportedTypeEvidenceRecorded || mode09SupportedTypeReportedEcuIds.includes(normalizeEcuInfoEcuId(String(key || "").split("|")[1])))
       : [];
-    const supportedPidEcuSnapshots = Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots)
-      ? supportedPidMatrix.supportedPidEcuSnapshots
-      : Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots)
-        ? supportedPidMatrix.supported_pid_ecu_snapshots
-        : [];
-    const supportedPidResponseUnavailable = ["unparsed", "blocked"].includes(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status)
-      || supportedPidMatrix?.blocked === true
-      || supportedPidMatrix?.isBlocked === true
-      || supportedPidMatrix?.is_blocked === true;
+    const supportedPidEcuSnapshots = firstPopulatedInventoryArray(supportedPidMatrix?.supportedPidEcuSnapshots, supportedPidMatrix?.supported_pid_ecu_snapshots, supportedPidMatrix?.ecuSnapshots, supportedPidMatrix?.ecu_snapshots);
+    const supportedPidResponseUnavailable = isInventoryResponseUnavailable(supportedPidMatrix, supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status);
     const supportedPidEvidenceRecorded = !supportedPidResponseUnavailable
       && String(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || "").trim().toLowerCase() === "reported"
       && (supportedPidEcuSnapshots.length === 0 || supportedPidEcuSnapshots.every((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported"));
     const supportedPidEntries = supportedPidEcuSnapshots.length > 0
-      ? supportedPidEcuSnapshots.flatMap((snapshot) => (Array.isArray(snapshot?.supportedPids) ? snapshot.supportedPids : Array.isArray(snapshot?.supported_pids) ? snapshot.supported_pids : [])
+      ? supportedPidEcuSnapshots.flatMap((snapshot) => firstPopulatedInventoryArray(snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids)
         .map((pid) => ({ pid, sourceEcu: snapshot?.sourceEcu || snapshot?.source_ecu || null })))
-      : (Array.isArray(supportedPidMatrix?.supportedPids) ? supportedPidMatrix.supportedPids : Array.isArray(supportedPidMatrix?.supported_pids) ? supportedPidMatrix.supported_pids : [])
+      : firstPopulatedInventoryArray(supportedPidMatrix?.supportedPids, supportedPidMatrix?.supported_pids, supportedPidMatrix?.pids)
         .map((pid) => ({ pid, sourceEcu: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu || null }));
     const supportedPidKeys = [...new Set(supportedPidEntries.map((entry) => {
       const pid = normalizeSupportedPidCode(entry?.pid);
@@ -7041,18 +7024,18 @@
     const supportedPidReportedEcuKeys = supportedPidReportedEcuEvidenceRecorded
       ? supportedPidKeys.filter((key) => supportedPidEvidenceRecorded || reportedSupportedPidEcuIds.includes(normalizeSupportedPidEcuId(String(key || "").split("|")[1])))
       : [];
-    const onboardMonitorEcuSnapshots = Array.isArray(onboardMonitorSnapshot?.onboardMonitorEcuSnapshots)
-      ? onboardMonitorSnapshot.onboardMonitorEcuSnapshots
-      : Array.isArray(onboardMonitorSnapshot?.onboard_monitor_ecu_snapshots)
-        ? onboardMonitorSnapshot.onboard_monitor_ecu_snapshots
-        : [];
-    const onboardMonitorResponseUnavailable = ["unparsed", "blocked"].includes(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status)
-      || onboardMonitorSnapshot?.blocked === true
-      || onboardMonitorSnapshot?.isBlocked === true
-      || onboardMonitorSnapshot?.is_blocked === true;
+    const onboardMonitorEcuSnapshots = firstPopulatedInventoryArray(
+      onboardMonitorSnapshot?.onboardMonitorEcuSnapshots,
+      onboardMonitorSnapshot?.onboard_monitor_ecu_snapshots,
+      onboardMonitorSnapshot?.mode06EcuSnapshots,
+      onboardMonitorSnapshot?.mode06_ecu_snapshots,
+      onboardMonitorSnapshot?.ecuSnapshots,
+      onboardMonitorSnapshot?.ecu_snapshots
+    );
+    const onboardMonitorResponseUnavailable = isInventoryResponseUnavailable(onboardMonitorSnapshot, onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status);
     const onboardMonitorEvidenceRecorded = !onboardMonitorResponseUnavailable
       && String(onboardMonitorSnapshot?.onboardMonitorReadoutStatus || onboardMonitorSnapshot?.onboard_monitor_readout_status || "").trim().toLowerCase() === "reported";
-    const onboardMonitorTestKeys = [...new Set((Array.isArray(onboardMonitorSnapshot?.tests) ? onboardMonitorSnapshot.tests : []).map((test) => [
+    const onboardMonitorTestKeys = [...new Set(onboardMonitorTestEntries.map((test) => [
       String(test?.testId || test?.test_id || "").trim().toUpperCase(),
       String(test?.componentId || test?.component_id || "").trim().toUpperCase(),
       String(test?.sourceEcu || test?.source_ecu || onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu || "").trim().toUpperCase() || "-",
@@ -7060,7 +7043,7 @@
     ].join("|")).filter((key) => !key.startsWith("|")))].sort();
     const recordedOnboardMonitorTestKeys = onboardMonitorEvidenceRecorded ? onboardMonitorTestKeys : [];
     const normalizeOnboardMonitorReportedNumber = (value) => Number.isFinite(Number(value)) ? String(Number(value)) : "-";
-    const onboardMonitorValueKeys = [...new Set((Array.isArray(onboardMonitorSnapshot?.tests) ? onboardMonitorSnapshot.tests : []).map((test) => {
+    const onboardMonitorValueKeys = [...new Set(onboardMonitorTestEntries.map((test) => {
       const testId = String(test?.testId || test?.test_id || "").trim().toUpperCase();
       const componentId = String(test?.componentId || test?.component_id || "").trim().toUpperCase();
       const value = normalizeOnboardMonitorReportedNumber(test?.value);
@@ -7215,8 +7198,8 @@
       readinessMonitorReportedEcuKeys: readinessMonitorReportedEcuKeys,
       readiness_monitor_reported_ecu_keys: [...readinessMonitorReportedEcuKeys],
       hasEcuInfoItems: countsById.ecu_info_snapshot > 0,
-      ecuInfoItemCount: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
-      ecu_info_item_count: Math.max(numericCount(ecuInfoSnapshot?.itemCount, countItems(ecuInfoSnapshot?.items)), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
+      ecuInfoItemCount: Math.max(numericCount(ecuInfoSnapshot?.itemCount, ecuInfoSnapshot?.item_count), countItems(ecuInfoItemEntries), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
+      ecu_info_item_count: Math.max(numericCount(ecuInfoSnapshot?.itemCount, ecuInfoSnapshot?.item_count), countItems(ecuInfoItemEntries), numericCount(ecuInfoSnapshot?.scopedItemCount, ecuInfoSnapshot?.scoped_item_count)),
       ecuInfoItemKeys: recordedEcuInfoItemKeys,
       ecu_info_item_keys: [...recordedEcuInfoItemKeys],
       ecuInfoItemEvidenceRecorded,
@@ -7267,8 +7250,8 @@
       supported_pid_unresolved_ecu_ids: [...unresolvedSupportedPidEcuIds],
       supportedPidReportedEcuKeys: supportedPidReportedEcuKeys,
       supported_pid_reported_ecu_keys: [...supportedPidReportedEcuKeys],
-      onboardMonitorTestCount: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)),
-      onboard_monitor_test_count: numericCount(onboardMonitorSnapshot?.testCount, countItems(onboardMonitorSnapshot?.tests)),
+      onboardMonitorTestCount: Math.max(numericCount(onboardMonitorSnapshot?.testCount, onboardMonitorSnapshot?.test_count), countItems(onboardMonitorTestEntries)),
+      onboard_monitor_test_count: Math.max(numericCount(onboardMonitorSnapshot?.testCount, onboardMonitorSnapshot?.test_count), countItems(onboardMonitorTestEntries)),
       onboardMonitorTestKeys: recordedOnboardMonitorTestKeys,
       onboard_monitor_test_keys: [...recordedOnboardMonitorTestKeys],
       onboardMonitorEvidenceRecorded,
