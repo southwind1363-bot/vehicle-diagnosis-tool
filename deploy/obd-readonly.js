@@ -4996,15 +4996,15 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
-    const freezeFrameEcuSnapshotRows = Array.isArray(data.freezeFrameEcuSnapshots)
-      ? data.freezeFrameEcuSnapshots
-      : Array.isArray(data.freeze_frame_ecu_snapshots)
-        ? data.freeze_frame_ecu_snapshots
-        : Array.isArray(data.ecuSnapshots)
-          ? data.ecuSnapshots
-          : Array.isArray(data.ecu_snapshots)
-            ? data.ecu_snapshots
-            : [];
+    const firstFreezeFrameArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+    const freezeFrameEcuSnapshotRows = firstFreezeFrameArray(
+      data.freezeFrameEcuSnapshots,
+      data.freeze_frame_ecu_snapshots,
+      data.ecuSnapshots,
+      data.ecu_snapshots
+    );
     const malformedFreezeFrameAlias = [
       "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "values", "freeze_frame", "freezeFrame",
@@ -5013,29 +5013,19 @@
       "monitor_values", "monitorValues",
       "pid_values", "pidValues"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
-    const freezeFrameValues = (Array.isArray(data.values)
-      ? data.values
-      : Array.isArray(data.freeze_frame)
-        ? data.freeze_frame
-        : Array.isArray(data.freezeFrame)
-          ? data.freezeFrame
-          : Array.isArray(data.freeze_frame_values)
-        ? data.freeze_frame_values
-        : Array.isArray(data.freezeFrameValues)
-          ? data.freezeFrameValues
-          : Array.isArray(data.freeze_frame_rows)
-            ? data.freeze_frame_rows
-            : Array.isArray(data.freezeFrameRows)
-              ? data.freezeFrameRows
-              : Array.isArray(data.monitor_values)
-                ? data.monitor_values
-                : Array.isArray(data.monitorValues)
-                  ? data.monitorValues
-                  : Array.isArray(data.pid_values)
-                    ? data.pid_values
-                    : Array.isArray(data.pidValues)
-                      ? data.pidValues
-                      : [])
+    const freezeFrameValues = firstFreezeFrameArray(
+      data.values,
+      data.freeze_frame,
+      data.freezeFrame,
+      data.freeze_frame_values,
+      data.freezeFrameValues,
+      data.freeze_frame_rows,
+      data.freezeFrameRows,
+      data.monitor_values,
+      data.monitorValues,
+      data.pid_values,
+      data.pidValues
+    )
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
@@ -5169,16 +5159,16 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
+    const firstReadinessArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
     const hasGenericReadinessEcuSnapshotRows = [data.ecuSnapshots, data.ecu_snapshots].some(Array.isArray);
-    const readinessEcuSnapshotRows = Array.isArray(data.readinessEcuSnapshots)
-      ? data.readinessEcuSnapshots
-      : Array.isArray(data.readiness_ecu_snapshots)
-        ? data.readiness_ecu_snapshots
-        : Array.isArray(data.ecuSnapshots)
-          ? data.ecuSnapshots
-          : Array.isArray(data.ecu_snapshots)
-            ? data.ecu_snapshots
-            : [];
+    const readinessEcuSnapshotRows = firstReadinessArray(
+      data.readinessEcuSnapshots,
+      data.readiness_ecu_snapshots,
+      data.ecuSnapshots,
+      data.ecu_snapshots
+    );
     const malformedReadinessAlias = [
       "readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "monitors",
@@ -5211,27 +5201,19 @@
       statusbytec: "readiness_status_byte_c",
       statusbyted: "readiness_status_byte_d"
     };
-    const rows = Array.isArray(data.values)
-      ? data.values
-      : Array.isArray(data.monitor_values)
-        ? data.monitor_values
-        : Array.isArray(data.monitorValues)
-          ? data.monitorValues
-          : Array.isArray(data.readiness_values)
-            ? data.readiness_values
-            : Array.isArray(data.readinessValues)
-              ? data.readinessValues
-              : Array.isArray(data.pid_values)
-                ? data.pid_values
-                : Array.isArray(data.pidValues)
-                  ? data.pidValues
-              : Array.isArray(data.readiness_rows)
-                ? data.readiness_rows
-                : Array.isArray(data.readinessRows)
-                  ? data.readinessRows
-              : Array.isArray(response.monitorValues)
-                ? response.monitorValues
-                : [
+    const rows = firstReadinessArray(
+      data.values,
+      data.monitor_values,
+      data.monitorValues,
+      data.readiness_values,
+      data.readinessValues,
+      data.pid_values,
+      data.pidValues,
+      data.readiness_rows,
+      data.readinessRows,
+      response.monitorValues
+    );
+    const readinessValueRows = rows.length > 0 ? rows : [
             data.mil_on !== undefined ? { id: "mil_status", value: data.mil_on } : null,
             data.milStatus !== undefined ? { id: "mil_status", value: data.milStatus } : null,
             data.mil !== undefined ? { id: "mil_status", value: data.mil } : null,
@@ -5305,13 +5287,13 @@
       }));
     }
     const readinessRowIds = new Set(["mil_status", "monitor_status_mil", "readiness_status_byte_a", "readiness_status_byte_b", "readiness_status_byte_c", "readiness_status_byte_d"]);
-    const hasDirectMonitorRows = rows.some((row) => {
+    const hasDirectMonitorRows = readinessValueRows.some((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return false;
       const rowKey = String(row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
       return !readinessRowIds.has(readinessRowIdAliases[rowKey] || row.id || row.name || row.label);
     });
     if ((!hasGenericReadinessEcuSnapshotRows || readinessEcuSnapshotRows.length === 0) && (Array.isArray(data.monitors) || hasDirectMonitorRows)) {
-      const directMonitorRows = Array.isArray(data.monitors) ? data.monitors : rows;
+      const directMonitorRows = firstReadinessArray(data.monitors, readinessValueRows);
       const hasDirectReadinessEvidence = directMonitorRows.length > 0 || [
         data.mil_on, data.milStatus, data.mil,
         data.readiness_status_byte_a, data.readiness_status_byte_b, data.readiness_status_byte_c, data.readiness_status_byte_d,
@@ -5331,7 +5313,7 @@
       }));
     }
     const readinessRowsByEcu = new Map();
-    rows.forEach((row) => {
+    readinessValueRows.forEach((row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return;
       const rowKey = String(
         row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || ""
@@ -5358,7 +5340,9 @@
             protocol: row.protocol || row.obd_protocol || row.communicationProtocol || row.communication_protocol || data.protocol || data.obd_protocol || data.communicationProtocol || data.communication_protocol || response.protocol || response.obd_protocol || null,
             readiness_readout_status: row.readinessReadoutStatus || row.readiness_readout_status || row.readoutStatus || row.readout_status || data.readinessReadoutStatus || data.readiness_readout_status || data.readoutStatus || data.readout_status || null,
             readinessEcuSnapshots: [],
-            readiness_ecu_snapshots: []
+            readiness_ecu_snapshots: [],
+            ecuSnapshots: [],
+            ecu_snapshots: []
           }
         });
       }).filter((snapshot) => snapshot?.sourceEcu || snapshot?.source_ecu);
@@ -5382,7 +5366,9 @@
           source_ecu: ecu,
           values: ecuRows,
           readinessEcuSnapshots: [],
-          readiness_ecu_snapshots: []
+          readiness_ecu_snapshots: [],
+          ecuSnapshots: [],
+          ecu_snapshots: []
         }
       }));
       return withBridgeMetadata(normalizeReadinessSnapshot({
@@ -5394,7 +5380,7 @@
         readiness_ecu_snapshots: readinessEcuSnapshots
       }));
     }
-    const valueById = new Map(rows.filter((row) => row && typeof row === "object").map((row) => {
+    const valueById = new Map(readinessValueRows.filter((row) => row && typeof row === "object").map((row) => {
       const rowKey = String(
         row.id || row.name || row.label || row.monitor_id || row.monitorId || row.status_id || row.statusId || ""
       ).toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -21849,15 +21835,15 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
-    const freezeFrameEcuSnapshotInputs = Array.isArray(sourceInput.freezeFrameEcuSnapshots)
-      ? sourceInput.freezeFrameEcuSnapshots
-      : Array.isArray(sourceInput.freeze_frame_ecu_snapshots)
-        ? sourceInput.freeze_frame_ecu_snapshots
-        : Array.isArray(sourceInput.ecuSnapshots)
-          ? sourceInput.ecuSnapshots
-          : Array.isArray(sourceInput.ecu_snapshots)
-            ? sourceInput.ecu_snapshots
-            : [];
+    const firstFreezeFrameArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+    const freezeFrameEcuSnapshotInputs = firstFreezeFrameArray(
+      sourceInput.freezeFrameEcuSnapshots,
+      sourceInput.freeze_frame_ecu_snapshots,
+      sourceInput.ecuSnapshots,
+      sourceInput.ecu_snapshots
+    );
     const freezeFrameEcuSnapshots = freezeFrameEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
@@ -21967,31 +21953,20 @@
     const udsDtcStoredDataRecords = reportedLocalUdsDtcStoredDataRecords.length
       ? reportedLocalUdsDtcStoredDataRecords
       : reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.udsDtcStoredDataRecords || snapshot.uds_dtc_stored_data_records || []);
-    const rows = (Array.isArray(sourceInput.values)
-      ? sourceInput.values
-      : Array.isArray(sourceInput.freeze_frame)
-        ? sourceInput.freeze_frame
-        : Array.isArray(sourceInput.freezeFrame)
-          ? sourceInput.freezeFrame
-          : Array.isArray(sourceInput.freeze_frame_values)
-            ? sourceInput.freeze_frame_values
-            : Array.isArray(sourceInput.freezeFrameValues)
-              ? sourceInput.freezeFrameValues
-              : Array.isArray(sourceInput.freeze_frame_rows)
-                ? sourceInput.freeze_frame_rows
-                : Array.isArray(sourceInput.freezeFrameRows)
-                  ? sourceInput.freezeFrameRows
-                  : Array.isArray(sourceInput.pid_values)
-                    ? sourceInput.pid_values
-                    : Array.isArray(sourceInput.pidValues)
-                      ? sourceInput.pidValues
-                  : Array.isArray(sourceInput.monitorValues)
-                    ? sourceInput.monitorValues
-                    : Array.isArray(sourceInput.monitor_values)
-                      ? sourceInput.monitor_values
-                      : Array.isArray(sourceInput.items)
-                        ? sourceInput.items
-                        : [])
+    const rows = firstFreezeFrameArray(
+      sourceInput.values,
+      sourceInput.freeze_frame,
+      sourceInput.freezeFrame,
+      sourceInput.freeze_frame_values,
+      sourceInput.freezeFrameValues,
+      sourceInput.freeze_frame_rows,
+      sourceInput.freezeFrameRows,
+      sourceInput.pid_values,
+      sourceInput.pidValues,
+      sourceInput.monitorValues,
+      sourceInput.monitor_values,
+      sourceInput.items
+    )
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = readObdResponseSourceEcu(row);
@@ -22387,15 +22362,15 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const declaredSourceEcu = readObdResponseSourceEcu(sourceInput);
     const declaredSourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
-    const readinessEcuSnapshotInputs = Array.isArray(sourceInput.readinessEcuSnapshots)
-      ? sourceInput.readinessEcuSnapshots
-      : Array.isArray(sourceInput.readiness_ecu_snapshots)
-        ? sourceInput.readiness_ecu_snapshots
-        : Array.isArray(sourceInput.ecuSnapshots)
-          ? sourceInput.ecuSnapshots
-          : Array.isArray(sourceInput.ecu_snapshots)
-            ? sourceInput.ecu_snapshots
-            : [];
+    const firstReadinessArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+    const readinessEcuSnapshotInputs = firstReadinessArray(
+      sourceInput.readinessEcuSnapshots,
+      sourceInput.readiness_ecu_snapshots,
+      sourceInput.ecuSnapshots,
+      sourceInput.ecu_snapshots
+    );
     const readinessEcuSnapshots = readinessEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
@@ -22439,27 +22414,18 @@
     const readinessStatusBytes = normalizeReadinessStatusBytes(sourceInput);
     const explicitMonitors = Array.isArray(input)
       ? input
-      : Array.isArray(sourceInput.monitors)
-        ? sourceInput.monitors
-        : Array.isArray(sourceInput.readinessMonitors)
-          ? sourceInput.readinessMonitors
-          : Array.isArray(sourceInput.readiness_monitors)
-            ? sourceInput.readiness_monitors
-            : Array.isArray(sourceInput.readinessValues)
-              ? sourceInput.readinessValues
-              : Array.isArray(sourceInput.readiness_values)
-                ? sourceInput.readiness_values
-                : Array.isArray(sourceInput.pid_values)
-                  ? sourceInput.pid_values
-                  : Array.isArray(sourceInput.pidValues)
-                    ? sourceInput.pidValues
-                : Array.isArray(sourceInput.readinessRows)
-                  ? sourceInput.readinessRows
-                  : Array.isArray(sourceInput.readiness_rows)
-                    ? sourceInput.readiness_rows
-                    : Array.isArray(sourceInput.items)
-                      ? sourceInput.items
-                      : [];
+      : firstReadinessArray(
+        sourceInput.monitors,
+        sourceInput.readinessMonitors,
+        sourceInput.readiness_monitors,
+        sourceInput.readinessValues,
+        sourceInput.readiness_values,
+        sourceInput.pid_values,
+        sourceInput.pidValues,
+        sourceInput.readinessRows,
+        sourceInput.readiness_rows,
+        sourceInput.items
+      );
     const monitors = explicitMonitors.length > 0
       ? explicitMonitors
       : buildReadinessMonitorsFromStatusBytes(readinessStatusBytes);
