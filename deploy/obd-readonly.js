@@ -22786,28 +22786,23 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const rows = Array.isArray(sourceInput)
       ? input
-      : Array.isArray(sourceInput.ecus)
-        ? sourceInput.ecus
-        : Array.isArray(sourceInput.modules)
-          ? sourceInput.modules
-          : Array.isArray(sourceInput.controllers)
-            ? sourceInput.controllers
-            : Array.isArray(sourceInput.ecu_responses)
-              ? sourceInput.ecu_responses
-              : Array.isArray(sourceInput.ecuResponses)
-                ? sourceInput.ecuResponses
-                : Array.isArray(sourceInput.ecu_response_rows)
-                  ? sourceInput.ecu_response_rows
-                  : Array.isArray(sourceInput.ecuResponseRows)
-                    ? sourceInput.ecuResponseRows
-                    : Array.isArray(sourceInput.items)
-                      ? sourceInput.items
-                      : [];
+      : [
+        sourceInput.ecus,
+        sourceInput.modules,
+        sourceInput.controllers,
+        sourceInput.ecu_responses,
+        sourceInput.ecuResponses,
+        sourceInput.ecu_response_rows,
+        sourceInput.ecuResponseRows,
+        sourceInput.ecu_snapshots,
+        sourceInput.ecuSnapshots,
+        sourceInput.items
+      ].find(Array.isArray) || [];
     const rawEcus = rows.map((row, index) => {
-      const id = String(row?.id || row?.ecu || row?.address || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
-      const name = row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : row?.ecu_name ? String(row.ecu_name).slice(0, 120) : row?.ecuName ? String(row.ecuName).slice(0, 120) : null;
-      const address = row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null;
-      const reportedStatus = row?.status || row?.response_status || row?.responseStatus || "unknown";
+      const id = String(row?.id || row?.ecu || row?.address || row?.source_ecu || row?.sourceEcu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
+      const name = row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : row?.source_ecu_name ? String(row.source_ecu_name).slice(0, 120) : row?.sourceEcuName ? String(row.sourceEcuName).slice(0, 120) : row?.ecu_name ? String(row.ecu_name).slice(0, 120) : row?.ecuName ? String(row.ecuName).slice(0, 120) : row?.module_name ? String(row.module_name).slice(0, 120) : row?.moduleName ? String(row.moduleName).slice(0, 120) : null;
+      const address = row?.address || row?.ecu || row?.source_ecu || row?.sourceEcu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null;
+      const reportedStatus = row?.status || row?.response_status || row?.responseStatus || row?.readout_status || row?.readoutStatus || "unknown";
       const dtcCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : Array.isArray(row?.dtcs) ? row.dtcs.length : Array.isArray(row?.codes) ? row.codes.length : Array.isArray(row?.dtc_codes) ? row.dtc_codes.length : Array.isArray(row?.dtcCodes) ? row.dtcCodes.length : null;
       const responseCount = Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : Number.isInteger(row?.responses) ? row.responses : null;
       const services = Array.isArray(row?.services) ? row.services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requested_services) ? row.requested_services.map((item) => String(item).toUpperCase()).slice(0, 16) : Array.isArray(row?.requestedServices) ? row.requestedServices.map((item) => String(item).toUpperCase()).slice(0, 16) : [];
