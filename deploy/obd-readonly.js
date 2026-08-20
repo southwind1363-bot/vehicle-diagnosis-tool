@@ -5586,7 +5586,22 @@
         })
         : [];
     });
-    const items = [...structuredItems, ...rawEcuInfoItems];
+    const childStructuredItems = ecuInfoEcuSnapshots.flatMap((ecuRow) => {
+      if (!ecuRow || typeof ecuRow !== "object" || Array.isArray(ecuRow)) return [];
+      const ecu = ecuRow.source_ecu || ecuRow.sourceEcu || ecuRow.ecu || ecuRow.ecu_id || ecuRow.ecuId || ecuRow.address || ecuRow.module || ecuRow.module_id || ecuRow.moduleId || null;
+      const ecuName = ecuRow.source_ecu_name || ecuRow.sourceEcuName || ecuRow.ecu_name || ecuRow.ecuName || ecuRow.module_name || ecuRow.moduleName || ecuRow.name || ecuRow.label || null;
+      return getEcuInfoSnapshotItems(ecuRow).map((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+        const itemEcu = item.source_ecu || item.sourceEcu || item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || null;
+        const itemEcuName = item.source_ecu_name || item.sourceEcuName || item.ecu_name || item.ecuName || item.module_name || item.moduleName || null;
+        return {
+          ...item,
+          ...(itemEcu || !ecu ? {} : { source_ecu: ecu }),
+          ...(itemEcuName || !ecuName ? {} : { source_ecu_name: ecuName })
+        };
+      });
+    });
+    const items = [...(structuredItems.length > 0 ? structuredItems : childStructuredItems), ...rawEcuInfoItems];
     const resolvedEcuInfoEcuSnapshots = ecuInfoEcuSnapshots.map((ecuRow) => {
       const decoded = decodedRawEcuInfoSnapshots.get(ecuRow);
       if (!decoded) return ecuRow;
@@ -23003,7 +23018,42 @@
       primary_protocol: protocol,
       ...readBridgeProtocolProvenance(sourceInput)
     };
-    const rows = collectEcuInfoRows(sourceInput);
+    const rawEcuInfoEcuSnapshots = [
+      sourceInput.ecuInfoEcuSnapshots,
+      sourceInput.ecu_info_ecu_snapshots,
+      sourceInput.ecuSnapshots,
+      sourceInput.ecu_snapshots,
+      sourceInput.ecuResponses,
+      sourceInput.ecu_responses
+    ].find((value) => Array.isArray(value) && value.length > 0) || [
+      sourceInput.ecuInfoEcuSnapshots,
+      sourceInput.ecu_info_ecu_snapshots,
+      sourceInput.ecuSnapshots,
+      sourceInput.ecu_snapshots,
+      sourceInput.ecuResponses,
+      sourceInput.ecu_responses
+    ].find(Array.isArray) || [];
+    const hasGenericEcuInfoEcuSnapshotRows = [
+      sourceInput.ecuSnapshots,
+      sourceInput.ecu_snapshots,
+      sourceInput.ecuResponses,
+      sourceInput.ecu_responses
+    ].some(Array.isArray);
+    const directRows = collectEcuInfoRows(sourceInput);
+    const childRows = rawEcuInfoEcuSnapshots.flatMap((snapshot) => {
+      if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return [];
+      const snapshotSourceEcu = readObdResponseSourceEcu(snapshot);
+      const snapshotSourceEcuName = snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null;
+      return collectEcuInfoRows(snapshot).map((row) => {
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+        return {
+          ...row,
+          ...(readObdResponseSourceEcu(row) || !snapshotSourceEcu ? {} : { source_ecu: snapshotSourceEcu }),
+          ...((row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName) || !snapshotSourceEcuName ? {} : { source_ecu_name: snapshotSourceEcuName })
+        };
+      });
+    });
+    const rows = directRows.length > 0 ? directRows : childRows;
     const normalizedItems = rows
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
@@ -23029,11 +23079,6 @@
         ? parsedValue.toString(16).toUpperCase().padStart(2, "0")
         : null;
     };
-    const rawEcuInfoEcuSnapshots = Array.isArray(sourceInput.ecuInfoEcuSnapshots)
-      ? sourceInput.ecuInfoEcuSnapshots
-      : Array.isArray(sourceInput.ecu_info_ecu_snapshots)
-        ? sourceInput.ecu_info_ecu_snapshots
-        : [];
     const ecuInfoEcuSnapshots = rawEcuInfoEcuSnapshots.map((snapshot) => {
       if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshot);
@@ -23188,8 +23233,11 @@
       sourceInput.readoutStatus,
       sourceInput.readout_status
     );
-    const baseReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(String(explicitReadoutStatus || "").trim().toLowerCase())
-      ? String(explicitReadoutStatus).trim().toLowerCase()
+    const normalizedExplicitReadoutStatus = String(explicitReadoutStatus || "").trim().toLowerCase();
+    const baseReadoutStatus = hasGenericEcuInfoEcuSnapshotRows && normalizedExplicitReadoutStatus === "unknown" && items.length > 0
+      ? "reported"
+      : ["reported", "unparsed", "blocked", "unknown"].includes(normalizedExplicitReadoutStatus)
+      ? normalizedExplicitReadoutStatus
       : items.length > 0
         ? "reported"
         : "unknown";
