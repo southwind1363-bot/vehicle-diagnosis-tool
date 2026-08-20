@@ -21439,6 +21439,31 @@
     };
   }
 
+  function normalizeDtcStatusSummaryAliasesOnSnapshot(snapshot = {}) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return snapshot;
+    const dtcs = Array.isArray(snapshot.dtcs) ? snapshot.dtcs : [];
+    const readoutStatus = String(snapshot.dtcReadoutStatus || snapshot.dtc_readout_status || "").trim().toLowerCase();
+    const includeReportedEvidence = !["blocked", "unparsed", "not_supported", "unsupported", "unavailable"].includes(readoutStatus)
+      && (readoutStatus === "reported" || dtcs.length > 0);
+    const summaries = [snapshot.dtcStatusSummary, snapshot.dtc_status_summary]
+      .filter((summary) => summary && typeof summary === "object" && !Array.isArray(summary));
+    const collectStatuses = (camelKey, snakeKey) => summaries.flatMap((summary) => [
+      ...(Array.isArray(summary[camelKey]) ? summary[camelKey] : []),
+      ...(Array.isArray(summary[snakeKey]) ? summary[snakeKey] : [])
+    ]);
+    const dtcStatusSummary = buildDtcStatusSummary({
+      reportedStatuses: includeReportedEvidence ? collectStatuses("reportedStatuses", "reported_statuses") : [],
+      reportedCountOnlyStatuses: includeReportedEvidence ? collectStatuses("reportedCountOnlyStatuses", "reported_count_only_statuses") : [],
+      dtcs: includeReportedEvidence ? dtcs : [],
+      includeObservedStatuses: includeReportedEvidence
+    });
+    return {
+      ...snapshot,
+      dtcStatusSummary,
+      dtc_status_summary: dtcStatusSummary
+    };
+  }
+
   function buildDtcReportedStatusSummary(dtcs = []) {
     const countsByStatus = new Map();
     (Array.isArray(dtcs) ? dtcs : []).forEach((row) => {
@@ -28809,6 +28834,7 @@
         : (dtcSnapshotInput?.data && typeof dtcSnapshotInput.data === "object" && !Array.isArray(dtcSnapshotInput.data))
           ? normalizeBridgeDtcSnapshot(dtcSnapshotInput)
         : normalizeDtcSnapshot(dtcSnapshotInput)), dtcSnapshotSafetyInput, ["dtcReadoutStatus", "dtc_readout_status"]);
+    dtcSnapshot = normalizeDtcStatusSummaryAliasesOnSnapshot(dtcSnapshot);
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
           ? {
