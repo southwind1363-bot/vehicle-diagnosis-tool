@@ -593,7 +593,7 @@ const bridgeCoreReadoutNormalizerFunctionChecks = () => {
   check(Boolean(bridgeLivePidSnapshotFunctionSource), "normalizeBridgeLivePidSnapshot is missing from obd-readonly.js");
   if (bridgeLivePidSnapshotFunctionSource) {
     const functionBody = bridgeLivePidSnapshotFunctionSource[0];
-    check(functionBody.includes('Array.isArray(data.values)') && functionBody.includes('Array.isArray(data.monitor_values)') && functionBody.includes('Array.isArray(data.pidValues)') && functionBody.includes('const rawLivePidResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const getEcuRawLivePidResponse = (row) =>') && functionBody.includes('const rawEcuLivePidMonitorValues = livePidEcuSnapshots.flatMap((ecuRow) => {') && functionBody.includes('const decoded = decodeLivePidResponse({'), "normalizeBridgeLivePidSnapshot should accept live PID aliases and decode raw read-only responses");
+    check(functionBody.includes('const firstLivePidArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)') && functionBody.includes('const livePidEcuSnapshots = firstLivePidArray(') && functionBody.includes('const getEcuLivePidValues = (row) => firstLivePidArray(') && functionBody.includes('const rawLivePidResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);') && functionBody.includes('const getEcuRawLivePidResponse = (row) =>') && functionBody.includes('const rawEcuLivePidMonitorValues = livePidEcuSnapshots.flatMap((ecuRow) => {') && functionBody.includes('const decoded = decodeLivePidResponse({'), "normalizeBridgeLivePidSnapshot should prefer populated live PID aliases and decode raw read-only responses");
     check(functionBody.includes('Array.isArray(data.live_pid_values)') && functionBody.includes('Array.isArray(data.liveData)') && functionBody.includes('Array.isArray(data.items)'), "normalizeBridgeLivePidSnapshot should accept live data array aliases");
     check(functionBody.includes('.map((row, index) => normalizeBridgePidValue(row, index))') && functionBody.includes('.filter(Boolean)'), "normalizeBridgeLivePidSnapshot should normalize and filter PID value rows");
     check(functionBody.includes('const supportedPids = collectBridgeSupportedPids(data);') && functionBody.includes('supported_pids: supportedPids'), "normalizeBridgeLivePidSnapshot should carry supported PID context and snake_case alias");
@@ -3335,7 +3335,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2918件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('DTC別名の空配列フォールバックを統一'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2920件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('ライブPID別名の空配列フォールバックを統一'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3942,7 +3942,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "DTC別名の空配列フォールバックを統一"'), "OBD core progress should describe the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "ライブPID別名の空配列フォールバックを統一"'), "OBD core progress should describe the latest completed interface-reliability milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4270,7 +4270,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "DTC別名の空配列フォールバックを統一"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "ライブPID別名の空配列フォールバックを統一"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -17683,6 +17683,45 @@ const genericAliasChildOnlyCoreRoundTrip = obd.buildDiagnosticScanSessionFromJso
 check([genericAliasChildOnlyCoreSession, genericAliasChildOnlyCoreRoundTrip].every((session) => session.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 800) && session.onboardMonitorSnapshot?.tests?.some((item) => item.testId === "01" && item.componentId === "01") && session.supportedPidMatrix?.supportedPids?.includes("0C") && session.readoutCoverage?.itemById?.live_pid_snapshot?.count === 1 && session.readoutCoverage?.itemById?.onboard_monitor_snapshot?.count === 1 && session.readoutCoverage?.itemById?.supported_pid_matrix?.count === 1 && session.vehicleCommandEnabled === false && session.wouldTransmit === false), "Generic child-only core readouts were not aggregated into the diagnostic session through export and import");
 const genericAliasChildOnlyBridgeSummary = obd.buildBridgeSessionSummary(genericAliasChildOnlyCoreInput);
 check(genericAliasChildOnlyBridgeSummary.livePidSnapshot?.monitorValues?.length === 1 && genericAliasChildOnlyBridgeSummary.livePidSnapshot?.monitorValues?.[0]?.id === "engine_speed" && genericAliasChildOnlyBridgeSummary.onboardMonitorSnapshot?.tests?.length === 1 && genericAliasChildOnlyBridgeSummary.onboardMonitorSnapshot?.tests?.[0]?.testId === "01" && genericAliasChildOnlyBridgeSummary.supportedPidMatrix?.supportedPids?.join(",") === "0C" && genericAliasChildOnlyBridgeSummary.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && genericAliasChildOnlyBridgeSummary.readoutCoverage?.itemById?.onboard_monitor_snapshot?.status === "captured" && genericAliasChildOnlyBridgeSummary.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && genericAliasChildOnlyBridgeSummary.vehicleCommandEnabled === false && genericAliasChildOnlyBridgeSummary.wouldTransmit === false, "Generic child-only core readouts were not aggregated consistently by the bridge summary");
+const populatedLivePidAliasFallback = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    values: [],
+    monitor_values: [{ id: "engine_speed", value: 900, unit: "rpm" }],
+    live_pid_ecu_snapshots: [],
+    ecu_snapshots: [{ source_ecu: "7E8", readout_status: "reported", values: [], monitor_values: [{ id: "engine_speed", value: 850, unit: "rpm" }] }]
+  }
+});
+const populatedLivePidCanonicalPriority = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  data: {
+    values: [{ id: "engine_speed", value: 950, unit: "rpm" }],
+    monitor_values: [{ id: "engine_speed", value: 700, unit: "rpm" }]
+  }
+});
+check(populatedLivePidAliasFallback.livePidReadoutStatus === "reported" && populatedLivePidAliasFallback.monitorValues?.length === 1 && populatedLivePidAliasFallback.monitorValues?.[0]?.value === 900 && populatedLivePidAliasFallback.livePidEcuSnapshots?.[0]?.sourceEcu === "7E8" && populatedLivePidAliasFallback.livePidEcuSnapshots?.[0]?.monitorValues?.[0]?.value === 850 && populatedLivePidAliasFallback.vehicleCommandEnabled === false && populatedLivePidAliasFallback.wouldTransmit === false && populatedLivePidCanonicalPriority.monitorValues?.length === 1 && populatedLivePidCanonicalPriority.monitorValues?.[0]?.value === 950, "Empty live PID aliases hid populated parent or ECU values, or overrode a populated canonical array");
+const emptyFirstLivePidAliasInput = {
+  live_pid_snapshot: {
+    schemaVersion: "live_pid_snapshot_v1",
+    live_pid_readout_status: "unknown",
+    monitorValues: [],
+    live_pid_ecu_snapshots: [],
+    ecu_snapshots: [{ source_ecu: "7E8", readout_status: "reported", values: [], monitor_values: [{ id: "engine_speed", value: 850, unit: "rpm" }] }]
+  }
+};
+const emptyFirstLivePidAliasSession = obd.buildDiagnosticScanSession(emptyFirstLivePidAliasInput);
+const emptyFirstLivePidAliasBridgeSummary = obd.buildBridgeSessionSummary(emptyFirstLivePidAliasInput);
+const emptyFirstLivePidAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(emptyFirstLivePidAliasSession)));
+const emptyFirstLivePidAliasTimelineSession = obd.buildDiagnosticScanSession({
+  live_pid_timeline: {
+    samples: [{ captured_at: "2026-08-20T09:00:00+09:00", live_pid_snapshot: { ...emptyFirstLivePidAliasInput.live_pid_snapshot, live_pid_readout_status: "reported" } }]
+  }
+});
+check([emptyFirstLivePidAliasSession, emptyFirstLivePidAliasBridgeSummary, emptyFirstLivePidAliasRoundTrip].every((session) => session.livePidSnapshot?.livePidReadoutStatus === "unknown" && session.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 850 && item.sourceEcu === "7E8") && session.livePidSnapshot?.livePidEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.livePidReadoutStatus === "reported") && session.readoutCoverage?.itemById?.live_pid_snapshot?.status === "captured" && session.readoutCoverage?.itemById?.live_pid_snapshot?.count === 1 && session.vehicleCommandEnabled === false && session.wouldTransmit === false) && emptyFirstLivePidAliasTimelineSession.livePidTimeline?.sampleCount === 1 && emptyFirstLivePidAliasTimelineSession.livePidTimeline?.samples?.[0]?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 850 && item.sourceEcu === "7E8") && emptyFirstLivePidAliasTimelineSession.livePidSnapshot?.monitorValues?.some((item) => item.id === "engine_speed" && item.value === 850) && emptyFirstLivePidAliasTimelineSession.vehicleCommandEnabled === false && emptyFirstLivePidAliasTimelineSession.wouldTransmit === false, "Populated live PID aliases were not retained through session, bridge summary, timeline, and read-only export");
 const childOnlyDtcInput = {
   dtc_snapshot: {
     schemaVersion: "dtc_snapshot_v1",
@@ -23527,6 +23566,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2918");
+  console.log("OBD read-only safety checks: 2920");
   console.log("Errors: 0");
 }

@@ -4169,16 +4169,19 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
-    const livePidEcuSnapshots = [
+    const firstLivePidArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+    const livePidEcuSnapshots = firstLivePidArray(
       data.live_pid_ecu_snapshots,
       data.livePidEcuSnapshots,
       data.ecu_snapshots,
       data.ecuSnapshots,
       data.ecu_responses,
       data.ecuResponses
-    ].find(Array.isArray) || [];
+    );
     const getEcuRawLivePidResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
-    const getEcuLivePidValues = (row) => [
+    const getEcuLivePidValues = (row) => firstLivePidArray(
       row?.values,
       row?.monitor_values,
       row?.monitorValues,
@@ -4189,7 +4192,7 @@
       row?.live_data,
       row?.liveData,
       row?.items
-    ].find(Array.isArray) || [];
+    );
     const hasRawEcuLivePidResponse = livePidEcuSnapshots.some((row) => getEcuRawLivePidResponse(row) !== null && getEcuLivePidValues(row).length === 0);
     const hasBridgeValueList = Array.isArray(data.values)
       || Array.isArray(data.monitor_values)
@@ -4219,27 +4222,18 @@
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
         ? { ...bridgeSafety, ok: false, unparsed: true }
         : bridgeSafety;
-    const values = (Array.isArray(data.values)
-      ? data.values
-      : Array.isArray(data.monitor_values)
-        ? data.monitor_values
-        : Array.isArray(data.monitorValues)
-          ? data.monitorValues
-          : Array.isArray(data.pid_values)
-            ? data.pid_values
-            : Array.isArray(data.pidValues)
-              ? data.pidValues
-              : Array.isArray(data.live_pid_values)
-                ? data.live_pid_values
-                : Array.isArray(data.livePidValues)
-                  ? data.livePidValues
-                  : Array.isArray(data.live_data)
-                    ? data.live_data
-                    : Array.isArray(data.liveData)
-                      ? data.liveData
-                      : Array.isArray(data.items)
-                        ? data.items
-                        : [])
+    const values = firstLivePidArray(
+      data.values,
+      data.monitor_values,
+      data.monitorValues,
+      data.pid_values,
+      data.pidValues,
+      data.live_pid_values,
+      data.livePidValues,
+      data.live_data,
+      data.liveData,
+      data.items
+    )
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
@@ -4527,6 +4521,7 @@
         const item = sample && typeof sample === "object" ? sample : {};
         const snapshotInput = item.livePidSnapshot || item.live_pid_snapshot || item;
         const retainedSample = Array.isArray(snapshotInput?.monitorValues)
+          && snapshotInput.monitorValues.length > 0
           && (snapshotInput.livePidReadoutStatus || snapshotInput.live_pid_readout_status) === "reported"
           && snapshotInput.blocked !== true
           && snapshotInput.wouldTransmit !== true
