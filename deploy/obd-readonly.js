@@ -6118,7 +6118,11 @@
       onboardMonitorSnapshot?.onboardMonitorEcuSnapshots,
       onboardMonitorSnapshot?.onboard_monitor_ecu_snapshots,
       onboardMonitorSnapshot?.mode06EcuSnapshots,
-      onboardMonitorSnapshot?.mode06_ecu_snapshots
+      onboardMonitorSnapshot?.mode06_ecu_snapshots,
+      onboardMonitorSnapshot?.ecuSnapshots,
+      onboardMonitorSnapshot?.ecu_snapshots,
+      onboardMonitorSnapshot?.ecuResponses,
+      onboardMonitorSnapshot?.ecu_responses
     ].find(Array.isArray) || [];
     const supportedPidMatrix = hasSupportedPidMatrixInput
       ? (supportedPidMatrixInput?.schemaVersion
@@ -6142,11 +6146,14 @@
       : Array.isArray(dtcSnapshot?.ecu_responses)
         ? dtcSnapshot.ecu_responses
         : [];
-    const livePidEcuSnapshots = Array.isArray(livePidCoverageSnapshot?.livePidEcuSnapshots)
-      ? livePidCoverageSnapshot.livePidEcuSnapshots
-      : Array.isArray(livePidCoverageSnapshot?.live_pid_ecu_snapshots)
-        ? livePidCoverageSnapshot.live_pid_ecu_snapshots
-        : [];
+    const livePidEcuSnapshots = [
+      livePidCoverageSnapshot?.livePidEcuSnapshots,
+      livePidCoverageSnapshot?.live_pid_ecu_snapshots,
+      livePidCoverageSnapshot?.ecuSnapshots,
+      livePidCoverageSnapshot?.ecu_snapshots,
+      livePidCoverageSnapshot?.ecuResponses,
+      livePidCoverageSnapshot?.ecu_responses
+    ].find(Array.isArray) || [];
     const supportedPidEcuSnapshots = Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots)
       ? supportedPidMatrix.supportedPidEcuSnapshots
       : Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots)
@@ -6156,7 +6163,7 @@
       const normalizedParentStatus = String(parentStatus || "").trim().toLowerCase();
       if (!Array.isArray(snapshots) || snapshots.length === 0) return normalizedParentStatus || null;
       if (["blocked", "unparsed", "not_supported", "unsupported", "unavailable"].includes(normalizedParentStatus)) return normalizedParentStatus;
-      const statuses = snapshots.map((snapshot) => String(snapshot?.[camelStatusKey] || snapshot?.[snakeStatusKey] || (normalizedParentStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase());
+      const statuses = snapshots.map((snapshot) => String(snapshot?.[camelStatusKey] || snapshot?.[snakeStatusKey] || snapshot?.readoutStatus || snapshot?.readout_status || (normalizedParentStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase());
       if (statuses.includes("blocked")) return "blocked";
       if (statuses.includes("unparsed")) return "unparsed";
       if (statuses.some((status) => ["not_supported", "unsupported", "unavailable"].includes(status))) return "not_supported";
@@ -6191,7 +6198,7 @@
     const hasIncompleteScopedOnboardMonitor = onboardMonitorEcuSnapshots.length > 0 && onboardMonitorCoverageReadoutStatus !== "reported";
     const hasIncompleteScopedSupportedPid = supportedPidEcuSnapshots.length > 0 && supportedPidCoverageReadoutStatus !== "reported";
     const reportedReadinessEcuSnapshots = readinessEcuSnapshots.filter((snapshot) => String(snapshot?.readinessReadoutStatus || snapshot?.readiness_readout_status || (readinessParentReadoutStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase() === "reported");
-    const reportedOnboardMonitorEcuSnapshots = onboardMonitorEcuSnapshots.filter((snapshot) => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || (onboardMonitorParentReadoutStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase() === "reported");
+    const reportedOnboardMonitorEcuSnapshots = onboardMonitorEcuSnapshots.filter((snapshot) => String(snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status || snapshot?.readoutStatus || snapshot?.readout_status || (onboardMonitorParentReadoutStatus === "reported" ? "reported" : "unknown")).trim().toLowerCase() === "reported");
     const readinessEcuMonitorCount = reportedReadinessEcuSnapshots.reduce((total, snapshot) => {
       const monitors = [snapshot?.monitors, snapshot?.values, snapshot?.monitor_values, snapshot?.monitorValues, snapshot?.readiness_values, snapshot?.readinessValues].find(Array.isArray) || null;
       return total + (Array.isArray(monitors) ? (snapshot.monitorCount || snapshot.monitor_count || monitors.length) : 0);
@@ -23248,7 +23255,11 @@
       sourceInput.onboardMonitorEcuSnapshots,
       sourceInput.onboard_monitor_ecu_snapshots,
       sourceInput.mode06EcuSnapshots,
-      sourceInput.mode06_ecu_snapshots
+      sourceInput.mode06_ecu_snapshots,
+      sourceInput.ecuSnapshots,
+      sourceInput.ecu_snapshots,
+      sourceInput.ecuResponses,
+      sourceInput.ecu_responses
     ].find(Array.isArray) || [];
     const onboardMonitorEcuSnapshots = onboardMonitorEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
@@ -23259,7 +23270,11 @@
         onboardMonitorEcuSnapshots: [],
         onboard_monitor_ecu_snapshots: [],
         mode06EcuSnapshots: [],
-        mode06_ecu_snapshots: []
+        mode06_ecu_snapshots: [],
+        ecuSnapshots: [],
+        ecu_snapshots: [],
+        ecuResponses: [],
+        ecu_responses: []
       });
       return {
         ...normalizedSnapshot,
