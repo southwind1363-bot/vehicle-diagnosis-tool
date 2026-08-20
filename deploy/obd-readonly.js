@@ -18640,6 +18640,108 @@
     };
   }
 
+  function resolveSnapshotCountAlias(snapshot = {}, camelKey, snakeKey) {
+    return Math.max(0, ...[snapshot?.[camelKey], snapshot?.[snakeKey]]
+      .filter((value) => Number.isFinite(Number(value)))
+      .map((value) => Math.max(0, Math.round(Number(value)))));
+  }
+
+  function normalizeReadinessCountAliases(snapshot = {}) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return snapshot;
+    const monitors = [
+      snapshot.monitors,
+      snapshot.values,
+      snapshot.monitor_values,
+      snapshot.monitorValues,
+      snapshot.readiness_values,
+      snapshot.readinessValues,
+      snapshot.pid_values,
+      snapshot.pidValues
+    ].find((value) => Array.isArray(value) && value.length > 0)
+      || [snapshot.monitors, snapshot.values, snapshot.monitor_values, snapshot.monitorValues].find(Array.isArray)
+      || [];
+    const hasMonitorRows = monitors.length > 0;
+    const completeCount = hasMonitorRows
+      ? monitors.filter((item) => item?.supported === true && item?.complete === true).length
+      : resolveSnapshotCountAlias(snapshot, "completeCount", "complete_count");
+    const incompleteCount = hasMonitorRows
+      ? monitors.filter((item) => item?.supported === true && item?.complete === false).length
+      : resolveSnapshotCountAlias(snapshot, "incompleteCount", "incomplete_count");
+    const completionUnknownCount = hasMonitorRows
+      ? monitors.filter((item) => item?.supported === true && item?.complete == null).length
+      : resolveSnapshotCountAlias(snapshot, "completionUnknownCount", "completion_unknown_count");
+    const notSupportedCount = hasMonitorRows
+      ? monitors.filter((item) => item?.supported === false).length
+      : resolveSnapshotCountAlias(snapshot, "notSupportedCount", "not_supported_count");
+    const supportUnknownCount = hasMonitorRows
+      ? monitors.filter((item) => item?.supported == null).length
+      : resolveSnapshotCountAlias(snapshot, "supportUnknownCount", "support_unknown_count");
+    const monitorCount = hasMonitorRows
+      ? monitors.length
+      : Math.max(
+        resolveSnapshotCountAlias(snapshot, "monitorCount", "monitor_count"),
+        completeCount + incompleteCount + completionUnknownCount + notSupportedCount + supportUnknownCount
+      );
+    return {
+      ...snapshot,
+      monitorCount,
+      monitor_count: monitorCount,
+      completeCount,
+      complete_count: completeCount,
+      incompleteCount,
+      incomplete_count: incompleteCount,
+      completionUnknownCount,
+      completion_unknown_count: completionUnknownCount,
+      notSupportedCount,
+      not_supported_count: notSupportedCount,
+      supportUnknownCount,
+      support_unknown_count: supportUnknownCount
+    };
+  }
+
+  function normalizeOnboardMonitorCountAliases(snapshot = {}) {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return snapshot;
+    const tests = [
+      snapshot.tests,
+      snapshot.values,
+      snapshot.mode06_tests,
+      snapshot.mode06Tests,
+      snapshot.monitor_tests,
+      snapshot.monitorTests,
+      snapshot.onboard_monitor_tests,
+      snapshot.onboardMonitorTests
+    ].find((value) => Array.isArray(value) && value.length > 0)
+      || [snapshot.tests, snapshot.values, snapshot.mode06_tests, snapshot.mode06Tests].find(Array.isArray)
+      || [];
+    const hasTestRows = tests.length > 0;
+    const passedCount = hasTestRows
+      ? tests.filter((item) => String(item?.status || "").trim().toLowerCase() === "pass").length
+      : resolveSnapshotCountAlias(snapshot, "passedCount", "passed_count");
+    const failedCount = hasTestRows
+      ? tests.filter((item) => String(item?.status || "").trim().toLowerCase() === "fail").length
+      : resolveSnapshotCountAlias(snapshot, "failedCount", "failed_count");
+    const unknownCount = hasTestRows
+      ? tests.filter((item) => !["pass", "fail"].includes(String(item?.status || "").trim().toLowerCase())).length
+      : resolveSnapshotCountAlias(snapshot, "unknownCount", "unknown_count");
+    const testCount = hasTestRows
+      ? tests.length
+      : Math.max(
+        resolveSnapshotCountAlias(snapshot, "testCount", "test_count"),
+        passedCount + failedCount + unknownCount
+      );
+    return {
+      ...snapshot,
+      testCount,
+      test_count: testCount,
+      passedCount,
+      passed_count: passedCount,
+      failedCount,
+      failed_count: failedCount,
+      unknownCount,
+      unknown_count: unknownCount
+    };
+  }
+
   function buildReadOnlyFlags({
     retainedRawText = false,
     retainedRawFrames = undefined,
@@ -22628,12 +22730,21 @@
     const explicitDtcCount = pickDefined(sourceInput.dtc_count, sourceInput.dtcCount);
     const normalizedExplicitDtcCount = Number.isInteger(explicitDtcCount) && explicitDtcCount >= 0 && explicitDtcCount <= 127 ? explicitDtcCount : null;
     const storedDtcCount = readinessScope === "multiple_ecus" ? null : byteDtcCount ?? normalizedExplicitDtcCount;
-    const localMonitorCount = normalized.length;
-    const localCompleteCount = normalized.filter((item) => item.supported === true && item.complete === true).length;
-    const localIncompleteCount = normalized.filter((item) => item.supported === true && item.complete === false).length;
-    const localCompletionUnknownCount = normalized.filter((item) => item.supported === true && item.complete === null).length;
-    const localNotSupportedCount = normalized.filter((item) => item.supported === false).length;
-    const localSupportUnknownCount = normalized.filter((item) => item.supported === null).length;
+    const readExplicitReadinessCount = (camelKey, snakeKey) => Math.max(0, ...[sourceInput[camelKey], sourceInput[snakeKey]]
+      .filter((value) => Number.isFinite(Number(value)))
+      .map((value) => Math.max(0, Math.round(Number(value)))));
+    const hasLocalMonitorRows = normalized.length > 0;
+    const localCompleteCount = hasLocalMonitorRows ? normalized.filter((item) => item.supported === true && item.complete === true).length : readExplicitReadinessCount("completeCount", "complete_count");
+    const localIncompleteCount = hasLocalMonitorRows ? normalized.filter((item) => item.supported === true && item.complete === false).length : readExplicitReadinessCount("incompleteCount", "incomplete_count");
+    const localCompletionUnknownCount = hasLocalMonitorRows ? normalized.filter((item) => item.supported === true && item.complete === null).length : readExplicitReadinessCount("completionUnknownCount", "completion_unknown_count");
+    const localNotSupportedCount = hasLocalMonitorRows ? normalized.filter((item) => item.supported === false).length : readExplicitReadinessCount("notSupportedCount", "not_supported_count");
+    const localSupportUnknownCount = hasLocalMonitorRows ? normalized.filter((item) => item.supported === null).length : readExplicitReadinessCount("supportUnknownCount", "support_unknown_count");
+    const localMonitorCount = hasLocalMonitorRows
+      ? normalized.length
+      : Math.max(
+        readExplicitReadinessCount("monitorCount", "monitor_count"),
+        localCompleteCount + localIncompleteCount + localCompletionUnknownCount + localNotSupportedCount + localSupportUnknownCount
+      );
     const readinessEcuStatuses = readinessEcuSnapshots.map((snapshot) => snapshot.readinessReadoutStatus || snapshot.readiness_readout_status || "unknown");
     const reportedEcuCount = readinessEcuStatuses.filter((status) => status === "reported").length;
     const blockedEcuCount = readinessEcuStatuses.filter((status) => status === "blocked").length;
@@ -23565,10 +23676,16 @@
     const observedSourceEcuNames = [...new Set(tests.map((item) => item.sourceEcuName || item.source_ecu_name || null).filter(Boolean))];
     const resolvedSourceEcuName = sourceEcuName || (observedSourceEcuNames.length === 1 ? observedSourceEcuNames[0] : null);
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
-    const testCount = tests.length;
-    const passedCount = tests.filter((test) => test.status === "pass").length;
-    const failedCount = tests.filter((test) => test.status === "fail").length;
-    const unknownCount = tests.filter((test) => test.status === "unknown").length;
+    const readExplicitOnboardMonitorCount = (camelKey, snakeKey) => Math.max(0, ...[sourceInput[camelKey], sourceInput[snakeKey]]
+      .filter((value) => Number.isFinite(Number(value)))
+      .map((value) => Math.max(0, Math.round(Number(value)))));
+    const hasTestRows = tests.length > 0;
+    const passedCount = hasTestRows ? tests.filter((test) => test.status === "pass").length : readExplicitOnboardMonitorCount("passedCount", "passed_count");
+    const failedCount = hasTestRows ? tests.filter((test) => test.status === "fail").length : readExplicitOnboardMonitorCount("failedCount", "failed_count");
+    const unknownCount = hasTestRows ? tests.filter((test) => test.status === "unknown").length : readExplicitOnboardMonitorCount("unknownCount", "unknown_count");
+    const testCount = hasTestRows
+      ? tests.length
+      : Math.max(readExplicitOnboardMonitorCount("testCount", "test_count"), passedCount + failedCount + unknownCount);
     const ecuTestSummary = observedSourceEcus.map((ecu) => {
       const ecuTests = tests.filter((test) => (test.sourceEcu || test.source_ecu || null) === ecu);
       const ecuName = ecuTests.map((test) => test.sourceEcuName || test.source_ecu_name || null).find(Boolean) || null;
@@ -28840,7 +28957,7 @@
           ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput)
           : normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput)), freezeFrameSafetyInput, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
     dtcSnapshot = linkReadableFreezeFrameToDtcSnapshot(dtcSnapshot, freezeFrameSnapshot);
-    const readinessSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
+    const readinessSnapshot = normalizeReadinessCountAliases(preserveExplicitReadoutFailure(withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
       ? (hasGenericReadinessEcuRows(readinessSnapshotInput) ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput) : !Number.isFinite(Number(readinessSnapshotInput.monitorCount)) || !Number.isFinite(Number(readinessSnapshotInput.incompleteCount)) || !Number.isFinite(Number(readinessSnapshotInput.completeCount)) ? normalizeReadinessSnapshot(readinessSnapshotInput) : readinessSnapshotInput)
       : (readinessResponseInput?.raw || readinessResponseInput?.response || Array.isArray(readinessResponseInput?.bytes))
         ? decodeReadinessResponse(readinessResponseInput)
@@ -28849,8 +28966,8 @@
         : ((readinessSnapshotInput?.data && typeof readinessSnapshotInput.data === "object" && !Array.isArray(readinessSnapshotInput.data))
           || [readinessSnapshotInput?.readiness_ecu_snapshots, readinessSnapshotInput?.readinessEcuSnapshots, readinessSnapshotInput?.ecu_snapshots, readinessSnapshotInput?.ecuSnapshots].some(Array.isArray))
           ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput)
-        : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);
-    const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
+        : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]));
+    const onboardMonitorSnapshot = normalizeOnboardMonitorCountAliases(preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
       ? (hasGenericOnboardMonitorEcuRows(onboardMonitorSnapshotInput) || !Number.isFinite(Number(onboardMonitorSnapshotInput.testCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.failedCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.passedCount)) ? normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput) : onboardMonitorSnapshotInput)
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
@@ -28866,7 +28983,7 @@
             onboardMonitorSnapshotInput?.ecuResponses
           ].some(Array.isArray))
           ? normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)
-          : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSafetyInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]);
+          : normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput)), onboardMonitorSafetyInput, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]));
     const ecuInfoSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
