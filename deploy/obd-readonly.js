@@ -8805,6 +8805,29 @@
     };
   }
 
+  function synchronizeDtcNextReadoutSummary(summary = null, request = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary) || request?.readoutId !== "dtc_snapshot") return summary;
+    return {
+      ...summary,
+      readoutId: request.readoutId,
+      readout_id: request.readoutId,
+      readoutRequest: request,
+      readout_request: request,
+      bridgeIntent: request.bridgeIntent || null,
+      bridge_intent: request.bridgeIntent || null,
+      serviceMode: request.serviceMode || null,
+      service_mode: request.serviceMode || null,
+      executionEnabled: request.executionEnabled === true,
+      execution_enabled: request.executionEnabled === true,
+      readOnly: request.readOnly !== false,
+      read_only: request.readOnly !== false,
+      wouldTransmit: request.wouldTransmit === true,
+      would_transmit: request.wouldTransmit === true,
+      vehicleCommandEnabled: request.vehicleCommandEnabled === true,
+      vehicle_command_enabled: request.vehicleCommandEnabled === true
+    };
+  }
+
   function buildNextReadoutReasonSummary(nextReadoutSummary = null, readoutCompletionSummary = null) {
     if (!nextReadoutSummary || typeof nextReadoutSummary !== "object") return null;
     const readoutRequest = normalizeReadoutRequestSummaryAliases(nextReadoutSummary.readoutRequest || nextReadoutSummary.readout_request || null);
@@ -8861,6 +8884,36 @@
       would_transmit: readoutRequest?.wouldTransmit === true,
       vehicleCommandEnabled: readoutRequest?.vehicleCommandEnabled === true,
       vehicle_command_enabled: readoutRequest?.vehicleCommandEnabled === true
+    };
+  }
+
+  function synchronizeDtcNextReadoutReasonSummary(summary = null, request = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary) || request?.readoutId !== "dtc_snapshot") return summary;
+    const reasonId = summary.reasonId || summary.reason_id || null;
+    return {
+      ...summary,
+      schemaVersion: summary.schemaVersion || summary.schema_version || "next_readout_reason_summary_v1",
+      schema_version: summary.schemaVersion || summary.schema_version || "next_readout_reason_summary_v1",
+      readoutId: request.readoutId,
+      readout_id: request.readoutId,
+      reasonId,
+      reason_id: reasonId,
+      readoutRequest: request,
+      readout_request: request,
+      bridgeIntent: request.bridgeIntent || null,
+      bridge_intent: request.bridgeIntent || null,
+      serviceMode: request.serviceMode || null,
+      service_mode: request.serviceMode || null,
+      requestMapped: Boolean(request.bridgeIntent),
+      request_mapped: Boolean(request.bridgeIntent),
+      executionEnabled: request.executionEnabled === true,
+      execution_enabled: request.executionEnabled === true,
+      readOnly: request.readOnly !== false,
+      read_only: request.readOnly !== false,
+      wouldTransmit: request.wouldTransmit === true,
+      would_transmit: request.wouldTransmit === true,
+      vehicleCommandEnabled: request.vehicleCommandEnabled === true,
+      vehicle_command_enabled: request.vehicleCommandEnabled === true
     };
   }
 
@@ -14094,26 +14147,41 @@
       summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null,
       isDtcNextReadoutRequest ? nextReadoutRequest : null
     );
-    const nextReadoutSummary = summary.nextReadoutSummary || summary.next_readout_summary || null;
-    const nextReadoutReasonSummary = summary.nextReadoutReasonSummary
+    const savedNextReadoutSummary = summary.nextReadoutSummary || summary.next_readout_summary || null;
+    const nextReadoutSummary = isDtcNextReadoutRequest
+      ? synchronizeDtcNextReadoutSummary(savedNextReadoutSummary, nextReadoutRequest)
+      : savedNextReadoutSummary;
+    const savedNextReadoutReasonSummary = summary.nextReadoutReasonSummary
       || summary.next_readout_reason_summary
       || coreWorkflowSummary?.nextReadoutReasonSummary
       || coreWorkflowSummary?.next_readout_reason_summary
       || analysisReadinessSummary?.nextReadoutReasonSummary
       || analysisReadinessSummary?.next_readout_reason_summary
       || buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
+    const nextReadoutReasonSummary = isDtcNextReadoutRequest
+      ? synchronizeDtcNextReadoutReasonSummary(savedNextReadoutReasonSummary, nextReadoutRequest)
+      : savedNextReadoutReasonSummary;
     const nextReadoutRequestSafetySummary = isDtcNextReadoutRequest
       ? buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary)
       : summary.nextReadoutRequestSafetySummary
         || summary.next_readout_request_safety_summary
         || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
-    const nextReadoutGuardSummary = summary.nextReadoutGuardSummary
+    const savedNextReadoutGuardSummary = summary.nextReadoutGuardSummary
       || summary.next_readout_guard_summary
       || coreWorkflowSummary?.nextReadoutGuardSummary
       || coreWorkflowSummary?.next_readout_guard_summary
       || analysisReadinessSummary?.nextReadoutGuardSummary
       || analysisReadinessSummary?.next_readout_guard_summary
-      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
+      || null;
+    const savedNextReadoutGuardGate = savedNextReadoutGuardSummary ? {
+      state: savedNextReadoutGuardSummary.gateState || savedNextReadoutGuardSummary.gate_state || "unknown",
+      ready: savedNextReadoutGuardSummary.gateReady === true || savedNextReadoutGuardSummary.gate_ready === true,
+      actionRequired: savedNextReadoutGuardSummary.actionRequired === true || savedNextReadoutGuardSummary.action_required === true,
+      nextActionId: savedNextReadoutGuardSummary.nextActionId || savedNextReadoutGuardSummary.next_action_id || null
+    } : null;
+    const nextReadoutGuardSummary = isDtcNextReadoutRequest
+      ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate)
+      : savedNextReadoutGuardSummary || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
     const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, analysisReadinessSummary?.ready, false) === true;
     return {
       ...summary,
