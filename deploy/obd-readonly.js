@@ -9030,6 +9030,179 @@
     };
   }
 
+  function normalizePendingReadoutRequestQueueAliases(input = [], dtcStatusReadoutPlan = null) {
+    if (!Array.isArray(input)) return [];
+    return input
+      .map((item) => {
+        if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+        const readoutId = item.readoutId || item.readout_id || item.id || null;
+        return normalizeReadoutRequestSummaryAliases(item, readoutId === "dtc_snapshot" ? dtcStatusReadoutPlan : null);
+      })
+      .filter(Boolean);
+  }
+
+  function synchronizeDtcPendingReadoutRequestPlan(input = null, queue = [], nextRequest = null, dtcStatusReadoutPlan = null) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return input || null;
+    const savedNextRequestInput = input.nextRequest || input.next_request || null;
+    const savedNextRequestId = savedNextRequestInput?.readoutId || savedNextRequestInput?.readout_id || savedNextRequestInput?.id || null;
+    const savedNextRequest = normalizeReadoutRequestSummaryAliases(savedNextRequestInput, savedNextRequestId === "dtc_snapshot" ? dtcStatusReadoutPlan : null);
+    const normalizedQueue = Array.isArray(queue) ? queue : [];
+    const preferredNextRequest = nextRequest || savedNextRequest || normalizedQueue.find((item) => item.isNext === true || item.is_next === true) || normalizedQueue[0] || null;
+    const hasDtcRequest = preferredNextRequest?.readoutId === "dtc_snapshot" || normalizedQueue.some((item) => item?.readoutId === "dtc_snapshot");
+    if (!hasDtcRequest) return input;
+    const entries = preferredNextRequest && !normalizedQueue.some((item) => item?.readoutId === preferredNextRequest.readoutId)
+      ? [preferredNextRequest, ...normalizedQueue]
+      : normalizedQueue;
+    const mappedEntries = entries.filter((item) => Boolean(item?.bridgeIntent));
+    const unmappedRequestIds = entries.filter((item) => !item?.bridgeIntent).map((item) => item?.readoutId).filter(Boolean);
+    const safetySummary = buildReadoutRequestPlanSafetySummary(entries, unmappedRequestIds);
+    const requestIds = entries.map((item) => item?.readoutId).filter(Boolean);
+    const bridgeIntents = [...new Set(mappedEntries.map((item) => item.bridgeIntent).filter(Boolean))];
+    return {
+      ...input,
+      schemaVersion: input.schemaVersion || input.schema_version || "read_only_readout_request_plan_v1",
+      schema_version: input.schemaVersion || input.schema_version || "read_only_readout_request_plan_v1",
+      totalCount: entries.length,
+      total_count: entries.length,
+      mappedCount: mappedEntries.length,
+      mapped_count: mappedEntries.length,
+      unmappedCount: unmappedRequestIds.length,
+      unmapped_count: unmappedRequestIds.length,
+      allMapped: unmappedRequestIds.length === 0,
+      all_mapped: unmappedRequestIds.length === 0,
+      ...safetySummary,
+      unmappedRequestIds: [...unmappedRequestIds],
+      unmapped_request_ids: [...unmappedRequestIds],
+      nextRequest: preferredNextRequest,
+      next_request: preferredNextRequest,
+      requestIds,
+      request_ids: [...requestIds],
+      bridgeIntents,
+      bridge_intents: [...bridgeIntents],
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function synchronizeDtcReadoutRequestPlanGateSummary(input = null, plan = null) {
+    if (!plan || typeof plan !== "object" || Array.isArray(plan)) return input || null;
+    const source = normalizeReadoutRequestPlanGateSummaryAliases(input) || {};
+    const blockedReasonIds = Array.isArray(plan.blockedReasonIds) ? [...plan.blockedReasonIds] : Array.isArray(plan.blocked_reason_ids) ? [...plan.blocked_reason_ids] : [];
+    const blockedReasonById = plan.blockedReasonById && typeof plan.blockedReasonById === "object"
+      ? { ...plan.blockedReasonById }
+      : plan.blocked_reason_by_id && typeof plan.blocked_reason_by_id === "object" ? { ...plan.blocked_reason_by_id } : {};
+    const actionQueue = buildReadoutRequestPlanGateActionQueue(blockedReasonIds, blockedReasonById);
+    const actionIds = actionQueue.map((item) => item.id).filter(Boolean);
+    const actionReasonIds = actionQueue.map((item) => item.reasonId).filter(Boolean);
+    const actionReadoutIds = [...new Set(actionQueue.flatMap((item) => Array.isArray(item.readoutIds) ? item.readoutIds : []).filter(Boolean))];
+    const actionQueueById = Object.fromEntries(actionQueue.map((item) => [item.id, { ...item }]));
+    const actionQueueByReasonId = Object.fromEntries(actionQueue.map((item) => [item.reasonId, { ...item }]));
+    const actionQueueByReadoutId = Object.fromEntries(actionQueue.flatMap((item) => (Array.isArray(item.readoutIds) ? item.readoutIds : []).map((readoutId) => [readoutId, { ...item }])));
+    const totalCount = Number.isFinite(Number(plan.totalCount ?? plan.total_count)) ? Number(plan.totalCount ?? plan.total_count) : 0;
+    const mappedCount = Number.isFinite(Number(plan.mappedCount ?? plan.mapped_count)) ? Number(plan.mappedCount ?? plan.mapped_count) : 0;
+    const unmappedCount = Number.isFinite(Number(plan.unmappedCount ?? plan.unmapped_count)) ? Number(plan.unmappedCount ?? plan.unmapped_count) : 0;
+    const state = totalCount === 0 ? "idle" : blockedReasonIds.length ? "blocked" : "ready";
+    const ready = blockedReasonIds.length === 0;
+    const actionSummary = {
+      schemaVersion: "readout_request_plan_gate_action_summary_v1",
+      schema_version: "readout_request_plan_gate_action_summary_v1",
+      actionRequired: actionQueue.length > 0,
+      action_required: actionQueue.length > 0,
+      actionCount: actionQueue.length,
+      action_count: actionQueue.length,
+      reasonCount: actionReasonIds.length,
+      reason_count: actionReasonIds.length,
+      readoutCount: actionReadoutIds.length,
+      readout_count: actionReadoutIds.length,
+      actionIds: [...actionIds],
+      action_ids: [...actionIds],
+      reasonIds: [...actionReasonIds],
+      reason_ids: [...actionReasonIds],
+      readoutIds: [...actionReadoutIds],
+      readout_ids: [...actionReadoutIds],
+      nextActionId: actionQueue[0]?.id || null,
+      next_action_id: actionQueue[0]?.id || null,
+      nextActionReasonId: actionQueue[0]?.reasonId || null,
+      next_action_reason_id: actionQueue[0]?.reasonId || null,
+      nextActionReadoutIds: actionQueue[0]?.readoutIds ? [...actionQueue[0].readoutIds] : [],
+      next_action_readout_ids: actionQueue[0]?.readoutIds ? [...actionQueue[0].readoutIds] : [],
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+    return {
+      ...source,
+      schemaVersion: source.schemaVersion || source.schema_version || "readout_request_plan_gate_v1",
+      schema_version: source.schemaVersion || source.schema_version || "readout_request_plan_gate_v1",
+      state,
+      ready,
+      blocked: blockedReasonIds.length > 0,
+      blockedReasonCount: blockedReasonIds.length,
+      blocked_reason_count: blockedReasonIds.length,
+      blockedReasonIds,
+      blocked_reason_ids: [...blockedReasonIds],
+      blockedReasonById,
+      blocked_reason_by_id: blockedReasonById,
+      nextBlockedReasonId: blockedReasonIds[0] || null,
+      next_blocked_reason_id: blockedReasonIds[0] || null,
+      actionRequired: actionQueue.length > 0,
+      action_required: actionQueue.length > 0,
+      actionCount: actionQueue.length,
+      action_count: actionQueue.length,
+      actionIds,
+      action_ids: [...actionIds],
+      actionReasonIds,
+      action_reason_ids: [...actionReasonIds],
+      actionReadoutIds,
+      action_readout_ids: [...actionReadoutIds],
+      actionSummary,
+      action_summary: actionSummary,
+      actionQueue,
+      action_queue: actionQueue,
+      actionQueueById,
+      action_queue_by_id: actionQueueById,
+      actionQueueByReasonId,
+      action_queue_by_reason_id: actionQueueByReasonId,
+      actionQueueByReadoutId,
+      action_queue_by_readout_id: actionQueueByReadoutId,
+      nextAction: actionQueue[0] ? { ...actionQueue[0] } : null,
+      next_action: actionQueue[0] ? { ...actionQueue[0] } : null,
+      nextActionId: actionQueue[0]?.id || null,
+      next_action_id: actionQueue[0]?.id || null,
+      nextActionReasonId: actionQueue[0]?.reasonId || null,
+      next_action_reason_id: actionQueue[0]?.reasonId || null,
+      nextActionReadoutIds: actionQueue[0]?.readoutIds ? [...actionQueue[0].readoutIds] : [],
+      next_action_readout_ids: actionQueue[0]?.readoutIds ? [...actionQueue[0].readoutIds] : [],
+      totalCount,
+      total_count: totalCount,
+      mappedCount,
+      mapped_count: mappedCount,
+      unmappedCount,
+      unmapped_count: unmappedCount,
+      safeForBridgePlanning: plan.safeForBridgePlanning === true || plan.safe_for_bridge_planning === true,
+      safe_for_bridge_planning: plan.safeForBridgePlanning === true || plan.safe_for_bridge_planning === true,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function buildNextReadoutRequestSafetySummary(request = null, plan = null) {
     const normalizedRequest = normalizeReadoutRequestSummaryAliases(request);
     const normalizedPlan = normalizeReadoutRequestPlanSummaryAliases(plan);
@@ -14129,20 +14302,36 @@
     const dtcMetadataEvidenceSummary = normalizeSelectedDtcEvidenceSummary("dtcMetadataEvidenceSummary", "dtc_metadata_evidence_summary", "dtc_metadata_evidence_summary_v1");
     const dtcFaultDetectionCounterSummary = normalizeSelectedDtcEvidenceSummary("dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary", "dtc_fault_detection_counter_summary_v1");
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
-    const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummary?.primaryBlockingReason || readoutCompletionSummary?.primaryBlockingReason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || analysisReadinessSummary?.primaryBlockingReadoutRequest || readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || analysisReadinessSummary?.primaryBlockingSummary || readoutCompletionSummary?.primaryBlockingSummary || null;
     const pendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
-    const pendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
+    const savedPendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
+    const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan);
     const analysisChecklist = normalizeArray("analysisChecklist", "analysis_checklist");
     const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(
       summary.nextReadoutRequest || summary.next_readout_request || null,
       dtcStatusReadoutPlan
     );
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
+    const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
+    const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
+    const savedPlanNextRequestId = savedPlanNextRequest?.readoutId || savedPlanNextRequest?.readout_id || savedPlanNextRequest?.id || null;
+    const hasDtcPendingReadoutRequest = isDtcNextReadoutRequest
+      || savedPlanNextRequestId === "dtc_snapshot"
+      || pendingReadoutRequestQueue.some((item) => item?.readoutId === "dtc_snapshot");
+    const pendingReadoutRequestPlan = hasDtcPendingReadoutRequest
+      ? synchronizeDtcPendingReadoutRequestPlan(savedPendingReadoutRequestPlan, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
+      : savedPendingReadoutRequestPlan;
+    const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
+    const readoutRequestPlanGateSummary = hasDtcPendingReadoutRequest && pendingReadoutRequestPlan
+      ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan)
+      : savedReadoutRequestPlanGateSummary;
+    const pendingReadoutRequestQueueById = hasDtcPendingReadoutRequest
+      ? Object.fromEntries(pendingReadoutRequestQueue.map((item) => [item.readoutId, { ...item }]))
+      : normalizeObject("pendingReadoutRequestQueueById", "pending_readout_request_queue_by_id");
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(
       summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null,
       isDtcNextReadoutRequest ? nextReadoutRequest : null
@@ -14219,10 +14408,10 @@
       pending_readout_queue_summary: summary.pending_readout_queue_summary || summary.pendingReadoutQueueSummary || null,
       pendingReadoutRequestQueue,
       pending_readout_request_queue: pendingReadoutRequestQueue,
-      pendingReadoutRequestQueueById: normalizeObject("pendingReadoutRequestQueueById", "pending_readout_request_queue_by_id"),
-      pending_readout_request_queue_by_id: normalizeObject("pendingReadoutRequestQueueById", "pending_readout_request_queue_by_id"),
-      pendingReadoutRequestPlan: summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null,
-      pending_readout_request_plan: summary.pending_readout_request_plan || summary.pendingReadoutRequestPlan || null,
+      pendingReadoutRequestQueueById,
+      pending_readout_request_queue_by_id: pendingReadoutRequestQueueById,
+      pendingReadoutRequestPlan,
+      pending_readout_request_plan: pendingReadoutRequestPlan,
       readoutRequestPlanGateSummary,
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
       readoutRequestPlanSummary,
