@@ -11643,9 +11643,9 @@
         snapshot?.protocol_provenance?.diagnostic_protocol
       ])
       .filter(Boolean);
-    const dtcStatusSummary = dtcSnapshot?.dtcStatusSummary
-      || dtcSnapshot?.dtc_status_summary
-      || buildDtcStatusSummary({ dtcs: dtcSnapshot?.dtcs || [] });
+    const normalizedDtcStatusSnapshot = normalizeDtcStatusSummaryAliasesOnSnapshot(dtcSnapshot);
+    const dtcStatusSummary = normalizedDtcStatusSnapshot?.dtcStatusSummary
+      || buildDtcStatusSummary();
     const normalizedDtcReportedStatusSnapshot = normalizeDtcReportedStatusSummaryAliasesOnSnapshot(dtcSnapshot);
     const dtcReportedStatusSummary = normalizedDtcReportedStatusSnapshot?.dtcReportedStatusSummary
       || buildDtcReportedStatusSummary([]);
@@ -12747,7 +12747,10 @@
     const vehicleApplicabilityEvidencePresent = pickDefined(vehicleApplicabilityEvidenceSummary?.evidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, false) === true;
     const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
     const readoutQualitySummary = coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || readiness.readoutQualitySummary || readiness.readout_quality_summary || {};
-    const dtcStatusSummary = coreSessionStatus?.dtcStatusSummary || coreSessionStatus?.dtc_status_summary || {};
+    const dtcStatusSummary = normalizeDtcStatusSummaryAliases(
+      coreSessionStatus?.dtcStatusSummary,
+      coreSessionStatus?.dtc_status_summary
+    );
     const dtcReportedStatusSummary = normalizeDtcReportedStatusSummaryAliases(
       coreSessionStatus?.dtcReportedStatusSummary,
       coreSessionStatus?.dtc_reported_status_summary
@@ -14011,7 +14014,15 @@
     const readoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
     const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
-    const dtcStatusSummary = normalizeObject("dtcStatusSummary", "dtc_status_summary");
+    const fallbackDtcStatusAliases = [
+      fallbackDtcSnapshot?.dtcStatusSummary,
+      fallbackDtcSnapshot?.dtc_status_summary
+    ].filter(hasObjectContent);
+    const dtcStatusSummary = normalizeDtcStatusSummaryAliases(
+      ...(fallbackDtcStatusAliases.length > 0
+        ? fallbackDtcStatusAliases
+        : [summary.dtcStatusSummary, summary.dtc_status_summary])
+    );
     const fallbackDtcReportedStatusAliases = [
       fallbackDtcSnapshot?.dtcReportedStatusSummary,
       fallbackDtcSnapshot?.dtc_reported_status_summary
@@ -14232,7 +14243,15 @@
     const blockingWarningsChecklist = summary.blockingWarningsChecklist || summary.blocking_warnings_checklist || null;
     const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
-    const dtcStatusSummary = summary.dtcStatusSummary || summary.dtc_status_summary || {};
+    const fallbackDtcStatusAliases = [
+      fallbackCoreSessionStatus?.dtcStatusSummary,
+      fallbackCoreSessionStatus?.dtc_status_summary
+    ].filter(hasObjectContent);
+    const dtcStatusSummary = normalizeDtcStatusSummaryAliases(
+      ...(fallbackDtcStatusAliases.length > 0
+        ? fallbackDtcStatusAliases
+        : [summary.dtcStatusSummary, summary.dtc_status_summary])
+    );
     const fallbackDtcReportedStatusAliases = [
       fallbackCoreSessionStatus?.dtcReportedStatusSummary,
       fallbackCoreSessionStatus?.dtc_reported_status_summary
@@ -21465,24 +21484,35 @@
     };
   }
 
+  function normalizeDtcStatusSummaryAliases(...summaryInputs) {
+    const summaries = summaryInputs
+      .filter((summary) => summary && typeof summary === "object" && !Array.isArray(summary));
+    const collectStatuses = (camelKey, snakeKey) => summaries.flatMap((summary) => [
+      ...(Array.isArray(summary[camelKey]) ? summary[camelKey] : []),
+      ...(Array.isArray(summary[snakeKey]) ? summary[snakeKey] : [])
+    ]);
+    const observedStatuses = collectStatuses("observedStatuses", "observed_statuses");
+    return buildDtcStatusSummary({
+      reportedStatuses: collectStatuses("reportedStatuses", "reported_statuses"),
+      reportedCountOnlyStatuses: collectStatuses("reportedCountOnlyStatuses", "reported_count_only_statuses"),
+      dtcs: observedStatuses.map((status) => ({ status })),
+      includeObservedStatuses: true
+    });
+  }
+
   function normalizeDtcStatusSummaryAliasesOnSnapshot(snapshot = {}) {
     if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return snapshot;
     const dtcs = Array.isArray(snapshot.dtcs) ? snapshot.dtcs : [];
     const readoutStatus = String(snapshot.dtcReadoutStatus || snapshot.dtc_readout_status || "").trim().toLowerCase();
     const includeReportedEvidence = !["blocked", "unparsed", "not_supported", "unsupported", "unavailable"].includes(readoutStatus)
       && (readoutStatus === "reported" || dtcs.length > 0);
-    const summaries = [snapshot.dtcStatusSummary, snapshot.dtc_status_summary]
-      .filter((summary) => summary && typeof summary === "object" && !Array.isArray(summary));
-    const collectStatuses = (camelKey, snakeKey) => summaries.flatMap((summary) => [
-      ...(Array.isArray(summary[camelKey]) ? summary[camelKey] : []),
-      ...(Array.isArray(summary[snakeKey]) ? summary[snakeKey] : [])
-    ]);
-    const dtcStatusSummary = buildDtcStatusSummary({
-      reportedStatuses: includeReportedEvidence ? collectStatuses("reportedStatuses", "reported_statuses") : [],
-      reportedCountOnlyStatuses: includeReportedEvidence ? collectStatuses("reportedCountOnlyStatuses", "reported_count_only_statuses") : [],
-      dtcs: includeReportedEvidence ? dtcs : [],
-      includeObservedStatuses: includeReportedEvidence
-    });
+    const dtcStatusSummary = includeReportedEvidence
+      ? normalizeDtcStatusSummaryAliases(
+        snapshot.dtcStatusSummary,
+        snapshot.dtc_status_summary,
+        buildDtcStatusSummary({ dtcs })
+      )
+      : buildDtcStatusSummary({ includeObservedStatuses: false });
     return {
       ...snapshot,
       dtcStatusSummary,
