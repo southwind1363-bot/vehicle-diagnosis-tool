@@ -22784,9 +22784,7 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
-    const rows = Array.isArray(sourceInput)
-      ? input
-      : [
+    const rowCandidates = [
         sourceInput.ecus,
         sourceInput.modules,
         sourceInput.controllers,
@@ -22797,7 +22795,12 @@
         sourceInput.ecu_snapshots,
         sourceInput.ecuSnapshots,
         sourceInput.items
-      ].find(Array.isArray) || [];
+      ];
+    const rows = Array.isArray(sourceInput)
+      ? input
+      : rowCandidates.find((value) => Array.isArray(value) && value.length > 0)
+        || rowCandidates.find(Array.isArray)
+        || [];
     const rawEcus = rows.map((row, index) => {
       const id = String(row?.id || row?.ecu || row?.address || row?.source_ecu || row?.sourceEcu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
       const name = row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : row?.source_ecu_name ? String(row.source_ecu_name).slice(0, 120) : row?.sourceEcuName ? String(row.sourceEcuName).slice(0, 120) : row?.ecu_name ? String(row.ecu_name).slice(0, 120) : row?.ecuName ? String(row.ecuName).slice(0, 120) : row?.module_name ? String(row.module_name).slice(0, 120) : row?.moduleName ? String(row.moduleName).slice(0, 120) : null;
