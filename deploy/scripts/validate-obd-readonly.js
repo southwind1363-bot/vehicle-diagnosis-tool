@@ -3383,7 +3383,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2973件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('保存DTC診断フローを同期'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2979件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('ネスト保存DTCフローを同期'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3990,7 +3990,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "保存DTC診断フローを同期"'), "OBD core progress should describe the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "ネスト保存DTCフローを同期"'), "OBD core progress should describe the latest completed interface-reliability milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4318,7 +4318,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "保存DTC診断フローを同期"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "ネスト保存DTCフローを同期"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -24287,10 +24287,80 @@ const mixedUnsafeSavedDtcFlowSession = obd.buildDiagnosticScanSession({
 check(mixedUnsafeSavedDtcFlowSession?.importedDiagnosticFlowSummary?.pendingReadoutRequestQueue?.[0]?.bridgeIntent === "read_permanent_dtc" && mixedUnsafeSavedDtcFlowSession?.importedDiagnosticFlowSummary?.pendingReadoutRequestQueue?.[1]?.bridgeIntent === "read_readiness" && mixedUnsafeSavedDtcFlowSession?.importedDiagnosticFlowSummary?.pendingReadoutRequestQueue?.[1]?.wouldTransmit === true && mixedUnsafeSavedDtcFlowSession?.importedDiagnosticFlowSummary?.pendingReadoutRequestPlan?.safeForBridgePlanning === false && mixedUnsafeSavedDtcFlowSession?.importedDiagnosticFlowSummary?.readoutRequestPlanGateSummary?.state === "blocked", "Normalizing saved diagnostic flow DTC requests must preserve unrelated unsafe blockers");
 check(savedDtcDiagnosticFlowRoundTrip?.importedDiagnosticFlowSummary?.next_readout_request?.bridge_intent === "read_permanent_dtc" && savedDtcDiagnosticFlowRoundTrip?.importedDiagnosticFlowSummary?.pending_readout_request_queue?.[0]?.service_mode === "0A" && savedDtcDiagnosticFlowRoundTrip?.importedDiagnosticFlowSummary?.pending_readout_request_plan?.safe_for_bridge_planning === true && savedDtcDiagnosticFlowRoundTrip?.importedDiagnosticFlowSummary?.readout_request_plan_gate_summary?.state === "ready" && savedDtcDiagnosticFlowRoundTrip?.importedDiagnosticFlowSummary?.next_readout_reason_summary?.reason_id === "saved_flow_dtc_incomplete" && savedDtcDiagnosticFlowRoundTrip?.importedDiagnosticFlowSummary?.next_readout_guard_summary?.planning_ready === true && savedDtcDiagnosticFlowRoundTrip?.vehicleCommandEnabled === false && savedDtcDiagnosticFlowRoundTrip?.wouldTransmit === false, "Saved diagnostic flow DTC corrections were not retained through read-only export and JSON reimport");
 
+const nestedSavedDtcRequest = {
+  readout_id: "dtc_snapshot",
+  bridge_intent: "read_stored_dtc",
+  service_mode: "03",
+  execution_enabled: true,
+  read_only: false,
+  would_transmit: true,
+  vehicle_command_enabled: true
+};
+const nestedSavedDtcReason = {
+  schema_version: "next_readout_reason_summary_v1",
+  readout_id: "dtc_snapshot",
+  reason_id: "nested_saved_dtc_incomplete",
+  readout_request: nestedSavedDtcRequest,
+  bridge_intent: "read_stored_dtc",
+  service_mode: "03",
+  execution_enabled: true,
+  read_only: false,
+  would_transmit: true,
+  vehicle_command_enabled: true
+};
+const nestedSavedDtcGuard = {
+  schema_version: "next_readout_guard_summary_v1",
+  readout_id: "dtc_snapshot",
+  reason_id: "nested_saved_dtc_incomplete",
+  gate_state: "ready",
+  gate_ready: true,
+  request_safe: false,
+  read_only: false,
+  non_transmitting: false,
+  vehicle_command_disabled: false,
+  execution_disabled: false,
+  planning_ready: false,
+  bridge_intent: "read_stored_dtc",
+  service_mode: "03"
+};
+const nestedSavedDtcFlowSession = obd.buildDiagnosticScanSession({
+  imported_core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_status_summary: { reported_statuses: ["stored", "pending"], unreported_statuses: ["permanent"] },
+    core_workflow_summary: {
+      schema_version: "core_workflow_summary_v1",
+      next_readout_reason_summary: nestedSavedDtcReason,
+      next_readout_guard_summary: nestedSavedDtcGuard
+    },
+    analysis_readiness_summary: {
+      schema_version: "analysis_readiness_summary_v1",
+      next_readout_reason_summary: nestedSavedDtcReason,
+      next_readout_guard_summary: nestedSavedDtcGuard,
+      readout_request_plan_gate_summary: { schema_version: "readout_request_plan_gate_v1", state: "ready", ready: true, blocked: false, action_required: false }
+    }
+  }
+});
+const nestedSavedDtcFlowRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(nestedSavedDtcFlowSession)));
+const normalizedNestedSavedDtcCore = nestedSavedDtcFlowSession?.importedCoreSessionStatus;
+check(normalizedNestedSavedDtcCore?.nextReadoutRequest?.bridgeIntent === "read_permanent_dtc" && normalizedNestedSavedDtcCore?.nextReadoutRequest?.serviceMode === "0A" && normalizedNestedSavedDtcCore?.nextReadoutRequest?.readOnly === true && normalizedNestedSavedDtcCore?.nextReadoutRequest?.executionEnabled === false && normalizedNestedSavedDtcCore?.nextReadoutRequest?.wouldTransmit === false && normalizedNestedSavedDtcCore?.nextReadoutRequestSafetySummary?.safe === true, "Nested saved DTC workflow metadata did not recover the canonical next readout request");
+check(normalizedNestedSavedDtcCore?.nextReadoutReasonSummary?.reasonId === "nested_saved_dtc_incomplete" && normalizedNestedSavedDtcCore?.nextReadoutReasonSummary?.bridgeIntent === "read_permanent_dtc" && normalizedNestedSavedDtcCore?.nextReadoutReasonSummary?.serviceMode === "0A" && normalizedNestedSavedDtcCore?.nextReadoutGuardSummary?.requestSafe === true && normalizedNestedSavedDtcCore?.nextReadoutGuardSummary?.planningReady === true && normalizedNestedSavedDtcCore?.nextReadoutGuardSummary?.vehicleCommandDisabled === true, "Nested saved DTC workflow metadata did not synchronize top-level reason and guard summaries");
+check(normalizedNestedSavedDtcCore?.coreWorkflowSummary?.nextReadoutReasonSummary === normalizedNestedSavedDtcCore?.nextReadoutReasonSummary && normalizedNestedSavedDtcCore?.core_workflow_summary?.next_readout_reason_summary?.bridge_intent === "read_permanent_dtc" && normalizedNestedSavedDtcCore?.coreWorkflowSummary?.nextReadoutGuardSummary === normalizedNestedSavedDtcCore?.nextReadoutGuardSummary && normalizedNestedSavedDtcCore?.core_workflow_summary?.next_readout_guard_summary?.planning_ready === true, "Nested core workflow DTC reason and guard aliases were not synchronized");
+check(normalizedNestedSavedDtcCore?.analysisReadinessSummary?.nextReadoutReasonSummary === normalizedNestedSavedDtcCore?.nextReadoutReasonSummary && normalizedNestedSavedDtcCore?.analysis_readiness_summary?.next_readout_reason_summary?.service_mode === "0A" && normalizedNestedSavedDtcCore?.analysisReadinessSummary?.nextReadoutGuardSummary === normalizedNestedSavedDtcCore?.nextReadoutGuardSummary && normalizedNestedSavedDtcCore?.analysis_readiness_summary?.next_readout_guard_summary?.request_safe === true && normalizedNestedSavedDtcCore?.analysisReadinessSummary?.readoutRequestPlanGateSummary?.state === "ready", "Nested analysis readiness DTC reason, guard, and gate aliases were not synchronized");
+const nestedSavedNonDtcReason = { readout_id: "readiness_snapshot", reason_id: "keep_nested_non_dtc", bridge_intent: "read_readiness", service_mode: "01" };
+const nestedSavedNonDtcGuard = { readout_id: "readiness_snapshot", gate_state: "blocked", planning_ready: false, marker: "keep_nested_non_dtc_guard" };
+const nestedSavedNonDtcSession = obd.buildDiagnosticScanSession({
+  imported_core_session_status: {
+    core_workflow_summary: { marker: "keep_nested_non_dtc_workflow", next_readout_reason_summary: nestedSavedNonDtcReason, next_readout_guard_summary: nestedSavedNonDtcGuard },
+    analysis_readiness_summary: { marker: "keep_nested_non_dtc_readiness", next_readout_reason_summary: nestedSavedNonDtcReason, next_readout_guard_summary: nestedSavedNonDtcGuard }
+  }
+});
+check(nestedSavedNonDtcSession?.importedCoreSessionStatus?.nextReadoutRequest === null && nestedSavedNonDtcSession?.importedCoreSessionStatus?.coreWorkflowSummary?.marker === "keep_nested_non_dtc_workflow" && nestedSavedNonDtcSession?.importedCoreSessionStatus?.coreWorkflowSummary?.next_readout_guard_summary?.marker === "keep_nested_non_dtc_guard" && nestedSavedNonDtcSession?.importedCoreSessionStatus?.analysisReadinessSummary?.marker === "keep_nested_non_dtc_readiness" && nestedSavedNonDtcSession?.importedCoreSessionStatus?.nextReadoutReasonSummary?.reason_id === "keep_nested_non_dtc", "Nested non-DTC workflow metadata must preserve prior behavior without inferring a top-level request");
+check(nestedSavedDtcFlowRoundTrip?.importedCoreSessionStatus?.next_readout_request?.bridge_intent === "read_permanent_dtc" && nestedSavedDtcFlowRoundTrip?.importedCoreSessionStatus?.core_workflow_summary?.next_readout_reason_summary?.reason_id === "nested_saved_dtc_incomplete" && nestedSavedDtcFlowRoundTrip?.importedCoreSessionStatus?.coreWorkflowSummary?.next_readout_guard_summary?.service_mode === "0A" && nestedSavedDtcFlowRoundTrip?.importedCoreSessionStatus?.analysis_readiness_summary?.next_readout_reason_summary?.bridge_intent === "read_permanent_dtc" && nestedSavedDtcFlowRoundTrip?.importedCoreSessionStatus?.analysisReadinessSummary?.next_readout_guard_summary?.planning_ready === true && nestedSavedDtcFlowRoundTrip?.vehicleCommandEnabled === false && nestedSavedDtcFlowRoundTrip?.wouldTransmit === false, "Nested saved DTC workflow corrections were not retained through read-only export and JSON reimport");
+
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2973");
+  console.log("OBD read-only safety checks: 2979");
   console.log("Errors: 0");
 }

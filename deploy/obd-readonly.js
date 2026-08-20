@@ -14267,7 +14267,7 @@
     const analysisBlockers = normalizeIds(summary.analysisBlockers || summary.analysis_blockers);
     const blockingWarningIds = normalizeIds(summary.blockingWarningIds || summary.blocking_warning_ids);
     const readoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
-    const analysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
+    const analysisReadinessSummaryInput = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
     const fallbackDtcStatusAliases = [
       fallbackDtcSnapshot?.dtcStatusSummary,
@@ -14291,7 +14291,7 @@
       const directAliases = [summary[camelKey], summary[snakeKey]].filter(hasObjectContent);
       return directAliases.length > 0
         ? directAliases
-        : [analysisReadinessSummary?.[camelKey], analysisReadinessSummary?.[snakeKey]].filter(hasObjectContent);
+        : [analysisReadinessSummaryInput?.[camelKey], analysisReadinessSummaryInput?.[snakeKey]].filter(hasObjectContent);
     };
     const normalizeSelectedDtcEvidenceSummary = (camelKey, snakeKey, schemaVersion) => {
       const aliases = selectDtcEvidenceSummaryAliases(camelKey, snakeKey);
@@ -14302,22 +14302,73 @@
     const dtcMetadataEvidenceSummary = normalizeSelectedDtcEvidenceSummary("dtcMetadataEvidenceSummary", "dtc_metadata_evidence_summary", "dtc_metadata_evidence_summary_v1");
     const dtcFaultDetectionCounterSummary = normalizeSelectedDtcEvidenceSummary("dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary", "dtc_fault_detection_counter_summary_v1");
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
-    const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
+    const coreWorkflowSummaryInput = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
-    const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummary?.primaryBlockingReason || readoutCompletionSummary?.primaryBlockingReason || null;
-    const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || analysisReadinessSummary?.primaryBlockingReadoutRequest || readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
-    const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || analysisReadinessSummary?.primaryBlockingSummary || readoutCompletionSummary?.primaryBlockingSummary || null;
+    const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummaryInput?.primaryBlockingReason || readoutCompletionSummary?.primaryBlockingReason || null;
+    const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || analysisReadinessSummaryInput?.primaryBlockingReadoutRequest || readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
+    const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || analysisReadinessSummaryInput?.primaryBlockingSummary || readoutCompletionSummary?.primaryBlockingSummary || null;
     const pendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
     const savedPendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
     const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan);
     const analysisChecklist = normalizeArray("analysisChecklist", "analysis_checklist");
+    const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
+    const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
+    const savedNextReadoutSummary = summary.nextReadoutSummary || summary.next_readout_summary || null;
+    const savedNextReadoutReasonSummary = summary.nextReadoutReasonSummary
+      || summary.next_readout_reason_summary
+      || coreWorkflowSummaryInput?.nextReadoutReasonSummary
+      || coreWorkflowSummaryInput?.next_readout_reason_summary
+      || analysisReadinessSummaryInput?.nextReadoutReasonSummary
+      || analysisReadinessSummaryInput?.next_readout_reason_summary
+      || null;
+    const savedNextReadoutGuardSummary = summary.nextReadoutGuardSummary
+      || summary.next_readout_guard_summary
+      || coreWorkflowSummaryInput?.nextReadoutGuardSummary
+      || coreWorkflowSummaryInput?.next_readout_guard_summary
+      || analysisReadinessSummaryInput?.nextReadoutGuardSummary
+      || analysisReadinessSummaryInput?.next_readout_guard_summary
+      || null;
+    const toReadoutRequestCandidate = (input = null) => {
+      if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+      const nestedRequest = input.readoutRequest || input.readout_request || input.nextRequest || input.next_request || null;
+      if (nestedRequest && typeof nestedRequest === "object" && !Array.isArray(nestedRequest)) return nestedRequest;
+      const readoutId = input.readoutId || input.readout_id || input.id || null;
+      if (!readoutId) return null;
+      return {
+        readoutId,
+        readout_id: readoutId,
+        bridgeIntent: input.bridgeIntent || input.bridge_intent || null,
+        bridge_intent: input.bridgeIntent || input.bridge_intent || null,
+        serviceMode: input.serviceMode || input.service_mode || null,
+        service_mode: input.serviceMode || input.service_mode || null,
+        executionEnabled: pickDefined(input.executionEnabled, input.execution_enabled, false) === true,
+        execution_enabled: pickDefined(input.executionEnabled, input.execution_enabled, false) === true,
+        readOnly: pickDefined(input.readOnly, input.read_only, true) !== false,
+        read_only: pickDefined(input.readOnly, input.read_only, true) !== false,
+        wouldTransmit: pickDefined(input.wouldTransmit, input.would_transmit, false) === true,
+        would_transmit: pickDefined(input.wouldTransmit, input.would_transmit, false) === true,
+        vehicleCommandEnabled: pickDefined(input.vehicleCommandEnabled, input.vehicle_command_enabled, false) === true,
+        vehicle_command_enabled: pickDefined(input.vehicleCommandEnabled, input.vehicle_command_enabled, false) === true
+      };
+    };
+    const savedReadoutRequestPlanSummary = summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null;
+    const nestedNextReadoutRequestInput = toReadoutRequestCandidate(savedNextReadoutSummary)
+      || toReadoutRequestCandidate(savedNextReadoutReasonSummary)
+      || toReadoutRequestCandidate(savedNextReadoutGuardSummary)
+      || toReadoutRequestCandidate(savedReadoutRequestPlanSummary)
+      || savedPlanNextRequest
+      || pendingReadoutRequestQueue.find((item) => item?.isNext === true || item?.is_next === true)
+      || pendingReadoutRequestQueue[0]
+      || null;
+    const nestedNextReadoutRequestId = nestedNextReadoutRequestInput?.readoutId || nestedNextReadoutRequestInput?.readout_id || nestedNextReadoutRequestInput?.id || null;
+    const nextReadoutRequestInput = summary.nextReadoutRequest
+      || summary.next_readout_request
+      || (nestedNextReadoutRequestId === "dtc_snapshot" ? nestedNextReadoutRequestInput : null);
     const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(
-      summary.nextReadoutRequest || summary.next_readout_request || null,
+      nextReadoutRequestInput,
       dtcStatusReadoutPlan
     );
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
-    const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
-    const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
     const savedPlanNextRequestId = savedPlanNextRequest?.readoutId || savedPlanNextRequest?.readout_id || savedPlanNextRequest?.id || null;
     const hasDtcPendingReadoutRequest = isDtcNextReadoutRequest
       || savedPlanNextRequestId === "dtc_snapshot"
@@ -14325,7 +14376,13 @@
     const pendingReadoutRequestPlan = hasDtcPendingReadoutRequest
       ? synchronizeDtcPendingReadoutRequestPlan(savedPendingReadoutRequestPlan, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
       : savedPendingReadoutRequestPlan;
-    const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
+    const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(
+      summary.readoutRequestPlanGateSummary
+      || summary.readout_request_plan_gate_summary
+      || analysisReadinessSummaryInput?.readoutRequestPlanGateSummary
+      || analysisReadinessSummaryInput?.readout_request_plan_gate_summary
+      || null
+    );
     const readoutRequestPlanGateSummary = hasDtcPendingReadoutRequest && pendingReadoutRequestPlan
       ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan)
       : savedReadoutRequestPlanGateSummary;
@@ -14333,35 +14390,21 @@
       ? Object.fromEntries(pendingReadoutRequestQueue.map((item) => [item.readoutId, { ...item }]))
       : normalizeObject("pendingReadoutRequestQueueById", "pending_readout_request_queue_by_id");
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(
-      summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null,
+      savedReadoutRequestPlanSummary,
       isDtcNextReadoutRequest ? nextReadoutRequest : null
     );
-    const savedNextReadoutSummary = summary.nextReadoutSummary || summary.next_readout_summary || null;
     const nextReadoutSummary = isDtcNextReadoutRequest
       ? synchronizeDtcNextReadoutSummary(savedNextReadoutSummary, nextReadoutRequest)
       : savedNextReadoutSummary;
-    const savedNextReadoutReasonSummary = summary.nextReadoutReasonSummary
-      || summary.next_readout_reason_summary
-      || coreWorkflowSummary?.nextReadoutReasonSummary
-      || coreWorkflowSummary?.next_readout_reason_summary
-      || analysisReadinessSummary?.nextReadoutReasonSummary
-      || analysisReadinessSummary?.next_readout_reason_summary
-      || buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
+    const savedOrBuiltNextReadoutReasonSummary = savedNextReadoutReasonSummary || buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
     const nextReadoutReasonSummary = isDtcNextReadoutRequest
-      ? synchronizeDtcNextReadoutReasonSummary(savedNextReadoutReasonSummary, nextReadoutRequest)
-      : savedNextReadoutReasonSummary;
+      ? synchronizeDtcNextReadoutReasonSummary(savedOrBuiltNextReadoutReasonSummary, nextReadoutRequest)
+      : savedOrBuiltNextReadoutReasonSummary;
     const nextReadoutRequestSafetySummary = isDtcNextReadoutRequest
       ? buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary)
       : summary.nextReadoutRequestSafetySummary
         || summary.next_readout_request_safety_summary
         || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
-    const savedNextReadoutGuardSummary = summary.nextReadoutGuardSummary
-      || summary.next_readout_guard_summary
-      || coreWorkflowSummary?.nextReadoutGuardSummary
-      || coreWorkflowSummary?.next_readout_guard_summary
-      || analysisReadinessSummary?.nextReadoutGuardSummary
-      || analysisReadinessSummary?.next_readout_guard_summary
-      || null;
     const savedNextReadoutGuardGate = savedNextReadoutGuardSummary ? {
       state: savedNextReadoutGuardSummary.gateState || savedNextReadoutGuardSummary.gate_state || "unknown",
       ready: savedNextReadoutGuardSummary.gateReady === true || savedNextReadoutGuardSummary.gate_ready === true,
@@ -14371,6 +14414,26 @@
     const nextReadoutGuardSummary = isDtcNextReadoutRequest
       ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate)
       : savedNextReadoutGuardSummary || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
+    const coreWorkflowSummary = isDtcNextReadoutRequest && coreWorkflowSummaryInput
+      ? {
+        ...coreWorkflowSummaryInput,
+        nextReadoutReasonSummary,
+        next_readout_reason_summary: nextReadoutReasonSummary,
+        nextReadoutGuardSummary,
+        next_readout_guard_summary: nextReadoutGuardSummary
+      }
+      : coreWorkflowSummaryInput;
+    const analysisReadinessSummary = isDtcNextReadoutRequest && analysisReadinessSummaryInput
+      ? {
+        ...analysisReadinessSummaryInput,
+        readoutRequestPlanGateSummary,
+        readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+        nextReadoutReasonSummary,
+        next_readout_reason_summary: nextReadoutReasonSummary,
+        nextReadoutGuardSummary,
+        next_readout_guard_summary: nextReadoutGuardSummary
+      }
+      : analysisReadinessSummaryInput;
     const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, analysisReadinessSummary?.ready, false) === true;
     return {
       ...summary,
