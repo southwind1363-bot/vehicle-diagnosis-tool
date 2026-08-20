@@ -8864,22 +8864,34 @@
     };
   }
 
-  function normalizeReadoutRequestPlanSummaryAliases(input = null) {
-    if (!input || typeof input !== "object") return input || null;
-    const nextRequest = normalizeReadoutRequestSummaryAliases(input.nextRequest || input.next_request || null);
-    const nextRequestId = input.nextRequestId || input.next_request_id || nextRequest?.readoutId || null;
-    const nextBridgeIntent = input.nextBridgeIntent || input.next_bridge_intent || nextRequest?.bridgeIntent || null;
-    const nextServiceMode = input.nextServiceMode || input.next_service_mode || nextRequest?.serviceMode || null;
-    const nextExecutionEnabled = pickDefined(input.nextExecutionEnabled, input.next_execution_enabled, nextRequest?.executionEnabled, nextRequest?.execution_enabled, false) === true;
-    const nextReadOnly = pickDefined(input.nextReadOnly, input.next_read_only, nextRequest?.readOnly, nextRequest?.read_only, true) !== false;
-    const nextWouldTransmit = pickDefined(input.nextWouldTransmit, input.next_would_transmit, nextRequest?.wouldTransmit, nextRequest?.would_transmit, false) === true;
-    const nextVehicleCommandEnabled = pickDefined(input.nextVehicleCommandEnabled, input.next_vehicle_command_enabled, nextRequest?.vehicleCommandEnabled, nextRequest?.vehicle_command_enabled, false) === true;
-    const readOnly = pickDefined(input.readOnly, input.read_only, true) !== false;
-    const retainedRawText = pickDefined(input.retainedRawText, input.retained_raw_text, false) === true;
-    const wouldTransmit = pickDefined(input.wouldTransmit, input.would_transmit, false) === true;
-    const vehicleCommandEnabled = pickDefined(input.vehicleCommandEnabled, input.vehicle_command_enabled, false) === true;
+  function normalizeReadoutRequestPlanSummaryAliases(input = null, fallbackNextRequest = null) {
+    const hasInput = Boolean(input && typeof input === "object" && !Array.isArray(input));
+    if (!hasInput && (!fallbackNextRequest || typeof fallbackNextRequest !== "object")) return input || null;
+    const sourceInput = hasInput ? input : {};
+    const savedNextRequest = normalizeReadoutRequestSummaryAliases(sourceInput.nextRequest || sourceInput.next_request || null);
+    const nextRequest = fallbackNextRequest || savedNextRequest;
+    const hasFallbackNextRequest = Boolean(fallbackNextRequest && typeof fallbackNextRequest === "object");
+    const nextRequestId = hasFallbackNextRequest ? nextRequest?.readoutId || null : sourceInput.nextRequestId || sourceInput.next_request_id || nextRequest?.readoutId || null;
+    const nextBridgeIntent = hasFallbackNextRequest ? nextRequest?.bridgeIntent || null : sourceInput.nextBridgeIntent || sourceInput.next_bridge_intent || nextRequest?.bridgeIntent || null;
+    const nextServiceMode = hasFallbackNextRequest ? nextRequest?.serviceMode || null : sourceInput.nextServiceMode || sourceInput.next_service_mode || nextRequest?.serviceMode || null;
+    const nextExecutionEnabled = hasFallbackNextRequest
+      ? nextRequest?.executionEnabled === true
+      : pickDefined(sourceInput.nextExecutionEnabled, sourceInput.next_execution_enabled, nextRequest?.executionEnabled, nextRequest?.execution_enabled, false) === true;
+    const nextReadOnly = hasFallbackNextRequest
+      ? nextRequest?.readOnly !== false
+      : pickDefined(sourceInput.nextReadOnly, sourceInput.next_read_only, nextRequest?.readOnly, nextRequest?.read_only, true) !== false;
+    const nextWouldTransmit = hasFallbackNextRequest
+      ? nextRequest?.wouldTransmit === true
+      : pickDefined(sourceInput.nextWouldTransmit, sourceInput.next_would_transmit, nextRequest?.wouldTransmit, nextRequest?.would_transmit, false) === true;
+    const nextVehicleCommandEnabled = hasFallbackNextRequest
+      ? nextRequest?.vehicleCommandEnabled === true
+      : pickDefined(sourceInput.nextVehicleCommandEnabled, sourceInput.next_vehicle_command_enabled, nextRequest?.vehicleCommandEnabled, nextRequest?.vehicle_command_enabled, false) === true;
+    const readOnly = hasFallbackNextRequest ? nextReadOnly : pickDefined(sourceInput.readOnly, sourceInput.read_only, true) !== false;
+    const retainedRawText = pickDefined(sourceInput.retainedRawText, sourceInput.retained_raw_text, false) === true;
+    const wouldTransmit = hasFallbackNextRequest ? nextWouldTransmit : pickDefined(sourceInput.wouldTransmit, sourceInput.would_transmit, false) === true;
+    const vehicleCommandEnabled = hasFallbackNextRequest ? nextVehicleCommandEnabled : pickDefined(sourceInput.vehicleCommandEnabled, sourceInput.vehicle_command_enabled, false) === true;
     return {
-      ...input,
+      ...sourceInput,
       nextRequest,
       next_request: nextRequest,
       nextRequestId,
@@ -14065,7 +14077,6 @@
     const dtcFaultDetectionCounterSummary = normalizeSelectedDtcEvidenceSummary("dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary", "dtc_fault_detection_counter_summary_v1");
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
-    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
     const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummary?.primaryBlockingReason || readoutCompletionSummary?.primaryBlockingReason || null;
@@ -14078,6 +14089,11 @@
       summary.nextReadoutRequest || summary.next_readout_request || null,
       dtcStatusReadoutPlan
     );
+    const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
+    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(
+      summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null,
+      isDtcNextReadoutRequest ? nextReadoutRequest : null
+    );
     const nextReadoutSummary = summary.nextReadoutSummary || summary.next_readout_summary || null;
     const nextReadoutReasonSummary = summary.nextReadoutReasonSummary
       || summary.next_readout_reason_summary
@@ -14086,9 +14102,11 @@
       || analysisReadinessSummary?.nextReadoutReasonSummary
       || analysisReadinessSummary?.next_readout_reason_summary
       || buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
-    const nextReadoutRequestSafetySummary = summary.nextReadoutRequestSafetySummary
-      || summary.next_readout_request_safety_summary
-      || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const nextReadoutRequestSafetySummary = isDtcNextReadoutRequest
+      ? buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary)
+      : summary.nextReadoutRequestSafetySummary
+        || summary.next_readout_request_safety_summary
+        || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
     const nextReadoutGuardSummary = summary.nextReadoutGuardSummary
       || summary.next_readout_guard_summary
       || coreWorkflowSummary?.nextReadoutGuardSummary
