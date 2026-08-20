@@ -2046,11 +2046,22 @@
       return latestEntry ? buildNativeConnectorSnapshotInput(latestEntry.envelope, latestEntry.evaluation) : {};
     }
     if (successfulEntries.length === 1) return buildNativeConnectorSnapshotInput(successfulEntries[0].envelope, successfulEntries[0].evaluation);
+    const firstScopedArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
     const rowsWithScope = (data, aliases, scopeId) => {
-      const values = aliases.map((key) => data?.[key]).find(Array.isArray) || [];
+      const values = firstScopedArray(...aliases.map((key) => data?.[key]));
       return values.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
         ? { ...row, source_ecu: scopeId }
         : row);
+    };
+    const scopedRowsOrRaw = (data, ...values) => {
+      const rows = firstScopedArray(...values);
+      return rows.length > 0
+        ? rows
+        : data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes)
+          ? [data]
+          : rows;
     };
     const scopedData = successfulEntries.map(({ envelope, evaluation }) => ({
       data: envelope?.data && typeof envelope.data === "object" ? envelope.data : {},
@@ -2076,8 +2087,7 @@
     }
     if (readoutId === "live_pid_snapshot") {
       const livePidEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
-        const rows = [data.live_pid_ecu_snapshots, data.livePidEcuSnapshots, data.ecu_snapshots, data.ecuSnapshots, data.ecu_responses, data.ecuResponses].find(Array.isArray)
-          || (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
+        const rows = scopedRowsOrRaw(data, data.live_pid_ecu_snapshots, data.livePidEcuSnapshots, data.ecu_snapshots, data.ecuSnapshots, data.ecu_responses, data.ecuResponses);
         return rows.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
           ? { ...row, source_ecu: scopeId }
           : row).filter(Boolean);
@@ -2100,7 +2110,8 @@
           .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
           .filter(Boolean),
         readiness_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
-          const rows = Array.isArray(data.readiness_ecu_snapshots) ? data.readiness_ecu_snapshots : Array.isArray(data.readinessEcuSnapshots) ? data.readinessEcuSnapshots : [data];
+          const snapshotRows = firstScopedArray(data.readiness_ecu_snapshots, data.readinessEcuSnapshots);
+          const rows = snapshotRows.length > 0 ? snapshotRows : [data];
           return rows.map((row) => {
             const rawResponse = row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
             return {
@@ -2114,7 +2125,8 @@
     }
     if (readoutId === "supported_pid_matrix") {
       const supportedPidEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
-        const rows = Array.isArray(data.supported_pid_ecu_snapshots) ? data.supported_pid_ecu_snapshots : Array.isArray(data.supportedPidEcuSnapshots) ? data.supportedPidEcuSnapshots : [data];
+        const snapshotRows = firstScopedArray(data.supported_pid_ecu_snapshots, data.supportedPidEcuSnapshots);
+        const rows = snapshotRows.length > 0 ? snapshotRows : [data];
         return rows.map((row) => {
           const rawResponse = row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
           return {
@@ -2124,11 +2136,11 @@
           };
         });
       });
-      const supportedPids = [...new Set(supportedPidEcuSnapshots.flatMap((row) => row.supported_pids || row.supportedPids || row.pids || []))]
+      const supportedPids = [...new Set(supportedPidEcuSnapshots.flatMap((row) => firstScopedArray(row.supported_pids, row.supportedPids, row.pids)))]
         .map((pid) => String(pid?.pid || pid?.code || pid?.id || pid?.value || pid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0"))
         .filter(Boolean)
         .sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
-      const supportedPidPageBases = [...new Set(supportedPidEcuSnapshots.flatMap((row) => row.supported_pid_page_bases || row.supportedPidPageBases || row.queried_pid_bases || row.queriedPidBases || []))]
+      const supportedPidPageBases = [...new Set(supportedPidEcuSnapshots.flatMap((row) => firstScopedArray(row.supported_pid_page_bases, row.supportedPidPageBases, row.queried_pid_bases, row.queriedPidBases)))]
         .map((pid) => String(pid?.pid || pid?.base || pid?.value || pid || "").toUpperCase().replace(/^0X/, "").padStart(2, "0"))
         .filter(Boolean)
         .sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
@@ -2144,11 +2156,16 @@
     }
     if (readoutId === "ecu_info_snapshot") {
       const ecuInfoEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
-        const rows = [data.ecu_info_ecu_snapshots, data.ecuInfoEcuSnapshots, data.ecu_snapshots, data.ecuSnapshots, data.ecu_responses, data.ecuResponses].find(Array.isArray)
-          || (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
-        return rows.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
-          ? { ...row, source_ecu: scopeId }
-          : row).filter(Boolean);
+        const rows = scopedRowsOrRaw(data, data.ecu_info_ecu_snapshots, data.ecuInfoEcuSnapshots, data.ecu_snapshots, data.ecuSnapshots, data.ecu_responses, data.ecuResponses);
+        return rows.map((row) => {
+          if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+          const rawResponse = row.raw ?? row.response ?? (Array.isArray(row.bytes) ? row.bytes : null);
+          return {
+            ...row,
+            ...(row.ecu_info_readout_status || row.ecuInfoReadoutStatus || row.readout_status || row.readoutStatus || rawResponse !== null ? {} : { ecu_info_readout_status: "reported" }),
+            ...(scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row) ? { source_ecu: scopeId } : {})
+          };
+        }).filter(Boolean);
       });
       return {
         captured_at: capturedAt,
@@ -2163,7 +2180,7 @@
     }
     if (readoutId === "onboard_monitor_snapshot") {
       const onboardMonitorEcuSnapshots = scopedData.flatMap(({ data, scopeId }) => {
-        const rows = [
+        const rows = scopedRowsOrRaw(data,
           data.onboard_monitor_ecu_snapshots,
           data.onboardMonitorEcuSnapshots,
           data.mode06_ecu_snapshots,
@@ -2172,7 +2189,7 @@
           data.ecuSnapshots,
           data.ecu_responses,
           data.ecuResponses
-        ].find(Array.isArray) || (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
+        );
         return rows.map((row) => row && typeof row === "object" && !Array.isArray(row) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(row)
           ? { ...row, source_ecu: scopeId }
           : row).filter(Boolean);
@@ -2197,19 +2214,14 @@
           .map(({ scopeId }) => scopeId === "LEGACY" ? null : scopeId)
           .filter(Boolean),
         trigger_dtc_entries: scopedData.flatMap(({ data, scopeId }) => {
-          const entries = Array.isArray(data.trigger_dtc_entries)
-            ? data.trigger_dtc_entries
-            : Array.isArray(data.triggerDtcEntries)
-              ? data.triggerDtcEntries
-              : Array.isArray(data.freeze_frame_trigger_entries)
-                ? data.freeze_frame_trigger_entries
-                : Array.isArray(data.freezeFrameTriggerEntries)
-                  ? data.freezeFrameTriggerEntries
-                  : Array.isArray(data.associated_dtc_entries)
-                    ? data.associated_dtc_entries
-                    : Array.isArray(data.associatedDtcEntries)
-                      ? data.associatedDtcEntries
-                      : [];
+          const entries = firstScopedArray(
+            data.trigger_dtc_entries,
+            data.triggerDtcEntries,
+            data.freeze_frame_trigger_entries,
+            data.freezeFrameTriggerEntries,
+            data.associated_dtc_entries,
+            data.associatedDtcEntries
+          );
           const fallbackCode = data.trigger_dtc || data.triggerDtc || data.trigger_code || data.triggerCode || data.freeze_dtc || data.freezeDtc || data.associated_dtc || data.associatedDtc || data.dtc || null;
           const rows = fallbackCode && !entries.some((item) => String(item?.code || item?.dtc || item || "").trim().toUpperCase() === String(fallbackCode).trim().toUpperCase())
             ? [...entries, { code: fallbackCode }]
@@ -2227,11 +2239,7 @@
         }),
         monitor_values: scopedData.flatMap(({ data, scopeId }) => rowsWithScope(data, ["monitor_values", "monitorValues", "values", "items", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues"], scopeId)),
         freeze_frame_ecu_snapshots: scopedData.flatMap(({ data, scopeId }) => {
-          const snapshots = Array.isArray(data.freeze_frame_ecu_snapshots)
-            ? data.freeze_frame_ecu_snapshots
-            : Array.isArray(data.freezeFrameEcuSnapshots)
-              ? data.freezeFrameEcuSnapshots
-              : (data.raw !== undefined || data.response !== undefined || Array.isArray(data.bytes) ? [data] : []);
+          const snapshots = scopedRowsOrRaw(data, data.freeze_frame_ecu_snapshots, data.freezeFrameEcuSnapshots);
           return snapshots.map((snapshot) => snapshot && typeof snapshot === "object" && !Array.isArray(snapshot) && scopeId !== "LEGACY" && !readNativeConnectorDataScopeId(snapshot)
             ? { ...snapshot, source_ecu: scopeId }
             : snapshot);
