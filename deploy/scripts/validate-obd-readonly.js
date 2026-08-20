@@ -240,7 +240,7 @@ const commonCoreWarningsFunctionSource = source.match(/function appendCommonCore
 const warningListFunctionSource = source.match(/function resolveWarningList[\s\S]*?return mergeUniqueStrings\(\.\.\.warningSets\);\r?\n  \}/);
 const mergeDiagnosticInputsFunctionSource = source.match(/function mergeDiagnosticInputs[\s\S]*?vehicleCommandEnabled: false\r?\n    \};\r?\n  \}/);
 const readoutCoverageInputFunctionSource = source.match(/function getReadoutCoverageInput[\s\S]*?return input\.readoutCoverage \|\| input\.readout_coverage \|\| input\.readoutCoverageResponse \|\| input\.readout_coverage_response \|\| null;\r?\n  \}/);
-const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?return explicitSummary \|\| buildMonitorValueSummary\(monitorValues\);\r?\n  \}/);
+const monitorValueSummaryFunctionSource = source.match(/function resolveMonitorValueSummary[\s\S]*?text_count: textCount\r?\n    \};\r?\n  \}/);
 const buildMonitorValueSummaryFunctionSource = source.match(/function buildMonitorValueSummary[\s\S]*?text_count: textCount\r?\n    \};\r?\n  \}/);
 const analyzeMonitorValuesFunctionSource = source.match(/function analyzeMonitorValues[\s\S]*?return insights\.slice\(0, 6\);\r?\n  \}/);
 const fuelTrimInsightFunctionSource = source.match(/function addFuelTrimInsight[\s\S]*?\r?\n  \}/);
@@ -669,7 +669,7 @@ const bridgePidValueFunctionChecks = () => {
     check(functionBody.includes('row.id || row.monitor_id || row.monitorId || row.sensor_id || row.sensorId || row.pid') && functionBody.includes('row.pid_id || row.pidId'), "normalizeBridgePidValue should accept PID and monitor id aliases");
     check(functionBody.includes('monitorDefinitions.find((item) => item.id === id)') && functionBody.includes('const pidAliases = [row.pid, row.code, row.pid_code, row.pidCode, row.pid_id, row.pidId]') && functionBody.includes('pidAliases.includes(item.pid)') && functionBody.includes('isMonitorLabelMatch(normalizedLabelAlias, alias)'), "normalizeBridgePidValue should resolve monitor definitions by id, PID, and label aliases");
     check(functionBody.includes('bridgeComputedPidDefinitions[id]'), "normalizeBridgePidValue should preserve computed bridge PID definitions");
-    check(functionBody.includes('const decodedAlias = pickDefined(row.decoded, row.is_decoded, row.isDecoded);') && functionBody.includes('const rawValueType = String(pickDefined(row.value_type, row.valueType, "")).trim().toLowerCase();') && functionBody.includes('rawValueType === "raw_hex"'), "normalizeBridgePidValue should preserve undecoded raw value aliases");
+    check(functionBody.includes('const decodedAlias = pickDefined(row.decoded, row.is_decoded, row.isDecoded);') && functionBody.includes('const undecodedRawAlias = pickDefined(row.undecodedRaw, row.undecoded_raw, row.isUndecodedRaw, row.is_undecoded_raw);') && functionBody.includes('isExplicitTrueFlag(undecodedRawAlias)') && functionBody.includes('const rawValueType = String(pickDefined(row.value_type, row.valueType, "")).trim().toLowerCase();') && functionBody.includes('rawValueType === "raw_hex"'), "normalizeBridgePidValue should preserve undecoded raw value aliases");
     check(functionBody.includes('row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue'), "normalizeBridgePidValue should accept value aliases");
     check(functionBody.includes('typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number"'), "normalizeBridgePidValue should infer text versus numeric values from raw value shape");
     check(functionBody.includes('if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;'), "normalizeBridgePidValue should reject non-finite numeric values unless they are raw undecoded values");
@@ -1442,7 +1442,7 @@ const monitorValueSummaryFunctionChecks = () => {
   if (monitorValueSummaryFunctionSource) {
     const functionBody = monitorValueSummaryFunctionSource[0];
     check(functionBody.includes('function resolveMonitorValueSummary(monitorValues = [], explicitSummary = null)'), "resolveMonitorValueSummary should default monitor values and explicit summary inputs");
-    check(functionBody.includes('return explicitSummary || buildMonitorValueSummary(monitorValues);'), "resolveMonitorValueSummary should prefer explicit summaries before rebuilding from monitor values");
+    check(functionBody.includes('const calculated = buildMonitorValueSummary(monitorValues);') && functionBody.includes('const undecodedRawCount = Math.max(calculated.undecodedRawCount, readCount("undecodedRawCount", "undecoded_raw_count"));') && functionBody.includes('total_count: totalCount') && functionBody.includes('undecoded_raw_count: undecodedRawCount'), "resolveMonitorValueSummary should combine calculated values with camelCase and snake_case explicit summaries without undercounting raw values");
   }
 };
 const buildMonitorValueSummaryFunctionChecks = () => {
@@ -1450,7 +1450,7 @@ const buildMonitorValueSummaryFunctionChecks = () => {
   if (buildMonitorValueSummaryFunctionSource) {
     const functionBody = buildMonitorValueSummaryFunctionSource[0];
     check(functionBody.includes('const rows = Array.isArray(values) ? values : [];'), "buildMonitorValueSummary should treat non-array input as empty rows");
-    check(functionBody.includes('item?.decoded === false || item?.valueType === "raw_hex"'), "buildMonitorValueSummary should count undecoded raw values from decoded=false or raw_hex type");
+    check(functionBody.includes('item?.decoded === false') && functionBody.includes('item?.valueType === "raw_hex"') && functionBody.includes('item?.value_type === "raw_hex"') && functionBody.includes('item?.undecodedRaw === true') && functionBody.includes('item?.undecoded_raw === true'), "buildMonitorValueSummary should count undecoded raw values from decoded, value type, and explicit raw aliases");
     check(functionBody.includes('Number.isFinite(item?.value)'), "buildMonitorValueSummary should count numeric values only from finite numeric values");
     check(functionBody.includes('const decodedCount = Math.max(0, rows.length - undecodedRawCount);'), "buildMonitorValueSummary should derive decoded count without going below zero");
     check(functionBody.includes('numericCount,') && functionBody.includes('textCount'), "buildMonitorValueSummary should expose numeric and text counts");
@@ -3383,7 +3383,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2933件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('コア読取在庫の別名件数を統一'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2935件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('未換算RAW品質の別名・再読込を統一'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3990,7 +3990,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "コア読取在庫の別名件数を統一"'), "OBD core progress should describe the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "未換算RAW品質の別名・再読込を統一"'), "OBD core progress should describe the latest completed interface-reliability milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4318,7 +4318,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "コア読取在庫の別名件数を統一"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "未換算RAW品質の別名・再読込を統一"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -16527,6 +16527,34 @@ check(rawPidScanSession.warnings.includes("raw_pid_values_need_conversion"), "�
 check(rawPidScanSession.coreSessionStatus?.readoutQualitySummary?.rawPidUndecodedCount === 2 && rawPidScanSession.coreSessionStatus.readoutQualitySummary.issueIds.includes("raw_pid_values_need_conversion"), "Diagnostic scan session did not expose raw PID readout quality issues");
 check(rawPidScanSession.coreSessionStatus?.readoutQualitySummary?.raw_pid_undecoded_count === 2 && rawPidScanSession.coreSessionStatus.readoutQualitySummary.issue_ids.includes("raw_pid_values_need_conversion"), "Diagnostic scan session did not expose raw PID readout quality snake_case aliases");
 check(rawPidScanSession.diagnosticFlowSummary?.rawPidUndecodedCount === 2 && rawPidScanSession.diagnosticFlowSummary?.readoutQualityReviewRequired === true, "Diagnostic flow summary did not expose raw PID readout quality review state");
+const structuredRawAliasQualitySession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    schemaVersion: "live_pid_snapshot_v1",
+    live_pid_readout_status: "reported",
+    monitorValues: [{ id: "turbo_temp", pid: "75", value: "01 90", unit: "C", undecoded_raw: true }],
+    monitor_value_summary: { total_count: 1, undecoded_raw_count: 1 }
+  },
+  freeze_frame_snapshot: {
+    schemaVersion: "freeze_frame_snapshot_v1",
+    freeze_frame_readout_status: "reported",
+    monitorValues: [{ id: "turbo_temp", pid: "75", value: "00 01 90", unit: "C", undecodedRaw: true }]
+  }
+});
+const structuredRawAliasQualityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(structuredRawAliasQualitySession)));
+check([structuredRawAliasQualitySession, structuredRawAliasQualityRoundTrip].every((session) => session.coreReadoutInventorySummary?.rawPidUndecodedCount === 2 && session.readoutQualitySummary?.rawPidUndecodedCount === 2 && session.readoutQualitySummary?.issueIds?.includes("raw_pid_values_need_conversion") && session.warnings?.includes("raw_pid_values_need_conversion") && session.vehicleCommandEnabled === false && session.wouldTransmit === false), "Structured undecoded RAW PID aliases lost quality review state through read-only export and reimport");
+const unavailableStructuredRawQualitySession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: { schemaVersion: "live_pid_snapshot_v1", live_pid_readout_status: "unparsed", monitorValues: [{ id: "turbo_temp", pid: "75", value: "01 90", unit: "C", undecoded_raw: true }] }
+});
+const canonicalRawSummaryQualitySession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    schemaVersion: "live_pid_snapshot_v1",
+    live_pid_readout_status: "reported",
+    monitorValues: [{ id: "turbo_temp", pid: "75", value: "01 90", unit: "C", decoded: false }],
+    monitorValueSummary: { totalCount: 1, undecodedRawCount: 1 },
+    monitor_value_summary: { total_count: 2, undecoded_raw_count: 2 }
+  }
+});
+check(unavailableStructuredRawQualitySession.coreReadoutInventorySummary?.rawPidUndecodedCount === 0 && unavailableStructuredRawQualitySession.readoutQualitySummary?.rawPidUndecodedCount === 0 && !unavailableStructuredRawQualitySession.readoutQualitySummary?.issueIds?.includes("raw_pid_values_need_conversion") && canonicalRawSummaryQualitySession.readoutQualitySummary?.rawPidUndecodedCount === 1 && canonicalRawSummaryQualitySession.diagnosticFlowSummary?.readoutQualityReviewRequired === true, "RAW PID quality alias handling overrode explicit failure state or canonical summary priority");
 const obdTextLog = [
   ">03",
   "7E8 06 43 01 71 03 00 00 00",
@@ -23713,6 +23741,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2933");
+  console.log("OBD read-only safety checks: 2935");
   console.log("Errors: 0");
 }

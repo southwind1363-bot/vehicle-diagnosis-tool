@@ -5862,9 +5862,11 @@
       || bridgeComputedPidDefinitions[id];
     if (!definition) return null;
     const decodedAlias = pickDefined(row.decoded, row.is_decoded, row.isDecoded);
+    const undecodedRawAlias = pickDefined(row.undecodedRaw, row.undecoded_raw, row.isUndecodedRaw, row.is_undecoded_raw);
     const rawValueType = String(pickDefined(row.value_type, row.valueType, "")).trim().toLowerCase();
     const isUndecodedRaw = decodedAlias === false
       || ["false", "0", "no", "raw", "raw_hex", "undecoded"].includes(String(decodedAlias ?? "").trim().toLowerCase())
+      || isExplicitTrueFlag(undecodedRawAlias)
       || rawValueType === "raw_hex";
     const rawValue = row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null;
     const valueType = definition?.valueType || row.value_type || row.valueType || (typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number");
@@ -5903,9 +5905,14 @@
 
   function buildMonitorValueSummary(values = []) {
     const rows = Array.isArray(values) ? values : [];
-    const undecodedRawCount = rows.filter((item) => item?.decoded === false || item?.valueType === "raw_hex").length;
-    const numericCount = rows.filter((item) => item?.valueType !== "text" && item?.valueType !== "raw_hex" && Number.isFinite(item?.value)).length;
-    const textCount = rows.filter((item) => item?.valueType === "text").length;
+    const isUndecodedRaw = (item) => item?.decoded === false
+      || item?.valueType === "raw_hex"
+      || item?.value_type === "raw_hex"
+      || item?.undecodedRaw === true
+      || item?.undecoded_raw === true;
+    const undecodedRawCount = rows.filter(isUndecodedRaw).length;
+    const numericCount = rows.filter((item) => !isUndecodedRaw(item) && item?.valueType !== "text" && item?.value_type !== "text" && Number.isFinite(item?.value)).length;
+    const textCount = rows.filter((item) => !isUndecodedRaw(item) && (item?.valueType === "text" || item?.value_type === "text")).length;
     const totalCount = rows.length;
     const decodedCount = Math.max(0, rows.length - undecodedRawCount);
     return {
@@ -6621,6 +6628,8 @@
       freezeFrameSnapshot?.freezeFrameValues,
       freezeFrameSnapshot?.freeze_frame_values
     );
+    const livePidMonitorValueSummary = resolveMonitorValueSummary(livePidValueEntries, livePidSnapshot?.monitorValueSummary || livePidSnapshot?.monitor_value_summary || null);
+    const freezeFrameMonitorValueSummary = resolveMonitorValueSummary(freezeFrameValueEntries, freezeFrameSnapshot?.monitorValueSummary || freezeFrameSnapshot?.monitor_value_summary || null);
     const ecuInfoItemEntries = firstPopulatedInventoryArray(ecuInfoSnapshot?.items, ecuInfoSnapshot?.values, ecuInfoSnapshot?.ecu_info_items, ecuInfoSnapshot?.ecuInfoItems);
     const onboardMonitorTestEntries = firstPopulatedInventoryArray(
       onboardMonitorSnapshot?.tests,
@@ -7274,8 +7283,8 @@
       onboard_monitor_reported_ecu_value_keys: [...onboardMonitorReportedEcuValueKeys],
       readinessIncompleteCount: isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? numericCount(readinessSnapshot?.incompleteCount) : 0,
       ecuInfoMissingKeyCount: isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? numericCount(ecuInfoSnapshot?.keyItemSummary?.missingCount) : 0,
-      rawPidUndecodedCount: (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? numericCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount) : 0)
-        + (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? numericCount(freezeFrameSnapshot?.monitorValueSummary?.undecodedRawCount) : 0)
+      rawPidUndecodedCount: (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? numericCount(livePidMonitorValueSummary?.undecodedRawCount, livePidMonitorValueSummary?.undecoded_raw_count) : 0)
+        + (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? numericCount(freezeFrameMonitorValueSummary?.undecodedRawCount, freezeFrameMonitorValueSummary?.undecoded_raw_count) : 0)
     };
   }
 
@@ -9626,7 +9635,10 @@
       liveDataWarning: "compare_values_under_same_conditions",
       hasLiveData: monitorValues.length > 0,
       livePidSnapshot,
-      rawPidUndecodedCount: (hasDirectMonitorEvidence ? monitorValueSummary?.undecodedRawCount || 0 : isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0 : 0) + (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0 : 0),
+      rawPidUndecodedCount: (hasDirectMonitorEvidence
+        ? monitorValueSummary?.undecodedRawCount || monitorValueSummary?.undecoded_raw_count || 0
+        : getUndecodedRawMonitorValueCount(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]))
+        + getUndecodedRawMonitorValueCount(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]),
       allowRawPidWarning: !hasObjectContent(livePidSnapshotInput) && hasDirectMonitorEvidence,
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
@@ -10347,7 +10359,10 @@
       liveDataWarning: "compare_values_under_same_conditions",
       hasLiveData: (monitorValueSummary?.totalCount || 0) > 0,
       livePidSnapshot,
-      rawPidUndecodedCount: (hasDirectMonitorEvidence ? monitorValueSummary?.undecodedRawCount || 0 : isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? monitorValueSummary?.undecodedRawCount || 0 : 0) + (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0 : 0),
+      rawPidUndecodedCount: (hasDirectMonitorEvidence
+        ? monitorValueSummary?.undecodedRawCount || monitorValueSummary?.undecoded_raw_count || 0
+        : getUndecodedRawMonitorValueCount(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]))
+        + getUndecodedRawMonitorValueCount(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]),
       allowRawPidWarning: !hasObjectContent(livePidSnapshotInput) && hasDirectMonitorEvidence,
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
@@ -11080,11 +11095,32 @@
   }
 
   function isReadableDiagnosticSnapshot(snapshot = {}, statusKeys = []) {
-    if (!snapshot || snapshot.blocked === true) return false;
+    if (!snapshot || hasExplicitReadoutBlock(snapshot) || hasReadoutTransportViolation(snapshot) || getExplicitReadoutFailureStatus(snapshot)) return false;
     const readoutStatus = statusKeys
       .map((key) => snapshot[key])
       .find((value) => value !== undefined && value !== null);
-    return !["blocked", "unparsed"].includes(String(readoutStatus || "").trim().toLowerCase());
+    return !["blocked", "unparsed", "not_supported", "unsupported", "unavailable"].includes(String(readoutStatus || "").trim().toLowerCase());
+  }
+
+  function getUndecodedRawMonitorValueCount(snapshot = {}, statusKeys = []) {
+    if (!isReadableDiagnosticSnapshot(snapshot, statusKeys)) return 0;
+    const monitorValues = [
+      snapshot?.monitorValues,
+      snapshot?.monitor_values,
+      snapshot?.values,
+      snapshot?.pid_values,
+      snapshot?.pidValues,
+      snapshot?.live_pid_values,
+      snapshot?.livePidValues,
+      snapshot?.live_data,
+      snapshot?.liveData,
+      snapshot?.freezeFrameValues,
+      snapshot?.freeze_frame_values,
+      snapshot?.items
+    ].find((value) => Array.isArray(value) && value.length > 0)
+      || [snapshot?.monitorValues, snapshot?.monitor_values, snapshot?.values].find(Array.isArray)
+      || [];
+    return resolveMonitorValueSummary(monitorValues, snapshot?.monitorValueSummary || snapshot?.monitor_value_summary || null).undecodedRawCount;
   }
 
   function appendCommonCoreWarnings(warnings, {
@@ -12198,6 +12234,30 @@
       }
       return 0;
     };
+    const firstPopulatedQualityArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+    const livePidQualityValues = firstPopulatedQualityArray(
+      livePidSnapshot?.monitorValues,
+      livePidSnapshot?.monitor_values,
+      livePidSnapshot?.values,
+      livePidSnapshot?.pid_values,
+      livePidSnapshot?.pidValues,
+      livePidSnapshot?.live_pid_values,
+      livePidSnapshot?.livePidValues,
+      livePidSnapshot?.live_data,
+      livePidSnapshot?.liveData,
+      livePidSnapshot?.items
+    );
+    const freezeFrameQualityValues = firstPopulatedQualityArray(
+      freezeFrameSnapshot?.monitorValues,
+      freezeFrameSnapshot?.monitor_values,
+      freezeFrameSnapshot?.values,
+      freezeFrameSnapshot?.freezeFrameValues,
+      freezeFrameSnapshot?.freeze_frame_values
+    );
+    const livePidQualityValueSummary = resolveMonitorValueSummary(livePidQualityValues, livePidSnapshot?.monitorValueSummary || livePidSnapshot?.monitor_value_summary || null);
+    const freezeFrameQualityValueSummary = resolveMonitorValueSummary(freezeFrameQualityValues, freezeFrameSnapshot?.monitorValueSummary || freezeFrameSnapshot?.monitor_value_summary || null);
     const normalizedWebSerialReadoutSummary = normalizeWebSerialReadoutSummary(webSerialReadoutSummary);
     const webSerialNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.negativeResponseCount, normalizedWebSerialReadoutSummary?.negative_response_count);
     const webSerialPendingNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.pendingNegativeResponseCount, normalizedWebSerialReadoutSummary?.pending_negative_response_count);
@@ -12219,10 +12279,10 @@
       + webSerialUnableToConnectCount
       + webSerialTransportIssueCount;
     const rawPidUndecodedCount = (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"])
-      ? readCount(livePidSnapshot?.monitorValueSummary?.undecodedRawCount)
+      ? readCount(livePidQualityValueSummary?.undecodedRawCount, livePidQualityValueSummary?.undecoded_raw_count)
       : 0)
       + (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])
-        ? readCount(freezeFrameSnapshot?.monitorValueSummary?.undecodedRawCount)
+        ? readCount(freezeFrameQualityValueSummary?.undecodedRawCount, freezeFrameQualityValueSummary?.undecoded_raw_count)
         : 0);
     const readinessIncompleteCount = isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? readCount(readinessSnapshot?.incompleteCount) : 0;
     const ecuInfoMissingKeyCount = isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? readCount(ecuInfoSnapshot?.keyItemSummary?.missingCount) : 0;
@@ -18535,7 +18595,29 @@
   }
 
   function resolveMonitorValueSummary(monitorValues = [], explicitSummary = null) {
-    return explicitSummary || buildMonitorValueSummary(monitorValues);
+    const calculated = buildMonitorValueSummary(monitorValues);
+    if (!explicitSummary || typeof explicitSummary !== "object") return calculated;
+    const readCount = (camelKey, snakeKey) => {
+      const value = explicitSummary[camelKey] ?? explicitSummary[snakeKey];
+      return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : 0;
+    };
+    const undecodedRawCount = Math.max(calculated.undecodedRawCount, readCount("undecodedRawCount", "undecoded_raw_count"));
+    const numericCount = Math.max(calculated.numericCount, readCount("numericCount", "numeric_count"));
+    const textCount = Math.max(calculated.textCount, readCount("textCount", "text_count"));
+    const totalCount = Math.max(calculated.totalCount, readCount("totalCount", "total_count"), undecodedRawCount + numericCount + textCount);
+    const decodedCount = Math.min(totalCount, Math.max(calculated.decodedCount, readCount("decodedCount", "decoded_count"), totalCount - undecodedRawCount));
+    return {
+      totalCount,
+      total_count: totalCount,
+      decodedCount,
+      decoded_count: decodedCount,
+      undecodedRawCount,
+      undecoded_raw_count: undecodedRawCount,
+      numericCount,
+      numeric_count: numericCount,
+      textCount,
+      text_count: textCount
+    };
   }
 
   function buildReadOnlyFlags({
@@ -28839,7 +28921,8 @@
       liveDataWarning: "compare_live_data_conditions",
       hasLiveData: livePidSnapshot.monitorValues.length > 0,
       livePidSnapshot,
-      rawPidUndecodedCount: (isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot.monitorValueSummary?.undecodedRawCount || 0 : 0) + (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot.monitorValueSummary?.undecodedRawCount || 0 : 0),
+      rawPidUndecodedCount: getUndecodedRawMonitorValueCount(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"])
+        + getUndecodedRawMonitorValueCount(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]),
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
