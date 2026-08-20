@@ -4745,18 +4745,27 @@
     };
   }
 
+  function firstSupportedPidArray(...values) {
+    return values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+  }
+
   function collectBridgeSupportedPids(data = {}) {
-    if (Array.isArray(data.supported_pids)) return data.supported_pids;
-    if (Array.isArray(data.supportedPids)) return data.supportedPids;
-    if (Array.isArray(data.pids)) return data.pids;
-    if (Array.isArray(data.pid_list)) return data.pid_list;
-    if (Array.isArray(data.pidList)) return data.pidList;
-    if (Array.isArray(data.supported_pid_rows)) return data.supported_pid_rows;
-    if (Array.isArray(data.supportedPidRows)) return data.supportedPidRows;
+    const rows = firstSupportedPidArray(
+      data.supported_pids,
+      data.supportedPids,
+      data.pids,
+      data.pid_list,
+      data.pidList,
+      data.supported_pid_rows,
+      data.supportedPidRows
+    );
+    if (rows.length > 0) return rows;
     const text = data.supported_pid_list || data.supportedPidList || data.supportedPidsText || data.supported_pids_text || "";
     return typeof text === "string" && text.trim()
       ? text.split(/[\s,;|/]+/).map((item) => item.trim()).filter(Boolean)
-      : [];
+      : rows;
   }
 
   function normalizeSupportedPidCode(value) {
@@ -4816,7 +4825,12 @@
         : response
       : {};
     const supportedPids = collectBridgeSupportedPids(data);
-    const supportedPidEcuSnapshots = data.supported_pid_ecu_snapshots || data.supportedPidEcuSnapshots || data.ecu_snapshots || data.ecuSnapshots || [];
+    const supportedPidEcuSnapshots = firstSupportedPidArray(
+      data.supported_pid_ecu_snapshots,
+      data.supportedPidEcuSnapshots,
+      data.ecu_snapshots,
+      data.ecuSnapshots
+    );
     const getEcuRawSupportedPidResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
     const hasEcuStructuredSupportedPidInput = (row) => [
       row?.supported_pids, row?.supportedPids, row?.pids, row?.pid_list, row?.pidList, row?.supported_pid_rows, row?.supportedPidRows,
@@ -5483,39 +5497,19 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
-    const ecuInfoEcuSnapshots = [
+    const firstEcuInfoArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+    const ecuInfoEcuSnapshots = firstEcuInfoArray(
       data.ecu_info_ecu_snapshots,
       data.ecuInfoEcuSnapshots,
       data.ecu_snapshots,
       data.ecuSnapshots,
       data.ecu_responses,
       data.ecuResponses
-    ].find(Array.isArray) || [];
+    );
     const getEcuRawEcuInfoResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
-    const getEcuInfoSnapshotItems = (row) => [
-      row?.values,
-      row?.items,
-      row?.ecu_info,
-      row?.ecu_info_items,
-      row?.ecu_info_rows,
-      row?.ecuInfo,
-      row?.ecuInfoItems,
-      row?.ecuInfoRows,
-      row?.mode09_items,
-      row?.mode09Items,
-      row?.mode_09_items,
-      row?.mode09_values,
-      row?.mode09Values,
-      row?.mode_09_values,
-      row?.info_values,
-      row?.infoValues,
-      row?.uds_data_identifiers,
-      row?.udsDataIdentifiers,
-      row?.uds_did_items,
-      row?.udsDidItems,
-      row?.data_identifiers,
-      row?.dataIdentifiers
-    ].find(Array.isArray) || [];
+    const getEcuInfoSnapshotItems = (row) => collectEcuInfoRows(row);
     const hasRawEcuInfoEcuResponse = ecuInfoEcuSnapshots.some((row) => getEcuRawEcuInfoResponse(row) !== null && getEcuInfoSnapshotItems(row).length === 0);
     const structuredItems = collectEcuInfoRows(data).map((row) => {
       if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
@@ -22866,29 +22860,34 @@
 
   function collectEcuInfoRows(input = {}) {
     if (Array.isArray(input)) return input;
-    if (Array.isArray(input.values)) return input.values;
-    if (Array.isArray(input.items)) return input.items;
-    if (Array.isArray(input.ecu_info)) return input.ecu_info;
-    if (Array.isArray(input.ecu_info_items)) return input.ecu_info_items;
-    if (Array.isArray(input.ecu_info_rows)) return input.ecu_info_rows;
-    if (Array.isArray(input.ecuInfo)) return input.ecuInfo;
-    if (Array.isArray(input.ecuInfoItems)) return input.ecuInfoItems;
-    if (Array.isArray(input.ecuInfoRows)) return input.ecuInfoRows;
-    if (Array.isArray(input.mode09_items)) return input.mode09_items;
-    if (Array.isArray(input.mode09Items)) return input.mode09Items;
-    if (Array.isArray(input.mode_09_items)) return input.mode_09_items;
-    if (Array.isArray(input.mode09_values)) return input.mode09_values;
-    if (Array.isArray(input.mode09Values)) return input.mode09Values;
-    if (Array.isArray(input.mode_09_values)) return input.mode_09_values;
-    if (Array.isArray(input.info_values)) return input.info_values;
-    if (Array.isArray(input.infoValues)) return input.infoValues;
-    if (Array.isArray(input.uds_data_identifiers)) return input.uds_data_identifiers;
-    if (Array.isArray(input.udsDataIdentifiers)) return input.udsDataIdentifiers;
-    if (Array.isArray(input.uds_did_items)) return input.uds_did_items;
-    if (Array.isArray(input.udsDidItems)) return input.udsDidItems;
-    if (Array.isArray(input.data_identifiers)) return input.data_identifiers;
-    if (Array.isArray(input.dataIdentifiers)) return input.dataIdentifiers;
     if (!input || typeof input !== "object") return [];
+    const arrayRows = [
+      input.values,
+      input.items,
+      input.ecu_info,
+      input.ecu_info_items,
+      input.ecu_info_rows,
+      input.ecuInfo,
+      input.ecuInfoItems,
+      input.ecuInfoRows,
+      input.mode09_items,
+      input.mode09Items,
+      input.mode_09_items,
+      input.mode09_values,
+      input.mode09Values,
+      input.mode_09_values,
+      input.info_values,
+      input.infoValues,
+      input.uds_data_identifiers,
+      input.udsDataIdentifiers,
+      input.uds_did_items,
+      input.udsDidItems,
+      input.data_identifiers,
+      input.dataIdentifiers
+    ];
+    const populatedArrayRows = arrayRows.find((value) => Array.isArray(value) && value.length > 0);
+    if (populatedArrayRows) return populatedArrayRows;
+    const emptyArrayRows = arrayRows.find(Array.isArray) || [];
     const aliases = [
       ["supported_info_types_00", "supported_info_types_00", "00"],
       ["supported_info_types", "supported_info_types_00", "00"],
@@ -22943,13 +22942,14 @@
       ["module_names", "ecu_name", "0A"],
       ["moduleNames", "ecu_name", "0A"]
     ];
-    return aliases
+    const scalarRows = aliases
       .filter(([key]) => input[key] !== undefined && input[key] !== null && input[key] !== "")
       .map(([key, id, infoType]) => ({
         id,
         info_type: infoType,
         value: input[key]
       }));
+    return scalarRows.length > 0 ? scalarRows : emptyArrayRows;
   }
 
   function normalizeEcuInfoSnapshot(input = {}) {
@@ -23044,11 +23044,7 @@
       if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshot);
       if (!snapshotSourceEcu) return null;
-      const snapshotItems = Array.isArray(snapshot.items)
-        ? snapshot.items
-        : Array.isArray(snapshot.values)
-          ? snapshot.values
-          : [];
+      const snapshotItems = collectEcuInfoRows(snapshot);
       const snapshotStatus = String(snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || snapshot.readoutStatus || snapshot.readout_status || "unknown").trim().toLowerCase();
       const itemIds = [...new Set([
         ...(Array.isArray(snapshot.itemIds) ? snapshot.itemIds : []),
@@ -27865,31 +27861,28 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
+    const supportedArrayRows = firstSupportedPidArray(
+      sourceInput.supported_pids,
+      sourceInput.supportedPids,
+      sourceInput.pids,
+      sourceInput.pid_list,
+      sourceInput.pidList,
+      sourceInput.supported_pid_rows,
+      sourceInput.supportedPidRows
+    );
     const supportedRows = Array.isArray(input)
       ? input
-      : Array.isArray(sourceInput.supported_pids)
-        ? sourceInput.supported_pids
-        : Array.isArray(sourceInput.supportedPids)
-          ? sourceInput.supportedPids
-          : Array.isArray(sourceInput.pids)
-            ? sourceInput.pids
-            : Array.isArray(sourceInput.pid_list)
-              ? sourceInput.pid_list
-              : Array.isArray(sourceInput.pidList)
-                ? sourceInput.pidList
-                : Array.isArray(sourceInput.supported_pid_rows)
-                  ? sourceInput.supported_pid_rows
-                  : Array.isArray(sourceInput.supportedPidRows)
-                    ? sourceInput.supportedPidRows
-                    : typeof sourceInput.supported_pid_list === "string"
-                      ? sourceInput.supported_pid_list.split(/[\s,;|/]+/)
-                      : typeof sourceInput.supportedPidList === "string"
-                        ? sourceInput.supportedPidList.split(/[\s,;|/]+/)
-                        : typeof sourceInput.supported_pids_text === "string"
-                          ? sourceInput.supported_pids_text.split(/[\s,;|/]+/)
-                          : typeof sourceInput.supportedPidsText === "string"
-                            ? sourceInput.supportedPidsText.split(/[\s,;|/]+/)
-                            : [];
+      : supportedArrayRows.length > 0
+        ? supportedArrayRows
+        : typeof sourceInput.supported_pid_list === "string"
+          ? sourceInput.supported_pid_list.split(/[\s,;|/]+/)
+          : typeof sourceInput.supportedPidList === "string"
+            ? sourceInput.supportedPidList.split(/[\s,;|/]+/)
+            : typeof sourceInput.supported_pids_text === "string"
+              ? sourceInput.supported_pids_text.split(/[\s,;|/]+/)
+              : typeof sourceInput.supportedPidsText === "string"
+                ? sourceInput.supportedPidsText.split(/[\s,;|/]+/)
+                : supportedArrayRows;
     const supported = new Set(supportedRows.map(normalizeSupportedPidCode).filter(Boolean));
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const supportedPidPageBasesInput = sourceInput.supportedPidPageBases
@@ -27902,15 +27895,12 @@
     const supportedPidPageBaseSet = new Set((Array.isArray(supportedPidPageBasesInput) ? supportedPidPageBasesInput : [supportedPidPageBasesInput])
       .map(normalizeSupportedPidCode)
       .filter((value) => value && isSupportedPidBase(parseInt(value, 16))));
-    const ecuSnapshotRows = Array.isArray(sourceInput.supportedPidEcuSnapshots)
-      ? sourceInput.supportedPidEcuSnapshots
-      : Array.isArray(sourceInput.supported_pid_ecu_snapshots)
-        ? sourceInput.supported_pid_ecu_snapshots
-        : Array.isArray(sourceInput.ecuSnapshots)
-          ? sourceInput.ecuSnapshots
-          : Array.isArray(sourceInput.ecu_snapshots)
-            ? sourceInput.ecu_snapshots
-            : [];
+    const ecuSnapshotRows = firstSupportedPidArray(
+      sourceInput.supportedPidEcuSnapshots,
+      sourceInput.supported_pid_ecu_snapshots,
+      sourceInput.ecuSnapshots,
+      sourceInput.ecu_snapshots
+    );
     const normalizeEcuSnapshot = (row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return null;
       const ecu = readObdResponseSourceEcu(row);
@@ -27918,21 +27908,15 @@
       const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
       const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!sourceEcu || ecu === sourceEcu));
       const ecuName = rowSourceEcuName || (shouldInheritEcuName ? sourceEcuName : null);
-      const pidRows = Array.isArray(row.supported_pids)
-        ? row.supported_pids
-        : Array.isArray(row.supportedPids)
-          ? row.supportedPids
-          : Array.isArray(row.pids)
-            ? row.pids
-            : Array.isArray(row.pid_list)
-              ? row.pid_list
-              : Array.isArray(row.pidList)
-                ? row.pidList
-                : Array.isArray(row.supported_pid_rows)
-                  ? row.supported_pid_rows
-                  : Array.isArray(row.supportedPidRows)
-                    ? row.supportedPidRows
-                    : [];
+      const pidRows = firstSupportedPidArray(
+        row.supported_pids,
+        row.supportedPids,
+        row.pids,
+        row.pid_list,
+        row.pidList,
+        row.supported_pid_rows,
+        row.supportedPidRows
+      );
       const pids = [...new Set(pidRows.map(normalizeSupportedPidCode).filter(Boolean))];
       const pageRows = row.supportedPidPageBases || row.supported_pid_page_bases || row.queriedPidBases || row.queried_pid_bases || [];
       const pageBases = [...new Set((Array.isArray(pageRows) ? pageRows : [pageRows])
