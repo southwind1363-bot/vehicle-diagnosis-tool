@@ -14266,7 +14266,7 @@
     const pendingReadoutIds = normalizeIds(summary.pendingReadoutIds || summary.pending_readout_ids || [...missingReadoutIds, ...emptyReadoutIds]);
     const analysisBlockers = normalizeIds(summary.analysisBlockers || summary.analysis_blockers);
     const blockingWarningIds = normalizeIds(summary.blockingWarningIds || summary.blocking_warning_ids);
-    const readoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
+    const readoutCompletionSummaryInput = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
     const analysisReadinessSummaryInput = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
     const fallbackDtcStatusAliases = [
@@ -14304,9 +14304,70 @@
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const coreWorkflowSummaryInput = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
-    const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummaryInput?.primaryBlockingReason || readoutCompletionSummary?.primaryBlockingReason || null;
-    const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || analysisReadinessSummaryInput?.primaryBlockingReadoutRequest || readoutCompletionSummary?.primaryBlockingReadoutRequest || null;
-    const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || analysisReadinessSummaryInput?.primaryBlockingSummary || readoutCompletionSummary?.primaryBlockingSummary || null;
+    const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummaryInput?.primaryBlockingReason || readoutCompletionSummaryInput?.primaryBlockingReason || null;
+    const primaryBlockingSummaryInput = summary.primaryBlockingSummary
+      || summary.primary_blocking_summary
+      || coreWorkflowSummaryInput?.primaryBlockingSummary
+      || coreWorkflowSummaryInput?.primary_blocking_summary
+      || analysisReadinessSummaryInput?.primaryBlockingSummary
+      || analysisReadinessSummaryInput?.primary_blocking_summary
+      || readoutCompletionSummaryInput?.primaryBlockingSummary
+      || readoutCompletionSummaryInput?.primary_blocking_summary
+      || null;
+    const primaryBlockingReadoutRequestInput = summary.primaryBlockingReadoutRequest
+      || summary.primary_blocking_readout_request
+      || coreWorkflowSummaryInput?.primaryBlockingReadoutRequest
+      || coreWorkflowSummaryInput?.primary_blocking_readout_request
+      || analysisReadinessSummaryInput?.primaryBlockingReadoutRequest
+      || analysisReadinessSummaryInput?.primary_blocking_readout_request
+      || readoutCompletionSummaryInput?.primaryBlockingReadoutRequest
+      || readoutCompletionSummaryInput?.primary_blocking_readout_request
+      || primaryBlockingSummaryInput?.request
+      || primaryBlockingSummaryInput?.readoutRequest
+      || primaryBlockingSummaryInput?.readout_request
+      || null;
+    const primaryBlockingReadoutRequestId = primaryBlockingReadoutRequestInput?.readoutId || primaryBlockingReadoutRequestInput?.readout_id || primaryBlockingReadoutRequestInput?.id || null;
+    const isDtcPrimaryBlockingReadoutRequest = primaryBlockingReadoutRequestId === "dtc_snapshot";
+    const primaryBlockingReadoutRequest = isDtcPrimaryBlockingReadoutRequest
+      ? normalizeReadoutRequestSummaryAliases(primaryBlockingReadoutRequestInput, dtcStatusReadoutPlan)
+      : primaryBlockingReadoutRequestInput;
+    const synchronizePrimaryBlockingSummary = (input = null) => isDtcPrimaryBlockingReadoutRequest && input
+      ? {
+        ...input,
+        readoutId: primaryBlockingReadoutRequest.readoutId,
+        readout_id: primaryBlockingReadoutRequest.readoutId,
+        request: primaryBlockingReadoutRequest,
+        bridgeIntent: primaryBlockingReadoutRequest.bridgeIntent || null,
+        bridge_intent: primaryBlockingReadoutRequest.bridgeIntent || null,
+        serviceMode: primaryBlockingReadoutRequest.serviceMode || null,
+        service_mode: primaryBlockingReadoutRequest.serviceMode || null,
+        requestMapped: Boolean(primaryBlockingReadoutRequest.bridgeIntent),
+        request_mapped: Boolean(primaryBlockingReadoutRequest.bridgeIntent),
+        executionEnabled: primaryBlockingReadoutRequest.executionEnabled === true,
+        execution_enabled: primaryBlockingReadoutRequest.executionEnabled === true,
+        readOnly: primaryBlockingReadoutRequest.readOnly !== false,
+        read_only: primaryBlockingReadoutRequest.readOnly !== false,
+        wouldTransmit: primaryBlockingReadoutRequest.wouldTransmit === true,
+        would_transmit: primaryBlockingReadoutRequest.wouldTransmit === true,
+        vehicleCommandEnabled: primaryBlockingReadoutRequest.vehicleCommandEnabled === true,
+        vehicle_command_enabled: primaryBlockingReadoutRequest.vehicleCommandEnabled === true
+      }
+      : input;
+    const primaryBlockingSummary = synchronizePrimaryBlockingSummary(primaryBlockingSummaryInput);
+    const readoutCompletionPrimaryBlockingSummary = synchronizePrimaryBlockingSummary(
+      readoutCompletionSummaryInput?.primaryBlockingSummary
+      || readoutCompletionSummaryInput?.primary_blocking_summary
+      || primaryBlockingSummary
+    );
+    const readoutCompletionSummary = isDtcPrimaryBlockingReadoutRequest && readoutCompletionSummaryInput
+      ? {
+        ...readoutCompletionSummaryInput,
+        primaryBlockingReadoutRequest,
+        primary_blocking_readout_request: primaryBlockingReadoutRequest,
+        primaryBlockingSummary: readoutCompletionPrimaryBlockingSummary,
+        primary_blocking_summary: readoutCompletionPrimaryBlockingSummary
+      }
+      : readoutCompletionSummaryInput;
     const pendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
     const savedPendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
     const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan);
@@ -14414,24 +14475,50 @@
     const nextReadoutGuardSummary = isDtcNextReadoutRequest
       ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate)
       : savedNextReadoutGuardSummary || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
-    const coreWorkflowSummary = isDtcNextReadoutRequest && coreWorkflowSummaryInput
+    const coreWorkflowPrimaryBlockingSummary = synchronizePrimaryBlockingSummary(
+      coreWorkflowSummaryInput?.primaryBlockingSummary
+      || coreWorkflowSummaryInput?.primary_blocking_summary
+      || primaryBlockingSummary
+    );
+    const analysisReadinessPrimaryBlockingSummary = synchronizePrimaryBlockingSummary(
+      analysisReadinessSummaryInput?.primaryBlockingSummary
+      || analysisReadinessSummaryInput?.primary_blocking_summary
+      || primaryBlockingSummary
+    );
+    const coreWorkflowSummary = (isDtcNextReadoutRequest || isDtcPrimaryBlockingReadoutRequest) && coreWorkflowSummaryInput
       ? {
         ...coreWorkflowSummaryInput,
-        nextReadoutReasonSummary,
-        next_readout_reason_summary: nextReadoutReasonSummary,
-        nextReadoutGuardSummary,
-        next_readout_guard_summary: nextReadoutGuardSummary
+        ...(isDtcNextReadoutRequest ? {
+          nextReadoutReasonSummary,
+          next_readout_reason_summary: nextReadoutReasonSummary,
+          nextReadoutGuardSummary,
+          next_readout_guard_summary: nextReadoutGuardSummary
+        } : {}),
+        ...(isDtcPrimaryBlockingReadoutRequest ? {
+          primaryBlockingReadoutRequest,
+          primary_blocking_readout_request: primaryBlockingReadoutRequest,
+          primaryBlockingSummary: coreWorkflowPrimaryBlockingSummary,
+          primary_blocking_summary: coreWorkflowPrimaryBlockingSummary
+        } : {})
       }
       : coreWorkflowSummaryInput;
-    const analysisReadinessSummary = isDtcNextReadoutRequest && analysisReadinessSummaryInput
+    const analysisReadinessSummary = (isDtcNextReadoutRequest || isDtcPrimaryBlockingReadoutRequest) && analysisReadinessSummaryInput
       ? {
         ...analysisReadinessSummaryInput,
-        readoutRequestPlanGateSummary,
-        readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
-        nextReadoutReasonSummary,
-        next_readout_reason_summary: nextReadoutReasonSummary,
-        nextReadoutGuardSummary,
-        next_readout_guard_summary: nextReadoutGuardSummary
+        ...(isDtcNextReadoutRequest ? {
+          readoutRequestPlanGateSummary,
+          readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
+          nextReadoutReasonSummary,
+          next_readout_reason_summary: nextReadoutReasonSummary,
+          nextReadoutGuardSummary,
+          next_readout_guard_summary: nextReadoutGuardSummary
+        } : {}),
+        ...(isDtcPrimaryBlockingReadoutRequest ? {
+          primaryBlockingReadoutRequest,
+          primary_blocking_readout_request: primaryBlockingReadoutRequest,
+          primaryBlockingSummary: analysisReadinessPrimaryBlockingSummary,
+          primary_blocking_summary: analysisReadinessPrimaryBlockingSummary
+        } : {})
       }
       : analysisReadinessSummaryInput;
     const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, analysisReadinessSummary?.ready, false) === true;
