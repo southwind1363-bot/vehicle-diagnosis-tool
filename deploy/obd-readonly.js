@@ -14511,33 +14511,6 @@
       return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
     };
     const normalizeIds = (ids = []) => Array.isArray(ids) ? [...new Set(ids.filter(Boolean).map(String))].sort() : [];
-    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(summary.nextReadoutRequest || summary.next_readout_request || null);
-    const pendingReadoutRequestQueue = Array.isArray(summary.pendingReadoutRequestQueue)
-      ? summary.pendingReadoutRequestQueue
-      : Array.isArray(summary.pending_readout_request_queue)
-        ? summary.pending_readout_request_queue
-        : [];
-    const pendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
-    const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null;
-    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
-    const nextReadoutReasonSummary = summary.nextReadoutReasonSummary || summary.next_readout_reason_summary || null;
-    const nextReadoutRequestSafetySummary = summary.nextReadoutRequestSafetySummary
-      || summary.next_readout_request_safety_summary
-      || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
-    const nextReadoutGuardSummary = summary.nextReadoutGuardSummary
-      || summary.next_readout_guard_summary
-      || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
-    const analysisChecklist = Array.isArray(summary.analysisChecklist)
-      ? summary.analysisChecklist
-      : Array.isArray(summary.analysis_checklist)
-        ? summary.analysis_checklist
-        : [];
-    const analysisChecklistById = summary.analysisChecklistById || summary.analysis_checklist_by_id || {};
-    const analysisChecklistSummary = summary.analysisChecklistSummary || summary.analysis_checklist_summary || {};
-    const requiredReadoutsChecklist = summary.requiredReadoutsChecklist || summary.required_readouts_checklist || null;
-    const blockingWarningsChecklist = summary.blockingWarningsChecklist || summary.blocking_warnings_checklist || null;
-    const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
-    const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
     const fallbackDtcStatusAliases = [
       fallbackCoreSessionStatus?.dtcStatusSummary,
       fallbackCoreSessionStatus?.dtc_status_summary
@@ -14556,6 +14529,67 @@
         ? fallbackDtcReportedStatusAliases
         : [summary.dtcReportedStatusSummary, summary.dtc_reported_status_summary])
     );
+    const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
+    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(
+      summary.nextReadoutRequest || summary.next_readout_request || null,
+      dtcStatusReadoutPlan
+    );
+    const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
+    const savedPendingReadoutRequestQueue = Array.isArray(summary.pendingReadoutRequestQueue)
+      ? summary.pendingReadoutRequestQueue
+      : Array.isArray(summary.pending_readout_request_queue)
+        ? summary.pending_readout_request_queue
+        : [];
+    const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan);
+    const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
+    const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
+    const savedPlanNextRequestId = savedPlanNextRequest?.readoutId || savedPlanNextRequest?.readout_id || savedPlanNextRequest?.id || null;
+    const hasDtcPendingReadoutRequest = isDtcNextReadoutRequest
+      || savedPlanNextRequestId === "dtc_snapshot"
+      || pendingReadoutRequestQueue.some((item) => item?.readoutId === "dtc_snapshot");
+    const pendingReadoutRequestPlan = hasDtcPendingReadoutRequest
+      ? synchronizeDtcPendingReadoutRequestPlan(savedPendingReadoutRequestPlan, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
+      : savedPendingReadoutRequestPlan;
+    const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
+    const readoutRequestPlanGateSummary = hasDtcPendingReadoutRequest && pendingReadoutRequestPlan
+      ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan)
+      : savedReadoutRequestPlanGateSummary;
+    const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(
+      summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null,
+      isDtcNextReadoutRequest ? nextReadoutRequest : null
+    );
+    const savedNextReadoutReasonSummary = summary.nextReadoutReasonSummary || summary.next_readout_reason_summary || null;
+    const nextReadoutReasonSummary = isDtcNextReadoutRequest
+      ? synchronizeDtcNextReadoutReasonSummary(savedNextReadoutReasonSummary, nextReadoutRequest)
+      : savedNextReadoutReasonSummary;
+    const nextReadoutRequestSafetySummary = isDtcNextReadoutRequest
+      ? buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary)
+      : summary.nextReadoutRequestSafetySummary
+        || summary.next_readout_request_safety_summary
+        || buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const savedNextReadoutGuardSummary = summary.nextReadoutGuardSummary
+      || summary.next_readout_guard_summary
+      || null;
+    const savedNextReadoutGuardGate = savedNextReadoutGuardSummary ? {
+      state: savedNextReadoutGuardSummary.gateState || savedNextReadoutGuardSummary.gate_state || "unknown",
+      ready: savedNextReadoutGuardSummary.gateReady === true || savedNextReadoutGuardSummary.gate_ready === true,
+      actionRequired: savedNextReadoutGuardSummary.actionRequired === true || savedNextReadoutGuardSummary.action_required === true,
+      nextActionId: savedNextReadoutGuardSummary.nextActionId || savedNextReadoutGuardSummary.next_action_id || null
+    } : null;
+    const nextReadoutGuardSummary = isDtcNextReadoutRequest
+      ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate)
+      : savedNextReadoutGuardSummary || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
+    const analysisChecklist = Array.isArray(summary.analysisChecklist)
+      ? summary.analysisChecklist
+      : Array.isArray(summary.analysis_checklist)
+        ? summary.analysis_checklist
+        : [];
+    const analysisChecklistById = summary.analysisChecklistById || summary.analysis_checklist_by_id || {};
+    const analysisChecklistSummary = summary.analysisChecklistSummary || summary.analysis_checklist_summary || {};
+    const requiredReadoutsChecklist = summary.requiredReadoutsChecklist || summary.required_readouts_checklist || null;
+    const blockingWarningsChecklist = summary.blockingWarningsChecklist || summary.blocking_warnings_checklist || null;
+    const readoutQualityChecklist = summary.readoutQualityChecklist || summary.readout_quality_checklist || null;
+    const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || {};
     const selectDtcEvidenceSummaryAliases = (camelKey, snakeKey) => {
       const fallbackAliases = [fallbackCoreSessionStatus?.[camelKey], fallbackCoreSessionStatus?.[snakeKey]].filter(hasObjectContent);
       return fallbackAliases.length > 0 ? fallbackAliases : [summary[camelKey], summary[snakeKey]].filter(hasObjectContent);
@@ -14588,10 +14622,39 @@
     const checklistReviewIds = normalizeIds(summary.checklistReviewIds || summary.checklist_review_ids);
     const readoutQualityIssueIds = normalizeIds(summary.readoutQualityIssueIds || summary.readout_quality_issue_ids);
     const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
-    const requestPlanBlockedReasonIds = normalizeIds(summary.requestPlanBlockedReasonIds || summary.request_plan_blocked_reason_ids);
-    const requestPlanGateActionIds = normalizeIds(summary.requestPlanGateActionIds || summary.request_plan_gate_action_ids);
-    const requestPlanGateActionReasonIds = normalizeIds(summary.requestPlanGateActionReasonIds || summary.request_plan_gate_action_reason_ids);
-    const requestPlanGateActionReadoutIds = normalizeIds(summary.requestPlanGateActionReadoutIds || summary.request_plan_gate_action_readout_ids);
+    const requestPlanBlockedReasonIds = hasDtcPendingReadoutRequest
+      ? normalizeIds(pendingReadoutRequestPlan?.blockedReasonIds || pendingReadoutRequestPlan?.blocked_reason_ids)
+      : normalizeIds(summary.requestPlanBlockedReasonIds || summary.request_plan_blocked_reason_ids);
+    const requestPlanGateActionIds = hasDtcPendingReadoutRequest
+      ? normalizeIds(readoutRequestPlanGateSummary?.actionIds || readoutRequestPlanGateSummary?.action_ids)
+      : normalizeIds(summary.requestPlanGateActionIds || summary.request_plan_gate_action_ids);
+    const requestPlanGateActionReasonIds = hasDtcPendingReadoutRequest
+      ? normalizeIds(readoutRequestPlanGateSummary?.actionReasonIds || readoutRequestPlanGateSummary?.action_reason_ids)
+      : normalizeIds(summary.requestPlanGateActionReasonIds || summary.request_plan_gate_action_reason_ids);
+    const requestPlanGateActionReadoutIds = hasDtcPendingReadoutRequest
+      ? normalizeIds(readoutRequestPlanGateSummary?.actionReadoutIds || readoutRequestPlanGateSummary?.action_readout_ids)
+      : normalizeIds(summary.requestPlanGateActionReadoutIds || summary.request_plan_gate_action_readout_ids);
+    const pendingReadoutRequestNext = hasDtcPendingReadoutRequest
+      ? nextReadoutRequest || pendingReadoutRequestQueue.find((item) => item?.isNext === true || item?.is_next === true) || pendingReadoutRequestQueue[0] || null
+      : summary.pendingReadoutRequestNext || summary.pending_readout_request_next || pendingReadoutRequestQueue.find((item) => item?.isNext) || pendingReadoutRequestQueue[0] || null;
+    const pendingReadoutRequestCount = hasDtcPendingReadoutRequest
+      ? pendingReadoutRequestQueue.length
+      : toCount("pendingReadoutRequestCount", "pending_readout_request_count", pendingReadoutRequestQueue.length);
+    const requestPlanMappedCount = hasDtcPendingReadoutRequest
+      ? Number(pendingReadoutRequestPlan?.mappedCount ?? pendingReadoutRequestPlan?.mapped_count ?? 0)
+      : toCount("requestPlanMappedCount", "request_plan_mapped_count", 0);
+    const requestPlanUnmappedCount = hasDtcPendingReadoutRequest
+      ? Number(pendingReadoutRequestPlan?.unmappedCount ?? pendingReadoutRequestPlan?.unmapped_count ?? 0)
+      : toCount("requestPlanUnmappedCount", "request_plan_unmapped_count", 0);
+    const nextReadoutBridgeIntent = isDtcNextReadoutRequest
+      ? nextReadoutRequest.bridgeIntent || null
+      : pickDefined(summary.nextReadoutBridgeIntent, summary.next_readout_bridge_intent, nextReadoutRequest?.bridgeIntent, null);
+    const nextReadoutServiceMode = isDtcNextReadoutRequest
+      ? nextReadoutRequest.serviceMode || null
+      : pickDefined(summary.nextReadoutServiceMode, summary.next_readout_service_mode, nextReadoutRequest?.serviceMode, null);
+    const nextReadoutExecutionEnabled = isDtcNextReadoutRequest
+      ? nextReadoutRequest.executionEnabled === true
+      : pickDefined(summary.nextReadoutExecutionEnabled, summary.next_readout_execution_enabled, nextReadoutRequest?.executionEnabled, false) === true;
     return {
       ...summary,
       schemaVersion,
@@ -14626,28 +14689,28 @@
       next_readout_candidate_all_safe: pickDefined(summary.next_readout_candidate_all_safe, summary.nextReadoutCandidateAllSafe, nextReadoutCandidateSafetySummary?.all_safe, nextReadoutCandidateSafetySummary?.allSafe, false) === true,
       nextReadoutCandidateUnsafeCount: toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0),
       next_readout_candidate_unsafe_count: toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0),
-      nextReadoutBridgeIntent: pickDefined(summary.nextReadoutBridgeIntent, summary.next_readout_bridge_intent, nextReadoutRequest?.bridgeIntent, null),
-      next_readout_bridge_intent: pickDefined(summary.next_readout_bridge_intent, summary.nextReadoutBridgeIntent, nextReadoutRequest?.bridgeIntent, null),
-      nextReadoutServiceMode: pickDefined(summary.nextReadoutServiceMode, summary.next_readout_service_mode, nextReadoutRequest?.serviceMode, null),
-      next_readout_service_mode: pickDefined(summary.next_readout_service_mode, summary.nextReadoutServiceMode, nextReadoutRequest?.serviceMode, null),
-      nextReadoutExecutionEnabled: pickDefined(summary.nextReadoutExecutionEnabled, summary.next_readout_execution_enabled, nextReadoutRequest?.executionEnabled, false) === true,
-      next_readout_execution_enabled: pickDefined(summary.next_readout_execution_enabled, summary.nextReadoutExecutionEnabled, nextReadoutRequest?.executionEnabled, false) === true,
-      pendingReadoutRequestCount: toCount("pendingReadoutRequestCount", "pending_readout_request_count", pendingReadoutRequestQueue.length),
-      pending_readout_request_count: toCount("pendingReadoutRequestCount", "pending_readout_request_count", pendingReadoutRequestQueue.length),
+      nextReadoutBridgeIntent,
+      next_readout_bridge_intent: nextReadoutBridgeIntent,
+      nextReadoutServiceMode,
+      next_readout_service_mode: nextReadoutServiceMode,
+      nextReadoutExecutionEnabled,
+      next_readout_execution_enabled: nextReadoutExecutionEnabled,
+      pendingReadoutRequestCount,
+      pending_readout_request_count: pendingReadoutRequestCount,
       pendingReadoutRequestQueue,
       pending_readout_request_queue: pendingReadoutRequestQueue,
-      pendingReadoutRequestNext: summary.pendingReadoutRequestNext || summary.pending_readout_request_next || pendingReadoutRequestQueue.find((item) => item?.isNext) || pendingReadoutRequestQueue[0] || null,
-      pending_readout_request_next: summary.pending_readout_request_next || summary.pendingReadoutRequestNext || pendingReadoutRequestQueue.find((item) => item?.isNext) || pendingReadoutRequestQueue[0] || null,
+      pendingReadoutRequestNext,
+      pending_readout_request_next: pendingReadoutRequestNext,
       pendingReadoutRequestPlan,
       pending_readout_request_plan: pendingReadoutRequestPlan,
       readoutRequestPlanGateSummary,
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
       readoutRequestPlanSummary,
       readout_request_plan_summary: readoutRequestPlanSummary,
-      requestPlanMappedCount: toCount("requestPlanMappedCount", "request_plan_mapped_count", 0),
-      request_plan_mapped_count: toCount("requestPlanMappedCount", "request_plan_mapped_count", 0),
-      requestPlanUnmappedCount: toCount("requestPlanUnmappedCount", "request_plan_unmapped_count", 0),
-      request_plan_unmapped_count: toCount("requestPlanUnmappedCount", "request_plan_unmapped_count", 0),
+      requestPlanMappedCount,
+      request_plan_mapped_count: requestPlanMappedCount,
+      requestPlanUnmappedCount,
+      request_plan_unmapped_count: requestPlanUnmappedCount,
       requestPlanBlockedReasonIds,
       request_plan_blocked_reason_ids: requestPlanBlockedReasonIds,
       requestPlanGateActionIds,
