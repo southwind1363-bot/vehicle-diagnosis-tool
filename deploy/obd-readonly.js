@@ -5644,6 +5644,12 @@
     };
   }
 
+  function firstOnboardMonitorArray(...values) {
+    return values.find((value) => Array.isArray(value) && value.length > 0)
+      || values.find(Array.isArray)
+      || [];
+  }
+
   function normalizeBridgeOnboardMonitorSnapshot(response = {}) {
     const nestedData = getBridgeResponseDataEnvelope(response);
     const hasNestedOnboardMonitorPayload = Boolean(nestedData && [
@@ -5655,7 +5661,7 @@
     // Never combine outer and nested Mode 06 evidence; outer tests only complete an otherwise empty envelope.
     const outerOnboardMonitorFallback = nestedData && !hasNestedOnboardMonitorPayload
       ? {
-        tests: response.tests ?? response.values ?? response.mode06_tests ?? response.mode06Tests ?? response.mode06_rows ?? response.mode06Rows ?? response.monitor_tests ?? response.monitorTests ?? response.test_rows ?? response.testRows ?? response.onboard_monitor_tests ?? response.onboardMonitorTests
+        tests: firstOnboardMonitorArray(response.tests, response.values, response.mode06_tests, response.mode06Tests, response.mode06_rows, response.mode06Rows, response.monitor_tests, response.monitorTests, response.test_rows, response.testRows, response.onboard_monitor_tests, response.onboardMonitorTests)
       }
       : {};
     const data = response && typeof response === "object"
@@ -5672,7 +5678,7 @@
       : {};
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
-    const onboardMonitorEcuSnapshots = [
+    const onboardMonitorEcuSnapshots = firstOnboardMonitorArray(
       data.onboard_monitor_ecu_snapshots,
       data.onboardMonitorEcuSnapshots,
       data.mode06_ecu_snapshots,
@@ -5681,9 +5687,9 @@
       data.ecuSnapshots,
       data.ecu_responses,
       data.ecuResponses
-    ].find(Array.isArray) || [];
+    );
     const getEcuRawOnboardMonitorResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
-    const getEcuOnboardMonitorTests = (row) => [
+    const getEcuOnboardMonitorTests = (row) => firstOnboardMonitorArray(
       row?.tests,
       row?.values,
       row?.mode06_tests,
@@ -5696,33 +5702,22 @@
       row?.testRows,
       row?.onboard_monitor_tests,
       row?.onboardMonitorTests
-    ].find(Array.isArray) || [];
+    );
     const hasRawEcuOnboardMonitorResponse = onboardMonitorEcuSnapshots.some((row) => getEcuRawOnboardMonitorResponse(row) !== null && getEcuOnboardMonitorTests(row).length === 0);
-    const structuredTests = (Array.isArray(data.tests)
-      ? data.tests
-      : Array.isArray(data.values)
-        ? data.values
-        : Array.isArray(data.mode06_tests)
-          ? data.mode06_tests
-          : Array.isArray(data.mode06Tests)
-            ? data.mode06Tests
-            : Array.isArray(data.mode06_rows)
-              ? data.mode06_rows
-              : Array.isArray(data.mode06Rows)
-                ? data.mode06Rows
-                : Array.isArray(data.monitor_tests)
-                  ? data.monitor_tests
-                  : Array.isArray(data.monitorTests)
-                    ? data.monitorTests
-                    : Array.isArray(data.test_rows)
-                      ? data.test_rows
-                      : Array.isArray(data.testRows)
-                        ? data.testRows
-                        : Array.isArray(data.onboard_monitor_tests)
-                          ? data.onboard_monitor_tests
-                          : Array.isArray(data.onboardMonitorTests)
-                            ? data.onboardMonitorTests
-                            : [])
+    const structuredTests = firstOnboardMonitorArray(
+      data.tests,
+      data.values,
+      data.mode06_tests,
+      data.mode06Tests,
+      data.mode06_rows,
+      data.mode06Rows,
+      data.monitor_tests,
+      data.monitorTests,
+      data.test_rows,
+      data.testRows,
+      data.onboard_monitor_tests,
+      data.onboardMonitorTests
+    )
       .map((row) => {
         if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
@@ -23336,7 +23331,7 @@
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
-    const onboardMonitorEcuSnapshotInputs = [
+    const onboardMonitorEcuSnapshotInputs = firstOnboardMonitorArray(
       sourceInput.onboardMonitorEcuSnapshots,
       sourceInput.onboard_monitor_ecu_snapshots,
       sourceInput.mode06EcuSnapshots,
@@ -23345,7 +23340,7 @@
       sourceInput.ecu_snapshots,
       sourceInput.ecuResponses,
       sourceInput.ecu_responses
-    ].find(Array.isArray) || [];
+    );
     const onboardMonitorEcuSnapshots = onboardMonitorEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
@@ -23384,37 +23379,23 @@
         return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
       });
     };
-    const directRows = (Array.isArray(sourceInput.tests)
-      ? sourceInput.tests
-      : Array.isArray(sourceInput.values)
-        ? sourceInput.values
-        : Array.isArray(sourceInput.mode06_tests)
-          ? sourceInput.mode06_tests
-          : Array.isArray(sourceInput.mode06Tests)
-            ? sourceInput.mode06Tests
-            : Array.isArray(sourceInput.monitor_tests)
-              ? sourceInput.monitor_tests
-              : Array.isArray(sourceInput.monitorTests)
-                ? sourceInput.monitorTests
-                : Array.isArray(sourceInput.onboard_monitor_tests)
-                  ? sourceInput.onboard_monitor_tests
-                  : Array.isArray(sourceInput.onboardMonitorTests)
-                    ? sourceInput.onboardMonitorTests
-                    : Array.isArray(sourceInput.onboard_monitor_rows)
-                      ? sourceInput.onboard_monitor_rows
-                      : Array.isArray(sourceInput.onboardMonitorRows)
-                        ? sourceInput.onboardMonitorRows
-                        : Array.isArray(sourceInput.mode06_rows)
-                          ? sourceInput.mode06_rows
-                          : Array.isArray(sourceInput.mode06Rows)
-                            ? sourceInput.mode06Rows
-                            : Array.isArray(sourceInput.test_rows)
-                              ? sourceInput.test_rows
-                              : Array.isArray(sourceInput.testRows)
-                                ? sourceInput.testRows
-                                : Array.isArray(sourceInput.items)
-                                  ? sourceInput.items
-                                  : []);
+    const directRows = firstOnboardMonitorArray(
+      sourceInput.tests,
+      sourceInput.values,
+      sourceInput.mode06_tests,
+      sourceInput.mode06Tests,
+      sourceInput.monitor_tests,
+      sourceInput.monitorTests,
+      sourceInput.onboard_monitor_tests,
+      sourceInput.onboardMonitorTests,
+      sourceInput.onboard_monitor_rows,
+      sourceInput.onboardMonitorRows,
+      sourceInput.mode06_rows,
+      sourceInput.mode06Rows,
+      sourceInput.test_rows,
+      sourceInput.testRows,
+      sourceInput.items
+    );
     const rows = (directRows.length > 0
       ? directRows
       : reportedOnboardMonitorEcuSnapshots.flatMap((snapshot) => snapshot.tests || []))
