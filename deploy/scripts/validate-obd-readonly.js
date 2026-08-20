@@ -3383,7 +3383,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2945件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('DTC状態要約の競合別名を統一'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2948件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('DTC証拠要約の競合別名を統一'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3990,7 +3990,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "DTC状態要約の競合別名を統一"'), "OBD core progress should describe the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "DTC証拠要約の競合別名を統一"'), "OBD core progress should describe the latest completed interface-reliability milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4318,7 +4318,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "DTC状態要約の競合別名を統一"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "DTC証拠要約の競合別名を統一"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -23882,10 +23882,70 @@ check(conflictingDtcStatusAliasSession?.dtcSnapshot?.dtcStatusSummary?.reportedS
 check(conflictingDtcStatusAliasRoundTrip?.dtcSnapshot?.dtc_status_summary?.reported_statuses?.join(",") === "stored,pending" && conflictingDtcStatusAliasRoundTrip?.coreSessionStatus?.dtcStatusReadoutPlan?.unreported_statuses?.join(",") === "permanent" && conflictingDtcStatusAliasRoundTrip?.vehicleCommandEnabled === false && conflictingDtcStatusAliasRoundTrip?.wouldTransmit === false, "DTC status summary aliases were not retained through read-only export and JSON reimport");
 check(blockedConflictingDtcStatusAliasSession?.dtcSnapshot?.dtcStatusSummary?.reportedStatuses?.length === 0 && blockedConflictingDtcStatusAliasSession?.coreSessionStatus?.dtcStatusReadoutPlan?.unreportedStatuses?.join(",") === "stored,pending,permanent" && blockedConflictingDtcStatusAliasSession?.vehicleCommandEnabled === false, "Blocked DTC summary aliases must not become reported diagnostic evidence");
 
+const conflictingDtcEvidenceKey = "P0300|-|generic_obd|stored|current|7E8";
+const buildConflictingDtcEvidenceAliases = (schemaVersion) => ({
+  camel: {
+    schemaVersion,
+    dtcCount: 0,
+    evidenceRecorded: false,
+    completeEvidenceRecorded: false,
+    reportedEcuEvidenceRecorded: false,
+    keys: [],
+    reportedEcuIds: [],
+    unresolvedEcuIds: [],
+    reportedEcuKeys: []
+  },
+  snake: {
+    schema_version: schemaVersion,
+    dtc_count: 1,
+    evidence_recorded: false,
+    complete_evidence_recorded: false,
+    reported_ecu_evidence_recorded: true,
+    dtc_keys: [conflictingDtcEvidenceKey],
+    reported_ecu_ids: ["7E8"],
+    unresolved_ecu_ids: ["7E9"],
+    reported_ecu_keys: [conflictingDtcEvidenceKey]
+  }
+});
+const conflictingDtcIdentityAliases = buildConflictingDtcEvidenceAliases("dtc_identity_summary_v1");
+const conflictingDtcStatusByteAliases = buildConflictingDtcEvidenceAliases("dtc_status_byte_summary_v1");
+const conflictingDtcMetadataAliases = buildConflictingDtcEvidenceAliases("dtc_metadata_evidence_summary_v1");
+const conflictingDtcCounterAliases = buildConflictingDtcEvidenceAliases("dtc_fault_detection_counter_summary_v1");
+const conflictingDtcEvidenceAliasSession = obd.buildDiagnosticScanSession({
+  imported_core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtcIdentitySummary: conflictingDtcIdentityAliases.camel,
+    dtc_identity_summary: conflictingDtcIdentityAliases.snake,
+    dtcStatusByteSummary: conflictingDtcStatusByteAliases.camel,
+    dtc_status_byte_summary: conflictingDtcStatusByteAliases.snake,
+    dtcMetadataEvidenceSummary: conflictingDtcMetadataAliases.camel,
+    dtc_metadata_evidence_summary: conflictingDtcMetadataAliases.snake,
+    dtcFaultDetectionCounterSummary: conflictingDtcCounterAliases.camel,
+    dtc_fault_detection_counter_summary: conflictingDtcCounterAliases.snake
+  },
+  imported_analysis_readiness_summary: {
+    schema_version: "analysis_readiness_summary_v1",
+    dtcIdentitySummary: conflictingDtcIdentityAliases.camel,
+    dtc_identity_summary: conflictingDtcIdentityAliases.snake
+  }
+});
+const conflictingDtcEvidenceAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(conflictingDtcEvidenceAliasSession)
+));
+const conflictingDtcEvidenceSummaries = [
+  conflictingDtcEvidenceAliasSession?.importedCoreSessionStatus?.dtcIdentitySummary,
+  conflictingDtcEvidenceAliasSession?.importedCoreSessionStatus?.dtcStatusByteSummary,
+  conflictingDtcEvidenceAliasSession?.importedCoreSessionStatus?.dtcMetadataEvidenceSummary,
+  conflictingDtcEvidenceAliasSession?.importedCoreSessionStatus?.dtcFaultDetectionCounterSummary
+];
+check(conflictingDtcEvidenceSummaries.every((summary) => summary?.dtcCount === 1 && summary?.keys?.join(",") === conflictingDtcEvidenceKey && summary?.evidenceRecorded === false && summary?.completeEvidenceRecorded === false && summary?.reportedEcuEvidenceRecorded === true && summary?.reportedEcuIds?.join(",") === "7E8" && summary?.unresolvedEcuIds?.join(",") === "7E9" && summary?.reportedEcuKeys?.join(",") === conflictingDtcEvidenceKey), "Conflicting saved DTC evidence aliases were not merged without overstating partial ECU evidence");
+check(conflictingDtcEvidenceAliasSession?.importedCoreSessionStatus?.dtcIdentitySummary === conflictingDtcEvidenceAliasSession?.importedCoreSessionStatus?.dtc_identity_summary && conflictingDtcEvidenceAliasSession?.importedAnalysisReadinessSummary?.dtcIdentitySummary?.reportedEcuIds?.join(",") === "7E8" && conflictingDtcEvidenceAliasSession?.importedAnalysisReadinessSummary?.dtc_identity_summary?.unresolvedEcuIds?.join(",") === "7E9", "DTC evidence aliases were not normalized consistently across imported core and analysis summaries");
+check(conflictingDtcEvidenceAliasRoundTrip?.importedCoreSessionStatus?.dtcIdentitySummary?.reportedEcuKeys?.join(",") === conflictingDtcEvidenceKey && conflictingDtcEvidenceAliasRoundTrip?.importedCoreSessionStatus?.dtc_status_byte_summary?.unresolved_ecu_ids?.join(",") === "7E9" && conflictingDtcEvidenceAliasRoundTrip?.importedCoreSessionStatus?.dtcMetadataEvidenceSummary?.completeEvidenceRecorded === false && conflictingDtcEvidenceAliasRoundTrip?.importedCoreSessionStatus?.dtcFaultDetectionCounterSummary?.reportedEcuEvidenceRecorded === true && conflictingDtcEvidenceAliasRoundTrip?.vehicleCommandEnabled === false && conflictingDtcEvidenceAliasRoundTrip?.wouldTransmit === false, "Conflicting DTC evidence aliases were not retained through read-only export and JSON reimport");
+
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2945");
+  console.log("OBD read-only safety checks: 2948");
   console.log("Errors: 0");
 }

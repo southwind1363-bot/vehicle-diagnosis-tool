@@ -13922,27 +13922,34 @@
     };
   }
 
-  function normalizeDtcEvidenceSummaryAliases(summary = null, fallbackSchemaVersion = "dtc_evidence_summary_v1") {
-    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return null;
+  function normalizeDtcEvidenceSummaryAliases(summary = null, fallbackSchemaVersion = "dtc_evidence_summary_v1", ...aliasSummaries) {
+    const summaries = [summary, ...aliasSummaries]
+      .filter((item) => item && typeof item === "object" && !Array.isArray(item));
+    if (!summaries.length) return null;
     const normalizeList = (camelKey, snakeKey) => {
-      const values = Array.isArray(summary[camelKey]) ? summary[camelKey] : Array.isArray(summary[snakeKey]) ? summary[snakeKey] : [];
+      const values = summaries.flatMap((item) => [
+        ...(Array.isArray(item[camelKey]) ? item[camelKey] : []),
+        ...(Array.isArray(item[snakeKey]) ? item[snakeKey] : [])
+      ]);
       return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))].sort();
     };
-    const schemaVersion = String(summary.schemaVersion || summary.schema_version || fallbackSchemaVersion).trim() || fallbackSchemaVersion;
+    const schemaVersion = String(summaries.map((item) => item.schemaVersion || item.schema_version).find(Boolean) || fallbackSchemaVersion).trim() || fallbackSchemaVersion;
     const keys = normalizeList("keys", "dtc_keys");
-    const evidenceRecorded = pickDefined(summary.evidenceRecorded, summary.evidence_recorded, false) === true;
-    const completeEvidenceRecorded = evidenceRecorded || pickDefined(summary.completeEvidenceRecorded, summary.complete_evidence_recorded, false) === true;
-    const reportedEcuEvidenceRecorded = completeEvidenceRecorded || pickDefined(summary.reportedEcuEvidenceRecorded, summary.reported_ecu_evidence_recorded, false) === true;
+    const evidenceRecorded = summaries.some((item) => pickDefined(item.evidenceRecorded, item.evidence_recorded, false) === true);
+    const completeEvidenceRecorded = evidenceRecorded || summaries.some((item) => pickDefined(item.completeEvidenceRecorded, item.complete_evidence_recorded, false) === true);
+    const reportedEcuEvidenceRecorded = completeEvidenceRecorded || summaries.some((item) => pickDefined(item.reportedEcuEvidenceRecorded, item.reported_ecu_evidence_recorded, false) === true);
     const explicitReportedEcuIds = normalizeList("reportedEcuIds", "reported_ecu_ids");
     const keyEcuIds = [...new Set(keys.map((key) => String(key || "").split("|")[5]?.trim().toUpperCase()).filter(Boolean))].sort();
     const reportedEcuIds = explicitReportedEcuIds.length > 0 || !completeEvidenceRecorded ? explicitReportedEcuIds : keyEcuIds;
     const unresolvedEcuIds = normalizeList("unresolvedEcuIds", "unresolved_ecu_ids");
     const explicitReportedEcuKeys = normalizeList("reportedEcuKeys", "reported_ecu_keys");
     const reportedEcuKeys = explicitReportedEcuKeys.length > 0 || !completeEvidenceRecorded ? explicitReportedEcuKeys : [...keys];
-    const rawDtcCount = pickDefined(summary.dtcCount, summary.dtc_count, keys.length);
-    const dtcCount = Number.isFinite(Number(rawDtcCount)) ? Math.max(0, Math.round(Number(rawDtcCount))) : keys.length;
+    const explicitDtcCounts = summaries.flatMap((item) => [item.dtcCount, item.dtc_count])
+      .filter((value) => Number.isFinite(Number(value)))
+      .map((value) => Math.max(0, Math.round(Number(value))));
+    const dtcCount = Math.max(keys.length, 0, ...explicitDtcCounts);
     return {
-      ...summary,
+      ...summaries[0],
       schemaVersion,
       schema_version: schemaVersion,
       dtcCount,
@@ -14005,22 +14012,20 @@
     const dtcReportedStatusSummary = fallbackDtcSnapshot?.dtcReportedStatusSummary
       || fallbackDtcSnapshot?.dtc_reported_status_summary
       || normalizeObject("dtcReportedStatusSummary", "dtc_reported_status_summary");
-    const dtcIdentitySummary = normalizeDtcEvidenceSummaryAliases(
-      summary.dtcIdentitySummary || summary.dtc_identity_summary || analysisReadinessSummary?.dtcIdentitySummary || analysisReadinessSummary?.dtc_identity_summary || null,
-      "dtc_identity_summary_v1"
-    );
-    const dtcStatusByteSummary = normalizeDtcEvidenceSummaryAliases(
-      summary.dtcStatusByteSummary || summary.dtc_status_byte_summary || analysisReadinessSummary?.dtcStatusByteSummary || analysisReadinessSummary?.dtc_status_byte_summary || null,
-      "dtc_status_byte_summary_v1"
-    );
-    const dtcMetadataEvidenceSummary = normalizeDtcEvidenceSummaryAliases(
-      summary.dtcMetadataEvidenceSummary || summary.dtc_metadata_evidence_summary || analysisReadinessSummary?.dtcMetadataEvidenceSummary || analysisReadinessSummary?.dtc_metadata_evidence_summary || null,
-      "dtc_metadata_evidence_summary_v1"
-    );
-    const dtcFaultDetectionCounterSummary = normalizeDtcEvidenceSummaryAliases(
-      summary.dtcFaultDetectionCounterSummary || summary.dtc_fault_detection_counter_summary || analysisReadinessSummary?.dtcFaultDetectionCounterSummary || analysisReadinessSummary?.dtc_fault_detection_counter_summary || null,
-      "dtc_fault_detection_counter_summary_v1"
-    );
+    const selectDtcEvidenceSummaryAliases = (camelKey, snakeKey) => {
+      const directAliases = [summary[camelKey], summary[snakeKey]].filter(hasObjectContent);
+      return directAliases.length > 0
+        ? directAliases
+        : [analysisReadinessSummary?.[camelKey], analysisReadinessSummary?.[snakeKey]].filter(hasObjectContent);
+    };
+    const normalizeSelectedDtcEvidenceSummary = (camelKey, snakeKey, schemaVersion) => {
+      const aliases = selectDtcEvidenceSummaryAliases(camelKey, snakeKey);
+      return normalizeDtcEvidenceSummaryAliases(aliases[0] || null, schemaVersion, ...aliases.slice(1));
+    };
+    const dtcIdentitySummary = normalizeSelectedDtcEvidenceSummary("dtcIdentitySummary", "dtc_identity_summary", "dtc_identity_summary_v1");
+    const dtcStatusByteSummary = normalizeSelectedDtcEvidenceSummary("dtcStatusByteSummary", "dtc_status_byte_summary", "dtc_status_byte_summary_v1");
+    const dtcMetadataEvidenceSummary = normalizeSelectedDtcEvidenceSummary("dtcMetadataEvidenceSummary", "dtc_metadata_evidence_summary", "dtc_metadata_evidence_summary_v1");
+    const dtcFaultDetectionCounterSummary = normalizeSelectedDtcEvidenceSummary("dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary", "dtc_fault_detection_counter_summary_v1");
     const dtcStatusReadoutPlan = summary.dtcStatusReadoutPlan || summary.dtc_status_readout_plan || null;
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
@@ -14224,10 +14229,18 @@
       || summary.dtcReportedStatusSummary
       || summary.dtc_reported_status_summary
       || {};
-    const dtcIdentitySummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcIdentitySummary || fallbackCoreSessionStatus?.dtc_identity_summary || summary.dtcIdentitySummary || summary.dtc_identity_summary || null, "dtc_identity_summary_v1");
-    const dtcStatusByteSummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcStatusByteSummary || fallbackCoreSessionStatus?.dtc_status_byte_summary || summary.dtcStatusByteSummary || summary.dtc_status_byte_summary || null, "dtc_status_byte_summary_v1");
-    const dtcMetadataEvidenceSummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcMetadataEvidenceSummary || fallbackCoreSessionStatus?.dtc_metadata_evidence_summary || summary.dtcMetadataEvidenceSummary || summary.dtc_metadata_evidence_summary || null, "dtc_metadata_evidence_summary_v1");
-    const dtcFaultDetectionCounterSummary = normalizeDtcEvidenceSummaryAliases(fallbackCoreSessionStatus?.dtcFaultDetectionCounterSummary || fallbackCoreSessionStatus?.dtc_fault_detection_counter_summary || summary.dtcFaultDetectionCounterSummary || summary.dtc_fault_detection_counter_summary || null, "dtc_fault_detection_counter_summary_v1");
+    const selectDtcEvidenceSummaryAliases = (camelKey, snakeKey) => {
+      const fallbackAliases = [fallbackCoreSessionStatus?.[camelKey], fallbackCoreSessionStatus?.[snakeKey]].filter(hasObjectContent);
+      return fallbackAliases.length > 0 ? fallbackAliases : [summary[camelKey], summary[snakeKey]].filter(hasObjectContent);
+    };
+    const normalizeSelectedDtcEvidenceSummary = (camelKey, snakeKey, schemaVersion) => {
+      const aliases = selectDtcEvidenceSummaryAliases(camelKey, snakeKey);
+      return normalizeDtcEvidenceSummaryAliases(aliases[0] || null, schemaVersion, ...aliases.slice(1));
+    };
+    const dtcIdentitySummary = normalizeSelectedDtcEvidenceSummary("dtcIdentitySummary", "dtc_identity_summary", "dtc_identity_summary_v1");
+    const dtcStatusByteSummary = normalizeSelectedDtcEvidenceSummary("dtcStatusByteSummary", "dtc_status_byte_summary", "dtc_status_byte_summary_v1");
+    const dtcMetadataEvidenceSummary = normalizeSelectedDtcEvidenceSummary("dtcMetadataEvidenceSummary", "dtc_metadata_evidence_summary", "dtc_metadata_evidence_summary_v1");
+    const dtcFaultDetectionCounterSummary = normalizeSelectedDtcEvidenceSummary("dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary", "dtc_fault_detection_counter_summary_v1");
     const vehicleApplicabilityChecklist = summary.vehicleApplicabilityChecklist || summary.vehicle_applicability_checklist || null;
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || {};
     const vehicleApplicabilityEvidenceSummary = summary.vehicleApplicabilityEvidenceSummary
@@ -16388,10 +16401,10 @@
     const vehicleApplicabilitySourceVerified = pickDefined(vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true;
     const readoutRequestPlanGateSummary = summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || null;
-    const dtcIdentitySummary = normalizeDtcEvidenceSummaryAliases(summary.dtcIdentitySummary || summary.dtc_identity_summary || null, "dtc_identity_summary_v1");
-    const dtcStatusByteSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcStatusByteSummary || summary.dtc_status_byte_summary || null, "dtc_status_byte_summary_v1");
-    const dtcMetadataEvidenceSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcMetadataEvidenceSummary || summary.dtc_metadata_evidence_summary || null, "dtc_metadata_evidence_summary_v1");
-    const dtcFaultDetectionCounterSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcFaultDetectionCounterSummary || summary.dtc_fault_detection_counter_summary || null, "dtc_fault_detection_counter_summary_v1");
+    const dtcIdentitySummary = normalizeDtcEvidenceSummaryAliases(summary.dtcIdentitySummary || null, "dtc_identity_summary_v1", summary.dtc_identity_summary);
+    const dtcStatusByteSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcStatusByteSummary || null, "dtc_status_byte_summary_v1", summary.dtc_status_byte_summary);
+    const dtcMetadataEvidenceSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcMetadataEvidenceSummary || null, "dtc_metadata_evidence_summary_v1", summary.dtc_metadata_evidence_summary);
+    const dtcFaultDetectionCounterSummary = normalizeDtcEvidenceSummaryAliases(summary.dtcFaultDetectionCounterSummary || null, "dtc_fault_detection_counter_summary_v1", summary.dtc_fault_detection_counter_summary);
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
