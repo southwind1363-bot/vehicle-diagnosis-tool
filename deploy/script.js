@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 2916件",
+  validationCheckLabel: "OBD安全検証 2918件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "ECU応答一覧の空配列フォールバックを統一",
+  recentMilestone: "DTC別名の空配列フォールバックを統一",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.13";
+const APP_VERSION = "3.13.14";
 const APP_LAST_UPDATED = "2026-08-20";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

@@ -3341,8 +3341,8 @@
       "permanent_dtcs", "permanentDtcs", "permanent_dtc_codes", "permanentDtcCodes", "permanent_codes", "permanentCodes",
       "ecu_responses", "ecuResponses", "ecu_snapshots", "ecuSnapshots"
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
-    const dtcRows = Array.isArray(data.dtcs) ? data.dtcs : Array.isArray(data.codes) ? data.codes : Array.isArray(data.dtc_codes) ? data.dtc_codes : Array.isArray(data.dtcCodes) ? data.dtcCodes : [];
-    const firstDtcArray = (...values) => values.find(Array.isArray) || [];
+    const firstDtcArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0) || values.find(Array.isArray) || [];
+    const dtcRows = firstDtcArray(data.dtcs, data.codes, data.dtc_codes, data.dtcCodes);
     const typedDtcRowGroups = [
       { status: "stored", rows: firstDtcArray(data.stored_dtcs, data.storedDtcs, data.stored_dtc_codes, data.storedDtcCodes, data.stored_codes, data.storedCodes) },
       { status: "pending", rows: firstDtcArray(data.pending_dtcs, data.pendingDtcs, data.pending_dtc_codes, data.pendingDtcCodes, data.pending_codes, data.pendingCodes) },
@@ -3356,7 +3356,7 @@
     ].some(Array.isArray);
     const errorCodes = readBridgeResponseErrorCodes(response);
     const rawDtcResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
-    const ecuRows = [data.ecu_responses, data.ecuResponses, data.ecu_snapshots, data.ecuSnapshots].find(Array.isArray) || [];
+    const ecuRows = firstDtcArray(data.ecu_responses, data.ecuResponses, data.ecu_snapshots, data.ecuSnapshots);
     const getEcuRawDtcResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
     const hasRawEcuDtcResponse = ecuRows.some((row) => getEcuRawDtcResponse(row) !== null);
     const malformedEcuDtcAlias = ecuRows.some((ecuRow) => ecuRow && typeof ecuRow === "object" && !Array.isArray(ecuRow) && [
@@ -3490,7 +3490,7 @@
       return rowIntent === "read_pending_dtc" ? "pending" : rowIntent === "read_permanent_dtc" ? "permanent" : rowIntent === "read_stored_dtc" ? "stored" : defaultStatus;
     };
     const ecuDtcRows = ecuRows.flatMap((ecuRow) => {
-      const rows = Array.isArray(ecuRow?.dtcs) ? ecuRow.dtcs : Array.isArray(ecuRow?.codes) ? ecuRow.codes : Array.isArray(ecuRow?.dtc_codes) ? ecuRow.dtc_codes : Array.isArray(ecuRow?.dtcCodes) ? ecuRow.dtcCodes : [];
+      const rows = firstDtcArray(ecuRow?.dtcs, ecuRow?.codes, ecuRow?.dtc_codes, ecuRow?.dtcCodes);
       const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
       const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.name || ecuRow?.label || ecuRow?.display_name || ecuRow?.displayName || null;
       const status = readEcuDtcCategory(ecuRow);
@@ -3552,7 +3552,7 @@
       const rowEcu = row?.source_ecu || row?.sourceEcu || row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.module || row?.module_id || row?.moduleId || null;
       const rowEcuName = row?.source_ecu_name || row?.sourceEcuName || row?.ecu_name || row?.ecuName || row?.name || row?.label || row?.display_name || row?.displayName || null;
       const rowDtcStatus = readEcuDtcCategory(row);
-      const rowInputs = Array.isArray(row?.dtcs) ? row.dtcs : Array.isArray(row?.codes) ? row.codes : Array.isArray(row?.dtc_codes) ? row.dtc_codes : Array.isArray(row?.dtcCodes) ? row.dtcCodes : [];
+      const rowInputs = firstDtcArray(row?.dtcs, row?.codes, row?.dtc_codes, row?.dtcCodes);
       const hasStructuredRowDtcEvidence = [row?.dtcs, row?.codes, row?.dtc_codes, row?.dtcCodes].some(Array.isArray);
       const rowStatus = row?.status || row?.response_status || row?.responseStatus || row?.readout_status || row?.readoutStatus || row?.dtc_readout_status || row?.dtcReadoutStatus || decodedRawSnapshot?.dtcReadoutStatus || (hasStructuredRowDtcEvidence ? "reported" : bridgeDtcReadoutStatus);
       const childDtcs = [...new Map([
@@ -9477,7 +9477,9 @@
       : Boolean(row && typeof row === "object" && !Array.isArray(row) && String(row.code || row.dtc || row.dtc_code || row.dtcCode || "").trim());
     const parentRows = [source?.codes, source?.dtcs, source?.dtc_codes, source?.dtcCodes].filter(Array.isArray).flat();
     if (parentRows.some(hasCode)) return false;
-    const ecuRows = [source?.ecuResponses, source?.ecu_responses, source?.ecuSnapshots, source?.ecu_snapshots].find(Array.isArray) || [];
+    const ecuRows = [source?.ecuResponses, source?.ecu_responses, source?.ecuSnapshots, source?.ecu_snapshots]
+      .filter(Array.isArray)
+      .flat();
     return ecuRows.some((ecuRow) => [ecuRow?.dtcs, ecuRow?.codes, ecuRow?.dtc_codes, ecuRow?.dtcCodes].filter(Array.isArray).flat().some(hasCode));
   }
 
