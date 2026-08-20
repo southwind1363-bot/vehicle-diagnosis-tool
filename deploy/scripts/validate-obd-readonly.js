@@ -3383,7 +3383,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2954件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('保存DTC区分要約の競合別名を統一'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 2957件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('保存DTC読取計画を取得区分へ同期'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3990,7 +3990,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "保存DTC区分要約の競合別名を統一"'), "OBD core progress should describe the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "保存DTC読取計画を取得区分へ同期"'), "OBD core progress should describe the latest completed interface-reliability milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4318,7 +4318,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "保存DTC区分要約の競合別名を統一"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "保存DTC読取計画を取得区分へ同期"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -4396,7 +4396,7 @@ check(appSource.includes('const previousNextReadoutCandidateSafetySummary = prev
 check(appSource.includes('const previousReadoutRequestPlanSummary = previousSession.readoutRequestPlanSummary || previousSession.readout_request_plan_summary') && appSource.includes('previousCoreSessionStatus?.readout_request_plan_summary'), "OBD local bridge readout rebuild should recover saved readout request plan aliases");
 check(appSource.includes('nextReadoutCandidates: previousNextReadoutCandidates || undefined,') && appSource.includes('nextReadoutRequestSafetySummary: previousNextReadoutRequestSafetySummary || undefined,') && appSource.includes('nextReadoutCandidateSafetySummary: previousNextReadoutCandidateSafetySummary || undefined,'), "OBD local bridge diagnostic import should receive saved readout safety metadata");
 check(appSource.includes('nextReadoutRequestSafetySummary: importResult.nextReadoutRequestSafetySummary || importResult.next_readout_request_safety_summary') && appSource.includes('previousNextReadoutRequestSafetySummary') && appSource.includes('nextReadoutCandidateSafetySummary: importResult.nextReadoutCandidateSafetySummary || importResult.next_readout_candidate_safety_summary'), "OBD local bridge rebuilt scan session should receive saved readout safety metadata");
-check(source.includes('function normalizeReadoutRequestSummaryAliases(input = null)') && source.includes('const readoutId = input.readoutId || input.readout_id || input.id || null;'), "OBD readout request metadata should normalize saved camelCase and snake_case aliases");
+check(source.includes('function normalizeReadoutRequestSummaryAliases(input = null, fallbackDtcStatusReadoutPlan = null)') && source.includes('const readoutId = input.readoutId || input.readout_id || input.id || null;'), "OBD readout request metadata should normalize saved camelCase and snake_case aliases");
 check(source.includes('function normalizeReadoutRequestPlanSummaryAliases(input = null)') && source.includes('nextRequestId = input.nextRequestId || input.next_request_id || nextRequest?.readoutId || null'), "OBD readout request plan metadata should normalize saved camelCase and snake_case aliases");
 check(source.includes('nextReadoutRequest: normalizeReadoutRequestSummaryAliases(sessionInput.next_readout_request || sessionInput.nextReadoutRequest || null),') && source.includes('readoutRequestPlanSummary: normalizeReadoutRequestPlanSummaryAliases(sessionInput.readout_request_plan_summary || sessionInput.readoutRequestPlanSummary || null),'), "session metadata overrides should carry normalized saved readout request summaries");
 check(source.includes('const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(summary.nextReadoutRequest || summary.next_readout_request || null);') && source.includes('const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);'), "summary metadata fields should carry normalized saved readout request summaries");
@@ -24033,10 +24033,53 @@ check(savedDtcStatusSummaries.every((summary) => summary?.reportedStatuses?.join
 check(savedDtcStatusSummaries.every((summary) => summary?.observedStatuses?.join(",") === "stored" && summary?.reportedCountOnlyStatuses?.join(",") === "pending" && summary?.emptyStatuses?.length === 0), "Saved DTC observed and count-only states were not kept distinct while normalizing aliases");
 check(conflictingSavedDtcStatusAliasSession?.importedCoreSessionStatus?.dtcStatusSummary === conflictingSavedDtcStatusAliasSession?.importedCoreSessionStatus?.dtc_status_summary && conflictingSavedDtcStatusAliasSession?.importedDiagnosticFlowSummary?.dtcStatusSummary === conflictingSavedDtcStatusAliasSession?.importedDiagnosticFlowSummary?.dtc_status_summary && conflictingSavedDtcStatusAliasRoundTrip?.importedCoreSessionStatus?.dtc_status_summary?.reported_statuses?.join(",") === "stored,pending" && conflictingSavedDtcStatusAliasRoundTrip?.importedDiagnosticFlowSummary?.dtcStatusSummary?.reportedCountOnlyStatuses?.join(",") === "pending" && conflictingSavedDtcStatusAliasRoundTrip?.vehicleCommandEnabled === false && conflictingSavedDtcStatusAliasRoundTrip?.wouldTransmit === false, "Saved DTC status aliases were not retained through read-only export and JSON reimport");
 
+const staleSavedDtcReadoutPlan = {
+  schemaVersion: "dtc_status_readout_plan_v1",
+  reportedStatuses: [],
+  unreportedStatuses: ["stored", "pending", "permanent"],
+  requests: [{ dtcStatus: "stored", bridgeIntent: "read_stored_dtc", serviceMode: "03", required: true }]
+};
+const savedDtcReadoutPlanSession = obd.buildDiagnosticScanSession({
+  imported_core_session_status: {
+    schema_version: "core_session_status_v1",
+    dtc_status_summary: {
+      reported_statuses: ["stored", "pending"],
+      observed_statuses: ["stored"],
+      reported_count_only_statuses: ["pending"],
+      unreported_statuses: ["permanent"]
+    },
+    dtcStatusReadoutPlan: staleSavedDtcReadoutPlan,
+    dtc_status_readout_plan: {
+      schema_version: "dtc_status_readout_plan_v1",
+      reported_statuses: ["stored", "pending"],
+      unreported_statuses: ["permanent"]
+    },
+    next_readout_request: {
+      readout_id: "dtc_snapshot",
+      bridge_intent: "read_stored_dtc",
+      service_mode: "03",
+      dtc_status: "stored",
+      dtcStatusReadoutPlan: staleSavedDtcReadoutPlan,
+      execution_enabled: true,
+      read_only: false,
+      would_transmit: true,
+      vehicle_command_enabled: true
+    }
+  }
+});
+const savedDtcReadoutPlanRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(savedDtcReadoutPlanSession)
+));
+const normalizedSavedDtcReadoutPlan = savedDtcReadoutPlanSession?.importedCoreSessionStatus?.dtcStatusReadoutPlan;
+const normalizedSavedDtcNextRequest = savedDtcReadoutPlanSession?.importedCoreSessionStatus?.nextReadoutRequest;
+check(normalizedSavedDtcReadoutPlan?.reportedStatuses?.join(",") === "stored,pending" && normalizedSavedDtcReadoutPlan?.unreportedStatuses?.join(",") === "permanent" && normalizedSavedDtcReadoutPlan?.requests?.filter((item) => item.required).map((item) => item.dtcStatus).join(",") === "permanent", "Saved DTC readout plans were not rebuilt from the normalized stored, pending, and permanent status summary");
+check(normalizedSavedDtcNextRequest?.dtcStatus === "permanent" && normalizedSavedDtcNextRequest?.bridgeIntent === "read_permanent_dtc" && normalizedSavedDtcNextRequest?.serviceMode === "0A" && normalizedSavedDtcNextRequest?.dtcStatusReadoutPlan === normalizedSavedDtcReadoutPlan && normalizedSavedDtcNextRequest?.executionEnabled === false && normalizedSavedDtcNextRequest?.readOnly === true && normalizedSavedDtcNextRequest?.wouldTransmit === false && normalizedSavedDtcNextRequest?.vehicleCommandEnabled === false, "Saved next DTC readout requests were not synchronized to the canonical read-only status plan");
+check(savedDtcReadoutPlanRoundTrip?.importedCoreSessionStatus?.dtc_status_readout_plan?.unreported_statuses?.join(",") === "permanent" && savedDtcReadoutPlanRoundTrip?.importedCoreSessionStatus?.next_readout_request?.bridge_intent === "read_permanent_dtc" && savedDtcReadoutPlanRoundTrip?.importedCoreSessionStatus?.nextReadoutRequest?.service_mode === "0A" && savedDtcReadoutPlanRoundTrip?.importedCoreSessionStatus?.nextReadoutRequest?.execution_enabled === false && savedDtcReadoutPlanRoundTrip?.vehicleCommandEnabled === false && savedDtcReadoutPlanRoundTrip?.wouldTransmit === false, "Saved DTC readout plans and requests were not retained through read-only export and JSON reimport");
+
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 2954");
+  console.log("OBD read-only safety checks: 2957");
   console.log("Errors: 0");
 }

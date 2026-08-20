@@ -8745,20 +8745,33 @@
     };
   }
 
-  function normalizeReadoutRequestSummaryAliases(input = null) {
+  function normalizeReadoutRequestSummaryAliases(input = null, fallbackDtcStatusReadoutPlan = null) {
     if (!input || typeof input !== "object") return input || null;
     const readoutId = input.readoutId || input.readout_id || input.id || null;
-    const bridgeIntent = input.bridgeIntent || input.bridge_intent || null;
-    const serviceMode = input.serviceMode || input.service_mode || null;
+    const dtcStatusReadoutPlan = readoutId === "dtc_snapshot"
+      ? (fallbackDtcStatusReadoutPlan || input.dtcStatusReadoutPlan || input.dtc_status_readout_plan || null)
+      : null;
+    const nextDtcStatus = dtcStatusReadoutPlan?.unreportedStatuses?.[0]
+      || dtcStatusReadoutPlan?.unreported_statuses?.[0]
+      || "stored";
+    const dtcRequestByStatus = {
+      stored: { bridgeIntent: "read_stored_dtc", serviceMode: "03" },
+      pending: { bridgeIntent: "read_pending_dtc", serviceMode: "07" },
+      permanent: { bridgeIntent: "read_permanent_dtc", serviceMode: "0A" }
+    };
+    const dtcRequest = dtcStatusReadoutPlan ? dtcRequestByStatus[nextDtcStatus] || dtcRequestByStatus.stored : null;
+    const bridgeIntent = dtcRequest?.bridgeIntent || input.bridgeIntent || input.bridge_intent || null;
+    const serviceMode = dtcRequest?.serviceMode || input.serviceMode || input.service_mode || null;
+    const dtcStatus = dtcStatusReadoutPlan ? nextDtcStatus : input.dtcStatus || input.dtc_status || null;
     const dataIdentifier = input.dataIdentifier || input.data_identifier || null;
     const requiresDataIdentifier = pickDefined(input.requiresDataIdentifier, input.requires_data_identifier, false) === true;
     const dataIdentifierConfigured = pickDefined(input.dataIdentifierConfigured, input.data_identifier_configured, false) === true;
     const executionBlockReason = input.executionBlockReason || input.execution_block_reason || null;
-    const executionEnabled = pickDefined(input.executionEnabled, input.execution_enabled, false) === true;
-    const readOnly = pickDefined(input.readOnly, input.read_only, true) !== false;
+    const executionEnabled = dtcStatusReadoutPlan ? false : pickDefined(input.executionEnabled, input.execution_enabled, false) === true;
+    const readOnly = dtcStatusReadoutPlan ? true : pickDefined(input.readOnly, input.read_only, true) !== false;
     const retainedRawText = pickDefined(input.retainedRawText, input.retained_raw_text, false) === true;
-    const wouldTransmit = pickDefined(input.wouldTransmit, input.would_transmit, false) === true;
-    const vehicleCommandEnabled = pickDefined(input.vehicleCommandEnabled, input.vehicle_command_enabled, false) === true;
+    const wouldTransmit = dtcStatusReadoutPlan ? false : pickDefined(input.wouldTransmit, input.would_transmit, false) === true;
+    const vehicleCommandEnabled = dtcStatusReadoutPlan ? false : pickDefined(input.vehicleCommandEnabled, input.vehicle_command_enabled, false) === true;
     return {
       ...input,
       readoutId,
@@ -8767,6 +8780,10 @@
       bridge_intent: bridgeIntent,
       serviceMode,
       service_mode: serviceMode,
+      dtcStatus,
+      dtc_status: dtcStatus,
+      dtcStatusReadoutPlan,
+      dtc_status_readout_plan: dtcStatusReadoutPlan,
       dataIdentifier,
       data_identifier: dataIdentifier,
       requiresDataIdentifier,
@@ -14046,7 +14063,7 @@
     const dtcStatusByteSummary = normalizeSelectedDtcEvidenceSummary("dtcStatusByteSummary", "dtc_status_byte_summary", "dtc_status_byte_summary_v1");
     const dtcMetadataEvidenceSummary = normalizeSelectedDtcEvidenceSummary("dtcMetadataEvidenceSummary", "dtc_metadata_evidence_summary", "dtc_metadata_evidence_summary_v1");
     const dtcFaultDetectionCounterSummary = normalizeSelectedDtcEvidenceSummary("dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary", "dtc_fault_detection_counter_summary_v1");
-    const dtcStatusReadoutPlan = summary.dtcStatusReadoutPlan || summary.dtc_status_readout_plan || null;
+    const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const readoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanSummary = normalizeReadoutRequestPlanSummaryAliases(summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null);
     const coreWorkflowSummary = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
@@ -14057,7 +14074,10 @@
     const pendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
     const pendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
     const analysisChecklist = normalizeArray("analysisChecklist", "analysis_checklist");
-    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(summary.nextReadoutRequest || summary.next_readout_request || null);
+    const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(
+      summary.nextReadoutRequest || summary.next_readout_request || null,
+      dtcStatusReadoutPlan
+    );
     const nextReadoutSummary = summary.nextReadoutSummary || summary.next_readout_summary || null;
     const nextReadoutReasonSummary = summary.nextReadoutReasonSummary
       || summary.next_readout_reason_summary
