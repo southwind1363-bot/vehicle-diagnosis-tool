@@ -6021,7 +6021,9 @@
       livePidResponseInput?.items
     ].some(Array.isArray);
     const livePidSnapshot = hasLivePidSnapshotInput
-      ? (livePidSnapshotInput?.monitorValues
+      ? (hasGenericLivePidEcuRows(livePidSnapshotInput)
+          ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
+          : livePidSnapshotInput?.monitorValues
           ? livePidSnapshotInput
           : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes)) && !livePidResponseHasStructuredValues
             ? decodeLivePidResponse(livePidResponseInput)
@@ -6098,7 +6100,7 @@
         .filter((snapshot) => String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase() === "reported")
         .reduce((total, snapshot) => total + (Number(snapshot?.itemCount || snapshot?.item_count) || 0), 0);
     const onboardMonitorSnapshot = hasOnboardMonitorSnapshotInput
-      ? (onboardMonitorSnapshotInput?.schemaVersion ? onboardMonitorSnapshotInput : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput))
+      ? (onboardMonitorSnapshotInput?.schemaVersion && !hasGenericOnboardMonitorEcuRows(onboardMonitorSnapshotInput) ? onboardMonitorSnapshotInput : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput))
       : null;
     const onboardMonitorDirectTests = [
       onboardMonitorSnapshot?.tests,
@@ -6125,7 +6127,7 @@
       onboardMonitorSnapshot?.ecu_responses
     ].find(Array.isArray) || [];
     const supportedPidMatrix = hasSupportedPidMatrixInput
-      ? (supportedPidMatrixInput?.schemaVersion
+      ? (supportedPidMatrixInput?.schemaVersion && !hasGenericSupportedPidEcuRows(supportedPidMatrixInput)
           ? supportedPidMatrixInput
           : (supportedPidMatrixInput?.raw || supportedPidMatrixInput?.response || Array.isArray(supportedPidMatrixInput?.bytes))
             ? decodeSupportedPidResponse(supportedPidMatrixInput)
@@ -9411,6 +9413,21 @@
     );
   }
 
+  function hasGenericLivePidEcuRows(snapshot = {}) {
+    const source = snapshot?.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data) ? snapshot.data : snapshot;
+    return [source?.ecuSnapshots, source?.ecu_snapshots, source?.ecuResponses, source?.ecu_responses].some(Array.isArray);
+  }
+
+  function hasGenericOnboardMonitorEcuRows(snapshot = {}) {
+    const source = snapshot?.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data) ? snapshot.data : snapshot;
+    return [source?.ecuSnapshots, source?.ecu_snapshots, source?.ecuResponses, source?.ecu_responses].some(Array.isArray);
+  }
+
+  function hasGenericSupportedPidEcuRows(snapshot = {}) {
+    const source = snapshot?.data && typeof snapshot.data === "object" && !Array.isArray(snapshot.data) ? snapshot.data : snapshot;
+    return [source?.ecuSnapshots, source?.ecu_snapshots].some(Array.isArray);
+  }
+
   function buildBridgeSessionSummary(parts = {}) {
     parts = getBridgeSummaryInput(parts);
     const metadataOverrides = getSessionMetadataOverrides(parts);
@@ -9453,8 +9470,10 @@
           }
           : livePidSnapshotInput)
       : livePidSnapshotInput;
-    const normalizedLivePidSnapshot = livePidSnapshotInput?.monitorValues
-      ? livePidSnapshotInput
+    const normalizedLivePidSnapshot = hasGenericLivePidEcuRows(livePidSnapshotInput)
+      ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
+      : livePidSnapshotInput?.monitorValues
+        ? livePidSnapshotInput
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
@@ -9526,7 +9545,7 @@
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
-    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
+    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion && !hasGenericSupportedPidEcuRows(supportedPidMatrixInput)
       ? supportedPidMatrixInput
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
@@ -9545,7 +9564,7 @@
       : (ecuInfoResponseInput?.raw || ecuInfoResponseInput?.response || Array.isArray(ecuInfoResponseInput?.bytes))
         ? decodeEcuInfoResponse(ecuInfoResponseInput)
         : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}));
-    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
+    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion && !hasGenericOnboardMonitorEcuRows(onboardMonitorSnapshotInput)
       ? onboardMonitorSnapshotInput
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
@@ -10190,7 +10209,7 @@
       allowVciArray: true
     });
     const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" }));
-    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
+    const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion && !hasGenericSupportedPidEcuRows(supportedPidMatrixInput)
       ? supportedPidMatrixInput
       : normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput || { data: { supported_pids: [] } }));
     const readinessSnapshot = withSchemaVersionAlias(readinessSnapshotInput?.schemaVersion
@@ -10199,7 +10218,7 @@
     const ecuInfoSnapshot = withSchemaVersionAlias(ecuInfoSnapshotInput?.schemaVersion
       ? normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)
       : normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput || {}));
-    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
+    const onboardMonitorSnapshot = withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion && !hasGenericOnboardMonitorEcuRows(onboardMonitorSnapshotInput)
       ? onboardMonitorSnapshotInput
       : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
@@ -10214,8 +10233,10 @@
           }
           : livePidSnapshotInput)
       : livePidSnapshotInput;
-    const livePidSnapshot = livePidSnapshotInput?.monitorValues
-      ? livePidSnapshotInput
+    const livePidSnapshot = hasGenericLivePidEcuRows(livePidSnapshotInput)
+      ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
+      : livePidSnapshotInput?.monitorValues
+        ? livePidSnapshotInput
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
@@ -28539,8 +28560,10 @@
           }
           : livePidSnapshotInput)
       : livePidSnapshotInput;
-    const normalizedLivePidSnapshot = preserveExplicitReadoutFailure(livePidSnapshotInput?.monitorValues
-      ? livePidSnapshotInput
+    const normalizedLivePidSnapshot = preserveExplicitReadoutFailure(hasGenericLivePidEcuRows(livePidSnapshotInput)
+      ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
+      : livePidSnapshotInput?.monitorValues
+        ? livePidSnapshotInput
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput), livePidSnapshotInput, ["livePidReadoutStatus", "live_pid_readout_status"]);
@@ -28687,7 +28710,7 @@
           ? normalizeBridgeReadinessSnapshot(readinessSnapshotInput)
         : normalizeReadinessSnapshot(readinessSnapshotInput)), readinessSafetyInput, ["readinessReadoutStatus", "readiness_readout_status"]);
     const onboardMonitorSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(onboardMonitorSnapshotInput?.schemaVersion
-      ? (!Number.isFinite(Number(onboardMonitorSnapshotInput.testCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.failedCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.passedCount)) ? normalizeOnboardMonitorSnapshot(onboardMonitorSnapshotInput) : onboardMonitorSnapshotInput)
+      ? (hasGenericOnboardMonitorEcuRows(onboardMonitorSnapshotInput) || !Number.isFinite(Number(onboardMonitorSnapshotInput.testCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.failedCount)) || !Number.isFinite(Number(onboardMonitorSnapshotInput.passedCount)) ? normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput) : onboardMonitorSnapshotInput)
       : (onboardMonitorResponseInput?.raw || onboardMonitorResponseInput?.response || Array.isArray(onboardMonitorResponseInput?.bytes))
         ? decodeOnboardMonitorResponse(onboardMonitorResponseInput)
         : ((onboardMonitorSnapshotInput?.data && typeof onboardMonitorSnapshotInput.data === "object" && !Array.isArray(onboardMonitorSnapshotInput.data))
@@ -28712,7 +28735,7 @@
           ? normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput)
           : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSafetyInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
     const supportedPidMatrix = preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
-      ? (!Array.isArray(supportedPidMatrixInput.supportedPids) || !Array.isArray(supportedPidMatrixInput.items) ? buildSupportedPidMatrix(supportedPidMatrixInput) : supportedPidMatrixInput)
+      ? (hasGenericSupportedPidEcuRows(supportedPidMatrixInput) || !Array.isArray(supportedPidMatrixInput.supportedPids) || !Array.isArray(supportedPidMatrixInput.items) ? buildSupportedPidMatrix(supportedPidMatrixInput) : supportedPidMatrixInput)
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
       : (supportedPidMatrixInput?.data
