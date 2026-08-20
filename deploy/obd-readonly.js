@@ -14762,8 +14762,40 @@
       || vehicleApplicabilityChecklist?.evidence_summary
       || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
-    const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
-    const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+    const primaryBlockingSummaryInput = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+    const primaryBlockingReadoutRequestInput = summary.primaryBlockingReadoutRequest
+      || summary.primary_blocking_readout_request
+      || primaryBlockingSummaryInput?.request
+      || primaryBlockingSummaryInput?.readoutRequest
+      || primaryBlockingSummaryInput?.readout_request
+      || null;
+    const primaryBlockingReadoutRequestId = primaryBlockingReadoutRequestInput?.readoutId || primaryBlockingReadoutRequestInput?.readout_id || primaryBlockingReadoutRequestInput?.id || null;
+    const isDtcPrimaryBlockingReadoutRequest = primaryBlockingReadoutRequestId === "dtc_snapshot";
+    const primaryBlockingReadoutRequest = isDtcPrimaryBlockingReadoutRequest
+      ? normalizeReadoutRequestSummaryAliases(primaryBlockingReadoutRequestInput, dtcStatusReadoutPlan)
+      : primaryBlockingReadoutRequestInput;
+    const primaryBlockingSummary = isDtcPrimaryBlockingReadoutRequest && primaryBlockingSummaryInput
+      ? {
+        ...primaryBlockingSummaryInput,
+        readoutId: primaryBlockingReadoutRequest.readoutId,
+        readout_id: primaryBlockingReadoutRequest.readoutId,
+        request: primaryBlockingReadoutRequest,
+        bridgeIntent: primaryBlockingReadoutRequest.bridgeIntent || null,
+        bridge_intent: primaryBlockingReadoutRequest.bridgeIntent || null,
+        serviceMode: primaryBlockingReadoutRequest.serviceMode || null,
+        service_mode: primaryBlockingReadoutRequest.serviceMode || null,
+        requestMapped: Boolean(primaryBlockingReadoutRequest.bridgeIntent),
+        request_mapped: Boolean(primaryBlockingReadoutRequest.bridgeIntent),
+        executionEnabled: primaryBlockingReadoutRequest.executionEnabled === true,
+        execution_enabled: primaryBlockingReadoutRequest.executionEnabled === true,
+        readOnly: primaryBlockingReadoutRequest.readOnly !== false,
+        read_only: primaryBlockingReadoutRequest.readOnly !== false,
+        wouldTransmit: primaryBlockingReadoutRequest.wouldTransmit === true,
+        would_transmit: primaryBlockingReadoutRequest.wouldTransmit === true,
+        vehicleCommandEnabled: primaryBlockingReadoutRequest.vehicleCommandEnabled === true,
+        vehicle_command_enabled: primaryBlockingReadoutRequest.vehicleCommandEnabled === true
+      }
+      : primaryBlockingSummaryInput;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
     const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
@@ -14805,6 +14837,18 @@
     const nextReadoutExecutionEnabled = isDtcNextReadoutRequest
       ? nextReadoutRequest.executionEnabled === true
       : pickDefined(summary.nextReadoutExecutionEnabled, summary.next_readout_execution_enabled, nextReadoutRequest?.executionEnabled, false) === true;
+    const primaryBlockingReadoutBridgeIntent = isDtcPrimaryBlockingReadoutRequest
+      ? primaryBlockingReadoutRequest.bridgeIntent || null
+      : pickDefined(summary.primaryBlockingReadoutBridgeIntent, summary.primary_blocking_readout_bridge_intent, primaryBlockingReadoutRequest?.bridgeIntent, null);
+    const primaryBlockingReadoutServiceMode = isDtcPrimaryBlockingReadoutRequest
+      ? primaryBlockingReadoutRequest.serviceMode || null
+      : pickDefined(summary.primaryBlockingReadoutServiceMode, summary.primary_blocking_readout_service_mode, primaryBlockingReadoutRequest?.serviceMode, null);
+    const primaryBlockingReadoutExecutionEnabled = isDtcPrimaryBlockingReadoutRequest
+      ? primaryBlockingReadoutRequest.executionEnabled === true
+      : pickDefined(summary.primaryBlockingReadoutExecutionEnabled, summary.primary_blocking_readout_execution_enabled, primaryBlockingReadoutRequest?.executionEnabled, false) === true;
+    const primaryBlockingReadoutWouldTransmit = isDtcPrimaryBlockingReadoutRequest
+      ? primaryBlockingReadoutRequest.wouldTransmit === true
+      : pickDefined(summary.primaryBlockingReadoutWouldTransmit, summary.primary_blocking_readout_would_transmit, primaryBlockingReadoutRequest?.wouldTransmit, false) === true;
     return {
       ...summary,
       schemaVersion,
@@ -14945,10 +14989,14 @@
       primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
       primary_blocking_summary: primaryBlockingSummary,
-      primaryBlockingReadoutBridgeIntent: pickDefined(summary.primaryBlockingReadoutBridgeIntent, summary.primary_blocking_readout_bridge_intent, primaryBlockingReadoutRequest?.bridgeIntent, null),
-      primary_blocking_readout_bridge_intent: pickDefined(summary.primary_blocking_readout_bridge_intent, summary.primaryBlockingReadoutBridgeIntent, primaryBlockingReadoutRequest?.bridgeIntent, null),
-      primaryBlockingReadoutExecutionEnabled: pickDefined(summary.primaryBlockingReadoutExecutionEnabled, summary.primary_blocking_readout_execution_enabled, primaryBlockingReadoutRequest?.executionEnabled, false) === true,
-      primary_blocking_readout_execution_enabled: pickDefined(summary.primary_blocking_readout_execution_enabled, summary.primaryBlockingReadoutExecutionEnabled, primaryBlockingReadoutRequest?.executionEnabled, false) === true,
+      primaryBlockingReadoutBridgeIntent,
+      primary_blocking_readout_bridge_intent: primaryBlockingReadoutBridgeIntent,
+      primaryBlockingReadoutServiceMode,
+      primary_blocking_readout_service_mode: primaryBlockingReadoutServiceMode,
+      primaryBlockingReadoutExecutionEnabled,
+      primary_blocking_readout_execution_enabled: primaryBlockingReadoutExecutionEnabled,
+      primaryBlockingReadoutWouldTransmit,
+      primary_blocking_readout_would_transmit: primaryBlockingReadoutWouldTransmit,
       readoutCollectionRequired: pickDefined(summary.readoutCollectionRequired, summary.readout_collection_required, false) === true,
       readout_collection_required: pickDefined(summary.readout_collection_required, summary.readoutCollectionRequired, false) === true,
       completionPercent,
