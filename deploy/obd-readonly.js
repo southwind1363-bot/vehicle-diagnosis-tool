@@ -10068,7 +10068,7 @@
       || parts.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || null;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(parts.importedCoreSessionStatus || parts.imported_core_session_status || null);
-    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || null);
+    const importedDiagnosticFlowSummary = normalizeImportedDiagnosticFlowSummaryAliases(parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || null, importedCoreSessionStatus);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(parts.importedReadoutCompletionSummary || parts.imported_readout_completion_summary || null);
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
@@ -10796,7 +10796,7 @@
       || parts.imported_session_comparison_summary?.vehicle_applicability_changed_row_summary
       || null;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(parts.importedCoreSessionStatus || parts.imported_core_session_status || null);
-    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || null);
+    const importedDiagnosticFlowSummary = normalizeImportedDiagnosticFlowSummaryAliases(parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || null, importedCoreSessionStatus);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(parts.importedReadoutCompletionSummary || parts.imported_readout_completion_summary || null);
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || null);
@@ -15028,6 +15028,23 @@
       blockerCount: toCount("blockerCount", "blocker_count", blockingReasonIds.length),
       blocker_count: toCount("blockerCount", "blocker_count", blockingReasonIds.length)
     };
+  }
+
+  function normalizeImportedDiagnosticFlowSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
+    const fallbackFields = [
+      ["dtcStatusSummary", "dtc_status_summary"],
+      ["dtcReportedStatusSummary", "dtc_reported_status_summary"],
+      ["dtcIdentitySummary", "dtc_identity_summary"],
+      ["dtcStatusByteSummary", "dtc_status_byte_summary"],
+      ["dtcMetadataEvidenceSummary", "dtc_metadata_evidence_summary"],
+      ["dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary"]
+    ];
+    const missingEvidenceFallback = Object.fromEntries(fallbackFields.flatMap(([camelKey, snakeKey]) => {
+      if (hasObjectContent(summary?.[camelKey]) || hasObjectContent(summary?.[snakeKey])) return [];
+      const fallbackValue = fallbackCoreSessionStatus?.[camelKey] || fallbackCoreSessionStatus?.[snakeKey] || null;
+      return hasObjectContent(fallbackValue) ? [[camelKey, fallbackValue], [snakeKey, fallbackValue]] : [];
+    }));
+    return normalizeDiagnosticFlowSummaryAliases(summary, missingEvidenceFallback);
   }
 
   function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {}) {
@@ -20513,7 +20530,7 @@
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(summary.importedCoreSessionStatus || summary.imported_core_session_status || parts.importedCoreSessionStatus || parts.imported_core_session_status || parts.session?.imported_core_session_status || null);
-    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(summary.importedDiagnosticFlowSummary || summary.imported_diagnostic_flow_summary || parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || parts.session?.imported_diagnostic_flow_summary || null);
+    const importedDiagnosticFlowSummary = normalizeImportedDiagnosticFlowSummaryAliases(summary.importedDiagnosticFlowSummary || summary.imported_diagnostic_flow_summary || parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || parts.session?.imported_diagnostic_flow_summary || null, importedCoreSessionStatus);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(summary.importedReadoutCompletionSummary || summary.imported_readout_completion_summary || parts.importedReadoutCompletionSummary || parts.imported_readout_completion_summary || parts.session?.imported_readout_completion_summary || null);
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.importedAnalysisReadinessSummary || summary.imported_analysis_readiness_summary || parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || parts.session?.imported_analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.importedReadoutQualitySummary || summary.imported_readout_quality_summary || parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || parts.session?.imported_readout_quality_summary || null);
@@ -20846,7 +20863,7 @@
       || diagnosticFlowSummary.readoutQualitySummary
       || null;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(summary.importedCoreSessionStatus || summary.imported_core_session_status || parts.importedCoreSessionStatus || parts.imported_core_session_status || parts.session?.imported_core_session_status || exportPayload.session?.imported_core_session_status || null);
-    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(summary.importedDiagnosticFlowSummary || summary.imported_diagnostic_flow_summary || parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || parts.session?.imported_diagnostic_flow_summary || exportPayload.session?.imported_diagnostic_flow_summary || null);
+    const importedDiagnosticFlowSummary = normalizeImportedDiagnosticFlowSummaryAliases(summary.importedDiagnosticFlowSummary || summary.imported_diagnostic_flow_summary || parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || parts.session?.imported_diagnostic_flow_summary || exportPayload.session?.imported_diagnostic_flow_summary || null, importedCoreSessionStatus);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(summary.importedReadoutCompletionSummary || summary.imported_readout_completion_summary || parts.importedReadoutCompletionSummary || parts.imported_readout_completion_summary || parts.session?.imported_readout_completion_summary || exportPayload.session?.imported_readout_completion_summary || null);
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(summary.importedAnalysisReadinessSummary || summary.imported_analysis_readiness_summary || parts.importedAnalysisReadinessSummary || parts.imported_analysis_readiness_summary || parts.session?.imported_analysis_readiness_summary || exportPayload.session?.imported_analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.importedReadoutQualitySummary || summary.imported_readout_quality_summary || parts.importedReadoutQualitySummary || parts.imported_readout_quality_summary || parts.session?.imported_readout_quality_summary || exportPayload.session?.imported_readout_quality_summary || null);
@@ -21329,7 +21346,7 @@
       || bridgeImportInput?.coreSessionStatus
       || bridgeImportInput?.core_session_status
       || null);
-    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(input.importedDiagnosticFlowSummary
+    const importedDiagnosticFlowSummary = normalizeImportedDiagnosticFlowSummaryAliases(input.importedDiagnosticFlowSummary
       || input.imported_diagnostic_flow_summary
       || bridgeImport?.importedDiagnosticFlowSummary
       || bridgeImport?.imported_diagnostic_flow_summary
@@ -21343,7 +21360,7 @@
       || bridgeImportInput?.imported_diagnostic_flow_summary
       || bridgeImportInput?.diagnosticFlowSummary
       || bridgeImportInput?.diagnostic_flow_summary
-      || null);
+      || null, importedCoreSessionStatus);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(input.importedReadoutCompletionSummary
       || input.imported_readout_completion_summary
       || bridgeImport?.importedReadoutCompletionSummary
@@ -29463,7 +29480,7 @@
     const importClassification = metadataOverrides.importClassification;
     const webSerialReadoutSummary = metadataOverrides.webSerialReadoutSummary;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(sessionInput.importedCoreSessionStatus || sessionInput.imported_core_session_status || sessionInput.coreSessionStatus || sessionInput.core_session_status || null);
-    const importedDiagnosticFlowSummary = normalizeDiagnosticFlowSummaryAliases(sessionInput.importedDiagnosticFlowSummary || sessionInput.imported_diagnostic_flow_summary || sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null);
+    const importedDiagnosticFlowSummary = normalizeImportedDiagnosticFlowSummaryAliases(sessionInput.importedDiagnosticFlowSummary || sessionInput.imported_diagnostic_flow_summary || sessionInput.diagnosticFlowSummary || sessionInput.diagnostic_flow_summary || null, importedCoreSessionStatus);
     const importedReadoutCompletionSummary = normalizeReadoutCompletionSummaryAliases(sessionInput.importedReadoutCompletionSummary || sessionInput.imported_readout_completion_summary || sessionInput.readoutCompletionSummary || sessionInput.readout_completion_summary || null);
     const importedAnalysisReadinessSummary = normalizeAnalysisReadinessSummaryAliases(sessionInput.importedAnalysisReadinessSummary || sessionInput.imported_analysis_readiness_summary || sessionInput.analysisReadinessSummary || sessionInput.analysis_readiness_summary || null);
     const importedReadoutQualitySummary = normalizeReadoutQualitySummaryAliases(sessionInput.importedReadoutQualitySummary || sessionInput.imported_readout_quality_summary || sessionInput.readoutQualitySummary || sessionInput.readout_quality_summary || null);
