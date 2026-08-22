@@ -3384,7 +3384,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 3147件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('外側通信経路を取得元として優先'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 3156件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('VCI 0件応答と未読取を分離'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3993,7 +3993,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "外側通信経路を取得元として優先"'), "OBD core progress should describe the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "VCI 0件応答と未読取を分離"'), "OBD core progress should describe the latest completed interface-reliability milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4322,7 +4322,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "外側通信経路を取得元として優先"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "VCI 0件応答と未読取を分離"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -6264,6 +6264,11 @@ const bridgeVciAliasSessions = [
   { devices: [] }
 ].map((vciDevices) => obd.buildDiagnosticScanSession({ vciDevices: { ...vciDevices, ok: true, blocked: false, would_transmit: false } }));
 check(bridgeVciAliasSessions.every((session) => session.warnings?.includes("bridge_readout_incomplete") && session.readoutCoverage?.items?.some((item) => item.id === "vci_devices") && session.vehicleCommandEnabled === false && session.wouldTransmit === false), "VCI list aliases or an explicit empty bridge VCI response were omitted from infrastructure coverage");
+const bridgeEmptyVciSession = bridgeVciAliasSessions[2];
+const bridgeEmptyVciRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeEmptyVciSession)));
+const bridgeEmptyVciSummary = obd.buildBridgeSessionSummary({ vciDevices: { devices: [], ok: true, blocked: false, would_transmit: false } });
+check([bridgeEmptyVciSession, bridgeEmptyVciRoundTrip, bridgeEmptyVciSummary].every((session) => session.readoutCoverage?.itemById?.vci_devices?.status === "empty" && session.readoutCoverage?.itemById?.vci_devices?.statusReason === "empty_response" && session.readoutCoverage?.itemById?.vci_devices?.count === 0), "Successful empty VCI readout was not distinguished from an unrequested VCI list across session paths");
+check(bridgeEmptyVciRoundTrip.warnings?.includes("bridge_readout_empty_sections") && bridgeEmptyVciRoundTrip.vehicleCommandEnabled === false && bridgeEmptyVciRoundTrip.wouldTransmit === false, "Successful empty VCI roundtrip lost its empty-section warning or read-only safety");
 const bridgeVciAliasCoverageSnapshots = [
   { vci_devices: [{ id: "snake-vci", connected: true }] },
   { items: [{ id: "items-vci", connected: true }] },
@@ -6271,6 +6276,16 @@ const bridgeVciAliasCoverageSnapshots = [
 ].map((vciDevices) => obd.buildReadoutCoverageSnapshot({ vciDevices }));
 const disabledBridgeVciAliasCoverage = obd.buildReadoutCoverageSnapshot({ includeInfrastructure: false, vciDevices: { vci_devices: [{ id: "disabled-vci", connected: true }] } });
 check(bridgeVciAliasCoverageSnapshots.every((coverage) => coverage.includeInfrastructure === true && coverage.items?.some((item) => item.id === "vci_devices")) && disabledBridgeVciAliasCoverage.includeInfrastructure === false && !disabledBridgeVciAliasCoverage.items?.some((item) => item.id === "vci_devices"), "Direct readout coverage omitted VCI aliases or ignored the explicit infrastructure override");
+const unrequestedVciCoverage = obd.buildReadoutCoverageSnapshot({ includeInfrastructure: true, connectionStatus: { status: "ready", ok: true, blocked: false, would_transmit: false } });
+check(unrequestedVciCoverage.itemById?.vci_devices?.status === "missing" && unrequestedVciCoverage.itemById?.vci_devices?.statusReason === "not_requested", "Infrastructure coverage treated an unrequested VCI list as a successful empty response");
+const failedEmptyVciSessions = [
+  { input: { devices: [], ok: false, blocked: true, would_transmit: false }, reason: "blocked_readout" },
+  { input: { devices: [], ok: false, blocked: false, would_transmit: false, errors: ["adapter_timeout"] }, reason: "transport_error" },
+  { input: { devices: [], ok: true, blocked: false, would_transmit: true }, reason: "transport_safety_blocked" }
+].map(({ input, reason }) => ({ reason, session: obd.buildDiagnosticScanSession({ vciDevices: input }) }));
+check(failedEmptyVciSessions.every(({ reason, session }) => session.readoutCoverage?.itemById?.vci_devices?.status === "missing" && session.readoutCoverage?.itemById?.vci_devices?.statusReason === reason && session.readoutCoverage?.failedReadoutIds?.includes("vci_devices")), "Blocked, failed, or transmitting empty VCI responses were promoted to successful empty readouts");
+const failedEmptyVciRoundTrips = failedEmptyVciSessions.map(({ reason, session }) => ({ reason, session: obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(session))) }));
+check(failedEmptyVciRoundTrips.every(({ reason, session }) => session.readoutCoverage?.itemById?.vci_devices?.statusReason === reason && session.vehicleCommandEnabled === false && session.wouldTransmit === false), "Failed empty VCI state did not survive read-only JSON roundtrip");
 const parentScopedInfrastructureSources = {
   connection: obd.normalizeBridgeConnectionStatus({ source: "local_bridge", ok: true, blocked: false, would_transmit: false, data: { source: "native_connector", status: "ready", vci_connected: true, vehicle_connected: true } }),
   vci: obd.normalizeBridgeVciList({ source: "local_bridge", ok: true, blocked: false, would_transmit: false, data: { source: "native_connector", devices: [{ id: "bridge-vci", connected: true }] } }),
@@ -25306,6 +25321,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 3151");
+  console.log("OBD read-only safety checks: 3156");
   console.log("Errors: 0");
 }
