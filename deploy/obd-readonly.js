@@ -5789,7 +5789,9 @@
             ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
           };
       });
-    const errorCodes = readBridgeResponseErrorCodes(response);
+    const sourceErrorCodes = readBridgeResponseErrorCodes(response);
+    const scopedOnboardMonitorErrorCodes = [...new Set(onboardMonitorEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedOnboardMonitorErrorCodes])].slice(0, 12);
     const rawOnboardMonitorResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const malformedMode06Alias = ["tests", "values", "mode06_tests", "mode06Tests", "mode06_rows", "mode06Rows", "monitor_tests", "monitorTests", "test_rows", "testRows", "onboard_monitor_tests", "onboardMonitorTests"].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const hasTestEvidence = structuredTests.length > 0;
@@ -5797,11 +5799,13 @@
     const shouldDecodeRawOnboardMonitor = rawOnboardMonitorResponse !== null && !hasStructuredOnboardMonitorInput;
     const explicitReadoutStatus = String(data.onboard_monitor_readout_status || data.onboardMonitorReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
-    const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse || hasExplicitReadoutStatus || hasTestEvidence));
+    const bridgeSafety = readBridgeSnapshotSafety(response, sourceErrorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse || hasExplicitReadoutStatus || hasTestEvidence));
     const resolvedBridgeSafety = malformedMode06Alias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
-      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+      : sourceErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, blocked: hasTestEvidence || shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse, unparsed: !hasTestEvidence && !shouldDecodeRawOnboardMonitor && !hasRawEcuOnboardMonitorResponse }
+      : scopedOnboardMonitorErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
       : bridgeSafety;
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
@@ -25754,6 +25758,7 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const onboardMonitorEcuSnapshotInputs = firstOnboardMonitorArray(
@@ -25770,8 +25775,12 @@
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
       if (!snapshotSourceEcu) return null;
+      const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshotInput);
+      const snapshotStatusInput = String(snapshotInput.onboardMonitorReadoutStatus || snapshotInput.onboard_monitor_readout_status || snapshotInput.readoutStatus || snapshotInput.readout_status || "").trim().toLowerCase();
+      const resolvedSnapshotStatus = snapshotStatusInput === "blocked" ? "blocked" : snapshotErrorCodes.length > 0 ? "unparsed" : snapshotStatusInput;
       const normalizedSnapshot = normalizeOnboardMonitorSnapshot({
         ...snapshotInput,
+        ...(resolvedSnapshotStatus ? { onboardMonitorReadoutStatus: resolvedSnapshotStatus, onboard_monitor_readout_status: resolvedSnapshotStatus } : {}),
         onboardMonitorEcuSnapshots: [],
         onboard_monitor_ecu_snapshots: [],
         mode06EcuSnapshots: [],
@@ -25785,6 +25794,8 @@
         ...normalizedSnapshot,
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
+        errorCodes: snapshotErrorCodes,
+        error_codes: [...snapshotErrorCodes],
         onboardMonitorScope: "single_ecu",
         onboard_monitor_scope: "single_ecu"
       };
@@ -25922,6 +25933,8 @@
     );
     const explicitNormalizedReadoutStatus = String(explicitReadoutStatus || "").trim().toLowerCase();
     const onboardMonitorEcuStatuses = onboardMonitorEcuSnapshots.map((snapshot) => snapshot.onboardMonitorReadoutStatus || snapshot.onboard_monitor_readout_status || "unknown");
+    const scopedErrorCodes = [...new Set(onboardMonitorEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes])].slice(0, 12);
     const reportedEcuCount = onboardMonitorEcuStatuses.filter((status) => status === "reported").length;
     const blockedEcuCount = onboardMonitorEcuStatuses.filter((status) => status === "blocked").length;
     const unparsedEcuCount = onboardMonitorEcuStatuses.filter((status) => status === "unparsed").length;
@@ -25929,7 +25942,9 @@
     const onboardMonitorScope = onboardMonitorEcuSnapshots.length > 1
       ? "multiple_ecus"
       : (sourceEcu || onboardMonitorEcuSnapshots.length === 1) ? "single_ecu" : "unknown";
-    const normalizedReadoutStatus = onboardMonitorEcuSnapshots.length > 0
+    const normalizedReadoutStatus = errorCodes.length > 0 && explicitNormalizedReadoutStatus !== "blocked"
+      ? "unparsed"
+      : onboardMonitorEcuSnapshots.length > 0
       ? ["blocked", "unparsed"].includes(explicitNormalizedReadoutStatus)
         ? explicitNormalizedReadoutStatus
         : blockedEcuCount > 0
@@ -25957,6 +25972,10 @@
       unparsed_ecu_count: unparsedEcuCount,
       unknownEcuCount,
       unknown_ecu_count: unknownEcuCount,
+      errorResponseCount: onboardMonitorEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length,
+      error_response_count: onboardMonitorEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length,
+      errorCodes: scopedErrorCodes,
+      error_codes: [...scopedErrorCodes],
       allReported: reportedEcuCount === onboardMonitorEcuSnapshots.length,
       all_reported: reportedEcuCount === onboardMonitorEcuSnapshots.length
     } : null;
@@ -26006,6 +26025,8 @@
       ecu_test_summary: ecuTestSummary,
       onboardMonitorReadoutStatus: normalizedReadoutStatus,
       onboard_monitor_readout_status: normalizedReadoutStatus,
+      errorCodes,
+      error_codes: [...errorCodes],
       tests,
       retainedRawText: false,
       retained_raw_text: false
