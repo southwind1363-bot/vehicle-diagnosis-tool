@@ -6063,8 +6063,10 @@
     const ecuInfoSnapshotInput = input.ecuInfoSnapshot || input.ecu_info_snapshot || input.ecuInfoResponse || input.ecu_info_response || {};
     const onboardMonitorSnapshotInput = input.onboardMonitorSnapshot || input.onboard_monitor_snapshot || input.onboardMonitorResponse || input.onboard_monitor_response || {};
     const supportedPidMatrixInput = input.supportedPidMatrix || input.supported_pid_matrix || input.supportedPidSnapshot || input.supported_pid_snapshot || input.supportedPidResponse || input.supported_pid_response || {};
+    const connectionStatusSafetyInput = input.connectionStatusSafetyInput || input.connection_status_safety_input || connectionStatusInput;
     const dtcSnapshotSafetyInput = input.dtcSnapshotSafetyInput || input.dtc_snapshot_safety_input || dtcSnapshotInput;
     const vciDevicesSafetyInput = input.vciDevicesSafetyInput || input.vci_devices_safety_input || vciDevicesInput;
+    const adapterIdentitySafetyInput = input.adapterIdentitySafetyInput || input.adapter_identity_safety_input || adapterIdentityInput;
     const livePidSnapshotSafetyInput = input.livePidSnapshotSafetyInput || input.live_pid_snapshot_safety_input || livePidSnapshotInput;
     const freezeFrameSnapshotSafetyInput = input.freezeFrameSnapshotSafetyInput || input.freeze_frame_snapshot_safety_input || freezeFrameSnapshotInput;
     const readinessSnapshotSafetyInput = input.readinessSnapshotSafetyInput || input.readiness_snapshot_safety_input || readinessSnapshotInput;
@@ -6075,8 +6077,10 @@
       const override = pickDefined(input[camelKey], input[snakeKey]);
       return typeof override === "boolean" ? override : fallback;
     };
-    const hasConnectionStatusInput = hasObjectContent(connectionStatusInput);
-    const hasAdapterIdentityInput = hasObjectContent(adapterIdentityInput);
+    const hasConnectionStatusInput = inputPresenceOverride("connectionStatusInputPresent", "connection_status_input_present", hasObjectContent(connectionStatusInput));
+    const hasConnectionStatusEvidence = inputPresenceOverride("connectionStatusEvidencePresent", "connection_status_evidence_present", hasConnectionStatusReadoutEvidence(connectionStatusInput));
+    const hasAdapterIdentityInput = inputPresenceOverride("adapterIdentityInputPresent", "adapter_identity_input_present", hasObjectContent(adapterIdentityInput));
+    const hasAdapterIdentityEvidence = inputPresenceOverride("adapterIdentityEvidencePresent", "adapter_identity_evidence_present", hasAdapterIdentityReadoutEvidence(adapterIdentityInput));
     const hasVciDevicesInput = inputPresenceOverride("vciDevicesInputPresent", "vci_devices_input_present", hasVciDeviceInputContent(vciDevicesInput));
     const hasDtcSnapshotInput = inputPresenceOverride("dtcInputPresent", "dtc_input_present", hasObjectContent(dtcSnapshotInput));
     const hasTypedDtcSnapshotInput = inputPresenceOverride("typedDtcInputPresent", "typed_dtc_input_present", hasObjectContent(storedDtcSnapshotInput) || hasObjectContent(pendingDtcSnapshotInput) || hasObjectContent(permanentDtcSnapshotInput));
@@ -6361,8 +6365,11 @@
       {
         id: "connection_status",
         label: "接続状態",
-        available: Boolean(connectionStatus?.displayStatus),
-        count: connectionStatus?.displayStatus ? 1 : 0
+        inputPresent: hasConnectionStatusInput,
+        safetyInput: connectionStatusSafetyInput,
+        responseUnavailable: hasConnectionStatusInput && !hasConnectionStatusEvidence && isUnavailableReadout(connectionStatus, null, connectionStatusSafetyInput),
+        available: hasConnectionStatusEvidence || (hasConnectionStatusInput && connectionStatus?.ok === true && connectionStatus?.blocked === false),
+        count: hasConnectionStatusEvidence ? 1 : 0
       },
       {
         id: "vci_devices",
@@ -6376,8 +6383,11 @@
       {
         id: "adapter_identity",
         label: "アダプター情報",
-        available: Boolean(adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion),
-        count: adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion ? 1 : 0
+        inputPresent: hasAdapterIdentityInput,
+        safetyInput: adapterIdentitySafetyInput,
+        responseUnavailable: hasAdapterIdentityInput && !hasAdapterIdentityEvidence && isUnavailableReadout(adapterIdentity, null, adapterIdentitySafetyInput),
+        available: hasAdapterIdentityEvidence || (hasAdapterIdentityInput && adapterIdentity?.ok === true && adapterIdentity?.blocked === false),
+        count: hasAdapterIdentityEvidence ? 1 : 0
       },
       ] : []),
       {
@@ -10190,14 +10200,24 @@
     const hasEcuInfoReadoutInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorReadoutInput = hasObjectContent(onboardMonitorSnapshotInput);
     const hasSupportedPidReadoutInput = hasObjectContent(supportedPidMatrixInput);
+    const hasConnectionStatusReadoutInput = resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "connection_status", hasObjectContent(connectionStatusInput));
+    const connectionStatusCapturedEvidence = resolveReadoutCapturedEvidenceFromCoverage(readoutCoverageInput, "connection_status", hasConnectionStatusReadoutEvidence(connectionStatusInput));
     const hasVciDevicesReadoutInput = resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "vci_devices", hasVciDeviceInputContent(vciListInput));
+    const hasAdapterIdentityReadoutInput = resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "adapter_identity", hasObjectContent(adapterIdentityInput));
+    const adapterIdentityCapturedEvidence = resolveReadoutCapturedEvidenceFromCoverage(readoutCoverageInput, "adapter_identity", hasAdapterIdentityReadoutEvidence(adapterIdentityInput));
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
+      connectionStatusInputPresent: hasConnectionStatusReadoutInput,
+      connectionStatusEvidencePresent: connectionStatusCapturedEvidence,
+      connectionStatusSafetyInput: connectionStatusInput,
       vciDevices: vciList.devices,
       vciDevicesInputPresent: hasVciDevicesReadoutInput,
       vciDevicesSafetyInput: vciListInput,
       adapterIdentity,
+      adapterIdentityInputPresent: hasAdapterIdentityReadoutInput,
+      adapterIdentityEvidencePresent: adapterIdentityCapturedEvidence,
+      adapterIdentitySafetyInput: adapterIdentityInput,
       dtcSnapshot,
       dtcSnapshotSafetyInput: dtcSnapshotInput,
       dtcInputPresent: hasDtcReadoutInput,
@@ -10853,14 +10873,24 @@
     const hasEcuInfoReadoutInput = hasObjectContent(ecuInfoSnapshotInput);
     const hasOnboardMonitorReadoutInput = hasObjectContent(onboardMonitorSnapshotInput);
     const hasSupportedPidReadoutInput = hasObjectContent(supportedPidMatrixInput);
+    const hasConnectionStatusReadoutInput = resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "connection_status", hasObjectContent(connectionStatusInput));
+    const connectionStatusCapturedEvidence = resolveReadoutCapturedEvidenceFromCoverage(readoutCoverageInput, "connection_status", hasConnectionStatusReadoutEvidence(connectionStatusInput));
     const hasVciDevicesReadoutInput = resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "vci_devices", hasVciDeviceInputContent(vciDevicesInput));
+    const hasAdapterIdentityReadoutInput = resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "adapter_identity", hasObjectContent(adapterIdentityInput));
+    const adapterIdentityCapturedEvidence = resolveReadoutCapturedEvidenceFromCoverage(readoutCoverageInput, "adapter_identity", hasAdapterIdentityReadoutEvidence(adapterIdentityInput));
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: hasBridgeInfrastructureContext,
       connectionStatus,
+      connectionStatusInputPresent: hasConnectionStatusReadoutInput,
+      connectionStatusEvidencePresent: connectionStatusCapturedEvidence,
+      connectionStatusSafetyInput: connectionStatusInput,
       vciDevices: normalizedVciList.devices,
       vciDevicesInputPresent: hasVciDevicesReadoutInput,
       vciDevicesSafetyInput: vciDevicesInput,
       adapterIdentity,
+      adapterIdentityInputPresent: hasAdapterIdentityReadoutInput,
+      adapterIdentityEvidencePresent: adapterIdentityCapturedEvidence,
+      adapterIdentitySafetyInput: adapterIdentityInput,
       dtcSnapshot,
       dtcInputPresent: hasDtcReadoutInput,
       livePidSnapshot: {
@@ -11346,6 +11376,45 @@
     const statusReason = String(item.statusReason || item.status_reason || "").trim().toLowerCase();
     if (statusReason) return statusReason !== "not_requested";
     return ["captured", "empty"].includes(String(item.status || "").trim().toLowerCase()) || item.available === true;
+  }
+
+  function resolveReadoutCapturedEvidenceFromCoverage(coverage = null, readoutId, fallback = false) {
+    if (!coverage || typeof coverage !== "object" || Array.isArray(coverage)) return fallback;
+    const items = Array.isArray(coverage.items) ? coverage.items : [];
+    const item = coverage.itemById?.[readoutId]
+      || coverage.item_by_id?.[readoutId]
+      || items.find((candidate) => candidate?.id === readoutId);
+    if (!item || typeof item !== "object") return fallback;
+    return String(item.status || "").trim().toLowerCase() === "captured" || item.captured === true;
+  }
+
+  function hasInfrastructureReadoutEvidence(input = {}, keys = []) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return false;
+    const data = getBridgeResponseDataEnvelope(input) || input.data || input;
+    return data && typeof data === "object" && !Array.isArray(data)
+      && keys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
+  }
+
+  function hasConnectionStatusReadoutEvidence(input = {}) {
+    return hasInfrastructureReadoutEvidence(input, [
+      "status", "display_status", "displayStatus", "connection_state", "connectionState",
+      "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady",
+      "vehicle_connected", "vehicleConnected", "car_connected", "carConnected",
+      "bridge_version", "bridgeVersion", "api_version", "apiVersion",
+      "driver_readiness_status", "driverReadinessStatus", "sample_mode", "sampleMode", "replay_mode", "replayMode"
+    ]);
+  }
+
+  function hasAdapterIdentityReadoutEvidence(input = {}) {
+    return hasInfrastructureReadoutEvidence(input, [
+      "adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family",
+      "firmware_version", "firmwareVersion", "firmware", "version",
+      "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint",
+      "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber",
+      "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck",
+      "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount",
+      "selected_static_ready_device_id", "selectedStaticReadyDeviceId"
+    ]);
   }
 
   function withSchemaVersionAlias(snapshot) {
@@ -28624,6 +28693,9 @@
         (item.statusReason || item.status_reason) !== "not_requested"
       ]))
       : null;
+    const trustedReadoutCapturedEvidenceById = normalizedTrustedReadoutCoverage
+      ? Object.fromEntries(normalizedTrustedReadoutCoverage.items.map((item) => [item.id, item.status === "captured"]))
+      : null;
     const trustedIncludeInfrastructureOverride = pickDefined(
       trustedReadoutCoverage?.includeInfrastructure,
       trustedReadoutCoverage?.include_infrastructure
@@ -29047,7 +29119,11 @@
       vciDevices: vciDevicesInput || undefined,
       adapterIdentity: adapterIdentityInput || undefined,
       includeInfrastructure: trustedIncludeInfrastructureOverride,
+      connectionStatusInputPresent: trustedReadoutInputPresenceById?.connection_status,
+      connectionStatusEvidencePresent: trustedReadoutCapturedEvidenceById?.connection_status,
       vciDevicesInputPresent: trustedReadoutInputPresenceById?.vci_devices,
+      adapterIdentityInputPresent: trustedReadoutInputPresenceById?.adapter_identity,
+      adapterIdentityEvidencePresent: trustedReadoutCapturedEvidenceById?.adapter_identity,
       dtcInputPresent: trustedReadoutInputPresenceById?.dtc_snapshot,
       livePidInputPresent: trustedReadoutInputPresenceById?.live_pid_snapshot,
       freezeFrameInputPresent: trustedReadoutInputPresenceById?.freeze_frame_snapshot,
@@ -31527,7 +31603,11 @@
       ecuResponseSummary,
       supportedPidMatrix
     });
+    const hasConnectionStatusReadoutInput = readoutInputPresenceOverride("connectionStatusInputPresent", "connection_status_input_present", resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "connection_status", hasObjectContent(connectionStatusInput)));
+    const connectionStatusCapturedEvidence = readoutInputPresenceOverride("connectionStatusEvidencePresent", "connection_status_evidence_present", resolveReadoutCapturedEvidenceFromCoverage(readoutCoverageInput, "connection_status", hasConnectionStatusReadoutEvidence(connectionStatusInput)));
     const hasVciDevicesReadoutInput = readoutInputPresenceOverride("vciDevicesInputPresent", "vci_devices_input_present", resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "vci_devices", hasVciDeviceInputContent(vciListInput)));
+    const hasAdapterIdentityReadoutInput = readoutInputPresenceOverride("adapterIdentityInputPresent", "adapter_identity_input_present", resolveReadoutInputPresenceFromCoverage(readoutCoverageInput, "adapter_identity", hasObjectContent(adapterIdentityInput)));
+    const adapterIdentityCapturedEvidence = readoutInputPresenceOverride("adapterIdentityEvidencePresent", "adapter_identity_evidence_present", resolveReadoutCapturedEvidenceFromCoverage(readoutCoverageInput, "adapter_identity", hasAdapterIdentityReadoutEvidence(adapterIdentityInput)));
     const hasDtcReadoutInput = readoutInputPresenceOverride("dtcInputPresent", "dtc_input_present", hasTypedDtcSnapshotInput
       || dtcSnapshotInput !== sessionInput
       || ["codes", "dtcs", "stored_dtcs", "storedDtcs", "pending_dtcs", "pendingDtcs", "permanent_dtcs", "permanentDtcs", "raw", "response", "bytes"]
@@ -31541,10 +31621,16 @@
     const derivedReadoutCoverage = buildReadoutCoverageSnapshot({
       includeInfrastructure: effectiveBridgeInfrastructureContext,
       connectionStatus,
+      connectionStatusInputPresent: hasConnectionStatusReadoutInput,
+      connectionStatusEvidencePresent: connectionStatusCapturedEvidence,
+      connectionStatusSafetyInput: connectionStatusInput,
       vciDevices: vciList.devices,
       vciDevicesInputPresent: hasVciDevicesReadoutInput,
       vciDevicesSafetyInput: vciListInput,
       adapterIdentity,
+      adapterIdentityInputPresent: hasAdapterIdentityReadoutInput,
+      adapterIdentityEvidencePresent: adapterIdentityCapturedEvidence,
+      adapterIdentitySafetyInput: adapterIdentityInput,
       dtcSnapshot,
       dtcSnapshotSafetyInput,
       dtcInputPresent: hasDtcReadoutInput,
