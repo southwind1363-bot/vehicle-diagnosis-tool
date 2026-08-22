@@ -2283,7 +2283,7 @@
       hardware_compatibility_confirmed: false
     });
     const readoutInputByIntent = {
-      bridge_status: { connection_status: data },
+      bridge_status: { connection_status: { ...data, source: "native_connector" } },
       list_vci: { vci_devices: data },
       adapter_identity: { adapter_identity: { ...data, source: "native_connector" } },
       read_stored_dtc: { stored_dtc_snapshot: data },
@@ -2630,7 +2630,7 @@
         readoutId
       );
       const intentInput = {
-        bridge_status: { connection_status: data },
+        bridge_status: { connection_status: { ...data, source: "native_connector" } },
         list_vci: { vci_devices: data },
         adapter_identity: { adapter_identity: { ...data, source: "native_connector" } },
         read_stored_dtc: { stored_dtc_snapshot: data },
@@ -3823,7 +3823,7 @@
     };
     const normalizedSource = String(readConnectionText(data.source, data.source_type, data.sourceType, response?.source, response?.source_type, response?.sourceType) || "").trim().toLowerCase();
     const providedDisplayStatus = readConnectionText(data.display_status, data.displayStatus);
-    if (normalizedSource === "web_serial") {
+    if (["web_serial", "native_connector"].includes(normalizedSource)) {
       const providedStatus = readConnectionText(data.status) || "disconnected";
       const resolvedDisplayStatus = providedDisplayStatus || providedStatus;
       const nextAction = readConnectionText(data.next_action, data.nextAction);
@@ -3838,7 +3838,7 @@
           ? data.adapterInitializationSummary
           : null;
       return {
-        source: "web_serial",
+        source: normalizedSource,
         intent: "connection_status",
         ok: data.ok === true && errorCodes.length === 0,
         blocked: data.blocked === true,
@@ -31308,6 +31308,10 @@
     const hasNativeConnectorContext = Boolean(nativeConnectorScanLifecycle || nativeConnectorBoundary || [
       sessionInput.source,
       sessionInput.source_type,
+      connectionStatus?.source,
+      connectionStatusInput?.source,
+      connectionStatusInput?.source_type,
+      connectionStatusInput?.sourceType,
       adapterIdentity?.source,
       adapterIdentityInput?.source,
       adapterIdentityInput?.source_type,
