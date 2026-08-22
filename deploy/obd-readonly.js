@@ -3362,9 +3362,11 @@
       data.pending_dtcs, data.pendingDtcs, data.pending_dtc_codes, data.pendingDtcCodes, data.pending_codes, data.pendingCodes,
       data.permanent_dtcs, data.permanentDtcs, data.permanent_dtc_codes, data.permanentDtcCodes, data.permanent_codes, data.permanentCodes
     ].some(Array.isArray);
-    const errorCodes = readBridgeResponseErrorCodes(response);
+    const sourceErrorCodes = readBridgeResponseErrorCodes(response);
     const rawDtcResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const ecuRows = firstDtcArray(data.ecu_responses, data.ecuResponses, data.ecu_snapshots, data.ecuSnapshots);
+    const scopedDtcErrorCodes = [...new Set(ecuRows.flatMap((row) => readBridgeResponseErrorCodes(row)))].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedDtcErrorCodes])].slice(0, 12);
     const getEcuRawDtcResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
     const hasRawEcuDtcResponse = ecuRows.some((row) => getEcuRawDtcResponse(row) !== null);
     const malformedEcuDtcAlias = ecuRows.some((ecuRow) => ecuRow && typeof ecuRow === "object" && !Array.isArray(ecuRow) && [
@@ -3376,12 +3378,14 @@
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(
       response,
-      errorCodes.length === 0 && (rawDtcResponse !== null || hasRawEcuDtcResponse || hasExplicitReadoutStatus || hasDtcArrayEvidence)
+      sourceErrorCodes.length === 0 && (rawDtcResponse !== null || hasRawEcuDtcResponse || hasExplicitReadoutStatus || hasDtcArrayEvidence)
     );
     const resolvedBridgeSafety = malformedDtcAlias || malformedEcuDtcAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
-      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+      : sourceErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
         ? { ...bridgeSafety, ok: false, blocked: hasDtcRowEvidence, unparsed: !hasDtcRowEvidence }
+        : scopedDtcErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+          ? { ...bridgeSafety, ok: false, unparsed: true }
         : bridgeSafety;
     const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(response.intent)
       ? response.intent
@@ -3562,7 +3566,9 @@
       const rowDtcStatus = readEcuDtcCategory(row);
       const rowInputs = firstDtcArray(row?.dtcs, row?.codes, row?.dtc_codes, row?.dtcCodes);
       const hasStructuredRowDtcEvidence = [row?.dtcs, row?.codes, row?.dtc_codes, row?.dtcCodes].some(Array.isArray);
-      const rowStatus = row?.status || row?.response_status || row?.responseStatus || row?.readout_status || row?.readoutStatus || row?.dtc_readout_status || row?.dtcReadoutStatus || decodedRawSnapshot?.dtcReadoutStatus || (hasStructuredRowDtcEvidence ? "reported" : bridgeDtcReadoutStatus);
+      const rowErrorCodes = readBridgeResponseErrorCodes(row);
+      const rawRowStatus = row?.status || row?.response_status || row?.responseStatus || row?.readout_status || row?.readoutStatus || row?.dtc_readout_status || row?.dtcReadoutStatus || decodedRawSnapshot?.dtcReadoutStatus || (hasStructuredRowDtcEvidence ? "reported" : bridgeDtcReadoutStatus);
+      const rowStatus = String(rawRowStatus || "unknown").trim().toLowerCase() === "blocked" ? "blocked" : rowErrorCodes.length > 0 ? "unparsed" : rawRowStatus;
       const childDtcs = [...new Map([
         ...normalizeDtcRows(rowInputs, rowDtcStatus, rowEcu, rowEcuName),
         ...(Array.isArray(decodedRawSnapshot?.dtcs) ? decodedRawSnapshot.dtcs.map((item) => inheritDtcEcuName(item, rowEcu, rowEcuName)) : [])
@@ -3574,6 +3580,8 @@
         ecuName: rowEcuName,
         ecu_name: rowEcuName,
         status: rowStatus,
+        errorCodes: rowErrorCodes,
+        error_codes: [...rowErrorCodes],
         codeCount,
         code_count: codeCount,
         dtcs: childDtcs,
@@ -3630,6 +3638,10 @@
       reported_response_count: reportedEcuResponseCount,
       incompleteResponseCount: normalizedEcuResponses.length - reportedEcuResponseCount,
       incomplete_response_count: normalizedEcuResponses.length - reportedEcuResponseCount,
+      errorResponseCount: normalizedEcuResponses.filter((row) => readBridgeResponseErrorCodes(row).length > 0).length,
+      error_response_count: normalizedEcuResponses.filter((row) => readBridgeResponseErrorCodes(row).length > 0).length,
+      errorCodes: scopedDtcErrorCodes,
+      error_codes: [...scopedDtcErrorCodes],
       allReported: reportedEcuResponseCount === normalizedEcuResponses.length,
       all_reported: reportedEcuResponseCount === normalizedEcuResponses.length
     } : null;
@@ -23714,6 +23726,7 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const normalizeDtcResponseEcu = (value) => {
@@ -23742,7 +23755,9 @@
         .map((row) => {
           const ecu = redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const ecuName = redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecuName || row.ecu_name || row.name || row.label || row.displayName || row.display_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-          const status = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || row.readout_status || row.readoutStatus || row.dtc_readout_status || row.dtcReadoutStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
+          const rowErrorCodes = readBridgeResponseErrorCodes(row);
+          const rawStatus = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || row.readout_status || row.readoutStatus || row.dtc_readout_status || row.dtcReadoutStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
+          const status = String(rawStatus).trim().toLowerCase() === "blocked" ? "blocked" : rowErrorCodes.length > 0 ? "unparsed" : rawStatus;
           const rowIntent = row.intent || row.read_intent || row.readIntent;
           const intent = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc"].includes(rowIntent)
             ? rowIntent
@@ -23776,6 +23791,8 @@
             ecuName,
             ecu_name: ecuName,
             status,
+            errorCodes: rowErrorCodes,
+            error_codes: [...rowErrorCodes],
             ...(intent ? { intent } : {}),
             codeCount,
             code_count: codeCount,
@@ -23982,12 +23999,14 @@
     const requestedReadoutStatus = String(sourceInput.dtcReadoutStatus || sourceInput.dtc_readout_status || "").trim().toLowerCase();
     const isCompleteDtcEcuResponseStatus = (value) => ["reported", "responded", "ok"].includes(String(value || "unknown").trim().toLowerCase());
     const explicitEcuReadoutStatuses = explicitEcuResponses.map((row) => String(row.status || "unknown").trim().toLowerCase());
+    const scopedErrorCodes = [...new Set(explicitEcuResponses.flatMap((row) => readBridgeResponseErrorCodes(row)))].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes])].slice(0, 12);
     const baseDtcReadoutStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedReadoutStatus)
       ? requestedReadoutStatus
       : normalizedDtcs.length > 0 ? "reported" : "unknown";
     const dtcReadoutStatus = baseDtcReadoutStatus === "blocked" || explicitEcuReadoutStatuses.includes("blocked")
       ? "blocked"
-      : baseDtcReadoutStatus === "unparsed" || explicitEcuReadoutStatuses.some((status) => !isCompleteDtcEcuResponseStatus(status))
+      : errorCodes.length > 0 || baseDtcReadoutStatus === "unparsed" || explicitEcuReadoutStatuses.some((status) => !isCompleteDtcEcuResponseStatus(status))
         ? "unparsed"
         : baseDtcReadoutStatus === "unknown" && explicitEcuReadoutStatuses.length > 0
           ? "reported"
@@ -24049,6 +24068,10 @@
       reported_response_count: reportedEcuResponseCount,
       incompleteResponseCount: ecuResponses.length - reportedEcuResponseCount,
       incomplete_response_count: ecuResponses.length - reportedEcuResponseCount,
+      errorResponseCount: ecuResponses.filter((row) => readBridgeResponseErrorCodes(row).length > 0).length,
+      error_response_count: ecuResponses.filter((row) => readBridgeResponseErrorCodes(row).length > 0).length,
+      errorCodes: scopedErrorCodes,
+      error_codes: [...scopedErrorCodes],
       allReported: reportedEcuResponseCount === ecuResponses.length,
       all_reported: reportedEcuResponseCount === ecuResponses.length
     } : null;
@@ -24132,6 +24155,8 @@
       dtc_reported_status_summary: dtcReportedStatusSummary,
       dtcReadoutStatus,
       dtc_readout_status: dtcReadoutStatus,
+      errorCodes,
+      error_codes: [...errorCodes],
       dtcResponseFormat,
       dtc_response_format: dtcResponseFormat,
       dtcResponseSubfunction,
