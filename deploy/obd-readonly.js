@@ -14446,7 +14446,7 @@
     const completedReadoutIds = new Set(explicitlyCompletedNonDtcReadoutIds);
     if (dtcStatusReadoutComplete) completedReadoutIds.add("dtc_snapshot");
     const coreWorkflowSummaryInput = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
-    const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
+    const savedNextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummaryInput?.primaryBlockingReason || readoutCompletionSummaryInput?.primaryBlockingReason || null;
     const primaryBlockingSummaryInput = summary.primaryBlockingSummary
       || summary.primary_blocking_summary
@@ -14638,6 +14638,9 @@
     const nextReadoutCandidate = replaceNextReadoutCandidate && nextRecommendedReadoutId === promotedNextReadoutSummary?.readoutId
       ? promotedNextReadoutSummary
       : replaceNextReadoutCandidate ? null : savedNextReadoutCandidate;
+    const nextReadoutCandidateSafetySummary = clearCompletedNextReadout
+      ? buildNextReadoutCandidateSafetySummary(nextReadoutRequest ? [nextReadoutRequest] : [])
+      : savedNextReadoutCandidateSafetySummary;
     const savedPendingReadoutQueueSummary = summary.pendingReadoutQueueSummary || summary.pending_readout_queue_summary || null;
     const savedPendingQueueNextReadoutId = savedPendingReadoutQueueSummary?.nextReadoutId || savedPendingReadoutQueueSummary?.next_readout_id || null;
     const savedPendingQueueRecommendedReadoutId = savedPendingReadoutQueueSummary?.recommendedReadoutId || savedPendingReadoutQueueSummary?.recommended_readout_id || null;
@@ -15271,7 +15274,16 @@
     };
     const flowCoreWorkflowSummary = synchronizeNestedFlowControls(coreWorkflowSummaryInput);
     const flowAnalysisReadinessSummary = synchronizeNestedFlowControls(analysisReadinessSummaryInput);
-    const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
+    const savedNextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
+    const nextReadoutCandidateSafetySummary = clearCompletedNextReadout
+      ? buildNextReadoutCandidateSafetySummary(nextReadoutRequest ? [nextReadoutRequest] : [])
+      : savedNextReadoutCandidateSafetySummary;
+    const nextReadoutCandidateAllSafe = clearCompletedNextReadout
+      ? nextReadoutCandidateSafetySummary?.allSafe === true
+      : pickDefined(summary.nextReadoutCandidateAllSafe, summary.next_readout_candidate_all_safe, nextReadoutCandidateSafetySummary?.allSafe, nextReadoutCandidateSafetySummary?.all_safe, false) === true;
+    const nextReadoutCandidateUnsafeCount = clearCompletedNextReadout
+      ? Number(nextReadoutCandidateSafetySummary?.unsafeCount || 0)
+      : toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0);
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
     const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
     const blockingReasonIds = normalizeIds(summary.blockingReasonIds || summary.blocking_reason_ids);
@@ -15379,10 +15391,10 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       nextReadoutCandidateSafetySummary,
       next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
-      nextReadoutCandidateAllSafe: pickDefined(summary.nextReadoutCandidateAllSafe, summary.next_readout_candidate_all_safe, nextReadoutCandidateSafetySummary?.allSafe, nextReadoutCandidateSafetySummary?.all_safe, false) === true,
-      next_readout_candidate_all_safe: pickDefined(summary.next_readout_candidate_all_safe, summary.nextReadoutCandidateAllSafe, nextReadoutCandidateSafetySummary?.all_safe, nextReadoutCandidateSafetySummary?.allSafe, false) === true,
-      nextReadoutCandidateUnsafeCount: toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0),
-      next_readout_candidate_unsafe_count: toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0),
+      nextReadoutCandidateAllSafe,
+      next_readout_candidate_all_safe: nextReadoutCandidateAllSafe,
+      nextReadoutCandidateUnsafeCount,
+      next_readout_candidate_unsafe_count: nextReadoutCandidateUnsafeCount,
       nextReadoutBridgeIntent,
       next_readout_bridge_intent: nextReadoutBridgeIntent,
       nextReadoutServiceMode,
