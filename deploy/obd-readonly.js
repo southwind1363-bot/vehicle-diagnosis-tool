@@ -7398,7 +7398,34 @@
   function normalizeReadoutCoverageSnapshot(input = {}) {
     if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();
     if (input.data && typeof input.data === "object" && !Array.isArray(input.data)) input = { ...input, ...input.data };
-    const normalizedItems = Array.isArray(input.items) ? input.items.map((item) => (item && typeof item === "object" ? { ...item } : item)) : [];
+    const normalizedItems = Array.isArray(input.items) ? input.items.map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      const explicitStatus = String(item.status || "").trim().toLowerCase();
+      if (explicitStatus) return { ...item };
+      const numericCount = Number.isFinite(Number(item.count)) ? Math.max(0, Math.round(Number(item.count))) : 0;
+      const status = item.captured === true
+        ? "captured"
+        : item.empty === true
+          ? "empty"
+          : item.missing === true
+            ? "missing"
+            : item.available === true
+              ? numericCount > 0 ? "captured" : "empty"
+              : "missing";
+      const statusReason = item.statusReason || item.status_reason
+        || (status === "captured" ? "captured" : status === "empty" ? "empty_response" : "not_requested");
+      return {
+        ...item,
+        available: status !== "missing",
+        count: numericCount,
+        status,
+        statusReason,
+        status_reason: statusReason,
+        captured: status === "captured",
+        empty: status === "empty",
+        missing: status === "missing"
+      };
+    }) : [];
     const inferredItemsByStatus = ["captured", "empty", "missing"].reduce((byStatus, status) => {
       byStatus[status] = normalizedItems.filter((item) => item && typeof item === "object" && item.status === status);
       return byStatus;
