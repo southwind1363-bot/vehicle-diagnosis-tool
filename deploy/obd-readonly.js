@@ -9071,48 +9071,65 @@
     };
   }
 
-  function normalizePendingReadoutRequestQueueAliases(input = [], dtcStatusReadoutPlan = null) {
+  function normalizePendingReadoutRequestQueueAliases(input = [], dtcStatusReadoutPlan = null, completedReadoutIds = []) {
     if (!Array.isArray(input)) return [];
     const dtcStatusReadoutComplete = isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan);
+    const completedReadoutIdSet = completedReadoutIds instanceof Set
+      ? completedReadoutIds
+      : new Set(Array.isArray(completedReadoutIds) ? completedReadoutIds : []);
     return input
       .map((item) => {
         if (!item || typeof item !== "object" || Array.isArray(item)) return null;
         const readoutId = item.readoutId || item.readout_id || item.id || null;
-        if (dtcStatusReadoutComplete && readoutId === "dtc_snapshot") return null;
+        if ((dtcStatusReadoutComplete && readoutId === "dtc_snapshot") || completedReadoutIdSet.has(readoutId)) return null;
         return normalizeReadoutRequestSummaryAliases(item, readoutId === "dtc_snapshot" ? dtcStatusReadoutPlan : null);
       })
       .filter(Boolean);
   }
 
-  function buildCompletedDtcPendingReadoutRequestPlanSeed(input = null, removedCompletedDtcRequest = false) {
+  function buildCompletedDtcPendingReadoutRequestPlanSeed(input = null, removedCompletedDtcRequest = false, completedReadoutIds = ["dtc_snapshot"]) {
     if (input && typeof input === "object" && !Array.isArray(input)) return input;
     if (!removedCompletedDtcRequest) return input || null;
+    const requestIds = completedReadoutIds instanceof Set
+      ? [...completedReadoutIds]
+      : Array.isArray(completedReadoutIds) ? [...completedReadoutIds] : ["dtc_snapshot"];
     return {
       schemaVersion: "read_only_readout_request_plan_v1",
       schema_version: "read_only_readout_request_plan_v1",
-      requestIds: ["dtc_snapshot"],
-      request_ids: ["dtc_snapshot"]
+      requestIds,
+      request_ids: [...requestIds]
     };
   }
 
-  function synchronizeDtcPendingReadoutRequestPlan(input = null, queue = [], nextRequest = null, dtcStatusReadoutPlan = null) {
+  function synchronizeDtcPendingReadoutRequestPlan(input = null, queue = [], nextRequest = null, dtcStatusReadoutPlan = null, completedReadoutIds = []) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return input || null;
     const dtcStatusReadoutComplete = isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan);
+    const completedReadoutIdSet = completedReadoutIds instanceof Set
+      ? completedReadoutIds
+      : new Set(Array.isArray(completedReadoutIds) ? completedReadoutIds : []);
+    if (dtcStatusReadoutComplete) completedReadoutIdSet.add("dtc_snapshot");
     const savedNextRequestInput = input.nextRequest || input.next_request || null;
     const savedNextRequestId = savedNextRequestInput?.readoutId || savedNextRequestInput?.readout_id || savedNextRequestInput?.id || null;
-    const savedNextRequest = dtcStatusReadoutComplete && savedNextRequestId === "dtc_snapshot"
+    const savedNextRequest = completedReadoutIdSet.has(savedNextRequestId)
       ? null
       : normalizeReadoutRequestSummaryAliases(savedNextRequestInput, savedNextRequestId === "dtc_snapshot" ? dtcStatusReadoutPlan : null);
     const normalizedQueue = Array.isArray(queue) ? queue : [];
-    const safeNextRequest = dtcStatusReadoutComplete && nextRequest?.readoutId === "dtc_snapshot" ? null : nextRequest;
+    const safeNextRequest = completedReadoutIdSet.has(nextRequest?.readoutId) ? null : nextRequest;
     const preferredNextRequest = safeNextRequest || savedNextRequest || normalizedQueue.find((item) => item.isNext === true || item.is_next === true) || normalizedQueue[0] || null;
     const hasDtcRequest = preferredNextRequest?.readoutId === "dtc_snapshot" || normalizedQueue.some((item) => item?.readoutId === "dtc_snapshot");
     const savedRequestIds = Array.isArray(input.requestIds) ? input.requestIds : Array.isArray(input.request_ids) ? input.request_ids : [];
-    const removedCompletedDtcRequest = dtcStatusReadoutComplete && (savedNextRequestId === "dtc_snapshot" || savedRequestIds.includes("dtc_snapshot"));
-    if (!hasDtcRequest && !removedCompletedDtcRequest) return input;
-    const entries = preferredNextRequest && !normalizedQueue.some((item) => item?.readoutId === preferredNextRequest.readoutId)
+    const removedCompletedRequest = completedReadoutIdSet.has(savedNextRequestId) || savedRequestIds.some((readoutId) => completedReadoutIdSet.has(readoutId));
+    if (!hasDtcRequest && !removedCompletedRequest) return input;
+    const queueEntries = preferredNextRequest && !normalizedQueue.some((item) => item?.readoutId === preferredNextRequest.readoutId)
       ? [preferredNextRequest, ...normalizedQueue]
       : normalizedQueue;
+    const queuedReadoutIds = new Set(queueEntries.map((item) => item?.readoutId).filter(Boolean));
+    const reconstructedSavedRequests = savedRequestIds
+      .filter((readoutId) => readoutId && !completedReadoutIdSet.has(readoutId) && !queuedReadoutIds.has(readoutId))
+      .map((readoutId) => buildReadOnlyNextReadoutRequest({ id: readoutId, label: readoutId, status: "missing" }, { dtcStatusReadoutPlan }))
+      .filter(Boolean);
+    const entries = [...queueEntries, ...reconstructedSavedRequests];
+    const resolvedNextRequest = preferredNextRequest || entries[0] || null;
     const mappedEntries = entries.filter((item) => Boolean(item?.bridgeIntent));
     const unmappedRequestIds = entries.filter((item) => !item?.bridgeIntent).map((item) => item?.readoutId).filter(Boolean);
     const safetySummary = buildReadoutRequestPlanSafetySummary(entries, unmappedRequestIds);
@@ -9133,8 +9150,8 @@
       ...safetySummary,
       unmappedRequestIds: [...unmappedRequestIds],
       unmapped_request_ids: [...unmappedRequestIds],
-      nextRequest: preferredNextRequest,
-      next_request: preferredNextRequest,
+      nextRequest: resolvedNextRequest,
+      next_request: resolvedNextRequest,
       requestIds,
       request_ids: [...requestIds],
       bridgeIntents,
@@ -9152,13 +9169,32 @@
     };
   }
 
-  function synchronizeDtcReadoutRequestPlanGateSummary(input = null, plan = null) {
+  function synchronizeDtcReadoutRequestPlanGateSummary(input = null, plan = null, completedReadoutIds = []) {
     if (!plan || typeof plan !== "object" || Array.isArray(plan)) return input || null;
     const source = normalizeReadoutRequestPlanGateSummaryAliases(input) || {};
-    const blockedReasonIds = Array.isArray(plan.blockedReasonIds) ? [...plan.blockedReasonIds] : Array.isArray(plan.blocked_reason_ids) ? [...plan.blocked_reason_ids] : [];
-    const blockedReasonById = plan.blockedReasonById && typeof plan.blockedReasonById === "object"
+    const completedReadoutIdSet = completedReadoutIds instanceof Set
+      ? completedReadoutIds
+      : new Set(Array.isArray(completedReadoutIds) ? completedReadoutIds : []);
+    const planBlockedReasonIds = Array.isArray(plan.blockedReasonIds) ? [...plan.blockedReasonIds] : Array.isArray(plan.blocked_reason_ids) ? [...plan.blocked_reason_ids] : [];
+    const planBlockedReasonById = plan.blockedReasonById && typeof plan.blockedReasonById === "object"
       ? { ...plan.blockedReasonById }
       : plan.blocked_reason_by_id && typeof plan.blocked_reason_by_id === "object" ? { ...plan.blocked_reason_by_id } : {};
+    const sourceBlockedReasonIds = Array.isArray(source.blockedReasonIds) ? source.blockedReasonIds : Array.isArray(source.blocked_reason_ids) ? source.blocked_reason_ids : [];
+    const sourceBlockedReasonById = source.blockedReasonById && typeof source.blockedReasonById === "object"
+      ? source.blockedReasonById
+      : source.blocked_reason_by_id && typeof source.blocked_reason_by_id === "object" ? source.blocked_reason_by_id : {};
+    const requestSafetyReasonIds = new Set(["unmapped_readout_requests", "non_read_only_requests", "transmitting_requests"]);
+    const retainedCustomReasonIds = sourceBlockedReasonIds.filter((reasonId) => {
+      if (!reasonId || requestSafetyReasonIds.has(reasonId)) return false;
+      const reason = sourceBlockedReasonById[reasonId] || {};
+      const readoutIds = Array.isArray(reason.readoutIds) ? reason.readoutIds : Array.isArray(reason.readout_ids) ? reason.readout_ids : [];
+      return readoutIds.length === 0 || !readoutIds.every((readoutId) => completedReadoutIdSet.has(readoutId));
+    });
+    const blockedReasonIds = [...new Set([...planBlockedReasonIds, ...retainedCustomReasonIds])];
+    const blockedReasonById = {
+      ...planBlockedReasonById,
+      ...Object.fromEntries(retainedCustomReasonIds.map((reasonId) => [reasonId, sourceBlockedReasonById[reasonId] || {}]))
+    };
     const actionQueue = buildReadoutRequestPlanGateActionQueue(blockedReasonIds, blockedReasonById);
     const actionIds = actionQueue.map((item) => item.id).filter(Boolean);
     const actionReasonIds = actionQueue.map((item) => item.reasonId).filter(Boolean);
@@ -14364,6 +14400,8 @@
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const dtcStatusReadoutComplete = isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan);
     const explicitlyCompletedNonDtcReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(summary);
+    const completedReadoutIds = new Set(explicitlyCompletedNonDtcReadoutIds);
+    if (dtcStatusReadoutComplete) completedReadoutIds.add("dtc_snapshot");
     const coreWorkflowSummaryInput = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || analysisReadinessSummaryInput?.primaryBlockingReason || readoutCompletionSummaryInput?.primaryBlockingReason || null;
@@ -14427,7 +14465,7 @@
       || readoutCompletionSummaryInput?.primary_blocking_summary
       || primaryBlockingSummary
     );
-    const readoutCompletionSummary = isDtcPrimaryBlockingReadoutRequest && readoutCompletionSummaryInput
+    const readoutCompletionSummary = (isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout) && readoutCompletionSummaryInput
       ? {
         ...readoutCompletionSummaryInput,
         primaryBlockingReadoutRequest,
@@ -14438,11 +14476,9 @@
       : readoutCompletionSummaryInput;
     const pendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
     const savedPendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
-    const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan);
-    const removedCompletedDtcPendingRequest = dtcStatusReadoutComplete && savedPendingReadoutRequestQueue.some((item) => (item?.readoutId || item?.readout_id || item?.id) === "dtc_snapshot");
-    const completedSavedDtcPendingRequestInput = dtcStatusReadoutComplete
-      ? savedPendingReadoutRequestQueue.find((item) => (item?.readoutId || item?.readout_id || item?.id) === "dtc_snapshot") || null
-      : null;
+    const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan, completedReadoutIds);
+    const removedCompletedPendingRequest = savedPendingReadoutRequestQueue.some((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id));
+    const completedSavedPendingRequestInput = savedPendingReadoutRequestQueue.find((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id)) || null;
     const analysisChecklist = normalizeArray("analysisChecklist", "analysis_checklist");
     const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
     const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
@@ -14496,8 +14532,8 @@
     const nestedNextReadoutRequestId = nestedNextReadoutRequestInput?.readoutId || nestedNextReadoutRequestInput?.readout_id || nestedNextReadoutRequestInput?.id || null;
     const nextReadoutRequestInput = summary.nextReadoutRequest
       || summary.next_readout_request
-      || completedSavedDtcPendingRequestInput
-      || (nestedNextReadoutRequestId === "dtc_snapshot" ? nestedNextReadoutRequestInput : null);
+      || completedSavedPendingRequestInput
+      || (nestedNextReadoutRequestId === "dtc_snapshot" || completedReadoutIds.has(nestedNextReadoutRequestId) ? nestedNextReadoutRequestInput : null);
     const nextReadoutRequestInputId = nextReadoutRequestInput?.readoutId || nextReadoutRequestInput?.readout_id || nextReadoutRequestInput?.id || null;
     const clearCompletedDtcNextReadout = nextReadoutRequestInputId === "dtc_snapshot" && dtcStatusReadoutComplete;
     const clearCompletedNextReadout = clearCompletedDtcNextReadout || explicitlyCompletedNonDtcReadoutIds.has(nextReadoutRequestInputId);
@@ -14506,13 +14542,14 @@
       : normalizeReadoutRequestSummaryAliases(nextReadoutRequestInput, dtcStatusReadoutPlan);
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
     const savedPlanNextRequestId = savedPlanNextRequest?.readoutId || savedPlanNextRequest?.readout_id || savedPlanNextRequest?.id || null;
-    const hasDtcPendingReadoutRequest = isDtcNextReadoutRequest
+    const removedCompletedSavedRequest = removedCompletedPendingRequest || completedReadoutIds.has(savedPlanNextRequestId);
+    const hasSynchronizedPendingReadoutRequest = isDtcNextReadoutRequest
       || savedPlanNextRequestId === "dtc_snapshot"
       || pendingReadoutRequestQueue.some((item) => item?.readoutId === "dtc_snapshot")
-      || removedCompletedDtcPendingRequest;
-    const pendingReadoutRequestPlanInput = buildCompletedDtcPendingReadoutRequestPlanSeed(savedPendingReadoutRequestPlan, removedCompletedDtcPendingRequest);
-    const pendingReadoutRequestPlan = hasDtcPendingReadoutRequest
-      ? synchronizeDtcPendingReadoutRequestPlan(pendingReadoutRequestPlanInput, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
+      || removedCompletedSavedRequest;
+    const pendingReadoutRequestPlanInput = buildCompletedDtcPendingReadoutRequestPlanSeed(savedPendingReadoutRequestPlan, removedCompletedSavedRequest, completedReadoutIds);
+    const pendingReadoutRequestPlan = hasSynchronizedPendingReadoutRequest
+      ? synchronizeDtcPendingReadoutRequestPlan(pendingReadoutRequestPlanInput, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan, completedReadoutIds)
       : savedPendingReadoutRequestPlan;
     const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(
       summary.readoutRequestPlanGateSummary
@@ -14521,12 +14558,12 @@
       || analysisReadinessSummaryInput?.readout_request_plan_gate_summary
       || null
     );
-    const readoutRequestPlanGateSummary = hasDtcPendingReadoutRequest && pendingReadoutRequestPlan
-      ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan)
+    const readoutRequestPlanGateSummary = hasSynchronizedPendingReadoutRequest && pendingReadoutRequestPlan
+      ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan, completedReadoutIds)
       : dtcStatusReadoutComplete
         ? normalizeImportedReadoutRequestPlanGateSummaryAliases(savedReadoutRequestPlanGateSummary, { dtcStatusSummary, dtcStatusReadoutPlan })
         : savedReadoutRequestPlanGateSummary;
-    const pendingReadoutRequestQueueById = hasDtcPendingReadoutRequest
+    const pendingReadoutRequestQueueById = hasSynchronizedPendingReadoutRequest
       ? Object.fromEntries(pendingReadoutRequestQueue.map((item) => [item.readoutId, { ...item }]))
       : normalizeObject("pendingReadoutRequestQueueById", "pending_readout_request_queue_by_id");
     const readoutRequestPlanSummary = clearCompletedNextReadout && !nextReadoutRequest
@@ -14771,23 +14808,23 @@
     const dtcStatusReadoutPlan = buildDtcStatusReadoutPlan(dtcStatusSummary);
     const dtcStatusReadoutComplete = isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan);
     const explicitlyCompletedNonDtcReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(summary, fallbackCoreSessionStatus);
+    const completedReadoutIds = new Set(explicitlyCompletedNonDtcReadoutIds);
+    if (dtcStatusReadoutComplete) completedReadoutIds.add("dtc_snapshot");
     const savedPendingReadoutRequestQueue = Array.isArray(summary.pendingReadoutRequestQueue)
       ? summary.pendingReadoutRequestQueue
       : Array.isArray(summary.pending_readout_request_queue)
         ? summary.pending_readout_request_queue
         : [];
-    const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan);
-    const removedCompletedDtcPendingRequest = dtcStatusReadoutComplete && savedPendingReadoutRequestQueue.some((item) => (item?.readoutId || item?.readout_id || item?.id) === "dtc_snapshot");
+    const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan, completedReadoutIds);
+    const removedCompletedPendingRequest = savedPendingReadoutRequestQueue.some((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id));
     const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
     const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
     const savedPlanNextRequestId = savedPlanNextRequest?.readoutId || savedPlanNextRequest?.readout_id || savedPlanNextRequest?.id || null;
-    const completedSavedDtcPendingRequestInput = dtcStatusReadoutComplete
-      ? savedPendingReadoutRequestQueue.find((item) => (item?.readoutId || item?.readout_id || item?.id) === "dtc_snapshot") || null
-      : null;
+    const completedSavedPendingRequestInput = savedPendingReadoutRequestQueue.find((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id)) || null;
     const nextReadoutRequestInput = summary.nextReadoutRequest
       || summary.next_readout_request
-      || (savedPlanNextRequestId === "dtc_snapshot" ? savedPlanNextRequest : null)
-      || completedSavedDtcPendingRequestInput;
+      || (savedPlanNextRequestId === "dtc_snapshot" || completedReadoutIds.has(savedPlanNextRequestId) ? savedPlanNextRequest : null)
+      || completedSavedPendingRequestInput;
     const nextReadoutRequestInputId = nextReadoutRequestInput?.readoutId || nextReadoutRequestInput?.readout_id || nextReadoutRequestInput?.id || null;
     const clearCompletedDtcNextReadout = nextReadoutRequestInputId === "dtc_snapshot" && dtcStatusReadoutComplete;
     const clearCompletedNextReadout = clearCompletedDtcNextReadout || explicitlyCompletedNonDtcReadoutIds.has(nextReadoutRequestInputId);
@@ -14795,17 +14832,18 @@
       ? pendingReadoutRequestQueue[0] || null
       : normalizeReadoutRequestSummaryAliases(nextReadoutRequestInput, dtcStatusReadoutPlan);
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
-    const hasDtcPendingReadoutRequest = isDtcNextReadoutRequest
+    const removedCompletedSavedRequest = removedCompletedPendingRequest || completedReadoutIds.has(savedPlanNextRequestId);
+    const hasSynchronizedPendingReadoutRequest = isDtcNextReadoutRequest
       || savedPlanNextRequestId === "dtc_snapshot"
       || pendingReadoutRequestQueue.some((item) => item?.readoutId === "dtc_snapshot")
-      || removedCompletedDtcPendingRequest;
-    const pendingReadoutRequestPlanInput = buildCompletedDtcPendingReadoutRequestPlanSeed(savedPendingReadoutRequestPlan, removedCompletedDtcPendingRequest);
-    const pendingReadoutRequestPlan = hasDtcPendingReadoutRequest
-      ? synchronizeDtcPendingReadoutRequestPlan(pendingReadoutRequestPlanInput, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
+      || removedCompletedSavedRequest;
+    const pendingReadoutRequestPlanInput = buildCompletedDtcPendingReadoutRequestPlanSeed(savedPendingReadoutRequestPlan, removedCompletedSavedRequest, completedReadoutIds);
+    const pendingReadoutRequestPlan = hasSynchronizedPendingReadoutRequest
+      ? synchronizeDtcPendingReadoutRequestPlan(pendingReadoutRequestPlanInput, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan, completedReadoutIds)
       : savedPendingReadoutRequestPlan;
     const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
-    const readoutRequestPlanGateSummary = hasDtcPendingReadoutRequest && pendingReadoutRequestPlan
-      ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan)
+    const readoutRequestPlanGateSummary = hasSynchronizedPendingReadoutRequest && pendingReadoutRequestPlan
+      ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan, completedReadoutIds)
       : dtcStatusReadoutComplete
         ? normalizeImportedReadoutRequestPlanGateSummaryAliases(savedReadoutRequestPlanGateSummary, { dtcStatusSummary, dtcStatusReadoutPlan })
         : savedReadoutRequestPlanGateSummary;
@@ -14924,28 +14962,28 @@
     const checklistReviewIds = normalizeIds(summary.checklistReviewIds || summary.checklist_review_ids);
     const readoutQualityIssueIds = normalizeIds(summary.readoutQualityIssueIds || summary.readout_quality_issue_ids);
     const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
-    const requestPlanBlockedReasonIds = hasDtcPendingReadoutRequest
+    const requestPlanBlockedReasonIds = hasSynchronizedPendingReadoutRequest
       ? normalizeIds(pendingReadoutRequestPlan?.blockedReasonIds || pendingReadoutRequestPlan?.blocked_reason_ids)
       : normalizeIds(summary.requestPlanBlockedReasonIds || summary.request_plan_blocked_reason_ids);
-    const requestPlanGateActionIds = hasDtcPendingReadoutRequest
+    const requestPlanGateActionIds = hasSynchronizedPendingReadoutRequest
       ? normalizeIds(readoutRequestPlanGateSummary?.actionIds || readoutRequestPlanGateSummary?.action_ids)
       : normalizeIds(summary.requestPlanGateActionIds || summary.request_plan_gate_action_ids);
-    const requestPlanGateActionReasonIds = hasDtcPendingReadoutRequest
+    const requestPlanGateActionReasonIds = hasSynchronizedPendingReadoutRequest
       ? normalizeIds(readoutRequestPlanGateSummary?.actionReasonIds || readoutRequestPlanGateSummary?.action_reason_ids)
       : normalizeIds(summary.requestPlanGateActionReasonIds || summary.request_plan_gate_action_reason_ids);
-    const requestPlanGateActionReadoutIds = hasDtcPendingReadoutRequest
+    const requestPlanGateActionReadoutIds = hasSynchronizedPendingReadoutRequest
       ? normalizeIds(readoutRequestPlanGateSummary?.actionReadoutIds || readoutRequestPlanGateSummary?.action_readout_ids)
       : normalizeIds(summary.requestPlanGateActionReadoutIds || summary.request_plan_gate_action_readout_ids);
-    const pendingReadoutRequestNext = hasDtcPendingReadoutRequest
+    const pendingReadoutRequestNext = hasSynchronizedPendingReadoutRequest
       ? nextReadoutRequest || pendingReadoutRequestQueue.find((item) => item?.isNext === true || item?.is_next === true) || pendingReadoutRequestQueue[0] || null
       : summary.pendingReadoutRequestNext || summary.pending_readout_request_next || pendingReadoutRequestQueue.find((item) => item?.isNext) || pendingReadoutRequestQueue[0] || null;
-    const pendingReadoutRequestCount = hasDtcPendingReadoutRequest
+    const pendingReadoutRequestCount = hasSynchronizedPendingReadoutRequest
       ? pendingReadoutRequestQueue.length
       : toCount("pendingReadoutRequestCount", "pending_readout_request_count", pendingReadoutRequestQueue.length);
-    const requestPlanMappedCount = hasDtcPendingReadoutRequest
+    const requestPlanMappedCount = hasSynchronizedPendingReadoutRequest
       ? Number(pendingReadoutRequestPlan?.mappedCount ?? pendingReadoutRequestPlan?.mapped_count ?? 0)
       : toCount("requestPlanMappedCount", "request_plan_mapped_count", 0);
-    const requestPlanUnmappedCount = hasDtcPendingReadoutRequest
+    const requestPlanUnmappedCount = hasSynchronizedPendingReadoutRequest
       ? Number(pendingReadoutRequestPlan?.unmappedCount ?? pendingReadoutRequestPlan?.unmapped_count ?? 0)
       : toCount("requestPlanUnmappedCount", "request_plan_unmapped_count", 0);
     const nextReadoutBridgeIntent = clearCompletedNextReadout
