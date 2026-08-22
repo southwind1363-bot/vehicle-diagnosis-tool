@@ -7401,7 +7401,22 @@
     const normalizedItems = Array.isArray(input.items) ? input.items.map((item) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return item;
       const explicitStatus = String(item.status || "").trim().toLowerCase();
-      if (explicitStatus) return { ...item, status: explicitStatus };
+      if (explicitStatus) {
+        const explicitFailureReasonByStatus = {
+          blocked: "blocked_readout",
+          safety_blocked: "transport_safety_blocked",
+          not_supported: "not_supported",
+          transport_error: "transport_error",
+          unparsed: "unparsed_response",
+          unknown_response: "unknown_response"
+        };
+        const explicitStatusReason = item.statusReason || item.status_reason || explicitFailureReasonByStatus[explicitStatus] || null;
+        return {
+          ...item,
+          status: explicitStatus,
+          ...(explicitStatusReason ? { statusReason: explicitStatusReason, status_reason: explicitStatusReason } : {})
+        };
+      }
       const numericCount = Number.isFinite(Number(item.count)) ? Math.max(0, Math.round(Number(item.count))) : 0;
       const status = item.captured === true
         ? "captured"
