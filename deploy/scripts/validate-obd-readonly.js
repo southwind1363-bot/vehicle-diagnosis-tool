@@ -3383,7 +3383,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 3114件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('生成coreの次読取詳細を同期'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 3118件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('次読取の状態差分を追跡'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -3990,7 +3990,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "生成coreの次読取詳細を同期"'), "OBD core progress should describe the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "次読取の状態差分を追跡"'), "OBD core progress should describe the latest completed interface-reliability milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4318,7 +4318,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "生成coreの次読取詳細を同期"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
+check(appSource.includes('recentMilestone: "次読取の状態差分を追跡"'), "OBD core progress snapshot should show the latest completed interface-reliability milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -21078,6 +21078,34 @@ const scanSessionPlainCoverageOverride = obd.buildDiagnosticScanSession({
   }
 });
 const scanSessionPlainCoverageReasonRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scanSessionPlainCoverageOverride)));
+const changedNextReadoutComparisonAliases = {
+  schema_version: "readout_comparison_alias_v1",
+  next_readout_id: "freeze_frame_snapshot",
+  next_readout_label: "Freeze frame",
+  next_readout_status: "missing",
+  next_readout_status_reason: "timeout",
+  next_readout_source: "explicit_candidate",
+  next_readout_queue_position: 1
+};
+const changedNextReadoutComparisonSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-next-readout-status-reason-comparison",
+  readout_coverage: scanSessionPlainCoverageOverride.readoutCoverage,
+  imported_core_session_status: {
+    ...changedNextReadoutComparisonAliases,
+    schema_version: "core_session_status_v1",
+    pending_readout_ids: ["freeze_frame_snapshot"]
+  },
+  imported_diagnostic_flow_summary: {
+    ...changedNextReadoutComparisonAliases,
+    schema_version: "diagnostic_flow_summary_v1"
+  },
+  imported_analysis_readiness_summary: {
+    ...changedNextReadoutComparisonAliases,
+    schema_version: "analysis_readiness_summary_v1",
+    ready: false
+  }
+});
+const changedNextReadoutComparisonRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(changedNextReadoutComparisonSession)));
 check(scanSessionPlainCoverageOverride.readoutCoverage.includeInfrastructure === false, "Diagnostic scan session did not preserve plain-object includeInfrastructure override");
 check(scanSessionPlainCoverageOverride.readoutCoverage.include_infrastructure === false, "Diagnostic scan session did not expose readout coverage snake_case includeInfrastructure alias");
 check(scanSessionPlainCoverageOverride.readoutCoverage.schema_version === "readout_coverage_v1", "Diagnostic scan session did not expose readout coverage snake_case schema version");
@@ -21116,6 +21144,10 @@ check(scanSessionPlainCoverageOverride.coreSessionStatus?.primaryBlockingReadout
 check(scanSessionPlainCoverageOverride.diagnosticFlowSummary?.nextReadoutStatusReason === "not_supported" && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.recommendedReadoutStatusReason === "not_supported" && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.primaryBlockingReadoutStatusReason === "transport_error" && scanSessionPlainCoverageOverride.diagnosticFlowSummary?.primaryBlockingReadoutRequest?.status_reason === "transport_error", "Generated diagnostic flow mixed next and primary blocker failure reasons");
 check(scanSessionPlainCoverageReasonRoundTrip?.coreSessionStatus?.coreWorkflowSummary?.next_readout_status_reason === "not_supported" && scanSessionPlainCoverageReasonRoundTrip?.coreSessionStatus?.primary_blocking_readout_status_reason === "transport_error" && scanSessionPlainCoverageReasonRoundTrip?.diagnosticFlowSummary?.next_readout_status_reason === "not_supported" && scanSessionPlainCoverageReasonRoundTrip?.diagnosticFlowSummary?.primary_blocking_readout_status_reason === "transport_error" && scanSessionPlainCoverageReasonRoundTrip?.vehicleCommandEnabled === false && scanSessionPlainCoverageReasonRoundTrip?.wouldTransmit === false, "Generated readout failure reasons were not retained through read-only JSON roundtrip");
 check(scanSessionPlainCoverageReasonRoundTrip?.coreSessionStatus?.nextReadoutId === "freeze_frame_snapshot" && scanSessionPlainCoverageReasonRoundTrip?.coreSessionStatus?.next_readout_status === "empty" && scanSessionPlainCoverageReasonRoundTrip?.coreSessionStatus?.nextReadoutStatusReason === "not_supported" && scanSessionPlainCoverageReasonRoundTrip?.coreSessionStatus?.next_readout_queue_position === 1 && scanSessionPlainCoverageReasonRoundTrip?.vehicleCommandEnabled === false && scanSessionPlainCoverageReasonRoundTrip?.wouldTransmit === false, "Generated core direct next-readout details were not retained through read-only JSON roundtrip");
+check(changedNextReadoutComparisonSession?.importedCoreComparisonSummary?.importedNextReadoutStatus === "missing" && changedNextReadoutComparisonSession?.importedCoreComparisonSummary?.currentNextReadoutStatus === "empty" && changedNextReadoutComparisonSession?.importedCoreComparisonSummary?.importedNextReadoutStatusReason === "timeout" && changedNextReadoutComparisonSession?.importedCoreComparisonSummary?.currentNextReadoutStatusReason === "not_supported" && changedNextReadoutComparisonSession?.importedCoreComparisonSummary?.nextReadoutDetailsChanged === true, "Imported core comparison did not detect next-readout status and failure-reason changes");
+check(changedNextReadoutComparisonSession?.importedDiagnosticFlowComparisonSummary?.imported_next_readout_status === "missing" && changedNextReadoutComparisonSession?.importedDiagnosticFlowComparisonSummary?.current_next_readout_status === "empty" && changedNextReadoutComparisonSession?.importedDiagnosticFlowComparisonSummary?.imported_next_readout_status_reason === "timeout" && changedNextReadoutComparisonSession?.importedDiagnosticFlowComparisonSummary?.current_next_readout_status_reason === "not_supported" && changedNextReadoutComparisonSession?.importedDiagnosticFlowComparisonSummary?.next_readout_details_changed === true, "Imported diagnostic-flow comparison did not detect next-readout status and failure-reason changes");
+check(changedNextReadoutComparisonSession?.importedAnalysisReadinessComparisonSummary?.importedNextReadoutStatus === "missing" && changedNextReadoutComparisonSession?.importedAnalysisReadinessComparisonSummary?.currentNextReadoutStatus === "empty" && changedNextReadoutComparisonSession?.importedAnalysisReadinessComparisonSummary?.importedNextReadoutStatusReason === "timeout" && changedNextReadoutComparisonSession?.importedAnalysisReadinessComparisonSummary?.currentNextReadoutStatusReason === "not_supported" && changedNextReadoutComparisonSession?.importedAnalysisReadinessComparisonSummary?.nextReadoutDetailsChanged === true, "Imported analysis-readiness comparison did not detect next-readout status and failure-reason changes");
+check(changedNextReadoutComparisonRoundTrip?.importedCoreComparisonSummary?.imported_next_readout_status_reason === "timeout" && changedNextReadoutComparisonRoundTrip?.importedDiagnosticFlowComparisonSummary?.current_next_readout_status_reason === "not_supported" && changedNextReadoutComparisonRoundTrip?.importedAnalysisReadinessComparisonSummary?.next_readout_details_changed === true && changedNextReadoutComparisonRoundTrip?.vehicleCommandEnabled === false && changedNextReadoutComparisonRoundTrip?.wouldTransmit === false, "Next-readout status and failure-reason comparisons were not retained through read-only JSON roundtrip");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutReasonSummary?.schema_version === "next_readout_reason_summary_v1" && scanSessionPlainCoverageOverride.coreSessionStatus.nextReadoutReasonSummary?.readoutId === "freeze_frame_snapshot", "Diagnostic scan session did not expose core next readout reason summary");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.next_readout_reason_summary?.reason_id === "empty_readout_retry" && scanSessionPlainCoverageOverride.coreSessionStatus.next_readout_reason_summary?.request_mapped === true, "Diagnostic scan session did not expose snake_case next readout reason summary");
 check(scanSessionPlainCoverageOverride.coreSessionStatus?.nextReadoutGuardSummary?.schema_version === "next_readout_guard_summary_v1" && scanSessionPlainCoverageOverride.coreSessionStatus.nextReadoutGuardSummary?.safeForReadoutPlanning === true, "Diagnostic scan session did not expose core next readout guard summary");
@@ -25014,6 +25046,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 3114");
+  console.log("OBD read-only safety checks: 3118");
   console.log("Errors: 0");
 }
