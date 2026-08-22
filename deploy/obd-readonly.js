@@ -7398,19 +7398,26 @@
   function normalizeReadoutCoverageSnapshot(input = {}) {
     if (!input || typeof input !== "object") return buildReadoutCoverageSnapshot();
     if (input.data && typeof input.data === "object" && !Array.isArray(input.data)) input = { ...input, ...input.data };
+    const normalizedItems = Array.isArray(input.items) ? input.items.map((item) => (item && typeof item === "object" ? { ...item } : item)) : [];
+    const inferredItemsByStatus = ["captured", "empty", "missing"].reduce((byStatus, status) => {
+      byStatus[status] = normalizedItems.filter((item) => item && typeof item === "object" && item.status === status);
+      return byStatus;
+    }, {});
     const totalCategoriesInput = pickDefined(input.totalCategories, input.total_categories, input.requiredCount, input.required_count, input.totalCount, input.total_count, input.totalReadoutCount, input.total_readout_count);
     const availableCategoriesInput = pickDefined(input.availableCategories, input.available_categories, input.availableCount, input.available_count, input.attemptedCount, input.attempted_count, input.attemptedReadoutCount, input.attempted_readout_count);
     const capturedCategoriesInput = pickDefined(input.capturedCategories, input.captured_categories, input.capturedCount, input.captured_count, input.capturedReadoutCount, input.captured_readout_count);
     const emptyCategoriesInput = pickDefined(input.emptyCategories, input.empty_categories, input.emptyCount, input.empty_count, input.emptyReadoutCount, input.empty_readout_count);
     const missingCategoriesInput = pickDefined(input.missingCategories, input.missing_categories, input.missingCount, input.missing_count, input.missingReadoutCount, input.missing_readout_count);
-    const totalCategories = Number.isFinite(Number(totalCategoriesInput)) ? Math.max(0, Math.round(Number(totalCategoriesInput))) : 0;
-    const availableCategories = Number.isFinite(Number(availableCategoriesInput)) ? Math.max(0, Math.round(Number(availableCategoriesInput))) : 0;
-    const capturedCategories = Number.isFinite(Number(capturedCategoriesInput)) ? Math.max(0, Math.round(Number(capturedCategoriesInput))) : 0;
-    const emptyCategories = Number.isFinite(Number(emptyCategoriesInput)) ? Math.max(0, Math.round(Number(emptyCategoriesInput))) : 0;
-    const missingCategories = Number.isFinite(Number(missingCategoriesInput)) ? Math.max(0, Math.round(Number(missingCategoriesInput))) : 0;
+    const inferredCapturedCategories = inferredItemsByStatus.captured.length;
+    const inferredEmptyCategories = inferredItemsByStatus.empty.length;
+    const inferredMissingCategories = inferredItemsByStatus.missing.length;
+    const totalCategories = Number.isFinite(Number(totalCategoriesInput)) ? Math.max(0, Math.round(Number(totalCategoriesInput))) : normalizedItems.length;
+    const availableCategories = Number.isFinite(Number(availableCategoriesInput)) ? Math.max(0, Math.round(Number(availableCategoriesInput))) : inferredCapturedCategories + inferredEmptyCategories;
+    const capturedCategories = Number.isFinite(Number(capturedCategoriesInput)) ? Math.max(0, Math.round(Number(capturedCategoriesInput))) : inferredCapturedCategories;
+    const emptyCategories = Number.isFinite(Number(emptyCategoriesInput)) ? Math.max(0, Math.round(Number(emptyCategoriesInput))) : inferredEmptyCategories;
+    const missingCategories = Number.isFinite(Number(missingCategoriesInput)) ? Math.max(0, Math.round(Number(missingCategoriesInput))) : inferredMissingCategories;
     const computedCapturedPercent = totalCategories > 0 ? Math.round((capturedCategories / totalCategories) * 100) : 0;
     const computedProgressPercent = totalCategories > 0 ? Math.round((availableCategories / totalCategories) * 100) : 0;
-    const normalizedItems = Array.isArray(input.items) ? input.items.map((item) => (item && typeof item === "object" ? { ...item } : item)) : [];
     const itemById = normalizedItems.reduce((byId, item) => {
       if (item && typeof item === "object" && item.id) byId[item.id] = item;
       return byId;
@@ -7429,10 +7436,7 @@
       const reason = item.statusReason || item.status_reason || failedReadoutReasonByIdInput?.[id] || null;
       return [id, reason];
     }));
-    const itemsByStatus = ["captured", "empty", "missing"].reduce((byStatus, status) => {
-      byStatus[status] = normalizedItems.filter((item) => item && typeof item === "object" && item.status === status);
-      return byStatus;
-    }, {});
+    const itemsByStatus = inferredItemsByStatus;
     const capturedItems = itemsByStatus.captured || [];
     const pendingItems = [...(itemsByStatus.empty || []), ...(itemsByStatus.missing || [])];
     const emptyIdsInput = pickDefined(input.emptyIds, input.empty_ids, input.emptyReadoutIds, input.empty_readout_ids);
@@ -7443,10 +7447,10 @@
     const capturedLabelsInput = pickDefined(input.capturedLabels, input.captured_labels, input.capturedReadoutLabels, input.captured_readout_labels);
     const pendingIdsInput = pickDefined(input.pendingIds, input.pending_ids, input.pendingReadoutIds, input.pending_readout_ids);
     const pendingLabelsInput = pickDefined(input.pendingLabels, input.pending_labels, input.pendingReadoutLabels, input.pending_readout_labels);
-    const normalizedEmptyIds = Array.isArray(emptyIdsInput) ? [...emptyIdsInput] : [];
-    const normalizedEmptyLabels = Array.isArray(emptyLabelsInput) ? [...emptyLabelsInput] : [];
-    const normalizedMissingIds = Array.isArray(missingIdsInput) ? [...missingIdsInput] : [];
-    const normalizedMissingLabels = Array.isArray(missingLabelsInput) ? [...missingLabelsInput] : [];
+    const normalizedEmptyIds = Array.isArray(emptyIdsInput) ? [...emptyIdsInput] : (itemsByStatus.empty || []).map((item) => item.id);
+    const normalizedEmptyLabels = Array.isArray(emptyLabelsInput) ? [...emptyLabelsInput] : (itemsByStatus.empty || []).map((item) => item.label);
+    const normalizedMissingIds = Array.isArray(missingIdsInput) ? [...missingIdsInput] : (itemsByStatus.missing || []).map((item) => item.id);
+    const normalizedMissingLabels = Array.isArray(missingLabelsInput) ? [...missingLabelsInput] : (itemsByStatus.missing || []).map((item) => item.label);
     const normalizedCapturedIds = Array.isArray(capturedIdsInput) ? [...capturedIdsInput] : capturedItems.map((item) => item.id);
     const normalizedCapturedLabels = Array.isArray(capturedLabelsInput) ? [...capturedLabelsInput] : capturedItems.map((item) => item.label);
     const normalizedPendingIds = Array.isArray(pendingIdsInput) ? [...pendingIdsInput] : [...normalizedEmptyIds, ...normalizedMissingIds].length > 0 ? [...normalizedEmptyIds, ...normalizedMissingIds] : pendingItems.map((item) => item.id);
