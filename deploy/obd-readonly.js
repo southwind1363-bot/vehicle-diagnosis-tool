@@ -4900,7 +4900,8 @@
       || data.supported_pid_pages
       || data.supportedPidPages
       || [];
-    const errorCodes = readBridgeResponseErrorCodes(response);
+    const scopedSupportedPidErrorCodes = [...new Set(supportedPidEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))];
+    const errorCodes = [...new Set([...readBridgeResponseErrorCodes(response), ...scopedSupportedPidErrorCodes])].slice(0, 12);
     const explicitReadoutStatus = String(data.supported_pid_readout_status || data.supportedPidReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(
@@ -30269,7 +30270,12 @@
         .map(normalizeSupportedPidCode)
         .filter((value) => value && isSupportedPidBase(parseInt(value, 16)))
       )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
-      const status = row.supportedPidReadoutStatus || row.supported_pid_readout_status || row.readoutStatus || row.readout_status || (pids.length || pageBases.length ? "reported" : "unknown");
+      const rowErrorCodes = readBridgeResponseErrorCodes(row);
+      const requestedStatus = String(row.supportedPidReadoutStatus || row.supported_pid_readout_status || row.readoutStatus || row.readout_status || "").trim().toLowerCase();
+      const inferredStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedStatus)
+        ? requestedStatus
+        : pids.length || pageBases.length ? "reported" : "unknown";
+      const status = inferredStatus === "blocked" ? "blocked" : rowErrorCodes.length ? "unparsed" : inferredStatus;
       return {
         sourceEcu: ecu,
         source_ecu: ecu,
@@ -30282,7 +30288,9 @@
         supportedCount: pids.length,
         supported_count: pids.length,
         supportedPidReadoutStatus: status,
-        supported_pid_readout_status: status
+        supported_pid_readout_status: status,
+        errorCodes: rowErrorCodes,
+        error_codes: [...rowErrorCodes]
       };
     };
     const supportedPidEcuSnapshots = ecuSnapshotRows.map(normalizeEcuSnapshot).filter(Boolean);
@@ -30362,6 +30370,8 @@
     }
     const supportedPidEcuIds = [...new Set(supportedPidEcuSnapshots.map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu).filter(Boolean))];
     const reportedEcuResponseCount = supportedPidEcuSnapshots.filter((snapshot) => String(snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status || "unknown").trim().toLowerCase() === "reported").length;
+    const errorResponseCount = supportedPidEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length;
+    const scopedErrorCodes = [...new Set(supportedPidEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
     const supportedPidEcuAggregateSummary = supportedPidEcuSnapshots.length ? {
       schemaVersion: "supported_pid_ecu_aggregate_summary_v1",
       schema_version: "supported_pid_ecu_aggregate_summary_v1",
@@ -30373,6 +30383,10 @@
       reported_response_count: reportedEcuResponseCount,
       incompleteResponseCount: supportedPidEcuSnapshots.length - reportedEcuResponseCount,
       incomplete_response_count: supportedPidEcuSnapshots.length - reportedEcuResponseCount,
+      errorResponseCount,
+      error_response_count: errorResponseCount,
+      errorCodes: scopedErrorCodes,
+      error_codes: [...scopedErrorCodes],
       allReported: reportedEcuResponseCount === supportedPidEcuSnapshots.length,
       all_reported: reportedEcuResponseCount === supportedPidEcuSnapshots.length
     } : null;
@@ -30432,6 +30446,8 @@
       known_pid_count: knownPidCount,
       supportedPidReadoutStatus: readoutStatus,
       supported_pid_readout_status: readoutStatus,
+      errorCodes: scopedErrorCodes,
+      error_codes: [...scopedErrorCodes],
       items,
       retainedRawText: false,
       retained_raw_text: false
