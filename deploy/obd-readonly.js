@@ -3821,7 +3821,7 @@
       const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
       return value === undefined ? null : String(value).slice(0, 80);
     };
-    const normalizedSource = String(readConnectionText(data.source, data.source_type, data.sourceType, response?.source, response?.source_type, response?.sourceType) || "").trim().toLowerCase();
+    const normalizedSource = String(readConnectionText(response?.source, response?.source_type, response?.sourceType, data.source, data.source_type, data.sourceType) || "").trim().toLowerCase();
     const providedDisplayStatus = readConnectionText(data.display_status, data.displayStatus);
     if (["web_serial", "native_connector"].includes(normalizedSource)) {
       const providedStatus = readConnectionText(data.status) || "disconnected";
@@ -3969,7 +3969,7 @@
       && new Set(deviceSourceValues).size === 1
       ? deviceSourceValues[0]
       : null;
-    const sourceValue = data.source || data.source_type || data.sourceType || response?.source || response?.source_type || response?.sourceType || deviceSourceValue || "local_bridge";
+    const sourceValue = response?.source || response?.source_type || response?.sourceType || data.source || data.source_type || data.sourceType || deviceSourceValue || "local_bridge";
     const normalizedSource = String(sourceValue).trim().toLowerCase();
     const source = ["web_serial", "native_connector"].includes(normalizedSource) ? normalizedSource : "local_bridge";
     const malformedVciListAlias = ["devices", "vci_devices", "items"]
@@ -4134,7 +4134,7 @@
 
   function normalizeBridgeAdapterIdentity(response = {}) {
     const data = response && typeof response === "object" ? getBridgeResponseDataEnvelope(response) || response.data || response : {};
-    const sourceValue = data.source || data.source_type || data.sourceType || response?.source || response?.source_type || response?.sourceType || "local_bridge";
+    const sourceValue = response?.source || response?.source_type || response?.sourceType || data.source || data.source_type || data.sourceType || "local_bridge";
     const normalizedSource = String(sourceValue).trim().toLowerCase();
     const source = ["web_serial", "native_connector"].includes(normalizedSource) ? normalizedSource : "local_bridge";
     const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
@@ -11331,7 +11331,10 @@
   function hasVciDeviceInputContent(input = {}) {
     if (Array.isArray(input)) return input.length > 0;
     if (!input || typeof input !== "object") return false;
-    return ["devices", "vci_devices", "items"].some((key) => Array.isArray(input[key]));
+    const nestedData = getBridgeResponseDataEnvelope(input) || input.data;
+    return [input, nestedData]
+      .filter((value) => value && typeof value === "object" && !Array.isArray(value))
+      .some((value) => ["devices", "vci_devices", "items"].some((key) => Array.isArray(value[key])));
   }
 
   function hasConnectionInfrastructureSourceEvidence(input = {}, normalized = {}) {
