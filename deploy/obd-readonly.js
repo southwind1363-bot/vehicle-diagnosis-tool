@@ -2284,7 +2284,7 @@
     });
     const readoutInputByIntent = {
       bridge_status: { connection_status: { ...data, source: "native_connector" } },
-      list_vci: { vci_devices: data },
+      list_vci: { vci_devices: { ...data, source: "native_connector" } },
       adapter_identity: { adapter_identity: { ...data, source: "native_connector" } },
       read_stored_dtc: { stored_dtc_snapshot: data },
       read_pending_dtc: { pending_dtc_snapshot: data },
@@ -2631,7 +2631,7 @@
       );
       const intentInput = {
         bridge_status: { connection_status: { ...data, source: "native_connector" } },
-        list_vci: { vci_devices: data },
+        list_vci: { vci_devices: { ...data, source: "native_connector" } },
         adapter_identity: { adapter_identity: { ...data, source: "native_connector" } },
         read_stored_dtc: { stored_dtc_snapshot: data },
         read_pending_dtc: { pending_dtc_snapshot: data },
@@ -3960,6 +3960,10 @@
         : Array.isArray(data.items)
           ? data.items
           : [];
+    const deviceSourceValue = devices.map((device) => device?.source || device?.source_type || device?.sourceType).find(Boolean);
+    const sourceValue = data.source || data.source_type || data.sourceType || deviceSourceValue || response?.source || response?.source_type || response?.sourceType || "local_bridge";
+    const normalizedSource = String(sourceValue).trim().toLowerCase();
+    const source = ["web_serial", "native_connector"].includes(normalizedSource) ? normalizedSource : "local_bridge";
     const malformedVciListAlias = ["devices", "vci_devices", "items"]
       .some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const malformedVciDeviceRow = devices.some((device) => !device || typeof device !== "object" || Array.isArray(device));
@@ -4038,6 +4042,7 @@
       const driverReadonlyApiReady = device?.driver_readonly_api_ready === true || device?.driverReadonlyApiReady === true;
       return {
         id,
+        source,
         label: String(device?.label || device?.name || `VCI ${index + 1}`).slice(0, 80),
         vendor: device?.vendor ? String(device.vendor).slice(0, 80) : null,
         driverStatus,
@@ -4095,7 +4100,7 @@
     });
 
     return {
-      source: "local_bridge",
+      source,
       intent: "list_vci",
       ok: resolvedBridgeSafety.ok,
       blocked: resolvedBridgeSafety.blocked,
@@ -31312,6 +31317,10 @@
       connectionStatusInput?.source,
       connectionStatusInput?.source_type,
       connectionStatusInput?.sourceType,
+      vciList?.source,
+      vciListInput?.source,
+      vciListInput?.source_type,
+      vciListInput?.sourceType,
       adapterIdentity?.source,
       adapterIdentityInput?.source,
       adapterIdentityInput?.source_type,
@@ -31322,6 +31331,10 @@
       connectionStatusInput?.source,
       connectionStatusInput?.source_type,
       connectionStatusInput?.sourceType,
+      vciList?.source,
+      vciListInput?.source,
+      vciListInput?.source_type,
+      vciListInput?.sourceType,
       adapterIdentity?.source,
       adapterIdentityInput?.source,
       adapterIdentityInput?.source_type,
