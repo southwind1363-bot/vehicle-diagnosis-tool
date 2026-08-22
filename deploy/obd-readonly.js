@@ -14627,6 +14627,45 @@
       : isDtcNextReadoutRequest
       ? synchronizeDtcNextReadoutSummary(savedNextReadoutSummary, nextReadoutRequest)
       : savedNextReadoutSummary;
+    const savedNextRecommendedReadoutId = pickDefined(summary.nextRecommendedReadoutId, summary.next_recommended_readout_id, null);
+    const replaceNextRecommendedReadout = clearCompletedNextReadout && (!savedNextRecommendedReadoutId || completedReadoutIds.has(savedNextRecommendedReadoutId));
+    const nextRecommendedReadoutId = replaceNextRecommendedReadout
+      ? promotedNextReadoutSummary?.readoutId || null
+      : savedNextRecommendedReadoutId;
+    const savedNextReadoutCandidate = summary.nextReadoutCandidate || summary.next_readout_candidate || null;
+    const savedNextReadoutCandidateId = savedNextReadoutCandidate?.id || savedNextReadoutCandidate?.readoutId || savedNextReadoutCandidate?.readout_id || null;
+    const replaceNextReadoutCandidate = clearCompletedNextReadout && (!savedNextReadoutCandidateId || completedReadoutIds.has(savedNextReadoutCandidateId));
+    const nextReadoutCandidate = replaceNextReadoutCandidate && nextRecommendedReadoutId === promotedNextReadoutSummary?.readoutId
+      ? promotedNextReadoutSummary
+      : replaceNextReadoutCandidate ? null : savedNextReadoutCandidate;
+    const savedPendingReadoutQueueSummary = summary.pendingReadoutQueueSummary || summary.pending_readout_queue_summary || null;
+    const savedPendingQueueNextReadoutId = savedPendingReadoutQueueSummary?.nextReadoutId || savedPendingReadoutQueueSummary?.next_readout_id || null;
+    const savedPendingQueueRecommendedReadoutId = savedPendingReadoutQueueSummary?.recommendedReadoutId || savedPendingReadoutQueueSummary?.recommended_readout_id || null;
+    const replacePendingQueueNextReadout = clearCompletedNextReadout && (!savedPendingQueueNextReadoutId || completedReadoutIds.has(savedPendingQueueNextReadoutId));
+    const replacePendingQueueRecommendedReadout = clearCompletedNextReadout && (!savedPendingQueueRecommendedReadoutId || completedReadoutIds.has(savedPendingQueueRecommendedReadoutId));
+    const pendingReadoutQueueSummary = clearCompletedNextReadout ? {
+      ...(savedPendingReadoutQueueSummary || {}),
+      ...(replacePendingQueueNextReadout ? {
+        nextReadoutId: promotedNextReadoutSummary?.readoutId || null,
+        next_readout_id: promotedNextReadoutSummary?.readoutId || null,
+        nextReadoutStatus: promotedNextReadoutSummary?.status || null,
+        next_readout_status: promotedNextReadoutSummary?.status || null
+      } : {}),
+      ...(replacePendingQueueRecommendedReadout ? {
+        recommendedReadoutId: promotedNextReadoutSummary?.readoutId || null,
+        recommended_readout_id: promotedNextReadoutSummary?.readoutId || null,
+        recommendedReadoutLabel: promotedNextReadoutSummary?.label || null,
+        recommended_readout_label: promotedNextReadoutSummary?.label || null,
+        recommendedReadoutStatus: promotedNextReadoutSummary?.status || null,
+        recommended_readout_status: promotedNextReadoutSummary?.status || null,
+        recommendedReadoutSource: promotedNextReadoutSummary?.source || null,
+        recommended_readout_source: promotedNextReadoutSummary?.source || null,
+        recommendedReadoutQueuePosition: promotedNextReadoutSummary?.queuePosition || null,
+        recommended_readout_queue_position: promotedNextReadoutSummary?.queuePosition || null,
+        recommendedReadoutIsPending: Boolean(promotedNextReadoutSummary),
+        recommended_readout_is_pending: Boolean(promotedNextReadoutSummary)
+      } : {})
+    } : savedPendingReadoutQueueSummary;
     const savedOrBuiltNextReadoutReasonSummary = savedNextReadoutReasonSummary || buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
     const nextReadoutReasonSummary = clearCompletedNextReadout
       ? buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary)
@@ -14811,8 +14850,8 @@
       pending_readout_queue: pendingReadoutQueue,
       pendingReadoutQueueById: normalizeObject("pendingReadoutQueueById", "pending_readout_queue_by_id"),
       pending_readout_queue_by_id: normalizeObject("pendingReadoutQueueById", "pending_readout_queue_by_id"),
-      pendingReadoutQueueSummary: summary.pendingReadoutQueueSummary || summary.pending_readout_queue_summary || null,
-      pending_readout_queue_summary: summary.pending_readout_queue_summary || summary.pendingReadoutQueueSummary || null,
+      pendingReadoutQueueSummary,
+      pending_readout_queue_summary: pendingReadoutQueueSummary,
       pendingReadoutRequestQueue,
       pending_readout_request_queue: pendingReadoutRequestQueue,
       pendingReadoutRequestQueueById,
@@ -14857,12 +14896,12 @@
       readout_completion_summary: finalReadoutCompletionSummary,
       coreWorkflowSummary,
       core_workflow_summary: coreWorkflowSummary,
-      nextReadoutCandidate: summary.nextReadoutCandidate || summary.next_readout_candidate || null,
-      next_readout_candidate: summary.next_readout_candidate || summary.nextReadoutCandidate || null,
+      nextReadoutCandidate,
+      next_readout_candidate: nextReadoutCandidate,
       nextReadoutCandidateSafetySummary,
       next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
-      nextRecommendedReadoutId: pickDefined(summary.nextRecommendedReadoutId, summary.next_recommended_readout_id, null),
-      next_recommended_readout_id: pickDefined(summary.next_recommended_readout_id, summary.nextRecommendedReadoutId, null),
+      nextRecommendedReadoutId,
+      next_recommended_readout_id: nextRecommendedReadoutId,
       nextReadoutId: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.nextReadoutId, summary.next_readout_id, null),
       next_readout_id: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.next_readout_id, summary.nextReadoutId, null),
       nextReadoutLabel: clearCompletedNextReadout ? nextReadoutSummary?.label || null : pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
@@ -14988,6 +15027,31 @@
         : null,
       source: "pending_request_queue"
     }) : null;
+    const savedPendingQueueNextReadoutId = pickDefined(summary.pendingQueueNextReadoutId, summary.pending_queue_next_readout_id, null);
+    const replacePendingQueueNextReadout = clearCompletedNextReadout && (!savedPendingQueueNextReadoutId || completedReadoutIds.has(savedPendingQueueNextReadoutId));
+    const pendingQueueNextReadoutId = replacePendingQueueNextReadout
+      ? promotedNextReadoutSummary?.readoutId || null
+      : savedPendingQueueNextReadoutId;
+    const pendingQueueNextReadoutStatus = replacePendingQueueNextReadout
+      ? promotedNextReadoutSummary?.status || null
+      : pickDefined(summary.pendingQueueNextReadoutStatus, summary.pending_queue_next_readout_status, null);
+    const savedRecommendedReadoutId = pickDefined(summary.recommendedReadoutId, summary.recommended_readout_id, null);
+    const replaceRecommendedReadout = clearCompletedNextReadout && (!savedRecommendedReadoutId || completedReadoutIds.has(savedRecommendedReadoutId));
+    const recommendedReadoutId = replaceRecommendedReadout
+      ? promotedNextReadoutSummary?.readoutId || null
+      : savedRecommendedReadoutId;
+    const recommendedReadoutStatus = replaceRecommendedReadout
+      ? promotedNextReadoutSummary?.status || null
+      : pickDefined(summary.recommendedReadoutStatus, summary.recommended_readout_status, null);
+    const recommendedReadoutSource = replaceRecommendedReadout
+      ? promotedNextReadoutSummary?.source || null
+      : pickDefined(summary.recommendedReadoutSource, summary.recommended_readout_source, null);
+    const recommendedReadoutQueuePosition = replaceRecommendedReadout
+      ? promotedNextReadoutSummary?.queuePosition || null
+      : pickDefined(summary.recommendedReadoutQueuePosition, summary.recommended_readout_queue_position, null);
+    const recommendedReadoutIsPending = replaceRecommendedReadout
+      ? Boolean(promotedNextReadoutSummary)
+      : pickDefined(summary.recommendedReadoutIsPending, summary.recommended_readout_is_pending, false) === true;
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
     const removedCompletedSavedRequest = removedCompletedPendingRequest || completedReadoutIds.has(savedPlanNextRequestId);
     const hasSynchronizedPendingReadoutRequest = isDtcNextReadoutRequest
@@ -15389,14 +15453,20 @@
       core_workflow_summary: flowCoreWorkflowSummary,
       analysisReadinessSummary: flowAnalysisReadinessSummary,
       analysis_readiness_summary: flowAnalysisReadinessSummary,
-      pendingQueueNextReadoutId: pickDefined(summary.pendingQueueNextReadoutId, summary.pending_queue_next_readout_id, null),
-      pending_queue_next_readout_id: pickDefined(summary.pending_queue_next_readout_id, summary.pendingQueueNextReadoutId, null),
-      recommendedReadoutId: pickDefined(summary.recommendedReadoutId, summary.recommended_readout_id, null),
-      recommended_readout_id: pickDefined(summary.recommended_readout_id, summary.recommendedReadoutId, null),
-      recommendedReadoutStatus: pickDefined(summary.recommendedReadoutStatus, summary.recommended_readout_status, null),
-      recommended_readout_status: pickDefined(summary.recommended_readout_status, summary.recommendedReadoutStatus, null),
-      recommendedReadoutSource: pickDefined(summary.recommendedReadoutSource, summary.recommended_readout_source, null),
-      recommended_readout_source: pickDefined(summary.recommended_readout_source, summary.recommendedReadoutSource, null),
+      pendingQueueNextReadoutId,
+      pending_queue_next_readout_id: pendingQueueNextReadoutId,
+      pendingQueueNextReadoutStatus,
+      pending_queue_next_readout_status: pendingQueueNextReadoutStatus,
+      recommendedReadoutId,
+      recommended_readout_id: recommendedReadoutId,
+      recommendedReadoutStatus,
+      recommended_readout_status: recommendedReadoutStatus,
+      recommendedReadoutSource,
+      recommended_readout_source: recommendedReadoutSource,
+      recommendedReadoutQueuePosition,
+      recommended_readout_queue_position: recommendedReadoutQueuePosition,
+      recommendedReadoutIsPending,
+      recommended_readout_is_pending: recommendedReadoutIsPending,
       readyForAnalysis,
       ready_for_analysis: readyForAnalysis,
       canStartAnalysis: pickDefined(summary.canStartAnalysis, summary.can_start_analysis, readyForAnalysis) === true,
