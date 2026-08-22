@@ -3960,8 +3960,11 @@
         : Array.isArray(data.items)
           ? data.items
           : [];
-    const deviceSourceValue = devices.map((device) => device?.source || device?.source_type || device?.sourceType).find(Boolean);
-    const sourceValue = data.source || data.source_type || data.sourceType || deviceSourceValue || response?.source || response?.source_type || response?.sourceType || "local_bridge";
+    const canInferSourceFromDeviceRows = Array.isArray(response) || Array.isArray(data);
+    const deviceSourceValue = canInferSourceFromDeviceRows
+      ? devices.map((device) => device?.source || device?.source_type || device?.sourceType).find(Boolean)
+      : null;
+    const sourceValue = data.source || data.source_type || data.sourceType || response?.source || response?.source_type || response?.sourceType || deviceSourceValue || "local_bridge";
     const normalizedSource = String(sourceValue).trim().toLowerCase();
     const source = ["web_serial", "native_connector"].includes(normalizedSource) ? normalizedSource : "local_bridge";
     const malformedVciListAlias = ["devices", "vci_devices", "items"]
