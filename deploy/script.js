@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3130件",
+  validationCheckLabel: "OBD安全検証 3131件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "Web Serial接続エラーを保持",
+  recentMilestone: "接続・VCIエラーを画面表示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.75";
+const APP_VERSION = "3.13.76";
 const APP_LAST_UPDATED = "2026-08-22";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7639,6 +7639,7 @@ function renderObdBridgeSessionDetails(session = null) {
   const j2534StaticBlockedVciCount = readJ2534StaticCount(connectionStatus?.staticBlockedVciCount, connectionStatus?.static_blocked_vci_count, obdDevSession.bridgeVciList?.staticBlockedVciCount, obdDevSession.bridgeVciList?.static_blocked_vci_count);
   const connectionDisplayStatus = connectionStatus?.displayStatus || connectionStatus?.display_status || null;
   const connectionNextAction = connectionStatus?.nextAction || connectionStatus?.next_action || null;
+  const connectionErrorLabel = formatReadoutErrorCodes(connectionStatus?.errorCodes || connectionStatus?.error_codes || connectionStatus?.errors || []);
   if (connectionDisplayStatus || vciDevices.length) {
     const lines = [
       `状態: ${connectionDisplayStatus || NO_DATA}`,
@@ -7648,10 +7649,12 @@ function renderObdBridgeSessionDetails(session = null) {
     if (j2534DriverReadinessLabel) lines.push(`J2534準備: ${j2534DriverReadinessLabel}`);
     if (j2534NextCheckLabel) lines.push(`J2534次確認: ${j2534NextCheckLabel}`);
     if (j2534StaticReadyVciCount !== null || j2534StaticBlockedVciCount !== null) lines.push(`J2534静的確認: 読取候補 ${j2534StaticReadyVciCount ?? "未報告"} / 要確認 ${j2534StaticBlockedVciCount ?? "未報告"}`);
+    if (connectionErrorLabel) lines.push(`接続エラー: ${connectionErrorLabel.replace(/^理由:/, "")}`);
     vciDevices.slice(0, 4).forEach((item) => {
       const runtimeCompatibility = formatJ2534RuntimeCompatibility(item);
+      const vciErrorLabel = formatReadoutErrorCodes(item?.errorCodes || item?.error_codes || item?.errors || []);
       if (runtimeCompatibility) lines.push(`J2534 runtime: ${runtimeCompatibility}`);
-      lines.push(`${item.label || item.id}: ${item.connected ? "読取中" : "未読取"} / ${item.selected ? "選択中" : "待機"}`);
+      lines.push(`${item.label || item.id}: ${item.connected ? "読取中" : "未読取"} / ${item.selected ? "選択中" : "待機"}${vciErrorLabel ? ` / ${vciErrorLabel}` : ""}`);
     });
     sections.push(["読取", lines]);
   }
@@ -8966,6 +8969,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     : (obdDevSession.bridgeVciList?.deviceCount ?? 0);
   const vciDevices = Array.isArray(sessionVciDevices) ? sessionVciDevices : (obdDevSession.bridgeVciList?.devices || []);
   const selectedVci = vciDevices.find((item) => item?.selected) || vciDevices[0] || null;
+  const connectionErrorLabel = formatReadoutErrorCodes(connectionStatus?.errorCodes || connectionStatus?.error_codes || connectionStatus?.errors || []) || NO_DATA;
+  const selectedVciErrorLabel = formatReadoutErrorCodes(selectedVci?.errorCodes || selectedVci?.error_codes || selectedVci?.errors || []) || NO_DATA;
   const j2534RuntimeCompatibilityLabel = formatJ2534RuntimeCompatibility(selectedVci);
   const j2534DriverReadinessLabel = formatJ2534DriverReadiness(connectionStatus, formatJ2534DriverReadiness(obdDevSession.bridgeVciList));
   const j2534NextCheckLabel = formatJ2534NextCheck(connectionStatus, formatJ2534NextCheck(obdDevSession.bridgeVciList));
@@ -9200,6 +9205,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["読取経路", readoutInterfaceLabel],
     ["車両", vehicleLabel],
     ["状態", connectionStatus?.displayStatus || connectionStatus?.display_status || NO_DATA],
+    ["接続エラー", connectionErrorLabel],
+    ["VCIエラー", selectedVciErrorLabel],
     ...(adapterInitializationLabel ? [["VCI初期化", adapterInitializationLabel]] : []),
     ["DTC", dtcSnapshot?.dtcs?.length ?? 0],
     ["DTC比較", dtcIdentityComparisonLabel],
