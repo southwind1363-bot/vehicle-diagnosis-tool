@@ -3860,6 +3860,9 @@
         vehicle_connected: vehicleConnected,
         ...(lastDisconnectReason ? { lastDisconnectReason, last_disconnect_reason: lastDisconnectReason } : {}),
         ...(adapterInitializationSummary ? { adapterInitializationSummary, adapter_initialization_summary: adapterInitializationSummary } : {}),
+        errors: [...errorCodes],
+        errorCodes,
+        error_codes: [...errorCodes],
         retainedRawText: false,
         retained_raw_text: false
       };
