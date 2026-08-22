@@ -5540,12 +5540,17 @@
       "info_values", "infoValues", "uds_data_identifiers", "udsDataIdentifiers", "uds_did_items", "udsDidItems", "data_identifiers", "dataIdentifiers"
     ];
     const malformedEcuInfoAlias = ecuInfoArrayAliases.some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
+    const malformedEcuInfoEcuSnapshots = new Set(ecuInfoEcuSnapshots.filter((snapshot) => snapshot
+      && typeof snapshot === "object"
+      && !Array.isArray(snapshot)
+      && ecuInfoArrayAliases.some((key) => snapshot[key] !== undefined && snapshot[key] !== null && !Array.isArray(snapshot[key]))));
     const errorCodes = readBridgeResponseErrorCodes(response);
     const rawEcuInfoResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
     const decodedRawEcuInfoSnapshots = new Map();
     const rawEcuInfoItems = ecuInfoEcuSnapshots.flatMap((ecuRow) => {
+      if (malformedEcuInfoEcuSnapshots.has(ecuRow)) return [];
       const raw = getEcuRawEcuInfoResponse(ecuRow);
       if (raw === null || getEcuInfoSnapshotItems(ecuRow).length > 0) return [];
       const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
@@ -5572,6 +5577,7 @@
     });
     const childStructuredItems = ecuInfoEcuSnapshots.flatMap((ecuRow) => {
       if (!ecuRow || typeof ecuRow !== "object" || Array.isArray(ecuRow)) return [];
+      if (malformedEcuInfoEcuSnapshots.has(ecuRow)) return [];
       const ecu = ecuRow.source_ecu || ecuRow.sourceEcu || ecuRow.ecu || ecuRow.ecu_id || ecuRow.ecuId || ecuRow.address || ecuRow.module || ecuRow.module_id || ecuRow.moduleId || null;
       const ecuName = ecuRow.source_ecu_name || ecuRow.sourceEcuName || ecuRow.ecu_name || ecuRow.ecuName || ecuRow.module_name || ecuRow.moduleName || ecuRow.name || ecuRow.label || null;
       return getEcuInfoSnapshotItems(ecuRow).map((item) => {
@@ -5587,6 +5593,14 @@
     });
     const items = [...(structuredItems.length > 0 ? structuredItems : childStructuredItems), ...rawEcuInfoItems];
     const resolvedEcuInfoEcuSnapshots = ecuInfoEcuSnapshots.map((ecuRow) => {
+      if (malformedEcuInfoEcuSnapshots.has(ecuRow)) {
+        return {
+          ...ecuRow,
+          ecu_info_readout_status: "blocked",
+          item_count: 0,
+          item_ids: []
+        };
+      }
       const decoded = decodedRawEcuInfoSnapshots.get(ecuRow);
       if (!decoded) return ecuRow;
       const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || decoded.sourceEcu || decoded.source_ecu || null;
@@ -5608,7 +5622,7 @@
     const explicitReadoutStatus = String(data.ecu_info_readout_status || data.ecuInfoReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(response, errorCodes.length === 0 && (rawEcuInfoResponse !== null || hasRawEcuInfoEcuResponse || hasExplicitReadoutStatus || hasItemEvidence));
-    const resolvedBridgeSafety = malformedEcuInfoAlias
+    const resolvedBridgeSafety = malformedEcuInfoAlias || malformedEcuInfoEcuSnapshots.size > 0
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
       ? { ...bridgeSafety, ok: false, blocked: hasItemEvidence, unparsed: !hasItemEvidence }
