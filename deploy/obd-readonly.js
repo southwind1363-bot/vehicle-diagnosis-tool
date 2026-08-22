@@ -9051,6 +9051,17 @@
       .filter(Boolean);
   }
 
+  function buildCompletedDtcPendingReadoutRequestPlanSeed(input = null, removedCompletedDtcRequest = false) {
+    if (input && typeof input === "object" && !Array.isArray(input)) return input;
+    if (!removedCompletedDtcRequest) return input || null;
+    return {
+      schemaVersion: "read_only_readout_request_plan_v1",
+      schema_version: "read_only_readout_request_plan_v1",
+      requestIds: ["dtc_snapshot"],
+      request_ids: ["dtc_snapshot"]
+    };
+  }
+
   function synchronizeDtcPendingReadoutRequestPlan(input = null, queue = [], nextRequest = null, dtcStatusReadoutPlan = null) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return input || null;
     const dtcStatusReadoutComplete = isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan);
@@ -14463,8 +14474,9 @@
       || savedPlanNextRequestId === "dtc_snapshot"
       || pendingReadoutRequestQueue.some((item) => item?.readoutId === "dtc_snapshot")
       || removedCompletedDtcPendingRequest;
+    const pendingReadoutRequestPlanInput = buildCompletedDtcPendingReadoutRequestPlanSeed(savedPendingReadoutRequestPlan, removedCompletedDtcPendingRequest);
     const pendingReadoutRequestPlan = hasDtcPendingReadoutRequest
-      ? synchronizeDtcPendingReadoutRequestPlan(savedPendingReadoutRequestPlan, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
+      ? synchronizeDtcPendingReadoutRequestPlan(pendingReadoutRequestPlanInput, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
       : savedPendingReadoutRequestPlan;
     const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(
       summary.readoutRequestPlanGateSummary
@@ -14475,7 +14487,9 @@
     );
     const readoutRequestPlanGateSummary = hasDtcPendingReadoutRequest && pendingReadoutRequestPlan
       ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan)
-      : savedReadoutRequestPlanGateSummary;
+      : dtcStatusReadoutComplete
+        ? normalizeImportedReadoutRequestPlanGateSummaryAliases(savedReadoutRequestPlanGateSummary, { dtcStatusSummary, dtcStatusReadoutPlan })
+        : savedReadoutRequestPlanGateSummary;
     const pendingReadoutRequestQueueById = hasDtcPendingReadoutRequest
       ? Object.fromEntries(pendingReadoutRequestQueue.map((item) => [item.readoutId, { ...item }]))
       : normalizeObject("pendingReadoutRequestQueueById", "pending_readout_request_queue_by_id");
@@ -14747,13 +14761,16 @@
       || savedPlanNextRequestId === "dtc_snapshot"
       || pendingReadoutRequestQueue.some((item) => item?.readoutId === "dtc_snapshot")
       || removedCompletedDtcPendingRequest;
+    const pendingReadoutRequestPlanInput = buildCompletedDtcPendingReadoutRequestPlanSeed(savedPendingReadoutRequestPlan, removedCompletedDtcPendingRequest);
     const pendingReadoutRequestPlan = hasDtcPendingReadoutRequest
-      ? synchronizeDtcPendingReadoutRequestPlan(savedPendingReadoutRequestPlan, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
+      ? synchronizeDtcPendingReadoutRequestPlan(pendingReadoutRequestPlanInput, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan)
       : savedPendingReadoutRequestPlan;
     const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
     const readoutRequestPlanGateSummary = hasDtcPendingReadoutRequest && pendingReadoutRequestPlan
       ? synchronizeDtcReadoutRequestPlanGateSummary(savedReadoutRequestPlanGateSummary, pendingReadoutRequestPlan)
-      : savedReadoutRequestPlanGateSummary;
+      : dtcStatusReadoutComplete
+        ? normalizeImportedReadoutRequestPlanGateSummaryAliases(savedReadoutRequestPlanGateSummary, { dtcStatusSummary, dtcStatusReadoutPlan })
+        : savedReadoutRequestPlanGateSummary;
     const readoutRequestPlanSummaryInput = summary.readoutRequestPlanSummary || summary.readout_request_plan_summary || null;
     const readoutRequestPlanSummary = clearCompletedDtcNextReadout && !nextReadoutRequest
       ? null
