@@ -5074,7 +5074,8 @@
         snapshot.uds_dtc_snapshot_records, snapshot.udsDtcSnapshotRecords,
         snapshot.uds_dtc_stored_data_records, snapshot.udsDtcStoredDataRecords
       ].some((value) => Array.isArray(value) && value.length > 0));
-    const errorCodes = readBridgeResponseErrorCodes(response);
+    const scopedFreezeFrameErrorCodes = [...new Set(freezeFrameEcuSnapshotRows.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))];
+    const errorCodes = [...new Set([...readBridgeResponseErrorCodes(response), ...scopedFreezeFrameErrorCodes])].slice(0, 12);
     const rawFreezeFrameResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const bridgeSafety = malformedFreezeFrameAlias
       ? { ...readBridgeSnapshotSafety(response, false), ok: false, blocked: true, unparsed: true }
@@ -24154,6 +24155,7 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const firstFreezeFrameArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
@@ -24169,8 +24171,12 @@
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
       if (!snapshotSourceEcu) return null;
+      const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshotInput);
+      const snapshotStatusInput = String(snapshotInput.freezeFrameReadoutStatus || snapshotInput.freeze_frame_readout_status || snapshotInput.readoutStatus || snapshotInput.readout_status || "").trim().toLowerCase();
+      const resolvedSnapshotStatus = snapshotStatusInput === "blocked" ? "blocked" : snapshotErrorCodes.length > 0 ? "unparsed" : snapshotStatusInput;
       const normalizedSnapshot = normalizeFreezeFrameSnapshot({
         ...snapshotInput,
+        ...(resolvedSnapshotStatus ? { freezeFrameReadoutStatus: resolvedSnapshotStatus, freeze_frame_readout_status: resolvedSnapshotStatus } : {}),
         freezeFrameEcuSnapshots: [],
         freeze_frame_ecu_snapshots: [],
         ecuSnapshots: [],
@@ -24180,6 +24186,8 @@
         ...normalizedSnapshot,
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
+        errorCodes: snapshotErrorCodes,
+        error_codes: [...snapshotErrorCodes],
         freezeFrameScope: "single_ecu",
         freeze_frame_scope: "single_ecu"
       };
@@ -24533,9 +24541,12 @@
     const freezeFrameNumberSummary = buildFreezeFrameNumberSummary(monitorValues);
     const explicitReadoutStatus = String(sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || "").trim().toLowerCase();
     const freezeFrameEcuStatuses = freezeFrameEcuSnapshots.map((snapshot) => String(snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status || "unknown").trim().toLowerCase());
+    const scopedErrorCodes = [...new Set(freezeFrameEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes])].slice(0, 12);
     const freezeFrameStatusCandidates = [
       ...(["reported", "unparsed", "blocked", "unknown"].includes(explicitReadoutStatus) ? [explicitReadoutStatus] : []),
-      ...freezeFrameEcuStatuses
+      ...freezeFrameEcuStatuses,
+      ...(errorCodes.length > 0 ? ["unparsed"] : [])
     ];
     const readoutStatus = freezeFrameStatusCandidates.includes("blocked")
       ? "blocked"
@@ -24563,6 +24574,10 @@
       unparsed_ecu_count: unparsedEcuCount,
       unknownEcuCount,
       unknown_ecu_count: unknownEcuCount,
+      errorResponseCount: freezeFrameEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length,
+      error_response_count: freezeFrameEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length,
+      errorCodes: scopedErrorCodes,
+      error_codes: [...scopedErrorCodes],
       allReported: reportedEcuCount === freezeFrameEcuSnapshots.length,
       all_reported: reportedEcuCount === freezeFrameEcuSnapshots.length
     } : null;
@@ -24625,6 +24640,8 @@
       freeze_frame_number_summary: freezeFrameNumberSummary,
       freezeFrameReadoutStatus: readoutStatus,
       freeze_frame_readout_status: readoutStatus,
+      errorCodes,
+      error_codes: [...errorCodes],
       retainedRawText: false,
       retained_raw_text: false
     };
