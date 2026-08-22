@@ -17289,7 +17289,7 @@
   function synchronizeImportedDtcPrimaryBlockingAliases(summary = null, fallbackCoreSessionStatus = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
     const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
-    if (!dtcStatusReadoutPlan) return summary;
+    const explicitlyCompletedNonDtcReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
     const primaryBlockingSummaryInput = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
     const primaryBlockingReadoutRequestInput = summary.primaryBlockingReadoutRequest
       || summary.primary_blocking_readout_request
@@ -17298,10 +17298,35 @@
       || primaryBlockingSummaryInput?.readout_request
       || null;
     const readoutId = primaryBlockingReadoutRequestInput?.readoutId || primaryBlockingReadoutRequestInput?.readout_id || primaryBlockingReadoutRequestInput?.id || null;
-    if (readoutId !== "dtc_snapshot") return summary;
+    if (explicitlyCompletedNonDtcReadoutIds.has(readoutId)) {
+      return {
+        ...summary,
+        primaryBlockingReasonId: null,
+        primary_blocking_reason_id: null,
+        primaryBlockingReason: null,
+        primary_blocking_reason: null,
+        primaryBlockingReadoutId: null,
+        primary_blocking_readout_id: null,
+        primaryBlockingReadoutLabel: null,
+        primary_blocking_readout_label: null,
+        primaryBlockingReadoutRequest: null,
+        primary_blocking_readout_request: null,
+        primaryBlockingSummary: null,
+        primary_blocking_summary: null
+      };
+    }
+    if (readoutId !== "dtc_snapshot" || !dtcStatusReadoutPlan) return summary;
     if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) {
       return {
         ...summary,
+        primaryBlockingReasonId: null,
+        primary_blocking_reason_id: null,
+        primaryBlockingReason: null,
+        primary_blocking_reason: null,
+        primaryBlockingReadoutId: null,
+        primary_blocking_readout_id: null,
+        primaryBlockingReadoutLabel: null,
+        primary_blocking_readout_label: null,
         primaryBlockingReadoutRequest: null,
         primary_blocking_readout_request: null,
         primaryBlockingSummary: null,
@@ -17987,7 +18012,10 @@
   function normalizeImportedNextReadoutGuardSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
     const normalizedSummary = normalizeNextReadoutGuardSummaryAliases(summary);
     const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
-    if (!normalizedSummary || normalizedSummary.readoutId !== "dtc_snapshot" || !dtcStatusReadoutPlan) return normalizedSummary;
+    const explicitlyCompletedNonDtcReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
+    if (!normalizedSummary) return normalizedSummary;
+    if (explicitlyCompletedNonDtcReadoutIds.has(normalizedSummary.readoutId)) return null;
+    if (normalizedSummary.readoutId !== "dtc_snapshot" || !dtcStatusReadoutPlan) return normalizedSummary;
     if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) return null;
     const readoutRequest = normalizeReadoutRequestSummaryAliases({
       readoutId: normalizedSummary.readoutId,
@@ -18232,7 +18260,9 @@
   function normalizeImportedReadoutRequestPlanGateSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
     const normalizedSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary);
     const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
-    if (!normalizedSummary || !dtcStatusReadoutPlan) return normalizedSummary;
+    const completedReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
+    if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) completedReadoutIds.add("dtc_snapshot");
+    if (!normalizedSummary) return normalizedSummary;
     const actionQueueReadoutIds = (Array.isArray(normalizedSummary.actionQueue) ? normalizedSummary.actionQueue : [])
       .flatMap((item) => [
         item?.readoutId,
@@ -18254,10 +18284,11 @@
     const knownRequestSafetyReasonIds = new Set(["unmapped_readout_requests", "non_read_only_requests", "transmitting_requests"]);
     const knownRequestSafetyActionIds = new Set(["map_readout_request", "require_read_only_request", "block_transmitting_request"]);
     const isDtcOnlyGate = actionReadoutIds.length > 0 && actionReadoutIds.every((readoutId) => readoutId === "dtc_snapshot");
+    const isCompletedReadoutOnlyGate = actionReadoutIds.length > 0 && actionReadoutIds.every((readoutId) => completedReadoutIds.has(readoutId));
     const hasOnlyKnownReasons = gateReasonIds.every((reasonId) => knownRequestSafetyReasonIds.has(reasonId));
     const hasOnlyKnownActions = actionIds.every((actionId) => knownRequestSafetyActionIds.has(actionId));
-    if (!isDtcOnlyGate || !hasOnlyKnownReasons || !hasOnlyKnownActions) return normalizedSummary;
-    if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) {
+    if (!hasOnlyKnownReasons || !hasOnlyKnownActions) return normalizedSummary;
+    if (isCompletedReadoutOnlyGate) {
       return synchronizeDtcReadoutRequestPlanGateSummary(normalizedSummary, {
         schemaVersion: "read_only_readout_request_plan_v1",
         schema_version: "read_only_readout_request_plan_v1",
@@ -18293,8 +18324,9 @@
         would_transmit: false,
         vehicleCommandEnabled: false,
         vehicle_command_enabled: false
-      });
+      }, completedReadoutIds);
     }
+    if (!isDtcOnlyGate || !dtcStatusReadoutPlan) return normalizedSummary;
     const nextRequest = normalizeReadoutRequestSummaryAliases({ readoutId: "dtc_snapshot" }, dtcStatusReadoutPlan);
     const readoutRequestPlan = synchronizeDtcPendingReadoutRequestPlan({
       schemaVersion: "read_only_readout_request_plan_v1",
