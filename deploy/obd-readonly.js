@@ -17434,6 +17434,107 @@
     };
   }
 
+  function synchronizeImportedAnalysisReadinessStateAliases(summary = null, fallbackCoreSessionStatus = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const completedReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
+    const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
+    if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) completedReadoutIds.add("dtc_snapshot");
+    if (completedReadoutIds.size === 0) return summary;
+    const originalBlockerIds = Array.isArray(summary.blockerIds)
+      ? summary.blockerIds
+      : Array.isArray(summary.blocker_ids) ? summary.blocker_ids : [];
+    const blockerIds = [...new Set(originalBlockerIds.filter(Boolean).map(String))];
+    const sourceBlockersById = summary.blockersById && typeof summary.blockersById === "object"
+      ? summary.blockersById
+      : summary.blockers_by_id && typeof summary.blockers_by_id === "object" ? summary.blockers_by_id : {};
+    const blockersById = Object.fromEntries(Object.entries(sourceBlockersById).map(([reasonId, reason]) => [reasonId, reason && typeof reason === "object" ? { ...reason } : reason]));
+    let removedReadoutBlocker = false;
+    const readoutIdsByReasonId = {};
+    ["missing_readouts", "empty_readouts"].forEach((reasonId) => {
+      const reason = blockersById[reasonId];
+      const sourceReadoutIds = Array.isArray(reason?.readoutIds)
+        ? reason.readoutIds
+        : Array.isArray(reason?.readout_ids) ? reason.readout_ids : null;
+      if (!sourceReadoutIds) return;
+      const filteredReadoutIds = [...new Set(sourceReadoutIds.filter(Boolean).map(String))].filter((readoutId) => !completedReadoutIds.has(readoutId));
+      readoutIdsByReasonId[reasonId] = filteredReadoutIds;
+      if (!sourceReadoutIds.some((readoutId) => completedReadoutIds.has(String(readoutId)))) return;
+      removedReadoutBlocker = true;
+      if (filteredReadoutIds.length === 0) {
+        const blockerIndex = blockerIds.indexOf(reasonId);
+        if (blockerIndex >= 0) blockerIds.splice(blockerIndex, 1);
+        delete blockersById[reasonId];
+        return;
+      }
+      blockersById[reasonId] = {
+        ...reason,
+        count: filteredReadoutIds.length,
+        readoutIds: filteredReadoutIds,
+        readout_ids: [...filteredReadoutIds]
+      };
+    });
+    if (!removedReadoutBlocker) return summary;
+    const readCount = (camelKey, snakeKey) => Number(summary[camelKey] ?? summary[snakeKey] ?? 0) || 0;
+    const missingReadoutCount = readoutIdsByReasonId.missing_readouts?.length ?? readCount("missingReadoutCount", "missing_readout_count");
+    const emptyReadoutCount = readoutIdsByReasonId.empty_readouts?.length ?? readCount("emptyReadoutCount", "empty_readout_count");
+    const pendingReadoutCount = missingReadoutCount + emptyReadoutCount;
+    const blockerSummaryInput = summary.blockerSummary || summary.blocker_summary || null;
+    const blockerSummary = blockerSummaryInput && typeof blockerSummaryInput === "object" ? {
+      ...blockerSummaryInput,
+      totalCount: blockerIds.length,
+      total_count: blockerIds.length,
+      missingReadoutCount,
+      missing_readout_count: missingReadoutCount,
+      emptyReadoutCount,
+      empty_readout_count: emptyReadoutCount
+    } : blockerSummaryInput;
+    const currentNextReadoutId = summary.nextReadoutId || summary.next_readout_id || null;
+    const fallbackPendingReadoutIds = Array.isArray(fallbackCoreSessionStatus?.pendingReadoutIds)
+      ? fallbackCoreSessionStatus.pendingReadoutIds
+      : Array.isArray(fallbackCoreSessionStatus?.pending_readout_ids) ? fallbackCoreSessionStatus.pending_readout_ids : [];
+    const nextReadoutId = completedReadoutIds.has(currentNextReadoutId)
+      ? fallbackPendingReadoutIds.find((readoutId) => !completedReadoutIds.has(readoutId)) || null
+      : currentNextReadoutId;
+    const allOriginalBlockersWereCompletedReadouts = originalBlockerIds.length > 0
+      && originalBlockerIds.every((reasonId) => ["missing_readouts", "empty_readouts"].includes(reasonId))
+      && blockerIds.length === 0;
+    const ready = allOriginalBlockersWereCompletedReadouts ? true : summary.ready === true;
+    const fallbackCompletionPercent = Number(fallbackCoreSessionStatus?.completionPercent ?? fallbackCoreSessionStatus?.completion_percent);
+    const completionPercent = Number.isFinite(fallbackCompletionPercent)
+      ? Math.max(0, Math.min(100, Math.round(fallbackCompletionPercent)))
+      : Number(summary.completionPercent || summary.completion_percent || 0);
+    return {
+      ...summary,
+      ready,
+      blockerCount: blockerIds.length,
+      blocker_count: blockerIds.length,
+      blockerIds,
+      blocker_ids: [...blockerIds],
+      blockerSummary,
+      blocker_summary: blockerSummary,
+      blockersById,
+      blockers_by_id: blockersById,
+      missingReadoutCount,
+      missing_readout_count: missingReadoutCount,
+      emptyReadoutCount,
+      empty_readout_count: emptyReadoutCount,
+      pendingReadoutCount,
+      pending_readout_count: pendingReadoutCount,
+      completionPercent,
+      completion_percent: completionPercent,
+      nextReadoutId,
+      next_readout_id: nextReadoutId,
+      nextReadoutLabel: nextReadoutId === currentNextReadoutId ? summary.nextReadoutLabel || summary.next_readout_label || null : nextReadoutId,
+      next_readout_label: nextReadoutId === currentNextReadoutId ? summary.next_readout_label || summary.nextReadoutLabel || null : nextReadoutId,
+      nextReadoutStatus: nextReadoutId === currentNextReadoutId ? summary.nextReadoutStatus || summary.next_readout_status || null : null,
+      next_readout_status: nextReadoutId === currentNextReadoutId ? summary.next_readout_status || summary.nextReadoutStatus || null : null,
+      nextReadoutSource: nextReadoutId === currentNextReadoutId ? summary.nextReadoutSource || summary.next_readout_source || null : "fallback_core_session",
+      next_readout_source: nextReadoutId === currentNextReadoutId ? summary.next_readout_source || summary.nextReadoutSource || null : "fallback_core_session",
+      nextReadoutQueuePosition: nextReadoutId === currentNextReadoutId ? summary.nextReadoutQueuePosition || summary.next_readout_queue_position || null : nextReadoutId ? 1 : null,
+      next_readout_queue_position: nextReadoutId === currentNextReadoutId ? summary.next_readout_queue_position || summary.nextReadoutQueuePosition || null : nextReadoutId ? 1 : null
+    };
+  }
+
   function normalizeImportedReadoutCompletionSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
     return synchronizeImportedReadoutCompletionStateAliases(
       synchronizeImportedDtcPrimaryBlockingAliases(normalizeReadoutCompletionSummaryAliases(summary), fallbackCoreSessionStatus),
@@ -17442,7 +17543,10 @@
   }
 
   function normalizeImportedAnalysisReadinessSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
-    return synchronizeImportedDtcPrimaryBlockingAliases(normalizeAnalysisReadinessSummaryAliases(summary), fallbackCoreSessionStatus);
+    return synchronizeImportedAnalysisReadinessStateAliases(
+      synchronizeImportedDtcPrimaryBlockingAliases(normalizeAnalysisReadinessSummaryAliases(summary), fallbackCoreSessionStatus),
+      fallbackCoreSessionStatus
+    );
   }
 
   function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
