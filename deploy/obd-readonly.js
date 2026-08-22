@@ -11329,6 +11329,44 @@
     };
   }
 
+  function hasVciDeviceInputContent(input = {}) {
+    if (Array.isArray(input)) return input.length > 0;
+    if (!input || typeof input !== "object") return false;
+    return ["devices", "vci_devices", "items"].some((key) => Array.isArray(input[key]));
+  }
+
+  function hasConnectionInfrastructureSourceEvidence(input = {}, normalized = {}) {
+    if (!hasObjectContent(input)) return false;
+    if (normalized?.source !== "local_bridge") return true;
+    const errorCodes = normalized?.errorCodes || normalized?.error_codes || [];
+    const isGeneratedPlaceholder = String(input?.intent || "").trim().toLowerCase() === "bridge_status"
+      && normalized?.status === "not_connected"
+      && normalized?.blocked === true
+      && normalized?.ok === false
+      && !normalized?.bridgeVersion
+      && normalized?.paired !== true
+      && normalized?.vciConnected !== true
+      && normalized?.vehicleConnected !== true
+      && (!Array.isArray(errorCodes) || errorCodes.length === 0);
+    return !isGeneratedPlaceholder;
+  }
+
+  function hasAdapterInfrastructureSourceEvidence(input = {}, normalized = {}) {
+    if (!hasObjectContent(input)) return false;
+    if (normalized?.source !== "local_bridge") return true;
+    const errorCodes = normalized?.errorCodes || normalized?.error_codes || [];
+    const isGeneratedPlaceholder = String(input?.intent || "").trim().toLowerCase() === "adapter_identity"
+      && normalized?.blocked === true
+      && normalized?.ok === false
+      && !normalized?.adapterName
+      && !normalized?.adapterFamily
+      && !normalized?.firmwareVersion
+      && !normalized?.adapterProtocolHint
+      && !normalized?.adapterProtocolNumber
+      && (!Array.isArray(errorCodes) || errorCodes.length === 0);
+    return !isGeneratedPlaceholder;
+  }
+
   function detectBridgeInfrastructureContext({
     connectionStatusInput = {},
     vciDevicesInput = {},
@@ -11346,8 +11384,7 @@
     }
     return hasObjectContent(connectionStatusInput)
       || hasObjectContent(adapterIdentityInput)
-      || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
-      || Boolean(vciDevicesInput?.devices?.length)
+      || hasVciDeviceInputContent(vciDevicesInput)
       || Boolean(nestedSession);
   }
 
@@ -31348,7 +31385,16 @@
       adapterIdentityInput?.source_type,
       adapterIdentityInput?.sourceType
     ].some((source) => String(source || "").trim().toLowerCase() === "web_serial");
-    const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext && !hasWebSerialInfrastructureContext;
+    const activeInfrastructureSources = [
+      hasConnectionInfrastructureSourceEvidence(connectionStatusInput, connectionStatus) ? connectionStatus?.source : null,
+      hasVciDeviceInputContent(vciListInput) ? vciList?.source : null,
+      hasAdapterInfrastructureSourceEvidence(adapterIdentityInput, adapterIdentity) ? adapterIdentity?.source : null
+    ].filter(Boolean);
+    const hasLocalBridgeInfrastructureSource = activeInfrastructureSources.includes("local_bridge");
+    const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && (
+      hasLocalBridgeInfrastructureSource
+      || (activeInfrastructureSources.length === 0 && !hasNativeConnectorContext && !hasWebSerialInfrastructureContext)
+    );
     const hasSessionAdapterIdentity = Boolean(adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion);
     const singleSampleNeedsAdapterIdentity = livePidTimeline.samples.length === 1
       && !normalizeLivePidTimelineAdapterIdentity(livePidTimeline.samples[0]?.adapterIdentity || livePidTimeline.samples[0]?.adapter_identity);
