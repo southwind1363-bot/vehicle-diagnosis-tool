@@ -5544,7 +5544,8 @@
       && typeof snapshot === "object"
       && !Array.isArray(snapshot)
       && ecuInfoArrayAliases.some((key) => snapshot[key] !== undefined && snapshot[key] !== null && !Array.isArray(snapshot[key]))));
-    const errorCodes = readBridgeResponseErrorCodes(response);
+    const scopedEcuInfoErrorCodes = [...new Set(ecuInfoEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))];
+    const errorCodes = [...new Set([...readBridgeResponseErrorCodes(response), ...scopedEcuInfoErrorCodes])].slice(0, 12);
     const rawEcuInfoResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const capturedAt = data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null;
     const protocol = readBridgeProtocol(data) || readBridgeProtocol(response);
@@ -25379,6 +25380,11 @@
       if (!snapshotSourceEcu) return null;
       const snapshotItems = collectEcuInfoRows(snapshot);
       const snapshotStatus = String(snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || snapshot.readoutStatus || snapshot.readout_status || "unknown").trim().toLowerCase();
+      const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshot);
+      const normalizedSnapshotStatus = ["reported", "unparsed", "blocked", "unknown"].includes(snapshotStatus) ? snapshotStatus : "unknown";
+      const resolvedSnapshotStatus = snapshotErrorCodes.length > 0 && normalizedSnapshotStatus !== "blocked"
+        ? "unparsed"
+        : normalizedSnapshotStatus;
       const itemIds = [...new Set([
         ...(Array.isArray(snapshot.itemIds) ? snapshot.itemIds : []),
         ...(Array.isArray(snapshot.item_ids) ? snapshot.item_ids : []),
@@ -25397,8 +25403,8 @@
         source_ecu: snapshotSourceEcu,
         sourceEcuName: snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null,
         source_ecu_name: snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null,
-        ecuInfoReadoutStatus: ["reported", "unparsed", "blocked", "unknown"].includes(snapshotStatus) ? snapshotStatus : "unknown",
-        ecu_info_readout_status: ["reported", "unparsed", "blocked", "unknown"].includes(snapshotStatus) ? snapshotStatus : "unknown",
+        ecuInfoReadoutStatus: resolvedSnapshotStatus,
+        ecu_info_readout_status: resolvedSnapshotStatus,
         itemCount,
         item_count: itemCount,
         itemIds,
@@ -25406,7 +25412,9 @@
         ecuInfoNegativeResponseService: negativeResponseService,
         ecu_info_negative_response_service: negativeResponseService,
         ecuInfoNegativeResponseCode: negativeResponseCode,
-        ecu_info_negative_response_code: negativeResponseCode
+        ecu_info_negative_response_code: negativeResponseCode,
+        errorCodes: snapshotErrorCodes,
+        error_codes: [...snapshotErrorCodes]
       };
     }).filter(Boolean);
     const reportedEcuInfoEcuSnapshots = ecuInfoEcuSnapshots.filter((snapshot) =>
@@ -25531,14 +25539,17 @@
       : items.length > 0
         ? "reported"
         : "unknown";
-    const normalizedReadoutStatus = blockedEcuCount > 0
+    const combinedReadoutStatuses = [baseReadoutStatus, ...ecuInfoEcuStatuses];
+    const normalizedReadoutStatus = combinedReadoutStatuses.includes("blocked")
       ? "blocked"
-      : unparsedEcuCount > 0
+      : combinedReadoutStatuses.includes("unparsed")
         ? "unparsed"
-        : unknownEcuCount > 0
+        : combinedReadoutStatuses.includes("unknown")
           ? "unknown"
-          : baseReadoutStatus;
+          : "reported";
     const pendingResponseCount = ecuInfoEcuSnapshots.filter((snapshot) => (snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code) === "78").length;
+    const errorResponseCount = ecuInfoEcuSnapshots.filter((snapshot) => (snapshot.errorCodes || snapshot.error_codes || []).length > 0).length;
+    const scopedErrorCodes = mergeUniqueStrings(...ecuInfoEcuSnapshots.map((snapshot) => snapshot.errorCodes || snapshot.error_codes || []));
     const resolvedPendingResponseCount = [...ecuInfoEcuOutcomeGroups.values()].filter((outcomes) =>
       outcomes.some((snapshot) => (snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code) === "78")
       && outcomes.some((snapshot) => (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported")
@@ -25562,6 +25573,10 @@
       pending_response_count: pendingResponseCount,
       resolvedPendingResponseCount,
       resolved_pending_response_count: resolvedPendingResponseCount,
+      errorResponseCount,
+      error_response_count: errorResponseCount,
+      errorCodes: scopedErrorCodes,
+      error_codes: [...scopedErrorCodes],
       allReported: reportedEcuCount === ecuInfoEcuStatuses.length,
       all_reported: reportedEcuCount === ecuInfoEcuStatuses.length
     } : null;
@@ -25579,7 +25594,7 @@
       missingLabels: missingKeyItems.map((item) => item.label),
       missing_labels: missingKeyItems.map((item) => item.label)
     };
-    const errorCodes = mergeUniqueStrings(sourceInput.errorCodes, sourceInput.error_codes);
+    const errorCodes = mergeUniqueStrings(sourceInput.errorCodes, sourceInput.error_codes, scopedErrorCodes);
 
     return {
       schemaVersion: "ecu_info_snapshot_v2",
