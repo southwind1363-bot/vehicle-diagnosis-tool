@@ -31305,7 +31305,16 @@
       honorCoverageOverride: true
     });
     const hasNativeConnectorContext = Boolean(nativeConnectorScanLifecycle || nativeConnectorBoundary || String(sessionInput.source || sessionInput.source_type || "") === "native_connector");
-    const hasWebSerialInfrastructureContext = String(connectionStatus?.source || connectionStatusInput?.source || "").toLowerCase() === "web_serial";
+    const hasWebSerialInfrastructureContext = [
+      connectionStatus?.source,
+      connectionStatusInput?.source,
+      connectionStatusInput?.source_type,
+      connectionStatusInput?.sourceType,
+      adapterIdentity?.source,
+      adapterIdentityInput?.source,
+      adapterIdentityInput?.source_type,
+      adapterIdentityInput?.sourceType
+    ].some((source) => String(source || "").trim().toLowerCase() === "web_serial");
     const effectiveBridgeInfrastructureContext = hasBridgeInfrastructureContext && !hasNativeConnectorContext && !hasWebSerialInfrastructureContext;
     const hasSessionAdapterIdentity = Boolean(adapterIdentity?.adapterName || adapterIdentity?.adapterFamily || adapterIdentity?.firmwareVersion);
     const singleSampleNeedsAdapterIdentity = livePidTimeline.samples.length === 1
