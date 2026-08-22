@@ -17375,8 +17375,70 @@
       || buildDtcStatusReadoutPlan(dtcStatusSummary);
   }
 
+  function synchronizeImportedReadoutCompletionStateAliases(summary = null, fallbackCoreSessionStatus = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const completedReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
+    const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
+    if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) completedReadoutIds.add("dtc_snapshot");
+    if (completedReadoutIds.size === 0) return summary;
+    const readIds = (camelKey, snakeKey) => {
+      const values = Array.isArray(summary[camelKey])
+        ? summary[camelKey]
+        : Array.isArray(summary[snakeKey]) ? summary[snakeKey] : [];
+      return [...new Set(values.filter(Boolean).map(String))];
+    };
+    const requiredIds = readIds("requiredIds", "required_ids");
+    const capturedIds = [...new Set([...readIds("capturedIds", "captured_ids"), ...completedReadoutIds])].sort();
+    const missingIds = readIds("missingIds", "missing_ids").filter((readoutId) => !completedReadoutIds.has(readoutId)).sort();
+    const emptyIds = readIds("emptyIds", "empty_ids").filter((readoutId) => !completedReadoutIds.has(readoutId)).sort();
+    const pendingIds = readIds("pendingIds", "pending_ids").filter((readoutId) => !completedReadoutIds.has(readoutId)).sort();
+    const requiredCount = requiredIds.length || Number(summary.requiredCount || summary.required_count || 0);
+    const capturedCount = capturedIds.length;
+    const completionPercent = requiredCount > 0
+      ? Math.max(0, Math.min(100, Math.round((capturedIds.filter((readoutId) => requiredIds.length === 0 || requiredIds.includes(readoutId)).length / requiredCount) * 100)))
+      : Number(summary.completionPercent || summary.completion_percent || 0);
+    const nextPendingReadoutId = completedReadoutIds.has(summary.nextPendingReadoutId || summary.next_pending_readout_id)
+      ? pendingIds[0] || null
+      : summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0] || null;
+    return {
+      ...summary,
+      complete: pendingIds.length === 0,
+      hasAnyReadout: capturedIds.length > 0 || emptyIds.length > 0,
+      has_any_readout: capturedIds.length > 0 || emptyIds.length > 0,
+      hasCapturedReadouts: capturedIds.length > 0,
+      has_captured_readouts: capturedIds.length > 0,
+      hasMissingReadouts: missingIds.length > 0,
+      has_missing_readouts: missingIds.length > 0,
+      hasEmptyReadouts: emptyIds.length > 0,
+      has_empty_readouts: emptyIds.length > 0,
+      capturedCount,
+      captured_count: capturedCount,
+      missingCount: missingIds.length,
+      missing_count: missingIds.length,
+      emptyCount: emptyIds.length,
+      empty_count: emptyIds.length,
+      pendingCount: pendingIds.length,
+      pending_count: pendingIds.length,
+      capturedIds,
+      captured_ids: [...capturedIds],
+      missingIds,
+      missing_ids: [...missingIds],
+      emptyIds,
+      empty_ids: [...emptyIds],
+      pendingIds,
+      pending_ids: [...pendingIds],
+      completionPercent,
+      completion_percent: completionPercent,
+      nextPendingReadoutId,
+      next_pending_readout_id: nextPendingReadoutId
+    };
+  }
+
   function normalizeImportedReadoutCompletionSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
-    return synchronizeImportedDtcPrimaryBlockingAliases(normalizeReadoutCompletionSummaryAliases(summary), fallbackCoreSessionStatus);
+    return synchronizeImportedReadoutCompletionStateAliases(
+      synchronizeImportedDtcPrimaryBlockingAliases(normalizeReadoutCompletionSummaryAliases(summary), fallbackCoreSessionStatus),
+      fallbackCoreSessionStatus
+    );
   }
 
   function normalizeImportedAnalysisReadinessSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
