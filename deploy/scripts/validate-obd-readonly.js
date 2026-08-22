@@ -25290,10 +25290,22 @@ const standaloneMixedAnalysisReadinessRoundTrip = obd.buildDiagnosticScanSession
 check(standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.blockers_by_id?.missing_readouts?.readout_ids?.join(",") === "live_pid_snapshot" && standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.blocking_warning_count === 1 && standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.next_readout_id === "live_pid_snapshot" && standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.primary_blocking_readout_request?.bridge_intent === "read_live_pid_snapshot" && standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.primary_blocking_summary?.would_transmit === false && [standaloneMixedAnalysisReadinessSession, standaloneOnlyReadinessAnalysisSession, standalonePendingReadinessAnalysisSession, standaloneCustomReadinessAnalysisSession, standaloneEmptyLivePidAnalysisSession, standaloneMixedAnalysisReadinessRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Standalone analysis readiness cleanup was not retained through read-only JSON roundtrip");
 check(standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.checklist_by_id?.required_readouts?.pending_count === 1 && standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.checklist_summary?.blocked_ids?.includes("blocking_warnings") && standaloneMixedAnalysisReadinessRoundTrip?.importedAnalysisReadinessSummary?.checklist_summary?.marker === "keep_checklist_summary", "Standalone analysis-readiness checklist synchronization was not retained through JSON roundtrip");
 
+const nonInfrastructureSavedSession = obd.buildDiagnosticScanSession({});
+const nonInfrastructureSavedExport = obd.buildBridgeSessionExportPayload(nonInfrastructureSavedSession);
+const nonInfrastructureSavedRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(nonInfrastructureSavedExport));
+check(nonInfrastructureSavedExport.session?.readout_coverage?.includeInfrastructure === false && !(nonInfrastructureSavedExport.session?.warnings || []).some((warning) => String(warning).startsWith("bridge_")), "Non-infrastructure export introduced bridge coverage or warnings");
+check(nonInfrastructureSavedRoundTrip?.readoutCoverage?.includeInfrastructure === false && nonInfrastructureSavedRoundTrip?.readoutCoverage?.items?.length === 7 && nonInfrastructureSavedRoundTrip?.readoutCoverage?.items?.every((item) => item.statusReason === "not_requested") && !(nonInfrastructureSavedRoundTrip?.warnings || []).some((warning) => String(warning).startsWith("bridge_")), "Non-infrastructure JSON roundtrip changed unrequested core readouts into bridge failures");
+const capturedDtcSavedSession = obd.buildDiagnosticScanSession({ dtcSnapshot: { codes: [{ code: "P0300" }] } });
+const capturedDtcSavedRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(capturedDtcSavedSession)));
+check(capturedDtcSavedRoundTrip?.readoutCoverage?.itemById?.dtc_snapshot?.status === "captured" && capturedDtcSavedRoundTrip?.readoutCoverage?.itemById?.live_pid_snapshot?.statusReason === "not_requested" && capturedDtcSavedRoundTrip?.dtcSnapshot?.codes?.[0] === "P0300", "Captured DTC roundtrip did not preserve unrequested sibling readouts");
+const failedNonInfrastructureSavedSession = obd.buildDiagnosticScanSession({ readoutCoverage: { includeInfrastructure: false, items: [{ id: "dtc_snapshot", label: "DTC", available: false, count: 0, status: "missing", statusReason: "transport_error" }] } });
+const failedNonInfrastructureSavedRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(failedNonInfrastructureSavedSession)));
+check(failedNonInfrastructureSavedRoundTrip?.readoutCoverage?.includeInfrastructure === false && failedNonInfrastructureSavedRoundTrip?.readoutCoverage?.failedReadoutIds?.join(",") === "dtc_snapshot" && failedNonInfrastructureSavedRoundTrip?.vehicleCommandEnabled === false && failedNonInfrastructureSavedRoundTrip?.wouldTransmit === false, "Failed non-infrastructure readout coverage did not survive read-only JSON roundtrip");
+
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 3147");
+  console.log("OBD read-only safety checks: 3151");
   console.log("Errors: 0");
 }
