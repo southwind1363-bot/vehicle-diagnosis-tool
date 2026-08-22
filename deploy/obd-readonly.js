@@ -17990,22 +17990,26 @@
     const capturedIds = normalizeIds(summary.capturedIds || summary.captured_ids);
     const missingIds = normalizeIds(summary.missingIds || summary.missing_ids);
     const emptyIds = normalizeIds(summary.emptyIds || summary.empty_ids);
-    const pendingIds = normalizeIds(summary.pendingIds || summary.pending_ids || [...missingIds, ...emptyIds]);
+    const pendingIds = normalizeIds([...(summary.pendingIds || summary.pending_ids || []), ...missingIds, ...emptyIds]);
     const requiredCount = toCount("requiredCount", "required_count", requiredIds.length);
     const capturedCount = toCount("capturedCount", "captured_count", capturedIds.length);
     const missingCount = toCount("missingCount", "missing_count", missingIds.length);
     const emptyCount = toCount("emptyCount", "empty_count", emptyIds.length);
-    const pendingCount = toCount("pendingCount", "pending_count", pendingIds.length);
+    const hasPendingEvidence = [summary.pendingIds, summary.pending_ids, summary.missingIds, summary.missing_ids, summary.emptyIds, summary.empty_ids].some(Array.isArray);
+    const pendingCount = hasPendingEvidence ? pendingIds.length : toCount("pendingCount", "pending_count", pendingIds.length);
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, requiredCount > 0 ? Math.round((capturedCount / requiredCount) * 100) : 0);
-    const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const normalizedCompletionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const completionPercent = pendingCount > 0 && normalizedCompletionPercent === 100
+      ? Math.min(99, requiredCount > 0 ? Math.round((capturedCount / requiredCount) * 100) : 0)
+      : normalizedCompletionPercent;
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
-    const complete = pickDefined(summary.complete, pendingCount === 0) === true;
+    const complete = pendingCount === 0 && pickDefined(summary.complete, true) === true;
     const hasAnyReadout = pickDefined(summary.hasAnyReadout, summary.has_any_readout, capturedCount > 0 || emptyCount > 0) === true;
     const hasCapturedReadouts = pickDefined(summary.hasCapturedReadouts, summary.has_captured_readouts, capturedCount > 0) === true;
-    const hasMissingReadouts = pickDefined(summary.hasMissingReadouts, summary.has_missing_readouts, missingCount > 0) === true;
-    const hasEmptyReadouts = pickDefined(summary.hasEmptyReadouts, summary.has_empty_readouts, emptyCount > 0) === true;
+    const hasMissingReadouts = missingCount > 0 || pickDefined(summary.hasMissingReadouts, summary.has_missing_readouts, false) === true;
+    const hasEmptyReadouts = emptyCount > 0 || pickDefined(summary.hasEmptyReadouts, summary.has_empty_readouts, false) === true;
     return {
       ...summary,
       schemaVersion,
