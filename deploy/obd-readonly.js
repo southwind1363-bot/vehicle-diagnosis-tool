@@ -6091,8 +6091,7 @@
       : includeInfrastructureInput === false
         ? false
         : hasConnectionStatusInput
-          || (Array.isArray(vciDevicesInput) && vciDevicesInput.length > 0)
-          || Boolean(vciDevicesInput?.devices?.length)
+          || hasVciDeviceInputContent(vciDevicesInput)
           || hasAdapterIdentityInput;
     const connectionStatus = hasConnectionStatusInput
       ? normalizeBridgeConnectionStatus(connectionStatusInput)
