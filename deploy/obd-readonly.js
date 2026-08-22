@@ -14986,7 +14986,9 @@
     const dtcMetadataEvidenceSummary = normalizeSelectedDtcEvidenceSummary("dtcMetadataEvidenceSummary", "dtc_metadata_evidence_summary", "dtc_metadata_evidence_summary_v1");
     const dtcFaultDetectionCounterSummary = normalizeSelectedDtcEvidenceSummary("dtcFaultDetectionCounterSummary", "dtc_fault_detection_counter_summary", "dtc_fault_detection_counter_summary_v1");
     const vehicleApplicabilityChecklist = summary.vehicleApplicabilityChecklist || summary.vehicle_applicability_checklist || null;
-    const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || {};
+    const coreWorkflowSummaryInput = summary.coreWorkflowSummary || summary.core_workflow_summary || null;
+    const analysisReadinessSummaryInput = summary.analysisReadinessSummary || summary.analysis_readiness_summary || null;
+    const analysisReadinessSummary = analysisReadinessSummaryInput || {};
     const vehicleApplicabilityEvidenceSummary = summary.vehicleApplicabilityEvidenceSummary
       || summary.vehicle_applicability_evidence_summary
       || analysisReadinessSummary.vehicleApplicabilityEvidenceSummary
@@ -15098,6 +15100,27 @@
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false
     } : primaryBlockingSummary;
+    const synchronizeNestedPrimaryBlocker = (nestedSummary = null) => {
+      if (!nestedSummary || typeof nestedSummary !== "object" || Array.isArray(nestedSummary)) return nestedSummary;
+      if (!isDtcPrimaryBlockingReadoutRequest && !clearCompletedPrimaryBlockingReadout && !promoteFallbackCorePrimaryBlocker) return nestedSummary;
+      return {
+        ...nestedSummary,
+        primaryBlockingReasonId: flowPrimaryBlockingReasonId,
+        primary_blocking_reason_id: flowPrimaryBlockingReasonId,
+        primaryBlockingReason: flowPrimaryBlockingReason,
+        primary_blocking_reason: flowPrimaryBlockingReason,
+        primaryBlockingReadoutId: flowPrimaryBlockingReadoutId,
+        primary_blocking_readout_id: flowPrimaryBlockingReadoutId,
+        primaryBlockingReadoutLabel: flowPrimaryBlockingReadoutLabel,
+        primary_blocking_readout_label: flowPrimaryBlockingReadoutLabel,
+        primaryBlockingReadoutRequest: flowPrimaryBlockingReadoutRequest,
+        primary_blocking_readout_request: flowPrimaryBlockingReadoutRequest,
+        primaryBlockingSummary: flowPrimaryBlockingSummary,
+        primary_blocking_summary: flowPrimaryBlockingSummary
+      };
+    };
+    const flowCoreWorkflowSummary = synchronizeNestedPrimaryBlocker(coreWorkflowSummaryInput);
+    const flowAnalysisReadinessSummary = synchronizeNestedPrimaryBlocker(analysisReadinessSummaryInput);
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
     const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
@@ -15276,6 +15299,10 @@
       vehicle_applicability_checklist: vehicleApplicabilityChecklist,
       vehicleApplicabilityEvidenceSummary,
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
+      coreWorkflowSummary: flowCoreWorkflowSummary,
+      core_workflow_summary: flowCoreWorkflowSummary,
+      analysisReadinessSummary: flowAnalysisReadinessSummary,
+      analysis_readiness_summary: flowAnalysisReadinessSummary,
       pendingQueueNextReadoutId: pickDefined(summary.pendingQueueNextReadoutId, summary.pending_queue_next_readout_id, null),
       pending_queue_next_readout_id: pickDefined(summary.pending_queue_next_readout_id, summary.pendingQueueNextReadoutId, null),
       recommendedReadoutId: pickDefined(summary.recommendedReadoutId, summary.recommended_readout_id, null),
