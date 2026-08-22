@@ -8864,6 +8864,13 @@
       : missingReadoutIds.includes(readoutId) || remainingReadoutIds.includes(readoutId)
         ? "missing"
         : readoutRequest.status || null;
+    const statusReason = pickDefined(
+      readoutRequest.statusReason,
+      readoutRequest.status_reason,
+      readoutRequest.readoutStatusReason,
+      readoutRequest.readout_status_reason,
+      null
+    );
     const label = readoutRequest.label || context.fallbackLabel || readoutId;
     const source = readoutRequest.source || readoutRequest.readoutSource || readoutRequest.readout_source || context.source || "pending_request_queue";
     const queuePosition = queueIndex >= 0
@@ -8875,6 +8882,8 @@
       readout_id: readoutId,
       label,
       status,
+      statusReason,
+      status_reason: statusReason,
       source,
       queuePosition,
       queue_position: queuePosition,
@@ -14800,6 +14809,8 @@
           next_readout_label: nextReadoutSummary?.label || null,
           nextReadoutStatus: nextReadoutSummary?.status || null,
           next_readout_status: nextReadoutSummary?.status || null,
+          nextReadoutStatusReason: nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null,
+          next_readout_status_reason: nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null,
           nextReadoutSource: nextReadoutSummary?.source || null,
           next_readout_source: nextReadoutSummary?.source || null,
           nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
@@ -14831,6 +14842,8 @@
           next_readout_label: nextReadoutSummary?.label || null,
           nextReadoutStatus: nextReadoutSummary?.status || null,
           next_readout_status: nextReadoutSummary?.status || null,
+          nextReadoutStatusReason: nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null,
+          next_readout_status_reason: nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null,
           nextReadoutSource: nextReadoutSummary?.source || null,
           next_readout_source: nextReadoutSummary?.source || null,
           nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
@@ -14935,6 +14948,8 @@
       next_readout_label: clearCompletedNextReadout ? nextReadoutSummary?.label || null : pickDefined(summary.next_readout_label, summary.nextReadoutLabel, null),
       nextReadoutStatus: clearCompletedNextReadout ? nextReadoutSummary?.status || null : pickDefined(summary.nextReadoutStatus, summary.next_readout_status, null),
       next_readout_status: clearCompletedNextReadout ? nextReadoutSummary?.status || null : pickDefined(summary.next_readout_status, summary.nextReadoutStatus, null),
+      nextReadoutStatusReason: clearCompletedNextReadout ? nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null : pickDefined(summary.nextReadoutStatusReason, summary.next_readout_status_reason, null),
+      next_readout_status_reason: clearCompletedNextReadout ? nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null : pickDefined(summary.next_readout_status_reason, summary.nextReadoutStatusReason, null),
       nextReadoutSource: clearCompletedNextReadout ? nextReadoutSummary?.source || null : pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
       next_readout_source: clearCompletedNextReadout ? nextReadoutSummary?.source || null : pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
       nextReadoutQueuePosition: clearCompletedNextReadout ? nextReadoutSummary?.queuePosition || null : pickDefined(summary.nextReadoutQueuePosition, summary.next_readout_queue_position, null),
@@ -15287,6 +15302,8 @@
           next_readout_label: promotedNextReadoutSummary?.label || null,
           nextReadoutStatus: promotedNextReadoutSummary?.status || null,
           next_readout_status: promotedNextReadoutSummary?.status || null,
+          nextReadoutStatusReason: promotedNextReadoutSummary?.statusReason || promotedNextReadoutSummary?.status_reason || null,
+          next_readout_status_reason: promotedNextReadoutSummary?.statusReason || promotedNextReadoutSummary?.status_reason || null,
           nextReadoutSource: promotedNextReadoutSummary?.source || null,
           next_readout_source: promotedNextReadoutSummary?.source || null,
           nextReadoutQueuePosition: promotedNextReadoutSummary?.queuePosition || null,
@@ -15413,6 +15430,8 @@
       next_readout_label: clearCompletedNextReadout ? promotedNextReadoutSummary?.label || null : pickDefined(summary.next_readout_label, summary.nextReadoutLabel, null),
       nextReadoutStatus: clearCompletedNextReadout ? promotedNextReadoutSummary?.status || null : pickDefined(summary.nextReadoutStatus, summary.next_readout_status, null),
       next_readout_status: clearCompletedNextReadout ? promotedNextReadoutSummary?.status || null : pickDefined(summary.next_readout_status, summary.nextReadoutStatus, null),
+      nextReadoutStatusReason: clearCompletedNextReadout ? promotedNextReadoutSummary?.statusReason || promotedNextReadoutSummary?.status_reason || null : pickDefined(summary.nextReadoutStatusReason, summary.next_readout_status_reason, null),
+      next_readout_status_reason: clearCompletedNextReadout ? promotedNextReadoutSummary?.statusReason || promotedNextReadoutSummary?.status_reason || null : pickDefined(summary.next_readout_status_reason, summary.nextReadoutStatusReason, null),
       nextReadoutSource: clearCompletedNextReadout ? promotedNextReadoutSummary?.source || null : pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
       next_readout_source: clearCompletedNextReadout ? promotedNextReadoutSummary?.source || null : pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
       nextReadoutQueuePosition: clearCompletedNextReadout ? promotedNextReadoutSummary?.queuePosition || null : pickDefined(summary.nextReadoutQueuePosition, summary.next_readout_queue_position, null),
