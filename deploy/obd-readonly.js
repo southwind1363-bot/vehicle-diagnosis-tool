@@ -7401,7 +7401,7 @@
     const normalizedItems = Array.isArray(input.items) ? input.items.map((item) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return item;
       const explicitStatus = String(item.status || "").trim().toLowerCase();
-      if (explicitStatus) return { ...item };
+      if (explicitStatus) return { ...item, status: explicitStatus };
       const numericCount = Number.isFinite(Number(item.count)) ? Math.max(0, Math.round(Number(item.count))) : 0;
       const status = item.captured === true
         ? "captured"
@@ -7438,6 +7438,9 @@
     const inferredCapturedCategories = inferredItemsByStatus.captured.length;
     const inferredEmptyCategories = inferredItemsByStatus.empty.length;
     const inferredMissingCategories = inferredItemsByStatus.missing.length;
+    const unresolvedItems = normalizedItems.filter((item) => item && typeof item === "object" && !["captured", "empty", "missing"].includes(item.status));
+    const unresolvedCategoriesInput = pickDefined(input.unresolvedCategories, input.unresolved_categories, input.unresolvedCount, input.unresolved_count);
+    const unresolvedCategories = Number.isFinite(Number(unresolvedCategoriesInput)) ? Math.max(0, Math.round(Number(unresolvedCategoriesInput))) : unresolvedItems.length;
     const totalCategories = Number.isFinite(Number(totalCategoriesInput)) ? Math.max(0, Math.round(Number(totalCategoriesInput))) : normalizedItems.length;
     const availableCategories = Number.isFinite(Number(availableCategoriesInput)) ? Math.max(0, Math.round(Number(availableCategoriesInput))) : inferredCapturedCategories + inferredEmptyCategories;
     const capturedCategories = Number.isFinite(Number(capturedCategoriesInput)) ? Math.max(0, Math.round(Number(capturedCategoriesInput))) : inferredCapturedCategories;
@@ -7463,13 +7466,14 @@
       const reason = item.statusReason || item.status_reason || failedReadoutReasonByIdInput?.[id] || null;
       return [id, reason];
     }));
-    const itemsByStatus = inferredItemsByStatus;
+    const itemsByStatus = { ...inferredItemsByStatus, unresolved: unresolvedItems };
     const capturedItems = itemsByStatus.captured || [];
-    const pendingItems = [...(itemsByStatus.empty || []), ...(itemsByStatus.missing || [])];
     const emptyIdsInput = pickDefined(input.emptyIds, input.empty_ids, input.emptyReadoutIds, input.empty_readout_ids);
     const emptyLabelsInput = pickDefined(input.emptyLabels, input.empty_labels, input.emptyReadoutLabels, input.empty_readout_labels);
     const missingIdsInput = pickDefined(input.missingIds, input.missing_ids, input.missingReadoutIds, input.missing_readout_ids);
     const missingLabelsInput = pickDefined(input.missingLabels, input.missing_labels, input.missingReadoutLabels, input.missing_readout_labels);
+    const unresolvedIdsInput = pickDefined(input.unresolvedIds, input.unresolved_ids, input.unresolvedReadoutIds, input.unresolved_readout_ids);
+    const unresolvedLabelsInput = pickDefined(input.unresolvedLabels, input.unresolved_labels, input.unresolvedReadoutLabels, input.unresolved_readout_labels);
     const capturedIdsInput = pickDefined(input.capturedIds, input.captured_ids, input.capturedReadoutIds, input.captured_readout_ids);
     const capturedLabelsInput = pickDefined(input.capturedLabels, input.captured_labels, input.capturedReadoutLabels, input.captured_readout_labels);
     const pendingIdsInput = pickDefined(input.pendingIds, input.pending_ids, input.pendingReadoutIds, input.pending_readout_ids);
@@ -7478,10 +7482,12 @@
     const normalizedEmptyLabels = Array.isArray(emptyLabelsInput) ? [...emptyLabelsInput] : (itemsByStatus.empty || []).map((item) => item.label);
     const normalizedMissingIds = Array.isArray(missingIdsInput) ? [...missingIdsInput] : (itemsByStatus.missing || []).map((item) => item.id);
     const normalizedMissingLabels = Array.isArray(missingLabelsInput) ? [...missingLabelsInput] : (itemsByStatus.missing || []).map((item) => item.label);
+    const normalizedUnresolvedIds = [...new Set([...(Array.isArray(unresolvedIdsInput) ? unresolvedIdsInput : []), ...unresolvedItems.map((item) => item.id)])];
+    const normalizedUnresolvedLabels = [...new Set([...(Array.isArray(unresolvedLabelsInput) ? unresolvedLabelsInput : []), ...unresolvedItems.map((item) => item.label)])];
     const normalizedCapturedIds = Array.isArray(capturedIdsInput) ? [...capturedIdsInput] : capturedItems.map((item) => item.id);
     const normalizedCapturedLabels = Array.isArray(capturedLabelsInput) ? [...capturedLabelsInput] : capturedItems.map((item) => item.label);
-    const normalizedPendingIds = Array.isArray(pendingIdsInput) ? [...pendingIdsInput] : [...normalizedEmptyIds, ...normalizedMissingIds].length > 0 ? [...normalizedEmptyIds, ...normalizedMissingIds] : pendingItems.map((item) => item.id);
-    const normalizedPendingLabels = Array.isArray(pendingLabelsInput) ? [...pendingLabelsInput] : [...normalizedEmptyLabels, ...normalizedMissingLabels].length > 0 ? [...normalizedEmptyLabels, ...normalizedMissingLabels] : pendingItems.map((item) => item.label);
+    const normalizedPendingIds = [...new Set([...(Array.isArray(pendingIdsInput) ? pendingIdsInput : []), ...normalizedEmptyIds, ...normalizedMissingIds, ...normalizedUnresolvedIds])];
+    const normalizedPendingLabels = [...new Set([...(Array.isArray(pendingLabelsInput) ? pendingLabelsInput : []), ...normalizedEmptyLabels, ...normalizedMissingLabels, ...normalizedUnresolvedLabels])];
     const normalizedNextPendingId = normalizedPendingIds[0] || null;
     const normalizedNextPendingItem = normalizedNextPendingId ? itemById[normalizedNextPendingId] || null : null;
     const normalizedNextPendingStatus = normalizedNextPendingItem?.status
@@ -7498,11 +7504,13 @@
       || (normalizedRecommendedNextReadoutId && normalizedEmptyIds.includes(normalizedRecommendedNextReadoutId) ? "empty" : null);
     const normalizedBlockingReasonIds = [
       normalizedMissingIds.length > 0 ? "missing_readouts" : null,
-      normalizedEmptyIds.length > 0 ? "empty_readouts" : null
+      normalizedEmptyIds.length > 0 ? "empty_readouts" : null,
+      normalizedUnresolvedIds.length > 0 ? "unresolved_readouts" : null
     ].filter(Boolean);
     const normalizedBlockingReasonById = {
       missing_readouts: { id: "missing_readouts", count: normalizedMissingIds.length, readoutIds: normalizedMissingIds, readoutLabels: normalizedMissingLabels },
-      empty_readouts: { id: "empty_readouts", count: normalizedEmptyIds.length, readoutIds: normalizedEmptyIds, readoutLabels: normalizedEmptyLabels }
+      empty_readouts: { id: "empty_readouts", count: normalizedEmptyIds.length, readoutIds: normalizedEmptyIds, readoutLabels: normalizedEmptyLabels },
+      unresolved_readouts: { id: "unresolved_readouts", count: normalizedUnresolvedIds.length, readoutIds: normalizedUnresolvedIds, readoutLabels: normalizedUnresolvedLabels }
     };
     const normalizedPrimaryBlockingReasonId = normalizedBlockingReasonIds[0] || null;
     const normalizedPrimaryBlockingReason = normalizedPrimaryBlockingReasonId ? normalizedBlockingReasonById[normalizedPrimaryBlockingReasonId] : null;
@@ -7539,6 +7547,8 @@
       has_missing_readouts: normalizedMissingIds.length > 0,
       hasEmptyReadouts: normalizedEmptyIds.length > 0,
       has_empty_readouts: normalizedEmptyIds.length > 0,
+      hasUnresolvedReadouts: normalizedUnresolvedIds.length > 0,
+      has_unresolved_readouts: normalizedUnresolvedIds.length > 0,
       failedReadoutCount: normalizedFailedReadoutIds.length,
       failed_readout_count: normalizedFailedReadoutIds.length,
       failedReadoutIds: normalizedFailedReadoutIds,
@@ -7553,6 +7563,8 @@
       empty_count: emptyCategories,
       missingCount: missingCategories,
       missing_count: missingCategories,
+      unresolvedCount: unresolvedCategories,
+      unresolved_count: unresolvedCategories,
       pendingCount: normalizedPendingIds.length,
       pending_count: normalizedPendingIds.length,
       capturedPercent: computedCapturedPercent,
@@ -7596,7 +7608,9 @@
       emptyIds: normalizedEmptyIds,
       empty_ids: normalizedEmptyIds,
       missingIds: normalizedMissingIds,
-      missing_ids: normalizedMissingIds
+      missing_ids: normalizedMissingIds,
+      unresolvedIds: normalizedUnresolvedIds,
+      unresolved_ids: normalizedUnresolvedIds
     };
     return {
       ...input,
@@ -7614,6 +7628,8 @@
       empty_categories: emptyCategories,
       missingCategories,
       missing_categories: missingCategories,
+      unresolvedCategories,
+      unresolved_categories: unresolvedCategories,
       capturedPercent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent))) ? Math.max(0, Math.min(100, Math.round(Number(pickDefined(input.capturedPercent, input.captured_percent))))) : computedCapturedPercent,
       captured_percent: Number.isFinite(Number(pickDefined(input.capturedPercent, input.captured_percent))) ? Math.max(0, Math.min(100, Math.round(Number(pickDefined(input.capturedPercent, input.captured_percent))))) : computedCapturedPercent,
       progressPercent: Number.isFinite(Number(pickDefined(input.progressPercent, input.progress_percent))) ? Math.max(0, Math.min(100, Math.round(Number(pickDefined(input.progressPercent, input.progress_percent))))) : computedProgressPercent,
@@ -7639,6 +7655,10 @@
       empty_labels: normalizedEmptyLabels,
       missingIds: normalizedMissingIds,
       missing_ids: normalizedMissingIds,
+      unresolvedIds: normalizedUnresolvedIds,
+      unresolved_ids: normalizedUnresolvedIds,
+      unresolvedLabels: normalizedUnresolvedLabels,
+      unresolved_labels: normalizedUnresolvedLabels,
       failedReadoutCount: normalizedFailedReadoutIds.length,
       failed_readout_count: normalizedFailedReadoutIds.length,
       failedReadoutIds: normalizedFailedReadoutIds,
