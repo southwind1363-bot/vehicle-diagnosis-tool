@@ -6083,11 +6083,9 @@
     const connectionStatus = hasConnectionStatusInput
       ? normalizeBridgeConnectionStatus(connectionStatusInput)
       : null;
-    const vciDevices = Array.isArray(vciDevicesInput)
-      ? vciDevicesInput
-      : (vciDevicesInput?.devices || normalizeBridgeVciList(vciDevicesInput).devices);
+    const vciDevices = normalizeBridgeVciList(vciDevicesInput).devices;
     const adapterIdentity = hasAdapterIdentityInput
-      ? (adapterIdentityInput?.intent === "adapter_identity" ? adapterIdentityInput : normalizeBridgeAdapterIdentity(adapterIdentityInput))
+      ? normalizeBridgeAdapterIdentity(adapterIdentityInput)
       : null;
     const dtcSnapshot = hasDtcSnapshotInput
       ? (dtcSnapshotInput?.codes && !needsDtcChildAggregation(dtcSnapshotInput) ? dtcSnapshotInput : normalizeBridgeDtcSnapshot(dtcSnapshotInput))
@@ -10744,8 +10742,7 @@
       connectionStatusInput,
       vciDevicesInput,
       adapterIdentityInput,
-      nestedSession: parts.bridgeSession || parts.bridge_session || parts.session,
-      allowVciArray: true
+      nestedSession: parts.bridgeSession || parts.bridge_session || parts.session
     });
     const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(parts.ecuResponseSummary || parts.ecu_response_summary || parts.ecuResponseSummaryResponse || parts.ecu_response_summary_response || { source: "local_bridge" }));
     const supportedPidMatrix = withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion && !hasGenericSupportedPidEcuRows(supportedPidMatrixInput)
@@ -11346,18 +11343,11 @@
     adapterIdentityInput = {},
     nestedSession = null,
     readoutCoverageInput = null,
-    honorCoverageOverride = false,
-    allowVciArray = false
+    honorCoverageOverride = false
   } = {}) {
     const connectionStatus = normalizeBridgeConnectionStatus(connectionStatusInput);
-    const vciList = allowVciArray && Array.isArray(vciDevicesInput)
-      ? { devices: vciDevicesInput, blocked: false }
-      : (vciDevicesInput?.devices
-        ? { ...vciDevicesInput, blocked: false }
-        : normalizeBridgeVciList(vciDevicesInput));
-    const adapterIdentity = adapterIdentityInput?.intent === "adapter_identity"
-      ? adapterIdentityInput
-      : normalizeBridgeAdapterIdentity(adapterIdentityInput);
+    const vciList = normalizeBridgeVciList(vciDevicesInput);
+    const adapterIdentity = normalizeBridgeAdapterIdentity(adapterIdentityInput);
 
     return {
       connectionStatus,
