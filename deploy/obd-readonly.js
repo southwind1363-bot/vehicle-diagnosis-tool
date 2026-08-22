@@ -17476,7 +17476,61 @@
         readout_ids: [...filteredReadoutIds]
       };
     });
-    if (!removedReadoutBlocker) return summary;
+    if (!removedReadoutBlocker) {
+      const savedPrimaryReadoutId = summary.primaryBlockingReadoutId
+        || summary.primary_blocking_readout_id
+        || summary.nextReadoutId
+        || summary.next_readout_id
+        || null;
+      const replacementReasonId = blockerIds.find((reasonId) => !["missing_readouts", "empty_readouts"].includes(reasonId)) || null;
+      if (!replacementReasonId || !completedReadoutIds.has(String(savedPrimaryReadoutId || ""))) return summary;
+      const replacementReason = blockersById[replacementReasonId] || null;
+      const replacementSummaryInput = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+      const replacementSummaryReasonId = replacementSummaryInput?.reasonId || replacementSummaryInput?.reason_id || null;
+      const replacementSummaryBase = replacementSummaryReasonId === replacementReasonId ? replacementSummaryInput : {};
+      const replacementSummary = {
+        ...replacementSummaryBase,
+        schemaVersion: replacementSummaryBase.schemaVersion || replacementSummaryBase.schema_version || "primary_readout_blocker_v1",
+        schema_version: replacementSummaryBase.schema_version || replacementSummaryBase.schemaVersion || "primary_readout_blocker_v1",
+        reasonId: replacementReasonId,
+        reason_id: replacementReasonId,
+        reason: replacementReason,
+        readoutId: null,
+        readout_id: null,
+        readoutLabel: null,
+        readout_label: null,
+        request: null,
+        bridgeIntent: null,
+        bridge_intent: null,
+        serviceMode: null,
+        service_mode: null,
+        requestMapped: false,
+        request_mapped: false,
+        executionEnabled: false,
+        execution_enabled: false,
+        readOnly: true,
+        read_only: true,
+        wouldTransmit: false,
+        would_transmit: false,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false
+      };
+      return {
+        ...summary,
+        primaryBlockingReasonId: replacementReasonId,
+        primary_blocking_reason_id: replacementReasonId,
+        primaryBlockingReason: replacementReason,
+        primary_blocking_reason: replacementReason,
+        primaryBlockingReadoutId: null,
+        primary_blocking_readout_id: null,
+        primaryBlockingReadoutLabel: null,
+        primary_blocking_readout_label: null,
+        primaryBlockingReadoutRequest: null,
+        primary_blocking_readout_request: null,
+        primaryBlockingSummary: replacementSummary,
+        primary_blocking_summary: replacementSummary
+      };
+    }
     const readCount = (camelKey, snakeKey) => Number(summary[camelKey] ?? summary[snakeKey] ?? 0) || 0;
     const missingReadoutCount = readoutIdsByReasonId.missing_readouts?.length ?? readCount("missingReadoutCount", "missing_readout_count");
     const emptyReadoutCount = readoutIdsByReasonId.empty_readouts?.length ?? readCount("emptyReadoutCount", "empty_readout_count");
@@ -17573,9 +17627,74 @@
     const fallbackPendingReadoutIds = Array.isArray(fallbackCoreSessionStatus?.pendingReadoutIds)
       ? fallbackCoreSessionStatus.pendingReadoutIds
       : Array.isArray(fallbackCoreSessionStatus?.pending_readout_ids) ? fallbackCoreSessionStatus.pending_readout_ids : [];
-    const nextReadoutId = completedReadoutIds.has(currentNextReadoutId)
-      ? fallbackPendingReadoutIds.find((readoutId) => !completedReadoutIds.has(readoutId)) || null
-      : currentNextReadoutId;
+    const remainingReadoutIds = [
+      ...(readoutIdsByReasonId.missing_readouts || []),
+      ...(readoutIdsByReasonId.empty_readouts || [])
+    ];
+    const fallbackNextReadoutId = fallbackPendingReadoutIds.find((readoutId) => remainingReadoutIds.includes(String(readoutId))) || null;
+    const nextReadoutId = currentNextReadoutId && remainingReadoutIds.includes(String(currentNextReadoutId))
+      ? String(currentNextReadoutId)
+      : fallbackNextReadoutId || remainingReadoutIds[0] || null;
+    const fallbackPendingReadoutRequestQueue = Array.isArray(fallbackCoreSessionStatus?.pendingReadoutRequestQueue)
+      ? fallbackCoreSessionStatus.pendingReadoutRequestQueue
+      : Array.isArray(fallbackCoreSessionStatus?.pending_readout_request_queue) ? fallbackCoreSessionStatus.pending_readout_request_queue : [];
+    const fallbackNextReadoutRequest = [
+      fallbackCoreSessionStatus?.nextReadoutRequest,
+      fallbackCoreSessionStatus?.next_readout_request,
+      ...fallbackPendingReadoutRequestQueue
+    ].find((request) => String(request?.readoutId || request?.readout_id || request?.id || "") === nextReadoutId) || null;
+    const nextReadoutLabel = nextReadoutId === currentNextReadoutId
+      ? summary.nextReadoutLabel || summary.next_readout_label || fallbackNextReadoutRequest?.label || nextReadoutId
+      : fallbackNextReadoutRequest?.label || nextReadoutId;
+    const primaryBlockingReasonId = nextReadoutId && (readoutIdsByReasonId.missing_readouts || []).includes(nextReadoutId)
+      ? "missing_readouts"
+      : nextReadoutId && (readoutIdsByReasonId.empty_readouts || []).includes(nextReadoutId)
+        ? "empty_readouts"
+        : blockerIds[0] || null;
+    const primaryBlockingReason = primaryBlockingReasonId ? blockersById[primaryBlockingReasonId] || null : null;
+    const primaryBlockingReadoutId = primaryBlockingReasonId === "missing_readouts" || primaryBlockingReasonId === "empty_readouts"
+      ? nextReadoutId
+      : null;
+    const primaryBlockingReadoutLabel = primaryBlockingReadoutId ? nextReadoutLabel : null;
+    const primaryBlockingReadoutRequest = primaryBlockingReadoutId ? buildReadOnlyNextReadoutRequest({
+      id: primaryBlockingReadoutId,
+      label: primaryBlockingReadoutLabel || primaryBlockingReadoutId,
+      status: primaryBlockingReasonId === "empty_readouts" ? "empty" : "missing",
+      source: "fallback_core_session"
+    }, fallbackCoreSessionStatus || {}) : null;
+    const primaryBlockingSummaryInput = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
+    const summaryReasonId = primaryBlockingSummaryInput?.reasonId || primaryBlockingSummaryInput?.reason_id || null;
+    const summaryReadoutId = primaryBlockingSummaryInput?.readoutId || primaryBlockingSummaryInput?.readout_id || null;
+    const primaryBlockingSummaryBase = summaryReasonId === primaryBlockingReasonId && summaryReadoutId === primaryBlockingReadoutId
+      ? primaryBlockingSummaryInput
+      : {};
+    const primaryBlockingSummary = primaryBlockingReasonId ? {
+      ...primaryBlockingSummaryBase,
+      schemaVersion: primaryBlockingSummaryBase.schemaVersion || primaryBlockingSummaryBase.schema_version || "primary_readout_blocker_v1",
+      schema_version: primaryBlockingSummaryBase.schema_version || primaryBlockingSummaryBase.schemaVersion || "primary_readout_blocker_v1",
+      reasonId: primaryBlockingReasonId,
+      reason_id: primaryBlockingReasonId,
+      reason: primaryBlockingReason,
+      readoutId: primaryBlockingReadoutId,
+      readout_id: primaryBlockingReadoutId,
+      readoutLabel: primaryBlockingReadoutLabel,
+      readout_label: primaryBlockingReadoutLabel,
+      request: primaryBlockingReadoutRequest,
+      bridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+      bridge_intent: primaryBlockingReadoutRequest?.bridgeIntent || null,
+      serviceMode: primaryBlockingReadoutRequest?.serviceMode || null,
+      service_mode: primaryBlockingReadoutRequest?.serviceMode || null,
+      requestMapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
+      request_mapped: Boolean(primaryBlockingReadoutRequest?.bridgeIntent),
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    } : null;
     const allOriginalBlockersWereCompletedReadouts = originalBlockerIds.length > 0
       && originalBlockerIds.every((reasonId) => ["missing_readouts", "empty_readouts"].includes(reasonId))
       && blockerIds.length === 0;
@@ -17601,6 +17720,18 @@
       checklist_by_id: checklistById,
       checklistSummary,
       checklist_summary: checklistSummary,
+      primaryBlockingReasonId,
+      primary_blocking_reason_id: primaryBlockingReasonId,
+      primaryBlockingReason,
+      primary_blocking_reason: primaryBlockingReason,
+      primaryBlockingReadoutId,
+      primary_blocking_readout_id: primaryBlockingReadoutId,
+      primaryBlockingReadoutLabel,
+      primary_blocking_readout_label: primaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest,
+      primary_blocking_readout_request: primaryBlockingReadoutRequest,
+      primaryBlockingSummary,
+      primary_blocking_summary: primaryBlockingSummary,
       missingReadoutCount,
       missing_readout_count: missingReadoutCount,
       emptyReadoutCount,
@@ -17611,8 +17742,8 @@
       completion_percent: completionPercent,
       nextReadoutId,
       next_readout_id: nextReadoutId,
-      nextReadoutLabel: nextReadoutId === currentNextReadoutId ? summary.nextReadoutLabel || summary.next_readout_label || null : nextReadoutId,
-      next_readout_label: nextReadoutId === currentNextReadoutId ? summary.next_readout_label || summary.nextReadoutLabel || null : nextReadoutId,
+      nextReadoutLabel,
+      next_readout_label: nextReadoutLabel,
       nextReadoutStatus: nextReadoutId === currentNextReadoutId ? summary.nextReadoutStatus || summary.next_readout_status || null : null,
       next_readout_status: nextReadoutId === currentNextReadoutId ? summary.next_readout_status || summary.nextReadoutStatus || null : null,
       nextReadoutSource: nextReadoutId === currentNextReadoutId ? summary.nextReadoutSource || summary.next_readout_source || null : "fallback_core_session",
