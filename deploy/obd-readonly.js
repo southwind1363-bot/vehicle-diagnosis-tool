@@ -14793,6 +14793,18 @@
           nextReadoutGuardSummary,
           next_readout_guard_summary: nextReadoutGuardSummary
         } : {}),
+        ...(clearCompletedNextReadout ? {
+          nextReadoutId: nextReadoutSummary?.readoutId || null,
+          next_readout_id: nextReadoutSummary?.readoutId || null,
+          nextReadoutLabel: nextReadoutSummary?.label || null,
+          next_readout_label: nextReadoutSummary?.label || null,
+          nextReadoutStatus: nextReadoutSummary?.status || null,
+          next_readout_status: nextReadoutSummary?.status || null,
+          nextReadoutSource: nextReadoutSummary?.source || null,
+          next_readout_source: nextReadoutSummary?.source || null,
+          nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
+          next_readout_queue_position: nextReadoutSummary?.queuePosition || null
+        } : {}),
         ...(isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout ? {
           primaryBlockingReadoutRequest: finalPrimaryBlockingReadoutRequest,
           primary_blocking_readout_request: finalPrimaryBlockingReadoutRequest,
@@ -14811,6 +14823,18 @@
           next_readout_reason_summary: nextReadoutReasonSummary,
           nextReadoutGuardSummary,
           next_readout_guard_summary: nextReadoutGuardSummary
+        } : {}),
+        ...(clearCompletedNextReadout ? {
+          nextReadoutId: nextReadoutSummary?.readoutId || null,
+          next_readout_id: nextReadoutSummary?.readoutId || null,
+          nextReadoutLabel: nextReadoutSummary?.label || null,
+          next_readout_label: nextReadoutSummary?.label || null,
+          nextReadoutStatus: nextReadoutSummary?.status || null,
+          next_readout_status: nextReadoutSummary?.status || null,
+          nextReadoutSource: nextReadoutSummary?.source || null,
+          next_readout_source: nextReadoutSummary?.source || null,
+          nextReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
+          next_readout_queue_position: nextReadoutSummary?.queuePosition || null
         } : {}),
         ...(isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout ? {
           primaryBlockingReadoutRequest: finalPrimaryBlockingReadoutRequest,
@@ -15255,6 +15279,18 @@
           next_readout_reason_summary: nextReadoutReasonSummary,
           nextReadoutGuardSummary,
           next_readout_guard_summary: nextReadoutGuardSummary
+        } : {}),
+        ...(clearCompletedNextReadout ? {
+          nextReadoutId: promotedNextReadoutSummary?.readoutId || null,
+          next_readout_id: promotedNextReadoutSummary?.readoutId || null,
+          nextReadoutLabel: promotedNextReadoutSummary?.label || null,
+          next_readout_label: promotedNextReadoutSummary?.label || null,
+          nextReadoutStatus: promotedNextReadoutSummary?.status || null,
+          next_readout_status: promotedNextReadoutSummary?.status || null,
+          nextReadoutSource: promotedNextReadoutSummary?.source || null,
+          next_readout_source: promotedNextReadoutSummary?.source || null,
+          nextReadoutQueuePosition: promotedNextReadoutSummary?.queuePosition || null,
+          next_readout_queue_position: promotedNextReadoutSummary?.queuePosition || null
         } : {}),
         ...(synchronizePrimaryBlocker ? {
           primaryBlockingReasonId: flowPrimaryBlockingReasonId,
