@@ -21917,12 +21917,16 @@
     });
     const derivedById = new Map((derived.items || []).map((item) => [item.id, item]));
     const itemsById = new Map((normalizedBase.items || []).map((item) => [item.id, item]));
+    const failedReadoutReasons = new Set(["transport_safety_blocked", "blocked_readout", "not_supported", "transport_error", "unparsed_response", "unknown_response"]);
 
     // A merged, typed snapshot is newer evidence than an inherited missing/empty coverage state.
     derivedById.forEach((derivedItem, id) => {
       const baseItem = itemsById.get(id);
       if (!baseItem) {
-        itemsById.set(id, derivedItem);
+        const derivedStatusReason = derivedItem.statusReason || derivedItem.status_reason || null;
+        itemsById.set(id, derivedItem.status === "missing" && failedReadoutReasons.has(derivedStatusReason)
+          ? { ...derivedItem, statusReason: "not_requested", status_reason: "not_requested", errorCodes: [], error_codes: [] }
+          : derivedItem);
         return;
       }
       if (derivedItem.status === "captured" || (derivedItem.status === "empty" && baseItem.status === "missing")) {
@@ -21934,7 +21938,6 @@
     const capturedItems = items.filter((item) => item?.status === "captured");
     const emptyItems = items.filter((item) => item?.status === "empty");
     const missingItems = items.filter((item) => item?.status === "missing");
-    const failedReadoutReasons = new Set(["transport_safety_blocked", "blocked_readout", "not_supported", "transport_error", "unparsed_response", "unknown_response"]);
     const itemById = Object.fromEntries(items.filter((item) => item?.id).map((item) => [item.id, item]));
     const retainedFailedReadoutIds = normalizedBase.failedReadoutIds.filter((id) => {
       const item = itemById[id];
