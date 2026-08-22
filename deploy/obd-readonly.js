@@ -14601,17 +14601,98 @@
       : isDtcNextReadoutRequest
       ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate)
       : savedNextReadoutGuardSummary || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
-    const coreWorkflowPrimaryBlockingSummary = synchronizePrimaryBlockingSummary(
+    const promotedPrimaryBlockingReadoutId = clearCompletedPrimaryBlockingReadout
+      && nextReadoutRequest?.readoutId
+      && pendingReadoutIds.includes(nextReadoutRequest.readoutId)
+      ? nextReadoutRequest.readoutId
+      : null;
+    const promotedPrimaryBlockingReasonId = promotedPrimaryBlockingReadoutId
+      ? missingReadoutIds.includes(promotedPrimaryBlockingReadoutId) || remainingReadoutIds.includes(promotedPrimaryBlockingReadoutId)
+        ? "missing_readouts"
+        : emptyReadoutIds.includes(promotedPrimaryBlockingReadoutId) ? "empty_readouts" : null
+      : null;
+    const analysisBlockerByIdInput = summary.analysisBlockerById || summary.analysis_blocker_by_id || {};
+    const promotedPrimaryBlockingReason = promotedPrimaryBlockingReasonId
+      ? analysisBlockerByIdInput[promotedPrimaryBlockingReasonId] || {
+        id: promotedPrimaryBlockingReasonId,
+        count: promotedPrimaryBlockingReasonId === "missing_readouts" ? missingReadoutIds.length : emptyReadoutIds.length,
+        readoutIds: promotedPrimaryBlockingReasonId === "missing_readouts" ? [...missingReadoutIds] : [...emptyReadoutIds],
+        readout_ids: promotedPrimaryBlockingReasonId === "missing_readouts" ? [...missingReadoutIds] : [...emptyReadoutIds]
+      }
+      : null;
+    const promotedPrimaryBlockingReadoutLabel = promotedPrimaryBlockingReadoutId
+      ? nextReadoutRequest.label || promotedPrimaryBlockingReadoutId
+      : null;
+    const promotedPrimaryBlockingReadoutRequest = promotedPrimaryBlockingReasonId ? buildReadOnlyNextReadoutRequest({
+      id: promotedPrimaryBlockingReadoutId,
+      label: promotedPrimaryBlockingReadoutLabel,
+      status: promotedPrimaryBlockingReasonId === "empty_readouts" ? "empty" : "missing",
+      source: "promoted_primary_blocker"
+    }, summary) : null;
+    const promotedPrimaryBlockingSummary = promotedPrimaryBlockingReasonId ? {
+      schemaVersion: "primary_readout_blocker_v1",
+      schema_version: "primary_readout_blocker_v1",
+      reasonId: promotedPrimaryBlockingReasonId,
+      reason_id: promotedPrimaryBlockingReasonId,
+      reason: promotedPrimaryBlockingReason,
+      readoutId: promotedPrimaryBlockingReadoutId,
+      readout_id: promotedPrimaryBlockingReadoutId,
+      readoutLabel: promotedPrimaryBlockingReadoutLabel,
+      readout_label: promotedPrimaryBlockingReadoutLabel,
+      readoutStatus: promotedPrimaryBlockingReasonId === "empty_readouts" ? "empty" : "missing",
+      readout_status: promotedPrimaryBlockingReasonId === "empty_readouts" ? "empty" : "missing",
+      request: promotedPrimaryBlockingReadoutRequest,
+      bridgeIntent: promotedPrimaryBlockingReadoutRequest?.bridgeIntent || null,
+      bridge_intent: promotedPrimaryBlockingReadoutRequest?.bridgeIntent || null,
+      serviceMode: promotedPrimaryBlockingReadoutRequest?.serviceMode || null,
+      service_mode: promotedPrimaryBlockingReadoutRequest?.serviceMode || null,
+      requestMapped: Boolean(promotedPrimaryBlockingReadoutRequest?.bridgeIntent),
+      request_mapped: Boolean(promotedPrimaryBlockingReadoutRequest?.bridgeIntent),
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    } : null;
+    const finalPrimaryBlockingReasonId = promotedPrimaryBlockingReasonId
+      || (clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, analysisReadinessSummaryInput?.primaryBlockingReasonId, readoutCompletionSummaryInput?.primaryBlockingReasonId, null));
+    const finalPrimaryBlockingReason = promotedPrimaryBlockingReason
+      || (clearCompletedPrimaryBlockingReadout ? null : primaryBlockingReason);
+    const finalPrimaryBlockingReadoutId = promotedPrimaryBlockingReadoutId
+      || (clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutId, summary.primary_blocking_readout_id, analysisReadinessSummaryInput?.primaryBlockingReadoutId, readoutCompletionSummaryInput?.primaryBlockingReadoutId, null));
+    const finalPrimaryBlockingReadoutLabel = promotedPrimaryBlockingReadoutLabel
+      || (clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutLabel, summary.primary_blocking_readout_label, analysisReadinessSummaryInput?.primaryBlockingReadoutLabel, readoutCompletionSummaryInput?.primaryBlockingReadoutLabel, null));
+    const finalPrimaryBlockingReadoutRequest = promotedPrimaryBlockingReadoutRequest || primaryBlockingReadoutRequest;
+    const finalPrimaryBlockingSummary = promotedPrimaryBlockingSummary || primaryBlockingSummary;
+    const finalReadoutCompletionSummary = promotedPrimaryBlockingReasonId && readoutCompletionSummary ? {
+      ...readoutCompletionSummary,
+      primaryBlockingReasonId: finalPrimaryBlockingReasonId,
+      primary_blocking_reason_id: finalPrimaryBlockingReasonId,
+      primaryBlockingReason: finalPrimaryBlockingReason,
+      primary_blocking_reason: finalPrimaryBlockingReason,
+      primaryBlockingReadoutId: finalPrimaryBlockingReadoutId,
+      primary_blocking_readout_id: finalPrimaryBlockingReadoutId,
+      primaryBlockingReadoutLabel: finalPrimaryBlockingReadoutLabel,
+      primary_blocking_readout_label: finalPrimaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest: finalPrimaryBlockingReadoutRequest,
+      primary_blocking_readout_request: finalPrimaryBlockingReadoutRequest,
+      primaryBlockingSummary: finalPrimaryBlockingSummary,
+      primary_blocking_summary: finalPrimaryBlockingSummary
+    } : readoutCompletionSummary;
+    const coreWorkflowPrimaryBlockingSummary = promotedPrimaryBlockingSummary || synchronizePrimaryBlockingSummary(
       coreWorkflowSummaryInput?.primaryBlockingSummary
       || coreWorkflowSummaryInput?.primary_blocking_summary
       || primaryBlockingSummary
     );
-    const analysisReadinessPrimaryBlockingSummary = synchronizePrimaryBlockingSummary(
+    const analysisReadinessPrimaryBlockingSummary = promotedPrimaryBlockingSummary || synchronizePrimaryBlockingSummary(
       analysisReadinessSummaryInput?.primaryBlockingSummary
       || analysisReadinessSummaryInput?.primary_blocking_summary
       || primaryBlockingSummary
     );
-    const coreWorkflowSummary = (isDtcNextReadoutRequest || clearCompletedNextReadout || isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout) && coreWorkflowSummaryInput
+    const coreWorkflowSummary = (isDtcNextReadoutRequest || clearCompletedNextReadout || isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout || promotedPrimaryBlockingReasonId) && coreWorkflowSummaryInput
       ? {
         ...coreWorkflowSummaryInput,
         ...(isDtcNextReadoutRequest || clearCompletedNextReadout ? {
@@ -14621,14 +14702,14 @@
           next_readout_guard_summary: nextReadoutGuardSummary
         } : {}),
         ...(isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout ? {
-          primaryBlockingReadoutRequest,
-          primary_blocking_readout_request: primaryBlockingReadoutRequest,
+          primaryBlockingReadoutRequest: finalPrimaryBlockingReadoutRequest,
+          primary_blocking_readout_request: finalPrimaryBlockingReadoutRequest,
           primaryBlockingSummary: coreWorkflowPrimaryBlockingSummary,
           primary_blocking_summary: coreWorkflowPrimaryBlockingSummary
         } : {})
       }
       : coreWorkflowSummaryInput;
-    const analysisReadinessSummary = (isDtcNextReadoutRequest || clearCompletedNextReadout || isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout) && analysisReadinessSummaryInput
+    const analysisReadinessSummary = (isDtcNextReadoutRequest || clearCompletedNextReadout || isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout || promotedPrimaryBlockingReasonId) && analysisReadinessSummaryInput
       ? {
         ...analysisReadinessSummaryInput,
         ...(isDtcNextReadoutRequest || clearCompletedNextReadout ? {
@@ -14640,8 +14721,8 @@
           next_readout_guard_summary: nextReadoutGuardSummary
         } : {}),
         ...(isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout ? {
-          primaryBlockingReadoutRequest,
-          primary_blocking_readout_request: primaryBlockingReadoutRequest,
+          primaryBlockingReadoutRequest: finalPrimaryBlockingReadoutRequest,
+          primary_blocking_readout_request: finalPrimaryBlockingReadoutRequest,
           primaryBlockingSummary: analysisReadinessPrimaryBlockingSummary,
           primary_blocking_summary: analysisReadinessPrimaryBlockingSummary
         } : {})
@@ -14722,8 +14803,8 @@
       readout_state_summary: summary.readout_state_summary || summary.readoutStateSummary || null,
       readoutProgressSummary: summary.readoutProgressSummary || summary.readout_progress_summary || null,
       readout_progress_summary: summary.readout_progress_summary || summary.readoutProgressSummary || null,
-      readoutCompletionSummary,
-      readout_completion_summary: readoutCompletionSummary,
+      readoutCompletionSummary: finalReadoutCompletionSummary,
+      readout_completion_summary: finalReadoutCompletionSummary,
       coreWorkflowSummary,
       core_workflow_summary: coreWorkflowSummary,
       nextReadoutCandidate: summary.nextReadoutCandidate || summary.next_readout_candidate || null,
@@ -14752,18 +14833,18 @@
       analysis_blocker_by_id: normalizeObject("analysisBlockerById", "analysis_blocker_by_id"),
       analysisBlockerSummary: summary.analysisBlockerSummary || summary.analysis_blocker_summary || null,
       analysis_blocker_summary: summary.analysis_blocker_summary || summary.analysisBlockerSummary || null,
-      primaryBlockingReasonId: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, analysisReadinessSummary?.primaryBlockingReasonId, readoutCompletionSummary?.primaryBlockingReasonId, null),
-      primary_blocking_reason_id: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primary_blocking_reason_id, summary.primaryBlockingReasonId, analysisReadinessSummary?.primaryBlockingReasonId, readoutCompletionSummary?.primaryBlockingReasonId, null),
-      primaryBlockingReason: clearCompletedPrimaryBlockingReadout ? null : primaryBlockingReason,
-      primary_blocking_reason: clearCompletedPrimaryBlockingReadout ? null : primaryBlockingReason,
-      primaryBlockingReadoutId: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutId, summary.primary_blocking_readout_id, analysisReadinessSummary?.primaryBlockingReadoutId, readoutCompletionSummary?.primaryBlockingReadoutId, null),
-      primary_blocking_readout_id: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primary_blocking_readout_id, summary.primaryBlockingReadoutId, analysisReadinessSummary?.primaryBlockingReadoutId, readoutCompletionSummary?.primaryBlockingReadoutId, null),
-      primaryBlockingReadoutLabel: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutLabel, summary.primary_blocking_readout_label, analysisReadinessSummary?.primaryBlockingReadoutLabel, readoutCompletionSummary?.primaryBlockingReadoutLabel, null),
-      primary_blocking_readout_label: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primary_blocking_readout_label, summary.primaryBlockingReadoutLabel, analysisReadinessSummary?.primaryBlockingReadoutLabel, readoutCompletionSummary?.primaryBlockingReadoutLabel, null),
-      primaryBlockingReadoutRequest,
-      primary_blocking_readout_request: primaryBlockingReadoutRequest,
-      primaryBlockingSummary,
-      primary_blocking_summary: primaryBlockingSummary,
+      primaryBlockingReasonId: finalPrimaryBlockingReasonId,
+      primary_blocking_reason_id: finalPrimaryBlockingReasonId,
+      primaryBlockingReason: finalPrimaryBlockingReason,
+      primary_blocking_reason: finalPrimaryBlockingReason,
+      primaryBlockingReadoutId: finalPrimaryBlockingReadoutId,
+      primary_blocking_readout_id: finalPrimaryBlockingReadoutId,
+      primaryBlockingReadoutLabel: finalPrimaryBlockingReadoutLabel,
+      primary_blocking_readout_label: finalPrimaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest: finalPrimaryBlockingReadoutRequest,
+      primary_blocking_readout_request: finalPrimaryBlockingReadoutRequest,
+      primaryBlockingSummary: finalPrimaryBlockingSummary,
+      primary_blocking_summary: finalPrimaryBlockingSummary,
       analysisChecklist,
       analysis_checklist: analysisChecklist,
       analysisChecklistById: normalizeObject("analysisChecklistById", "analysis_checklist_by_id"),
@@ -14954,10 +15035,76 @@
         vehicle_command_enabled: primaryBlockingReadoutRequest.vehicleCommandEnabled === true
       }
       : primaryBlockingSummaryInput;
+    const fallbackCorePrimaryBlockingReadoutRequest = fallbackCoreSessionStatus?.primaryBlockingReadoutRequest
+      || fallbackCoreSessionStatus?.primary_blocking_readout_request
+      || null;
+    const fallbackCorePrimaryBlockingReadoutId = fallbackCorePrimaryBlockingReadoutRequest?.readoutId
+      || fallbackCorePrimaryBlockingReadoutRequest?.readout_id
+      || fallbackCoreSessionStatus?.primaryBlockingReadoutId
+      || fallbackCoreSessionStatus?.primary_blocking_readout_id
+      || null;
+    const promoteFallbackCorePrimaryBlocker = clearCompletedPrimaryBlockingReadout
+      && fallbackCorePrimaryBlockingReadoutId
+      && (nextReadoutRequest?.readoutId === fallbackCorePrimaryBlockingReadoutId
+        || pendingReadoutRequestQueue.some((request) => request?.readoutId === fallbackCorePrimaryBlockingReadoutId));
+    const flowPrimaryBlockingReasonId = promoteFallbackCorePrimaryBlocker
+      ? fallbackCoreSessionStatus?.primaryBlockingReasonId || fallbackCoreSessionStatus?.primary_blocking_reason_id || null
+      : clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null);
+    const flowPrimaryBlockingReason = promoteFallbackCorePrimaryBlocker
+      ? fallbackCoreSessionStatus?.primaryBlockingReason || fallbackCoreSessionStatus?.primary_blocking_reason || null
+      : clearCompletedPrimaryBlockingReadout ? null : primaryBlockingReason;
+    const flowPrimaryBlockingReadoutId = promoteFallbackCorePrimaryBlocker
+      ? fallbackCorePrimaryBlockingReadoutId
+      : clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutId, summary.primary_blocking_readout_id, null);
+    const flowPrimaryBlockingReadoutLabel = promoteFallbackCorePrimaryBlocker
+      ? fallbackCoreSessionStatus?.primaryBlockingReadoutLabel
+        || fallbackCoreSessionStatus?.primary_blocking_readout_label
+        || fallbackCorePrimaryBlockingReadoutRequest?.label
+        || fallbackCorePrimaryBlockingReadoutId
+      : clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutLabel, summary.primary_blocking_readout_label, null);
+    const flowPrimaryBlockingReadoutRequest = promoteFallbackCorePrimaryBlocker ? buildReadOnlyNextReadoutRequest({
+      id: flowPrimaryBlockingReadoutId,
+      label: flowPrimaryBlockingReadoutLabel || flowPrimaryBlockingReadoutId,
+      status: flowPrimaryBlockingReasonId === "empty_readouts" ? "empty" : "missing",
+      source: "fallback_core_primary_blocker"
+    }, fallbackCoreSessionStatus || {}) : primaryBlockingReadoutRequest;
+    const fallbackCorePrimaryBlockingSummary = fallbackCoreSessionStatus?.primaryBlockingSummary
+      || fallbackCoreSessionStatus?.primary_blocking_summary
+      || null;
+    const flowPrimaryBlockingSummary = promoteFallbackCorePrimaryBlocker ? {
+      ...(fallbackCorePrimaryBlockingSummary || {}),
+      schemaVersion: fallbackCorePrimaryBlockingSummary?.schemaVersion || fallbackCorePrimaryBlockingSummary?.schema_version || "primary_readout_blocker_v1",
+      schema_version: fallbackCorePrimaryBlockingSummary?.schema_version || fallbackCorePrimaryBlockingSummary?.schemaVersion || "primary_readout_blocker_v1",
+      reasonId: flowPrimaryBlockingReasonId,
+      reason_id: flowPrimaryBlockingReasonId,
+      reason: flowPrimaryBlockingReason,
+      readoutId: flowPrimaryBlockingReadoutId,
+      readout_id: flowPrimaryBlockingReadoutId,
+      readoutLabel: flowPrimaryBlockingReadoutLabel,
+      readout_label: flowPrimaryBlockingReadoutLabel,
+      request: flowPrimaryBlockingReadoutRequest,
+      bridgeIntent: flowPrimaryBlockingReadoutRequest?.bridgeIntent || null,
+      bridge_intent: flowPrimaryBlockingReadoutRequest?.bridgeIntent || null,
+      serviceMode: flowPrimaryBlockingReadoutRequest?.serviceMode || null,
+      service_mode: flowPrimaryBlockingReadoutRequest?.serviceMode || null,
+      requestMapped: Boolean(flowPrimaryBlockingReadoutRequest?.bridgeIntent),
+      request_mapped: Boolean(flowPrimaryBlockingReadoutRequest?.bridgeIntent),
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    } : primaryBlockingSummary;
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
     const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
     const blockingReasonIds = normalizeIds(summary.blockingReasonIds || summary.blocking_reason_ids);
+    const synchronizedBlockingReasonIds = promoteFallbackCorePrimaryBlocker && flowPrimaryBlockingReasonId
+      ? [...new Set([flowPrimaryBlockingReasonId, ...blockingReasonIds])]
+      : blockingReasonIds;
     const checklistBlockedIds = normalizeIds(summary.checklistBlockedIds || summary.checklist_blocked_ids);
     const checklistReviewIds = normalizeIds(summary.checklistReviewIds || summary.checklist_review_ids);
     const readoutQualityIssueIds = normalizeIds(summary.readoutQualityIssueIds || summary.readout_quality_issue_ids);
@@ -15001,22 +15148,30 @@
       : isDtcNextReadoutRequest
       ? nextReadoutRequest.executionEnabled === true
       : pickDefined(summary.nextReadoutExecutionEnabled, summary.next_readout_execution_enabled, nextReadoutRequest?.executionEnabled, false) === true;
-    const primaryBlockingReadoutBridgeIntent = clearCompletedPrimaryBlockingReadout
+    const primaryBlockingReadoutBridgeIntent = promoteFallbackCorePrimaryBlocker
+      ? flowPrimaryBlockingReadoutRequest?.bridgeIntent || null
+      : clearCompletedPrimaryBlockingReadout
       ? null
       : isDtcPrimaryBlockingReadoutRequest
       ? primaryBlockingReadoutRequest.bridgeIntent || null
       : pickDefined(summary.primaryBlockingReadoutBridgeIntent, summary.primary_blocking_readout_bridge_intent, primaryBlockingReadoutRequest?.bridgeIntent, null);
-    const primaryBlockingReadoutServiceMode = clearCompletedPrimaryBlockingReadout
+    const primaryBlockingReadoutServiceMode = promoteFallbackCorePrimaryBlocker
+      ? flowPrimaryBlockingReadoutRequest?.serviceMode || null
+      : clearCompletedPrimaryBlockingReadout
       ? null
       : isDtcPrimaryBlockingReadoutRequest
       ? primaryBlockingReadoutRequest.serviceMode || null
       : pickDefined(summary.primaryBlockingReadoutServiceMode, summary.primary_blocking_readout_service_mode, primaryBlockingReadoutRequest?.serviceMode, null);
-    const primaryBlockingReadoutExecutionEnabled = clearCompletedPrimaryBlockingReadout
+    const primaryBlockingReadoutExecutionEnabled = promoteFallbackCorePrimaryBlocker
+      ? false
+      : clearCompletedPrimaryBlockingReadout
       ? false
       : isDtcPrimaryBlockingReadoutRequest
       ? primaryBlockingReadoutRequest.executionEnabled === true
       : pickDefined(summary.primaryBlockingReadoutExecutionEnabled, summary.primary_blocking_readout_execution_enabled, primaryBlockingReadoutRequest?.executionEnabled, false) === true;
-    const primaryBlockingReadoutWouldTransmit = clearCompletedPrimaryBlockingReadout
+    const primaryBlockingReadoutWouldTransmit = promoteFallbackCorePrimaryBlocker
+      ? false
+      : clearCompletedPrimaryBlockingReadout
       ? false
       : isDtcPrimaryBlockingReadoutRequest
       ? primaryBlockingReadoutRequest.wouldTransmit === true
@@ -15147,20 +15302,20 @@
       vehicle_applicability_evidence_present: pickDefined(summary.vehicle_applicability_evidence_present, summary.vehicleApplicabilityEvidencePresent, vehicleApplicabilityEvidenceSummary?.evidence_present, vehicleApplicabilityEvidenceSummary?.evidencePresent, false) === true,
       vehicleApplicabilitySourceVerified: pickDefined(summary.vehicleApplicabilitySourceVerified, summary.vehicle_applicability_source_verified, vehicleApplicabilityEvidenceSummary?.sourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, false) === true,
       vehicle_applicability_source_verified: pickDefined(summary.vehicle_applicability_source_verified, summary.vehicleApplicabilitySourceVerified, vehicleApplicabilityEvidenceSummary?.source_verified, vehicleApplicabilityEvidenceSummary?.sourceVerified, false) === true,
-      blockingReasonIds,
-      blocking_reason_ids: blockingReasonIds,
-      primaryBlockingReasonId: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null),
-      primary_blocking_reason_id: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primary_blocking_reason_id, summary.primaryBlockingReasonId, null),
-      primaryBlockingReason: clearCompletedPrimaryBlockingReadout ? null : primaryBlockingReason,
-      primary_blocking_reason: clearCompletedPrimaryBlockingReadout ? null : primaryBlockingReason,
-      primaryBlockingReadoutId: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutId, summary.primary_blocking_readout_id, null),
-      primary_blocking_readout_id: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primary_blocking_readout_id, summary.primaryBlockingReadoutId, null),
-      primaryBlockingReadoutLabel: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReadoutLabel, summary.primary_blocking_readout_label, null),
-      primary_blocking_readout_label: clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primary_blocking_readout_label, summary.primaryBlockingReadoutLabel, null),
-      primaryBlockingReadoutRequest,
-      primary_blocking_readout_request: primaryBlockingReadoutRequest,
-      primaryBlockingSummary,
-      primary_blocking_summary: primaryBlockingSummary,
+      blockingReasonIds: synchronizedBlockingReasonIds,
+      blocking_reason_ids: synchronizedBlockingReasonIds,
+      primaryBlockingReasonId: flowPrimaryBlockingReasonId,
+      primary_blocking_reason_id: flowPrimaryBlockingReasonId,
+      primaryBlockingReason: flowPrimaryBlockingReason,
+      primary_blocking_reason: flowPrimaryBlockingReason,
+      primaryBlockingReadoutId: flowPrimaryBlockingReadoutId,
+      primary_blocking_readout_id: flowPrimaryBlockingReadoutId,
+      primaryBlockingReadoutLabel: flowPrimaryBlockingReadoutLabel,
+      primary_blocking_readout_label: flowPrimaryBlockingReadoutLabel,
+      primaryBlockingReadoutRequest: flowPrimaryBlockingReadoutRequest,
+      primary_blocking_readout_request: flowPrimaryBlockingReadoutRequest,
+      primaryBlockingSummary: flowPrimaryBlockingSummary,
+      primary_blocking_summary: flowPrimaryBlockingSummary,
       primaryBlockingReadoutBridgeIntent,
       primary_blocking_readout_bridge_intent: primaryBlockingReadoutBridgeIntent,
       primaryBlockingReadoutServiceMode,
@@ -15197,8 +15352,8 @@
       checklist_blocked_ids: checklistBlockedIds,
       checklistReviewIds,
       checklist_review_ids: checklistReviewIds,
-      blockerCount: toCount("blockerCount", "blocker_count", blockingReasonIds.length),
-      blocker_count: toCount("blockerCount", "blocker_count", blockingReasonIds.length)
+      blockerCount: promoteFallbackCorePrimaryBlocker ? synchronizedBlockingReasonIds.length : toCount("blockerCount", "blocker_count", synchronizedBlockingReasonIds.length),
+      blocker_count: promoteFallbackCorePrimaryBlocker ? synchronizedBlockingReasonIds.length : toCount("blockerCount", "blocker_count", synchronizedBlockingReasonIds.length)
     };
   }
 
@@ -15231,6 +15386,19 @@
       if (!fallbackValue) return;
       missingEvidenceFallback[camelKey] = [...fallbackValue];
       missingEvidenceFallback[snakeKey] = [...fallbackValue];
+    });
+    [
+      ["primaryBlockingReasonId", "primary_blocking_reason_id"],
+      ["primaryBlockingReason", "primary_blocking_reason"],
+      ["primaryBlockingReadoutId", "primary_blocking_readout_id"],
+      ["primaryBlockingReadoutLabel", "primary_blocking_readout_label"],
+      ["primaryBlockingReadoutRequest", "primary_blocking_readout_request"],
+      ["primaryBlockingSummary", "primary_blocking_summary"]
+    ].forEach(([camelKey, snakeKey]) => {
+      const fallbackValue = pickDefined(fallbackCoreSessionStatus?.[camelKey], fallbackCoreSessionStatus?.[snakeKey]);
+      if (typeof fallbackValue === "undefined") return;
+      missingEvidenceFallback[camelKey] = fallbackValue;
+      missingEvidenceFallback[snakeKey] = fallbackValue;
     });
     return normalizeDiagnosticFlowSummaryAliases(summary, missingEvidenceFallback);
   }
