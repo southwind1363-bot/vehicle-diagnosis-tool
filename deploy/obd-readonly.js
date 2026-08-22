@@ -15100,27 +15100,37 @@
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false
     } : primaryBlockingSummary;
-    const synchronizeNestedPrimaryBlocker = (nestedSummary = null) => {
+    const synchronizeNestedFlowControls = (nestedSummary = null) => {
       if (!nestedSummary || typeof nestedSummary !== "object" || Array.isArray(nestedSummary)) return nestedSummary;
-      if (!isDtcPrimaryBlockingReadoutRequest && !clearCompletedPrimaryBlockingReadout && !promoteFallbackCorePrimaryBlocker) return nestedSummary;
+      const synchronizeNextReadoutControls = isDtcNextReadoutRequest || clearCompletedNextReadout;
+      const synchronizePrimaryBlocker = isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout || promoteFallbackCorePrimaryBlocker;
+      if (!synchronizeNextReadoutControls && !synchronizePrimaryBlocker) return nestedSummary;
       return {
         ...nestedSummary,
-        primaryBlockingReasonId: flowPrimaryBlockingReasonId,
-        primary_blocking_reason_id: flowPrimaryBlockingReasonId,
-        primaryBlockingReason: flowPrimaryBlockingReason,
-        primary_blocking_reason: flowPrimaryBlockingReason,
-        primaryBlockingReadoutId: flowPrimaryBlockingReadoutId,
-        primary_blocking_readout_id: flowPrimaryBlockingReadoutId,
-        primaryBlockingReadoutLabel: flowPrimaryBlockingReadoutLabel,
-        primary_blocking_readout_label: flowPrimaryBlockingReadoutLabel,
-        primaryBlockingReadoutRequest: flowPrimaryBlockingReadoutRequest,
-        primary_blocking_readout_request: flowPrimaryBlockingReadoutRequest,
-        primaryBlockingSummary: flowPrimaryBlockingSummary,
-        primary_blocking_summary: flowPrimaryBlockingSummary
+        ...(synchronizeNextReadoutControls ? {
+          nextReadoutReasonSummary,
+          next_readout_reason_summary: nextReadoutReasonSummary,
+          nextReadoutGuardSummary,
+          next_readout_guard_summary: nextReadoutGuardSummary
+        } : {}),
+        ...(synchronizePrimaryBlocker ? {
+          primaryBlockingReasonId: flowPrimaryBlockingReasonId,
+          primary_blocking_reason_id: flowPrimaryBlockingReasonId,
+          primaryBlockingReason: flowPrimaryBlockingReason,
+          primary_blocking_reason: flowPrimaryBlockingReason,
+          primaryBlockingReadoutId: flowPrimaryBlockingReadoutId,
+          primary_blocking_readout_id: flowPrimaryBlockingReadoutId,
+          primaryBlockingReadoutLabel: flowPrimaryBlockingReadoutLabel,
+          primary_blocking_readout_label: flowPrimaryBlockingReadoutLabel,
+          primaryBlockingReadoutRequest: flowPrimaryBlockingReadoutRequest,
+          primary_blocking_readout_request: flowPrimaryBlockingReadoutRequest,
+          primaryBlockingSummary: flowPrimaryBlockingSummary,
+          primary_blocking_summary: flowPrimaryBlockingSummary
+        } : {})
       };
     };
-    const flowCoreWorkflowSummary = synchronizeNestedPrimaryBlocker(coreWorkflowSummaryInput);
-    const flowAnalysisReadinessSummary = synchronizeNestedPrimaryBlocker(analysisReadinessSummaryInput);
+    const flowCoreWorkflowSummary = synchronizeNestedFlowControls(coreWorkflowSummaryInput);
+    const flowAnalysisReadinessSummary = synchronizeNestedFlowControls(analysisReadinessSummaryInput);
     const nextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
     const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
