@@ -209,8 +209,128 @@ function isIsoDate(value) {
     && parsed.getUTCDate() === day;
 }
 
+function validateDtcStandardsReferenceRows(rows, file) {
+  const validationErrors = [];
+  const addError = (message) => validationErrors.push(`${file}: ${message}`);
+  const j2012daRows = [];
+
+  for (const [index, row] of rows.entries()) {
+    const label = `[${index}]`;
+    for (const field of ["id", "title", "reference_type", "summary", "source"]) {
+      if (!isNonEmptyString(row?.[field])) addError(`${label} ${field} is missing`);
+    }
+    if (!isNonEmptyString(row?.source_url)) {
+      addError(`${label} source_url must be one official HTTPS URL`);
+    } else {
+      try {
+        const sourceUrl = new URL(row.source_url);
+        if (sourceUrl.protocol !== "https:") addError(`${label} source_url must use HTTPS`);
+        if (String(row.id || "").startsWith("sae-")
+          && (sourceUrl.hostname !== "saemobilus.sae.org" || !sourceUrl.pathname.startsWith("/standards/"))) {
+          addError(`${label} SAE reference must use the official SAE Mobilus standards URL`);
+        }
+        if (String(row.id || "").startsWith("naltec-")
+          && !["obd.naltec.go.jp", "www.obd.naltec.go.jp"].includes(sourceUrl.hostname)) {
+          addError(`${label} NALTEC reference must use the official OBD inspection portal URL`);
+        }
+      } catch {
+        addError(`${label} source_url is invalid`);
+      }
+    }
+    if (!isIsoDate(row?.source_date)) addError(`${label} source_date must be an ISO calendar date`);
+    if (!isIsoDate(row?.last_verified_date)) addError(`${label} last_verified_date must be an ISO calendar date`);
+    if (isIsoDate(row?.source_date) && isIsoDate(row?.last_verified_date)
+      && row.last_verified_date < row.source_date) {
+      addError(`${label} last_verified_date predates source_date`);
+    }
+    if (row?.service_manual_required !== true) addError(`${label} service_manual_required must be true`);
+    if (String(row?.id || "").startsWith("sae-j2012da-")) j2012daRows.push({ row, index });
+  }
+
+  const currentRows = j2012daRows.filter(({ row }) => row.edition_status === "current");
+  const historicalRows = j2012daRows.filter(({ row }) => row.edition_status === "historical");
+  const invalidStatusRows = j2012daRows.filter(({ row }) => !["current", "historical"].includes(row.edition_status));
+  if (j2012daRows.length && currentRows.length !== 1) {
+    addError(`J2012DA must have exactly one current edition; found ${currentRows.length}`);
+  }
+  for (const { index } of invalidStatusRows) addError(`[${index}] J2012DA edition_status must be current or historical`);
+
+  const current = currentRows[0]?.row;
+  const currentEdition = current?.title?.match(/\b(J2012DA_\d{6})\b/)?.[1] || "";
+  if (current && !currentEdition) addError(`[${currentRows[0].index}] current J2012DA title must include its edition code`);
+  for (const { row, index } of currentRows) {
+    if (row.superseded_by !== undefined) addError(`[${index}] current J2012DA must not declare superseded_by`);
+  }
+
+  for (const { row, index } of j2012daRows) {
+    const edition = row.title?.match(/\b(J2012DA_\d{6})\b/)?.[1] || "";
+    if (!edition) addError(`[${index}] J2012DA title must include its edition code`);
+    if (edition && isNonEmptyString(row.source_url) && !row.source_url.toLowerCase().includes(edition.toLowerCase())) {
+      addError(`[${index}] J2012DA source_url does not match ${edition}`);
+    }
+  }
+  for (const { row, index } of historicalRows) {
+    if (!currentEdition || row.superseded_by !== currentEdition) {
+      addError(`[${index}] historical J2012DA superseded_by must reference ${currentEdition || "the current edition"}`);
+    }
+    if (current && isIsoDate(row.source_date) && isIsoDate(current.source_date) && row.source_date >= current.source_date) {
+      addError(`[${index}] historical J2012DA source_date must predate the current edition`);
+    }
+  }
+
+  return validationErrors;
+}
+
 if (!isIsoDate("2024-02-29") || isIsoDate("2025-02-29") || isIsoDate("2026-13-01") || isIsoDate("2026-04-31")) {
   reportError("ISO date validation must reject non-calendar source and verification dates");
+}
+
+const dtcStandardsReferenceFixture = [
+  {
+    id: "sae-j2012da-current-test",
+    title: "SAE J2012DA_202607 Digital Annex",
+    reference_type: "licensed_dataset",
+    edition_status: "current",
+    summary: "fixture",
+    source: "SAE International",
+    source_url: "https://saemobilus.sae.org/standards/j2012da_202607-fixture",
+    source_date: "2026-07-29",
+    last_verified_date: "2026-08-22",
+    service_manual_required: true
+  },
+  {
+    id: "sae-j2012da-historical-test",
+    title: "SAE J2012DA_202510 Digital Annex",
+    reference_type: "licensed_dataset",
+    edition_status: "historical",
+    superseded_by: "J2012DA_202607",
+    summary: "fixture",
+    source: "SAE International",
+    source_url: "https://saemobilus.sae.org/standards/j2012da_202510-fixture",
+    source_date: "2025-10-24",
+    last_verified_date: "2026-08-22",
+    service_manual_required: true
+  }
+];
+const validDtcStandardsFixtureErrors = validateDtcStandardsReferenceRows(dtcStandardsReferenceFixture, "fixture");
+const invalidDtcStandardsFixture = dtcStandardsReferenceFixture.map((row) => ({ ...row }));
+invalidDtcStandardsFixture[0].source_url = "http://example.com/j2012da_202607";
+invalidDtcStandardsFixture[1].edition_status = "current";
+invalidDtcStandardsFixture[1].superseded_by = "J2012DA_202510";
+const invalidDtcStandardsFixtureErrors = validateDtcStandardsReferenceRows(invalidDtcStandardsFixture, "fixture");
+const invalidDtcStandardsHistoryFixture = dtcStandardsReferenceFixture.map((row) => ({ ...row }));
+invalidDtcStandardsHistoryFixture[1].superseded_by = "J2012DA_202510";
+invalidDtcStandardsHistoryFixture[1].source_date = "2026-07-29";
+invalidDtcStandardsHistoryFixture[1].source_url = "https://saemobilus.sae.org/standards/j2012da_202607-fixture";
+const invalidDtcStandardsHistoryErrors = validateDtcStandardsReferenceRows(invalidDtcStandardsHistoryFixture, "fixture");
+if (validDtcStandardsFixtureErrors.length
+  || !invalidDtcStandardsFixtureErrors.some((message) => message.includes("official SAE Mobilus"))
+  || !invalidDtcStandardsFixtureErrors.some((message) => message.includes("exactly one current edition"))
+  || !invalidDtcStandardsFixtureErrors.some((message) => message.includes("must not declare superseded_by"))
+  || !invalidDtcStandardsHistoryErrors.some((message) => message.includes("superseded_by must reference"))
+  || !invalidDtcStandardsHistoryErrors.some((message) => message.includes("must predate the current edition"))
+  || !invalidDtcStandardsHistoryErrors.some((message) => message.includes("source_url does not match"))) {
+  reportError("DTC standards reference validation must enforce official source and edition lineage");
 }
 
 for (const file of jsonFiles) {
@@ -484,6 +604,10 @@ for (const file of jsonFiles) {
       if (!isNonEmptyStringArray(row.missing)) reportError(`${label}: missing がありません`);
       if (!isNonEmptyString(row.safety_gate)) reportError(`${label}: safety_gate がありません`);
     }
+  }
+
+  if (file === "dtc-standards-reference-2026.json") {
+    validateDtcStandardsReferenceRows(rows, file).forEach(reportError);
   }
 }
 
