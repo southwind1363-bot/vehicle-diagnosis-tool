@@ -8692,11 +8692,20 @@
 
   function buildReadOnlyNextReadoutRequest(nextReadoutSummary = null, context = {}) {
     if (!nextReadoutSummary || typeof nextReadoutSummary !== "object" || !nextReadoutSummary.id) return null;
+    const contextNextReadoutId = pickDefined(
+      context.nextReadoutId,
+      context.next_readout_id,
+      context.nextReadoutSummary?.id,
+      context.next_readout_summary?.id,
+      context.nextReadoutRequest?.readoutId,
+      context.next_readout_request?.readout_id,
+      null
+    );
     const statusReason = pickDefined(
       nextReadoutSummary.statusReason,
       nextReadoutSummary.status_reason,
-      context.nextReadoutStatusReason,
-      context.next_readout_status_reason,
+      contextNextReadoutId === nextReadoutSummary.id ? context.nextReadoutStatusReason : null,
+      contextNextReadoutId === nextReadoutSummary.id ? context.next_readout_status_reason : null,
       null
     );
     const protocolEvidence = [
@@ -12132,6 +12141,12 @@
       .filter((item) => item && typeof item.id === "string");
     const coverageStatusById = new Map(coverageItems.map((item) => [item.id, item.status]));
     const coverageLabelById = new Map(coverageItems.map((item) => [item.id, item.label || item.id]));
+    const coverageStatusReasonById = new Map(coverageItems.map((item) => [
+      item.id,
+      item.status === "captured"
+        ? null
+        : item.statusReason || item.status_reason || normalizedCoverage.failedReadoutReasonById?.[item.id] || null
+    ]));
     const isCoverageCapturedReadout = (id) => coverageStatusById.get(id) === "captured";
     const fallbackPriorityById = {
       dtc_snapshot: 100,
@@ -12166,12 +12181,17 @@
       .filter((item) => !item.captured && !emptyReadoutIds.includes(item.id))
       .map((item) => item.id);
     const pendingReadoutIds = [...remainingReadoutIds, ...emptyReadoutIds];
-    const readoutStates = requiredReadouts.map((item) => ({
-      id: item.id,
-      label: coverageLabelById.get(item.id) || item.id,
-      priority: fallbackPriorityById[item.id] || 0,
-      status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing"
-    }));
+    const readoutStates = requiredReadouts.map((item) => {
+      const statusReason = item.captured ? null : coverageStatusReasonById.get(item.id) || null;
+      return {
+        id: item.id,
+        label: coverageLabelById.get(item.id) || item.id,
+        priority: fallbackPriorityById[item.id] || 0,
+        status: item.captured ? "captured" : emptyReadoutIds.includes(item.id) ? "empty" : "missing",
+        statusReason,
+        status_reason: statusReason
+      };
+    });
     const readoutStateById = Object.fromEntries(readoutStates.map((item) => [item.id, { ...item }]));
     const pendingReadoutStates = pendingReadoutIds
       .map((id) => readoutStateById[id])
@@ -12199,6 +12219,8 @@
       next_readout_label: nextPendingReadoutState?.label || null,
       nextReadoutStatus: nextPendingReadoutState?.status || null,
       next_readout_status: nextPendingReadoutState?.status || null,
+      nextReadoutStatusReason: nextPendingReadoutState?.statusReason || nextPendingReadoutState?.status_reason || null,
+      next_readout_status_reason: nextPendingReadoutState?.status_reason || nextPendingReadoutState?.statusReason || null,
       pendingPercent: readoutStates.length
         ? Math.round((pendingReadoutQueue.length / readoutStates.length) * 100)
         : 0,
@@ -12474,6 +12496,8 @@
       recommended_readout_label: nextReadoutSummary?.label || null,
       recommendedReadoutStatus: nextReadoutSummary?.status || null,
       recommended_readout_status: nextReadoutSummary?.status || null,
+      recommendedReadoutStatusReason: nextReadoutSummary?.statusReason || nextReadoutSummary?.status_reason || null,
+      recommended_readout_status_reason: nextReadoutSummary?.status_reason || nextReadoutSummary?.statusReason || null,
       recommendedReadoutSource: nextReadoutSummary?.source || null,
       recommended_readout_source: nextReadoutSummary?.source || null,
       recommendedReadoutQueuePosition: nextReadoutSummary?.queuePosition || null,
@@ -12559,11 +12583,14 @@
       ? readoutStateById[primaryBlockingReadoutId]?.label || coverageLabelById.get(primaryBlockingReadoutId) || primaryBlockingReadoutId
       : null;
     const primaryBlockingReadoutState = primaryBlockingReadoutId ? readoutStateById[primaryBlockingReadoutId] || null : null;
+    const primaryBlockingReadoutStatusReason = primaryBlockingReadoutState?.statusReason || primaryBlockingReadoutState?.status_reason || null;
     const primaryBlockingReadoutRequest = primaryBlockingReadoutId
       ? buildReadOnlyNextReadoutRequest({
         id: primaryBlockingReadoutId,
         label: primaryBlockingReadoutLabel || primaryBlockingReadoutId,
         status: primaryBlockingReadoutState?.status || null,
+        statusReason: primaryBlockingReadoutStatusReason,
+        status_reason: primaryBlockingReadoutStatusReason,
         source: "primary_blocker"
       }, readoutRequestContext)
       : null;
@@ -12579,6 +12606,8 @@
       readout_label: primaryBlockingReadoutLabel,
       readoutStatus: primaryBlockingReadoutState?.status || null,
       readout_status: primaryBlockingReadoutState?.status || null,
+      readoutStatusReason: primaryBlockingReadoutStatusReason,
+      readout_status_reason: primaryBlockingReadoutStatusReason,
       request: primaryBlockingReadoutRequest,
       bridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
       bridge_intent: primaryBlockingReadoutRequest?.bridgeIntent || null,
@@ -12604,6 +12633,8 @@
       primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primary_blocking_readout_label: primaryBlockingReadoutLabel,
+      primaryBlockingReadoutStatusReason,
+      primary_blocking_readout_status_reason: primaryBlockingReadoutStatusReason,
       primaryBlockingReadoutRequest,
       primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
@@ -12878,6 +12909,8 @@
       primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primary_blocking_readout_label: primaryBlockingReadoutLabel,
+      primaryBlockingReadoutStatusReason,
+      primary_blocking_readout_status_reason: primaryBlockingReadoutStatusReason,
       primaryBlockingReadoutRequest,
       primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
@@ -12937,6 +12970,8 @@
       primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primary_blocking_readout_label: primaryBlockingReadoutLabel,
+      primaryBlockingReadoutStatusReason,
+      primary_blocking_readout_status_reason: primaryBlockingReadoutStatusReason,
       primaryBlockingReadoutRequest,
       primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
@@ -13083,6 +13118,8 @@
       primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primary_blocking_readout_label: primaryBlockingReadoutLabel,
+      primaryBlockingReadoutStatusReason,
+      primary_blocking_readout_status_reason: primaryBlockingReadoutStatusReason,
       primaryBlockingReadoutRequest,
       primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
@@ -13225,6 +13262,17 @@
       || (primaryBlockingReadoutId && coreSessionStatus?.readoutStateById ? coreSessionStatus.readoutStateById[primaryBlockingReadoutId]?.label : null)
       || primaryBlockingReadoutId
       || null;
+    const primaryBlockingReadoutStatusReason = pickDefined(
+      readiness.primaryBlockingReadoutStatusReason,
+      readiness.primary_blocking_readout_status_reason,
+      completion.primaryBlockingReadoutStatusReason,
+      completion.primary_blocking_readout_status_reason,
+      coreSessionStatus?.primaryBlockingReadoutStatusReason,
+      coreSessionStatus?.primary_blocking_readout_status_reason,
+      primaryBlockingReadoutId && coreSessionStatus?.readoutStateById ? coreSessionStatus.readoutStateById[primaryBlockingReadoutId]?.statusReason : null,
+      primaryBlockingReadoutId && coreSessionStatus?.readout_state_by_id ? coreSessionStatus.readout_state_by_id[primaryBlockingReadoutId]?.status_reason : null,
+      null
+    );
     const normalizeReadoutRequestEntry = (item) => {
       if (!item || typeof item !== "object") return item;
       return {
@@ -13235,6 +13283,8 @@
         bridge_intent: item.bridgeIntent || item.bridge_intent || null,
         serviceMode: item.serviceMode || item.service_mode || null,
         service_mode: item.serviceMode || item.service_mode || null,
+        statusReason: pickDefined(item.statusReason, item.status_reason, null),
+        status_reason: pickDefined(item.status_reason, item.statusReason, null),
         executionEnabled: pickDefined(item.executionEnabled, item.execution_enabled) === true,
         execution_enabled: pickDefined(item.executionEnabled, item.execution_enabled) === true,
         readOnly: pickDefined(item.readOnly, item.read_only) === true,
@@ -13264,6 +13314,8 @@
         readout_id: primaryBlockingReadoutId,
         readoutLabel: primaryBlockingReadoutLabel,
         readout_label: primaryBlockingReadoutLabel,
+        readoutStatusReason: primaryBlockingReadoutStatusReason,
+        readout_status_reason: primaryBlockingReadoutStatusReason,
         request: primaryBlockingReadoutRequest,
         bridgeIntent: primaryBlockingReadoutRequest?.bridgeIntent || null,
         bridge_intent: primaryBlockingReadoutRequest?.bridgeIntent || null,
@@ -13454,6 +13506,8 @@
       next_readout_label: readAliasValue(workflow, "nextReadoutLabel") || readAliasValue(readiness, "nextReadoutLabel") || coreSessionStatus?.nextReadoutSummary?.label || coreSessionStatus?.next_readout_summary?.label || null,
       nextReadoutStatus: readAliasValue(workflow, "nextReadoutStatus") || readAliasValue(readiness, "nextReadoutStatus") || coreSessionStatus?.nextReadoutState?.status || coreSessionStatus?.next_readout_state?.status || null,
       next_readout_status: readAliasValue(workflow, "nextReadoutStatus") || readAliasValue(readiness, "nextReadoutStatus") || coreSessionStatus?.nextReadoutState?.status || coreSessionStatus?.next_readout_state?.status || null,
+      nextReadoutStatusReason: pickDefined(readAliasValue(workflow, "nextReadoutStatusReason"), readAliasValue(readiness, "nextReadoutStatusReason"), nextReadoutSummary?.statusReason, nextReadoutSummary?.status_reason, nextReadoutRequest?.statusReason, nextReadoutRequest?.status_reason, null),
+      next_readout_status_reason: pickDefined(readAliasValue(workflow, "nextReadoutStatusReason"), readAliasValue(readiness, "nextReadoutStatusReason"), nextReadoutSummary?.statusReason, nextReadoutSummary?.status_reason, nextReadoutRequest?.statusReason, nextReadoutRequest?.status_reason, null),
       nextReadoutSource: readAliasValue(workflow, "nextReadoutSource") || readAliasValue(readiness, "nextReadoutSource") || readAliasValue(coreSessionStatus, "nextReadoutSource") || null,
       next_readout_source: readAliasValue(workflow, "nextReadoutSource") || readAliasValue(readiness, "nextReadoutSource") || readAliasValue(coreSessionStatus, "nextReadoutSource") || null,
       nextReadoutQueuePosition: readAliasValue(workflow, "nextReadoutQueuePosition") || readAliasValue(readiness, "nextReadoutQueuePosition") || coreSessionStatus?.nextReadoutSummary?.queuePosition || coreSessionStatus?.next_readout_summary?.queue_position || null,
@@ -13592,10 +13646,14 @@
       pending_queue_next_readout_id: readAliasValue(queueSummary, "nextReadoutId") || readAliasValue(coreSessionStatus, "nextPendingReadoutId") || null,
       pendingQueueNextReadoutStatus: readAliasValue(queueSummary, "nextReadoutStatus") || coreSessionStatus?.nextPendingReadoutState?.status || coreSessionStatus?.next_pending_readout_state?.status || null,
       pending_queue_next_readout_status: readAliasValue(queueSummary, "nextReadoutStatus") || coreSessionStatus?.nextPendingReadoutState?.status || coreSessionStatus?.next_pending_readout_state?.status || null,
+      pendingQueueNextReadoutStatusReason: pickDefined(readAliasValue(queueSummary, "nextReadoutStatusReason"), coreSessionStatus?.nextPendingReadoutState?.statusReason, coreSessionStatus?.next_pending_readout_state?.status_reason, null),
+      pending_queue_next_readout_status_reason: pickDefined(readAliasValue(queueSummary, "nextReadoutStatusReason"), coreSessionStatus?.nextPendingReadoutState?.statusReason, coreSessionStatus?.next_pending_readout_state?.status_reason, null),
       recommendedReadoutId: readAliasValue(queueSummary, "recommendedReadoutId") || readAliasValue(coreSessionStatus, "nextRecommendedReadoutId") || null,
       recommended_readout_id: readAliasValue(queueSummary, "recommendedReadoutId") || readAliasValue(coreSessionStatus, "nextRecommendedReadoutId") || null,
       recommendedReadoutStatus: readAliasValue(queueSummary, "recommendedReadoutStatus") || coreSessionStatus?.nextReadoutSummary?.status || coreSessionStatus?.next_readout_summary?.status || null,
       recommended_readout_status: readAliasValue(queueSummary, "recommendedReadoutStatus") || coreSessionStatus?.nextReadoutSummary?.status || coreSessionStatus?.next_readout_summary?.status || null,
+      recommendedReadoutStatusReason: pickDefined(readAliasValue(queueSummary, "recommendedReadoutStatusReason"), coreSessionStatus?.nextReadoutSummary?.statusReason, coreSessionStatus?.next_readout_summary?.status_reason, null),
+      recommended_readout_status_reason: pickDefined(readAliasValue(queueSummary, "recommendedReadoutStatusReason"), coreSessionStatus?.nextReadoutSummary?.statusReason, coreSessionStatus?.next_readout_summary?.status_reason, null),
       recommendedReadoutSource: readAliasValue(queueSummary, "recommendedReadoutSource") || readAliasValue(coreSessionStatus, "nextReadoutSource") || null,
       recommended_readout_source: readAliasValue(queueSummary, "recommendedReadoutSource") || readAliasValue(coreSessionStatus, "nextReadoutSource") || null,
       recommendedReadoutQueuePosition: readAliasValue(queueSummary, "recommendedReadoutQueuePosition") || coreSessionStatus?.nextReadoutSummary?.queuePosition || coreSessionStatus?.next_readout_summary?.queue_position || null,
@@ -13630,6 +13688,8 @@
       primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primary_blocking_readout_label: primaryBlockingReadoutLabel,
+      primaryBlockingReadoutStatusReason,
+      primary_blocking_readout_status_reason: primaryBlockingReadoutStatusReason,
       primaryBlockingReadoutRequest,
       primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
