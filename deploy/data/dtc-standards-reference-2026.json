@@ -11,14 +11,28 @@
     "service_manual_required": true
   },
   {
-    "id": "sae-j2012da-current-2025-10",
+    "id": "sae-j2012da-current-2026-07",
+    "title": "SAE J2012DA_202607 Digital Annex",
+    "reference_type": "licensed_dataset",
+    "edition_status": "current",
+    "summary": "標準DTCとFailure Type Byte定義の現行Excelデータ。2026年7月29日改訂版として確認済み。完全網羅インポートは利用権と正規データ取得後に行い、旧版で検証済みの定義を自動置換しない。",
+    "source": "SAE International",
+    "source_url": "https://saemobilus.sae.org/standards/j2012da_202607-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
+    "source_date": "2026-07-29",
+    "last_verified_date": "2026-08-22",
+    "service_manual_required": true
+  },
+  {
+    "id": "sae-j2012da-historical-2025-10",
     "title": "SAE J2012DA_202510 Digital Annex",
     "reference_type": "licensed_dataset",
-    "summary": "標準DTCとFailure Type Byte定義のExcelデータ。SAE公式ページでは業務プロセスで利用できるスプレッドシートとして案内され、複数回更新される。完全網羅インポートは利用権確認後に行う。",
+    "edition_status": "historical",
+    "superseded_by": "J2012DA_202607",
+    "summary": "既存の汎用DTC定義で使用した2025年10月版の出典履歴。現行版はJ2012DA_202607だが、旧版で確認した名称の出典追跡を維持するため残す。",
     "source": "SAE International",
     "source_url": "https://saemobilus.sae.org/standards/j2012da_202510-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions",
     "source_date": "2025-10-24",
-    "last_verified_date": "2026-08-17",
+    "last_verified_date": "2026-08-22",
     "service_manual_required": true
   },
   {

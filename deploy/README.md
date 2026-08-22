@@ -427,12 +427,14 @@ SAE J2012DAなど利用権を確認した正規データは、CSV形式にして
 ```powershell
 node scripts/import-verified-dtc-csv.js `
   --input "C:\path\to\verified-dtc.csv" `
-  --source "SAE J2012DA_202510 licensed dataset" `
-  --source-url "https://saemobilus.sae.org/standards/supplements" `
-  --source-date "2025-10-24"
+  --source "SAE J2012DA_202607 licensed dataset" `
+  --source-url "https://saemobilus.sae.org/standards/j2012da_202607-digital-annex-diagnostic-trouble-code-definitions-failure-type-byte-definitions" `
+  --source-date "2026-07-29"
 ```
 
 検査結果を確認した後だけ、同じコマンドへ `--write` を追加します。出力先は `data/imported-verified-dtc.json` です。
+
+既存のJ2012DA_202510由来定義は出典履歴として保持します。J2012DA_202607の正規データを入手・照合するまでは、版番号だけを根拠に名称や診断ガイダンスを自動更新しません。
 
 基本列は `code,title` です。メーカー資料のサブコードまたはFTBがある場合は、`subcode` / `FTB` 列へ1〜4桁の16進数を入れるか、`B0001:11` のように `code` 列へ付けます。同じ定義に両方を指定した場合は一致が必要で、同じ `code + subcode` の重複は取込を中止します。
 
