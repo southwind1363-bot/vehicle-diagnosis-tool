@@ -17754,8 +17754,14 @@
     const capturedIds = normalizeIds(summary.capturedIds || summary.captured_ids);
     const emptyIds = normalizeIds(summary.emptyIds || summary.empty_ids);
     const missingIds = normalizeIds(summary.missingIds || summary.missing_ids);
-    const pendingIds = normalizeIds(summary.pendingIds || summary.pending_ids || [...missingIds, ...emptyIds]);
-    const attemptedIds = normalizeIds(summary.attemptedIds || summary.attempted_ids || [...capturedIds, ...emptyIds]);
+    const inventoryItems = Object.entries(itemById).map(([id, item]) => ({ id, ...(item && typeof item === "object" ? item : {}) }));
+    const resolvedStatuses = new Set(["captured", "empty", "missing"]);
+    const derivedUnresolvedIds = inventoryItems
+      .filter((item) => item.id && item.status && !resolvedStatuses.has(String(item.status).trim().toLowerCase()))
+      .map((item) => item.id);
+    const unresolvedIds = normalizeIds([...(summary.unresolvedIds || summary.unresolved_ids || []), ...derivedUnresolvedIds]);
+    const pendingIds = normalizeIds([...(summary.pendingIds || summary.pending_ids || []), ...missingIds, ...emptyIds, ...unresolvedIds]);
+    const attemptedIds = normalizeIds([...(summary.attemptedIds || summary.attempted_ids || []), ...capturedIds, ...emptyIds, ...unresolvedIds]);
     const errorReadoutIds = normalizeIds(summary.errorReadoutIds || summary.error_readout_ids);
     const failedReadoutIds = normalizeIds(summary.failedReadoutIds || summary.failed_readout_ids);
     const errorCodes = readBridgeResponseErrorCodes(summary);
@@ -17779,10 +17785,12 @@
       empty_readout_count: toCount("emptyReadoutCount", "empty_readout_count", emptyIds.length),
       missingReadoutCount: toCount("missingReadoutCount", "missing_readout_count", missingIds.length),
       missing_readout_count: toCount("missingReadoutCount", "missing_readout_count", missingIds.length),
-      pendingReadoutCount: toCount("pendingReadoutCount", "pending_readout_count", pendingIds.length),
-      pending_readout_count: toCount("pendingReadoutCount", "pending_readout_count", pendingIds.length),
-      attemptedReadoutCount: toCount("attemptedReadoutCount", "attempted_readout_count", attemptedIds.length),
-      attempted_readout_count: toCount("attemptedReadoutCount", "attempted_readout_count", attemptedIds.length),
+      unresolvedReadoutCount: unresolvedIds.length,
+      unresolved_readout_count: unresolvedIds.length,
+      pendingReadoutCount: pendingIds.length,
+      pending_readout_count: pendingIds.length,
+      attemptedReadoutCount: attemptedIds.length,
+      attempted_readout_count: attemptedIds.length,
       totalValueCount,
       total_value_count: totalValueCount,
       livePidValueCount: toCount("livePidValueCount", "live_pid_value_count", 0),
@@ -17939,6 +17947,8 @@
       empty_ids: emptyIds,
       missingIds,
       missing_ids: missingIds,
+      unresolvedIds,
+      unresolved_ids: unresolvedIds,
       pendingIds,
       pending_ids: pendingIds,
       attemptedIds,
@@ -17957,14 +17967,14 @@
       failed_readout_ids: failedReadoutIds,
       failedReadoutReasonById,
       failed_readout_reason_by_id: { ...failedReadoutReasonById },
-      nextPendingReadoutId: summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0] || null,
-      next_pending_readout_id: summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0] || null,
+      nextPendingReadoutId: pendingIds.includes(summary.nextPendingReadoutId || summary.next_pending_readout_id) ? summary.nextPendingReadoutId || summary.next_pending_readout_id : pendingIds[0] || null,
+      next_pending_readout_id: pendingIds.includes(summary.next_pending_readout_id || summary.nextPendingReadoutId) ? summary.next_pending_readout_id || summary.nextPendingReadoutId : pendingIds[0] || null,
       nextPendingReadoutStatusReason: summary.nextPendingReadoutStatusReason || summary.next_pending_readout_status_reason || itemById[summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0]]?.statusReason || itemById[summary.nextPendingReadoutId || summary.next_pending_readout_id || pendingIds[0]]?.status_reason || null,
       next_pending_readout_status_reason: summary.next_pending_readout_status_reason || summary.nextPendingReadoutStatusReason || itemById[summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0]]?.statusReason || itemById[summary.next_pending_readout_id || summary.nextPendingReadoutId || pendingIds[0]]?.status_reason || null,
       allReadoutsAttempted: pickDefined(summary.allReadoutsAttempted, summary.all_readouts_attempted, missingIds.length === 0) === true,
       all_readouts_attempted: pickDefined(summary.allReadoutsAttempted, summary.all_readouts_attempted, missingIds.length === 0) === true,
-      valueCaptureComplete: pickDefined(summary.valueCaptureComplete, summary.value_capture_complete, pendingIds.length === 0) === true,
-      value_capture_complete: pickDefined(summary.valueCaptureComplete, summary.value_capture_complete, pendingIds.length === 0) === true
+      valueCaptureComplete: pendingIds.length === 0 && pickDefined(summary.valueCaptureComplete, summary.value_capture_complete, true) === true,
+      value_capture_complete: pendingIds.length === 0 && pickDefined(summary.valueCaptureComplete, summary.value_capture_complete, true) === true
     };
   }
 
