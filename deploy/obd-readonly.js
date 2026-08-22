@@ -6081,7 +6081,7 @@
           || Boolean(vciDevicesInput?.devices?.length)
           || hasAdapterIdentityInput;
     const connectionStatus = hasConnectionStatusInput
-      ? (connectionStatusInput?.displayStatus ? connectionStatusInput : normalizeBridgeConnectionStatus(connectionStatusInput))
+      ? normalizeBridgeConnectionStatus(connectionStatusInput)
       : null;
     const vciDevices = Array.isArray(vciDevicesInput)
       ? vciDevicesInput
@@ -11349,9 +11349,7 @@
     honorCoverageOverride = false,
     allowVciArray = false
   } = {}) {
-    const connectionStatus = connectionStatusInput?.displayStatus
-      ? connectionStatusInput
-      : normalizeBridgeConnectionStatus(connectionStatusInput);
+    const connectionStatus = normalizeBridgeConnectionStatus(connectionStatusInput);
     const vciList = allowVciArray && Array.isArray(vciDevicesInput)
       ? { devices: vciDevicesInput, blocked: false }
       : (vciDevicesInput?.devices
