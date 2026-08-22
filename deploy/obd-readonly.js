@@ -3823,8 +3823,9 @@
     };
     const normalizedSource = String(readConnectionText(data.source, data.source_type, data.sourceType, response?.source, response?.source_type, response?.sourceType) || "").trim().toLowerCase();
     const providedDisplayStatus = readConnectionText(data.display_status, data.displayStatus);
-    if (normalizedSource === "web_serial" && providedDisplayStatus) {
+    if (normalizedSource === "web_serial") {
       const providedStatus = readConnectionText(data.status) || "disconnected";
+      const resolvedDisplayStatus = providedDisplayStatus || providedStatus;
       const nextAction = readConnectionText(data.next_action, data.nextAction);
       const connectionState = readConnectionText(data.connection_state, data.connectionState) || "disconnected";
       const lastDisconnectReason = readConnectionText(data.last_disconnect_reason, data.lastDisconnectReason);
@@ -3848,8 +3849,8 @@
         vehicleCommandEnabled: false,
         vehicle_command_enabled: false,
         status: providedStatus,
-        displayStatus: providedDisplayStatus,
-        display_status: providedDisplayStatus,
+        displayStatus: resolvedDisplayStatus,
+        display_status: resolvedDisplayStatus,
         nextAction,
         next_action: nextAction,
         connectionState,
