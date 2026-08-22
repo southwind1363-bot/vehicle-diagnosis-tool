@@ -3961,8 +3961,13 @@
           ? data.items
           : [];
     const canInferSourceFromDeviceRows = Array.isArray(response) || Array.isArray(data);
-    const deviceSourceValue = canInferSourceFromDeviceRows
-      ? devices.map((device) => device?.source || device?.source_type || device?.sourceType).find(Boolean)
+    const deviceSourceValues = canInferSourceFromDeviceRows
+      ? devices.map((device) => String(device?.source || device?.source_type || device?.sourceType || "").trim().toLowerCase())
+      : [];
+    const deviceSourceValue = deviceSourceValues.length > 0
+      && deviceSourceValues.every(Boolean)
+      && new Set(deviceSourceValues).size === 1
+      ? deviceSourceValues[0]
       : null;
     const sourceValue = data.source || data.source_type || data.sourceType || response?.source || response?.source_type || response?.sourceType || deviceSourceValue || "local_bridge";
     const normalizedSource = String(sourceValue).trim().toLowerCase();
