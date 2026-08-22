@@ -5258,7 +5258,8 @@
             data.statusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.statusByteC } : null,
             data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
           ].filter(Boolean);
-    const errorCodes = readBridgeResponseErrorCodes(response);
+    const scopedReadinessErrorCodes = [...new Set(readinessEcuSnapshotRows.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))];
+    const errorCodes = [...new Set([...readBridgeResponseErrorCodes(response), ...scopedReadinessErrorCodes])].slice(0, 12);
     const rawReadinessResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const explicitReadoutStatus = String(data.readiness_readout_status || data.readinessReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
@@ -24680,6 +24681,7 @@
       }
       : input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
     const declaredSourceEcu = readObdResponseSourceEcu(sourceInput);
     const declaredSourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const firstReadinessArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
@@ -24695,8 +24697,12 @@
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
       if (!snapshotSourceEcu) return null;
+      const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshotInput);
+      const snapshotStatusInput = String(snapshotInput.readinessReadoutStatus || snapshotInput.readiness_readout_status || snapshotInput.readoutStatus || snapshotInput.readout_status || "").trim().toLowerCase();
+      const resolvedSnapshotStatus = snapshotStatusInput === "blocked" ? "blocked" : snapshotErrorCodes.length > 0 ? "unparsed" : snapshotStatusInput;
       const normalizedSnapshot = normalizeReadinessSnapshot({
         ...snapshotInput,
+        ...(resolvedSnapshotStatus ? { readinessReadoutStatus: resolvedSnapshotStatus, readiness_readout_status: resolvedSnapshotStatus } : {}),
         readinessEcuSnapshots: [],
         readiness_ecu_snapshots: [],
         ecuSnapshots: [],
@@ -24712,6 +24718,8 @@
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
         monitors: scopedMonitors,
+        errorCodes: snapshotErrorCodes,
+        error_codes: [...snapshotErrorCodes],
         readinessScope: "single_ecu",
         readiness_scope: "single_ecu"
       };
@@ -24869,6 +24877,8 @@
         localCompleteCount + localIncompleteCount + localCompletionUnknownCount + localNotSupportedCount + localSupportUnknownCount
       );
     const readinessEcuStatuses = readinessEcuSnapshots.map((snapshot) => snapshot.readinessReadoutStatus || snapshot.readiness_readout_status || "unknown");
+    const scopedErrorCodes = [...new Set(readinessEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes])].slice(0, 12);
     const reportedEcuCount = readinessEcuStatuses.filter((status) => status === "reported").length;
     const blockedEcuCount = readinessEcuStatuses.filter((status) => status === "blocked").length;
     const unparsedEcuCount = readinessEcuStatuses.filter((status) => status === "unparsed").length;
@@ -24889,8 +24899,12 @@
     );
     const explicitNormalizedReadoutStatus = String(explicitReadoutStatus || "").trim().toLowerCase();
     const normalizedReadoutStatus = readinessScope === "multiple_ecus"
-      ? ["blocked", "unparsed"].includes(explicitNormalizedReadoutStatus)
-        ? explicitNormalizedReadoutStatus
+      ? explicitNormalizedReadoutStatus === "blocked"
+        ? "blocked"
+        : errorCodes.length > 0
+          ? "unparsed"
+          : explicitNormalizedReadoutStatus === "unparsed"
+            ? "unparsed"
         : blockedEcuCount > 0
           ? "blocked"
           : unparsedEcuCount > 0
@@ -24898,8 +24912,12 @@
             : reportedEcuCount === readinessEcuSnapshots.length && readinessEcuSnapshots.length > 0
               ? "reported"
               : "unknown"
-      : ["reported", "unparsed", "blocked", "unknown"].includes(explicitNormalizedReadoutStatus)
-        ? explicitNormalizedReadoutStatus
+      : explicitNormalizedReadoutStatus === "blocked"
+        ? "blocked"
+        : errorCodes.length > 0
+          ? "unparsed"
+          : ["reported", "unparsed", "unknown"].includes(explicitNormalizedReadoutStatus)
+            ? explicitNormalizedReadoutStatus
         : localMonitorCount > 0
           ? "reported"
           : "unknown";
@@ -24927,6 +24945,10 @@
       unparsed_ecu_count: unparsedEcuCount,
       unknownEcuCount,
       unknown_ecu_count: unknownEcuCount,
+      errorResponseCount: readinessEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length,
+      error_response_count: readinessEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length,
+      errorCodes: scopedErrorCodes,
+      error_codes: [...scopedErrorCodes],
       monitorObservationCount: readinessScope === "multiple_ecus" ? monitorCount : 0,
       monitor_observation_count: readinessScope === "multiple_ecus" ? monitorCount : 0,
       completeObservationCount: readinessScope === "multiple_ecus" ? completeCount : 0,
@@ -24992,6 +25014,8 @@
       known_monitor_count: knownMonitorCount,
       readinessReadoutStatus: normalizedReadoutStatus,
       readiness_readout_status: normalizedReadoutStatus,
+      errorCodes,
+      error_codes: [...errorCodes],
       readinessIgnitionType,
       readiness_ignition_type: readinessIgnitionType,
       readinessStatusBytes: readinessScope === "multiple_ecus" ? null : readinessStatusBytes,
