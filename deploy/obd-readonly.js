@@ -3821,7 +3821,7 @@
       const value = values.find((item) => item !== undefined && item !== null && item !== "" && typeof item !== "object");
       return value === undefined ? null : String(value).slice(0, 80);
     };
-    const normalizedSource = String(readConnectionText(data.source, response?.source) || "").trim().toLowerCase();
+    const normalizedSource = String(readConnectionText(data.source, data.source_type, data.sourceType, response?.source, response?.source_type, response?.sourceType) || "").trim().toLowerCase();
     const providedDisplayStatus = readConnectionText(data.display_status, data.displayStatus);
     if (normalizedSource === "web_serial" && providedDisplayStatus) {
       const providedStatus = readConnectionText(data.status) || "disconnected";
