@@ -8846,6 +8846,49 @@
     };
   }
 
+  function buildPromotedNextReadoutSummary(requestInput = null, context = {}) {
+    const readoutRequest = normalizeReadoutRequestSummaryAliases(requestInput);
+    const readoutId = readoutRequest?.readoutId || null;
+    if (!readoutId) return null;
+    const readIds = (camelKey, snakeKey) => {
+      const value = Array.isArray(context[camelKey]) ? context[camelKey] : Array.isArray(context[snakeKey]) ? context[snakeKey] : [];
+      return value.filter(Boolean).map(String);
+    };
+    const emptyReadoutIds = readIds("emptyReadoutIds", "empty_readout_ids");
+    const missingReadoutIds = readIds("missingReadoutIds", "missing_readout_ids");
+    const remainingReadoutIds = readIds("remainingReadoutIds", "remaining_readout_ids");
+    const queue = Array.isArray(context.queue) ? context.queue : [];
+    const queueIndex = queue.findIndex((item) => (item?.readoutId || item?.readout_id || item?.id) === readoutId);
+    const status = emptyReadoutIds.includes(readoutId)
+      ? "empty"
+      : missingReadoutIds.includes(readoutId) || remainingReadoutIds.includes(readoutId)
+        ? "missing"
+        : readoutRequest.status || null;
+    const label = readoutRequest.label || context.fallbackLabel || readoutId;
+    const source = readoutRequest.source || readoutRequest.readoutSource || readoutRequest.readout_source || context.source || "pending_request_queue";
+    const queuePosition = queueIndex >= 0
+      ? queueIndex + 1
+      : pickDefined(readoutRequest.queuePosition, readoutRequest.queue_position, 1);
+    return {
+      id: readoutId,
+      readoutId,
+      readout_id: readoutId,
+      label,
+      status,
+      source,
+      queuePosition,
+      queue_position: queuePosition,
+      isPending: true,
+      is_pending: true,
+      isMissing: status === "missing",
+      is_missing: status === "missing",
+      isEmpty: status === "empty",
+      is_empty: status === "empty",
+      readoutRequest,
+      readout_request: readoutRequest
+    };
+  }
+
   function synchronizeDtcNextReadoutSummary(summary = null, request = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary) || request?.readoutId !== "dtc_snapshot") return summary;
     return {
@@ -14540,6 +14583,13 @@
     const nextReadoutRequest = clearCompletedNextReadout
       ? pendingReadoutRequestQueue[0] || null
       : normalizeReadoutRequestSummaryAliases(nextReadoutRequestInput, dtcStatusReadoutPlan);
+    const promotedNextReadoutSummary = clearCompletedNextReadout && nextReadoutRequest ? buildPromotedNextReadoutSummary(nextReadoutRequest, {
+      missingReadoutIds,
+      remainingReadoutIds,
+      emptyReadoutIds,
+      queue: pendingReadoutRequestQueue,
+      source: "pending_request_queue"
+    }) : null;
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
     const savedPlanNextRequestId = savedPlanNextRequest?.readoutId || savedPlanNextRequest?.readout_id || savedPlanNextRequest?.id || null;
     const removedCompletedSavedRequest = removedCompletedPendingRequest || completedReadoutIds.has(savedPlanNextRequestId);
@@ -14573,13 +14623,13 @@
         isDtcNextReadoutRequest || clearCompletedNextReadout ? nextReadoutRequest : null
       );
     const nextReadoutSummary = clearCompletedNextReadout
-      ? null
+      ? promotedNextReadoutSummary
       : isDtcNextReadoutRequest
       ? synchronizeDtcNextReadoutSummary(savedNextReadoutSummary, nextReadoutRequest)
       : savedNextReadoutSummary;
     const savedOrBuiltNextReadoutReasonSummary = savedNextReadoutReasonSummary || buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
     const nextReadoutReasonSummary = clearCompletedNextReadout
-      ? null
+      ? buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary)
       : isDtcNextReadoutRequest
       ? synchronizeDtcNextReadoutReasonSummary(savedOrBuiltNextReadoutReasonSummary, nextReadoutRequest)
       : savedOrBuiltNextReadoutReasonSummary;
@@ -14597,7 +14647,7 @@
       nextActionId: savedNextReadoutGuardSummary.nextActionId || savedNextReadoutGuardSummary.next_action_id || null
     } : null;
     const nextReadoutGuardSummary = clearCompletedNextReadout
-      ? null
+      ? nextReadoutRequest ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate) : null
       : isDtcNextReadoutRequest
       ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate)
       : savedNextReadoutGuardSummary || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
@@ -14789,10 +14839,10 @@
       dtc_fault_detection_counter_summary: dtcFaultDetectionCounterSummary,
       dtcStatusReadoutPlan,
       dtc_status_readout_plan: dtcStatusReadoutPlan,
-      nextPendingReadoutId: pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutIds[0], null),
-      next_pending_readout_id: pickDefined(summary.next_pending_readout_id, summary.nextPendingReadoutId, pendingReadoutIds[0], null),
-      nextPendingReadoutState: summary.nextPendingReadoutState || summary.next_pending_readout_state || null,
-      next_pending_readout_state: summary.next_pending_readout_state || summary.nextPendingReadoutState || null,
+      nextPendingReadoutId: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutIds[0], null),
+      next_pending_readout_id: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.next_pending_readout_id, summary.nextPendingReadoutId, pendingReadoutIds[0], null),
+      nextPendingReadoutState: clearCompletedNextReadout ? nextReadoutSummary?.status || null : summary.nextPendingReadoutState || summary.next_pending_readout_state || null,
+      next_pending_readout_state: clearCompletedNextReadout ? nextReadoutSummary?.status || null : summary.next_pending_readout_state || summary.nextPendingReadoutState || null,
       readoutStates: normalizeArray("readoutStates", "readout_states"),
       readout_states: normalizeArray("readoutStates", "readout_states"),
       readoutStateById: normalizeObject("readoutStateById", "readout_state_by_id"),
@@ -14813,10 +14863,18 @@
       next_readout_candidate_safety_summary: nextReadoutCandidateSafetySummary,
       nextRecommendedReadoutId: pickDefined(summary.nextRecommendedReadoutId, summary.next_recommended_readout_id, null),
       next_recommended_readout_id: pickDefined(summary.next_recommended_readout_id, summary.nextRecommendedReadoutId, null),
-      nextReadoutSource: pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
-      next_readout_source: pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
-      nextReadoutState: summary.nextReadoutState || summary.next_readout_state || null,
-      next_readout_state: summary.next_readout_state || summary.nextReadoutState || null,
+      nextReadoutId: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.nextReadoutId, summary.next_readout_id, null),
+      next_readout_id: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.next_readout_id, summary.nextReadoutId, null),
+      nextReadoutLabel: clearCompletedNextReadout ? nextReadoutSummary?.label || null : pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
+      next_readout_label: clearCompletedNextReadout ? nextReadoutSummary?.label || null : pickDefined(summary.next_readout_label, summary.nextReadoutLabel, null),
+      nextReadoutStatus: clearCompletedNextReadout ? nextReadoutSummary?.status || null : pickDefined(summary.nextReadoutStatus, summary.next_readout_status, null),
+      next_readout_status: clearCompletedNextReadout ? nextReadoutSummary?.status || null : pickDefined(summary.next_readout_status, summary.nextReadoutStatus, null),
+      nextReadoutSource: clearCompletedNextReadout ? nextReadoutSummary?.source || null : pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
+      next_readout_source: clearCompletedNextReadout ? nextReadoutSummary?.source || null : pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
+      nextReadoutQueuePosition: clearCompletedNextReadout ? nextReadoutSummary?.queuePosition || null : pickDefined(summary.nextReadoutQueuePosition, summary.next_readout_queue_position, null),
+      next_readout_queue_position: clearCompletedNextReadout ? nextReadoutSummary?.queuePosition || null : pickDefined(summary.next_readout_queue_position, summary.nextReadoutQueuePosition, null),
+      nextReadoutState: clearCompletedNextReadout ? nextReadoutSummary?.status || null : summary.nextReadoutState || summary.next_readout_state || null,
+      next_readout_state: clearCompletedNextReadout ? nextReadoutSummary?.status || null : summary.next_readout_state || summary.nextReadoutState || null,
       nextReadoutSummary,
       next_readout_summary: nextReadoutSummary,
       nextReadoutReasonSummary,
@@ -14912,6 +14970,24 @@
     const nextReadoutRequest = clearCompletedNextReadout
       ? pendingReadoutRequestQueue[0] || null
       : normalizeReadoutRequestSummaryAliases(nextReadoutRequestInput, dtcStatusReadoutPlan);
+    const readReadoutIds = (camelKey, snakeKey) => {
+      if (Array.isArray(summary[camelKey])) return summary[camelKey];
+      if (Array.isArray(summary[snakeKey])) return summary[snakeKey];
+      if (Array.isArray(fallbackCoreSessionStatus?.[camelKey])) return fallbackCoreSessionStatus[camelKey];
+      if (Array.isArray(fallbackCoreSessionStatus?.[snakeKey])) return fallbackCoreSessionStatus[snakeKey];
+      return [];
+    };
+    const fallbackPrimaryReadoutId = fallbackCoreSessionStatus?.primaryBlockingReadoutId || fallbackCoreSessionStatus?.primary_blocking_readout_id || null;
+    const promotedNextReadoutSummary = clearCompletedNextReadout && nextReadoutRequest ? buildPromotedNextReadoutSummary(nextReadoutRequest, {
+      missingReadoutIds: readReadoutIds("missingReadoutIds", "missing_readout_ids"),
+      remainingReadoutIds: readReadoutIds("remainingReadoutIds", "remaining_readout_ids"),
+      emptyReadoutIds: readReadoutIds("emptyReadoutIds", "empty_readout_ids"),
+      queue: pendingReadoutRequestQueue,
+      fallbackLabel: fallbackPrimaryReadoutId === nextReadoutRequest.readoutId
+        ? fallbackCoreSessionStatus?.primaryBlockingReadoutLabel || fallbackCoreSessionStatus?.primary_blocking_readout_label || null
+        : null,
+      source: "pending_request_queue"
+    }) : null;
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
     const removedCompletedSavedRequest = removedCompletedPendingRequest || completedReadoutIds.has(savedPlanNextRequestId);
     const hasSynchronizedPendingReadoutRequest = isDtcNextReadoutRequest
@@ -14937,7 +15013,7 @@
       );
     const savedNextReadoutReasonSummary = summary.nextReadoutReasonSummary || summary.next_readout_reason_summary || null;
     const nextReadoutReasonSummary = clearCompletedNextReadout
-      ? null
+      ? buildNextReadoutReasonSummary(promotedNextReadoutSummary, null)
       : isDtcNextReadoutRequest
       ? synchronizeDtcNextReadoutReasonSummary(savedNextReadoutReasonSummary, nextReadoutRequest)
       : savedNextReadoutReasonSummary;
@@ -14958,7 +15034,7 @@
       nextActionId: savedNextReadoutGuardSummary.nextActionId || savedNextReadoutGuardSummary.next_action_id || null
     } : null;
     const nextReadoutGuardSummary = clearCompletedNextReadout
-      ? null
+      ? nextReadoutRequest ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate) : null
       : isDtcNextReadoutRequest
       ? buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary || savedNextReadoutGuardGate)
       : savedNextReadoutGuardSummary || buildNextReadoutGuardSummary(nextReadoutReasonSummary, nextReadoutRequestSafetySummary, readoutRequestPlanGateSummary);
@@ -15221,14 +15297,14 @@
       next_action: pickDefined(summary.next_action, summary.nextAction, null),
       nextReadoutId: clearCompletedNextReadout ? nextReadoutRequest?.readoutId || null : pickDefined(summary.nextReadoutId, summary.next_readout_id, null),
       next_readout_id: clearCompletedNextReadout ? nextReadoutRequest?.readoutId || null : pickDefined(summary.next_readout_id, summary.nextReadoutId, null),
-      nextReadoutLabel: clearCompletedNextReadout ? null : pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
-      next_readout_label: clearCompletedNextReadout ? null : pickDefined(summary.next_readout_label, summary.nextReadoutLabel, null),
-      nextReadoutStatus: clearCompletedNextReadout ? null : pickDefined(summary.nextReadoutStatus, summary.next_readout_status, null),
-      next_readout_status: clearCompletedNextReadout ? null : pickDefined(summary.next_readout_status, summary.nextReadoutStatus, null),
-      nextReadoutSource: clearCompletedNextReadout ? null : pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
-      next_readout_source: clearCompletedNextReadout ? null : pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
-      nextReadoutQueuePosition: clearCompletedNextReadout ? null : pickDefined(summary.nextReadoutQueuePosition, summary.next_readout_queue_position, null),
-      next_readout_queue_position: clearCompletedNextReadout ? null : pickDefined(summary.next_readout_queue_position, summary.nextReadoutQueuePosition, null),
+      nextReadoutLabel: clearCompletedNextReadout ? promotedNextReadoutSummary?.label || null : pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
+      next_readout_label: clearCompletedNextReadout ? promotedNextReadoutSummary?.label || null : pickDefined(summary.next_readout_label, summary.nextReadoutLabel, null),
+      nextReadoutStatus: clearCompletedNextReadout ? promotedNextReadoutSummary?.status || null : pickDefined(summary.nextReadoutStatus, summary.next_readout_status, null),
+      next_readout_status: clearCompletedNextReadout ? promotedNextReadoutSummary?.status || null : pickDefined(summary.next_readout_status, summary.nextReadoutStatus, null),
+      nextReadoutSource: clearCompletedNextReadout ? promotedNextReadoutSummary?.source || null : pickDefined(summary.nextReadoutSource, summary.next_readout_source, null),
+      next_readout_source: clearCompletedNextReadout ? promotedNextReadoutSummary?.source || null : pickDefined(summary.next_readout_source, summary.nextReadoutSource, null),
+      nextReadoutQueuePosition: clearCompletedNextReadout ? promotedNextReadoutSummary?.queuePosition || null : pickDefined(summary.nextReadoutQueuePosition, summary.next_readout_queue_position, null),
+      next_readout_queue_position: clearCompletedNextReadout ? promotedNextReadoutSummary?.queuePosition || null : pickDefined(summary.next_readout_queue_position, summary.nextReadoutQueuePosition, null),
       nextReadoutReasonSummary,
       next_readout_reason_summary: nextReadoutReasonSummary,
       nextReadoutGuardSummary,
