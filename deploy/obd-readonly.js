@@ -3960,10 +3960,14 @@
       .some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const malformedVciDeviceRow = devices.some((device) => !device || typeof device !== "object" || Array.isArray(device));
     const bridgeSafety = readBridgeSnapshotSafety(response, Array.isArray(response) || Array.isArray(data) || [data.devices, data.vci_devices, data.items].some(Array.isArray));
-    const errorCodes = readBridgeResponseErrorCodes(response);
+    const sourceErrorCodes = readBridgeResponseErrorCodes(response);
+    const scopedVciErrorCodes = [...new Set(devices.flatMap((device) => readBridgeResponseErrorCodes(device)))].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedVciErrorCodes])].slice(0, 12);
     const resolvedBridgeSafety = malformedVciListAlias || malformedVciDeviceRow
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
-      : errorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+      : sourceErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
+        ? { ...bridgeSafety, ok: false, unparsed: true }
+      : scopedVciErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
         ? { ...bridgeSafety, ok: false, unparsed: true }
       : bridgeSafety;
     const selectedDeviceId = data.selected_device_id || data.selectedDeviceId || data.selected_vci_id || data.selectedVciId || null;
@@ -3975,6 +3979,7 @@
     const driverReadiness = normalizeBridgeDriverReadiness(data);
     const normalizedDevices = (malformedVciDeviceRow ? [] : devices).map((device, index) => {
       const id = String(device?.id || device?.device_id || device?.deviceId || `vci_${index + 1}`).slice(0, 80);
+      const deviceErrorCodes = readBridgeResponseErrorCodes(device);
       const deviceReplayMode = device?.replay_mode === true || device?.replayMode === true || replayMode;
       const deviceSampleMode = !deviceReplayMode && (device?.sample_mode === true || device?.sampleMode === true || sampleMode);
       const driverStatus = String(device?.driver_status || device?.driverStatus || data.driver_status || data.driverStatus || "unknown").slice(0, 80);
@@ -4077,6 +4082,8 @@
         replayMode: deviceReplayMode,
         replay_mode: deviceReplayMode,
         selected: selectedDeviceId ? id === selectedDeviceId : explicitlySelectedDeviceIndex >= 0 ? index === explicitlySelectedDeviceIndex : index === 0 && devices.length === 1,
+        errorCodes: deviceErrorCodes,
+        error_codes: [...deviceErrorCodes],
         vehicleCommandEnabled: false,
         vehicle_command_enabled: false,
         supportNote: "VCI識別情報は表示用に最小化し、シリアル番号などの生識別子は保持しません。"
@@ -4098,6 +4105,8 @@
       selectedDeviceId: selectedDeviceId || normalizedDevices.find((device) => device.selected)?.id || null,
       devices: normalizedDevices,
       deviceCount: normalizedDevices.length,
+      errorResponseCount: normalizedDevices.filter((device) => readBridgeResponseErrorCodes(device).length > 0).length,
+      error_response_count: normalizedDevices.filter((device) => readBridgeResponseErrorCodes(device).length > 0).length,
       connectionEnabled: localBridgeContract.connectionEnabled,
       vehicleCommandEnabled: false,
       errorCodes,
