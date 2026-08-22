@@ -6874,8 +6874,10 @@
     const capturedIds = items.filter((item) => item.captured).map((item) => item.id);
     const emptyIds = items.filter((item) => item.empty).map((item) => item.id);
     const missingIds = items.filter((item) => item.missing).map((item) => item.id);
-    const pendingIds = [...missingIds, ...emptyIds];
-    const attemptedIds = [...capturedIds, ...emptyIds];
+    const unresolvedItems = items.filter((item) => !["captured", "empty", "missing"].includes(item.status));
+    const unresolvedIds = unresolvedItems.map((item) => item.id);
+    const pendingIds = [...missingIds, ...emptyIds, ...unresolvedIds];
+    const attemptedIds = [...capturedIds, ...emptyIds, ...unresolvedIds];
     const errorReadoutItems = items.filter((item) => item.errorCodes.length > 0);
     const errorReadoutIds = errorReadoutItems.map((item) => item.id);
     const errorCodesByReadoutId = Object.fromEntries(errorReadoutItems.map((item) => [item.id, [...item.errorCodes]]));
@@ -7197,6 +7199,8 @@
       capturedReadoutCount: capturedIds.length,
       emptyReadoutCount: emptyIds.length,
       missingReadoutCount: missingIds.length,
+      unresolvedReadoutCount: unresolvedIds.length,
+      unresolved_readout_count: unresolvedIds.length,
       pendingReadoutCount: pendingIds.length,
       attemptedReadoutCount: attemptedIds.length,
       capturedReadoutPercent: percent(capturedIds.length),
@@ -7208,12 +7212,15 @@
       itemsByStatus: {
         captured: items.filter((item) => item.captured),
         empty: items.filter((item) => item.empty),
-        missing: items.filter((item) => item.missing)
+        missing: items.filter((item) => item.missing),
+        unresolved: unresolvedItems
       },
       items,
       capturedIds,
       emptyIds,
       missingIds,
+      unresolvedIds,
+      unresolved_ids: unresolvedIds,
       pendingIds,
       attemptedIds,
       errorReadoutCount: errorReadoutIds.length,
