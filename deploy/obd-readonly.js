@@ -17449,6 +17449,7 @@
       : summary.blockers_by_id && typeof summary.blockers_by_id === "object" ? summary.blockers_by_id : {};
     const blockersById = Object.fromEntries(Object.entries(sourceBlockersById).map(([reasonId, reason]) => [reasonId, reason && typeof reason === "object" ? { ...reason } : reason]));
     let removedReadoutBlocker = false;
+    const removedReadoutIds = new Set();
     const readoutIdsByReasonId = {};
     ["missing_readouts", "empty_readouts"].forEach((reasonId) => {
       const reason = blockersById[reasonId];
@@ -17458,7 +17459,9 @@
       if (!sourceReadoutIds) return;
       const filteredReadoutIds = [...new Set(sourceReadoutIds.filter(Boolean).map(String))].filter((readoutId) => !completedReadoutIds.has(readoutId));
       readoutIdsByReasonId[reasonId] = filteredReadoutIds;
-      if (!sourceReadoutIds.some((readoutId) => completedReadoutIds.has(String(readoutId)))) return;
+      const completedReasonReadoutIds = sourceReadoutIds.filter((readoutId) => completedReadoutIds.has(String(readoutId))).map(String);
+      if (completedReasonReadoutIds.length === 0) return;
+      completedReasonReadoutIds.forEach((readoutId) => removedReadoutIds.add(readoutId));
       removedReadoutBlocker = true;
       if (filteredReadoutIds.length === 0) {
         const blockerIndex = blockerIds.indexOf(reasonId);
@@ -17488,6 +17491,84 @@
       emptyReadoutCount,
       empty_readout_count: emptyReadoutCount
     } : blockerSummaryInput;
+    const fallbackRequiredReadoutIds = Array.isArray(fallbackCoreSessionStatus?.requiredReadoutIds)
+      ? fallbackCoreSessionStatus.requiredReadoutIds
+      : Array.isArray(fallbackCoreSessionStatus?.required_readout_ids) ? fallbackCoreSessionStatus.required_readout_ids : null;
+    const fallbackCapturedReadoutIds = Array.isArray(fallbackCoreSessionStatus?.capturedReadoutIds)
+      ? fallbackCoreSessionStatus.capturedReadoutIds
+      : Array.isArray(fallbackCoreSessionStatus?.captured_readout_ids) ? fallbackCoreSessionStatus.captured_readout_ids : null;
+    const synchronizeRequiredReadoutsChecklistItem = (item = null) => {
+      if (!item || typeof item !== "object" || String(item.id || "") !== "required_readouts") return item;
+      const readItemCount = (camelKey, snakeKey) => Number(item[camelKey] ?? item[snakeKey] ?? 0) || 0;
+      const requiredCount = fallbackRequiredReadoutIds?.length
+        || readItemCount("requiredCount", "required_count")
+        || readItemCount("capturedCount", "captured_count") + readItemCount("pendingCount", "pending_count");
+      const capturedEvidenceCount = new Set([...(fallbackCapturedReadoutIds || []), ...removedReadoutIds]).size;
+      const capturedCount = Math.min(requiredCount || Number.POSITIVE_INFINITY, Math.max(
+        readItemCount("capturedCount", "captured_count"),
+        capturedEvidenceCount,
+        requiredCount - pendingReadoutCount
+      ));
+      return {
+        ...item,
+        state: pendingReadoutCount > 0 ? "pending" : "complete",
+        complete: pendingReadoutCount === 0,
+        blocking: pendingReadoutCount > 0,
+        requiredCount,
+        required_count: requiredCount,
+        capturedCount,
+        captured_count: capturedCount,
+        missingCount: missingReadoutCount,
+        missing_count: missingReadoutCount,
+        emptyCount: emptyReadoutCount,
+        empty_count: emptyReadoutCount,
+        pendingCount: pendingReadoutCount,
+        pending_count: pendingReadoutCount
+      };
+    };
+    const sourceChecklist = Array.isArray(summary.checklist) ? summary.checklist : [];
+    const checklistHasRequiredReadouts = sourceChecklist.some((item) => String(item?.id || "") === "required_readouts");
+    const checklist = checklistHasRequiredReadouts
+      ? sourceChecklist.map((item) => synchronizeRequiredReadoutsChecklistItem(item))
+      : sourceChecklist;
+    const sourceChecklistById = summary.checklistById && typeof summary.checklistById === "object"
+      ? summary.checklistById
+      : summary.checklist_by_id && typeof summary.checklist_by_id === "object" ? summary.checklist_by_id : {};
+    const requiredReadoutsChecklistKey = Object.prototype.hasOwnProperty.call(sourceChecklistById, "required_readouts")
+      ? "required_readouts"
+      : Object.prototype.hasOwnProperty.call(sourceChecklistById, "requiredReadouts") ? "requiredReadouts" : null;
+    const synchronizedRequiredReadoutsChecklist = checklist.find((item) => String(item?.id || "") === "required_readouts") || null;
+    const checklistById = requiredReadoutsChecklistKey ? {
+      ...sourceChecklistById,
+      [requiredReadoutsChecklistKey]: synchronizeRequiredReadoutsChecklistItem({
+        ...sourceChecklistById[requiredReadoutsChecklistKey],
+        id: "required_readouts"
+      })
+    } : synchronizedRequiredReadoutsChecklist ? {
+      ...sourceChecklistById,
+      required_readouts: { ...synchronizedRequiredReadoutsChecklist }
+    } : sourceChecklistById;
+    const checklistWasSynchronized = checklistHasRequiredReadouts || Boolean(requiredReadoutsChecklistKey);
+    const checklistSummaryInput = summary.checklistSummary || summary.checklist_summary || null;
+    const checklistItemsForSummary = checklist.length > 0 ? checklist : Object.values(checklistById);
+    const checklistSummary = checklistWasSynchronized && checklistSummaryInput && typeof checklistSummaryInput === "object" ? {
+      ...checklistSummaryInput,
+      totalCount: checklistItemsForSummary.length,
+      total_count: checklistItemsForSummary.length,
+      completeCount: checklistItemsForSummary.filter((item) => item?.complete === true).length,
+      complete_count: checklistItemsForSummary.filter((item) => item?.complete === true).length,
+      blockingCount: checklistItemsForSummary.filter((item) => item?.blocking === true).length,
+      blocking_count: checklistItemsForSummary.filter((item) => item?.blocking === true).length,
+      reviewCount: checklistItemsForSummary.filter((item) => item?.state === "review").length,
+      review_count: checklistItemsForSummary.filter((item) => item?.state === "review").length,
+      pendingCount: checklistItemsForSummary.filter((item) => item?.state === "pending").length,
+      pending_count: checklistItemsForSummary.filter((item) => item?.state === "pending").length,
+      blockedIds: checklistItemsForSummary.filter((item) => item?.blocking === true).map((item) => item.id).filter(Boolean),
+      blocked_ids: checklistItemsForSummary.filter((item) => item?.blocking === true).map((item) => item.id).filter(Boolean),
+      reviewIds: checklistItemsForSummary.filter((item) => item?.state === "review").map((item) => item.id).filter(Boolean),
+      review_ids: checklistItemsForSummary.filter((item) => item?.state === "review").map((item) => item.id).filter(Boolean),
+      ready: blockerIds.length === 0
+    } : checklistSummaryInput;
     const currentNextReadoutId = summary.nextReadoutId || summary.next_readout_id || null;
     const fallbackPendingReadoutIds = Array.isArray(fallbackCoreSessionStatus?.pendingReadoutIds)
       ? fallbackCoreSessionStatus.pendingReadoutIds
@@ -17498,7 +17579,7 @@
     const allOriginalBlockersWereCompletedReadouts = originalBlockerIds.length > 0
       && originalBlockerIds.every((reasonId) => ["missing_readouts", "empty_readouts"].includes(reasonId))
       && blockerIds.length === 0;
-    const ready = allOriginalBlockersWereCompletedReadouts ? true : summary.ready === true;
+    const ready = blockerIds.length === 0 && (allOriginalBlockersWereCompletedReadouts || summary.ready === true);
     const fallbackCompletionPercent = Number(fallbackCoreSessionStatus?.completionPercent ?? fallbackCoreSessionStatus?.completion_percent);
     const completionPercent = Number.isFinite(fallbackCompletionPercent)
       ? Math.max(0, Math.min(100, Math.round(fallbackCompletionPercent)))
@@ -17506,6 +17587,7 @@
     return {
       ...summary,
       ready,
+      status: ready ? "analysis_ready" : summary.status || null,
       blockerCount: blockerIds.length,
       blocker_count: blockerIds.length,
       blockerIds,
@@ -17514,6 +17596,11 @@
       blocker_summary: blockerSummary,
       blockersById,
       blockers_by_id: blockersById,
+      checklist,
+      checklistById,
+      checklist_by_id: checklistById,
+      checklistSummary,
+      checklist_summary: checklistSummary,
       missingReadoutCount,
       missing_readout_count: missingReadoutCount,
       emptyReadoutCount,
