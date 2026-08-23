@@ -19512,6 +19512,85 @@
       const synchronizedStatus = corePendingIds.length > 0
         ? "collecting_readouts"
         : fallbackCoreSessionStatus?.status || "blocked";
+      const checklistIdByBlockerId = {
+        missing_readouts: "required_readouts",
+        empty_readouts: "required_readouts",
+        blocking_warnings: "blocking_warnings",
+        readout_quality: "readout_quality",
+        vehicle_applicability: "vehicle_applicability"
+      };
+      const blockingChecklistIds = [...new Set(coreBlockerIds.map((reasonId) => checklistIdByBlockerId[reasonId]).filter(Boolean))];
+      const checklistLabelsById = {
+        required_readouts: "Required core readouts",
+        blocking_warnings: "Blocking warnings",
+        readout_quality: "Readout quality",
+        vehicle_applicability: "Vehicle applicability"
+      };
+      const synchronizeBlockingChecklistItem = (item = {}) => {
+        const itemId = String(item.id || "");
+        if (!blockingChecklistIds.includes(itemId)) return item;
+        const isRequiredReadouts = itemId === "required_readouts";
+        const fallbackApplicability = fallbackCoreSessionStatus?.vehicleApplicability || fallbackCoreSessionStatus?.vehicle_applicability || null;
+        return {
+          ...item,
+          id: itemId,
+          label: item.label || checklistLabelsById[itemId] || itemId,
+          state: isRequiredReadouts ? "pending" : "blocked",
+          complete: false,
+          blocking: true,
+          ...(isRequiredReadouts ? {
+            requiredCount: coreRequiredIds.length,
+            required_count: coreRequiredIds.length,
+            capturedCount: coreCapturedIds.length,
+            captured_count: coreCapturedIds.length,
+            missingCount: coreMissingIds.length,
+            missing_count: coreMissingIds.length,
+            emptyCount: coreEmptyIds.length,
+            empty_count: coreEmptyIds.length,
+            pendingCount: corePendingIds.length,
+            pending_count: corePendingIds.length
+          } : {}),
+          ...(itemId === "vehicle_applicability" ? {
+            applicabilityStatus: fallbackApplicability?.status || fallbackApplicability?.applicabilityStatus || fallbackApplicability?.applicability_status || "unconfirmed",
+            applicability_status: fallbackApplicability?.status || fallbackApplicability?.applicability_status || fallbackApplicability?.applicabilityStatus || "unconfirmed",
+            reviewRequired: true,
+            review_required: true
+          } : {})
+        };
+      };
+      const sourceChecklist = Array.isArray(summary.checklist) ? summary.checklist : [];
+      const sourceChecklistById = summary.checklistById && typeof summary.checklistById === "object"
+        ? summary.checklistById
+        : summary.checklist_by_id && typeof summary.checklist_by_id === "object" ? summary.checklist_by_id : {};
+      const synchronizedChecklistById = Object.fromEntries(Object.entries(sourceChecklistById).map(([itemId, item]) => [itemId, synchronizeBlockingChecklistItem({ ...(item || {}), id: item?.id || itemId })]));
+      const checklist = sourceChecklist.map((item) => synchronizeBlockingChecklistItem(item));
+      blockingChecklistIds.forEach((itemId) => {
+        if (!synchronizedChecklistById[itemId]) synchronizedChecklistById[itemId] = synchronizeBlockingChecklistItem({ id: itemId, label: checklistLabelsById[itemId] });
+        if (!checklist.some((item) => String(item?.id || "") === itemId)) checklist.push({ ...synchronizedChecklistById[itemId] });
+      });
+      checklist.forEach((item) => {
+        const itemId = String(item?.id || "");
+        if (itemId) synchronizedChecklistById[itemId] = { ...item };
+      });
+      const checklistSummaryInput = summary.checklistSummary || summary.checklist_summary || {};
+      const checklistSummary = checklist.length > 0 ? {
+        ...checklistSummaryInput,
+        totalCount: checklist.length,
+        total_count: checklist.length,
+        completeCount: checklist.filter((item) => item?.complete === true).length,
+        complete_count: checklist.filter((item) => item?.complete === true).length,
+        blockingCount: checklist.filter((item) => item?.blocking === true).length,
+        blocking_count: checklist.filter((item) => item?.blocking === true).length,
+        reviewCount: checklist.filter((item) => item?.state === "review").length,
+        review_count: checklist.filter((item) => item?.state === "review").length,
+        pendingCount: checklist.filter((item) => item?.state === "pending").length,
+        pending_count: checklist.filter((item) => item?.state === "pending").length,
+        blockedIds: checklist.filter((item) => item?.blocking === true).map((item) => item.id).filter(Boolean),
+        blocked_ids: checklist.filter((item) => item?.blocking === true).map((item) => item.id).filter(Boolean),
+        reviewIds: checklist.filter((item) => item?.state === "review").map((item) => item.id).filter(Boolean),
+        review_ids: checklist.filter((item) => item?.state === "review").map((item) => item.id).filter(Boolean),
+        ready: false
+      } : checklistSummaryInput;
       return normalizeAnalysisReadinessSummaryAliases({
         ...summary,
         ready: false,
@@ -19524,6 +19603,11 @@
         blocker_count: blockerIds.length,
         blockersById,
         blockers_by_id: blockersById,
+        checklist,
+        checklistById: synchronizedChecklistById,
+        checklist_by_id: synchronizedChecklistById,
+        checklistSummary,
+        checklist_summary: checklistSummary,
         blockerSummary: fallbackCoreSessionStatus?.analysisBlockerSummary || fallbackCoreSessionStatus?.analysis_blocker_summary || summary.blockerSummary || summary.blocker_summary || null,
         blocker_summary: fallbackCoreSessionStatus?.analysis_blocker_summary || fallbackCoreSessionStatus?.analysisBlockerSummary || summary.blocker_summary || summary.blockerSummary || null,
         missingReadoutCount: coreMissingIds.length,
