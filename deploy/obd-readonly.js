@@ -19481,16 +19481,23 @@
       || summary.readyForAnalysis === true
       || summary.ready_for_analysis === true
       || ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase());
-    if (summaryClaimsReady && corePendingIds.length > 0) {
+    const fallbackCoreBlockerIds = [
+      ...(Array.isArray(fallbackCoreSessionStatus?.blockingReasonIds) ? fallbackCoreSessionStatus.blockingReasonIds : []),
+      ...(Array.isArray(fallbackCoreSessionStatus?.blocking_reason_ids) ? fallbackCoreSessionStatus.blocking_reason_ids : []),
+      ...(Array.isArray(fallbackCoreSessionStatus?.analysisBlockers) ? fallbackCoreSessionStatus.analysisBlockers : []),
+      ...(Array.isArray(fallbackCoreSessionStatus?.analysis_blockers) ? fallbackCoreSessionStatus.analysis_blockers : [])
+    ].filter(Boolean).map(String);
+    if (summaryClaimsReady && (corePendingIds.length > 0 || fallbackCoreBlockerIds.length > 0)) {
       const coreCapturedIds = readCoreIds("capturedReadoutIds", "captured_readout_ids");
       const explicitRequiredIds = readCoreIds("requiredReadoutIds", "required_readout_ids");
       const coreRequiredIds = explicitRequiredIds.length > 0
         ? explicitRequiredIds
         : [...new Set([...coreCapturedIds, ...corePendingIds])].sort();
-      const coreBlockerIds = [
+      const coreBlockerIds = [...new Set([
+        ...fallbackCoreBlockerIds,
         ...(coreMissingIds.length > 0 ? ["missing_readouts"] : []),
         ...(coreEmptyIds.length > 0 ? ["empty_readouts"] : [])
-      ];
+      ])].sort();
       const fallbackBlockersById = fallbackCoreSessionStatus?.analysisBlockerById || fallbackCoreSessionStatus?.analysis_blocker_by_id || {};
       const savedBlockersById = summary.blockersById || summary.blockers_by_id || {};
       const blockersById = { ...savedBlockersById, ...fallbackBlockersById };
@@ -19498,15 +19505,19 @@
         ...(Array.isArray(summary.blockerIds) ? summary.blockerIds : Array.isArray(summary.blocker_ids) ? summary.blocker_ids : []),
         ...coreBlockerIds
       ].filter(Boolean).map(String))].sort();
-      const completionPercent = coreRequiredIds.length > 0
+      const savedCompletionPercent = Number(summary.completionPercent ?? summary.completion_percent ?? 0);
+      const completionPercent = corePendingIds.length > 0 && coreRequiredIds.length > 0
         ? Math.min(99, Math.round((coreCapturedIds.filter((readoutId) => coreRequiredIds.includes(readoutId)).length / coreRequiredIds.length) * 100))
-        : 0;
+        : Number.isFinite(savedCompletionPercent) ? Math.max(0, Math.min(100, Math.round(savedCompletionPercent))) : 0;
+      const synchronizedStatus = corePendingIds.length > 0
+        ? "collecting_readouts"
+        : fallbackCoreSessionStatus?.status || "blocked";
       return normalizeAnalysisReadinessSummaryAliases({
         ...summary,
         ready: false,
         readyForAnalysis: false,
         ready_for_analysis: false,
-        status: "collecting_readouts",
+        status: synchronizedStatus,
         blockerIds,
         blocker_ids: [...blockerIds],
         blockerCount: blockerIds.length,
@@ -19541,10 +19552,10 @@
         next_readout_label: fallbackCoreSessionStatus?.next_readout_label || fallbackCoreSessionStatus?.nextReadoutLabel || corePendingIds[0] || null,
         nextReadoutStatus: fallbackCoreSessionStatus?.nextReadoutStatus || fallbackCoreSessionStatus?.next_readout_status || null,
         next_readout_status: fallbackCoreSessionStatus?.next_readout_status || fallbackCoreSessionStatus?.nextReadoutStatus || null,
-        nextReadoutSource: "fallback_core_session",
-        next_readout_source: "fallback_core_session",
-        nextReadoutQueuePosition: 1,
-        next_readout_queue_position: 1
+        nextReadoutSource: corePendingIds.length > 0 ? "fallback_core_session" : null,
+        next_readout_source: corePendingIds.length > 0 ? "fallback_core_session" : null,
+        nextReadoutQueuePosition: corePendingIds.length > 0 ? 1 : null,
+        next_readout_queue_position: corePendingIds.length > 0 ? 1 : null
       });
     }
     const completedReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
