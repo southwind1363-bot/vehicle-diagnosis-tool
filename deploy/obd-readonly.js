@@ -19262,14 +19262,14 @@
     const readoutId = pickDefined(summary.readoutId, summary.readout_id, null);
     const reasonId = pickDefined(summary.reasonId, summary.reason_id, null);
     const gateState = pickDefined(summary.gateState, summary.gate_state, "unknown");
-    const gateReady = readFlag("gateReady", "gate_ready", gateState === "ready");
+    const gateReady = String(gateState).trim().toLowerCase() === "ready" && readFlag("gateReady", "gate_ready", true);
     const actionRequired = readFlag("actionRequired", "action_required", false);
     const requestSafe = readFlag("requestSafe", "request_safe", false);
     const readOnly = pickDefined(summary.readOnly, summary.read_only, true) !== false;
     const nonTransmitting = readFlag("nonTransmitting", "non_transmitting", false);
     const vehicleCommandDisabled = readFlag("vehicleCommandDisabled", "vehicle_command_disabled", false);
     const executionDisabled = readFlag("executionDisabled", "execution_disabled", false);
-    const planningReady = pickDefined(summary.planningReady, summary.planning_ready, summary.safeForReadoutPlanning, summary.safe_for_readout_planning, false) === true;
+    const planningReady = Boolean(readoutId) && gateReady && !actionRequired && requestSafe && readOnly && nonTransmitting && vehicleCommandDisabled && executionDisabled;
     return {
       ...summary,
       schemaVersion,
