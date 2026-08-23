@@ -16225,7 +16225,23 @@
       || activeSavedPlanRequestIds.length
       || pendingReadoutRequestQueue.length
     );
-    if (!hasActiveSavedFlowRequest && removedCompletedFlowRequestEvidence && fallbackCoreSessionStatus) {
+    const hasSavedFlowStateEvidence = pickDefined(
+      summary.status,
+      summary.currentStep,
+      summary.current_step,
+      summary.nextAction,
+      summary.next_action,
+      summary.pendingReadoutCount,
+      summary.pending_readout_count,
+      summary.readoutCollectionRequired,
+      summary.readout_collection_required,
+      summary.readyForAnalysis,
+      summary.ready_for_analysis,
+      summary.canStartAnalysis,
+      summary.can_start_analysis,
+      null
+    ) !== null;
+    if (!hasActiveSavedFlowRequest && fallbackCoreSessionStatus && (removedCompletedFlowRequestEvidence || !hasSavedFlowStateEvidence)) {
       const fallbackPendingRequestQueueInput = Array.isArray(fallbackCoreSessionStatus.pendingReadoutRequestQueue)
         ? fallbackCoreSessionStatus.pendingReadoutRequestQueue
         : Array.isArray(fallbackCoreSessionStatus.pending_readout_request_queue) ? fallbackCoreSessionStatus.pending_readout_request_queue : [];
