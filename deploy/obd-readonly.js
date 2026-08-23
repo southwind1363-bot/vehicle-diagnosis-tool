@@ -16211,13 +16211,69 @@
     const savedPlanRequestIds = [...new Set(savedPlanRequestIdsInput.filter(Boolean).map(String))];
     const completedSavedPendingRequestInput = savedPendingReadoutRequestQueue.find((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id)) || null;
     const directSavedNextReadoutRequestInput = summary.nextReadoutRequest || summary.next_readout_request || null;
+    const directSavedNextReadoutRequestId = directSavedNextReadoutRequestInput?.readoutId || directSavedNextReadoutRequestInput?.readout_id || directSavedNextReadoutRequestInput?.id || null;
+    const directSavedNextReadoutCompleted = completedReadoutIds.has(directSavedNextReadoutRequestId);
+    const activeSavedPlanNextRequest = savedPlanNextRequestId && !completedReadoutIds.has(savedPlanNextRequestId) ? savedPlanNextRequest : null;
+    const activeSavedPlanRequestIds = savedPlanRequestIds.filter((readoutId) => !completedReadoutIds.has(readoutId));
+    const removedCompletedFlowRequestEvidence = directSavedNextReadoutCompleted
+      || completedReadoutIds.has(savedPlanNextRequestId)
+      || savedPlanRequestIds.some((readoutId) => completedReadoutIds.has(readoutId))
+      || removedCompletedPendingRequest;
+    const hasActiveSavedFlowRequest = Boolean(
+      (directSavedNextReadoutRequestInput && !directSavedNextReadoutCompleted)
+      || activeSavedPlanNextRequest
+      || activeSavedPlanRequestIds.length
+      || pendingReadoutRequestQueue.length
+    );
+    if (!hasActiveSavedFlowRequest && removedCompletedFlowRequestEvidence && fallbackCoreSessionStatus) {
+      const fallbackPendingRequestQueueInput = Array.isArray(fallbackCoreSessionStatus.pendingReadoutRequestQueue)
+        ? fallbackCoreSessionStatus.pendingReadoutRequestQueue
+        : Array.isArray(fallbackCoreSessionStatus.pending_readout_request_queue) ? fallbackCoreSessionStatus.pending_readout_request_queue : [];
+      const fallbackPendingRequestQueue = normalizePendingReadoutRequestQueueAliases(fallbackPendingRequestQueueInput, dtcStatusReadoutPlan, completedReadoutIds);
+      const fallbackPendingRequestPlan = fallbackCoreSessionStatus.pendingReadoutRequestPlan || fallbackCoreSessionStatus.pending_readout_request_plan || null;
+      const fallbackPlanNextRequestInput = fallbackPendingRequestPlan?.nextRequest || fallbackPendingRequestPlan?.next_request || null;
+      const fallbackNextRequestInput = fallbackCoreSessionStatus.nextReadoutRequest
+        || fallbackCoreSessionStatus.next_readout_request
+        || fallbackPlanNextRequestInput
+        || fallbackPendingRequestQueue.find((item) => item?.isNext === true || item?.is_next === true)
+        || fallbackPendingRequestQueue[0]
+        || null;
+      const fallbackNextRequest = normalizeReadoutRequestSummaryAliases(fallbackNextRequestInput, dtcStatusReadoutPlan);
+      const fallbackNextRequestId = fallbackNextRequest?.readoutId || null;
+      const fallbackPlanRequestIdsInput = Array.isArray(fallbackPendingRequestPlan?.requestIds)
+        ? fallbackPendingRequestPlan.requestIds
+        : Array.isArray(fallbackPendingRequestPlan?.request_ids) ? fallbackPendingRequestPlan.request_ids : [];
+      const fallbackRequestById = new Map(fallbackPendingRequestQueue
+        .map((item) => [item?.readoutId, item])
+        .filter(([id]) => Boolean(id)));
+      if (fallbackNextRequestId) {
+        const savedRequest = fallbackRequestById.get(fallbackNextRequestId) || {};
+        fallbackRequestById.set(fallbackNextRequestId, { ...savedRequest, ...fallbackNextRequest });
+      }
+      const fallbackRequestIds = [...new Set([
+        fallbackNextRequestId,
+        ...fallbackPendingRequestQueue.map((item) => item?.readoutId),
+        ...fallbackPlanRequestIdsInput.filter(Boolean).map(String)
+      ].filter(Boolean))].filter((readoutId) => !completedReadoutIds.has(readoutId));
+      pendingReadoutRequestQueue = fallbackRequestIds.map((readoutId, index) => {
+        const request = fallbackRequestById.get(readoutId)
+          || buildReadOnlyNextReadoutRequest({ id: readoutId, label: readoutId, status: "missing" }, fallbackCoreSessionStatus);
+        return request ? {
+          ...request,
+          queuePosition: index + 1,
+          queue_position: index + 1,
+          isNext: index === 0,
+          is_next: index === 0
+        } : null;
+      }).filter(Boolean);
+    }
     const savedNextReadoutRequestInput = directSavedNextReadoutRequestInput
       || (savedPlanNextRequestId === "dtc_snapshot" || completedReadoutIds.has(savedPlanNextRequestId) ? savedPlanNextRequest : null)
       || completedSavedPendingRequestInput;
-    const savedPendingNextReadoutCandidate = savedPlanNextRequest
+    const savedPendingNextReadoutCandidate = activeSavedPlanNextRequest
       || pendingReadoutRequestQueue.find((item) => item?.isNext === true || item?.is_next === true)
       || pendingReadoutRequestQueue[0]
-      || (savedPlanRequestIds[0] ? buildReadOnlyNextReadoutRequest({ id: savedPlanRequestIds[0], label: savedPlanRequestIds[0], status: "missing" }, summary) : null)
+      || (activeSavedPlanRequestIds[0] ? buildReadOnlyNextReadoutRequest({ id: activeSavedPlanRequestIds[0], label: activeSavedPlanRequestIds[0], status: "missing" }, summary) : null)
       || null;
     const normalizedSavedPendingNextReadoutCandidate = normalizeReadoutRequestSummaryAliases(
       savedPendingNextReadoutCandidate,
@@ -16243,7 +16299,7 @@
     const clearCompletedDtcNextReadout = nextReadoutRequestInputId === "dtc_snapshot" && dtcStatusReadoutComplete;
     const clearCompletedNextReadout = clearCompletedDtcNextReadout || explicitlyCompletedNonDtcReadoutIds.has(nextReadoutRequestInputId);
     const recoverSavedPendingNextReadout = Boolean(recoveredSavedPendingNextReadoutRequest);
-    const rebuildSavedPendingRequestPlan = !directSavedNextReadoutRequestInput && Boolean(
+    const rebuildSavedPendingRequestPlan = (!directSavedNextReadoutRequestInput || directSavedNextReadoutCompleted) && Boolean(
       savedPlanNextRequest
       || savedPlanRequestIds.length
       || pendingReadoutRequestQueue.length
@@ -16626,7 +16682,10 @@
     const hasFlowBlockingEvidence = synchronizedBlockingReasonIds.length > 0 || checklistBlockedIds.length > 0 || readoutCollectionRequired;
     const readyForAnalysis = !hasFlowBlockingEvidence && pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
     const completionPercent = hasFlowBlockingEvidence && normalizedCompletionPercent === 100 ? 99 : normalizedCompletionPercent;
-    const status = hasFlowBlockingEvidence && ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
+    const promoteReadoutCollectionState = Boolean(nextReadoutRequest) && (recoverSavedPendingNextReadout || clearCompletedNextReadout);
+    const status = promoteReadoutCollectionState
+      ? "collecting_readouts"
+      : hasFlowBlockingEvidence && ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
       ? "collecting_readouts"
       : summary.status || "not_started";
     const requestPlanBlockedReasonIds = hasSynchronizedPendingReadoutRequest
@@ -16702,10 +16761,10 @@
       schema_version: schemaVersion,
       stage: summary.stage || "diagnostic_core",
       status,
-      currentStep: recoverSavedPendingNextReadout ? "readout_collection" : pickDefined(summary.currentStep, summary.current_step, null),
-      current_step: recoverSavedPendingNextReadout ? "readout_collection" : pickDefined(summary.current_step, summary.currentStep, null),
-      nextAction: recoverSavedPendingNextReadout ? "collect_next_readout" : pickDefined(summary.nextAction, summary.next_action, null),
-      next_action: recoverSavedPendingNextReadout ? "collect_next_readout" : pickDefined(summary.next_action, summary.nextAction, null),
+      currentStep: promoteReadoutCollectionState ? "readout_collection" : pickDefined(summary.currentStep, summary.current_step, null),
+      current_step: promoteReadoutCollectionState ? "readout_collection" : pickDefined(summary.current_step, summary.currentStep, null),
+      nextAction: promoteReadoutCollectionState ? "collect_next_readout" : pickDefined(summary.nextAction, summary.next_action, null),
+      next_action: promoteReadoutCollectionState ? "collect_next_readout" : pickDefined(summary.next_action, summary.nextAction, null),
       nextReadoutId: synchronizePendingNextReadout ? nextReadoutRequest?.readoutId || null : pickDefined(summary.nextReadoutId, summary.next_readout_id, null),
       next_readout_id: synchronizePendingNextReadout ? nextReadoutRequest?.readoutId || null : pickDefined(summary.next_readout_id, summary.nextReadoutId, null),
       nextReadoutLabel: synchronizePendingNextReadout ? promotedNextReadoutSummary?.label || null : pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
@@ -16928,6 +16987,16 @@
       ["primaryBlockingReadoutLabel", "primary_blocking_readout_label"],
       ["primaryBlockingReadoutRequest", "primary_blocking_readout_request"],
       ["primaryBlockingSummary", "primary_blocking_summary"]
+    ].forEach(([camelKey, snakeKey]) => {
+      const fallbackValue = pickDefined(fallbackCoreSessionStatus?.[camelKey], fallbackCoreSessionStatus?.[snakeKey]);
+      if (typeof fallbackValue === "undefined") return;
+      missingEvidenceFallback[camelKey] = fallbackValue;
+      missingEvidenceFallback[snakeKey] = fallbackValue;
+    });
+    [
+      ["nextReadoutRequest", "next_readout_request"],
+      ["pendingReadoutRequestQueue", "pending_readout_request_queue"],
+      ["pendingReadoutRequestPlan", "pending_readout_request_plan"]
     ].forEach(([camelKey, snakeKey]) => {
       const fallbackValue = pickDefined(fallbackCoreSessionStatus?.[camelKey], fallbackCoreSessionStatus?.[snakeKey]);
       if (typeof fallbackValue === "undefined") return;
