@@ -19509,35 +19509,43 @@
         ...actionSummaryInput,
         schemaVersion: actionSummaryInput.schemaVersion || actionSummaryInput.schema_version || "readout_request_plan_gate_action_summary_v1",
         schema_version: actionSummaryInput.schema_version || actionSummaryInput.schemaVersion || "readout_request_plan_gate_action_summary_v1",
-        actionCount: Number.isFinite(Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length))) ? Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length)) : actionIds.length,
-        action_count: Number.isFinite(Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length))) ? Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, actionIds.length)) : actionIds.length,
-        reasonCount: Number.isFinite(Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length))) ? Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length)) : actionReasonIds.length,
-        reason_count: Number.isFinite(Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length))) ? Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, actionReasonIds.length)) : actionReasonIds.length,
-        readoutCount: Number.isFinite(Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length))) ? Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length)) : actionReadoutIds.length,
-        readout_count: Number.isFinite(Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length))) ? Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, actionReadoutIds.length)) : actionReadoutIds.length,
+        actionCount: Math.max(Number.isFinite(Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, 0))) ? Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, 0)) : 0, actionIds.length, actionQueue.length),
+        action_count: Math.max(Number.isFinite(Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, 0))) ? Number(pickDefined(actionSummaryInput.actionCount, actionSummaryInput.action_count, 0)) : 0, actionIds.length, actionQueue.length),
+        reasonCount: Math.max(Number.isFinite(Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, 0))) ? Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, 0)) : 0, actionReasonIds.length),
+        reason_count: Math.max(Number.isFinite(Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, 0))) ? Number(pickDefined(actionSummaryInput.reasonCount, actionSummaryInput.reason_count, 0)) : 0, actionReasonIds.length),
+        readoutCount: Math.max(Number.isFinite(Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, 0))) ? Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, 0)) : 0, actionReadoutIds.length),
+        readout_count: Math.max(Number.isFinite(Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, 0))) ? Number(pickDefined(actionSummaryInput.readoutCount, actionSummaryInput.readout_count, 0)) : 0, actionReadoutIds.length),
         vehicleCommandEnabled: false,
         vehicle_command_enabled: false,
         wouldTransmit: false,
         would_transmit: false
       }
       : null;
+    const blockedReasonCount = Math.max(toCount("blockedReasonCount", "blocked_reason_count", blockedReasonIds.length), blockedReasonIds.length);
+    const blocked = blockedReasonCount > 0 || pickDefined(summary.blocked, summary.is_blocked, false) === true;
+    const stateInput = summary.state || "unknown";
+    const state = blocked && ["ready", "idle"].includes(String(stateInput).trim().toLowerCase()) ? "blocked" : stateInput;
+    const ready = !blocked && pickDefined(summary.ready, summary.is_ready, false) === true;
+    const safeForBridgePlanning = !blocked && pickDefined(summary.safeForBridgePlanning, summary.safe_for_bridge_planning, false) === true;
+    const actionCount = Math.max(toCount("actionCount", "action_count", actionIds.length || actionQueue.length), actionIds.length, actionQueue.length);
+    const actionRequired = actionCount > 0 || pickDefined(summary.actionRequired, summary.action_required, false) === true;
     return {
       ...summary,
       schemaVersion,
       schema_version: schemaVersion,
-      state: summary.state || "unknown",
-      ready: pickDefined(summary.ready, summary.is_ready, false) === true,
-      blocked: pickDefined(summary.blocked, summary.is_blocked, false) === true,
-      safeForBridgePlanning: pickDefined(summary.safeForBridgePlanning, summary.safe_for_bridge_planning, false) === true,
-      safe_for_bridge_planning: pickDefined(summary.safeForBridgePlanning, summary.safe_for_bridge_planning, false) === true,
-      blockedReasonCount: toCount("blockedReasonCount", "blocked_reason_count", blockedReasonIds.length),
-      blocked_reason_count: toCount("blockedReasonCount", "blocked_reason_count", blockedReasonIds.length),
+      state,
+      ready,
+      blocked,
+      safeForBridgePlanning,
+      safe_for_bridge_planning: safeForBridgePlanning,
+      blockedReasonCount,
+      blocked_reason_count: blockedReasonCount,
       blockedReasonIds,
       blocked_reason_ids: blockedReasonIds,
-      actionRequired: pickDefined(summary.actionRequired, summary.action_required, actionIds.length > 0 || actionQueue.length > 0) === true,
-      action_required: pickDefined(summary.actionRequired, summary.action_required, actionIds.length > 0 || actionQueue.length > 0) === true,
-      actionCount: toCount("actionCount", "action_count", actionIds.length || actionQueue.length),
-      action_count: toCount("actionCount", "action_count", actionIds.length || actionQueue.length),
+      actionRequired,
+      action_required: actionRequired,
+      actionCount,
+      action_count: actionCount,
       actionIds,
       action_ids: actionIds,
       actionReasonIds,
@@ -19548,6 +19556,10 @@
       action_summary: actionSummary,
       actionQueue,
       action_queue: actionQueue,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
       wouldTransmit: false,
