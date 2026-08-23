@@ -15717,31 +15717,51 @@
       pendingReadoutCount: Math.max(readNonnegativeCount(coreWorkflowSummary.pendingReadoutCount, coreWorkflowSummary.pending_readout_count), pendingReadoutIds.length),
       pending_readout_count: Math.max(readNonnegativeCount(coreWorkflowSummary.pendingReadoutCount, coreWorkflowSummary.pending_readout_count), pendingReadoutIds.length)
     } : coreWorkflowSummary;
-    const effectiveAnalysisReadinessSummary = analysisReadinessSummary && hasCoreBlockingEvidence ? {
+    const effectiveAnalysisReadinessSummary = analysisReadinessSummary && (hasCoreBlockingEvidence || hasExplicitAnalysisBlockerEvidence) ? {
       ...analysisReadinessSummary,
-      ready: false,
-      readyForAnalysis: false,
-      ready_for_analysis: false,
-      status: ["ready", "analysis_ready"].includes(String(analysisReadinessSummary.status || "").trim().toLowerCase())
-        ? "collecting_readouts"
-        : analysisReadinessSummary.status || status,
-      blockerCount: Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
-      blocker_count: Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
+      blockerCount: hasExplicitAnalysisBlockerEvidence
+        ? analysisBlockers.length
+        : Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
+      blocker_count: hasExplicitAnalysisBlockerEvidence
+        ? analysisBlockers.length
+        : Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
       blockerIds: analysisBlockers,
       blocker_ids: analysisBlockers,
       blockerSummary: effectiveAnalysisBlockerSummary,
       blocker_summary: effectiveAnalysisBlockerSummary,
       blockersById: effectiveAnalysisBlockerById,
       blockers_by_id: effectiveAnalysisBlockerById,
+      ...(hasExplicitAnalysisBlockerEvidence ? {
+        missingReadoutCount: remainingReadoutIds.length,
+        missing_readout_count: remainingReadoutIds.length,
+        emptyReadoutCount: emptyReadoutIds.length,
+        empty_readout_count: emptyReadoutIds.length,
+        blockingWarningCount: blockingWarningIds.length,
+        blocking_warning_count: blockingWarningIds.length,
+        pendingReadoutCount: pendingReadoutIds.length,
+        pending_readout_count: pendingReadoutIds.length
+      } : {}),
+      ...(hasCoreBlockingEvidence ? {
+        ready: false,
+        readyForAnalysis: false,
+        ready_for_analysis: false,
+        status: ["ready", "analysis_ready"].includes(String(analysisReadinessSummary.status || "").trim().toLowerCase())
+          ? "collecting_readouts"
+          : analysisReadinessSummary.status || status,
+        pendingReadoutCount: hasExplicitAnalysisBlockerEvidence
+          ? pendingReadoutIds.length
+          : Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
+        pending_readout_count: hasExplicitAnalysisBlockerEvidence
+          ? pendingReadoutIds.length
+          : Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
+        completionPercent,
+        completion_percent: completionPercent
+      } : {}),
       checklist: effectiveAnalysisChecklist,
       checklistById: effectiveAnalysisChecklistById,
       checklist_by_id: effectiveAnalysisChecklistById,
       checklistSummary: effectiveAnalysisChecklistSummary,
-      checklist_summary: effectiveAnalysisChecklistSummary,
-      pendingReadoutCount: Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
-      pending_readout_count: Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
-      completionPercent,
-      completion_percent: completionPercent
+      checklist_summary: effectiveAnalysisChecklistSummary
     } : analysisReadinessSummary;
     return {
       ...summary,
