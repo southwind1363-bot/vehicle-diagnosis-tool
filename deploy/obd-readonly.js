@@ -16200,19 +16200,24 @@
       : Array.isArray(summary.pending_readout_request_queue)
         ? summary.pending_readout_request_queue
         : [];
-    const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan, completedReadoutIds);
+    let pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan, completedReadoutIds);
     const removedCompletedPendingRequest = savedPendingReadoutRequestQueue.some((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id));
     const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
     const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
     const savedPlanNextRequestId = savedPlanNextRequest?.readoutId || savedPlanNextRequest?.readout_id || savedPlanNextRequest?.id || null;
+    const savedPlanRequestIdsInput = Array.isArray(savedPendingReadoutRequestPlan?.requestIds)
+      ? savedPendingReadoutRequestPlan.requestIds
+      : Array.isArray(savedPendingReadoutRequestPlan?.request_ids) ? savedPendingReadoutRequestPlan.request_ids : [];
+    const savedPlanRequestIds = [...new Set(savedPlanRequestIdsInput.filter(Boolean).map(String))];
     const completedSavedPendingRequestInput = savedPendingReadoutRequestQueue.find((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id)) || null;
-    const savedNextReadoutRequestInput = summary.nextReadoutRequest
-      || summary.next_readout_request
+    const directSavedNextReadoutRequestInput = summary.nextReadoutRequest || summary.next_readout_request || null;
+    const savedNextReadoutRequestInput = directSavedNextReadoutRequestInput
       || (savedPlanNextRequestId === "dtc_snapshot" || completedReadoutIds.has(savedPlanNextRequestId) ? savedPlanNextRequest : null)
       || completedSavedPendingRequestInput;
     const savedPendingNextReadoutCandidate = savedPlanNextRequest
       || pendingReadoutRequestQueue.find((item) => item?.isNext === true || item?.is_next === true)
       || pendingReadoutRequestQueue[0]
+      || (savedPlanRequestIds[0] ? buildReadOnlyNextReadoutRequest({ id: savedPlanRequestIds[0], label: savedPlanRequestIds[0], status: "missing" }, summary) : null)
       || null;
     const normalizedSavedPendingNextReadoutCandidate = normalizeReadoutRequestSummaryAliases(
       savedPendingNextReadoutCandidate,
@@ -16238,6 +16243,11 @@
     const clearCompletedDtcNextReadout = nextReadoutRequestInputId === "dtc_snapshot" && dtcStatusReadoutComplete;
     const clearCompletedNextReadout = clearCompletedDtcNextReadout || explicitlyCompletedNonDtcReadoutIds.has(nextReadoutRequestInputId);
     const recoverSavedPendingNextReadout = Boolean(recoveredSavedPendingNextReadoutRequest);
+    const rebuildSavedPendingRequestPlan = !directSavedNextReadoutRequestInput && Boolean(
+      savedPlanNextRequest
+      || savedPlanRequestIds.length
+      || pendingReadoutRequestQueue.length
+    );
     const hasSavedNextReadoutDisplayMetadata = Boolean(
       pickDefined(
         summary.nextReadoutId,
@@ -16253,6 +16263,33 @@
     const nextReadoutRequest = clearCompletedNextReadout
       ? pendingReadoutRequestQueue[0] || null
       : normalizeReadoutRequestSummaryAliases(nextReadoutRequestInput, dtcStatusReadoutPlan);
+    if (rebuildSavedPendingRequestPlan) {
+      const savedRequestById = new Map(pendingReadoutRequestQueue
+        .map((item) => [item?.readoutId, item])
+        .filter(([id]) => Boolean(id)));
+      if (savedPendingNextReadoutCandidateId) {
+        const savedRequest = savedRequestById.get(savedPendingNextReadoutCandidateId) || {};
+        savedRequestById.set(savedPendingNextReadoutCandidateId, { ...savedRequest, ...normalizedSavedPendingNextReadoutCandidate });
+      }
+      const requestOrderIds = [...new Set([
+        savedPendingNextReadoutCandidateId,
+        ...pendingReadoutRequestQueue.map((item) => item?.readoutId),
+        ...savedPlanRequestIds
+      ].filter(Boolean))].filter((readoutId) => !completedReadoutIds.has(readoutId));
+      pendingReadoutRequestQueue = requestOrderIds.map((readoutId, index) => {
+        const savedRequest = savedRequestById.get(readoutId) || null;
+        const request = nextReadoutRequest?.readoutId === readoutId
+          ? nextReadoutRequest
+          : savedRequest || buildReadOnlyNextReadoutRequest({ id: readoutId, label: readoutId, status: "missing" }, summary);
+        return request ? {
+          ...request,
+          queuePosition: index + 1,
+          queue_position: index + 1,
+          isNext: index === 0,
+          is_next: index === 0
+        } : null;
+      }).filter(Boolean);
+    }
     const readReadoutIds = (camelKey, snakeKey) => {
       if (Array.isArray(summary[camelKey])) return summary[camelKey];
       if (Array.isArray(summary[snakeKey])) return summary[snakeKey];
@@ -16298,12 +16335,19 @@
       : pickDefined(summary.recommendedReadoutIsPending, summary.recommended_readout_is_pending, false) === true;
     const isDtcNextReadoutRequest = nextReadoutRequest?.readoutId === "dtc_snapshot";
     const removedCompletedSavedRequest = removedCompletedPendingRequest || completedReadoutIds.has(savedPlanNextRequestId);
-    const hasSynchronizedPendingReadoutRequest = isDtcNextReadoutRequest
+    const hasSynchronizedPendingReadoutRequest = rebuildSavedPendingRequestPlan
+      || isDtcNextReadoutRequest
       || savedPlanNextRequestId === "dtc_snapshot"
       || pendingReadoutRequestQueue.some((item) => item?.readoutId === "dtc_snapshot")
       || removedCompletedSavedRequest;
     const pendingReadoutRequestPlanInput = buildCompletedDtcPendingReadoutRequestPlanSeed(savedPendingReadoutRequestPlan, removedCompletedSavedRequest, completedReadoutIds);
-    const pendingReadoutRequestPlan = hasSynchronizedPendingReadoutRequest
+    const pendingReadoutRequestPlanNextRequest = nextReadoutRequest
+      || pendingReadoutRequestQueue.find((item) => item?.readoutId === savedPendingNextReadoutCandidateId)
+      || pendingReadoutRequestQueue[0]
+      || null;
+    const pendingReadoutRequestPlan = rebuildSavedPendingRequestPlan
+      ? buildReadOnlyPendingReadoutRequestPlan(pendingReadoutRequestQueue, pendingReadoutRequestPlanNextRequest, savedPendingReadoutRequestPlan)
+      : hasSynchronizedPendingReadoutRequest
       ? synchronizeDtcPendingReadoutRequestPlan(pendingReadoutRequestPlanInput, pendingReadoutRequestQueue, nextReadoutRequest, dtcStatusReadoutPlan, completedReadoutIds)
       : savedPendingReadoutRequestPlan;
     const savedReadoutRequestPlanGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(summary.readoutRequestPlanGateSummary || summary.readout_request_plan_gate_summary || null);
