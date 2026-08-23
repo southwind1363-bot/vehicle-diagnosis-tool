@@ -18998,23 +18998,14 @@
   function normalizeReadoutQualitySummaryAliases(summary = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
     const schemaVersion = summary.schemaVersion || summary.schema_version || "readout_quality_summary_v1";
-    const issueIds = Array.isArray(summary.issueIds)
-      ? [...new Set(summary.issueIds.filter(Boolean).map(String))].sort()
-      : Array.isArray(summary.issue_ids)
-        ? [...new Set(summary.issue_ids.filter(Boolean).map(String))].sort()
-        : [];
     const toCount = (camelKey, snakeKey, fallback = 0) => {
       const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
       return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
     };
-    const reviewRequired = pickDefined(summary.reviewRequired, summary.review_required, issueIds.length > 0) === true;
-    const readyForInterpretation = pickDefined(summary.readyForInterpretation, summary.ready_for_interpretation, !reviewRequired) === true;
-    const issueCount = toCount("issueCount", "issue_count", issueIds.length);
     const rawPidUndecodedCount = toCount("rawPidUndecodedCount", "raw_pid_undecoded_count", 0);
     const readinessIncompleteCount = toCount("readinessIncompleteCount", "readiness_incomplete_count", 0);
     const ecuInfoMissingKeyCount = toCount("ecuInfoMissingKeyCount", "ecu_info_missing_key_count", 0);
     const onboardMonitorFailedCount = toCount("onboardMonitorFailedCount", "onboard_monitor_failed_count", 0);
-    const webSerialResponseReviewCount = toCount("webSerialResponseReviewCount", "web_serial_response_review_count", 0);
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
     const webSerialPendingNegativeResponseCount = toCount("webSerialPendingNegativeResponseCount", "web_serial_pending_negative_response_count", 0);
     const webSerialNoDataCount = toCount("webSerialNoDataCount", "web_serial_no_data_count", 0);
@@ -19025,6 +19016,31 @@
     const webSerialUnableToConnectCount = toCount("webSerialUnableToConnectCount", "web_serial_unable_to_connect_count", 0);
     const webSerialTransportErrorCount = toCount("webSerialTransportErrorCount", "web_serial_transport_error_count", 0);
     const webSerialTimedOutCount = toCount("webSerialTimedOutCount", "web_serial_timed_out_count", 0);
+    const derivedWebSerialResponseReviewCount = webSerialNegativeResponseCount
+      + webSerialPendingNegativeResponseCount
+      + Math.max(0, webSerialNoDataCount - webSerialExpectedEmptyCommandCount)
+      + webSerialEmptyResponseCount
+      + webSerialUnrecognizedResponseCount
+      + webSerialAdapterErrorCount
+      + webSerialUnableToConnectCount
+      + Math.max(webSerialTransportErrorCount, webSerialTimedOutCount);
+    const webSerialResponseReviewCount = Math.max(toCount("webSerialResponseReviewCount", "web_serial_response_review_count", 0), derivedWebSerialResponseReviewCount);
+    const explicitIssueIds = Array.isArray(summary.issueIds)
+      ? summary.issueIds
+      : Array.isArray(summary.issue_ids)
+        ? summary.issue_ids
+        : [];
+    const issueIds = [...new Set([
+      ...explicitIssueIds.filter(Boolean).map(String),
+      ...(rawPidUndecodedCount > 0 ? ["raw_pid_values_need_conversion"] : []),
+      ...(readinessIncompleteCount > 0 ? ["readiness_incomplete"] : []),
+      ...(ecuInfoMissingKeyCount > 0 ? ["mode09_key_items_missing"] : []),
+      ...(onboardMonitorFailedCount > 0 ? ["onboard_monitor_test_failed"] : []),
+      ...(webSerialResponseReviewCount > 0 ? ["web_serial_response_quality"] : [])
+    ])].sort();
+    const issueCount = Math.max(toCount("issueCount", "issue_count", issueIds.length), issueIds.length);
+    const reviewRequired = issueCount > 0 || pickDefined(summary.reviewRequired, summary.review_required, false) === true;
+    const readyForInterpretation = !reviewRequired && pickDefined(summary.readyForInterpretation, summary.ready_for_interpretation, true) === true;
     return {
       ...summary,
       schemaVersion,
