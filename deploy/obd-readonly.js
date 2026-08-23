@@ -14800,6 +14800,7 @@
     const pendingReadoutIds = normalizeIds(summary.pendingReadoutIds || summary.pending_readout_ids || [...missingReadoutIds, ...emptyReadoutIds]);
     const blockingWarningIds = normalizeIds(summary.blockingWarningIds || summary.blocking_warning_ids);
     const readoutCompletionSummaryInput = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
+    const readoutProgressSummaryInput = summary.readoutProgressSummary || summary.readout_progress_summary || null;
     const analysisReadinessSummaryInput = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
     const analysisBlockers = normalizeIds([
       ...normalizeIds(summary.analysisBlockers || summary.analysis_blockers),
@@ -15296,6 +15297,63 @@
       const value = values.find((item) => Number.isFinite(Number(item)));
       return value == null ? 0 : Math.max(0, Math.round(Number(value)));
     };
+    const hasArrayAlias = (...keys) => keys.some((key) => Array.isArray(summary[key]));
+    const effectiveReadoutProgressSummary = readoutProgressSummaryInput ? (() => {
+      const hasRequiredIdEvidence = hasArrayAlias("requiredReadoutIds", "required_readout_ids");
+      const hasCapturedIdEvidence = hasArrayAlias("capturedReadoutIds", "captured_readout_ids");
+      const hasPendingIdEvidence = hasArrayAlias(
+        "pendingReadoutIds",
+        "pending_readout_ids",
+        "missingReadoutIds",
+        "missing_readout_ids",
+        "remainingReadoutIds",
+        "remaining_readout_ids",
+        "emptyReadoutIds",
+        "empty_readout_ids"
+      );
+      const requiredCount = hasRequiredIdEvidence
+        ? requiredReadoutIds.length
+        : readNonnegativeCount(readoutProgressSummaryInput.requiredCount, readoutProgressSummaryInput.required_count);
+      const capturedCount = hasCapturedIdEvidence
+        ? capturedReadoutIds.length
+        : readNonnegativeCount(readoutProgressSummaryInput.capturedCount, readoutProgressSummaryInput.captured_count);
+      const pendingCount = hasPendingIdEvidence
+        ? pendingReadoutIds.length
+        : readNonnegativeCount(readoutProgressSummaryInput.pendingCount, readoutProgressSummaryInput.pending_count);
+      const attemptedCount = hasCapturedIdEvidence || hasArrayAlias("emptyReadoutIds", "empty_readout_ids")
+        ? normalizeIds([...capturedReadoutIds, ...emptyReadoutIds]).length
+        : readNonnegativeCount(readoutProgressSummaryInput.attemptedCount, readoutProgressSummaryInput.attempted_count);
+      const toPercent = (count, total, camelKey, snakeKey) => total > 0
+        ? Math.max(0, Math.min(100, Math.round((count / total) * 100)))
+        : readNonnegativeCount(readoutProgressSummaryInput[camelKey], readoutProgressSummaryInput[snakeKey]);
+      const capturedPercent = toPercent(capturedCount, requiredCount, "capturedPercent", "captured_percent");
+      const attemptedPercent = toPercent(attemptedCount, requiredCount, "attemptedPercent", "attempted_percent");
+      const pendingPercent = toPercent(pendingCount, requiredCount, "pendingPercent", "pending_percent");
+      const progressSchemaVersion = readoutProgressSummaryInput.schemaVersion || readoutProgressSummaryInput.schema_version || "readout_progress_summary_v1";
+      return {
+        ...readoutProgressSummaryInput,
+        schemaVersion: progressSchemaVersion,
+        schema_version: progressSchemaVersion,
+        requiredCount,
+        required_count: requiredCount,
+        capturedCount,
+        captured_count: capturedCount,
+        attemptedCount,
+        attempted_count: attemptedCount,
+        pendingCount,
+        pending_count: pendingCount,
+        openCount: pendingCount,
+        open_count: pendingCount,
+        capturedPercent,
+        captured_percent: capturedPercent,
+        attemptedPercent,
+        attempted_percent: attemptedPercent,
+        pendingPercent,
+        pending_percent: pendingPercent,
+        completionPercent,
+        completion_percent: completionPercent
+      };
+    })() : null;
     const effectiveCoreWorkflowSummary = coreWorkflowSummary && hasCoreBlockingEvidence ? {
       ...coreWorkflowSummary,
       status: ["ready", "analysis_ready"].includes(String(coreWorkflowSummary.status || "").trim().toLowerCase())
@@ -15403,8 +15461,8 @@
       readout_states_by_status: normalizeObject("readoutStatesByStatus", "readout_states_by_status"),
       readoutStateSummary: summary.readoutStateSummary || summary.readout_state_summary || null,
       readout_state_summary: summary.readout_state_summary || summary.readoutStateSummary || null,
-      readoutProgressSummary: summary.readoutProgressSummary || summary.readout_progress_summary || null,
-      readout_progress_summary: summary.readout_progress_summary || summary.readoutProgressSummary || null,
+      readoutProgressSummary: effectiveReadoutProgressSummary,
+      readout_progress_summary: effectiveReadoutProgressSummary,
       readoutCompletionSummary: finalReadoutCompletionSummary,
       readout_completion_summary: finalReadoutCompletionSummary,
       coreWorkflowSummary: effectiveCoreWorkflowSummary,
