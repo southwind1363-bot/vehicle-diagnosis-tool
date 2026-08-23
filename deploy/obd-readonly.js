@@ -14797,7 +14797,21 @@
     const missingReadoutIds = normalizeIds(summary.missingReadoutIds || summary.missing_readout_ids || summary.remainingReadoutIds || summary.remaining_readout_ids);
     const remainingReadoutIds = normalizeIds(summary.remainingReadoutIds || summary.remaining_readout_ids || missingReadoutIds);
     const emptyReadoutIds = normalizeIds(summary.emptyReadoutIds || summary.empty_readout_ids);
-    const pendingReadoutIds = normalizeIds(summary.pendingReadoutIds || summary.pending_readout_ids || [...missingReadoutIds, ...emptyReadoutIds]);
+    const hasExplicitPendingReadoutEvidence = [
+      summary.pendingReadoutIds,
+      summary.pending_readout_ids,
+      summary.missingReadoutIds,
+      summary.missing_readout_ids,
+      summary.remainingReadoutIds,
+      summary.remaining_readout_ids,
+      summary.emptyReadoutIds,
+      summary.empty_readout_ids
+    ].some(Array.isArray);
+    const pendingReadoutIds = normalizeIds([
+      ...(Array.isArray(summary.pendingReadoutIds) ? summary.pendingReadoutIds : Array.isArray(summary.pending_readout_ids) ? summary.pending_readout_ids : []),
+      ...missingReadoutIds,
+      ...emptyReadoutIds
+    ]);
     const blockingWarningIds = normalizeIds(summary.blockingWarningIds || summary.blocking_warning_ids);
     const readoutCompletionSummaryInput = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
     const readoutProgressSummaryInput = summary.readoutProgressSummary || summary.readout_progress_summary || null;
@@ -14920,7 +14934,54 @@
         primary_blocking_summary: readoutCompletionPrimaryBlockingSummary
       }
       : readoutCompletionSummaryInput;
-    const pendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
+    const savedPendingReadoutStates = normalizeArray("pendingReadoutStates", "pending_readout_states");
+    const savedPendingReadoutStateById = normalizeObject("pendingReadoutStateById", "pending_readout_state_by_id");
+    const savedPendingReadoutQueue = normalizeArray("pendingReadoutQueue", "pending_readout_queue");
+    const pendingReadoutSourceById = new Map();
+    Object.entries(savedPendingReadoutStateById).forEach(([id, item]) => {
+      if (item && typeof item === "object" && !Array.isArray(item)) pendingReadoutSourceById.set(item.id || id, { ...item, id: item.id || id });
+    });
+    savedPendingReadoutStates.forEach((item) => {
+      const id = item?.id || item?.readoutId || item?.readout_id || null;
+      if (id) pendingReadoutSourceById.set(id, { ...item, id });
+    });
+    savedPendingReadoutQueue.forEach((item) => {
+      const id = item?.id || item?.readoutId || item?.readout_id || null;
+      if (id) pendingReadoutSourceById.set(id, { ...(pendingReadoutSourceById.get(id) || {}), ...item, id });
+    });
+    const savedPendingReadoutQueueIds = [...new Set(savedPendingReadoutQueue
+      .map((item) => item?.id || item?.readoutId || item?.readout_id)
+      .filter(Boolean)
+      .map(String))];
+    const pendingReadoutQueueIds = hasExplicitPendingReadoutEvidence
+      ? [
+        ...savedPendingReadoutQueueIds.filter((id) => pendingReadoutIds.includes(id)),
+        ...pendingReadoutIds.filter((id) => !savedPendingReadoutQueueIds.includes(id))
+      ]
+      : savedPendingReadoutQueueIds;
+    const pendingReadoutQueue = pendingReadoutQueueIds.map((id, index) => {
+      const source = pendingReadoutSourceById.get(id) || {};
+      const status = emptyReadoutIds.includes(id) ? "empty" : missingReadoutIds.includes(id) ? "missing" : source.status || null;
+      const statusReason = source.statusReason || source.status_reason || null;
+      return {
+        ...source,
+        id,
+        readoutId: source.readoutId || source.readout_id || id,
+        readout_id: source.readout_id || source.readoutId || id,
+        label: source.label || id,
+        status,
+        statusReason,
+        status_reason: statusReason,
+        position: index + 1,
+        queuePosition: index + 1,
+        queue_position: index + 1,
+        isNext: index === 0,
+        is_next: index === 0
+      };
+    });
+    const pendingReadoutStates = pendingReadoutQueue.map((item) => ({ ...item }));
+    const pendingReadoutStateById = Object.fromEntries(pendingReadoutStates.map((item) => [item.id, { ...item }]));
+    const pendingReadoutQueueById = Object.fromEntries(pendingReadoutQueue.map((item) => [item.id, { ...item }]));
     const savedPendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
     const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan, completedReadoutIds);
     const removedCompletedPendingRequest = savedPendingReadoutRequestQueue.some((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id));
@@ -15051,7 +15112,7 @@
     const savedPendingQueueRecommendedReadoutId = savedPendingReadoutQueueSummary?.recommendedReadoutId || savedPendingReadoutQueueSummary?.recommended_readout_id || null;
     const replacePendingQueueNextReadout = clearCompletedNextReadout && (!savedPendingQueueNextReadoutId || completedReadoutIds.has(savedPendingQueueNextReadoutId));
     const replacePendingQueueRecommendedReadout = clearCompletedNextReadout && (!savedPendingQueueRecommendedReadoutId || completedReadoutIds.has(savedPendingQueueRecommendedReadoutId));
-    const pendingReadoutQueueSummary = clearCompletedNextReadout ? {
+    const pendingReadoutQueueSummaryInput = clearCompletedNextReadout ? {
       ...(savedPendingReadoutQueueSummary || {}),
       ...(replacePendingQueueNextReadout ? {
         nextReadoutId: promotedNextReadoutSummary?.readoutId || null,
@@ -15074,6 +15135,36 @@
         recommended_readout_is_pending: Boolean(promotedNextReadoutSummary)
       } : {})
     } : savedPendingReadoutQueueSummary;
+    const shouldNormalizePendingReadoutQueueSummary = hasExplicitPendingReadoutEvidence || savedPendingReadoutQueue.length > 0 || clearCompletedNextReadout;
+    const pendingReadoutQueueSummary = shouldNormalizePendingReadoutQueueSummary ? (() => {
+      const nextPendingReadout = pendingReadoutQueue[0] || null;
+      const pendingPercentValue = requiredReadoutIds.length > 0
+        ? Math.round((pendingReadoutQueue.length / requiredReadoutIds.length) * 100)
+        : Number(pendingReadoutQueueSummaryInput?.pendingPercent ?? pendingReadoutQueueSummaryInput?.pending_percent);
+      const pendingPercent = Number.isFinite(pendingPercentValue) ? Math.max(0, Math.min(100, Math.round(pendingPercentValue))) : 0;
+      const queueSchemaVersion = pendingReadoutQueueSummaryInput?.schemaVersion || pendingReadoutQueueSummaryInput?.schema_version || "pending_readout_queue_summary_v1";
+      return {
+        ...(pendingReadoutQueueSummaryInput || {}),
+        schemaVersion: queueSchemaVersion,
+        schema_version: queueSchemaVersion,
+        totalCount: pendingReadoutQueue.length,
+        total_count: pendingReadoutQueue.length,
+        hasPendingReadouts: pendingReadoutQueue.length > 0,
+        has_pending_readouts: pendingReadoutQueue.length > 0,
+        nextReadoutId: nextPendingReadout?.id || null,
+        next_readout_id: nextPendingReadout?.id || null,
+        nextReadoutLabel: nextPendingReadout?.label || null,
+        next_readout_label: nextPendingReadout?.label || null,
+        nextReadoutStatus: nextPendingReadout?.status || null,
+        next_readout_status: nextPendingReadout?.status || null,
+        nextReadoutStatusReason: nextPendingReadout?.statusReason || nextPendingReadout?.status_reason || null,
+        next_readout_status_reason: nextPendingReadout?.statusReason || nextPendingReadout?.status_reason || null,
+        pendingPercent,
+        pending_percent: pendingPercent,
+        remainingAfterNextCount: Math.max(0, pendingReadoutQueue.length - 1),
+        remaining_after_next_count: Math.max(0, pendingReadoutQueue.length - 1)
+      };
+    })() : pendingReadoutQueueSummaryInput;
     const savedOrBuiltNextReadoutReasonSummary = savedNextReadoutReasonSummary || buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary);
     const nextReadoutReasonSummary = clearCompletedNextReadout
       ? buildNextReadoutReasonSummary(nextReadoutSummary, readoutCompletionSummary)
@@ -15506,14 +15597,14 @@
       empty_readout_ids: emptyReadoutIds,
       pendingReadoutIds,
       pending_readout_ids: pendingReadoutIds,
-      pendingReadoutStates: normalizeArray("pendingReadoutStates", "pending_readout_states"),
-      pending_readout_states: normalizeArray("pendingReadoutStates", "pending_readout_states"),
-      pendingReadoutStateById: normalizeObject("pendingReadoutStateById", "pending_readout_state_by_id"),
-      pending_readout_state_by_id: normalizeObject("pendingReadoutStateById", "pending_readout_state_by_id"),
+      pendingReadoutStates,
+      pending_readout_states: pendingReadoutStates,
+      pendingReadoutStateById,
+      pending_readout_state_by_id: pendingReadoutStateById,
       pendingReadoutQueue,
       pending_readout_queue: pendingReadoutQueue,
-      pendingReadoutQueueById: normalizeObject("pendingReadoutQueueById", "pending_readout_queue_by_id"),
-      pending_readout_queue_by_id: normalizeObject("pendingReadoutQueueById", "pending_readout_queue_by_id"),
+      pendingReadoutQueueById,
+      pending_readout_queue_by_id: pendingReadoutQueueById,
       pendingReadoutQueueSummary,
       pending_readout_queue_summary: pendingReadoutQueueSummary,
       pendingReadoutRequestQueue,
@@ -15542,10 +15633,10 @@
       dtc_fault_detection_counter_summary: dtcFaultDetectionCounterSummary,
       dtcStatusReadoutPlan,
       dtc_status_readout_plan: dtcStatusReadoutPlan,
-      nextPendingReadoutId: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutIds[0], null),
-      next_pending_readout_id: clearCompletedNextReadout ? nextReadoutSummary?.readoutId || null : pickDefined(summary.next_pending_readout_id, summary.nextPendingReadoutId, pendingReadoutIds[0], null),
-      nextPendingReadoutState: clearCompletedNextReadout ? nextReadoutSummary?.status || null : summary.nextPendingReadoutState || summary.next_pending_readout_state || null,
-      next_pending_readout_state: clearCompletedNextReadout ? nextReadoutSummary?.status || null : summary.next_pending_readout_state || summary.nextPendingReadoutState || null,
+      nextPendingReadoutId: pendingReadoutQueue[0]?.id || pickDefined(summary.nextPendingReadoutId, summary.next_pending_readout_id, pendingReadoutQueueSummary?.nextReadoutId, pendingReadoutQueueSummary?.next_readout_id, null),
+      next_pending_readout_id: pendingReadoutQueue[0]?.id || pickDefined(summary.next_pending_readout_id, summary.nextPendingReadoutId, pendingReadoutQueueSummary?.next_readout_id, pendingReadoutQueueSummary?.nextReadoutId, null),
+      nextPendingReadoutState: pendingReadoutQueue[0] || summary.nextPendingReadoutState || summary.next_pending_readout_state || null,
+      next_pending_readout_state: pendingReadoutQueue[0] || summary.next_pending_readout_state || summary.nextPendingReadoutState || null,
       readoutStates: normalizeArray("readoutStates", "readout_states"),
       readout_states: normalizeArray("readoutStates", "readout_states"),
       readoutStateById: normalizeObject("readoutStateById", "readout_state_by_id"),
