@@ -20541,6 +20541,37 @@
     const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
     const explicitlyCompletedNonDtcReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
     if (!normalizedSummary) return normalizedSummary;
+    const fallbackGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(
+      fallbackCoreSessionStatus?.readoutRequestPlanGateSummary
+      || fallbackCoreSessionStatus?.readout_request_plan_gate_summary
+      || null
+    );
+    const fallbackGateBlocked = fallbackGateSummary?.blocked === true || fallbackGateSummary?.state === "blocked";
+    const fallbackGateReadoutIds = [
+      ...(Array.isArray(fallbackGateSummary?.actionReadoutIds) ? fallbackGateSummary.actionReadoutIds : []),
+      ...(Array.isArray(fallbackGateSummary?.action_readout_ids) ? fallbackGateSummary.action_readout_ids : [])
+    ].filter(Boolean).map(String);
+    const guardClaimsReady = normalizedSummary.gateReady === true
+      || normalizedSummary.planningReady === true
+      || normalizedSummary.safeForReadoutPlanning === true
+      || normalizedSummary.gateState === "ready";
+    if (guardClaimsReady && fallbackGateBlocked && fallbackGateReadoutIds.includes(String(normalizedSummary.readoutId || ""))) {
+      return normalizeNextReadoutGuardSummaryAliases({
+        ...normalizedSummary,
+        gateState: "blocked",
+        gate_state: "blocked",
+        gateReady: false,
+        gate_ready: false,
+        actionRequired: true,
+        action_required: true,
+        nextActionId: fallbackGateSummary.nextActionId || fallbackGateSummary.next_action_id || null,
+        next_action_id: fallbackGateSummary.next_action_id || fallbackGateSummary.nextActionId || null,
+        planningReady: false,
+        planning_ready: false,
+        safeForReadoutPlanning: false,
+        safe_for_readout_planning: false
+      });
+    }
     if (explicitlyCompletedNonDtcReadoutIds.has(normalizedSummary.readoutId)) return null;
     if (normalizedSummary.readoutId !== "dtc_snapshot" || !dtcStatusReadoutPlan) return normalizedSummary;
     if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) return null;
@@ -20802,6 +20833,21 @@
     const completedReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
     if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) completedReadoutIds.add("dtc_snapshot");
     if (!normalizedSummary) return normalizedSummary;
+    const fallbackGateSummary = normalizeReadoutRequestPlanGateSummaryAliases(
+      fallbackCoreSessionStatus?.readoutRequestPlanGateSummary
+      || fallbackCoreSessionStatus?.readout_request_plan_gate_summary
+      || null
+    );
+    const summaryClaimsReady = normalizedSummary.ready === true
+      || normalizedSummary.state === "ready"
+      || normalizedSummary.safeForBridgePlanning === true;
+    const fallbackGateBlocked = fallbackGateSummary?.blocked === true || fallbackGateSummary?.state === "blocked";
+    if (summaryClaimsReady && fallbackGateBlocked) {
+      return normalizeReadoutRequestPlanGateSummaryAliases({
+        ...normalizedSummary,
+        ...fallbackGateSummary
+      });
+    }
     const actionQueueReadoutIds = (Array.isArray(normalizedSummary.actionQueue) ? normalizedSummary.actionQueue : [])
       .flatMap((item) => [
         item?.readoutId,
