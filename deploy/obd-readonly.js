@@ -16978,6 +16978,7 @@
   }
 
   function normalizeImportedDiagnosticFlowSummaryAliases(summary = null, fallbackCoreSessionStatus = null) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
     const fallbackFields = [
       ["dtcStatusSummary", "dtc_status_summary"],
       ["dtcReportedStatusSummary", "dtc_reported_status_summary"],
@@ -16992,6 +16993,7 @@
       return hasObjectContent(fallbackValue) ? [[camelKey, fallbackValue], [snakeKey, fallbackValue]] : [];
     }));
     const readoutStateFallbackFields = [
+      ["requiredReadoutIds", "required_readout_ids"],
       ["capturedReadoutIds", "captured_readout_ids"],
       ["pendingReadoutIds", "pending_readout_ids"],
       ["missingReadoutIds", "missing_readout_ids"],
@@ -17030,7 +17032,38 @@
       missingEvidenceFallback[camelKey] = fallbackValue;
       missingEvidenceFallback[snakeKey] = fallbackValue;
     });
-    return normalizeDiagnosticFlowSummaryAliases(summary, missingEvidenceFallback);
+    const normalizedSummary = normalizeDiagnosticFlowSummaryAliases(summary, missingEvidenceFallback);
+    const normalizedSummaryWithReadoutState = { ...normalizedSummary };
+    readoutStateFallbackFields.forEach(([camelKey, snakeKey]) => {
+      const ids = Array.isArray(summary[camelKey])
+        ? summary[camelKey]
+        : Array.isArray(summary[snakeKey])
+          ? summary[snakeKey]
+          : Array.isArray(missingEvidenceFallback[camelKey]) ? missingEvidenceFallback[camelKey] : null;
+      if (!ids) return;
+      normalizedSummaryWithReadoutState[camelKey] = ids;
+      normalizedSummaryWithReadoutState[snakeKey] = ids;
+    });
+    [
+      ["requiredReadoutCount", "required_readout_count", "requiredReadoutIds", "required_readout_ids"],
+      ["capturedReadoutCount", "captured_readout_count", "capturedReadoutIds", "captured_readout_ids"],
+      ["missingReadoutCount", "missing_readout_count", "missingReadoutIds", "missing_readout_ids"],
+      ["emptyReadoutCount", "empty_readout_count", "emptyReadoutIds", "empty_readout_ids"],
+      ["pendingReadoutCount", "pending_readout_count", "pendingReadoutIds", "pending_readout_ids"]
+    ].forEach(([countCamelKey, countSnakeKey, idsCamelKey, idsSnakeKey]) => {
+      const explicitCount = pickDefined(summary[countCamelKey], summary[countSnakeKey]);
+      if (typeof explicitCount !== "undefined") return;
+      const ids = Array.isArray(normalizedSummaryWithReadoutState[idsCamelKey])
+        ? normalizedSummaryWithReadoutState[idsCamelKey]
+        : Array.isArray(normalizedSummaryWithReadoutState[idsSnakeKey]) ? normalizedSummaryWithReadoutState[idsSnakeKey] : null;
+      if (!ids) return;
+      const normalizedCount = countCamelKey === "pendingReadoutCount"
+        ? Math.max(Number(normalizedSummaryWithReadoutState[countCamelKey] || 0), ids.length)
+        : ids.length;
+      normalizedSummaryWithReadoutState[countCamelKey] = normalizedCount;
+      normalizedSummaryWithReadoutState[countSnakeKey] = normalizedCount;
+    });
+    return normalizedSummaryWithReadoutState;
   }
 
   function buildImportedDiagnosticFlowComparisonSummary(importedDiagnosticFlowSummary = null, currentDiagnosticFlowSummary = {}) {
