@@ -14839,6 +14839,16 @@
       ...(blockingWarningIds.length > 0 ? ["blocking_warnings"] : [])
     ]);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
+    const savedAnalysisBlockerById = normalizeObject("analysisBlockerById", "analysis_blocker_by_id");
+    const analysisBlockerSummaryInput = summary.analysisBlockerSummary || summary.analysis_blocker_summary || null;
+    const hasExplicitAnalysisBlockerEvidence = hasExplicitReadoutStateEvidence || [
+      summary.analysisBlockers,
+      summary.analysis_blockers,
+      summary.blockingReasonIds,
+      summary.blocking_reason_ids,
+      summary.blockingWarningIds,
+      summary.blocking_warning_ids
+    ].some(Array.isArray);
     const fallbackDtcStatusAliases = [
       fallbackDtcSnapshot?.dtcStatusSummary,
       fallbackDtcSnapshot?.dtc_status_summary
@@ -15409,6 +15419,51 @@
       return value == null ? 0 : Math.max(0, Math.round(Number(value)));
     };
     const hasArrayAlias = (...keys) => keys.some((key) => Array.isArray(summary[key]));
+    const effectiveAnalysisBlockerById = hasExplicitAnalysisBlockerEvidence ? Object.fromEntries(
+      analysisBlockers.map((id) => {
+        const source = savedAnalysisBlockerById[id] && typeof savedAnalysisBlockerById[id] === "object"
+          ? savedAnalysisBlockerById[id]
+          : {};
+        if (id === "missing_readouts") return [id, {
+          ...source,
+          id,
+          count: remainingReadoutIds.length,
+          readoutIds: remainingReadoutIds,
+          readout_ids: remainingReadoutIds
+        }];
+        if (id === "empty_readouts") return [id, {
+          ...source,
+          id,
+          count: emptyReadoutIds.length,
+          readoutIds: emptyReadoutIds,
+          readout_ids: emptyReadoutIds
+        }];
+        if (id === "blocking_warnings") return [id, {
+          ...source,
+          id,
+          count: blockingWarningIds.length,
+          warningIds: blockingWarningIds,
+          warning_ids: blockingWarningIds
+        }];
+        return [id, { ...source, id: source.id || id }];
+      })
+    ) : savedAnalysisBlockerById;
+    const effectiveAnalysisBlockerSummary = hasExplicitAnalysisBlockerEvidence ? (() => {
+      const blockerSchemaVersion = analysisBlockerSummaryInput?.schemaVersion || analysisBlockerSummaryInput?.schema_version || "analysis_blocker_summary_v1";
+      return {
+        ...(analysisBlockerSummaryInput || {}),
+        schemaVersion: blockerSchemaVersion,
+        schema_version: blockerSchemaVersion,
+        totalCount: analysisBlockers.length,
+        total_count: analysisBlockers.length,
+        missingReadoutCount: remainingReadoutIds.length,
+        missing_readout_count: remainingReadoutIds.length,
+        emptyReadoutCount: emptyReadoutIds.length,
+        empty_readout_count: emptyReadoutIds.length,
+        blockingWarningCount: blockingWarningIds.length,
+        blocking_warning_count: blockingWarningIds.length
+      };
+    })() : analysisBlockerSummaryInput;
     const effectiveReadoutStates = (() => {
       const sourceById = new Map();
       Object.entries(savedReadoutStateById).forEach(([id, item]) => {
@@ -15674,6 +15729,10 @@
       blocker_count: Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
       blockerIds: analysisBlockers,
       blocker_ids: analysisBlockers,
+      blockerSummary: effectiveAnalysisBlockerSummary,
+      blocker_summary: effectiveAnalysisBlockerSummary,
+      blockersById: effectiveAnalysisBlockerById,
+      blockers_by_id: effectiveAnalysisBlockerById,
       checklist: effectiveAnalysisChecklist,
       checklistById: effectiveAnalysisChecklistById,
       checklist_by_id: effectiveAnalysisChecklistById,
@@ -15796,10 +15855,10 @@
       analysis_blockers: analysisBlockers,
       blockingReasonIds: analysisBlockers,
       blocking_reason_ids: analysisBlockers,
-      analysisBlockerById: normalizeObject("analysisBlockerById", "analysis_blocker_by_id"),
-      analysis_blocker_by_id: normalizeObject("analysisBlockerById", "analysis_blocker_by_id"),
-      analysisBlockerSummary: summary.analysisBlockerSummary || summary.analysis_blocker_summary || null,
-      analysis_blocker_summary: summary.analysis_blocker_summary || summary.analysisBlockerSummary || null,
+      analysisBlockerById: effectiveAnalysisBlockerById,
+      analysis_blocker_by_id: effectiveAnalysisBlockerById,
+      analysisBlockerSummary: effectiveAnalysisBlockerSummary,
+      analysis_blocker_summary: effectiveAnalysisBlockerSummary,
       primaryBlockingReasonId: finalPrimaryBlockingReasonId,
       primary_blocking_reason_id: finalPrimaryBlockingReasonId,
       primaryBlockingReason: finalPrimaryBlockingReason,
