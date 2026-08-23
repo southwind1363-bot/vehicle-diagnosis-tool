@@ -16640,10 +16640,10 @@
       if (!nestedSummary || typeof nestedSummary !== "object" || Array.isArray(nestedSummary)) return nestedSummary;
       const synchronizeNextReadoutControls = isDtcNextReadoutRequest || clearCompletedNextReadout || recoverSavedPendingNextReadout;
       const synchronizePrimaryBlocker = isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout || promoteFallbackCorePrimaryBlocker;
-      if (!synchronizeNextReadoutControls && !synchronizePrimaryBlocker && !promoteReadoutCollectionState) return nestedSummary;
+      if (!synchronizeNextReadoutControls && !synchronizePrimaryBlocker && !synchronizeReadoutCollectionState) return nestedSummary;
       return {
         ...nestedSummary,
-        ...(promoteReadoutCollectionState ? {
+        ...(synchronizeReadoutCollectionState ? {
           status: "collecting_readouts",
           ready: false,
           readyForAnalysis: false,
@@ -16738,6 +16738,7 @@
     const readyForAnalysis = !hasFlowBlockingEvidence && pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
     const completionPercent = hasFlowBlockingEvidence && normalizedCompletionPercent === 100 ? 99 : normalizedCompletionPercent;
     const promoteReadoutCollectionState = Boolean(nextReadoutRequest) && (recoverSavedPendingNextReadout || clearCompletedNextReadout);
+    const synchronizeReadoutCollectionState = promoteReadoutCollectionState || savedFlowClaimsReady && hasFlowBlockingEvidence;
     const fallbackReadoutCount = (camelKey, snakeKey, fallback) => {
       const ids = Array.isArray(fallbackCoreSessionStatus?.[camelKey])
         ? fallbackCoreSessionStatus[camelKey]
@@ -16749,7 +16750,7 @@
     const synchronizedMissingReadoutCount = fallbackReadoutCount("missingReadoutIds", "missing_readout_ids", missingReadoutCount);
     const synchronizedEmptyReadoutCount = fallbackReadoutCount("emptyReadoutIds", "empty_readout_ids", emptyReadoutCount);
     const synchronizedPendingReadoutCount = Math.max(fallbackReadoutCount("pendingReadoutIds", "pending_readout_ids", pendingReadoutCount), pendingReadoutRequestQueue.length);
-    const status = promoteReadoutCollectionState
+    const status = synchronizeReadoutCollectionState
       ? "collecting_readouts"
       : hasFlowBlockingEvidence && ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
       ? "collecting_readouts"
@@ -16829,10 +16830,10 @@
       schema_version: schemaVersion,
       stage: summary.stage || "diagnostic_core",
       status,
-      currentStep: promoteReadoutCollectionState ? "readout_collection" : pickDefined(summary.currentStep, summary.current_step, null),
-      current_step: promoteReadoutCollectionState ? "readout_collection" : pickDefined(summary.current_step, summary.currentStep, null),
-      nextAction: promoteReadoutCollectionState ? "collect_next_readout" : pickDefined(summary.nextAction, summary.next_action, null),
-      next_action: promoteReadoutCollectionState ? "collect_next_readout" : pickDefined(summary.next_action, summary.nextAction, null),
+      currentStep: synchronizeReadoutCollectionState ? "readout_collection" : pickDefined(summary.currentStep, summary.current_step, null),
+      current_step: synchronizeReadoutCollectionState ? "readout_collection" : pickDefined(summary.current_step, summary.currentStep, null),
+      nextAction: synchronizeReadoutCollectionState ? "collect_next_readout" : pickDefined(summary.nextAction, summary.next_action, null),
+      next_action: synchronizeReadoutCollectionState ? "collect_next_readout" : pickDefined(summary.next_action, summary.nextAction, null),
       nextReadoutId: synchronizePendingNextReadout ? nextReadoutRequest?.readoutId || null : pickDefined(summary.nextReadoutId, summary.next_readout_id, null),
       next_readout_id: synchronizePendingNextReadout ? nextReadoutRequest?.readoutId || null : pickDefined(summary.next_readout_id, summary.nextReadoutId, null),
       nextReadoutLabel: synchronizePendingNextReadout ? promotedNextReadoutSummary?.label || null : pickDefined(summary.nextReadoutLabel, summary.next_readout_label, null),
@@ -17078,10 +17079,19 @@
     const summaryClaimsReady = ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
       || pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
     const normalizedNextReadoutId = normalizedSummary?.nextReadoutRequest?.readoutId || normalizedSummary?.next_readout_request?.readout_id || null;
+    const normalizedPendingReadoutCount = Number(pickDefined(normalizedSummary?.pendingReadoutCount, normalizedSummary?.pending_readout_count, 0)) || 0;
+    const normalizedPlanGateSummary = normalizedSummary?.readoutRequestPlanGateSummary || normalizedSummary?.readout_request_plan_gate_summary || null;
+    const normalizedPlanGateBlockedReasonIds = [
+      ...(Array.isArray(normalizedPlanGateSummary?.blockedReasonIds) ? normalizedPlanGateSummary.blockedReasonIds : []),
+      ...(Array.isArray(normalizedPlanGateSummary?.blocked_reason_ids) ? normalizedPlanGateSummary.blocked_reason_ids : [])
+    ].filter(Boolean);
+    const normalizedHasBlockedReadoutPlan = normalizedPlanGateSummary?.state === "blocked"
+      || normalizedPlanGateSummary?.blocked === true
+      || normalizedPlanGateBlockedReasonIds.length > 0;
     const recoveredConflictingReadyState = Boolean(
       summaryClaimsReady
-      && normalizedNextReadoutId
       && normalizedSummary?.status === "collecting_readouts"
+      && (normalizedNextReadoutId || normalizedSummary?.readoutCollectionRequired === true || normalizedSummary?.readout_collection_required === true || normalizedPendingReadoutCount > 0 || normalizedHasBlockedReadoutPlan)
     );
     readoutStateFallbackFields.forEach(([camelKey, snakeKey]) => {
       const conflictingCoreIds = Array.isArray(fallbackCoreSessionStatus?.[camelKey])
