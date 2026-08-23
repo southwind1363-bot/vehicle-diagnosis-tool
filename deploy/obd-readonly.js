@@ -19731,10 +19731,28 @@
         primary_blocking_readout_id: null,
         primaryBlockingReadoutLabel: null,
         primary_blocking_readout_label: null,
+        primaryBlockingReadoutStatusReason: null,
+        primary_blocking_readout_status_reason: null,
         primaryBlockingReadoutRequest: null,
         primary_blocking_readout_request: null,
         primaryBlockingSummary: replacementSummary,
-        primary_blocking_summary: replacementSummary
+        primary_blocking_summary: replacementSummary,
+        nextReadoutId: null,
+        next_readout_id: null,
+        nextReadoutLabel: null,
+        next_readout_label: null,
+        nextReadoutStatus: null,
+        next_readout_status: null,
+        nextReadoutStatusReason: null,
+        next_readout_status_reason: null,
+        nextReadoutSource: null,
+        next_readout_source: null,
+        nextReadoutQueuePosition: null,
+        next_readout_queue_position: null,
+        nextReadoutReasonSummary: null,
+        next_readout_reason_summary: null,
+        nextReadoutGuardSummary: null,
+        next_readout_guard_summary: null
       };
     }
     const readCount = (camelKey, snakeKey) => Number(summary[camelKey] ?? summary[snakeKey] ?? 0) || 0;
@@ -19852,6 +19870,24 @@
     const nextReadoutLabel = nextReadoutId === currentNextReadoutId
       ? summary.nextReadoutLabel || summary.next_readout_label || fallbackNextReadoutRequest?.label || nextReadoutId
       : fallbackNextReadoutRequest?.label || nextReadoutId;
+    const useSavedNextReadoutDetails = Boolean(nextReadoutId && String(currentNextReadoutId || "") === nextReadoutId);
+    const fallbackCoreNextReadoutId = fallbackCoreSessionStatus?.nextReadoutId || fallbackCoreSessionStatus?.next_readout_id || fallbackNextReadoutId || null;
+    const useFallbackNextReadoutDetails = Boolean(nextReadoutId && String(fallbackCoreNextReadoutId || "") === nextReadoutId);
+    const nextReadoutStatusReason = useSavedNextReadoutDetails
+      ? summary.nextReadoutStatusReason || summary.next_readout_status_reason || null
+      : useFallbackNextReadoutDetails
+        ? fallbackCoreSessionStatus?.nextReadoutStatusReason || fallbackCoreSessionStatus?.next_readout_status_reason || fallbackNextReadoutRequest?.statusReason || fallbackNextReadoutRequest?.status_reason || null
+        : null;
+    const nextReadoutReasonSummary = useSavedNextReadoutDetails
+      ? summary.nextReadoutReasonSummary || summary.next_readout_reason_summary || null
+      : useFallbackNextReadoutDetails
+        ? fallbackCoreSessionStatus?.nextReadoutReasonSummary || fallbackCoreSessionStatus?.next_readout_reason_summary || null
+        : null;
+    const nextReadoutGuardSummary = useSavedNextReadoutDetails
+      ? summary.nextReadoutGuardSummary || summary.next_readout_guard_summary || null
+      : useFallbackNextReadoutDetails
+        ? fallbackCoreSessionStatus?.nextReadoutGuardSummary || fallbackCoreSessionStatus?.next_readout_guard_summary || null
+        : null;
     const primaryBlockingReasonId = nextReadoutId && (readoutIdsByReasonId.missing_readouts || []).includes(nextReadoutId)
       ? "missing_readouts"
       : nextReadoutId && (readoutIdsByReasonId.empty_readouts || []).includes(nextReadoutId)
@@ -19936,6 +19972,8 @@
       primary_blocking_readout_id: primaryBlockingReadoutId,
       primaryBlockingReadoutLabel,
       primary_blocking_readout_label: primaryBlockingReadoutLabel,
+      primaryBlockingReadoutStatusReason: primaryBlockingReadoutId ? nextReadoutStatusReason : null,
+      primary_blocking_readout_status_reason: primaryBlockingReadoutId ? nextReadoutStatusReason : null,
       primaryBlockingReadoutRequest,
       primary_blocking_readout_request: primaryBlockingReadoutRequest,
       primaryBlockingSummary,
@@ -19952,12 +19990,18 @@
       next_readout_id: nextReadoutId,
       nextReadoutLabel,
       next_readout_label: nextReadoutLabel,
-      nextReadoutStatus: nextReadoutId === currentNextReadoutId ? summary.nextReadoutStatus || summary.next_readout_status || null : null,
-      next_readout_status: nextReadoutId === currentNextReadoutId ? summary.next_readout_status || summary.nextReadoutStatus || null : null,
-      nextReadoutSource: nextReadoutId === currentNextReadoutId ? summary.nextReadoutSource || summary.next_readout_source || null : "fallback_core_session",
-      next_readout_source: nextReadoutId === currentNextReadoutId ? summary.next_readout_source || summary.nextReadoutSource || null : "fallback_core_session",
-      nextReadoutQueuePosition: nextReadoutId === currentNextReadoutId ? summary.nextReadoutQueuePosition || summary.next_readout_queue_position || null : nextReadoutId ? 1 : null,
-      next_readout_queue_position: nextReadoutId === currentNextReadoutId ? summary.next_readout_queue_position || summary.nextReadoutQueuePosition || null : nextReadoutId ? 1 : null
+      nextReadoutStatus: useSavedNextReadoutDetails ? summary.nextReadoutStatus || summary.next_readout_status || null : nextReadoutId ? fallbackCoreSessionStatus?.nextReadoutStatus || fallbackCoreSessionStatus?.next_readout_status || null : null,
+      next_readout_status: useSavedNextReadoutDetails ? summary.next_readout_status || summary.nextReadoutStatus || null : nextReadoutId ? fallbackCoreSessionStatus?.next_readout_status || fallbackCoreSessionStatus?.nextReadoutStatus || null : null,
+      nextReadoutStatusReason,
+      next_readout_status_reason: nextReadoutStatusReason,
+      nextReadoutSource: useSavedNextReadoutDetails ? summary.nextReadoutSource || summary.next_readout_source || null : nextReadoutId ? "fallback_core_session" : null,
+      next_readout_source: useSavedNextReadoutDetails ? summary.next_readout_source || summary.nextReadoutSource || null : nextReadoutId ? "fallback_core_session" : null,
+      nextReadoutQueuePosition: useSavedNextReadoutDetails ? summary.nextReadoutQueuePosition || summary.next_readout_queue_position || null : nextReadoutId ? 1 : null,
+      next_readout_queue_position: useSavedNextReadoutDetails ? summary.next_readout_queue_position || summary.nextReadoutQueuePosition || null : nextReadoutId ? 1 : null,
+      nextReadoutReasonSummary,
+      next_readout_reason_summary: nextReadoutReasonSummary,
+      nextReadoutGuardSummary,
+      next_readout_guard_summary: nextReadoutGuardSummary
     };
   }
 
