@@ -19340,6 +19340,71 @@
 
   function synchronizeImportedReadoutCompletionStateAliases(summary = null, fallbackCoreSessionStatus = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const readCoreIds = (camelKey, snakeKey) => {
+      const values = Array.isArray(fallbackCoreSessionStatus?.[camelKey])
+        ? fallbackCoreSessionStatus[camelKey]
+        : Array.isArray(fallbackCoreSessionStatus?.[snakeKey]) ? fallbackCoreSessionStatus[snakeKey] : [];
+      return [...new Set(values.filter(Boolean).map(String))].sort();
+    };
+    const coreMissingIds = readCoreIds("missingReadoutIds", "missing_readout_ids");
+    const coreEmptyIds = readCoreIds("emptyReadoutIds", "empty_readout_ids");
+    const corePendingIds = [...new Set([
+      ...readCoreIds("pendingReadoutIds", "pending_readout_ids"),
+      ...coreMissingIds,
+      ...coreEmptyIds
+    ])].sort();
+    const summaryClaimsComplete = summary.complete === true
+      || Number(summary.completionPercent ?? summary.completion_percent) === 100 && Number(summary.pendingCount ?? summary.pending_count ?? 0) === 0;
+    if (summaryClaimsComplete && corePendingIds.length > 0) {
+      const coreCapturedIds = readCoreIds("capturedReadoutIds", "captured_readout_ids");
+      const explicitRequiredIds = readCoreIds("requiredReadoutIds", "required_readout_ids");
+      const coreRequiredIds = explicitRequiredIds.length > 0
+        ? explicitRequiredIds
+        : [...new Set([...coreCapturedIds, ...corePendingIds])].sort();
+      const completionPercent = coreRequiredIds.length > 0
+        ? Math.min(99, Math.round((coreCapturedIds.filter((readoutId) => coreRequiredIds.includes(readoutId)).length / coreRequiredIds.length) * 100))
+        : 0;
+      return normalizeReadoutCompletionSummaryAliases({
+        ...summary,
+        complete: false,
+        requiredIds: coreRequiredIds,
+        required_ids: [...coreRequiredIds],
+        capturedIds: coreCapturedIds,
+        captured_ids: [...coreCapturedIds],
+        missingIds: coreMissingIds,
+        missing_ids: [...coreMissingIds],
+        emptyIds: coreEmptyIds,
+        empty_ids: [...coreEmptyIds],
+        pendingIds: corePendingIds,
+        pending_ids: [...corePendingIds],
+        requiredCount: coreRequiredIds.length,
+        required_count: coreRequiredIds.length,
+        capturedCount: coreCapturedIds.length,
+        captured_count: coreCapturedIds.length,
+        missingCount: coreMissingIds.length,
+        missing_count: coreMissingIds.length,
+        emptyCount: coreEmptyIds.length,
+        empty_count: coreEmptyIds.length,
+        pendingCount: corePendingIds.length,
+        pending_count: corePendingIds.length,
+        completionPercent,
+        completion_percent: completionPercent,
+        nextPendingReadoutId: fallbackCoreSessionStatus?.nextPendingReadoutId || fallbackCoreSessionStatus?.next_pending_readout_id || corePendingIds[0] || null,
+        next_pending_readout_id: fallbackCoreSessionStatus?.next_pending_readout_id || fallbackCoreSessionStatus?.nextPendingReadoutId || corePendingIds[0] || null,
+        primaryBlockingReasonId: fallbackCoreSessionStatus?.primaryBlockingReasonId || fallbackCoreSessionStatus?.primary_blocking_reason_id || null,
+        primary_blocking_reason_id: fallbackCoreSessionStatus?.primary_blocking_reason_id || fallbackCoreSessionStatus?.primaryBlockingReasonId || null,
+        primaryBlockingReason: fallbackCoreSessionStatus?.primaryBlockingReason || fallbackCoreSessionStatus?.primary_blocking_reason || null,
+        primary_blocking_reason: fallbackCoreSessionStatus?.primary_blocking_reason || fallbackCoreSessionStatus?.primaryBlockingReason || null,
+        primaryBlockingReadoutId: fallbackCoreSessionStatus?.primaryBlockingReadoutId || fallbackCoreSessionStatus?.primary_blocking_readout_id || corePendingIds[0] || null,
+        primary_blocking_readout_id: fallbackCoreSessionStatus?.primary_blocking_readout_id || fallbackCoreSessionStatus?.primaryBlockingReadoutId || corePendingIds[0] || null,
+        primaryBlockingReadoutLabel: fallbackCoreSessionStatus?.primaryBlockingReadoutLabel || fallbackCoreSessionStatus?.primary_blocking_readout_label || corePendingIds[0] || null,
+        primary_blocking_readout_label: fallbackCoreSessionStatus?.primary_blocking_readout_label || fallbackCoreSessionStatus?.primaryBlockingReadoutLabel || corePendingIds[0] || null,
+        primaryBlockingReadoutRequest: fallbackCoreSessionStatus?.primaryBlockingReadoutRequest || fallbackCoreSessionStatus?.primary_blocking_readout_request || null,
+        primary_blocking_readout_request: fallbackCoreSessionStatus?.primary_blocking_readout_request || fallbackCoreSessionStatus?.primaryBlockingReadoutRequest || null,
+        primaryBlockingSummary: fallbackCoreSessionStatus?.primaryBlockingSummary || fallbackCoreSessionStatus?.primary_blocking_summary || null,
+        primary_blocking_summary: fallbackCoreSessionStatus?.primary_blocking_summary || fallbackCoreSessionStatus?.primaryBlockingSummary || null
+      });
+    }
     const completedReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
     const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
     if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) completedReadoutIds.add("dtc_snapshot");
@@ -19399,6 +19464,89 @@
 
   function synchronizeImportedAnalysisReadinessStateAliases(summary = null, fallbackCoreSessionStatus = null) {
     if (!summary || typeof summary !== "object" || Array.isArray(summary)) return summary;
+    const readCoreIds = (camelKey, snakeKey) => {
+      const values = Array.isArray(fallbackCoreSessionStatus?.[camelKey])
+        ? fallbackCoreSessionStatus[camelKey]
+        : Array.isArray(fallbackCoreSessionStatus?.[snakeKey]) ? fallbackCoreSessionStatus[snakeKey] : [];
+      return [...new Set(values.filter(Boolean).map(String))].sort();
+    };
+    const coreMissingIds = readCoreIds("missingReadoutIds", "missing_readout_ids");
+    const coreEmptyIds = readCoreIds("emptyReadoutIds", "empty_readout_ids");
+    const corePendingIds = [...new Set([
+      ...readCoreIds("pendingReadoutIds", "pending_readout_ids"),
+      ...coreMissingIds,
+      ...coreEmptyIds
+    ])].sort();
+    const summaryClaimsReady = summary.ready === true
+      || summary.readyForAnalysis === true
+      || summary.ready_for_analysis === true
+      || ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase());
+    if (summaryClaimsReady && corePendingIds.length > 0) {
+      const coreCapturedIds = readCoreIds("capturedReadoutIds", "captured_readout_ids");
+      const explicitRequiredIds = readCoreIds("requiredReadoutIds", "required_readout_ids");
+      const coreRequiredIds = explicitRequiredIds.length > 0
+        ? explicitRequiredIds
+        : [...new Set([...coreCapturedIds, ...corePendingIds])].sort();
+      const coreBlockerIds = [
+        ...(coreMissingIds.length > 0 ? ["missing_readouts"] : []),
+        ...(coreEmptyIds.length > 0 ? ["empty_readouts"] : [])
+      ];
+      const fallbackBlockersById = fallbackCoreSessionStatus?.analysisBlockerById || fallbackCoreSessionStatus?.analysis_blocker_by_id || {};
+      const savedBlockersById = summary.blockersById || summary.blockers_by_id || {};
+      const blockersById = { ...savedBlockersById, ...fallbackBlockersById };
+      const blockerIds = [...new Set([
+        ...(Array.isArray(summary.blockerIds) ? summary.blockerIds : Array.isArray(summary.blocker_ids) ? summary.blocker_ids : []),
+        ...coreBlockerIds
+      ].filter(Boolean).map(String))].sort();
+      const completionPercent = coreRequiredIds.length > 0
+        ? Math.min(99, Math.round((coreCapturedIds.filter((readoutId) => coreRequiredIds.includes(readoutId)).length / coreRequiredIds.length) * 100))
+        : 0;
+      return normalizeAnalysisReadinessSummaryAliases({
+        ...summary,
+        ready: false,
+        readyForAnalysis: false,
+        ready_for_analysis: false,
+        status: "collecting_readouts",
+        blockerIds,
+        blocker_ids: [...blockerIds],
+        blockerCount: blockerIds.length,
+        blocker_count: blockerIds.length,
+        blockersById,
+        blockers_by_id: blockersById,
+        blockerSummary: fallbackCoreSessionStatus?.analysisBlockerSummary || fallbackCoreSessionStatus?.analysis_blocker_summary || summary.blockerSummary || summary.blocker_summary || null,
+        blocker_summary: fallbackCoreSessionStatus?.analysis_blocker_summary || fallbackCoreSessionStatus?.analysisBlockerSummary || summary.blocker_summary || summary.blockerSummary || null,
+        missingReadoutCount: coreMissingIds.length,
+        missing_readout_count: coreMissingIds.length,
+        emptyReadoutCount: coreEmptyIds.length,
+        empty_readout_count: coreEmptyIds.length,
+        pendingReadoutCount: corePendingIds.length,
+        pending_readout_count: corePendingIds.length,
+        completionPercent,
+        completion_percent: completionPercent,
+        primaryBlockingReasonId: fallbackCoreSessionStatus?.primaryBlockingReasonId || fallbackCoreSessionStatus?.primary_blocking_reason_id || coreBlockerIds[0] || null,
+        primary_blocking_reason_id: fallbackCoreSessionStatus?.primary_blocking_reason_id || fallbackCoreSessionStatus?.primaryBlockingReasonId || coreBlockerIds[0] || null,
+        primaryBlockingReason: fallbackCoreSessionStatus?.primaryBlockingReason || fallbackCoreSessionStatus?.primary_blocking_reason || null,
+        primary_blocking_reason: fallbackCoreSessionStatus?.primary_blocking_reason || fallbackCoreSessionStatus?.primaryBlockingReason || null,
+        primaryBlockingReadoutId: fallbackCoreSessionStatus?.primaryBlockingReadoutId || fallbackCoreSessionStatus?.primary_blocking_readout_id || corePendingIds[0] || null,
+        primary_blocking_readout_id: fallbackCoreSessionStatus?.primary_blocking_readout_id || fallbackCoreSessionStatus?.primaryBlockingReadoutId || corePendingIds[0] || null,
+        primaryBlockingReadoutLabel: fallbackCoreSessionStatus?.primaryBlockingReadoutLabel || fallbackCoreSessionStatus?.primary_blocking_readout_label || corePendingIds[0] || null,
+        primary_blocking_readout_label: fallbackCoreSessionStatus?.primary_blocking_readout_label || fallbackCoreSessionStatus?.primaryBlockingReadoutLabel || corePendingIds[0] || null,
+        primaryBlockingReadoutRequest: fallbackCoreSessionStatus?.primaryBlockingReadoutRequest || fallbackCoreSessionStatus?.primary_blocking_readout_request || null,
+        primary_blocking_readout_request: fallbackCoreSessionStatus?.primary_blocking_readout_request || fallbackCoreSessionStatus?.primaryBlockingReadoutRequest || null,
+        primaryBlockingSummary: fallbackCoreSessionStatus?.primaryBlockingSummary || fallbackCoreSessionStatus?.primary_blocking_summary || null,
+        primary_blocking_summary: fallbackCoreSessionStatus?.primary_blocking_summary || fallbackCoreSessionStatus?.primaryBlockingSummary || null,
+        nextReadoutId: fallbackCoreSessionStatus?.nextReadoutId || fallbackCoreSessionStatus?.next_readout_id || corePendingIds[0] || null,
+        next_readout_id: fallbackCoreSessionStatus?.next_readout_id || fallbackCoreSessionStatus?.nextReadoutId || corePendingIds[0] || null,
+        nextReadoutLabel: fallbackCoreSessionStatus?.nextReadoutLabel || fallbackCoreSessionStatus?.next_readout_label || corePendingIds[0] || null,
+        next_readout_label: fallbackCoreSessionStatus?.next_readout_label || fallbackCoreSessionStatus?.nextReadoutLabel || corePendingIds[0] || null,
+        nextReadoutStatus: fallbackCoreSessionStatus?.nextReadoutStatus || fallbackCoreSessionStatus?.next_readout_status || null,
+        next_readout_status: fallbackCoreSessionStatus?.next_readout_status || fallbackCoreSessionStatus?.nextReadoutStatus || null,
+        nextReadoutSource: "fallback_core_session",
+        next_readout_source: "fallback_core_session",
+        nextReadoutQueuePosition: 1,
+        next_readout_queue_position: 1
+      });
+    }
     const completedReadoutIds = buildExplicitlyCompletedNonDtcReadoutIds(fallbackCoreSessionStatus);
     const dtcStatusReadoutPlan = getImportedCoreDtcStatusReadoutPlan(fallbackCoreSessionStatus);
     if (isDtcStatusReadoutPlanComplete(dtcStatusReadoutPlan)) completedReadoutIds.add("dtc_snapshot");
