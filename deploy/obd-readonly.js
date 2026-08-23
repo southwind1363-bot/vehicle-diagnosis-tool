@@ -18068,7 +18068,6 @@
       const value = pickDefined(summary[camelKey], summary[snakeKey], fallback);
       return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : fallback;
     };
-    const blockerIds = normalizeIds(summary.blockerIds || summary.blocker_ids);
     const checklist = Array.isArray(summary.checklist) ? summary.checklist : [];
     const blockerSummary = summary.blockerSummary || summary.blocker_summary || null;
     const blockersById = summary.blockersById || summary.blockers_by_id || {};
@@ -18092,21 +18091,29 @@
     const primaryBlockingReason = summary.primaryBlockingReason || summary.primary_blocking_reason || null;
     const primaryBlockingReadoutRequest = summary.primaryBlockingReadoutRequest || summary.primary_blocking_readout_request || null;
     const primaryBlockingSummary = summary.primaryBlockingSummary || summary.primary_blocking_summary || null;
-    const blockerCount = toCount("blockerCount", "blocker_count", blockerIds.length);
     const missingReadoutCount = toCount("missingReadoutCount", "missing_readout_count", 0);
     const emptyReadoutCount = toCount("emptyReadoutCount", "empty_readout_count", 0);
     const blockingWarningCount = toCount("blockingWarningCount", "blocking_warning_count", 0);
     const readoutQualityIssueCount = toCount("readoutQualityIssueCount", "readout_quality_issue_count", 0);
-    const pendingReadoutCount = toCount("pendingReadoutCount", "pending_readout_count", missingReadoutCount + emptyReadoutCount);
+    const blockerIds = normalizeIds(summary.blockerIds || summary.blocker_ids);
+    const blockerCount = Math.max(toCount("blockerCount", "blocker_count", blockerIds.length), blockerIds.length);
+    const pendingReadoutCount = Math.max(toCount("pendingReadoutCount", "pending_readout_count", missingReadoutCount + emptyReadoutCount), missingReadoutCount + emptyReadoutCount);
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
-    const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
-    const ready = pickDefined(summary.ready, summary.readyForAnalysis, summary.ready_for_analysis, false) === true;
+    const normalizedCompletionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const hasBlockingEvidence = blockerCount > 0 || pendingReadoutCount > 0;
+    const completionPercent = hasBlockingEvidence && normalizedCompletionPercent === 100 ? 99 : normalizedCompletionPercent;
+    const ready = !hasBlockingEvidence && pickDefined(summary.ready, summary.readyForAnalysis, summary.ready_for_analysis, false) === true;
+    const status = hasBlockingEvidence && ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
+      ? "collecting_readouts"
+      : summary.status || null;
     return {
       ...summary,
       schemaVersion,
       schema_version: schemaVersion,
       ready,
-      status: summary.status || null,
+      readyForAnalysis: ready,
+      ready_for_analysis: ready,
+      status,
       blockerCount,
       blocker_count: blockerCount,
       blockerIds,
