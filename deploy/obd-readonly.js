@@ -15779,7 +15779,7 @@
       ? Number(nextReadoutCandidateSafetySummary?.unsafeCount || 0)
       : toCount("nextReadoutCandidateUnsafeCount", "next_readout_candidate_unsafe_count", Number.isFinite(Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count))) ? Number(pickDefined(nextReadoutCandidateSafetySummary?.unsafeCount, nextReadoutCandidateSafetySummary?.unsafe_count)) : 0);
     const completionValue = pickDefined(summary.completionPercent, summary.completion_percent, 0);
-    const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const normalizedCompletionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
     const blockingReasonIds = normalizeIds(summary.blockingReasonIds || summary.blocking_reason_ids);
     const synchronizedBlockingReasonIds = promoteFallbackCorePrimaryBlocker && flowPrimaryBlockingReasonId
       ? [...new Set([flowPrimaryBlockingReasonId, ...blockingReasonIds])]
@@ -15787,7 +15787,18 @@
     const checklistBlockedIds = normalizeIds(summary.checklistBlockedIds || summary.checklist_blocked_ids);
     const checklistReviewIds = normalizeIds(summary.checklistReviewIds || summary.checklist_review_ids);
     const readoutQualityIssueIds = normalizeIds(summary.readoutQualityIssueIds || summary.readout_quality_issue_ids);
-    const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
+    const requiredReadoutCount = toCount("requiredReadoutCount", "required_readout_count", 0);
+    const capturedReadoutCount = toCount("capturedReadoutCount", "captured_readout_count", 0);
+    const missingReadoutCount = toCount("missingReadoutCount", "missing_readout_count", 0);
+    const emptyReadoutCount = toCount("emptyReadoutCount", "empty_readout_count", 0);
+    const pendingReadoutCount = Math.max(toCount("pendingReadoutCount", "pending_readout_count", missingReadoutCount + emptyReadoutCount), missingReadoutCount + emptyReadoutCount);
+    const readoutCollectionRequired = pendingReadoutCount > 0 || pickDefined(summary.readoutCollectionRequired, summary.readout_collection_required, false) === true;
+    const hasFlowBlockingEvidence = synchronizedBlockingReasonIds.length > 0 || checklistBlockedIds.length > 0 || readoutCollectionRequired;
+    const readyForAnalysis = !hasFlowBlockingEvidence && pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
+    const completionPercent = hasFlowBlockingEvidence && normalizedCompletionPercent === 100 ? 99 : normalizedCompletionPercent;
+    const status = hasFlowBlockingEvidence && ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
+      ? "collecting_readouts"
+      : summary.status || "not_started";
     const requestPlanBlockedReasonIds = hasSynchronizedPendingReadoutRequest
       ? normalizeIds(pendingReadoutRequestPlan?.blockedReasonIds || pendingReadoutRequestPlan?.blocked_reason_ids)
       : normalizeIds(summary.requestPlanBlockedReasonIds || summary.request_plan_blocked_reason_ids);
@@ -15860,7 +15871,7 @@
       schemaVersion,
       schema_version: schemaVersion,
       stage: summary.stage || "diagnostic_core",
-      status: summary.status || "not_started",
+      status,
       currentStep: pickDefined(summary.currentStep, summary.current_step, null),
       current_step: pickDefined(summary.current_step, summary.currentStep, null),
       nextAction: pickDefined(summary.nextAction, summary.next_action, null),
@@ -15977,10 +15988,10 @@
       recommended_readout_is_pending: recommendedReadoutIsPending,
       readyForAnalysis,
       ready_for_analysis: readyForAnalysis,
-      canStartAnalysis: pickDefined(summary.canStartAnalysis, summary.can_start_analysis, readyForAnalysis) === true,
-      can_start_analysis: pickDefined(summary.can_start_analysis, summary.canStartAnalysis, readyForAnalysis) === true,
-      analysisBlocked: pickDefined(summary.analysisBlocked, summary.analysis_blocked, !readyForAnalysis) === true,
-      analysis_blocked: pickDefined(summary.analysis_blocked, summary.analysisBlocked, !readyForAnalysis) === true,
+      canStartAnalysis: readyForAnalysis,
+      can_start_analysis: readyForAnalysis,
+      analysisBlocked: !readyForAnalysis,
+      analysis_blocked: !readyForAnalysis,
       applicabilityStatus: pickDefined(summary.applicabilityStatus, summary.applicability_status, "unknown"),
       applicability_status: pickDefined(summary.applicability_status, summary.applicabilityStatus, "unknown"),
       vehicleApplicabilityReviewRequired: pickDefined(summary.vehicleApplicabilityReviewRequired, summary.vehicle_applicability_review_required, false) === true,
@@ -16017,20 +16028,20 @@
       primary_blocking_readout_execution_enabled: primaryBlockingReadoutExecutionEnabled,
       primaryBlockingReadoutWouldTransmit,
       primary_blocking_readout_would_transmit: primaryBlockingReadoutWouldTransmit,
-      readoutCollectionRequired: pickDefined(summary.readoutCollectionRequired, summary.readout_collection_required, false) === true,
-      readout_collection_required: pickDefined(summary.readout_collection_required, summary.readoutCollectionRequired, false) === true,
+      readoutCollectionRequired,
+      readout_collection_required: readoutCollectionRequired,
       completionPercent,
       completion_percent: completionPercent,
-      requiredReadoutCount: toCount("requiredReadoutCount", "required_readout_count", 0),
-      required_readout_count: toCount("requiredReadoutCount", "required_readout_count", 0),
-      capturedReadoutCount: toCount("capturedReadoutCount", "captured_readout_count", 0),
-      captured_readout_count: toCount("capturedReadoutCount", "captured_readout_count", 0),
-      missingReadoutCount: toCount("missingReadoutCount", "missing_readout_count", 0),
-      missing_readout_count: toCount("missingReadoutCount", "missing_readout_count", 0),
-      emptyReadoutCount: toCount("emptyReadoutCount", "empty_readout_count", 0),
-      empty_readout_count: toCount("emptyReadoutCount", "empty_readout_count", 0),
-      pendingReadoutCount: toCount("pendingReadoutCount", "pending_readout_count", 0),
-      pending_readout_count: toCount("pendingReadoutCount", "pending_readout_count", 0),
+      requiredReadoutCount,
+      required_readout_count: requiredReadoutCount,
+      capturedReadoutCount,
+      captured_readout_count: capturedReadoutCount,
+      missingReadoutCount,
+      missing_readout_count: missingReadoutCount,
+      emptyReadoutCount,
+      empty_readout_count: emptyReadoutCount,
+      pendingReadoutCount,
+      pending_readout_count: pendingReadoutCount,
       checklistTotalCount: toCount("checklistTotalCount", "checklist_total_count", 0),
       checklist_total_count: toCount("checklistTotalCount", "checklist_total_count", 0),
       checklistCompleteCount: toCount("checklistCompleteCount", "checklist_complete_count", 0),
