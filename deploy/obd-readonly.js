@@ -14926,6 +14926,8 @@
     const removedCompletedPendingRequest = savedPendingReadoutRequestQueue.some((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id));
     const completedSavedPendingRequestInput = savedPendingReadoutRequestQueue.find((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id)) || null;
     const analysisChecklist = normalizeArray("analysisChecklist", "analysis_checklist");
+    const analysisChecklistByIdInput = normalizeObject("analysisChecklistById", "analysis_checklist_by_id");
+    const analysisChecklistSummaryInput = summary.analysisChecklistSummary || summary.analysis_checklist_summary || null;
     const savedPendingReadoutRequestPlan = summary.pendingReadoutRequestPlan || summary.pending_readout_request_plan || null;
     const savedPlanNextRequest = savedPendingReadoutRequestPlan?.nextRequest || savedPendingReadoutRequestPlan?.next_request || null;
     const savedNextReadoutSummary = summary.nextReadoutSummary || summary.next_readout_summary || null;
@@ -15354,6 +15356,92 @@
         completion_percent: completionPercent
       };
     })() : null;
+    const effectiveAnalysisChecklist = (() => {
+      const checklistById = new Map();
+      Object.entries(analysisChecklistByIdInput).forEach(([id, item]) => {
+        if (item && typeof item === "object" && !Array.isArray(item)) checklistById.set(item.id || id, { ...item, id: item.id || id });
+      });
+      analysisChecklist.forEach((item) => {
+        if (item && typeof item === "object" && !Array.isArray(item) && item.id) checklistById.set(item.id, { ...item });
+      });
+      if (pendingReadoutIds.length > 0 && !checklistById.has("required_readouts")) {
+        checklistById.set("required_readouts", { id: "required_readouts", label: "Required core readouts" });
+      }
+      if (blockingWarningIds.length > 0 && !checklistById.has("blocking_warnings")) {
+        checklistById.set("blocking_warnings", { id: "blocking_warnings", label: "Blocking warnings" });
+      }
+      return [...checklistById.values()].map((item) => {
+        if (item.id === "required_readouts") {
+          const requiredCount = hasArrayAlias("requiredReadoutIds", "required_readout_ids")
+            ? requiredReadoutIds.length
+            : readNonnegativeCount(item.requiredCount, item.required_count, effectiveReadoutProgressSummary?.requiredCount);
+          const capturedCount = hasArrayAlias("capturedReadoutIds", "captured_readout_ids")
+            ? capturedReadoutIds.length
+            : readNonnegativeCount(item.capturedCount, item.captured_count, effectiveReadoutProgressSummary?.capturedCount);
+          const pending = pendingReadoutIds.length > 0;
+          return {
+            ...item,
+            state: pending ? "pending" : "complete",
+            complete: !pending,
+            blocking: pending,
+            requiredCount,
+            required_count: requiredCount,
+            capturedCount,
+            captured_count: capturedCount,
+            missingCount: missingReadoutIds.length,
+            missing_count: missingReadoutIds.length,
+            emptyCount: emptyReadoutIds.length,
+            empty_count: emptyReadoutIds.length,
+            pendingCount: pendingReadoutIds.length,
+            pending_count: pendingReadoutIds.length
+          };
+        }
+        if (item.id === "blocking_warnings") {
+          const blocked = blockingWarningIds.length > 0;
+          return {
+            ...item,
+            state: blocked ? "blocked" : "complete",
+            complete: !blocked,
+            blocking: blocked,
+            warningCount: blockingWarningIds.length,
+            warning_count: blockingWarningIds.length,
+            warningIds: blockingWarningIds,
+            warning_ids: blockingWarningIds
+          };
+        }
+        return item;
+      });
+    })();
+    const effectiveAnalysisChecklistById = Object.fromEntries(
+      effectiveAnalysisChecklist.filter((item) => item?.id).map((item) => [item.id, { ...item }])
+    );
+    const effectiveAnalysisChecklistSummary = effectiveAnalysisChecklist.length > 0 ? (() => {
+      const completeItems = effectiveAnalysisChecklist.filter((item) => item.complete === true);
+      const blockingItems = effectiveAnalysisChecklist.filter((item) => item.blocking === true);
+      const reviewItems = effectiveAnalysisChecklist.filter((item) => item.state === "review");
+      const pendingItems = effectiveAnalysisChecklist.filter((item) => item.state === "pending");
+      const checklistSchemaVersion = analysisChecklistSummaryInput?.schemaVersion || analysisChecklistSummaryInput?.schema_version || "analysis_checklist_summary_v1";
+      return {
+        ...(analysisChecklistSummaryInput || {}),
+        schemaVersion: checklistSchemaVersion,
+        schema_version: checklistSchemaVersion,
+        totalCount: effectiveAnalysisChecklist.length,
+        total_count: effectiveAnalysisChecklist.length,
+        completeCount: completeItems.length,
+        complete_count: completeItems.length,
+        blockingCount: blockingItems.length,
+        blocking_count: blockingItems.length,
+        reviewCount: reviewItems.length,
+        review_count: reviewItems.length,
+        pendingCount: pendingItems.length,
+        pending_count: pendingItems.length,
+        blockedIds: blockingItems.map((item) => item.id).filter(Boolean),
+        blocked_ids: blockingItems.map((item) => item.id).filter(Boolean),
+        reviewIds: reviewItems.map((item) => item.id).filter(Boolean),
+        review_ids: reviewItems.map((item) => item.id).filter(Boolean),
+        ready: !hasCoreBlockingEvidence
+      };
+    })() : analysisChecklistSummaryInput;
     const effectiveCoreWorkflowSummary = coreWorkflowSummary && hasCoreBlockingEvidence ? {
       ...coreWorkflowSummary,
       status: ["ready", "analysis_ready"].includes(String(coreWorkflowSummary.status || "").trim().toLowerCase())
@@ -15384,6 +15472,11 @@
       blocker_count: Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
       blockerIds: analysisBlockers,
       blocker_ids: analysisBlockers,
+      checklist: effectiveAnalysisChecklist,
+      checklistById: effectiveAnalysisChecklistById,
+      checklist_by_id: effectiveAnalysisChecklistById,
+      checklistSummary: effectiveAnalysisChecklistSummary,
+      checklist_summary: effectiveAnalysisChecklistSummary,
       pendingReadoutCount: Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
       pending_readout_count: Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
       completionPercent,
@@ -15519,12 +15612,12 @@
       primary_blocking_readout_request: finalPrimaryBlockingReadoutRequest,
       primaryBlockingSummary: finalPrimaryBlockingSummary,
       primary_blocking_summary: finalPrimaryBlockingSummary,
-      analysisChecklist,
-      analysis_checklist: analysisChecklist,
-      analysisChecklistById: normalizeObject("analysisChecklistById", "analysis_checklist_by_id"),
-      analysis_checklist_by_id: normalizeObject("analysisChecklistById", "analysis_checklist_by_id"),
-      analysisChecklistSummary: summary.analysisChecklistSummary || summary.analysis_checklist_summary || null,
-      analysis_checklist_summary: summary.analysis_checklist_summary || summary.analysisChecklistSummary || null,
+      analysisChecklist: effectiveAnalysisChecklist,
+      analysis_checklist: effectiveAnalysisChecklist,
+      analysisChecklistById: effectiveAnalysisChecklistById,
+      analysis_checklist_by_id: effectiveAnalysisChecklistById,
+      analysisChecklistSummary: effectiveAnalysisChecklistSummary,
+      analysis_checklist_summary: effectiveAnalysisChecklistSummary,
       analysisReadinessSummary: effectiveAnalysisReadinessSummary,
       analysis_readiness_summary: effectiveAnalysisReadinessSummary,
       blockingWarningIds,
