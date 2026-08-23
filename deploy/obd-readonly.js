@@ -14807,6 +14807,20 @@
       summary.emptyReadoutIds,
       summary.empty_readout_ids
     ].some(Array.isArray);
+    const hasExplicitReadoutStateEvidence = [
+      summary.requiredReadoutIds,
+      summary.required_readout_ids,
+      summary.capturedReadoutIds,
+      summary.captured_readout_ids,
+      summary.pendingReadoutIds,
+      summary.pending_readout_ids,
+      summary.missingReadoutIds,
+      summary.missing_readout_ids,
+      summary.remainingReadoutIds,
+      summary.remaining_readout_ids,
+      summary.emptyReadoutIds,
+      summary.empty_readout_ids
+    ].some(Array.isArray);
     const pendingReadoutIds = normalizeIds([
       ...(Array.isArray(summary.pendingReadoutIds) ? summary.pendingReadoutIds : Array.isArray(summary.pending_readout_ids) ? summary.pending_readout_ids : []),
       ...missingReadoutIds,
@@ -14982,6 +14996,10 @@
     const pendingReadoutStates = pendingReadoutQueue.map((item) => ({ ...item }));
     const pendingReadoutStateById = Object.fromEntries(pendingReadoutStates.map((item) => [item.id, { ...item }]));
     const pendingReadoutQueueById = Object.fromEntries(pendingReadoutQueue.map((item) => [item.id, { ...item }]));
+    const savedReadoutStates = normalizeArray("readoutStates", "readout_states");
+    const savedReadoutStateById = normalizeObject("readoutStateById", "readout_state_by_id");
+    const savedReadoutStatesByStatus = normalizeObject("readoutStatesByStatus", "readout_states_by_status");
+    const readoutStateSummaryInput = summary.readoutStateSummary || summary.readout_state_summary || null;
     const savedPendingReadoutRequestQueue = normalizeArray("pendingReadoutRequestQueue", "pending_readout_request_queue");
     const pendingReadoutRequestQueue = normalizePendingReadoutRequestQueueAliases(savedPendingReadoutRequestQueue, dtcStatusReadoutPlan, completedReadoutIds);
     const removedCompletedPendingRequest = savedPendingReadoutRequestQueue.some((item) => completedReadoutIds.has(item?.readoutId || item?.readout_id || item?.id));
@@ -15391,6 +15409,99 @@
       return value == null ? 0 : Math.max(0, Math.round(Number(value)));
     };
     const hasArrayAlias = (...keys) => keys.some((key) => Array.isArray(summary[key]));
+    const effectiveReadoutStates = (() => {
+      const sourceById = new Map();
+      Object.entries(savedReadoutStateById).forEach(([id, item]) => {
+        if (item && typeof item === "object" && !Array.isArray(item)) sourceById.set(item.id || id, { ...item, id: item.id || id });
+      });
+      Object.values(savedReadoutStatesByStatus).forEach((items) => {
+        if (!Array.isArray(items)) return;
+        items.forEach((item) => {
+          const id = item?.id || item?.readoutId || item?.readout_id || null;
+          if (id) sourceById.set(id, { ...(sourceById.get(id) || {}), ...item, id });
+        });
+      });
+      savedReadoutStates.forEach((item) => {
+        const id = item?.id || item?.readoutId || item?.readout_id || null;
+        if (id) sourceById.set(id, { ...(sourceById.get(id) || {}), ...item, id });
+      });
+      const savedIds = [...sourceById.keys()];
+      const evidenceIds = normalizeIds([
+        ...requiredReadoutIds,
+        ...capturedReadoutIds,
+        ...missingReadoutIds,
+        ...remainingReadoutIds,
+        ...emptyReadoutIds,
+        ...pendingReadoutIds
+      ]);
+      const stateIds = hasExplicitReadoutStateEvidence
+        ? [...savedIds.filter((id) => evidenceIds.includes(id)), ...evidenceIds.filter((id) => !savedIds.includes(id))]
+        : savedIds;
+      return stateIds.map((id) => {
+        const source = sourceById.get(id) || {};
+        const status = emptyReadoutIds.includes(id)
+          ? "empty"
+          : missingReadoutIds.includes(id) || remainingReadoutIds.includes(id) || pendingReadoutIds.includes(id)
+            ? "missing"
+            : capturedReadoutIds.includes(id) ? "captured" : source.status || null;
+        const statusReason = status === "captured" ? null : source.statusReason || source.status_reason || null;
+        return {
+          ...source,
+          id,
+          readoutId: source.readoutId || source.readout_id || id,
+          readout_id: source.readout_id || source.readoutId || id,
+          label: source.label || id,
+          status,
+          statusReason,
+          status_reason: statusReason
+        };
+      });
+    })();
+    const effectiveReadoutStateById = Object.fromEntries(effectiveReadoutStates.map((item) => [item.id, { ...item }]));
+    const effectiveReadoutStatesByStatus = effectiveReadoutStates.reduce((groups, item) => {
+      const status = item.status || "unknown";
+      if (!groups[status]) groups[status] = [];
+      groups[status].push({ ...item });
+      return groups;
+    }, {});
+    ["captured", "empty", "missing"].forEach((status) => {
+      if (!effectiveReadoutStatesByStatus[status]) effectiveReadoutStatesByStatus[status] = [];
+    });
+    const effectiveReadoutStateSummary = effectiveReadoutStates.length > 0 || hasExplicitReadoutStateEvidence ? (() => {
+      const capturedCount = effectiveReadoutStatesByStatus.captured.length;
+      const emptyCount = effectiveReadoutStatesByStatus.empty.length;
+      const missingCount = effectiveReadoutStatesByStatus.missing.length;
+      const pendingCount = emptyCount + missingCount;
+      const attemptedCount = capturedCount + emptyCount;
+      const totalCount = effectiveReadoutStates.length;
+      const toPercent = (count) => totalCount > 0 ? Math.round((count / totalCount) * 100) : 0;
+      const stateSchemaVersion = readoutStateSummaryInput?.schemaVersion || readoutStateSummaryInput?.schema_version || "readout_state_summary_v1";
+      return {
+        ...(readoutStateSummaryInput || {}),
+        schemaVersion: stateSchemaVersion,
+        schema_version: stateSchemaVersion,
+        totalCount,
+        total_count: totalCount,
+        capturedCount,
+        captured_count: capturedCount,
+        emptyCount,
+        empty_count: emptyCount,
+        missingCount,
+        missing_count: missingCount,
+        pendingCount,
+        pending_count: pendingCount,
+        openCount: pendingCount,
+        open_count: pendingCount,
+        attemptedCount,
+        attempted_count: attemptedCount,
+        capturedPercent: toPercent(capturedCount),
+        captured_percent: toPercent(capturedCount),
+        attemptedPercent: toPercent(attemptedCount),
+        attempted_percent: toPercent(attemptedCount),
+        pendingPercent: toPercent(pendingCount),
+        pending_percent: toPercent(pendingCount)
+      };
+    })() : readoutStateSummaryInput;
     const effectiveReadoutProgressSummary = readoutProgressSummaryInput ? (() => {
       const hasRequiredIdEvidence = hasArrayAlias("requiredReadoutIds", "required_readout_ids");
       const hasCapturedIdEvidence = hasArrayAlias("capturedReadoutIds", "captured_readout_ids");
@@ -15637,14 +15748,14 @@
       next_pending_readout_id: pendingReadoutQueue[0]?.id || pickDefined(summary.next_pending_readout_id, summary.nextPendingReadoutId, pendingReadoutQueueSummary?.next_readout_id, pendingReadoutQueueSummary?.nextReadoutId, null),
       nextPendingReadoutState: pendingReadoutQueue[0] || summary.nextPendingReadoutState || summary.next_pending_readout_state || null,
       next_pending_readout_state: pendingReadoutQueue[0] || summary.next_pending_readout_state || summary.nextPendingReadoutState || null,
-      readoutStates: normalizeArray("readoutStates", "readout_states"),
-      readout_states: normalizeArray("readoutStates", "readout_states"),
-      readoutStateById: normalizeObject("readoutStateById", "readout_state_by_id"),
-      readout_state_by_id: normalizeObject("readoutStateById", "readout_state_by_id"),
-      readoutStatesByStatus: normalizeObject("readoutStatesByStatus", "readout_states_by_status"),
-      readout_states_by_status: normalizeObject("readoutStatesByStatus", "readout_states_by_status"),
-      readoutStateSummary: summary.readoutStateSummary || summary.readout_state_summary || null,
-      readout_state_summary: summary.readout_state_summary || summary.readoutStateSummary || null,
+      readoutStates: effectiveReadoutStates,
+      readout_states: effectiveReadoutStates,
+      readoutStateById: effectiveReadoutStateById,
+      readout_state_by_id: effectiveReadoutStateById,
+      readoutStatesByStatus: effectiveReadoutStatesByStatus,
+      readout_states_by_status: effectiveReadoutStatesByStatus,
+      readoutStateSummary: effectiveReadoutStateSummary,
+      readout_state_summary: effectiveReadoutStateSummary,
       readoutProgressSummary: effectiveReadoutProgressSummary,
       readout_progress_summary: effectiveReadoutProgressSummary,
       readoutCompletionSummary: finalReadoutCompletionSummary,
