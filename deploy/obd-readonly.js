@@ -19912,6 +19912,8 @@
     return {
       ...summary,
       ready,
+      readyForAnalysis: ready,
+      ready_for_analysis: ready,
       status: ready ? "analysis_ready" : summary.status || null,
       blockerCount: blockerIds.length,
       blocker_count: blockerIds.length,
