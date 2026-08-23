@@ -16241,7 +16241,9 @@
       summary.can_start_analysis,
       null
     ) !== null;
-    if (!hasActiveSavedFlowRequest && fallbackCoreSessionStatus && (removedCompletedFlowRequestEvidence || !hasSavedFlowStateEvidence)) {
+    const savedFlowClaimsReady = ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
+      || pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
+    if (!hasActiveSavedFlowRequest && fallbackCoreSessionStatus && (removedCompletedFlowRequestEvidence || !hasSavedFlowStateEvidence || savedFlowClaimsReady)) {
       const fallbackPendingRequestQueueInput = Array.isArray(fallbackCoreSessionStatus.pendingReadoutRequestQueue)
         ? fallbackCoreSessionStatus.pendingReadoutRequestQueue
         : Array.isArray(fallbackCoreSessionStatus.pending_readout_request_queue) ? fallbackCoreSessionStatus.pending_readout_request_queue : [];
@@ -16638,9 +16640,37 @@
       if (!nestedSummary || typeof nestedSummary !== "object" || Array.isArray(nestedSummary)) return nestedSummary;
       const synchronizeNextReadoutControls = isDtcNextReadoutRequest || clearCompletedNextReadout || recoverSavedPendingNextReadout;
       const synchronizePrimaryBlocker = isDtcPrimaryBlockingReadoutRequest || clearCompletedPrimaryBlockingReadout || promoteFallbackCorePrimaryBlocker;
-      if (!synchronizeNextReadoutControls && !synchronizePrimaryBlocker) return nestedSummary;
+      if (!synchronizeNextReadoutControls && !synchronizePrimaryBlocker && !promoteReadoutCollectionState) return nestedSummary;
       return {
         ...nestedSummary,
+        ...(promoteReadoutCollectionState ? {
+          status: "collecting_readouts",
+          ready: false,
+          readyForAnalysis: false,
+          ready_for_analysis: false,
+          canStartAnalysis: false,
+          can_start_analysis: false,
+          analysisBlocked: true,
+          analysis_blocked: true,
+          readoutCollectionRequired: true,
+          readout_collection_required: true,
+          completionPercent,
+          completion_percent: completionPercent,
+          requiredReadoutCount: synchronizedRequiredReadoutCount,
+          required_readout_count: synchronizedRequiredReadoutCount,
+          capturedReadoutCount: synchronizedCapturedReadoutCount,
+          captured_readout_count: synchronizedCapturedReadoutCount,
+          missingReadoutCount: synchronizedMissingReadoutCount,
+          missing_readout_count: synchronizedMissingReadoutCount,
+          emptyReadoutCount: synchronizedEmptyReadoutCount,
+          empty_readout_count: synchronizedEmptyReadoutCount,
+          pendingReadoutCount: synchronizedPendingReadoutCount,
+          pending_readout_count: synchronizedPendingReadoutCount,
+          blockerCount: synchronizedBlockingReasonIds.length,
+          blocker_count: synchronizedBlockingReasonIds.length,
+          blockingReasonIds: synchronizedBlockingReasonIds,
+          blocking_reason_ids: synchronizedBlockingReasonIds
+        } : {}),
         ...(synchronizeNextReadoutControls ? {
           nextReadoutReasonSummary,
           next_readout_reason_summary: nextReadoutReasonSummary,
@@ -16679,8 +16709,6 @@
         } : {})
       };
     };
-    const flowCoreWorkflowSummary = synchronizeNestedFlowControls(coreWorkflowSummaryInput);
-    const flowAnalysisReadinessSummary = synchronizeNestedFlowControls(analysisReadinessSummaryInput);
     const savedNextReadoutCandidateSafetySummary = summary.nextReadoutCandidateSafetySummary || summary.next_readout_candidate_safety_summary || null;
     const nextReadoutCandidateSafetySummary = clearCompletedNextReadout || recoverSavedPendingNextReadout
       ? buildNextReadoutCandidateSafetySummary(nextReadoutRequest ? [nextReadoutRequest] : [])
@@ -16710,11 +16738,24 @@
     const readyForAnalysis = !hasFlowBlockingEvidence && pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
     const completionPercent = hasFlowBlockingEvidence && normalizedCompletionPercent === 100 ? 99 : normalizedCompletionPercent;
     const promoteReadoutCollectionState = Boolean(nextReadoutRequest) && (recoverSavedPendingNextReadout || clearCompletedNextReadout);
+    const fallbackReadoutCount = (camelKey, snakeKey, fallback) => {
+      const ids = Array.isArray(fallbackCoreSessionStatus?.[camelKey])
+        ? fallbackCoreSessionStatus[camelKey]
+        : Array.isArray(fallbackCoreSessionStatus?.[snakeKey]) ? fallbackCoreSessionStatus[snakeKey] : null;
+      return ids ? ids.length : fallback;
+    };
+    const synchronizedRequiredReadoutCount = fallbackReadoutCount("requiredReadoutIds", "required_readout_ids", requiredReadoutCount);
+    const synchronizedCapturedReadoutCount = fallbackReadoutCount("capturedReadoutIds", "captured_readout_ids", capturedReadoutCount);
+    const synchronizedMissingReadoutCount = fallbackReadoutCount("missingReadoutIds", "missing_readout_ids", missingReadoutCount);
+    const synchronizedEmptyReadoutCount = fallbackReadoutCount("emptyReadoutIds", "empty_readout_ids", emptyReadoutCount);
+    const synchronizedPendingReadoutCount = Math.max(fallbackReadoutCount("pendingReadoutIds", "pending_readout_ids", pendingReadoutCount), pendingReadoutRequestQueue.length);
     const status = promoteReadoutCollectionState
       ? "collecting_readouts"
       : hasFlowBlockingEvidence && ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
       ? "collecting_readouts"
       : summary.status || "not_started";
+    const flowCoreWorkflowSummary = synchronizeNestedFlowControls(coreWorkflowSummaryInput);
+    const flowAnalysisReadinessSummary = synchronizeNestedFlowControls(analysisReadinessSummaryInput);
     const requestPlanBlockedReasonIds = hasSynchronizedPendingReadoutRequest
       ? normalizeIds(pendingReadoutRequestPlan?.blockedReasonIds || pendingReadoutRequestPlan?.blocked_reason_ids)
       : normalizeIds(summary.requestPlanBlockedReasonIds || summary.request_plan_blocked_reason_ids);
@@ -17034,8 +17075,21 @@
     });
     const normalizedSummary = normalizeDiagnosticFlowSummaryAliases(summary, missingEvidenceFallback);
     const normalizedSummaryWithReadoutState = { ...normalizedSummary };
+    const summaryClaimsReady = ["ready", "analysis_ready"].includes(String(summary.status || "").trim().toLowerCase())
+      || pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, summary.canStartAnalysis, summary.can_start_analysis, false) === true;
+    const normalizedNextReadoutId = normalizedSummary?.nextReadoutRequest?.readoutId || normalizedSummary?.next_readout_request?.readout_id || null;
+    const recoveredConflictingReadyState = Boolean(
+      summaryClaimsReady
+      && normalizedNextReadoutId
+      && normalizedSummary?.status === "collecting_readouts"
+    );
     readoutStateFallbackFields.forEach(([camelKey, snakeKey]) => {
-      const ids = Array.isArray(summary[camelKey])
+      const conflictingCoreIds = Array.isArray(fallbackCoreSessionStatus?.[camelKey])
+        ? fallbackCoreSessionStatus[camelKey]
+        : Array.isArray(fallbackCoreSessionStatus?.[snakeKey]) ? fallbackCoreSessionStatus[snakeKey] : null;
+      const ids = recoveredConflictingReadyState && conflictingCoreIds
+        ? conflictingCoreIds
+        : Array.isArray(summary[camelKey])
         ? summary[camelKey]
         : Array.isArray(summary[snakeKey])
           ? summary[snakeKey]
@@ -17052,7 +17106,7 @@
       ["pendingReadoutCount", "pending_readout_count", "pendingReadoutIds", "pending_readout_ids"]
     ].forEach(([countCamelKey, countSnakeKey, idsCamelKey, idsSnakeKey]) => {
       const explicitCount = pickDefined(summary[countCamelKey], summary[countSnakeKey]);
-      if (typeof explicitCount !== "undefined") return;
+      if (typeof explicitCount !== "undefined" && !recoveredConflictingReadyState) return;
       const ids = Array.isArray(normalizedSummaryWithReadoutState[idsCamelKey])
         ? normalizedSummaryWithReadoutState[idsCamelKey]
         : Array.isArray(normalizedSummaryWithReadoutState[idsSnakeKey]) ? normalizedSummaryWithReadoutState[idsSnakeKey] : null;
@@ -17063,6 +17117,37 @@
       normalizedSummaryWithReadoutState[countCamelKey] = normalizedCount;
       normalizedSummaryWithReadoutState[countSnakeKey] = normalizedCount;
     });
+    if (recoveredConflictingReadyState) {
+      const synchronizeNestedReadoutState = (nestedSummary = null) => nestedSummary && typeof nestedSummary === "object" && !Array.isArray(nestedSummary) ? {
+        ...nestedSummary,
+        status: "collecting_readouts",
+        ready: false,
+        readyForAnalysis: false,
+        ready_for_analysis: false,
+        canStartAnalysis: false,
+        can_start_analysis: false,
+        analysisBlocked: true,
+        analysis_blocked: true,
+        readoutCollectionRequired: true,
+        readout_collection_required: true,
+        requiredReadoutCount: normalizedSummaryWithReadoutState.requiredReadoutCount,
+        required_readout_count: normalizedSummaryWithReadoutState.requiredReadoutCount,
+        capturedReadoutCount: normalizedSummaryWithReadoutState.capturedReadoutCount,
+        captured_readout_count: normalizedSummaryWithReadoutState.capturedReadoutCount,
+        missingReadoutCount: normalizedSummaryWithReadoutState.missingReadoutCount,
+        missing_readout_count: normalizedSummaryWithReadoutState.missingReadoutCount,
+        emptyReadoutCount: normalizedSummaryWithReadoutState.emptyReadoutCount,
+        empty_readout_count: normalizedSummaryWithReadoutState.emptyReadoutCount,
+        pendingReadoutCount: normalizedSummaryWithReadoutState.pendingReadoutCount,
+        pending_readout_count: normalizedSummaryWithReadoutState.pendingReadoutCount
+      } : nestedSummary;
+      const synchronizedCoreWorkflowSummary = synchronizeNestedReadoutState(normalizedSummaryWithReadoutState.coreWorkflowSummary || normalizedSummaryWithReadoutState.core_workflow_summary || null);
+      const synchronizedAnalysisReadinessSummary = synchronizeNestedReadoutState(normalizedSummaryWithReadoutState.analysisReadinessSummary || normalizedSummaryWithReadoutState.analysis_readiness_summary || null);
+      normalizedSummaryWithReadoutState.coreWorkflowSummary = synchronizedCoreWorkflowSummary;
+      normalizedSummaryWithReadoutState.core_workflow_summary = synchronizedCoreWorkflowSummary;
+      normalizedSummaryWithReadoutState.analysisReadinessSummary = synchronizedAnalysisReadinessSummary;
+      normalizedSummaryWithReadoutState.analysis_readiness_summary = synchronizedAnalysisReadinessSummary;
+    }
     return normalizedSummaryWithReadoutState;
   }
 
