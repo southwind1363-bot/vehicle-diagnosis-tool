@@ -16529,13 +16529,24 @@
       || fallbackCoreSessionStatus?.primaryBlockingReadoutId
       || fallbackCoreSessionStatus?.primary_blocking_readout_id
       || null;
-    const promoteFallbackCorePrimaryBlocker = clearCompletedPrimaryBlockingReadout
-      && fallbackCorePrimaryBlockingReadoutId
+    const savedFlowPrimaryBlockingReasonId = pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null);
+    const hasSavedFlowPrimaryBlocker = Boolean(
+      savedFlowPrimaryBlockingReasonId
+      || primaryBlockingReason
+      || primaryBlockingReadoutRequestId
+      || primaryBlockingSummaryInput
+    );
+    const fallbackCorePrimaryBlockerActive = fallbackCorePrimaryBlockingReadoutId
+      && !completedReadoutIds.has(fallbackCorePrimaryBlockingReadoutId)
       && (nextReadoutRequest?.readoutId === fallbackCorePrimaryBlockingReadoutId
         || pendingReadoutRequestQueue.some((request) => request?.readoutId === fallbackCorePrimaryBlockingReadoutId));
+    const promoteFallbackCorePrimaryBlocker = Boolean(
+      fallbackCorePrimaryBlockerActive
+      && (clearCompletedPrimaryBlockingReadout || !hasSavedFlowPrimaryBlocker)
+    );
     const flowPrimaryBlockingReasonId = promoteFallbackCorePrimaryBlocker
       ? fallbackCoreSessionStatus?.primaryBlockingReasonId || fallbackCoreSessionStatus?.primary_blocking_reason_id || null
-      : clearCompletedPrimaryBlockingReadout ? null : pickDefined(summary.primaryBlockingReasonId, summary.primary_blocking_reason_id, null);
+      : clearCompletedPrimaryBlockingReadout ? null : savedFlowPrimaryBlockingReasonId;
     const flowPrimaryBlockingReason = promoteFallbackCorePrimaryBlocker
       ? fallbackCoreSessionStatus?.primaryBlockingReason || fallbackCoreSessionStatus?.primary_blocking_reason || null
       : clearCompletedPrimaryBlockingReadout ? null : primaryBlockingReason;
