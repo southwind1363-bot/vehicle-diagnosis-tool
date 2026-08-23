@@ -14791,17 +14791,24 @@
       summary.readout_completion_summary?.completion_percent,
       0
     );
-    const completionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
+    const normalizedCompletionPercent = Number.isFinite(Number(completionValue)) ? Math.max(0, Math.min(100, Math.round(Number(completionValue)))) : 0;
     const requiredReadoutIds = normalizeIds(summary.requiredReadoutIds || summary.required_readout_ids);
     const capturedReadoutIds = normalizeIds(summary.capturedReadoutIds || summary.captured_readout_ids);
     const missingReadoutIds = normalizeIds(summary.missingReadoutIds || summary.missing_readout_ids || summary.remainingReadoutIds || summary.remaining_readout_ids);
     const remainingReadoutIds = normalizeIds(summary.remainingReadoutIds || summary.remaining_readout_ids || missingReadoutIds);
     const emptyReadoutIds = normalizeIds(summary.emptyReadoutIds || summary.empty_readout_ids);
     const pendingReadoutIds = normalizeIds(summary.pendingReadoutIds || summary.pending_readout_ids || [...missingReadoutIds, ...emptyReadoutIds]);
-    const analysisBlockers = normalizeIds(summary.analysisBlockers || summary.analysis_blockers);
     const blockingWarningIds = normalizeIds(summary.blockingWarningIds || summary.blocking_warning_ids);
     const readoutCompletionSummaryInput = normalizeReadoutCompletionSummaryAliases(summary.readoutCompletionSummary || summary.readout_completion_summary || null);
     const analysisReadinessSummaryInput = normalizeAnalysisReadinessSummaryAliases(summary.analysisReadinessSummary || summary.analysis_readiness_summary || null);
+    const analysisBlockers = normalizeIds([
+      ...normalizeIds(summary.analysisBlockers || summary.analysis_blockers),
+      ...normalizeIds(summary.blockingReasonIds || summary.blocking_reason_ids),
+      ...normalizeIds(analysisReadinessSummaryInput?.blockerIds || analysisReadinessSummaryInput?.blocker_ids),
+      ...(missingReadoutIds.length > 0 || pendingReadoutIds.some((id) => !emptyReadoutIds.includes(id)) ? ["missing_readouts"] : []),
+      ...(emptyReadoutIds.length > 0 ? ["empty_readouts"] : []),
+      ...(blockingWarningIds.length > 0 ? ["blocking_warnings"] : [])
+    ]);
     const readoutQualitySummary = normalizeReadoutQualitySummaryAliases(summary.readoutQualitySummary || summary.readout_quality_summary || null);
     const fallbackDtcStatusAliases = [
       fallbackDtcSnapshot?.dtcStatusSummary,
@@ -15271,13 +15278,65 @@
         } : {})
       }
       : analysisReadinessSummaryInput;
-    const readyForAnalysis = pickDefined(summary.readyForAnalysis, summary.ready_for_analysis, analysisReadinessSummary?.ready, false) === true;
+    const hasCoreBlockingEvidence = analysisBlockers.length > 0 || pendingReadoutIds.length > 0 || Boolean(finalPrimaryBlockingReasonId);
+    const completionPercent = hasCoreBlockingEvidence && normalizedCompletionPercent === 100 ? 99 : normalizedCompletionPercent;
+    const readyForAnalysis = !hasCoreBlockingEvidence && pickDefined(
+      summary.readyForAnalysis,
+      summary.ready_for_analysis,
+      summary.canStartAnalysis,
+      summary.can_start_analysis,
+      analysisReadinessSummary?.ready,
+      false
+    ) === true;
+    const savedStatus = summary.status || "not_started";
+    const status = hasCoreBlockingEvidence && ["ready", "analysis_ready"].includes(String(savedStatus).trim().toLowerCase())
+      ? "collecting_readouts"
+      : savedStatus;
+    const readNonnegativeCount = (...values) => {
+      const value = values.find((item) => Number.isFinite(Number(item)));
+      return value == null ? 0 : Math.max(0, Math.round(Number(value)));
+    };
+    const effectiveCoreWorkflowSummary = coreWorkflowSummary && hasCoreBlockingEvidence ? {
+      ...coreWorkflowSummary,
+      status: ["ready", "analysis_ready"].includes(String(coreWorkflowSummary.status || "").trim().toLowerCase())
+        ? "collecting_readouts"
+        : coreWorkflowSummary.status || status,
+      currentStep: "readout_collection",
+      current_step: "readout_collection",
+      nextAction: nextReadoutRequest ? "collect_next_readout" : "start_core_readouts",
+      next_action: nextReadoutRequest ? "collect_next_readout" : "start_core_readouts",
+      readyForAnalysis: false,
+      ready_for_analysis: false,
+      completionPercent,
+      completion_percent: completionPercent,
+      blockerCount: Math.max(readNonnegativeCount(coreWorkflowSummary.blockerCount, coreWorkflowSummary.blocker_count), analysisBlockers.length),
+      blocker_count: Math.max(readNonnegativeCount(coreWorkflowSummary.blockerCount, coreWorkflowSummary.blocker_count), analysisBlockers.length),
+      pendingReadoutCount: Math.max(readNonnegativeCount(coreWorkflowSummary.pendingReadoutCount, coreWorkflowSummary.pending_readout_count), pendingReadoutIds.length),
+      pending_readout_count: Math.max(readNonnegativeCount(coreWorkflowSummary.pendingReadoutCount, coreWorkflowSummary.pending_readout_count), pendingReadoutIds.length)
+    } : coreWorkflowSummary;
+    const effectiveAnalysisReadinessSummary = analysisReadinessSummary && hasCoreBlockingEvidence ? {
+      ...analysisReadinessSummary,
+      ready: false,
+      readyForAnalysis: false,
+      ready_for_analysis: false,
+      status: ["ready", "analysis_ready"].includes(String(analysisReadinessSummary.status || "").trim().toLowerCase())
+        ? "collecting_readouts"
+        : analysisReadinessSummary.status || status,
+      blockerCount: Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
+      blocker_count: Math.max(readNonnegativeCount(analysisReadinessSummary.blockerCount, analysisReadinessSummary.blocker_count), analysisBlockers.length),
+      blockerIds: analysisBlockers,
+      blocker_ids: analysisBlockers,
+      pendingReadoutCount: Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
+      pending_readout_count: Math.max(readNonnegativeCount(analysisReadinessSummary.pendingReadoutCount, analysisReadinessSummary.pending_readout_count), pendingReadoutIds.length),
+      completionPercent,
+      completion_percent: completionPercent
+    } : analysisReadinessSummary;
     return {
       ...summary,
       schemaVersion,
       schema_version: schemaVersion,
       stage: summary.stage || "diagnostic_core",
-      status: summary.status || "not_started",
+      status,
       completionPercent,
       completion_percent: completionPercent,
       applicabilityStatus: pickDefined(summary.applicabilityStatus, summary.applicability_status, "unknown"),
@@ -15348,8 +15407,8 @@
       readout_progress_summary: summary.readout_progress_summary || summary.readoutProgressSummary || null,
       readoutCompletionSummary: finalReadoutCompletionSummary,
       readout_completion_summary: finalReadoutCompletionSummary,
-      coreWorkflowSummary,
-      core_workflow_summary: coreWorkflowSummary,
+      coreWorkflowSummary: effectiveCoreWorkflowSummary,
+      core_workflow_summary: effectiveCoreWorkflowSummary,
       nextReadoutCandidate,
       next_readout_candidate: nextReadoutCandidate,
       nextReadoutCandidateSafetySummary,
@@ -15382,6 +15441,8 @@
       next_readout_request_safety_summary: nextReadoutRequestSafetySummary,
       analysisBlockers,
       analysis_blockers: analysisBlockers,
+      blockingReasonIds: analysisBlockers,
+      blocking_reason_ids: analysisBlockers,
       analysisBlockerById: normalizeObject("analysisBlockerById", "analysis_blocker_by_id"),
       analysis_blocker_by_id: normalizeObject("analysisBlockerById", "analysis_blocker_by_id"),
       analysisBlockerSummary: summary.analysisBlockerSummary || summary.analysis_blocker_summary || null,
@@ -15406,12 +15467,16 @@
       analysis_checklist_by_id: normalizeObject("analysisChecklistById", "analysis_checklist_by_id"),
       analysisChecklistSummary: summary.analysisChecklistSummary || summary.analysis_checklist_summary || null,
       analysis_checklist_summary: summary.analysis_checklist_summary || summary.analysisChecklistSummary || null,
-      analysisReadinessSummary,
-      analysis_readiness_summary: analysisReadinessSummary,
+      analysisReadinessSummary: effectiveAnalysisReadinessSummary,
+      analysis_readiness_summary: effectiveAnalysisReadinessSummary,
       blockingWarningIds,
       blocking_warning_ids: blockingWarningIds,
       readyForAnalysis,
-      ready_for_analysis: readyForAnalysis
+      ready_for_analysis: readyForAnalysis,
+      canStartAnalysis: readyForAnalysis,
+      can_start_analysis: readyForAnalysis,
+      analysisBlocked: !readyForAnalysis,
+      analysis_blocked: !readyForAnalysis
     };
   }
 
