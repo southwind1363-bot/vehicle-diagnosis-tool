@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3271件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "次読取層間不一致をread-only確認化",
+  recentMilestone: "次読取層間整合を診断フローへ表示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.137";
+const APP_VERSION = "3.13.138";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7209,6 +7209,31 @@ function formatNextReadoutGuardComparisonSummary(summary = null, fallback = NO_D
   return parts.join(" / ");
 }
 
+function formatNextReadoutChangeSummary(summary = null, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const changed = summary.changed === true;
+  const consistent = summary.consistentAcrossSections === true || summary.consistent_across_sections === true;
+  const reviewRequired = summary.consistencyReviewRequired === true || summary.consistency_review_required === true;
+  const importedReasonId = summary.importedReasonId || summary.imported_reason_id || "-";
+  const currentReasonId = summary.currentReasonId || summary.current_reason_id || "-";
+  const importedGuardState = summary.importedGuardState || summary.imported_guard_state || "-";
+  const currentGuardState = summary.currentGuardState || summary.current_guard_state || "-";
+  const conflictingSectionIds = Array.isArray(summary.conflictingSectionIds)
+    ? summary.conflictingSectionIds
+    : Array.isArray(summary.conflicting_section_ids) ? summary.conflicting_section_ids : [];
+  const sectionLabels = {
+    core_session_status: "コア",
+    diagnostic_flow_summary: "診断フロー",
+    analysis_readiness_summary: "解析準備"
+  };
+  const parts = [consistent ? "3層一致" : "層間不一致"];
+  if (changed) parts.push(`理由 ${importedReasonId} -> ${currentReasonId}`);
+  if (changed) parts.push(`安全 ${importedGuardState} -> ${currentGuardState}`);
+  if (conflictingSectionIds.length) parts.push(`競合 ${conflictingSectionIds.map((id) => sectionLabels[id] || id).join(" / ")}`);
+  if (reviewRequired) parts.push("read-only確認");
+  return parts.join(" / ");
+}
+
 function buildCoreAnalysisPendingStatus(coreSessionStatus, fallback = "") {
   if (!coreSessionStatus || typeof coreSessionStatus !== "object") return fallback;
   const blockingSummary = formatCoreBlockingWarningSummary(coreSessionStatus, 2, "");
@@ -8828,6 +8853,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
     ? `${primaryBlockingBridgeIntent}${primaryBlockingServiceMode ? ` / Mode ${primaryBlockingServiceMode}` : ""}`
     : NO_DATA;
   const importedSessionComparisonSummary = session.importedSessionComparisonSummary || session.imported_session_comparison_summary || null;
+  const nextReadoutChangeSummary = importedSessionComparisonSummary?.nextReadoutChangeSummary || importedSessionComparisonSummary?.next_readout_change_summary || null;
+  const nextReadoutChangeLabel = formatNextReadoutChangeSummary(nextReadoutChangeSummary, NO_DATA);
   const importedNextReadoutGuardComparisonSummary = session.importedNextReadoutGuardComparisonSummary || session.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
   const importedNextReadoutGuardReviewRequestPlanSummary = session.importedNextReadoutGuardReviewRequestPlanSummary || session.imported_next_readout_guard_review_request_plan_summary || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary || null;
   const importedNextReadoutGuardComparisonLabel = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonSummary, NO_DATA, importedNextReadoutGuardReviewRequestPlanSummary);
@@ -8897,6 +8924,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "読取理由", nextReadoutReasonLabel, nextReadoutReasonSummary ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "計画安全", nextReadoutGuardLabel, nextReadoutGuardSummary?.safeForReadoutPlanning === true || nextReadoutGuardSummary?.safe_for_readout_planning === true ? "ready" : nextReadoutGuardSummary ? "blocked" : "");
   addObdDiagnosticFlowMetric(grid, "計画差分", importedNextReadoutGuardComparisonLabel, importedNextReadoutGuardComparisonSummary?.changed === true || importedNextReadoutGuardComparisonSummary?.has_changes === true || Number(importedNextReadoutGuardReviewRequestPlanSummary?.requestCount ?? importedNextReadoutGuardReviewRequestPlanSummary?.request_count ?? 0) > 0 ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "次読取整合", nextReadoutChangeLabel, nextReadoutChangeSummary?.consistencyReviewRequired === true || nextReadoutChangeSummary?.consistency_review_required === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取要求", nextReadoutRequestLabel, readoutRequestTone);
   addObdDiagnosticFlowMetric(grid, "要求安全", nextReadoutRequestSafetyLabel, nextReadoutRequestSafetySummary?.safe === true || nextReadoutRequestSafetySummary?.safe_for_readout_request === true ? "ready" : "pending");
   addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel, nextReadoutCandidateSafetySummary?.allSafe === true || nextReadoutCandidateSafetySummary?.all_safe === true ? "ready" : "pending");
@@ -9114,6 +9142,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const emptyReadoutLabel = formatCoreEmptyReadoutSummary(coreSessionStatus, 2, NO_DATA);
   const blockingSummaryLabel = formatCoreBlockingWarningSummary(coreSessionStatus, 2, NO_DATA);
   const importedSessionComparisonSummary = session?.importedSessionComparisonSummary || session?.imported_session_comparison_summary || null;
+  const nextReadoutChangeSummary = importedSessionComparisonSummary?.nextReadoutChangeSummary || importedSessionComparisonSummary?.next_readout_change_summary || null;
+  const nextReadoutChangeLabel = formatNextReadoutChangeSummary(nextReadoutChangeSummary, NO_DATA);
   const importedNextReadoutGuardComparisonSummary = session?.importedNextReadoutGuardComparisonSummary || session?.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
   const importedNextReadoutGuardReviewRequestPlanSummary = session?.importedNextReadoutGuardReviewRequestPlanSummary || session?.imported_next_readout_guard_review_request_plan_summary || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary || null;
   const importedNextReadoutGuardComparisonLabel = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonSummary, NO_DATA, importedNextReadoutGuardReviewRequestPlanSummary);
@@ -9296,7 +9326,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(6, 0, ["ECU適合", vehicleApplicabilityEcuMatchLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel], ["読取理由", nextReadoutReasonLabel], ["計画安全", nextReadoutGuardLabel], ["計画差分", importedNextReadoutGuardComparisonLabel], ["要求安全", nextReadoutRequestSafetyLabel], ["候補安全", nextReadoutCandidateSafetyLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel], ["読取理由", nextReadoutReasonLabel], ["計画安全", nextReadoutGuardLabel], ["計画差分", importedNextReadoutGuardComparisonLabel], ["次読取整合", nextReadoutChangeLabel], ["要求安全", nextReadoutRequestSafetyLabel], ["候補安全", nextReadoutCandidateSafetyLabel]);
   values.splice(10, 0, ["品質比較", readoutQualityComparisonLabel]);
   values.splice(11, 0, ["品質確認要求", readoutQualityReviewRequestLabel]);
   values.push(["Evidence", vehicleApplicabilityEvidenceLabel]);
@@ -9965,6 +9995,7 @@ function analyzeObdScannerImport(options = {}) {
     notes.push(`品質比較 ${readoutQualityComparisonNote}`);
   }
   const importedSessionComparisonSummary = summarySource.importedSessionComparisonSummary || summarySource.imported_session_comparison_summary || null;
+  const nextReadoutChangeNote = formatNextReadoutChangeSummary(importedSessionComparisonSummary?.nextReadoutChangeSummary || importedSessionComparisonSummary?.next_readout_change_summary, "");
   const importedNextReadoutGuardComparisonForNote = summarySource.importedNextReadoutGuardComparisonSummary || summarySource.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
   const importedNextReadoutGuardReviewRequestPlanForNote = summarySource.importedNextReadoutGuardReviewRequestPlanSummary || summarySource.imported_next_readout_guard_review_request_plan_summary || importedSessionComparisonSummary?.nextReadoutGuardReviewRequestPlanSummary || importedSessionComparisonSummary?.next_readout_guard_review_request_plan_summary || importedNextReadoutGuardComparisonForNote?.reviewRequestPlanSummary || importedNextReadoutGuardComparisonForNote?.review_request_plan_summary || null;
   const importedNextReadoutGuardComparisonNote = formatNextReadoutGuardComparisonSummary(importedNextReadoutGuardComparisonForNote, "", importedNextReadoutGuardReviewRequestPlanForNote);
@@ -9986,6 +10017,9 @@ function analyzeObdScannerImport(options = {}) {
   }
   if (importedNextReadoutGuardComparisonNote) {
     notes.push(`計画差分 ${importedNextReadoutGuardComparisonNote}`);
+  }
+  if (nextReadoutChangeNote) {
+    notes.push(`次読取整合 ${nextReadoutChangeNote}`);
   }
   if (analysisNextReadoutRequestSafetyNote) {
     notes.push(`読取要求 ${analysisNextReadoutRequestSafetyNote}`);
