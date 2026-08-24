@@ -107,6 +107,7 @@
   });
   let monitorDefinitions = fallbackMonitorDefinitions;
   let pidReferenceThresholds = Object.freeze([]);
+  let manufacturerPidReferenceCandidates = Object.freeze([]);
 
   const policy = Object.freeze({
     mode: "vehicle-connection-safety-gated",
@@ -34608,6 +34609,137 @@
     return pidReferenceThresholds;
   }
 
+  function configureManufacturerPidReferenceCandidates(input) {
+    const rows = Array.isArray(input) ? input : Array.isArray(input?.records) ? input.records : null;
+    if (!rows) return false;
+    const normalized = rows.map((item) => {
+      const measurement = item?.measurement || {};
+      const scope = item?.vehicle_scope || {};
+      const operatingState = item?.required_operating_state || {};
+      const applicability = item?.required_applicability_evidence || {};
+      const serial = applicability.transaxle_serial || {};
+      const anyOf = applicability.any_of || {};
+      const limits = Array.isArray(item?.conditional_limits) ? item.conditional_limits.map((limit) => {
+        const required = Array.isArray(limit?.required_measurements) ? limit.required_measurements : [];
+        const requiredMeasurement = required[0] || {};
+        const maximumValue = Number(limit?.maximum_value);
+        const minValue = Number(requiredMeasurement.min_value);
+        const maxValue = Number(requiredMeasurement.max_value);
+        if (required.length !== 1 || !String(requiredMeasurement.id || "").trim() || !String(requiredMeasurement.unit || "").trim()
+          || !Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue > maxValue || !Number.isFinite(maximumValue)) return null;
+        return Object.freeze({
+          requiredMeasurement: Object.freeze({ id: String(requiredMeasurement.id).trim(), unit: String(requiredMeasurement.unit).trim(), minValue, maxValue }),
+          maximumValue
+        });
+      }) : null;
+      const makers = Array.isArray(scope.makers) ? scope.makers.map(String).map((value) => value.trim()).filter(Boolean) : [];
+      const models = Array.isArray(scope.models) ? scope.models.map(String).map((value) => value.trim()).filter(Boolean) : [];
+      const transmissions = Array.isArray(scope.transmissions) ? scope.transmissions.map(String).map((value) => value.trim()).filter(Boolean) : [];
+      const transmissionPositions = Array.isArray(operatingState.transmission_positions) ? operatingState.transmission_positions.map(String).map((value) => value.trim().toLowerCase()).filter(Boolean) : [];
+      const dtcs = Array.isArray(anyOf.dtcs) ? anyOf.dtcs.map((value) => String(value).trim().toUpperCase()).filter(Boolean) : [];
+      const symptoms = Array.isArray(anyOf.symptoms) ? anyOf.symptoms.map(String).map((value) => value.trim()).filter(Boolean) : [];
+      const yearFrom = Number(scope.year_from);
+      const yearTo = Number(scope.year_to);
+      const engineSpeed = Number(operatingState.engine_speed_target?.value);
+      const blockers = Array.isArray(item?.activation_blockers) ? item.activation_blockers : [];
+      if (!item || !String(item.id || "").trim() || item.status !== "source_verified_not_activated"
+        || item.reference_semantics !== "single_observation_absolute_max"
+        || !String(measurement.id || "").trim() || !String(measurement.label || "").trim()
+        || !String(measurement.unit || "").trim() || !String(measurement.source_ecu || "").trim()
+        || !makers.length || !models.length || !transmissions.length || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo) || yearFrom > yearTo
+        || !String(scope.market || "").trim() || transmissionPositions.join(",") !== "park"
+        || operatingState.parking_brake !== "applied" || engineSpeed !== 1000 || operatingState.engine_speed_target?.unit !== "rpm"
+        || !String(serial.prefix || "").trim() || !String(serial.maximum_exclusive || "").trim()
+        || !dtcs.length || !symptoms.length || !limits || !limits.length || limits.some((limit) => !limit)
+        || !String(item.source || "").trim() || !/^https:\/\//.test(item.source_url || "") || !String(item.source_locator || "").trim() || !String(item.applicability_note || "").trim()
+        || !/^\d{4}-\d{2}-\d{2}$/.test(item.source_date || "") || !/^\d{4}-\d{2}-\d{2}$/.test(item.last_verified_date || "")
+        || blockers.join(",") !== "manufacturer_pid_identity_not_verified_from_vehicle_readout"
+        || item.service_manual_required !== true || item.diagnostic_conclusion_assigned !== false || item.vehicle_command_enabled !== false) return null;
+      return Object.freeze({
+        id: String(item.id).trim(), status: item.status, referenceSemantics: item.reference_semantics,
+        measurement: Object.freeze({ id: String(measurement.id).trim(), label: String(measurement.label).trim(), unit: String(measurement.unit).trim(), sourceEcu: String(measurement.source_ecu).trim() }),
+        vehicleScope: Object.freeze({ makers: Object.freeze(makers), models: Object.freeze(models), yearFrom, yearTo, market: String(scope.market).trim(), transmissions: Object.freeze(transmissions) }),
+        requiredOperatingState: Object.freeze({ transmissionPositions: Object.freeze(transmissionPositions), parkingBrake: "applied", engineSpeedTarget: Object.freeze({ value: engineSpeed, unit: "rpm" }) }),
+        requiredApplicabilityEvidence: Object.freeze({ transaxleSerial: Object.freeze({ prefix: String(serial.prefix).trim().toUpperCase(), maximumExclusive: String(serial.maximum_exclusive).trim().toUpperCase() }), anyOf: Object.freeze({ dtcs: Object.freeze(dtcs), symptoms: Object.freeze(symptoms) }) }),
+        conditionalLimits: Object.freeze(limits), source: String(item.source).trim(), sourceUrl: String(item.source_url).trim(), sourceDate: item.source_date,
+        sourceLocator: String(item.source_locator).trim(), lastVerifiedDate: item.last_verified_date, applicabilityNote: String(item.applicability_note || "").trim(),
+        activationBlockers: Object.freeze([...blockers]), serviceManualRequired: true, diagnosticConclusionAssigned: false, vehicleCommandEnabled: false
+      });
+    });
+    if (normalized.some((item) => !item) || new Set(normalized.map((item) => item.id)).size !== normalized.length) return false;
+    manufacturerPidReferenceCandidates = Object.freeze(normalized);
+    return true;
+  }
+
+  function getManufacturerPidReferenceCandidates() {
+    return manufacturerPidReferenceCandidates;
+  }
+
+  function evaluateManufacturerPidReferenceCandidate({ candidateId, vehicleProfile = null, observationContext = null, measurements = [], applicabilityEvidence = null } = {}) {
+    const candidate = manufacturerPidReferenceCandidates.find((item) => item.id === String(candidateId || "").trim());
+    const base = {
+      schemaVersion: "manufacturer_pid_reference_evaluation_v1", candidateId: String(candidateId || "").trim() || null,
+      eligible: false, blockerIds: [], diagnosticConclusionAssigned: false, vehicleCommandEnabled: false, wouldTransmit: false, readOnly: true
+    };
+    if (!candidate) return Object.freeze({ ...base, status: "evidence_incomplete", blockerIds: Object.freeze(["candidate_not_found"]) });
+    const resultBase = {
+      ...base, candidateId: candidate.id, candidateStatus: candidate.status, referenceSemantics: candidate.referenceSemantics,
+      activationBlockers: candidate.activationBlockers, automaticApplicationEnabled: false,
+      sourceEvidence: Object.freeze({ source: candidate.source, sourceUrl: candidate.sourceUrl, sourceDate: candidate.sourceDate, sourceLocator: candidate.sourceLocator, lastVerifiedDate: candidate.lastVerifiedDate })
+    };
+    const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
+    const context = observationContext && typeof observationContext === "object" ? observationContext : {};
+    const evidence = applicabilityEvidence && typeof applicabilityEvidence === "object" ? applicabilityEvidence : {};
+    const sameText = (value, allowed) => allowed.some((candidateValue) => candidateValue.toLowerCase() === String(value || "").trim().toLowerCase());
+    const year = Number(profile.year);
+    const missing = [];
+    if (!String(profile.maker || "").trim()) missing.push("vehicle_maker_missing");
+    if (!String(profile.model || "").trim()) missing.push("vehicle_model_missing");
+    if (!Number.isInteger(year)) missing.push("vehicle_year_missing");
+    if (!String(profile.market || "").trim()) missing.push("vehicle_market_missing");
+    if (!String(profile.transmission || "").trim()) missing.push("vehicle_transmission_missing");
+    if (missing.length) return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(missing) });
+    if (!sameText(profile.maker, candidate.vehicleScope.makers) || !sameText(profile.model, candidate.vehicleScope.models)
+      || year < candidate.vehicleScope.yearFrom || year > candidate.vehicleScope.yearTo
+      || String(profile.market).trim().toLowerCase() !== candidate.vehicleScope.market.toLowerCase()
+      || !sameText(profile.transmission, candidate.vehicleScope.transmissions)) {
+      return Object.freeze({ ...resultBase, status: "not_applicable", blockerIds: Object.freeze(["vehicle_scope_mismatch"]) });
+    }
+    if (String(context.transmissionPosition || context.transmission_position || "").trim().toLowerCase() !== "park"
+      || String(context.parkingBrake || context.parking_brake || "").trim().toLowerCase() !== "applied"
+      || Number(context.engineSpeed ?? context.engine_speed) !== candidate.requiredOperatingState.engineSpeedTarget.value) {
+      return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["required_operating_state_not_confirmed"]) });
+    }
+    const serialValue = String(evidence.transaxleSerial || evidence.transaxle_serial || "").replace(/[^0-9A-Z]/gi, "").toUpperCase();
+    if (!serialValue) return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["transaxle_serial_missing"]) });
+    const serialGate = candidate.requiredApplicabilityEvidence.transaxleSerial;
+    if (serialValue.length !== serialGate.maximumExclusive.length || !serialValue.startsWith(serialGate.prefix) || serialValue >= serialGate.maximumExclusive) {
+      return Object.freeze({ ...resultBase, status: "not_applicable", blockerIds: Object.freeze(["transaxle_serial_outside_source_scope"]) });
+    }
+    const dtcs = Array.isArray(evidence.dtcs) ? evidence.dtcs.map((value) => String(value).replace(/[^0-9A-Z]/gi, "").toUpperCase()) : [];
+    const symptoms = Array.isArray(evidence.symptoms) ? evidence.symptoms.map((value) => String(value).trim()) : [];
+    if (!dtcs.some((value) => candidate.requiredApplicabilityEvidence.anyOf.dtcs.includes(value))
+      && !symptoms.some((value) => candidate.requiredApplicabilityEvidence.anyOf.symptoms.includes(value))) {
+      return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["source_symptom_or_dtc_gate_not_confirmed"]) });
+    }
+    const normalizedMeasurements = normalizePidReferenceMeasurementValues(measurements);
+    const target = normalizedMeasurements.get(`${candidate.measurement.id}|${candidate.measurement.unit.toLowerCase()}`);
+    if (!target) return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["target_measurement_missing_or_ambiguous"]) });
+    const matchingLimits = candidate.conditionalLimits.filter((limit) => {
+      const requirement = limit.requiredMeasurement;
+      const observed = normalizedMeasurements.get(`${requirement.id}|${requirement.unit.toLowerCase()}`);
+      return observed && observed.value >= requirement.minValue && observed.value <= requirement.maxValue;
+    });
+    if (matchingLimits.length !== 1) return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["conditional_measurement_missing_ambiguous_or_outside_range"]) });
+    const limit = matchingLimits[0];
+    return Object.freeze({
+      ...resultBase, status: "eligible_reference_comparison", eligible: true, blockerIds: Object.freeze([]),
+      observedMeasurement: Object.freeze({ id: target.pidId, value: target.value, unit: target.unit }),
+      sourceLimit: Object.freeze({ comparison: "absolute_max", maximumValue: limit.maximumValue, unit: candidate.measurement.unit }),
+      comparisonStatus: target.value <= limit.maximumValue ? "within_source_limit" : "above_source_limit"
+    });
+  }
+
   function normalizePidReferenceMeasurementValues(input = []) {
     const values = new Map();
     const ambiguousKeys = new Set();
@@ -35999,6 +36131,7 @@
     policy,
     configureMonitorDefinitions,
     configurePidReferenceThresholds,
+    configureManufacturerPidReferenceCandidates,
     configureVehicleInterfaceCatalog,
     configureFreezeFrameItems,
     configureReadinessMonitors,
@@ -36006,6 +36139,8 @@
     getMonitorDefinitions,
     getPidReferenceThresholds,
     findApplicablePidReferenceThreshold,
+    getManufacturerPidReferenceCandidates,
+    evaluateManufacturerPidReferenceCandidate,
     getVehicleInterfaceCatalog,
     getFreezeFrameItems,
     getReadinessMonitors,

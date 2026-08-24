@@ -25,6 +25,16 @@
         "unit": "rpm"
       }
     },
+    "required_applicability_evidence": {
+      "transaxle_serial": {
+        "prefix": "7A6",
+        "maximum_exclusive": "7A617E03416"
+      },
+      "any_of": {
+        "dtcs": ["P07457F", "P07757F", "P07957F", "P28077F", "P28167F", "P08BA7F", "P27137F", "P07407E", "P27567F", "P211904", "P071531"],
+        "symptoms": ["harsh_shift", "whine_noise_driving_d"]
+      }
+    },
     "conditional_limits": [
       {
         "required_measurements": [
@@ -58,9 +68,7 @@
     "last_verified_date": "2026-08-25",
     "applicability_note": "Bulletin applicability is limited to 2017-2018 Highlander and Sienna with 8AT and the production/symptom checks in T-SB-0160-18. Engine code is not inferred from the bulletin.",
     "activation_blockers": [
-      "single_observation_reference_evaluator_not_implemented",
-      "manufacturer_pid_identity_not_verified_from_vehicle_readout",
-      "bulletin_production_and_symptom_gates_not_modeled"
+      "manufacturer_pid_identity_not_verified_from_vehicle_readout"
     ],
     "service_manual_required": true,
     "diagnostic_conclusion_assigned": false,

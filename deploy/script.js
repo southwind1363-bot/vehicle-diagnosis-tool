@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "メーカーPID基準候補を用途別に分離",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.157";
+const APP_VERSION = "3.13.158";
 const APP_LAST_UPDATED = "2026-08-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -934,6 +934,7 @@ async function loadData() {
       dtcScopeRules,
       obdMonitorDefinitions,
       pidReferenceThresholdCatalog2026,
+      manufacturerPidReferenceCandidates2026,
       obdFreezeFrameItems2026,
       obdReadinessMonitors2026,
       obdEcuInfoItems2026,
@@ -1133,6 +1134,7 @@ async function loadData() {
       fetchJson("data/dtc-scope-rules.json"),
       fetchJson("data/obd-monitor-definitions.json"),
       fetchJson("data/pid-reference-thresholds-2026.json"),
+      fetchJson("data/manufacturer-pid-reference-candidates-2026.json"),
       fetchJson("data/obd-freeze-frame-items-2026.json"),
       fetchJson("data/obd-readiness-monitors-2026.json"),
       fetchJson("data/obd-ecu-info-items-2026.json"),
@@ -1146,6 +1148,9 @@ async function loadData() {
     }
     if (!window.ObdReadOnly?.configurePidReferenceThresholds(pidReferenceThresholdCatalog2026)) {
       throw new Error("PID基準値カタログを読み込めません");
+    }
+    if (!window.ObdReadOnly?.configureManufacturerPidReferenceCandidates(manufacturerPidReferenceCandidates2026)) {
+      throw new Error("メーカーPID基準候補を読み込めません");
     }
     if (!window.ObdReadOnly?.configureFreezeFrameItems(obdFreezeFrameItems2026)) {
       throw new Error("OBDフリーズフレーム項目辞書を読み込めません");
@@ -1183,6 +1188,7 @@ async function loadData() {
       dtcScopeRules,
       obdMonitorDefinitions,
       pidReferenceThresholdCatalog2026,
+      manufacturerPidReferenceCandidates2026,
       obdFreezeFrameItems2026,
       obdReadinessMonitors2026,
       obdEcuInfoItems2026,
