@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3276件",
+  validationCheckLabel: "OBD安全検証 3277件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "整備後再判定へ個別差分を追加",
+  recentMilestone: "次測定候補へ適合・優先根拠を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.147";
+const APP_VERSION = "3.13.148";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2775,7 +2775,7 @@ function formatCauseCandidateLogEntries(log = null) {
 function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements = [], liveDataGuidance = []) {
   const candidates = [];
   const seen = new Set();
-  const addCandidate = ({ label, actionType, sourceType, readoutId = null, reason = null, status = "pending" }) => {
+  const addCandidate = ({ label, actionType, sourceType, readoutId = null, reason = null, status = "pending", applicabilityStatus = "unconfirmed", applicabilityConfirmed = false, priorityBasis, sourcePriority = null, evidenceRefs = [] }) => {
     const normalizedLabel = String(label || "").trim().slice(0, 240);
     if (!normalizedLabel || normalizedLabel === NO_DATA || candidates.length >= 8) return;
     const key = normalizedLabel.toLocaleLowerCase("ja");
@@ -2792,6 +2792,18 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
       readout_id: readoutId,
       reason: reason ? String(reason).trim().slice(0, 320) : null,
       status,
+      applicabilityStatus,
+      applicability_status: applicabilityStatus,
+      applicabilityConfirmed: applicabilityConfirmed === true,
+      applicability_confirmed: applicabilityConfirmed === true,
+      priorityBasis,
+      priority_basis: priorityBasis,
+      priorityReason: reason ? String(reason).trim().slice(0, 320) : null,
+      priority_reason: reason ? String(reason).trim().slice(0, 320) : null,
+      sourcePriority: sourcePriority !== null && sourcePriority !== "" && Number.isFinite(Number(sourcePriority)) ? Number(sourcePriority) : null,
+      source_priority: sourcePriority !== null && sourcePriority !== "" && Number.isFinite(Number(sourcePriority)) ? Number(sourcePriority) : null,
+      evidenceRefs: [...new Set((Array.isArray(evidenceRefs) ? evidenceRefs : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 12),
+      evidence_refs: [...new Set((Array.isArray(evidenceRefs) ? evidenceRefs : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 12),
       displayOrder: candidates.length + 1,
       display_order: candidates.length + 1,
       candidateOnly: true,
@@ -2815,21 +2827,32 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
       sourceType: "scan_session",
       readoutId,
       reason: item.reason || item.statusReason || item.status_reason || "未取得の読取データを補完",
-      status: item.status || "missing"
+      status: item.status || "missing",
+      applicabilityStatus: item.applicabilityStatus || item.applicability_status || "unconfirmed",
+      applicabilityConfirmed: item.applicabilityConfirmed === true || item.applicability_confirmed === true,
+      priorityBasis: "saved_readout_candidate_order",
+      sourcePriority: item.priority,
+      evidenceRefs: [readoutId ? `readout:${readoutId}` : null, item.status ? `status:${item.status}` : null, item.statusReason || item.status_reason ? `reason:${item.statusReason || item.status_reason}` : null]
     });
   });
   (Array.isArray(measurements) ? measurements : []).forEach((label) => addCandidate({
     label,
     actionType: "measurement_point",
     sourceType: "diagnostic_flow",
-    reason: "現在のDTC・症状・問診から抽出した測定候補"
+    reason: "現在のDTC・症状・問診から抽出した測定候補",
+    applicabilityStatus: "unconfirmed",
+    priorityBasis: "diagnostic_flow_order",
+    evidenceRefs: ["diagnostic_flow:measurement_point"]
   }));
   if (!candidates.length) {
     (Array.isArray(liveDataGuidance) ? liveDataGuidance : []).forEach((label) => addCandidate({
       label,
       actionType: "observation_guidance",
       sourceType: "diagnostic_workflow",
-      reason: "登録済み診断ワークフローの観察候補"
+      reason: "登録済み診断ワークフローの観察候補",
+      applicabilityStatus: "unconfirmed",
+      priorityBasis: "diagnostic_workflow_order",
+      evidenceRefs: ["diagnostic_workflow:observation_guidance"]
     }));
   }
   return {
@@ -2840,6 +2863,10 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
     candidate_count: candidates.length,
     readoutCandidateCount: candidates.filter((item) => item.actionType === "diagnostic_readout").length,
     readout_candidate_count: candidates.filter((item) => item.actionType === "diagnostic_readout").length,
+    applicabilityConfirmedCount: candidates.filter((item) => item.applicabilityConfirmed === true).length,
+    applicability_confirmed_count: candidates.filter((item) => item.applicabilityConfirmed === true).length,
+    applicabilityUnconfirmedCount: candidates.filter((item) => item.applicabilityConfirmed !== true).length,
+    applicability_unconfirmed_count: candidates.filter((item) => item.applicabilityConfirmed !== true).length,
     automatic: true,
     candidateOnly: true,
     candidate_only: true,
@@ -2854,8 +2881,10 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
 
 function formatNextMeasurementCandidateEntries(plan = null) {
   const candidates = Array.isArray(plan?.candidates) ? plan.candidates : [];
+  const applicabilityLabels = { matched: "適合候補", partial: "適合要確認", unlisted: "未登録", manual: "手入力・要確認", unknown: "適合未確認", unconfirmed: "適合未確認" };
+  const priorityLabels = { saved_readout_candidate_order: "保存読取順", diagnostic_flow_order: "診断フロー順", diagnostic_workflow_order: "登録手順順" };
   return candidates.length
-    ? candidates.map((item) => `${String(item.displayOrder).padStart(2, "0")} / ${item.actionType === "diagnostic_readout" ? "読取候補" : "測定候補"} / ${item.label} / ${item.reason || "根拠未登録"} / 読取専用・未実行`)
+    ? candidates.map((item) => `${String(item.displayOrder).padStart(2, "0")} / ${item.actionType === "diagnostic_readout" ? "読取候補" : "測定候補"} / ${item.label} / ${applicabilityLabels[item.applicabilityStatus] || item.applicabilityStatus} / 優先根拠: ${priorityLabels[item.priorityBasis] || item.priorityBasis}・${item.priorityReason || "根拠未登録"} / 読取専用・未実行`)
     : ["次の測定候補はまだありません。車両・DTC・症状・問診を入力してください。"];
 }
 
