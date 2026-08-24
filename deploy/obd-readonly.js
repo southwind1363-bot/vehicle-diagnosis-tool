@@ -26551,6 +26551,7 @@
     const expectedItemCount = expectedItems.length;
     const monitorInsights = analyzeMonitorValues(monitorValues);
     const freezeFrameNumberSummary = buildFreezeFrameNumberSummary(monitorValues);
+    const freezeFrameAssociationSummary = buildFreezeFrameAssociationSummary(triggerDtcEntries, monitorValues);
     const explicitReadoutStatus = String(sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || "").trim().toLowerCase();
     const freezeFrameEcuStatuses = freezeFrameEcuSnapshots.map((snapshot) => String(snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status || "unknown").trim().toLowerCase());
     const scopedErrorCodes = [...new Set(freezeFrameEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
@@ -26650,6 +26651,8 @@
       monitor_insights: monitorInsights,
       freezeFrameNumberSummary,
       freeze_frame_number_summary: freezeFrameNumberSummary,
+      freezeFrameAssociationSummary,
+      freeze_frame_association_summary: freezeFrameAssociationSummary,
       freezeFrameReadoutStatus: readoutStatus,
       freeze_frame_readout_status: readoutStatus,
       errorCodes,
@@ -26693,6 +26696,117 @@
       frame_value_counts: frameValueCounts,
       unnumberedValueCount,
       unnumbered_value_count: unnumberedValueCount
+    };
+  }
+
+  function buildFreezeFrameAssociationSummary(triggerDtcEntries = [], monitorValues = []) {
+    const triggers = Array.isArray(triggerDtcEntries) ? triggerDtcEntries : [];
+    const values = Array.isArray(monitorValues) ? monitorValues : [];
+    const readFrameNumber = (item) => {
+      const value = Number.isInteger(item?.frameNumber)
+        ? item.frameNumber
+        : Number.isInteger(item?.frame_number)
+          ? item.frame_number
+          : Number.isInteger(item?.freezeFrameNumber)
+            ? item.freezeFrameNumber
+            : Number.isInteger(item?.freeze_frame_number)
+              ? item.freeze_frame_number
+              : null;
+      return value !== null && value >= 0 && value <= 255 ? value : null;
+    };
+    const readSourceEcu = (item) => redactSensitiveText(String(item?.sourceEcu || item?.source_ecu || ""))
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 80) || null;
+    const groupKey = (frameNumber, sourceEcu) => `${frameNumber}::${String(sourceEcu || "").toUpperCase()}`;
+    const groupsByKey = new Map();
+    const ensureGroup = (frameNumber, sourceEcu) => {
+      const key = groupKey(frameNumber, sourceEcu);
+      if (!groupsByKey.has(key)) {
+        groupsByKey.set(key, {
+          frameNumber,
+          frame_number: frameNumber,
+          sourceEcu,
+          source_ecu: sourceEcu,
+          triggerCodes: [],
+          valueIds: []
+        });
+      }
+      return groupsByKey.get(key);
+    };
+    let unnumberedTriggerCount = 0;
+    let unnumberedValueCount = 0;
+    triggers.forEach((item) => {
+      const frameNumber = readFrameNumber(item);
+      if (frameNumber === null) {
+        unnumberedTriggerCount += 1;
+        return;
+      }
+      const group = ensureGroup(frameNumber, readSourceEcu(item));
+      const code = String(item?.code || item?.dtc || "").trim().toUpperCase();
+      if (code && !group.triggerCodes.includes(code)) group.triggerCodes.push(code);
+    });
+    values.forEach((item) => {
+      const frameNumber = readFrameNumber(item);
+      if (frameNumber === null) {
+        unnumberedValueCount += 1;
+        return;
+      }
+      const group = ensureGroup(frameNumber, readSourceEcu(item));
+      const id = String(item?.id || item?.monitorId || item?.monitor_id || item?.pid || "").trim();
+      if (id && !group.valueIds.includes(id)) group.valueIds.push(id);
+    });
+    const groups = [...groupsByKey.values()]
+      .map((group) => {
+        const triggerCount = group.triggerCodes.length;
+        const valueCount = group.valueIds.length;
+        const associationState = triggerCount === 1 && valueCount > 0
+          ? "matched"
+          : triggerCount > 1 && valueCount > 0
+            ? "ambiguous_trigger"
+            : triggerCount > 0
+              ? "trigger_only"
+              : "values_only";
+        return {
+          ...group,
+          triggerCodes: [...group.triggerCodes].sort(),
+          trigger_codes: [...group.triggerCodes].sort(),
+          triggerCount,
+          trigger_count: triggerCount,
+          valueIds: [...group.valueIds].sort(),
+          value_ids: [...group.valueIds].sort(),
+          valueCount,
+          value_count: valueCount,
+          associationState,
+          association_state: associationState
+        };
+      })
+      .sort((left, right) => left.frameNumber - right.frameNumber || String(left.sourceEcu || "").localeCompare(String(right.sourceEcu || "")));
+    const matchedGroupCount = groups.filter((group) => group.associationState === "matched").length;
+    const ambiguousGroupCount = groups.filter((group) => group.associationState === "ambiguous_trigger").length;
+    const unmatchedGroupCount = groups.filter((group) => ["trigger_only", "values_only"].includes(group.associationState)).length;
+    const reviewRequired = ambiguousGroupCount > 0 || unmatchedGroupCount > 0 || unnumberedTriggerCount > 0 || unnumberedValueCount > 0;
+    const associationComplete = groups.length > 0 && matchedGroupCount === groups.length && !reviewRequired;
+    return {
+      schemaVersion: "freeze_frame_association_summary_v1",
+      schema_version: "freeze_frame_association_summary_v1",
+      groups,
+      groupCount: groups.length,
+      group_count: groups.length,
+      matchedGroupCount,
+      matched_group_count: matchedGroupCount,
+      ambiguousGroupCount,
+      ambiguous_group_count: ambiguousGroupCount,
+      unmatchedGroupCount,
+      unmatched_group_count: unmatchedGroupCount,
+      unnumberedTriggerCount,
+      unnumbered_trigger_count: unnumberedTriggerCount,
+      unnumberedValueCount,
+      unnumbered_value_count: unnumberedValueCount,
+      associationComplete,
+      association_complete: associationComplete,
+      reviewRequired,
+      review_required: reviewRequired
     };
   }
 

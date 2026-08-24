@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3271件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "次読取層間整合を診断フローへ表示",
+  recentMilestone: "フリーズフレームDTC・PID対応を明示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.138";
+const APP_VERSION = "3.13.139";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9098,6 +9098,12 @@ function renderObdDeveloperSessionSummary(session = null) {
   const freezeFrameNumbersLabel = Array.isArray(freezeFrameNumberSummary?.frameValueCounts || freezeFrameNumberSummary?.frame_value_counts)
     ? (freezeFrameNumberSummary.frameValueCounts || freezeFrameNumberSummary.frame_value_counts).map((item) => `#${item.frameNumber ?? item.frame_number}: ${item.valueCount ?? item.value_count}`).join(" / ") || NO_DATA
     : NO_DATA;
+  const freezeFrameAssociationSummary = freezeFrameSnapshot?.freezeFrameAssociationSummary || freezeFrameSnapshot?.freeze_frame_association_summary || null;
+  const freezeFrameAssociationLabel = freezeFrameAssociationSummary?.associationComplete === true || freezeFrameAssociationSummary?.association_complete === true
+    ? `一致 ${freezeFrameAssociationSummary.matchedGroupCount ?? freezeFrameAssociationSummary.matched_group_count ?? 0}組`
+    : freezeFrameAssociationSummary?.reviewRequired === true || freezeFrameAssociationSummary?.review_required === true
+      ? `要確認 ${freezeFrameAssociationSummary.ambiguousGroupCount ?? freezeFrameAssociationSummary.ambiguous_group_count ?? 0}曖昧 / ${freezeFrameAssociationSummary.unmatchedGroupCount ?? freezeFrameAssociationSummary.unmatched_group_count ?? 0}未対応`
+      : NO_DATA;
   const readinessReadoutStatusLabel = formatObdReadoutStatus(readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status, NO_DATA);
   const readinessIgnitionType = readinessSnapshot?.readinessIgnitionType || readinessSnapshot?.readiness_ignition_type || null;
   const readinessStatusBytes = readinessSnapshot?.readinessStatusBytes || readinessSnapshot?.readiness_status_bytes || null;
@@ -9285,6 +9291,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["FF読取状態", freezeFrameReadoutStatusLabel],
     ["FF起点番号", freezeFrameTriggerNumber === null ? NO_DATA : `#${freezeFrameTriggerNumber}`],
     ["FF番号", freezeFrameNumbersLabel],
+    ["FF対応", freezeFrameAssociationLabel],
     ["ライブ値", livePidSnapshot?.monitorValues?.length
       ? formatObdBridgeMonitorSummary(livePidSnapshot?.monitorValueSummary)
       : 0],
