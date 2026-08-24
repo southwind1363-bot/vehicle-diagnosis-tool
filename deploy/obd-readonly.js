@@ -22116,6 +22116,84 @@
       bridge_intent_removed_changed_ids: [...(bridgeIntentChangedIdDirectionSummary.removed?.ids || [])]
     };
     const primaryChangedReasonSummary = primaryChangedReasonId ? changedReasonSummaryById[primaryChangedReasonId] || null : null;
+    const readComparisonField = (comparison = {}, field) => {
+      const snakeField = String(field || "").replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+      return pickDefined(comparison?.[field], comparison?.[snakeField], null);
+    };
+    const nextReadoutChangeRows = sectionInputs
+      .filter((item) => item.comparison && (typeof item.comparison.nextReadoutReasonChanged === "boolean" || typeof item.comparison.nextReadoutGuardChanged === "boolean"))
+      .map((item) => ({
+        sectionId: item.id,
+        section_id: item.id,
+        reasonChanged: item.comparison.nextReadoutReasonChanged === true,
+        reason_changed: item.comparison.nextReadoutReasonChanged === true,
+        guardChanged: item.comparison.nextReadoutGuardChanged === true,
+        guard_changed: item.comparison.nextReadoutGuardChanged === true,
+        importedReasonId: readComparisonField(item.comparison, "importedNextReadoutReasonId"),
+        imported_reason_id: readComparisonField(item.comparison, "importedNextReadoutReasonId"),
+        currentReasonId: readComparisonField(item.comparison, "currentNextReadoutReasonId"),
+        current_reason_id: readComparisonField(item.comparison, "currentNextReadoutReasonId"),
+        importedGuardState: readComparisonField(item.comparison, "importedNextReadoutGuardState"),
+        imported_guard_state: readComparisonField(item.comparison, "importedNextReadoutGuardState"),
+        currentGuardState: readComparisonField(item.comparison, "currentNextReadoutGuardState"),
+        current_guard_state: readComparisonField(item.comparison, "currentNextReadoutGuardState"),
+        importedGuardReady: readComparisonField(item.comparison, "importedNextReadoutGuardReady") === true,
+        imported_guard_ready: readComparisonField(item.comparison, "importedNextReadoutGuardReady") === true,
+        currentGuardReady: readComparisonField(item.comparison, "currentNextReadoutGuardReady") === true,
+        current_guard_ready: readComparisonField(item.comparison, "currentNextReadoutGuardReady") === true,
+        importedRequestSafe: readComparisonField(item.comparison, "importedNextReadoutRequestSafe") === true,
+        imported_request_safe: readComparisonField(item.comparison, "importedNextReadoutRequestSafe") === true,
+        currentRequestSafe: readComparisonField(item.comparison, "currentNextReadoutRequestSafe") === true,
+        current_request_safe: readComparisonField(item.comparison, "currentNextReadoutRequestSafe") === true,
+        importedPlanningReady: readComparisonField(item.comparison, "importedNextReadoutPlanningReady") === true,
+        imported_planning_ready: readComparisonField(item.comparison, "importedNextReadoutPlanningReady") === true,
+        currentPlanningReady: readComparisonField(item.comparison, "currentNextReadoutPlanningReady") === true,
+        current_planning_ready: readComparisonField(item.comparison, "currentNextReadoutPlanningReady") === true
+      }));
+    const nextReadoutChangeRowBySectionId = Object.fromEntries(nextReadoutChangeRows.map((item) => [item.sectionId, item]));
+    const primaryNextReadoutChangeRow = nextReadoutChangeRowBySectionId.core_session_status || nextReadoutChangeRows[0] || null;
+    const nextReadoutChangeSignatures = [...new Set(nextReadoutChangeRows.map((item) => [
+      item.importedReasonId,
+      item.currentReasonId,
+      item.importedGuardState,
+      item.currentGuardState,
+      item.importedGuardReady,
+      item.currentGuardReady,
+      item.importedRequestSafe,
+      item.currentRequestSafe,
+      item.importedPlanningReady,
+      item.currentPlanningReady
+    ].join("|")))];
+    const nextReadoutReasonChangedSectionIds = nextReadoutChangeRows.filter((item) => item.reasonChanged).map((item) => item.sectionId);
+    const nextReadoutGuardChangedSectionIds = nextReadoutChangeRows.filter((item) => item.guardChanged).map((item) => item.sectionId);
+    const nextReadoutChangeSummary = {
+      schemaVersion: "next_readout_change_summary_v1",
+      schema_version: "next_readout_change_summary_v1",
+      changed: nextReadoutReasonChangedSectionIds.length > 0 || nextReadoutGuardChangedSectionIds.length > 0,
+      reasonChanged: nextReadoutReasonChangedSectionIds.length > 0,
+      reason_changed: nextReadoutReasonChangedSectionIds.length > 0,
+      guardChanged: nextReadoutGuardChangedSectionIds.length > 0,
+      guard_changed: nextReadoutGuardChangedSectionIds.length > 0,
+      sectionIds: nextReadoutChangeRows.map((item) => item.sectionId),
+      section_ids: nextReadoutChangeRows.map((item) => item.sectionId),
+      reasonChangedSectionIds: nextReadoutReasonChangedSectionIds,
+      reason_changed_section_ids: nextReadoutReasonChangedSectionIds,
+      guardChangedSectionIds: nextReadoutGuardChangedSectionIds,
+      guard_changed_section_ids: nextReadoutGuardChangedSectionIds,
+      consistentAcrossSections: nextReadoutChangeSignatures.length <= 1,
+      consistent_across_sections: nextReadoutChangeSignatures.length <= 1,
+      importedReasonId: primaryNextReadoutChangeRow?.importedReasonId || null,
+      imported_reason_id: primaryNextReadoutChangeRow?.importedReasonId || null,
+      currentReasonId: primaryNextReadoutChangeRow?.currentReasonId || null,
+      current_reason_id: primaryNextReadoutChangeRow?.currentReasonId || null,
+      importedGuardState: primaryNextReadoutChangeRow?.importedGuardState || null,
+      imported_guard_state: primaryNextReadoutChangeRow?.importedGuardState || null,
+      currentGuardState: primaryNextReadoutChangeRow?.currentGuardState || null,
+      current_guard_state: primaryNextReadoutChangeRow?.currentGuardState || null,
+      rows: nextReadoutChangeRows,
+      rowBySectionId: nextReadoutChangeRowBySectionId,
+      row_by_section_id: nextReadoutChangeRowBySectionId
+    };
     const primaryBlockerReasonSummary = changedReasonSummaryById.primary_blocker || null;
     const primaryBlockerChangedIds = primaryBlockerReasonSummary
       ? [...new Set([...(primaryBlockerReasonSummary.addedIds || []), ...(primaryBlockerReasonSummary.removedIds || [])])]
@@ -22358,6 +22436,8 @@
       primary_changed_reason_id: primaryChangedReasonId,
       primaryChangedReasonSummary,
       primary_changed_reason_summary: primaryChangedReasonSummary,
+      nextReadoutChangeSummary,
+      next_readout_change_summary: nextReadoutChangeSummary,
       primaryBlockerChangeSummary,
       primary_blocker_change_summary: primaryBlockerChangeSummary,
       primaryBlockerChangedIds,
