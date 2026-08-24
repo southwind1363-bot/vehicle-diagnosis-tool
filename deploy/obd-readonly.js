@@ -33492,6 +33492,11 @@
         + getUndecodedRawMonitorValueCount(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]),
       vehicleApplicability: metadataOverrides.vehicleApplicability || {}
     });
+    const freezeFrameAssociationSummary = freezeFrameSnapshot?.freezeFrameAssociationSummary || freezeFrameSnapshot?.freeze_frame_association_summary || null;
+    if (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])
+      && (freezeFrameAssociationSummary?.reviewRequired === true || freezeFrameAssociationSummary?.review_required === true)) {
+      warnings.push("freeze_frame_association_review_required");
+    }
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
     const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });
     const { protocol, capturedAt, startedAt, endedAt } = resolveSessionTemporalContext({
