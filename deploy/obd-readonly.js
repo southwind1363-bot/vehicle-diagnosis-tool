@@ -22152,7 +22152,7 @@
       }));
     const nextReadoutChangeRowBySectionId = Object.fromEntries(nextReadoutChangeRows.map((item) => [item.sectionId, item]));
     const primaryNextReadoutChangeRow = nextReadoutChangeRowBySectionId.core_session_status || nextReadoutChangeRows[0] || null;
-    const nextReadoutChangeSignatures = [...new Set(nextReadoutChangeRows.map((item) => [
+    const buildNextReadoutChangeSignature = (item = {}) => [
       item.importedReasonId,
       item.currentReasonId,
       item.importedGuardState,
@@ -22163,9 +22163,35 @@
       item.currentRequestSafe,
       item.importedPlanningReady,
       item.currentPlanningReady
-    ].join("|")))];
+    ].join("|");
+    const nextReadoutChangeSignatures = [...new Set(nextReadoutChangeRows.map(buildNextReadoutChangeSignature))];
+    const primaryNextReadoutChangeSignature = primaryNextReadoutChangeRow ? buildNextReadoutChangeSignature(primaryNextReadoutChangeRow) : null;
+    const nextReadoutConflictingSectionIds = primaryNextReadoutChangeSignature === null
+      ? []
+      : nextReadoutChangeRows.filter((item) => buildNextReadoutChangeSignature(item) !== primaryNextReadoutChangeSignature).map((item) => item.sectionId);
     const nextReadoutReasonChangedSectionIds = nextReadoutChangeRows.filter((item) => item.reasonChanged).map((item) => item.sectionId);
     const nextReadoutGuardChangedSectionIds = nextReadoutChangeRows.filter((item) => item.guardChanged).map((item) => item.sectionId);
+    const nextReadoutConsistencyReviewRequired = nextReadoutConflictingSectionIds.length > 0;
+    const nextReadoutConsistencyReviewActionSummary = nextReadoutConsistencyReviewRequired ? {
+      schemaVersion: "next_readout_consistency_review_action_v1",
+      schema_version: "next_readout_consistency_review_action_v1",
+      actionId: "review_next_readout_state_consistency",
+      action_id: "review_next_readout_state_consistency",
+      actionRequired: true,
+      action_required: true,
+      readoutId: readComparisonField(coreComparison || diagnosticFlowComparison || analysisReadinessComparison || {}, "currentNextReadoutId"),
+      readout_id: readComparisonField(coreComparison || diagnosticFlowComparison || analysisReadinessComparison || {}, "currentNextReadoutId"),
+      conflictingSectionIds: nextReadoutConflictingSectionIds,
+      conflicting_section_ids: nextReadoutConflictingSectionIds,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false
+    } : null;
     const nextReadoutChangeSummary = {
       schemaVersion: "next_readout_change_summary_v1",
       schema_version: "next_readout_change_summary_v1",
@@ -22182,6 +22208,12 @@
       guard_changed_section_ids: nextReadoutGuardChangedSectionIds,
       consistentAcrossSections: nextReadoutChangeSignatures.length <= 1,
       consistent_across_sections: nextReadoutChangeSignatures.length <= 1,
+      conflictingSectionIds: nextReadoutConflictingSectionIds,
+      conflicting_section_ids: nextReadoutConflictingSectionIds,
+      consistencyReviewRequired: nextReadoutConsistencyReviewRequired,
+      consistency_review_required: nextReadoutConsistencyReviewRequired,
+      consistencyReviewActionSummary: nextReadoutConsistencyReviewActionSummary,
+      consistency_review_action_summary: nextReadoutConsistencyReviewActionSummary,
       importedReasonId: primaryNextReadoutChangeRow?.importedReasonId || null,
       imported_reason_id: primaryNextReadoutChangeRow?.importedReasonId || null,
       currentReasonId: primaryNextReadoutChangeRow?.currentReasonId || null,
