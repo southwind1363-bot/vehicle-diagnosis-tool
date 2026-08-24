@@ -34675,7 +34675,37 @@
     return manufacturerPidReferenceCandidates;
   }
 
-  function evaluateManufacturerPidReferenceCandidate({ candidateId, vehicleProfile = null, observationContext = null, measurements = [], applicabilityEvidence = null } = {}) {
+  function normalizeManufacturerPidIdentityEvidence(candidate, input) {
+    if (!candidate || !input || typeof input !== "object" || input.verifiedFromVehicleReadout !== true
+      || input.readOnly !== true || input.observedValueSource !== "vehicle_readout") return null;
+    const transport = String(input.transport || "").trim().toLowerCase();
+    const scanSessionId = String(input.scanSessionId || input.scan_session_id || "").trim();
+    const allowedTransports = ["web_serial", "local_bridge", "j2534", "native_ble", "imported_tool_export"];
+    if (!allowedTransports.includes(transport) || !scanSessionId) return null;
+    const requiredIds = [candidate.measurement.id, ...candidate.conditionalLimits.map((limit) => limit.requiredMeasurement.id)];
+    const requiredUnits = new Map([[candidate.measurement.id, candidate.measurement.unit]]);
+    candidate.conditionalLimits.forEach((limit) => requiredUnits.set(limit.requiredMeasurement.id, limit.requiredMeasurement.unit));
+    const rows = Array.isArray(input.identities) ? input.identities.map((item) => {
+      const normalizedMeasurementId = String(item?.normalizedMeasurementId || item?.normalized_measurement_id || "").trim();
+      const rawIdentifier = String(item?.rawIdentifier || item?.raw_identifier || "").trim();
+      const sourceEcu = String(item?.sourceEcu || item?.source_ecu || "").trim();
+      const unit = String(item?.unit || "").trim();
+      if (!requiredIds.includes(normalizedMeasurementId) || !rawIdentifier || !sourceEcu || !unit
+        || unit.toLowerCase() !== String(requiredUnits.get(normalizedMeasurementId) || "").toLowerCase()
+        || normalizedMeasurementId === candidate.measurement.id && sourceEcu.toLowerCase() !== candidate.measurement.sourceEcu.toLowerCase()) return null;
+      return Object.freeze({ normalizedMeasurementId, rawIdentifier: rawIdentifier.slice(0, 120), sourceEcu: sourceEcu.slice(0, 80), unit });
+    }) : null;
+    if (!rows || rows.length !== requiredUnits.size || rows.some((item) => !item)
+      || new Set(rows.map((item) => item.normalizedMeasurementId)).size !== requiredUnits.size
+      || requiredIds.some((id) => !rows.some((item) => item.normalizedMeasurementId === id))) return null;
+    return Object.freeze({
+      schemaVersion: "manufacturer_pid_identity_evidence_v1", verifiedFromVehicleReadout: true,
+      observedValueSource: "vehicle_readout", transport, scanSessionId: scanSessionId.slice(0, 120),
+      identities: Object.freeze(rows), readOnly: true, vehicleCommandEnabled: false, wouldTransmit: false
+    });
+  }
+
+  function evaluateManufacturerPidReferenceCandidate({ candidateId, vehicleProfile = null, observationContext = null, measurements = [], applicabilityEvidence = null, pidIdentityEvidence = null } = {}) {
     const candidate = manufacturerPidReferenceCandidates.find((item) => item.id === String(candidateId || "").trim());
     const base = {
       schemaVersion: "manufacturer_pid_reference_evaluation_v1", candidateId: String(candidateId || "").trim() || null,
@@ -34722,6 +34752,10 @@
       && !symptoms.some((value) => candidate.requiredApplicabilityEvidence.anyOf.symptoms.includes(value))) {
       return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["source_symptom_or_dtc_gate_not_confirmed"]) });
     }
+    const normalizedPidIdentityEvidence = normalizeManufacturerPidIdentityEvidence(candidate, pidIdentityEvidence);
+    if (!normalizedPidIdentityEvidence) {
+      return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["manufacturer_pid_identity_evidence_missing_or_invalid"]) });
+    }
     const normalizedMeasurements = normalizePidReferenceMeasurementValues(measurements);
     const target = normalizedMeasurements.get(`${candidate.measurement.id}|${candidate.measurement.unit.toLowerCase()}`);
     if (!target) return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["target_measurement_missing_or_ambiguous"]) });
@@ -34734,6 +34768,7 @@
     const limit = matchingLimits[0];
     return Object.freeze({
       ...resultBase, status: "eligible_reference_comparison", eligible: true, blockerIds: Object.freeze([]),
+      pidIdentityEvidence: normalizedPidIdentityEvidence,
       observedMeasurement: Object.freeze({ id: target.pidId, value: target.value, unit: target.unit }),
       sourceLimit: Object.freeze({ comparison: "absolute_max", maximumValue: limit.maximumValue, unit: candidate.measurement.unit }),
       comparisonStatus: target.value <= limit.maximumValue ? "within_source_limit" : "above_source_limit"
