@@ -47,7 +47,7 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
     public let schemaVersion: String
     public let interfaceID: String
     public let platform: String
-    public let adapterTransport: String? = nil
+    public let adapterTransport: String?
     public let intent: String
     public let capturedAt: String
     public let scanID: UUID
@@ -62,6 +62,46 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
     public let wouldTransmit: Bool
     public let errors: [String]
     public let data: [String: NativeConnectorJSONValue]
+
+    public init(
+        schemaVersion: String,
+        interfaceID: String,
+        platform: String,
+        adapterTransport: String? = nil,
+        intent: String,
+        capturedAt: String,
+        scanID: UUID,
+        connectionID: UUID,
+        vehicleContextID: UUID,
+        sequence: Int,
+        readoutID: String?,
+        readoutScopeID: String?,
+        readoutAttempt: Int?,
+        ok: Bool,
+        blocked: Bool,
+        wouldTransmit: Bool,
+        errors: [String],
+        data: [String: NativeConnectorJSONValue]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.interfaceID = interfaceID
+        self.platform = platform
+        self.adapterTransport = adapterTransport
+        self.intent = intent
+        self.capturedAt = capturedAt
+        self.scanID = scanID
+        self.connectionID = connectionID
+        self.vehicleContextID = vehicleContextID
+        self.sequence = sequence
+        self.readoutID = readoutID
+        self.readoutScopeID = readoutScopeID
+        self.readoutAttempt = readoutAttempt
+        self.ok = ok
+        self.blocked = blocked
+        self.wouldTransmit = wouldTransmit
+        self.errors = errors
+        self.data = data
+    }
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion = "schema_version"
