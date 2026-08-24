@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3271件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "DTC詳細へ確認済みFF実測値を表示",
+  recentMilestone: "車両候補の項目別自動照合をセッション化",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.142";
+const APP_VERSION = "3.13.143";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1714,6 +1714,14 @@ function formatVehicleApplicabilityEvidenceSummary(summary, fallback = "") {
   const confidenceValue = summary.confidence ?? summary.confidence_score ?? "";
   const confidence = confidenceValue !== "" && confidenceValue !== null ? `confidence ${confidenceValue}` : "";
   return [state, sourceName, evidenceId, confidence].filter(Boolean).join(" / ") || fallback || "";
+}
+
+function formatVehicleApplicabilityFieldMatchSummary(summary, fallback = "") {
+  if (!summary || typeof summary !== "object") return fallback || "";
+  const matchedCount = Number(summary.matchedCount ?? summary.matched_count ?? 0);
+  const mismatchCount = Number(summary.mismatchCount ?? summary.mismatch_count ?? 0);
+  const pendingCount = Number(summary.pendingCount ?? summary.pending_count ?? 0);
+  return `候補照合: 一致 ${matchedCount} / 不一致 ${mismatchCount} / 未評価 ${pendingCount}`;
 }
 
 function formatVehicleProfileLabel(profile, fallback = "") {
@@ -8888,6 +8896,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const applicabilityLabel = formatVehicleApplicabilitySummary(session.vehicleApplicability || session.vehicle_applicability || { status: applicabilityStatus }, applicabilityStatus || NO_DATA) || NO_DATA;
   const applicabilityEvidenceSummary = core.vehicleApplicabilityEvidenceSummary || core.vehicle_applicability_evidence_summary || analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || analysisReadinessSummary?.vehicle_applicability_evidence_summary || applicabilityChecklist?.evidenceSummary || applicabilityChecklist?.evidence_summary || null;
   const applicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(applicabilityEvidenceSummary, NO_DATA) || NO_DATA;
+  const applicabilityFieldMatchSummary = core.vehicleApplicabilityFieldMatchSummary || core.vehicle_applicability_field_match_summary || analysisReadinessSummary?.vehicleApplicabilityFieldMatchSummary || analysisReadinessSummary?.vehicle_applicability_field_match_summary || applicabilityChecklist?.fieldMatchSummary || applicabilityChecklist?.field_match_summary || null;
+  const applicabilityFieldMatchLabel = formatVehicleApplicabilityFieldMatchSummary(applicabilityFieldMatchSummary, NO_DATA) || NO_DATA;
   const applicabilityTone = flow.vehicleApplicabilityBlocking === true || applicabilityChecklist?.blocking === true
     ? "blocked"
     : flow.vehicleApplicabilityReviewRequired === true || applicabilityChecklist?.state === "review" ? "pending" : "";
@@ -8945,6 +8955,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "読取品質", readoutQualityLabel, readoutQualitySummary?.reviewRequired || readoutQualitySummary?.review_required ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
+  addObdDiagnosticFlowMetric(grid, "候補照合", applicabilityFieldMatchLabel, applicabilityFieldMatchSummary?.reviewRequired === true || applicabilityFieldMatchSummary?.review_required === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適合差分", vehicleApplicabilityChangedRowLabel, vehicleApplicabilityChangedRowSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
@@ -9132,6 +9143,8 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleApplicabilityLabel = formatVehicleApplicabilitySummary(sessionVehicleApplicability, NO_DATA) || NO_DATA;
   const vehicleApplicabilityEvidenceSummary = coreSessionStatus?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEvidenceSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_evidence_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.evidenceSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.evidence_summary || null;
   const vehicleApplicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(vehicleApplicabilityEvidenceSummary, NO_DATA) || NO_DATA;
+  const vehicleApplicabilityFieldMatchSummary = coreSessionStatus?.vehicleApplicabilityFieldMatchSummary || coreSessionStatus?.vehicle_applicability_field_match_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityFieldMatchSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_field_match_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.fieldMatchSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.field_match_summary || null;
+  const vehicleApplicabilityFieldMatchLabel = formatVehicleApplicabilityFieldMatchSummary(vehicleApplicabilityFieldMatchSummary, NO_DATA) || NO_DATA;
   const vehicleApplicabilityEcuMatchSummary = coreSessionStatus?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.ecuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.ecu_match_summary || null;
   const expectedApplicabilityEcu = vehicleApplicabilityEcuMatchSummary?.expectedAddress || vehicleApplicabilityEcuMatchSummary?.expected_address || null;
   const observedApplicabilityEcus = vehicleApplicabilityEcuMatchSummary?.observedAddresses || vehicleApplicabilityEcuMatchSummary?.observed_addresses || [];
@@ -9331,6 +9344,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(4, 0, ["読取実行", webSerialReadoutLabel]);
   values.splice(5, 0, ["ECU報告プロファイル", obdReportedProfileLabel]);
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
+  values.splice(6, 0, ["候補照合", vehicleApplicabilityFieldMatchLabel]);
   values.splice(6, 0, ["ECU適合", vehicleApplicabilityEcuMatchLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);

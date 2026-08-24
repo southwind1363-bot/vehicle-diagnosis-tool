@@ -8556,6 +8556,73 @@
     };
   }
 
+  function buildVehicleApplicabilityFieldMatchSummary(vehicleApplicability = {}, ecuMatchSummary = null) {
+    const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
+    const fields = [];
+    const addField = (id, label, value, status, evidence) => {
+      fields.push({ id, label, value: value || null, status, evidence: evidence || null });
+    };
+    const catalogConfigured = Boolean(applicability.maker && applicability.model);
+    addField(
+      "maker_model",
+      "メーカー・車種候補",
+      [applicability.maker, applicability.model].filter(Boolean).join(" "),
+      !catalogConfigured ? "not_provided" : applicability.catalogMatched ? "candidate_matched" : applicability.status === "manual" ? "not_evaluated" : "mismatch",
+      "vehicle_catalog"
+    );
+    const addCatalogField = (id, label, value, matched) => {
+      addField(
+        id,
+        label,
+        value,
+        !value ? "not_provided" : !catalogConfigured || !applicability.catalogMatched ? "not_evaluated" : matched ? "candidate_matched" : "mismatch",
+        "vehicle_catalog_range"
+      );
+    };
+    addCatalogField("model_code", "型式候補", applicability.modelCode, applicability.modelCodeMatched);
+    addCatalogField("year", "年式候補", applicability.year, applicability.yearMatched);
+    addCatalogField("engine_code", "エンジン型式候補", applicability.engineCode, applicability.engineMatched);
+    const ecuStatus = String(ecuMatchSummary?.status || "not_configured");
+    addField(
+      "ecu_address",
+      "ECUアドレス",
+      ecuMatchSummary?.expectedAddress || ecuMatchSummary?.expected_address || applicability.ecuAddress,
+      ecuStatus === "matched" ? "observed_matched" : ecuStatus === "mismatch" ? "mismatch" : ecuStatus === "not_observed" || ecuStatus === "not_comparable" ? ecuStatus : "not_provided",
+      "readout_ecu_evidence"
+    );
+    const matchedFieldIds = fields.filter((item) => ["candidate_matched", "observed_matched"].includes(item.status)).map((item) => item.id);
+    const mismatchFieldIds = fields.filter((item) => item.status === "mismatch").map((item) => item.id);
+    const pendingFieldIds = fields.filter((item) => !["candidate_matched", "observed_matched", "mismatch"].includes(item.status)).map((item) => item.id);
+    return {
+      schemaVersion: "vehicle_applicability_field_match_summary_v1",
+      schema_version: "vehicle_applicability_field_match_summary_v1",
+      scope: "catalog_candidate_and_observed_ecu",
+      fields,
+      fieldCount: fields.length,
+      field_count: fields.length,
+      matchedCount: matchedFieldIds.length,
+      matched_count: matchedFieldIds.length,
+      matchedFieldIds,
+      matched_field_ids: matchedFieldIds,
+      mismatchCount: mismatchFieldIds.length,
+      mismatch_count: mismatchFieldIds.length,
+      mismatchFieldIds,
+      mismatch_field_ids: mismatchFieldIds,
+      pendingCount: pendingFieldIds.length,
+      pending_count: pendingFieldIds.length,
+      pendingFieldIds,
+      pending_field_ids: pendingFieldIds,
+      reviewRequired: mismatchFieldIds.length > 0,
+      review_required: mismatchFieldIds.length > 0,
+      confirmedVehicleApplicability: false,
+      confirmed_vehicle_applicability: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+  }
+
   function hasObjectContent(value) {
     return Boolean(value && typeof value === "object" && Object.keys(value).length > 0);
   }
@@ -12452,6 +12519,7 @@
       ecuResponseSummary,
       supportedPidMatrix
     });
+    const vehicleApplicabilityFieldMatchSummary = buildVehicleApplicabilityFieldMatchSummary(applicability, vehicleApplicabilityEcuMatchSummary);
     const normalizedCoverage = normalizeReadoutCoverageSnapshot(readoutCoverage || {});
     const isExplicitlyBlockedReadout = (snapshot) => snapshot?.blocked === true || snapshot?.isBlocked === true || snapshot?.is_blocked === true;
     const isCapturedReadout = (snapshot, key) => (
@@ -13350,6 +13418,8 @@
       vehicle_applicability_evidence_summary: vehicleApplicabilityEvidenceSummary,
       vehicleApplicabilityEcuMatchSummary,
       vehicle_applicability_ecu_match_summary: vehicleApplicabilityEcuMatchSummary,
+      vehicleApplicabilityFieldMatchSummary,
+      vehicle_applicability_field_match_summary: vehicleApplicabilityFieldMatchSummary,
       observedEcuSummary,
       observed_ecu_summary: observedEcuSummary,
       dtcIdentitySummary,
@@ -35262,6 +35332,7 @@
     buildReadoutCoverageSnapshot,
     normalizeReadoutCoverageSnapshot,
     normalizeVehicleApplicabilitySnapshot,
+    buildVehicleApplicabilityFieldMatchSummary,
     normalizeObservationContext,
     normalizeReadoutInterfaceSnapshot,
     normalizeObdReportedProfile,
