@@ -20084,6 +20084,25 @@
     const currentNextReadoutSource = readAliasValue(currentSummary, "nextReadoutSource") || null;
     const importedNextReadoutQueuePosition = readAliasValue(importedAnalysisReadinessSummary, "nextReadoutQueuePosition") || null;
     const currentNextReadoutQueuePosition = readAliasValue(currentSummary, "nextReadoutQueuePosition") || null;
+    const importedNextReadoutReasonSummary = readAliasValue(importedAnalysisReadinessSummary, "nextReadoutReasonSummary") || {};
+    const currentNextReadoutReasonSummary = readAliasValue(currentSummary, "nextReadoutReasonSummary") || {};
+    const importedNextReadoutReasonId = readAliasValue(importedNextReadoutReasonSummary, "reasonId") || null;
+    const currentNextReadoutReasonId = readAliasValue(currentNextReadoutReasonSummary, "reasonId") || null;
+    const importedNextReadoutGuardSummary = readAliasValue(importedAnalysisReadinessSummary, "nextReadoutGuardSummary") || {};
+    const currentNextReadoutGuardSummary = readAliasValue(currentSummary, "nextReadoutGuardSummary") || {};
+    const importedNextReadoutGuardState = readAliasValue(importedNextReadoutGuardSummary, "gateState") || null;
+    const currentNextReadoutGuardState = readAliasValue(currentNextReadoutGuardSummary, "gateState") || null;
+    const importedNextReadoutGuardReady = readAliasValue(importedNextReadoutGuardSummary, "gateReady") === true;
+    const currentNextReadoutGuardReady = readAliasValue(currentNextReadoutGuardSummary, "gateReady") === true;
+    const importedNextReadoutRequestSafe = readAliasValue(importedNextReadoutGuardSummary, "requestSafe") === true;
+    const currentNextReadoutRequestSafe = readAliasValue(currentNextReadoutGuardSummary, "requestSafe") === true;
+    const importedNextReadoutPlanningReady = readAliasValue(importedNextReadoutGuardSummary, "planningReady") === true;
+    const currentNextReadoutPlanningReady = readAliasValue(currentNextReadoutGuardSummary, "planningReady") === true;
+    const nextReadoutReasonChanged = importedNextReadoutReasonId !== currentNextReadoutReasonId;
+    const nextReadoutGuardChanged = importedNextReadoutGuardState !== currentNextReadoutGuardState
+      || importedNextReadoutGuardReady !== currentNextReadoutGuardReady
+      || importedNextReadoutRequestSafe !== currentNextReadoutRequestSafe
+      || importedNextReadoutPlanningReady !== currentNextReadoutPlanningReady;
     return {
       schemaVersion: "imported_analysis_readiness_comparison_v1",
       schema_version: "imported_analysis_readiness_comparison_v1",
@@ -20187,16 +20206,44 @@
       imported_next_readout_queue_position: importedNextReadoutQueuePosition,
       currentNextReadoutQueuePosition,
       current_next_readout_queue_position: currentNextReadoutQueuePosition,
+      importedNextReadoutReasonId,
+      imported_next_readout_reason_id: importedNextReadoutReasonId,
+      currentNextReadoutReasonId,
+      current_next_readout_reason_id: currentNextReadoutReasonId,
+      nextReadoutReasonChanged,
+      next_readout_reason_changed: nextReadoutReasonChanged,
+      importedNextReadoutGuardState,
+      imported_next_readout_guard_state: importedNextReadoutGuardState,
+      currentNextReadoutGuardState,
+      current_next_readout_guard_state: currentNextReadoutGuardState,
+      importedNextReadoutGuardReady,
+      imported_next_readout_guard_ready: importedNextReadoutGuardReady,
+      currentNextReadoutGuardReady,
+      current_next_readout_guard_ready: currentNextReadoutGuardReady,
+      importedNextReadoutRequestSafe,
+      imported_next_readout_request_safe: importedNextReadoutRequestSafe,
+      currentNextReadoutRequestSafe,
+      current_next_readout_request_safe: currentNextReadoutRequestSafe,
+      importedNextReadoutPlanningReady,
+      imported_next_readout_planning_ready: importedNextReadoutPlanningReady,
+      currentNextReadoutPlanningReady,
+      current_next_readout_planning_ready: currentNextReadoutPlanningReady,
+      nextReadoutGuardChanged,
+      next_readout_guard_changed: nextReadoutGuardChanged,
       nextReadoutDetailsChanged: importedNextReadoutLabel !== currentNextReadoutLabel
         || importedNextReadoutStatus !== currentNextReadoutStatus
         || importedNextReadoutStatusReason !== currentNextReadoutStatusReason
         || importedNextReadoutSource !== currentNextReadoutSource
-        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition
+        || nextReadoutReasonChanged
+        || nextReadoutGuardChanged,
       next_readout_details_changed: importedNextReadoutLabel !== currentNextReadoutLabel
         || importedNextReadoutStatus !== currentNextReadoutStatus
         || importedNextReadoutStatusReason !== currentNextReadoutStatusReason
         || importedNextReadoutSource !== currentNextReadoutSource
         || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition
+        || nextReadoutReasonChanged
+        || nextReadoutGuardChanged
     };
   }
 
