@@ -21254,6 +21254,8 @@
       || comparison.primaryBlockingBridgeIntentChanged === true
       || comparison.nextReadoutChanged === true
       || comparison.nextReadoutDetailsChanged === true
+      || comparison.nextReadoutReasonChanged === true
+      || comparison.nextReadoutGuardChanged === true
       || comparison.nextBlockedReasonChanged === true
       || comparison.actionRequiredChanged === true
       || comparison.nextActionChanged === true
@@ -21303,7 +21305,8 @@
       comparison.readyForAnalysisChanged === true || comparison.readyChanged === true ? "readiness" : null,
       comparison.blockedChanged === true || comparison.safeForBridgePlanningChanged === true ? "request_plan_gate" : null,
       comparison.requestPlanStateChanged === true || comparison.requestPlanNextRequestChanged === true || comparison.requestPlanNextBridgeIntentChanged === true ? "request_plan_summary" : null,
-      comparison.readoutIdChanged === true || comparison.reasonIdChanged === true || comparison.gateStateChanged === true || comparison.planningReadyChanged === true || comparison.safeForReadoutPlanningChanged === true || comparison.bridgeIntentChanged === true || comparison.serviceModeChanged === true ? "next_readout_guard" : null,
+      comparison.nextReadoutReasonChanged === true ? "next_readout_reason" : null,
+      comparison.nextReadoutGuardChanged === true || comparison.readoutIdChanged === true || comparison.reasonIdChanged === true || comparison.gateStateChanged === true || comparison.planningReadyChanged === true || comparison.safeForReadoutPlanningChanged === true || comparison.bridgeIntentChanged === true || comparison.serviceModeChanged === true ? "next_readout_guard" : null,
       comparison.requestSafeChanged === true || comparison.readOnlyChanged === true || comparison.nonTransmittingChanged === true || comparison.vehicleCommandDisabledChanged === true || comparison.executionDisabledChanged === true || comparison.safetyChanged === true ? "next_readout_guard_safety" : null,
       comparison.primaryBlockingChanged === true || comparison.primaryBlockingReasonChanged === true || comparison.primaryBlockingReadoutChanged === true || comparison.primaryBlockingBridgeIntentChanged === true ? "primary_blocker" : null,
       comparison.nextReadoutChanged === true || comparison.nextReadoutDetailsChanged === true ? "next_readout" : null,
@@ -21401,6 +21404,8 @@
           statusChanged: item.comparison.statusChanged === true || item.comparison.stateChanged === true,
           completionChanged: hasComparisonMetricChanges(item.comparison),
           nextReadoutChanged: item.comparison.nextReadoutChanged === true || item.comparison.nextReadoutDetailsChanged === true,
+          nextReadoutReasonChanged: item.comparison.nextReadoutReasonChanged === true,
+          next_readout_reason_changed: item.comparison.nextReadoutReasonChanged === true,
           readyForAnalysisChanged: item.comparison.readyForAnalysisChanged === true || item.comparison.readyChanged === true,
           analysisChecklistChanged: item.comparison.checklistBlockedIdsChanged === true
             || item.comparison.checklistReviewIdsChanged === true
@@ -21423,7 +21428,21 @@
           requestPlanSummaryChanged: item.comparison.requestPlanStateChanged === true
             || item.comparison.requestPlanNextRequestChanged === true
             || item.comparison.requestPlanNextBridgeIntentChanged === true,
-          nextReadoutGuardChanged: item.comparison.readoutIdChanged === true
+          nextReadoutGuardChanged: item.comparison.nextReadoutGuardChanged === true
+            || item.comparison.readoutIdChanged === true
+            || item.comparison.reasonIdChanged === true
+            || item.comparison.gateStateChanged === true
+            || item.comparison.planningReadyChanged === true
+            || item.comparison.safeForReadoutPlanningChanged === true
+            || item.comparison.requestSafeChanged === true
+            || item.comparison.readOnlyChanged === true
+            || item.comparison.nonTransmittingChanged === true
+            || item.comparison.vehicleCommandDisabledChanged === true
+            || item.comparison.executionDisabledChanged === true
+            || item.comparison.bridgeIntentChanged === true
+            || item.comparison.serviceModeChanged === true,
+          next_readout_guard_changed: item.comparison.nextReadoutGuardChanged === true
+            || item.comparison.readoutIdChanged === true
             || item.comparison.reasonIdChanged === true
             || item.comparison.gateStateChanged === true
             || item.comparison.planningReadyChanged === true
@@ -22353,8 +22372,10 @@
       ready_for_analysis_changed: comparisons.some((item) => item.readyForAnalysisChanged === true || item.readyChanged === true),
       requestPlanGateChanged: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
       request_plan_gate_changed: comparisons.some((item) => item.stateChanged === true || item.blockedChanged === true || item.safeForBridgePlanningChanged === true || item.nextBlockedReasonChanged === true || item.actionRequiredChanged === true || item.nextActionChanged === true || item.actionIdsChanged === true || item.actionReasonIdsChanged === true || item.actionReadoutIdsChanged === true || Number(item.actionQueueCountDelta || item.actionSummaryCountDelta || item.actionSummaryReasonCountDelta || item.actionSummaryReadoutCountDelta || 0) !== 0 || item.blockedReasonIdsChanged === true),
-      nextReadoutGuardChanged: comparisons.some((item) => item.readoutIdChanged === true || item.reasonIdChanged === true || item.gateStateChanged === true || item.planningReadyChanged === true || item.safeForReadoutPlanningChanged === true || item.requestSafeChanged === true || item.readOnlyChanged === true || item.nonTransmittingChanged === true || item.vehicleCommandDisabledChanged === true || item.executionDisabledChanged === true || item.bridgeIntentChanged === true || item.serviceModeChanged === true),
-      next_readout_guard_changed: comparisons.some((item) => item.readoutIdChanged === true || item.reasonIdChanged === true || item.gateStateChanged === true || item.planningReadyChanged === true || item.safeForReadoutPlanningChanged === true || item.requestSafeChanged === true || item.readOnlyChanged === true || item.nonTransmittingChanged === true || item.vehicleCommandDisabledChanged === true || item.executionDisabledChanged === true || item.bridgeIntentChanged === true || item.serviceModeChanged === true),
+      nextReadoutReasonChanged: comparisons.some((item) => item.nextReadoutReasonChanged === true),
+      next_readout_reason_changed: comparisons.some((item) => item.nextReadoutReasonChanged === true),
+      nextReadoutGuardChanged: comparisons.some((item) => item.nextReadoutGuardChanged === true || item.readoutIdChanged === true || item.reasonIdChanged === true || item.gateStateChanged === true || item.planningReadyChanged === true || item.safeForReadoutPlanningChanged === true || item.requestSafeChanged === true || item.readOnlyChanged === true || item.nonTransmittingChanged === true || item.vehicleCommandDisabledChanged === true || item.executionDisabledChanged === true || item.bridgeIntentChanged === true || item.serviceModeChanged === true),
+      next_readout_guard_changed: comparisons.some((item) => item.nextReadoutGuardChanged === true || item.readoutIdChanged === true || item.reasonIdChanged === true || item.gateStateChanged === true || item.planningReadyChanged === true || item.safeForReadoutPlanningChanged === true || item.requestSafeChanged === true || item.readOnlyChanged === true || item.nonTransmittingChanged === true || item.vehicleCommandDisabledChanged === true || item.executionDisabledChanged === true || item.bridgeIntentChanged === true || item.serviceModeChanged === true),
       requestPlanSummaryChanged: comparisons.some((item) => item.requestPlanStateChanged === true || item.requestPlanNextRequestChanged === true || item.requestPlanNextBridgeIntentChanged === true),
       request_plan_summary_changed: comparisons.some((item) => item.requestPlanStateChanged === true || item.requestPlanNextRequestChanged === true || item.requestPlanNextBridgeIntentChanged === true),
       primaryBlockerChanged: comparisons.some((item) => item.primaryBlockingChanged === true || item.primaryBlockingReasonChanged === true || item.primaryBlockingReadoutChanged === true || item.primaryBlockingBridgeIntentChanged === true),
