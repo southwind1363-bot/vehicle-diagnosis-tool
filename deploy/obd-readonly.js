@@ -12233,7 +12233,8 @@
           unit: row.unit,
           observationCondition: comparisonObservationCondition,
           observationContext: normalizedObservationContext,
-          vehicleProfile
+          vehicleProfile,
+          currentMeasurements: rawLivePidValueDeltaRows
         });
         const thresholdApplied = Boolean(reference);
         const previousRow = Array.isArray(previousLivePidValueDeltaRows) ? previousLivePidValueDeltaRows.find((candidate) =>
@@ -12245,7 +12246,7 @@
         ) : null;
         const normalizedHistoricalThresholdEvidence = normalizeHistoricalPidReferenceThresholdEvidence(previousRow?.thresholdEvidence || previousRow?.threshold_evidence);
         const thresholdEvidence = reference
-          ? buildPidReferenceThresholdEvidence(reference, { vehicleProfile, observationCondition: comparisonObservationCondition, observationContext: normalizedObservationContext })
+          ? buildPidReferenceThresholdEvidence(reference, { vehicleProfile, observationCondition: comparisonObservationCondition, observationContext: normalizedObservationContext, currentMeasurements: rawLivePidValueDeltaRows })
           : normalizedHistoricalThresholdEvidence?.pidId === String(row.id).trim()
             && normalizedHistoricalThresholdEvidence.unit.toLowerCase() === String(row.unit || "").trim().toLowerCase()
             ? normalizedHistoricalThresholdEvidence
@@ -34538,6 +34539,18 @@
         : [];
       const requiredAccessoryLoad = String(rawRequiredOperatingState?.accessory_load || rawRequiredOperatingState?.accessoryLoad || "").trim().toLowerCase();
       const hasRequiredOperatingState = Boolean(rawRequiredOperatingState);
+      const rawRequiredMeasurements = item?.required_measurements || item?.requiredMeasurements || [];
+      const requiredMeasurements = Array.isArray(rawRequiredMeasurements) ? rawRequiredMeasurements.map((measurement) => {
+        const pidId = String(measurement?.pid_id || measurement?.pidId || "").trim();
+        const unit = String(measurement?.unit || "").trim();
+        const rawMinValue = measurement?.min_value ?? measurement?.minValue;
+        const rawMaxValue = measurement?.max_value ?? measurement?.maxValue;
+        const minValue = rawMinValue === null || rawMinValue === "" ? NaN : Number(rawMinValue);
+        const maxValue = rawMaxValue === null || rawMaxValue === "" ? NaN : Number(rawMaxValue);
+        if (!pidId || !monitorDefinitions.some((definition) => definition.id === pidId) || !unit
+          || !Number.isFinite(minValue) || !Number.isFinite(maxValue) || minValue > maxValue) return null;
+        return Object.freeze({ pidId, unit, minValue, maxValue });
+      }) : null;
       const yearFrom = Number(scope.year_from ?? scope.yearFrom);
       const yearTo = Number(scope.year_to ?? scope.yearTo);
       const threshold = Number(item?.absolute_delta_max ?? item?.absoluteDeltaMax);
@@ -34550,6 +34563,8 @@
           || requiredVehicleMotion && !["stationary", "moving"].includes(requiredVehicleMotion)
           || requiredTransmissionPositions.some((value) => !["park", "neutral", "drive", "reverse", "other"].includes(value))
           || requiredAccessoryLoad && !["off", "on"].includes(requiredAccessoryLoad))
+        || !requiredMeasurements || requiredMeasurements.some((measurement) => !measurement) || requiredMeasurements.length > 8
+        || new Set(requiredMeasurements.map((measurement) => `${measurement.pidId}|${measurement.unit.toLowerCase()}`)).size !== requiredMeasurements.length
         || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo) || yearFrom > yearTo
         || typeof item.source_url !== "string" || !/^https:\/\//.test(item.source_url)
         || !/^\d{4}-\d{2}-\d{2}$/.test(item.source_date || "")
@@ -34567,6 +34582,7 @@
           transmissionPositions: Object.freeze([...new Set(requiredTransmissionPositions)]),
           accessoryLoad: requiredAccessoryLoad || null
         }) : null,
+        requiredMeasurements: Object.freeze(requiredMeasurements),
         makers: Object.freeze([...new Set(makers)]),
         models: Object.freeze([...new Set(models)]),
         engineCodes: Object.freeze([...new Set(engineCodes)]),
@@ -34587,7 +34603,24 @@
     return pidReferenceThresholds;
   }
 
-  function buildPidReferenceThresholdEvidence(reference, { vehicleProfile = null, observationCondition = null, observationContext = null } = {}) {
+  function normalizePidReferenceMeasurementValues(input = []) {
+    const values = new Map();
+    const ambiguousKeys = new Set();
+    (Array.isArray(input) ? input : []).forEach((measurement) => {
+      const pidId = String(measurement?.pidId || measurement?.pid_id || measurement?.id || "").trim();
+      const unit = String(measurement?.unit || "").trim();
+      const rawValue = measurement?.currentValue ?? measurement?.current_value ?? measurement?.value;
+      const value = rawValue === null || rawValue === "" ? NaN : Number(rawValue);
+      if (!pidId || !unit || !Number.isFinite(value)) return;
+      const key = `${pidId}|${unit.toLowerCase()}`;
+      if (values.has(key)) ambiguousKeys.add(key);
+      values.set(key, { pidId, unit, value });
+    });
+    ambiguousKeys.forEach((key) => values.delete(key));
+    return values;
+  }
+
+  function buildPidReferenceThresholdEvidence(reference, { vehicleProfile = null, observationCondition = null, observationContext = null, currentMeasurements = [] } = {}) {
     const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
     const context = normalizeObservationContext(observationContext) || {};
     const vehicleScope = {
@@ -34616,6 +34649,20 @@
       accessoryLoad: reference.requiredOperatingState.accessoryLoad,
       accessory_load: reference.requiredOperatingState.accessoryLoad
     } : null;
+    const measurementValues = normalizePidReferenceMeasurementValues(currentMeasurements);
+    const requiredMeasurements = reference.requiredMeasurements.map((measurement) => ({
+      pidId: measurement.pidId,
+      pid_id: measurement.pidId,
+      unit: measurement.unit,
+      minValue: measurement.minValue,
+      min_value: measurement.minValue,
+      maxValue: measurement.maxValue,
+      max_value: measurement.maxValue
+    }));
+    const matchedMeasurements = requiredMeasurements.map((measurement) => {
+      const matched = measurementValues.get(`${measurement.pidId}|${measurement.unit.toLowerCase()}`);
+      return { pidId: measurement.pidId, pid_id: measurement.pidId, unit: measurement.unit, value: matched?.value ?? null };
+    });
     return Object.freeze({
       schemaVersion: "pid_reference_threshold_evidence_v1",
       schema_version: "pid_reference_threshold_evidence_v1",
@@ -34632,6 +34679,10 @@
       observation_conditions: [...reference.observationConditions],
       requiredOperatingState,
       required_operating_state: requiredOperatingState ? { ...requiredOperatingState, transmissionPositions: [...requiredOperatingState.transmissionPositions], transmission_positions: [...requiredOperatingState.transmission_positions] } : null,
+      requiredMeasurements,
+      required_measurements: requiredMeasurements.map((measurement) => ({ ...measurement })),
+      matchedMeasurements,
+      matched_measurements: matchedMeasurements.map((measurement) => ({ ...measurement })),
       vehicleScope,
       vehicle_scope: { ...vehicleScope, makers: [...vehicleScope.makers], models: [...vehicleScope.models], engine_codes: [...vehicleScope.engine_codes] },
       matchedVehicle,
@@ -34695,6 +34746,26 @@
       : [];
     const requiredAccessoryLoad = String(rawRequiredOperatingState?.accessoryLoad || rawRequiredOperatingState?.accessory_load || "").trim().toLowerCase();
     const hasRequiredOperatingState = Boolean(rawRequiredOperatingState);
+    const rawRequiredMeasurements = input.requiredMeasurements || input.required_measurements || [];
+    const requiredMeasurements = Array.isArray(rawRequiredMeasurements) ? rawRequiredMeasurements.map((measurement) => {
+      const pidId = String(measurement?.pidId || measurement?.pid_id || "").trim().slice(0, 96);
+      const unit = String(measurement?.unit || "").trim().slice(0, 48);
+      const rawMinValue = measurement?.minValue ?? measurement?.min_value;
+      const rawMaxValue = measurement?.maxValue ?? measurement?.max_value;
+      const minValue = rawMinValue === null || rawMinValue === "" ? NaN : Number(rawMinValue);
+      const maxValue = rawMaxValue === null || rawMaxValue === "" ? NaN : Number(rawMaxValue);
+      return pidId && unit && Number.isFinite(minValue) && Number.isFinite(maxValue) && minValue <= maxValue
+        ? { pidId, pid_id: pidId, unit, minValue, min_value: minValue, maxValue, max_value: maxValue }
+        : null;
+    }) : null;
+    const rawMatchedMeasurements = input.matchedMeasurements || input.matched_measurements || [];
+    const matchedMeasurements = Array.isArray(rawMatchedMeasurements) ? rawMatchedMeasurements.map((measurement) => {
+      const pidId = String(measurement?.pidId || measurement?.pid_id || "").trim().slice(0, 96);
+      const unit = String(measurement?.unit || "").trim().slice(0, 48);
+      const rawValue = measurement?.value;
+      const value = rawValue === null || rawValue === "" ? NaN : Number(rawValue);
+      return pidId && unit && Number.isFinite(value) ? { pidId, pid_id: pidId, unit, value } : null;
+    }) : null;
     const observationConditions = Array.isArray(input.observationConditions || input.observation_conditions)
       ? (input.observationConditions || input.observation_conditions).map(normalizeLivePidObservationCondition).filter((value) => value !== "unspecified")
       : [];
@@ -34712,6 +34783,15 @@
         || requiredVehicleMotion && requiredVehicleMotion !== matchedVehicle.vehicle_motion_state
         || requiredTransmissionPositions.length && !requiredTransmissionPositions.includes(matchedVehicle.transmission_position)
         || requiredAccessoryLoad && requiredAccessoryLoad !== matchedVehicle.accessory_load_state)) return null;
+    if (!requiredMeasurements || requiredMeasurements.some((measurement) => !measurement) || requiredMeasurements.length > 8
+      || new Set(requiredMeasurements.map((measurement) => `${measurement.pidId}|${measurement.unit.toLowerCase()}`)).size !== requiredMeasurements.length
+      || !matchedMeasurements || matchedMeasurements.some((measurement) => !measurement)
+      || matchedMeasurements.length !== requiredMeasurements.length
+      || new Set(matchedMeasurements.map((measurement) => `${measurement.pidId}|${measurement.unit.toLowerCase()}`)).size !== matchedMeasurements.length
+      || requiredMeasurements.some((required) => {
+        const matched = matchedMeasurements.find((measurement) => measurement.pidId === required.pidId && measurement.unit.toLowerCase() === required.unit.toLowerCase());
+        return !matched || matched.value < required.minValue || matched.value > required.maxValue;
+      })) return null;
     const vehicleScope = { makers, models, engine_codes: engineCodes, year_from: yearFrom, year_to: yearTo };
     const requiredOperatingState = hasRequiredOperatingState ? {
       vehicleMotion: requiredVehicleMotion || null,
@@ -34737,6 +34817,10 @@
       observation_conditions: [...observationConditions],
       requiredOperatingState,
       required_operating_state: requiredOperatingState ? { ...requiredOperatingState, transmissionPositions: [...requiredOperatingState.transmissionPositions], transmission_positions: [...requiredOperatingState.transmission_positions] } : null,
+      requiredMeasurements,
+      required_measurements: requiredMeasurements.map((measurement) => ({ ...measurement })),
+      matchedMeasurements,
+      matched_measurements: matchedMeasurements.map((measurement) => ({ ...measurement })),
       vehicleScope,
       vehicle_scope: { makers: [...makers], models: [...models], engine_codes: [...engineCodes], year_from: yearFrom, year_to: yearTo },
       matchedVehicle,
@@ -34760,7 +34844,7 @@
     });
   }
 
-  function findApplicablePidReferenceThreshold({ pidId, unit, observationCondition, observationContext = null, vehicleProfile } = {}) {
+  function findApplicablePidReferenceThreshold({ pidId, unit, observationCondition, observationContext = null, vehicleProfile, currentMeasurements = [] } = {}) {
     const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
     const maker = String(profile.maker || "").trim().toLowerCase();
     const model = String(profile.model || "").trim().toLowerCase();
@@ -34772,6 +34856,7 @@
     const vehicleMotionState = context?.vehicleMotionState || context?.vehicle_motion_state || "unspecified";
     const transmissionPosition = context?.transmissionPosition || context?.transmission_position || "unspecified";
     const accessoryLoadState = context?.accessoryLoadState || context?.accessory_load_state || "unspecified";
+    const measurementValues = normalizePidReferenceMeasurementValues(currentMeasurements);
     const observedConditions = new Set([
       condition,
       ...(context?.conditions || []).map(normalizeLivePidObservationCondition),
@@ -34786,6 +34871,10 @@
       && (!item.requiredOperatingState?.vehicleMotion || context?.vehicleMotionStateConflict !== true && item.requiredOperatingState.vehicleMotion === vehicleMotionState)
       && (!item.requiredOperatingState?.transmissionPositions.length || context?.transmissionPositionConflict !== true && item.requiredOperatingState.transmissionPositions.includes(transmissionPosition))
       && (!item.requiredOperatingState?.accessoryLoad || context?.accessoryLoadStateConflict !== true && item.requiredOperatingState.accessoryLoad === accessoryLoadState)
+      && item.requiredMeasurements.every((required) => {
+        const matched = measurementValues.get(`${required.pidId}|${required.unit.toLowerCase()}`);
+        return matched && matched.value >= required.minValue && matched.value <= required.maxValue;
+      })
       && item.makers.some((value) => value.toLowerCase() === maker)
       && item.models.some((value) => value.toLowerCase() === model)
       && item.engineCodes.some((value) => value.toLowerCase() === engineCode)

@@ -548,6 +548,22 @@ for (const file of jsonFiles) {
           if (hasAccessoryLoad && !["off", "on"].includes(operatingState.accessory_load)) reportError(`${label}: accessory_load が不正です`);
         }
       }
+      if (row.required_measurements !== undefined) {
+        if (!Array.isArray(row.required_measurements) || row.required_measurements.length > 8) {
+          reportError(`${label}: required_measurements が不正です`);
+        } else {
+          const measurementKeys = new Set();
+          for (const measurement of row.required_measurements) {
+            const measurementLabel = `${label}: required_measurements`;
+            if (!isNonEmptyString(measurement?.pid_id) || !monitorDefinitionIds.has(measurement.pid_id)) reportError(`${measurementLabel}: pid_id がOBDモニター辞書にありません`);
+            if (!isNonEmptyString(measurement?.unit)) reportError(`${measurementLabel}: unit がありません`);
+            if (!Number.isFinite(measurement?.min_value) || !Number.isFinite(measurement?.max_value) || measurement.min_value > measurement.max_value) reportError(`${measurementLabel}: 値範囲が不正です`);
+            const measurementKey = `${measurement?.pid_id}|${String(measurement?.unit || "").toLowerCase()}`;
+            if (measurementKeys.has(measurementKey)) reportError(`${measurementLabel}: ${measurementKey} が重複しています`);
+            measurementKeys.add(measurementKey);
+          }
+        }
+      }
       if (!isNonEmptyString(row.source_url) || !row.source_url.startsWith("https://")) reportError(`${label}: HTTPS source_url がありません`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.source_date || "")) reportError(`${label}: source_date が不正です`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.last_verified_date || "")) reportError(`${label}: last_verified_date が不正です`);
