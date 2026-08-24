@@ -12144,6 +12144,52 @@
         technicianReviewRequired: true,
         technician_review_required: true
       }));
+    const livePidComparison = comparison?.coreReadoutInventoryComparison
+      || comparison?.core_readout_inventory_comparison
+      || comparison;
+    const livePidValueComparisonAvailable = eligible && pickDefined(
+      livePidComparison?.livePidValueComparisonAvailable,
+      livePidComparison?.live_pid_value_comparison_available,
+      false
+    ) === true;
+    const rawLivePidValueDeltaRows = livePidComparison?.livePidValueDeltaRows
+      || livePidComparison?.live_pid_value_delta_rows
+      || [];
+    const livePidValueDeltaRows = (livePidValueComparisonAvailable && Array.isArray(rawLivePidValueDeltaRows) ? rawLivePidValueDeltaRows : [])
+      .filter((row) => row && typeof row === "object" && String(row.id || "").trim() && Number.isFinite(Number(row.importedValue ?? row.imported_value)) && Number.isFinite(Number(row.currentValue ?? row.current_value)))
+      .slice(0, 32)
+      .map((row, index) => {
+        const importedValue = Number(row.importedValue ?? row.imported_value);
+        const currentValue = Number(row.currentValue ?? row.current_value);
+        const delta = Number((currentValue - importedValue).toPrecision(12));
+        return {
+          id: String(row.id).trim().slice(0, 96),
+          sourceEcu: String(row.sourceEcu || row.source_ecu || "-").trim().slice(0, 64),
+          source_ecu: String(row.sourceEcu || row.source_ecu || "-").trim().slice(0, 64),
+          unit: String(row.unit || "").trim().slice(0, 48),
+          importedValue,
+          imported_value: importedValue,
+          currentValue,
+          current_value: currentValue,
+          delta,
+          changed: delta !== 0,
+          displayOrder: index + 1,
+          display_order: index + 1,
+          threshold: null,
+          thresholdApplied: false,
+          threshold_applied: false,
+          interpretationAssigned: false,
+          interpretation_assigned: false,
+          technicianReviewRequired: true,
+          technician_review_required: true
+        };
+      });
+    const livePidObservationCondition = livePidValueComparisonAvailable
+      ? String(livePidComparison?.currentLivePidObservationCondition || livePidComparison?.current_live_pid_observation_condition || "unspecified").trim().slice(0, 80)
+      : null;
+    const livePidDiagnosticProtocol = livePidValueComparisonAvailable
+      ? String(livePidComparison?.currentLivePidDiagnosticProtocol || livePidComparison?.current_live_pid_diagnostic_protocol || "").trim().slice(0, 80) || null
+      : null;
     return {
       schemaVersion: "post_repair_reassessment_summary_v1",
       schema_version: "post_repair_reassessment_summary_v1",
@@ -12169,6 +12215,20 @@
       evidence_rows: postRepairEvidenceRows,
       evidenceRowCount: postRepairEvidenceRows.length,
       evidence_row_count: postRepairEvidenceRows.length,
+      livePidValueComparisonAvailable,
+      live_pid_value_comparison_available: livePidValueComparisonAvailable,
+      livePidValueDeltaRows,
+      live_pid_value_delta_rows: livePidValueDeltaRows,
+      livePidValueDeltaRowCount: livePidValueDeltaRows.length,
+      live_pid_value_delta_row_count: livePidValueDeltaRows.length,
+      livePidValueChangedRowCount: livePidValueDeltaRows.filter((row) => row.changed).length,
+      live_pid_value_changed_row_count: livePidValueDeltaRows.filter((row) => row.changed).length,
+      livePidObservationCondition,
+      live_pid_observation_condition: livePidObservationCondition,
+      livePidDiagnosticProtocol,
+      live_pid_diagnostic_protocol: livePidDiagnosticProtocol,
+      livePidThresholdInterpretationAssigned: false,
+      live_pid_threshold_interpretation_assigned: false,
       blockedReasonIds,
       blocked_reason_ids: blockedReasonIds,
       repairOutcomeConfirmed: false,
@@ -18145,6 +18205,60 @@
       && livePidUnitMismatchKeys.length === 0;
     const livePidValueAddedKeys = livePidValueComparisonAvailable ? diffIds(currentLivePidValueKeys, importedLivePidValueKeys) : [];
     const livePidValueRemovedKeys = livePidValueComparisonAvailable ? diffIds(importedLivePidValueKeys, currentLivePidValueKeys) : [];
+    const buildLivePidNumericValueMap = (keys = []) => {
+      const values = new Map();
+      const ambiguousKeys = new Set();
+      keys.forEach((key) => {
+        const [id, sourceEcu, unit, value] = String(key || "").split("|");
+        const measurementKey = `${id}|${sourceEcu}|${unit}`;
+        const numericValue = Number(value);
+        if (values.has(measurementKey) && values.get(measurementKey) !== numericValue) ambiguousKeys.add(measurementKey);
+        values.set(measurementKey, numericValue);
+      });
+      ambiguousKeys.forEach((key) => values.delete(key));
+      return { values, ambiguousKeys: [...ambiguousKeys].sort() };
+    };
+    const importedLivePidNumericValueSummary = buildLivePidNumericValueMap(importedLivePidValueKeys);
+    const currentLivePidNumericValueSummary = buildLivePidNumericValueMap(currentLivePidValueKeys);
+    const importedLivePidNumericValues = importedLivePidNumericValueSummary.values;
+    const currentLivePidNumericValues = currentLivePidNumericValueSummary.values;
+    const livePidValueAmbiguousMeasurementKeys = [...new Set([
+      ...importedLivePidNumericValueSummary.ambiguousKeys,
+      ...currentLivePidNumericValueSummary.ambiguousKeys
+    ])].sort();
+    const livePidValueDeltaRows = livePidValueComparisonAvailable
+      ? [...importedLivePidNumericValues.keys()]
+        .filter((key) => currentLivePidNumericValues.has(key))
+        .sort()
+        .slice(0, 64)
+        .map((key, index) => {
+          const [id, sourceEcu, unit] = key.split("|");
+          const importedValue = importedLivePidNumericValues.get(key);
+          const currentValue = currentLivePidNumericValues.get(key);
+          const delta = Number((currentValue - importedValue).toPrecision(12));
+          return {
+            id,
+            sourceEcu,
+            source_ecu: sourceEcu,
+            unit,
+            importedValue,
+            imported_value: importedValue,
+            currentValue,
+            current_value: currentValue,
+            delta,
+            changed: delta !== 0,
+            displayOrder: index + 1,
+            display_order: index + 1,
+            threshold: null,
+            thresholdApplied: false,
+            threshold_applied: false,
+            interpretationAssigned: false,
+            interpretation_assigned: false,
+            technicianReviewRequired: true,
+            technician_review_required: true
+          };
+        })
+      : [];
     const hasLivePidValueEcuScopeEvidence = [
       ...importedLivePidValueReportedEcuScope.reportedEcuIds,
       ...currentLivePidValueReportedEcuScope.reportedEcuIds,
@@ -18840,6 +18954,14 @@
       live_pid_value_added_keys: livePidValueAddedKeys,
       livePidValueRemovedKeys,
       live_pid_value_removed_keys: livePidValueRemovedKeys,
+      livePidValueDeltaRows,
+      live_pid_value_delta_rows: livePidValueDeltaRows,
+      livePidValueDeltaRowCount: livePidValueDeltaRows.length,
+      live_pid_value_delta_row_count: livePidValueDeltaRows.length,
+      livePidValueChangedRowCount: livePidValueDeltaRows.filter((row) => row.changed).length,
+      live_pid_value_changed_row_count: livePidValueDeltaRows.filter((row) => row.changed).length,
+      livePidValueAmbiguousMeasurementKeys,
+      live_pid_value_ambiguous_measurement_keys: livePidValueAmbiguousMeasurementKeys,
       importedFreezeFrameTriggerCount: readCount(importedInventory, "freezeFrameTriggerCount"),
       imported_freeze_frame_trigger_count: readCount(importedInventory, "freezeFrameTriggerCount"),
       currentFreezeFrameTriggerCount: readCount(currentSummary, "freezeFrameTriggerCount"),
