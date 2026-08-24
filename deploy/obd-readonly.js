@@ -14405,6 +14405,25 @@
     const currentNextReadoutSource = readAliasValue(currentFlow, "nextReadoutSource") || null;
     const importedNextReadoutQueuePosition = readAliasValue(importedFlow, "nextReadoutQueuePosition") || null;
     const currentNextReadoutQueuePosition = readAliasValue(currentFlow, "nextReadoutQueuePosition") || null;
+    const importedNextReadoutReasonSummary = readAliasValue(importedFlow, "nextReadoutReasonSummary") || {};
+    const currentNextReadoutReasonSummary = readAliasValue(currentFlow, "nextReadoutReasonSummary") || {};
+    const importedNextReadoutReasonId = readAliasValue(importedNextReadoutReasonSummary, "reasonId") || null;
+    const currentNextReadoutReasonId = readAliasValue(currentNextReadoutReasonSummary, "reasonId") || null;
+    const importedNextReadoutGuardSummary = readAliasValue(importedFlow, "nextReadoutGuardSummary") || {};
+    const currentNextReadoutGuardSummary = readAliasValue(currentFlow, "nextReadoutGuardSummary") || {};
+    const importedNextReadoutGuardState = readAliasValue(importedNextReadoutGuardSummary, "gateState") || null;
+    const currentNextReadoutGuardState = readAliasValue(currentNextReadoutGuardSummary, "gateState") || null;
+    const importedNextReadoutGuardReady = readAliasValue(importedNextReadoutGuardSummary, "gateReady") === true;
+    const currentNextReadoutGuardReady = readAliasValue(currentNextReadoutGuardSummary, "gateReady") === true;
+    const importedNextReadoutRequestSafe = readAliasValue(importedNextReadoutGuardSummary, "requestSafe") === true;
+    const currentNextReadoutRequestSafe = readAliasValue(currentNextReadoutGuardSummary, "requestSafe") === true;
+    const importedNextReadoutPlanningReady = readAliasValue(importedNextReadoutGuardSummary, "planningReady") === true;
+    const currentNextReadoutPlanningReady = readAliasValue(currentNextReadoutGuardSummary, "planningReady") === true;
+    const nextReadoutReasonChanged = importedNextReadoutReasonId !== currentNextReadoutReasonId;
+    const nextReadoutGuardChanged = importedNextReadoutGuardState !== currentNextReadoutGuardState
+      || importedNextReadoutGuardReady !== currentNextReadoutGuardReady
+      || importedNextReadoutRequestSafe !== currentNextReadoutRequestSafe
+      || importedNextReadoutPlanningReady !== currentNextReadoutPlanningReady;
     const importedPendingQueueNextReadoutId = readAliasValue(importedFlow, "pendingQueueNextReadoutId") || null;
     const currentPendingQueueNextReadoutId = readAliasValue(currentFlow, "pendingQueueNextReadoutId") || null;
     const importedRecommendedReadoutId = readAliasValue(importedFlow, "recommendedReadoutId") || null;
@@ -14554,16 +14573,44 @@
       imported_next_readout_queue_position: importedNextReadoutQueuePosition,
       currentNextReadoutQueuePosition,
       current_next_readout_queue_position: currentNextReadoutQueuePosition,
+      importedNextReadoutReasonId,
+      imported_next_readout_reason_id: importedNextReadoutReasonId,
+      currentNextReadoutReasonId,
+      current_next_readout_reason_id: currentNextReadoutReasonId,
+      nextReadoutReasonChanged,
+      next_readout_reason_changed: nextReadoutReasonChanged,
+      importedNextReadoutGuardState,
+      imported_next_readout_guard_state: importedNextReadoutGuardState,
+      currentNextReadoutGuardState,
+      current_next_readout_guard_state: currentNextReadoutGuardState,
+      importedNextReadoutGuardReady,
+      imported_next_readout_guard_ready: importedNextReadoutGuardReady,
+      currentNextReadoutGuardReady,
+      current_next_readout_guard_ready: currentNextReadoutGuardReady,
+      importedNextReadoutRequestSafe,
+      imported_next_readout_request_safe: importedNextReadoutRequestSafe,
+      currentNextReadoutRequestSafe,
+      current_next_readout_request_safe: currentNextReadoutRequestSafe,
+      importedNextReadoutPlanningReady,
+      imported_next_readout_planning_ready: importedNextReadoutPlanningReady,
+      currentNextReadoutPlanningReady,
+      current_next_readout_planning_ready: currentNextReadoutPlanningReady,
+      nextReadoutGuardChanged,
+      next_readout_guard_changed: nextReadoutGuardChanged,
       nextReadoutDetailsChanged: importedNextReadoutLabel !== currentNextReadoutLabel
         || importedNextReadoutStatus !== currentNextReadoutStatus
         || importedNextReadoutStatusReason !== currentNextReadoutStatusReason
         || importedNextReadoutSource !== currentNextReadoutSource
-        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition
+        || nextReadoutReasonChanged
+        || nextReadoutGuardChanged,
       next_readout_details_changed: importedNextReadoutLabel !== currentNextReadoutLabel
         || importedNextReadoutStatus !== currentNextReadoutStatus
         || importedNextReadoutStatusReason !== currentNextReadoutStatusReason
         || importedNextReadoutSource !== currentNextReadoutSource
-        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition
+        || nextReadoutReasonChanged
+        || nextReadoutGuardChanged,
       importedPendingQueueNextReadoutId,
       currentPendingQueueNextReadoutId,
       pendingQueueNextReadoutChanged: importedPendingQueueNextReadoutId !== currentPendingQueueNextReadoutId,
@@ -17279,6 +17326,25 @@
     const currentNextReadoutSource = readAliasValue(currentFlow, "nextReadoutSource") || null;
     const importedNextReadoutQueuePosition = readAliasValue(importedDiagnosticFlowSummary, "nextReadoutQueuePosition") || null;
     const currentNextReadoutQueuePosition = readAliasValue(currentFlow, "nextReadoutQueuePosition") || null;
+    const importedNextReadoutReasonSummary = readAliasValue(importedDiagnosticFlowSummary, "nextReadoutReasonSummary") || {};
+    const currentNextReadoutReasonSummary = readAliasValue(currentFlow, "nextReadoutReasonSummary") || {};
+    const importedNextReadoutReasonId = readAliasValue(importedNextReadoutReasonSummary, "reasonId") || null;
+    const currentNextReadoutReasonId = readAliasValue(currentNextReadoutReasonSummary, "reasonId") || null;
+    const importedNextReadoutGuardSummary = readAliasValue(importedDiagnosticFlowSummary, "nextReadoutGuardSummary") || {};
+    const currentNextReadoutGuardSummary = readAliasValue(currentFlow, "nextReadoutGuardSummary") || {};
+    const importedNextReadoutGuardState = readAliasValue(importedNextReadoutGuardSummary, "gateState") || null;
+    const currentNextReadoutGuardState = readAliasValue(currentNextReadoutGuardSummary, "gateState") || null;
+    const importedNextReadoutGuardReady = readAliasValue(importedNextReadoutGuardSummary, "gateReady") === true;
+    const currentNextReadoutGuardReady = readAliasValue(currentNextReadoutGuardSummary, "gateReady") === true;
+    const importedNextReadoutRequestSafe = readAliasValue(importedNextReadoutGuardSummary, "requestSafe") === true;
+    const currentNextReadoutRequestSafe = readAliasValue(currentNextReadoutGuardSummary, "requestSafe") === true;
+    const importedNextReadoutPlanningReady = readAliasValue(importedNextReadoutGuardSummary, "planningReady") === true;
+    const currentNextReadoutPlanningReady = readAliasValue(currentNextReadoutGuardSummary, "planningReady") === true;
+    const nextReadoutReasonChanged = importedNextReadoutReasonId !== currentNextReadoutReasonId;
+    const nextReadoutGuardChanged = importedNextReadoutGuardState !== currentNextReadoutGuardState
+      || importedNextReadoutGuardReady !== currentNextReadoutGuardReady
+      || importedNextReadoutRequestSafe !== currentNextReadoutRequestSafe
+      || importedNextReadoutPlanningReady !== currentNextReadoutPlanningReady;
     const importedReadyForAnalysis = readAliasValue(importedDiagnosticFlowSummary, "readyForAnalysis") === true;
     const currentReadyForAnalysis = readAliasValue(currentFlow, "readyForAnalysis") === true;
     return {
@@ -17322,16 +17388,44 @@
       imported_next_readout_queue_position: importedNextReadoutQueuePosition,
       currentNextReadoutQueuePosition,
       current_next_readout_queue_position: currentNextReadoutQueuePosition,
+      importedNextReadoutReasonId,
+      imported_next_readout_reason_id: importedNextReadoutReasonId,
+      currentNextReadoutReasonId,
+      current_next_readout_reason_id: currentNextReadoutReasonId,
+      nextReadoutReasonChanged,
+      next_readout_reason_changed: nextReadoutReasonChanged,
+      importedNextReadoutGuardState,
+      imported_next_readout_guard_state: importedNextReadoutGuardState,
+      currentNextReadoutGuardState,
+      current_next_readout_guard_state: currentNextReadoutGuardState,
+      importedNextReadoutGuardReady,
+      imported_next_readout_guard_ready: importedNextReadoutGuardReady,
+      currentNextReadoutGuardReady,
+      current_next_readout_guard_ready: currentNextReadoutGuardReady,
+      importedNextReadoutRequestSafe,
+      imported_next_readout_request_safe: importedNextReadoutRequestSafe,
+      currentNextReadoutRequestSafe,
+      current_next_readout_request_safe: currentNextReadoutRequestSafe,
+      importedNextReadoutPlanningReady,
+      imported_next_readout_planning_ready: importedNextReadoutPlanningReady,
+      currentNextReadoutPlanningReady,
+      current_next_readout_planning_ready: currentNextReadoutPlanningReady,
+      nextReadoutGuardChanged,
+      next_readout_guard_changed: nextReadoutGuardChanged,
       nextReadoutDetailsChanged: importedNextReadoutLabel !== currentNextReadoutLabel
         || importedNextReadoutStatus !== currentNextReadoutStatus
         || importedNextReadoutStatusReason !== currentNextReadoutStatusReason
         || importedNextReadoutSource !== currentNextReadoutSource
-        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition
+        || nextReadoutReasonChanged
+        || nextReadoutGuardChanged,
       next_readout_details_changed: importedNextReadoutLabel !== currentNextReadoutLabel
         || importedNextReadoutStatus !== currentNextReadoutStatus
         || importedNextReadoutStatusReason !== currentNextReadoutStatusReason
         || importedNextReadoutSource !== currentNextReadoutSource
-        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition,
+        || importedNextReadoutQueuePosition !== currentNextReadoutQueuePosition
+        || nextReadoutReasonChanged
+        || nextReadoutGuardChanged,
       importedReadyForAnalysis,
       imported_ready_for_analysis: importedReadyForAnalysis,
       currentReadyForAnalysis,
