@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3272件",
+  validationCheckLabel: "OBD安全検証 3273件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "原因候補の根拠ログを診断結果へ保存",
+  recentMilestone: "次の測定候補を診断結果へ自動表示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.144";
+const APP_VERSION = "3.13.145";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -361,6 +361,7 @@ const realWorldCaseList = document.querySelector("#realWorldCaseList");
 const dataGapList = document.querySelector("#dataGapList");
 const checkOrderList = document.querySelector("#checkOrderList");
 const measurementList = document.querySelector("#measurementList");
+const nextMeasurementCandidateList = document.querySelector("#nextMeasurementCandidateList");
 const liveDataGuideList = document.querySelector("#liveDataGuideList");
 const branchList = document.querySelector("#branchList");
 const cautionList = document.querySelector("#cautionList");
@@ -2366,6 +2367,13 @@ function buildDiagnosis(input) {
     obd ? `DTC ${formatDtcReference(input.obdCode, input.obdSubcode)} のメーカー別診断手順、端子番号、基準値を確認してください。` : ""
   ]);
   const causeCandidateLog = buildCauseCandidateLog(input, obd, flow, interview, dtcApplicability);
+  const measurements = buildMeasurements(flow, interview, workflowMatches);
+  const liveDataGuidance = buildLiveDataGuidance(workflowMatches);
+  const nextMeasurementCandidatePlan = buildNextMeasurementCandidatePlan(
+    getSessionNextReadoutCandidates(obdDevSession.lastSession, 4),
+    measurements,
+    liveDataGuidance
+  );
 
   return {
     confidence: getConfidence(obd, flow, interview),
@@ -2378,8 +2386,9 @@ function buildDiagnosis(input) {
     quickView: buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMatches, workflowMatches),
     summary: buildDiagnosisSummary(input, obd, flow, interview, modernReferences, safetyTags),
     checkOrder: buildCheckOrder(obd, flow, interview, workflowMatches),
-    measurements: buildMeasurements(flow, interview, workflowMatches),
-    liveDataGuidance: buildLiveDataGuidance(workflowMatches),
+    measurements,
+    liveDataGuidance,
+    nextMeasurementCandidatePlan,
     branches: buildBranches(flow, interview, workflowMatches),
     cautions: buildCautions(obd, flow, confirmationBeforeParts, workflowMatches),
     partsChecks: confirmationBeforeParts.length ? confirmationBeforeParts : [NO_DATA],
@@ -2737,6 +2746,93 @@ function formatCauseCandidateLogEntries(log = null) {
   return candidates.length
     ? candidates.map((item) => `${item.id} / ${item.sourceType} / ${item.label} / 根拠: ${item.evidenceRefs?.join(", ") || NO_DATA} / 未確定`)
     : ["記録できる原因候補はありません。"];
+}
+
+function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements = [], liveDataGuidance = []) {
+  const candidates = [];
+  const seen = new Set();
+  const addCandidate = ({ label, actionType, sourceType, readoutId = null, reason = null, status = "pending" }) => {
+    const normalizedLabel = String(label || "").trim().slice(0, 240);
+    if (!normalizedLabel || normalizedLabel === NO_DATA || candidates.length >= 8) return;
+    const key = normalizedLabel.toLocaleLowerCase("ja");
+    if (seen.has(key)) return;
+    seen.add(key);
+    candidates.push({
+      id: `next_measurement_${String(candidates.length + 1).padStart(2, "0")}`,
+      label: normalizedLabel,
+      actionType,
+      action_type: actionType,
+      sourceType,
+      source_type: sourceType,
+      readoutId,
+      readout_id: readoutId,
+      reason: reason ? String(reason).trim().slice(0, 320) : null,
+      status,
+      displayOrder: candidates.length + 1,
+      display_order: candidates.length + 1,
+      candidateOnly: true,
+      candidate_only: true,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false
+    });
+  };
+  (Array.isArray(readoutCandidates) ? readoutCandidates : []).forEach((item) => {
+    if (!isSafeNextReadoutCandidate(item)) return;
+    const readoutId = item.id || item.readoutId || item.readout_id || null;
+    addCandidate({
+      label: item.label || item.displayLabel || item.display_label || readoutId,
+      actionType: "diagnostic_readout",
+      sourceType: "scan_session",
+      readoutId,
+      reason: item.reason || item.statusReason || item.status_reason || "未取得の読取データを補完",
+      status: item.status || "missing"
+    });
+  });
+  (Array.isArray(measurements) ? measurements : []).forEach((label) => addCandidate({
+    label,
+    actionType: "measurement_point",
+    sourceType: "diagnostic_flow",
+    reason: "現在のDTC・症状・問診から抽出した測定候補"
+  }));
+  if (!candidates.length) {
+    (Array.isArray(liveDataGuidance) ? liveDataGuidance : []).forEach((label) => addCandidate({
+      label,
+      actionType: "observation_guidance",
+      sourceType: "diagnostic_workflow",
+      reason: "登録済み診断ワークフローの観察候補"
+    }));
+  }
+  return {
+    schemaVersion: "diagnostic_next_measurement_candidates_v1",
+    schema_version: "diagnostic_next_measurement_candidates_v1",
+    candidates,
+    candidateCount: candidates.length,
+    candidate_count: candidates.length,
+    readoutCandidateCount: candidates.filter((item) => item.actionType === "diagnostic_readout").length,
+    readout_candidate_count: candidates.filter((item) => item.actionType === "diagnostic_readout").length,
+    automatic: true,
+    candidateOnly: true,
+    candidate_only: true,
+    allReadOnly: candidates.every((item) => item.readOnly === true),
+    all_read_only: candidates.every((item) => item.readOnly === true),
+    wouldTransmit: false,
+    would_transmit: false,
+    vehicleCommandEnabled: false,
+    vehicle_command_enabled: false
+  };
+}
+
+function formatNextMeasurementCandidateEntries(plan = null) {
+  const candidates = Array.isArray(plan?.candidates) ? plan.candidates : [];
+  return candidates.length
+    ? candidates.map((item) => `${String(item.displayOrder).padStart(2, "0")} / ${item.actionType === "diagnostic_readout" ? "読取候補" : "測定候補"} / ${item.label} / ${item.reason || "根拠未登録"} / 読取専用・未実行`)
+    : ["次の測定候補はまだありません。車両・DTC・症状・問診を入力してください。"];
 }
 
 function buildCheckOrder(obd, flow, interview, workflowMatches = []) {
@@ -3421,6 +3517,7 @@ function renderDiagnosis(result) {
   }
   renderItems(checkOrderList, result.checkOrder);
   renderItems(measurementList, result.measurements);
+  renderItems(nextMeasurementCandidateList, formatNextMeasurementCandidateEntries(result.nextMeasurementCandidatePlan));
   renderItems(liveDataGuideList, result.liveDataGuidance);
   renderItems(branchList, result.branches);
   renderItems(cautionList, result.cautions);
