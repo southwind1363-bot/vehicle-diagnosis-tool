@@ -67,7 +67,7 @@ public struct NativeConnectorEnvelope: Codable, Sendable, Equatable {
         schemaVersion: String,
         interfaceID: String,
         platform: String,
-        adapterTransport: String? = nil,
+        adapterTransport: String? = "ble_gatt",
         intent: String,
         capturedAt: String,
         scanID: UUID,
