@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3271件",
+  validationCheckLabel: "OBD安全検証 3272件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "車両候補の項目別自動照合をセッション化",
+  recentMilestone: "原因候補の根拠ログを診断結果へ保存",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.143";
+const APP_VERSION = "3.13.144";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -343,6 +343,7 @@ const confidenceBadge = document.querySelector("#confidenceBadge");
 const factList = document.querySelector("#factList");
 const interviewList = document.querySelector("#interviewList");
 const guessList = document.querySelector("#guessList");
+const causeCandidateLogList = document.querySelector("#causeCandidateLogList");
 const aiStatus = document.querySelector("#aiStatus");
 const aiList = document.querySelector("#aiList");
 const copyToast = document.querySelector("#copyToast");
@@ -2364,6 +2365,7 @@ function buildDiagnosis(input) {
     ...workflowMatches.flatMap((item) => item.before_replacement_checks || []),
     obd ? `DTC ${formatDtcReference(input.obdCode, input.obdSubcode)} のメーカー別診断手順、端子番号、基準値を確認してください。` : ""
   ]);
+  const causeCandidateLog = buildCauseCandidateLog(input, obd, flow, interview, dtcApplicability);
 
   return {
     confidence: getConfidence(obd, flow, interview),
@@ -2371,6 +2373,7 @@ function buildDiagnosis(input) {
     facts: buildFacts(input, obd, flow, interview, dtcApplicability, dtcApplicabilityScopeSummary, sourceSpecificDtcContext),
     interview: interview.insights.length ? interview.insights : [NO_DATA],
     guesses: buildGuesses(obd, flow, interview),
+    causeCandidateLog,
     modernReferences,
     quickView: buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMatches, workflowMatches),
     summary: buildDiagnosisSummary(input, obd, flow, interview, modernReferences, safetyTags),
@@ -2650,6 +2653,90 @@ function buildGuesses(obd, flow, interview) {
   }
 
   return guesses.length ? guesses : [NO_DATA];
+}
+
+function buildCauseCandidateLog(input = {}, obd = null, flow = null, interview = {}, dtcApplicability = null) {
+  const candidates = [];
+  const seen = new Set();
+  const addCandidate = ({ kind, label, sourceType, sourceId, evidenceRefs = [], applicabilityStatus = "unknown", sourceUrl = null, sourceDate = null }) => {
+    const normalizedLabel = String(label || "").trim().slice(0, 240);
+    if (!normalizedLabel) return;
+    const key = [kind, sourceType, sourceId, normalizedLabel].join("::");
+    if (seen.has(key) || candidates.length >= 64) return;
+    seen.add(key);
+    const normalizedEvidenceRefs = collectUnique(evidenceRefs.map((item) => String(item || "").trim()).filter(Boolean)).slice(0, 12);
+    candidates.push({
+      id: `cause_candidate_${String(candidates.length + 1).padStart(3, "0")}`,
+      kind,
+      label: normalizedLabel,
+      sourceType,
+      source_type: sourceType,
+      sourceId: sourceId || null,
+      source_id: sourceId || null,
+      evidenceRefs: normalizedEvidenceRefs,
+      evidence_refs: normalizedEvidenceRefs,
+      applicabilityStatus,
+      applicability_status: applicabilityStatus,
+      sourceUrl: sourceUrl || null,
+      source_url: sourceUrl || null,
+      sourceDate: sourceDate || null,
+      source_date: sourceDate || null,
+      candidateOnly: true,
+      candidate_only: true,
+      confirmed: false,
+      rank: null
+    });
+  };
+  const dtcReference = input.obdCode ? formatDtcReference(input.obdCode, input.obdSubcode) : null;
+  const interviewEvidenceRefs = Object.entries(input.interview || {})
+    .filter(([, value]) => value !== null && value !== undefined && String(value).trim())
+    .map(([key]) => `interview:${key}`);
+  (interview.guesses || []).forEach((label) => addCandidate({
+    kind: "interview_hypothesis",
+    label,
+    sourceType: "interview",
+    sourceId: "current_interview",
+    evidenceRefs: interviewEvidenceRefs
+  }));
+  const flowEvidenceRefs = [input.symptomId ? `symptom:${input.symptomId}` : null].filter(Boolean);
+  const possibleSystems = flow?.possibleSystems?.length ? flow.possibleSystems : flow?.faultSystem ? [flow.faultSystem] : [];
+  possibleSystems.forEach((label) => addCandidate({ kind: "possible_system", label, sourceType: "symptom_flow", sourceId: flow?.id || input.symptomId, evidenceRefs: flowEvidenceRefs }));
+  (obd?.commonCauses || []).forEach((label) => addCandidate({
+    kind: "registered_dtc_cause",
+    label,
+    sourceType: "dtc_definition",
+    sourceId: obd?.id || dtcReference,
+    evidenceRefs: dtcReference ? [`dtc:${dtcReference}`] : [],
+    applicabilityStatus: dtcApplicability?.status || "unknown",
+    sourceUrl: Array.isArray(obd?.source_url) ? obd.source_url[0] : obd?.source_url,
+    sourceDate: obd?.source_date
+  }));
+  (flow?.likelyButUnconfirmed || []).forEach((label) => addCandidate({ kind: "unconfirmed_flow_candidate", label, sourceType: "symptom_flow", sourceId: flow?.id || input.symptomId, evidenceRefs: flowEvidenceRefs }));
+  const sourceTypes = collectUnique(candidates.map((item) => item.sourceType));
+  return {
+    schemaVersion: "cause_candidate_log_v1",
+    schema_version: "cause_candidate_log_v1",
+    candidates,
+    candidateCount: candidates.length,
+    candidate_count: candidates.length,
+    sourceTypes,
+    source_types: sourceTypes,
+    candidateOnly: true,
+    candidate_only: true,
+    confirmedCount: 0,
+    confirmed_count: 0,
+    rankingAssigned: false,
+    ranking_assigned: false,
+    retainedInterviewValues: false,
+    retained_interview_values: false
+  };
+}
+
+function formatCauseCandidateLogEntries(log = null) {
+  const candidates = Array.isArray(log?.candidates) ? log.candidates : [];
+  return candidates.length
+    ? candidates.map((item) => `${item.id} / ${item.sourceType} / ${item.label} / 根拠: ${item.evidenceRefs?.join(", ") || NO_DATA} / 未確定`)
+    : ["記録できる原因候補はありません。"];
 }
 
 function buildCheckOrder(obd, flow, interview, workflowMatches = []) {
@@ -3322,6 +3409,7 @@ function renderDiagnosis(result) {
   renderItems(factList, result.facts);
   renderItems(interviewList, result.interview);
   renderItems(guessList, result.guesses);
+  renderItems(causeCandidateLogList, formatCauseCandidateLogEntries(result.causeCandidateLog));
   renderItems(modernGenericList, result.modernReferences.generic);
   renderItems(vehiclePatternList, result.modernReferences.vehiclePatterns);
   renderItems(recallTsbList, result.modernReferences.recallTsb);
