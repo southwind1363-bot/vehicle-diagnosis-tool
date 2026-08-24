@@ -106,6 +106,7 @@
     "0D": "vehicle_speed"
   });
   let monitorDefinitions = fallbackMonitorDefinitions;
+  let pidReferenceThresholds = Object.freeze([]);
 
   const policy = Object.freeze({
     mode: "vehicle-connection-safety-gated",
@@ -12096,7 +12097,7 @@
     };
   }
 
-  function buildPostRepairReassessmentSummary({ observationContext = null, importedSessionComparisonSummary = null } = {}) {
+  function buildPostRepairReassessmentSummary({ observationContext = null, importedSessionComparisonSummary = null, vehicleProfile = null } = {}) {
     const normalizedObservationContext = normalizeObservationContext(observationContext);
     const conditions = normalizedObservationContext?.conditions || [];
     const postRepairRecorded = conditions.includes("post_repair");
@@ -12155,6 +12156,12 @@
     const rawLivePidValueDeltaRows = livePidComparison?.livePidValueDeltaRows
       || livePidComparison?.live_pid_value_delta_rows
       || [];
+    const comparisonObservationCondition = livePidValueComparisonAvailable
+      ? String(livePidComparison?.currentLivePidObservationCondition || livePidComparison?.current_live_pid_observation_condition || "unspecified").trim().slice(0, 80)
+      : null;
+    const comparisonDiagnosticProtocol = livePidValueComparisonAvailable
+      ? String(livePidComparison?.currentLivePidDiagnosticProtocol || livePidComparison?.current_live_pid_diagnostic_protocol || "").trim().slice(0, 80) || null
+      : null;
     const livePidValueDeltaRows = (livePidValueComparisonAvailable && Array.isArray(rawLivePidValueDeltaRows) ? rawLivePidValueDeltaRows : [])
       .filter((row) => row && typeof row === "object" && String(row.id || "").trim() && Number.isFinite(Number(row.importedValue ?? row.imported_value)) && Number.isFinite(Number(row.currentValue ?? row.current_value)))
       .slice(0, 32)
@@ -12162,6 +12169,13 @@
         const importedValue = Number(row.importedValue ?? row.imported_value);
         const currentValue = Number(row.currentValue ?? row.current_value);
         const delta = Number((currentValue - importedValue).toPrecision(12));
+        const reference = findApplicablePidReferenceThreshold({
+          pidId: String(row.id).trim(),
+          unit: row.unit,
+          observationCondition: comparisonObservationCondition,
+          vehicleProfile
+        });
+        const thresholdApplied = Boolean(reference);
         return {
           id: String(row.id).trim().slice(0, 96),
           sourceEcu: String(row.sourceEcu || row.source_ecu || "-").trim().slice(0, 64),
@@ -12175,21 +12189,29 @@
           changed: delta !== 0,
           displayOrder: index + 1,
           display_order: index + 1,
-          threshold: null,
-          thresholdApplied: false,
-          threshold_applied: false,
-          interpretationAssigned: false,
-          interpretation_assigned: false,
+          threshold: reference?.absoluteDeltaMax ?? null,
+          thresholdApplied,
+          threshold_applied: thresholdApplied,
+          referenceDeltaStatus: thresholdApplied ? (Math.abs(delta) <= reference.absoluteDeltaMax ? "within_reference_delta" : "outside_reference_delta") : "not_evaluated",
+          reference_delta_status: thresholdApplied ? (Math.abs(delta) <= reference.absoluteDeltaMax ? "within_reference_delta" : "outside_reference_delta") : "not_evaluated",
+          thresholdReferenceId: reference?.id || null,
+          threshold_reference_id: reference?.id || null,
+          sourceUrl: reference?.sourceUrl || null,
+          source_url: reference?.sourceUrl || null,
+          sourceDate: reference?.sourceDate || null,
+          source_date: reference?.sourceDate || null,
+          applicabilityNote: reference?.applicabilityNote || null,
+          applicability_note: reference?.applicabilityNote || null,
+          interpretationAssigned: thresholdApplied,
+          interpretation_assigned: thresholdApplied,
+          diagnosticConclusionAssigned: false,
+          diagnostic_conclusion_assigned: false,
           technicianReviewRequired: true,
           technician_review_required: true
         };
       });
-    const livePidObservationCondition = livePidValueComparisonAvailable
-      ? String(livePidComparison?.currentLivePidObservationCondition || livePidComparison?.current_live_pid_observation_condition || "unspecified").trim().slice(0, 80)
-      : null;
-    const livePidDiagnosticProtocol = livePidValueComparisonAvailable
-      ? String(livePidComparison?.currentLivePidDiagnosticProtocol || livePidComparison?.current_live_pid_diagnostic_protocol || "").trim().slice(0, 80) || null
-      : null;
+    const livePidObservationCondition = comparisonObservationCondition;
+    const livePidDiagnosticProtocol = comparisonDiagnosticProtocol;
     return {
       schemaVersion: "post_repair_reassessment_summary_v1",
       schema_version: "post_repair_reassessment_summary_v1",
@@ -12227,8 +12249,10 @@
       live_pid_observation_condition: livePidObservationCondition,
       livePidDiagnosticProtocol,
       live_pid_diagnostic_protocol: livePidDiagnosticProtocol,
-      livePidThresholdInterpretationAssigned: false,
-      live_pid_threshold_interpretation_assigned: false,
+      livePidThresholdInterpretationAssigned: livePidValueDeltaRows.some((row) => row.thresholdApplied),
+      live_pid_threshold_interpretation_assigned: livePidValueDeltaRows.some((row) => row.thresholdApplied),
+      livePidThresholdAppliedRowCount: livePidValueDeltaRows.filter((row) => row.thresholdApplied).length,
+      live_pid_threshold_applied_row_count: livePidValueDeltaRows.filter((row) => row.thresholdApplied).length,
       blockedReasonIds,
       blocked_reason_ids: blockedReasonIds,
       repairOutcomeConfirmed: false,
@@ -25474,7 +25498,8 @@
     const importedSessionComparisonSummary = importedSessionComparisonSummaryInput || generatedImportedSessionComparisonSummary;
     const postRepairReassessmentSummary = buildPostRepairReassessmentSummary({
       observationContext: mergedBridgeMetadata.observationContext,
-      importedSessionComparisonSummary
+      importedSessionComparisonSummary,
+      vehicleProfile: mergedBridgeMetadata.vehicleProfile
     });
     const importedVehicleApplicabilityChangedRowSummary = input.importedVehicleApplicabilityChangedRowSummary
       || input.imported_vehicle_applicability_changed_row_summary
@@ -34091,7 +34116,8 @@
       || null;
     const postRepairReassessmentSummary = buildPostRepairReassessmentSummary({
       observationContext: resolvedMetadata.observationContext,
-      importedSessionComparisonSummary
+      importedSessionComparisonSummary,
+      vehicleProfile: resolvedMetadata.vehicleProfile
     });
     const mergedMonitorValueSummary = mergeMonitorValueSummaries(
       resolveMonitorValueSummary([], livePidSnapshot.monitorValueSummary, livePidSnapshot.monitor_value_summary),
@@ -34405,6 +34431,75 @@
 
   function getMonitorDefinitions() {
     return monitorDefinitions;
+  }
+
+  function configurePidReferenceThresholds(input) {
+    const rows = Array.isArray(input) ? input : Array.isArray(input?.records) ? input.records : null;
+    if (!rows) return false;
+    const normalized = rows.map((item) => {
+      const scope = item?.vehicle_scope || item?.vehicleScope || {};
+      const makers = Array.isArray(scope.makers) ? scope.makers.map(String).map((value) => value.trim()).filter(Boolean) : [];
+      const models = Array.isArray(scope.models) ? scope.models.map(String).map((value) => value.trim()).filter(Boolean) : [];
+      const engineCodes = Array.isArray(scope.engine_codes || scope.engineCodes) ? (scope.engine_codes || scope.engineCodes).map(String).map((value) => value.trim()).filter(Boolean) : [];
+      const rawConditions = item?.observation_conditions || item?.observationConditions;
+      const conditions = Array.isArray(rawConditions) ? rawConditions.map(normalizeLivePidObservationCondition) : [];
+      const yearFrom = Number(scope.year_from ?? scope.yearFrom);
+      const yearTo = Number(scope.year_to ?? scope.yearTo);
+      const threshold = Number(item?.absolute_delta_max ?? item?.absoluteDeltaMax);
+      if (!item || typeof item.id !== "string" || !item.id.trim()
+        || typeof item.pid_id !== "string" || !item.pid_id.trim() || !monitorDefinitions.some((definition) => definition.id === item.pid_id.trim())
+        || typeof item.unit !== "string" || !item.unit.trim()
+        || item.comparison_type !== "absolute_delta_max" || !Number.isFinite(threshold) || threshold < 0
+        || !makers.length || !models.length || !engineCodes.length || !conditions.length || conditions.includes("unspecified")
+        || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo) || yearFrom > yearTo
+        || typeof item.source_url !== "string" || !/^https:\/\//.test(item.source_url)
+        || !/^\d{4}-\d{2}-\d{2}$/.test(item.source_date || "")
+        || !/^\d{4}-\d{2}-\d{2}$/.test(item.last_verified_date || "")
+        || typeof item.applicability_note !== "string" || !item.applicability_note.trim()) return null;
+      return Object.freeze({
+        id: item.id.trim().slice(0, 120),
+        pidId: item.pid_id.trim().slice(0, 96),
+        unit: item.unit.trim().slice(0, 48),
+        comparisonType: "absolute_delta_max",
+        absoluteDeltaMax: threshold,
+        observationConditions: Object.freeze([...new Set(conditions)]),
+        makers: Object.freeze([...new Set(makers)]),
+        models: Object.freeze([...new Set(models)]),
+        engineCodes: Object.freeze([...new Set(engineCodes)]),
+        yearFrom,
+        yearTo,
+        sourceUrl: item.source_url.trim(),
+        sourceDate: item.source_date.trim(),
+        lastVerifiedDate: item.last_verified_date.trim(),
+        applicabilityNote: String(item.applicability_note || "").trim().slice(0, 500)
+      });
+    });
+    if (normalized.some((item) => !item) || new Set(normalized.map((item) => item.id)).size !== normalized.length) return false;
+    pidReferenceThresholds = Object.freeze(normalized);
+    return true;
+  }
+
+  function getPidReferenceThresholds() {
+    return pidReferenceThresholds;
+  }
+
+  function findApplicablePidReferenceThreshold({ pidId, unit, observationCondition, vehicleProfile } = {}) {
+    const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
+    const maker = String(profile.maker || "").trim().toLowerCase();
+    const model = String(profile.model || "").trim().toLowerCase();
+    const engineCode = String(profile.engineCode || profile.engine_code || "").trim().toLowerCase();
+    const year = Number(String(profile.year || "").match(/\d{4}/)?.[0]);
+    const condition = normalizeLivePidObservationCondition(observationCondition);
+    if (!maker || !model || !engineCode || !Number.isInteger(year) || condition === "unspecified") return null;
+    return pidReferenceThresholds.find((item) =>
+      item.pidId === String(pidId || "").trim()
+      && item.unit.toLowerCase() === String(unit || "").trim().toLowerCase()
+      && item.observationConditions.includes(condition)
+      && item.makers.some((value) => value.toLowerCase() === maker)
+      && item.models.some((value) => value.toLowerCase() === model)
+      && item.engineCodes.some((value) => value.toLowerCase() === engineCode)
+      && year >= item.yearFrom && year <= item.yearTo
+    ) || null;
   }
 
   function normalizeDtcSubcode(value) {
@@ -35507,11 +35602,14 @@
   window.ObdReadOnly = Object.freeze({
     policy,
     configureMonitorDefinitions,
+    configurePidReferenceThresholds,
     configureVehicleInterfaceCatalog,
     configureFreezeFrameItems,
     configureReadinessMonitors,
     configureEcuInfoItems,
     getMonitorDefinitions,
+    getPidReferenceThresholds,
+    findApplicablePidReferenceThreshold,
     getVehicleInterfaceCatalog,
     getFreezeFrameItems,
     getReadinessMonitors,

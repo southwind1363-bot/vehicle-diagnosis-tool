@@ -524,6 +524,22 @@ for (const file of jsonFiles) {
       }
     }
 
+    if (file === "pid-reference-thresholds-2026.json") {
+      const scope = row.vehicle_scope;
+      if (!isNonEmptyString(row.id)) reportError(`${label}: id がありません`);
+      if (!isNonEmptyString(row.pid_id) || !monitorDefinitionIds.has(row.pid_id)) reportError(`${label}: pid_id がOBDモニター辞書にありません`);
+      if (!isNonEmptyString(row.unit)) reportError(`${label}: unit がありません`);
+      if (row.comparison_type !== "absolute_delta_max") reportError(`${label}: comparison_type が不正です`);
+      if (!Number.isFinite(row.absolute_delta_max) || row.absolute_delta_max < 0) reportError(`${label}: absolute_delta_max が不正です`);
+      if (!scope || !isNonEmptyStringArray(scope.makers) || !isNonEmptyStringArray(scope.models) || !isNonEmptyStringArray(scope.engine_codes)) reportError(`${label}: vehicle_scope のメーカー・車種・エンジンが不足しています`);
+      if (!Number.isInteger(scope?.year_from) || !Number.isInteger(scope?.year_to) || scope.year_from > scope.year_to) reportError(`${label}: vehicle_scope の年式範囲が不正です`);
+      if (!isNonEmptyStringArray(row.observation_conditions) || row.observation_conditions.some((value) => !["cold", "warm", "symptom_reproduced", "post_repair"].includes(value))) reportError(`${label}: observation_conditions が不正です`);
+      if (!isNonEmptyString(row.source_url) || !row.source_url.startsWith("https://")) reportError(`${label}: HTTPS source_url がありません`);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(row.source_date || "")) reportError(`${label}: source_date が不正です`);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(row.last_verified_date || "")) reportError(`${label}: last_verified_date が不正です`);
+      if (!isNonEmptyString(row.applicability_note)) reportError(`${label}: applicability_note がありません`);
+    }
+
     if (file === "obd-freeze-frame-items-2026.json") {
       if (!isNonEmptyString(row.monitor_id)) reportError(`${label}: monitor_id がありません`);
       if (!monitorDefinitionIds.has(row.monitor_id)) reportError(`${label}: 未登録の monitor_id ${row.monitor_id} があります`);

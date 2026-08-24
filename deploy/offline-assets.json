@@ -1,7 +1,7 @@
 {
-  "version": "3.13.150",
+  "version": "3.13.151",
   "generated_at": "2026-08-24",
-  "asset_count": 208,
+  "asset_count": 209,
   "assets": [
     "./",
     "index.html",
@@ -198,6 +198,7 @@
     "data/obd-freeze-frame-items-2026.json",
     "data/obd-codes.json",
     "data/obd-monitor-definitions.json",
+    "data/pid-reference-thresholds-2026.json",
     "data/obd-readiness-monitors-2026.json",
     "data/official-reference-notes-2026.json",
     "data/real-world-cases.json",

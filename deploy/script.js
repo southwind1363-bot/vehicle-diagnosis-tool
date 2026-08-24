@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3280件",
+  validationCheckLabel: "OBD安全検証 3281件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "整備前後の同条件PID差分を追加",
+  recentMilestone: "出典付きPID差分基準の適用構造を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.150";
+const APP_VERSION = "3.13.151";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -929,6 +929,7 @@ async function loadData() {
       dtcFamilyWorkflows2026,
       dtcScopeRules,
       obdMonitorDefinitions,
+      pidReferenceThresholdCatalog2026,
       obdFreezeFrameItems2026,
       obdReadinessMonitors2026,
       obdEcuInfoItems2026,
@@ -1127,6 +1128,7 @@ async function loadData() {
       fetchJson("data/dtc-family-workflows-2026.json"),
       fetchJson("data/dtc-scope-rules.json"),
       fetchJson("data/obd-monitor-definitions.json"),
+      fetchJson("data/pid-reference-thresholds-2026.json"),
       fetchJson("data/obd-freeze-frame-items-2026.json"),
       fetchJson("data/obd-readiness-monitors-2026.json"),
       fetchJson("data/obd-ecu-info-items-2026.json"),
@@ -1137,6 +1139,9 @@ async function loadData() {
 
     if (!window.ObdReadOnly?.configureMonitorDefinitions(obdMonitorDefinitions)) {
       throw new Error("OBDデータモニター辞書を読み込めません");
+    }
+    if (!window.ObdReadOnly?.configurePidReferenceThresholds(pidReferenceThresholdCatalog2026)) {
+      throw new Error("PID基準値カタログを読み込めません");
     }
     if (!window.ObdReadOnly?.configureFreezeFrameItems(obdFreezeFrameItems2026)) {
       throw new Error("OBDフリーズフレーム項目辞書を読み込めません");
@@ -1173,6 +1178,7 @@ async function loadData() {
       diagnosticCoverageRoadmap: diagnosticCoverageRoadmap2026,
       dtcScopeRules,
       obdMonitorDefinitions,
+      pidReferenceThresholdCatalog2026,
       obdFreezeFrameItems2026,
       obdReadinessMonitors2026,
       obdEcuInfoItems2026,
@@ -1484,10 +1490,12 @@ function selectedVehicleYear() {
 function buildSelectedDiagnosticVehicleProfile() {
   const maker = selectedVehicleValue(vehicleMakerSelect);
   const model = selectedVehicleValue(vehicleModelSelect);
+  const modelCode = selectedVehicleValue(vehicleModelCodeSelect);
   const year = selectedVehicleValue(vehicleYearSelect) || vehicleYearManualInput.value.trim();
+  const engineCode = selectedVehicleValue(vehicleEngineCodeSelect);
   const productionDate = vehicleProductionDateInput.value || null;
-  if (!maker && !model && !year && !productionDate) return null;
-  return { maker: maker || null, model: model || null, year: year || null, productionDate };
+  if (!maker && !model && !modelCode && !year && !engineCode && !productionDate) return null;
+  return { maker: maker || null, model: model || null, modelCode: modelCode || null, model_code: modelCode || null, year: year || null, engineCode: engineCode || null, engine_code: engineCode || null, productionDate };
 }
 
 function selectedVehicleValue(select) {
@@ -2975,11 +2983,14 @@ function formatPostRepairReassessmentEntries(summary = null) {
   const livePidValueDeltaRows = summary.livePidValueDeltaRows || summary.live_pid_value_delta_rows || [];
   const kindLabels = { readout_id: "読取", bridge_intent: "ブリッジ", request_plan_action: "次読取", blocked_reason: "保留要因", analysis_checklist_id: "解析条件", unclassified: "診断値" };
   const directionLabels = { added: "整備後側に追加", removed: "整備後側で消失", mixed: "追加・消失の両方" };
+  const formatPidDeltaThreshold = (row) => row.thresholdApplied === true || row.threshold_applied === true
+    ? `出典基準差 ${row.threshold} / ${row.referenceDeltaStatus || row.reference_delta_status} / ${row.thresholdReferenceId || row.threshold_reference_id} / 要確認`
+    : "閾値判定なし・要確認";
   return [
     summary.state === "changed_requires_review" ? "整備前後で読取状態に変化あり。整備士確認が必要です。" : "比較対象の読取状態に変化は検出されませんでした。",
     `比較セクション: ${summary.comparedSectionCount ?? summary.compared_section_count ?? 0} / 変化: ${changedIds.length}`,
     ...evidenceRows.map((row) => `${String(row.displayOrder || row.display_order).padStart(2, "0")} / ${kindLabels[row.kind] || row.kind} / ${row.id} / ${directionLabels[row.direction] || row.direction} / 要確認`),
-    ...livePidValueDeltaRows.map((row) => `PID差分 ${String(row.displayOrder || row.display_order).padStart(2, "0")} / ${row.id} / ECU ${row.sourceEcu || row.source_ecu || "-"} / ${row.importedValue ?? row.imported_value} -> ${row.currentValue ?? row.current_value} ${row.unit || ""} / 差 ${row.delta} / 閾値判定なし・要確認`),
+    ...livePidValueDeltaRows.map((row) => `PID差分 ${String(row.displayOrder || row.display_order).padStart(2, "0")} / ${row.id} / ECU ${row.sourceEcu || row.source_ecu || "-"} / ${row.importedValue ?? row.imported_value} -> ${row.currentValue ?? row.current_value} ${row.unit || ""} / 差 ${row.delta} / ${formatPidDeltaThreshold(row)}`),
     "修理成功・故障解消の確定ではありません。DTC、FF、レディネス、ライブ値を個別に確認してください。"
   ];
 }
