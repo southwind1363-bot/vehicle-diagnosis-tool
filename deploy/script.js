@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3271件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "確認済みFF値をDTC詳細へ接続",
+  recentMilestone: "DTC詳細へ確認済みFF実測値を表示",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.141";
+const APP_VERSION = "3.13.142";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10449,6 +10449,15 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
       freezeFrameValues.className = "obd-dtc-check";
       freezeFrameValues.textContent = `FF読取値: ${verifiedFreezeFrameValueCount}項目${verifiedFreezeFrameValueIds.length ? ` (${verifiedFreezeFrameValueIds.slice(0, 4).join(" / ")}${verifiedFreezeFrameValueIds.length > 4 ? " ほか" : ""})` : ""}`;
       wrapper.appendChild(freezeFrameValues);
+    }
+    const verifiedFreezeFrameValueRefs = [...new Map(freezeFrameMatches
+      .flatMap((item) => item?.freezeFrameValueRefs || item?.freeze_frame_value_refs || [])
+      .map((item) => [`${item?.id || ""}::${String(item?.value ?? "")}::${item?.unit || ""}`, item])).values()];
+    if (verifiedFreezeFrameValueRefs.length) {
+      const freezeFrameReadings = document.createElement("p");
+      freezeFrameReadings.className = "obd-dtc-check";
+      freezeFrameReadings.textContent = `FF実測: ${verifiedFreezeFrameValueRefs.slice(0, 6).map((item) => `${item.label || item.id} ${item.value ?? NO_DATA}${item.unit ? ` ${item.unit}` : ""}${item.decoded === false ? " (未換算)" : ""}`).join(" / ")}${verifiedFreezeFrameValueRefs.length > 6 ? " / ほか" : ""}`;
+      wrapper.appendChild(freezeFrameReadings);
     }
     const udsSnapshotEvidence = [...new Set(freezeFrameMatches
       .map((item) => {

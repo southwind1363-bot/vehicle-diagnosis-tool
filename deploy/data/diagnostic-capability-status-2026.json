@@ -209,8 +209,8 @@
         "label":  "診断支援ワークフロー",
         "target_level":  "DTC / 症状 / ライブデータ / セッション記録を一つの流れで解釈",
         "current_status":  "統合中",
-        "progress_percent":  52,
-        "current_basis":  "症状入力、DTC 解析、診断フロー、ライブデータヒント、貼り付け解析を統合。bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ載せ、selected vehicle label retained across analysis summaries、曖昧なフリーズフレーム対応の解析注意、確認済みFF値のDTC詳細接続を反映。",
+        "progress_percent":  53,
+        "current_basis":  "症状入力、DTC 解析、診断フロー、ライブデータヒント、貼り付け解析を統合。bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ載せ、selected vehicle label retained across analysis summaries、曖昧なフリーズフレーム対応の解析注意、確認済みFF値と実測値のDTC詳細接続を反映。",
         "done":  [
                      "症状ベース仮説",
                      "DTC と推奨データの連携",
@@ -220,7 +220,8 @@
                      "bridge/session/export/import の alias 吸収後も同じ診断入力モデルへ統合",
                      "selected vehicle label retained across analysis summaries",
                      "曖昧なフリーズフレームDTC・PID対応を非ブロッキング解析注意として表示",
-                     "コード・サブコード・形式・報告状態・ECU・番号が一致したFF値をDTC詳細へ接続"
+                     "コード・サブコード・形式・報告状態・ECU・番号が一致したFF値をDTC詳細へ接続",
+                     "確認済みFF値の実測値と単位をDTCカードへ最大6件表示"
                  ],
         "missing":  [
                         "車両適用範囲との自動照合",

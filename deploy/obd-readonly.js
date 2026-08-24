@@ -33039,6 +33039,9 @@
     const associationGroups = associationSummaryVersion === "freeze_frame_association_summary_v2" && Array.isArray(freezeFrameAssociationSummary?.groups)
       ? freezeFrameAssociationSummary.groups
       : [];
+    const freezeFrameMonitorValues = Array.isArray(freezeFrameSnapshot?.monitorValues)
+      ? freezeFrameSnapshot.monitorValues
+      : Array.isArray(freezeFrameSnapshot?.monitor_values) ? freezeFrameSnapshot.monitor_values : [];
     const findVerifiedValueGroup = (entry) => {
       const identityKey = [entry.code, entry.subcode, entry.codeFormat, entry.reportedStatus || ""].join("::");
       return associationGroups.find((group) => {
@@ -33088,6 +33091,35 @@
         const freezeFrameValueIds = verifiedValueGroup
           ? (Array.isArray(verifiedValueGroup.valueIds) ? verifiedValueGroup.valueIds : Array.isArray(verifiedValueGroup.value_ids) ? verifiedValueGroup.value_ids : [])
           : [];
+        const verifiedFreezeFrameValueRefs = verifiedValueGroup ? [...new Map(freezeFrameMonitorValues
+          .filter((item) => {
+            const itemFrameNumber = Number(item?.freezeFrameNumber ?? item?.freeze_frame_number);
+            const itemSourceEcu = normalizeLinkPart(item?.sourceEcu || item?.source_ecu);
+            const itemId = String(item?.id || item?.monitorId || item?.monitor_id || item?.pid || "").trim();
+            return Number.isInteger(itemFrameNumber)
+              && itemFrameNumber === entry.frameNumber
+              && itemSourceEcu === entry.sourceEcu
+              && freezeFrameValueIds.includes(itemId);
+          })
+          .map((item) => {
+            const id = String(item?.id || item?.monitorId || item?.monitor_id || item?.pid || "").trim();
+            const label = String(item?.label || id).trim().slice(0, 120);
+            const unit = String(item?.unit || "").trim().slice(0, 40);
+            const value = item?.value ?? null;
+            const decoded = item?.decoded !== false;
+            const valueRef = {
+              id,
+              label,
+              value,
+              unit,
+              decoded,
+              frameNumber: entry.frameNumber,
+              frame_number: entry.frameNumber,
+              sourceEcu: entry.sourceEcu || null,
+              source_ecu: entry.sourceEcu || null
+            };
+            return [`${id}::${String(value)}::${unit}::${decoded}`, valueRef];
+          })).values()].slice(0, 64) : [];
         return {
           frameNumber: entry.frameNumber,
           frame_number: entry.frameNumber,
@@ -33101,6 +33133,8 @@
             freeze_frame_value_ids: [...freezeFrameValueIds],
             freezeFrameValueCount: Number(verifiedValueGroup.valueCount ?? verifiedValueGroup.value_count ?? freezeFrameValueIds.length),
             freeze_frame_value_count: Number(verifiedValueGroup.valueCount ?? verifiedValueGroup.value_count ?? freezeFrameValueIds.length),
+            freezeFrameValueRefs: verifiedFreezeFrameValueRefs,
+            freeze_frame_value_refs: verifiedFreezeFrameValueRefs,
             freezeFrameValueAssociationVerified: true,
             freeze_frame_value_association_verified: true
           } : {}),
