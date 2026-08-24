@@ -742,13 +742,17 @@
             <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>保留DTC(ローカルブリッジ)</button>
             <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC(ローカルブリッジ)</button>
             <span class="obd-dev-group-label">ライブデータ</span>
-            <label class="obd-dev-group-label" for="obdLiveObservationCondition">観察条件</label>
+            <label class="obd-dev-group-label" for="obdLiveObservationCondition">観察目的</label>
             <select id="obdLiveObservationCondition">
               <option value="unspecified">未指定</option>
-              <option value="cold">冷間時</option>
-              <option value="warm">暖機後</option>
               <option value="symptom_reproduced">症状再現時</option>
               <option value="post_repair">修理後</option>
+            </select>
+            <label class="obd-dev-group-label" for="obdLiveThermalState">エンジン熱状態</label>
+            <select id="obdLiveThermalState">
+              <option value="unspecified">未指定</option>
+              <option value="cold">冷間</option>
+              <option value="warmed_up">暖機後</option>
             </select>
             <label class="obd-dev-group-label"><input id="obdSameVehicleConfirmed" type="checkbox"> 前回保存セッションと同一車両</label>
             <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>

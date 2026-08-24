@@ -12073,7 +12073,21 @@
       .map((value) => value.trim().toLowerCase().replace(/[\s-]+/g, "_"))
       .map((value) => aliases[value] || null)
       .filter(Boolean))].slice(0, 4);
-    if (!conditions.length) return null;
+    const rawThermalState = pickPresent(source.thermalState, source.thermal_state, source.engineThermalState, source.engine_thermal_state, null);
+    const normalizeThermalState = (value) => {
+      const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      if (["cold", "cold_start", "coldstart"].includes(normalized)) return "cold";
+      if (["warm", "warmed", "warm_up", "warmed_up", "warmup"].includes(normalized)) return "warmed_up";
+      return "unspecified";
+    };
+    const thermalCandidates = [...new Set([
+      normalizeThermalState(rawThermalState),
+      conditions.includes("cold_start") ? "cold" : "unspecified",
+      conditions.includes("warmed_up") ? "warmed_up" : "unspecified"
+    ].filter((value) => value !== "unspecified"))];
+    const thermalStateConflict = pickDefined(source.thermalStateConflict, source.thermal_state_conflict) === true || thermalCandidates.length > 1;
+    const thermalState = thermalStateConflict ? "unspecified" : thermalCandidates[0] || "unspecified";
+    if (!conditions.length && thermalState === "unspecified" && !thermalStateConflict) return null;
     const sameVehicleConfirmed = pickDefined(source.sameVehicleConfirmed, source.same_vehicle_confirmed) === true;
     return {
       schemaVersion: "observation_context_v1",
@@ -12081,6 +12095,12 @@
       conditions,
       observationConditions: conditions,
       observation_conditions: conditions,
+      thermalState,
+      thermal_state: thermalState,
+      thermalStateExplicitlyRecorded: thermalState !== "unspecified",
+      thermal_state_explicitly_recorded: thermalState !== "unspecified",
+      thermalStateConflict,
+      thermal_state_conflict: thermalStateConflict,
       explicitlyRecorded: true,
       explicitly_recorded: true,
       inferred: false,
@@ -12176,6 +12196,7 @@
           pidId: String(row.id).trim(),
           unit: row.unit,
           observationCondition: comparisonObservationCondition,
+          observationContext: normalizedObservationContext,
           vehicleProfile
         });
         const thresholdApplied = Boolean(reference);
@@ -12188,7 +12209,7 @@
         ) : null;
         const normalizedHistoricalThresholdEvidence = normalizeHistoricalPidReferenceThresholdEvidence(previousRow?.thresholdEvidence || previousRow?.threshold_evidence);
         const thresholdEvidence = reference
-          ? buildPidReferenceThresholdEvidence(reference, { vehicleProfile, observationCondition: comparisonObservationCondition })
+          ? buildPidReferenceThresholdEvidence(reference, { vehicleProfile, observationCondition: comparisonObservationCondition, observationContext: normalizedObservationContext })
           : normalizedHistoricalThresholdEvidence?.pidId === String(row.id).trim()
             && normalizedHistoricalThresholdEvidence.unit.toLowerCase() === String(row.unit || "").trim().toLowerCase()
             ? normalizedHistoricalThresholdEvidence
@@ -34514,7 +34535,7 @@
     return pidReferenceThresholds;
   }
 
-  function buildPidReferenceThresholdEvidence(reference, { vehicleProfile = null, observationCondition = null } = {}) {
+  function buildPidReferenceThresholdEvidence(reference, { vehicleProfile = null, observationCondition = null, observationContext = null } = {}) {
     const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
     const vehicleScope = {
       makers: [...reference.makers],
@@ -34528,7 +34549,8 @@
       model: String(profile.model || "").trim(),
       engine_code: String(profile.engineCode || profile.engine_code || "").trim(),
       year: String(profile.year || "").trim(),
-      observation_condition: normalizeLivePidObservationCondition(observationCondition)
+      observation_condition: normalizeLivePidObservationCondition(observationCondition),
+      thermal_state: String(observationContext?.thermalState || observationContext?.thermal_state || "unspecified")
     };
     return Object.freeze({
       schemaVersion: "pid_reference_threshold_evidence_v1",
@@ -34586,7 +34608,10 @@
       model: String(rawMatchedVehicle.model || "").trim().slice(0, 120),
       engine_code: String(rawMatchedVehicle.engine_code || rawMatchedVehicle.engineCode || "").trim().slice(0, 80),
       year: String(rawMatchedVehicle.year || "").trim().slice(0, 16),
-      observation_condition: normalizeLivePidObservationCondition(rawMatchedVehicle.observation_condition || rawMatchedVehicle.observationCondition)
+      observation_condition: normalizeLivePidObservationCondition(rawMatchedVehicle.observation_condition || rawMatchedVehicle.observationCondition),
+      thermal_state: ["cold", "warmed_up", "unspecified"].includes(rawMatchedVehicle.thermal_state || rawMatchedVehicle.thermalState)
+        ? rawMatchedVehicle.thermal_state || rawMatchedVehicle.thermalState
+        : "unspecified"
     };
     const observationConditions = Array.isArray(input.observationConditions || input.observation_conditions)
       ? (input.observationConditions || input.observation_conditions).map(normalizeLivePidObservationCondition).filter((value) => value !== "unspecified")
@@ -34636,18 +34661,25 @@
     });
   }
 
-  function findApplicablePidReferenceThreshold({ pidId, unit, observationCondition, vehicleProfile } = {}) {
+  function findApplicablePidReferenceThreshold({ pidId, unit, observationCondition, observationContext = null, vehicleProfile } = {}) {
     const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
     const maker = String(profile.maker || "").trim().toLowerCase();
     const model = String(profile.model || "").trim().toLowerCase();
     const engineCode = String(profile.engineCode || profile.engine_code || "").trim().toLowerCase();
     const year = Number(String(profile.year || "").match(/\d{4}/)?.[0]);
     const condition = normalizeLivePidObservationCondition(observationCondition);
-    if (!maker || !model || !engineCode || !Number.isInteger(year) || condition === "unspecified") return null;
+    const context = normalizeObservationContext(observationContext);
+    const thermalState = context?.thermalState || context?.thermal_state || "unspecified";
+    const observedConditions = new Set([
+      condition,
+      ...(context?.conditions || []).map(normalizeLivePidObservationCondition),
+      thermalState === "cold" ? "cold" : thermalState === "warmed_up" ? "warm" : "unspecified"
+    ].filter((value) => value !== "unspecified"));
+    if (!maker || !model || !engineCode || !Number.isInteger(year) || !observedConditions.size || context?.thermalStateConflict === true) return null;
     return pidReferenceThresholds.find((item) =>
       item.pidId === String(pidId || "").trim()
       && item.unit.toLowerCase() === String(unit || "").trim().toLowerCase()
-      && item.observationConditions.includes(condition)
+      && item.observationConditions.every((requiredCondition) => observedConditions.has(requiredCondition))
       && item.makers.some((value) => value.toLowerCase() === maker)
       && item.models.some((value) => value.toLowerCase() === model)
       && item.engineCodes.some((value) => value.toLowerCase() === engineCode)

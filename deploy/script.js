@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3281件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "PID基準の適用根拠スナップショットを追加",
+  recentMilestone: "修理段階と熱状態を分離して保存",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.152";
+const APP_VERSION = "3.13.153";
 const APP_LAST_UPDATED = "2026-08-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -438,6 +438,7 @@ const obdDevReadFreezeFrameButton = document.querySelector("#obdDevReadFreezeFra
 const obdDevReadReadinessButton = document.querySelector("#obdDevReadReadinessButton");
 const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
 const obdLiveObservationCondition = document.querySelector("#obdLiveObservationCondition");
+const obdLiveThermalState = document.querySelector("#obdLiveThermalState");
 const obdSameVehicleConfirmed = document.querySelector("#obdSameVehicleConfirmed");
 const obdDevReadEcuInfoButton = document.querySelector("#obdDevReadEcuInfoButton");
 const obdDevReadOnboardMonitorButton = document.querySelector("#obdDevReadOnboardMonitorButton");
@@ -1959,6 +1960,7 @@ function buildSelectedObdReadoutInterface() {
 function buildSelectedObdObservationContext() {
   return window.ObdReadOnly?.normalizeObservationContext?.({
     condition: obdLiveObservationCondition?.value || null,
+    thermalState: obdLiveThermalState?.value || null,
     sameVehicleConfirmed: obdSameVehicleConfirmed?.checked === true
   }) || null;
 }
@@ -1969,7 +1971,9 @@ function mergeObdObservationContexts(...contexts) {
     return Array.isArray(normalized?.conditions) ? normalized.conditions : [];
   });
   const sameVehicleConfirmed = normalizedContexts.some((normalized) => normalized.sameVehicleConfirmed === true || normalized.same_vehicle_confirmed === true);
-  return window.ObdReadOnly?.normalizeObservationContext?.({ conditions, sameVehicleConfirmed }) || null;
+  const thermalStates = [...new Set(normalizedContexts.map((normalized) => normalized.thermalState || normalized.thermal_state).filter((value) => value && value !== "unspecified"))];
+  const thermalStateConflict = thermalStates.length > 1 || normalizedContexts.some((normalized) => normalized.thermalStateConflict === true || normalized.thermal_state_conflict === true);
+  return window.ObdReadOnly?.normalizeObservationContext?.({ conditions, thermalState: thermalStates.length === 1 ? thermalStates[0] : null, thermalStateConflict, sameVehicleConfirmed }) || null;
 }
 
 function getObdInterfaceStrategyNote(interfaceId) {
