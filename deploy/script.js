@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3277件",
+  validationCheckLabel: "OBD安全検証 3278件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "次測定候補へ適合・優先根拠を追加",
+  recentMilestone: "次測定候補を実測・対応PIDへ照合",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.148";
+const APP_VERSION = "3.13.149";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2395,7 +2395,12 @@ function buildDiagnosis(input) {
   const nextMeasurementCandidatePlan = buildNextMeasurementCandidatePlan(
     getSessionNextReadoutCandidates(obdDevSession.lastSession, 4),
     measurements,
-    liveDataGuidance
+    liveDataGuidance,
+    {
+      monitorDefinitions: dataStore.obdMonitorDefinitions,
+      livePidSnapshot: obdDevSession.lastSession?.livePidSnapshot || obdDevSession.lastSession?.live_pid_snapshot || null,
+      supportedPidMatrix: obdDevSession.lastSession?.supportedPidMatrix || obdDevSession.lastSession?.supported_pid_matrix || null
+    }
   );
 
   return {
@@ -2772,10 +2777,51 @@ function formatCauseCandidateLogEntries(log = null) {
     : ["記録できる原因候補はありません。"];
 }
 
-function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements = [], liveDataGuidance = []) {
+function normalizeMeasurementCandidateMatchText(value) {
+  return String(value || "").normalize("NFKC").trim().toLocaleLowerCase("ja").replace(/\s+/g, " ");
+}
+
+function buildMeasurementPidEvidence(label, context = {}) {
+  const definitions = Array.isArray(context.monitorDefinitions) ? context.monitorDefinitions : [];
+  const normalizedLabel = normalizeMeasurementCandidateMatchText(label);
+  const definition = definitions.find((item) => [item?.id, item?.label, ...(Array.isArray(item?.aliases) ? item.aliases : [])]
+    .some((alias) => normalizeMeasurementCandidateMatchText(alias) === normalizedLabel));
+  if (!definition) return null;
+  const rawPid = String(definition.pid || "").trim().toUpperCase();
+  const pid = rawPid ? rawPid.padStart(2, "0") : "";
+  const serviceMode = String(definition.service || "01").trim().toUpperCase().padStart(2, "0");
+  const monitorValues = context.livePidSnapshot?.monitorValues || context.livePidSnapshot?.monitor_values || [];
+  const observed = (Array.isArray(monitorValues) ? monitorValues : []).some((item) => {
+    if (String(item?.id || "").trim() === definition.id) return true;
+    return [item?.label, item?.name].some((value) => normalizeMeasurementCandidateMatchText(value) === normalizedLabel);
+  });
+  const supportedPids = context.supportedPidMatrix?.supportedPids || context.supportedPidMatrix?.supported_pids || [];
+  const supported = pid && (Array.isArray(supportedPids) ? supportedPids : []).some((value) => {
+    const normalizedValue = String(value || "").trim().toUpperCase();
+    const normalizedPid = normalizedValue.length === 4 && normalizedValue.startsWith(serviceMode)
+      ? normalizedValue.slice(2)
+      : normalizedValue;
+    return normalizedPid.padStart(2, "0") === pid;
+  });
+  return {
+    definitionId: definition.id || null,
+    serviceMode,
+    pid: pid || null,
+    matchStatus: observed ? "observed_pid" : supported ? "supported_pid" : "dictionary_only",
+    applicabilityStatus: observed ? "observed_pid" : supported ? "supported_pid" : "unconfirmed",
+    applicabilityConfirmed: observed || supported,
+    evidenceRefs: [
+      definition.id ? `monitor_definition:${definition.id}` : null,
+      observed && definition.id ? `live_pid:${definition.id}` : null,
+      supported && pid ? `supported_pid:${serviceMode}${pid}` : null
+    ].filter(Boolean)
+  };
+}
+
+function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements = [], liveDataGuidance = [], measurementContext = {}) {
   const candidates = [];
   const seen = new Set();
-  const addCandidate = ({ label, actionType, sourceType, readoutId = null, reason = null, status = "pending", applicabilityStatus = "unconfirmed", applicabilityConfirmed = false, priorityBasis, sourcePriority = null, evidenceRefs = [] }) => {
+  const addCandidate = ({ label, actionType, sourceType, readoutId = null, reason = null, status = "pending", applicabilityStatus = "unconfirmed", applicabilityConfirmed = false, priorityBasis, sourcePriority = null, evidenceRefs = [], measurementDefinitionId = null, serviceMode = null, pid = null, matchStatus = "unconfirmed" }) => {
     const normalizedLabel = String(label || "").trim().slice(0, 240);
     if (!normalizedLabel || normalizedLabel === NO_DATA || candidates.length >= 8) return;
     const key = normalizedLabel.toLocaleLowerCase("ja");
@@ -2804,6 +2850,13 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
       source_priority: sourcePriority !== null && sourcePriority !== "" && Number.isFinite(Number(sourcePriority)) ? Number(sourcePriority) : null,
       evidenceRefs: [...new Set((Array.isArray(evidenceRefs) ? evidenceRefs : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 12),
       evidence_refs: [...new Set((Array.isArray(evidenceRefs) ? evidenceRefs : []).map((item) => String(item || "").trim()).filter(Boolean))].slice(0, 12),
+      measurementDefinitionId,
+      measurement_definition_id: measurementDefinitionId,
+      serviceMode,
+      service_mode: serviceMode,
+      pid,
+      matchStatus,
+      match_status: matchStatus,
       displayOrder: candidates.length + 1,
       display_order: candidates.length + 1,
       candidateOnly: true,
@@ -2835,25 +2888,41 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
       evidenceRefs: [readoutId ? `readout:${readoutId}` : null, item.status ? `status:${item.status}` : null, item.statusReason || item.status_reason ? `reason:${item.statusReason || item.status_reason}` : null]
     });
   });
-  (Array.isArray(measurements) ? measurements : []).forEach((label) => addCandidate({
-    label,
-    actionType: "measurement_point",
-    sourceType: "diagnostic_flow",
-    reason: "現在のDTC・症状・問診から抽出した測定候補",
-    applicabilityStatus: "unconfirmed",
-    priorityBasis: "diagnostic_flow_order",
-    evidenceRefs: ["diagnostic_flow:measurement_point"]
-  }));
-  if (!candidates.length) {
-    (Array.isArray(liveDataGuidance) ? liveDataGuidance : []).forEach((label) => addCandidate({
+  (Array.isArray(measurements) ? measurements : []).forEach((label) => {
+    const pidEvidence = buildMeasurementPidEvidence(label, measurementContext);
+    addCandidate({
       label,
-      actionType: "observation_guidance",
-      sourceType: "diagnostic_workflow",
-      reason: "登録済み診断ワークフローの観察候補",
-      applicabilityStatus: "unconfirmed",
-      priorityBasis: "diagnostic_workflow_order",
-      evidenceRefs: ["diagnostic_workflow:observation_guidance"]
-    }));
+      actionType: "measurement_point",
+      sourceType: "diagnostic_flow",
+      reason: "現在のDTC・症状・問診から抽出した測定候補",
+      applicabilityStatus: pidEvidence?.applicabilityStatus || "unconfirmed",
+      applicabilityConfirmed: pidEvidence?.applicabilityConfirmed === true,
+      priorityBasis: "diagnostic_flow_order",
+      evidenceRefs: ["diagnostic_flow:measurement_point", ...(pidEvidence?.evidenceRefs || [])],
+      measurementDefinitionId: pidEvidence?.definitionId || null,
+      serviceMode: pidEvidence?.serviceMode || null,
+      pid: pidEvidence?.pid || null,
+      matchStatus: pidEvidence?.matchStatus || "unconfirmed"
+    });
+  });
+  if (!candidates.length) {
+    (Array.isArray(liveDataGuidance) ? liveDataGuidance : []).forEach((label) => {
+      const pidEvidence = buildMeasurementPidEvidence(label, measurementContext);
+      addCandidate({
+        label,
+        actionType: "observation_guidance",
+        sourceType: "diagnostic_workflow",
+        reason: "登録済み診断ワークフローの観察候補",
+        applicabilityStatus: pidEvidence?.applicabilityStatus || "unconfirmed",
+        applicabilityConfirmed: pidEvidence?.applicabilityConfirmed === true,
+        priorityBasis: "diagnostic_workflow_order",
+        evidenceRefs: ["diagnostic_workflow:observation_guidance", ...(pidEvidence?.evidenceRefs || [])],
+        measurementDefinitionId: pidEvidence?.definitionId || null,
+        serviceMode: pidEvidence?.serviceMode || null,
+        pid: pidEvidence?.pid || null,
+        matchStatus: pidEvidence?.matchStatus || "unconfirmed"
+      });
+    });
   }
   return {
     schemaVersion: "diagnostic_next_measurement_candidates_v1",
@@ -2867,6 +2936,10 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
     applicability_confirmed_count: candidates.filter((item) => item.applicabilityConfirmed === true).length,
     applicabilityUnconfirmedCount: candidates.filter((item) => item.applicabilityConfirmed !== true).length,
     applicability_unconfirmed_count: candidates.filter((item) => item.applicabilityConfirmed !== true).length,
+    observedPidMatchCount: candidates.filter((item) => item.matchStatus === "observed_pid").length,
+    observed_pid_match_count: candidates.filter((item) => item.matchStatus === "observed_pid").length,
+    supportedPidMatchCount: candidates.filter((item) => item.matchStatus === "supported_pid").length,
+    supported_pid_match_count: candidates.filter((item) => item.matchStatus === "supported_pid").length,
     automatic: true,
     candidateOnly: true,
     candidate_only: true,
@@ -2881,7 +2954,7 @@ function buildNextMeasurementCandidatePlan(readoutCandidates = [], measurements 
 
 function formatNextMeasurementCandidateEntries(plan = null) {
   const candidates = Array.isArray(plan?.candidates) ? plan.candidates : [];
-  const applicabilityLabels = { matched: "適合候補", partial: "適合要確認", unlisted: "未登録", manual: "手入力・要確認", unknown: "適合未確認", unconfirmed: "適合未確認" };
+  const applicabilityLabels = { matched: "適合候補", partial: "適合要確認", observed_pid: "実測PID一致", supported_pid: "対応PID一致", unlisted: "未登録", manual: "手入力・要確認", unknown: "適合未確認", unconfirmed: "適合未確認" };
   const priorityLabels = { saved_readout_candidate_order: "保存読取順", diagnostic_flow_order: "診断フロー順", diagnostic_workflow_order: "登録手順順" };
   return candidates.length
     ? candidates.map((item) => `${String(item.displayOrder).padStart(2, "0")} / ${item.actionType === "diagnostic_readout" ? "読取候補" : "測定候補"} / ${item.label} / ${applicabilityLabels[item.applicabilityStatus] || item.applicabilityStatus} / 優先根拠: ${priorityLabels[item.priorityBasis] || item.priorityBasis}・${item.priorityReason || "根拠未登録"} / 読取専用・未実行`)
