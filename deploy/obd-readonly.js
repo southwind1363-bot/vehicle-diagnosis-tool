@@ -26729,6 +26729,7 @@
           sourceEcu,
           source_ecu: sourceEcu,
           triggerCodes: [],
+          triggerIdentityKeys: [],
           valueIds: []
         });
       }
@@ -26745,6 +26746,11 @@
       const group = ensureGroup(frameNumber, readSourceEcu(item));
       const code = String(item?.code || item?.dtc || "").trim().toUpperCase();
       if (code && !group.triggerCodes.includes(code)) group.triggerCodes.push(code);
+      const subcode = String(item?.subcode || item?.sub_code || "").trim().toUpperCase();
+      const codeFormat = String(item?.codeFormat || item?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const reportedStatus = normalizeDtcReportedStatus(item?.reportedStatus || item?.reported_status) || "";
+      const identityKey = code ? [code, subcode, codeFormat, reportedStatus].join("::") : null;
+      if (identityKey && !group.triggerIdentityKeys.includes(identityKey)) group.triggerIdentityKeys.push(identityKey);
     });
     values.forEach((item) => {
       const frameNumber = readFrameNumber(item);
@@ -26758,7 +26764,7 @@
     });
     const groups = [...groupsByKey.values()]
       .map((group) => {
-        const triggerCount = group.triggerCodes.length;
+        const triggerCount = group.triggerIdentityKeys.length;
         const valueCount = group.valueIds.length;
         const associationState = triggerCount === 1 && valueCount > 0
           ? "matched"
@@ -26771,6 +26777,8 @@
           ...group,
           triggerCodes: [...group.triggerCodes].sort(),
           trigger_codes: [...group.triggerCodes].sort(),
+          triggerIdentityKeys: [...group.triggerIdentityKeys].sort(),
+          trigger_identity_keys: [...group.triggerIdentityKeys].sort(),
           triggerCount,
           trigger_count: triggerCount,
           valueIds: [...group.valueIds].sort(),
@@ -26788,8 +26796,8 @@
     const reviewRequired = ambiguousGroupCount > 0 || unmatchedGroupCount > 0 || unnumberedTriggerCount > 0 || unnumberedValueCount > 0;
     const associationComplete = groups.length > 0 && matchedGroupCount === groups.length && !reviewRequired;
     return {
-      schemaVersion: "freeze_frame_association_summary_v1",
-      schema_version: "freeze_frame_association_summary_v1",
+      schemaVersion: "freeze_frame_association_summary_v2",
+      schema_version: "freeze_frame_association_summary_v2",
       groups,
       groupCount: groups.length,
       group_count: groups.length,
@@ -33026,6 +33034,27 @@
       `${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
       entry
     ])).values()];
+    const freezeFrameAssociationSummary = freezeFrameSnapshot?.freezeFrameAssociationSummary || freezeFrameSnapshot?.freeze_frame_association_summary || null;
+    const associationSummaryVersion = freezeFrameAssociationSummary?.schemaVersion || freezeFrameAssociationSummary?.schema_version || null;
+    const associationGroups = associationSummaryVersion === "freeze_frame_association_summary_v2" && Array.isArray(freezeFrameAssociationSummary?.groups)
+      ? freezeFrameAssociationSummary.groups
+      : [];
+    const findVerifiedValueGroup = (entry) => {
+      const identityKey = [entry.code, entry.subcode, entry.codeFormat, entry.reportedStatus || ""].join("::");
+      return associationGroups.find((group) => {
+        const groupState = group?.associationState || group?.association_state || null;
+        const groupFrameNumber = Number(group?.frameNumber ?? group?.frame_number);
+        const groupSourceEcu = normalizeLinkPart(group?.sourceEcu || group?.source_ecu);
+        const triggerIdentityKeys = Array.isArray(group?.triggerIdentityKeys)
+          ? group.triggerIdentityKeys
+          : Array.isArray(group?.trigger_identity_keys) ? group.trigger_identity_keys : [];
+        return groupState === "matched"
+          && Number.isInteger(groupFrameNumber)
+          && groupFrameNumber === entry.frameNumber
+          && groupSourceEcu === entry.sourceEcu
+          && triggerIdentityKeys.includes(identityKey);
+      }) || null;
+    };
     const udsSnapshotRecords = (Array.isArray(freezeFrameSnapshot?.udsDtcSnapshotRecords)
       ? freezeFrameSnapshot.udsDtcSnapshotRecords
       : Array.isArray(freezeFrameSnapshot?.uds_dtc_snapshot_records) ? freezeFrameSnapshot.uds_dtc_snapshot_records : [])
@@ -33055,6 +33084,10 @@
       const freezeFrameMatches = matches.map((entry) => {
         const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && record.sourceEcu === entry.sourceEcu && record.frameNumber === entry.frameNumber && (!entry.codeFormat || !record.codeFormat || entry.codeFormat === record.codeFormat));
         const udsRecord = matchingUdsRecords.length === 1 ? matchingUdsRecords[0] : null;
+        const verifiedValueGroup = findVerifiedValueGroup(entry);
+        const freezeFrameValueIds = verifiedValueGroup
+          ? (Array.isArray(verifiedValueGroup.valueIds) ? verifiedValueGroup.valueIds : Array.isArray(verifiedValueGroup.value_ids) ? verifiedValueGroup.value_ids : [])
+          : [];
         return {
           frameNumber: entry.frameNumber,
           frame_number: entry.frameNumber,
@@ -33063,6 +33096,14 @@
           sourceEcuName: entry.sourceEcuName,
           source_ecu_name: entry.sourceEcuName,
           ...(entry.reportedStatus ? { reportedStatus: entry.reportedStatus, reported_status: entry.reportedStatus } : {}),
+          ...(verifiedValueGroup ? {
+            freezeFrameValueIds: [...freezeFrameValueIds],
+            freeze_frame_value_ids: [...freezeFrameValueIds],
+            freezeFrameValueCount: Number(verifiedValueGroup.valueCount ?? verifiedValueGroup.value_count ?? freezeFrameValueIds.length),
+            freeze_frame_value_count: Number(verifiedValueGroup.valueCount ?? verifiedValueGroup.value_count ?? freezeFrameValueIds.length),
+            freezeFrameValueAssociationVerified: true,
+            freeze_frame_value_association_verified: true
+          } : {}),
           ...(udsRecord?.snapshotRecordType ? { snapshotRecordType: udsRecord.snapshotRecordType, snapshot_record_type: udsRecord.snapshotRecordType } : {}),
           ...(udsRecord?.statusByte ? { statusByte: udsRecord.statusByte, status_byte: udsRecord.statusByte } : {})
         };
