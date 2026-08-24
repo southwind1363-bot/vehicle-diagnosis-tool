@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3275件",
+  validationCheckLabel: "OBD安全検証 3276件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "整備後再判定を明示条件付きで保存",
+  recentMilestone: "整備後再判定へ個別差分を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.146";
+const APP_VERSION = "3.13.147";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2869,9 +2869,13 @@ function formatPostRepairReassessmentEntries(summary = null) {
   };
   if (summary.state === "blocked") return [`再判定保留: ${blockedReasons.map((id) => blockedLabels[id] || id).join(" / ")}`];
   const changedIds = summary.changedSectionIds || summary.changed_section_ids || [];
+  const evidenceRows = summary.evidenceRows || summary.evidence_rows || [];
+  const kindLabels = { readout_id: "読取", bridge_intent: "ブリッジ", request_plan_action: "次読取", blocked_reason: "保留要因", analysis_checklist_id: "解析条件", unclassified: "診断値" };
+  const directionLabels = { added: "整備後側に追加", removed: "整備後側で消失", mixed: "追加・消失の両方" };
   return [
     summary.state === "changed_requires_review" ? "整備前後で読取状態に変化あり。整備士確認が必要です。" : "比較対象の読取状態に変化は検出されませんでした。",
     `比較セクション: ${summary.comparedSectionCount ?? summary.compared_section_count ?? 0} / 変化: ${changedIds.length}`,
+    ...evidenceRows.map((row) => `${String(row.displayOrder || row.display_order).padStart(2, "0")} / ${kindLabels[row.kind] || row.kind} / ${row.id} / ${directionLabels[row.direction] || row.direction} / 要確認`),
     "修理成功・故障解消の確定ではありません。DTC、FF、レディネス、ライブ値を個別に確認してください。"
   ];
 }

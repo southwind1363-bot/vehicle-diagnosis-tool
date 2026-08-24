@@ -12119,6 +12119,31 @@
       : Array.isArray(comparison?.changed_section_ids) ? comparison.changed_section_ids : [];
     const addedIds = Array.isArray(comparison?.addedIds) ? comparison.addedIds : Array.isArray(comparison?.added_ids) ? comparison.added_ids : [];
     const removedIds = Array.isArray(comparison?.removedIds) ? comparison.removedIds : Array.isArray(comparison?.removed_ids) ? comparison.removed_ids : [];
+    const displayRows = Array.isArray(comparison?.changedIdDisplayRows)
+      ? comparison.changedIdDisplayRows
+      : Array.isArray(comparison?.changed_id_display_rows)
+        ? comparison.changed_id_display_rows
+        : Array.isArray(comparison?.changedIdDisplaySummary?.rows)
+          ? comparison.changedIdDisplaySummary.rows
+          : Array.isArray(comparison?.changed_id_display_summary?.rows) ? comparison.changed_id_display_summary.rows : [];
+    const fallbackRows = [
+      ...addedIds.map((id) => ({ id, kind: "unclassified", direction: "added", reviewTarget: "session_review" })),
+      ...removedIds.map((id) => ({ id, kind: "unclassified", direction: "removed", reviewTarget: "session_review" }))
+    ];
+    const postRepairEvidenceRows = (eligible ? (displayRows.length ? displayRows : fallbackRows) : [])
+      .filter((row) => row && typeof row === "object" && String(row.id || "").trim())
+      .slice(0, 32)
+      .map((row, index) => ({
+        id: String(row.id).trim().slice(0, 120),
+        kind: String(row.kind || row.changedIdKind || row.changed_id_kind || "unclassified").trim().slice(0, 80),
+        direction: ["added", "removed", "mixed"].includes(row.direction) ? row.direction : "mixed",
+        reviewTarget: String(row.reviewTarget || row.review_target || "session_review").trim().slice(0, 80),
+        review_target: String(row.reviewTarget || row.review_target || "session_review").trim().slice(0, 80),
+        displayOrder: index + 1,
+        display_order: index + 1,
+        technicianReviewRequired: true,
+        technician_review_required: true
+      }));
     return {
       schemaVersion: "post_repair_reassessment_summary_v1",
       schema_version: "post_repair_reassessment_summary_v1",
@@ -12140,6 +12165,10 @@
       added_ids: addedIds.slice(0, 64),
       removedIds: removedIds.slice(0, 64),
       removed_ids: removedIds.slice(0, 64),
+      evidenceRows: postRepairEvidenceRows,
+      evidence_rows: postRepairEvidenceRows,
+      evidenceRowCount: postRepairEvidenceRows.length,
+      evidence_row_count: postRepairEvidenceRows.length,
       blockedReasonIds,
       blocked_reason_ids: blockedReasonIds,
       repairOutcomeConfirmed: false,
