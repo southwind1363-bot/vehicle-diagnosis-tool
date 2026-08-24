@@ -224,11 +224,11 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3281件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "出典付きPID差分基準の適用構造を追加",
+  recentMilestone: "PID基準の適用根拠スナップショットを追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.151";
-const APP_LAST_UPDATED = "2026-08-24";
+const APP_VERSION = "3.13.152";
+const APP_LAST_UPDATED = "2026-08-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -2984,8 +2984,10 @@ function formatPostRepairReassessmentEntries(summary = null) {
   const kindLabels = { readout_id: "読取", bridge_intent: "ブリッジ", request_plan_action: "次読取", blocked_reason: "保留要因", analysis_checklist_id: "解析条件", unclassified: "診断値" };
   const directionLabels = { added: "整備後側に追加", removed: "整備後側で消失", mixed: "追加・消失の両方" };
   const formatPidDeltaThreshold = (row) => row.thresholdApplied === true || row.threshold_applied === true
-    ? `出典基準差 ${row.threshold} / ${row.referenceDeltaStatus || row.reference_delta_status} / ${row.thresholdReferenceId || row.threshold_reference_id} / 要確認`
-    : "閾値判定なし・要確認";
+    ? `出典基準差 ${row.threshold} / ${row.referenceDeltaStatus || row.reference_delta_status} / ${row.thresholdReferenceId || row.threshold_reference_id} / 出典日 ${row.sourceDate || row.source_date || "未登録"} / 要確認`
+    : row.historicalThresholdEvidenceRetained === true || row.historical_threshold_evidence_retained === true
+      ? `過去の出典証跡 ${row.thresholdEvidence?.referenceId || row.threshold_evidence?.reference_id || "不明"} / 現行基準で再確認できないため判定なし`
+      : "閾値判定なし・要確認";
   return [
     summary.state === "changed_requires_review" ? "整備前後で読取状態に変化あり。整備士確認が必要です。" : "比較対象の読取状態に変化は検出されませんでした。",
     `比較セクション: ${summary.comparedSectionCount ?? summary.compared_section_count ?? 0} / 変化: ${changedIds.length}`,

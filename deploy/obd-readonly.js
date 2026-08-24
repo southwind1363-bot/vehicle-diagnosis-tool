@@ -12097,7 +12097,7 @@
     };
   }
 
-  function buildPostRepairReassessmentSummary({ observationContext = null, importedSessionComparisonSummary = null, vehicleProfile = null } = {}) {
+  function buildPostRepairReassessmentSummary({ observationContext = null, importedSessionComparisonSummary = null, vehicleProfile = null, previousPostRepairReassessmentSummary = null } = {}) {
     const normalizedObservationContext = normalizeObservationContext(observationContext);
     const conditions = normalizedObservationContext?.conditions || [];
     const postRepairRecorded = conditions.includes("post_repair");
@@ -12156,6 +12156,9 @@
     const rawLivePidValueDeltaRows = livePidComparison?.livePidValueDeltaRows
       || livePidComparison?.live_pid_value_delta_rows
       || [];
+    const previousLivePidValueDeltaRows = previousPostRepairReassessmentSummary?.livePidValueDeltaRows
+      || previousPostRepairReassessmentSummary?.live_pid_value_delta_rows
+      || [];
     const comparisonObservationCondition = livePidValueComparisonAvailable
       ? String(livePidComparison?.currentLivePidObservationCondition || livePidComparison?.current_live_pid_observation_condition || "unspecified").trim().slice(0, 80)
       : null;
@@ -12176,6 +12179,24 @@
           vehicleProfile
         });
         const thresholdApplied = Boolean(reference);
+        const previousRow = Array.isArray(previousLivePidValueDeltaRows) ? previousLivePidValueDeltaRows.find((candidate) =>
+          candidate && String(candidate.id || "").trim() === String(row.id).trim()
+          && String(candidate.sourceEcu || candidate.source_ecu || "-").trim() === String(row.sourceEcu || row.source_ecu || "-").trim()
+          && String(candidate.unit || "").trim().toLowerCase() === String(row.unit || "").trim().toLowerCase()
+          && Number(candidate.importedValue ?? candidate.imported_value) === importedValue
+          && Number(candidate.currentValue ?? candidate.current_value) === currentValue
+        ) : null;
+        const normalizedHistoricalThresholdEvidence = normalizeHistoricalPidReferenceThresholdEvidence(previousRow?.thresholdEvidence || previousRow?.threshold_evidence);
+        const thresholdEvidence = reference
+          ? buildPidReferenceThresholdEvidence(reference, { vehicleProfile, observationCondition: comparisonObservationCondition })
+          : normalizedHistoricalThresholdEvidence?.pidId === String(row.id).trim()
+            && normalizedHistoricalThresholdEvidence.unit.toLowerCase() === String(row.unit || "").trim().toLowerCase()
+            ? normalizedHistoricalThresholdEvidence
+            : null;
+        const historicalThresholdEvidenceRetained = !thresholdApplied && Boolean(thresholdEvidence);
+        const referenceDeltaStatus = thresholdApplied
+          ? (Math.abs(delta) <= reference.absoluteDeltaMax ? "within_reference_delta" : "outside_reference_delta")
+          : historicalThresholdEvidenceRetained ? "historical_reference_only" : "not_evaluated";
         return {
           id: String(row.id).trim().slice(0, 96),
           sourceEcu: String(row.sourceEcu || row.source_ecu || "-").trim().slice(0, 64),
@@ -12192,8 +12213,8 @@
           threshold: reference?.absoluteDeltaMax ?? null,
           thresholdApplied,
           threshold_applied: thresholdApplied,
-          referenceDeltaStatus: thresholdApplied ? (Math.abs(delta) <= reference.absoluteDeltaMax ? "within_reference_delta" : "outside_reference_delta") : "not_evaluated",
-          reference_delta_status: thresholdApplied ? (Math.abs(delta) <= reference.absoluteDeltaMax ? "within_reference_delta" : "outside_reference_delta") : "not_evaluated",
+          referenceDeltaStatus,
+          reference_delta_status: referenceDeltaStatus,
           thresholdReferenceId: reference?.id || null,
           threshold_reference_id: reference?.id || null,
           sourceUrl: reference?.sourceUrl || null,
@@ -12202,6 +12223,12 @@
           source_date: reference?.sourceDate || null,
           applicabilityNote: reference?.applicabilityNote || null,
           applicability_note: reference?.applicabilityNote || null,
+          thresholdEvidence,
+          threshold_evidence: thresholdEvidence,
+          thresholdReferenceRevalidated: thresholdApplied,
+          threshold_reference_revalidated: thresholdApplied,
+          historicalThresholdEvidenceRetained,
+          historical_threshold_evidence_retained: historicalThresholdEvidenceRetained,
           interpretationAssigned: thresholdApplied,
           interpretation_assigned: thresholdApplied,
           diagnosticConclusionAssigned: false,
@@ -12253,6 +12280,8 @@
       live_pid_threshold_interpretation_assigned: livePidValueDeltaRows.some((row) => row.thresholdApplied),
       livePidThresholdAppliedRowCount: livePidValueDeltaRows.filter((row) => row.thresholdApplied).length,
       live_pid_threshold_applied_row_count: livePidValueDeltaRows.filter((row) => row.thresholdApplied).length,
+      livePidHistoricalThresholdEvidenceRowCount: livePidValueDeltaRows.filter((row) => row.historicalThresholdEvidenceRetained).length,
+      live_pid_historical_threshold_evidence_row_count: livePidValueDeltaRows.filter((row) => row.historicalThresholdEvidenceRetained).length,
       blockedReasonIds,
       blocked_reason_ids: blockedReasonIds,
       repairOutcomeConfirmed: false,
@@ -25499,7 +25528,8 @@
     const postRepairReassessmentSummary = buildPostRepairReassessmentSummary({
       observationContext: mergedBridgeMetadata.observationContext,
       importedSessionComparisonSummary,
-      vehicleProfile: mergedBridgeMetadata.vehicleProfile
+      vehicleProfile: mergedBridgeMetadata.vehicleProfile,
+      previousPostRepairReassessmentSummary: input.postRepairReassessmentSummary || input.post_repair_reassessment_summary || null
     });
     const importedVehicleApplicabilityChangedRowSummary = input.importedVehicleApplicabilityChangedRowSummary
       || input.imported_vehicle_applicability_changed_row_summary
@@ -34117,7 +34147,8 @@
     const postRepairReassessmentSummary = buildPostRepairReassessmentSummary({
       observationContext: resolvedMetadata.observationContext,
       importedSessionComparisonSummary,
-      vehicleProfile: resolvedMetadata.vehicleProfile
+      vehicleProfile: resolvedMetadata.vehicleProfile,
+      previousPostRepairReassessmentSummary: sessionInput.postRepairReassessmentSummary || sessionInput.post_repair_reassessment_summary || null
     });
     const mergedMonitorValueSummary = mergeMonitorValueSummaries(
       resolveMonitorValueSummary([], livePidSnapshot.monitorValueSummary, livePidSnapshot.monitor_value_summary),
@@ -34481,6 +34512,128 @@
 
   function getPidReferenceThresholds() {
     return pidReferenceThresholds;
+  }
+
+  function buildPidReferenceThresholdEvidence(reference, { vehicleProfile = null, observationCondition = null } = {}) {
+    const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
+    const vehicleScope = {
+      makers: [...reference.makers],
+      models: [...reference.models],
+      engine_codes: [...reference.engineCodes],
+      year_from: reference.yearFrom,
+      year_to: reference.yearTo
+    };
+    const matchedVehicle = {
+      maker: String(profile.maker || "").trim(),
+      model: String(profile.model || "").trim(),
+      engine_code: String(profile.engineCode || profile.engine_code || "").trim(),
+      year: String(profile.year || "").trim(),
+      observation_condition: normalizeLivePidObservationCondition(observationCondition)
+    };
+    return Object.freeze({
+      schemaVersion: "pid_reference_threshold_evidence_v1",
+      schema_version: "pid_reference_threshold_evidence_v1",
+      referenceId: reference.id,
+      reference_id: reference.id,
+      pidId: reference.pidId,
+      pid_id: reference.pidId,
+      unit: reference.unit,
+      comparisonType: reference.comparisonType,
+      comparison_type: reference.comparisonType,
+      absoluteDeltaMax: reference.absoluteDeltaMax,
+      absolute_delta_max: reference.absoluteDeltaMax,
+      observationConditions: [...reference.observationConditions],
+      observation_conditions: [...reference.observationConditions],
+      vehicleScope,
+      vehicle_scope: { ...vehicleScope, makers: [...vehicleScope.makers], models: [...vehicleScope.models], engine_codes: [...vehicleScope.engine_codes] },
+      matchedVehicle,
+      matched_vehicle: { ...matchedVehicle },
+      sourceUrl: reference.sourceUrl,
+      source_url: reference.sourceUrl,
+      sourceDate: reference.sourceDate,
+      source_date: reference.sourceDate,
+      lastVerifiedDate: reference.lastVerifiedDate,
+      last_verified_date: reference.lastVerifiedDate,
+      applicabilityNote: reference.applicabilityNote,
+      applicability_note: reference.applicabilityNote,
+      exactMatch: true,
+      exact_match: true,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      readOnly: true,
+      read_only: true
+    });
+  }
+
+  function normalizeHistoricalPidReferenceThresholdEvidence(input = null) {
+    if (!input || typeof input !== "object") return null;
+    const referenceId = String(input.referenceId || input.reference_id || "").trim().slice(0, 120);
+    const pidId = String(input.pidId || input.pid_id || "").trim().slice(0, 96);
+    const unit = String(input.unit || "").trim().slice(0, 48);
+    const sourceUrl = String(input.sourceUrl || input.source_url || "").trim();
+    const sourceDate = String(input.sourceDate || input.source_date || "").trim();
+    const lastVerifiedDate = String(input.lastVerifiedDate || input.last_verified_date || "").trim();
+    const absoluteDeltaMax = Number(input.absoluteDeltaMax ?? input.absolute_delta_max);
+    const rawVehicleScope = input.vehicleScope || input.vehicle_scope || {};
+    const makers = Array.isArray(rawVehicleScope.makers) ? rawVehicleScope.makers.map(String).map((value) => value.trim()).filter(Boolean) : [];
+    const models = Array.isArray(rawVehicleScope.models) ? rawVehicleScope.models.map(String).map((value) => value.trim()).filter(Boolean) : [];
+    const engineCodes = Array.isArray(rawVehicleScope.engine_codes || rawVehicleScope.engineCodes) ? (rawVehicleScope.engine_codes || rawVehicleScope.engineCodes).map(String).map((value) => value.trim()).filter(Boolean) : [];
+    const yearFrom = Number(rawVehicleScope.year_from ?? rawVehicleScope.yearFrom);
+    const yearTo = Number(rawVehicleScope.year_to ?? rawVehicleScope.yearTo);
+    const rawMatchedVehicle = input.matchedVehicle || input.matched_vehicle || {};
+    const matchedVehicle = {
+      maker: String(rawMatchedVehicle.maker || "").trim().slice(0, 120),
+      model: String(rawMatchedVehicle.model || "").trim().slice(0, 120),
+      engine_code: String(rawMatchedVehicle.engine_code || rawMatchedVehicle.engineCode || "").trim().slice(0, 80),
+      year: String(rawMatchedVehicle.year || "").trim().slice(0, 16),
+      observation_condition: normalizeLivePidObservationCondition(rawMatchedVehicle.observation_condition || rawMatchedVehicle.observationCondition)
+    };
+    const observationConditions = Array.isArray(input.observationConditions || input.observation_conditions)
+      ? (input.observationConditions || input.observation_conditions).map(normalizeLivePidObservationCondition).filter((value) => value !== "unspecified")
+      : [];
+    if ((input.schemaVersion || input.schema_version) !== "pid_reference_threshold_evidence_v1"
+      || !referenceId || !pidId || !unit || !Number.isFinite(absoluteDeltaMax) || absoluteDeltaMax < 0
+      || !/^https:\/\//.test(sourceUrl) || !/^\d{4}-\d{2}-\d{2}$/.test(sourceDate)
+      || !/^\d{4}-\d{2}-\d{2}$/.test(lastVerifiedDate) || (input.exactMatch !== true && input.exact_match !== true)
+      || !makers.length || !models.length || !engineCodes.length || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo) || yearFrom > yearTo
+      || !matchedVehicle.maker || !matchedVehicle.model || !matchedVehicle.engine_code || !/^\d{4}$/.test(matchedVehicle.year)
+      || matchedVehicle.observation_condition === "unspecified" || !observationConditions.length) return null;
+    const vehicleScope = { makers, models, engine_codes: engineCodes, year_from: yearFrom, year_to: yearTo };
+    return Object.freeze({
+      schemaVersion: "pid_reference_threshold_evidence_v1",
+      schema_version: "pid_reference_threshold_evidence_v1",
+      referenceId,
+      reference_id: referenceId,
+      pidId,
+      pid_id: pidId,
+      unit,
+      comparisonType: "absolute_delta_max",
+      comparison_type: "absolute_delta_max",
+      absoluteDeltaMax,
+      absolute_delta_max: absoluteDeltaMax,
+      observationConditions,
+      observation_conditions: [...observationConditions],
+      vehicleScope,
+      vehicle_scope: { makers: [...makers], models: [...models], engine_codes: [...engineCodes], year_from: yearFrom, year_to: yearTo },
+      matchedVehicle,
+      matched_vehicle: { ...matchedVehicle },
+      sourceUrl,
+      source_url: sourceUrl,
+      sourceDate,
+      source_date: sourceDate,
+      lastVerifiedDate,
+      last_verified_date: lastVerifiedDate,
+      applicabilityNote: String(input.applicabilityNote || input.applicability_note || "").trim().slice(0, 500),
+      applicability_note: String(input.applicabilityNote || input.applicability_note || "").trim().slice(0, 500),
+      exactMatch: true,
+      exact_match: true,
+      historicalOnly: true,
+      historical_only: true,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      readOnly: true,
+      read_only: true
+    });
   }
 
   function findApplicablePidReferenceThreshold({ pidId, unit, observationCondition, vehicleProfile } = {}) {
