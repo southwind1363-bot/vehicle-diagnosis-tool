@@ -754,6 +754,27 @@
               <option value="cold">冷間</option>
               <option value="warmed_up">暖機後</option>
             </select>
+            <label class="obd-dev-group-label" for="obdVehicleMotionState">車両状態</label>
+            <select id="obdVehicleMotionState">
+              <option value="unspecified">未指定</option>
+              <option value="stationary">停車中</option>
+              <option value="moving">走行中</option>
+            </select>
+            <label class="obd-dev-group-label" for="obdTransmissionPosition">ギヤ位置</label>
+            <select id="obdTransmissionPosition">
+              <option value="unspecified">未指定</option>
+              <option value="park">P</option>
+              <option value="neutral">N</option>
+              <option value="drive">D</option>
+              <option value="reverse">R</option>
+              <option value="other">その他</option>
+            </select>
+            <label class="obd-dev-group-label" for="obdAccessoryLoadState">補機負荷</label>
+            <select id="obdAccessoryLoadState">
+              <option value="unspecified">未指定</option>
+              <option value="off">A/C等OFF</option>
+              <option value="on">A/C等ON</option>
+            </select>
             <label class="obd-dev-group-label"><input id="obdSameVehicleConfirmed" type="checkbox"> 前回保存セッションと同一車両</label>
             <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
             <button id="obdDevReadFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(Web Serial)</button>

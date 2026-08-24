@@ -534,6 +534,20 @@ for (const file of jsonFiles) {
       if (!scope || !isNonEmptyStringArray(scope.makers) || !isNonEmptyStringArray(scope.models) || !isNonEmptyStringArray(scope.engine_codes)) reportError(`${label}: vehicle_scope のメーカー・車種・エンジンが不足しています`);
       if (!Number.isInteger(scope?.year_from) || !Number.isInteger(scope?.year_to) || scope.year_from > scope.year_to) reportError(`${label}: vehicle_scope の年式範囲が不正です`);
       if (!isNonEmptyStringArray(row.observation_conditions) || row.observation_conditions.some((value) => !["cold", "warm", "symptom_reproduced", "post_repair"].includes(value))) reportError(`${label}: observation_conditions が不正です`);
+      if (row.required_operating_state !== undefined) {
+        const operatingState = row.required_operating_state;
+        if (!operatingState || typeof operatingState !== "object" || Array.isArray(operatingState)) {
+          reportError(`${label}: required_operating_state が不正です`);
+        } else {
+          const hasMotion = operatingState.vehicle_motion !== undefined;
+          const hasTransmission = operatingState.transmission_positions !== undefined;
+          const hasAccessoryLoad = operatingState.accessory_load !== undefined;
+          if (!hasMotion && !hasTransmission && !hasAccessoryLoad) reportError(`${label}: required_operating_state に条件がありません`);
+          if (hasMotion && !["stationary", "moving"].includes(operatingState.vehicle_motion)) reportError(`${label}: vehicle_motion が不正です`);
+          if (hasTransmission && (!isNonEmptyStringArray(operatingState.transmission_positions) || operatingState.transmission_positions.some((value) => !["park", "neutral", "drive", "reverse", "other"].includes(value)))) reportError(`${label}: transmission_positions が不正です`);
+          if (hasAccessoryLoad && !["off", "on"].includes(operatingState.accessory_load)) reportError(`${label}: accessory_load が不正です`);
+        }
+      }
       if (!isNonEmptyString(row.source_url) || !row.source_url.startsWith("https://")) reportError(`${label}: HTTPS source_url がありません`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.source_date || "")) reportError(`${label}: source_date が不正です`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.last_verified_date || "")) reportError(`${label}: last_verified_date が不正です`);

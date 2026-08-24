@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3281件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "修理段階と熱状態を分離して保存",
+  recentMilestone: "停車・ギヤ・補機負荷を測定条件へ追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.153";
+const APP_VERSION = "3.13.154";
 const APP_LAST_UPDATED = "2026-08-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -439,6 +439,9 @@ const obdDevReadReadinessButton = document.querySelector("#obdDevReadReadinessBu
 const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
 const obdLiveObservationCondition = document.querySelector("#obdLiveObservationCondition");
 const obdLiveThermalState = document.querySelector("#obdLiveThermalState");
+const obdVehicleMotionState = document.querySelector("#obdVehicleMotionState");
+const obdTransmissionPosition = document.querySelector("#obdTransmissionPosition");
+const obdAccessoryLoadState = document.querySelector("#obdAccessoryLoadState");
 const obdSameVehicleConfirmed = document.querySelector("#obdSameVehicleConfirmed");
 const obdDevReadEcuInfoButton = document.querySelector("#obdDevReadEcuInfoButton");
 const obdDevReadOnboardMonitorButton = document.querySelector("#obdDevReadOnboardMonitorButton");
@@ -1961,6 +1964,9 @@ function buildSelectedObdObservationContext() {
   return window.ObdReadOnly?.normalizeObservationContext?.({
     condition: obdLiveObservationCondition?.value || null,
     thermalState: obdLiveThermalState?.value || null,
+    vehicleMotionState: obdVehicleMotionState?.value || null,
+    transmissionPosition: obdTransmissionPosition?.value || null,
+    accessoryLoadState: obdAccessoryLoadState?.value || null,
     sameVehicleConfirmed: obdSameVehicleConfirmed?.checked === true
   }) || null;
 }
@@ -1973,7 +1979,14 @@ function mergeObdObservationContexts(...contexts) {
   const sameVehicleConfirmed = normalizedContexts.some((normalized) => normalized.sameVehicleConfirmed === true || normalized.same_vehicle_confirmed === true);
   const thermalStates = [...new Set(normalizedContexts.map((normalized) => normalized.thermalState || normalized.thermal_state).filter((value) => value && value !== "unspecified"))];
   const thermalStateConflict = thermalStates.length > 1 || normalizedContexts.some((normalized) => normalized.thermalStateConflict === true || normalized.thermal_state_conflict === true);
-  return window.ObdReadOnly?.normalizeObservationContext?.({ conditions, thermalState: thermalStates.length === 1 ? thermalStates[0] : null, thermalStateConflict, sameVehicleConfirmed }) || null;
+  const mergeState = (camelKey, snakeKey, camelConflictKey, snakeConflictKey) => {
+    const values = [...new Set(normalizedContexts.map((normalized) => normalized[camelKey] || normalized[snakeKey]).filter((value) => value && value !== "unspecified"))];
+    return { value: values.length === 1 ? values[0] : null, conflict: values.length > 1 || normalizedContexts.some((normalized) => normalized[camelConflictKey] === true || normalized[snakeConflictKey] === true) };
+  };
+  const motion = mergeState("vehicleMotionState", "vehicle_motion_state", "vehicleMotionStateConflict", "vehicle_motion_state_conflict");
+  const transmission = mergeState("transmissionPosition", "transmission_position", "transmissionPositionConflict", "transmission_position_conflict");
+  const accessoryLoad = mergeState("accessoryLoadState", "accessory_load_state", "accessoryLoadStateConflict", "accessory_load_state_conflict");
+  return window.ObdReadOnly?.normalizeObservationContext?.({ conditions, thermalState: thermalStates.length === 1 ? thermalStates[0] : null, thermalStateConflict, vehicleMotionState: motion.value, vehicleMotionStateConflict: motion.conflict, transmissionPosition: transmission.value, transmissionPositionConflict: transmission.conflict, accessoryLoadState: accessoryLoad.value, accessoryLoadStateConflict: accessoryLoad.conflict, sameVehicleConfirmed }) || null;
 }
 
 function getObdInterfaceStrategyNote(interfaceId) {

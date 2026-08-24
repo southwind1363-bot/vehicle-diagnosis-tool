@@ -12087,7 +12087,31 @@
     ].filter((value) => value !== "unspecified"))];
     const thermalStateConflict = pickDefined(source.thermalStateConflict, source.thermal_state_conflict) === true || thermalCandidates.length > 1;
     const thermalState = thermalStateConflict ? "unspecified" : thermalCandidates[0] || "unspecified";
-    if (!conditions.length && thermalState === "unspecified" && !thermalStateConflict) return null;
+    const normalizeOperatingState = (value, aliases, allowed) => {
+      const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      const aliased = aliases[normalized] || normalized;
+      return allowed.includes(aliased) ? aliased : "unspecified";
+    };
+    const vehicleMotionState = normalizeOperatingState(
+      pickPresent(source.vehicleMotionState, source.vehicle_motion_state, source.vehicleMotion, source.vehicle_motion, null),
+      { stopped: "stationary", stop: "stationary", driving: "moving" },
+      ["stationary", "moving"]
+    );
+    const transmissionPosition = normalizeOperatingState(
+      pickPresent(source.transmissionPosition, source.transmission_position, source.gearPosition, source.gear_position, null),
+      { p: "park", n: "neutral", d: "drive", r: "reverse" },
+      ["park", "neutral", "drive", "reverse", "other"]
+    );
+    const accessoryLoadState = normalizeOperatingState(
+      pickPresent(source.accessoryLoadState, source.accessory_load_state, source.accessoryLoads, source.accessory_loads, null),
+      { none: "off", inactive: "off", active: "on" },
+      ["off", "on"]
+    );
+    const vehicleMotionStateConflict = pickDefined(source.vehicleMotionStateConflict, source.vehicle_motion_state_conflict) === true;
+    const transmissionPositionConflict = pickDefined(source.transmissionPositionConflict, source.transmission_position_conflict) === true;
+    const accessoryLoadStateConflict = pickDefined(source.accessoryLoadStateConflict, source.accessory_load_state_conflict) === true;
+    if (!conditions.length && thermalState === "unspecified" && vehicleMotionState === "unspecified" && transmissionPosition === "unspecified" && accessoryLoadState === "unspecified"
+      && !thermalStateConflict && !vehicleMotionStateConflict && !transmissionPositionConflict && !accessoryLoadStateConflict) return null;
     const sameVehicleConfirmed = pickDefined(source.sameVehicleConfirmed, source.same_vehicle_confirmed) === true;
     return {
       schemaVersion: "observation_context_v1",
@@ -12101,6 +12125,18 @@
       thermal_state_explicitly_recorded: thermalState !== "unspecified",
       thermalStateConflict,
       thermal_state_conflict: thermalStateConflict,
+      vehicleMotionState: vehicleMotionStateConflict ? "unspecified" : vehicleMotionState,
+      vehicle_motion_state: vehicleMotionStateConflict ? "unspecified" : vehicleMotionState,
+      vehicleMotionStateConflict,
+      vehicle_motion_state_conflict: vehicleMotionStateConflict,
+      transmissionPosition: transmissionPositionConflict ? "unspecified" : transmissionPosition,
+      transmission_position: transmissionPositionConflict ? "unspecified" : transmissionPosition,
+      transmissionPositionConflict,
+      transmission_position_conflict: transmissionPositionConflict,
+      accessoryLoadState: accessoryLoadStateConflict ? "unspecified" : accessoryLoadState,
+      accessory_load_state: accessoryLoadStateConflict ? "unspecified" : accessoryLoadState,
+      accessoryLoadStateConflict,
+      accessory_load_state_conflict: accessoryLoadStateConflict,
       explicitlyRecorded: true,
       explicitly_recorded: true,
       inferred: false,
@@ -34495,6 +34531,13 @@
       const engineCodes = Array.isArray(scope.engine_codes || scope.engineCodes) ? (scope.engine_codes || scope.engineCodes).map(String).map((value) => value.trim()).filter(Boolean) : [];
       const rawConditions = item?.observation_conditions || item?.observationConditions;
       const conditions = Array.isArray(rawConditions) ? rawConditions.map(normalizeLivePidObservationCondition) : [];
+      const rawRequiredOperatingState = item?.required_operating_state || item?.requiredOperatingState || null;
+      const requiredVehicleMotion = String(rawRequiredOperatingState?.vehicle_motion || rawRequiredOperatingState?.vehicleMotion || "").trim().toLowerCase();
+      const requiredTransmissionPositions = Array.isArray(rawRequiredOperatingState?.transmission_positions || rawRequiredOperatingState?.transmissionPositions)
+        ? (rawRequiredOperatingState.transmission_positions || rawRequiredOperatingState.transmissionPositions).map(String).map((value) => value.trim().toLowerCase()).filter(Boolean)
+        : [];
+      const requiredAccessoryLoad = String(rawRequiredOperatingState?.accessory_load || rawRequiredOperatingState?.accessoryLoad || "").trim().toLowerCase();
+      const hasRequiredOperatingState = Boolean(rawRequiredOperatingState);
       const yearFrom = Number(scope.year_from ?? scope.yearFrom);
       const yearTo = Number(scope.year_to ?? scope.yearTo);
       const threshold = Number(item?.absolute_delta_max ?? item?.absoluteDeltaMax);
@@ -34503,6 +34546,10 @@
         || typeof item.unit !== "string" || !item.unit.trim()
         || item.comparison_type !== "absolute_delta_max" || !Number.isFinite(threshold) || threshold < 0
         || !makers.length || !models.length || !engineCodes.length || !conditions.length || conditions.includes("unspecified")
+        || hasRequiredOperatingState && (!requiredVehicleMotion && !requiredTransmissionPositions.length && !requiredAccessoryLoad
+          || requiredVehicleMotion && !["stationary", "moving"].includes(requiredVehicleMotion)
+          || requiredTransmissionPositions.some((value) => !["park", "neutral", "drive", "reverse", "other"].includes(value))
+          || requiredAccessoryLoad && !["off", "on"].includes(requiredAccessoryLoad))
         || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo) || yearFrom > yearTo
         || typeof item.source_url !== "string" || !/^https:\/\//.test(item.source_url)
         || !/^\d{4}-\d{2}-\d{2}$/.test(item.source_date || "")
@@ -34515,6 +34562,11 @@
         comparisonType: "absolute_delta_max",
         absoluteDeltaMax: threshold,
         observationConditions: Object.freeze([...new Set(conditions)]),
+        requiredOperatingState: hasRequiredOperatingState ? Object.freeze({
+          vehicleMotion: requiredVehicleMotion || null,
+          transmissionPositions: Object.freeze([...new Set(requiredTransmissionPositions)]),
+          accessoryLoad: requiredAccessoryLoad || null
+        }) : null,
         makers: Object.freeze([...new Set(makers)]),
         models: Object.freeze([...new Set(models)]),
         engineCodes: Object.freeze([...new Set(engineCodes)]),
@@ -34537,6 +34589,7 @@
 
   function buildPidReferenceThresholdEvidence(reference, { vehicleProfile = null, observationCondition = null, observationContext = null } = {}) {
     const profile = vehicleProfile && typeof vehicleProfile === "object" ? vehicleProfile : {};
+    const context = normalizeObservationContext(observationContext) || {};
     const vehicleScope = {
       makers: [...reference.makers],
       models: [...reference.models],
@@ -34550,8 +34603,19 @@
       engine_code: String(profile.engineCode || profile.engine_code || "").trim(),
       year: String(profile.year || "").trim(),
       observation_condition: normalizeLivePidObservationCondition(observationCondition),
-      thermal_state: String(observationContext?.thermalState || observationContext?.thermal_state || "unspecified")
+      thermal_state: String(context.thermalState || context.thermal_state || "unspecified"),
+      vehicle_motion_state: String(context.vehicleMotionState || context.vehicle_motion_state || "unspecified"),
+      transmission_position: String(context.transmissionPosition || context.transmission_position || "unspecified"),
+      accessory_load_state: String(context.accessoryLoadState || context.accessory_load_state || "unspecified")
     };
+    const requiredOperatingState = reference.requiredOperatingState ? {
+      vehicleMotion: reference.requiredOperatingState.vehicleMotion,
+      vehicle_motion: reference.requiredOperatingState.vehicleMotion,
+      transmissionPositions: [...reference.requiredOperatingState.transmissionPositions],
+      transmission_positions: [...reference.requiredOperatingState.transmissionPositions],
+      accessoryLoad: reference.requiredOperatingState.accessoryLoad,
+      accessory_load: reference.requiredOperatingState.accessoryLoad
+    } : null;
     return Object.freeze({
       schemaVersion: "pid_reference_threshold_evidence_v1",
       schema_version: "pid_reference_threshold_evidence_v1",
@@ -34566,6 +34630,8 @@
       absolute_delta_max: reference.absoluteDeltaMax,
       observationConditions: [...reference.observationConditions],
       observation_conditions: [...reference.observationConditions],
+      requiredOperatingState,
+      required_operating_state: requiredOperatingState ? { ...requiredOperatingState, transmissionPositions: [...requiredOperatingState.transmissionPositions], transmission_positions: [...requiredOperatingState.transmission_positions] } : null,
       vehicleScope,
       vehicle_scope: { ...vehicleScope, makers: [...vehicleScope.makers], models: [...vehicleScope.models], engine_codes: [...vehicleScope.engine_codes] },
       matchedVehicle,
@@ -34611,8 +34677,24 @@
       observation_condition: normalizeLivePidObservationCondition(rawMatchedVehicle.observation_condition || rawMatchedVehicle.observationCondition),
       thermal_state: ["cold", "warmed_up", "unspecified"].includes(rawMatchedVehicle.thermal_state || rawMatchedVehicle.thermalState)
         ? rawMatchedVehicle.thermal_state || rawMatchedVehicle.thermalState
+        : "unspecified",
+      vehicle_motion_state: ["stationary", "moving", "unspecified"].includes(rawMatchedVehicle.vehicle_motion_state || rawMatchedVehicle.vehicleMotionState)
+        ? rawMatchedVehicle.vehicle_motion_state || rawMatchedVehicle.vehicleMotionState
+        : "unspecified",
+      transmission_position: ["park", "neutral", "drive", "reverse", "other", "unspecified"].includes(rawMatchedVehicle.transmission_position || rawMatchedVehicle.transmissionPosition)
+        ? rawMatchedVehicle.transmission_position || rawMatchedVehicle.transmissionPosition
+        : "unspecified",
+      accessory_load_state: ["off", "on", "unspecified"].includes(rawMatchedVehicle.accessory_load_state || rawMatchedVehicle.accessoryLoadState)
+        ? rawMatchedVehicle.accessory_load_state || rawMatchedVehicle.accessoryLoadState
         : "unspecified"
     };
+    const rawRequiredOperatingState = input.requiredOperatingState || input.required_operating_state || null;
+    const requiredVehicleMotion = String(rawRequiredOperatingState?.vehicleMotion || rawRequiredOperatingState?.vehicle_motion || "").trim().toLowerCase();
+    const requiredTransmissionPositions = Array.isArray(rawRequiredOperatingState?.transmissionPositions || rawRequiredOperatingState?.transmission_positions)
+      ? (rawRequiredOperatingState.transmissionPositions || rawRequiredOperatingState.transmission_positions).map(String).map((value) => value.trim().toLowerCase()).filter(Boolean)
+      : [];
+    const requiredAccessoryLoad = String(rawRequiredOperatingState?.accessoryLoad || rawRequiredOperatingState?.accessory_load || "").trim().toLowerCase();
+    const hasRequiredOperatingState = Boolean(rawRequiredOperatingState);
     const observationConditions = Array.isArray(input.observationConditions || input.observation_conditions)
       ? (input.observationConditions || input.observation_conditions).map(normalizeLivePidObservationCondition).filter((value) => value !== "unspecified")
       : [];
@@ -34622,8 +34704,23 @@
       || !/^\d{4}-\d{2}-\d{2}$/.test(lastVerifiedDate) || (input.exactMatch !== true && input.exact_match !== true)
       || !makers.length || !models.length || !engineCodes.length || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo) || yearFrom > yearTo
       || !matchedVehicle.maker || !matchedVehicle.model || !matchedVehicle.engine_code || !/^\d{4}$/.test(matchedVehicle.year)
-      || matchedVehicle.observation_condition === "unspecified" || !observationConditions.length) return null;
+      || matchedVehicle.observation_condition === "unspecified" || !observationConditions.length
+      || hasRequiredOperatingState && (!requiredVehicleMotion && !requiredTransmissionPositions.length && !requiredAccessoryLoad
+        || requiredVehicleMotion && !["stationary", "moving"].includes(requiredVehicleMotion)
+        || requiredTransmissionPositions.some((value) => !["park", "neutral", "drive", "reverse", "other"].includes(value))
+        || requiredAccessoryLoad && !["off", "on"].includes(requiredAccessoryLoad)
+        || requiredVehicleMotion && requiredVehicleMotion !== matchedVehicle.vehicle_motion_state
+        || requiredTransmissionPositions.length && !requiredTransmissionPositions.includes(matchedVehicle.transmission_position)
+        || requiredAccessoryLoad && requiredAccessoryLoad !== matchedVehicle.accessory_load_state)) return null;
     const vehicleScope = { makers, models, engine_codes: engineCodes, year_from: yearFrom, year_to: yearTo };
+    const requiredOperatingState = hasRequiredOperatingState ? {
+      vehicleMotion: requiredVehicleMotion || null,
+      vehicle_motion: requiredVehicleMotion || null,
+      transmissionPositions: [...new Set(requiredTransmissionPositions)],
+      transmission_positions: [...new Set(requiredTransmissionPositions)],
+      accessoryLoad: requiredAccessoryLoad || null,
+      accessory_load: requiredAccessoryLoad || null
+    } : null;
     return Object.freeze({
       schemaVersion: "pid_reference_threshold_evidence_v1",
       schema_version: "pid_reference_threshold_evidence_v1",
@@ -34638,6 +34735,8 @@
       absolute_delta_max: absoluteDeltaMax,
       observationConditions,
       observation_conditions: [...observationConditions],
+      requiredOperatingState,
+      required_operating_state: requiredOperatingState ? { ...requiredOperatingState, transmissionPositions: [...requiredOperatingState.transmissionPositions], transmission_positions: [...requiredOperatingState.transmission_positions] } : null,
       vehicleScope,
       vehicle_scope: { makers: [...makers], models: [...models], engine_codes: [...engineCodes], year_from: yearFrom, year_to: yearTo },
       matchedVehicle,
@@ -34670,16 +34769,23 @@
     const condition = normalizeLivePidObservationCondition(observationCondition);
     const context = normalizeObservationContext(observationContext);
     const thermalState = context?.thermalState || context?.thermal_state || "unspecified";
+    const vehicleMotionState = context?.vehicleMotionState || context?.vehicle_motion_state || "unspecified";
+    const transmissionPosition = context?.transmissionPosition || context?.transmission_position || "unspecified";
+    const accessoryLoadState = context?.accessoryLoadState || context?.accessory_load_state || "unspecified";
     const observedConditions = new Set([
       condition,
       ...(context?.conditions || []).map(normalizeLivePidObservationCondition),
       thermalState === "cold" ? "cold" : thermalState === "warmed_up" ? "warm" : "unspecified"
     ].filter((value) => value !== "unspecified"));
-    if (!maker || !model || !engineCode || !Number.isInteger(year) || !observedConditions.size || context?.thermalStateConflict === true) return null;
+    if (!maker || !model || !engineCode || !Number.isInteger(year) || !observedConditions.size
+      || context?.thermalStateConflict === true) return null;
     return pidReferenceThresholds.find((item) =>
       item.pidId === String(pidId || "").trim()
       && item.unit.toLowerCase() === String(unit || "").trim().toLowerCase()
       && item.observationConditions.every((requiredCondition) => observedConditions.has(requiredCondition))
+      && (!item.requiredOperatingState?.vehicleMotion || context?.vehicleMotionStateConflict !== true && item.requiredOperatingState.vehicleMotion === vehicleMotionState)
+      && (!item.requiredOperatingState?.transmissionPositions.length || context?.transmissionPositionConflict !== true && item.requiredOperatingState.transmissionPositions.includes(transmissionPosition))
+      && (!item.requiredOperatingState?.accessoryLoad || context?.accessoryLoadStateConflict !== true && item.requiredOperatingState.accessoryLoad === accessoryLoadState)
       && item.makers.some((value) => value.toLowerCase() === maker)
       && item.models.some((value) => value.toLowerCase() === model)
       && item.engineCodes.some((value) => value.toLowerCase() === engineCode)
