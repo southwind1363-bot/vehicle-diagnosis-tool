@@ -572,6 +572,23 @@ for (const file of jsonFiles) {
       if (!isNonEmptyString(row.applicability_note)) reportError(`${label}: applicability_note がありません`);
     }
 
+    if (file === "manufacturer-pid-reference-candidates-2026.json") {
+      const measurement = row.measurement;
+      const scope = row.vehicle_scope;
+      const operatingState = row.required_operating_state;
+      if (!isNonEmptyString(row.id)) reportError(`${label}: id がありません`);
+      if (row.status !== "source_verified_not_activated") reportError(`${label}: 未開放候補の status が不正です`);
+      if (row.reference_semantics !== "single_observation_absolute_max") reportError(`${label}: reference_semantics が不正です`);
+      if (!measurement || !isNonEmptyString(measurement.id) || !isNonEmptyString(measurement.label) || !isNonEmptyString(measurement.unit) || !isNonEmptyString(measurement.source_ecu)) reportError(`${label}: measurement が不足しています`);
+      if (!scope || !isNonEmptyStringArray(scope.makers) || !isNonEmptyStringArray(scope.models) || !Number.isInteger(scope.year_from) || !Number.isInteger(scope.year_to) || scope.year_from > scope.year_to || !isNonEmptyString(scope.market) || !isNonEmptyStringArray(scope.transmissions)) reportError(`${label}: vehicle_scope が不足しています`);
+      if (!operatingState || operatingState.parking_brake !== "applied" || !Array.isArray(operatingState.transmission_positions) || operatingState.transmission_positions.join(",") !== "park" || operatingState.engine_speed_target?.value !== 1000 || operatingState.engine_speed_target?.unit !== "rpm") reportError(`${label}: required_operating_state が出典条件と一致しません`);
+      if (!Array.isArray(row.conditional_limits) || row.conditional_limits.length !== 2 || row.conditional_limits.some((limit) => !Number.isFinite(limit.maximum_value) || !Array.isArray(limit.required_measurements) || limit.required_measurements.length !== 1 || !isNonEmptyString(limit.required_measurements[0].id) || !isNonEmptyString(limit.required_measurements[0].unit) || !Number.isFinite(limit.required_measurements[0].min_value) || !Number.isFinite(limit.required_measurements[0].max_value) || limit.required_measurements[0].min_value > limit.required_measurements[0].max_value)) reportError(`${label}: conditional_limits が不正です`);
+      if (!isNonEmptyString(row.source) || !isNonEmptyString(row.source_url) || !hasNhtsaArchiveSource(row.source_url)) reportError(`${label}: source または NHTSA source_url がありません`);
+      if (!isIsoDate(row.source_date) || !isIsoDate(row.last_verified_date) || row.last_verified_date < row.source_date) reportError(`${label}: 出典日または確認日が不正です`);
+      if (!isNonEmptyString(row.source_locator) || !isNonEmptyString(row.applicability_note)) reportError(`${label}: 出典位置または適用注記がありません`);
+      if (!isNonEmptyStringArray(row.activation_blockers) || row.service_manual_required !== true || row.diagnostic_conclusion_assigned !== false || row.vehicle_command_enabled !== false) reportError(`${label}: 未開放安全ゲートが不足しています`);
+    }
+
     if (file === "obd-freeze-frame-items-2026.json") {
       if (!isNonEmptyString(row.monitor_id)) reportError(`${label}: monitor_id がありません`);
       if (!monitorDefinitionIds.has(row.monitor_id)) reportError(`${label}: 未登録の monitor_id ${row.monitor_id} があります`);

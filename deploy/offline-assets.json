@@ -1,7 +1,7 @@
 {
-  "version": "3.13.156",
+  "version": "3.13.157",
   "generated_at": "2026-08-25",
-  "asset_count": 209,
+  "asset_count": 210,
   "assets": [
     "./",
     "index.html",
@@ -199,6 +199,7 @@
     "data/obd-codes.json",
     "data/obd-monitor-definitions.json",
     "data/pid-reference-thresholds-2026.json",
+    "data/manufacturer-pid-reference-candidates-2026.json",
     "data/obd-readiness-monitors-2026.json",
     "data/official-reference-notes-2026.json",
     "data/real-world-cases.json",

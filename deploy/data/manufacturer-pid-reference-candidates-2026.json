@@ -1,0 +1,69 @@
+[
+  {
+    "id": "toyota-t-sb-0160-18-nt-sensor-speed",
+    "status": "source_verified_not_activated",
+    "reference_semantics": "single_observation_absolute_max",
+    "measurement": {
+      "id": "toyota_nt_sensor_speed",
+      "label": "NT Sensor Speed",
+      "unit": "rpm",
+      "source_ecu": "Engine"
+    },
+    "vehicle_scope": {
+      "makers": ["Toyota"],
+      "models": ["Highlander", "Sienna"],
+      "year_from": 2017,
+      "year_to": 2018,
+      "market": "USA",
+      "transmissions": ["8AT"]
+    },
+    "required_operating_state": {
+      "transmission_positions": ["park"],
+      "parking_brake": "applied",
+      "engine_speed_target": {
+        "value": 1000,
+        "unit": "rpm"
+      }
+    },
+    "conditional_limits": [
+      {
+        "required_measurements": [
+          {
+            "id": "toyota_at_oil_temperature_no_1",
+            "label": "A/T Oil Temperature No. 1",
+            "unit": "degC",
+            "min_value": 27,
+            "max_value": 40
+          }
+        ],
+        "maximum_value": 850
+      },
+      {
+        "required_measurements": [
+          {
+            "id": "toyota_at_oil_temperature_no_1",
+            "label": "A/T Oil Temperature No. 1",
+            "unit": "degC",
+            "min_value": 41,
+            "max_value": 100
+          }
+        ],
+        "maximum_value": 900
+      }
+    ],
+    "source": "Toyota Service Bulletin T-SB-0160-18 / NHTSA MC-10153235",
+    "source_url": "https://static.nhtsa.gov/odi/tsbs/2018/MC-10153235-9999.pdf",
+    "source_date": "2018-12-17",
+    "source_locator": "T-SB-0160-18, page 6, Repair Procedure step 2, Table 1",
+    "last_verified_date": "2026-08-25",
+    "applicability_note": "Bulletin applicability is limited to 2017-2018 Highlander and Sienna with 8AT and the production/symptom checks in T-SB-0160-18. Engine code is not inferred from the bulletin.",
+    "activation_blockers": [
+      "single_observation_reference_evaluator_not_implemented",
+      "manufacturer_pid_identity_not_verified_from_vehicle_readout",
+      "bulletin_production_and_symptom_gates_not_modeled"
+    ],
+    "service_manual_required": true,
+    "diagnostic_conclusion_assigned": false,
+    "vehicle_command_enabled": false
+  }
+]
