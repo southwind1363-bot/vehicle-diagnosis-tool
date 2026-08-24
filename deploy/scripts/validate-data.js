@@ -531,6 +531,7 @@ for (const file of jsonFiles) {
       if (!isNonEmptyString(row.unit)) reportError(`${label}: unit がありません`);
       if (row.comparison_type !== "absolute_delta_max") reportError(`${label}: comparison_type が不正です`);
       if (!Number.isFinite(row.absolute_delta_max) || row.absolute_delta_max < 0) reportError(`${label}: absolute_delta_max が不正です`);
+      if (row.reference_semantics !== "post_repair_absolute_delta") reportError(`${label}: reference_semantics が不正です`);
       if (!scope || !isNonEmptyStringArray(scope.makers) || !isNonEmptyStringArray(scope.models) || !isNonEmptyStringArray(scope.engine_codes)) reportError(`${label}: vehicle_scope のメーカー・車種・エンジンが不足しています`);
       if (!Number.isInteger(scope?.year_from) || !Number.isInteger(scope?.year_to) || scope.year_from > scope.year_to) reportError(`${label}: vehicle_scope の年式範囲が不正です`);
       if (!isNonEmptyStringArray(row.observation_conditions) || row.observation_conditions.some((value) => !["cold", "warm", "symptom_reproduced", "post_repair"].includes(value))) reportError(`${label}: observation_conditions が不正です`);
@@ -565,6 +566,7 @@ for (const file of jsonFiles) {
         }
       }
       if (!isNonEmptyString(row.source_url) || !row.source_url.startsWith("https://")) reportError(`${label}: HTTPS source_url がありません`);
+      if (!isNonEmptyString(row.source_locator)) reportError(`${label}: source_locator がありません`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.source_date || "")) reportError(`${label}: source_date が不正です`);
       if (!/^\d{4}-\d{2}-\d{2}$/.test(row.last_verified_date || "")) reportError(`${label}: last_verified_date が不正です`);
       if (!isNonEmptyString(row.applicability_note)) reportError(`${label}: applicability_note がありません`);

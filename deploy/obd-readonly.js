@@ -34554,10 +34554,13 @@
       const yearFrom = Number(scope.year_from ?? scope.yearFrom);
       const yearTo = Number(scope.year_to ?? scope.yearTo);
       const threshold = Number(item?.absolute_delta_max ?? item?.absoluteDeltaMax);
+      const referenceSemantics = String(item?.reference_semantics || item?.referenceSemantics || "").trim().toLowerCase();
+      const sourceLocator = String(item?.source_locator || item?.sourceLocator || "").trim();
       if (!item || typeof item.id !== "string" || !item.id.trim()
         || typeof item.pid_id !== "string" || !item.pid_id.trim() || !monitorDefinitions.some((definition) => definition.id === item.pid_id.trim())
         || typeof item.unit !== "string" || !item.unit.trim()
         || item.comparison_type !== "absolute_delta_max" || !Number.isFinite(threshold) || threshold < 0
+        || referenceSemantics !== "post_repair_absolute_delta" || !sourceLocator
         || !makers.length || !models.length || !engineCodes.length || !conditions.length || conditions.includes("unspecified")
         || hasRequiredOperatingState && (!requiredVehicleMotion && !requiredTransmissionPositions.length && !requiredAccessoryLoad
           || requiredVehicleMotion && !["stationary", "moving"].includes(requiredVehicleMotion)
@@ -34576,6 +34579,7 @@
         unit: item.unit.trim().slice(0, 48),
         comparisonType: "absolute_delta_max",
         absoluteDeltaMax: threshold,
+        referenceSemantics,
         observationConditions: Object.freeze([...new Set(conditions)]),
         requiredOperatingState: hasRequiredOperatingState ? Object.freeze({
           vehicleMotion: requiredVehicleMotion || null,
@@ -34589,6 +34593,7 @@
         yearFrom,
         yearTo,
         sourceUrl: item.source_url.trim(),
+        sourceLocator: sourceLocator.slice(0, 240),
         sourceDate: item.source_date.trim(),
         lastVerifiedDate: item.last_verified_date.trim(),
         applicabilityNote: String(item.applicability_note || "").trim().slice(0, 500)
@@ -34673,6 +34678,8 @@
       unit: reference.unit,
       comparisonType: reference.comparisonType,
       comparison_type: reference.comparisonType,
+      referenceSemantics: reference.referenceSemantics,
+      reference_semantics: reference.referenceSemantics,
       absoluteDeltaMax: reference.absoluteDeltaMax,
       absolute_delta_max: reference.absoluteDeltaMax,
       observationConditions: [...reference.observationConditions],
@@ -34689,6 +34696,8 @@
       matched_vehicle: { ...matchedVehicle },
       sourceUrl: reference.sourceUrl,
       source_url: reference.sourceUrl,
+      sourceLocator: reference.sourceLocator,
+      source_locator: reference.sourceLocator,
       sourceDate: reference.sourceDate,
       source_date: reference.sourceDate,
       lastVerifiedDate: reference.lastVerifiedDate,
@@ -34710,6 +34719,8 @@
     const pidId = String(input.pidId || input.pid_id || "").trim().slice(0, 96);
     const unit = String(input.unit || "").trim().slice(0, 48);
     const sourceUrl = String(input.sourceUrl || input.source_url || "").trim();
+    const sourceLocator = String(input.sourceLocator || input.source_locator || "").trim().slice(0, 240);
+    const referenceSemantics = String(input.referenceSemantics || input.reference_semantics || "").trim().toLowerCase();
     const sourceDate = String(input.sourceDate || input.source_date || "").trim();
     const lastVerifiedDate = String(input.lastVerifiedDate || input.last_verified_date || "").trim();
     const absoluteDeltaMax = Number(input.absoluteDeltaMax ?? input.absolute_delta_max);
@@ -34771,6 +34782,7 @@
       : [];
     if ((input.schemaVersion || input.schema_version) !== "pid_reference_threshold_evidence_v1"
       || !referenceId || !pidId || !unit || !Number.isFinite(absoluteDeltaMax) || absoluteDeltaMax < 0
+      || referenceSemantics !== "post_repair_absolute_delta" || !sourceLocator
       || !/^https:\/\//.test(sourceUrl) || !/^\d{4}-\d{2}-\d{2}$/.test(sourceDate)
       || !/^\d{4}-\d{2}-\d{2}$/.test(lastVerifiedDate) || (input.exactMatch !== true && input.exact_match !== true)
       || !makers.length || !models.length || !engineCodes.length || !Number.isInteger(yearFrom) || !Number.isInteger(yearTo) || yearFrom > yearTo
@@ -34811,6 +34823,8 @@
       unit,
       comparisonType: "absolute_delta_max",
       comparison_type: "absolute_delta_max",
+      referenceSemantics,
+      reference_semantics: referenceSemantics,
       absoluteDeltaMax,
       absolute_delta_max: absoluteDeltaMax,
       observationConditions,
@@ -34827,6 +34841,8 @@
       matched_vehicle: { ...matchedVehicle },
       sourceUrl,
       source_url: sourceUrl,
+      sourceLocator,
+      source_locator: sourceLocator,
       sourceDate,
       source_date: sourceDate,
       lastVerifiedDate,
