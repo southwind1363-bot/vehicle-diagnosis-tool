@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3273件",
+  validationCheckLabel: "OBD安全検証 3275件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "次の測定候補を診断結果へ自動表示",
+  recentMilestone: "整備後再判定を明示条件付きで保存",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.145";
+const APP_VERSION = "3.13.146";
 const APP_LAST_UPDATED = "2026-08-24";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -362,6 +362,7 @@ const dataGapList = document.querySelector("#dataGapList");
 const checkOrderList = document.querySelector("#checkOrderList");
 const measurementList = document.querySelector("#measurementList");
 const nextMeasurementCandidateList = document.querySelector("#nextMeasurementCandidateList");
+const postRepairReassessmentList = document.querySelector("#postRepairReassessmentList");
 const liveDataGuideList = document.querySelector("#liveDataGuideList");
 const branchList = document.querySelector("#branchList");
 const cautionList = document.querySelector("#cautionList");
@@ -437,6 +438,7 @@ const obdDevReadFreezeFrameButton = document.querySelector("#obdDevReadFreezeFra
 const obdDevReadReadinessButton = document.querySelector("#obdDevReadReadinessButton");
 const obdDevSnapshotButton = document.querySelector("#obdDevSnapshotButton");
 const obdLiveObservationCondition = document.querySelector("#obdLiveObservationCondition");
+const obdSameVehicleConfirmed = document.querySelector("#obdSameVehicleConfirmed");
 const obdDevReadEcuInfoButton = document.querySelector("#obdDevReadEcuInfoButton");
 const obdDevReadOnboardMonitorButton = document.querySelector("#obdDevReadOnboardMonitorButton");
 const obdDevBridgeStatusButton = document.querySelector("#obdDevBridgeStatusButton");
@@ -624,6 +626,25 @@ obdVehicleYearSelect?.addEventListener("change", () => {
 obdVehicleYearManualInput?.addEventListener("input", () => {
   obdVehicleYearManualInput.value = obdVehicleYearManualInput.value.replace(/\D/g, "").slice(0, 4);
   renderObdVehicleEngineOptions();
+});
+[
+  obdVehicleMakerSelect,
+  obdVehicleModelSelect,
+  obdVehicleModelCodeSelect,
+  obdVehicleYearSelect,
+  obdVehicleYearManualInput,
+  obdVehicleEngineCodeSelect,
+  obdVehicleProductionDateInput,
+  obdVehicleManualInput
+].forEach((element) => {
+  const clearSameVehicleConfirmation = () => {
+    if (obdSameVehicleConfirmed) obdSameVehicleConfirmed.checked = false;
+  };
+  element?.addEventListener("change", clearSameVehicleConfirmation);
+  element?.addEventListener("input", clearSameVehicleConfirmation);
+});
+obdLiveObservationCondition?.addEventListener("change", () => {
+  if (obdLiveObservationCondition.value !== "post_repair" && obdSameVehicleConfirmed) obdSameVehicleConfirmed.checked = false;
 });
 obdUseDiagnosisVehicleButton?.addEventListener("click", applyDiagnosisVehicleToObdSetup);
 obdPreviewSelectedButton?.addEventListener("click", previewSelectedObdInterface);
@@ -1929,16 +1950,18 @@ function buildSelectedObdReadoutInterface() {
 
 function buildSelectedObdObservationContext() {
   return window.ObdReadOnly?.normalizeObservationContext?.({
-    condition: obdLiveObservationCondition?.value || null
+    condition: obdLiveObservationCondition?.value || null,
+    sameVehicleConfirmed: obdSameVehicleConfirmed?.checked === true
   }) || null;
 }
 
 function mergeObdObservationContexts(...contexts) {
-  const conditions = contexts.flatMap((context) => {
-    const normalized = window.ObdReadOnly?.normalizeObservationContext?.(context);
+  const normalizedContexts = contexts.map((context) => window.ObdReadOnly?.normalizeObservationContext?.(context)).filter(Boolean);
+  const conditions = normalizedContexts.flatMap((normalized) => {
     return Array.isArray(normalized?.conditions) ? normalized.conditions : [];
   });
-  return window.ObdReadOnly?.normalizeObservationContext?.({ conditions }) || null;
+  const sameVehicleConfirmed = normalizedContexts.some((normalized) => normalized.sameVehicleConfirmed === true || normalized.same_vehicle_confirmed === true);
+  return window.ObdReadOnly?.normalizeObservationContext?.({ conditions, sameVehicleConfirmed }) || null;
 }
 
 function getObdInterfaceStrategyNote(interfaceId) {
@@ -2389,6 +2412,7 @@ function buildDiagnosis(input) {
     measurements,
     liveDataGuidance,
     nextMeasurementCandidatePlan,
+    postRepairReassessmentSummary: obdDevSession.lastSession?.postRepairReassessmentSummary || obdDevSession.lastSession?.post_repair_reassessment_summary || null,
     branches: buildBranches(flow, interview, workflowMatches),
     cautions: buildCautions(obd, flow, confirmationBeforeParts, workflowMatches),
     partsChecks: confirmationBeforeParts.length ? confirmationBeforeParts : [NO_DATA],
@@ -2833,6 +2857,23 @@ function formatNextMeasurementCandidateEntries(plan = null) {
   return candidates.length
     ? candidates.map((item) => `${String(item.displayOrder).padStart(2, "0")} / ${item.actionType === "diagnostic_readout" ? "読取候補" : "測定候補"} / ${item.label} / ${item.reason || "根拠未登録"} / 読取専用・未実行`)
     : ["次の測定候補はまだありません。車両・DTC・症状・問診を入力してください。"];
+}
+
+function formatPostRepairReassessmentEntries(summary = null) {
+  if (!summary) return ["整備後比較セッションはまだありません。"];
+  const blockedReasons = summary.blockedReasonIds || summary.blocked_reason_ids || [];
+  const blockedLabels = {
+    post_repair_condition_not_recorded: "観察条件を修理後に設定",
+    same_vehicle_not_confirmed: "前回と同一車両を明示確認",
+    baseline_comparison_not_available: "整備前セッションを読み込み比較"
+  };
+  if (summary.state === "blocked") return [`再判定保留: ${blockedReasons.map((id) => blockedLabels[id] || id).join(" / ")}`];
+  const changedIds = summary.changedSectionIds || summary.changed_section_ids || [];
+  return [
+    summary.state === "changed_requires_review" ? "整備前後で読取状態に変化あり。整備士確認が必要です。" : "比較対象の読取状態に変化は検出されませんでした。",
+    `比較セクション: ${summary.comparedSectionCount ?? summary.compared_section_count ?? 0} / 変化: ${changedIds.length}`,
+    "修理成功・故障解消の確定ではありません。DTC、FF、レディネス、ライブ値を個別に確認してください。"
+  ];
 }
 
 function buildCheckOrder(obd, flow, interview, workflowMatches = []) {
@@ -3518,6 +3559,7 @@ function renderDiagnosis(result) {
   renderItems(checkOrderList, result.checkOrder);
   renderItems(measurementList, result.measurements);
   renderItems(nextMeasurementCandidateList, formatNextMeasurementCandidateEntries(result.nextMeasurementCandidatePlan));
+  renderItems(postRepairReassessmentList, formatPostRepairReassessmentEntries(result.postRepairReassessmentSummary));
   renderItems(liveDataGuideList, result.liveDataGuidance);
   renderItems(branchList, result.branches);
   renderItems(cautionList, result.cautions);

@@ -12073,6 +12073,7 @@
       .map((value) => aliases[value] || null)
       .filter(Boolean))].slice(0, 4);
     if (!conditions.length) return null;
+    const sameVehicleConfirmed = pickDefined(source.sameVehicleConfirmed, source.same_vehicle_confirmed) === true;
     return {
       schemaVersion: "observation_context_v1",
       schema_version: "observation_context_v1",
@@ -12082,6 +12083,69 @@
       explicitlyRecorded: true,
       explicitly_recorded: true,
       inferred: false,
+      sameVehicleConfirmed,
+      same_vehicle_confirmed: sameVehicleConfirmed,
+      sameVehicleConfirmationSource: sameVehicleConfirmed ? "operator" : null,
+      same_vehicle_confirmation_source: sameVehicleConfirmed ? "operator" : null,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function buildPostRepairReassessmentSummary({ observationContext = null, importedSessionComparisonSummary = null } = {}) {
+    const normalizedObservationContext = normalizeObservationContext(observationContext);
+    const conditions = normalizedObservationContext?.conditions || [];
+    const postRepairRecorded = conditions.includes("post_repair");
+    const sameVehicleConfirmed = normalizedObservationContext?.sameVehicleConfirmed === true;
+    const comparison = importedSessionComparisonSummary && typeof importedSessionComparisonSummary === "object"
+      ? importedSessionComparisonSummary
+      : null;
+    const comparedSectionCount = Number(pickDefined(comparison?.comparedSectionCount, comparison?.compared_section_count, 0)) || 0;
+    const comparisonAvailable = Boolean(comparison && comparedSectionCount > 0);
+    const blockedReasonIds = [
+      !postRepairRecorded ? "post_repair_condition_not_recorded" : null,
+      !sameVehicleConfirmed ? "same_vehicle_not_confirmed" : null,
+      !comparisonAvailable ? "baseline_comparison_not_available" : null
+    ].filter(Boolean);
+    const eligible = blockedReasonIds.length === 0;
+    const hasChanges = eligible && (comparison.hasChanges === true || comparison.has_changes === true);
+    const state = !eligible ? "blocked" : hasChanges ? "changed_requires_review" : "no_detected_change";
+    const changedSectionIds = Array.isArray(comparison?.changedSectionIds)
+      ? comparison.changedSectionIds
+      : Array.isArray(comparison?.changed_section_ids) ? comparison.changed_section_ids : [];
+    const addedIds = Array.isArray(comparison?.addedIds) ? comparison.addedIds : Array.isArray(comparison?.added_ids) ? comparison.added_ids : [];
+    const removedIds = Array.isArray(comparison?.removedIds) ? comparison.removedIds : Array.isArray(comparison?.removed_ids) ? comparison.removed_ids : [];
+    return {
+      schemaVersion: "post_repair_reassessment_summary_v1",
+      schema_version: "post_repair_reassessment_summary_v1",
+      state,
+      eligible,
+      postRepairRecorded,
+      post_repair_recorded: postRepairRecorded,
+      sameVehicleConfirmed,
+      same_vehicle_confirmed: sameVehicleConfirmed,
+      comparisonAvailable,
+      comparison_available: comparisonAvailable,
+      comparedSectionCount,
+      compared_section_count: comparedSectionCount,
+      hasChanges,
+      has_changes: hasChanges,
+      changedSectionIds: changedSectionIds.slice(0, 32),
+      changed_section_ids: changedSectionIds.slice(0, 32),
+      addedIds: addedIds.slice(0, 64),
+      added_ids: addedIds.slice(0, 64),
+      removedIds: removedIds.slice(0, 64),
+      removed_ids: removedIds.slice(0, 64),
+      blockedReasonIds,
+      blocked_reason_ids: blockedReasonIds,
+      repairOutcomeConfirmed: false,
+      repair_outcome_confirmed: false,
+      requiresTechnicianReview: eligible,
+      requires_technician_review: eligible,
       readOnly: true,
       read_only: true,
       wouldTransmit: false,
@@ -25257,6 +25321,10 @@
       coreReadoutInventoryComparison: importedCoreReadoutInventoryComparisonSummary
     });
     const importedSessionComparisonSummary = importedSessionComparisonSummaryInput || generatedImportedSessionComparisonSummary;
+    const postRepairReassessmentSummary = buildPostRepairReassessmentSummary({
+      observationContext: mergedBridgeMetadata.observationContext,
+      importedSessionComparisonSummary
+    });
     const importedVehicleApplicabilityChangedRowSummary = input.importedVehicleApplicabilityChangedRowSummary
       || input.imported_vehicle_applicability_changed_row_summary
       || input.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary
@@ -25474,6 +25542,8 @@
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       importedSessionComparisonSummary,
       imported_session_comparison_summary: importedSessionComparisonSummary,
+      postRepairReassessmentSummary,
+      post_repair_reassessment_summary: postRepairReassessmentSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
@@ -33868,6 +33938,10 @@
       || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
       || null;
+    const postRepairReassessmentSummary = buildPostRepairReassessmentSummary({
+      observationContext: resolvedMetadata.observationContext,
+      importedSessionComparisonSummary
+    });
     const mergedMonitorValueSummary = mergeMonitorValueSummaries(
       resolveMonitorValueSummary([], livePidSnapshot.monitorValueSummary, livePidSnapshot.monitor_value_summary),
       resolveMonitorValueSummary([], freezeFrameSnapshot.monitorValueSummary, freezeFrameSnapshot.monitor_value_summary)
@@ -34039,6 +34113,8 @@
       imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
       importedSessionComparisonSummary,
       imported_session_comparison_summary: importedSessionComparisonSummary,
+      postRepairReassessmentSummary,
+      post_repair_reassessment_summary: postRepairReassessmentSummary,
       monitorValueSummary,
       monitor_value_summary: monitorValueSummary,
       importClassification: resolvedImportClassification,
@@ -35334,6 +35410,7 @@
     normalizeVehicleApplicabilitySnapshot,
     buildVehicleApplicabilityFieldMatchSummary,
     normalizeObservationContext,
+    buildPostRepairReassessmentSummary,
     normalizeReadoutInterfaceSnapshot,
     normalizeObdReportedProfile,
     buildObdReportedProfile,

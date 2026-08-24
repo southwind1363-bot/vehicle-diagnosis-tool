@@ -271,6 +271,11 @@
                 <p class="live-data-guide-note">未取得の読取候補を優先し、現在の診断入力から測定候補を自動整理します。表示だけで車両通信は実行しません。</p>
                 <ol id="nextMeasurementCandidateList"></ol>
               </article>
+              <article class="result-block post-repair-reassessment-block">
+                <h3>整備後の再判定</h3>
+                <p class="live-data-guide-note">同一車両確認・修理後条件・前回比較が揃った場合だけ変化を表示します。修理成功は自動判定しません。</p>
+                <ul id="postRepairReassessmentList"></ul>
+              </article>
               <article class="result-block live-data-guide-block">
                 <h3>推奨ライブデータ</h3>
                 <p class="live-data-guide-note">車両が対応して返した項目だけを表示対象にします。未取得値や正常範囲は推測しません。</p>
@@ -745,6 +750,7 @@
               <option value="symptom_reproduced">症状再現時</option>
               <option value="post_repair">修理後</option>
             </select>
+            <label class="obd-dev-group-label"><input id="obdSameVehicleConfirmed" type="checkbox"> 前回保存セッションと同一車両</label>
             <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
             <button id="obdDevReadFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(Web Serial)</button>
             <button id="obdDevReadReadinessButton" class="secondary-button" type="button" disabled>レディネス(Web Serial)</button>
