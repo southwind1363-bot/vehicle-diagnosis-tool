@@ -25735,6 +25735,56 @@
       || importedNextReadoutGuardComparisonSummary?.reviewRequestPlanSummary
       || importedNextReadoutGuardComparisonSummary?.review_request_plan_summary
       || null;
+    const explicitManufacturerPidVehicleReadoutPackageInput = pickDefined(
+      input.manufacturerPidVehicleReadoutPackages,
+      input.manufacturer_pid_vehicle_readout_packages
+    );
+    const bridgeManufacturerPidVehicleReadoutPackageInput = pickDefined(
+      bridgeImport?.manufacturerPidVehicleReadoutPackages,
+      bridgeImport?.manufacturer_pid_vehicle_readout_packages,
+      bridgeSession?.manufacturerPidVehicleReadoutPackages,
+      bridgeSession?.manufacturer_pid_vehicle_readout_packages,
+      bridgeImportInput?.manufacturerPidVehicleReadoutPackages,
+      bridgeImportInput?.manufacturer_pid_vehicle_readout_packages
+    );
+    const bridgeImportedManufacturerPidVehicleReadoutPackageInput = pickDefined(
+      bridgeImport?.importedManufacturerPidVehicleReadoutPackages,
+      bridgeImport?.imported_manufacturer_pid_vehicle_readout_packages,
+      bridgeSession?.importedManufacturerPidVehicleReadoutPackages,
+      bridgeSession?.imported_manufacturer_pid_vehicle_readout_packages,
+      bridgeImportInput?.importedManufacturerPidVehicleReadoutPackages,
+      bridgeImportInput?.imported_manufacturer_pid_vehicle_readout_packages
+    );
+    const explicitImportedManufacturerPidVehicleReadoutPackageInput = pickDefined(
+      input.importedManufacturerPidVehicleReadoutPackages,
+      input.imported_manufacturer_pid_vehicle_readout_packages
+    );
+    const manufacturerPidVehicleReadoutPackageInput = explicitManufacturerPidVehicleReadoutPackageInput === undefined
+      ? bridgeManufacturerPidVehicleReadoutPackageInput
+      : explicitManufacturerPidVehicleReadoutPackageInput;
+    const importedManufacturerPidVehicleReadoutPackageInput = explicitImportedManufacturerPidVehicleReadoutPackageInput !== undefined
+      ? explicitImportedManufacturerPidVehicleReadoutPackageInput
+      : explicitManufacturerPidVehicleReadoutPackageInput !== undefined
+        ? bridgeManufacturerPidVehicleReadoutPackageInput ?? bridgeImportedManufacturerPidVehicleReadoutPackageInput
+        : bridgeImportedManufacturerPidVehicleReadoutPackageInput;
+    const manufacturerPidVehicleReadoutPackageCollection = normalizeManufacturerPidVehicleReadoutPackageCollection(manufacturerPidVehicleReadoutPackageInput);
+    const importedManufacturerPidVehicleReadoutPackageCollection = normalizeManufacturerPidVehicleReadoutPackageCollection(importedManufacturerPidVehicleReadoutPackageInput);
+    const manufacturerPidVehicleReadoutPackages = manufacturerPidVehicleReadoutPackageCollection.packages;
+    const importedManufacturerPidVehicleReadoutPackages = importedManufacturerPidVehicleReadoutPackageCollection.packages;
+    const manufacturerPidVehicleReadoutSummary = buildManufacturerPidVehicleReadoutSummary(manufacturerPidVehicleReadoutPackages);
+    const importedManufacturerPidVehicleReadoutSummary = importedManufacturerPidVehicleReadoutPackageInput === undefined
+      || (importedManufacturerPidVehicleReadoutPackages.length === 0 && importedManufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0)
+      ? null
+      : buildManufacturerPidVehicleReadoutSummary(importedManufacturerPidVehicleReadoutPackages);
+    const manufacturerPidVehicleReadoutComparisonSummary = buildManufacturerPidVehicleReadoutSummaryComparison(importedManufacturerPidVehicleReadoutSummary, manufacturerPidVehicleReadoutSummary);
+    const manufacturerPidWarnings = [
+      ...(Array.isArray(mergedBridgeMetadata.warnings) ? mergedBridgeMetadata.warnings : []),
+      ...(manufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0 ? ["manufacturer_pid_vehicle_readout_package_rejected"] : []),
+      ...(importedManufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0 ? ["imported_manufacturer_pid_vehicle_readout_package_rejected"] : []),
+      ...(explicitManufacturerPidVehicleReadoutPackageInput !== undefined
+        && mergedBridgeMetadata.warnings?.includes("manufacturer_pid_vehicle_readout_package_rejected")
+        ? ["imported_manufacturer_pid_vehicle_readout_package_rejected"] : [])
+    ].filter((value, index, values) => values.indexOf(value) === index);
     const vehicleProfile = mergedBridgeMetadata.vehicleProfile || bridgeImport?.vehicleProfile || bridgeImport?.vehicle_profile || bridgeSession?.vehicleProfile || bridgeSession?.vehicle_profile || scannerAnalysis.vehicleProfile || scannerAnalysis.vehicle_profile || null;
     const readoutInterface = mergedBridgeMetadata.readoutInterface || bridgeImport?.readoutInterface || bridgeImport?.readout_interface || bridgeSession?.readoutInterface || bridgeSession?.readout_interface || scannerAnalysis.readoutInterface || scannerAnalysis.readout_interface || null;
     const connectionStatus = bridgeImport?.connectionStatus || bridgeImport?.connection_status || bridgeSession?.connectionStatus || bridgeSession?.connection_status || null;
@@ -25800,7 +25850,17 @@
       bridge_session: bridgeSession,
       bridgeExportPayload,
       bridge_export_payload: bridgeExportPayload,
-      warnings: mergedBridgeMetadata.warnings,
+      warnings: manufacturerPidWarnings,
+      manufacturerPidVehicleReadoutPackages,
+      manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
+      manufacturerPidVehicleReadoutSummary,
+      manufacturer_pid_vehicle_readout_summary: manufacturerPidVehicleReadoutSummary,
+      importedManufacturerPidVehicleReadoutPackages,
+      imported_manufacturer_pid_vehicle_readout_packages: importedManufacturerPidVehicleReadoutPackages,
+      importedManufacturerPidVehicleReadoutSummary,
+      imported_manufacturer_pid_vehicle_readout_summary: importedManufacturerPidVehicleReadoutSummary,
+      manufacturerPidVehicleReadoutComparisonSummary,
+      manufacturer_pid_vehicle_readout_comparison_summary: manufacturerPidVehicleReadoutComparisonSummary,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       next_readout_candidates: resolvedNextReadoutCandidates,
       coreSessionStatus,
