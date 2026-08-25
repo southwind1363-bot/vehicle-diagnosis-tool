@@ -191,9 +191,9 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q3 見込み"
   }),
   j2534_passthru: Object.freeze({
-    progressPercent: 37,
-    currentBasis: "Windowsレジストリ列挙、J2534 DLLの32/64bit・必須API静的確認、read-only受け口まで実装済み。実ドライバーは未登録。",
-    nextBuild: "対応J2534ドライバーを登録し、DLLを実行せず静的適合を確認してからPassThruOpenの隔離実装へ進む。",
+    progressPercent: 38,
+    currentBasis: "Windowsレジストリ列挙、J2534 DLLの32/64bit・必須API静的確認、PassThruOpen前の未試行レビュー契約まで実装済み。実ドライバーは未登録。",
+    nextBuild: "対応J2534ドライバーを登録して静的適合を確認し、手動確認ゲート付きPassThruOpen隔離ワーカーへ進む。",
     etaTarget: "2026-Q3 見込み"
   }),
   uds_canfd: Object.freeze({
@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "メーカーPID基準候補を用途別に分離",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.183";
+const APP_VERSION = "3.13.184";
 const APP_LAST_UPDATED = "2026-08-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

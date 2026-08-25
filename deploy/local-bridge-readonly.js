@@ -490,6 +490,11 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     registry_roots_checked: [...j2534DiscoveryEnvironment.registry_roots_checked],
     bridge_runtime_architecture: j2534DiscoveryEnvironment.bridge_runtime_architecture,
     bridge_runtime_bitness: j2534DiscoveryEnvironment.bridge_runtime_bitness,
+    open_review_status: j2534DiscoveryEnvironment.open_review_status,
+    open_review_blockers: [...j2534DiscoveryEnvironment.open_review_blockers],
+    pass_thru_open_allowed: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
     static_ready_vci_count: j2534DiscoveryEnvironment.static_ready_vci_count,
     static_blocked_vci_count: j2534DiscoveryEnvironment.static_blocked_vci_count,
     selected_static_ready_device_id: j2534DiscoveryEnvironment.selected_static_ready_device_id
@@ -851,6 +856,15 @@ export function getJ2534DiscoveryEnvironment(devices = []) {
         : driver_readiness_status === "readonly_api_incomplete"
           ? "verify_driver_readonly_exports"
           : "manual_vci_connection_review";
+  const open_review_blockers = driver_readiness_status === "no_registered_driver"
+    ? ["no_registered_driver"]
+    : driver_readiness_status === "static_inspection_pending"
+      ? ["driver_library_not_inspected"]
+      : driver_readiness_status === "runtime_architecture_mismatch"
+        ? ["runtime_architecture_mismatch"]
+        : driver_readiness_status === "readonly_api_incomplete"
+          ? ["readonly_api_incomplete"]
+          : ["manual_vci_connection_review_required"];
   return {
     registry_roots_checked: [...J2534_REGISTRY_ROOTS],
     bridge_runtime_architecture: J2534_HOST_ARCHITECTURE,
@@ -858,6 +872,11 @@ export function getJ2534DiscoveryEnvironment(devices = []) {
     registration_status: detectedCount > 0 ? "registered_driver_detected" : "no_registered_driver",
     driver_readiness_status,
     next_check,
+    open_review_status: hasStaticReadyDriver ? "manual_review_required" : "blocked",
+    open_review_blockers,
+    pass_thru_open_allowed: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
     static_ready_vci_count: readyDeviceIndexes.length,
     static_blocked_vci_count: detectedCount - readyDeviceIndexes.length,
     selected_static_ready_device_id: readyDeviceIndexes.length > 0 ? registeredDevices[readyDeviceIndexes[0]]?.id || null : null,
