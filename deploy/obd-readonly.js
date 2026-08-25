@@ -4352,6 +4352,9 @@
       if (!ecu) return null;
       const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.module_name || ecuRow?.moduleName || ecuRow?.name || ecuRow?.label || null;
       const scopedErrorCodes = readBridgeResponseErrorCodes(ecuRow);
+      const failedPids = [...new Set((Array.isArray(ecuRow?.failedPids) ? ecuRow.failedPids : Array.isArray(ecuRow?.failed_pids) ? ecuRow.failed_pids : [])
+        .map(normalizeSupportedPidCode)
+        .filter(Boolean))];
       if (decoded) {
         const decodedStatus = String(ecuRow?.livePidReadoutStatus || ecuRow?.live_pid_readout_status || ecuRow?.readoutStatus || ecuRow?.readout_status || decoded.livePidReadoutStatus || decoded.live_pid_readout_status || "unknown").trim().toLowerCase();
         const scopedReadoutStatus = decodedStatus === "blocked" || decoded.blocked
@@ -4365,6 +4368,8 @@
           source_ecu_name: ecuName,
           errorCodes: scopedErrorCodes,
           error_codes: [...scopedErrorCodes],
+          failedPids,
+          failed_pids: [...failedPids],
           livePidReadoutStatus: scopedReadoutStatus,
           live_pid_readout_status: scopedReadoutStatus
         };
@@ -4378,10 +4383,13 @@
         .filter(Boolean);
       const scopedSafety = readBridgeSnapshotSafety(ecuRow, scopedMonitorValues.length > 0);
       const explicitScopedStatus = String(ecuRow?.livePidReadoutStatus || ecuRow?.live_pid_readout_status || ecuRow?.readoutStatus || ecuRow?.readout_status || "").trim().toLowerCase();
-      const scopedReadoutStatus = scopedSafety.blocked
-        ? getBridgeReadoutStatus(scopedSafety)
-        : scopedErrorCodes.length > 0 || scopedSafety.unparsed
+      const explicitScopedBlock = explicitScopedStatus === "blocked" || isExplicitTrueFlag(ecuRow?.blocked) || isExplicitTrueFlag(ecuRow?.wouldTransmit) || isExplicitTrueFlag(ecuRow?.would_transmit);
+      const scopedReadoutStatus = explicitScopedBlock
+        ? "blocked"
+        : scopedErrorCodes.length > 0 || scopedSafety.unparsed || explicitScopedStatus === "unparsed"
           ? "unparsed"
+        : scopedSafety.blocked
+          ? getBridgeReadoutStatus(scopedSafety)
         : ["reported", "unparsed", "blocked", "unknown"].includes(explicitScopedStatus)
           ? explicitScopedStatus
           : scopedMonitorValues.length > 0 ? "reported" : "unknown";
@@ -4402,7 +4410,9 @@
         live_pid_readout_status: scopedReadoutStatus,
         errorCodes: scopedErrorCodes,
         error_codes: [...scopedErrorCodes],
-        blocked: scopedSafety.blocked,
+        failedPids,
+        failed_pids: [...failedPids],
+        blocked: explicitScopedBlock,
         wouldTransmit: scopedSafety.wouldTransmit,
         would_transmit: scopedSafety.wouldTransmit,
         vehicleCommandEnabled: false,

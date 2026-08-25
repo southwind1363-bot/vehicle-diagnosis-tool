@@ -763,6 +763,19 @@ try {
   const replayLive = await post(replayPort, "read_live_pid_snapshot");
   check(!Object.hasOwn(replayLive.data, "captured_at"), "replay live PID response fabricated a capture timestamp");
   check(replayLive.data.values.some((item) => item.id === "engine_speed" && item.value === 1726), "replay live response did not decode engine speed");
+  check(replayLive.data.readout_ecu_ids?.includes("7E8") && replayLive.data.live_pid_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.live_pid_readout_status === "reported" && item.monitor_values?.some((value) => value.id === "engine_speed") && item.vehicle_command_enabled === false && item.would_transmit === false), "replay live PID response did not retain a read-only ECU-scoped snapshot");
+  const mixedLivePidServer = createLocalBridgeApp({ pairingToken: token, replayLogText: ["can0 7E8#04410C1AF8", "can0 7E9#03410C1A"].join("\n") });
+  const mixedLivePidPort = await new Promise((resolve) => {
+    mixedLivePidServer.listen(0, "127.0.0.1", () => resolve(mixedLivePidServer.address().port));
+  });
+  try {
+    const mixedLivePid = await post(mixedLivePidPort, "read_live_pid_snapshot", token);
+    check(mixedLivePid.ok === false && mixedLivePid.errors?.includes("replay_live_pid_payload_unparsed") && mixedLivePid.data.readout_ecu_ids?.join(",") === "7E8,7E9" && mixedLivePid.data.live_pid_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.live_pid_readout_status === "reported" && item.monitor_values?.some((value) => value.id === "engine_speed" && value.value === 1726)) && mixedLivePid.data.live_pid_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.live_pid_readout_status === "unparsed" && item.error_codes?.includes("replay_live_pid_payload_unparsed") && item.failed_pids?.includes("0C") && item.monitor_values?.length === 0) && mixedLivePid.would_transmit === false, "mixed live PID replay discarded the valid ECU or lost the malformed ECU response");
+  } finally {
+    await new Promise((resolve) => mixedLivePidServer.close(resolve));
+  }
+  const incompleteLivePidTransport = decodeReplayLog("can0 7EA#1006410C1AF8");
+  check(incompleteLivePidTransport.readoutErrors.live_pid_snapshot === "replay_live_pid_transport_incomplete" && incompleteLivePidTransport.readoutErrors.readiness_snapshot === null && incompleteLivePidTransport.readoutErrors.supported_pids === null && incompleteLivePidTransport.livePidEcuOutcomes?.some((item) => item.source_ecu === "7EA" && item.pid === "0C" && item.error_codes?.includes("replay_live_pid_transport_incomplete")), "incomplete live PID transport was not isolated as an ECU- and PID-scoped failure");
   check(replayLive.data.values.some((item) => item.id === "coolant_temp" && item.value === 83), "replay live response did not decode coolant temperature");
   check(replayLive.data.values.some((item) => item.id === "control_module_voltage" && item.value === 14.2), "replay live response did not decode module voltage");
   check(replayLive.data.values.some((item) => item.id === "mil_status" && item.value === true), "replay live response did not decode MIL status");

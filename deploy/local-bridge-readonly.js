@@ -356,6 +356,41 @@ function buildOnboardMonitorEcuSnapshots(tests = [], outcomes = []) {
     };
   });
 }
+
+function buildLivePidEcuSnapshots(values = [], outcomes = []) {
+  const rowsByEcu = new Map();
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return;
+    const sourceEcu = String(value.source_ecu || value.sourceEcu || value.ecu || value.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    const row = rowsByEcu.get(sourceEcu) || { values: [], errors: [], failedPids: [] };
+    row.values.push({ ...value, source_ecu: sourceEcu });
+    rowsByEcu.set(sourceEcu, row);
+  });
+  (Array.isArray(outcomes) ? outcomes : []).forEach((outcome) => {
+    if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) return;
+    const sourceEcu = String(outcome.source_ecu || outcome.sourceEcu || outcome.ecu || outcome.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    const row = rowsByEcu.get(sourceEcu) || { values: [], errors: [], failedPids: [] };
+    row.errors.push(...(outcome.error_codes || []));
+    if (outcome.pid) row.failedPids.push(outcome.pid);
+    rowsByEcu.set(sourceEcu, row);
+  });
+  return [...rowsByEcu.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([sourceEcu, row]) => {
+    const errorCodes = [...new Set(row.errors)];
+    const failedPids = [...new Set(row.failedPids)];
+    return {
+      source_ecu: sourceEcu,
+      live_pid_readout_status: errorCodes.length ? "unparsed" : "reported",
+      monitor_values: row.values,
+      ...(failedPids.length ? { failed_pids: failedPids } : {}),
+      ...(errorCodes.length ? { error_codes: errorCodes } : {}),
+      read_only: true,
+      vehicle_command_enabled: false,
+      would_transmit: false
+    };
+  });
+}
 const SAMPLE_ONBOARD_MONITOR_TESTS = [
   { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
   { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
@@ -746,13 +781,16 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   if (request.intent === "read_live_pid_snapshot" && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.live_pid_snapshot
       || (replaySnapshot.readoutObserved?.live_pid_snapshot ? null : "replay_live_pid_not_observed");
+    const livePidEcuSnapshots = buildLivePidEcuSnapshots(replaySnapshot.liveValues, replaySnapshot.livePidEcuOutcomes);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         supported_pids: replaySnapshot.supportedPids,
-        values: replaySnapshot.liveValues
+        values: replaySnapshot.liveValues,
+        readout_ecu_ids: livePidEcuSnapshots.map((item) => item.source_ecu),
+        live_pid_ecu_snapshots: livePidEcuSnapshots
       }
     };
   }
@@ -1117,6 +1155,7 @@ export function decodeReplayLog(text) {
     .filter((packet) => packet.bytes.length));
   const dtcs = [];
   const liveValues = [];
+  const livePidEcuOutcomes = [];
   const freezeFrameValues = [];
   const freezeFrameEcuOutcomes = [];
   const ecuInfoValues = [];
@@ -1189,6 +1228,11 @@ export function decodeReplayLog(text) {
     onboardMonitorEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode], ...details });
   };
 
+  const recordLivePidEcuOutcome = (ecu, errorCode, pid = null) => {
+    if (!ecu || !errorCode) return;
+    livePidEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode], ...(pid ? { pid } : {}) });
+  };
+
   packets.forEach((packet) => {
     const { ecu, bytes } = packet;
     if (ecu) ecus.add(ecu);
@@ -1199,6 +1243,9 @@ export function decodeReplayLog(text) {
       if (packet.responseService === 0x41 && packet.responsePid === 0x01) recordReadinessEcuOutcome(ecu, "replay_readiness_transport_incomplete");
       if (packet.responseService === 0x41 && isSupportedPidBase(packet.responsePid)) recordSupportedPidEcuOutcome(ecu, "replay_supported_pids_transport_incomplete");
       if (packet.responseService === 0x46) recordOnboardMonitorEcuOutcome(ecu, "replay_onboard_monitor_transport_incomplete");
+      if (packet.responseService === 0x41 && packet.responsePid !== 0x01 && !isSupportedPidBase(packet.responsePid)) {
+        recordLivePidEcuOutcome(ecu, "replay_live_pid_transport_incomplete", toHexByte(packet.responsePid));
+      }
       if ([0x43, 0x47, 0x4A].includes(packet.responseService)) {
         const dtcStatus = packet.responseService === 0x47 ? "pending" : packet.responseService === 0x4A ? "permanent" : "stored";
         recordDtcEcuOutcome(ecu, dtcStatus, "unparsed", { error_codes: ["replay_dtc_transport_incomplete"] });
@@ -1369,6 +1416,7 @@ export function decodeReplayLog(text) {
       const decodedValues = decodeLivePidValues(pid, bytes.slice(serviceIndex + 2));
       if (!decodedValues.length) {
         readoutErrors.live_pid_snapshot = "replay_live_pid_payload_unparsed";
+        recordLivePidEcuOutcome(ecu, "replay_live_pid_payload_unparsed", pid);
         return;
       }
       readoutObserved.live_pid_snapshot = true;
@@ -1391,6 +1439,7 @@ export function decodeReplayLog(text) {
     dtcEcuOutcomes: uniqueBy(dtcEcuOutcomes, (item) => `${item.ecu || ""}:${item.dtc_status || ""}:${item.status || ""}:${item.negative_requested_service || ""}:${item.negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
     liveValues: uniqueBy(liveValues, (item) => `${item.id}:${item.source_ecu || ""}`),
+    livePidEcuOutcomes: uniqueBy(livePidEcuOutcomes, (item) => `${item.source_ecu || ""}:${item.pid || ""}:${(item.error_codes || []).join(",")}`),
     freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}:${item.source_ecu || ""}`),
     freezeFrameEcuOutcomes: uniqueBy(freezeFrameEcuOutcomes, (item) => `${item.source_ecu || ""}:${item.negative_requested_service || ""}:${item.negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     ecuInfoValues: uniqueBy(ecuInfoValues, (item) => `${item.id}:${item.source_ecu || ""}`),
