@@ -583,6 +583,8 @@ try {
       const response = await post(negativeReplayPort, intent);
       check(response.ok === false && response.errors.includes(error) && response.would_transmit === false, `replay ${intent} did not retain its negative OBD response as a read-only failure`);
     }
+    const negativeMode09 = await post(negativeReplayPort, "read_ecu_info");
+    check(negativeMode09.data.readout_ecu_ids?.includes("7E8") && negativeMode09.data.ecu_info_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.ecu_info_readout_status === "unparsed" && item.ecu_info_negative_response_service === "09" && item.ecu_info_negative_response_code === "22" && item.error_codes?.includes("replay_negative_response_09_22") && item.item_count === 0 && item.vehicle_command_enabled === false && item.would_transmit === false), "replay Mode 09 negative response lost its ECU-scoped read-only outcome");
     const negativeMode01Replay = decodeReplayLog("can0 7E8#037F0112");
     check(negativeMode01Replay.readoutErrors.live_pid_snapshot === null && negativeMode01Replay.readoutErrors.readiness_snapshot === null && negativeMode01Replay.readoutErrors.supported_pids === null, "replay Mode 01 negative response was assigned to an unknown PID readout");
   } finally {
@@ -608,6 +610,20 @@ try {
   const multiEcuFreezeFrameReplay = decodeReplayLog(["can0 7E8#054202000171", "can0 7E9#054202000300"].join("\n"));
   check(multiEcuFreezeFrameReplay.triggerDtc === "P0171" && multiEcuFreezeFrameReplay.triggerDtcEntries?.some((item) => item.code === "P0171" && item.source_ecu === "7E8") && multiEcuFreezeFrameReplay.triggerDtcEntries?.some((item) => item.code === "P0300" && item.source_ecu === "7E9"), "replay freeze-frame trigger DTCs lost ECU-specific evidence");
 
+  const mixedMode09Server = createLocalBridgeApp({
+    pairingToken: token,
+    replayLogText: ["can0 7E8#100B49040143414C", "can0 7E8#212D31323334", "can0 7E9#037F0922"].join("\n")
+  });
+  const mixedMode09Port = await new Promise((resolve) => {
+    mixedMode09Server.listen(0, "127.0.0.1", () => resolve(mixedMode09Server.address().port));
+  });
+  try {
+    const mixedMode09 = await post(mixedMode09Port, "read_ecu_info");
+    check(mixedMode09.ok === false && mixedMode09.data.values?.some((item) => item.id === "calibration_id" && item.value === "CAL-1234" && item.source_ecu === "7E8") && mixedMode09.data.readout_ecu_ids?.join(",") === "7E8,7E9" && mixedMode09.data.ecu_info_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.ecu_info_readout_status === "reported" && item.item_ids?.includes("calibration_id")) && mixedMode09.data.ecu_info_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.ecu_info_readout_status === "unparsed" && item.ecu_info_negative_response_code === "22" && item.item_count === 0) && mixedMode09.would_transmit === false, "mixed Mode 09 replay discarded valid ECU data or lost the failed ECU outcome");
+  } finally {
+    await new Promise((resolve) => mixedMode09Server.close(resolve));
+  }
+
   const replayIsoTpCases = [
     ["complete", ["can0 7E8#100B49040143414C", "can0 7E8#212D31323334"].join("\n"), true],
     ["dlc_complete", ["7E8 [8] 10 0B 49 04 01 43 41 4C", "7E8 [6] 21 2D 31 32 33 34"].join("\n"), true],
@@ -630,7 +646,7 @@ try {
   });
   try {
     const incompleteIsoTpReplay = await post(incompleteIsoTpReplayPort, "read_ecu_info");
-    check(incompleteIsoTpReplay.ok === false && incompleteIsoTpReplay.errors.includes("replay_ecu_info_transport_incomplete") && incompleteIsoTpReplay.data.values.length === 0, "incomplete replay ISO-TP ECU information was not reported as a transport failure");
+    check(incompleteIsoTpReplay.ok === false && incompleteIsoTpReplay.errors.includes("replay_ecu_info_transport_incomplete") && incompleteIsoTpReplay.data.values.length === 0 && incompleteIsoTpReplay.data.readout_ecu_ids?.includes("7E8") && incompleteIsoTpReplay.data.ecu_info_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.ecu_info_readout_status === "unparsed" && item.error_codes?.includes("replay_ecu_info_transport_incomplete") && item.item_count === 0), "incomplete replay ISO-TP ECU information was not reported as an ECU-scoped transport failure");
   } finally {
     await new Promise((resolve) => incompleteIsoTpReplayServer.close(resolve));
   }
