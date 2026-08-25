@@ -8255,12 +8255,13 @@
       if (status === "unknown") return "unknown";
       return "reported";
     };
-    const collectScopedObservedRows = (snapshot, arrayAliases, statusAliases) => {
-      const scopedRows = arrayAliases
+    const readScopedObservedRows = (snapshot, arrayAliases) => arrayAliases
         .map((key) => snapshot?.[key])
         .find((value) => Array.isArray(value) && value.length > 0)
         || arrayAliases.map((key) => snapshot?.[key]).find(Array.isArray)
         || [];
+    const collectScopedObservedRows = (snapshot, arrayAliases, statusAliases) => {
+      const scopedRows = readScopedObservedRows(snapshot, arrayAliases);
       return scopedRows.flatMap((item) => {
         if (!item || typeof item !== "object" || Array.isArray(item)) return [];
         const rawStatus = statusAliases.map((key) => item[key]).find((value) => value !== undefined && value !== null);
@@ -8274,6 +8275,19 @@
         }];
       });
     };
+    const collectScopedObservedEcuIdentities = (snapshot, arrayAliases) => new Set(readScopedObservedRows(snapshot, arrayAliases)
+      .map((item) => normalizeComparableCanEcuAddress(item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || null)
+        || String(item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || "").trim().toUpperCase())
+      .filter(Boolean));
+    const matchesScopedObservedEcu = (identities, ecuId) => {
+      const identity = normalizeComparableCanEcuAddress(ecuId) || String(ecuId || "").trim().toUpperCase();
+      return Boolean(identity && identities.has(identity));
+    };
+    const livePidScopedEcuIdentities = collectScopedObservedEcuIdentities(sourceLivePidSnapshot, ["livePidEcuSnapshots", "live_pid_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"]);
+    const freezeFrameScopedEcuIdentities = collectScopedObservedEcuIdentities(sourceFreezeFrameSnapshot, ["freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"]);
+    const readinessScopedEcuIdentities = collectScopedObservedEcuIdentities(sourceReadinessSnapshot, ["readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"]);
+    const onboardMonitorScopedEcuIdentities = collectScopedObservedEcuIdentities(sourceOnboardMonitorSnapshot, ["onboardMonitorEcuSnapshots", "onboard_monitor_ecu_snapshots", "mode06EcuSnapshots", "mode06_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"]);
+    const supportedPidScopedEcuIdentities = collectScopedObservedEcuIdentities(sourceSupportedPidMatrix, ["supportedPidEcuSnapshots", "supported_pid_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"]);
     const ecuInfoNameCandidates = (Array.isArray(ecuInfoSnapshot?.items) ? ecuInfoSnapshot.items : []).flatMap((item) => {
       if (!item || typeof item !== "object" || Array.isArray(item)) return [];
       const id = String(item.id || item.key || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
@@ -8309,22 +8323,23 @@
         readoutStatus: item?.status || item?.responseStatus || item?.response_status || null
       })));
     add("live_pid_snapshot", [
-      { ecuId: livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu, ecuName: livePidSnapshot?.sourceEcuName || livePidSnapshot?.source_ecu_name },
+      ...(matchesScopedObservedEcu(livePidScopedEcuIdentities, livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu) ? [] : [{ ecuId: livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu, ecuName: livePidSnapshot?.sourceEcuName || livePidSnapshot?.source_ecu_name }]),
       ...(livePidSnapshot?.monitorValues || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...collectScopedObservedRows(sourceLivePidSnapshot, ["livePidEcuSnapshots", "live_pid_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["livePidReadoutStatus", "live_pid_readout_status", "readoutStatus", "readout_status"])
     ]);
     add("freeze_frame_snapshot", [
-      { ecuId: freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu, ecuName: freezeFrameSnapshot?.sourceEcuName || freezeFrameSnapshot?.source_ecu_name },
+      ...(matchesScopedObservedEcu(freezeFrameScopedEcuIdentities, freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu) ? [] : [{ ecuId: freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu, ecuName: freezeFrameSnapshot?.sourceEcuName || freezeFrameSnapshot?.source_ecu_name }]),
       ...[freezeFrameSnapshot?.readoutEcuIds, freezeFrameSnapshot?.readout_ecu_ids]
         .filter(Array.isArray)
         .flat()
+        .filter((ecuId) => !matchesScopedObservedEcu(freezeFrameScopedEcuIdentities, ecuId))
         .map((ecuId) => ({ ecuId })),
       ...(freezeFrameSnapshot?.monitorValues || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...collectScopedObservedRows(sourceFreezeFrameSnapshot, ["freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["freezeFrameReadoutStatus", "freeze_frame_readout_status", "readoutStatus", "readout_status"])
     ]);
     add("readiness_snapshot", [
-      { ecuId: readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu, ecuName: readinessSnapshot?.sourceEcuName || readinessSnapshot?.source_ecu_name },
+      ...(matchesScopedObservedEcu(readinessScopedEcuIdentities, readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu) ? [] : [{ ecuId: readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu, ecuName: readinessSnapshot?.sourceEcuName || readinessSnapshot?.source_ecu_name }]),
       ...collectScopedObservedRows(sourceReadinessSnapshot, ["readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["readinessReadoutStatus", "readiness_readout_status", "readoutStatus", "readout_status"])
     ]);
     const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
@@ -8350,16 +8365,17 @@
       )
     ]);
     add("onboard_monitor_snapshot", [
-      { ecuId: onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu, ecuName: onboardMonitorSnapshot?.sourceEcuName || onboardMonitorSnapshot?.source_ecu_name },
+      ...(matchesScopedObservedEcu(onboardMonitorScopedEcuIdentities, onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu) ? [] : [{ ecuId: onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu, ecuName: onboardMonitorSnapshot?.sourceEcuName || onboardMonitorSnapshot?.source_ecu_name }]),
       ...[onboardMonitorSnapshot?.readoutEcuIds, onboardMonitorSnapshot?.readout_ecu_ids]
         .filter(Array.isArray)
         .flat()
+        .filter((ecuId) => !matchesScopedObservedEcu(onboardMonitorScopedEcuIdentities, ecuId))
         .map((ecuId) => ({ ecuId })),
       ...(onboardMonitorSnapshot?.tests || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...collectScopedObservedRows(sourceOnboardMonitorSnapshot, ["onboardMonitorEcuSnapshots", "onboard_monitor_ecu_snapshots", "mode06EcuSnapshots", "mode06_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status", "readoutStatus", "readout_status"])
     ]);
     add("supported_pid_matrix", [
-      { ecuId: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu, ecuName: supportedPidMatrix?.sourceEcuName || supportedPidMatrix?.source_ecu_name },
+      ...(matchesScopedObservedEcu(supportedPidScopedEcuIdentities, supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu) ? [] : [{ ecuId: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu, ecuName: supportedPidMatrix?.sourceEcuName || supportedPidMatrix?.source_ecu_name }]),
       ...collectScopedObservedRows(sourceSupportedPidMatrix, ["supportedPidEcuSnapshots", "supported_pid_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["supportedPidReadoutStatus", "supported_pid_readout_status", "readoutStatus", "readout_status"])
     ]);
     const byId = new Map();
@@ -10096,19 +10112,7 @@
       if (!snapshot || typeof snapshot !== "object" || seenSnapshots.has(snapshot)) return;
       seenSnapshots.add(snapshot);
       if (scoped && !isReportedScopedSnapshot(snapshot)) return;
-      rememberEcu(snapshot.sourceEcu || snapshot.source_ecu || snapshot.ecu || snapshot.address, snapshot.sourceEcuName || snapshot.source_ecu_name || snapshot.ecuName || snapshot.ecu_name || null);
-      [
-        snapshot.monitorValues,
-        snapshot.monitor_values,
-        snapshot.values,
-        snapshot.items,
-        snapshot.tests,
-        snapshot.monitors
-      ].filter(Array.isArray).flat().forEach((row) => {
-        if (!row || typeof row !== "object") return;
-        rememberEcu(row.sourceEcu || row.source_ecu || row.ecu || row.address || row.ecu_id || row.ecuId, row.sourceEcuName || row.source_ecu_name || row.ecuName || row.ecu_name || null);
-      });
-      [
+      const scopedSnapshots = [
         snapshot.freezeFrameEcuSnapshots,
         snapshot.freeze_frame_ecu_snapshots,
         snapshot.readinessEcuSnapshots,
@@ -10121,7 +10125,29 @@
         snapshot.onboard_monitor_ecu_snapshots,
         snapshot.ecuInfoEcuSnapshots,
         snapshot.ecu_info_ecu_snapshots
-      ].filter(Array.isArray).flat().forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, seenSnapshots, true));
+      ].filter(Array.isArray).flat();
+      const sourceEcu = snapshot.sourceEcu || snapshot.source_ecu || snapshot.ecu || snapshot.address || null;
+      const sourceIdentity = normalizeEcuIdentity(sourceEcu);
+      const sourceComparableAddress = normalizeComparableCanEcuAddress(sourceEcu);
+      const sourceHasScopedOutcome = !scoped && sourceIdentity && scopedSnapshots.some((item) => {
+        const itemEcu = item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || null;
+        if (normalizeEcuIdentity(itemEcu) === sourceIdentity) return true;
+        const itemComparableAddress = normalizeComparableCanEcuAddress(itemEcu);
+        return sourceComparableAddress && itemComparableAddress && isComparableCanEcuAddressMatch(sourceComparableAddress, itemComparableAddress);
+      });
+      if (!sourceHasScopedOutcome) rememberEcu(sourceEcu, snapshot.sourceEcuName || snapshot.source_ecu_name || snapshot.ecuName || snapshot.ecu_name || null);
+      [
+        snapshot.monitorValues,
+        snapshot.monitor_values,
+        snapshot.values,
+        snapshot.items,
+        snapshot.tests,
+        snapshot.monitors
+      ].filter(Array.isArray).flat().forEach((row) => {
+        if (!row || typeof row !== "object") return;
+        rememberEcu(row.sourceEcu || row.source_ecu || row.ecu || row.address || row.ecu_id || row.ecuId, row.sourceEcuName || row.source_ecu_name || row.ecuName || row.ecu_name || null);
+      });
+      scopedSnapshots.forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, seenSnapshots, true));
     };
     const addReportedReadout = (snapshot, statusKeys, service, responseService = null) => {
       const status = statusKeys.map((key) => snapshot?.[key]).find((value) => value !== undefined && value !== null) || "unknown";
