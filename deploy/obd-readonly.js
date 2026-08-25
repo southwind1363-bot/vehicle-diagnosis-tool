@@ -8516,14 +8516,16 @@
     supportedPidMatrix = {}
   } = {}) {
     const applicability = normalizeVehicleApplicabilitySnapshot(vehicleApplicability || {});
-    // Retained failed payload rows must never satisfy a vehicle/ECU applicability match.
-    dtcSnapshot = isReadableDiagnosticSnapshot(dtcSnapshot, ["dtcReadoutStatus", "dtc_readout_status"]) ? dtcSnapshot : {};
-    livePidSnapshot = isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot : {};
-    freezeFrameSnapshot = isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot : {};
-    readinessSnapshot = isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? readinessSnapshot : {};
-    ecuInfoSnapshot = isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? ecuInfoSnapshot : {};
-    onboardMonitorSnapshot = isReadableDiagnosticSnapshot(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]) ? onboardMonitorSnapshot : {};
-    supportedPidMatrix = isReadableDiagnosticSnapshot(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"]) ? supportedPidMatrix : {};
+    const observedEcuSummary = buildObservedEcuSummary({
+      dtcSnapshot,
+      freezeFrameSnapshot,
+      readinessSnapshot,
+      ecuInfoSnapshot,
+      onboardMonitorSnapshot,
+      livePidSnapshot,
+      ecuResponseSummary,
+      supportedPidMatrix
+    });
     const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
       .filter(isObservableEcuResponse);
@@ -8531,45 +8533,11 @@
       .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
       .map(normalizeComparableCanEcuAddress)
       .filter(Boolean))].sort();
+    const reachableReadoutStatuses = new Set(["reported", "negative_response", "pending_response"]);
     const observedAddressInputs = [
-      dtcSnapshot?.sourceEcu,
-      dtcSnapshot?.source_ecu,
-      ...(dtcSnapshot?.dtcs || []).map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || null),
-      ...[dtcSnapshot?.ecuResponses, dtcSnapshot?.ecu_responses]
-        .filter(Array.isArray)
-        .flat()
-        .map((item) => item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId || null),
-      livePidSnapshot?.sourceEcu,
-      livePidSnapshot?.source_ecu,
-      ...(livePidSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
-      freezeFrameSnapshot?.sourceEcu,
-      freezeFrameSnapshot?.source_ecu,
-      ...(Array.isArray(freezeFrameSnapshot?.readoutEcuIds) ? freezeFrameSnapshot.readoutEcuIds : []),
-      ...(Array.isArray(freezeFrameSnapshot?.readout_ecu_ids) ? freezeFrameSnapshot.readout_ecu_ids : []),
-      ...(freezeFrameSnapshot?.monitorValues || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
-      ...(freezeFrameSnapshot?.triggerDtcEntries || freezeFrameSnapshot?.trigger_dtc_entries || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
-      readinessSnapshot?.sourceEcu,
-      readinessSnapshot?.source_ecu,
-      ...[
-        ...(Array.isArray(readinessSnapshot?.readinessEcuSnapshots) ? readinessSnapshot.readinessEcuSnapshots : []),
-        ...(Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) ? readinessSnapshot.readiness_ecu_snapshots : [])
-      ].map((item) => item?.sourceEcu || item?.source_ecu || null),
-      ecuInfoSnapshot?.sourceEcu,
-      ecuInfoSnapshot?.source_ecu,
-      ...(Array.isArray(ecuInfoSnapshot?.readoutEcuIds) ? ecuInfoSnapshot.readoutEcuIds : []),
-      ...(Array.isArray(ecuInfoSnapshot?.readout_ecu_ids) ? ecuInfoSnapshot.readout_ecu_ids : []),
-      ...(ecuInfoSnapshot?.items || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
-      onboardMonitorSnapshot?.sourceEcu,
-      onboardMonitorSnapshot?.source_ecu,
-      ...(Array.isArray(onboardMonitorSnapshot?.readoutEcuIds) ? onboardMonitorSnapshot.readoutEcuIds : []),
-      ...(Array.isArray(onboardMonitorSnapshot?.readout_ecu_ids) ? onboardMonitorSnapshot.readout_ecu_ids : []),
-      ...(onboardMonitorSnapshot?.tests || []).map((item) => item?.sourceEcu || item?.source_ecu || null),
-      supportedPidMatrix?.sourceEcu,
-      supportedPidMatrix?.source_ecu,
-      ...[
-        ...(Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots) ? supportedPidMatrix.supportedPidEcuSnapshots : []),
-        ...(Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots) ? supportedPidMatrix.supported_pid_ecu_snapshots : [])
-      ].map((item) => item?.sourceEcu || item?.source_ecu || null),
+      ...(observedEcuSummary.ecus || [])
+        .filter((item) => Object.values(item?.readoutStatusById || item?.readout_status_by_id || {}).some((status) => reachableReadoutStatuses.has(String(status || "").trim().toLowerCase())))
+        .map((item) => item?.id || null),
       ...respondedEcuAddresses
     ];
     const observedAddresses = [...new Set(observedAddressInputs.map(normalizeComparableCanEcuAddress).filter(Boolean))].sort();
