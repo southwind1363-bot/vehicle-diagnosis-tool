@@ -745,6 +745,20 @@ try {
   const replayOnboardMonitor = await post(replayPort, "read_onboard_monitor");
   check(replayOnboardMonitor.data.tests.some((item) => item.test_id === "01" && item.value === 100), "replay Mode 06 did not decode passing test");
   check(replayOnboardMonitor.data.tests.some((item) => item.test_id === "02" && item.value === 300), "replay Mode 06 did not decode failing test");
+  check(replayOnboardMonitor.data.readout_ecu_ids?.includes("7E8") && replayOnboardMonitor.data.onboard_monitor_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.onboard_monitor_readout_status === "reported" && item.tests?.length === 2 && item.vehicle_command_enabled === false && item.would_transmit === false), "replay Mode 06 did not retain a read-only ECU-scoped snapshot");
+
+  const mixedOnboardMonitorServer = createLocalBridgeApp({ pairingToken: token, replayLogText: ["can0 7E8#094601010064003200C8", "can0 7E9#037F0631"].join("\n") });
+  const mixedOnboardMonitorPort = await new Promise((resolve) => {
+    mixedOnboardMonitorServer.listen(0, "127.0.0.1", () => resolve(mixedOnboardMonitorServer.address().port));
+  });
+  try {
+    const mixedOnboardMonitor = await post(mixedOnboardMonitorPort, "read_onboard_monitor", token);
+    check(mixedOnboardMonitor.ok === false && mixedOnboardMonitor.errors?.includes("replay_negative_response_06_31") && mixedOnboardMonitor.data.readout_ecu_ids?.join(",") === "7E8,7E9" && mixedOnboardMonitor.data.onboard_monitor_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.onboard_monitor_readout_status === "reported" && item.tests?.some((test) => test.test_id === "01" && test.value === 100)) && mixedOnboardMonitor.data.onboard_monitor_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.onboard_monitor_readout_status === "unparsed" && item.error_codes?.includes("replay_negative_response_06_31") && item.negative_requested_service === "06" && item.negative_response_code === "31" && item.tests?.length === 0) && mixedOnboardMonitor.would_transmit === false, "mixed Mode 06 replay discarded the valid ECU or lost the negative-response ECU");
+  } finally {
+    await new Promise((resolve) => mixedOnboardMonitorServer.close(resolve));
+  }
+  const incompleteOnboardMonitorTransport = decodeReplayLog("can0 7EA#1009460101006400");
+  check(incompleteOnboardMonitorTransport.readoutErrors.onboard_monitor === "replay_onboard_monitor_transport_incomplete" && incompleteOnboardMonitorTransport.onboardMonitorEcuOutcomes?.some((item) => item.source_ecu === "7EA" && item.error_codes?.includes("replay_onboard_monitor_transport_incomplete")), "incomplete Mode 06 transport was not retained as an ECU-scoped monitor failure");
 
   const replayLive = await post(replayPort, "read_live_pid_snapshot");
   check(!Object.hasOwn(replayLive.data, "captured_at"), "replay live PID response fabricated a capture timestamp");

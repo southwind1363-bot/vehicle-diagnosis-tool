@@ -322,6 +322,40 @@ function buildSupportedPidEcuSnapshots(snapshots = [], outcomes = []) {
     };
   });
 }
+
+function buildOnboardMonitorEcuSnapshots(tests = [], outcomes = []) {
+  const rowsByEcu = new Map();
+  (Array.isArray(tests) ? tests : []).forEach((test) => {
+    if (!test || typeof test !== "object" || Array.isArray(test)) return;
+    const sourceEcu = String(test.source_ecu || test.sourceEcu || test.ecu || test.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    const row = rowsByEcu.get(sourceEcu) || { tests: [], errors: [], details: {} };
+    row.tests.push({ ...test, source_ecu: sourceEcu });
+    rowsByEcu.set(sourceEcu, row);
+  });
+  (Array.isArray(outcomes) ? outcomes : []).forEach((outcome) => {
+    if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) return;
+    const sourceEcu = String(outcome.source_ecu || outcome.sourceEcu || outcome.ecu || outcome.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    const row = rowsByEcu.get(sourceEcu) || { tests: [], errors: [], details: {} };
+    row.errors.push(...(outcome.error_codes || []));
+    row.details = { ...row.details, ...outcome };
+    rowsByEcu.set(sourceEcu, row);
+  });
+  return [...rowsByEcu.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([sourceEcu, row]) => {
+    const errorCodes = [...new Set(row.errors)];
+    return {
+      ...row.details,
+      source_ecu: sourceEcu,
+      onboard_monitor_readout_status: errorCodes.length ? "unparsed" : "reported",
+      tests: row.tests,
+      ...(errorCodes.length ? { error_codes: errorCodes } : {}),
+      read_only: true,
+      vehicle_command_enabled: false,
+      would_transmit: false
+    };
+  });
+}
 const SAMPLE_ONBOARD_MONITOR_TESTS = [
   { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
   { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
@@ -661,12 +695,15 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   if (request.intent === "read_onboard_monitor" && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.onboard_monitor
       || (replaySnapshot.readoutObserved?.onboard_monitor ? null : "replay_onboard_monitor_not_observed");
+    const onboardMonitorEcuSnapshots = buildOnboardMonitorEcuSnapshots(replaySnapshot.onboardMonitorTests, replaySnapshot.onboardMonitorEcuOutcomes);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        tests: replaySnapshot.onboardMonitorTests
+        tests: replaySnapshot.onboardMonitorTests,
+        readout_ecu_ids: onboardMonitorEcuSnapshots.map((item) => item.source_ecu),
+        onboard_monitor_ecu_snapshots: onboardMonitorEcuSnapshots
       }
     };
   }
@@ -1086,6 +1123,7 @@ export function decodeReplayLog(text) {
   const ecuInfoEcuOutcomes = [];
   const dtcEcuOutcomes = [];
   const onboardMonitorTests = [];
+  const onboardMonitorEcuOutcomes = [];
   const supportedPids = new Set();
   const supportedPidsByEcu = new Map();
   const supportedPidPageBasesByEcu = new Map();
@@ -1146,6 +1184,11 @@ export function decodeReplayLog(text) {
     readinessEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode] });
   };
 
+  const recordOnboardMonitorEcuOutcome = (ecu, errorCode, details = {}) => {
+    if (!ecu || !errorCode) return;
+    onboardMonitorEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode], ...details });
+  };
+
   packets.forEach((packet) => {
     const { ecu, bytes } = packet;
     if (ecu) ecus.add(ecu);
@@ -1155,6 +1198,7 @@ export function decodeReplayLog(text) {
       if (packet.responseService === 0x42) recordFreezeFrameEcuOutcome(ecu, "replay_freeze_frame_transport_incomplete");
       if (packet.responseService === 0x41 && packet.responsePid === 0x01) recordReadinessEcuOutcome(ecu, "replay_readiness_transport_incomplete");
       if (packet.responseService === 0x41 && isSupportedPidBase(packet.responsePid)) recordSupportedPidEcuOutcome(ecu, "replay_supported_pids_transport_incomplete");
+      if (packet.responseService === 0x46) recordOnboardMonitorEcuOutcome(ecu, "replay_onboard_monitor_transport_incomplete");
       if ([0x43, 0x47, 0x4A].includes(packet.responseService)) {
         const dtcStatus = packet.responseService === 0x47 ? "pending" : packet.responseService === 0x4A ? "permanent" : "stored";
         recordDtcEcuOutcome(ecu, dtcStatus, "unparsed", { error_codes: ["replay_dtc_transport_incomplete"] });
@@ -1191,6 +1235,13 @@ export function decodeReplayLog(text) {
             ecu_info_negative_response_code: responseCode
           });
         }
+      }
+      if (bytes[serviceIndex + 1] === 0x06) {
+        const responseCode = toHexByte(bytes[serviceIndex + 2]);
+        if (responseCode) recordOnboardMonitorEcuOutcome(ecu, `replay_negative_response_06_${responseCode}`, {
+          negative_requested_service: "06",
+          negative_response_code: responseCode
+        });
       }
       return;
     }
@@ -1275,6 +1326,7 @@ export function decodeReplayLog(text) {
       const decoded = decodeOnboardMonitorTest(bytes.slice(serviceIndex + 1));
       if (!decoded) {
         readoutErrors.onboard_monitor = "replay_onboard_monitor_payload_incomplete";
+        recordOnboardMonitorEcuOutcome(ecu, "replay_onboard_monitor_payload_incomplete");
         return;
       }
       readoutObserved.onboard_monitor = true;
@@ -1344,6 +1396,7 @@ export function decodeReplayLog(text) {
     ecuInfoValues: uniqueBy(ecuInfoValues, (item) => `${item.id}:${item.source_ecu || ""}`),
     ecuInfoEcuOutcomes: uniqueBy(ecuInfoEcuOutcomes, (item) => `${item.source_ecu || ""}:${item.ecu_info_negative_response_service || ""}:${item.ecu_info_negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}:${item.source_ecu || ""}`),
+    onboardMonitorEcuOutcomes: uniqueBy(onboardMonitorEcuOutcomes, (item) => `${item.source_ecu || ""}:${item.negative_requested_service || ""}:${item.negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     readinessEcuSnapshots: uniqueBy(readinessEcuSnapshots, (item) => item.source_ecu || "default"),
     readinessEcuOutcomes: uniqueBy(readinessEcuOutcomes, (item) => `${item.source_ecu || ""}:${(item.error_codes || []).join(",")}`),
     triggerDtc,

@@ -5880,10 +5880,11 @@
     const explicitReadoutStatus = String(data.onboard_monitor_readout_status || data.onboardMonitorReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
     const bridgeSafety = readBridgeSnapshotSafety(response, sourceErrorCodes.length === 0 && (shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse || hasExplicitReadoutStatus || hasTestEvidence));
+    const hasScopedOnboardMonitorEvidence = onboardMonitorEcuSnapshots.length > 0;
     const resolvedBridgeSafety = malformedMode06Alias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : sourceErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
-      ? { ...bridgeSafety, ok: false, blocked: hasTestEvidence || shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse, unparsed: !hasTestEvidence && !shouldDecodeRawOnboardMonitor && !hasRawEcuOnboardMonitorResponse }
+      ? { ...bridgeSafety, ok: false, blocked: !hasScopedOnboardMonitorEvidence && (hasTestEvidence || shouldDecodeRawOnboardMonitor || hasRawEcuOnboardMonitorResponse), unparsed: hasScopedOnboardMonitorEvidence || (!hasTestEvidence && !shouldDecodeRawOnboardMonitor && !hasRawEcuOnboardMonitorResponse) }
       : scopedOnboardMonitorErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
         ? { ...bridgeSafety, ok: false, unparsed: true }
       : bridgeSafety;
