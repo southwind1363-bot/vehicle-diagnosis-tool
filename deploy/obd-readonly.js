@@ -3788,6 +3788,7 @@
   }
 
   function normalizeBridgeDriverReadiness(data = {}) {
+    const registrationValue = String(data.registration_status || data.registrationStatus || "").trim().toLowerCase();
     const readinessValue = String(data.driver_readiness_status || data.driverReadinessStatus || "").trim().toLowerCase();
     const nextCheckValue = String(data.next_check || data.nextCheck || "").trim().toLowerCase();
     const readCount = (...values) => {
@@ -3819,11 +3820,32 @@
     const staticReadyVciCount = readCount(data.static_ready_vci_count, data.staticReadyVciCount);
     const staticBlockedVciCount = readCount(data.static_blocked_vci_count, data.staticBlockedVciCount);
     const selectedStaticReadyDeviceId = readDeviceId(data.selected_static_ready_device_id, data.selectedStaticReadyDeviceId);
+    const registrationStatus = ["no_registered_driver", "registered_driver_detected"].includes(registrationValue) ? registrationValue : "not_checked";
+    const bridgeRuntimeArchitectureValue = String(data.bridge_runtime_architecture || data.bridgeRuntimeArchitecture || "").trim().toLowerCase();
+    const bridgeRuntimeArchitecture = ["x86", "x64", "arm64", "unknown"].includes(bridgeRuntimeArchitectureValue) ? bridgeRuntimeArchitectureValue : null;
+    const bridgeRuntimeBitnessValue = Number(data.bridge_runtime_bitness ?? data.bridgeRuntimeBitness);
+    const bridgeRuntimeBitness = [32, 64].includes(bridgeRuntimeBitnessValue) ? bridgeRuntimeBitnessValue : null;
+    const registryRootsChecked = [...new Set((Array.isArray(data.registry_roots_checked)
+      ? data.registry_roots_checked
+      : Array.isArray(data.registryRootsChecked)
+        ? data.registryRootsChecked
+        : [])
+      .map((value) => String(value || "").trim())
+      .filter((value) => /^[A-Z]+\\[A-Z0-9_.\\-]+$/i.test(value))
+      .slice(0, 8))];
     return {
+      registrationStatus,
+      registration_status: registrationStatus,
       driverReadinessStatus,
       driver_readiness_status: driverReadinessStatus,
       nextCheck,
       next_check: nextCheck,
+      registryRootsChecked,
+      registry_roots_checked: [...registryRootsChecked],
+      bridgeRuntimeArchitecture,
+      bridge_runtime_architecture: bridgeRuntimeArchitecture,
+      bridgeRuntimeBitness,
+      bridge_runtime_bitness: bridgeRuntimeBitness,
       staticReadyVciCount,
       static_ready_vci_count: staticReadyVciCount,
       staticBlockedVciCount,
@@ -3835,9 +3857,9 @@
 
   function normalizeBridgeConnectionStatus(response = {}) {
     const data = response && typeof response === "object" ? getBridgeResponseDataEnvelope(response) || response.data || response : {};
-    const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
+    const connectionStatusKeys = ["status", "bridge_version", "bridgeVersion", "api_version", "apiVersion", "paired", "is_paired", "isPaired", "vci_connected", "vciConnected", "vci_ready", "vciReady", "vehicle_connected", "vehicleConnected", "car_connected", "carConnected", "registration_status", "registrationStatus", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "registry_roots_checked", "registryRootsChecked", "bridge_runtime_architecture", "bridgeRuntimeArchitecture", "bridge_runtime_bitness", "bridgeRuntimeBitness", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
     const hasConnectionStatusData = connectionStatusKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
-    const malformedConnectionStatus = connectionStatusKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
+    const malformedConnectionStatus = connectionStatusKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object" && !(["registry_roots_checked", "registryRootsChecked"].includes(key) && Array.isArray(data[key])));
     const bridgeSafety = readBridgeSnapshotSafety(response, hasConnectionStatusData);
     const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedConnectionStatus
@@ -4165,9 +4187,9 @@
     const sourceValue = response?.source || response?.source_type || response?.sourceType || data.source || data.source_type || data.sourceType || "local_bridge";
     const normalizedSource = String(sourceValue).trim().toLowerCase();
     const source = ["web_serial", "native_connector"].includes(normalizedSource) ? normalizedSource : "local_bridge";
-    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
+    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber", "registration_status", "registrationStatus", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "registry_roots_checked", "registryRootsChecked", "bridge_runtime_architecture", "bridgeRuntimeArchitecture", "bridge_runtime_bitness", "bridgeRuntimeBitness", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
     const hasAdapterIdentityData = adapterIdentityKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
-    const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object");
+    const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object" && !(["registry_roots_checked", "registryRootsChecked"].includes(key) && Array.isArray(data[key])));
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
     const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedAdapterIdentity

@@ -3674,7 +3674,7 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断機能完成度マトリクスの進捗率が不正です");
 check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断機能完成度マトリクスの目標時期が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent === 8 && item.current_status === "非実行準備モデル実装中" && item.done.includes("DTC消去の非実行準備モデル（適合・保存・確認・再スキャン・復旧）")), "双方向制御の非実行準備モデル進捗が不足しています");
-check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 76 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合") && item.done.includes("ECU情報の明示状態だけを観測ECU要約へ採用し未指定・遮断ECUの成功誤認を防止") && item.done.includes("DTCの明示ECU応答で親成功を継承せず未指定・遮断状態の成功誤認を防止") && item.done.includes("レディネス・対応PIDの子ECUを明示状態で選別し親成功による誤認を防止") && item.done.includes("親ECU識別・読取ECU一覧より子ECUの明示状態を優先して観測・応答要約を統合") && item.done.includes("ECU応答要約の矛盾状態を除外し明示応答状態だけを観測・適用照合へ採用") && item.done.includes("車両適用ECU照合を観測要約へ集約し未解析・無応答ECUの一致誤認を防止") && item.done.includes("再読込時に解消済みのECU適用不一致候補を除去し現場指定候補を保持")), "ローカルブリッジのECU別読取進捗が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 77 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合") && item.done.includes("ECU情報の明示状態だけを観測ECU要約へ採用し未指定・遮断ECUの成功誤認を防止") && item.done.includes("DTCの明示ECU応答で親成功を継承せず未指定・遮断状態の成功誤認を防止") && item.done.includes("レディネス・対応PIDの子ECUを明示状態で選別し親成功による誤認を防止") && item.done.includes("親ECU識別・読取ECU一覧より子ECUの明示状態を優先して観測・応答要約を統合") && item.done.includes("ECU応答要約の矛盾状態を除外し明示応答状態だけを観測・適用照合へ採用") && item.done.includes("車両適用ECU照合を観測要約へ集約し未解析・無応答ECUの一致誤認を防止") && item.done.includes("再読込時に解消済みのECU適用不一致候補を除去し現場指定候補を保持") && item.done.includes("J2534登録状態・確認レジストリ・ブリッジ32/64bitをread-onlyセッションへ保持")), "ローカルブリッジのECU別読取進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("既定サンプル応答を実車読取として返さない安全境界を追加")), "ローカルブリッジ既定サンプル遮断の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
@@ -6249,14 +6249,18 @@ const bridgeJ2534PreferredStatus = obd.normalizeBridgeConnectionStatus({
     paired: true,
     vci_connected: false,
     vehicle_connected: false,
+    registration_status: "registered_driver_detected",
     driver_readiness_status: "readonly_static_check_complete",
     next_check: "manual_vci_connection_review",
+    registry_roots_checked: ["HKLM\\SOFTWARE\\PassThruSupport.04.04", "HKLM\\SOFTWARE\\WOW6432Node\\PassThruSupport.04.04"],
+    bridge_runtime_architecture: "x64",
+    bridge_runtime_bitness: 64,
     static_ready_vci_count: 1,
     static_blocked_vci_count: 1,
     selected_static_ready_device_id: "j2534-ready-2"
   }
 });
-check(bridgeJ2534PreferredStatus.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534PreferredStatus.staticReadyVciCount === 1 && bridgeJ2534PreferredStatus.static_ready_vci_count === 1 && bridgeJ2534PreferredStatus.staticBlockedVciCount === 1 && bridgeJ2534PreferredStatus.static_blocked_vci_count === 1 && bridgeJ2534PreferredStatus.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredStatus.selected_static_ready_device_id === "j2534-ready-2" && bridgeJ2534PreferredStatus.vehicleCommandEnabled === false, "J2534 static-ready selection metadata was not normalized with the read-only connection status");
+check(bridgeJ2534PreferredStatus.registrationStatus === "registered_driver_detected" && bridgeJ2534PreferredStatus.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534PreferredStatus.registryRootsChecked?.length === 2 && bridgeJ2534PreferredStatus.registry_roots_checked?.length === 2 && bridgeJ2534PreferredStatus.bridgeRuntimeArchitecture === "x64" && bridgeJ2534PreferredStatus.bridgeRuntimeBitness === 64 && bridgeJ2534PreferredStatus.staticReadyVciCount === 1 && bridgeJ2534PreferredStatus.static_ready_vci_count === 1 && bridgeJ2534PreferredStatus.staticBlockedVciCount === 1 && bridgeJ2534PreferredStatus.static_blocked_vci_count === 1 && bridgeJ2534PreferredStatus.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredStatus.selected_static_ready_device_id === "j2534-ready-2" && bridgeJ2534PreferredStatus.vehicleCommandEnabled === false, "J2534 static runtime and ready selection metadata was not normalized with the read-only connection status");
 const bridgeJ2534ReadinessStatuses = [
   ["no_registered_driver", "J2534ドライバー未登録", "WindowsにJ2534 Pass-Thruドライバーを登録"],
   ["static_inspection_pending", "J2534 DLL静的確認待ち", "read-only必須APIを静的確認"],
@@ -6303,8 +6307,12 @@ const bridgeJ2534PreferredVciList = obd.normalizeBridgeVciList({
   would_transmit: false,
   data: {
     driver_status: "j2534_registry_detected",
+    registration_status: "registered_driver_detected",
     driver_readiness_status: "readonly_static_check_complete",
     next_check: "manual_vci_connection_review",
+    registry_roots_checked: ["HKLM\\SOFTWARE\\PassThruSupport.04.04", "HKLM\\SOFTWARE\\WOW6432Node\\PassThruSupport.04.04"],
+    bridge_runtime_architecture: "x64",
+    bridge_runtime_bitness: 64,
     static_ready_vci_count: 1,
     static_blocked_vci_count: 1,
     selected_static_ready_device_id: "j2534-ready-2",
@@ -6315,7 +6323,7 @@ const bridgeJ2534PreferredVciList = obd.normalizeBridgeVciList({
     ]
   }
 });
-check(bridgeJ2534PreferredVciList.staticReadyVciCount === 1 && bridgeJ2534PreferredVciList.staticBlockedVciCount === 1 && bridgeJ2534PreferredVciList.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.selectedDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.devices[1]?.selected === true && bridgeJ2534PreferredVciList.vehicleCommandEnabled === false, "J2534 static-ready selection metadata was not retained in the VCI list");
+check(bridgeJ2534PreferredVciList.registrationStatus === "registered_driver_detected" && bridgeJ2534PreferredVciList.registryRootsChecked?.length === 2 && bridgeJ2534PreferredVciList.bridgeRuntimeArchitecture === "x64" && bridgeJ2534PreferredVciList.bridgeRuntimeBitness === 64 && bridgeJ2534PreferredVciList.staticReadyVciCount === 1 && bridgeJ2534PreferredVciList.staticBlockedVciCount === 1 && bridgeJ2534PreferredVciList.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.selectedDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.devices[1]?.selected === true && bridgeJ2534PreferredVciList.vehicleCommandEnabled === false, "J2534 static runtime and ready selection metadata was not retained in the VCI list");
 const bridgeMalformedVciList = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,
@@ -6418,7 +6426,7 @@ const j2534PreferredReadinessSession = obd.buildDiagnosticScanSession({
   vciDevices: bridgeJ2534PreferredVciList
 });
 const reimportedJ2534PreferredReadinessSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(j2534PreferredReadinessSession) }));
-check(reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticReadyVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connection_status?.static_ready_vci_count === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticBlockedVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.selectedStaticReadyDeviceId === "j2534-ready-2" && reimportedJ2534PreferredReadinessSession?.vciDevices?.[1]?.selected === true && reimportedJ2534PreferredReadinessSession?.vehicleCommandEnabled === false, "J2534 static-ready selection metadata was not retained through read-only session JSON reimport");
+check(reimportedJ2534PreferredReadinessSession?.connectionStatus?.registrationStatus === "registered_driver_detected" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.registryRootsChecked?.length === 2 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.bridgeRuntimeArchitecture === "x64" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.bridgeRuntimeBitness === 64 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticReadyVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connection_status?.static_ready_vci_count === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticBlockedVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.selectedStaticReadyDeviceId === "j2534-ready-2" && reimportedJ2534PreferredReadinessSession?.vciDevices?.[1]?.selected === true && reimportedJ2534PreferredReadinessSession?.vehicleCommandEnabled === false, "J2534 static runtime and ready selection metadata was not retained through read-only session JSON reimport");
 const bridgeAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,
@@ -6441,14 +6449,18 @@ const bridgeJ2534AdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   data: {
     adapter_name: "Ready J2534 VCI",
     adapter_family: "j2534_passthru",
+    registration_status: "registered_driver_detected",
     driver_readiness_status: "readonly_static_check_complete",
     next_check: "manual_vci_connection_review",
+    registry_roots_checked: ["HKLM\\SOFTWARE\\PassThruSupport.04.04", "HKLM\\SOFTWARE\\WOW6432Node\\PassThruSupport.04.04"],
+    bridge_runtime_architecture: "x64",
+    bridge_runtime_bitness: 64,
     static_ready_vci_count: 1,
     static_blocked_vci_count: 1,
     selected_static_ready_device_id: "j2534-ready-2"
   }
 });
-check(bridgeJ2534AdapterIdentity.adapterFamily === "j2534_passthru" && bridgeJ2534AdapterIdentity.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534AdapterIdentity.staticReadyVciCount === 1 && bridgeJ2534AdapterIdentity.staticBlockedVciCount === 1 && bridgeJ2534AdapterIdentity.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534AdapterIdentity.vehicleCommandEnabled === false, "J2534 adapter identity did not retain static-ready selection metadata");
+check(bridgeJ2534AdapterIdentity.adapterFamily === "j2534_passthru" && bridgeJ2534AdapterIdentity.registrationStatus === "registered_driver_detected" && bridgeJ2534AdapterIdentity.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534AdapterIdentity.registryRootsChecked?.length === 2 && bridgeJ2534AdapterIdentity.bridgeRuntimeArchitecture === "x64" && bridgeJ2534AdapterIdentity.bridgeRuntimeBitness === 64 && bridgeJ2534AdapterIdentity.staticReadyVciCount === 1 && bridgeJ2534AdapterIdentity.staticBlockedVciCount === 1 && bridgeJ2534AdapterIdentity.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534AdapterIdentity.vehicleCommandEnabled === false, "J2534 adapter identity did not retain static runtime and ready selection metadata");
 const bridgeMalformedAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,

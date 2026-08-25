@@ -484,8 +484,12 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   const driverDetected = discoveryMode && discoveredVciDevices.length > 0;
   const selectedJ2534Driver = driverDetected ? selectPreferredJ2534Driver(discoveredVciDevices) : null;
   const j2534StatusData = discoveryMode ? {
+    registration_status: j2534DiscoveryEnvironment.registration_status,
     driver_readiness_status: j2534DiscoveryEnvironment.driver_readiness_status,
     next_check: j2534DiscoveryEnvironment.next_check,
+    registry_roots_checked: [...j2534DiscoveryEnvironment.registry_roots_checked],
+    bridge_runtime_architecture: j2534DiscoveryEnvironment.bridge_runtime_architecture,
+    bridge_runtime_bitness: j2534DiscoveryEnvironment.bridge_runtime_bitness,
     static_ready_vci_count: j2534DiscoveryEnvironment.static_ready_vci_count,
     static_blocked_vci_count: j2534DiscoveryEnvironment.static_blocked_vci_count,
     selected_static_ready_device_id: j2534DiscoveryEnvironment.selected_static_ready_device_id
