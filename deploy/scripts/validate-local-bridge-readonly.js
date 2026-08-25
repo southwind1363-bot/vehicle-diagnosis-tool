@@ -618,6 +618,18 @@ try {
   check(multiEcuReplay.liveValues.length === 2 && multiEcuReplay.liveValues.every((item) => item.id === "engine_speed" && ["7E8", "7E9"].includes(item.source_ecu)), "replay live values lost ECU identity or collapsed values from separate ECUs");
   const multiEcuSupportedPidReplay = decodeReplayLog(["can0 7E8#06410080000000", "can0 7E9#06410040000000"].join("\n"));
   check(multiEcuSupportedPidReplay.supportedPidEcuSnapshots?.some((item) => item.source_ecu === "7E8" && item.supported_pid_page_bases.includes("00") && item.supported_pids.includes("01")) && multiEcuSupportedPidReplay.supportedPidEcuSnapshots?.some((item) => item.source_ecu === "7E9" && item.supported_pid_page_bases.includes("00") && item.supported_pids.includes("02")), "replay supported PID pages lost ECU-specific capability boundaries");
+  const mixedSupportedPidServer = createLocalBridgeApp({ pairingToken: token, replayLogText: ["can0 7E8#06410080000000", "can0 7E9#03410080"].join("\n") });
+  const mixedSupportedPidPort = await new Promise((resolve) => {
+    mixedSupportedPidServer.listen(0, "127.0.0.1", () => resolve(mixedSupportedPidServer.address().port));
+  });
+  try {
+    const mixedSupportedPid = await post(mixedSupportedPidPort, "read_supported_pids", token);
+    check(mixedSupportedPid.ok === false && mixedSupportedPid.errors?.includes("replay_supported_pids_payload_incomplete") && mixedSupportedPid.data.readout_ecu_ids?.join(",") === "7E8,7E9" && mixedSupportedPid.data.supported_pid_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.supported_pid_readout_status === "reported" && item.supported_pids?.includes("01") && item.vehicle_command_enabled === false) && mixedSupportedPid.data.supported_pid_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.supported_pid_readout_status === "unparsed" && item.error_codes?.includes("replay_supported_pids_payload_incomplete") && item.supported_pids === undefined) && mixedSupportedPid.would_transmit === false, "mixed supported PID replay discarded the valid ECU or promoted the incomplete ECU");
+  } finally {
+    await new Promise((resolve) => mixedSupportedPidServer.close(resolve));
+  }
+  const incompleteSupportedPidTransport = decodeReplayLog("can0 7EA#100641008000");
+  check(incompleteSupportedPidTransport.readoutErrors.supported_pids === "replay_supported_pids_transport_incomplete" && incompleteSupportedPidTransport.readoutErrors.live_pid_snapshot === null && incompleteSupportedPidTransport.supportedPidEcuOutcomes?.some((item) => item.source_ecu === "7EA" && item.error_codes?.includes("replay_supported_pids_transport_incomplete")), "incomplete supported PID transport was not isolated as an ECU-scoped capability failure");
   const multiEcuFreezeFrameReplay = decodeReplayLog(["can0 7E8#054202000171", "can0 7E9#054202000300"].join("\n"));
   check(multiEcuFreezeFrameReplay.triggerDtc === "P0171" && multiEcuFreezeFrameReplay.triggerDtcEntries?.some((item) => item.code === "P0171" && item.source_ecu === "7E8") && multiEcuFreezeFrameReplay.triggerDtcEntries?.some((item) => item.code === "P0300" && item.source_ecu === "7E9"), "replay freeze-frame trigger DTCs lost ECU-specific evidence");
 

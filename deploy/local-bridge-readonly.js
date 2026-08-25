@@ -292,6 +292,36 @@ function buildReadinessEcuSnapshots(snapshots = [], outcomes = []) {
     };
   });
 }
+
+function buildSupportedPidEcuSnapshots(snapshots = [], outcomes = []) {
+  const rowsByEcu = new Map();
+  (Array.isArray(snapshots) ? snapshots : []).forEach((snapshot) => {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return;
+    const sourceEcu = String(snapshot.source_ecu || snapshot.sourceEcu || snapshot.ecu || snapshot.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    rowsByEcu.set(sourceEcu, { snapshot: { ...snapshot, source_ecu: sourceEcu }, errors: [] });
+  });
+  (Array.isArray(outcomes) ? outcomes : []).forEach((outcome) => {
+    if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) return;
+    const sourceEcu = String(outcome.source_ecu || outcome.sourceEcu || outcome.ecu || outcome.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    const row = rowsByEcu.get(sourceEcu) || { snapshot: { source_ecu: sourceEcu }, errors: [] };
+    row.errors.push(...(outcome.error_codes || []));
+    rowsByEcu.set(sourceEcu, row);
+  });
+  return [...rowsByEcu.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([sourceEcu, row]) => {
+    const errorCodes = [...new Set(row.errors)];
+    return {
+      ...row.snapshot,
+      source_ecu: sourceEcu,
+      supported_pid_readout_status: errorCodes.length ? "unparsed" : "reported",
+      ...(errorCodes.length ? { error_codes: errorCodes } : {}),
+      read_only: true,
+      vehicle_command_enabled: false,
+      would_transmit: false
+    };
+  });
+}
 const SAMPLE_ONBOARD_MONITOR_TESTS = [
   { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
   { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
@@ -572,13 +602,15 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   if (request.intent === "read_supported_pids" && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.supported_pids
       || (replaySnapshot.readoutObserved?.supported_pids ? null : "replay_supported_pids_not_observed");
+    const supportedPidEcuSnapshots = buildSupportedPidEcuSnapshots(replaySnapshot.supportedPidEcuSnapshots, replaySnapshot.supportedPidEcuOutcomes);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         supported_pids: replaySnapshot.supportedPids,
-        supported_pid_ecu_snapshots: replaySnapshot.supportedPidEcuSnapshots
+        readout_ecu_ids: supportedPidEcuSnapshots.map((item) => item.source_ecu),
+        supported_pid_ecu_snapshots: supportedPidEcuSnapshots
       }
     };
   }
@@ -1057,6 +1089,7 @@ export function decodeReplayLog(text) {
   const supportedPids = new Set();
   const supportedPidsByEcu = new Map();
   const supportedPidPageBasesByEcu = new Map();
+  const supportedPidEcuOutcomes = [];
   const ecus = new Set();
   const dtcReadoutObserved = { stored: false, pending: false, permanent: false };
   const dtcReadoutErrors = { stored: null, pending: null, permanent: null };
@@ -1081,6 +1114,11 @@ export function decodeReplayLog(text) {
     const pageBases = supportedPidPageBasesByEcu.get(ecu) || new Set();
     pageBases.add(pid);
     supportedPidPageBasesByEcu.set(ecu, pageBases);
+  };
+
+  const recordSupportedPidEcuOutcome = (ecu, errorCode) => {
+    if (!ecu || !errorCode) return;
+    supportedPidEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode] });
   };
 
   const recordEcuInfoOutcome = (ecu, errorCode, details = {}) => {
@@ -1116,6 +1154,7 @@ export function decodeReplayLog(text) {
       if (packet.responseService === 0x49) recordEcuInfoOutcome(ecu, "replay_ecu_info_transport_incomplete");
       if (packet.responseService === 0x42) recordFreezeFrameEcuOutcome(ecu, "replay_freeze_frame_transport_incomplete");
       if (packet.responseService === 0x41 && packet.responsePid === 0x01) recordReadinessEcuOutcome(ecu, "replay_readiness_transport_incomplete");
+      if (packet.responseService === 0x41 && isSupportedPidBase(packet.responsePid)) recordSupportedPidEcuOutcome(ecu, "replay_supported_pids_transport_incomplete");
       if ([0x43, 0x47, 0x4A].includes(packet.responseService)) {
         const dtcStatus = packet.responseService === 0x47 ? "pending" : packet.responseService === 0x4A ? "permanent" : "stored";
         recordDtcEcuOutcome(ecu, dtcStatus, "unparsed", { error_codes: ["replay_dtc_transport_incomplete"] });
@@ -1250,6 +1289,7 @@ export function decodeReplayLog(text) {
         const bitmap = bytes.slice(serviceIndex + 2, serviceIndex + 6);
         if (bitmap.length < 4) {
           readoutErrors.supported_pids = "replay_supported_pids_payload_incomplete";
+          recordSupportedPidEcuOutcome(ecu, "replay_supported_pids_payload_incomplete");
           return;
         }
         readoutObserved.supported_pids = true;
@@ -1309,6 +1349,7 @@ export function decodeReplayLog(text) {
     triggerDtc,
     triggerDtcEntries: uniqueBy(triggerDtcEntries, (item) => `${item.code}:${item.frame_number}:${item.source_ecu || ""}`),
     supportedPids: [...supportedPids].sort(),
+    supportedPidEcuOutcomes: uniqueBy(supportedPidEcuOutcomes, (item) => `${item.source_ecu || ""}:${(item.error_codes || []).join(",")}`),
     supportedPidEcuSnapshots: [...new Set([...supportedPidsByEcu.keys(), ...supportedPidPageBasesByEcu.keys()])]
       .sort()
       .map((ecu) => ({
