@@ -3673,7 +3673,7 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断機能完成度マトリクスの進捗率が不正です");
 check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断機能完成度マトリクスの目標時期が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent === 8 && item.current_status === "非実行準備モデル実装中" && item.done.includes("DTC消去の非実行準備モデル（適合・保存・確認・再スキャン・復旧）")), "双方向制御の非実行準備モデル進捗が不足しています");
-check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 68 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合")), "ローカルブリッジのECU別読取進捗が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 69 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合")), "ローカルブリッジのECU別読取進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("既定サンプル応答を実車読取として返さない安全境界を追加")), "ローカルブリッジ既定サンプル遮断の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
@@ -10011,6 +10011,27 @@ const bridgeMixedReadinessOutcomeSnapshot = obd.normalizeBridgeReadinessSnapshot
 });
 const bridgeMixedReadinessOutcomeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ readiness_snapshot: bridgeMixedReadinessOutcomeSnapshot }))));
 check(bridgeMixedReadinessOutcomeSnapshot.ok === false && bridgeMixedReadinessOutcomeSnapshot.blocked === false && bridgeMixedReadinessOutcomeSnapshot.readinessReadoutStatus === "unparsed" && bridgeMixedReadinessOutcomeSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E8" && item.readinessReadoutStatus === "reported" && item.monitorCount > 0) && bridgeMixedReadinessOutcomeSnapshot.readinessEcuSnapshots?.some((item) => item.sourceEcu === "7E9" && item.readinessReadoutStatus === "unparsed" && item.errorCodes?.includes("replay_readiness_payload_incomplete") && item.monitorCount === 0) && bridgeMixedReadinessOutcomeSnapshot.readinessEcuAggregateSummary?.allReported === false && bridgeMixedReadinessOutcomeRoundTrip?.readinessSnapshot?.readinessReadoutStatus === "unparsed" && bridgeMixedReadinessOutcomeRoundTrip?.readinessSnapshot?.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.error_codes?.includes("replay_readiness_payload_incomplete")) && bridgeMixedReadinessOutcomeRoundTrip?.vehicleCommandEnabled === false && bridgeMixedReadinessOutcomeRoundTrip?.wouldTransmit === false, "Mixed bridge readiness outcomes lost valid ECU state or incomplete provenance through read-only export");
+const partialCoreReadoutSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: bridgeMixedLivePidOutcomeSnapshot,
+  freeze_frame_snapshot: bridgeMixedFreezeFrameOutcomeSnapshot,
+  readiness_snapshot: bridgeMixedReadinessOutcomeSnapshot,
+  onboard_monitor_snapshot: bridgeMixedOnboardMonitorOutcomeSnapshot,
+  supported_pid_matrix: {
+    ...bridgeMixedSupportedPidOutcomeSnapshot,
+    supportedPidEcuSnapshots: [
+      ...(bridgeMixedSupportedPidOutcomeSnapshot.supportedPidEcuSnapshots || []),
+      { sourceEcu: "7EA", supportedPidReadoutStatus: "blocked", blocked: true },
+      { sourceEcu: "7EB" }
+    ]
+  }
+});
+const partialCoreReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(partialCoreReadoutSession)));
+const partialCoreObservedEcu7E8 = partialCoreReadoutSession.coreSessionStatus?.observedEcuSummary?.ecus?.find((item) => item.id === "7E8");
+const partialCoreObservedEcu7E9 = partialCoreReadoutSession.coreSessionStatus?.observedEcuSummary?.ecus?.find((item) => item.id === "7E9");
+const partialCoreReadoutIds = ["live_pid_snapshot", "freeze_frame_snapshot", "readiness_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix"];
+const partialCoreReportedResponse7E8 = partialCoreReadoutSession.ecuResponseSummary?.ecus?.find((item) => item.address === "7E8");
+const partialCoreRoundTrip7E9 = partialCoreReadoutRoundTrip.coreSessionStatus?.observedEcuSummary?.ecus?.find((item) => item.id === "7E9");
+check(partialCoreReadoutIds.every((id) => partialCoreObservedEcu7E8?.readoutStatusById?.[id] === "reported") && partialCoreReadoutIds.every((id) => partialCoreObservedEcu7E9?.readoutStatusById?.[id] === "unparsed" && partialCoreObservedEcu7E9?.unparsedReadoutIds?.includes(id)) && !partialCoreReadoutSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.includes("7EA") && !partialCoreReadoutSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.includes("7EB") && ["01", "02", "06"].every((service) => partialCoreReportedResponse7E8?.services?.includes(service)) && !partialCoreReadoutSession.ecuResponseSummary?.ecus?.some((item) => item.address === "7E9" && item.status === "reported") && partialCoreReadoutIds.every((id) => partialCoreRoundTrip7E9?.readout_status_by_id?.[id] === "unparsed" && partialCoreRoundTrip7E9?.unparsed_readout_ids?.includes(id)) && partialCoreReadoutRoundTrip.vehicleCommandEnabled === false && partialCoreReadoutRoundTrip.wouldTransmit === false, "Partial core readouts lost explicit per-ECU status, fabricated blocked/statusless ECUs, or weakened through read-only export");
 const snakeOnlyReadinessEcuSession = obd.buildDiagnosticScanSession({
   vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
   readiness_snapshot: {

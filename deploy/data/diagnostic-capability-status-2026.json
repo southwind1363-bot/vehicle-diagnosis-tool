@@ -128,8 +128,8 @@
         "label":  "ローカルブリッジ / VCI連携",
         "target_level":  "ELM327 / J2534 / CAN / CAN FD を段階的に読取へ統合",
         "current_status":  "読取入口あり",
-        "progress_percent":  68,
-        "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化、bridge/session alias 吸収、ECU応答サービス来歴、Mode09のECU別読取証跡、Web Serial終端確認、既定サンプル読取遮断を反映。",
+        "progress_percent":  69,
+        "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化、bridge/session alias 吸収、ECU応答サービス来歴、主要読取の部分成功を含むECU別状態、Web Serial終端確認、既定サンプル読取遮断を反映。",
         "done":  [
                      "bridge status / list_vci / adapter_identity / DTC / freeze frame / live PID / supported PID / readiness / ECU info / Mode06 の read-only 正規化",
                      "THINKCAR / Techstream J2534 / ELM327 / CANable の候補整理",
@@ -146,7 +146,8 @@
                      "レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合",
                      "対応PIDページの成功値と不完全応答をECU別スナップショットへ統合",
                      "Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合",
-                     "ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合"
+                     "ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合",
+                     "部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合"
                  ],
         "missing":  [
                         "実VCIドライバ連携",
@@ -154,10 +155,10 @@
                         "THINKCAR Bluetooth VCI連携",
                         "CAN FDログ読取"
                     ],
-        "next_build":  "J2534 / CANable / THINKCAR の読取ドライバを増やしつつ、Mode09 の読取正規化と VCI 実機差分をローカルブリッジ側へ寄せる。",
+        "next_build":  "J2534 / CANable / THINKCAR の読取ドライバを増やし、VCI実機差分を同じread-onlyセッション契約へ寄せる。",
         "safety_gate":  "read-only status intents only / vehicle_command_enabled:false",
         "source":  "ローカル読取検証と進捗データ",
-        "source_date":  "2026-08-08",
+        "source_date":  "2026-08-25",
         "eta_target":  "2026-Q3 読み込み"
     },
     {
