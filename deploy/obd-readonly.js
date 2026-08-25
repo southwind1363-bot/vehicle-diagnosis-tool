@@ -8789,12 +8789,16 @@
                 ? 92
               : (priorityById[item.id] || 10),
           reason,
-          reasonId: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
-            ? (applicabilityEcuPendingResponse ? "applicability_ecu_pending_response" : "applicability_ecu_negative_response")
-            : null,
-          reason_id: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
-            ? (applicabilityEcuPendingResponse ? "applicability_ecu_pending_response" : "applicability_ecu_negative_response")
-            : null,
+          reasonId: item.id === "ecu_info_snapshot" && applicabilityEcuMismatch
+            ? "applicability_ecu_mismatch"
+            : item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
+              ? (applicabilityEcuPendingResponse ? "applicability_ecu_pending_response" : "applicability_ecu_negative_response")
+              : null,
+          reason_id: item.id === "ecu_info_snapshot" && applicabilityEcuMismatch
+            ? "applicability_ecu_mismatch"
+            : item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
+              ? (applicabilityEcuPendingResponse ? "applicability_ecu_pending_response" : "applicability_ecu_negative_response")
+              : null,
           matchedResponseEvidence: item.id === "ecu_info_snapshot" && (applicabilityEcuNegativeResponse || applicabilityEcuPendingResponse)
             ? (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence || null)
             : null,
@@ -8901,9 +8905,26 @@
     supportedPidMatrix = null,
     vehicleApplicabilityEcuMatchSummary = null
   } = {}) {
+    const normalizedExplicitCandidates = normalizeNextReadoutCandidates(explicitCandidates);
+    const currentApplicabilityReasonId = vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
+      || vehicleApplicabilityEcuMatchSummary?.reviewRequired === true
+      || vehicleApplicabilityEcuMatchSummary?.review_required === true
+      ? "applicability_ecu_mismatch"
+      : vehicleApplicabilityEcuMatchSummary?.status === "matched"
+        && (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence) === "negative_response"
+        ? "applicability_ecu_negative_response"
+        : vehicleApplicabilityEcuMatchSummary?.status === "matched"
+          && (vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence || vehicleApplicabilityEcuMatchSummary?.matched_response_evidence) === "pending_response"
+          ? "applicability_ecu_pending_response"
+          : null;
+    const applicabilityReasonIds = new Set(["applicability_ecu_mismatch", "applicability_ecu_negative_response", "applicability_ecu_pending_response"]);
+    const reconciledExplicitCandidates = normalizedExplicitCandidates.filter((item) => {
+      const reasonId = item?.reasonId || item?.reason_id || (item?.reason === "応答ECUと適合ECUの不一致確認のため再確認候補" ? "applicability_ecu_mismatch" : null);
+      return !applicabilityReasonIds.has(reasonId) || reasonId === currentApplicabilityReasonId;
+    });
     return normalizeNextReadoutCandidates(
-      Array.isArray(explicitCandidates) && explicitCandidates.length
-        ? explicitCandidates
+      reconciledExplicitCandidates.length
+        ? reconciledExplicitCandidates
         : buildNextReadoutCandidates(readoutCoverage, vehicleApplicability || {}, ecuInfoSnapshot, dtcSnapshot, supportedPidMatrix, vehicleApplicabilityEcuMatchSummary)
     );
   }

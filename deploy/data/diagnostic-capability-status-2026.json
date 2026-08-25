@@ -128,7 +128,7 @@
         "label":  "ローカルブリッジ / VCI連携",
         "target_level":  "ELM327 / J2534 / CAN / CAN FD を段階的に読取へ統合",
         "current_status":  "読取入口あり",
-        "progress_percent":  75,
+        "progress_percent":  76,
         "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化、bridge/session alias 吸収、ECU応答サービス来歴、主要読取の部分成功を含むECU別状態、Web Serial終端確認、既定サンプル読取遮断を反映。",
         "done":  [
                      "bridge status / list_vci / adapter_identity / DTC / freeze frame / live PID / supported PID / readiness / ECU info / Mode06 の read-only 正規化",
@@ -153,7 +153,8 @@
                      "レディネス・対応PIDの子ECUを明示状態で選別し親成功による誤認を防止",
                      "親ECU識別・読取ECU一覧より子ECUの明示状態を優先して観測・応答要約を統合",
                      "ECU応答要約の矛盾状態を除外し明示応答状態だけを観測・適用照合へ採用",
-                     "車両適用ECU照合を観測要約へ集約し未解析・無応答ECUの一致誤認を防止"
+                     "車両適用ECU照合を観測要約へ集約し未解析・無応答ECUの一致誤認を防止",
+                     "再読込時に解消済みのECU適用不一致候補を除去し現場指定候補を保持"
                  ],
         "missing":  [
                         "実VCIドライバ連携",
