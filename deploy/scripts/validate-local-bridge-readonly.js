@@ -643,6 +643,20 @@ try {
     await new Promise((resolve) => mixedFreezeFrameServer.close(resolve));
   }
 
+  const mixedReadinessServer = createLocalBridgeApp({ pairingToken: token, replayLogText: ["can0 7E8#06410181070000", "can0 7E9#03410181"].join("\n") });
+  const mixedReadinessPort = await new Promise((resolve) => {
+    mixedReadinessServer.listen(0, "127.0.0.1", () => resolve(mixedReadinessServer.address().port));
+  });
+  try {
+    const mixedReadiness = await post(mixedReadinessPort, "read_readiness", token, { readout_id: "readiness_snapshot", pid: "01" });
+    check(mixedReadiness.ok === false && mixedReadiness.errors?.includes("replay_readiness_payload_incomplete") && mixedReadiness.data.readout_ecu_ids?.join(",") === "7E8,7E9" && mixedReadiness.data.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.readiness_readout_status === "reported" && item.readiness_status_byte_a === 0x81 && item.vehicle_command_enabled === false) && mixedReadiness.data.readiness_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.readiness_readout_status === "unparsed" && item.error_codes?.includes("replay_readiness_payload_incomplete") && item.readiness_status_byte_a === undefined) && mixedReadiness.would_transmit === false, "mixed readiness replay discarded the valid ECU or promoted the incomplete ECU");
+  } finally {
+    await new Promise((resolve) => mixedReadinessServer.close(resolve));
+  }
+
+  const incompleteReadinessTransport = decodeReplayLog("can0 7EA#100641018107");
+  check(incompleteReadinessTransport.readoutErrors.readiness_snapshot === "replay_readiness_transport_incomplete" && incompleteReadinessTransport.readoutErrors.live_pid_snapshot === null && incompleteReadinessTransport.readinessEcuOutcomes?.some((item) => item.source_ecu === "7EA" && item.error_codes?.includes("replay_readiness_transport_incomplete")), "incomplete Mode 01 PID 01 transport was not isolated as an ECU-scoped readiness failure");
+
   const mixedMode09Server = createLocalBridgeApp({
     pairingToken: token,
     replayLogText: ["can0 7E8#100B49040143414C", "can0 7E8#212D31323334", "can0 7E9#037F0922"].join("\n")
@@ -738,7 +752,7 @@ try {
   check(replayLive.data.values.some((item) => item.id === "stft_b1" && item.value === 0), "replay live response did not decode STFT B1");
   check(replayLive.data.values.some((item) => item.id === "ltft_b1" && item.value === 19.53), "replay live response did not decode LTFT B1");
   const replayReadiness = await post(replayPort, "read_readiness", token, { readout_id: "readiness_snapshot", pid: "01" });
-  check(replayReadiness.ok === true && replayReadiness.would_transmit === false && replayReadiness.data.readiness_ecu_snapshots.some((item) => item.readiness_status_byte_a === 0x81 && item.readiness_status_byte_b === 0x07), "replay readiness request did not return an observed Mode 01 PID 01 snapshot");
+  check(replayReadiness.ok === true && replayReadiness.would_transmit === false && replayReadiness.data.readout_ecu_ids?.includes("7E8") && replayReadiness.data.readiness_ecu_snapshots.some((item) => item.source_ecu === "7E8" && item.readiness_readout_status === "reported" && item.readiness_status_byte_a === 0x81 && item.readiness_status_byte_b === 0x07 && item.vehicle_command_enabled === false && item.would_transmit === false), "replay readiness request did not return an ECU-scoped Mode 01 PID 01 snapshot");
   check(replayLive.data.values.some((item) => item.id === "fuel_pressure" && item.value === 120), "replay live response did not decode fuel pressure");
   check(replayLive.data.values.some((item) => item.id === "intake_air_temp" && item.value === 40), "replay live response did not decode intake air temperature");
   check(replayLive.data.values.some((item) => item.id === "o2_b1s1_voltage" && item.value === 0.005), "replay live response did not decode O2 B1S1 voltage");

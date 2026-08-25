@@ -5454,11 +5454,22 @@
     if (readinessEcuSnapshotRows.length > 0) {
       const readinessEcuSnapshots = readinessEcuSnapshotRows.map((row) => {
         if (!row || typeof row !== "object" || Array.isArray(row)) return null;
+        const childErrorCodes = readBridgeResponseErrorCodes(row);
+        const childReadoutStatus = String(row.readinessReadoutStatus || row.readiness_readout_status || row.readoutStatus || row.readout_status || "").trim().toLowerCase();
+        const childBlocked = childReadoutStatus === "blocked" || isExplicitTrueFlag(row.blocked);
         return normalizeBridgeReadinessSnapshot({
           ...response,
+          ok: childErrorCodes.length === 0 && !childBlocked,
+          blocked: childBlocked,
+          errors: childErrorCodes,
+          errorCodes: childErrorCodes,
+          error_codes: [...childErrorCodes],
           data: {
             ...data,
             ...row,
+            errors: childErrorCodes,
+            errorCodes: childErrorCodes,
+            error_codes: [...childErrorCodes],
             source_ecu: row.source_ecu || row.sourceEcu || row.ecu || row.address || data.source_ecu || data.sourceEcu || data.ecu || data.address || null,
             source_ecu_name: row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null,
             captured_at: row.captured_at || row.capturedAt || row.timestamp || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null,

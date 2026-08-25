@@ -262,6 +262,36 @@ function buildFreezeFrameEcuSnapshots(values = [], triggerEntries = [], outcomes
     };
   });
 }
+
+function buildReadinessEcuSnapshots(snapshots = [], outcomes = []) {
+  const rowsByEcu = new Map();
+  (Array.isArray(snapshots) ? snapshots : []).forEach((snapshot) => {
+    if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return;
+    const sourceEcu = String(snapshot.source_ecu || snapshot.sourceEcu || snapshot.ecu || snapshot.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    rowsByEcu.set(sourceEcu, { snapshot: { ...snapshot, source_ecu: sourceEcu }, errors: [] });
+  });
+  (Array.isArray(outcomes) ? outcomes : []).forEach((outcome) => {
+    if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) return;
+    const sourceEcu = String(outcome.source_ecu || outcome.sourceEcu || outcome.ecu || outcome.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    const row = rowsByEcu.get(sourceEcu) || { snapshot: { source_ecu: sourceEcu }, errors: [] };
+    row.errors.push(...(outcome.error_codes || []));
+    rowsByEcu.set(sourceEcu, row);
+  });
+  return [...rowsByEcu.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([sourceEcu, row]) => {
+    const errorCodes = [...new Set(row.errors)];
+    return {
+      ...row.snapshot,
+      source_ecu: sourceEcu,
+      readiness_readout_status: errorCodes.length ? "unparsed" : "reported",
+      ...(errorCodes.length ? { error_codes: errorCodes } : {}),
+      read_only: true,
+      vehicle_command_enabled: false,
+      would_transmit: false
+    };
+  });
+}
 const SAMPLE_ONBOARD_MONITOR_TESTS = [
   { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
   { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
@@ -622,12 +652,14 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   if (isReadinessSnapshotRequest(request) && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.readiness_snapshot
       || (replaySnapshot.readoutObserved?.readiness_snapshot ? null : "replay_readiness_not_observed");
+    const readinessEcuSnapshots = buildReadinessEcuSnapshots(replaySnapshot.readinessEcuSnapshots, replaySnapshot.readinessEcuOutcomes);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        readiness_ecu_snapshots: replaySnapshot.readinessEcuSnapshots
+        readout_ecu_ids: readinessEcuSnapshots.map((item) => item.source_ecu),
+        readiness_ecu_snapshots: readinessEcuSnapshots
       }
     };
   }
@@ -1031,6 +1063,7 @@ export function decodeReplayLog(text) {
   const readoutObserved = { freeze_frame: false, supported_pids: false, readiness_snapshot: false, ecu_info: false, onboard_monitor: false, live_pid_snapshot: false };
   const readoutErrors = { freeze_frame: null, supported_pids: null, readiness_snapshot: null, ecu_info: null, onboard_monitor: null, live_pid_snapshot: null };
   const readinessEcuSnapshots = [];
+  const readinessEcuOutcomes = [];
   let triggerDtc = null;
   const triggerDtcEntries = [];
 
@@ -1070,6 +1103,11 @@ export function decodeReplayLog(text) {
     freezeFrameEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode], ...details });
   };
 
+  const recordReadinessEcuOutcome = (ecu, errorCode) => {
+    if (!ecu || !errorCode) return;
+    readinessEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode] });
+  };
+
   packets.forEach((packet) => {
     const { ecu, bytes } = packet;
     if (ecu) ecus.add(ecu);
@@ -1077,6 +1115,7 @@ export function decodeReplayLog(text) {
       applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors);
       if (packet.responseService === 0x49) recordEcuInfoOutcome(ecu, "replay_ecu_info_transport_incomplete");
       if (packet.responseService === 0x42) recordFreezeFrameEcuOutcome(ecu, "replay_freeze_frame_transport_incomplete");
+      if (packet.responseService === 0x41 && packet.responsePid === 0x01) recordReadinessEcuOutcome(ecu, "replay_readiness_transport_incomplete");
       if ([0x43, 0x47, 0x4A].includes(packet.responseService)) {
         const dtcStatus = packet.responseService === 0x47 ? "pending" : packet.responseService === 0x4A ? "permanent" : "stored";
         recordDtcEcuOutcome(ecu, dtcStatus, "unparsed", { error_codes: ["replay_dtc_transport_incomplete"] });
@@ -1223,6 +1262,7 @@ export function decodeReplayLog(text) {
         const readinessBytes = bytes.slice(serviceIndex + 2, serviceIndex + 6);
         if (readinessBytes.length < 4) {
           readoutErrors.readiness_snapshot = "replay_readiness_payload_incomplete";
+          recordReadinessEcuOutcome(ecu, "replay_readiness_payload_incomplete");
           return;
         }
         readoutObserved.readiness_snapshot = true;
@@ -1265,6 +1305,7 @@ export function decodeReplayLog(text) {
     ecuInfoEcuOutcomes: uniqueBy(ecuInfoEcuOutcomes, (item) => `${item.source_ecu || ""}:${item.ecu_info_negative_response_service || ""}:${item.ecu_info_negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}:${item.source_ecu || ""}`),
     readinessEcuSnapshots: uniqueBy(readinessEcuSnapshots, (item) => item.source_ecu || "default"),
+    readinessEcuOutcomes: uniqueBy(readinessEcuOutcomes, (item) => `${item.source_ecu || ""}:${(item.error_codes || []).join(",")}`),
     triggerDtc,
     triggerDtcEntries: uniqueBy(triggerDtcEntries, (item) => `${item.code}:${item.frame_number}:${item.source_ecu || ""}`),
     supportedPids: [...supportedPids].sort(),
@@ -1385,6 +1426,8 @@ function applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors)
     const pid = packet?.responsePid;
     if (isSupportedPidBase(pid)) {
       readoutErrors.supported_pids = "replay_supported_pids_transport_incomplete";
+    } else if (pid === 0x01) {
+      readoutErrors.readiness_snapshot = "replay_readiness_transport_incomplete";
     } else {
       readoutErrors.live_pid_snapshot = "replay_live_pid_transport_incomplete";
     }
