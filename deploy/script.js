@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "メーカーPID基準候補を用途別に分離",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.165";
+const APP_VERSION = "3.13.166";
 const APP_LAST_UPDATED = "2026-08-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10194,6 +10194,13 @@ function analyzeObdScannerImport(options = {}) {
   const currentNextReadoutCandidates = currentSession?.nextReadoutCandidates || currentSession?.next_readout_candidates || null;
   const currentDiagnosticFlowSummary = currentSession?.diagnosticFlowSummary || currentSession?.diagnostic_flow_summary || null;
   const currentCoreSessionStatus = currentSession?.coreSessionStatus || currentSession?.core_session_status || null;
+  const currentReadoutCompletionSummary = currentSession?.readoutCompletionSummary || currentSession?.readout_completion_summary || null;
+  const currentAnalysisReadinessSummary = currentSession?.analysisReadinessSummary || currentSession?.analysis_readiness_summary || null;
+  const currentReadoutQualitySummary = currentSession?.readoutQualitySummary || currentSession?.readout_quality_summary || null;
+  const currentReadoutRequestPlanGateSummary = currentSession?.readoutRequestPlanGateSummary || currentSession?.readout_request_plan_gate_summary || null;
+  const currentNextReadoutGuardSummary = currentSession?.nextReadoutGuardSummary || currentSession?.next_readout_guard_summary || null;
+  const currentCoreReadoutInventorySummary = currentSession?.coreReadoutInventorySummary || currentSession?.core_readout_inventory_summary || null;
+  const currentManufacturerPidVehicleReadoutPackages = currentSession?.manufacturerPidVehicleReadoutPackages || currentSession?.manufacturer_pid_vehicle_readout_packages || [];
   const currentNextReadoutRequest = currentSession?.nextReadoutRequest || currentSession?.next_readout_request || currentDiagnosticFlowSummary?.nextReadoutRequest || currentDiagnosticFlowSummary?.next_readout_request || currentCoreSessionStatus?.nextReadoutRequest || currentCoreSessionStatus?.next_readout_request || currentCoreSessionStatus?.nextReadoutSummary?.readoutRequest || currentCoreSessionStatus?.next_readout_summary?.readout_request || null;
   const currentReadoutRequestPlanSummary = currentSession?.readoutRequestPlanSummary || currentSession?.readout_request_plan_summary || currentDiagnosticFlowSummary?.readoutRequestPlanSummary || currentDiagnosticFlowSummary?.readout_request_plan_summary || currentCoreSessionStatus?.readoutRequestPlanSummary || currentCoreSessionStatus?.readout_request_plan_summary || null;
   const currentNextReadoutRequestSafetySummary = currentSession?.nextReadoutRequestSafetySummary || currentSession?.next_readout_request_safety_summary || currentDiagnosticFlowSummary?.nextReadoutRequestSafetySummary || currentDiagnosticFlowSummary?.next_readout_request_safety_summary || currentCoreSessionStatus?.nextReadoutRequestSafetySummary || currentCoreSessionStatus?.next_readout_request_safety_summary || null;
@@ -10241,16 +10248,17 @@ function analyzeObdScannerImport(options = {}) {
       nextReadoutReasonSummary: currentNextReadoutReasonSummary,
       nextReadoutCandidateSafetySummary: currentNextReadoutCandidateSafetySummary,
       readoutRequestPlanSummary: currentReadoutRequestPlanSummary,
+      manufacturerPidVehicleReadoutPackages: currentManufacturerPidVehicleReadoutPackages,
       warnings: currentWarnings,
       toolHints: currentToolHints,
       sourceLength: currentSourceLength,
       hadSensitiveIdentifier: currentHadSensitiveIdentifier
     })
     : null;
-  const jsonImportSession = !bridgeImport && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"
+  const jsonImportSession = hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromJson === "function"
     ? window.ObdReadOnly.buildDiagnosticScanSessionFromJson(scannerText)
     : null;
-  const csvImportSession = !bridgeImport && !jsonImportSession && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromCsv === "function"
+  const csvImportSession = !jsonImportSession && hasScannerText && typeof window.ObdReadOnly?.buildDiagnosticScanSessionFromCsv === "function"
     ? window.ObdReadOnly.buildDiagnosticScanSessionFromCsv(scannerText)
     : null;
   const structuredImportSession = jsonImportSession || csvImportSession;
@@ -10285,11 +10293,24 @@ function analyzeObdScannerImport(options = {}) {
     const importedVehicleApplicability = structuredImportSession.vehicleApplicability || structuredImportSession.vehicle_applicability || null;
     const structuredImportVehicleApplicability = importedVehicleApplicability || buildSelectedObdVehicleApplicability(structuredImportVehicleProfile);
     const importedReadoutInterface = structuredImportSession.readoutInterface || structuredImportSession.readout_interface || null;
+    const structuredManufacturerPidVehicleReadoutPackages = structuredImportSession.manufacturerPidVehicleReadoutPackages || structuredImportSession.manufacturer_pid_vehicle_readout_packages || [];
+    const compareManufacturerPidVehicleReadouts = mergeWithCurrentSession
+      && currentManufacturerPidVehicleReadoutPackages.length > 0
+      && structuredManufacturerPidVehicleReadoutPackages.length > 0;
     obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
       scan_session: structuredImportSession,
       vehicleProfile: structuredImportVehicleProfile || undefined,
       vehicleApplicability: structuredImportVehicleApplicability || undefined,
-      readoutInterface: importedReadoutInterface || buildSelectedObdReadoutInterface()
+      readoutInterface: importedReadoutInterface || buildSelectedObdReadoutInterface(),
+      importedCoreSessionStatus: mergeWithCurrentSession ? currentCoreSessionStatus || undefined : undefined,
+      importedDiagnosticFlowSummary: mergeWithCurrentSession ? currentDiagnosticFlowSummary || undefined : undefined,
+      importedReadoutCompletionSummary: mergeWithCurrentSession ? currentReadoutCompletionSummary || undefined : undefined,
+      importedAnalysisReadinessSummary: mergeWithCurrentSession ? currentAnalysisReadinessSummary || undefined : undefined,
+      importedReadoutQualitySummary: mergeWithCurrentSession ? currentReadoutQualitySummary || undefined : undefined,
+      importedReadoutRequestPlanGateSummary: mergeWithCurrentSession ? currentReadoutRequestPlanGateSummary || undefined : undefined,
+      importedNextReadoutGuardSummary: mergeWithCurrentSession ? currentNextReadoutGuardSummary || undefined : undefined,
+      importedCoreReadoutInventorySummary: mergeWithCurrentSession ? currentCoreReadoutInventorySummary || undefined : undefined,
+      importedManufacturerPidVehicleReadoutPackages: compareManufacturerPidVehicleReadouts ? currentManufacturerPidVehicleReadoutPackages : undefined
     });
   }
   if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport()) {
