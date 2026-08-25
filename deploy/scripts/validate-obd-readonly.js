@@ -3673,7 +3673,7 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断機能完成度マトリクスの進捗率が不正です");
 check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断機能完成度マトリクスの目標時期が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent === 8 && item.current_status === "非実行準備モデル実装中" && item.done.includes("DTC消去の非実行準備モデル（適合・保存・確認・再スキャン・復旧）")), "双方向制御の非実行準備モデル進捗が不足しています");
-check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 70 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合") && item.done.includes("ECU情報の明示状態だけを観測ECU要約へ採用し未指定・遮断ECUの成功誤認を防止")), "ローカルブリッジのECU別読取進捗が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 71 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合") && item.done.includes("ECU情報の明示状態だけを観測ECU要約へ採用し未指定・遮断ECUの成功誤認を防止") && item.done.includes("DTCの明示ECU応答で親成功を継承せず未指定・遮断状態の成功誤認を防止")), "ローカルブリッジのECU別読取進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("既定サンプル応答を実車読取として返さない安全境界を追加")), "ローカルブリッジ既定サンプル遮断の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
@@ -9165,6 +9165,26 @@ const bridgeMixedDtcOutcomeSnapshot = obd.normalizeBridgeDtcSnapshot({
 });
 const bridgeMixedDtcOutcomeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeMixedDtcOutcomeSnapshot }))));
 check(bridgeMixedDtcOutcomeSnapshot.ok === false && bridgeMixedDtcOutcomeSnapshot.blocked === false && bridgeMixedDtcOutcomeSnapshot.dtcReadoutStatus === "unparsed" && bridgeMixedDtcOutcomeSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && bridgeMixedDtcOutcomeSnapshot.ecuResponses?.some((item) => item.ecu === "7E8" && item.status === "reported" && item.responseServices?.includes("43")) && bridgeMixedDtcOutcomeSnapshot.ecuResponses?.some((item) => item.ecu === "7E9" && item.status === "negative_response" && item.responseServices?.includes("7F") && item.negativeRequestedServices?.includes("03") && item.negativeResponseCount === 1 && item.negativeResponseLabels?.includes("OBD NRC 11")) && bridgeMixedDtcOutcomeRoundTrip?.dtcSnapshot?.dtcReadoutStatus === "blocked" && bridgeMixedDtcOutcomeRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.status === "negative_response" && item.response_services?.includes("7F") && item.negative_response_count === 1 && item.negative_requested_services?.includes("03")) && bridgeMixedDtcOutcomeRoundTrip?.vehicleCommandEnabled === false && bridgeMixedDtcOutcomeRoundTrip?.wouldTransmit === false, "Mixed bridge DTC ECU outcomes lost response provenance through read-only normalization and export");
+const guardedDtcResponseSession = obd.buildDiagnosticScanSession({
+  dtc_snapshot: {
+    schemaVersion: "dtc_snapshot_v1",
+    dtcReadoutStatus: "reported",
+    blocked: false,
+    wouldTransmit: false,
+    intent: "read_stored_dtc",
+    dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }],
+    ecuResponses: [
+      { ecu: "7E8", status: "reported", dtcCount: 1, services: ["03"], responseServices: ["43"] },
+      { ecu: "7E9", status: "negative_response", services: ["03"], responseServices: ["7F"], negativeResponseCount: 1, negativeRequestedServices: ["03"] },
+      { ecu: "7EA", status: "blocked", blocked: true },
+      { ecu: "7EB" }
+    ]
+  }
+});
+const guardedDtcResponseRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(guardedDtcResponseSession)));
+const guardedDtcObserved = guardedDtcResponseSession.coreSessionStatus?.observedEcuSummary;
+const guardedDtcObserved7E9 = guardedDtcObserved?.ecus?.find((item) => item.id === "7E9");
+check(guardedDtcObserved?.ecus?.find((item) => item.id === "7E8")?.readoutStatusById?.ecu_response_summary === "reported" && guardedDtcObserved7E9?.readoutStatusById?.dtc_snapshot === "negative_response" && guardedDtcObserved7E9?.negativeResponseReadoutIds?.includes("dtc_snapshot") && !guardedDtcObserved?.ecuIds?.includes("7EA") && !guardedDtcObserved?.ecuIds?.includes("7EB") && guardedDtcResponseSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7EA" && item.status === "blocked") && guardedDtcResponseSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7EB" && item.status === "unknown") && !guardedDtcResponseRoundTrip.coreSessionStatus?.observedEcuSummary?.ecuIds?.includes("7EA") && !guardedDtcResponseRoundTrip.coreSessionStatus?.observedEcuSummary?.ecuIds?.includes("7EB") && guardedDtcResponseRoundTrip.vehicleCommandEnabled === false && guardedDtcResponseRoundTrip.wouldTransmit === false, "DTC observed ECU summary inherited parent success for blocked or statusless explicit ECU responses");
 const failedBridgeReadinessInput = { errors: ["transport:timeout"], data: { mil_on: false, monitors: [{ id: "catalyst", status: "complete" }] } };
 const failedBridgeReadinessSession = obd.buildDiagnosticScanSession({ readinessResponse: failedBridgeReadinessInput });
 const contradictoryFailedBridgeReadinessSession = obd.buildDiagnosticScanSession({ readinessResponse: { ...failedBridgeReadinessInput, ok: true, blocked: false } });

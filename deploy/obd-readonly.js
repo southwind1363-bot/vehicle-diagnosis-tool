@@ -8196,6 +8196,8 @@
       .flat();
     const normalizeDtcEcuResponseStatus = (item) => String(item?.status || item?.responseStatus || item?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const isPositiveDtcEcuResponse = (item) => ["reported", "responded", "ok"].includes(normalizeDtcEcuResponseStatus(item));
+    const isObservableDtcEcuResponse = (item) => isPositiveDtcEcuResponse(item)
+      || ["negative_response", "pending_response", "unparsed", "no_response"].includes(normalizeDtcEcuResponseStatus(item));
     const dtcReadoutStatus = String(dtcSnapshot?.dtcReadoutStatus || dtcSnapshot?.dtc_readout_status || "").trim().toLowerCase();
     const hasPartialReportedDtcEcuEvidence = dtcReadoutStatus === "unparsed"
       && dtcSnapshot?.blocked !== true
@@ -8205,7 +8207,7 @@
     // Failed snapshots cannot contribute values; partial DTC scans may retain explicit ECU response provenance only.
     const readableDtcSnapshot = isReadableDiagnosticSnapshot(dtcSnapshot, ["dtcReadoutStatus", "dtc_readout_status"]) ? dtcSnapshot : {};
     const observedDtcEcuResponseRows = hasObjectContent(readableDtcSnapshot)
-      ? dtcEcuResponseRows
+      ? dtcEcuResponseRows.filter(isObservableDtcEcuResponse)
       : dtcEcuResponseRows.filter((item) => hasPartialReportedDtcEcuEvidence && isPositiveDtcEcuResponse(item)
         || ["negative_response", "pending_response", "unparsed", "no_response"].includes(normalizeDtcEcuResponseStatus(item)));
     const readableLivePidSnapshot = isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot : {};
@@ -10021,7 +10023,7 @@
       captured_at: dtcSnapshot?.capturedAt || dtcSnapshot?.captured_at || null,
       protocol: dtcSnapshot?.protocol || dtcSnapshot?.obd_protocol || fallbackProtocol || null,
       ecu_responses: ecuResponses.map((row) => {
-        const status = row.status || row.responseStatus || row.response_status || snapshotReadoutStatus || "unknown";
+        const status = row.status || row.responseStatus || row.response_status || (explicitEcuResponses.length ? "unknown" : snapshotReadoutStatus || "unknown");
         const inferredRequestServices = getDtcSnapshotRequestServices(dtcSnapshot, row);
         const inferredPositiveResponseServices = isPositiveStatus(status) ? getDtcSnapshotPositiveResponseServices(dtcSnapshot, row) : [];
         return {
