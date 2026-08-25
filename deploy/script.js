@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "メーカーPID基準候補を用途別に分離",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.162";
+const APP_VERSION = "3.13.163";
 const APP_LAST_UPDATED = "2026-08-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9408,6 +9408,14 @@ function renderObdDeveloperSessionSummary(session = null) {
   const livePidSnapshot = session?.livePidSnapshot || session?.live_pid_snapshot || null;
   const livePidTimeline = session?.livePidTimeline || session?.live_pid_timeline || null;
   const livePidTimelineSummary = session?.livePidTimelineSummary || session?.live_pid_timeline_summary || null;
+  const manufacturerPidVehicleReadoutSummary = session?.manufacturerPidVehicleReadoutSummary || session?.manufacturer_pid_vehicle_readout_summary || null;
+  const manufacturerPidEvidencePackageCount = Math.max(0, Number(manufacturerPidVehicleReadoutSummary?.packageCount ?? manufacturerPidVehicleReadoutSummary?.package_count ?? 0) || 0);
+  const manufacturerPidEvidenceCandidateCount = Math.max(0, Number(manufacturerPidVehicleReadoutSummary?.candidateCount ?? manufacturerPidVehicleReadoutSummary?.candidate_count ?? 0) || 0);
+  const manufacturerPidEvidenceMeasurementCount = Math.max(0, Number(manufacturerPidVehicleReadoutSummary?.measurementCount ?? manufacturerPidVehicleReadoutSummary?.measurement_count ?? 0) || 0);
+  const manufacturerPidEvidenceTransports = manufacturerPidVehicleReadoutSummary?.transportIds || manufacturerPidVehicleReadoutSummary?.transport_ids || [];
+  const manufacturerPidEvidenceLabel = manufacturerPidEvidencePackageCount > 0
+    ? `${manufacturerPidEvidencePackageCount}件 / 候補${manufacturerPidEvidenceCandidateCount} / 測定${manufacturerPidEvidenceMeasurementCount} / ${Array.isArray(manufacturerPidEvidenceTransports) && manufacturerPidEvidenceTransports.length ? manufacturerPidEvidenceTransports.slice(0, 4).join(" / ") : "経路未確認"} / 手動評価待ち`
+    : "証跡なし";
   const livePidTimelineComparisonLabel = !livePidTimelineSummary?.comparisonAvailable
     ? NO_DATA
     : livePidTimelineSummary.changedValueCount
@@ -9681,6 +9689,7 @@ function renderObdDeveloperSessionSummary(session = null) {
       ? formatObdBridgeMonitorSummary(livePidSnapshot?.monitorValueSummary)
       : 0],
     ["ライブ値読取状態", livePidReadoutStatusLabel],
+    ["メーカーPID証跡", manufacturerPidEvidenceLabel],
     ["ライブ履歴", livePidTimeline?.sampleCount ? `${livePidTimeline.sampleCount}回` : 0],
     ["前回比較", livePidTimelineComparisonLabel],
     ["レディネス", readinessSnapshot?.monitorCount || readinessSnapshot?.knownMonitorCount
