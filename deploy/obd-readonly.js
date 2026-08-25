@@ -24282,6 +24282,15 @@
       monitor_value_summary: summary.monitor_value_summary || null
     });
     const livePidTimeline = normalizeLivePidTimeline(summary.livePidTimeline || summary.live_pid_timeline || parts.livePidTimeline || parts.live_pid_timeline || []);
+    const manufacturerPidVehicleReadoutPackages = normalizeManufacturerPidVehicleReadoutPackageCollection(pickPresent(
+      summary.manufacturerPidVehicleReadoutPackages,
+      summary.manufacturer_pid_vehicle_readout_packages,
+      parts.manufacturerPidVehicleReadoutPackages,
+      parts.manufacturer_pid_vehicle_readout_packages,
+      parts.session?.manufacturerPidVehicleReadoutPackages,
+      parts.session?.manufacturer_pid_vehicle_readout_packages,
+      []
+    )).packages;
     const webSerialReadoutSummary = normalizeWebSerialReadoutSummary(
       summary.webSerialReadoutSummary
       || summary.web_serial_readout_summary
@@ -24460,6 +24469,7 @@
         onboard_monitor_snapshot: summary.onboardMonitorSnapshot || normalizeBridgeOnboardMonitorSnapshot(),
         live_pid_snapshot: livePidSnapshot,
         live_pid_timeline: livePidTimeline,
+        manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
         web_serial_readout_summary: webSerialReadoutSummary,
         readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
@@ -24787,6 +24797,17 @@
     const importedReadoutRequestPlanGateComparisonSummary = summary.importedReadoutRequestPlanGateComparisonSummary || summary.imported_readout_request_plan_gate_comparison_summary || exportPayload.session?.imported_readout_request_plan_gate_comparison_summary || importedSessionComparisonSummary?.readoutRequestPlanGateComparison || importedSessionComparisonSummary?.readout_request_plan_gate_comparison || null;
     const importedNextReadoutGuardComparisonSummary = summary.importedNextReadoutGuardComparisonSummary || summary.imported_next_readout_guard_comparison_summary || exportPayload.session?.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
     const importedCoreReadoutInventoryComparisonSummary = summary.importedCoreReadoutInventoryComparisonSummary || summary.imported_core_readout_inventory_comparison_summary || exportPayload.session?.imported_core_readout_inventory_comparison_summary || importedSessionComparisonSummary?.coreReadoutInventoryComparison || importedSessionComparisonSummary?.core_readout_inventory_comparison || null;
+    const manufacturerPidVehicleReadoutPackageCollection = normalizeManufacturerPidVehicleReadoutPackageCollection(pickPresent(
+      nestedBridgeSession.manufacturerPidVehicleReadoutPackages,
+      nestedBridgeSession.manufacturer_pid_vehicle_readout_packages,
+      exportPayload.session?.manufacturer_pid_vehicle_readout_packages,
+      []
+    ));
+    const manufacturerPidVehicleReadoutPackages = manufacturerPidVehicleReadoutPackageCollection.packages;
+    const bridgeImportWarnings = resolveWarningList(
+      metadataFields.warnings,
+      manufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0 ? ["manufacturer_pid_vehicle_readout_package_rejected"] : []
+    );
 
     return {
       source: "local_bridge",
@@ -24811,6 +24832,8 @@
       monitorInsights,
       livePidTimeline,
       live_pid_timeline: livePidTimeline,
+      manufacturerPidVehicleReadoutPackages,
+      manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
       importClassification: metadataFields.importClassification,
       import_classification: metadataFields.importClassification,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
@@ -24824,7 +24847,7 @@
       vciDevices: cloneBridgeArrayItems(summary.vciDevices),
       adapterIdentity: summary.adapterIdentity || normalizeBridgeAdapterIdentity(),
       toolHints: metadataFields.toolHints,
-      warnings: metadataFields.warnings,
+      warnings: bridgeImportWarnings,
       nextReadoutCandidates: metadataFields.nextReadoutCandidates,
       coreSessionStatus,
       diagnosticFlowSummary,
@@ -31434,6 +31457,7 @@
       dtcSnapshot: dtcSnapshot || undefined,
       livePidSnapshot: importedLivePidSnapshot || undefined,
       livePidTimeline: livePidTimeline || undefined,
+      manufacturerPidVehicleReadoutPackages: pick("manufacturerPidVehicleReadoutPackages", "manufacturer_pid_vehicle_readout_packages"),
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
       readinessSnapshot: readinessSnapshot || undefined,
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
@@ -33593,6 +33617,12 @@
 
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
+    const manufacturerPidVehicleReadoutPackageCollection = normalizeManufacturerPidVehicleReadoutPackageCollection(pickPresent(
+      sessionInput.manufacturerPidVehicleReadoutPackages,
+      sessionInput.manufacturer_pid_vehicle_readout_packages,
+      []
+    ));
+    const manufacturerPidVehicleReadoutPackages = manufacturerPidVehicleReadoutPackageCollection.packages;
     const nativeConnectorBoundary = normalizeNativeConnectorBoundary(sessionInput.nativeConnectorBoundary || sessionInput.native_connector_boundary || {});
     const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle(sessionInput.nativeConnectorScanLifecycle || sessionInput.native_connector_scan_lifecycle || {});
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
@@ -33953,6 +33983,7 @@
     ].map((item) => normalizeProtocolProvenanceValue(item)).filter(Boolean))];
     const multipleProtocols = observedProtocols.length > 1;
     const warnings = [];
+    if (manufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0) warnings.push("manufacturer_pid_vehicle_readout_package_rejected");
     if (multipleProtocols || importClassification?.multipleProtocols === true || importClassification?.multiple_protocols === true) warnings.push("mixed_protocol_readout");
     appendCommonCoreWarnings(warnings, {
       dtcWarning: "save_before_clear",
@@ -34300,6 +34331,8 @@
       live_pid_snapshot: livePidSnapshot,
       livePidTimeline,
       live_pid_timeline: livePidTimeline,
+      manufacturerPidVehicleReadoutPackages,
+      manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
       livePidTimelineSummary,
       live_pid_timeline_summary: livePidTimelineSummary,
       supportedPidMatrix,
@@ -34758,6 +34791,66 @@
     });
   }
 
+  function normalizeManufacturerPidVehicleReadoutPackage(input) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const candidateId = String(input.candidateId || input.candidate_id || "").trim();
+    const candidate = manufacturerPidReferenceCandidates.find((item) => item.id === candidateId);
+    const capturedAt = String(input.capturedAt || input.captured_at || "").trim();
+    if (!candidate || (input.schemaVersion || input.schema_version) !== "manufacturer_pid_vehicle_readout_package_v1"
+      || input.ok !== true || input.blocked !== false || input.readOnly !== true
+      || input.vehicleCommandEnabled !== false || input.wouldTransmit !== false || input.retainedRawText !== false
+      || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(capturedAt)) return null;
+    const pidIdentityEvidence = normalizeManufacturerPidIdentityEvidence(candidate, input.pidIdentityEvidence || input.pid_identity_evidence);
+    const rows = Array.isArray(input.measurements) ? input.measurements : null;
+    if (!pidIdentityEvidence || !rows || rows.length !== pidIdentityEvidence.identities.length) return null;
+    const measurements = rows.map((row) => {
+      const id = String(row?.id || row?.pidId || row?.pid_id || "").trim();
+      const unit = String(row?.unit || "").trim();
+      const sourceEcu = String(row?.sourceEcu || row?.source_ecu || "").trim();
+      const rawValue = row?.value ?? row?.currentValue ?? row?.current_value;
+      const value = rawValue === null || rawValue === "" ? NaN : Number(rawValue);
+      const identity = pidIdentityEvidence.identities.find((item) => item.normalizedMeasurementId === id);
+      if (!identity || !Number.isFinite(value) || !unit || !sourceEcu
+        || identity.unit.toLowerCase() !== unit.toLowerCase()
+        || identity.sourceEcu.toLowerCase() !== sourceEcu.toLowerCase()) return null;
+      return Object.freeze({ id, value, unit, sourceEcu: sourceEcu.slice(0, 80) });
+    });
+    if (measurements.some((row) => !row) || new Set(measurements.map((row) => row.id)).size !== measurements.length) return null;
+    return Object.freeze({
+      schemaVersion: "manufacturer_pid_vehicle_readout_package_v1",
+      candidateId: candidate.id,
+      ok: true,
+      blocked: false,
+      blockerIds: Object.freeze([]),
+      capturedAt,
+      measurements: Object.freeze(measurements),
+      pidIdentityEvidence,
+      readOnly: true,
+      vehicleCommandEnabled: false,
+      wouldTransmit: false,
+      retainedRawText: false
+    });
+  }
+
+  function normalizeManufacturerPidVehicleReadoutPackageCollection(input) {
+    if (input === undefined || input === null) return Object.freeze({ packages: Object.freeze([]), rejectedCount: 0 });
+    if (!Array.isArray(input)) return Object.freeze({ packages: Object.freeze([]), rejectedCount: 1 });
+    const packages = [];
+    const keys = new Set();
+    let rejectedCount = Math.max(0, input.length - 8);
+    input.slice(0, 8).forEach((row) => {
+      const normalized = normalizeManufacturerPidVehicleReadoutPackage(row);
+      const key = normalized ? `${normalized.candidateId}|${normalized.pidIdentityEvidence.scanSessionId}|${normalized.capturedAt}` : null;
+      if (!normalized || keys.has(key)) {
+        rejectedCount += 1;
+        return;
+      }
+      keys.add(key);
+      packages.push(normalized);
+    });
+    return Object.freeze({ packages: Object.freeze(packages), rejectedCount });
+  }
+
   function evaluateManufacturerPidReferenceCandidate({ candidateId, vehicleProfile = null, observationContext = null, measurements = [], applicabilityEvidence = null, pidIdentityEvidence = null, vehicleReadoutPackage = null } = {}) {
     const candidate = manufacturerPidReferenceCandidates.find((item) => item.id === String(candidateId || "").trim());
     const base = {
@@ -34806,36 +34899,15 @@
       return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["source_symptom_or_dtc_gate_not_confirmed"]) });
     }
     const hasVehicleReadoutPackage = vehicleReadoutPackage !== null && vehicleReadoutPackage !== undefined;
-    const validVehicleReadoutPackage = hasVehicleReadoutPackage
-      && vehicleReadoutPackage?.schemaVersion === "manufacturer_pid_vehicle_readout_package_v1"
-      && vehicleReadoutPackage?.candidateId === candidate.id && vehicleReadoutPackage?.ok === true
-      && vehicleReadoutPackage?.blocked === false && vehicleReadoutPackage?.readOnly === true
-      && vehicleReadoutPackage?.vehicleCommandEnabled === false && vehicleReadoutPackage?.wouldTransmit === false
-      && vehicleReadoutPackage?.retainedRawText === false
-      && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(String(vehicleReadoutPackage?.capturedAt || ""))
-      && Array.isArray(vehicleReadoutPackage?.measurements);
-    if (hasVehicleReadoutPackage && !validVehicleReadoutPackage) {
+    const normalizedVehicleReadoutPackage = hasVehicleReadoutPackage ? normalizeManufacturerPidVehicleReadoutPackage(vehicleReadoutPackage) : null;
+    if (hasVehicleReadoutPackage && (!normalizedVehicleReadoutPackage || normalizedVehicleReadoutPackage.candidateId !== candidate.id)) {
       return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["manufacturer_pid_vehicle_readout_package_invalid"]) });
     }
-    const effectivePidIdentityEvidence = validVehicleReadoutPackage ? vehicleReadoutPackage.pidIdentityEvidence : pidIdentityEvidence;
-    const effectiveMeasurements = validVehicleReadoutPackage ? vehicleReadoutPackage.measurements : measurements;
+    const effectivePidIdentityEvidence = normalizedVehicleReadoutPackage ? normalizedVehicleReadoutPackage.pidIdentityEvidence : pidIdentityEvidence;
+    const effectiveMeasurements = normalizedVehicleReadoutPackage ? normalizedVehicleReadoutPackage.measurements : measurements;
     const normalizedPidIdentityEvidence = normalizeManufacturerPidIdentityEvidence(candidate, effectivePidIdentityEvidence);
     if (!normalizedPidIdentityEvidence) {
       return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["manufacturer_pid_identity_evidence_missing_or_invalid"]) });
-    }
-    if (validVehicleReadoutPackage) {
-      const rows = vehicleReadoutPackage.measurements;
-      const packageRowsMatchIdentity = rows.length === normalizedPidIdentityEvidence.identities.length
-        && new Set(rows.map((row) => String(row?.id || "").trim())).size === rows.length
-        && rows.every((row) => {
-          const identity = normalizedPidIdentityEvidence.identities.find((item) => item.normalizedMeasurementId === String(row?.id || "").trim());
-          return identity && Number.isFinite(Number(row?.value))
-            && identity.unit.toLowerCase() === String(row?.unit || "").trim().toLowerCase()
-            && identity.sourceEcu.toLowerCase() === String(row?.sourceEcu || row?.source_ecu || "").trim().toLowerCase();
-        });
-      if (!packageRowsMatchIdentity) {
-        return Object.freeze({ ...resultBase, status: "evidence_incomplete", blockerIds: Object.freeze(["manufacturer_pid_vehicle_readout_package_invalid"]) });
-      }
     }
     const normalizedMeasurements = normalizePidReferenceMeasurementValues(effectiveMeasurements);
     const target = normalizedMeasurements.get(`${candidate.measurement.id}|${candidate.measurement.unit.toLowerCase()}`);
