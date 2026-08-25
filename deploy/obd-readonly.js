@@ -8345,7 +8345,11 @@
         .map((ecuId) => ({ ecuId, readoutStatus: ecuInfoReadoutStatus })),
       ...(ecuInfoSnapshot?.items || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name, readoutStatus: "reported" })),
       ...ecuInfoNameCandidates.map((item) => ({ ...item, readoutStatus: "reported" })),
-      ...ecuInfoEcuSnapshots.map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || null, ecuName: item?.sourceEcuName || item?.source_ecu_name || item?.ecuName || item?.ecu_name || null, readoutStatus: item?.ecuInfoReadoutStatus || item?.ecu_info_readout_status || null }))
+      ...collectScopedObservedRows(
+        { ecuInfoEcuSnapshots: sourceEcuInfoEcuSnapshots },
+        ["ecuInfoEcuSnapshots"],
+        ["ecuInfoReadoutStatus", "ecu_info_readout_status", "readoutStatus", "readout_status"]
+      )
     ]);
     add("onboard_monitor_snapshot", [
       { ecuId: onboardMonitorSnapshot?.sourceEcu || onboardMonitorSnapshot?.source_ecu, ecuName: onboardMonitorSnapshot?.sourceEcuName || onboardMonitorSnapshot?.source_ecu_name },
