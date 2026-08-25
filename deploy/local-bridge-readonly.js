@@ -173,6 +173,29 @@ function sanitizeEcuInfoValuesForBrowser(values = []) {
   });
   return { values: sanitizedValues, hadSensitiveIdentifier };
 }
+
+function buildEcuInfoEcuSnapshots(values = []) {
+  const rowsByEcu = new Map();
+  (Array.isArray(values) ? values : []).forEach((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return;
+    const sourceEcu = String(item.source_ecu || item.sourceEcu || item.ecu || item.address || "").trim().toUpperCase();
+    if (!sourceEcu) return;
+    if (!rowsByEcu.has(sourceEcu)) rowsByEcu.set(sourceEcu, []);
+    rowsByEcu.get(sourceEcu).push({ ...item, source_ecu: sourceEcu });
+  });
+  return [...rowsByEcu.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([sourceEcu, items]) => ({
+      source_ecu: sourceEcu,
+      ecu_info_readout_status: "reported",
+      item_count: items.length,
+      item_ids: [...new Set(items.map((item) => item.id).filter(Boolean))],
+      items,
+      read_only: true,
+      vehicle_command_enabled: false,
+      would_transmit: false
+    }));
+}
 const SAMPLE_ONBOARD_MONITOR_TESTS = [
   { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
   { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
@@ -467,12 +490,15 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     const replayError = replaySnapshot.readoutErrors?.ecu_info
       || (replaySnapshot.readoutObserved?.ecu_info ? null : "replay_ecu_info_not_observed");
     const ecuInfo = sanitizeEcuInfoValuesForBrowser(replaySnapshot.ecuInfoValues);
+    const ecuInfoEcuSnapshots = buildEcuInfoEcuSnapshots(ecuInfo.values);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         values: ecuInfo.values,
+        readout_ecu_ids: ecuInfoEcuSnapshots.map((item) => item.source_ecu),
+        ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
         ...(ecuInfo.hadSensitiveIdentifier ? { had_sensitive_identifier: true } : {})
       }
     };
@@ -480,11 +506,14 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
 
   if (request.intent === "read_ecu_info") {
     const ecuInfo = sanitizeEcuInfoValuesForBrowser(SAMPLE_ECU_INFO_VALUES);
+    const ecuInfoEcuSnapshots = buildEcuInfoEcuSnapshots(ecuInfo.values);
     return {
       ...base,
       data: {
         protocol: "ISO15765-4",
         values: ecuInfo.values,
+        readout_ecu_ids: ecuInfoEcuSnapshots.map((item) => item.source_ecu),
+        ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
         ...(ecuInfo.hadSensitiveIdentifier ? { had_sensitive_identifier: true } : {})
       }
     };

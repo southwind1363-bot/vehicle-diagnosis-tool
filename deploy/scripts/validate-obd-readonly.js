@@ -3673,7 +3673,7 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断機能完成度マトリクスの進捗率が不正です");
 check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断機能完成度マトリクスの目標時期が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent === 8 && item.current_status === "非実行準備モデル実装中" && item.done.includes("DTC消去の非実行準備モデル（適合・保存・確認・再スキャン・復旧）")), "双方向制御の非実行準備モデル進捗が不足しています");
-check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 60), "ローカルブリッジの読取入口進捗が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 61 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離")), "ローカルブリッジのMode09 ECU別読取進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("既定サンプル応答を実車読取として返さない安全境界を追加")), "ローカルブリッジ既定サンプル遮断の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");

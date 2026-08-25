@@ -475,6 +475,7 @@ const replayLog = [
   "can0 7E8#03416C80",
   "can0 7E8#03418E78",
   "can0 7E8#0749000155600000",
+  "can0 7E9#0749000100008000",
   "can0 7E8#0749080100000001",
   "can0 7E8#0C49040143414C2D31323334",
   "can0 7E8#0C490A01456E67696E6520454355",
@@ -659,6 +660,7 @@ try {
   check(replayEcuInfo.data.values.some((item) => item.id === "calibration_id" && item.value === "CAL-1234"), "replay ECU info did not decode CALID");
   check(replayEcuInfo.data.values.some((item) => item.id === "ecu_name" && item.value === "Engine ECU"), "replay ECU info did not decode ECU name");
   check(replayEcuInfo.data.values.some((item) => item.id === "in_use_performance_tracking_compression" && item.value === "00 00 00 02"), "replay ECU info did not decode Mode 09 compression performance counters");
+  check(replayEcuInfo.data.readout_ecu_ids.join(",") === "7E8,7E9" && replayEcuInfo.data.ecu_info_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.ecu_info_readout_status === "reported" && item.item_ids.includes("calibration_id") && item.vehicle_command_enabled === false && item.would_transmit === false) && replayEcuInfo.data.ecu_info_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.item_ids.includes("supported_info_types_00")), "replay ECU information did not retain separate read-only Mode 09 evidence for each responding ECU");
 
   const replayMode09LeadingZero = decodeReplayLog("can0 7E8#0749000100008000");
   check(replayMode09LeadingZero.ecuInfoValues.some((item) => item.id === "supported_info_types_00" && item.value === "00 00 80 00"), "replay Mode 09 supported information types dropped leading zero bytes");

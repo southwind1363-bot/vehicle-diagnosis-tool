@@ -128,8 +128,8 @@
         "label":  "ローカルブリッジ / VCI連携",
         "target_level":  "ELM327 / J2534 / CAN / CAN FD を段階的に読取へ統合",
         "current_status":  "読取入口あり",
-        "progress_percent":  60,
-        "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化、bridge/session alias 吸収、ECU応答サービス来歴、Web Serial終端確認、既定サンプル読取遮断を反映。",
+        "progress_percent":  61,
+        "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化、bridge/session alias 吸収、ECU応答サービス来歴、Mode09のECU別読取証跡、Web Serial終端確認、既定サンプル読取遮断を反映。",
         "done":  [
                      "bridge status / list_vci / adapter_identity / DTC / freeze frame / live PID / supported PID / readiness / ECU info / Mode06 の read-only 正規化",
                      "THINKCAR / Techstream J2534 / ELM327 / CANable の候補整理",
@@ -138,7 +138,8 @@
                      "bridge/session/export/import の nested alias 吸収と outer 優先正規化",
                      "PC側ローカルブリッジの読取専用サンプル実装",
                      "既定サンプル応答を実車読取として返さない安全境界を追加",
-                     "selected vehicle profile carry-through to bridge/session summaries"
+                     "selected vehicle profile carry-through to bridge/session summaries",
+                     "Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離"
                  ],
         "missing":  [
                         "実VCIドライバ連携",
