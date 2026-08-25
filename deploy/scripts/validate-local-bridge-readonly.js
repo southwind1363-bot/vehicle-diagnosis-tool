@@ -594,6 +594,8 @@ try {
     const negativePendingDtc = await post(negativeReplayPort, "read_pending_dtc");
     const negativePermanentDtc = await post(negativeReplayPort, "read_permanent_dtc");
     check(negativePendingDtc.data.ecu_responses?.some((item) => item.ecu === "7E9" && item.dtc_status === "pending" && item.negative_requested_services?.includes("07") && item.negative_response_labels?.includes("OBD NRC 12")) && negativePermanentDtc.data.ecu_responses?.some((item) => item.ecu === "7EA" && item.dtc_status === "permanent" && item.negative_requested_services?.includes("0A") && item.negative_response_labels?.includes("OBD NRC 22")) && [negativePendingDtc, negativePermanentDtc].every((item) => item.ok === false && item.would_transmit === false), "replay pending or permanent DTC negative response was assigned to the wrong ECU or status");
+    const negativeFreezeFrame = await post(negativeReplayPort, "read_freeze_frame");
+    check(negativeFreezeFrame.data.readout_ecu_ids?.includes("7E8") && negativeFreezeFrame.data.freeze_frame_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.freeze_frame_readout_status === "unparsed" && item.freeze_frame_negative_response_service === "02" && item.freeze_frame_negative_response_code === "12" && item.error_codes?.includes("replay_negative_response_02_12") && item.monitor_values?.length === 0 && item.vehicle_command_enabled === false), "replay freeze-frame negative response lost its ECU-scoped outcome");
     const negativeMode01Replay = decodeReplayLog("can0 7E8#037F0112");
     check(negativeMode01Replay.readoutErrors.live_pid_snapshot === null && negativeMode01Replay.readoutErrors.readiness_snapshot === null && negativeMode01Replay.readoutErrors.supported_pids === null, "replay Mode 01 negative response was assigned to an unknown PID readout");
   } finally {
@@ -628,6 +630,17 @@ try {
     check(mixedStoredDtc.ok === false && mixedStoredDtc.data.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && mixedStoredDtc.data.ecu_responses?.some((item) => item.ecu === "7E8" && item.status === "reported" && item.response_services?.includes("43") && item.dtcs?.includes("P0171")) && mixedStoredDtc.data.ecu_responses?.some((item) => item.ecu === "7E9" && item.status === "negative_response" && item.response_services?.includes("7F") && item.negative_requested_services?.includes("03")) && mixedStoredDtc.would_transmit === false, "mixed stored DTC replay discarded valid ECU codes or lost the negative-response ECU");
   } finally {
     await new Promise((resolve) => mixedStoredDtcServer.close(resolve));
+  }
+
+  const mixedFreezeFrameServer = createLocalBridgeApp({ pairingToken: token, replayLogText: ["can0 7E8#054202000171", "can0 7E8#04420C001AF8", "can0 7E9#037F0212"].join("\n") });
+  const mixedFreezeFramePort = await new Promise((resolve) => {
+    mixedFreezeFrameServer.listen(0, "127.0.0.1", () => resolve(mixedFreezeFrameServer.address().port));
+  });
+  try {
+    const mixedFreezeFrame = await post(mixedFreezeFramePort, "read_freeze_frame");
+    check(mixedFreezeFrame.ok === false && mixedFreezeFrame.data.values?.some((item) => item.id === "engine_speed" && item.source_ecu === "7E8") && mixedFreezeFrame.data.trigger_dtc_entries?.some((item) => item.code === "P0171" && item.source_ecu === "7E8") && mixedFreezeFrame.data.readout_ecu_ids?.join(",") === "7E8,7E9" && mixedFreezeFrame.data.freeze_frame_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.freeze_frame_readout_status === "reported" && item.monitor_values?.some((value) => value.id === "engine_speed") && item.trigger_dtc === "P0171") && mixedFreezeFrame.data.freeze_frame_ecu_snapshots?.some((item) => item.source_ecu === "7E9" && item.freeze_frame_readout_status === "unparsed" && item.freeze_frame_negative_response_code === "12" && item.monitor_values?.length === 0) && mixedFreezeFrame.would_transmit === false, "mixed freeze-frame replay discarded valid ECU evidence or lost the failed ECU outcome");
+  } finally {
+    await new Promise((resolve) => mixedFreezeFrameServer.close(resolve));
   }
 
   const mixedMode09Server = createLocalBridgeApp({
@@ -781,6 +794,7 @@ try {
   check(replayFreezeFrame.data.values.some((item) => item.id === "stored_dtc_count" && item.value === 1 && item.freeze_frame_number === 0), "replay freeze frame did not decode stored DTC count");
   check(replayFreezeFrame.data.values.some((item) => item.id === "readiness_flag_count" && item.value === 3 && item.freeze_frame_number === 0), "replay freeze frame did not decode readiness flags");
   check(replayFreezeFrame.data.values.every((item) => monitorDefinitionIds.has(item.id) || bridgeComputedValueIds.has(item.id)), "replay freeze frame included an id not registered in monitor definitions or bridge computed values");
+  check(replayFreezeFrame.data.readout_ecu_ids?.includes("7E8") && replayFreezeFrame.data.freeze_frame_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.freeze_frame_readout_status === "reported" && item.trigger_dtc === "P0171" && item.monitor_values?.some((value) => value.id === "engine_speed") && item.vehicle_command_enabled === false && item.would_transmit === false), "replay freeze frame did not expose its ECU-scoped read-only snapshot");
 } finally {
   await new Promise((resolve) => replayServer.close(resolve));
 }

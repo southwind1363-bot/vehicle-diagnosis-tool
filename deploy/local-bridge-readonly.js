@@ -216,6 +216,52 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
       };
     });
 }
+
+function buildFreezeFrameEcuSnapshots(values = [], triggerEntries = [], outcomes = []) {
+  const rowsByEcu = new Map();
+  const ensureRow = (ecu) => {
+    const sourceEcu = String(ecu || "").trim().toUpperCase();
+    if (!sourceEcu) return null;
+    if (!rowsByEcu.has(sourceEcu)) rowsByEcu.set(sourceEcu, { values: [], triggerEntries: [], outcomes: [] });
+    return rowsByEcu.get(sourceEcu);
+  };
+  (Array.isArray(values) ? values : []).forEach((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return;
+    const sourceEcu = item.source_ecu || item.sourceEcu || item.ecu || item.address;
+    const row = ensureRow(sourceEcu);
+    if (row) row.values.push({ ...item, source_ecu: String(sourceEcu).trim().toUpperCase() });
+  });
+  (Array.isArray(triggerEntries) ? triggerEntries : []).forEach((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return;
+    const sourceEcu = item.source_ecu || item.sourceEcu || item.ecu || item.address;
+    const row = ensureRow(sourceEcu);
+    if (row) row.triggerEntries.push({ ...item, source_ecu: String(sourceEcu).trim().toUpperCase() });
+  });
+  (Array.isArray(outcomes) ? outcomes : []).forEach((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return;
+    const row = ensureRow(item.source_ecu || item.sourceEcu || item.ecu || item.address);
+    if (row) row.outcomes.push(item);
+  });
+  return [...rowsByEcu.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([sourceEcu, row]) => {
+    const errorCodes = [...new Set(row.outcomes.flatMap((item) => item.error_codes || []))];
+    const negativeServices = [...new Set(row.outcomes.map((item) => item.negative_requested_service).filter(Boolean))];
+    const negativeCodes = [...new Set(row.outcomes.map((item) => item.negative_response_code).filter(Boolean))];
+    const triggerCodes = [...new Set(row.triggerEntries.map((item) => item.code).filter(Boolean))];
+    return {
+      source_ecu: sourceEcu,
+      freeze_frame_readout_status: errorCodes.length || negativeCodes.length ? "unparsed" : "reported",
+      monitor_values: row.values,
+      trigger_dtc_entries: row.triggerEntries,
+      ...(triggerCodes.length === 1 ? { trigger_dtc: triggerCodes[0] } : {}),
+      ...(negativeServices.length === 1 ? { freeze_frame_negative_response_service: negativeServices[0] } : {}),
+      ...(negativeCodes.length === 1 ? { freeze_frame_negative_response_code: negativeCodes[0] } : {}),
+      ...(errorCodes.length ? { error_codes: errorCodes } : {}),
+      read_only: true,
+      vehicle_command_enabled: false,
+      would_transmit: false
+    };
+  });
+}
 const SAMPLE_ONBOARD_MONITOR_TESTS = [
   { test_id: "01", component_id: "01", value: 100, min: 50, max: 200 },
   { test_id: "02", component_id: "01", value: 300, min: 50, max: 200 }
@@ -464,6 +510,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
   if (request.intent === "read_freeze_frame" && replaySnapshot) {
     const replayError = replaySnapshot.readoutErrors?.freeze_frame
       || (replaySnapshot.readoutObserved?.freeze_frame ? null : "replay_freeze_frame_not_observed");
+    const freezeFrameEcuSnapshots = buildFreezeFrameEcuSnapshots(replaySnapshot.freezeFrameValues, replaySnapshot.triggerDtcEntries, replaySnapshot.freezeFrameEcuOutcomes);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
@@ -471,6 +518,8 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
         protocol: replaySnapshot.protocol,
         trigger_dtc: replaySnapshot.triggerDtc,
         trigger_dtc_entries: replaySnapshot.triggerDtcEntries,
+        readout_ecu_ids: freezeFrameEcuSnapshots.map((item) => item.source_ecu),
+        freeze_frame_ecu_snapshots: freezeFrameEcuSnapshots,
         values: replaySnapshot.freezeFrameValues
       }
     };
@@ -968,6 +1017,7 @@ export function decodeReplayLog(text) {
   const dtcs = [];
   const liveValues = [];
   const freezeFrameValues = [];
+  const freezeFrameEcuOutcomes = [];
   const ecuInfoValues = [];
   const ecuInfoEcuOutcomes = [];
   const dtcEcuOutcomes = [];
@@ -1015,12 +1065,18 @@ export function decodeReplayLog(text) {
     dtcEcuOutcomes.push({ ecu, dtc_status: dtcStatus, status, ...details });
   };
 
+  const recordFreezeFrameEcuOutcome = (ecu, errorCode, details = {}) => {
+    if (!ecu || !errorCode) return;
+    freezeFrameEcuOutcomes.push({ source_ecu: ecu, error_codes: [errorCode], ...details });
+  };
+
   packets.forEach((packet) => {
     const { ecu, bytes } = packet;
     if (ecu) ecus.add(ecu);
     if (packet.isoTpIncomplete) {
       applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors);
       if (packet.responseService === 0x49) recordEcuInfoOutcome(ecu, "replay_ecu_info_transport_incomplete");
+      if (packet.responseService === 0x42) recordFreezeFrameEcuOutcome(ecu, "replay_freeze_frame_transport_incomplete");
       if ([0x43, 0x47, 0x4A].includes(packet.responseService)) {
         const dtcStatus = packet.responseService === 0x47 ? "pending" : packet.responseService === 0x4A ? "permanent" : "stored";
         recordDtcEcuOutcome(ecu, dtcStatus, "unparsed", { error_codes: ["replay_dtc_transport_incomplete"] });
@@ -1039,6 +1095,13 @@ export function decodeReplayLog(text) {
         const dtcStatus = requestedService === 0x07 ? "pending" : requestedService === 0x0A ? "permanent" : "stored";
         if (responseCode) recordDtcEcuOutcome(ecu, dtcStatus, "negative_response", {
           negative_requested_service: toHexByte(requestedService),
+          negative_response_code: responseCode
+        });
+      }
+      if (bytes[serviceIndex + 1] === 0x02) {
+        const responseCode = toHexByte(bytes[serviceIndex + 2]);
+        if (responseCode) recordFreezeFrameEcuOutcome(ecu, `replay_negative_response_02_${responseCode}`, {
+          negative_requested_service: "02",
           negative_response_code: responseCode
         });
       }
@@ -1081,11 +1144,13 @@ export function decodeReplayLog(text) {
       const frameNumber = bytes[serviceIndex + 2];
       if (!pid || !Number.isInteger(frameNumber)) {
         readoutErrors.freeze_frame = "replay_freeze_frame_payload_incomplete";
+        recordFreezeFrameEcuOutcome(ecu, "replay_freeze_frame_payload_incomplete");
         return;
       }
       if (pid === "02") {
         if (serviceIndex + 4 >= bytes.length) {
           readoutErrors.freeze_frame = "replay_freeze_frame_payload_incomplete";
+          recordFreezeFrameEcuOutcome(ecu, "replay_freeze_frame_payload_incomplete");
           return;
         }
         const decodedDtc = decodeDtcPair(bytes[serviceIndex + 3], bytes[serviceIndex + 4]);
@@ -1103,6 +1168,7 @@ export function decodeReplayLog(text) {
       const decodedValues = decodeLivePidValues(pid, bytes.slice(serviceIndex + 3));
       if (!decodedValues.length) {
         readoutErrors.freeze_frame = "replay_freeze_frame_payload_unparsed";
+        recordFreezeFrameEcuOutcome(ecu, "replay_freeze_frame_payload_unparsed");
         return;
       }
       readoutObserved.freeze_frame = true;
@@ -1194,6 +1260,7 @@ export function decodeReplayLog(text) {
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
     liveValues: uniqueBy(liveValues, (item) => `${item.id}:${item.source_ecu || ""}`),
     freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}:${item.source_ecu || ""}`),
+    freezeFrameEcuOutcomes: uniqueBy(freezeFrameEcuOutcomes, (item) => `${item.source_ecu || ""}:${item.negative_requested_service || ""}:${item.negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     ecuInfoValues: uniqueBy(ecuInfoValues, (item) => `${item.id}:${item.source_ecu || ""}`),
     ecuInfoEcuOutcomes: uniqueBy(ecuInfoEcuOutcomes, (item) => `${item.source_ecu || ""}:${item.ecu_info_negative_response_service || ""}:${item.ecu_info_negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     onboardMonitorTests: uniqueBy(onboardMonitorTests, (item) => `${item.test_id}:${item.component_id}:${item.source_ecu || ""}`),
