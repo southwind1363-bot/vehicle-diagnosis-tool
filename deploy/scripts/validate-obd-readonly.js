@@ -3673,7 +3673,7 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断機能完成度マトリクスの進捗率が不正です");
 check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断機能完成度マトリクスの目標時期が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent === 8 && item.current_status === "非実行準備モデル実装中" && item.done.includes("DTC消去の非実行準備モデル（適合・保存・確認・再スキャン・復旧）")), "双方向制御の非実行準備モデル進捗が不足しています");
-check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 71 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合") && item.done.includes("ECU情報の明示状態だけを観測ECU要約へ採用し未指定・遮断ECUの成功誤認を防止") && item.done.includes("DTCの明示ECU応答で親成功を継承せず未指定・遮断状態の成功誤認を防止")), "ローカルブリッジのECU別読取進捗が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 72 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合") && item.done.includes("ECU情報の明示状態だけを観測ECU要約へ採用し未指定・遮断ECUの成功誤認を防止") && item.done.includes("DTCの明示ECU応答で親成功を継承せず未指定・遮断状態の成功誤認を防止") && item.done.includes("レディネス・対応PIDの子ECUを明示状態で選別し親成功による誤認を防止")), "ローカルブリッジのECU別読取進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("既定サンプル応答を実車読取として返さない安全境界を追加")), "ローカルブリッジ既定サンプル遮断の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
@@ -10064,6 +10064,37 @@ const snakeOnlyReadinessEcuSession = obd.buildDiagnosticScanSession({
 });
 const snakeOnlyReadinessEcuRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(snakeOnlyReadinessEcuSession)));
 check(snakeOnlyReadinessEcuSession.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && snakeOnlyReadinessEcuSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlyReadinessEcuSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("readiness_snapshot") && snakeOnlyReadinessEcuSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && snakeOnlyReadinessEcuRoundTrip?.readoutCoverage?.itemById?.readiness_snapshot?.status === "captured" && snakeOnlyReadinessEcuRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && snakeOnlyReadinessEcuRoundTrip?.vehicleCommandEnabled === false && snakeOnlyReadinessEcuRoundTrip?.wouldTransmit === false, "Snake-case readiness ECU snapshots were treated as an empty or unscoped readout");
+const guardedReportedScopedReadoutSession = obd.buildDiagnosticScanSession({
+  readiness_snapshot: {
+    schemaVersion: "readiness_snapshot_v1",
+    readinessReadoutStatus: "reported",
+    blocked: false,
+    monitorCount: 1,
+    completeCount: 1,
+    incompleteCount: 0,
+    monitors: [{ id: "misfire", supported: true, complete: true, sourceEcu: "7E8" }],
+    readinessEcuSnapshots: [
+      { sourceEcu: "7E8", readinessReadoutStatus: "reported", monitors: [{ id: "misfire", supported: true, complete: true }] },
+      { sourceEcu: "7EA", readinessReadoutStatus: "blocked", blocked: true },
+      { sourceEcu: "7EB" }
+    ]
+  },
+  supported_pid_matrix: {
+    schemaVersion: "supported_pid_matrix_v1",
+    supportedPidReadoutStatus: "reported",
+    blocked: false,
+    supportedPids: ["0C"],
+    supportedPidEcuSnapshots: [
+      { sourceEcu: "7E8", supportedPidReadoutStatus: "reported", supportedPids: ["0C"] },
+      { sourceEcu: "7EC", supportedPidReadoutStatus: "blocked", blocked: true },
+      { sourceEcu: "7ED" }
+    ]
+  }
+});
+const guardedReportedScopedReadoutRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(guardedReportedScopedReadoutSession)));
+const guardedReportedScopedObserved = guardedReportedScopedReadoutSession.coreSessionStatus?.observedEcuSummary;
+const guardedReportedScopedExcludedEcuIds = ["7EA", "7EB", "7EC", "7ED"];
+check(guardedReportedScopedObserved?.ecus?.find((item) => item.id === "7E8")?.readoutStatusById?.readiness_snapshot === "reported" && guardedReportedScopedObserved?.ecus?.find((item) => item.id === "7E8")?.readoutStatusById?.supported_pid_matrix === "reported" && guardedReportedScopedExcludedEcuIds.every((id) => !guardedReportedScopedObserved?.ecuIds?.includes(id) && !guardedReportedScopedReadoutSession.ecuResponseSummary?.ecus?.some((item) => item.id === id) && !guardedReportedScopedReadoutRoundTrip.coreSessionStatus?.observedEcuSummary?.ecuIds?.includes(id)) && guardedReportedScopedReadoutRoundTrip.vehicleCommandEnabled === false && guardedReportedScopedReadoutRoundTrip.wouldTransmit === false, "Reported readiness or supported-PID parents promoted blocked or statusless child ECUs into observed evidence");
 const bridgeMixedEcuReadinessValueRows = obd.normalizeBridgeReadinessSnapshot({
   ok: true,
   blocked: false,

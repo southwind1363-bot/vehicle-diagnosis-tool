@@ -8325,10 +8325,6 @@
     ]);
     add("readiness_snapshot", [
       { ecuId: readinessSnapshot?.sourceEcu || readinessSnapshot?.source_ecu, ecuName: readinessSnapshot?.sourceEcuName || readinessSnapshot?.source_ecu_name },
-      ...[
-        ...(Array.isArray(readinessSnapshot?.readinessEcuSnapshots) ? readinessSnapshot.readinessEcuSnapshots : []),
-        ...(Array.isArray(readinessSnapshot?.readiness_ecu_snapshots) ? readinessSnapshot.readiness_ecu_snapshots : [])
-      ].map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...collectScopedObservedRows(sourceReadinessSnapshot, ["readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["readinessReadoutStatus", "readiness_readout_status", "readoutStatus", "readout_status"])
     ]);
     const ecuInfoEcuSnapshots = Array.isArray(ecuInfoSnapshot?.ecuInfoEcuSnapshots)
@@ -8364,10 +8360,6 @@
     ]);
     add("supported_pid_matrix", [
       { ecuId: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu, ecuName: supportedPidMatrix?.sourceEcuName || supportedPidMatrix?.source_ecu_name },
-      ...[
-        ...(Array.isArray(supportedPidMatrix?.supportedPidEcuSnapshots) ? supportedPidMatrix.supportedPidEcuSnapshots : []),
-        ...(Array.isArray(supportedPidMatrix?.supported_pid_ecu_snapshots) ? supportedPidMatrix.supported_pid_ecu_snapshots : [])
-      ].map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
       ...collectScopedObservedRows(sourceSupportedPidMatrix, ["supportedPidEcuSnapshots", "supported_pid_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["supportedPidReadoutStatus", "supported_pid_readout_status", "readoutStatus", "readout_status"])
     ]);
     const byId = new Map();
