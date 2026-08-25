@@ -9,6 +9,7 @@
     "bridge:dev": "C:\\Progra~1\\nodejs\\node.exe local-bridge-readonly.js",
     "bridge:j2534:dev": "C:\\Progra~1\\nodejs\\node.exe scripts/start-j2534-readonly-bridge.js",
     "inspect:j2534": "C:\\Progra~1\\nodejs\\node.exe scripts/inspect-j2534-drivers.js",
+    "review:j2534-worker": "C:\\Progra~1\\nodejs\\node.exe scripts/j2534-readonly-worker.js",
     "validate:data": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-data.js",
     "validate:dtc-import": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-verified-dtc-import.js",
     "validate:obd": "C:\\Progra~1\\nodejs\\node.exe scripts/validate-obd-readonly.js",

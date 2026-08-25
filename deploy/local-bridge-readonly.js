@@ -15,6 +15,7 @@ const MAX_J2534_LIBRARY_SIZE = 64 * 1024 * 1024;
 const MAX_PE_EXPORT_NAMES = 4096;
 const J2534_HOST_ARCHITECTURE = process.arch === "ia32" ? "x86" : process.arch === "x64" ? "x64" : process.arch === "arm64" ? "arm64" : "unknown";
 const J2534_HOST_BITNESS = J2534_HOST_ARCHITECTURE === "x86" ? 32 : J2534_HOST_ARCHITECTURE === "unknown" ? null : 64;
+const J2534_WORKER_CONTRACT_VERSION = "j2534-readonly-worker-v1";
 const J2534_REQUIRED_API_NAMES = Object.freeze([
   "PassThruOpen",
   "PassThruClose",
@@ -495,6 +496,9 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     pass_thru_open_allowed: false,
     pass_thru_open_attempted: false,
     vehicle_connection_attempted: false,
+    worker_contract_version: J2534_WORKER_CONTRACT_VERSION,
+    worker_execution_status: "disabled_review_only",
+    dll_load_attempted: false,
     static_ready_vci_count: j2534DiscoveryEnvironment.static_ready_vci_count,
     static_blocked_vci_count: j2534DiscoveryEnvironment.static_blocked_vci_count,
     selected_static_ready_device_id: j2534DiscoveryEnvironment.selected_static_ready_device_id
@@ -877,6 +881,9 @@ export function getJ2534DiscoveryEnvironment(devices = []) {
     pass_thru_open_allowed: false,
     pass_thru_open_attempted: false,
     vehicle_connection_attempted: false,
+    worker_contract_version: J2534_WORKER_CONTRACT_VERSION,
+    worker_execution_status: "disabled_review_only",
+    dll_load_attempted: false,
     static_ready_vci_count: readyDeviceIndexes.length,
     static_blocked_vci_count: detectedCount - readyDeviceIndexes.length,
     selected_static_ready_device_id: readyDeviceIndexes.length > 0 ? registeredDevices[readyDeviceIndexes[0]]?.id || null : null,

@@ -3068,6 +3068,7 @@ const interfaceCatalog = obd.getVehicleInterfaceCatalog();
 check(interfaceCatalog.length >= 4, "VCI候補カタログが不足しています");
 check(interfaceCatalog.some((item) => item.id === "user-vci-techstream-j2534" && item.interfaceFamily === "potential-j2534-passthru" && item.hardwareCompatibilityConfirmed === false), "有線OBD2機器のJ2534適合未確認状態を保持できません");
 check(interfaceCatalog.some((item) => item.id === "user-vci-techstream-j2534" && item.observedUse.includes("Techstream") && item.observedUse.includes("DLLは未確認")), "Techstream使用実績とJ2534 DLL未確認状態を分離できません");
+check(interfaceCatalog.some((item) => item.id === "user-vci-techstream-j2534" && item.progressPercent === 28 && item.currentStatus.includes("隔離ワーカー契約実装") && item.nextBuild.includes("ReadVersion限定ロード") && item.connectionEnabled === false && item.vehicleCommandEnabled === false), "J2534隔離ワーカー進捗または未接続安全状態を保持できません");
 check(interfaceCatalog.some((item) => item.id === "user-vci-thinkcar-bluetooth" && item.deviceModel === "TCMa" && item.hardwareCompatibilityConfirmed === false), "THINKCAR TCMaの実機適合確認状態を保持できません");
 check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.deviceModel === "ELM327 mini" && item.hardwareCompatibilityConfirmed === false), "ELM327 miniの実機適合確認状態を保持できません");
 check(interfaceCatalog.some((item) => item.id === "user-vci-elm327" && item.observedUse.includes("スマホアプリ") && item.observedUse.includes("Bluetooth読取")), "ELM327 miniのスマホBluetooth使用実績を保持できません");
@@ -3676,6 +3677,7 @@ check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "str
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent === 8 && item.current_status === "非実行準備モデル実装中" && item.done.includes("DTC消去の非実行準備モデル（適合・保存・確認・再スキャン・復旧）")), "双方向制御の非実行準備モデル進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 78 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合") && item.done.includes("フリーズフレームのPID値・トリガーDTC・失敗応答をECU別スナップショットへ統合") && item.done.includes("レディネスPID01の成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("対応PIDページの成功値と不完全応答をECU別スナップショットへ統合") && item.done.includes("Mode06監視結果の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("ライブPIDの成功値と不完全応答・失敗PID番号をECU別スナップショットへ統合") && item.done.includes("部分成功した主要読取のECU別状態を観測ECU要約と応答要約へ横断統合") && item.done.includes("ECU情報の明示状態だけを観測ECU要約へ採用し未指定・遮断ECUの成功誤認を防止") && item.done.includes("DTCの明示ECU応答で親成功を継承せず未指定・遮断状態の成功誤認を防止") && item.done.includes("レディネス・対応PIDの子ECUを明示状態で選別し親成功による誤認を防止") && item.done.includes("親ECU識別・読取ECU一覧より子ECUの明示状態を優先して観測・応答要約を統合") && item.done.includes("ECU応答要約の矛盾状態を除外し明示応答状態だけを観測・適用照合へ採用") && item.done.includes("車両適用ECU照合を観測要約へ集約し未解析・無応答ECUの一致誤認を防止") && item.done.includes("再読込時に解消済みのECU適用不一致候補を除去し現場指定候補を保持") && item.done.includes("J2534登録状態・確認レジストリ・ブリッジ32/64bitをread-onlyセッションへ保持") && item.done.includes("PassThruOpen前のブロッカー・未試行状態・手動確認ゲートをread-onlyセッションへ保持")), "ローカルブリッジのECU別読取進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("J2534 DLL非実行の別プロセスレビュー契約とタイムアウト・生パス拒否を実装")), "J2534隔離ワーカー契約の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("既定サンプル応答を実車読取として返さない安全境界を追加")), "ローカルブリッジ既定サンプル遮断の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("selected vehicle profile carry-through to bridge/session summaries")), "ローカルブリッジの車両プロファイル引継ぎ進捗が不足しています");
@@ -6260,12 +6262,16 @@ const bridgeJ2534PreferredStatus = obd.normalizeBridgeConnectionStatus({
     pass_thru_open_allowed: true,
     pass_thru_open_attempted: true,
     vehicle_connection_attempted: true,
+    worker_contract_version: "j2534-readonly-worker-v1",
+    worker_execution_status: "disabled_review_only",
+    dll_load_attempted: true,
     static_ready_vci_count: 1,
     static_blocked_vci_count: 1,
     selected_static_ready_device_id: "j2534-ready-2"
   }
 });
 check(bridgeJ2534PreferredStatus.registrationStatus === "registered_driver_detected" && bridgeJ2534PreferredStatus.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534PreferredStatus.registryRootsChecked?.length === 2 && bridgeJ2534PreferredStatus.registry_roots_checked?.length === 2 && bridgeJ2534PreferredStatus.bridgeRuntimeArchitecture === "x64" && bridgeJ2534PreferredStatus.bridgeRuntimeBitness === 64 && bridgeJ2534PreferredStatus.openReviewStatus === "manual_review_required" && bridgeJ2534PreferredStatus.openReviewBlockers?.join(",") === "manual_vci_connection_review_required" && bridgeJ2534PreferredStatus.passThruOpenAllowed === false && bridgeJ2534PreferredStatus.passThruOpenAttempted === false && bridgeJ2534PreferredStatus.vehicleConnectionAttempted === false && bridgeJ2534PreferredStatus.staticReadyVciCount === 1 && bridgeJ2534PreferredStatus.static_ready_vci_count === 1 && bridgeJ2534PreferredStatus.staticBlockedVciCount === 1 && bridgeJ2534PreferredStatus.static_blocked_vci_count === 1 && bridgeJ2534PreferredStatus.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredStatus.selected_static_ready_device_id === "j2534-ready-2" && bridgeJ2534PreferredStatus.vehicleCommandEnabled === false, "J2534 static runtime and unopened review metadata was not normalized with the read-only connection status");
+check(bridgeJ2534PreferredStatus.workerContractVersion === "j2534-readonly-worker-v1" && bridgeJ2534PreferredStatus.workerExecutionStatus === "disabled_review_only" && bridgeJ2534PreferredStatus.dllLoadAttempted === false, "J2534 worker metadata did not fail closed during connection status normalization");
 const bridgeJ2534ReadinessStatuses = [
   ["no_registered_driver", "J2534ドライバー未登録", "WindowsにJ2534 Pass-Thruドライバーを登録"],
   ["static_inspection_pending", "J2534 DLL静的確認待ち", "read-only必須APIを静的確認"],
@@ -6323,6 +6329,9 @@ const bridgeJ2534PreferredVciList = obd.normalizeBridgeVciList({
     pass_thru_open_allowed: false,
     pass_thru_open_attempted: false,
     vehicle_connection_attempted: false,
+    worker_contract_version: "j2534-readonly-worker-v1",
+    worker_execution_status: "disabled_review_only",
+    dll_load_attempted: false,
     static_ready_vci_count: 1,
     static_blocked_vci_count: 1,
     selected_static_ready_device_id: "j2534-ready-2",
@@ -6334,6 +6343,7 @@ const bridgeJ2534PreferredVciList = obd.normalizeBridgeVciList({
   }
 });
 check(bridgeJ2534PreferredVciList.registrationStatus === "registered_driver_detected" && bridgeJ2534PreferredVciList.registryRootsChecked?.length === 2 && bridgeJ2534PreferredVciList.bridgeRuntimeArchitecture === "x64" && bridgeJ2534PreferredVciList.bridgeRuntimeBitness === 64 && bridgeJ2534PreferredVciList.openReviewStatus === "manual_review_required" && bridgeJ2534PreferredVciList.openReviewBlockers?.join(",") === "manual_vci_connection_review_required" && bridgeJ2534PreferredVciList.passThruOpenAllowed === false && bridgeJ2534PreferredVciList.passThruOpenAttempted === false && bridgeJ2534PreferredVciList.vehicleConnectionAttempted === false && bridgeJ2534PreferredVciList.staticReadyVciCount === 1 && bridgeJ2534PreferredVciList.staticBlockedVciCount === 1 && bridgeJ2534PreferredVciList.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.selectedDeviceId === "j2534-ready-2" && bridgeJ2534PreferredVciList.devices[1]?.selected === true && bridgeJ2534PreferredVciList.vehicleCommandEnabled === false, "J2534 static runtime and unopened review metadata was not retained in the VCI list");
+check(bridgeJ2534PreferredVciList.workerContractVersion === "j2534-readonly-worker-v1" && bridgeJ2534PreferredVciList.workerExecutionStatus === "disabled_review_only" && bridgeJ2534PreferredVciList.dllLoadAttempted === false, "J2534 worker metadata was not retained in the VCI list");
 const bridgeMalformedVciList = obd.normalizeBridgeVciList({
   ok: true,
   blocked: false,
@@ -6437,6 +6447,7 @@ const j2534PreferredReadinessSession = obd.buildDiagnosticScanSession({
 });
 const reimportedJ2534PreferredReadinessSession = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(j2534PreferredReadinessSession) }));
 check(reimportedJ2534PreferredReadinessSession?.connectionStatus?.registrationStatus === "registered_driver_detected" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.registryRootsChecked?.length === 2 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.bridgeRuntimeArchitecture === "x64" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.bridgeRuntimeBitness === 64 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.openReviewStatus === "manual_review_required" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.openReviewBlockers?.join(",") === "manual_vci_connection_review_required" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.passThruOpenAttempted === false && reimportedJ2534PreferredReadinessSession?.connectionStatus?.vehicleConnectionAttempted === false && reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticReadyVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connection_status?.static_ready_vci_count === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.staticBlockedVciCount === 1 && reimportedJ2534PreferredReadinessSession?.connectionStatus?.selectedStaticReadyDeviceId === "j2534-ready-2" && reimportedJ2534PreferredReadinessSession?.vciDevices?.[1]?.selected === true && reimportedJ2534PreferredReadinessSession?.vehicleCommandEnabled === false, "J2534 static runtime and unopened review metadata was not retained through read-only session JSON reimport");
+check(reimportedJ2534PreferredReadinessSession?.connectionStatus?.workerContractVersion === "j2534-readonly-worker-v1" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.workerExecutionStatus === "disabled_review_only" && reimportedJ2534PreferredReadinessSession?.connectionStatus?.dllLoadAttempted === false, "J2534 worker metadata was not retained through read-only session JSON reimport");
 const bridgeAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,
@@ -6470,12 +6481,16 @@ const bridgeJ2534AdapterIdentity = obd.normalizeBridgeAdapterIdentity({
     pass_thru_open_allowed: false,
     pass_thru_open_attempted: false,
     vehicle_connection_attempted: false,
+    worker_contract_version: "j2534-readonly-worker-v1",
+    worker_execution_status: "disabled_review_only",
+    dll_load_attempted: false,
     static_ready_vci_count: 1,
     static_blocked_vci_count: 1,
     selected_static_ready_device_id: "j2534-ready-2"
   }
 });
 check(bridgeJ2534AdapterIdentity.adapterFamily === "j2534_passthru" && bridgeJ2534AdapterIdentity.registrationStatus === "registered_driver_detected" && bridgeJ2534AdapterIdentity.driverReadinessStatus === "readonly_static_check_complete" && bridgeJ2534AdapterIdentity.registryRootsChecked?.length === 2 && bridgeJ2534AdapterIdentity.bridgeRuntimeArchitecture === "x64" && bridgeJ2534AdapterIdentity.bridgeRuntimeBitness === 64 && bridgeJ2534AdapterIdentity.openReviewStatus === "manual_review_required" && bridgeJ2534AdapterIdentity.openReviewBlockers?.join(",") === "manual_vci_connection_review_required" && bridgeJ2534AdapterIdentity.passThruOpenAllowed === false && bridgeJ2534AdapterIdentity.passThruOpenAttempted === false && bridgeJ2534AdapterIdentity.vehicleConnectionAttempted === false && bridgeJ2534AdapterIdentity.staticReadyVciCount === 1 && bridgeJ2534AdapterIdentity.staticBlockedVciCount === 1 && bridgeJ2534AdapterIdentity.selectedStaticReadyDeviceId === "j2534-ready-2" && bridgeJ2534AdapterIdentity.vehicleCommandEnabled === false, "J2534 adapter identity did not retain static runtime and unopened review metadata");
+check(bridgeJ2534AdapterIdentity.workerContractVersion === "j2534-readonly-worker-v1" && bridgeJ2534AdapterIdentity.workerExecutionStatus === "disabled_review_only" && bridgeJ2534AdapterIdentity.dllLoadAttempted === false, "J2534 adapter identity did not retain disabled worker metadata");
 const bridgeMalformedAdapterIdentity = obd.normalizeBridgeAdapterIdentity({
   ok: true,
   blocked: false,
