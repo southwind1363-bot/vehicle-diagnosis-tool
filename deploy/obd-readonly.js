@@ -8175,6 +8175,21 @@
     return ["responded", "response", "ok", "success", "available", "positive", "pending_response", "negative_response"].includes(status);
   }
 
+  function isObservableEcuResponse(row) {
+    const status = String(row?.status || row?.responseStatus || row?.response_status || "")
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, "_");
+    if (["blocked", "unknown", "no_response", "unparsed", "failed", "error", "timeout"].includes(status)) return false;
+    if (isRespondedEcuResponse(row)) return true;
+    const responseServices = Array.isArray(row?.responseServices)
+      ? row.responseServices
+      : Array.isArray(row?.response_services)
+        ? row.response_services
+        : [];
+    return status === "reported" && responseServices.some((service) => String(service || "").trim().toUpperCase() !== "7F");
+  }
+
   function buildObservedEcuSummary({
     dtcSnapshot = {},
     freezeFrameSnapshot = {},
@@ -8311,12 +8326,7 @@
         .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name, readoutStatus: item?.status || item?.responseStatus || item?.response_status || null }))
     ]);
     add("ecu_response_summary", (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
-      .filter((item) => {
-        if (isRespondedEcuResponse(item)) return true;
-        const status = String(item?.status || item?.responseStatus || item?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-        const responseServices = Array.isArray(item?.responseServices) ? item.responseServices : Array.isArray(item?.response_services) ? item.response_services : [];
-        return status === "reported" && responseServices.some((service) => String(service || "").trim().toUpperCase() !== "7F");
-      })
+      .filter(isObservableEcuResponse)
       .map((item) => ({
         ecuId: item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null,
         ecuName: item?.name || item?.ecuName || item?.ecu_name || item?.label || item?.displayName || item?.display_name || null,
@@ -8515,13 +8525,8 @@
     onboardMonitorSnapshot = isReadableDiagnosticSnapshot(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]) ? onboardMonitorSnapshot : {};
     supportedPidMatrix = isReadableDiagnosticSnapshot(supportedPidMatrix, ["supportedPidReadoutStatus", "supported_pid_readout_status"]) ? supportedPidMatrix : {};
     const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
-    const hasExplicitPositiveReportedResponse = (row) => {
-      const status = String(row?.status || row?.responseStatus || row?.response_status || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
-      const responseServices = Array.isArray(row?.responseServices) ? row.responseServices : Array.isArray(row?.response_services) ? row.response_services : [];
-      return status === "reported" && responseServices.some((service) => String(service || "").trim().toUpperCase() !== "7F");
-    };
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
-      .filter((row) => isRespondedEcuResponse(row) || hasExplicitPositiveReportedResponse(row));
+      .filter(isObservableEcuResponse);
     const respondedEcuAddresses = [...new Set(respondedEcuRows
       .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
       .map(normalizeComparableCanEcuAddress)
