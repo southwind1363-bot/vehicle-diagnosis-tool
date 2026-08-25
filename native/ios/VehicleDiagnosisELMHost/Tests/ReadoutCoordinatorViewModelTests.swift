@@ -108,7 +108,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
 
         coordinator.connector(coordinator.connector, didEmit: envelope)
         coordinator.connector(coordinator.connector, didComplete: manifest)
-        await Task.yield()
+        await waitForViewModelUpdate { viewModel.archiveState == "Complete" }
 
         XCTAssertEqual(viewModel.archiveState, "Complete")
         XCTAssertEqual(viewModel.archiveRecordCount, 1)
@@ -189,7 +189,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
 
         coordinator.connector(coordinator.connector, didEmit: envelope)
         coordinator.connector(coordinator.connector, didComplete: manifest)
-        await Task.yield()
+        await waitForViewModelUpdate { viewModel.canExportArchive }
         viewModel.prepareArchiveExport()
 
         let url = try XCTUnwrap(viewModel.exportURL)
@@ -236,7 +236,7 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
 
         coordinator.connector(coordinator.connector, didEmit: envelope)
         coordinator.connector(coordinator.connector, didComplete: manifest)
-        await Task.yield()
+        await waitForViewModelUpdate { viewModel.errorMessage != nil }
 
         XCTAssertEqual(viewModel.archiveState, "Incomplete")
         XCTAssertFalse(viewModel.canExportArchive)
@@ -404,6 +404,14 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
         let expected = "読取結果が安全な保存上限の\(NativeConnectorScanArchiveBuilder.maximumEnvelopeCount)件を超えたため、中断しました。"
 
         XCTAssertEqual(viewModel.archiveErrorMessage(.tooManyEnvelopes), expected)
+    }
+
+    @MainActor
+    private func waitForViewModelUpdate(_ condition: () -> Bool) async {
+        for _ in 0..<100 {
+            if condition() { return }
+            await Task.yield()
+        }
     }
 
     private func readoutEnvelope(
