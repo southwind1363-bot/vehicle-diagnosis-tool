@@ -24291,6 +24291,7 @@
       parts.session?.manufacturer_pid_vehicle_readout_packages,
       []
     )).packages;
+    const manufacturerPidVehicleReadoutSummary = buildManufacturerPidVehicleReadoutSummary(manufacturerPidVehicleReadoutPackages);
     const webSerialReadoutSummary = normalizeWebSerialReadoutSummary(
       summary.webSerialReadoutSummary
       || summary.web_serial_readout_summary
@@ -24470,6 +24471,7 @@
         live_pid_snapshot: livePidSnapshot,
         live_pid_timeline: livePidTimeline,
         manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
+        manufacturer_pid_vehicle_readout_summary: manufacturerPidVehicleReadoutSummary,
         web_serial_readout_summary: webSerialReadoutSummary,
         readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
@@ -24804,6 +24806,7 @@
       []
     ));
     const manufacturerPidVehicleReadoutPackages = manufacturerPidVehicleReadoutPackageCollection.packages;
+    const manufacturerPidVehicleReadoutSummary = buildManufacturerPidVehicleReadoutSummary(manufacturerPidVehicleReadoutPackages);
     const bridgeImportWarnings = resolveWarningList(
       metadataFields.warnings,
       manufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0 ? ["manufacturer_pid_vehicle_readout_package_rejected"] : []
@@ -24834,6 +24837,8 @@
       live_pid_timeline: livePidTimeline,
       manufacturerPidVehicleReadoutPackages,
       manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
+      manufacturerPidVehicleReadoutSummary,
+      manufacturer_pid_vehicle_readout_summary: manufacturerPidVehicleReadoutSummary,
       importClassification: metadataFields.importClassification,
       import_classification: metadataFields.importClassification,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
@@ -33623,6 +33628,7 @@
       []
     ));
     const manufacturerPidVehicleReadoutPackages = manufacturerPidVehicleReadoutPackageCollection.packages;
+    const manufacturerPidVehicleReadoutSummary = buildManufacturerPidVehicleReadoutSummary(manufacturerPidVehicleReadoutPackages);
     const nativeConnectorBoundary = normalizeNativeConnectorBoundary(sessionInput.nativeConnectorBoundary || sessionInput.native_connector_boundary || {});
     const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle(sessionInput.nativeConnectorScanLifecycle || sessionInput.native_connector_scan_lifecycle || {});
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
@@ -34333,6 +34339,8 @@
       live_pid_timeline: livePidTimeline,
       manufacturerPidVehicleReadoutPackages,
       manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
+      manufacturerPidVehicleReadoutSummary,
+      manufacturer_pid_vehicle_readout_summary: manufacturerPidVehicleReadoutSummary,
       livePidTimelineSummary,
       live_pid_timeline_summary: livePidTimelineSummary,
       supportedPidMatrix,
@@ -34849,6 +34857,46 @@
       packages.push(normalized);
     });
     return Object.freeze({ packages: Object.freeze(packages), rejectedCount });
+  }
+
+  function buildManufacturerPidVehicleReadoutSummary(input = []) {
+    const packages = Array.isArray(input) ? input : [];
+    const candidateIds = [...new Set(packages.map((item) => item.candidateId).filter(Boolean))].sort();
+    const transportIds = [...new Set(packages.map((item) => item.pidIdentityEvidence?.transport).filter(Boolean))].sort();
+    const capturedAtValues = packages.map((item) => item.capturedAt).filter(Boolean).sort();
+    const measurementCount = packages.reduce((total, item) => total + (Array.isArray(item.measurements) ? item.measurements.length : 0), 0);
+    return Object.freeze({
+      schemaVersion: "manufacturer_pid_vehicle_readout_summary_v1",
+      schema_version: "manufacturer_pid_vehicle_readout_summary_v1",
+      packageCount: packages.length,
+      package_count: packages.length,
+      candidateCount: candidateIds.length,
+      candidate_count: candidateIds.length,
+      candidateIds: Object.freeze(candidateIds),
+      candidate_ids: Object.freeze([...candidateIds]),
+      measurementCount,
+      measurement_count: measurementCount,
+      transportIds: Object.freeze(transportIds),
+      transport_ids: Object.freeze([...transportIds]),
+      earliestCapturedAt: capturedAtValues[0] || null,
+      earliest_captured_at: capturedAtValues[0] || null,
+      latestCapturedAt: capturedAtValues.at(-1) || null,
+      latest_captured_at: capturedAtValues.at(-1) || null,
+      identityVerifiedPackageCount: packages.length,
+      identity_verified_package_count: packages.length,
+      requiresManualCandidateEvaluation: packages.length > 0,
+      requires_manual_candidate_evaluation: packages.length > 0,
+      automaticApplicationEnabled: false,
+      automatic_application_enabled: false,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      readOnly: true,
+      read_only: true,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
+    });
   }
 
   function evaluateManufacturerPidReferenceCandidate({ candidateId, vehicleProfile = null, observationContext = null, measurements = [], applicabilityEvidence = null, pidIdentityEvidence = null, vehicleReadoutPackage = null } = {}) {
