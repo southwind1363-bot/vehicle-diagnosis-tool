@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "メーカーPID基準候補を用途別に分離",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.163";
+const APP_VERSION = "3.13.164";
 const APP_LAST_UPDATED = "2026-08-25";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9416,6 +9416,12 @@ function renderObdDeveloperSessionSummary(session = null) {
   const manufacturerPidEvidenceLabel = manufacturerPidEvidencePackageCount > 0
     ? `${manufacturerPidEvidencePackageCount}件 / 候補${manufacturerPidEvidenceCandidateCount} / 測定${manufacturerPidEvidenceMeasurementCount} / ${Array.isArray(manufacturerPidEvidenceTransports) && manufacturerPidEvidenceTransports.length ? manufacturerPidEvidenceTransports.slice(0, 4).join(" / ") : "経路未確認"} / 手動評価待ち`
     : "証跡なし";
+  const manufacturerPidVehicleReadoutComparisonSummary = session?.manufacturerPidVehicleReadoutComparisonSummary || session?.manufacturer_pid_vehicle_readout_comparison_summary || null;
+  const manufacturerPidEvidenceComparisonLabel = !manufacturerPidVehicleReadoutComparisonSummary
+    ? "前回証跡なし"
+    : manufacturerPidVehicleReadoutComparisonSummary.changed === true
+      ? `変更あり / パッケージ${Number(manufacturerPidVehicleReadoutComparisonSummary.packageCountDelta ?? manufacturerPidVehicleReadoutComparisonSummary.package_count_delta ?? 0) >= 0 ? "+" : ""}${manufacturerPidVehicleReadoutComparisonSummary.packageCountDelta ?? manufacturerPidVehicleReadoutComparisonSummary.package_count_delta ?? 0} / 測定${Number(manufacturerPidVehicleReadoutComparisonSummary.measurementCountDelta ?? manufacturerPidVehicleReadoutComparisonSummary.measurement_count_delta ?? 0) >= 0 ? "+" : ""}${manufacturerPidVehicleReadoutComparisonSummary.measurementCountDelta ?? manufacturerPidVehicleReadoutComparisonSummary.measurement_count_delta ?? 0} / 手動確認`
+      : "変更なし / 手動確認";
   const livePidTimelineComparisonLabel = !livePidTimelineSummary?.comparisonAvailable
     ? NO_DATA
     : livePidTimelineSummary.changedValueCount
@@ -9690,6 +9696,7 @@ function renderObdDeveloperSessionSummary(session = null) {
       : 0],
     ["ライブ値読取状態", livePidReadoutStatusLabel],
     ["メーカーPID証跡", manufacturerPidEvidenceLabel],
+    ["メーカーPID証跡比較", manufacturerPidEvidenceComparisonLabel],
     ["ライブ履歴", livePidTimeline?.sampleCount ? `${livePidTimeline.sampleCount}回` : 0],
     ["前回比較", livePidTimelineComparisonLabel],
     ["レディネス", readinessSnapshot?.monitorCount || readinessSnapshot?.knownMonitorCount

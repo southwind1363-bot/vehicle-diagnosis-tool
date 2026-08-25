@@ -24292,6 +24292,19 @@
       []
     )).packages;
     const manufacturerPidVehicleReadoutSummary = buildManufacturerPidVehicleReadoutSummary(manufacturerPidVehicleReadoutPackages);
+    const importedManufacturerPidVehicleReadoutPackageInput = pickDefined(
+      summary.importedManufacturerPidVehicleReadoutPackages,
+      summary.imported_manufacturer_pid_vehicle_readout_packages,
+      parts.importedManufacturerPidVehicleReadoutPackages,
+      parts.imported_manufacturer_pid_vehicle_readout_packages,
+      parts.session?.importedManufacturerPidVehicleReadoutPackages,
+      parts.session?.imported_manufacturer_pid_vehicle_readout_packages
+    );
+    const importedManufacturerPidVehicleReadoutPackages = normalizeManufacturerPidVehicleReadoutPackageCollection(importedManufacturerPidVehicleReadoutPackageInput).packages;
+    const importedManufacturerPidVehicleReadoutSummary = importedManufacturerPidVehicleReadoutPackageInput === undefined || importedManufacturerPidVehicleReadoutPackageInput === null
+      ? null
+      : buildManufacturerPidVehicleReadoutSummary(importedManufacturerPidVehicleReadoutPackages);
+    const manufacturerPidVehicleReadoutComparisonSummary = buildManufacturerPidVehicleReadoutSummaryComparison(importedManufacturerPidVehicleReadoutSummary, manufacturerPidVehicleReadoutSummary);
     const webSerialReadoutSummary = normalizeWebSerialReadoutSummary(
       summary.webSerialReadoutSummary
       || summary.web_serial_readout_summary
@@ -24472,6 +24485,9 @@
         live_pid_timeline: livePidTimeline,
         manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
         manufacturer_pid_vehicle_readout_summary: manufacturerPidVehicleReadoutSummary,
+        imported_manufacturer_pid_vehicle_readout_packages: importedManufacturerPidVehicleReadoutPackages,
+        imported_manufacturer_pid_vehicle_readout_summary: importedManufacturerPidVehicleReadoutSummary,
+        manufacturer_pid_vehicle_readout_comparison_summary: manufacturerPidVehicleReadoutComparisonSummary,
         web_serial_readout_summary: webSerialReadoutSummary,
         readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
@@ -24807,9 +24823,21 @@
     ));
     const manufacturerPidVehicleReadoutPackages = manufacturerPidVehicleReadoutPackageCollection.packages;
     const manufacturerPidVehicleReadoutSummary = buildManufacturerPidVehicleReadoutSummary(manufacturerPidVehicleReadoutPackages);
+    const importedManufacturerPidVehicleReadoutPackageInput = pickDefined(
+      nestedBridgeSession.importedManufacturerPidVehicleReadoutPackages,
+      nestedBridgeSession.imported_manufacturer_pid_vehicle_readout_packages,
+      exportPayload.session?.imported_manufacturer_pid_vehicle_readout_packages
+    );
+    const importedManufacturerPidVehicleReadoutPackageCollection = normalizeManufacturerPidVehicleReadoutPackageCollection(importedManufacturerPidVehicleReadoutPackageInput);
+    const importedManufacturerPidVehicleReadoutPackages = importedManufacturerPidVehicleReadoutPackageCollection.packages;
+    const importedManufacturerPidVehicleReadoutSummary = importedManufacturerPidVehicleReadoutPackageInput === undefined || importedManufacturerPidVehicleReadoutPackageInput === null
+      ? null
+      : buildManufacturerPidVehicleReadoutSummary(importedManufacturerPidVehicleReadoutPackages);
+    const manufacturerPidVehicleReadoutComparisonSummary = buildManufacturerPidVehicleReadoutSummaryComparison(importedManufacturerPidVehicleReadoutSummary, manufacturerPidVehicleReadoutSummary);
     const bridgeImportWarnings = resolveWarningList(
       metadataFields.warnings,
-      manufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0 ? ["manufacturer_pid_vehicle_readout_package_rejected"] : []
+      manufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0 ? ["manufacturer_pid_vehicle_readout_package_rejected"] : [],
+      importedManufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0 ? ["imported_manufacturer_pid_vehicle_readout_package_rejected"] : []
     );
 
     return {
@@ -24839,6 +24867,12 @@
       manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
       manufacturerPidVehicleReadoutSummary,
       manufacturer_pid_vehicle_readout_summary: manufacturerPidVehicleReadoutSummary,
+      importedManufacturerPidVehicleReadoutPackages,
+      imported_manufacturer_pid_vehicle_readout_packages: importedManufacturerPidVehicleReadoutPackages,
+      importedManufacturerPidVehicleReadoutSummary,
+      imported_manufacturer_pid_vehicle_readout_summary: importedManufacturerPidVehicleReadoutSummary,
+      manufacturerPidVehicleReadoutComparisonSummary,
+      manufacturer_pid_vehicle_readout_comparison_summary: manufacturerPidVehicleReadoutComparisonSummary,
       importClassification: metadataFields.importClassification,
       import_classification: metadataFields.importClassification,
       ecuResponseSummary: summary.ecuResponseSummary || normalizeEcuResponseSummary({ source: "local_bridge" }),
@@ -31463,6 +31497,7 @@
       livePidSnapshot: importedLivePidSnapshot || undefined,
       livePidTimeline: livePidTimeline || undefined,
       manufacturerPidVehicleReadoutPackages: pick("manufacturerPidVehicleReadoutPackages", "manufacturer_pid_vehicle_readout_packages"),
+      importedManufacturerPidVehicleReadoutPackages: pick("importedManufacturerPidVehicleReadoutPackages", "imported_manufacturer_pid_vehicle_readout_packages"),
       freezeFrameSnapshot: freezeFrameSnapshot || undefined,
       readinessSnapshot: readinessSnapshot || undefined,
       ecuInfoSnapshot: ecuInfoSnapshot || undefined,
@@ -33629,6 +33664,16 @@
     ));
     const manufacturerPidVehicleReadoutPackages = manufacturerPidVehicleReadoutPackageCollection.packages;
     const manufacturerPidVehicleReadoutSummary = buildManufacturerPidVehicleReadoutSummary(manufacturerPidVehicleReadoutPackages);
+    const importedManufacturerPidVehicleReadoutPackageInput = pickDefined(
+      sessionInput.importedManufacturerPidVehicleReadoutPackages,
+      sessionInput.imported_manufacturer_pid_vehicle_readout_packages
+    );
+    const importedManufacturerPidVehicleReadoutPackageCollection = normalizeManufacturerPidVehicleReadoutPackageCollection(importedManufacturerPidVehicleReadoutPackageInput);
+    const importedManufacturerPidVehicleReadoutPackages = importedManufacturerPidVehicleReadoutPackageCollection.packages;
+    const importedManufacturerPidVehicleReadoutSummary = importedManufacturerPidVehicleReadoutPackageInput === undefined || importedManufacturerPidVehicleReadoutPackageInput === null
+      ? null
+      : buildManufacturerPidVehicleReadoutSummary(importedManufacturerPidVehicleReadoutPackages);
+    const manufacturerPidVehicleReadoutComparisonSummary = buildManufacturerPidVehicleReadoutSummaryComparison(importedManufacturerPidVehicleReadoutSummary, manufacturerPidVehicleReadoutSummary);
     const nativeConnectorBoundary = normalizeNativeConnectorBoundary(sessionInput.nativeConnectorBoundary || sessionInput.native_connector_boundary || {});
     const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle(sessionInput.nativeConnectorScanLifecycle || sessionInput.native_connector_scan_lifecycle || {});
     const metadataOverrides = getSessionMetadataOverrides(sessionInput);
@@ -33990,6 +34035,7 @@
     const multipleProtocols = observedProtocols.length > 1;
     const warnings = [];
     if (manufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0) warnings.push("manufacturer_pid_vehicle_readout_package_rejected");
+    if (importedManufacturerPidVehicleReadoutPackageCollection.rejectedCount > 0) warnings.push("imported_manufacturer_pid_vehicle_readout_package_rejected");
     if (multipleProtocols || importClassification?.multipleProtocols === true || importClassification?.multiple_protocols === true) warnings.push("mixed_protocol_readout");
     appendCommonCoreWarnings(warnings, {
       dtcWarning: "save_before_clear",
@@ -34341,6 +34387,12 @@
       manufacturer_pid_vehicle_readout_packages: manufacturerPidVehicleReadoutPackages,
       manufacturerPidVehicleReadoutSummary,
       manufacturer_pid_vehicle_readout_summary: manufacturerPidVehicleReadoutSummary,
+      importedManufacturerPidVehicleReadoutPackages,
+      imported_manufacturer_pid_vehicle_readout_packages: importedManufacturerPidVehicleReadoutPackages,
+      importedManufacturerPidVehicleReadoutSummary,
+      imported_manufacturer_pid_vehicle_readout_summary: importedManufacturerPidVehicleReadoutSummary,
+      manufacturerPidVehicleReadoutComparisonSummary,
+      manufacturer_pid_vehicle_readout_comparison_summary: manufacturerPidVehicleReadoutComparisonSummary,
       livePidTimelineSummary,
       live_pid_timeline_summary: livePidTimelineSummary,
       supportedPidMatrix,
@@ -34890,6 +34942,63 @@
       automatic_application_enabled: false,
       diagnosticConclusionAssigned: false,
       diagnostic_conclusion_assigned: false,
+      readOnly: true,
+      read_only: true,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
+    });
+  }
+
+  function buildManufacturerPidVehicleReadoutSummaryComparison(importedSummary = null, currentSummary = null) {
+    if (!importedSummary || !currentSummary) return null;
+    const importedCandidateIds = [...new Set(importedSummary.candidateIds || importedSummary.candidate_ids || [])].sort();
+    const currentCandidateIds = [...new Set(currentSummary.candidateIds || currentSummary.candidate_ids || [])].sort();
+    const importedTransportIds = [...new Set(importedSummary.transportIds || importedSummary.transport_ids || [])].sort();
+    const currentTransportIds = [...new Set(currentSummary.transportIds || currentSummary.transport_ids || [])].sort();
+    const candidateAddedIds = currentCandidateIds.filter((id) => !importedCandidateIds.includes(id));
+    const candidateRemovedIds = importedCandidateIds.filter((id) => !currentCandidateIds.includes(id));
+    const transportAddedIds = currentTransportIds.filter((id) => !importedTransportIds.includes(id));
+    const transportRemovedIds = importedTransportIds.filter((id) => !currentTransportIds.includes(id));
+    const importedPackageCount = Number(importedSummary.packageCount ?? importedSummary.package_count ?? 0) || 0;
+    const currentPackageCount = Number(currentSummary.packageCount ?? currentSummary.package_count ?? 0) || 0;
+    const importedMeasurementCount = Number(importedSummary.measurementCount ?? importedSummary.measurement_count ?? 0) || 0;
+    const currentMeasurementCount = Number(currentSummary.measurementCount ?? currentSummary.measurement_count ?? 0) || 0;
+    const importedLatestCapturedAt = importedSummary.latestCapturedAt || importedSummary.latest_captured_at || null;
+    const currentLatestCapturedAt = currentSummary.latestCapturedAt || currentSummary.latest_captured_at || null;
+    const changed = importedPackageCount !== currentPackageCount
+      || importedMeasurementCount !== currentMeasurementCount
+      || candidateAddedIds.length > 0 || candidateRemovedIds.length > 0
+      || transportAddedIds.length > 0 || transportRemovedIds.length > 0
+      || importedLatestCapturedAt !== currentLatestCapturedAt;
+    return Object.freeze({
+      schemaVersion: "manufacturer_pid_vehicle_readout_comparison_v1",
+      schema_version: "manufacturer_pid_vehicle_readout_comparison_v1",
+      status: changed ? "changed" : "unchanged",
+      changed,
+      packageCountDelta: currentPackageCount - importedPackageCount,
+      package_count_delta: currentPackageCount - importedPackageCount,
+      measurementCountDelta: currentMeasurementCount - importedMeasurementCount,
+      measurement_count_delta: currentMeasurementCount - importedMeasurementCount,
+      candidateAddedIds: Object.freeze(candidateAddedIds),
+      candidate_added_ids: Object.freeze([...candidateAddedIds]),
+      candidateRemovedIds: Object.freeze(candidateRemovedIds),
+      candidate_removed_ids: Object.freeze([...candidateRemovedIds]),
+      transportAddedIds: Object.freeze(transportAddedIds),
+      transport_added_ids: Object.freeze([...transportAddedIds]),
+      transportRemovedIds: Object.freeze(transportRemovedIds),
+      transport_removed_ids: Object.freeze([...transportRemovedIds]),
+      importedLatestCapturedAt,
+      imported_latest_captured_at: importedLatestCapturedAt,
+      currentLatestCapturedAt,
+      current_latest_captured_at: currentLatestCapturedAt,
+      captureWindowChanged: importedLatestCapturedAt !== currentLatestCapturedAt,
+      capture_window_changed: importedLatestCapturedAt !== currentLatestCapturedAt,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      automaticApplicationEnabled: false,
+      automatic_application_enabled: false,
       readOnly: true,
       read_only: true,
       vehicleCommandEnabled: false,
