@@ -3577,6 +3577,17 @@
       ].map((item) => [`${item.code}::${item.subcode || ""}::${normalizeDtcEntryCodeFormat(item)}::${item.status}`, { ...item, source: "local_bridge" }])).values()];
       const explicitCodeCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null;
       const codeCount = Number.isInteger(decodedRawSnapshot?.dtcCount) ? decodedRawSnapshot.dtcCount : childDtcs.length > 0 ? childDtcs.length : explicitCodeCount;
+      const normalizeServiceList = (...values) => [...new Set(values.filter(Array.isArray).flat().map((value) => String(value || "").trim().toUpperCase()).filter((value) => /^[0-9A-F]{2}$/.test(value)))].slice(0, 16);
+      const responseServices = normalizeServiceList(row?.response_services, row?.responseServices);
+      const requestedServices = normalizeServiceList(row?.services, row?.requested_services, row?.requestedServices);
+      const negativeRequestedServices = normalizeServiceList(row?.negative_requested_services, row?.negativeRequestedServices);
+      const negativeResponseLabels = [...new Set([
+        ...(Array.isArray(row?.negative_response_labels) ? row.negative_response_labels : []),
+        ...(Array.isArray(row?.negativeResponseLabels) ? row.negativeResponseLabels : [])
+      ].map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 16);
+      const responseCount = Number.isInteger(row?.response_count) ? row.response_count : Number.isInteger(row?.responseCount) ? row.responseCount : null;
+      const negativeResponseCount = Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : 0;
+      const pendingNegativeResponseCount = Number.isInteger(row?.pending_negative_response_count) ? row.pending_negative_response_count : Number.isInteger(row?.pendingNegativeResponseCount) ? row.pendingNegativeResponseCount : 0;
       return {
         ecu: rowEcu,
         ecuName: rowEcuName,
@@ -3586,6 +3597,21 @@
         error_codes: [...rowErrorCodes],
         codeCount,
         code_count: codeCount,
+        responseCount,
+        response_count: responseCount,
+        services: requestedServices,
+        requestedServices,
+        requested_services: requestedServices,
+        responseServices,
+        response_services: responseServices,
+        negativeResponseCount,
+        negative_response_count: negativeResponseCount,
+        pendingNegativeResponseCount,
+        pending_negative_response_count: pendingNegativeResponseCount,
+        negativeRequestedServices,
+        negative_requested_services: negativeRequestedServices,
+        negativeResponseLabels,
+        negative_response_labels: negativeResponseLabels,
         dtcs: childDtcs,
         codes: [...new Set(childDtcs.map((item) => item.code))]
       };

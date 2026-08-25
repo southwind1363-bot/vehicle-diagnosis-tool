@@ -519,7 +519,7 @@ try {
   });
   try {
     const incompleteReplayDtc = await post(incompleteReplayPort, "read_stored_dtc");
-    check(incompleteReplayDtc.ok === false && incompleteReplayDtc.errors.includes("replay_dtc_payload_incomplete") && incompleteReplayDtc.data.dtcs.length === 0, "incomplete replay DTC payload was treated as an empty valid readout");
+    check(incompleteReplayDtc.ok === false && incompleteReplayDtc.errors.includes("replay_dtc_payload_incomplete") && incompleteReplayDtc.data.dtcs.length === 0 && incompleteReplayDtc.data.ecu_responses?.some((item) => item.ecu === "7E8" && item.status === "unparsed" && item.error_codes?.includes("replay_dtc_payload_incomplete") && item.vehicle_command_enabled === false), "incomplete replay DTC payload lost its ECU-scoped read-only failure");
     const missingReplayReadouts = [
       ["read_freeze_frame", "replay_freeze_frame_not_observed"],
       ["read_supported_pids", "replay_supported_pids_not_observed"],
@@ -564,6 +564,8 @@ try {
 
   const negativeReplayLog = [
     "can0 7E8#037F0311",
+    "can0 7E9#037F0712",
+    "can0 7EA#037F0A22",
     "can0 7E8#037F0212",
     "can0 7E8#037F0922",
     "can0 7E8#037F0631"
@@ -575,6 +577,8 @@ try {
   try {
     const negativeReplayReadouts = [
       ["read_stored_dtc", "replay_negative_response_03_11"],
+      ["read_pending_dtc", "replay_negative_response_07_12"],
+      ["read_permanent_dtc", "replay_negative_response_0A_22"],
       ["read_freeze_frame", "replay_negative_response_02_12"],
       ["read_ecu_info", "replay_negative_response_09_22"],
       ["read_onboard_monitor", "replay_negative_response_06_31"]
@@ -585,6 +589,11 @@ try {
     }
     const negativeMode09 = await post(negativeReplayPort, "read_ecu_info");
     check(negativeMode09.data.readout_ecu_ids?.includes("7E8") && negativeMode09.data.ecu_info_ecu_snapshots?.some((item) => item.source_ecu === "7E8" && item.ecu_info_readout_status === "unparsed" && item.ecu_info_negative_response_service === "09" && item.ecu_info_negative_response_code === "22" && item.error_codes?.includes("replay_negative_response_09_22") && item.item_count === 0 && item.vehicle_command_enabled === false && item.would_transmit === false), "replay Mode 09 negative response lost its ECU-scoped read-only outcome");
+    const negativeStoredDtc = await post(negativeReplayPort, "read_stored_dtc");
+    check(negativeStoredDtc.data.dtc_negative_response_services?.includes("03") && negativeStoredDtc.data.dtc_negative_response_codes?.includes("11") && negativeStoredDtc.data.ecu_responses?.some((item) => item.ecu === "7E8" && item.status === "negative_response" && item.response_services?.includes("7F") && item.negative_requested_services?.includes("03") && item.negative_response_labels?.includes("OBD NRC 11") && item.negative_response_count === 1 && item.dtcs?.length === 0 && item.would_transmit === false), "replay stored DTC negative response lost its ECU-scoped service evidence");
+    const negativePendingDtc = await post(negativeReplayPort, "read_pending_dtc");
+    const negativePermanentDtc = await post(negativeReplayPort, "read_permanent_dtc");
+    check(negativePendingDtc.data.ecu_responses?.some((item) => item.ecu === "7E9" && item.dtc_status === "pending" && item.negative_requested_services?.includes("07") && item.negative_response_labels?.includes("OBD NRC 12")) && negativePermanentDtc.data.ecu_responses?.some((item) => item.ecu === "7EA" && item.dtc_status === "permanent" && item.negative_requested_services?.includes("0A") && item.negative_response_labels?.includes("OBD NRC 22")) && [negativePendingDtc, negativePermanentDtc].every((item) => item.ok === false && item.would_transmit === false), "replay pending or permanent DTC negative response was assigned to the wrong ECU or status");
     const negativeMode01Replay = decodeReplayLog("can0 7E8#037F0112");
     check(negativeMode01Replay.readoutErrors.live_pid_snapshot === null && negativeMode01Replay.readoutErrors.readiness_snapshot === null && negativeMode01Replay.readoutErrors.supported_pids === null, "replay Mode 01 negative response was assigned to an unknown PID readout");
   } finally {
@@ -609,6 +618,17 @@ try {
   check(multiEcuSupportedPidReplay.supportedPidEcuSnapshots?.some((item) => item.source_ecu === "7E8" && item.supported_pid_page_bases.includes("00") && item.supported_pids.includes("01")) && multiEcuSupportedPidReplay.supportedPidEcuSnapshots?.some((item) => item.source_ecu === "7E9" && item.supported_pid_page_bases.includes("00") && item.supported_pids.includes("02")), "replay supported PID pages lost ECU-specific capability boundaries");
   const multiEcuFreezeFrameReplay = decodeReplayLog(["can0 7E8#054202000171", "can0 7E9#054202000300"].join("\n"));
   check(multiEcuFreezeFrameReplay.triggerDtc === "P0171" && multiEcuFreezeFrameReplay.triggerDtcEntries?.some((item) => item.code === "P0171" && item.source_ecu === "7E8") && multiEcuFreezeFrameReplay.triggerDtcEntries?.some((item) => item.code === "P0300" && item.source_ecu === "7E9"), "replay freeze-frame trigger DTCs lost ECU-specific evidence");
+
+  const mixedStoredDtcServer = createLocalBridgeApp({ pairingToken: token, replayLogText: ["can0 7E8#03430171", "can0 7E9#037F0311"].join("\n") });
+  const mixedStoredDtcPort = await new Promise((resolve) => {
+    mixedStoredDtcServer.listen(0, "127.0.0.1", () => resolve(mixedStoredDtcServer.address().port));
+  });
+  try {
+    const mixedStoredDtc = await post(mixedStoredDtcPort, "read_stored_dtc");
+    check(mixedStoredDtc.ok === false && mixedStoredDtc.data.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && mixedStoredDtc.data.ecu_responses?.some((item) => item.ecu === "7E8" && item.status === "reported" && item.response_services?.includes("43") && item.dtcs?.includes("P0171")) && mixedStoredDtc.data.ecu_responses?.some((item) => item.ecu === "7E9" && item.status === "negative_response" && item.response_services?.includes("7F") && item.negative_requested_services?.includes("03")) && mixedStoredDtc.would_transmit === false, "mixed stored DTC replay discarded valid ECU codes or lost the negative-response ECU");
+  } finally {
+    await new Promise((resolve) => mixedStoredDtcServer.close(resolve));
+  }
 
   const mixedMode09Server = createLocalBridgeApp({
     pairingToken: token,

@@ -434,7 +434,15 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
-        ecu_responses: buildEcuResponsesForDtcs(replaySnapshot.ecuResponses, dtcs),
+        ecu_responses: buildEcuResponsesForDtcs(dtcs, status, replaySnapshot.dtcEcuOutcomes),
+        dtc_negative_response_services: [...new Set((replaySnapshot.dtcEcuOutcomes || [])
+          .filter((item) => item.dtc_status === status && item.status === "negative_response")
+          .map((item) => item.negative_requested_service)
+          .filter(Boolean))],
+        dtc_negative_response_codes: [...new Set((replaySnapshot.dtcEcuOutcomes || [])
+          .filter((item) => item.dtc_status === status && item.status === "negative_response")
+          .map((item) => item.negative_response_code)
+          .filter(Boolean))],
         dtcs
       }
     };
@@ -901,11 +909,45 @@ function buildReplaySnapshot(options = {}) {
   return replayText ? decodeReplayLog(replayText) : null;
 }
 
-function buildEcuResponsesForDtcs(ecuResponses = [], dtcs = []) {
-  return ecuResponses.map((row) => {
-    const ecu = row?.ecu || null;
-    const codes = dtcs.filter((item) => !ecu || item.ecu === ecu).map((item) => item.code);
-    return { ...row, dtcs: [...new Set(codes)] };
+function buildEcuResponsesForDtcs(dtcs = [], dtcStatus = "stored", outcomes = []) {
+  const matchingOutcomes = (Array.isArray(outcomes) ? outcomes : []).filter((item) => item?.dtc_status === dtcStatus && item?.ecu);
+  const ecuIds = [...new Set([
+    ...(Array.isArray(dtcs) ? dtcs : []).map((item) => item?.ecu).filter(Boolean),
+    ...matchingOutcomes.map((item) => item.ecu)
+  ])].sort();
+  const requestedService = dtcStatus === "pending" ? "07" : dtcStatus === "permanent" ? "0A" : "03";
+  const positiveResponseService = dtcStatus === "pending" ? "47" : dtcStatus === "permanent" ? "4A" : "43";
+  return ecuIds.map((ecu) => {
+    const ecuOutcomes = matchingOutcomes.filter((item) => item.ecu === ecu);
+    const codes = [...new Set((Array.isArray(dtcs) ? dtcs : []).filter((item) => item.ecu === ecu).map((item) => item.code))];
+    const hasReported = ecuOutcomes.some((item) => item.status === "reported") || codes.length > 0;
+    const negativeOutcomes = ecuOutcomes.filter((item) => item.status === "negative_response");
+    const errorCodes = [...new Set(ecuOutcomes.flatMap((item) => item.error_codes || []))];
+    const status = hasReported ? "reported" : negativeOutcomes.length ? "negative_response" : "unparsed";
+    const responseServices = [...new Set([
+      ...(hasReported ? [positiveResponseService] : []),
+      ...(negativeOutcomes.length ? ["7F"] : [])
+    ])];
+    const negativeResponseCodes = [...new Set(negativeOutcomes.map((item) => item.negative_response_code).filter(Boolean))];
+    return {
+      ecu,
+      intent: dtcStatus === "pending" ? "read_pending_dtc" : dtcStatus === "permanent" ? "read_permanent_dtc" : "read_stored_dtc",
+      dtc_status: dtcStatus,
+      status,
+      dtc_count: codes.length,
+      response_count: ecuOutcomes.length || 1,
+      services: [requestedService],
+      response_services: responseServices,
+      negative_response_count: negativeOutcomes.length,
+      pending_negative_response_count: negativeOutcomes.filter((item) => item.negative_response_code === "78").length,
+      negative_requested_services: negativeOutcomes.length ? [requestedService] : [],
+      negative_response_labels: negativeResponseCodes.map((code) => `OBD NRC ${code}`),
+      ...(errorCodes.length ? { error_codes: errorCodes } : {}),
+      dtcs: codes,
+      read_only: true,
+      vehicle_command_enabled: false,
+      would_transmit: false
+    };
   });
 }
 
@@ -928,6 +970,7 @@ export function decodeReplayLog(text) {
   const freezeFrameValues = [];
   const ecuInfoValues = [];
   const ecuInfoEcuOutcomes = [];
+  const dtcEcuOutcomes = [];
   const onboardMonitorTests = [];
   const supportedPids = new Set();
   const supportedPidsByEcu = new Map();
@@ -967,12 +1010,21 @@ export function decodeReplayLog(text) {
     });
   };
 
+  const recordDtcEcuOutcome = (ecu, dtcStatus, status, details = {}) => {
+    if (!ecu || !dtcStatus || !status) return;
+    dtcEcuOutcomes.push({ ecu, dtc_status: dtcStatus, status, ...details });
+  };
+
   packets.forEach((packet) => {
     const { ecu, bytes } = packet;
     if (ecu) ecus.add(ecu);
     if (packet.isoTpIncomplete) {
       applyReplayIsoTpTransportError(packet, dtcReadoutErrors, readoutErrors);
       if (packet.responseService === 0x49) recordEcuInfoOutcome(ecu, "replay_ecu_info_transport_incomplete");
+      if ([0x43, 0x47, 0x4A].includes(packet.responseService)) {
+        const dtcStatus = packet.responseService === 0x47 ? "pending" : packet.responseService === 0x4A ? "permanent" : "stored";
+        recordDtcEcuOutcome(ecu, dtcStatus, "unparsed", { error_codes: ["replay_dtc_transport_incomplete"] });
+      }
       return;
     }
     const serviceIndex = findReplayResponseIndex(bytes);
@@ -981,6 +1033,15 @@ export function decodeReplayLog(text) {
 
     if (service === 0x7F) {
       applyReplayNegativeResponse(bytes[serviceIndex + 1], bytes[serviceIndex + 2], dtcReadoutErrors, readoutErrors);
+      if ([0x03, 0x07, 0x0A].includes(bytes[serviceIndex + 1])) {
+        const requestedService = bytes[serviceIndex + 1];
+        const responseCode = toHexByte(bytes[serviceIndex + 2]);
+        const dtcStatus = requestedService === 0x07 ? "pending" : requestedService === 0x0A ? "permanent" : "stored";
+        if (responseCode) recordDtcEcuOutcome(ecu, dtcStatus, "negative_response", {
+          negative_requested_service: toHexByte(requestedService),
+          negative_response_code: responseCode
+        });
+      }
       if (bytes[serviceIndex + 1] === 0x09) {
         const responseCode = toHexByte(bytes[serviceIndex + 2]);
         if (responseCode) {
@@ -1000,9 +1061,11 @@ export function decodeReplayLog(text) {
       const trailingPaddingByte = payloadLength % 2 === 1 ? bytes[bytes.length - 1] : null;
       if (payloadLength < 2 || (payloadLength % 2 === 1 && trailingPaddingByte !== 0)) {
         dtcReadoutErrors[status] = "replay_dtc_payload_incomplete";
+        recordDtcEcuOutcome(ecu, status, "unparsed", { error_codes: ["replay_dtc_payload_incomplete"] });
         return;
       }
       dtcReadoutObserved[status] = true;
+      recordDtcEcuOutcome(ecu, status, "reported", { response_service: toHexByte(service) });
       const completePayloadEnd = payloadLength % 2 === 0 ? bytes.length : bytes.length - 1;
       for (let index = payloadStart; index + 1 < completePayloadEnd; index += 2) {
         const high = bytes[index];
@@ -1127,6 +1190,7 @@ export function decodeReplayLog(text) {
     readoutErrors,
     readout_errors: { ...readoutErrors },
     ecuResponses: [...ecus].map((ecu) => ({ ecu, status: "replay", dtcs: dtcs.filter((item) => item.ecu === ecu).map((item) => item.code) })),
+    dtcEcuOutcomes: uniqueBy(dtcEcuOutcomes, (item) => `${item.ecu || ""}:${item.dtc_status || ""}:${item.status || ""}:${item.negative_requested_service || ""}:${item.negative_response_code || ""}:${(item.error_codes || []).join(",")}`),
     dtcs: uniqueBy(dtcs, (item) => `${item.code}:${item.status}:${item.ecu || ""}`),
     liveValues: uniqueBy(liveValues, (item) => `${item.id}:${item.source_ecu || ""}`),
     freezeFrameValues: uniqueBy(freezeFrameValues, (item) => `${item.id}:${item.freeze_frame_number}:${item.source_ecu || ""}`),

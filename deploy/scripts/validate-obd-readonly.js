@@ -3673,7 +3673,7 @@ check(diagnosticCapabilityStatus.length >= 6, "診断機能完成度マトリク
 check(diagnosticCapabilityStatus.every((item) => Number.isInteger(item.progress_percent) && item.progress_percent >= 0 && item.progress_percent <= 100), "診断機能完成度マトリクスの進捗率が不正です");
 check(diagnosticCapabilityStatus.every((item) => typeof item.eta_target === "string" && item.eta_target.length > 0), "診断機能完成度マトリクスの目標時期が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-bidirectional" && item.progress_percent === 8 && item.current_status === "非実行準備モデル実装中" && item.done.includes("DTC消去の非実行準備モデル（適合・保存・確認・再スキャン・復旧）")), "双方向制御の非実行準備モデル進捗が不足しています");
-check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 62 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合")), "ローカルブリッジのMode09 ECU別読取進捗が不足しています");
+check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.progress_percent === 63 && item.done.includes("Mode09応答をVIN除外後にECU別スナップショットと読取ECU一覧へ分離") && item.done.includes("Mode09の成功値と否定応答・不完全応答をECU別スナップショットへ統合") && item.done.includes("保存・保留・永久DTCの成功値と否定応答・不完全応答をECU別来歴へ統合")), "ローカルブリッジのECU別読取進捗が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("PC側ローカルブリッジの読取専用サンプル実装")), "ローカルブリッジ読取サンプル実装状態が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("既定サンプル応答を実車読取として返さない安全境界を追加")), "ローカルブリッジ既定サンプル遮断の進捗根拠が不足しています");
 check(diagnosticCapabilityStatus.some((item) => item.id === "capability-local-bridge" && item.done.includes("bridge/session/export/import の nested alias 吸収と outer 優先正規化")), "ローカルブリッジ alias 正規化の進捗根拠が不足しています");
@@ -9147,6 +9147,24 @@ const bridgeScopedErrorDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
 const bridgeScopedErrorDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeScopedErrorDtcSnapshot });
 const bridgeScopedErrorDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeScopedErrorDtcSession)));
 check(bridgeScopedErrorDtcSnapshot.ok === false && bridgeScopedErrorDtcSnapshot.blocked === false && bridgeScopedErrorDtcSnapshot.dtcReadoutStatus === "unparsed" && bridgeScopedErrorDtcSnapshot.errorCodes?.includes("ecu_timeout") && !bridgeScopedErrorDtcSnapshot.dtcs?.some((item) => item.ecu === "7E8") && bridgeScopedErrorDtcSnapshot.dtcs?.some((item) => item.ecu === "7E9" && item.code === "P0171") && bridgeScopedErrorDtcSnapshot.ecuResponses?.some((item) => item.ecu === "7E8" && item.status === "unparsed" && item.dtcs?.some((dtc) => dtc.code === "P0300") && item.errorCodes?.includes("ecu_timeout")) && bridgeScopedErrorDtcSnapshot.dtcEcuAggregateSummary?.errorResponseCount === 1 && bridgeScopedErrorDtcSnapshot.dtcEcuAggregateSummary?.errorCodes?.includes("ecu_timeout") && bridgeScopedErrorDtcSnapshot.dtcEcuAggregateSummary?.allReported === false && bridgeScopedErrorDtcSession?.dtcSnapshot?.dtcReadoutStatus === "blocked" && bridgeScopedErrorDtcSession?.dtcSnapshot?.errorCodes?.includes("ecu_timeout") && !bridgeScopedErrorDtcSession?.warnings?.includes("save_before_clear") && bridgeScopedErrorDtcRoundTrip?.dtcSnapshot?.dtcReadoutStatus === "blocked" && bridgeScopedErrorDtcRoundTrip?.dtcSnapshot?.errorCodes?.includes("ecu_timeout") && bridgeScopedErrorDtcRoundTrip?.vehicleCommandEnabled === false && bridgeScopedErrorDtcRoundTrip?.wouldTransmit === false, "ECU-scoped DTC errors were lost, promoted into parent diagnosis, or weakened through read-only export");
+const bridgeMixedDtcOutcomeSnapshot = obd.normalizeBridgeDtcSnapshot({
+  ok: false,
+  blocked: false,
+  would_transmit: false,
+  errors: ["replay_negative_response_03_11"],
+  intent: "read_stored_dtc",
+  data: {
+    dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }],
+    dtc_negative_response_services: ["03"],
+    dtc_negative_response_codes: ["11"],
+    ecu_responses: [
+      { ecu: "7E8", status: "reported", dtc_count: 1, response_count: 1, services: ["03"], response_services: ["43"], dtcs: ["P0171"] },
+      { ecu: "7E9", status: "negative_response", dtc_count: 0, response_count: 1, services: ["03"], response_services: ["7F"], negative_response_count: 1, negative_requested_services: ["03"], negative_response_labels: ["OBD NRC 11"], dtcs: [] }
+    ]
+  }
+});
+const bridgeMixedDtcOutcomeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeMixedDtcOutcomeSnapshot }))));
+check(bridgeMixedDtcOutcomeSnapshot.ok === false && bridgeMixedDtcOutcomeSnapshot.blocked === false && bridgeMixedDtcOutcomeSnapshot.dtcReadoutStatus === "unparsed" && bridgeMixedDtcOutcomeSnapshot.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && bridgeMixedDtcOutcomeSnapshot.ecuResponses?.some((item) => item.ecu === "7E8" && item.status === "reported" && item.responseServices?.includes("43")) && bridgeMixedDtcOutcomeSnapshot.ecuResponses?.some((item) => item.ecu === "7E9" && item.status === "negative_response" && item.responseServices?.includes("7F") && item.negativeRequestedServices?.includes("03") && item.negativeResponseCount === 1 && item.negativeResponseLabels?.includes("OBD NRC 11")) && bridgeMixedDtcOutcomeRoundTrip?.dtcSnapshot?.dtcReadoutStatus === "blocked" && bridgeMixedDtcOutcomeRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.status === "negative_response" && item.response_services?.includes("7F") && item.negative_response_count === 1 && item.negative_requested_services?.includes("03")) && bridgeMixedDtcOutcomeRoundTrip?.vehicleCommandEnabled === false && bridgeMixedDtcOutcomeRoundTrip?.wouldTransmit === false, "Mixed bridge DTC ECU outcomes lost response provenance through read-only normalization and export");
 const failedBridgeReadinessInput = { errors: ["transport:timeout"], data: { mil_on: false, monitors: [{ id: "catalyst", status: "complete" }] } };
 const failedBridgeReadinessSession = obd.buildDiagnosticScanSession({ readinessResponse: failedBridgeReadinessInput });
 const contradictoryFailedBridgeReadinessSession = obd.buildDiagnosticScanSession({ readinessResponse: { ...failedBridgeReadinessInput, ok: true, blocked: false } });
