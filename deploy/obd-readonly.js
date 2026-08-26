@@ -13968,13 +13968,29 @@
     const dtcEvidenceScanSessionIds = [...new Set(dtcEvidenceScopeInputs
       .map((row) => normalizeDtcEvidenceAcquisitionContextValue(row?.scanSessionId || row?.scan_session_id, 120))
       .filter(Boolean))].sort();
+    const dtcEvidenceReadoutAttemptIds = [...new Set(dtcEvidenceScopeInputs
+      .map((row) => normalizeDtcEvidenceAcquisitionContextValue(row?.readoutAttemptId || row?.readout_attempt_id, 120))
+      .filter(Boolean))].sort();
+    const dtcEvidenceCommunicationRouteKeys = [...new Set(dtcEvidenceScopeInputs
+      .map(buildDtcEvidenceCommunicationRouteKey)
+      .filter(Boolean))].sort();
+    const dtcEvidenceVciIdentityKeys = [...new Set(dtcEvidenceScopeInputs
+      .map(buildDtcEvidenceVciIdentityKey)
+      .filter(Boolean))].sort();
     const dtcEvidenceCapturedAt = dtcEvidenceCapturedAtValues.length === 1 ? dtcEvidenceCapturedAtValues[0] : null;
     const dtcEvidenceProtocol = dtcEvidenceProtocolValues.length === 1 ? dtcEvidenceProtocolValues[0] : null;
     const dtcEvidenceScanSessionId = dtcEvidenceScanSessionIds.length === 1 ? dtcEvidenceScanSessionIds[0] : null;
+    const dtcEvidenceReadoutAttemptId = dtcEvidenceReadoutAttemptIds.length === 1 ? dtcEvidenceReadoutAttemptIds[0] : null;
+    const dtcEvidenceCommunicationRouteKey = dtcEvidenceCommunicationRouteKeys.length === 1 ? dtcEvidenceCommunicationRouteKeys[0] : null;
+    const dtcEvidenceVciIdentityKey = dtcEvidenceVciIdentityKeys.length === 1 ? dtcEvidenceVciIdentityKeys[0] : null;
     const dtcEvidenceAcquisitionContextComplete = dtcEvidenceScopeInputs.length > 0
       && Boolean(dtcEvidenceCapturedAt)
       && Boolean(dtcEvidenceProtocol)
       && Boolean(dtcEvidenceScanSessionId);
+    const dtcEvidenceTransportContextComplete = dtcEvidenceScopeInputs.length > 0
+      && Boolean(dtcEvidenceReadoutAttemptId)
+      && Boolean(dtcEvidenceCommunicationRouteKey)
+      && Boolean(dtcEvidenceVciIdentityKey);
     const reportedInvalidDtcEvidenceScopedIssueKeys = Array.isArray(dtcEvidenceFieldReport?.scopedInvalidIssueKeys)
       ? dtcEvidenceFieldReport.scopedInvalidIssueKeys
       : Array.isArray(dtcEvidenceFieldReport?.scoped_invalid_issue_keys)
@@ -14065,6 +14081,14 @@
       dtc_evidence_scan_session_id: dtcEvidenceScanSessionId,
       dtcEvidenceAcquisitionContextComplete,
       dtc_evidence_acquisition_context_complete: dtcEvidenceAcquisitionContextComplete,
+      dtcEvidenceReadoutAttemptId,
+      dtc_evidence_readout_attempt_id: dtcEvidenceReadoutAttemptId,
+      dtcEvidenceCommunicationRouteKey,
+      dtc_evidence_communication_route_key: dtcEvidenceCommunicationRouteKey,
+      dtcEvidenceVciIdentityKey,
+      dtc_evidence_vci_identity_key: dtcEvidenceVciIdentityKey,
+      dtcEvidenceTransportContextComplete,
+      dtc_evidence_transport_context_complete: dtcEvidenceTransportContextComplete,
       dtcEvidenceScopeComplete,
       dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
@@ -21437,15 +21461,31 @@
     const currentDtcEvidenceProtocol = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(currentSummary, "dtcEvidenceProtocol"), 120);
     const importedDtcEvidenceScanSessionId = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(importedQualitySummary, "dtcEvidenceScanSessionId"), 120);
     const currentDtcEvidenceScanSessionId = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(currentSummary, "dtcEvidenceScanSessionId"), 120);
+    const importedDtcEvidenceReadoutAttemptId = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(importedQualitySummary, "dtcEvidenceReadoutAttemptId"), 120);
+    const currentDtcEvidenceReadoutAttemptId = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(currentSummary, "dtcEvidenceReadoutAttemptId"), 120);
+    const importedDtcEvidenceCommunicationRouteKey = normalizeDtcEvidenceCommunicationRouteKeyValue(readAliasValue(importedQualitySummary, "dtcEvidenceCommunicationRouteKey"));
+    const currentDtcEvidenceCommunicationRouteKey = normalizeDtcEvidenceCommunicationRouteKeyValue(readAliasValue(currentSummary, "dtcEvidenceCommunicationRouteKey"));
+    const importedDtcEvidenceVciIdentityKey = normalizeDtcEvidenceVciIdentityKeyValue(readAliasValue(importedQualitySummary, "dtcEvidenceVciIdentityKey"));
+    const currentDtcEvidenceVciIdentityKey = normalizeDtcEvidenceVciIdentityKeyValue(readAliasValue(currentSummary, "dtcEvidenceVciIdentityKey"));
     const importedDtcEvidenceAcquisitionContextComplete = readFlag(importedQualitySummary, "dtcEvidenceAcquisitionContextComplete")
       && Boolean(importedDtcEvidenceCapturedAt && importedDtcEvidenceProtocol && importedDtcEvidenceScanSessionId);
     const currentDtcEvidenceAcquisitionContextComplete = readFlag(currentSummary, "dtcEvidenceAcquisitionContextComplete")
       && Boolean(currentDtcEvidenceCapturedAt && currentDtcEvidenceProtocol && currentDtcEvidenceScanSessionId);
+    const importedDtcEvidenceTransportContextComplete = readFlag(importedQualitySummary, "dtcEvidenceTransportContextComplete")
+      && Boolean(importedDtcEvidenceReadoutAttemptId && importedDtcEvidenceCommunicationRouteKey && importedDtcEvidenceVciIdentityKey);
+    const currentDtcEvidenceTransportContextComplete = readFlag(currentSummary, "dtcEvidenceTransportContextComplete")
+      && Boolean(currentDtcEvidenceReadoutAttemptId && currentDtcEvidenceCommunicationRouteKey && currentDtcEvidenceVciIdentityKey);
     const dtcEvidenceProtocolMatch = Boolean(importedDtcEvidenceProtocol && importedDtcEvidenceProtocol === currentDtcEvidenceProtocol);
     const dtcEvidenceCaptureOrderValid = Boolean(importedDtcEvidenceCapturedAt && currentDtcEvidenceCapturedAt
       && Date.parse(currentDtcEvidenceCapturedAt) > Date.parse(importedDtcEvidenceCapturedAt));
     const dtcEvidenceScanIdentityDistinct = Boolean(importedDtcEvidenceScanSessionId && currentDtcEvidenceScanSessionId
       && importedDtcEvidenceScanSessionId !== currentDtcEvidenceScanSessionId);
+    const dtcEvidenceReadoutAttemptDistinct = Boolean(importedDtcEvidenceReadoutAttemptId && currentDtcEvidenceReadoutAttemptId
+      && importedDtcEvidenceReadoutAttemptId !== currentDtcEvidenceReadoutAttemptId);
+    const dtcEvidenceCommunicationRouteMatch = Boolean(importedDtcEvidenceCommunicationRouteKey
+      && importedDtcEvidenceCommunicationRouteKey === currentDtcEvidenceCommunicationRouteKey);
+    const dtcEvidenceVciIdentityMatch = Boolean(importedDtcEvidenceVciIdentityKey
+      && importedDtcEvidenceVciIdentityKey === currentDtcEvidenceVciIdentityKey);
     const importedDtcEvidenceValidationReported = readFlag(importedQualitySummary, "dtcEvidenceValidationReported") || importedInvalidDtcEvidenceIssueKeys.length > 0;
     const currentDtcEvidenceValidationReported = readFlag(currentSummary, "dtcEvidenceValidationReported") || currentInvalidDtcEvidenceIssueKeys.length > 0;
     const dtcEvidenceVehicleScopeMatch = Boolean(importedDtcEvidenceVehicleScopeKey && importedDtcEvidenceVehicleScopeKey === currentDtcEvidenceVehicleScopeKey);
@@ -21460,7 +21500,12 @@
       !currentDtcEvidenceAcquisitionContextComplete ? "current_dtc_evidence_acquisition_context_incomplete" : null,
       importedDtcEvidenceAcquisitionContextComplete && currentDtcEvidenceAcquisitionContextComplete && !dtcEvidenceProtocolMatch ? "dtc_evidence_protocol_mismatch" : null,
       importedDtcEvidenceAcquisitionContextComplete && currentDtcEvidenceAcquisitionContextComplete && dtcEvidenceProtocolMatch && !dtcEvidenceCaptureOrderValid ? "dtc_evidence_capture_order_invalid" : null,
-      importedDtcEvidenceAcquisitionContextComplete && currentDtcEvidenceAcquisitionContextComplete && dtcEvidenceProtocolMatch && dtcEvidenceCaptureOrderValid && !dtcEvidenceScanIdentityDistinct ? "dtc_evidence_scan_identity_reused" : null
+      importedDtcEvidenceAcquisitionContextComplete && currentDtcEvidenceAcquisitionContextComplete && dtcEvidenceProtocolMatch && dtcEvidenceCaptureOrderValid && !dtcEvidenceScanIdentityDistinct ? "dtc_evidence_scan_identity_reused" : null,
+      !importedDtcEvidenceTransportContextComplete ? "imported_dtc_evidence_transport_context_incomplete" : null,
+      !currentDtcEvidenceTransportContextComplete ? "current_dtc_evidence_transport_context_incomplete" : null,
+      importedDtcEvidenceTransportContextComplete && currentDtcEvidenceTransportContextComplete && !dtcEvidenceReadoutAttemptDistinct ? "dtc_evidence_readout_attempt_reused" : null,
+      importedDtcEvidenceTransportContextComplete && currentDtcEvidenceTransportContextComplete && !dtcEvidenceCommunicationRouteMatch ? "dtc_evidence_communication_route_mismatch" : null,
+      importedDtcEvidenceTransportContextComplete && currentDtcEvidenceTransportContextComplete && !dtcEvidenceVciIdentityMatch ? "dtc_evidence_vci_identity_mismatch" : null
     ].filter(Boolean);
     const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported
       && currentDtcEvidenceValidationReported
@@ -21611,6 +21656,28 @@
       imported_dtc_evidence_acquisition_context_complete: importedDtcEvidenceAcquisitionContextComplete,
       currentDtcEvidenceAcquisitionContextComplete,
       current_dtc_evidence_acquisition_context_complete: currentDtcEvidenceAcquisitionContextComplete,
+      importedDtcEvidenceReadoutAttemptId,
+      imported_dtc_evidence_readout_attempt_id: importedDtcEvidenceReadoutAttemptId,
+      currentDtcEvidenceReadoutAttemptId,
+      current_dtc_evidence_readout_attempt_id: currentDtcEvidenceReadoutAttemptId,
+      dtcEvidenceReadoutAttemptDistinct,
+      dtc_evidence_readout_attempt_distinct: dtcEvidenceReadoutAttemptDistinct,
+      importedDtcEvidenceCommunicationRouteKey,
+      imported_dtc_evidence_communication_route_key: importedDtcEvidenceCommunicationRouteKey,
+      currentDtcEvidenceCommunicationRouteKey,
+      current_dtc_evidence_communication_route_key: currentDtcEvidenceCommunicationRouteKey,
+      dtcEvidenceCommunicationRouteMatch,
+      dtc_evidence_communication_route_match: dtcEvidenceCommunicationRouteMatch,
+      importedDtcEvidenceVciIdentityKey,
+      imported_dtc_evidence_vci_identity_key: importedDtcEvidenceVciIdentityKey,
+      currentDtcEvidenceVciIdentityKey,
+      current_dtc_evidence_vci_identity_key: currentDtcEvidenceVciIdentityKey,
+      dtcEvidenceVciIdentityMatch,
+      dtc_evidence_vci_identity_match: dtcEvidenceVciIdentityMatch,
+      importedDtcEvidenceTransportContextComplete,
+      imported_dtc_evidence_transport_context_complete: importedDtcEvidenceTransportContextComplete,
+      currentDtcEvidenceTransportContextComplete,
+      current_dtc_evidence_transport_context_complete: currentDtcEvidenceTransportContextComplete,
       dtcEvidenceScopeBlockedReasonIds,
       dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       dtcEvidenceResolutionComparisonAvailable,
@@ -21698,6 +21765,11 @@
     const dtcEvidenceScanSessionId = normalizeDtcEvidenceAcquisitionContextValue(pickDefined(summary.dtcEvidenceScanSessionId, summary.dtc_evidence_scan_session_id), 120);
     const dtcEvidenceAcquisitionContextComplete = pickDefined(summary.dtcEvidenceAcquisitionContextComplete, summary.dtc_evidence_acquisition_context_complete, false) === true
       && Boolean(dtcEvidenceCapturedAt && dtcEvidenceProtocol && dtcEvidenceScanSessionId);
+    const dtcEvidenceReadoutAttemptId = normalizeDtcEvidenceAcquisitionContextValue(pickDefined(summary.dtcEvidenceReadoutAttemptId, summary.dtc_evidence_readout_attempt_id), 120);
+    const dtcEvidenceCommunicationRouteKey = normalizeDtcEvidenceCommunicationRouteKeyValue(pickDefined(summary.dtcEvidenceCommunicationRouteKey, summary.dtc_evidence_communication_route_key));
+    const dtcEvidenceVciIdentityKey = normalizeDtcEvidenceVciIdentityKeyValue(pickDefined(summary.dtcEvidenceVciIdentityKey, summary.dtc_evidence_vci_identity_key));
+    const dtcEvidenceTransportContextComplete = pickDefined(summary.dtcEvidenceTransportContextComplete, summary.dtc_evidence_transport_context_complete, false) === true
+      && Boolean(dtcEvidenceReadoutAttemptId && dtcEvidenceCommunicationRouteKey && dtcEvidenceVciIdentityKey);
     const dtcEvidenceValidationReported = pickDefined(summary.dtcEvidenceValidationReported, summary.dtc_evidence_validation_reported, false) === true
       || invalidDtcEvidenceIssueKeys.length > 0;
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
@@ -21780,6 +21852,14 @@
       dtc_evidence_scan_session_id: dtcEvidenceScanSessionId,
       dtcEvidenceAcquisitionContextComplete,
       dtc_evidence_acquisition_context_complete: dtcEvidenceAcquisitionContextComplete,
+      dtcEvidenceReadoutAttemptId,
+      dtc_evidence_readout_attempt_id: dtcEvidenceReadoutAttemptId,
+      dtcEvidenceCommunicationRouteKey,
+      dtc_evidence_communication_route_key: dtcEvidenceCommunicationRouteKey,
+      dtcEvidenceVciIdentityKey,
+      dtc_evidence_vci_identity_key: dtcEvidenceVciIdentityKey,
+      dtcEvidenceTransportContextComplete,
+      dtc_evidence_transport_context_complete: dtcEvidenceTransportContextComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
@@ -27447,6 +27527,10 @@
       const dtcReadoutCategory = ["stored", "pending", "permanent"].includes(dtcReadoutCategoryValue) ? dtcReadoutCategoryValue : null;
       const scanSessionId = redactSensitiveText(String(rowValue.scanSessionId || rowValue.scan_session_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const readoutAttemptId = redactSensitiveText(String(rowValue.readoutAttemptId || rowValue.readout_attempt_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const readoutRoute = redactSensitiveText(String(rowValue.readoutRoute || rowValue.readout_route || rowValue.interfaceRoute || rowValue.interface_route || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const adapterFamily = redactSensitiveText(String(rowValue.adapterFamily || rowValue.adapter_family || rowValue.vciFamily || rowValue.vci_family || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const adapterName = redactSensitiveText(String(rowValue.adapterName || rowValue.adapter_name || rowValue.vciName || rowValue.vci_name || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const adapterFirmwareVersion = redactSensitiveText(String(rowValue.adapterFirmwareVersion || rowValue.adapter_firmware_version || rowValue.firmwareVersion || rowValue.firmware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuGroup = redactSensitiveText(String(rowValue.ecuGroup || rowValue.ecu_group || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuSystem = redactSensitiveText(String(rowValue.ecuSystem || rowValue.ecu_system || rowValue.systemHierarchy || rowValue.system_hierarchy || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       const parentEcuId = redactSensitiveText(String(rowValue.parentEcuId || rowValue.parent_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
@@ -27551,6 +27635,10 @@
         ...(dtcReadoutCategory ? { dtcReadoutCategory, dtc_readout_category: dtcReadoutCategory } : {}),
         ...(scanSessionId ? { scanSessionId, scan_session_id: scanSessionId } : {}),
         ...(readoutAttemptId ? { readoutAttemptId, readout_attempt_id: readoutAttemptId } : {}),
+        ...(readoutRoute ? { readoutRoute, readout_route: readoutRoute } : {}),
+        ...(adapterFamily ? { adapterFamily, adapter_family: adapterFamily } : {}),
+        ...(adapterName ? { adapterName, adapter_name: adapterName } : {}),
+        ...(adapterFirmwareVersion ? { adapterFirmwareVersion, adapter_firmware_version: adapterFirmwareVersion } : {}),
         ...(ecuGroup ? { ecuGroup, ecu_group: ecuGroup } : {}),
         ...(ecuSystem ? { ecuSystem, ecu_system: ecuSystem } : {}),
         ...(parentEcuId ? { parentEcuId, parent_ecu_id: parentEcuId } : {}),
@@ -33333,6 +33421,33 @@
     return normalized || null;
   }
 
+  function buildDtcEvidenceCommunicationRouteKey(row = {}) {
+    const route = normalizeDtcEvidenceScopePart(row?.readoutRoute || row?.readout_route || row?.interfaceRoute || row?.interface_route, 80);
+    const bus = normalizeDtcEvidenceScopePart(row?.networkBus || row?.network_bus || row?.busName || row?.bus_name, 120);
+    const channel = normalizeDtcEvidenceScopePart(row?.networkChannel || row?.network_channel || row?.channelId || row?.channel_id, 120);
+    const gateway = normalizeDtcEvidenceScopePart(row?.gatewayRoute || row?.gateway_route || row?.gatewayPath || row?.gateway_path, 160);
+    if (!route && !bus && !channel && !gateway) return null;
+    return `route=${route || "-"};bus=${bus || "-"};channel=${channel || "-"};gateway=${gateway || "-"}`;
+  }
+
+  function normalizeDtcEvidenceCommunicationRouteKeyValue(value) {
+    const normalized = String(value || "").trim().slice(0, 560);
+    return /^route=(?:-|[A-Z0-9_.!~*'()%~-]+);bus=(?:-|[A-Z0-9_.!~*'()%~-]+);channel=(?:-|[A-Z0-9_.!~*'()%~-]+);gateway=(?:-|[A-Z0-9_.!~*'()%~-]+)$/.test(normalized) ? normalized : null;
+  }
+
+  function buildDtcEvidenceVciIdentityKey(row = {}) {
+    const family = normalizeDtcEvidenceScopePart(row?.adapterFamily || row?.adapter_family || row?.vciFamily || row?.vci_family, 120);
+    const name = normalizeDtcEvidenceScopePart(row?.adapterName || row?.adapter_name || row?.vciName || row?.vci_name, 160);
+    const firmware = normalizeDtcEvidenceScopePart(row?.adapterFirmwareVersion || row?.adapter_firmware_version || row?.firmwareVersion || row?.firmware_version, 120);
+    if (!family || (!name && !firmware)) return null;
+    return `family=${family};name=${name || "-"};firmware=${firmware || "-"}`;
+  }
+
+  function normalizeDtcEvidenceVciIdentityKeyValue(value) {
+    const normalized = String(value || "").trim().slice(0, 440);
+    return /^family=[A-Z0-9_.!~*'()%~-]+;name=(?:-|[A-Z0-9_.!~*'()%~-]+);firmware=(?:-|[A-Z0-9_.!~*'()%~-]+)$/.test(normalized) ? normalized : null;
+  }
+
   function buildDtcEvidenceVehicleScopeKey(vehicleProfile = null) {
     const profile = normalizeVehicleProfileInput(vehicleProfile) || {};
     const maker = normalizeDtcEvidenceScopePart(profile.maker, 60);
@@ -34090,6 +34205,10 @@
           ...(dtcReadoutKind ? { dtc_readout_category: dtcReadoutKind } : {}),
           ...(rowScanSessionId ? { scan_session_id: rowScanSessionId } : {}),
           ...(rowReadoutAttemptId ? { readout_attempt_id: rowReadoutAttemptId } : {}),
+          ...(cellAt(readoutRouteIndex, 80) ? { readout_route: cellAt(readoutRouteIndex, 80) } : {}),
+          ...(rowAdapterIdentity?.adapterFamily ? { adapter_family: rowAdapterIdentity.adapterFamily } : {}),
+          ...(rowAdapterIdentity?.adapterName ? { adapter_name: rowAdapterIdentity.adapterName } : {}),
+          ...(rowAdapterIdentity?.firmwareVersion ? { adapter_firmware_version: rowAdapterIdentity.firmwareVersion } : {}),
           ...(rowEcuGroup ? { ecu_group: rowEcuGroup } : {}),
           ...(rowEcuSystem ? { ecu_system: rowEcuSystem } : {}),
           ...(rowParentEcuId ? { parent_ecu_id: rowParentEcuId } : {}),
