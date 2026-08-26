@@ -3432,8 +3432,18 @@
         error_codes: Array.from(errorCodes)
       };
     }
-    const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) => rows.flatMap((row) => {
-      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode, oemDetailCode }) => ({ code, subcode, ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}), status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName, ecu_name: fallbackEcuName }));
+    const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null, fallbackCapturedAt = null, fallbackProtocol = null) => rows.flatMap((row) => {
+      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode, oemDetailCode }) => ({
+        code,
+        subcode,
+        ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}),
+        status: fallbackStatus,
+        ecu: fallbackEcu,
+        ecuName: fallbackEcuName,
+        ecu_name: fallbackEcuName,
+        ...(normalizeDtcEvidenceCapturedAt(null, fallbackCapturedAt) ? { capturedAt: normalizeDtcEvidenceCapturedAt(null, fallbackCapturedAt), captured_at: normalizeDtcEvidenceCapturedAt(null, fallbackCapturedAt) } : {}),
+        ...(normalizeDtcEvidenceProtocol(null, fallbackProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, fallbackProtocol) } : {})
+      }));
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "";
@@ -3453,6 +3463,8 @@
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
       const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       const ecuName = rowEcuName || (fallbackEcuName && (!rowEcu || !fallbackEcu || rowEcu === fallbackEcu) ? fallbackEcuName : null);
+      const rowCapturedAt = normalizeDtcEvidenceCapturedAt(rowValue, fallbackCapturedAt);
+      const rowProtocol = normalizeDtcEvidenceProtocol(rowValue, fallbackProtocol);
       const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
       const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
       const faultDetectionCounterRaw = readDtcFaultDetectionCounterRawAlias(rowValue);
@@ -3480,6 +3492,8 @@
         ecu: rowEcu || fallbackEcu,
         ecuName,
         ecu_name: ecuName,
+        ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
+        ...(rowProtocol ? { protocol: rowProtocol } : {}),
         freezeFrameAvailable,
         freeze_frame_available: freezeFrameAvailable,
         ...(extendedDataRecordNumber !== null ? {
@@ -3512,7 +3526,7 @@
       const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
       const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.name || ecuRow?.label || ecuRow?.display_name || ecuRow?.displayName || null;
       const status = readEcuDtcCategory(ecuRow);
-      return normalizeDtcRows(rows, status, ecu, ecuName);
+      return normalizeDtcRows(rows, status, ecu, ecuName, ecuRow?.captured_at || ecuRow?.capturedAt || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(ecuRow) || readBridgeProtocol(data) || readBridgeProtocol(response));
     });
     const decodedRawEcuDtcSnapshots = new Map();
     const rawEcuDtcRows = ecuRows.flatMap((ecuRow) => {
@@ -3535,8 +3549,8 @@
         : [];
     });
     const entries = [
-      ...normalizeDtcRows(dtcRows, defaultStatus, sourceEcu, sourceEcuName),
-      ...typedDtcRowGroups.flatMap((group) => normalizeDtcRows(group.rows, group.status, sourceEcu, sourceEcuName)),
+      ...normalizeDtcRows(dtcRows, defaultStatus, sourceEcu, sourceEcuName, data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(data) || readBridgeProtocol(response)),
+      ...typedDtcRowGroups.flatMap((group) => normalizeDtcRows(group.rows, group.status, sourceEcu, sourceEcuName, data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(data) || readBridgeProtocol(response))),
       ...ecuDtcRows,
       ...rawEcuDtcRows
     ];
@@ -3576,7 +3590,7 @@
       const rawRowStatus = row?.status || row?.response_status || row?.responseStatus || row?.readout_status || row?.readoutStatus || row?.dtc_readout_status || row?.dtcReadoutStatus || decodedRawSnapshot?.dtcReadoutStatus || (hasStructuredRowDtcEvidence ? "reported" : bridgeDtcReadoutStatus);
       const rowStatus = String(rawRowStatus || "unknown").trim().toLowerCase() === "blocked" ? "blocked" : rowErrorCodes.length > 0 ? "unparsed" : rawRowStatus;
       const childDtcs = [...new Map([
-        ...normalizeDtcRows(rowInputs, rowDtcStatus, rowEcu, rowEcuName),
+        ...normalizeDtcRows(rowInputs, rowDtcStatus, rowEcu, rowEcuName, row?.captured_at || row?.capturedAt || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(row) || readBridgeProtocol(data) || readBridgeProtocol(response)),
         ...(Array.isArray(decodedRawSnapshot?.dtcs) ? decodedRawSnapshot.dtcs.map((item) => inheritDtcEcuName(item, rowEcu, rowEcuName)) : [])
       ].map((item) => [`${item.code}::${item.subcode || ""}::${normalizeDtcEntryCodeFormat(item)}::${item.status}`, { ...item, source: "local_bridge" }])).values()];
       const explicitCodeCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null;
@@ -26512,6 +26526,8 @@
     ];
     const rows = rawRows.flatMap((row) => {
       if (typeof row === "string") {
+        const rowCapturedAt = normalizeDtcEvidenceCapturedAt(null, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null);
+        const rowProtocol = normalizeDtcEvidenceProtocol(null, sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null);
         return extractDtcReferences(row).map(({ code, subcode, oemDetailCode }) => ({
           code,
           subcode,
@@ -26519,7 +26535,9 @@
           status: normalizeDtcReadoutCategory(sourceInput.status || "unknown", "unknown"),
           ecu: sourceEcu,
           ecuName: sourceEcuName,
-          ecu_name: sourceEcuName
+          ecu_name: sourceEcuName,
+          ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
+          ...(rowProtocol ? { protocol: rowProtocol } : {})
         }));
       }
       if (!row || typeof row !== "object") return [];
@@ -26542,6 +26560,8 @@
       const rowEcu = rowValue.source_ecu || rowValue.sourceEcu || rowValue.ecu || rowValue.ecu_id || rowValue.ecuId || rowValue.address || rowValue.module || rowValue.module_id || rowValue.moduleId || null;
       const rowEcuName = rowValue.ecu_name || rowValue.ecuName || rowValue.name || rowValue.label || rowValue.display_name || rowValue.displayName || null;
       const ecuName = rowEcuName || (sourceEcuName && (!rowEcu || !sourceEcu || rowEcu === sourceEcu) ? sourceEcuName : null);
+      const rowCapturedAt = normalizeDtcEvidenceCapturedAt(rowValue, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null);
+      const rowProtocol = normalizeDtcEvidenceProtocol(rowValue, sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null);
       const extendedDataRecordNumber = readDtcExtendedDataRecordNumberAlias(rowValue);
       const extendedDataRaw = readDtcExtendedDataRawAlias(rowValue);
       const faultDetectionCounterRaw = readDtcFaultDetectionCounterRawAlias(rowValue);
@@ -26569,6 +26589,8 @@
         ecu: rowEcu || sourceEcu,
         ecuName,
         ecu_name: ecuName,
+        ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
+        ...(rowProtocol ? { protocol: rowProtocol } : {}),
         freezeFrameAvailable,
         freeze_frame_available: freezeFrameAvailable,
         ...(extendedDataRecordNumber !== null ? {
@@ -27173,6 +27195,8 @@
       const ecu = rowEcu || sourceEcu;
       const rowEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
       const ecuName = rowEcuName || (!rowEcu || !sourceEcu || rowEcu === sourceEcu ? sourceEcuName : null);
+      const rowCapturedAt = normalizeDtcEvidenceCapturedAt(row, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null);
+      const rowProtocol = normalizeDtcEvidenceProtocol(row, sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null);
       return {
         code,
         subcode,
@@ -27193,7 +27217,9 @@
         sourceEcu: ecu,
         source_ecu: ecu,
         sourceEcuName: ecuName,
-        source_ecu_name: ecuName
+        source_ecu_name: ecuName,
+        ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
+        ...(rowProtocol ? { protocol: rowProtocol } : {})
       };
     };
     const explicitTriggerDtcEntries = [...new Map([
@@ -27258,7 +27284,14 @@
         sourceEcu: resolvedSourceEcu,
         source_ecu: resolvedSourceEcu,
         sourceEcuName: resolvedSourceEcuName,
-        source_ecu_name: resolvedSourceEcuName
+        source_ecu_name: resolvedSourceEcuName,
+        ...(normalizeDtcEvidenceCapturedAt(null, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null) ? {
+          capturedAt: normalizeDtcEvidenceCapturedAt(null, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null),
+          captured_at: normalizeDtcEvidenceCapturedAt(null, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null)
+        } : {}),
+        ...(normalizeDtcEvidenceProtocol(null, sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null) ? {
+          protocol: normalizeDtcEvidenceProtocol(null, sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null)
+        } : {})
       }));
     const triggerDtc = triggerDtcEntries.length === 1 ? triggerDtcEntries[0].code : null;
     const triggerFrameNumber = triggerDtcEntries.length === 1
@@ -32146,7 +32179,9 @@
           ...(reportedDtcStatus ? { reported_status: reportedDtcStatus } : {}),
           ...(frameNumber === null ? {} : { frame_number: frameNumber }),
           ...(ecu ? { source_ecu: ecu } : {}),
-          ...(ecuName ? { source_ecu_name: ecuName } : {})
+          ...(ecuName ? { source_ecu_name: ecuName } : {}),
+          ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
+          ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {})
         };
       };
       if (isFreezeFrameRow) {
@@ -32178,6 +32213,8 @@
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
           ecu_name: ecuName || null,
+          ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
+          ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
         });
       }
@@ -35651,6 +35688,15 @@
   function normalizeDtcOemDetailCode(value) {
     const normalized = String(value ?? "").trim();
     return /^\d{3}$/.test(normalized) ? normalized : null;
+  }
+
+  function normalizeDtcEvidenceCapturedAt(row, fallback = null) {
+    const value = row?.captured_at || row?.capturedAt || row?.timestamp || fallback;
+    return /^\d{4}-\d{2}-\d{2}T/.test(String(value || "")) && Number.isFinite(Date.parse(value)) ? String(value) : null;
+  }
+
+  function normalizeDtcEvidenceProtocol(row, fallback = null) {
+    return normalizeProtocolProvenanceValue(row?.protocol || row?.obd_protocol || row?.communicationProtocol || row?.communication_protocol || fallback);
   }
 
   function readDtcOemDetailCodeAlias(row, fallback = null) {
