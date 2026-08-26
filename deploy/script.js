@@ -224,11 +224,11 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3372件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "DTC証跡監査の読取種別分離を固定",
+  recentMilestone: "DTC証跡監査の応答状態分離を固定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.229";
-const APP_LAST_UPDATED = "2026-08-26";
+const APP_VERSION = "3.13.230";
+const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const NO_DATA = "登録データなし";
@@ -3134,7 +3134,11 @@ function formatPostRepairReassessmentEntries(summary = null) {
     imported_dtc_evidence_readout_contract_incomplete: "整備前のDTC読取種別不足",
     current_dtc_evidence_readout_contract_incomplete: "現在のDTC読取種別不足",
     dtc_evidence_readout_category_mismatch: "DTC区分不一致",
-    dtc_evidence_requested_service_mismatch: "要求サービス不一致"
+    dtc_evidence_requested_service_mismatch: "要求サービス不一致",
+    imported_dtc_evidence_response_contract_incomplete: "整備前の応答契約不足",
+    current_dtc_evidence_response_contract_incomplete: "現在の応答契約不足",
+    dtc_evidence_response_service_mismatch: "応答サービス不一致",
+    dtc_evidence_ecu_response_status_mismatch: "ECU応答状態不一致"
   };
   const dtcEvidenceScopeNote = dtcEvidenceResolutionStatus === "not_comparable" && dtcEvidenceScopeBlockedReasonIds.length
     ? ` / ${dtcEvidenceScopeBlockedReasonIds.map((id) => dtcEvidenceScopeBlockedLabels[id] || id).join("・")}`
@@ -9287,7 +9291,11 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
     imported_dtc_evidence_readout_contract_incomplete: "整備前読取種別不足",
     current_dtc_evidence_readout_contract_incomplete: "現在読取種別不足",
     dtc_evidence_readout_category_mismatch: "DTC区分不一致",
-    dtc_evidence_requested_service_mismatch: "要求サービス不一致"
+    dtc_evidence_requested_service_mismatch: "要求サービス不一致",
+    imported_dtc_evidence_response_contract_incomplete: "整備前応答契約不足",
+    current_dtc_evidence_response_contract_incomplete: "現在応答契約不足",
+    dtc_evidence_response_service_mismatch: "応答サービス不一致",
+    dtc_evidence_ecu_response_status_mismatch: "ECU応答状態不一致"
   };
   if ((summary.dtcEvidenceResolutionComparisonAvailable === false || summary.dtc_evidence_resolution_comparison_available === false) && dtcEvidenceScopeBlockedReasonIds.length) {
     parts.push(`DTC証跡比較不可:${dtcEvidenceScopeBlockedReasonIds.map((id) => dtcEvidenceScopeBlockedLabels[id] || id).join("・")}`);

@@ -13983,6 +13983,12 @@
     const dtcEvidenceRequestedServices = [...new Set(dtcEvidenceScopeInputs
       .flatMap(readDtcEvidenceRequestedServices)
       .filter(Boolean))].sort();
+    const dtcEvidenceResponseServices = [...new Set(dtcEvidenceScopeInputs
+      .flatMap(readDtcEvidenceResponseServices)
+      .filter(Boolean))].sort();
+    const dtcEvidenceEcuResponseStatuses = [...new Set(dtcEvidenceScopeInputs
+      .map((row) => normalizeDtcEvidenceEcuResponseStatus(row?.ecuResponseStatus || row?.ecu_response_status || row?.responseStatus || row?.response_status))
+      .filter(Boolean))].sort();
     const dtcEvidenceCapturedAt = dtcEvidenceCapturedAtValues.length === 1 ? dtcEvidenceCapturedAtValues[0] : null;
     const dtcEvidenceProtocol = dtcEvidenceProtocolValues.length === 1 ? dtcEvidenceProtocolValues[0] : null;
     const dtcEvidenceScanSessionId = dtcEvidenceScanSessionIds.length === 1 ? dtcEvidenceScanSessionIds[0] : null;
@@ -13991,6 +13997,8 @@
     const dtcEvidenceVciIdentityKey = dtcEvidenceVciIdentityKeys.length === 1 ? dtcEvidenceVciIdentityKeys[0] : null;
     const dtcEvidenceReadoutCategory = dtcEvidenceReadoutCategories.length === 1 ? dtcEvidenceReadoutCategories[0] : null;
     const dtcEvidenceRequestedService = dtcEvidenceRequestedServices.length === 1 ? dtcEvidenceRequestedServices[0] : null;
+    const dtcEvidenceResponseService = dtcEvidenceResponseServices.length === 1 ? dtcEvidenceResponseServices[0] : null;
+    const dtcEvidenceEcuResponseStatus = dtcEvidenceEcuResponseStatuses.length === 1 ? dtcEvidenceEcuResponseStatuses[0] : null;
     const dtcEvidenceAcquisitionContextComplete = dtcEvidenceScopeInputs.length > 0
       && Boolean(dtcEvidenceCapturedAt)
       && Boolean(dtcEvidenceProtocol)
@@ -14002,6 +14010,9 @@
     const dtcEvidenceReadoutContractComplete = dtcEvidenceScopeInputs.length > 0
       && Boolean(dtcEvidenceReadoutCategory)
       && Boolean(dtcEvidenceRequestedService);
+    const dtcEvidenceResponseContractComplete = dtcEvidenceScopeInputs.length > 0
+      && dtcEvidenceResponseServices.length <= 1
+      && isDtcEvidenceResponseContractValid(dtcEvidenceResponseService, dtcEvidenceEcuResponseStatus);
     const reportedInvalidDtcEvidenceScopedIssueKeys = Array.isArray(dtcEvidenceFieldReport?.scopedInvalidIssueKeys)
       ? dtcEvidenceFieldReport.scopedInvalidIssueKeys
       : Array.isArray(dtcEvidenceFieldReport?.scoped_invalid_issue_keys)
@@ -14106,6 +14117,12 @@
       dtc_evidence_requested_service: dtcEvidenceRequestedService,
       dtcEvidenceReadoutContractComplete,
       dtc_evidence_readout_contract_complete: dtcEvidenceReadoutContractComplete,
+      dtcEvidenceResponseService,
+      dtc_evidence_response_service: dtcEvidenceResponseService,
+      dtcEvidenceEcuResponseStatus,
+      dtc_evidence_ecu_response_status: dtcEvidenceEcuResponseStatus,
+      dtcEvidenceResponseContractComplete,
+      dtc_evidence_response_contract_complete: dtcEvidenceResponseContractComplete,
       dtcEvidenceScopeComplete,
       dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
@@ -21488,6 +21505,10 @@
     const currentDtcEvidenceReadoutCategory = normalizeDtcEvidenceReadoutCategory(readAliasValue(currentSummary, "dtcEvidenceReadoutCategory"));
     const importedDtcEvidenceRequestedService = normalizeDtcEvidenceRequestedServiceValue(readAliasValue(importedQualitySummary, "dtcEvidenceRequestedService"));
     const currentDtcEvidenceRequestedService = normalizeDtcEvidenceRequestedServiceValue(readAliasValue(currentSummary, "dtcEvidenceRequestedService"));
+    const importedDtcEvidenceResponseService = normalizeDtcEvidenceResponseServiceValue(readAliasValue(importedQualitySummary, "dtcEvidenceResponseService"));
+    const currentDtcEvidenceResponseService = normalizeDtcEvidenceResponseServiceValue(readAliasValue(currentSummary, "dtcEvidenceResponseService"));
+    const importedDtcEvidenceEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(readAliasValue(importedQualitySummary, "dtcEvidenceEcuResponseStatus"));
+    const currentDtcEvidenceEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(readAliasValue(currentSummary, "dtcEvidenceEcuResponseStatus"));
     const importedDtcEvidenceAcquisitionContextComplete = readFlag(importedQualitySummary, "dtcEvidenceAcquisitionContextComplete")
       && Boolean(importedDtcEvidenceCapturedAt && importedDtcEvidenceProtocol && importedDtcEvidenceScanSessionId);
     const currentDtcEvidenceAcquisitionContextComplete = readFlag(currentSummary, "dtcEvidenceAcquisitionContextComplete")
@@ -21500,6 +21521,10 @@
       && Boolean(importedDtcEvidenceReadoutCategory && importedDtcEvidenceRequestedService);
     const currentDtcEvidenceReadoutContractComplete = readFlag(currentSummary, "dtcEvidenceReadoutContractComplete")
       && Boolean(currentDtcEvidenceReadoutCategory && currentDtcEvidenceRequestedService);
+    const importedDtcEvidenceResponseContractComplete = readFlag(importedQualitySummary, "dtcEvidenceResponseContractComplete")
+      && isDtcEvidenceResponseContractValid(importedDtcEvidenceResponseService, importedDtcEvidenceEcuResponseStatus);
+    const currentDtcEvidenceResponseContractComplete = readFlag(currentSummary, "dtcEvidenceResponseContractComplete")
+      && isDtcEvidenceResponseContractValid(currentDtcEvidenceResponseService, currentDtcEvidenceEcuResponseStatus);
     const dtcEvidenceProtocolMatch = Boolean(importedDtcEvidenceProtocol && importedDtcEvidenceProtocol === currentDtcEvidenceProtocol);
     const dtcEvidenceCaptureOrderValid = Boolean(importedDtcEvidenceCapturedAt && currentDtcEvidenceCapturedAt
       && Date.parse(currentDtcEvidenceCapturedAt) > Date.parse(importedDtcEvidenceCapturedAt));
@@ -21515,6 +21540,11 @@
       && importedDtcEvidenceReadoutCategory === currentDtcEvidenceReadoutCategory);
     const dtcEvidenceRequestedServiceMatch = Boolean(importedDtcEvidenceRequestedService
       && importedDtcEvidenceRequestedService === currentDtcEvidenceRequestedService);
+    const dtcEvidenceResponseServiceMatch = importedDtcEvidenceResponseContractComplete
+      && currentDtcEvidenceResponseContractComplete
+      && importedDtcEvidenceResponseService === currentDtcEvidenceResponseService;
+    const dtcEvidenceEcuResponseStatusMatch = Boolean(importedDtcEvidenceEcuResponseStatus
+      && importedDtcEvidenceEcuResponseStatus === currentDtcEvidenceEcuResponseStatus);
     const importedDtcEvidenceValidationReported = readFlag(importedQualitySummary, "dtcEvidenceValidationReported") || importedInvalidDtcEvidenceIssueKeys.length > 0;
     const currentDtcEvidenceValidationReported = readFlag(currentSummary, "dtcEvidenceValidationReported") || currentInvalidDtcEvidenceIssueKeys.length > 0;
     const dtcEvidenceVehicleScopeMatch = Boolean(importedDtcEvidenceVehicleScopeKey && importedDtcEvidenceVehicleScopeKey === currentDtcEvidenceVehicleScopeKey);
@@ -21538,7 +21568,11 @@
       !importedDtcEvidenceReadoutContractComplete ? "imported_dtc_evidence_readout_contract_incomplete" : null,
       !currentDtcEvidenceReadoutContractComplete ? "current_dtc_evidence_readout_contract_incomplete" : null,
       importedDtcEvidenceReadoutContractComplete && currentDtcEvidenceReadoutContractComplete && !dtcEvidenceReadoutCategoryMatch ? "dtc_evidence_readout_category_mismatch" : null,
-      importedDtcEvidenceReadoutContractComplete && currentDtcEvidenceReadoutContractComplete && !dtcEvidenceRequestedServiceMatch ? "dtc_evidence_requested_service_mismatch" : null
+      importedDtcEvidenceReadoutContractComplete && currentDtcEvidenceReadoutContractComplete && !dtcEvidenceRequestedServiceMatch ? "dtc_evidence_requested_service_mismatch" : null,
+      !importedDtcEvidenceResponseContractComplete ? "imported_dtc_evidence_response_contract_incomplete" : null,
+      !currentDtcEvidenceResponseContractComplete ? "current_dtc_evidence_response_contract_incomplete" : null,
+      importedDtcEvidenceResponseContractComplete && currentDtcEvidenceResponseContractComplete && !dtcEvidenceResponseServiceMatch ? "dtc_evidence_response_service_mismatch" : null,
+      importedDtcEvidenceResponseContractComplete && currentDtcEvidenceResponseContractComplete && !dtcEvidenceEcuResponseStatusMatch ? "dtc_evidence_ecu_response_status_mismatch" : null
     ].filter(Boolean);
     const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported
       && currentDtcEvidenceValidationReported
@@ -21727,6 +21761,22 @@
       imported_dtc_evidence_readout_contract_complete: importedDtcEvidenceReadoutContractComplete,
       currentDtcEvidenceReadoutContractComplete,
       current_dtc_evidence_readout_contract_complete: currentDtcEvidenceReadoutContractComplete,
+      importedDtcEvidenceResponseService,
+      imported_dtc_evidence_response_service: importedDtcEvidenceResponseService,
+      currentDtcEvidenceResponseService,
+      current_dtc_evidence_response_service: currentDtcEvidenceResponseService,
+      dtcEvidenceResponseServiceMatch,
+      dtc_evidence_response_service_match: dtcEvidenceResponseServiceMatch,
+      importedDtcEvidenceEcuResponseStatus,
+      imported_dtc_evidence_ecu_response_status: importedDtcEvidenceEcuResponseStatus,
+      currentDtcEvidenceEcuResponseStatus,
+      current_dtc_evidence_ecu_response_status: currentDtcEvidenceEcuResponseStatus,
+      dtcEvidenceEcuResponseStatusMatch,
+      dtc_evidence_ecu_response_status_match: dtcEvidenceEcuResponseStatusMatch,
+      importedDtcEvidenceResponseContractComplete,
+      imported_dtc_evidence_response_contract_complete: importedDtcEvidenceResponseContractComplete,
+      currentDtcEvidenceResponseContractComplete,
+      current_dtc_evidence_response_contract_complete: currentDtcEvidenceResponseContractComplete,
       dtcEvidenceScopeBlockedReasonIds,
       dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       dtcEvidenceResolutionComparisonAvailable,
@@ -21823,6 +21873,10 @@
     const dtcEvidenceRequestedService = normalizeDtcEvidenceRequestedServiceValue(pickDefined(summary.dtcEvidenceRequestedService, summary.dtc_evidence_requested_service));
     const dtcEvidenceReadoutContractComplete = pickDefined(summary.dtcEvidenceReadoutContractComplete, summary.dtc_evidence_readout_contract_complete, false) === true
       && Boolean(dtcEvidenceReadoutCategory && dtcEvidenceRequestedService);
+    const dtcEvidenceResponseService = normalizeDtcEvidenceResponseServiceValue(pickDefined(summary.dtcEvidenceResponseService, summary.dtc_evidence_response_service));
+    const dtcEvidenceEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(pickDefined(summary.dtcEvidenceEcuResponseStatus, summary.dtc_evidence_ecu_response_status));
+    const dtcEvidenceResponseContractComplete = pickDefined(summary.dtcEvidenceResponseContractComplete, summary.dtc_evidence_response_contract_complete, false) === true
+      && isDtcEvidenceResponseContractValid(dtcEvidenceResponseService, dtcEvidenceEcuResponseStatus);
     const dtcEvidenceValidationReported = pickDefined(summary.dtcEvidenceValidationReported, summary.dtc_evidence_validation_reported, false) === true
       || invalidDtcEvidenceIssueKeys.length > 0;
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
@@ -21919,6 +21973,12 @@
       dtc_evidence_requested_service: dtcEvidenceRequestedService,
       dtcEvidenceReadoutContractComplete,
       dtc_evidence_readout_contract_complete: dtcEvidenceReadoutContractComplete,
+      dtcEvidenceResponseService,
+      dtc_evidence_response_service: dtcEvidenceResponseService,
+      dtcEvidenceEcuResponseStatus,
+      dtc_evidence_ecu_response_status: dtcEvidenceEcuResponseStatus,
+      dtcEvidenceResponseContractComplete,
+      dtc_evidence_response_contract_complete: dtcEvidenceResponseContractComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
@@ -27585,6 +27645,8 @@
       const dtcReadoutCategoryValue = String(rowValue.dtcReadoutCategory || rowValue.dtc_readout_category || "").trim().toLowerCase();
       const dtcReadoutCategory = ["stored", "pending", "permanent"].includes(dtcReadoutCategoryValue) ? dtcReadoutCategoryValue : null;
       const requestedService = normalizeDtcEvidenceRequestedServiceValue(rowValue.requestedService || rowValue.requested_service || rowValue.udsRequestedService || rowValue.uds_requested_service);
+      const responseService = normalizeDtcEvidenceResponseServiceValue(rowValue.responseService || rowValue.response_service);
+      const ecuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(rowValue.ecuResponseStatus || rowValue.ecu_response_status || rowValue.responseStatus || rowValue.response_status);
       const scanSessionId = redactSensitiveText(String(rowValue.scanSessionId || rowValue.scan_session_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const readoutAttemptId = redactSensitiveText(String(rowValue.readoutAttemptId || rowValue.readout_attempt_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const readoutRoute = redactSensitiveText(String(rowValue.readoutRoute || rowValue.readout_route || rowValue.interfaceRoute || rowValue.interface_route || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
@@ -27694,6 +27756,8 @@
         ...(readoutKind ? { readoutKind, readout_kind: readoutKind } : {}),
         ...(dtcReadoutCategory ? { dtcReadoutCategory, dtc_readout_category: dtcReadoutCategory } : {}),
         ...(requestedService ? { requestedService, requested_service: requestedService } : {}),
+        ...(responseService ? { responseService, response_service: responseService } : {}),
+        ...(ecuResponseStatus ? { ecuResponseStatus, ecu_response_status: ecuResponseStatus } : {}),
         ...(scanSessionId ? { scanSessionId, scan_session_id: scanSessionId } : {}),
         ...(readoutAttemptId ? { readoutAttemptId, readout_attempt_id: readoutAttemptId } : {}),
         ...(readoutRoute ? { readoutRoute, readout_route: readoutRoute } : {}),
@@ -33531,6 +33595,35 @@
     ].map(normalizeDtcEvidenceRequestedServiceValue).filter(Boolean))];
   }
 
+  function normalizeDtcEvidenceResponseServiceValue(value) {
+    const normalized = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+    return /^(?:43|47|4A|59|7F)$/.test(normalized) ? normalized : null;
+  }
+
+  function readDtcEvidenceResponseServices(row = {}) {
+    return [...new Set([
+      row?.responseService,
+      row?.response_service,
+      ...(Array.isArray(row?.responseServices) ? row.responseServices : []),
+      ...(Array.isArray(row?.response_services) ? row.response_services : [])
+    ].map(normalizeDtcEvidenceResponseServiceValue).filter(Boolean))];
+  }
+
+  function normalizeDtcEvidenceEcuResponseStatus(value) {
+    const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    if (["reported", "responded", "response", "ok", "success", "available", "positive", "positive_response"].includes(normalized)) return "reported";
+    if (["negative_response", "pending_response", "no_response", "timeout", "blocked", "failed", "unavailable"].includes(normalized)) return normalized;
+    if (["error", "errors"].includes(normalized)) return "failed";
+    return null;
+  }
+
+  function isDtcEvidenceResponseContractValid(responseService, ecuResponseStatus) {
+    if (ecuResponseStatus === "reported") return Boolean(responseService && responseService !== "7F");
+    if (["negative_response", "pending_response"].includes(ecuResponseStatus)) return responseService === "7F";
+    if (["no_response", "timeout", "blocked", "failed", "unavailable"].includes(ecuResponseStatus)) return responseService === null;
+    return false;
+  }
+
   function buildDtcEvidenceVehicleScopeKey(vehicleProfile = null) {
     const profile = normalizeVehicleProfileInput(vehicleProfile) || {};
     const maker = normalizeDtcEvidenceScopePart(profile.maker, 60);
@@ -33845,6 +33938,7 @@
     const negativeResponseLabelIndex = findIndex("negative response label", "negative_response_label", "negative label");
     const requestedServiceIndex = findIndex("requested service", "requested_service", "request service", "service", "readout service", "diagnostic service", "intent");
     const responseServiceIndex = findIndex("response service", "response_service", "positive response service");
+    const ecuResponseStatusIndex = findIndex("ecu response status", "ecu_response_status", "response status", "response_status", "communication status", "通信応答状態", "ECU応答状態");
     const negativeRequestedServiceIndex = findIndex("negative requested service", "negative_requested_service");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目", "項目名", "パラメーター", "パラメータ", "データ項目");
@@ -34064,6 +34158,8 @@
       const rowScanSessionId = cellAt(scanSessionIdIndex, 120) || null;
       const rowReadoutAttemptId = cellAt(readoutAttemptIdIndex, 120) || null;
       const rowRequestedService = normalizeDtcEvidenceRequestedServiceValue(cellAt(requestedServiceIndex, 40));
+      const rowResponseService = normalizeDtcEvidenceResponseServiceValue(cellAt(responseServiceIndex, 24));
+      const rowEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(cellAt(ecuResponseStatusIndex, 40));
       const rowEcuGroup = cellAt(ecuGroupIndex, 120) || null;
       const rowEcuSystem = cellAt(ecuSystemIndex, 160) || null;
       const rowParentEcuId = cellAt(parentEcuIdIndex, 120) || null;
@@ -34288,6 +34384,8 @@
           ...(sanitizeCell(readoutKind, 80) ? { readout_kind: sanitizeCell(readoutKind, 80) } : {}),
           ...(dtcReadoutKind ? { dtc_readout_category: dtcReadoutKind } : {}),
           ...(rowRequestedService ? { requested_service: rowRequestedService } : {}),
+          ...(rowResponseService ? { response_service: rowResponseService } : {}),
+          ...(rowEcuResponseStatus ? { ecu_response_status: rowEcuResponseStatus } : {}),
           ...(rowScanSessionId ? { scan_session_id: rowScanSessionId } : {}),
           ...(rowReadoutAttemptId ? { readout_attempt_id: rowReadoutAttemptId } : {}),
           ...(cellAt(readoutRouteIndex, 80) ? { readout_route: cellAt(readoutRouteIndex, 80) } : {}),
