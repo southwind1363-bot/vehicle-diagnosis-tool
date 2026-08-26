@@ -26490,6 +26490,9 @@
           const networkBus = redactSensitiveText(String(row.networkBus || row.network_bus || row.busName || row.bus_name || row.communicationBus || row.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const networkChannel = redactSensitiveText(String(row.networkChannel || row.network_channel || row.channelId || row.channel_id || row.channelName || row.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const gatewayRoute = redactSensitiveText(String(row.gatewayRoute || row.gateway_route || row.gatewayPath || row.gateway_path || row.routingPath || row.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+          const diagnosticRequestId = redactSensitiveText(String(row.diagnosticRequestId || row.diagnostic_request_id || row.requestCanId || row.request_can_id || row.txId || row.tx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const diagnosticResponseId = redactSensitiveText(String(row.diagnosticResponseId || row.diagnostic_response_id || row.responseCanId || row.response_can_id || row.rxId || row.rx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const addressingType = redactSensitiveText(String(row.addressingType || row.addressing_type || row.diagnosticAddressing || row.diagnostic_addressing || row.addressingMode || row.addressing_mode || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26557,6 +26560,9 @@
             ...(networkBus ? { networkBus, network_bus: networkBus } : {}),
             ...(networkChannel ? { networkChannel, network_channel: networkChannel } : {}),
             ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
+            ...(diagnosticRequestId ? { diagnosticRequestId, diagnostic_request_id: diagnosticRequestId } : {}),
+            ...(diagnosticResponseId ? { diagnosticResponseId, diagnostic_response_id: diagnosticResponseId } : {}),
+            ...(addressingType ? { addressingType, addressing_type: addressingType } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26684,6 +26690,9 @@
       const networkBus = redactSensitiveText(String(rowValue.networkBus || rowValue.network_bus || rowValue.busName || rowValue.bus_name || rowValue.communicationBus || rowValue.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const networkChannel = redactSensitiveText(String(rowValue.networkChannel || rowValue.network_channel || rowValue.channelId || rowValue.channel_id || rowValue.channelName || rowValue.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const gatewayRoute = redactSensitiveText(String(rowValue.gatewayRoute || rowValue.gateway_route || rowValue.gatewayPath || rowValue.gateway_path || rowValue.routingPath || rowValue.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const diagnosticRequestId = redactSensitiveText(String(rowValue.diagnosticRequestId || rowValue.diagnostic_request_id || rowValue.requestCanId || rowValue.request_can_id || rowValue.txId || rowValue.tx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const diagnosticResponseId = redactSensitiveText(String(rowValue.diagnosticResponseId || rowValue.diagnostic_response_id || rowValue.responseCanId || rowValue.response_can_id || rowValue.rxId || rowValue.rx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const addressingType = redactSensitiveText(String(rowValue.addressingType || rowValue.addressing_type || rowValue.diagnosticAddressing || rowValue.diagnostic_addressing || rowValue.addressingMode || rowValue.addressing_mode || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26739,6 +26748,9 @@
         ...(networkBus ? { networkBus, network_bus: networkBus } : {}),
         ...(networkChannel ? { networkChannel, network_channel: networkChannel } : {}),
         ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
+        ...(diagnosticRequestId ? { diagnosticRequestId, diagnostic_request_id: diagnosticRequestId } : {}),
+        ...(diagnosticResponseId ? { diagnosticResponseId, diagnostic_response_id: diagnosticResponseId } : {}),
+        ...(addressingType ? { addressingType, addressing_type: addressingType } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28279,6 +28291,9 @@
       const networkBus = redactSensitiveText(String(row?.networkBus || row?.network_bus || row?.busName || row?.bus_name || row?.communicationBus || row?.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const networkChannel = redactSensitiveText(String(row?.networkChannel || row?.network_channel || row?.channelId || row?.channel_id || row?.channelName || row?.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const gatewayRoute = redactSensitiveText(String(row?.gatewayRoute || row?.gateway_route || row?.gatewayPath || row?.gateway_path || row?.routingPath || row?.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const diagnosticRequestId = redactSensitiveText(String(row?.diagnosticRequestId || row?.diagnostic_request_id || row?.requestCanId || row?.request_can_id || row?.txId || row?.tx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const diagnosticResponseId = redactSensitiveText(String(row?.diagnosticResponseId || row?.diagnostic_response_id || row?.responseCanId || row?.response_can_id || row?.rxId || row?.rx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const addressingType = redactSensitiveText(String(row?.addressingType || row?.addressing_type || row?.diagnosticAddressing || row?.diagnostic_addressing || row?.addressingMode || row?.addressing_mode || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return {
         id,
         name,
@@ -28333,7 +28348,10 @@
         ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {}),
         ...(networkBus ? { networkBus, network_bus: networkBus } : {}),
         ...(networkChannel ? { networkChannel, network_channel: networkChannel } : {}),
-        ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {})
+        ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
+        ...(diagnosticRequestId ? { diagnosticRequestId, diagnostic_request_id: diagnosticRequestId } : {}),
+        ...(diagnosticResponseId ? { diagnosticResponseId, diagnostic_response_id: diagnosticResponseId } : {}),
+        ...(addressingType ? { addressingType, addressing_type: addressingType } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28389,7 +28407,10 @@
         diagnosticSoftwareVersion: row.diagnosticSoftwareVersion || null,
         networkBus: row.networkBus || null,
         networkChannel: row.networkChannel || null,
-        gatewayRoute: row.gatewayRoute || null
+        gatewayRoute: row.gatewayRoute || null,
+        diagnosticRequestId: row.diagnosticRequestId || null,
+        diagnosticResponseId: row.diagnosticResponseId || null,
+        addressingType: row.addressingType || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32292,6 +32313,9 @@
     const networkBusIndex = findIndex("network bus", "network_bus", "bus name", "bus_name", "communication bus", "communication_bus", "通信バス", "ネットワークバス");
     const networkChannelIndex = findIndex("network channel", "network_channel", "channel id", "channel_id", "channel name", "channel_name", "通信チャンネル", "ネットワークチャンネル");
     const gatewayRouteIndex = findIndex("gateway route", "gateway_route", "gateway path", "gateway_path", "routing path", "routing_path", "ゲートウェイ経路", "ルーティング経路");
+    const diagnosticRequestIdIndex = findIndex("diagnostic request id", "diagnostic_request_id", "request can id", "request_can_id", "tx id", "tx_id", "診断要求ID", "要求CAN ID");
+    const diagnosticResponseIdIndex = findIndex("diagnostic response id", "diagnostic_response_id", "response can id", "response_can_id", "rx id", "rx_id", "診断応答ID", "応答CAN ID");
+    const addressingTypeIndex = findIndex("addressing type", "addressing_type", "diagnostic addressing", "diagnostic_addressing", "addressing mode", "addressing_mode", "アドレッシング方式", "診断アドレス方式");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32422,6 +32446,9 @@
       const rowNetworkBus = cellAt(networkBusIndex, 120) || null;
       const rowNetworkChannel = cellAt(networkChannelIndex, 120) || null;
       const rowGatewayRoute = cellAt(gatewayRouteIndex, 160) || null;
+      const rowDiagnosticRequestId = cellAt(diagnosticRequestIdIndex, 80) || null;
+      const rowDiagnosticResponseId = cellAt(diagnosticResponseIdIndex, 80) || null;
+      const rowAddressingType = cellAt(addressingTypeIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32598,6 +32625,9 @@
           ...(rowNetworkBus ? { network_bus: rowNetworkBus } : {}),
           ...(rowNetworkChannel ? { network_channel: rowNetworkChannel } : {}),
           ...(rowGatewayRoute ? { gateway_route: rowGatewayRoute } : {}),
+          ...(rowDiagnosticRequestId ? { diagnostic_request_id: rowDiagnosticRequestId } : {}),
+          ...(rowDiagnosticResponseId ? { diagnostic_response_id: rowDiagnosticResponseId } : {}),
+          ...(rowAddressingType ? { addressing_type: rowAddressingType } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32739,6 +32769,9 @@
           ...(rowNetworkBus ? { network_bus: rowNetworkBus } : {}),
           ...(rowNetworkChannel ? { network_channel: rowNetworkChannel } : {}),
           ...(rowGatewayRoute ? { gateway_route: rowGatewayRoute } : {}),
+          ...(rowDiagnosticRequestId ? { diagnostic_request_id: rowDiagnosticRequestId } : {}),
+          ...(rowDiagnosticResponseId ? { diagnostic_response_id: rowDiagnosticResponseId } : {}),
+          ...(rowAddressingType ? { addressing_type: rowAddressingType } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34198,6 +34231,9 @@
         networkBus: row?.networkBus || row?.network_bus || row?.busName || row?.bus_name || row?.communicationBus || row?.communication_bus || null,
         networkChannel: row?.networkChannel || row?.network_channel || row?.channelId || row?.channel_id || row?.channelName || row?.channel_name || null,
         gatewayRoute: row?.gatewayRoute || row?.gateway_route || row?.gatewayPath || row?.gateway_path || row?.routingPath || row?.routing_path || null,
+        diagnosticRequestId: row?.diagnosticRequestId || row?.diagnostic_request_id || row?.requestCanId || row?.request_can_id || row?.txId || row?.tx_id || null,
+        diagnosticResponseId: row?.diagnosticResponseId || row?.diagnostic_response_id || row?.responseCanId || row?.response_can_id || row?.rxId || row?.rx_id || null,
+        addressingType: row?.addressingType || row?.addressing_type || row?.diagnosticAddressing || row?.diagnostic_addressing || row?.addressingMode || row?.addressing_mode || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34249,6 +34285,9 @@
       const dtcNetworkBus = dtcRow?.networkBus || dtcRow?.network_bus || dtcRow?.busName || dtcRow?.bus_name || dtcRow?.communicationBus || dtcRow?.communication_bus || null;
       const dtcNetworkChannel = dtcRow?.networkChannel || dtcRow?.network_channel || dtcRow?.channelId || dtcRow?.channel_id || dtcRow?.channelName || dtcRow?.channel_name || null;
       const dtcGatewayRoute = dtcRow?.gatewayRoute || dtcRow?.gateway_route || dtcRow?.gatewayPath || dtcRow?.gateway_path || dtcRow?.routingPath || dtcRow?.routing_path || null;
+      const dtcDiagnosticRequestId = dtcRow?.diagnosticRequestId || dtcRow?.diagnostic_request_id || dtcRow?.requestCanId || dtcRow?.request_can_id || dtcRow?.txId || dtcRow?.tx_id || null;
+      const dtcDiagnosticResponseId = dtcRow?.diagnosticResponseId || dtcRow?.diagnostic_response_id || dtcRow?.responseCanId || dtcRow?.response_can_id || dtcRow?.rxId || dtcRow?.rx_id || null;
+      const dtcAddressingType = dtcRow?.addressingType || dtcRow?.addressing_type || dtcRow?.diagnosticAddressing || dtcRow?.diagnostic_addressing || dtcRow?.addressingMode || dtcRow?.addressing_mode || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34279,6 +34318,9 @@
       if (dtcNetworkBus && response.networkBus && normalizeCsvEcuHierarchyScope(dtcNetworkBus) !== normalizeCsvEcuHierarchyScope(response.networkBus)) return false;
       if (dtcNetworkChannel && response.networkChannel && normalizeCsvEcuHierarchyScope(dtcNetworkChannel) !== normalizeCsvEcuHierarchyScope(response.networkChannel)) return false;
       if (dtcGatewayRoute && response.gatewayRoute && normalizeCsvEcuHierarchyScope(dtcGatewayRoute) !== normalizeCsvEcuHierarchyScope(response.gatewayRoute)) return false;
+      if (dtcDiagnosticRequestId && response.diagnosticRequestId && normalizeCsvEcuIdentity(dtcDiagnosticRequestId) !== normalizeCsvEcuIdentity(response.diagnosticRequestId)) return false;
+      if (dtcDiagnosticResponseId && response.diagnosticResponseId && normalizeCsvEcuIdentity(dtcDiagnosticResponseId) !== normalizeCsvEcuIdentity(response.diagnosticResponseId)) return false;
+      if (dtcAddressingType && response.addressingType && normalizeCsvEcuHierarchyScope(dtcAddressingType) !== normalizeCsvEcuHierarchyScope(response.addressingType)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
