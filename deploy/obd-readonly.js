@@ -32384,7 +32384,14 @@
       ? buildDtcEvidenceFieldReport(
         importedDtcEvidenceFieldReportInput.recognizedFields || importedDtcEvidenceFieldReportInput.recognized_fields || [],
         importedDtcEvidenceFieldReportInput.unknownColumns || importedDtcEvidenceFieldReportInput.unknown_columns || [],
-        importedDtcEvidenceFieldReportInput.tableReportCount || importedDtcEvidenceFieldReportInput.table_report_count || 0
+        importedDtcEvidenceFieldReportInput.tableReportCount || importedDtcEvidenceFieldReportInput.table_report_count || 0,
+        {
+          sourceFieldSchemaVersion: importedDtcEvidenceFieldReportInput.sourceFieldSchemaVersion
+            || importedDtcEvidenceFieldReportInput.source_field_schema_version
+            || importedDtcEvidenceFieldReportInput.fieldSchemaVersion
+            || importedDtcEvidenceFieldReportInput.field_schema_version
+            || ""
+        }
       )
       : null;
     const importClassification = {
@@ -32509,6 +32516,19 @@
     };
   }
 
+  const DTC_EVIDENCE_FIELD_SCHEMA_VERSION = "dtc_evidence_field_schema_v1";
+  const DTC_EVIDENCE_FIELD_SCHEMA_MIGRATIONS = Object.freeze({
+    dtc_evidence_field_schema_v0: Object.freeze({
+      first_detected_at: "dtc_first_detected_at",
+      last_detected_at: "dtc_last_detected_at",
+      confirmed_at: "dtc_confirmed_at",
+      fault_mileage: "dtc_fault_occurrence_distance",
+      fault_mileage_unit: "dtc_fault_occurrence_distance_unit",
+      mileage_since_clear: "dtc_distance_since_clear",
+      mileage_since_clear_unit: "dtc_distance_since_clear_unit",
+      warmups_since_clear: "dtc_warm_up_cycle_count"
+    })
+  });
   const DTC_EVIDENCE_FIELD_SCHEMA = Object.freeze([
     ["dtc_first_detected_at", "timestamp", "none"],
     ["dtc_last_detected_at", "timestamp", "none"],
@@ -32536,14 +32556,48 @@
     unitPolicy,
     unit_policy: unitPolicy,
     scope: "dtc_ecu_response_row",
+    introducedIn: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+    introduced_in: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+    deprecated: false,
     required: false
   })));
 
-  function buildDtcEvidenceFieldReport(recognizedFields = [], unknownColumns = [], tableReportCount = 1) {
+  function buildDtcEvidenceFieldReport(recognizedFields = [], unknownColumns = [], tableReportCount = 1, options = {}) {
     const schemaIds = new Set(DTC_EVIDENCE_FIELD_SCHEMA.map((field) => field.id));
-    const recognized = [...new Set((Array.isArray(recognizedFields) ? recognizedFields : [])
-      .map((field) => String(field || "").trim())
-      .filter((field) => schemaIds.has(field)))];
+    const sourceFieldSchemaVersion = String(options.sourceFieldSchemaVersion || options.source_field_schema_version || DTC_EVIDENCE_FIELD_SCHEMA_VERSION).trim();
+    const sourceVersionMatch = sourceFieldSchemaVersion.match(/^dtc_evidence_field_schema_v(\d+)$/);
+    const sourceVersionNumber = sourceVersionMatch ? Number(sourceVersionMatch[1]) : null;
+    const migrationMap = DTC_EVIDENCE_FIELD_SCHEMA_MIGRATIONS[sourceFieldSchemaVersion] || null;
+    const compatibilityStatus = sourceFieldSchemaVersion === DTC_EVIDENCE_FIELD_SCHEMA_VERSION
+      ? "current"
+      : migrationMap
+        ? "migrated_legacy"
+        : Number.isInteger(sourceVersionNumber) && sourceVersionNumber > 1
+          ? "unsupported_future"
+          : "unsupported_unknown";
+    const sourceFields = [...new Set((Array.isArray(recognizedFields) ? recognizedFields : [])
+      .map((field) => redactSensitiveText(String(field || "")).replace(/\s+/g, " ").trim().slice(0, 80))
+      .filter(Boolean))];
+    const migrationMappings = [];
+    const deprecatedSourceFields = [];
+    const unrecognizedSourceFields = [];
+    const recognized = [];
+    sourceFields.forEach((sourceField) => {
+      const migratedField = compatibilityStatus === "current"
+        ? sourceField
+        : compatibilityStatus === "migrated_legacy"
+          ? migrationMap[sourceField] || (schemaIds.has(sourceField) ? sourceField : null)
+          : null;
+      if (!migratedField || !schemaIds.has(migratedField)) {
+        unrecognizedSourceFields.push(sourceField);
+        return;
+      }
+      if (!recognized.includes(migratedField)) recognized.push(migratedField);
+      if (sourceField !== migratedField) {
+        deprecatedSourceFields.push(sourceField);
+        migrationMappings.push({ sourceField, source_field: sourceField, targetField: migratedField, target_field: migratedField });
+      }
+    });
     const recognizedSet = new Set(recognized);
     const missingOptional = DTC_EVIDENCE_FIELD_SCHEMA.map((field) => field.id).filter((id) => !recognizedSet.has(id));
     const unknown = [...new Set((Array.isArray(unknownColumns) ? unknownColumns : [])
@@ -32554,8 +32608,24 @@
     return {
       schemaVersion: "dtc_evidence_field_report_v1",
       schema_version: "dtc_evidence_field_report_v1",
-      fieldSchemaVersion: "dtc_evidence_field_schema_v1",
-      field_schema_version: "dtc_evidence_field_schema_v1",
+      fieldSchemaVersion: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+      field_schema_version: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+      sourceFieldSchemaVersion,
+      source_field_schema_version: sourceFieldSchemaVersion,
+      supportedSourceSchemaVersions: [DTC_EVIDENCE_FIELD_SCHEMA_VERSION, ...Object.keys(DTC_EVIDENCE_FIELD_SCHEMA_MIGRATIONS)],
+      supported_source_schema_versions: [DTC_EVIDENCE_FIELD_SCHEMA_VERSION, ...Object.keys(DTC_EVIDENCE_FIELD_SCHEMA_MIGRATIONS)],
+      compatibilityStatus,
+      compatibility_status: compatibilityStatus,
+      migrationApplied: compatibilityStatus === "migrated_legacy",
+      migration_applied: compatibilityStatus === "migrated_legacy",
+      migrationReady: ["current", "migrated_legacy"].includes(compatibilityStatus),
+      migration_ready: ["current", "migrated_legacy"].includes(compatibilityStatus),
+      migrationMappings,
+      migration_mappings: migrationMappings.map((mapping) => ({ ...mapping })),
+      deprecatedSourceFields,
+      deprecated_source_fields: [...deprecatedSourceFields],
+      unrecognizedSourceFields,
+      unrecognized_source_fields: [...unrecognizedSourceFields],
       fieldCount: schemaFields.length,
       field_count: schemaFields.length,
       schemaFields,
@@ -32578,8 +32648,8 @@
       unknown_column_count: unknown.length,
       tableReportCount: normalizedTableReportCount,
       table_report_count: normalizedTableReportCount,
-      reviewRequired: unknown.length > 0,
-      review_required: unknown.length > 0,
+      reviewRequired: unknown.length > 0 || unrecognizedSourceFields.length > 0 || !["current", "migrated_legacy"].includes(compatibilityStatus),
+      review_required: unknown.length > 0 || unrecognizedSourceFields.length > 0 || !["current", "migrated_legacy"].includes(compatibilityStatus),
       diagnosticConclusionAssigned: false,
       diagnostic_conclusion_assigned: false,
       retainedRawText: false,
