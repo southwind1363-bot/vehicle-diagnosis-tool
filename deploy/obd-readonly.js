@@ -26458,6 +26458,10 @@
           const ecuResponseConflict = row.ecuResponseConflict === true || row.ecu_response_conflict === true;
           const applicabilityEvidenceEligible = !ecuResponseConflict && row.applicabilityEvidenceEligible !== false && row.applicability_evidence_eligible !== false;
           const dtcEvidenceStatus = redactSensitiveText(String(row.dtcEvidenceStatus || row.dtc_evidence_status || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const readoutSection = redactSensitiveText(String(row.readoutSection || row.readout_section || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const readoutKind = redactSensitiveText(String(row.readoutKind || row.readout_kind || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const dtcReadoutCategoryValue = String(row.dtcReadoutCategory || row.dtc_readout_category || "").trim().toLowerCase();
+          const dtcReadoutCategory = ["stored", "pending", "permanent"].includes(dtcReadoutCategoryValue) ? dtcReadoutCategoryValue : null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26494,6 +26498,9 @@
             negativeResponseLabels,
             negative_response_labels: negativeResponseLabels,
             ...(dtcEvidenceStatus ? { dtcEvidenceStatus, dtc_evidence_status: dtcEvidenceStatus } : {}),
+            ...(readoutSection ? { readoutSection, readout_section: readoutSection } : {}),
+            ...(readoutKind ? { readoutKind, readout_kind: readoutKind } : {}),
+            ...(dtcReadoutCategory ? { dtcReadoutCategory, dtc_readout_category: dtcReadoutCategory } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26589,6 +26596,10 @@
         .flat()
         .map((value) => redactSensitiveText(String(value || "")).trim().toLowerCase().replace(/[\s-]+/g, "_").slice(0, 80))
         .filter(Boolean))].slice(0, 12);
+      const readoutSection = redactSensitiveText(String(rowValue.readoutSection || rowValue.readout_section || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const readoutKind = redactSensitiveText(String(rowValue.readoutKind || rowValue.readout_kind || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const dtcReadoutCategoryValue = String(rowValue.dtcReadoutCategory || rowValue.dtc_readout_category || "").trim().toLowerCase();
+      const dtcReadoutCategory = ["stored", "pending", "permanent"].includes(dtcReadoutCategoryValue) ? dtcReadoutCategoryValue : null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26613,6 +26624,9 @@
         ...(rowProtocol ? { protocol: rowProtocol } : {}),
         freezeFrameAvailable,
         freeze_frame_available: freezeFrameAvailable,
+        ...(readoutSection ? { readoutSection, readout_section: readoutSection } : {}),
+        ...(readoutKind ? { readoutKind, readout_kind: readoutKind } : {}),
+        ...(dtcReadoutCategory ? { dtcReadoutCategory, dtc_readout_category: dtcReadoutCategory } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28121,6 +28135,10 @@
       const rowCapturedAtValue = row?.captured_at || row?.capturedAt || row?.timestamp || sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
       const rowCapturedAt = /^\d{4}-\d{2}-\d{2}T/.test(String(rowCapturedAtValue || "")) && Number.isFinite(Date.parse(rowCapturedAtValue)) ? rowCapturedAtValue : null;
       const rowProtocol = normalizeProtocolProvenanceValue(row?.protocol || row?.obd_protocol || row?.communicationProtocol || row?.communication_protocol || sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null);
+      const readoutSection = redactSensitiveText(String(row?.readoutSection || row?.readout_section || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const readoutKind = redactSensitiveText(String(row?.readoutKind || row?.readout_kind || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const dtcReadoutCategoryValue = String(row?.dtcReadoutCategory || row?.dtc_readout_category || "").trim().toLowerCase();
+      const dtcReadoutCategory = ["stored", "pending", "permanent"].includes(dtcReadoutCategoryValue) ? dtcReadoutCategoryValue : null;
       return {
         id,
         name,
@@ -28144,7 +28162,10 @@
         responseTimeMs,
         response_time_ms: responseTimeMs,
         ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
-        ...(rowProtocol ? { protocol: rowProtocol } : {})
+        ...(rowProtocol ? { protocol: rowProtocol } : {}),
+        ...(readoutSection ? { readoutSection, readout_section: readoutSection } : {}),
+        ...(readoutKind ? { readoutKind, readout_kind: readoutKind } : {}),
+        ...(dtcReadoutCategory ? { dtcReadoutCategory, dtc_readout_category: dtcReadoutCategory } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28169,7 +28190,10 @@
         negativeResponseLabels: [...row.negativeResponseLabels].sort(),
         responseTimeMs: row.responseTimeMs,
         capturedAt: row.capturedAt || null,
-        protocol: row.protocol || null
+        protocol: row.protocol || null,
+        readoutSection: row.readoutSection || null,
+        readoutKind: row.readoutKind || null,
+        dtcReadoutCategory: row.dtcReadoutCategory || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32296,6 +32320,9 @@
           status: cellAt(statusIndex, 80) ? normalizeStatus(cells[statusIndex]) : "unknown",
           ecu: ecu || null,
           ecu_name: ecuName || null,
+          ...(sanitizeCell(sectionHint, 120) ? { readout_section: sanitizeCell(sectionHint, 120) } : {}),
+          ...(sanitizeCell(readoutKind, 80) ? { readout_kind: sanitizeCell(readoutKind, 80) } : {}),
+          ...(dtcReadoutKind ? { dtc_readout_category: dtcReadoutKind } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32400,10 +32427,15 @@
         const requestedService = cellAt(requestedServiceIndex, 40).toUpperCase();
         const responseService = cellAt(responseServiceIndex, 24).toUpperCase();
         const negativeRequestedService = (cellAt(negativeRequestedServiceIndex, 24) || (/^(?:negative_response|no_response|blocked|timeout|failed|error|unavailable)$/.test(responseStatus.replace(/[\s-]+/g, "_")) ? requestedService : "")).toUpperCase();
+        const responseReadoutKind = cellAt(readoutKindIndex, 80) || sectionHint;
+        const responseDtcReadoutCategory = normalizeDtcReadoutKind(responseReadoutKind);
         if (responseId && responseStatus) ecuResponseRows.push({
           id: responseId,
           name: ecuName || responseId,
           status: responseStatus,
+          ...(sanitizeCell(sectionHint, 120) ? { readout_section: sanitizeCell(sectionHint, 120) } : {}),
+          ...(sanitizeCell(responseReadoutKind, 80) ? { readout_kind: sanitizeCell(responseReadoutKind, 80) } : {}),
+          ...(responseDtcReadoutCategory ? { dtc_readout_category: responseDtcReadoutCategory } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -33828,6 +33860,9 @@
         status: String(row?.status || row?.responseStatus || row?.response_status || "unknown").trim().toLowerCase().replace(/[\s-]+/g, "_"),
         capturedAt: row?.capturedAt || row?.captured_at || ecuResponseSummary?.capturedAt || ecuResponseSummary?.captured_at || null,
         protocol: normalizeProtocolProvenanceValue(row?.protocol || ecuResponseSummary?.protocol || ecuResponseSummary?.obd_protocol || null),
+        dtcReadoutCategory: ["stored", "pending", "permanent"].includes(String(row?.dtcReadoutCategory || row?.dtc_readout_category || "").trim().toLowerCase())
+          ? String(row?.dtcReadoutCategory || row?.dtc_readout_category).trim().toLowerCase()
+          : null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -33850,8 +33885,8 @@
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
-      const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
-      const responseServiceCategories = [...new Set((response.services || []).map(normalizeCsvDtcServiceCategory).filter(Boolean))];
+      const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
+      const responseServiceCategories = [...new Set([response.dtcReadoutCategory, ...(response.services || [])].map(normalizeCsvDtcServiceCategory).filter(Boolean))];
       if (dtcServiceCategory && responseServiceCategories.length && !responseServiceCategories.includes(dtcServiceCategory)) return false;
       return true;
     };
