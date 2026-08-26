@@ -26533,6 +26533,9 @@
           const dtcFaultDurationUnit = normalizeDtcLifecycleMeasurementUnit(row.dtcFaultDurationUnit || row.dtc_fault_duration_unit || row.faultDurationUnit || row.fault_duration_unit || row.timeSinceFaultUnit || row.time_since_fault_unit);
           const dtcTimeSinceClear = normalizeDtcLifecycleMeasurementValue(row.dtcTimeSinceClear ?? row.dtc_time_since_clear ?? row.timeSinceClear ?? row.time_since_clear ?? row.elapsedTimeSinceClear ?? row.elapsed_time_since_clear);
           const dtcTimeSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(row.dtcTimeSinceClearUnit || row.dtc_time_since_clear_unit || row.timeSinceClearUnit || row.time_since_clear_unit || row.elapsedTimeSinceClearUnit || row.elapsed_time_since_clear_unit);
+          const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(row.dtcFailureOccurrenceCount ?? row.dtc_failure_occurrence_count ?? row.failureOccurrenceCount ?? row.failure_occurrence_count ?? row.faultEventCount ?? row.fault_event_count);
+          const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(row.dtcRecoveryCount ?? row.dtc_recovery_count ?? row.recoveryCount ?? row.recovery_count ?? row.normalizationCount ?? row.normalization_count ?? row.healingCount ?? row.healing_count);
+          const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(row.dtcLastClearedAt || row.dtc_last_cleared_at || row.lastClearedAt || row.last_cleared_at || row.lastDtcClearAt || row.last_dtc_clear_at || row.dtcClearedAt || row.dtc_cleared_at);
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26643,6 +26646,9 @@
             ...(dtcFaultDurationUnit ? { dtcFaultDurationUnit, dtc_fault_duration_unit: dtcFaultDurationUnit } : {}),
             ...(dtcTimeSinceClear ? { dtcTimeSinceClear, dtc_time_since_clear: dtcTimeSinceClear } : {}),
             ...(dtcTimeSinceClearUnit ? { dtcTimeSinceClearUnit, dtc_time_since_clear_unit: dtcTimeSinceClearUnit } : {}),
+            ...(dtcFailureOccurrenceCount ? { dtcFailureOccurrenceCount, dtc_failure_occurrence_count: dtcFailureOccurrenceCount } : {}),
+            ...(dtcRecoveryCount ? { dtcRecoveryCount, dtc_recovery_count: dtcRecoveryCount } : {}),
+            ...(dtcLastClearedAt ? { dtcLastClearedAt, dtc_last_cleared_at: dtcLastClearedAt } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26813,6 +26819,9 @@
       const dtcFaultDurationUnit = normalizeDtcLifecycleMeasurementUnit(rowValue.dtcFaultDurationUnit || rowValue.dtc_fault_duration_unit || rowValue.faultDurationUnit || rowValue.fault_duration_unit || rowValue.timeSinceFaultUnit || rowValue.time_since_fault_unit);
       const dtcTimeSinceClear = normalizeDtcLifecycleMeasurementValue(rowValue.dtcTimeSinceClear ?? rowValue.dtc_time_since_clear ?? rowValue.timeSinceClear ?? rowValue.time_since_clear ?? rowValue.elapsedTimeSinceClear ?? rowValue.elapsed_time_since_clear);
       const dtcTimeSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(rowValue.dtcTimeSinceClearUnit || rowValue.dtc_time_since_clear_unit || rowValue.timeSinceClearUnit || rowValue.time_since_clear_unit || rowValue.elapsedTimeSinceClearUnit || rowValue.elapsed_time_since_clear_unit);
+      const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(rowValue.dtcFailureOccurrenceCount ?? rowValue.dtc_failure_occurrence_count ?? rowValue.failureOccurrenceCount ?? rowValue.failure_occurrence_count ?? rowValue.faultEventCount ?? rowValue.fault_event_count);
+      const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(rowValue.dtcRecoveryCount ?? rowValue.dtc_recovery_count ?? rowValue.recoveryCount ?? rowValue.recovery_count ?? rowValue.normalizationCount ?? rowValue.normalization_count ?? rowValue.healingCount ?? rowValue.healing_count);
+      const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcLastClearedAt || rowValue.dtc_last_cleared_at || rowValue.lastClearedAt || rowValue.last_cleared_at || rowValue.lastDtcClearAt || rowValue.last_dtc_clear_at || rowValue.dtcClearedAt || rowValue.dtc_cleared_at);
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26911,6 +26920,9 @@
         ...(dtcFaultDurationUnit ? { dtcFaultDurationUnit, dtc_fault_duration_unit: dtcFaultDurationUnit } : {}),
         ...(dtcTimeSinceClear ? { dtcTimeSinceClear, dtc_time_since_clear: dtcTimeSinceClear } : {}),
         ...(dtcTimeSinceClearUnit ? { dtcTimeSinceClearUnit, dtc_time_since_clear_unit: dtcTimeSinceClearUnit } : {}),
+        ...(dtcFailureOccurrenceCount ? { dtcFailureOccurrenceCount, dtc_failure_occurrence_count: dtcFailureOccurrenceCount } : {}),
+        ...(dtcRecoveryCount ? { dtcRecoveryCount, dtc_recovery_count: dtcRecoveryCount } : {}),
+        ...(dtcLastClearedAt ? { dtcLastClearedAt, dtc_last_cleared_at: dtcLastClearedAt } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28494,6 +28506,9 @@
       const dtcFaultDurationUnit = normalizeDtcLifecycleMeasurementUnit(row?.dtcFaultDurationUnit || row?.dtc_fault_duration_unit || row?.faultDurationUnit || row?.fault_duration_unit || row?.timeSinceFaultUnit || row?.time_since_fault_unit);
       const dtcTimeSinceClear = normalizeDtcLifecycleMeasurementValue(row?.dtcTimeSinceClear ?? row?.dtc_time_since_clear ?? row?.timeSinceClear ?? row?.time_since_clear ?? row?.elapsedTimeSinceClear ?? row?.elapsed_time_since_clear);
       const dtcTimeSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(row?.dtcTimeSinceClearUnit || row?.dtc_time_since_clear_unit || row?.timeSinceClearUnit || row?.time_since_clear_unit || row?.elapsedTimeSinceClearUnit || row?.elapsed_time_since_clear_unit);
+      const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(row?.dtcFailureOccurrenceCount ?? row?.dtc_failure_occurrence_count ?? row?.failureOccurrenceCount ?? row?.failure_occurrence_count ?? row?.faultEventCount ?? row?.fault_event_count);
+      const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(row?.dtcRecoveryCount ?? row?.dtc_recovery_count ?? row?.recoveryCount ?? row?.recovery_count ?? row?.normalizationCount ?? row?.normalization_count ?? row?.healingCount ?? row?.healing_count);
+      const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(row?.dtcLastClearedAt || row?.dtc_last_cleared_at || row?.lastClearedAt || row?.last_cleared_at || row?.lastDtcClearAt || row?.last_dtc_clear_at || row?.dtcClearedAt || row?.dtc_cleared_at);
       return {
         id,
         name,
@@ -28591,7 +28606,10 @@
         ...(dtcFaultDuration ? { dtcFaultDuration, dtc_fault_duration: dtcFaultDuration } : {}),
         ...(dtcFaultDurationUnit ? { dtcFaultDurationUnit, dtc_fault_duration_unit: dtcFaultDurationUnit } : {}),
         ...(dtcTimeSinceClear ? { dtcTimeSinceClear, dtc_time_since_clear: dtcTimeSinceClear } : {}),
-        ...(dtcTimeSinceClearUnit ? { dtcTimeSinceClearUnit, dtc_time_since_clear_unit: dtcTimeSinceClearUnit } : {})
+        ...(dtcTimeSinceClearUnit ? { dtcTimeSinceClearUnit, dtc_time_since_clear_unit: dtcTimeSinceClearUnit } : {}),
+        ...(dtcFailureOccurrenceCount ? { dtcFailureOccurrenceCount, dtc_failure_occurrence_count: dtcFailureOccurrenceCount } : {}),
+        ...(dtcRecoveryCount ? { dtcRecoveryCount, dtc_recovery_count: dtcRecoveryCount } : {}),
+        ...(dtcLastClearedAt ? { dtcLastClearedAt, dtc_last_cleared_at: dtcLastClearedAt } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28690,7 +28708,10 @@
         dtcFaultDuration: row.dtcFaultDuration || null,
         dtcFaultDurationUnit: row.dtcFaultDurationUnit || null,
         dtcTimeSinceClear: row.dtcTimeSinceClear || null,
-        dtcTimeSinceClearUnit: row.dtcTimeSinceClearUnit || null
+        dtcTimeSinceClearUnit: row.dtcTimeSinceClearUnit || null,
+        dtcFailureOccurrenceCount: row.dtcFailureOccurrenceCount || null,
+        dtcRecoveryCount: row.dtcRecoveryCount || null,
+        dtcLastClearedAt: row.dtcLastClearedAt || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32557,6 +32578,9 @@
     const dtcFaultDurationUnitIndex = findIndex("dtc fault duration unit", "dtc_fault_duration_unit", "fault duration unit", "fault_duration_unit", "time since fault unit", "time_since_fault_unit", "故障継続時間単位");
     const dtcTimeSinceClearIndex = findIndex("dtc time since clear", "dtc_time_since_clear", "time since clear", "time_since_clear", "elapsed time since clear", "elapsed_time_since_clear", "消去後経過時間");
     const dtcTimeSinceClearUnitIndex = findIndex("dtc time since clear unit", "dtc_time_since_clear_unit", "time since clear unit", "time_since_clear_unit", "elapsed time since clear unit", "elapsed_time_since_clear_unit", "消去後経過時間単位");
+    const dtcFailureOccurrenceCountIndex = findIndex("dtc failure occurrence count", "dtc_failure_occurrence_count", "failure occurrence count", "failure_occurrence_count", "fault event count", "fault_event_count", "故障発生回数");
+    const dtcRecoveryCountIndex = findIndex("dtc recovery count", "dtc_recovery_count", "recovery count", "recovery_count", "normalization count", "normalization_count", "healing count", "healing_count", "正常化回数");
+    const dtcLastClearedAtIndex = findIndex("dtc last cleared at", "dtc_last_cleared_at", "last cleared at", "last_cleared_at", "last dtc clear at", "last_dtc_clear_at", "dtc cleared at", "dtc_cleared_at", "最後の消去時刻");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
@@ -32805,6 +32829,9 @@
       const rowDtcFaultDurationUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcFaultDurationUnitIndex, 24));
       const rowDtcTimeSinceClear = normalizeDtcLifecycleMeasurementValue(cellAt(dtcTimeSinceClearIndex, 80));
       const rowDtcTimeSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcTimeSinceClearUnitIndex, 24));
+      const rowDtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcFailureOccurrenceCountIndex, 80));
+      const rowDtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcRecoveryCountIndex, 80));
+      const rowDtcLastClearedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcLastClearedAtIndex, 80));
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -33024,6 +33051,9 @@
           ...(rowDtcFaultDurationUnit ? { dtc_fault_duration_unit: rowDtcFaultDurationUnit } : {}),
           ...(rowDtcTimeSinceClear ? { dtc_time_since_clear: rowDtcTimeSinceClear } : {}),
           ...(rowDtcTimeSinceClearUnit ? { dtc_time_since_clear_unit: rowDtcTimeSinceClearUnit } : {}),
+          ...(rowDtcFailureOccurrenceCount ? { dtc_failure_occurrence_count: rowDtcFailureOccurrenceCount } : {}),
+          ...(rowDtcRecoveryCount ? { dtc_recovery_count: rowDtcRecoveryCount } : {}),
+          ...(rowDtcLastClearedAt ? { dtc_last_cleared_at: rowDtcLastClearedAt } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -33208,6 +33238,9 @@
           ...(rowDtcFaultDurationUnit ? { dtc_fault_duration_unit: rowDtcFaultDurationUnit } : {}),
           ...(rowDtcTimeSinceClear ? { dtc_time_since_clear: rowDtcTimeSinceClear } : {}),
           ...(rowDtcTimeSinceClearUnit ? { dtc_time_since_clear_unit: rowDtcTimeSinceClearUnit } : {}),
+          ...(rowDtcFailureOccurrenceCount ? { dtc_failure_occurrence_count: rowDtcFailureOccurrenceCount } : {}),
+          ...(rowDtcRecoveryCount ? { dtc_recovery_count: rowDtcRecoveryCount } : {}),
+          ...(rowDtcLastClearedAt ? { dtc_last_cleared_at: rowDtcLastClearedAt } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34715,6 +34748,9 @@
         dtcFaultDurationUnit: normalizeDtcLifecycleMeasurementUnit(row?.dtcFaultDurationUnit || row?.dtc_fault_duration_unit || row?.faultDurationUnit || row?.fault_duration_unit || row?.timeSinceFaultUnit || row?.time_since_fault_unit),
         dtcTimeSinceClear: normalizeDtcLifecycleMeasurementValue(row?.dtcTimeSinceClear ?? row?.dtc_time_since_clear ?? row?.timeSinceClear ?? row?.time_since_clear ?? row?.elapsedTimeSinceClear ?? row?.elapsed_time_since_clear),
         dtcTimeSinceClearUnit: normalizeDtcLifecycleMeasurementUnit(row?.dtcTimeSinceClearUnit || row?.dtc_time_since_clear_unit || row?.timeSinceClearUnit || row?.time_since_clear_unit || row?.elapsedTimeSinceClearUnit || row?.elapsed_time_since_clear_unit),
+        dtcFailureOccurrenceCount: normalizeDtcLifecycleMeasurementValue(row?.dtcFailureOccurrenceCount ?? row?.dtc_failure_occurrence_count ?? row?.failureOccurrenceCount ?? row?.failure_occurrence_count ?? row?.faultEventCount ?? row?.fault_event_count),
+        dtcRecoveryCount: normalizeDtcLifecycleMeasurementValue(row?.dtcRecoveryCount ?? row?.dtc_recovery_count ?? row?.recoveryCount ?? row?.recovery_count ?? row?.normalizationCount ?? row?.normalization_count ?? row?.healingCount ?? row?.healing_count),
+        dtcLastClearedAt: normalizeDtcEvidenceTimestampValue(row?.dtcLastClearedAt || row?.dtc_last_cleared_at || row?.lastClearedAt || row?.last_cleared_at || row?.lastDtcClearAt || row?.last_dtc_clear_at || row?.dtcClearedAt || row?.dtc_cleared_at),
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34825,6 +34861,9 @@
       const dtcFaultDurationUnit = normalizeDtcLifecycleMeasurementUnit(dtcRow?.dtcFaultDurationUnit || dtcRow?.dtc_fault_duration_unit || dtcRow?.faultDurationUnit || dtcRow?.fault_duration_unit || dtcRow?.timeSinceFaultUnit || dtcRow?.time_since_fault_unit);
       const dtcTimeSinceClear = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcTimeSinceClear ?? dtcRow?.dtc_time_since_clear ?? dtcRow?.timeSinceClear ?? dtcRow?.time_since_clear ?? dtcRow?.elapsedTimeSinceClear ?? dtcRow?.elapsed_time_since_clear);
       const dtcTimeSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(dtcRow?.dtcTimeSinceClearUnit || dtcRow?.dtc_time_since_clear_unit || dtcRow?.timeSinceClearUnit || dtcRow?.time_since_clear_unit || dtcRow?.elapsedTimeSinceClearUnit || dtcRow?.elapsed_time_since_clear_unit);
+      const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcFailureOccurrenceCount ?? dtcRow?.dtc_failure_occurrence_count ?? dtcRow?.failureOccurrenceCount ?? dtcRow?.failure_occurrence_count ?? dtcRow?.faultEventCount ?? dtcRow?.fault_event_count);
+      const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcRecoveryCount ?? dtcRow?.dtc_recovery_count ?? dtcRow?.recoveryCount ?? dtcRow?.recovery_count ?? dtcRow?.normalizationCount ?? dtcRow?.normalization_count ?? dtcRow?.healingCount ?? dtcRow?.healing_count);
+      const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcLastClearedAt || dtcRow?.dtc_last_cleared_at || dtcRow?.lastClearedAt || dtcRow?.last_cleared_at || dtcRow?.lastDtcClearAt || dtcRow?.last_dtc_clear_at || dtcRow?.dtcClearedAt || dtcRow?.dtc_cleared_at);
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34898,6 +34937,9 @@
       if (dtcFaultDurationUnit && response.dtcFaultDurationUnit && normalizeCsvEcuHierarchyScope(dtcFaultDurationUnit) !== normalizeCsvEcuHierarchyScope(response.dtcFaultDurationUnit)) return false;
       if (dtcTimeSinceClear && response.dtcTimeSinceClear && normalizeCsvDiagnosticMeasurementIdentity(dtcTimeSinceClear) !== normalizeCsvDiagnosticMeasurementIdentity(response.dtcTimeSinceClear)) return false;
       if (dtcTimeSinceClearUnit && response.dtcTimeSinceClearUnit && normalizeCsvEcuHierarchyScope(dtcTimeSinceClearUnit) !== normalizeCsvEcuHierarchyScope(response.dtcTimeSinceClearUnit)) return false;
+      if (dtcFailureOccurrenceCount && response.dtcFailureOccurrenceCount && normalizeCsvDiagnosticCounterIdentity(dtcFailureOccurrenceCount) !== normalizeCsvDiagnosticCounterIdentity(response.dtcFailureOccurrenceCount)) return false;
+      if (dtcRecoveryCount && response.dtcRecoveryCount && normalizeCsvDiagnosticCounterIdentity(dtcRecoveryCount) !== normalizeCsvDiagnosticCounterIdentity(response.dtcRecoveryCount)) return false;
+      if (dtcLastClearedAt && response.dtcLastClearedAt && normalizeCsvDiagnosticTimestampIdentity(dtcLastClearedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcLastClearedAt)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
