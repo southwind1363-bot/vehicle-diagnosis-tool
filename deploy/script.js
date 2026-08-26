@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3367件",
+  validationCheckLabel: "OBD安全検証 3369件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "DTC証跡の修理前後品質比較を固定",
+  recentMilestone: "DTC証跡品質の原因候補参照を固定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.223";
+const APP_VERSION = "3.13.224";
 const APP_LAST_UPDATED = "2026-08-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2420,7 +2420,8 @@ function buildDiagnosis(input) {
     ...workflowMatches.flatMap((item) => item.before_replacement_checks || []),
     obd ? `DTC ${formatDtcReference(input.obdCode, input.obdSubcode)} のメーカー別診断手順、端子番号、基準値を確認してください。` : ""
   ]);
-  const causeCandidateLog = buildCauseCandidateLog(input, obd, flow, interview, dtcApplicability);
+  const postRepairReassessmentSummary = obdDevSession.lastSession?.postRepairReassessmentSummary || obdDevSession.lastSession?.post_repair_reassessment_summary || null;
+  const causeCandidateLog = buildCauseCandidateLog(input, obd, flow, interview, dtcApplicability, postRepairReassessmentSummary);
   const measurements = buildMeasurements(flow, interview, workflowMatches);
   const liveDataGuidance = buildLiveDataGuidance(workflowMatches);
   const nextMeasurementCandidatePlan = buildNextMeasurementCandidatePlan(
@@ -2448,7 +2449,7 @@ function buildDiagnosis(input) {
     measurements,
     liveDataGuidance,
     nextMeasurementCandidatePlan,
-    postRepairReassessmentSummary: obdDevSession.lastSession?.postRepairReassessmentSummary || obdDevSession.lastSession?.post_repair_reassessment_summary || null,
+    postRepairReassessmentSummary,
     branches: buildBranches(flow, interview, workflowMatches),
     cautions: buildCautions(obd, flow, confirmationBeforeParts, workflowMatches),
     partsChecks: confirmationBeforeParts.length ? confirmationBeforeParts : [NO_DATA],
@@ -2724,7 +2725,7 @@ function buildGuesses(obd, flow, interview) {
   return guesses.length ? guesses : [NO_DATA];
 }
 
-function buildCauseCandidateLog(input = {}, obd = null, flow = null, interview = {}, dtcApplicability = null) {
+function buildCauseCandidateLog(input = {}, obd = null, flow = null, interview = {}, dtcApplicability = null, postRepairReassessmentSummary = null) {
   const candidates = [];
   const seen = new Set();
   const addCandidate = ({ kind, label, sourceType, sourceId, evidenceRefs = [], applicabilityStatus = "unknown", sourceUrl = null, sourceDate = null }) => {
@@ -2782,6 +2783,62 @@ function buildCauseCandidateLog(input = {}, obd = null, flow = null, interview =
   }));
   (flow?.likelyButUnconfirmed || []).forEach((label) => addCandidate({ kind: "unconfirmed_flow_candidate", label, sourceType: "symptom_flow", sourceId: flow?.id || input.symptomId, evidenceRefs: flowEvidenceRefs }));
   const sourceTypes = collectUnique(candidates.map((item) => item.sourceType));
+  const dtcEvidenceResolutionComparable = postRepairReassessmentSummary?.eligible === true
+    && (postRepairReassessmentSummary?.dtcEvidenceResolutionComparisonAvailable === true || postRepairReassessmentSummary?.dtc_evidence_resolution_comparison_available === true);
+  const rawDtcEvidenceResolutionStatus = String(postRepairReassessmentSummary?.dtcEvidenceResolutionStatus || postRepairReassessmentSummary?.dtc_evidence_resolution_status || "not_comparable");
+  const dtcEvidenceResolutionStatus = ["resolved", "improved", "persisting", "worsened", "changed", "clear"].includes(rawDtcEvidenceResolutionStatus)
+    ? rawDtcEvidenceResolutionStatus
+    : "not_comparable";
+  const readResolutionCount = (camelKey, snakeKey) => {
+    const value = postRepairReassessmentSummary?.[camelKey] ?? postRepairReassessmentSummary?.[snakeKey];
+    return Number.isFinite(Number(value)) ? Math.max(0, Math.round(Number(value))) : 0;
+  };
+  const readResolutionKeys = (camelKey, snakeKey) => {
+    const values = Array.isArray(postRepairReassessmentSummary?.[camelKey])
+      ? postRepairReassessmentSummary[camelKey]
+      : Array.isArray(postRepairReassessmentSummary?.[snakeKey]) ? postRepairReassessmentSummary[snakeKey] : [];
+    return collectUnique(values.filter((key) => /^[a-z0-9_]+\|[a-z0-9_]+$/i.test(String(key))).map(String)).slice(0, 32);
+  };
+  const resolvedCount = readResolutionCount("resolvedInvalidDtcEvidenceIssueCount", "resolved_invalid_dtc_evidence_issue_count");
+  const persistingCount = readResolutionCount("persistingInvalidDtcEvidenceIssueCount", "persisting_invalid_dtc_evidence_issue_count");
+  const newCount = readResolutionCount("newInvalidDtcEvidenceIssueCount", "new_invalid_dtc_evidence_issue_count");
+  const resolutionIssueKeys = collectUnique([
+    ...readResolutionKeys("resolvedInvalidDtcEvidenceIssueKeys", "resolved_invalid_dtc_evidence_issue_keys"),
+    ...readResolutionKeys("persistingInvalidDtcEvidenceIssueKeys", "persisting_invalid_dtc_evidence_issue_keys"),
+    ...readResolutionKeys("newInvalidDtcEvidenceIssueKeys", "new_invalid_dtc_evidence_issue_keys")
+  ]).slice(0, 32);
+  const referenceEntries = dtcEvidenceResolutionComparable && dtcEvidenceResolutionStatus !== "not_comparable"
+    ? [{
+      id: "cause_reference_dtc_evidence_quality_001",
+      kind: "post_repair_dtc_evidence_quality",
+      label: `DTC証跡品質 ${dtcEvidenceResolutionStatus} / 解消${resolvedCount}・継続${persistingCount}・新規${newCount}`,
+      sourceType: "post_repair_reassessment",
+      source_type: "post_repair_reassessment",
+      evidenceRefs: resolutionIssueKeys.map((key) => `dtc_evidence:${key}`),
+      evidence_refs: resolutionIssueKeys.map((key) => `dtc_evidence:${key}`),
+      resolutionStatus: dtcEvidenceResolutionStatus,
+      resolution_status: dtcEvidenceResolutionStatus,
+      resolvedCount,
+      resolved_count: resolvedCount,
+      persistingCount,
+      persisting_count: persistingCount,
+      newCount,
+      new_count: newCount,
+      candidate: false,
+      affectsRanking: false,
+      affects_ranking: false,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      repairOutcomeConfirmed: false,
+      repair_outcome_confirmed: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    }]
+    : [];
   return {
     schemaVersion: "cause_candidate_log_v1",
     schema_version: "cause_candidate_log_v1",
@@ -2790,6 +2847,10 @@ function buildCauseCandidateLog(input = {}, obd = null, flow = null, interview =
     candidate_count: candidates.length,
     sourceTypes,
     source_types: sourceTypes,
+    referenceEntries,
+    reference_entries: referenceEntries,
+    referenceEntryCount: referenceEntries.length,
+    reference_entry_count: referenceEntries.length,
     candidateOnly: true,
     candidate_only: true,
     confirmedCount: 0,
@@ -2803,8 +2864,13 @@ function buildCauseCandidateLog(input = {}, obd = null, flow = null, interview =
 
 function formatCauseCandidateLogEntries(log = null) {
   const candidates = Array.isArray(log?.candidates) ? log.candidates : [];
-  return candidates.length
-    ? candidates.map((item) => `${item.id} / ${item.sourceType} / ${item.label} / 根拠: ${item.evidenceRefs?.join(", ") || NO_DATA} / 未確定`)
+  const referenceEntries = Array.isArray(log?.referenceEntries) ? log.referenceEntries : Array.isArray(log?.reference_entries) ? log.reference_entries : [];
+  const rows = [
+    ...candidates.map((item) => `${item.id} / ${item.sourceType} / ${item.label} / 根拠: ${item.evidenceRefs?.join(", ") || NO_DATA} / 未確定`),
+    ...referenceEntries.map((item) => `${item.id} / 参照情報 / ${item.label} / 候補順位・診断結論には不使用`)
+  ];
+  return rows.length
+    ? rows
     : ["記録できる原因候補はありません。"];
 }
 
