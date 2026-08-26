@@ -27163,6 +27163,7 @@
       if (!codeReference) return null;
       const code = codeReference.code;
       const subcode = manufacturerCodeReference ? null : readDtcSubcodeAlias(row, codeReference.subcode);
+      const oemDetailCode = readDtcOemDetailCodeAlias(row, codeReference.oemDetailCode);
       const reportedDescription = normalizeDtcReportedDescription(row.reported_description || row.reportedDescription || row.description || row.failure_description || row.failureDescription || null);
       const reportedStatus = normalizeDtcReportedStatus(row.reported_status || row.reportedStatus || null);
       const frameInput = pickDefined(row.frame_number, row.frameNumber, row.trigger_frame_number, row.triggerFrameNumber, null);
@@ -27175,6 +27176,7 @@
       return {
         code,
         subcode,
+        ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}),
         ...(udsThreeByteCodeReference ? {
           codeFormat: "uds_3byte",
           code_format: "uds_3byte"
@@ -27197,7 +27199,7 @@
     const explicitTriggerDtcEntries = [...new Map([
       ...triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).filter(matchesReportedFreezeFrameEcu),
       ...reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || [])
-    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}`, item])).values()];
+    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${item.oemDetailCode || item.oem_detail_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}`, item])).values()];
     const readoutEcuIds = [...new Set([
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
       ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
@@ -27241,6 +27243,8 @@
       ? explicitTriggerDtcEntries
       : triggerCodeReferences.map((reference) => ({
         code: reference.code,
+        subcode: reference.subcode || null,
+        ...(reference.oemDetailCode ? { oemDetailCode: reference.oemDetailCode, oem_detail_code: reference.oemDetailCode } : {}),
         ...(reference.codeFormat === "manufacturer_specific" ? {
           codeFormat: "manufacturer_specific",
           code_format: "manufacturer_specific",
@@ -31890,6 +31894,7 @@
     const dtcFormatIndex = findIndex("code format", "dtc format", "code type", "dtc type", "manufacturer specific");
     const dtcDescriptionIndex = findIndex("description", "dtc description", "fault description", "failure description", "explanation of dtc");
     const subcodeIndex = findIndex("subcode", "sub code", "failure type byte", "ftb");
+    const oemDetailCodeIndex = findIndex("inf", "inf code", "oem detail code", "manufacturer detail code", "detail code", "詳細コード", "メーカー詳細コード");
     const statusIndex = findIndex("status", "dtc status", "state", "状態", "ステータス", "DTC状態");
     const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask", "status of dtc", "uds status byte");
     const dtcStatusAvailabilityMaskIndex = findIndex("dtc status availability mask", "status availability mask", "dtc status mask availability");
@@ -32076,6 +32081,7 @@
       const reportedDtcDescription = normalizeDtcReportedDescription(cellAt(dtcDescriptionIndex, 240));
       const reportedDtcStatus = normalizeDtcReportedStatus(cellAt(statusIndex, 80));
       const dtcSubcode = normalizeDtcSubcode(cellAt(subcodeIndex, 8));
+      const dtcOemDetailCode = normalizeDtcOemDetailCode(cellAt(oemDetailCodeIndex, 8));
       const dtcStatusByte = cellAt(dtcStatusByteIndex, 12);
       if (dtcStatusAvailabilityMask === null) dtcStatusAvailabilityMask = cellAt(dtcStatusAvailabilityMaskIndex, 12) || null;
       const dtcSeverity = cellAt(dtcSeverityIndex, 80);
@@ -32132,6 +32138,9 @@
         return {
           code: codeReference.code,
           subcode: manufacturerCodeReference ? null : dtcSubcode || codeReference.subcode || null,
+          ...(dtcOemDetailCode || codeReference.oemDetailCode ? {
+            oem_detail_code: dtcOemDetailCode || codeReference.oemDetailCode
+          } : {}),
           ...(manufacturerCodeReference ? { code_format: "manufacturer_specific", manufacturer_specific: true } : {}),
           ...(reportedDtcDescription ? { reported_description: reportedDtcDescription } : {}),
           ...(reportedDtcStatus ? { reported_status: reportedDtcStatus } : {}),
@@ -32160,6 +32169,7 @@
           code: dtc,
           ...(manufacturerSpecificDtc ? { code_format: "manufacturer_specific", manufacturer_specific: true } : {}),
           subcode: dtcSubcode,
+          ...(dtcOemDetailCode ? { oem_detail_code: dtcOemDetailCode } : {}),
           ...(dtcStatusByte ? { status_byte: dtcStatusByte } : {}),
           ...(dtcSeverity ? { severity: dtcSeverity } : {}),
           ...(dtcOccurrenceCount ? { occurrence_count: dtcOccurrenceCount } : {}),
