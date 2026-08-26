@@ -26511,6 +26511,9 @@
           const udsDtcReadinessGroupIdentifier = redactSensitiveText(String(row.udsDtcReadinessGroupIdentifier || row.uds_dtc_readiness_group_identifier || row.dtcReadinessGroupIdentifier || row.dtc_readiness_group_identifier || row.readinessGroupIdentifier || row.readiness_group_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsDtcSeverityAvailabilityMask = redactSensitiveText(String(row.udsDtcSeverityAvailabilityMask || row.uds_dtc_severity_availability_mask || row.dtcSeverityAvailabilityMask || row.dtc_severity_availability_mask || row.severityAvailabilityMask || row.severity_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsDtcFunctionalGroup = redactSensitiveText(String(row.udsDtcFunctionalGroup || row.uds_dtc_functional_group || row.dtcFunctionalGroup || row.dtc_functional_group || row.wwhObdFunctionalGroup || row.wwh_obd_functional_group || row.functionalGroup || row.functional_group || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcExtendedDataRecordNumber = redactSensitiveText(String(row.udsDtcExtendedDataRecordNumber || row.uds_dtc_extended_data_record_number || row.dtcExtendedDataRecordNumber || row.dtc_extended_data_record_number || row.extendedDataRecordNumber || row.extended_data_record_number || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcSnapshotRecordNumber = redactSensitiveText(String(row.udsDtcSnapshotRecordNumber || row.uds_dtc_snapshot_record_number || row.dtcSnapshotRecordNumber || row.dtc_snapshot_record_number || row.snapshotRecordNumber || row.snapshot_record_number || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcRecordType = redactSensitiveText(String(row.udsDtcRecordType || row.uds_dtc_record_type || row.dtcRecordType || row.dtc_record_type || row.snapshotRecordType || row.snapshot_record_type || row.recordType || row.record_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26599,6 +26602,9 @@
             ...(udsDtcReadinessGroupIdentifier ? { udsDtcReadinessGroupIdentifier, uds_dtc_readiness_group_identifier: udsDtcReadinessGroupIdentifier } : {}),
             ...(udsDtcSeverityAvailabilityMask ? { udsDtcSeverityAvailabilityMask, uds_dtc_severity_availability_mask: udsDtcSeverityAvailabilityMask } : {}),
             ...(udsDtcFunctionalGroup ? { udsDtcFunctionalGroup, uds_dtc_functional_group: udsDtcFunctionalGroup } : {}),
+            ...(udsDtcExtendedDataRecordNumber ? { udsDtcExtendedDataRecordNumber, uds_dtc_extended_data_record_number: udsDtcExtendedDataRecordNumber } : {}),
+            ...(udsDtcSnapshotRecordNumber ? { udsDtcSnapshotRecordNumber, uds_dtc_snapshot_record_number: udsDtcSnapshotRecordNumber } : {}),
+            ...(udsDtcRecordType ? { udsDtcRecordType, uds_dtc_record_type: udsDtcRecordType } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26747,6 +26753,9 @@
       const udsDtcReadinessGroupIdentifier = redactSensitiveText(String(rowValue.udsDtcReadinessGroupIdentifier || rowValue.uds_dtc_readiness_group_identifier || rowValue.dtcReadinessGroupIdentifier || rowValue.dtc_readiness_group_identifier || rowValue.readinessGroupIdentifier || rowValue.readiness_group_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcSeverityAvailabilityMask = redactSensitiveText(String(rowValue.udsDtcSeverityAvailabilityMask || rowValue.uds_dtc_severity_availability_mask || rowValue.dtcSeverityAvailabilityMask || rowValue.dtc_severity_availability_mask || rowValue.severityAvailabilityMask || rowValue.severity_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcFunctionalGroup = redactSensitiveText(String(rowValue.udsDtcFunctionalGroup || rowValue.uds_dtc_functional_group || rowValue.dtcFunctionalGroup || rowValue.dtc_functional_group || rowValue.wwhObdFunctionalGroup || rowValue.wwh_obd_functional_group || rowValue.functionalGroup || rowValue.functional_group || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcExtendedDataRecordNumber = redactSensitiveText(String(rowValue.udsDtcExtendedDataRecordNumber || rowValue.uds_dtc_extended_data_record_number || rowValue.dtcExtendedDataRecordNumber || rowValue.dtc_extended_data_record_number || rowValue.extendedDataRecordNumber || rowValue.extended_data_record_number || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcSnapshotRecordNumber = redactSensitiveText(String(rowValue.udsDtcSnapshotRecordNumber || rowValue.uds_dtc_snapshot_record_number || rowValue.dtcSnapshotRecordNumber || rowValue.dtc_snapshot_record_number || rowValue.snapshotRecordNumber || rowValue.snapshot_record_number || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcRecordType = redactSensitiveText(String(rowValue.udsDtcRecordType || rowValue.uds_dtc_record_type || rowValue.dtcRecordType || rowValue.dtc_record_type || rowValue.snapshotRecordType || rowValue.snapshot_record_type || rowValue.recordType || rowValue.record_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26823,6 +26832,9 @@
         ...(udsDtcReadinessGroupIdentifier ? { udsDtcReadinessGroupIdentifier, uds_dtc_readiness_group_identifier: udsDtcReadinessGroupIdentifier } : {}),
         ...(udsDtcSeverityAvailabilityMask ? { udsDtcSeverityAvailabilityMask, uds_dtc_severity_availability_mask: udsDtcSeverityAvailabilityMask } : {}),
         ...(udsDtcFunctionalGroup ? { udsDtcFunctionalGroup, uds_dtc_functional_group: udsDtcFunctionalGroup } : {}),
+        ...(udsDtcExtendedDataRecordNumber ? { udsDtcExtendedDataRecordNumber, uds_dtc_extended_data_record_number: udsDtcExtendedDataRecordNumber } : {}),
+        ...(udsDtcSnapshotRecordNumber ? { udsDtcSnapshotRecordNumber, uds_dtc_snapshot_record_number: udsDtcSnapshotRecordNumber } : {}),
+        ...(udsDtcRecordType ? { udsDtcRecordType, uds_dtc_record_type: udsDtcRecordType } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28384,6 +28396,9 @@
       const udsDtcReadinessGroupIdentifier = redactSensitiveText(String(row?.udsDtcReadinessGroupIdentifier || row?.uds_dtc_readiness_group_identifier || row?.dtcReadinessGroupIdentifier || row?.dtc_readiness_group_identifier || row?.readinessGroupIdentifier || row?.readiness_group_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcSeverityAvailabilityMask = redactSensitiveText(String(row?.udsDtcSeverityAvailabilityMask || row?.uds_dtc_severity_availability_mask || row?.dtcSeverityAvailabilityMask || row?.dtc_severity_availability_mask || row?.severityAvailabilityMask || row?.severity_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcFunctionalGroup = redactSensitiveText(String(row?.udsDtcFunctionalGroup || row?.uds_dtc_functional_group || row?.dtcFunctionalGroup || row?.dtc_functional_group || row?.wwhObdFunctionalGroup || row?.wwh_obd_functional_group || row?.functionalGroup || row?.functional_group || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcExtendedDataRecordNumber = redactSensitiveText(String(row?.udsDtcExtendedDataRecordNumber || row?.uds_dtc_extended_data_record_number || row?.dtcExtendedDataRecordNumber || row?.dtc_extended_data_record_number || row?.extendedDataRecordNumber || row?.extended_data_record_number || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcSnapshotRecordNumber = redactSensitiveText(String(row?.udsDtcSnapshotRecordNumber || row?.uds_dtc_snapshot_record_number || row?.dtcSnapshotRecordNumber || row?.dtc_snapshot_record_number || row?.snapshotRecordNumber || row?.snapshot_record_number || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcRecordType = redactSensitiveText(String(row?.udsDtcRecordType || row?.uds_dtc_record_type || row?.dtcRecordType || row?.dtc_record_type || row?.snapshotRecordType || row?.snapshot_record_type || row?.recordType || row?.record_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return {
         id,
         name,
@@ -28459,7 +28474,10 @@
         ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {}),
         ...(udsDtcReadinessGroupIdentifier ? { udsDtcReadinessGroupIdentifier, uds_dtc_readiness_group_identifier: udsDtcReadinessGroupIdentifier } : {}),
         ...(udsDtcSeverityAvailabilityMask ? { udsDtcSeverityAvailabilityMask, uds_dtc_severity_availability_mask: udsDtcSeverityAvailabilityMask } : {}),
-        ...(udsDtcFunctionalGroup ? { udsDtcFunctionalGroup, uds_dtc_functional_group: udsDtcFunctionalGroup } : {})
+        ...(udsDtcFunctionalGroup ? { udsDtcFunctionalGroup, uds_dtc_functional_group: udsDtcFunctionalGroup } : {}),
+        ...(udsDtcExtendedDataRecordNumber ? { udsDtcExtendedDataRecordNumber, uds_dtc_extended_data_record_number: udsDtcExtendedDataRecordNumber } : {}),
+        ...(udsDtcSnapshotRecordNumber ? { udsDtcSnapshotRecordNumber, uds_dtc_snapshot_record_number: udsDtcSnapshotRecordNumber } : {}),
+        ...(udsDtcRecordType ? { udsDtcRecordType, uds_dtc_record_type: udsDtcRecordType } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28536,7 +28554,10 @@
         udsDtcStatusAvailabilityMask: row.udsDtcStatusAvailabilityMask || null,
         udsDtcReadinessGroupIdentifier: row.udsDtcReadinessGroupIdentifier || null,
         udsDtcSeverityAvailabilityMask: row.udsDtcSeverityAvailabilityMask || null,
-        udsDtcFunctionalGroup: row.udsDtcFunctionalGroup || null
+        udsDtcFunctionalGroup: row.udsDtcFunctionalGroup || null,
+        udsDtcExtendedDataRecordNumber: row.udsDtcExtendedDataRecordNumber || null,
+        udsDtcSnapshotRecordNumber: row.udsDtcSnapshotRecordNumber || null,
+        udsDtcRecordType: row.udsDtcRecordType || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32382,6 +32403,9 @@
     const udsDtcReadinessGroupIdentifierIndex = findIndex("uds dtc readiness group identifier", "uds_dtc_readiness_group_identifier", "dtc readiness group identifier", "dtc_readiness_group_identifier", "readiness group identifier", "readiness_group_identifier", "WWH-OBDレディネスグループ識別子");
     const udsDtcSeverityAvailabilityMaskIndex = findIndex("uds dtc severity availability mask", "uds_dtc_severity_availability_mask", "dtc severity availability mask", "dtc_severity_availability_mask", "severity availability mask", "severity_availability_mask", "WWH-OBD重大度可用性マスク");
     const udsDtcFunctionalGroupIndex = findIndex("uds dtc functional group", "uds_dtc_functional_group", "dtc functional group", "dtc_functional_group", "wwh-obd functional group", "wwh_obd_functional_group", "functional group", "functional_group", "WWH-OBD機能グループ");
+    const udsDtcExtendedDataRecordNumberIndex = findIndex("uds dtc extended data record number", "uds_dtc_extended_data_record_number", "dtc extended data record number", "dtc_extended_data_record_number", "extended data record number", "extended_data_record_number", "UDS拡張データレコード番号");
+    const udsDtcSnapshotRecordNumberIndex = findIndex("uds dtc snapshot record number", "uds_dtc_snapshot_record_number", "dtc snapshot record number", "dtc_snapshot_record_number", "snapshot record number", "snapshot_record_number", "UDSスナップショットレコード番号");
+    const udsDtcRecordTypeIndex = findIndex("uds dtc record type", "uds_dtc_record_type", "dtc record type", "dtc_record_type", "snapshot record type", "snapshot_record_type", "record type", "record_type", "UDSレコード種別");
     const dtcSeverityIndex = findIndex("severity", "dtc severity", "severity byte", "dtc severity byte");
     const dtcOccurrenceCountIndex = findIndex("occurrence count", "occurrence counter", "dtc occurrence count", "dtc occurrence counter", "fault occurrence counter");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
@@ -32610,6 +32634,9 @@
       const rowUdsDtcReadinessGroupIdentifier = cellAt(udsDtcReadinessGroupIdentifierIndex, 80) || null;
       const rowUdsDtcSeverityAvailabilityMask = cellAt(udsDtcSeverityAvailabilityMaskIndex, 80) || null;
       const rowUdsDtcFunctionalGroup = cellAt(udsDtcFunctionalGroupIndex, 80) || null;
+      const rowUdsDtcExtendedDataRecordNumber = cellAt(udsDtcExtendedDataRecordNumberIndex, 80) || null;
+      const rowUdsDtcSnapshotRecordNumber = cellAt(udsDtcSnapshotRecordNumberIndex, 80) || null;
+      const rowUdsDtcRecordType = cellAt(udsDtcRecordTypeIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32807,6 +32834,9 @@
           ...(rowUdsDtcReadinessGroupIdentifier ? { uds_dtc_readiness_group_identifier: rowUdsDtcReadinessGroupIdentifier } : {}),
           ...(rowUdsDtcSeverityAvailabilityMask ? { uds_dtc_severity_availability_mask: rowUdsDtcSeverityAvailabilityMask } : {}),
           ...(rowUdsDtcFunctionalGroup ? { uds_dtc_functional_group: rowUdsDtcFunctionalGroup } : {}),
+          ...(rowUdsDtcExtendedDataRecordNumber ? { uds_dtc_extended_data_record_number: rowUdsDtcExtendedDataRecordNumber } : {}),
+          ...(rowUdsDtcSnapshotRecordNumber ? { uds_dtc_snapshot_record_number: rowUdsDtcSnapshotRecordNumber } : {}),
+          ...(rowUdsDtcRecordType ? { uds_dtc_record_type: rowUdsDtcRecordType } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32969,6 +32999,9 @@
           ...(rowUdsDtcReadinessGroupIdentifier ? { uds_dtc_readiness_group_identifier: rowUdsDtcReadinessGroupIdentifier } : {}),
           ...(rowUdsDtcSeverityAvailabilityMask ? { uds_dtc_severity_availability_mask: rowUdsDtcSeverityAvailabilityMask } : {}),
           ...(rowUdsDtcFunctionalGroup ? { uds_dtc_functional_group: rowUdsDtcFunctionalGroup } : {}),
+          ...(rowUdsDtcExtendedDataRecordNumber ? { uds_dtc_extended_data_record_number: rowUdsDtcExtendedDataRecordNumber } : {}),
+          ...(rowUdsDtcSnapshotRecordNumber ? { uds_dtc_snapshot_record_number: rowUdsDtcSnapshotRecordNumber } : {}),
+          ...(rowUdsDtcRecordType ? { uds_dtc_record_type: rowUdsDtcRecordType } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34454,6 +34487,9 @@
         udsDtcReadinessGroupIdentifier: row?.udsDtcReadinessGroupIdentifier || row?.uds_dtc_readiness_group_identifier || row?.dtcReadinessGroupIdentifier || row?.dtc_readiness_group_identifier || row?.readinessGroupIdentifier || row?.readiness_group_identifier || null,
         udsDtcSeverityAvailabilityMask: row?.udsDtcSeverityAvailabilityMask || row?.uds_dtc_severity_availability_mask || row?.dtcSeverityAvailabilityMask || row?.dtc_severity_availability_mask || row?.severityAvailabilityMask || row?.severity_availability_mask || null,
         udsDtcFunctionalGroup: row?.udsDtcFunctionalGroup || row?.uds_dtc_functional_group || row?.dtcFunctionalGroup || row?.dtc_functional_group || row?.wwhObdFunctionalGroup || row?.wwh_obd_functional_group || row?.functionalGroup || row?.functional_group || null,
+        udsDtcExtendedDataRecordNumber: row?.udsDtcExtendedDataRecordNumber || row?.uds_dtc_extended_data_record_number || row?.dtcExtendedDataRecordNumber || row?.dtc_extended_data_record_number || row?.extendedDataRecordNumber || row?.extended_data_record_number || null,
+        udsDtcSnapshotRecordNumber: row?.udsDtcSnapshotRecordNumber || row?.uds_dtc_snapshot_record_number || row?.dtcSnapshotRecordNumber || row?.dtc_snapshot_record_number || row?.snapshotRecordNumber || row?.snapshot_record_number || null,
+        udsDtcRecordType: row?.udsDtcRecordType || row?.uds_dtc_record_type || row?.dtcRecordType || row?.dtc_record_type || row?.snapshotRecordType || row?.snapshot_record_type || row?.recordType || row?.record_type || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34526,6 +34562,9 @@
       const dtcUdsDtcReadinessGroupIdentifier = dtcRow?.udsDtcReadinessGroupIdentifier || dtcRow?.uds_dtc_readiness_group_identifier || dtcRow?.dtcReadinessGroupIdentifier || dtcRow?.dtc_readiness_group_identifier || dtcRow?.readinessGroupIdentifier || dtcRow?.readiness_group_identifier || null;
       const dtcUdsDtcSeverityAvailabilityMask = dtcRow?.udsDtcSeverityAvailabilityMask || dtcRow?.uds_dtc_severity_availability_mask || dtcRow?.dtcSeverityAvailabilityMask || dtcRow?.dtc_severity_availability_mask || dtcRow?.severityAvailabilityMask || dtcRow?.severity_availability_mask || null;
       const dtcUdsDtcFunctionalGroup = dtcRow?.udsDtcFunctionalGroup || dtcRow?.uds_dtc_functional_group || dtcRow?.dtcFunctionalGroup || dtcRow?.dtc_functional_group || dtcRow?.wwhObdFunctionalGroup || dtcRow?.wwh_obd_functional_group || dtcRow?.functionalGroup || dtcRow?.functional_group || null;
+      const dtcUdsDtcExtendedDataRecordNumber = dtcRow?.udsDtcExtendedDataRecordNumber || dtcRow?.uds_dtc_extended_data_record_number || dtcRow?.dtcExtendedDataRecordNumber || dtcRow?.dtc_extended_data_record_number || dtcRow?.extendedDataRecordNumber || dtcRow?.extended_data_record_number || null;
+      const dtcUdsDtcSnapshotRecordNumber = dtcRow?.udsDtcSnapshotRecordNumber || dtcRow?.uds_dtc_snapshot_record_number || dtcRow?.dtcSnapshotRecordNumber || dtcRow?.dtc_snapshot_record_number || dtcRow?.snapshotRecordNumber || dtcRow?.snapshot_record_number || null;
+      const dtcUdsDtcRecordType = dtcRow?.udsDtcRecordType || dtcRow?.uds_dtc_record_type || dtcRow?.dtcRecordType || dtcRow?.dtc_record_type || dtcRow?.snapshotRecordType || dtcRow?.snapshot_record_type || dtcRow?.recordType || dtcRow?.record_type || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34577,6 +34616,9 @@
       if (dtcUdsDtcReadinessGroupIdentifier && response.udsDtcReadinessGroupIdentifier && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcReadinessGroupIdentifier) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcReadinessGroupIdentifier)) return false;
       if (dtcUdsDtcSeverityAvailabilityMask && response.udsDtcSeverityAvailabilityMask && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcSeverityAvailabilityMask) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcSeverityAvailabilityMask)) return false;
       if (dtcUdsDtcFunctionalGroup && response.udsDtcFunctionalGroup && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcFunctionalGroup) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcFunctionalGroup)) return false;
+      if (dtcUdsDtcExtendedDataRecordNumber && response.udsDtcExtendedDataRecordNumber && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcExtendedDataRecordNumber) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcExtendedDataRecordNumber)) return false;
+      if (dtcUdsDtcSnapshotRecordNumber && response.udsDtcSnapshotRecordNumber && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcSnapshotRecordNumber) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcSnapshotRecordNumber)) return false;
+      if (dtcUdsDtcRecordType && response.udsDtcRecordType && normalizeCsvEcuHierarchyScope(dtcUdsDtcRecordType) !== normalizeCsvEcuHierarchyScope(response.udsDtcRecordType)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
