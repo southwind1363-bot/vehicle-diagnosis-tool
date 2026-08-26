@@ -26487,6 +26487,9 @@
           const ecuHardwareId = redactSensitiveText(String(row.ecuHardwareId || row.ecu_hardware_id || row.hardwareId || row.hardware_id || row.hardwareVersion || row.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const ecuDatasetId = redactSensitiveText(String(row.ecuDatasetId || row.ecu_dataset_id || row.datasetId || row.dataset_id || row.dataSetId || row.data_set_id || row.calibrationDatasetId || row.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
           const diagnosticSoftwareVersion = redactSensitiveText(String(row.diagnosticSoftwareVersion || row.diagnostic_software_version || row.scannerSoftwareVersion || row.scanner_software_version || row.toolVersion || row.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const networkBus = redactSensitiveText(String(row.networkBus || row.network_bus || row.busName || row.bus_name || row.communicationBus || row.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const networkChannel = redactSensitiveText(String(row.networkChannel || row.network_channel || row.channelId || row.channel_id || row.channelName || row.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const gatewayRoute = redactSensitiveText(String(row.gatewayRoute || row.gateway_route || row.gatewayPath || row.gateway_path || row.routingPath || row.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26551,6 +26554,9 @@
             ...(ecuHardwareId ? { ecuHardwareId, ecu_hardware_id: ecuHardwareId } : {}),
             ...(ecuDatasetId ? { ecuDatasetId, ecu_dataset_id: ecuDatasetId } : {}),
             ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {}),
+            ...(networkBus ? { networkBus, network_bus: networkBus } : {}),
+            ...(networkChannel ? { networkChannel, network_channel: networkChannel } : {}),
+            ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26675,6 +26681,9 @@
       const ecuHardwareId = redactSensitiveText(String(rowValue.ecuHardwareId || rowValue.ecu_hardware_id || rowValue.hardwareId || rowValue.hardware_id || rowValue.hardwareVersion || rowValue.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuDatasetId = redactSensitiveText(String(rowValue.ecuDatasetId || rowValue.ecu_dataset_id || rowValue.datasetId || rowValue.dataset_id || rowValue.dataSetId || rowValue.data_set_id || rowValue.calibrationDatasetId || rowValue.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       const diagnosticSoftwareVersion = redactSensitiveText(String(rowValue.diagnosticSoftwareVersion || rowValue.diagnostic_software_version || rowValue.scannerSoftwareVersion || rowValue.scanner_software_version || rowValue.toolVersion || rowValue.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const networkBus = redactSensitiveText(String(rowValue.networkBus || rowValue.network_bus || rowValue.busName || rowValue.bus_name || rowValue.communicationBus || rowValue.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const networkChannel = redactSensitiveText(String(rowValue.networkChannel || rowValue.network_channel || rowValue.channelId || rowValue.channel_id || rowValue.channelName || rowValue.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const gatewayRoute = redactSensitiveText(String(rowValue.gatewayRoute || rowValue.gateway_route || rowValue.gatewayPath || rowValue.gateway_path || rowValue.routingPath || rowValue.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26727,6 +26736,9 @@
         ...(ecuHardwareId ? { ecuHardwareId, ecu_hardware_id: ecuHardwareId } : {}),
         ...(ecuDatasetId ? { ecuDatasetId, ecu_dataset_id: ecuDatasetId } : {}),
         ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {}),
+        ...(networkBus ? { networkBus, network_bus: networkBus } : {}),
+        ...(networkChannel ? { networkChannel, network_channel: networkChannel } : {}),
+        ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28264,6 +28276,9 @@
       const ecuHardwareId = redactSensitiveText(String(row?.ecuHardwareId || row?.ecu_hardware_id || row?.hardwareId || row?.hardware_id || row?.hardwareVersion || row?.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuDatasetId = redactSensitiveText(String(row?.ecuDatasetId || row?.ecu_dataset_id || row?.datasetId || row?.dataset_id || row?.dataSetId || row?.data_set_id || row?.calibrationDatasetId || row?.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       const diagnosticSoftwareVersion = redactSensitiveText(String(row?.diagnosticSoftwareVersion || row?.diagnostic_software_version || row?.scannerSoftwareVersion || row?.scanner_software_version || row?.toolVersion || row?.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const networkBus = redactSensitiveText(String(row?.networkBus || row?.network_bus || row?.busName || row?.bus_name || row?.communicationBus || row?.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const networkChannel = redactSensitiveText(String(row?.networkChannel || row?.network_channel || row?.channelId || row?.channel_id || row?.channelName || row?.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const gatewayRoute = redactSensitiveText(String(row?.gatewayRoute || row?.gateway_route || row?.gatewayPath || row?.gateway_path || row?.routingPath || row?.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       return {
         id,
         name,
@@ -28315,7 +28330,10 @@
         ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {}),
         ...(ecuHardwareId ? { ecuHardwareId, ecu_hardware_id: ecuHardwareId } : {}),
         ...(ecuDatasetId ? { ecuDatasetId, ecu_dataset_id: ecuDatasetId } : {}),
-        ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {})
+        ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {}),
+        ...(networkBus ? { networkBus, network_bus: networkBus } : {}),
+        ...(networkChannel ? { networkChannel, network_channel: networkChannel } : {}),
+        ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28368,7 +28386,10 @@
         ecuCalibrationId: row.ecuCalibrationId || null,
         ecuHardwareId: row.ecuHardwareId || null,
         ecuDatasetId: row.ecuDatasetId || null,
-        diagnosticSoftwareVersion: row.diagnosticSoftwareVersion || null
+        diagnosticSoftwareVersion: row.diagnosticSoftwareVersion || null,
+        networkBus: row.networkBus || null,
+        networkChannel: row.networkChannel || null,
+        gatewayRoute: row.gatewayRoute || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32268,6 +32289,9 @@
     const ecuHardwareIdIndex = findIndex("ecu hardware id", "ecu_hardware_id", "hardware id", "hardware_id", "hardware version", "hardware_version", "ECUハードウェアID", "ハードウェアID", "ハードウェアバージョン");
     const ecuDatasetIdIndex = findIndex("ecu dataset id", "ecu_dataset_id", "dataset id", "dataset_id", "data set id", "data_set_id", "calibration dataset id", "calibration_dataset_id", "ECUデータセットID", "データセットID");
     const diagnosticSoftwareVersionIndex = findIndex("diagnostic software version", "diagnostic_software_version", "scanner software version", "scanner_software_version", "diagnostic tool version", "tool version", "tool_version", "診断ソフト版", "診断機ソフト版");
+    const networkBusIndex = findIndex("network bus", "network_bus", "bus name", "bus_name", "communication bus", "communication_bus", "通信バス", "ネットワークバス");
+    const networkChannelIndex = findIndex("network channel", "network_channel", "channel id", "channel_id", "channel name", "channel_name", "通信チャンネル", "ネットワークチャンネル");
+    const gatewayRouteIndex = findIndex("gateway route", "gateway_route", "gateway path", "gateway_path", "routing path", "routing_path", "ゲートウェイ経路", "ルーティング経路");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32395,6 +32419,9 @@
       const rowEcuHardwareId = cellAt(ecuHardwareIdIndex, 120) || null;
       const rowEcuDatasetId = cellAt(ecuDatasetIdIndex, 160) || null;
       const rowDiagnosticSoftwareVersion = cellAt(diagnosticSoftwareVersionIndex, 120) || null;
+      const rowNetworkBus = cellAt(networkBusIndex, 120) || null;
+      const rowNetworkChannel = cellAt(networkChannelIndex, 120) || null;
+      const rowGatewayRoute = cellAt(gatewayRouteIndex, 160) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32568,6 +32595,9 @@
           ...(rowEcuHardwareId ? { ecu_hardware_id: rowEcuHardwareId } : {}),
           ...(rowEcuDatasetId ? { ecu_dataset_id: rowEcuDatasetId } : {}),
           ...(rowDiagnosticSoftwareVersion ? { diagnostic_software_version: rowDiagnosticSoftwareVersion } : {}),
+          ...(rowNetworkBus ? { network_bus: rowNetworkBus } : {}),
+          ...(rowNetworkChannel ? { network_channel: rowNetworkChannel } : {}),
+          ...(rowGatewayRoute ? { gateway_route: rowGatewayRoute } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32706,6 +32736,9 @@
           ...(rowEcuHardwareId ? { ecu_hardware_id: rowEcuHardwareId } : {}),
           ...(rowEcuDatasetId ? { ecu_dataset_id: rowEcuDatasetId } : {}),
           ...(rowDiagnosticSoftwareVersion ? { diagnostic_software_version: rowDiagnosticSoftwareVersion } : {}),
+          ...(rowNetworkBus ? { network_bus: rowNetworkBus } : {}),
+          ...(rowNetworkChannel ? { network_channel: rowNetworkChannel } : {}),
+          ...(rowGatewayRoute ? { gateway_route: rowGatewayRoute } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34162,6 +34195,9 @@
         ecuHardwareId: row?.ecuHardwareId || row?.ecu_hardware_id || row?.hardwareId || row?.hardware_id || row?.hardwareVersion || row?.hardware_version || null,
         ecuDatasetId: row?.ecuDatasetId || row?.ecu_dataset_id || row?.datasetId || row?.dataset_id || row?.dataSetId || row?.data_set_id || row?.calibrationDatasetId || row?.calibration_dataset_id || null,
         diagnosticSoftwareVersion: row?.diagnosticSoftwareVersion || row?.diagnostic_software_version || row?.scannerSoftwareVersion || row?.scanner_software_version || row?.toolVersion || row?.tool_version || null,
+        networkBus: row?.networkBus || row?.network_bus || row?.busName || row?.bus_name || row?.communicationBus || row?.communication_bus || null,
+        networkChannel: row?.networkChannel || row?.network_channel || row?.channelId || row?.channel_id || row?.channelName || row?.channel_name || null,
+        gatewayRoute: row?.gatewayRoute || row?.gateway_route || row?.gatewayPath || row?.gateway_path || row?.routingPath || row?.routing_path || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34210,6 +34246,9 @@
       const dtcEcuHardwareId = dtcRow?.ecuHardwareId || dtcRow?.ecu_hardware_id || dtcRow?.hardwareId || dtcRow?.hardware_id || dtcRow?.hardwareVersion || dtcRow?.hardware_version || null;
       const dtcEcuDatasetId = dtcRow?.ecuDatasetId || dtcRow?.ecu_dataset_id || dtcRow?.datasetId || dtcRow?.dataset_id || dtcRow?.dataSetId || dtcRow?.data_set_id || dtcRow?.calibrationDatasetId || dtcRow?.calibration_dataset_id || null;
       const dtcDiagnosticSoftwareVersion = dtcRow?.diagnosticSoftwareVersion || dtcRow?.diagnostic_software_version || dtcRow?.scannerSoftwareVersion || dtcRow?.scanner_software_version || dtcRow?.toolVersion || dtcRow?.tool_version || null;
+      const dtcNetworkBus = dtcRow?.networkBus || dtcRow?.network_bus || dtcRow?.busName || dtcRow?.bus_name || dtcRow?.communicationBus || dtcRow?.communication_bus || null;
+      const dtcNetworkChannel = dtcRow?.networkChannel || dtcRow?.network_channel || dtcRow?.channelId || dtcRow?.channel_id || dtcRow?.channelName || dtcRow?.channel_name || null;
+      const dtcGatewayRoute = dtcRow?.gatewayRoute || dtcRow?.gateway_route || dtcRow?.gatewayPath || dtcRow?.gateway_path || dtcRow?.routingPath || dtcRow?.routing_path || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34237,6 +34276,9 @@
       if (dtcEcuHardwareId && response.ecuHardwareId && normalizeCsvEcuHierarchyScope(dtcEcuHardwareId) !== normalizeCsvEcuHierarchyScope(response.ecuHardwareId)) return false;
       if (dtcEcuDatasetId && response.ecuDatasetId && normalizeCsvEcuHierarchyScope(dtcEcuDatasetId) !== normalizeCsvEcuHierarchyScope(response.ecuDatasetId)) return false;
       if (dtcDiagnosticSoftwareVersion && response.diagnosticSoftwareVersion && normalizeCsvEcuHierarchyScope(dtcDiagnosticSoftwareVersion) !== normalizeCsvEcuHierarchyScope(response.diagnosticSoftwareVersion)) return false;
+      if (dtcNetworkBus && response.networkBus && normalizeCsvEcuHierarchyScope(dtcNetworkBus) !== normalizeCsvEcuHierarchyScope(response.networkBus)) return false;
+      if (dtcNetworkChannel && response.networkChannel && normalizeCsvEcuHierarchyScope(dtcNetworkChannel) !== normalizeCsvEcuHierarchyScope(response.networkChannel)) return false;
+      if (dtcGatewayRoute && response.gatewayRoute && normalizeCsvEcuHierarchyScope(dtcGatewayRoute) !== normalizeCsvEcuHierarchyScope(response.gatewayRoute)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
