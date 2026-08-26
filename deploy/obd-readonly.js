@@ -29508,6 +29508,7 @@
         ? pendingCount === negativeResponseCount ? "pending_response" : "negative_response"
         : reportedStatus;
       const responseTimeMs = Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null;
+      const responseWaitMs = readDtcEvidenceResponseWaitMs(row);
       const rowCapturedAtValue = row?.captured_at || row?.capturedAt || row?.timestamp || sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
       const rowCapturedAt = /^\d{4}-\d{2}-\d{2}T/.test(String(rowCapturedAtValue || "")) && Number.isFinite(Date.parse(rowCapturedAtValue)) ? rowCapturedAtValue : null;
       const rowProtocol = normalizeProtocolProvenanceValue(row?.protocol || row?.obd_protocol || row?.communicationProtocol || row?.communication_protocol || sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null);
@@ -29614,6 +29615,8 @@
         negative_response_labels: negativeResponseLabels,
         responseTimeMs,
         response_time_ms: responseTimeMs,
+        responseWaitMs,
+        response_wait_ms: responseWaitMs,
         ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
         ...(rowProtocol ? { protocol: rowProtocol } : {}),
         ...(readoutSection ? { readoutSection, readout_section: readoutSection } : {}),
@@ -29719,6 +29722,7 @@
         negativeRequestedServices: [...row.negativeRequestedServices].sort(),
         negativeResponseLabels: [...row.negativeResponseLabels].sort(),
         responseTimeMs: row.responseTimeMs,
+        responseWaitMs: row.responseWaitMs,
         capturedAt: row.capturedAt || null,
         protocol: row.protocol || null,
         readoutSection: row.readoutSection || null,
@@ -34917,6 +34921,8 @@
           ...(requestedService ? { services: [requestedService] } : {}),
           ...(responseService ? { response_services: [responseService] } : {}),
           ...(Number.isFinite(responseTimeMs) && responseTimeMs >= 0 ? { response_time_ms: responseTimeMs } : {}),
+          ...(rowResponseCount !== null ? { response_count: rowResponseCount } : {}),
+          ...(rowResponseWaitMs !== null ? { response_wait_ms: rowResponseWaitMs } : {}),
           ...(Number.isInteger(negativeResponseCount) && negativeResponseCount >= 0 ? { negative_response_count: negativeResponseCount } : {}),
           ...(negativeResponseLabel ? { negative_response_labels: [negativeResponseLabel] } : {}),
           ...(negativeRequestedService ? { negative_requested_services: [negativeRequestedService] } : {})
@@ -36431,6 +36437,9 @@
         dtcConfirmationThreshold: normalizeDtcLifecycleMeasurementValue(row?.dtcConfirmationThreshold ?? row?.dtc_confirmation_threshold ?? row?.confirmationThreshold ?? row?.confirmation_threshold ?? row?.failureConfirmationThreshold ?? row?.failure_confirmation_threshold),
         dtcRecoveryThreshold: normalizeDtcLifecycleMeasurementValue(row?.dtcRecoveryThreshold ?? row?.dtc_recovery_threshold ?? row?.recoveryThreshold ?? row?.recovery_threshold ?? row?.normalizationThreshold ?? row?.normalization_threshold ?? row?.healingThreshold ?? row?.healing_threshold),
         dtcAgingCycleCount: normalizeDtcLifecycleMeasurementValue(row?.dtcAgingCycleCount ?? row?.dtc_aging_cycle_count ?? row?.agingCycleCount ?? row?.aging_cycle_count ?? row?.agingCycles ?? row?.aging_cycles),
+        responseCount: readDtcEvidenceResponseCount(row),
+        responseWaitMs: readDtcEvidenceResponseWaitMs(row),
+        negativeRequestedServices: readDtcEvidenceNegativeRequestedServices(row),
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -36637,14 +36646,37 @@
     const reconciledDtcRows = (mergedDtcSnapshot?.dtcs || []).map((row) => {
       const ecuId = normalizeCsvEcuIdentity(row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.sourceEcu || row?.source_ecu);
       const scopedResponses = ecuId ? (explicitResponsesByEcu.get(ecuId) || []).filter((response) => isSameCsvReadoutScope(row, response)) : [];
+      const responseAttemptSource = scopedResponses.length === 1 ? scopedResponses[0] : null;
+      const rowNegativeRequestedServices = readDtcEvidenceNegativeRequestedServices(row);
+      const inheritedNegativeRequestedService = responseAttemptSource?.negativeRequestedServices?.length === 1
+        ? responseAttemptSource.negativeRequestedServices[0]
+        : null;
+      const rowEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(row?.ecuResponseStatus || row?.ecu_response_status || row?.responseStatus || row?.response_status);
+      const canInheritNegativeRequestedService = ["negative_response", "pending_response"].includes(rowEcuResponseStatus)
+        && rowNegativeRequestedServices.length === 0
+        && Boolean(inheritedNegativeRequestedService);
+      const inheritedResponseCount = responseAttemptSource?.responseCount ?? null;
+      const inheritedResponseWaitMs = responseAttemptSource?.responseWaitMs ?? null;
+      const responseAttemptAdditions = {
+        ...(readDtcEvidenceResponseCount(row) === null && inheritedResponseCount !== null
+          ? { responseCount: inheritedResponseCount, response_count: inheritedResponseCount }
+          : {}),
+        ...(readDtcEvidenceResponseWaitMs(row) === null && inheritedResponseWaitMs !== null
+          ? { responseWaitMs: inheritedResponseWaitMs, response_wait_ms: inheritedResponseWaitMs }
+          : {}),
+        ...(canInheritNegativeRequestedService
+          ? { negativeRequestedService: inheritedNegativeRequestedService, negative_requested_service: inheritedNegativeRequestedService }
+          : {})
+      };
+      const enrichedRow = Object.keys(responseAttemptAdditions).length ? { ...row, ...responseAttemptAdditions } : row;
       const hasPositiveResponse = scopedResponses.some((response) => positiveResponseStatuses.has(response.status));
       const unavailableStatuses = [...new Set(scopedResponses.map((response) => response.status).filter((status) => unavailableResponseStatuses.has(status)))];
-      if (!ecuId || hasPositiveResponse || unavailableStatuses.length === 0) return row;
+      if (!ecuId || hasPositiveResponse || unavailableStatuses.length === 0) return enrichedRow;
       const conflictRows = conflictingDtcRowsByEcu.get(ecuId) || [];
       conflictRows.push(row);
       conflictingDtcRowsByEcu.set(ecuId, conflictRows);
       return {
-        ...row,
+        ...enrichedRow,
         ecuResponseConflict: true,
         ecu_response_conflict: true,
         ecuResponseConflictStatuses: unavailableStatuses,
@@ -36697,14 +36729,17 @@
         applicability_evidence_eligible: false
       };
     });
-    const reconciledDtcSnapshot = mergedDtcSnapshot && ecuDtcResponseReconciliationRows.length
+    const hasReconciledDtcRowChanges = reconciledDtcRows.some((row, index) => row !== mergedDtcSnapshot?.dtcs?.[index]);
+    const reconciledDtcSnapshot = mergedDtcSnapshot && hasReconciledDtcRowChanges
       ? {
         ...mergedDtcSnapshot,
         dtcs: reconciledDtcRows,
         ecuResponses: reconciledDtcEcuResponses,
         ecu_responses: reconciledDtcEcuResponses,
-        ecuDtcResponseReconciliationSummary,
-        ecu_dtc_response_reconciliation_summary: ecuDtcResponseReconciliationSummary
+        ...(ecuDtcResponseReconciliationRows.length ? {
+          ecuDtcResponseReconciliationSummary,
+          ecu_dtc_response_reconciliation_summary: ecuDtcResponseReconciliationSummary
+        } : {})
       }
       : mergedDtcSnapshot;
     const tableDtcEvidenceFieldReports = tableSessions
