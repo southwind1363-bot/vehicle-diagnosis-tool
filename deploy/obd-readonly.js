@@ -32390,7 +32390,10 @@
             || importedDtcEvidenceFieldReportInput.source_field_schema_version
             || importedDtcEvidenceFieldReportInput.fieldSchemaVersion
             || importedDtcEvidenceFieldReportInput.field_schema_version
-            || ""
+            || "",
+          invalidFieldObservations: importedDtcEvidenceFieldReportInput.invalidFieldObservations
+            || importedDtcEvidenceFieldReportInput.invalid_field_observations
+            || []
         }
       )
       : null;
@@ -32529,6 +32532,19 @@
       warmups_since_clear: "dtc_warm_up_cycle_count"
     })
   });
+  const DTC_EVIDENCE_INTEGER_FIELD_IDS = new Set([
+    "dtc_warm_up_cycle_count",
+    "dtc_ignition_cycle_count",
+    "dtc_failure_occurrence_count",
+    "dtc_recovery_count",
+    "dtc_aging_cycle_count"
+  ]);
+  const DTC_EVIDENCE_DISTANCE_UNIT_FIELD_IDS = new Set([
+    "dtc_fault_occurrence_distance_unit",
+    "dtc_distance_since_clear_unit"
+  ]);
+  const DTC_EVIDENCE_DISTANCE_UNITS = new Set(["km", "kilometer", "kilometers", "kilometre", "kilometres", "mi", "mile", "miles", "キロ", "キロメートル"]);
+  const DTC_EVIDENCE_DURATION_UNITS = new Set(["ms", "millisecond", "milliseconds", "s", "sec", "second", "seconds", "秒", "min", "minute", "minutes", "分", "h", "hr", "hour", "hours", "時間", "day", "days", "日"]);
   const DTC_EVIDENCE_FIELD_SCHEMA = Object.freeze([
     ["dtc_first_detected_at", "timestamp", "none"],
     ["dtc_last_detected_at", "timestamp", "none"],
@@ -32549,18 +32565,59 @@
     ["dtc_confirmation_threshold", "decimal_or_text", "none"],
     ["dtc_recovery_threshold", "decimal_or_text", "none"],
     ["dtc_aging_cycle_count", "integer_or_text", "none"]
-  ].map(([id, valueType, unitPolicy]) => Object.freeze({
-    id,
-    valueType,
-    value_type: valueType,
-    unitPolicy,
-    unit_policy: unitPolicy,
-    scope: "dtc_ecu_response_row",
-    introducedIn: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
-    introduced_in: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
-    deprecated: false,
-    required: false
-  })));
+  ].map(([id, valueType, unitPolicy]) => {
+    const validationRule = valueType === "timestamp"
+      ? "iso_8601_timestamp"
+      : valueType === "unit_text"
+        ? DTC_EVIDENCE_DISTANCE_UNIT_FIELD_IDS.has(id) ? "distance_unit" : "duration_unit"
+        : DTC_EVIDENCE_INTEGER_FIELD_IDS.has(id)
+          ? "nonnegative_integer_text"
+          : "nonnegative_decimal_text";
+    const unitFamily = valueType === "unit_text"
+      ? DTC_EVIDENCE_DISTANCE_UNIT_FIELD_IDS.has(id) ? "distance" : "duration"
+      : null;
+    return Object.freeze({
+      id,
+      valueType,
+      value_type: valueType,
+      unitPolicy,
+      unit_policy: unitPolicy,
+      validationRule,
+      validation_rule: validationRule,
+      unitFamily,
+      unit_family: unitFamily,
+      scope: "dtc_ecu_response_row",
+      introducedIn: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+      introduced_in: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+      deprecated: false,
+      required: false
+    });
+  }));
+
+  function validateDtcEvidenceFieldValue(fieldId, value) {
+    const normalized = redactSensitiveText(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, 80);
+    if (!normalized) return { present: false, valid: true, value: null, reason: null };
+    const field = DTC_EVIDENCE_FIELD_SCHEMA.find((item) => item.id === fieldId);
+    if (!field) return { present: true, valid: false, value: null, reason: "invalid_value" };
+    if (field.validationRule === "iso_8601_timestamp") {
+      const timestamp = normalizeDtcEvidenceTimestampValue(normalized);
+      return { present: true, valid: Boolean(timestamp), value: timestamp, reason: timestamp ? null : "invalid_timestamp" };
+    }
+    if (field.validationRule === "nonnegative_integer_text") {
+      const valid = /^\d+$/.test(normalized);
+      return { present: true, valid, value: valid ? normalized : null, reason: valid ? null : "invalid_integer" };
+    }
+    if (field.validationRule === "nonnegative_decimal_text") {
+      const valid = /^(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized);
+      return { present: true, valid, value: valid ? normalized : null, reason: valid ? null : "invalid_number" };
+    }
+    const normalizedUnit = normalized.toLowerCase().replace(/[.\s_-]+/g, "");
+    const supportedUnits = field.validationRule === "distance_unit"
+      ? DTC_EVIDENCE_DISTANCE_UNITS
+      : DTC_EVIDENCE_DURATION_UNITS;
+    const valid = supportedUnits.has(normalizedUnit);
+    return { present: true, valid, value: valid ? normalized : null, reason: valid ? null : "unsupported_unit" };
+  }
 
   function buildDtcEvidenceFieldReport(recognizedFields = [], unknownColumns = [], tableReportCount = 1, options = {}) {
     const schemaIds = new Set(DTC_EVIDENCE_FIELD_SCHEMA.map((field) => field.id));
@@ -32603,6 +32660,28 @@
     const unknown = [...new Set((Array.isArray(unknownColumns) ? unknownColumns : [])
       .map((column) => redactSensitiveText(String(column || "")).replace(/\s+/g, " ").trim().slice(0, 80))
       .filter(Boolean))];
+    const invalidObservationKeys = new Set();
+    const invalidFieldObservations = (Array.isArray(options.invalidFieldObservations) ? options.invalidFieldObservations : Array.isArray(options.invalid_field_observations) ? options.invalid_field_observations : [])
+      .map((observation) => {
+        const fieldId = String(observation?.fieldId || observation?.field_id || "").trim();
+        const reason = String(observation?.reason || "invalid_value").trim().slice(0, 40);
+        const rowNumberValue = Number(observation?.rowNumber ?? observation?.row_number);
+        const rowNumber = Number.isInteger(rowNumberValue) && rowNumberValue > 0 ? rowNumberValue : null;
+        const scope = ["dtc_row", "ecu_response_row", "csv_row"].includes(observation?.scope) ? observation.scope : "csv_row";
+        if (!schemaIds.has(fieldId) || !["invalid_timestamp", "invalid_number", "invalid_integer", "unsupported_unit"].includes(reason)) return null;
+        const key = [fieldId, reason, rowNumber || "", scope].join("|");
+        if (invalidObservationKeys.has(key)) return null;
+        invalidObservationKeys.add(key);
+        return {
+          fieldId,
+          field_id: fieldId,
+          reason,
+          ...(rowNumber ? { rowNumber, row_number: rowNumber } : {}),
+          scope
+        };
+      })
+      .filter(Boolean);
+    const invalidFieldIds = [...new Set(invalidFieldObservations.map((observation) => observation.fieldId))];
     const schemaFields = DTC_EVIDENCE_FIELD_SCHEMA.map((field) => ({ ...field }));
     const normalizedTableReportCount = Math.max(0, Number(tableReportCount) || 0);
     return {
@@ -32626,6 +32705,20 @@
       deprecated_source_fields: [...deprecatedSourceFields],
       unrecognizedSourceFields,
       unrecognized_source_fields: [...unrecognizedSourceFields],
+      fieldValidationVersion: "dtc_evidence_field_validation_v1",
+      field_validation_version: "dtc_evidence_field_validation_v1",
+      invalidFieldObservations,
+      invalid_field_observations: invalidFieldObservations.map((observation) => ({ ...observation })),
+      invalidFieldIds,
+      invalid_field_ids: [...invalidFieldIds],
+      invalidFieldCount: invalidFieldIds.length,
+      invalid_field_count: invalidFieldIds.length,
+      invalidObservationCount: invalidFieldObservations.length,
+      invalid_observation_count: invalidFieldObservations.length,
+      invalidValuesRetained: false,
+      invalid_values_retained: false,
+      validationStatus: invalidFieldObservations.length ? "invalid_evidence_excluded" : "valid",
+      validation_status: invalidFieldObservations.length ? "invalid_evidence_excluded" : "valid",
       fieldCount: schemaFields.length,
       field_count: schemaFields.length,
       schemaFields,
@@ -32648,8 +32741,8 @@
       unknown_column_count: unknown.length,
       tableReportCount: normalizedTableReportCount,
       table_report_count: normalizedTableReportCount,
-      reviewRequired: unknown.length > 0 || unrecognizedSourceFields.length > 0 || !["current", "migrated_legacy"].includes(compatibilityStatus),
-      review_required: unknown.length > 0 || unrecognizedSourceFields.length > 0 || !["current", "migrated_legacy"].includes(compatibilityStatus),
+      reviewRequired: unknown.length > 0 || unrecognizedSourceFields.length > 0 || invalidFieldObservations.length > 0 || !["current", "migrated_legacy"].includes(compatibilityStatus),
+      review_required: unknown.length > 0 || unrecognizedSourceFields.length > 0 || invalidFieldObservations.length > 0 || !["current", "migrated_legacy"].includes(compatibilityStatus),
       diagnosticConclusionAssigned: false,
       diagnostic_conclusion_assigned: false,
       retainedRawText: false,
@@ -32886,7 +32979,7 @@
       .map((header, index) => ({ header, index, normalized: normalizeHeader(header) }))
       .filter(({ index, normalized }) => normalized.startsWith("dtc") && !knownDtcColumnIndexes.has(index))
       .map(({ header }) => header);
-    const dtcEvidenceFieldReport = buildDtcEvidenceFieldReport(recognizedDtcEvidenceFields, unknownDtcEvidenceColumns, 1);
+    const invalidDtcEvidenceFieldObservations = [];
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32983,10 +33076,23 @@
     let endedAtMilliseconds = null;
     let protocol = null;
     let dtcStatusAvailabilityMask = null;
-    lines.slice(headerLineIndex + 1, headerLineIndex + 5001).forEach((line) => {
+    lines.slice(headerLineIndex + 1, headerLineIndex + 5001).forEach((line, rowIndex) => {
       const cells = parseRow(line, delimiter);
       if (!cells) return;
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
+      const rowEvidenceScope = /(?:ecu\s*responses?|module\s*responses?|ecu応答)/i.test(cellAt(readoutKindIndex, 80) || sectionHint) ? "ecu_response_row" : "dtc_row";
+      const readDtcEvidenceField = (fieldId, index, length = 80) => {
+        const validation = validateDtcEvidenceFieldValue(fieldId, cellAt(index, length));
+        if (!validation.valid) {
+          invalidDtcEvidenceFieldObservations.push({
+            fieldId,
+            reason: validation.reason,
+            rowNumber: headerLineIndex + rowIndex + 2,
+            scope: rowEvidenceScope
+          });
+        }
+        return validation.value;
+      };
       const rowCapturedAt = cellAt(capturedAtIndex, 80) || null;
       const rowProtocol = cellAt(protocolIndex, 80) || null;
       const rowScanSessionId = cellAt(scanSessionIdIndex, 120) || null;
@@ -33047,25 +33153,25 @@
       const rowUdsDtcSeverityValue = cellAt(dtcSeverityIndex, 80) || null;
       const rowUdsDtcFunctionalUnit = cellAt(dtcFunctionalUnitIndex, 80) || null;
       const rowUdsDtcStatusSource = cellAt(dtcStatusSourceIndex, 80) || null;
-      const rowDtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcFirstDetectedAtIndex, 80));
-      const rowDtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcLastDetectedAtIndex, 80));
-      const rowDtcConfirmedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcConfirmedAtIndex, 80));
-      const rowDtcFaultOccurrenceDistance = normalizeDtcLifecycleMeasurementValue(cellAt(dtcFaultOccurrenceDistanceIndex, 80));
-      const rowDtcFaultOccurrenceDistanceUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcFaultOccurrenceDistanceUnitIndex, 24));
-      const rowDtcDistanceSinceClear = normalizeDtcLifecycleMeasurementValue(cellAt(dtcDistanceSinceClearIndex, 80));
-      const rowDtcDistanceSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcDistanceSinceClearUnitIndex, 24));
-      const rowDtcWarmUpCycleCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcWarmUpCycleCountIndex, 80));
-      const rowDtcIgnitionCycleCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcIgnitionCycleCountIndex, 80));
-      const rowDtcFaultDuration = normalizeDtcLifecycleMeasurementValue(cellAt(dtcFaultDurationIndex, 80));
-      const rowDtcFaultDurationUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcFaultDurationUnitIndex, 24));
-      const rowDtcTimeSinceClear = normalizeDtcLifecycleMeasurementValue(cellAt(dtcTimeSinceClearIndex, 80));
-      const rowDtcTimeSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcTimeSinceClearUnitIndex, 24));
-      const rowDtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcFailureOccurrenceCountIndex, 80));
-      const rowDtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcRecoveryCountIndex, 80));
-      const rowDtcLastClearedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcLastClearedAtIndex, 80));
-      const rowDtcConfirmationThreshold = normalizeDtcLifecycleMeasurementValue(cellAt(dtcConfirmationThresholdIndex, 80));
-      const rowDtcRecoveryThreshold = normalizeDtcLifecycleMeasurementValue(cellAt(dtcRecoveryThresholdIndex, 80));
-      const rowDtcAgingCycleCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcAgingCycleCountIndex, 80));
+      const rowDtcFirstDetectedAt = readDtcEvidenceField("dtc_first_detected_at", dtcFirstDetectedAtIndex);
+      const rowDtcLastDetectedAt = readDtcEvidenceField("dtc_last_detected_at", dtcLastDetectedAtIndex);
+      const rowDtcConfirmedAt = readDtcEvidenceField("dtc_confirmed_at", dtcConfirmedAtIndex);
+      const rowDtcFaultOccurrenceDistance = readDtcEvidenceField("dtc_fault_occurrence_distance", dtcFaultOccurrenceDistanceIndex);
+      const rowDtcFaultOccurrenceDistanceUnit = readDtcEvidenceField("dtc_fault_occurrence_distance_unit", dtcFaultOccurrenceDistanceUnitIndex, 24);
+      const rowDtcDistanceSinceClear = readDtcEvidenceField("dtc_distance_since_clear", dtcDistanceSinceClearIndex);
+      const rowDtcDistanceSinceClearUnit = readDtcEvidenceField("dtc_distance_since_clear_unit", dtcDistanceSinceClearUnitIndex, 24);
+      const rowDtcWarmUpCycleCount = readDtcEvidenceField("dtc_warm_up_cycle_count", dtcWarmUpCycleCountIndex);
+      const rowDtcIgnitionCycleCount = readDtcEvidenceField("dtc_ignition_cycle_count", dtcIgnitionCycleCountIndex);
+      const rowDtcFaultDuration = readDtcEvidenceField("dtc_fault_duration", dtcFaultDurationIndex);
+      const rowDtcFaultDurationUnit = readDtcEvidenceField("dtc_fault_duration_unit", dtcFaultDurationUnitIndex, 24);
+      const rowDtcTimeSinceClear = readDtcEvidenceField("dtc_time_since_clear", dtcTimeSinceClearIndex);
+      const rowDtcTimeSinceClearUnit = readDtcEvidenceField("dtc_time_since_clear_unit", dtcTimeSinceClearUnitIndex, 24);
+      const rowDtcFailureOccurrenceCount = readDtcEvidenceField("dtc_failure_occurrence_count", dtcFailureOccurrenceCountIndex);
+      const rowDtcRecoveryCount = readDtcEvidenceField("dtc_recovery_count", dtcRecoveryCountIndex);
+      const rowDtcLastClearedAt = readDtcEvidenceField("dtc_last_cleared_at", dtcLastClearedAtIndex);
+      const rowDtcConfirmationThreshold = readDtcEvidenceField("dtc_confirmation_threshold", dtcConfirmationThresholdIndex);
+      const rowDtcRecoveryThreshold = readDtcEvidenceField("dtc_recovery_threshold", dtcRecoveryThresholdIndex);
+      const rowDtcAgingCycleCount = readDtcEvidenceField("dtc_aging_cycle_count", dtcAgingCycleCountIndex);
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -33658,6 +33764,9 @@
       || ecuInfoSnapshot?.hadSensitiveIdentifier === true;
     const observedProtocolList = [...observedProtocols];
     const multipleProtocols = observedProtocolList.length > 1;
+    const dtcEvidenceFieldReport = buildDtcEvidenceFieldReport(recognizedDtcEvidenceFields, unknownDtcEvidenceColumns, 1, {
+      invalidFieldObservations: invalidDtcEvidenceFieldObservations
+    });
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
       schema_version: "scanner_csv_import_v1",
@@ -35278,7 +35387,10 @@
     const dtcEvidenceFieldReport = buildDtcEvidenceFieldReport(
       tableDtcEvidenceFieldReports.flatMap((report) => report.recognizedFields || report.recognized_fields || []),
       tableDtcEvidenceFieldReports.flatMap((report) => report.unknownColumns || report.unknown_columns || []),
-      tableDtcEvidenceFieldReports.length
+      tableDtcEvidenceFieldReports.length,
+      {
+        invalidFieldObservations: tableDtcEvidenceFieldReports.flatMap((report) => report.invalidFieldObservations || report.invalid_field_observations || [])
+      }
     );
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
