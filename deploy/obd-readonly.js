@@ -26469,6 +26469,9 @@
           const parentEcuId = redactSensitiveText(String(row.parentEcuId || row.parent_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const subEcuId = redactSensitiveText(String(row.subEcuId || row.sub_ecu_id || row.childEcuId || row.child_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const resultRowId = redactSensitiveText(String(row.resultRowId || row.result_row_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const vehicleModelCode = redactSensitiveText(String(row.vehicleModelCode || row.vehicle_model_code || row.modelCode || row.model_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const vehicleModelYear = redactSensitiveText(String(row.vehicleModelYear || row.vehicle_model_year || row.modelYear || row.model_year || row.vehicleYear || row.vehicle_year || "")).replace(/\s+/g, " ").trim().slice(0, 24) || null;
+          const ecuConfigurationId = redactSensitiveText(String(row.ecuConfigurationId || row.ecu_configuration_id || row.ecuConfigId || row.ecu_config_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26515,6 +26518,9 @@
             ...(parentEcuId ? { parentEcuId, parent_ecu_id: parentEcuId } : {}),
             ...(subEcuId ? { subEcuId, sub_ecu_id: subEcuId } : {}),
             ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {}),
+            ...(vehicleModelCode ? { vehicleModelCode, vehicle_model_code: vehicleModelCode } : {}),
+            ...(vehicleModelYear ? { vehicleModelYear, vehicle_model_year: vehicleModelYear } : {}),
+            ...(ecuConfigurationId ? { ecuConfigurationId, ecu_configuration_id: ecuConfigurationId } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26621,6 +26627,9 @@
       const parentEcuId = redactSensitiveText(String(rowValue.parentEcuId || rowValue.parent_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const subEcuId = redactSensitiveText(String(rowValue.subEcuId || rowValue.sub_ecu_id || rowValue.childEcuId || rowValue.child_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const resultRowId = redactSensitiveText(String(rowValue.resultRowId || rowValue.result_row_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const vehicleModelCode = redactSensitiveText(String(rowValue.vehicleModelCode || rowValue.vehicle_model_code || rowValue.modelCode || rowValue.model_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const vehicleModelYear = redactSensitiveText(String(rowValue.vehicleModelYear || rowValue.vehicle_model_year || rowValue.modelYear || rowValue.model_year || rowValue.vehicleYear || rowValue.vehicle_year || "")).replace(/\s+/g, " ").trim().slice(0, 24) || null;
+      const ecuConfigurationId = redactSensitiveText(String(rowValue.ecuConfigurationId || rowValue.ecu_configuration_id || rowValue.ecuConfigId || rowValue.ecu_config_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26655,6 +26664,9 @@
         ...(parentEcuId ? { parentEcuId, parent_ecu_id: parentEcuId } : {}),
         ...(subEcuId ? { subEcuId, sub_ecu_id: subEcuId } : {}),
         ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {}),
+        ...(vehicleModelCode ? { vehicleModelCode, vehicle_model_code: vehicleModelCode } : {}),
+        ...(vehicleModelYear ? { vehicleModelYear, vehicle_model_year: vehicleModelYear } : {}),
+        ...(ecuConfigurationId ? { ecuConfigurationId, ecu_configuration_id: ecuConfigurationId } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28174,6 +28186,9 @@
       const parentEcuId = redactSensitiveText(String(row?.parentEcuId || row?.parent_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const subEcuId = redactSensitiveText(String(row?.subEcuId || row?.sub_ecu_id || row?.childEcuId || row?.child_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const resultRowId = redactSensitiveText(String(row?.resultRowId || row?.result_row_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const vehicleModelCode = redactSensitiveText(String(row?.vehicleModelCode || row?.vehicle_model_code || row?.modelCode || row?.model_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const vehicleModelYear = redactSensitiveText(String(row?.vehicleModelYear || row?.vehicle_model_year || row?.modelYear || row?.model_year || row?.vehicleYear || row?.vehicle_year || "")).replace(/\s+/g, " ").trim().slice(0, 24) || null;
+      const ecuConfigurationId = redactSensitiveText(String(row?.ecuConfigurationId || row?.ecu_configuration_id || row?.ecuConfigId || row?.ecu_config_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       return {
         id,
         name,
@@ -28207,7 +28222,10 @@
         ...(ecuSystem ? { ecuSystem, ecu_system: ecuSystem } : {}),
         ...(parentEcuId ? { parentEcuId, parent_ecu_id: parentEcuId } : {}),
         ...(subEcuId ? { subEcuId, sub_ecu_id: subEcuId } : {}),
-        ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {})
+        ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {}),
+        ...(vehicleModelCode ? { vehicleModelCode, vehicle_model_code: vehicleModelCode } : {}),
+        ...(vehicleModelYear ? { vehicleModelYear, vehicle_model_year: vehicleModelYear } : {}),
+        ...(ecuConfigurationId ? { ecuConfigurationId, ecu_configuration_id: ecuConfigurationId } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28242,7 +28260,10 @@
         ecuSystem: row.ecuSystem || null,
         parentEcuId: row.parentEcuId || null,
         subEcuId: row.subEcuId || null,
-        resultRowId: row.resultRowId || null
+        resultRowId: row.resultRowId || null,
+        vehicleModelCode: row.vehicleModelCode || null,
+        vehicleModelYear: row.vehicleModelYear || null,
+        ecuConfigurationId: row.ecuConfigurationId || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32126,6 +32147,7 @@
     const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model", "車種", "車名");
     const vehicleModelCodeIndex = findIndex("model code", "chassis code", "frame code", "vehicle model code", "body code", "型式", "型式コード");
     const vehicleYearIndex = findIndex("year", "model year", "registration year", "vehicle year", "年式", "登録年");
+    const ecuConfigurationIdIndex = findIndex("ecu configuration id", "ecu_configuration_id", "ecu config id", "ecu_config_id", "module configuration id", "module_configuration_id", "ECU構成ID", "ECU設定ID", "モジュール構成ID");
     const vehicleProductionDateIndex = findIndex("production date", "production_date", "build date", "build_date", "manufacture date", "manufacture_date", "manufacturing date", "production day", "生産日", "製造日", "組立日");
     const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code", "エンジン型式", "原動機型式");
     const vehicleTransmissionIndex = findIndex("transmission", "transmission type", "transmission_type", "gearbox", "transaxle");
@@ -32241,12 +32263,15 @@
       const rowParentEcuId = cellAt(parentEcuIdIndex, 120) || null;
       const rowSubEcuId = cellAt(subEcuIdIndex, 120) || null;
       const rowResultRowId = cellAt(resultRowIdIndex, 120) || null;
+      const rowVehicleModelCode = cellAt(vehicleModelCodeIndex, 80) || null;
+      const rowVehicleModelYear = cellAt(vehicleYearIndex, 24) || null;
+      const rowEcuConfigurationId = cellAt(ecuConfigurationIdIndex, 120) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
       if (!vehicleProfileValues.model) vehicleProfileValues.model = cellAt(vehicleModelIndex, 120) || null;
-      if (!vehicleProfileValues.modelCode) vehicleProfileValues.modelCode = cellAt(vehicleModelCodeIndex, 80) || null;
-      if (!vehicleProfileValues.year) vehicleProfileValues.year = cellAt(vehicleYearIndex, 24) || null;
+      if (!vehicleProfileValues.modelCode) vehicleProfileValues.modelCode = rowVehicleModelCode;
+      if (!vehicleProfileValues.year) vehicleProfileValues.year = rowVehicleModelYear;
       if (!vehicleProfileValues.productionDate) vehicleProfileValues.productionDate = cellAt(vehicleProductionDateIndex, 40) || null;
       if (!vehicleProfileValues.engineCode) vehicleProfileValues.engineCode = cellAt(vehicleEngineCodeIndex, 80) || null;
       if (!vehicleProfileValues.transmission) vehicleProfileValues.transmission = cellAt(vehicleTransmissionIndex, 80) || null;
@@ -32393,6 +32418,9 @@
           ...(rowParentEcuId ? { parent_ecu_id: rowParentEcuId } : {}),
           ...(rowSubEcuId ? { sub_ecu_id: rowSubEcuId } : {}),
           ...(rowResultRowId ? { result_row_id: rowResultRowId } : {}),
+          ...(rowVehicleModelCode ? { vehicle_model_code: rowVehicleModelCode } : {}),
+          ...(rowVehicleModelYear ? { vehicle_model_year: rowVehicleModelYear } : {}),
+          ...(rowEcuConfigurationId ? { ecu_configuration_id: rowEcuConfigurationId } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32513,6 +32541,9 @@
           ...(rowParentEcuId ? { parent_ecu_id: rowParentEcuId } : {}),
           ...(rowSubEcuId ? { sub_ecu_id: rowSubEcuId } : {}),
           ...(rowResultRowId ? { result_row_id: rowResultRowId } : {}),
+          ...(rowVehicleModelCode ? { vehicle_model_code: rowVehicleModelCode } : {}),
+          ...(rowVehicleModelYear ? { vehicle_model_year: rowVehicleModelYear } : {}),
+          ...(rowEcuConfigurationId ? { ecu_configuration_id: rowEcuConfigurationId } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -33951,6 +33982,9 @@
         parentEcuId: row?.parentEcuId || row?.parent_ecu_id || null,
         subEcuId: row?.subEcuId || row?.sub_ecu_id || row?.childEcuId || row?.child_ecu_id || null,
         resultRowId: row?.resultRowId || row?.result_row_id || null,
+        vehicleModelCode: row?.vehicleModelCode || row?.vehicle_model_code || row?.modelCode || row?.model_code || null,
+        vehicleModelYear: row?.vehicleModelYear || row?.vehicle_model_year || row?.modelYear || row?.model_year || row?.vehicleYear || row?.vehicle_year || null,
+        ecuConfigurationId: row?.ecuConfigurationId || row?.ecu_configuration_id || row?.ecuConfigId || row?.ecu_config_id || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -33981,6 +34015,9 @@
       const dtcParentEcuId = dtcRow?.parentEcuId || dtcRow?.parent_ecu_id || null;
       const dtcSubEcuId = dtcRow?.subEcuId || dtcRow?.sub_ecu_id || dtcRow?.childEcuId || dtcRow?.child_ecu_id || null;
       const dtcResultRowId = dtcRow?.resultRowId || dtcRow?.result_row_id || null;
+      const dtcVehicleModelCode = dtcRow?.vehicleModelCode || dtcRow?.vehicle_model_code || dtcRow?.modelCode || dtcRow?.model_code || null;
+      const dtcVehicleModelYear = dtcRow?.vehicleModelYear || dtcRow?.vehicle_model_year || dtcRow?.modelYear || dtcRow?.model_year || dtcRow?.vehicleYear || dtcRow?.vehicle_year || null;
+      const dtcEcuConfigurationId = dtcRow?.ecuConfigurationId || dtcRow?.ecu_configuration_id || dtcRow?.ecuConfigId || dtcRow?.ecu_config_id || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -33990,6 +34027,9 @@
       if (dtcParentEcuId && response.parentEcuId && normalizeCsvEcuIdentity(dtcParentEcuId) !== normalizeCsvEcuIdentity(response.parentEcuId)) return false;
       if (dtcSubEcuId && response.subEcuId && normalizeCsvEcuIdentity(dtcSubEcuId) !== normalizeCsvEcuIdentity(response.subEcuId)) return false;
       if (dtcResultRowId && response.resultRowId && normalizeCsvEcuHierarchyScope(dtcResultRowId) !== normalizeCsvEcuHierarchyScope(response.resultRowId)) return false;
+      if (dtcVehicleModelCode && response.vehicleModelCode && normalizeCsvEcuHierarchyScope(dtcVehicleModelCode) !== normalizeCsvEcuHierarchyScope(response.vehicleModelCode)) return false;
+      if (dtcVehicleModelYear && response.vehicleModelYear && normalizeCsvEcuHierarchyScope(dtcVehicleModelYear) !== normalizeCsvEcuHierarchyScope(response.vehicleModelYear)) return false;
+      if (dtcEcuConfigurationId && response.ecuConfigurationId && normalizeCsvEcuHierarchyScope(dtcEcuConfigurationId) !== normalizeCsvEcuHierarchyScope(response.ecuConfigurationId)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
