@@ -175,14 +175,15 @@
         "id":  "capability-oem-enhanced",
         "label":  "メーカー固有診断",
         "target_level":  "Techstream級の車種別DTC、データリスト、作業サポート",
-        "current_status":  "器を準備中",
-        "progress_percent":  10,
-        "current_basis":  "メーカー固有DTC用ロードマップ、J2534候補、Techstream等の貼り付け解析入口を準備",
+        "current_status":  "取込基盤拡張中",
+        "progress_percent":  12,
+        "current_basis":  "メーカー固有DTC用ロードマップ、J2534候補、Techstream等の貼り付け解析入口、Toyota系3桁INFの証跡分離を実装",
         "done":  [
                      "メーカー固有を汎用DTCと混ぜない方針",
                      "車種、年式、ECU、サブコードを分離する方針",
                      "J2534/Techstream候補管理",
-                     "Techstream等の読取結果貼り付けを先行解析する方針"
+                     "Techstream等の読取結果貼り付けを先行解析する方針",
+                     "3桁INFコードを2桁FTBから分離し同一DTCの複数INFをJSON再読込まで保持"
                  ],
         "missing":  [
                         "車種別ECU構成",
@@ -190,10 +191,10 @@
                         "データリスト項目",
                         "メーカー診断機表示のサンプル"
                     ],
-        "next_build":  "Techstream等の読取結果貼り付けを解析できる形式から先に作る。",
+        "next_build":  "Techstream等のECU名・DTC状態・INFコードを同一読取単位で保持し、車種別定義照合前の証跡を拡張する。",
         "safety_gate":  "車種適合未確認なら未確認として扱う",
         "source":  "ローカル検証集計と開発ロードマップ",
-        "source_date":  "2026-06-28",
+        "source_date":  "2026-08-26",
         "eta_target":  "2026-Q4 見込み"
     },
     {

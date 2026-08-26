@@ -3433,7 +3433,7 @@
       };
     }
     const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null) => rows.flatMap((row) => {
-      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode }) => ({ code, subcode, status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName, ecu_name: fallbackEcuName }));
+      if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode, oemDetailCode }) => ({ code, subcode, ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}), status: fallbackStatus, ecu: fallbackEcu, ecuName: fallbackEcuName, ecu_name: fallbackEcuName }));
       if (!row || typeof row !== "object") return [];
       const rowValue = row.value && typeof row.value === "object" ? row.value : row;
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "";
@@ -3460,9 +3460,13 @@
       const functionalGroupRaw = readDtcFunctionalGroupRawAlias(rowValue);
       const severityAvailabilityMask = readDtcSeverityAvailabilityMaskAlias(rowValue);
       const freezeFrameAvailable = [rowValue.freeze_frame_available, rowValue.freezeFrameAvailable, rowValue.freezeFrame, rowValue.freeze_frame].some(isExplicitTrueFlag);
-      return codeReferences.map(({ code, subcode, codeFormat = null }) => ({
+      return codeReferences.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
+        ...(readDtcOemDetailCodeAlias(rowValue, oemDetailCode) ? {
+          oemDetailCode: readDtcOemDetailCodeAlias(rowValue, oemDetailCode),
+          oem_detail_code: readDtcOemDetailCodeAlias(rowValue, oemDetailCode)
+        } : {}),
         statusByte: readDtcStatusByteAlias(rowValue),
         status_byte: readDtcStatusByteAlias(rowValue),
         severity: readDtcSeverityAlias(rowValue),
@@ -3539,13 +3543,13 @@
     const normalizeDtcEntryCodeFormat = (entry) => String(entry?.codeFormat || entry?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const scopedEntriesByKey = new Map();
     entries.filter((entry) => entry.ecu).forEach((entry) => {
-      const key = `${entry.code}::${entry.subcode || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`;
+      const key = `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`;
       if (!scopedEntriesByKey.has(key)) scopedEntriesByKey.set(key, entry);
     });
-    const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(`${entry.code}::${entry.subcode || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`) || entry);
+    const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(`${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`) || entry);
     const seen = new Set();
     const dtcs = resolvedEntries.filter((entry) => {
-      const key = `${entry.code}::${entry.subcode || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.ecu || ""}::${entry.status}`;
+      const key = `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.ecu || ""}::${entry.status}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -12632,7 +12636,9 @@
         const status = normalizeDtcReadoutCategory(row?.status || row?.dtcStatus || row?.dtc_status || "unknown");
         const reportedStatus = normalizeDtcReportedStatus(row?.reportedStatus || row?.reported_status) || "unreported";
         const ecu = String(row?.ecu || row?.ecuId || row?.ecu_id || row?.address || sourceEcu).trim().toUpperCase().slice(0, 64) || "-";
-        return `${code}|${subcode}|${codeFormat}|${status}|${reportedStatus}|${ecu}`;
+        const oemDetailCode = readDtcOemDetailCodeAlias(row);
+        const identityKey = `${code}|${subcode}|${codeFormat}|${status}|${reportedStatus}|${ecu}`;
+        return oemDetailCode ? `${identityKey}|${oemDetailCode}` : identityKey;
       }).filter(Boolean))].sort()
       : [];
     const keys = evidenceRecorded ? allKeys : [];
@@ -12658,7 +12664,7 @@
     const reportedEcuKeys = reportedEcuEvidenceRecorded
       ? allKeys.filter((key) => {
         if (evidenceRecorded) return true;
-        const ecu = normalizeEcuScopeId(String(key || "").split("|").at(-1));
+        const ecu = normalizeEcuScopeId(String(key || "").split("|")[5]);
         return ecu && reportedEcuIds.includes(ecu);
       })
       : [];
@@ -14733,11 +14739,11 @@
     const normalizeDtcIdentityKeyForScope = (key) => {
       const parts = String(key || "").split("|");
       if (parts.length < 6) return String(key || "");
-      parts[parts.length - 1] = normalizeComparableCanEcuAddress(parts.at(-1)) || String(parts.at(-1) || "").trim().toUpperCase();
+      parts[5] = normalizeComparableCanEcuAddress(parts[5]) || String(parts[5] || "").trim().toUpperCase();
       return parts.join("|");
     };
     const filterDtcIdentityKeysByScope = (evidence) => evidence.reportedEcuKeys
-      .filter((key) => comparableDtcEcuIds.includes(normalizeComparableCanEcuAddress(String(key || "").split("|").at(-1)) || String(key || "").split("|").at(-1)?.trim().toUpperCase()))
+      .filter((key) => comparableDtcEcuIds.includes(normalizeComparableCanEcuAddress(String(key || "").split("|")[5]) || String(key || "").split("|")[5]?.trim().toUpperCase()))
       .map(normalizeDtcIdentityKeyForScope);
     const importedDtcIdentityKeys = completeDtcIdentityComparisonAvailable
       ? importedDtcIdentityEvidence.keys
@@ -26506,9 +26512,10 @@
     ];
     const rows = rawRows.flatMap((row) => {
       if (typeof row === "string") {
-        return extractDtcReferences(row).map(({ code, subcode }) => ({
+        return extractDtcReferences(row).map(({ code, subcode, oemDetailCode }) => ({
           code,
           subcode,
+          ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}),
           status: normalizeDtcReadoutCategory(sourceInput.status || "unknown", "unknown"),
           ecu: sourceEcu,
           ecuName: sourceEcuName,
@@ -26542,9 +26549,13 @@
       const functionalGroupRaw = readDtcFunctionalGroupRawAlias(rowValue);
       const severityAvailabilityMask = readDtcSeverityAvailabilityMaskAlias(rowValue);
       const freezeFrameAvailable = [rowValue.freeze_frame_available, rowValue.freezeFrameAvailable, rowValue.freezeFrame, rowValue.freeze_frame].some(isExplicitTrueFlag);
-      return codes.map(({ code, subcode, codeFormat = null }) => ({
+      return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
+        ...(readDtcOemDetailCodeAlias(rowValue, oemDetailCode) ? {
+          oemDetailCode: readDtcOemDetailCodeAlias(rowValue, oemDetailCode),
+          oem_detail_code: readDtcOemDetailCodeAlias(rowValue, oemDetailCode)
+        } : {}),
         statusByte: readDtcStatusByteAlias(rowValue),
         status_byte: readDtcStatusByteAlias(rowValue),
         severity: readDtcSeverityAlias(rowValue),
@@ -26584,17 +26595,17 @@
     rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
       .forEach((row) => {
-        const key = `${row.code}::${row.subcode || ""}`;
+        const key = `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}`;
         if (!typedDtcFormatsByCode.has(key)) typedDtcFormatsByCode.set(key, new Set());
         typedDtcFormatsByCode.get(key).add(normalizeDtcIdentityFormat(row));
       });
     const deduplicatedRows = rows.filter((row) => {
       if (!["", "unknown"].includes(String(row.status || "").trim().toLowerCase())) return true;
-      const typedFormats = typedDtcFormatsByCode.get(`${row.code}::${row.subcode || ""}`);
+      const typedFormats = typedDtcFormatsByCode.get(`${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}`);
       const codeFormat = normalizeDtcIdentityFormat(row);
       return !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
     });
-    const reportedStatusIdentity = (row) => `${row.code}::${row.subcode || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}`;
+    const reportedStatusIdentity = (row) => `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}`;
     const explicitReportedStatusIdentities = new Set(deduplicatedRows
       .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim())
       .map(reportedStatusIdentity));
@@ -26603,7 +26614,7 @@
       .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim() || !explicitReportedStatusIdentities.has(reportedStatusIdentity(row)))
       .forEach((row) => {
       const reportedStatus = String(row.reportedStatus ?? row.reported_status ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-      const key = `${row.code}::${row.subcode || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}::${reportedStatus}`;
+      const key = `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}::${reportedStatus}`;
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
       });
 
@@ -29591,20 +29602,20 @@
     rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
       .forEach((row) => {
-        const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}`;
+        const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.oemDetailCode || row.oem_detail_code || ""}`;
         if (!typedCodeFormatsByKey.has(key)) typedCodeFormatsByKey.set(key, new Set());
         typedCodeFormatsByKey.get(key).add(normalizeDtcMergeCodeFormat(row));
       });
     const normalizedRows = rows.filter((row) => {
       const status = String(row.status || "unknown").trim().toLowerCase();
-      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}`;
+      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.oemDetailCode || row.oem_detail_code || ""}`;
       const codeFormat = normalizeDtcMergeCodeFormat(row);
       const typedFormats = typedCodeFormatsByKey.get(key);
       return !["", "unknown"].includes(status) || !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
     });
     const reportedStatusIdentity = (row) => {
       const ecu = row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "";
-      return `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;
+      return `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}`;
     };
     const explicitReportedStatusIdentities = new Set(normalizedRows
       .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim())
@@ -29615,7 +29626,7 @@
       .forEach((row) => {
       const ecu = row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "";
       const reportedStatus = String(row.reportedStatus ?? row.reported_status ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}::${reportedStatus}`;
+      const key = `${row.code || ""}::${row.subcode || row.sub_code || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcMergeCodeFormat(row)}::${normalizeDtcMergeEcu(ecu)}::${row.status || "unknown"}::${reportedStatus}`;
       if (row.code && !byCodeAndStatus.has(key)) byCodeAndStatus.set(key, row);
       });
     const mergedRows = [...byCodeAndStatus.values()];
@@ -32731,7 +32742,13 @@
       // A scanner may put the DTC state beside each code instead of using a section heading.
       const rowStatus = resolveInlineDtcStatus(text) || currentStatus;
       const rowEcu = resolveInlineEcu(text) || currentEcu;
-      lastDtcRows = codes.map(({ code, subcode }) => ({ code, subcode, status: rowStatus, ecu: rowEcu }));
+      lastDtcRows = codes.map(({ code, subcode, oemDetailCode }) => ({
+        code,
+        subcode,
+        ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}),
+        status: rowStatus,
+        ecu: rowEcu
+      }));
       rows.push(...lastDtcRows);
     });
     const thinkcarReportRows = extractThinkcarReportDtcRows(value);
@@ -35621,6 +35638,23 @@
     return /^[0-9A-F]{1,4}$/.test(normalized) ? normalized : null;
   }
 
+  function normalizeDtcOemDetailCode(value) {
+    const normalized = String(value ?? "").trim();
+    return /^\d{3}$/.test(normalized) ? normalized : null;
+  }
+
+  function readDtcOemDetailCodeAlias(row, fallback = null) {
+    const value = [
+      row?.oem_detail_code,
+      row?.oemDetailCode,
+      row?.inf_code,
+      row?.infCode,
+      row?.detail_code,
+      row?.detailCode
+    ].find((item) => item !== undefined && item !== null && item !== "");
+    return normalizeDtcOemDetailCode(value) || normalizeDtcOemDetailCode(fallback);
+  }
+
   function readDtcSubcodeAlias(row, fallback = null) {
     const value = [
       row?.subcode,
@@ -35939,11 +35973,13 @@
     const seen = new Set();
     return matches.flatMap((match) => {
       const code = match[1];
-      const subcode = match[2] || match[3] || null;
-      const key = `${code}::${subcode || ""}`;
+      const suffix = match[2] || match[3] || null;
+      const oemDetailCode = match[2] && /^\d{3}$/.test(suffix || "") ? suffix : null;
+      const subcode = oemDetailCode ? null : suffix;
+      const key = `${code}::${subcode || ""}::${oemDetailCode || ""}`;
       if (!code || seen.has(key)) return [];
       seen.add(key);
-      return [{ code, subcode }];
+      return [{ code, subcode, oemDetailCode, oem_detail_code: oemDetailCode }];
     });
   }
 

@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3281件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "メーカーPID基準候補を用途別に分離",
+  recentMilestone: "Techstream系3桁INFを2桁FTBと分離して保存",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.185";
+const APP_VERSION = "3.13.186";
 const APP_LAST_UPDATED = "2026-08-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8469,7 +8469,7 @@ function mergeObdBridgeDtcSnapshots(previousSnapshot, currentSnapshot) {
     if (!code) return;
     const status = item.status || "unknown";
     const reportedStatus = String(item.reportedStatus ?? item.reported_status ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-    const key = `${code}::${item.subcode || item.sub_code || ""}::${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}::${status}::${reportedStatus}`;
+    const key = `${code}::${item.subcode || item.sub_code || ""}::${item.oemDetailCode || item.oem_detail_code || ""}::${item.ecu || item.ecu_id || item.ecuId || item.address || item.module || item.module_id || item.moduleId || ""}::${status}::${reportedStatus}`;
     if (!dtcsByKind.has(key)) dtcsByKind.set(key, { ...item, status });
   });
   const ecuResponses = [
@@ -8966,10 +8966,11 @@ function formatDtcIdentityComparisonSummary(summary, fallback = NO_DATA) {
   const added = Array.isArray(summary.dtcIdentityAddedKeys) ? summary.dtcIdentityAddedKeys : Array.isArray(summary.dtc_identity_added_keys) ? summary.dtc_identity_added_keys : [];
   const removed = Array.isArray(summary.dtcIdentityRemovedKeys) ? summary.dtcIdentityRemovedKeys : Array.isArray(summary.dtc_identity_removed_keys) ? summary.dtc_identity_removed_keys : [];
   const displayKey = (key) => {
-    const [code, subcode, , status, reportedStatus, ecu] = String(key || "").split("|");
+    const [code, subcode, , status, reportedStatus, ecu, oemDetailCode] = String(key || "").split("|");
     const statusLabel = { stored: "保存", pending: "保留", permanent: "永久", unknown: "不明" }[status] || "不明";
     const reported = reportedStatus && reportedStatus !== "unreported" ? `/${reportedStatus}` : "";
-    return `${code || "DTC"}${subcode && subcode !== "-" ? `:${subcode}` : ""}${ecu && ecu !== "-" ? `@${ecu}` : ""}:${statusLabel}${reported}`;
+    const detail = oemDetailCode ? `-${oemDetailCode}` : "";
+    return `${code || "DTC"}${subcode && subcode !== "-" ? `:${subcode}` : detail}${ecu && ecu !== "-" ? `@${ecu}` : ""}:${statusLabel}${reported}`;
   };
   if (added.length || removed.length) return `DTC:${[...added.map((key) => `+${displayKey(key)}`), ...removed.map((key) => `-${displayKey(key)}`)].slice(0, 3).join(",")}`;
   return available ? "変化なし" : "DTC詳細比較不可";
@@ -10651,16 +10652,18 @@ function buildObdDtcDisplayKey(item = null) {
   const dtc = item && typeof item === "object" ? item : {};
   const code = String(dtc.code || "").trim().toUpperCase();
   const subcode = String(dtc.subcode || dtc.sub_code || "").trim().toUpperCase();
+  const oemDetailCode = String(dtc.oemDetailCode || dtc.oem_detail_code || dtc.infCode || dtc.inf_code || "").trim();
   const ecu = String(dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || "").trim().toUpperCase();
   const status = String(dtc.status || dtc.kind || dtc.dtc_status || dtc.dtcStatus || "").trim().toLowerCase();
   const reportedStatus = String(dtc.reportedStatus || dtc.reported_status || "").replace(/\s+/g, " ").trim().toLowerCase();
-  return `${code}:${subcode}:${ecu}:${status}:${reportedStatus}`;
+  return `${code}:${subcode}:${oemDetailCode}:${ecu}:${status}:${reportedStatus}`;
 }
 
 function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride = null) {
   const dtc = codeOrDtc && typeof codeOrDtc === "object" ? codeOrDtc : { code: codeOrDtc };
   const code = dtc.code;
   const subcode = dtc.subcode || dtc.sub_code || null;
+  const oemDetailCode = dtc.oemDetailCode || dtc.oem_detail_code || dtc.infCode || dtc.inf_code || null;
   const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;
   const severity = dtc.severity || dtc.dtc_severity || dtc.dtcSeverity || dtc.severityByte || dtc.severity_byte || null;
   const functionalUnitRaw = dtc.dtcFunctionalUnitRaw || dtc.dtc_functional_unit_raw || dtc.functionalUnitRaw || dtc.functional_unit_raw || null;
@@ -10671,7 +10674,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const ecu = dtc.ecu || dtc.ecu_id || dtc.ecuId || dtc.address || dtc.module || dtc.module_id || dtc.moduleId || null;
   const ecuName = dtc.ecuName || dtc.ecu_name || dtc.name || dtc.label || dtc.displayName || dtc.display_name || null;
   const ecuDisplay = ecuName && ecu ? `${ecuName} / ${ecu}` : ecuName || ecu || null;
-  const displayCode = `${subcode ? `${code}:${subcode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
+  const displayCode = `${subcode ? `${code}:${subcode}` : oemDetailCode ? `${code}-${oemDetailCode}` : code}${ecuDisplay ? ` [${ecuDisplay}]` : ""}`;
   const hasSessionVehicleProfile = vehicleProfileOverride && typeof vehicleProfileOverride === "object";
   const vehicleProfile = hasSessionVehicleProfile
     ? vehicleProfileOverride
@@ -10713,6 +10716,13 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   wrapper.appendChild(description);
 
   if (reportedDescription) description.textContent = `診断機報告: ${reportedDescription}`;
+
+  if (oemDetailCode) {
+    const detailEvidence = document.createElement("p");
+    detailEvidence.className = "obd-dtc-check";
+    detailEvidence.textContent = `メーカー詳細コード: ${oemDetailCode}（読取証跡のみ。定義・適合は未照合）`;
+    wrapper.appendChild(detailEvidence);
+  }
 
   if (hasImportedDefinitionEvidence && registered.applicability_note) {
     const applicability = document.createElement("p");
