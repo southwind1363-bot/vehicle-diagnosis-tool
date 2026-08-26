@@ -13958,6 +13958,23 @@
         row?.subcode || row?.sub_code || row?.oemDetailCode || row?.oem_detail_code
       ))
       .filter(Boolean))].sort();
+    const dtcEvidenceCapturedAtValues = [...new Set(dtcEvidenceScopeInputs
+      .map((row) => normalizeDtcEvidenceTimestampValue(row?.capturedAt || row?.captured_at || row?.timestamp))
+      .filter(Boolean)
+      .map((value) => new Date(Date.parse(value)).toISOString()))].sort();
+    const dtcEvidenceProtocolValues = [...new Set(dtcEvidenceScopeInputs
+      .map((row) => normalizeDtcEvidenceAcquisitionContextValue(row?.protocol || row?.obd_protocol || row?.communicationProtocol || row?.communication_protocol, 120))
+      .filter(Boolean))].sort();
+    const dtcEvidenceScanSessionIds = [...new Set(dtcEvidenceScopeInputs
+      .map((row) => normalizeDtcEvidenceAcquisitionContextValue(row?.scanSessionId || row?.scan_session_id, 120))
+      .filter(Boolean))].sort();
+    const dtcEvidenceCapturedAt = dtcEvidenceCapturedAtValues.length === 1 ? dtcEvidenceCapturedAtValues[0] : null;
+    const dtcEvidenceProtocol = dtcEvidenceProtocolValues.length === 1 ? dtcEvidenceProtocolValues[0] : null;
+    const dtcEvidenceScanSessionId = dtcEvidenceScanSessionIds.length === 1 ? dtcEvidenceScanSessionIds[0] : null;
+    const dtcEvidenceAcquisitionContextComplete = dtcEvidenceScopeInputs.length > 0
+      && Boolean(dtcEvidenceCapturedAt)
+      && Boolean(dtcEvidenceProtocol)
+      && Boolean(dtcEvidenceScanSessionId);
     const reportedInvalidDtcEvidenceScopedIssueKeys = Array.isArray(dtcEvidenceFieldReport?.scopedInvalidIssueKeys)
       ? dtcEvidenceFieldReport.scopedInvalidIssueKeys
       : Array.isArray(dtcEvidenceFieldReport?.scoped_invalid_issue_keys)
@@ -14040,6 +14057,14 @@
       dtc_evidence_vehicle_scope_key: dtcEvidenceVehicleScopeKey,
       dtcEvidenceComparisonScopeKeys,
       dtc_evidence_comparison_scope_keys: [...dtcEvidenceComparisonScopeKeys],
+      dtcEvidenceCapturedAt,
+      dtc_evidence_captured_at: dtcEvidenceCapturedAt,
+      dtcEvidenceProtocol,
+      dtc_evidence_protocol: dtcEvidenceProtocol,
+      dtcEvidenceScanSessionId,
+      dtc_evidence_scan_session_id: dtcEvidenceScanSessionId,
+      dtcEvidenceAcquisitionContextComplete,
+      dtc_evidence_acquisition_context_complete: dtcEvidenceAcquisitionContextComplete,
       dtcEvidenceScopeComplete,
       dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
@@ -21406,6 +21431,21 @@
     const currentDtcEvidenceVehicleScopeKey = String(readAliasValue(currentSummary, "dtcEvidenceVehicleScopeKey") || "").trim() || null;
     const importedDtcEvidenceScopeComplete = readFlag(importedQualitySummary, "dtcEvidenceScopeComplete");
     const currentDtcEvidenceScopeComplete = readFlag(currentSummary, "dtcEvidenceScopeComplete");
+    const importedDtcEvidenceCapturedAt = normalizeDtcEvidenceTimestampValue(readAliasValue(importedQualitySummary, "dtcEvidenceCapturedAt"));
+    const currentDtcEvidenceCapturedAt = normalizeDtcEvidenceTimestampValue(readAliasValue(currentSummary, "dtcEvidenceCapturedAt"));
+    const importedDtcEvidenceProtocol = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(importedQualitySummary, "dtcEvidenceProtocol"), 120);
+    const currentDtcEvidenceProtocol = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(currentSummary, "dtcEvidenceProtocol"), 120);
+    const importedDtcEvidenceScanSessionId = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(importedQualitySummary, "dtcEvidenceScanSessionId"), 120);
+    const currentDtcEvidenceScanSessionId = normalizeDtcEvidenceAcquisitionContextValue(readAliasValue(currentSummary, "dtcEvidenceScanSessionId"), 120);
+    const importedDtcEvidenceAcquisitionContextComplete = readFlag(importedQualitySummary, "dtcEvidenceAcquisitionContextComplete")
+      && Boolean(importedDtcEvidenceCapturedAt && importedDtcEvidenceProtocol && importedDtcEvidenceScanSessionId);
+    const currentDtcEvidenceAcquisitionContextComplete = readFlag(currentSummary, "dtcEvidenceAcquisitionContextComplete")
+      && Boolean(currentDtcEvidenceCapturedAt && currentDtcEvidenceProtocol && currentDtcEvidenceScanSessionId);
+    const dtcEvidenceProtocolMatch = Boolean(importedDtcEvidenceProtocol && importedDtcEvidenceProtocol === currentDtcEvidenceProtocol);
+    const dtcEvidenceCaptureOrderValid = Boolean(importedDtcEvidenceCapturedAt && currentDtcEvidenceCapturedAt
+      && Date.parse(currentDtcEvidenceCapturedAt) > Date.parse(importedDtcEvidenceCapturedAt));
+    const dtcEvidenceScanIdentityDistinct = Boolean(importedDtcEvidenceScanSessionId && currentDtcEvidenceScanSessionId
+      && importedDtcEvidenceScanSessionId !== currentDtcEvidenceScanSessionId);
     const importedDtcEvidenceValidationReported = readFlag(importedQualitySummary, "dtcEvidenceValidationReported") || importedInvalidDtcEvidenceIssueKeys.length > 0;
     const currentDtcEvidenceValidationReported = readFlag(currentSummary, "dtcEvidenceValidationReported") || currentInvalidDtcEvidenceIssueKeys.length > 0;
     const dtcEvidenceVehicleScopeMatch = Boolean(importedDtcEvidenceVehicleScopeKey && importedDtcEvidenceVehicleScopeKey === currentDtcEvidenceVehicleScopeKey);
@@ -21415,7 +21455,12 @@
       !importedDtcEvidenceScopeComplete ? "imported_dtc_evidence_scope_incomplete" : null,
       !currentDtcEvidenceScopeComplete ? "current_dtc_evidence_scope_incomplete" : null,
       importedDtcEvidenceScopeComplete && currentDtcEvidenceScopeComplete && !dtcEvidenceVehicleScopeMatch ? "dtc_evidence_vehicle_scope_mismatch" : null,
-      importedDtcEvidenceScopeComplete && currentDtcEvidenceScopeComplete && dtcEvidenceVehicleScopeMatch && !dtcEvidenceComparisonScopeMatch ? "dtc_evidence_ecu_dtc_scope_mismatch" : null
+      importedDtcEvidenceScopeComplete && currentDtcEvidenceScopeComplete && dtcEvidenceVehicleScopeMatch && !dtcEvidenceComparisonScopeMatch ? "dtc_evidence_ecu_dtc_scope_mismatch" : null,
+      !importedDtcEvidenceAcquisitionContextComplete ? "imported_dtc_evidence_acquisition_context_incomplete" : null,
+      !currentDtcEvidenceAcquisitionContextComplete ? "current_dtc_evidence_acquisition_context_incomplete" : null,
+      importedDtcEvidenceAcquisitionContextComplete && currentDtcEvidenceAcquisitionContextComplete && !dtcEvidenceProtocolMatch ? "dtc_evidence_protocol_mismatch" : null,
+      importedDtcEvidenceAcquisitionContextComplete && currentDtcEvidenceAcquisitionContextComplete && dtcEvidenceProtocolMatch && !dtcEvidenceCaptureOrderValid ? "dtc_evidence_capture_order_invalid" : null,
+      importedDtcEvidenceAcquisitionContextComplete && currentDtcEvidenceAcquisitionContextComplete && dtcEvidenceProtocolMatch && dtcEvidenceCaptureOrderValid && !dtcEvidenceScanIdentityDistinct ? "dtc_evidence_scan_identity_reused" : null
     ].filter(Boolean);
     const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported
       && currentDtcEvidenceValidationReported
@@ -21544,6 +21589,28 @@
       current_dtc_evidence_comparison_scope_keys: currentDtcEvidenceComparisonScopeKeys,
       dtcEvidenceComparisonScopeMatch,
       dtc_evidence_comparison_scope_match: dtcEvidenceComparisonScopeMatch,
+      importedDtcEvidenceCapturedAt,
+      imported_dtc_evidence_captured_at: importedDtcEvidenceCapturedAt,
+      currentDtcEvidenceCapturedAt,
+      current_dtc_evidence_captured_at: currentDtcEvidenceCapturedAt,
+      importedDtcEvidenceProtocol,
+      imported_dtc_evidence_protocol: importedDtcEvidenceProtocol,
+      currentDtcEvidenceProtocol,
+      current_dtc_evidence_protocol: currentDtcEvidenceProtocol,
+      dtcEvidenceProtocolMatch,
+      dtc_evidence_protocol_match: dtcEvidenceProtocolMatch,
+      importedDtcEvidenceScanSessionId,
+      imported_dtc_evidence_scan_session_id: importedDtcEvidenceScanSessionId,
+      currentDtcEvidenceScanSessionId,
+      current_dtc_evidence_scan_session_id: currentDtcEvidenceScanSessionId,
+      dtcEvidenceCaptureOrderValid,
+      dtc_evidence_capture_order_valid: dtcEvidenceCaptureOrderValid,
+      dtcEvidenceScanIdentityDistinct,
+      dtc_evidence_scan_identity_distinct: dtcEvidenceScanIdentityDistinct,
+      importedDtcEvidenceAcquisitionContextComplete,
+      imported_dtc_evidence_acquisition_context_complete: importedDtcEvidenceAcquisitionContextComplete,
+      currentDtcEvidenceAcquisitionContextComplete,
+      current_dtc_evidence_acquisition_context_complete: currentDtcEvidenceAcquisitionContextComplete,
       dtcEvidenceScopeBlockedReasonIds,
       dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       dtcEvidenceResolutionComparisonAvailable,
@@ -21625,6 +21692,12 @@
     const dtcEvidenceScopeComplete = pickDefined(summary.dtcEvidenceScopeComplete, summary.dtc_evidence_scope_complete, false) === true
       && Boolean(dtcEvidenceVehicleScopeKey)
       && dtcEvidenceComparisonScopeKeys.length > 0;
+    const dtcEvidenceCapturedAtInput = normalizeDtcEvidenceTimestampValue(pickDefined(summary.dtcEvidenceCapturedAt, summary.dtc_evidence_captured_at));
+    const dtcEvidenceCapturedAt = dtcEvidenceCapturedAtInput ? new Date(Date.parse(dtcEvidenceCapturedAtInput)).toISOString() : null;
+    const dtcEvidenceProtocol = normalizeDtcEvidenceAcquisitionContextValue(pickDefined(summary.dtcEvidenceProtocol, summary.dtc_evidence_protocol), 120);
+    const dtcEvidenceScanSessionId = normalizeDtcEvidenceAcquisitionContextValue(pickDefined(summary.dtcEvidenceScanSessionId, summary.dtc_evidence_scan_session_id), 120);
+    const dtcEvidenceAcquisitionContextComplete = pickDefined(summary.dtcEvidenceAcquisitionContextComplete, summary.dtc_evidence_acquisition_context_complete, false) === true
+      && Boolean(dtcEvidenceCapturedAt && dtcEvidenceProtocol && dtcEvidenceScanSessionId);
     const dtcEvidenceValidationReported = pickDefined(summary.dtcEvidenceValidationReported, summary.dtc_evidence_validation_reported, false) === true
       || invalidDtcEvidenceIssueKeys.length > 0;
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
@@ -21699,6 +21772,14 @@
       dtc_evidence_comparison_scope_keys: dtcEvidenceComparisonScopeKeys,
       dtcEvidenceScopeComplete,
       dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
+      dtcEvidenceCapturedAt,
+      dtc_evidence_captured_at: dtcEvidenceCapturedAt,
+      dtcEvidenceProtocol,
+      dtc_evidence_protocol: dtcEvidenceProtocol,
+      dtcEvidenceScanSessionId,
+      dtc_evidence_scan_session_id: dtcEvidenceScanSessionId,
+      dtcEvidenceAcquisitionContextComplete,
+      dtc_evidence_acquisition_context_complete: dtcEvidenceAcquisitionContextComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
@@ -33243,6 +33324,15 @@
     return normalized ? encodeURIComponent(normalized) : null;
   }
 
+  function normalizeDtcEvidenceAcquisitionContextValue(value, maxLength = 120) {
+    const normalized = redactSensitiveText(String(value ?? ""))
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maxLength)
+      .toUpperCase();
+    return normalized || null;
+  }
+
   function buildDtcEvidenceVehicleScopeKey(vehicleProfile = null) {
     const profile = normalizeVehicleProfileInput(vehicleProfile) || {};
     const maker = normalizeDtcEvidenceScopePart(profile.maker, 60);
@@ -33325,7 +33415,10 @@
           scope,
           ...(sourceEcu ? { sourceEcu, source_ecu: sourceEcu } : {}),
           ...(/^[PBCU][0-9A-F]{4,6}$/.test(dtcCode) ? { dtcCode, dtc_code: dtcCode } : {}),
-          ...(dtcSubcode ? { dtcSubcode, dtc_subcode: dtcSubcode } : {})
+          ...(dtcSubcode ? { dtcSubcode, dtc_subcode: dtcSubcode } : {}),
+          ...(normalizeDtcEvidenceTimestampValue(observation?.capturedAt || observation?.captured_at) ? { capturedAt: normalizeDtcEvidenceTimestampValue(observation?.capturedAt || observation?.captured_at), captured_at: normalizeDtcEvidenceTimestampValue(observation?.capturedAt || observation?.captured_at) } : {}),
+          ...(normalizeDtcEvidenceAcquisitionContextValue(observation?.protocol, 120) ? { protocol: normalizeDtcEvidenceAcquisitionContextValue(observation?.protocol, 120) } : {}),
+          ...(normalizeDtcEvidenceAcquisitionContextValue(observation?.scanSessionId || observation?.scan_session_id, 120) ? { scanSessionId: normalizeDtcEvidenceAcquisitionContextValue(observation?.scanSessionId || observation?.scan_session_id, 120), scan_session_id: normalizeDtcEvidenceAcquisitionContextValue(observation?.scanSessionId || observation?.scan_session_id, 120) } : {})
         };
       })
       .filter(Boolean);
@@ -33760,7 +33853,10 @@
             scope: rowEvidenceScope,
             sourceEcu: rowEvidenceEcu,
             dtcCode: rowEvidenceDtcCode,
-            dtcSubcode: rowEvidenceDtcSubcode
+            dtcSubcode: rowEvidenceDtcSubcode,
+            capturedAt: rowCapturedAt,
+            protocol: rowProtocol,
+            scanSessionId: rowScanSessionId
           });
         }
         return validation.value;
