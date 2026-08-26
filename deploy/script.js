@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3376件",
+  validationCheckLabel: "OBD安全検証 3379件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "実機サンプル受入監査を固定",
+  recentMilestone: "実機サンプル受入状態表示を固定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.234";
+const APP_VERSION = "3.13.235";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9245,6 +9245,39 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   return parts.length ? parts.join(" / ") : `${issueCount}件`;
 }
 
+function formatManufacturerSampleReadinessSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const status = String(summary.status || "").trim();
+  const requirementCountValue = summary.requirementCount ?? summary.requirement_count;
+  const completeRequirementCountValue = summary.completeRequirementCount ?? summary.complete_requirement_count;
+  const requirementCount = Number.isFinite(Number(requirementCountValue)) ? Number(requirementCountValue) : 0;
+  const completeRequirementCount = Number.isFinite(Number(completeRequirementCountValue)) ? Number(completeRequirementCountValue) : 0;
+  const missingRequirementIds = Array.isArray(summary.missingRequirementIds)
+    ? summary.missingRequirementIds
+    : Array.isArray(summary.missing_requirement_ids) ? summary.missing_requirement_ids : [];
+  const missingLabels = {
+    dtc_evidence_scope: "車両/ECU/DTC範囲",
+    acquisition_context: "取得時刻/方式/スキャンID",
+    transport_context: "試行/経路/VCI",
+    readout_contract: "読取区分/要求",
+    response_contract: "応答サービス/状態",
+    negative_response_context: "NRC/保留応答",
+    response_attempt_context: "否定対象/回数/待機",
+    evidence_validation_reported: "証跡検証報告",
+    evidence_values_valid: "証跡値"
+  };
+  if (status === "sample_not_observed" || summary.sampleObserved === false || summary.sample_observed === false) {
+    return "DTCサンプル未取込";
+  }
+  if (status === "contract_ready_unverified" || summary.contractCompleteForSampleReview === true || summary.contract_complete_for_sample_review === true) {
+    return `実機比較準備済み ${completeRequirementCount || requirementCount}/${requirementCount || completeRequirementCount} / 実車未検証`;
+  }
+  const visibleMissing = missingRequirementIds.slice(0, 2).map((id) => missingLabels[id] || id);
+  if (missingRequirementIds.length > visibleMissing.length) visibleMissing.push(`他${missingRequirementIds.length - visibleMissing.length}`);
+  const countLabel = requirementCount ? `${completeRequirementCount}/${requirementCount}` : `${missingRequirementIds.length}項目不足`;
+  return `証跡不足 ${countLabel}${visibleMissing.length ? ` (${visibleMissing.join("・")})` : ""}`;
+}
+
 function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   const issueDeltaValue = summary.issueCountDelta ?? summary.issue_count_delta;
@@ -9498,6 +9531,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(coreReadoutInventoryComparisonSummary, NO_DATA);
   const readoutQualitySummary = core.readoutQualitySummary || core.readout_quality_summary || flow.readoutQualitySummary || flow.readout_quality_summary || null;
   const readoutQualityLabel = formatReadoutQualitySummary(readoutQualitySummary, NO_DATA);
+  const manufacturerSampleReadinessSummary = session.manufacturerSampleReadinessSummary || session.manufacturer_sample_readiness_summary || null;
+  const manufacturerSampleReadinessLabel = formatManufacturerSampleReadinessSummary(manufacturerSampleReadinessSummary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session.importedReadoutQualityComparisonSummary || session.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session.importedReadoutQualityReviewRequestPlanSummary || session.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
   const checklistSummary = core.analysisChecklistSummary || core.analysis_checklist_summary || analysisReadinessSummary?.checklistSummary || analysisReadinessSummary?.checklist_summary || null;
@@ -9566,6 +9601,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "ECU応答比較", observedEcuComparisonLabel, observedEcuComparisonLabel !== "変化なし" && observedEcuComparisonLabel !== NO_DATA ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "在庫比較", coreReadoutInventoryComparisonLabel, coreReadoutInventoryComparisonSummary?.valueCountsChanged === true || coreReadoutInventoryComparisonSummary?.value_counts_changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "読取品質", readoutQualityLabel, readoutQualitySummary?.reviewRequired || readoutQualitySummary?.review_required ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "実機サンプル", manufacturerSampleReadinessLabel, manufacturerSampleReadinessSummary?.contractCompleteForSampleReview === true || manufacturerSampleReadinessSummary?.contract_complete_for_sample_review === true ? "ready" : manufacturerSampleReadinessSummary?.sampleObserved === true || manufacturerSampleReadinessSummary?.sample_observed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "候補照合", applicabilityFieldMatchLabel, applicabilityFieldMatchSummary?.reviewRequired === true || applicabilityFieldMatchSummary?.review_required === true ? "pending" : "");
@@ -9808,6 +9844,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const dtcMetadataComparisonLabel = formatDtcMetadataComparisonSummary(session?.importedCoreComparisonSummary || session?.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const dtcFaultDetectionCounterComparisonLabel = formatDtcFaultDetectionCounterComparisonSummary(session?.importedCoreComparisonSummary || session?.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null, NO_DATA);
   const readoutQualityLabel = formatReadoutQualitySummary(coreSessionStatus?.readoutQualitySummary || coreSessionStatus?.readout_quality_summary || session?.diagnosticFlowSummary?.readoutQualitySummary || session?.diagnosticFlowSummary?.readout_quality_summary, NO_DATA);
+  const manufacturerSampleReadinessLabel = formatManufacturerSampleReadinessSummary(session?.manufacturerSampleReadinessSummary || session?.manufacturer_sample_readiness_summary, NO_DATA);
   const readoutQualityComparisonLabel = formatReadoutQualityComparisonSummary(session?.importedReadoutQualityComparisonSummary || session?.imported_readout_quality_comparison_summary, NO_DATA);
   const readoutQualityReviewRequestLabel = formatReadoutQualityReviewRequestSummary(session?.importedReadoutQualityReviewRequestPlanSummary || session?.imported_readout_quality_review_request_plan_summary || importedSessionComparisonSummary, NO_DATA);
   const sourceLabel = formatObdSessionSourceLabel(session?.source || session?.source_type, NO_DATA);
@@ -9977,7 +10014,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(6, 0, ["ECU適合", vehicleApplicabilityEcuMatchLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
-  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel], ["読取理由", nextReadoutReasonLabel], ["計画安全", nextReadoutGuardLabel], ["計画差分", importedNextReadoutGuardComparisonLabel], ["次読取整合", nextReadoutChangeLabel], ["要求安全", nextReadoutRequestSafetyLabel], ["候補安全", nextReadoutCandidateSafetyLabel]);
+  values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ["実機サンプル", manufacturerSampleReadinessLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel], ["読取理由", nextReadoutReasonLabel], ["計画安全", nextReadoutGuardLabel], ["計画差分", importedNextReadoutGuardComparisonLabel], ["次読取整合", nextReadoutChangeLabel], ["要求安全", nextReadoutRequestSafetyLabel], ["候補安全", nextReadoutCandidateSafetyLabel]);
   values.splice(10, 0, ["品質比較", readoutQualityComparisonLabel]);
   values.splice(11, 0, ["品質確認要求", readoutQualityReviewRequestLabel]);
   values.push(["Evidence", vehicleApplicabilityEvidenceLabel]);
@@ -10661,6 +10698,10 @@ function analyzeObdScannerImport(options = {}) {
   const readoutQualityNote = formatReadoutQualitySummary(summaryCoreSessionStatus?.readoutQualitySummary || summaryCoreSessionStatus?.readout_quality_summary || summarySource.diagnosticFlowSummary?.readoutQualitySummary || summarySource.diagnosticFlowSummary?.readout_quality_summary, "");
   if (readoutQualityNote) {
     notes.push(`読取品質 ${readoutQualityNote}`);
+  }
+  const manufacturerSampleReadinessNote = formatManufacturerSampleReadinessSummary(summarySource.manufacturerSampleReadinessSummary || summarySource.manufacturer_sample_readiness_summary, "");
+  if (manufacturerSampleReadinessNote) {
+    notes.push(`実機サンプル ${manufacturerSampleReadinessNote}`);
   }
   const readoutQualityComparisonNote = formatReadoutQualityComparisonSummary(summarySource.importedReadoutQualityComparisonSummary || summarySource.imported_readout_quality_comparison_summary, "");
   if (readoutQualityComparisonNote) {
