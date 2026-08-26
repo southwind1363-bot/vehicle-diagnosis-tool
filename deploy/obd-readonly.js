@@ -21796,6 +21796,28 @@
             : resolvedInvalidDtcEvidenceIssueKeys.length > 0
               ? "improved"
               : currentInvalidDtcEvidenceIssueKeys.length > 0 ? "persisting" : "clear";
+    const importedManufacturerSampleReadiness = buildManufacturerSampleReadinessSummary(importedQualitySummary, null);
+    const currentManufacturerSampleReadiness = buildManufacturerSampleReadinessSummary(currentSummary, null);
+    const importedManufacturerSampleRequestScopeKeys = importedManufacturerSampleReadiness.requestScopeKeys || [];
+    const currentManufacturerSampleRequestScopeKeys = currentManufacturerSampleReadiness.requestScopeKeys || [];
+    const importedManufacturerSampleResponseObservationKeys = importedManufacturerSampleReadiness.responseObservationKeys || [];
+    const currentManufacturerSampleResponseObservationKeys = currentManufacturerSampleReadiness.responseObservationKeys || [];
+    const manufacturerSampleRequestScopeComparable = importedManufacturerSampleReadiness.contractCompleteForSampleReview === true
+      && currentManufacturerSampleReadiness.contractCompleteForSampleReview === true
+      && importedManufacturerSampleRequestScopeKeys.length > 0
+      && importedManufacturerSampleRequestScopeKeys.join("|") === currentManufacturerSampleRequestScopeKeys.join("|");
+    const manufacturerSampleResponseChanged = manufacturerSampleRequestScopeComparable
+      && importedManufacturerSampleResponseObservationKeys.join("|") !== currentManufacturerSampleResponseObservationKeys.join("|");
+    const manufacturerSampleResponseDifferenceStatus = !manufacturerSampleRequestScopeComparable
+      ? "not_comparable"
+      : manufacturerSampleResponseChanged ? "changed" : "unchanged";
+    const manufacturerSampleResponseDifferenceBlockedReasonIds = [
+      importedManufacturerSampleReadiness.contractCompleteForSampleReview !== true ? "imported_manufacturer_sample_incomplete" : null,
+      currentManufacturerSampleReadiness.contractCompleteForSampleReview !== true ? "current_manufacturer_sample_incomplete" : null,
+      importedManufacturerSampleReadiness.contractCompleteForSampleReview === true
+        && currentManufacturerSampleReadiness.contractCompleteForSampleReview === true
+        && !manufacturerSampleRequestScopeComparable ? "manufacturer_sample_request_scope_mismatch" : null
+    ].filter(Boolean);
     const issueAddedIds = diffIds(currentIssueIds, importedIssueIds);
     const issueRemovedIds = diffIds(importedIssueIds, currentIssueIds);
     const reviewIssueIds = [...new Set([
@@ -22022,6 +22044,22 @@
       dtc_evidence_resolution_comparison_available: dtcEvidenceResolutionComparisonAvailable,
       dtcEvidenceResolutionStatus,
       dtc_evidence_resolution_status: dtcEvidenceResolutionStatus,
+      manufacturerSampleRequestScopeComparable,
+      manufacturer_sample_request_scope_comparable: manufacturerSampleRequestScopeComparable,
+      manufacturerSampleResponseChanged,
+      manufacturer_sample_response_changed: manufacturerSampleResponseChanged,
+      manufacturerSampleResponseDifferenceStatus,
+      manufacturer_sample_response_difference_status: manufacturerSampleResponseDifferenceStatus,
+      manufacturerSampleResponseDifferenceBlockedReasonIds,
+      manufacturer_sample_response_difference_blocked_reason_ids: manufacturerSampleResponseDifferenceBlockedReasonIds,
+      importedManufacturerSampleRequestScopeKeys,
+      imported_manufacturer_sample_request_scope_keys: importedManufacturerSampleRequestScopeKeys,
+      currentManufacturerSampleRequestScopeKeys,
+      current_manufacturer_sample_request_scope_keys: currentManufacturerSampleRequestScopeKeys,
+      importedManufacturerSampleResponseObservationKeys,
+      imported_manufacturer_sample_response_observation_keys: importedManufacturerSampleResponseObservationKeys,
+      currentManufacturerSampleResponseObservationKeys,
+      current_manufacturer_sample_response_observation_keys: currentManufacturerSampleResponseObservationKeys,
       resolvedInvalidDtcEvidenceIssueKeys,
       resolved_invalid_dtc_evidence_issue_keys: resolvedInvalidDtcEvidenceIssueKeys,
       persistingInvalidDtcEvidenceIssueKeys,
