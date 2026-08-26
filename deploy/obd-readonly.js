@@ -13989,6 +13989,12 @@
     const dtcEvidenceEcuResponseStatuses = [...new Set(dtcEvidenceScopeInputs
       .map((row) => normalizeDtcEvidenceEcuResponseStatus(row?.ecuResponseStatus || row?.ecu_response_status || row?.responseStatus || row?.response_status))
       .filter(Boolean))].sort();
+    const dtcEvidenceNegativeResponseCodes = [...new Set(dtcEvidenceScopeInputs
+      .flatMap(readDtcEvidenceNegativeResponseCodes)
+      .filter(Boolean))].sort();
+    const dtcEvidenceResponsePendingObservedValues = [...new Set(dtcEvidenceScopeInputs
+      .map(resolveDtcEvidenceResponsePendingObserved)
+      .filter((value) => typeof value === "boolean"))];
     const dtcEvidenceCapturedAt = dtcEvidenceCapturedAtValues.length === 1 ? dtcEvidenceCapturedAtValues[0] : null;
     const dtcEvidenceProtocol = dtcEvidenceProtocolValues.length === 1 ? dtcEvidenceProtocolValues[0] : null;
     const dtcEvidenceScanSessionId = dtcEvidenceScanSessionIds.length === 1 ? dtcEvidenceScanSessionIds[0] : null;
@@ -13999,6 +14005,8 @@
     const dtcEvidenceRequestedService = dtcEvidenceRequestedServices.length === 1 ? dtcEvidenceRequestedServices[0] : null;
     const dtcEvidenceResponseService = dtcEvidenceResponseServices.length === 1 ? dtcEvidenceResponseServices[0] : null;
     const dtcEvidenceEcuResponseStatus = dtcEvidenceEcuResponseStatuses.length === 1 ? dtcEvidenceEcuResponseStatuses[0] : null;
+    const dtcEvidenceNegativeResponseCode = dtcEvidenceNegativeResponseCodes.length === 1 ? dtcEvidenceNegativeResponseCodes[0] : null;
+    const dtcEvidenceResponsePendingObserved = dtcEvidenceResponsePendingObservedValues.length === 1 ? dtcEvidenceResponsePendingObservedValues[0] : null;
     const dtcEvidenceAcquisitionContextComplete = dtcEvidenceScopeInputs.length > 0
       && Boolean(dtcEvidenceCapturedAt)
       && Boolean(dtcEvidenceProtocol)
@@ -14013,6 +14021,13 @@
     const dtcEvidenceResponseContractComplete = dtcEvidenceScopeInputs.length > 0
       && dtcEvidenceResponseServices.length <= 1
       && isDtcEvidenceResponseContractValid(dtcEvidenceResponseService, dtcEvidenceEcuResponseStatus);
+    const dtcEvidenceNegativeResponseContextComplete = dtcEvidenceScopeInputs.length > 0
+      && dtcEvidenceNegativeResponseCodes.length <= 1
+      && isDtcEvidenceNegativeResponseContextValid(
+        dtcEvidenceNegativeResponseCode,
+        dtcEvidenceEcuResponseStatus,
+        dtcEvidenceResponsePendingObserved
+      );
     const reportedInvalidDtcEvidenceScopedIssueKeys = Array.isArray(dtcEvidenceFieldReport?.scopedInvalidIssueKeys)
       ? dtcEvidenceFieldReport.scopedInvalidIssueKeys
       : Array.isArray(dtcEvidenceFieldReport?.scoped_invalid_issue_keys)
@@ -14123,6 +14138,12 @@
       dtc_evidence_ecu_response_status: dtcEvidenceEcuResponseStatus,
       dtcEvidenceResponseContractComplete,
       dtc_evidence_response_contract_complete: dtcEvidenceResponseContractComplete,
+      dtcEvidenceNegativeResponseCode,
+      dtc_evidence_negative_response_code: dtcEvidenceNegativeResponseCode,
+      dtcEvidenceResponsePendingObserved,
+      dtc_evidence_response_pending_observed: dtcEvidenceResponsePendingObserved,
+      dtcEvidenceNegativeResponseContextComplete,
+      dtc_evidence_negative_response_context_complete: dtcEvidenceNegativeResponseContextComplete,
       dtcEvidenceScopeComplete,
       dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
@@ -21509,6 +21530,10 @@
     const currentDtcEvidenceResponseService = normalizeDtcEvidenceResponseServiceValue(readAliasValue(currentSummary, "dtcEvidenceResponseService"));
     const importedDtcEvidenceEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(readAliasValue(importedQualitySummary, "dtcEvidenceEcuResponseStatus"));
     const currentDtcEvidenceEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(readAliasValue(currentSummary, "dtcEvidenceEcuResponseStatus"));
+    const importedDtcEvidenceNegativeResponseCode = normalizeDtcEvidenceNegativeResponseCodeValue(readAliasValue(importedQualitySummary, "dtcEvidenceNegativeResponseCode"));
+    const currentDtcEvidenceNegativeResponseCode = normalizeDtcEvidenceNegativeResponseCodeValue(readAliasValue(currentSummary, "dtcEvidenceNegativeResponseCode"));
+    const importedDtcEvidenceResponsePendingObserved = readAliasValue(importedQualitySummary, "dtcEvidenceResponsePendingObserved");
+    const currentDtcEvidenceResponsePendingObserved = readAliasValue(currentSummary, "dtcEvidenceResponsePendingObserved");
     const importedDtcEvidenceAcquisitionContextComplete = readFlag(importedQualitySummary, "dtcEvidenceAcquisitionContextComplete")
       && Boolean(importedDtcEvidenceCapturedAt && importedDtcEvidenceProtocol && importedDtcEvidenceScanSessionId);
     const currentDtcEvidenceAcquisitionContextComplete = readFlag(currentSummary, "dtcEvidenceAcquisitionContextComplete")
@@ -21525,6 +21550,10 @@
       && isDtcEvidenceResponseContractValid(importedDtcEvidenceResponseService, importedDtcEvidenceEcuResponseStatus);
     const currentDtcEvidenceResponseContractComplete = readFlag(currentSummary, "dtcEvidenceResponseContractComplete")
       && isDtcEvidenceResponseContractValid(currentDtcEvidenceResponseService, currentDtcEvidenceEcuResponseStatus);
+    const importedDtcEvidenceNegativeResponseContextComplete = readFlag(importedQualitySummary, "dtcEvidenceNegativeResponseContextComplete")
+      && isDtcEvidenceNegativeResponseContextValid(importedDtcEvidenceNegativeResponseCode, importedDtcEvidenceEcuResponseStatus, importedDtcEvidenceResponsePendingObserved);
+    const currentDtcEvidenceNegativeResponseContextComplete = readFlag(currentSummary, "dtcEvidenceNegativeResponseContextComplete")
+      && isDtcEvidenceNegativeResponseContextValid(currentDtcEvidenceNegativeResponseCode, currentDtcEvidenceEcuResponseStatus, currentDtcEvidenceResponsePendingObserved);
     const dtcEvidenceProtocolMatch = Boolean(importedDtcEvidenceProtocol && importedDtcEvidenceProtocol === currentDtcEvidenceProtocol);
     const dtcEvidenceCaptureOrderValid = Boolean(importedDtcEvidenceCapturedAt && currentDtcEvidenceCapturedAt
       && Date.parse(currentDtcEvidenceCapturedAt) > Date.parse(importedDtcEvidenceCapturedAt));
@@ -21545,6 +21574,12 @@
       && importedDtcEvidenceResponseService === currentDtcEvidenceResponseService;
     const dtcEvidenceEcuResponseStatusMatch = Boolean(importedDtcEvidenceEcuResponseStatus
       && importedDtcEvidenceEcuResponseStatus === currentDtcEvidenceEcuResponseStatus);
+    const dtcEvidenceNegativeResponseCodeMatch = importedDtcEvidenceNegativeResponseContextComplete
+      && currentDtcEvidenceNegativeResponseContextComplete
+      && importedDtcEvidenceNegativeResponseCode === currentDtcEvidenceNegativeResponseCode;
+    const dtcEvidenceResponsePendingObservedMatch = importedDtcEvidenceNegativeResponseContextComplete
+      && currentDtcEvidenceNegativeResponseContextComplete
+      && importedDtcEvidenceResponsePendingObserved === currentDtcEvidenceResponsePendingObserved;
     const importedDtcEvidenceValidationReported = readFlag(importedQualitySummary, "dtcEvidenceValidationReported") || importedInvalidDtcEvidenceIssueKeys.length > 0;
     const currentDtcEvidenceValidationReported = readFlag(currentSummary, "dtcEvidenceValidationReported") || currentInvalidDtcEvidenceIssueKeys.length > 0;
     const dtcEvidenceVehicleScopeMatch = Boolean(importedDtcEvidenceVehicleScopeKey && importedDtcEvidenceVehicleScopeKey === currentDtcEvidenceVehicleScopeKey);
@@ -21572,7 +21607,11 @@
       !importedDtcEvidenceResponseContractComplete ? "imported_dtc_evidence_response_contract_incomplete" : null,
       !currentDtcEvidenceResponseContractComplete ? "current_dtc_evidence_response_contract_incomplete" : null,
       importedDtcEvidenceResponseContractComplete && currentDtcEvidenceResponseContractComplete && !dtcEvidenceResponseServiceMatch ? "dtc_evidence_response_service_mismatch" : null,
-      importedDtcEvidenceResponseContractComplete && currentDtcEvidenceResponseContractComplete && !dtcEvidenceEcuResponseStatusMatch ? "dtc_evidence_ecu_response_status_mismatch" : null
+      importedDtcEvidenceResponseContractComplete && currentDtcEvidenceResponseContractComplete && !dtcEvidenceEcuResponseStatusMatch ? "dtc_evidence_ecu_response_status_mismatch" : null,
+      !importedDtcEvidenceNegativeResponseContextComplete ? "imported_dtc_evidence_negative_response_context_incomplete" : null,
+      !currentDtcEvidenceNegativeResponseContextComplete ? "current_dtc_evidence_negative_response_context_incomplete" : null,
+      importedDtcEvidenceNegativeResponseContextComplete && currentDtcEvidenceNegativeResponseContextComplete && !dtcEvidenceNegativeResponseCodeMatch ? "dtc_evidence_negative_response_code_mismatch" : null,
+      importedDtcEvidenceNegativeResponseContextComplete && currentDtcEvidenceNegativeResponseContextComplete && !dtcEvidenceResponsePendingObservedMatch ? "dtc_evidence_response_pending_state_mismatch" : null
     ].filter(Boolean);
     const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported
       && currentDtcEvidenceValidationReported
@@ -21777,6 +21816,22 @@
       imported_dtc_evidence_response_contract_complete: importedDtcEvidenceResponseContractComplete,
       currentDtcEvidenceResponseContractComplete,
       current_dtc_evidence_response_contract_complete: currentDtcEvidenceResponseContractComplete,
+      importedDtcEvidenceNegativeResponseCode,
+      imported_dtc_evidence_negative_response_code: importedDtcEvidenceNegativeResponseCode,
+      currentDtcEvidenceNegativeResponseCode,
+      current_dtc_evidence_negative_response_code: currentDtcEvidenceNegativeResponseCode,
+      dtcEvidenceNegativeResponseCodeMatch,
+      dtc_evidence_negative_response_code_match: dtcEvidenceNegativeResponseCodeMatch,
+      importedDtcEvidenceResponsePendingObserved,
+      imported_dtc_evidence_response_pending_observed: importedDtcEvidenceResponsePendingObserved,
+      currentDtcEvidenceResponsePendingObserved,
+      current_dtc_evidence_response_pending_observed: currentDtcEvidenceResponsePendingObserved,
+      dtcEvidenceResponsePendingObservedMatch,
+      dtc_evidence_response_pending_observed_match: dtcEvidenceResponsePendingObservedMatch,
+      importedDtcEvidenceNegativeResponseContextComplete,
+      imported_dtc_evidence_negative_response_context_complete: importedDtcEvidenceNegativeResponseContextComplete,
+      currentDtcEvidenceNegativeResponseContextComplete,
+      current_dtc_evidence_negative_response_context_complete: currentDtcEvidenceNegativeResponseContextComplete,
       dtcEvidenceScopeBlockedReasonIds,
       dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       dtcEvidenceResolutionComparisonAvailable,
@@ -21877,6 +21932,10 @@
     const dtcEvidenceEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(pickDefined(summary.dtcEvidenceEcuResponseStatus, summary.dtc_evidence_ecu_response_status));
     const dtcEvidenceResponseContractComplete = pickDefined(summary.dtcEvidenceResponseContractComplete, summary.dtc_evidence_response_contract_complete, false) === true
       && isDtcEvidenceResponseContractValid(dtcEvidenceResponseService, dtcEvidenceEcuResponseStatus);
+    const dtcEvidenceNegativeResponseCode = normalizeDtcEvidenceNegativeResponseCodeValue(pickDefined(summary.dtcEvidenceNegativeResponseCode, summary.dtc_evidence_negative_response_code));
+    const dtcEvidenceResponsePendingObserved = pickDefined(summary.dtcEvidenceResponsePendingObserved, summary.dtc_evidence_response_pending_observed);
+    const dtcEvidenceNegativeResponseContextComplete = pickDefined(summary.dtcEvidenceNegativeResponseContextComplete, summary.dtc_evidence_negative_response_context_complete, false) === true
+      && isDtcEvidenceNegativeResponseContextValid(dtcEvidenceNegativeResponseCode, dtcEvidenceEcuResponseStatus, dtcEvidenceResponsePendingObserved);
     const dtcEvidenceValidationReported = pickDefined(summary.dtcEvidenceValidationReported, summary.dtc_evidence_validation_reported, false) === true
       || invalidDtcEvidenceIssueKeys.length > 0;
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
@@ -21979,6 +22038,12 @@
       dtc_evidence_ecu_response_status: dtcEvidenceEcuResponseStatus,
       dtcEvidenceResponseContractComplete,
       dtc_evidence_response_contract_complete: dtcEvidenceResponseContractComplete,
+      dtcEvidenceNegativeResponseCode,
+      dtc_evidence_negative_response_code: dtcEvidenceNegativeResponseCode,
+      dtcEvidenceResponsePendingObserved,
+      dtc_evidence_response_pending_observed: dtcEvidenceResponsePendingObserved,
+      dtcEvidenceNegativeResponseContextComplete,
+      dtc_evidence_negative_response_context_complete: dtcEvidenceNegativeResponseContextComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
@@ -27694,6 +27759,7 @@
       const udsResponseSubfunction = redactSensitiveText(String(rowValue.udsResponseSubfunction || rowValue.uds_response_subfunction || rowValue.responseSubfunction || rowValue.response_subfunction || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsNegativeResponseCode = redactSensitiveText(String(rowValue.udsNegativeResponseCode || rowValue.uds_negative_response_code || rowValue.negativeResponseCode || rowValue.negative_response_code || rowValue.nrc || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsResponseState = redactSensitiveText(String(rowValue.udsResponseState || rowValue.uds_response_state || rowValue.responseState || rowValue.response_state || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const responsePendingObserved = resolveDtcEvidenceResponsePendingObserved(rowValue);
       const udsDtcMemorySelection = redactSensitiveText(String(rowValue.udsDtcMemorySelection || rowValue.uds_dtc_memory_selection || rowValue.dtcMemorySelection || rowValue.dtc_memory_selection || rowValue.memorySelection || rowValue.memory_selection || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcFormatIdentifier = redactSensitiveText(String(rowValue.udsDtcFormatIdentifier || rowValue.uds_dtc_format_identifier || rowValue.dtcFormatIdentifier || rowValue.dtc_format_identifier || rowValue.formatIdentifier || rowValue.format_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcStatusAvailabilityMask = redactSensitiveText(String(rowValue.udsDtcStatusAvailabilityMask || rowValue.uds_dtc_status_availability_mask || rowValue.dtcStatusAvailabilityMask || rowValue.dtc_status_availability_mask || rowValue.statusAvailabilityMask || rowValue.status_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
@@ -27805,6 +27871,7 @@
         ...(udsResponseSubfunction ? { udsResponseSubfunction, uds_response_subfunction: udsResponseSubfunction } : {}),
         ...(udsNegativeResponseCode ? { udsNegativeResponseCode, uds_negative_response_code: udsNegativeResponseCode } : {}),
         ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {}),
+        ...(typeof responsePendingObserved === "boolean" ? { responsePendingObserved, response_pending_observed: responsePendingObserved } : {}),
         ...(udsDtcMemorySelection ? { udsDtcMemorySelection, uds_dtc_memory_selection: udsDtcMemorySelection } : {}),
         ...(udsDtcFormatIdentifier ? { udsDtcFormatIdentifier, uds_dtc_format_identifier: udsDtcFormatIdentifier } : {}),
         ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {}),
@@ -33621,6 +33688,43 @@
     if (ecuResponseStatus === "reported") return Boolean(responseService && responseService !== "7F");
     if (["negative_response", "pending_response"].includes(ecuResponseStatus)) return responseService === "7F";
     if (["no_response", "timeout", "blocked", "failed", "unavailable"].includes(ecuResponseStatus)) return responseService === null;
+    return false;
+  }
+
+  function normalizeDtcEvidenceNegativeResponseCodeValue(value) {
+    const normalized = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+    return /^[0-9A-F]{2}$/.test(normalized) ? normalized : null;
+  }
+
+  function readDtcEvidenceNegativeResponseCodes(row = {}) {
+    return [...new Set([
+      row?.udsNegativeResponseCode,
+      row?.uds_negative_response_code,
+      row?.negativeResponseCode,
+      row?.negative_response_code,
+      row?.nrc,
+      ...(Array.isArray(row?.negativeResponseCodes) ? row.negativeResponseCodes : []),
+      ...(Array.isArray(row?.negative_response_codes) ? row.negative_response_codes : [])
+    ].map(normalizeDtcEvidenceNegativeResponseCodeValue).filter(Boolean))];
+  }
+
+  function resolveDtcEvidenceResponsePendingObserved(row = {}) {
+    const explicit = row?.responsePendingObserved ?? row?.response_pending_observed ?? row?.pendingResponseObserved ?? row?.pending_response_observed;
+    if (typeof explicit === "boolean") return explicit;
+    const count = Number(row?.pendingNegativeResponseCount ?? row?.pending_negative_response_count);
+    if (Number.isFinite(count) && count > 0) return true;
+    const responseState = String(row?.udsResponseState || row?.uds_response_state || row?.responseState || row?.response_state || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    if (["pending", "response_pending", "pending_response", "pending_observed", "pending_then_reported", "retry_pending"].includes(responseState)) return true;
+    if (["completed", "complete", "final", "terminal", "resolved", "not_pending", "no_pending_response"].includes(responseState)) return false;
+    const ecuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(row?.ecuResponseStatus || row?.ecu_response_status || row?.responseStatus || row?.response_status);
+    return ecuResponseStatus ? ecuResponseStatus === "pending_response" : null;
+  }
+
+  function isDtcEvidenceNegativeResponseContextValid(negativeResponseCode, ecuResponseStatus, responsePendingObserved) {
+    if (typeof responsePendingObserved !== "boolean") return false;
+    if (ecuResponseStatus === "pending_response") return negativeResponseCode === "78" && responsePendingObserved;
+    if (ecuResponseStatus === "negative_response") return Boolean(negativeResponseCode && negativeResponseCode !== "78");
+    if (["reported", "no_response", "timeout", "blocked", "failed", "unavailable"].includes(ecuResponseStatus)) return negativeResponseCode === null;
     return false;
   }
 
