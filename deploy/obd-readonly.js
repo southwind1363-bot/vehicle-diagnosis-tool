@@ -26536,6 +26536,9 @@
           const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(row.dtcFailureOccurrenceCount ?? row.dtc_failure_occurrence_count ?? row.failureOccurrenceCount ?? row.failure_occurrence_count ?? row.faultEventCount ?? row.fault_event_count);
           const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(row.dtcRecoveryCount ?? row.dtc_recovery_count ?? row.recoveryCount ?? row.recovery_count ?? row.normalizationCount ?? row.normalization_count ?? row.healingCount ?? row.healing_count);
           const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(row.dtcLastClearedAt || row.dtc_last_cleared_at || row.lastClearedAt || row.last_cleared_at || row.lastDtcClearAt || row.last_dtc_clear_at || row.dtcClearedAt || row.dtc_cleared_at);
+          const dtcConfirmationThreshold = normalizeDtcLifecycleMeasurementValue(row.dtcConfirmationThreshold ?? row.dtc_confirmation_threshold ?? row.confirmationThreshold ?? row.confirmation_threshold ?? row.failureConfirmationThreshold ?? row.failure_confirmation_threshold);
+          const dtcRecoveryThreshold = normalizeDtcLifecycleMeasurementValue(row.dtcRecoveryThreshold ?? row.dtc_recovery_threshold ?? row.recoveryThreshold ?? row.recovery_threshold ?? row.normalizationThreshold ?? row.normalization_threshold ?? row.healingThreshold ?? row.healing_threshold);
+          const dtcAgingCycleCount = normalizeDtcLifecycleMeasurementValue(row.dtcAgingCycleCount ?? row.dtc_aging_cycle_count ?? row.agingCycleCount ?? row.aging_cycle_count ?? row.agingCycles ?? row.aging_cycles);
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26649,6 +26652,9 @@
             ...(dtcFailureOccurrenceCount ? { dtcFailureOccurrenceCount, dtc_failure_occurrence_count: dtcFailureOccurrenceCount } : {}),
             ...(dtcRecoveryCount ? { dtcRecoveryCount, dtc_recovery_count: dtcRecoveryCount } : {}),
             ...(dtcLastClearedAt ? { dtcLastClearedAt, dtc_last_cleared_at: dtcLastClearedAt } : {}),
+            ...(dtcConfirmationThreshold ? { dtcConfirmationThreshold, dtc_confirmation_threshold: dtcConfirmationThreshold } : {}),
+            ...(dtcRecoveryThreshold ? { dtcRecoveryThreshold, dtc_recovery_threshold: dtcRecoveryThreshold } : {}),
+            ...(dtcAgingCycleCount ? { dtcAgingCycleCount, dtc_aging_cycle_count: dtcAgingCycleCount } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26822,6 +26828,9 @@
       const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(rowValue.dtcFailureOccurrenceCount ?? rowValue.dtc_failure_occurrence_count ?? rowValue.failureOccurrenceCount ?? rowValue.failure_occurrence_count ?? rowValue.faultEventCount ?? rowValue.fault_event_count);
       const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(rowValue.dtcRecoveryCount ?? rowValue.dtc_recovery_count ?? rowValue.recoveryCount ?? rowValue.recovery_count ?? rowValue.normalizationCount ?? rowValue.normalization_count ?? rowValue.healingCount ?? rowValue.healing_count);
       const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcLastClearedAt || rowValue.dtc_last_cleared_at || rowValue.lastClearedAt || rowValue.last_cleared_at || rowValue.lastDtcClearAt || rowValue.last_dtc_clear_at || rowValue.dtcClearedAt || rowValue.dtc_cleared_at);
+      const dtcConfirmationThreshold = normalizeDtcLifecycleMeasurementValue(rowValue.dtcConfirmationThreshold ?? rowValue.dtc_confirmation_threshold ?? rowValue.confirmationThreshold ?? rowValue.confirmation_threshold ?? rowValue.failureConfirmationThreshold ?? rowValue.failure_confirmation_threshold);
+      const dtcRecoveryThreshold = normalizeDtcLifecycleMeasurementValue(rowValue.dtcRecoveryThreshold ?? rowValue.dtc_recovery_threshold ?? rowValue.recoveryThreshold ?? rowValue.recovery_threshold ?? rowValue.normalizationThreshold ?? rowValue.normalization_threshold ?? rowValue.healingThreshold ?? rowValue.healing_threshold);
+      const dtcAgingCycleCount = normalizeDtcLifecycleMeasurementValue(rowValue.dtcAgingCycleCount ?? rowValue.dtc_aging_cycle_count ?? rowValue.agingCycleCount ?? rowValue.aging_cycle_count ?? rowValue.agingCycles ?? rowValue.aging_cycles);
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26923,6 +26932,9 @@
         ...(dtcFailureOccurrenceCount ? { dtcFailureOccurrenceCount, dtc_failure_occurrence_count: dtcFailureOccurrenceCount } : {}),
         ...(dtcRecoveryCount ? { dtcRecoveryCount, dtc_recovery_count: dtcRecoveryCount } : {}),
         ...(dtcLastClearedAt ? { dtcLastClearedAt, dtc_last_cleared_at: dtcLastClearedAt } : {}),
+        ...(dtcConfirmationThreshold ? { dtcConfirmationThreshold, dtc_confirmation_threshold: dtcConfirmationThreshold } : {}),
+        ...(dtcRecoveryThreshold ? { dtcRecoveryThreshold, dtc_recovery_threshold: dtcRecoveryThreshold } : {}),
+        ...(dtcAgingCycleCount ? { dtcAgingCycleCount, dtc_aging_cycle_count: dtcAgingCycleCount } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28509,6 +28521,9 @@
       const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(row?.dtcFailureOccurrenceCount ?? row?.dtc_failure_occurrence_count ?? row?.failureOccurrenceCount ?? row?.failure_occurrence_count ?? row?.faultEventCount ?? row?.fault_event_count);
       const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(row?.dtcRecoveryCount ?? row?.dtc_recovery_count ?? row?.recoveryCount ?? row?.recovery_count ?? row?.normalizationCount ?? row?.normalization_count ?? row?.healingCount ?? row?.healing_count);
       const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(row?.dtcLastClearedAt || row?.dtc_last_cleared_at || row?.lastClearedAt || row?.last_cleared_at || row?.lastDtcClearAt || row?.last_dtc_clear_at || row?.dtcClearedAt || row?.dtc_cleared_at);
+      const dtcConfirmationThreshold = normalizeDtcLifecycleMeasurementValue(row?.dtcConfirmationThreshold ?? row?.dtc_confirmation_threshold ?? row?.confirmationThreshold ?? row?.confirmation_threshold ?? row?.failureConfirmationThreshold ?? row?.failure_confirmation_threshold);
+      const dtcRecoveryThreshold = normalizeDtcLifecycleMeasurementValue(row?.dtcRecoveryThreshold ?? row?.dtc_recovery_threshold ?? row?.recoveryThreshold ?? row?.recovery_threshold ?? row?.normalizationThreshold ?? row?.normalization_threshold ?? row?.healingThreshold ?? row?.healing_threshold);
+      const dtcAgingCycleCount = normalizeDtcLifecycleMeasurementValue(row?.dtcAgingCycleCount ?? row?.dtc_aging_cycle_count ?? row?.agingCycleCount ?? row?.aging_cycle_count ?? row?.agingCycles ?? row?.aging_cycles);
       return {
         id,
         name,
@@ -28609,7 +28624,10 @@
         ...(dtcTimeSinceClearUnit ? { dtcTimeSinceClearUnit, dtc_time_since_clear_unit: dtcTimeSinceClearUnit } : {}),
         ...(dtcFailureOccurrenceCount ? { dtcFailureOccurrenceCount, dtc_failure_occurrence_count: dtcFailureOccurrenceCount } : {}),
         ...(dtcRecoveryCount ? { dtcRecoveryCount, dtc_recovery_count: dtcRecoveryCount } : {}),
-        ...(dtcLastClearedAt ? { dtcLastClearedAt, dtc_last_cleared_at: dtcLastClearedAt } : {})
+        ...(dtcLastClearedAt ? { dtcLastClearedAt, dtc_last_cleared_at: dtcLastClearedAt } : {}),
+        ...(dtcConfirmationThreshold ? { dtcConfirmationThreshold, dtc_confirmation_threshold: dtcConfirmationThreshold } : {}),
+        ...(dtcRecoveryThreshold ? { dtcRecoveryThreshold, dtc_recovery_threshold: dtcRecoveryThreshold } : {}),
+        ...(dtcAgingCycleCount ? { dtcAgingCycleCount, dtc_aging_cycle_count: dtcAgingCycleCount } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28711,7 +28729,10 @@
         dtcTimeSinceClearUnit: row.dtcTimeSinceClearUnit || null,
         dtcFailureOccurrenceCount: row.dtcFailureOccurrenceCount || null,
         dtcRecoveryCount: row.dtcRecoveryCount || null,
-        dtcLastClearedAt: row.dtcLastClearedAt || null
+        dtcLastClearedAt: row.dtcLastClearedAt || null,
+        dtcConfirmationThreshold: row.dtcConfirmationThreshold || null,
+        dtcRecoveryThreshold: row.dtcRecoveryThreshold || null,
+        dtcAgingCycleCount: row.dtcAgingCycleCount || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32581,6 +32602,9 @@
     const dtcFailureOccurrenceCountIndex = findIndex("dtc failure occurrence count", "dtc_failure_occurrence_count", "failure occurrence count", "failure_occurrence_count", "fault event count", "fault_event_count", "故障発生回数");
     const dtcRecoveryCountIndex = findIndex("dtc recovery count", "dtc_recovery_count", "recovery count", "recovery_count", "normalization count", "normalization_count", "healing count", "healing_count", "正常化回数");
     const dtcLastClearedAtIndex = findIndex("dtc last cleared at", "dtc_last_cleared_at", "last cleared at", "last_cleared_at", "last dtc clear at", "last_dtc_clear_at", "dtc cleared at", "dtc_cleared_at", "最後の消去時刻");
+    const dtcConfirmationThresholdIndex = findIndex("dtc confirmation threshold", "dtc_confirmation_threshold", "confirmation threshold", "confirmation_threshold", "failure confirmation threshold", "failure_confirmation_threshold", "故障確定閾値");
+    const dtcRecoveryThresholdIndex = findIndex("dtc recovery threshold", "dtc_recovery_threshold", "recovery threshold", "recovery_threshold", "normalization threshold", "normalization_threshold", "healing threshold", "healing_threshold", "正常化閾値");
+    const dtcAgingCycleCountIndex = findIndex("dtc aging cycle count", "dtc_aging_cycle_count", "aging cycle count", "aging_cycle_count", "aging cycles", "aging_cycles", "エージングサイクル数");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
@@ -32832,6 +32856,9 @@
       const rowDtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcFailureOccurrenceCountIndex, 80));
       const rowDtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcRecoveryCountIndex, 80));
       const rowDtcLastClearedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcLastClearedAtIndex, 80));
+      const rowDtcConfirmationThreshold = normalizeDtcLifecycleMeasurementValue(cellAt(dtcConfirmationThresholdIndex, 80));
+      const rowDtcRecoveryThreshold = normalizeDtcLifecycleMeasurementValue(cellAt(dtcRecoveryThresholdIndex, 80));
+      const rowDtcAgingCycleCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcAgingCycleCountIndex, 80));
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -33054,6 +33081,9 @@
           ...(rowDtcFailureOccurrenceCount ? { dtc_failure_occurrence_count: rowDtcFailureOccurrenceCount } : {}),
           ...(rowDtcRecoveryCount ? { dtc_recovery_count: rowDtcRecoveryCount } : {}),
           ...(rowDtcLastClearedAt ? { dtc_last_cleared_at: rowDtcLastClearedAt } : {}),
+          ...(rowDtcConfirmationThreshold ? { dtc_confirmation_threshold: rowDtcConfirmationThreshold } : {}),
+          ...(rowDtcRecoveryThreshold ? { dtc_recovery_threshold: rowDtcRecoveryThreshold } : {}),
+          ...(rowDtcAgingCycleCount ? { dtc_aging_cycle_count: rowDtcAgingCycleCount } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -33241,6 +33271,9 @@
           ...(rowDtcFailureOccurrenceCount ? { dtc_failure_occurrence_count: rowDtcFailureOccurrenceCount } : {}),
           ...(rowDtcRecoveryCount ? { dtc_recovery_count: rowDtcRecoveryCount } : {}),
           ...(rowDtcLastClearedAt ? { dtc_last_cleared_at: rowDtcLastClearedAt } : {}),
+          ...(rowDtcConfirmationThreshold ? { dtc_confirmation_threshold: rowDtcConfirmationThreshold } : {}),
+          ...(rowDtcRecoveryThreshold ? { dtc_recovery_threshold: rowDtcRecoveryThreshold } : {}),
+          ...(rowDtcAgingCycleCount ? { dtc_aging_cycle_count: rowDtcAgingCycleCount } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34751,6 +34784,9 @@
         dtcFailureOccurrenceCount: normalizeDtcLifecycleMeasurementValue(row?.dtcFailureOccurrenceCount ?? row?.dtc_failure_occurrence_count ?? row?.failureOccurrenceCount ?? row?.failure_occurrence_count ?? row?.faultEventCount ?? row?.fault_event_count),
         dtcRecoveryCount: normalizeDtcLifecycleMeasurementValue(row?.dtcRecoveryCount ?? row?.dtc_recovery_count ?? row?.recoveryCount ?? row?.recovery_count ?? row?.normalizationCount ?? row?.normalization_count ?? row?.healingCount ?? row?.healing_count),
         dtcLastClearedAt: normalizeDtcEvidenceTimestampValue(row?.dtcLastClearedAt || row?.dtc_last_cleared_at || row?.lastClearedAt || row?.last_cleared_at || row?.lastDtcClearAt || row?.last_dtc_clear_at || row?.dtcClearedAt || row?.dtc_cleared_at),
+        dtcConfirmationThreshold: normalizeDtcLifecycleMeasurementValue(row?.dtcConfirmationThreshold ?? row?.dtc_confirmation_threshold ?? row?.confirmationThreshold ?? row?.confirmation_threshold ?? row?.failureConfirmationThreshold ?? row?.failure_confirmation_threshold),
+        dtcRecoveryThreshold: normalizeDtcLifecycleMeasurementValue(row?.dtcRecoveryThreshold ?? row?.dtc_recovery_threshold ?? row?.recoveryThreshold ?? row?.recovery_threshold ?? row?.normalizationThreshold ?? row?.normalization_threshold ?? row?.healingThreshold ?? row?.healing_threshold),
+        dtcAgingCycleCount: normalizeDtcLifecycleMeasurementValue(row?.dtcAgingCycleCount ?? row?.dtc_aging_cycle_count ?? row?.agingCycleCount ?? row?.aging_cycle_count ?? row?.agingCycles ?? row?.aging_cycles),
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34864,6 +34900,9 @@
       const dtcFailureOccurrenceCount = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcFailureOccurrenceCount ?? dtcRow?.dtc_failure_occurrence_count ?? dtcRow?.failureOccurrenceCount ?? dtcRow?.failure_occurrence_count ?? dtcRow?.faultEventCount ?? dtcRow?.fault_event_count);
       const dtcRecoveryCount = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcRecoveryCount ?? dtcRow?.dtc_recovery_count ?? dtcRow?.recoveryCount ?? dtcRow?.recovery_count ?? dtcRow?.normalizationCount ?? dtcRow?.normalization_count ?? dtcRow?.healingCount ?? dtcRow?.healing_count);
       const dtcLastClearedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcLastClearedAt || dtcRow?.dtc_last_cleared_at || dtcRow?.lastClearedAt || dtcRow?.last_cleared_at || dtcRow?.lastDtcClearAt || dtcRow?.last_dtc_clear_at || dtcRow?.dtcClearedAt || dtcRow?.dtc_cleared_at);
+      const dtcConfirmationThreshold = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcConfirmationThreshold ?? dtcRow?.dtc_confirmation_threshold ?? dtcRow?.confirmationThreshold ?? dtcRow?.confirmation_threshold ?? dtcRow?.failureConfirmationThreshold ?? dtcRow?.failure_confirmation_threshold);
+      const dtcRecoveryThreshold = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcRecoveryThreshold ?? dtcRow?.dtc_recovery_threshold ?? dtcRow?.recoveryThreshold ?? dtcRow?.recovery_threshold ?? dtcRow?.normalizationThreshold ?? dtcRow?.normalization_threshold ?? dtcRow?.healingThreshold ?? dtcRow?.healing_threshold);
+      const dtcAgingCycleCount = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcAgingCycleCount ?? dtcRow?.dtc_aging_cycle_count ?? dtcRow?.agingCycleCount ?? dtcRow?.aging_cycle_count ?? dtcRow?.agingCycles ?? dtcRow?.aging_cycles);
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34940,6 +34979,9 @@
       if (dtcFailureOccurrenceCount && response.dtcFailureOccurrenceCount && normalizeCsvDiagnosticCounterIdentity(dtcFailureOccurrenceCount) !== normalizeCsvDiagnosticCounterIdentity(response.dtcFailureOccurrenceCount)) return false;
       if (dtcRecoveryCount && response.dtcRecoveryCount && normalizeCsvDiagnosticCounterIdentity(dtcRecoveryCount) !== normalizeCsvDiagnosticCounterIdentity(response.dtcRecoveryCount)) return false;
       if (dtcLastClearedAt && response.dtcLastClearedAt && normalizeCsvDiagnosticTimestampIdentity(dtcLastClearedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcLastClearedAt)) return false;
+      if (dtcConfirmationThreshold && response.dtcConfirmationThreshold && normalizeCsvDiagnosticMeasurementIdentity(dtcConfirmationThreshold) !== normalizeCsvDiagnosticMeasurementIdentity(response.dtcConfirmationThreshold)) return false;
+      if (dtcRecoveryThreshold && response.dtcRecoveryThreshold && normalizeCsvDiagnosticMeasurementIdentity(dtcRecoveryThreshold) !== normalizeCsvDiagnosticMeasurementIdentity(response.dtcRecoveryThreshold)) return false;
+      if (dtcAgingCycleCount && response.dtcAgingCycleCount && normalizeCsvDiagnosticCounterIdentity(dtcAgingCycleCount) !== normalizeCsvDiagnosticCounterIdentity(response.dtcAgingCycleCount)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
