@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3366件",
+  validationCheckLabel: "OBD安全検証 3367件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "DTC証跡の品質差分案内を固定",
+  recentMilestone: "DTC証跡の修理前後品質比較を固定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.222";
+const APP_VERSION = "3.13.223";
 const APP_LAST_UPDATED = "2026-08-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3006,6 +3006,11 @@ function formatPostRepairReassessmentEntries(summary = null) {
   const livePidValueDeltaRows = summary.livePidValueDeltaRows || summary.live_pid_value_delta_rows || [];
   const kindLabels = { readout_id: "読取", bridge_intent: "ブリッジ", request_plan_action: "次読取", blocked_reason: "保留要因", analysis_checklist_id: "解析条件", unclassified: "診断値" };
   const directionLabels = { added: "整備後側に追加", removed: "整備後側で消失", mixed: "追加・消失の両方" };
+  const dtcEvidenceResolutionLabels = { resolved: "解消", improved: "改善", persisting: "継続", worsened: "悪化", changed: "対象変化", clear: "問題なし", not_comparable: "比較不可" };
+  const dtcEvidenceResolutionStatus = summary.dtcEvidenceResolutionStatus || summary.dtc_evidence_resolution_status || "not_comparable";
+  const resolvedDtcEvidenceCount = summary.resolvedInvalidDtcEvidenceIssueCount ?? summary.resolved_invalid_dtc_evidence_issue_count ?? 0;
+  const persistingDtcEvidenceCount = summary.persistingInvalidDtcEvidenceIssueCount ?? summary.persisting_invalid_dtc_evidence_issue_count ?? 0;
+  const newDtcEvidenceCount = summary.newInvalidDtcEvidenceIssueCount ?? summary.new_invalid_dtc_evidence_issue_count ?? 0;
   const formatPidDeltaThreshold = (row) => row.thresholdApplied === true || row.threshold_applied === true
     ? `出典基準差 ${row.threshold} / ${row.referenceDeltaStatus || row.reference_delta_status} / ${row.thresholdReferenceId || row.threshold_reference_id} / 出典日 ${row.sourceDate || row.source_date || "未登録"} / 要確認`
     : row.historicalThresholdEvidenceRetained === true || row.historical_threshold_evidence_retained === true
@@ -3014,6 +3019,7 @@ function formatPostRepairReassessmentEntries(summary = null) {
   return [
     summary.state === "changed_requires_review" ? "整備前後で読取状態に変化あり。整備士確認が必要です。" : "比較対象の読取状態に変化は検出されませんでした。",
     `比較セクション: ${summary.comparedSectionCount ?? summary.compared_section_count ?? 0} / 変化: ${changedIds.length}`,
+    `DTC証跡品質: ${dtcEvidenceResolutionLabels[dtcEvidenceResolutionStatus] || dtcEvidenceResolutionStatus} / 解消${resolvedDtcEvidenceCount}・継続${persistingDtcEvidenceCount}・新規${newDtcEvidenceCount}`,
     ...evidenceRows.map((row) => `${String(row.displayOrder || row.display_order).padStart(2, "0")} / ${kindLabels[row.kind] || row.kind} / ${row.id} / ${directionLabels[row.direction] || row.direction} / 要確認`),
     ...livePidValueDeltaRows.map((row) => `PID差分 ${String(row.displayOrder || row.display_order).padStart(2, "0")} / ${row.id} / ECU ${row.sourceEcu || row.source_ecu || "-"} / ${row.importedValue ?? row.imported_value} -> ${row.currentValue ?? row.current_value} ${row.unit || ""} / 差 ${row.delta} / ${formatPidDeltaThreshold(row)}`),
     "修理成功・故障解消の確定ではありません。DTC、FF、レディネス、ライブ値を個別に確認してください。"
@@ -9049,6 +9055,21 @@ function formatDtcEvidenceFieldIds(fieldIds = []) {
   return visible.join("・");
 }
 
+function formatDtcEvidenceReasonCounts(reasonCounts = {}) {
+  const labels = {
+    invalid_timestamp: "時刻形式",
+    invalid_number: "数値形式",
+    invalid_integer: "整数形式",
+    unsupported_unit: "単位未対応",
+    invalid_value: "値不正"
+  };
+  return Object.entries(reasonCounts && typeof reasonCounts === "object" ? reasonCounts : {})
+    .filter(([, count]) => Number(count) > 0)
+    .slice(0, 3)
+    .map(([reason, count]) => `${labels[reason] || reason}${Number(count)}`)
+    .join("・");
+}
+
 function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   const issueCountValue = summary.issueCount ?? summary.issue_count;
@@ -9059,6 +9080,7 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   const webSerialResponseReviewCountValue = summary.webSerialResponseReviewCount ?? summary.web_serial_response_review_count;
   const invalidDtcEvidenceCountValue = summary.invalidDtcEvidenceObservationCount ?? summary.invalid_dtc_evidence_observation_count;
   const invalidDtcEvidenceFieldIds = Array.isArray(summary.invalidDtcEvidenceFieldIds) ? summary.invalidDtcEvidenceFieldIds : Array.isArray(summary.invalid_dtc_evidence_field_ids) ? summary.invalid_dtc_evidence_field_ids : [];
+  const invalidDtcEvidenceReasonCounts = summary.invalidDtcEvidenceReasonCounts || summary.invalid_dtc_evidence_reason_counts || {};
   const issueCount = Number.isFinite(Number(issueCountValue)) ? Number(issueCountValue) : 0;
   const rawCount = Number.isFinite(Number(rawCountValue)) ? Number(rawCountValue) : 0;
   const readinessCount = Number.isFinite(Number(readinessCountValue)) ? Number(readinessCountValue) : 0;
@@ -9074,7 +9096,8 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   if (webSerialResponseReviewCount) parts.push(`通信応答${webSerialResponseReviewCount}`);
   if (invalidDtcEvidenceCount || invalidDtcEvidenceFieldIds.length) {
     const fieldLabel = formatDtcEvidenceFieldIds(invalidDtcEvidenceFieldIds);
-    parts.push(`DTC証跡除外${invalidDtcEvidenceCount || invalidDtcEvidenceFieldIds.length}${fieldLabel ? `(${fieldLabel})` : ""}`);
+    const reasonLabel = formatDtcEvidenceReasonCounts(invalidDtcEvidenceReasonCounts);
+    parts.push(`DTC証跡除外${invalidDtcEvidenceCount || invalidDtcEvidenceFieldIds.length}${fieldLabel ? `(${fieldLabel})` : ""}${reasonLabel ? ` 理由:${reasonLabel}` : ""}`);
   }
   if (!parts.length && issueCount === 0) return "要確認なし";
   return parts.length ? parts.join(" / ") : `${issueCount}件`;
