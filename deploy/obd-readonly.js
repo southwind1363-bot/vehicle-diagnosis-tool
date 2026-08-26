@@ -26520,6 +26520,9 @@
           const udsDtcSeverityValue = redactSensitiveText(String(row.udsDtcSeverityValue || row.uds_dtc_severity_value || row.dtcSeverityValue || row.dtc_severity_value || row.dtcSeverity || row.dtc_severity || row.severityValue || row.severity_value || row.severity || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsDtcFunctionalUnit = redactSensitiveText(String(row.udsDtcFunctionalUnit || row.uds_dtc_functional_unit || row.dtcFunctionalUnitRaw || row.dtc_functional_unit_raw || row.dtcFunctionalUnit || row.dtc_functional_unit || row.functionalUnitRaw || row.functional_unit_raw || row.functionalUnit || row.functional_unit || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsDtcStatusSource = redactSensitiveText(String(row.udsDtcStatusSource || row.uds_dtc_status_source || row.dtcStatusSource || row.dtc_status_source || row.reportedStatusSource || row.reported_status_source || row.statusSource || row.status_source || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(row.dtcFirstDetectedAt || row.dtc_first_detected_at || row.firstDetectedAt || row.first_detected_at || row.firstFailedAt || row.first_failed_at || row.firstOccurrenceAt || row.first_occurrence_at);
+          const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(row.dtcLastDetectedAt || row.dtc_last_detected_at || row.lastDetectedAt || row.last_detected_at || row.lastFailedAt || row.last_failed_at || row.lastOccurrenceAt || row.last_occurrence_at);
+          const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(row.dtcConfirmedAt || row.dtc_confirmed_at || row.confirmedAt || row.confirmed_at || row.confirmationAt || row.confirmation_at);
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26617,6 +26620,9 @@
             ...(udsDtcSeverityValue ? { udsDtcSeverityValue, uds_dtc_severity_value: udsDtcSeverityValue } : {}),
             ...(udsDtcFunctionalUnit ? { udsDtcFunctionalUnit, uds_dtc_functional_unit: udsDtcFunctionalUnit } : {}),
             ...(udsDtcStatusSource ? { udsDtcStatusSource, uds_dtc_status_source: udsDtcStatusSource } : {}),
+            ...(dtcFirstDetectedAt ? { dtcFirstDetectedAt, dtc_first_detected_at: dtcFirstDetectedAt } : {}),
+            ...(dtcLastDetectedAt ? { dtcLastDetectedAt, dtc_last_detected_at: dtcLastDetectedAt } : {}),
+            ...(dtcConfirmedAt ? { dtcConfirmedAt, dtc_confirmed_at: dtcConfirmedAt } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26774,6 +26780,9 @@
       const udsDtcSeverityValue = redactSensitiveText(String(rowValue.udsDtcSeverityValue || rowValue.uds_dtc_severity_value || rowValue.dtcSeverityValue || rowValue.dtc_severity_value || rowValue.dtcSeverity || rowValue.dtc_severity || rowValue.severityValue || rowValue.severity_value || rowValue.severity || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcFunctionalUnit = redactSensitiveText(String(rowValue.udsDtcFunctionalUnit || rowValue.uds_dtc_functional_unit || rowValue.dtcFunctionalUnitRaw || rowValue.dtc_functional_unit_raw || rowValue.dtcFunctionalUnit || rowValue.dtc_functional_unit || rowValue.functionalUnitRaw || rowValue.functional_unit_raw || rowValue.functionalUnit || rowValue.functional_unit || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcStatusSource = redactSensitiveText(String(rowValue.udsDtcStatusSource || rowValue.uds_dtc_status_source || rowValue.dtcStatusSource || rowValue.dtc_status_source || rowValue.reportedStatusSource || rowValue.reported_status_source || rowValue.statusSource || rowValue.status_source || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcFirstDetectedAt || rowValue.dtc_first_detected_at || rowValue.firstDetectedAt || rowValue.first_detected_at || rowValue.firstFailedAt || rowValue.first_failed_at || rowValue.firstOccurrenceAt || rowValue.first_occurrence_at);
+      const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcLastDetectedAt || rowValue.dtc_last_detected_at || rowValue.lastDetectedAt || rowValue.last_detected_at || rowValue.lastFailedAt || rowValue.last_failed_at || rowValue.lastOccurrenceAt || rowValue.last_occurrence_at);
+      const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcConfirmedAt || rowValue.dtc_confirmed_at || rowValue.confirmedAt || rowValue.confirmed_at || rowValue.confirmationAt || rowValue.confirmation_at);
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26859,6 +26868,9 @@
         ...(udsDtcSeverityValue ? { udsDtcSeverityValue, uds_dtc_severity_value: udsDtcSeverityValue } : {}),
         ...(udsDtcFunctionalUnit ? { udsDtcFunctionalUnit, uds_dtc_functional_unit: udsDtcFunctionalUnit } : {}),
         ...(udsDtcStatusSource ? { udsDtcStatusSource, uds_dtc_status_source: udsDtcStatusSource } : {}),
+        ...(dtcFirstDetectedAt ? { dtcFirstDetectedAt, dtc_first_detected_at: dtcFirstDetectedAt } : {}),
+        ...(dtcLastDetectedAt ? { dtcLastDetectedAt, dtc_last_detected_at: dtcLastDetectedAt } : {}),
+        ...(dtcConfirmedAt ? { dtcConfirmedAt, dtc_confirmed_at: dtcConfirmedAt } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28429,6 +28441,9 @@
       const udsDtcSeverityValue = redactSensitiveText(String(row?.udsDtcSeverityValue || row?.uds_dtc_severity_value || row?.dtcSeverityValue || row?.dtc_severity_value || row?.dtcSeverity || row?.dtc_severity || row?.severityValue || row?.severity_value || row?.severity || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcFunctionalUnit = redactSensitiveText(String(row?.udsDtcFunctionalUnit || row?.uds_dtc_functional_unit || row?.dtcFunctionalUnitRaw || row?.dtc_functional_unit_raw || row?.dtcFunctionalUnit || row?.dtc_functional_unit || row?.functionalUnitRaw || row?.functional_unit_raw || row?.functionalUnit || row?.functional_unit || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcStatusSource = redactSensitiveText(String(row?.udsDtcStatusSource || row?.uds_dtc_status_source || row?.dtcStatusSource || row?.dtc_status_source || row?.reportedStatusSource || row?.reported_status_source || row?.statusSource || row?.status_source || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(row?.dtcFirstDetectedAt || row?.dtc_first_detected_at || row?.firstDetectedAt || row?.first_detected_at || row?.firstFailedAt || row?.first_failed_at || row?.firstOccurrenceAt || row?.first_occurrence_at);
+      const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(row?.dtcLastDetectedAt || row?.dtc_last_detected_at || row?.lastDetectedAt || row?.last_detected_at || row?.lastFailedAt || row?.last_failed_at || row?.lastOccurrenceAt || row?.last_occurrence_at);
+      const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(row?.dtcConfirmedAt || row?.dtc_confirmed_at || row?.confirmedAt || row?.confirmed_at || row?.confirmationAt || row?.confirmation_at);
       return {
         id,
         name,
@@ -28513,7 +28528,10 @@
         ...(udsDtcOccurrenceCount ? { udsDtcOccurrenceCount, uds_dtc_occurrence_count: udsDtcOccurrenceCount } : {}),
         ...(udsDtcSeverityValue ? { udsDtcSeverityValue, uds_dtc_severity_value: udsDtcSeverityValue } : {}),
         ...(udsDtcFunctionalUnit ? { udsDtcFunctionalUnit, uds_dtc_functional_unit: udsDtcFunctionalUnit } : {}),
-        ...(udsDtcStatusSource ? { udsDtcStatusSource, uds_dtc_status_source: udsDtcStatusSource } : {})
+        ...(udsDtcStatusSource ? { udsDtcStatusSource, uds_dtc_status_source: udsDtcStatusSource } : {}),
+        ...(dtcFirstDetectedAt ? { dtcFirstDetectedAt, dtc_first_detected_at: dtcFirstDetectedAt } : {}),
+        ...(dtcLastDetectedAt ? { dtcLastDetectedAt, dtc_last_detected_at: dtcLastDetectedAt } : {}),
+        ...(dtcConfirmedAt ? { dtcConfirmedAt, dtc_confirmed_at: dtcConfirmedAt } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28599,7 +28617,10 @@
         udsDtcOccurrenceCount: row.udsDtcOccurrenceCount || null,
         udsDtcSeverityValue: row.udsDtcSeverityValue || null,
         udsDtcFunctionalUnit: row.udsDtcFunctionalUnit || null,
-        udsDtcStatusSource: row.udsDtcStatusSource || null
+        udsDtcStatusSource: row.udsDtcStatusSource || null,
+        dtcFirstDetectedAt: row.dtcFirstDetectedAt || null,
+        dtcLastDetectedAt: row.dtcLastDetectedAt || null,
+        dtcConfirmedAt: row.dtcConfirmedAt || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32453,6 +32474,9 @@
     const dtcFaultDetectionCounterIndex = findIndex("fault detection counter", "fault_detection_counter", "dtc fault detection counter", "dtc_fault_detection_counter", "fault detection counter raw", "fault_detection_counter_raw", "UDS故障検出カウンタ");
     const dtcFunctionalUnitIndex = findIndex("dtc functional unit", "dtc_functional_unit", "dtc functional unit raw", "dtc_functional_unit_raw", "functional unit", "functional_unit", "functional unit raw", "functional_unit_raw", "UDS機能ユニット");
     const dtcStatusSourceIndex = findIndex("dtc status source", "dtc_status_source", "reported status source", "reported_status_source", "status source", "status_source", "UDS状態判定元");
+    const dtcFirstDetectedAtIndex = findIndex("dtc first detected at", "dtc_first_detected_at", "first detected at", "first_detected_at", "first failed at", "first_failed_at", "first occurrence at", "first_occurrence_at", "DTC初回検出時刻");
+    const dtcLastDetectedAtIndex = findIndex("dtc last detected at", "dtc_last_detected_at", "last detected at", "last_detected_at", "last failed at", "last_failed_at", "last occurrence at", "last_occurrence_at", "DTC最終検出時刻");
+    const dtcConfirmedAtIndex = findIndex("dtc confirmed at", "dtc_confirmed_at", "confirmed at", "confirmed_at", "confirmation at", "confirmation_at", "DTC確定時刻");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
@@ -32688,6 +32712,9 @@
       const rowUdsDtcSeverityValue = cellAt(dtcSeverityIndex, 80) || null;
       const rowUdsDtcFunctionalUnit = cellAt(dtcFunctionalUnitIndex, 80) || null;
       const rowUdsDtcStatusSource = cellAt(dtcStatusSourceIndex, 80) || null;
+      const rowDtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcFirstDetectedAtIndex, 80));
+      const rowDtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcLastDetectedAtIndex, 80));
+      const rowDtcConfirmedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcConfirmedAtIndex, 80));
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32894,6 +32921,9 @@
           ...(rowUdsDtcSeverityValue ? { uds_dtc_severity_value: rowUdsDtcSeverityValue } : {}),
           ...(rowUdsDtcFunctionalUnit ? { uds_dtc_functional_unit: rowUdsDtcFunctionalUnit } : {}),
           ...(rowUdsDtcStatusSource ? { uds_dtc_status_source: rowUdsDtcStatusSource } : {}),
+          ...(rowDtcFirstDetectedAt ? { dtc_first_detected_at: rowDtcFirstDetectedAt } : {}),
+          ...(rowDtcLastDetectedAt ? { dtc_last_detected_at: rowDtcLastDetectedAt } : {}),
+          ...(rowDtcConfirmedAt ? { dtc_confirmed_at: rowDtcConfirmedAt } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -33065,6 +33095,9 @@
           ...(rowUdsDtcSeverityValue ? { uds_dtc_severity_value: rowUdsDtcSeverityValue } : {}),
           ...(rowUdsDtcFunctionalUnit ? { uds_dtc_functional_unit: rowUdsDtcFunctionalUnit } : {}),
           ...(rowUdsDtcStatusSource ? { uds_dtc_status_source: rowUdsDtcStatusSource } : {}),
+          ...(rowDtcFirstDetectedAt ? { dtc_first_detected_at: rowDtcFirstDetectedAt } : {}),
+          ...(rowDtcLastDetectedAt ? { dtc_last_detected_at: rowDtcLastDetectedAt } : {}),
+          ...(rowDtcConfirmedAt ? { dtc_confirmed_at: rowDtcConfirmedAt } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34559,6 +34592,9 @@
         udsDtcSeverityValue: row?.udsDtcSeverityValue || row?.uds_dtc_severity_value || row?.dtcSeverityValue || row?.dtc_severity_value || row?.dtcSeverity || row?.dtc_severity || row?.severityValue || row?.severity_value || row?.severity || null,
         udsDtcFunctionalUnit: row?.udsDtcFunctionalUnit || row?.uds_dtc_functional_unit || row?.dtcFunctionalUnitRaw || row?.dtc_functional_unit_raw || row?.dtcFunctionalUnit || row?.dtc_functional_unit || row?.functionalUnitRaw || row?.functional_unit_raw || row?.functionalUnit || row?.functional_unit || null,
         udsDtcStatusSource: row?.udsDtcStatusSource || row?.uds_dtc_status_source || row?.dtcStatusSource || row?.dtc_status_source || row?.reportedStatusSource || row?.reported_status_source || row?.statusSource || row?.status_source || null,
+        dtcFirstDetectedAt: normalizeDtcEvidenceTimestampValue(row?.dtcFirstDetectedAt || row?.dtc_first_detected_at || row?.firstDetectedAt || row?.first_detected_at || row?.firstFailedAt || row?.first_failed_at || row?.firstOccurrenceAt || row?.first_occurrence_at),
+        dtcLastDetectedAt: normalizeDtcEvidenceTimestampValue(row?.dtcLastDetectedAt || row?.dtc_last_detected_at || row?.lastDetectedAt || row?.last_detected_at || row?.lastFailedAt || row?.last_failed_at || row?.lastOccurrenceAt || row?.last_occurrence_at),
+        dtcConfirmedAt: normalizeDtcEvidenceTimestampValue(row?.dtcConfirmedAt || row?.dtc_confirmed_at || row?.confirmedAt || row?.confirmed_at || row?.confirmationAt || row?.confirmation_at),
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34584,6 +34620,10 @@
     const normalizeCsvDiagnosticCounterIdentity = (value) => {
       const normalized = String(value ?? "").trim();
       return /^\d+$/.test(normalized) ? String(Number(normalized)) : normalizeCsvEcuHierarchyScope(normalized);
+    };
+    const normalizeCsvDiagnosticTimestampIdentity = (value) => {
+      const timestamp = normalizeDtcEvidenceTimestampValue(value);
+      return timestamp ? new Date(Date.parse(timestamp)).toISOString() : null;
     };
     const isSameCsvReadoutScope = (dtcRow, response) => {
       const dtcScanSessionId = dtcRow?.scanSessionId || dtcRow?.scan_session_id || null;
@@ -34644,6 +34684,9 @@
       const dtcUdsDtcSeverityValue = dtcRow?.udsDtcSeverityValue || dtcRow?.uds_dtc_severity_value || dtcRow?.dtcSeverityValue || dtcRow?.dtc_severity_value || dtcRow?.dtcSeverity || dtcRow?.dtc_severity || dtcRow?.severityValue || dtcRow?.severity_value || dtcRow?.severity || null;
       const dtcUdsDtcFunctionalUnit = dtcRow?.udsDtcFunctionalUnit || dtcRow?.uds_dtc_functional_unit || dtcRow?.dtcFunctionalUnitRaw || dtcRow?.dtc_functional_unit_raw || dtcRow?.dtcFunctionalUnit || dtcRow?.dtc_functional_unit || dtcRow?.functionalUnitRaw || dtcRow?.functional_unit_raw || dtcRow?.functionalUnit || dtcRow?.functional_unit || null;
       const dtcUdsDtcStatusSource = dtcRow?.udsDtcStatusSource || dtcRow?.uds_dtc_status_source || dtcRow?.dtcStatusSource || dtcRow?.dtc_status_source || dtcRow?.reportedStatusSource || dtcRow?.reported_status_source || dtcRow?.statusSource || dtcRow?.status_source || null;
+      const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcFirstDetectedAt || dtcRow?.dtc_first_detected_at || dtcRow?.firstDetectedAt || dtcRow?.first_detected_at || dtcRow?.firstFailedAt || dtcRow?.first_failed_at || dtcRow?.firstOccurrenceAt || dtcRow?.first_occurrence_at);
+      const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcLastDetectedAt || dtcRow?.dtc_last_detected_at || dtcRow?.lastDetectedAt || dtcRow?.last_detected_at || dtcRow?.lastFailedAt || dtcRow?.last_failed_at || dtcRow?.lastOccurrenceAt || dtcRow?.last_occurrence_at);
+      const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcConfirmedAt || dtcRow?.dtc_confirmed_at || dtcRow?.confirmedAt || dtcRow?.confirmed_at || dtcRow?.confirmationAt || dtcRow?.confirmation_at);
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34704,6 +34747,9 @@
       if (dtcUdsDtcSeverityValue && response.udsDtcSeverityValue && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcSeverityValue) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcSeverityValue)) return false;
       if (dtcUdsDtcFunctionalUnit && response.udsDtcFunctionalUnit && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcFunctionalUnit) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcFunctionalUnit)) return false;
       if (dtcUdsDtcStatusSource && response.udsDtcStatusSource && normalizeCsvEcuHierarchyScope(dtcUdsDtcStatusSource) !== normalizeCsvEcuHierarchyScope(response.udsDtcStatusSource)) return false;
+      if (dtcFirstDetectedAt && response.dtcFirstDetectedAt && normalizeCsvDiagnosticTimestampIdentity(dtcFirstDetectedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcFirstDetectedAt)) return false;
+      if (dtcLastDetectedAt && response.dtcLastDetectedAt && normalizeCsvDiagnosticTimestampIdentity(dtcLastDetectedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcLastDetectedAt)) return false;
+      if (dtcConfirmedAt && response.dtcConfirmedAt && normalizeCsvDiagnosticTimestampIdentity(dtcConfirmedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcConfirmedAt)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
@@ -36760,6 +36806,11 @@
   function normalizeDtcEvidenceCapturedAt(row, fallback = null) {
     const value = row?.captured_at || row?.capturedAt || row?.timestamp || fallback;
     return /^\d{4}-\d{2}-\d{2}T/.test(String(value || "")) && Number.isFinite(Date.parse(value)) ? String(value) : null;
+  }
+
+  function normalizeDtcEvidenceTimestampValue(value) {
+    const timestamp = String(value || "").trim();
+    return /^\d{4}-\d{2}-\d{2}T/.test(timestamp) && Number.isFinite(Date.parse(timestamp)) ? timestamp : null;
   }
 
   function normalizeDtcEvidenceProtocol(row, fallback = null) {
