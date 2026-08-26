@@ -26484,6 +26484,9 @@
           const ecuPartNumber = redactSensitiveText(String(row.ecuPartNumber || row.ecu_part_number || row.partNumber || row.part_number || row.modulePartNumber || row.module_part_number || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const ecuSoftwareId = redactSensitiveText(String(row.ecuSoftwareId || row.ecu_software_id || row.softwareId || row.software_id || row.softwareVersion || row.software_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const ecuCalibrationId = redactSensitiveText(String(row.ecuCalibrationId || row.ecu_calibration_id || row.calibrationId || row.calibration_id || row.calId || row.cal_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+          const ecuHardwareId = redactSensitiveText(String(row.ecuHardwareId || row.ecu_hardware_id || row.hardwareId || row.hardware_id || row.hardwareVersion || row.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const ecuDatasetId = redactSensitiveText(String(row.ecuDatasetId || row.ecu_dataset_id || row.datasetId || row.dataset_id || row.dataSetId || row.data_set_id || row.calibrationDatasetId || row.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+          const diagnosticSoftwareVersion = redactSensitiveText(String(row.diagnosticSoftwareVersion || row.diagnostic_software_version || row.scannerSoftwareVersion || row.scanner_software_version || row.toolVersion || row.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26545,6 +26548,9 @@
             ...(ecuPartNumber ? { ecuPartNumber, ecu_part_number: ecuPartNumber } : {}),
             ...(ecuSoftwareId ? { ecuSoftwareId, ecu_software_id: ecuSoftwareId } : {}),
             ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {}),
+            ...(ecuHardwareId ? { ecuHardwareId, ecu_hardware_id: ecuHardwareId } : {}),
+            ...(ecuDatasetId ? { ecuDatasetId, ecu_dataset_id: ecuDatasetId } : {}),
+            ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26666,6 +26672,9 @@
       const ecuPartNumber = redactSensitiveText(String(rowValue.ecuPartNumber || rowValue.ecu_part_number || rowValue.partNumber || rowValue.part_number || rowValue.modulePartNumber || rowValue.module_part_number || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuSoftwareId = redactSensitiveText(String(rowValue.ecuSoftwareId || rowValue.ecu_software_id || rowValue.softwareId || rowValue.software_id || rowValue.softwareVersion || rowValue.software_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuCalibrationId = redactSensitiveText(String(rowValue.ecuCalibrationId || rowValue.ecu_calibration_id || rowValue.calibrationId || rowValue.calibration_id || rowValue.calId || rowValue.cal_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const ecuHardwareId = redactSensitiveText(String(rowValue.ecuHardwareId || rowValue.ecu_hardware_id || rowValue.hardwareId || rowValue.hardware_id || rowValue.hardwareVersion || rowValue.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuDatasetId = redactSensitiveText(String(rowValue.ecuDatasetId || rowValue.ecu_dataset_id || rowValue.datasetId || rowValue.dataset_id || rowValue.dataSetId || rowValue.data_set_id || rowValue.calibrationDatasetId || rowValue.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const diagnosticSoftwareVersion = redactSensitiveText(String(rowValue.diagnosticSoftwareVersion || rowValue.diagnostic_software_version || rowValue.scannerSoftwareVersion || rowValue.scanner_software_version || rowValue.toolVersion || rowValue.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26715,6 +26724,9 @@
         ...(ecuPartNumber ? { ecuPartNumber, ecu_part_number: ecuPartNumber } : {}),
         ...(ecuSoftwareId ? { ecuSoftwareId, ecu_software_id: ecuSoftwareId } : {}),
         ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {}),
+        ...(ecuHardwareId ? { ecuHardwareId, ecu_hardware_id: ecuHardwareId } : {}),
+        ...(ecuDatasetId ? { ecuDatasetId, ecu_dataset_id: ecuDatasetId } : {}),
+        ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28249,6 +28261,9 @@
       const ecuPartNumber = redactSensitiveText(String(row?.ecuPartNumber || row?.ecu_part_number || row?.partNumber || row?.part_number || row?.modulePartNumber || row?.module_part_number || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuSoftwareId = redactSensitiveText(String(row?.ecuSoftwareId || row?.ecu_software_id || row?.softwareId || row?.software_id || row?.softwareVersion || row?.software_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuCalibrationId = redactSensitiveText(String(row?.ecuCalibrationId || row?.ecu_calibration_id || row?.calibrationId || row?.calibration_id || row?.calId || row?.cal_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const ecuHardwareId = redactSensitiveText(String(row?.ecuHardwareId || row?.ecu_hardware_id || row?.hardwareId || row?.hardware_id || row?.hardwareVersion || row?.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuDatasetId = redactSensitiveText(String(row?.ecuDatasetId || row?.ecu_dataset_id || row?.datasetId || row?.dataset_id || row?.dataSetId || row?.data_set_id || row?.calibrationDatasetId || row?.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const diagnosticSoftwareVersion = redactSensitiveText(String(row?.diagnosticSoftwareVersion || row?.diagnostic_software_version || row?.scannerSoftwareVersion || row?.scanner_software_version || row?.toolVersion || row?.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       return {
         id,
         name,
@@ -28297,7 +28312,10 @@
         ...(vehicleSpecificationCode ? { vehicleSpecificationCode, vehicle_specification_code: vehicleSpecificationCode } : {}),
         ...(ecuPartNumber ? { ecuPartNumber, ecu_part_number: ecuPartNumber } : {}),
         ...(ecuSoftwareId ? { ecuSoftwareId, ecu_software_id: ecuSoftwareId } : {}),
-        ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {})
+        ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {}),
+        ...(ecuHardwareId ? { ecuHardwareId, ecu_hardware_id: ecuHardwareId } : {}),
+        ...(ecuDatasetId ? { ecuDatasetId, ecu_dataset_id: ecuDatasetId } : {}),
+        ...(diagnosticSoftwareVersion ? { diagnosticSoftwareVersion, diagnostic_software_version: diagnosticSoftwareVersion } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28347,7 +28365,10 @@
         vehicleSpecificationCode: row.vehicleSpecificationCode || null,
         ecuPartNumber: row.ecuPartNumber || null,
         ecuSoftwareId: row.ecuSoftwareId || null,
-        ecuCalibrationId: row.ecuCalibrationId || null
+        ecuCalibrationId: row.ecuCalibrationId || null,
+        ecuHardwareId: row.ecuHardwareId || null,
+        ecuDatasetId: row.ecuDatasetId || null,
+        diagnosticSoftwareVersion: row.diagnosticSoftwareVersion || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32244,6 +32265,9 @@
     const ecuPartNumberIndex = findIndex("ecu part number", "ecu_part_number", "module part number", "module_part_number", "control unit part number", "part number", "part_number", "ECU部品番号", "ユニット部品番号");
     const ecuSoftwareIdIndex = findIndex("ecu software id", "ecu_software_id", "software id", "software_id", "software version", "software_version", "ECUソフトウェアID", "ソフトウェアID", "ソフトウェアバージョン");
     const ecuCalibrationIdIndex = findIndex("ecu calibration id", "ecu_calibration_id", "calibration id", "calibration_id", "cal id", "cal_id", "ECUキャリブレーションID", "キャリブレーションID");
+    const ecuHardwareIdIndex = findIndex("ecu hardware id", "ecu_hardware_id", "hardware id", "hardware_id", "hardware version", "hardware_version", "ECUハードウェアID", "ハードウェアID", "ハードウェアバージョン");
+    const ecuDatasetIdIndex = findIndex("ecu dataset id", "ecu_dataset_id", "dataset id", "dataset_id", "data set id", "data_set_id", "calibration dataset id", "calibration_dataset_id", "ECUデータセットID", "データセットID");
+    const diagnosticSoftwareVersionIndex = findIndex("diagnostic software version", "diagnostic_software_version", "scanner software version", "scanner_software_version", "diagnostic tool version", "tool version", "tool_version", "診断ソフト版", "診断機ソフト版");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32368,6 +32392,9 @@
       const rowEcuPartNumber = cellAt(ecuPartNumberIndex, 120) || null;
       const rowEcuSoftwareId = cellAt(ecuSoftwareIdIndex, 120) || null;
       const rowEcuCalibrationId = cellAt(ecuCalibrationIdIndex, 160) || null;
+      const rowEcuHardwareId = cellAt(ecuHardwareIdIndex, 120) || null;
+      const rowEcuDatasetId = cellAt(ecuDatasetIdIndex, 160) || null;
+      const rowDiagnosticSoftwareVersion = cellAt(diagnosticSoftwareVersionIndex, 120) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32538,6 +32565,9 @@
           ...(rowEcuPartNumber ? { ecu_part_number: rowEcuPartNumber } : {}),
           ...(rowEcuSoftwareId ? { ecu_software_id: rowEcuSoftwareId } : {}),
           ...(rowEcuCalibrationId ? { ecu_calibration_id: rowEcuCalibrationId } : {}),
+          ...(rowEcuHardwareId ? { ecu_hardware_id: rowEcuHardwareId } : {}),
+          ...(rowEcuDatasetId ? { ecu_dataset_id: rowEcuDatasetId } : {}),
+          ...(rowDiagnosticSoftwareVersion ? { diagnostic_software_version: rowDiagnosticSoftwareVersion } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32673,6 +32703,9 @@
           ...(rowEcuPartNumber ? { ecu_part_number: rowEcuPartNumber } : {}),
           ...(rowEcuSoftwareId ? { ecu_software_id: rowEcuSoftwareId } : {}),
           ...(rowEcuCalibrationId ? { ecu_calibration_id: rowEcuCalibrationId } : {}),
+          ...(rowEcuHardwareId ? { ecu_hardware_id: rowEcuHardwareId } : {}),
+          ...(rowEcuDatasetId ? { ecu_dataset_id: rowEcuDatasetId } : {}),
+          ...(rowDiagnosticSoftwareVersion ? { diagnostic_software_version: rowDiagnosticSoftwareVersion } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34126,6 +34159,9 @@
         ecuPartNumber: row?.ecuPartNumber || row?.ecu_part_number || row?.partNumber || row?.part_number || row?.modulePartNumber || row?.module_part_number || null,
         ecuSoftwareId: row?.ecuSoftwareId || row?.ecu_software_id || row?.softwareId || row?.software_id || row?.softwareVersion || row?.software_version || null,
         ecuCalibrationId: row?.ecuCalibrationId || row?.ecu_calibration_id || row?.calibrationId || row?.calibration_id || row?.calId || row?.cal_id || null,
+        ecuHardwareId: row?.ecuHardwareId || row?.ecu_hardware_id || row?.hardwareId || row?.hardware_id || row?.hardwareVersion || row?.hardware_version || null,
+        ecuDatasetId: row?.ecuDatasetId || row?.ecu_dataset_id || row?.datasetId || row?.dataset_id || row?.dataSetId || row?.data_set_id || row?.calibrationDatasetId || row?.calibration_dataset_id || null,
+        diagnosticSoftwareVersion: row?.diagnosticSoftwareVersion || row?.diagnostic_software_version || row?.scannerSoftwareVersion || row?.scanner_software_version || row?.toolVersion || row?.tool_version || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34171,6 +34207,9 @@
       const dtcEcuPartNumber = dtcRow?.ecuPartNumber || dtcRow?.ecu_part_number || dtcRow?.partNumber || dtcRow?.part_number || dtcRow?.modulePartNumber || dtcRow?.module_part_number || null;
       const dtcEcuSoftwareId = dtcRow?.ecuSoftwareId || dtcRow?.ecu_software_id || dtcRow?.softwareId || dtcRow?.software_id || dtcRow?.softwareVersion || dtcRow?.software_version || null;
       const dtcEcuCalibrationId = dtcRow?.ecuCalibrationId || dtcRow?.ecu_calibration_id || dtcRow?.calibrationId || dtcRow?.calibration_id || dtcRow?.calId || dtcRow?.cal_id || null;
+      const dtcEcuHardwareId = dtcRow?.ecuHardwareId || dtcRow?.ecu_hardware_id || dtcRow?.hardwareId || dtcRow?.hardware_id || dtcRow?.hardwareVersion || dtcRow?.hardware_version || null;
+      const dtcEcuDatasetId = dtcRow?.ecuDatasetId || dtcRow?.ecu_dataset_id || dtcRow?.datasetId || dtcRow?.dataset_id || dtcRow?.dataSetId || dtcRow?.data_set_id || dtcRow?.calibrationDatasetId || dtcRow?.calibration_dataset_id || null;
+      const dtcDiagnosticSoftwareVersion = dtcRow?.diagnosticSoftwareVersion || dtcRow?.diagnostic_software_version || dtcRow?.scannerSoftwareVersion || dtcRow?.scanner_software_version || dtcRow?.toolVersion || dtcRow?.tool_version || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34195,6 +34234,9 @@
       if (dtcEcuPartNumber && response.ecuPartNumber && normalizeCsvEcuHierarchyScope(dtcEcuPartNumber) !== normalizeCsvEcuHierarchyScope(response.ecuPartNumber)) return false;
       if (dtcEcuSoftwareId && response.ecuSoftwareId && normalizeCsvEcuHierarchyScope(dtcEcuSoftwareId) !== normalizeCsvEcuHierarchyScope(response.ecuSoftwareId)) return false;
       if (dtcEcuCalibrationId && response.ecuCalibrationId && normalizeCsvEcuHierarchyScope(dtcEcuCalibrationId) !== normalizeCsvEcuHierarchyScope(response.ecuCalibrationId)) return false;
+      if (dtcEcuHardwareId && response.ecuHardwareId && normalizeCsvEcuHierarchyScope(dtcEcuHardwareId) !== normalizeCsvEcuHierarchyScope(response.ecuHardwareId)) return false;
+      if (dtcEcuDatasetId && response.ecuDatasetId && normalizeCsvEcuHierarchyScope(dtcEcuDatasetId) !== normalizeCsvEcuHierarchyScope(response.ecuDatasetId)) return false;
+      if (dtcDiagnosticSoftwareVersion && response.diagnosticSoftwareVersion && normalizeCsvEcuHierarchyScope(dtcDiagnosticSoftwareVersion) !== normalizeCsvEcuHierarchyScope(response.diagnosticSoftwareVersion)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
