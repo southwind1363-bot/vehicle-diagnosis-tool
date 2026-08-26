@@ -26472,6 +26472,9 @@
           const vehicleModelCode = redactSensitiveText(String(row.vehicleModelCode || row.vehicle_model_code || row.modelCode || row.model_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const vehicleModelYear = redactSensitiveText(String(row.vehicleModelYear || row.vehicle_model_year || row.modelYear || row.model_year || row.vehicleYear || row.vehicle_year || "")).replace(/\s+/g, " ").trim().slice(0, 24) || null;
           const ecuConfigurationId = redactSensitiveText(String(row.ecuConfigurationId || row.ecu_configuration_id || row.ecuConfigId || row.ecu_config_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const vehicleEngineCode = redactSensitiveText(String(row.vehicleEngineCode || row.vehicle_engine_code || row.engineCode || row.engine_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const vehicleProductionDate = redactSensitiveText(String(row.vehicleProductionDate || row.vehicle_production_date || row.productionDate || row.production_date || row.buildDate || row.build_date || "")).replace(/\s+/g, " ").trim().slice(0, 40) || null;
+          const vehicleMarket = redactSensitiveText(String(row.vehicleMarket || row.vehicle_market || row.market || row.salesRegion || row.sales_region || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26521,6 +26524,9 @@
             ...(vehicleModelCode ? { vehicleModelCode, vehicle_model_code: vehicleModelCode } : {}),
             ...(vehicleModelYear ? { vehicleModelYear, vehicle_model_year: vehicleModelYear } : {}),
             ...(ecuConfigurationId ? { ecuConfigurationId, ecu_configuration_id: ecuConfigurationId } : {}),
+            ...(vehicleEngineCode ? { vehicleEngineCode, vehicle_engine_code: vehicleEngineCode } : {}),
+            ...(vehicleProductionDate ? { vehicleProductionDate, vehicle_production_date: vehicleProductionDate } : {}),
+            ...(vehicleMarket ? { vehicleMarket, vehicle_market: vehicleMarket } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26630,6 +26636,9 @@
       const vehicleModelCode = redactSensitiveText(String(rowValue.vehicleModelCode || rowValue.vehicle_model_code || rowValue.modelCode || rowValue.model_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const vehicleModelYear = redactSensitiveText(String(rowValue.vehicleModelYear || rowValue.vehicle_model_year || rowValue.modelYear || rowValue.model_year || rowValue.vehicleYear || rowValue.vehicle_year || "")).replace(/\s+/g, " ").trim().slice(0, 24) || null;
       const ecuConfigurationId = redactSensitiveText(String(rowValue.ecuConfigurationId || rowValue.ecu_configuration_id || rowValue.ecuConfigId || rowValue.ecu_config_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const vehicleEngineCode = redactSensitiveText(String(rowValue.vehicleEngineCode || rowValue.vehicle_engine_code || rowValue.engineCode || rowValue.engine_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const vehicleProductionDate = redactSensitiveText(String(rowValue.vehicleProductionDate || rowValue.vehicle_production_date || rowValue.productionDate || rowValue.production_date || rowValue.buildDate || rowValue.build_date || "")).replace(/\s+/g, " ").trim().slice(0, 40) || null;
+      const vehicleMarket = redactSensitiveText(String(rowValue.vehicleMarket || rowValue.vehicle_market || rowValue.market || rowValue.salesRegion || rowValue.sales_region || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26667,6 +26676,9 @@
         ...(vehicleModelCode ? { vehicleModelCode, vehicle_model_code: vehicleModelCode } : {}),
         ...(vehicleModelYear ? { vehicleModelYear, vehicle_model_year: vehicleModelYear } : {}),
         ...(ecuConfigurationId ? { ecuConfigurationId, ecu_configuration_id: ecuConfigurationId } : {}),
+        ...(vehicleEngineCode ? { vehicleEngineCode, vehicle_engine_code: vehicleEngineCode } : {}),
+        ...(vehicleProductionDate ? { vehicleProductionDate, vehicle_production_date: vehicleProductionDate } : {}),
+        ...(vehicleMarket ? { vehicleMarket, vehicle_market: vehicleMarket } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28189,6 +28201,9 @@
       const vehicleModelCode = redactSensitiveText(String(row?.vehicleModelCode || row?.vehicle_model_code || row?.modelCode || row?.model_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const vehicleModelYear = redactSensitiveText(String(row?.vehicleModelYear || row?.vehicle_model_year || row?.modelYear || row?.model_year || row?.vehicleYear || row?.vehicle_year || "")).replace(/\s+/g, " ").trim().slice(0, 24) || null;
       const ecuConfigurationId = redactSensitiveText(String(row?.ecuConfigurationId || row?.ecu_configuration_id || row?.ecuConfigId || row?.ecu_config_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const vehicleEngineCode = redactSensitiveText(String(row?.vehicleEngineCode || row?.vehicle_engine_code || row?.engineCode || row?.engine_code || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const vehicleProductionDate = redactSensitiveText(String(row?.vehicleProductionDate || row?.vehicle_production_date || row?.productionDate || row?.production_date || row?.buildDate || row?.build_date || "")).replace(/\s+/g, " ").trim().slice(0, 40) || null;
+      const vehicleMarket = redactSensitiveText(String(row?.vehicleMarket || row?.vehicle_market || row?.market || row?.salesRegion || row?.sales_region || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return {
         id,
         name,
@@ -28225,7 +28240,10 @@
         ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {}),
         ...(vehicleModelCode ? { vehicleModelCode, vehicle_model_code: vehicleModelCode } : {}),
         ...(vehicleModelYear ? { vehicleModelYear, vehicle_model_year: vehicleModelYear } : {}),
-        ...(ecuConfigurationId ? { ecuConfigurationId, ecu_configuration_id: ecuConfigurationId } : {})
+        ...(ecuConfigurationId ? { ecuConfigurationId, ecu_configuration_id: ecuConfigurationId } : {}),
+        ...(vehicleEngineCode ? { vehicleEngineCode, vehicle_engine_code: vehicleEngineCode } : {}),
+        ...(vehicleProductionDate ? { vehicleProductionDate, vehicle_production_date: vehicleProductionDate } : {}),
+        ...(vehicleMarket ? { vehicleMarket, vehicle_market: vehicleMarket } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28263,7 +28281,10 @@
         resultRowId: row.resultRowId || null,
         vehicleModelCode: row.vehicleModelCode || null,
         vehicleModelYear: row.vehicleModelYear || null,
-        ecuConfigurationId: row.ecuConfigurationId || null
+        ecuConfigurationId: row.ecuConfigurationId || null,
+        vehicleEngineCode: row.vehicleEngineCode || null,
+        vehicleProductionDate: row.vehicleProductionDate || null,
+        vehicleMarket: row.vehicleMarket || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32150,6 +32171,7 @@
     const ecuConfigurationIdIndex = findIndex("ecu configuration id", "ecu_configuration_id", "ecu config id", "ecu_config_id", "module configuration id", "module_configuration_id", "ECU構成ID", "ECU設定ID", "モジュール構成ID");
     const vehicleProductionDateIndex = findIndex("production date", "production_date", "build date", "build_date", "manufacture date", "manufacture_date", "manufacturing date", "production day", "生産日", "製造日", "組立日");
     const vehicleEngineCodeIndex = findIndex("engine code", "engine model", "engine type", "powertrain code", "エンジン型式", "原動機型式");
+    const vehicleMarketIndex = findIndex("vehicle market", "vehicle_market", "market", "sales region", "sales_region", "destination market", "destination_market", "市場", "仕向地", "販売地域");
     const vehicleTransmissionIndex = findIndex("transmission", "transmission type", "transmission_type", "gearbox", "transaxle");
     const vehicleDrivetrainIndex = findIndex("drivetrain", "drive type", "drive_type", "drivetrain type", "drivetrain_type", "driven wheels");
     const vehicleFuelTypeIndex = findIndex("fuel type", "fuel_type", "fuel", "powertrain type", "powertrain_type");
@@ -32172,7 +32194,7 @@
     const hasExplicitEcuResponseColumns = (Number.isInteger(ecuResponseIdIndex) || Number.isInteger(ecuIndex)) && Number.isInteger(statusIndex)
       && (Number.isInteger(readoutKindIndex) || /(?:ecu\s*responses?|module\s*responses?)/i.test(sectionHint));
     const hasExplicitDtcReadoutStatusColumns = Number.isInteger(readoutKindIndex) && Number.isInteger(statusIndex);
-    const hasExplicitVehicleProfileColumns = [vehicleMakerIndex, vehicleModelIndex, vehicleModelCodeIndex, vehicleYearIndex, vehicleProductionDateIndex, vehicleEngineCodeIndex, vehicleTransmissionIndex, vehicleDrivetrainIndex, vehicleFuelTypeIndex, vehicleElectrificationIndex].some(Number.isInteger);
+    const hasExplicitVehicleProfileColumns = [vehicleMakerIndex, vehicleModelIndex, vehicleModelCodeIndex, vehicleYearIndex, vehicleProductionDateIndex, vehicleEngineCodeIndex, vehicleMarketIndex, vehicleTransmissionIndex, vehicleDrivetrainIndex, vehicleFuelTypeIndex, vehicleElectrificationIndex].some(Number.isInteger);
     const hasExplicitReadoutInterfaceColumns = [readoutInterfaceLabelIndex, readoutDeviceModelIndex, readoutRouteIndex, readoutPlatformIndex].some(Number.isInteger);
     const hasExplicitAdapterIdentityColumns = [adapterNameIndex, adapterFamilyIndex, adapterFirmwareVersionIndex].some(Number.isInteger);
     if (!Number.isInteger(dtcIndex) && !(Number.isInteger(valueIndex) && (Number.isInteger(pidIndex) || Number.isInteger(labelIndex))) && !hasExplicitReadinessColumns && !hasExplicitEcuInfoColumns && !hasExplicitMode06Columns && !hasExplicitSupportedPidColumns && !hasExplicitEcuResponseColumns && !hasExplicitDtcReadoutStatusColumns && !hasExplicitVehicleProfileColumns && !hasExplicitReadoutInterfaceColumns && !hasExplicitAdapterIdentityColumns) return null;
@@ -32266,14 +32288,18 @@
       const rowVehicleModelCode = cellAt(vehicleModelCodeIndex, 80) || null;
       const rowVehicleModelYear = cellAt(vehicleYearIndex, 24) || null;
       const rowEcuConfigurationId = cellAt(ecuConfigurationIdIndex, 120) || null;
+      const rowVehicleProductionDate = cellAt(vehicleProductionDateIndex, 40) || null;
+      const rowVehicleEngineCode = cellAt(vehicleEngineCodeIndex, 80) || null;
+      const rowVehicleMarket = cellAt(vehicleMarketIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
       if (!vehicleProfileValues.model) vehicleProfileValues.model = cellAt(vehicleModelIndex, 120) || null;
       if (!vehicleProfileValues.modelCode) vehicleProfileValues.modelCode = rowVehicleModelCode;
       if (!vehicleProfileValues.year) vehicleProfileValues.year = rowVehicleModelYear;
-      if (!vehicleProfileValues.productionDate) vehicleProfileValues.productionDate = cellAt(vehicleProductionDateIndex, 40) || null;
-      if (!vehicleProfileValues.engineCode) vehicleProfileValues.engineCode = cellAt(vehicleEngineCodeIndex, 80) || null;
+      if (!vehicleProfileValues.productionDate) vehicleProfileValues.productionDate = rowVehicleProductionDate;
+      if (!vehicleProfileValues.engineCode) vehicleProfileValues.engineCode = rowVehicleEngineCode;
+      if (!vehicleProfileValues.market) vehicleProfileValues.market = rowVehicleMarket;
       if (!vehicleProfileValues.transmission) vehicleProfileValues.transmission = cellAt(vehicleTransmissionIndex, 80) || null;
       if (!vehicleProfileValues.drivetrain) vehicleProfileValues.drivetrain = cellAt(vehicleDrivetrainIndex, 80) || null;
       if (!vehicleProfileValues.fuelType) vehicleProfileValues.fuelType = cellAt(vehicleFuelTypeIndex, 80) || null;
@@ -32421,6 +32447,9 @@
           ...(rowVehicleModelCode ? { vehicle_model_code: rowVehicleModelCode } : {}),
           ...(rowVehicleModelYear ? { vehicle_model_year: rowVehicleModelYear } : {}),
           ...(rowEcuConfigurationId ? { ecu_configuration_id: rowEcuConfigurationId } : {}),
+          ...(rowVehicleEngineCode ? { vehicle_engine_code: rowVehicleEngineCode } : {}),
+          ...(rowVehicleProductionDate ? { vehicle_production_date: rowVehicleProductionDate } : {}),
+          ...(rowVehicleMarket ? { vehicle_market: rowVehicleMarket } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32544,6 +32573,9 @@
           ...(rowVehicleModelCode ? { vehicle_model_code: rowVehicleModelCode } : {}),
           ...(rowVehicleModelYear ? { vehicle_model_year: rowVehicleModelYear } : {}),
           ...(rowEcuConfigurationId ? { ecu_configuration_id: rowEcuConfigurationId } : {}),
+          ...(rowVehicleEngineCode ? { vehicle_engine_code: rowVehicleEngineCode } : {}),
+          ...(rowVehicleProductionDate ? { vehicle_production_date: rowVehicleProductionDate } : {}),
+          ...(rowVehicleMarket ? { vehicle_market: rowVehicleMarket } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -33985,6 +34017,9 @@
         vehicleModelCode: row?.vehicleModelCode || row?.vehicle_model_code || row?.modelCode || row?.model_code || null,
         vehicleModelYear: row?.vehicleModelYear || row?.vehicle_model_year || row?.modelYear || row?.model_year || row?.vehicleYear || row?.vehicle_year || null,
         ecuConfigurationId: row?.ecuConfigurationId || row?.ecu_configuration_id || row?.ecuConfigId || row?.ecu_config_id || null,
+        vehicleEngineCode: row?.vehicleEngineCode || row?.vehicle_engine_code || row?.engineCode || row?.engine_code || null,
+        vehicleProductionDate: row?.vehicleProductionDate || row?.vehicle_production_date || row?.productionDate || row?.production_date || row?.buildDate || row?.build_date || null,
+        vehicleMarket: row?.vehicleMarket || row?.vehicle_market || row?.market || row?.salesRegion || row?.sales_region || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34018,6 +34053,9 @@
       const dtcVehicleModelCode = dtcRow?.vehicleModelCode || dtcRow?.vehicle_model_code || dtcRow?.modelCode || dtcRow?.model_code || null;
       const dtcVehicleModelYear = dtcRow?.vehicleModelYear || dtcRow?.vehicle_model_year || dtcRow?.modelYear || dtcRow?.model_year || dtcRow?.vehicleYear || dtcRow?.vehicle_year || null;
       const dtcEcuConfigurationId = dtcRow?.ecuConfigurationId || dtcRow?.ecu_configuration_id || dtcRow?.ecuConfigId || dtcRow?.ecu_config_id || null;
+      const dtcVehicleEngineCode = dtcRow?.vehicleEngineCode || dtcRow?.vehicle_engine_code || dtcRow?.engineCode || dtcRow?.engine_code || null;
+      const dtcVehicleProductionDate = dtcRow?.vehicleProductionDate || dtcRow?.vehicle_production_date || dtcRow?.productionDate || dtcRow?.production_date || dtcRow?.buildDate || dtcRow?.build_date || null;
+      const dtcVehicleMarket = dtcRow?.vehicleMarket || dtcRow?.vehicle_market || dtcRow?.market || dtcRow?.salesRegion || dtcRow?.sales_region || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34030,6 +34068,9 @@
       if (dtcVehicleModelCode && response.vehicleModelCode && normalizeCsvEcuHierarchyScope(dtcVehicleModelCode) !== normalizeCsvEcuHierarchyScope(response.vehicleModelCode)) return false;
       if (dtcVehicleModelYear && response.vehicleModelYear && normalizeCsvEcuHierarchyScope(dtcVehicleModelYear) !== normalizeCsvEcuHierarchyScope(response.vehicleModelYear)) return false;
       if (dtcEcuConfigurationId && response.ecuConfigurationId && normalizeCsvEcuHierarchyScope(dtcEcuConfigurationId) !== normalizeCsvEcuHierarchyScope(response.ecuConfigurationId)) return false;
+      if (dtcVehicleEngineCode && response.vehicleEngineCode && normalizeCsvEcuHierarchyScope(dtcVehicleEngineCode) !== normalizeCsvEcuHierarchyScope(response.vehicleEngineCode)) return false;
+      if (dtcVehicleProductionDate && response.vehicleProductionDate && normalizeCsvEcuHierarchyScope(dtcVehicleProductionDate) !== normalizeCsvEcuHierarchyScope(response.vehicleProductionDate)) return false;
+      if (dtcVehicleMarket && response.vehicleMarket && normalizeCsvEcuHierarchyScope(dtcVehicleMarket) !== normalizeCsvEcuHierarchyScope(response.vehicleMarket)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
