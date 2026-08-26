@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3361件",
+  validationCheckLabel: "OBD安全検証 3366件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "DTC証跡の解析適格性を固定",
+  recentMilestone: "DTC証跡の品質差分案内を固定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.221";
+const APP_VERSION = "3.13.222";
 const APP_LAST_UPDATED = "2026-08-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9021,6 +9021,34 @@ function formatDtcFaultDetectionCounterComparisonSummary(summary, fallback = NO_
   return available ? "変化なし" : "DTC検出回数比較不可";
 }
 
+function formatDtcEvidenceFieldIds(fieldIds = []) {
+  const labels = {
+    dtc_first_detected_at: "初回検出時刻",
+    dtc_last_detected_at: "最終検出時刻",
+    dtc_confirmed_at: "確定時刻",
+    dtc_fault_occurrence_distance: "故障時距離",
+    dtc_fault_occurrence_distance_unit: "故障時距離単位",
+    dtc_distance_since_clear: "消去後距離",
+    dtc_distance_since_clear_unit: "消去後距離単位",
+    dtc_warm_up_cycle_count: "暖機回数",
+    dtc_ignition_cycle_count: "IG回数",
+    dtc_fault_duration: "故障継続時間",
+    dtc_fault_duration_unit: "故障継続単位",
+    dtc_time_since_clear: "消去後時間",
+    dtc_time_since_clear_unit: "消去後時間単位",
+    dtc_failure_occurrence_count: "故障発生回数",
+    dtc_recovery_count: "正常化回数",
+    dtc_last_cleared_at: "最終消去時刻",
+    dtc_confirmation_threshold: "確定閾値",
+    dtc_recovery_threshold: "正常化閾値",
+    dtc_aging_cycle_count: "エージング回数"
+  };
+  const ids = [...new Set((Array.isArray(fieldIds) ? fieldIds : []).filter(Boolean).map(String))];
+  const visible = ids.slice(0, 2).map((id) => labels[id] || id);
+  if (ids.length > visible.length) visible.push(`他${ids.length - visible.length}`);
+  return visible.join("・");
+}
+
 function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
   const issueCountValue = summary.issueCount ?? summary.issue_count;
@@ -9029,18 +9057,25 @@ function formatReadoutQualitySummary(summary, fallback = NO_DATA) {
   const ecuCountValue = summary.ecuInfoMissingKeyCount ?? summary.ecu_info_missing_key_count;
   const mode06CountValue = summary.onboardMonitorFailedCount ?? summary.onboard_monitor_failed_count;
   const webSerialResponseReviewCountValue = summary.webSerialResponseReviewCount ?? summary.web_serial_response_review_count;
+  const invalidDtcEvidenceCountValue = summary.invalidDtcEvidenceObservationCount ?? summary.invalid_dtc_evidence_observation_count;
+  const invalidDtcEvidenceFieldIds = Array.isArray(summary.invalidDtcEvidenceFieldIds) ? summary.invalidDtcEvidenceFieldIds : Array.isArray(summary.invalid_dtc_evidence_field_ids) ? summary.invalid_dtc_evidence_field_ids : [];
   const issueCount = Number.isFinite(Number(issueCountValue)) ? Number(issueCountValue) : 0;
   const rawCount = Number.isFinite(Number(rawCountValue)) ? Number(rawCountValue) : 0;
   const readinessCount = Number.isFinite(Number(readinessCountValue)) ? Number(readinessCountValue) : 0;
   const ecuCount = Number.isFinite(Number(ecuCountValue)) ? Number(ecuCountValue) : 0;
   const mode06Count = Number.isFinite(Number(mode06CountValue)) ? Number(mode06CountValue) : 0;
   const webSerialResponseReviewCount = Number.isFinite(Number(webSerialResponseReviewCountValue)) ? Number(webSerialResponseReviewCountValue) : 0;
+  const invalidDtcEvidenceCount = Number.isFinite(Number(invalidDtcEvidenceCountValue)) ? Number(invalidDtcEvidenceCountValue) : 0;
   const parts = [];
   if (rawCount) parts.push(`RAW${rawCount}`);
   if (readinessCount) parts.push(`RDY未完${readinessCount}`);
   if (ecuCount) parts.push(`ECU不足${ecuCount}`);
   if (mode06Count) parts.push(`M06失敗${mode06Count}`);
   if (webSerialResponseReviewCount) parts.push(`通信応答${webSerialResponseReviewCount}`);
+  if (invalidDtcEvidenceCount || invalidDtcEvidenceFieldIds.length) {
+    const fieldLabel = formatDtcEvidenceFieldIds(invalidDtcEvidenceFieldIds);
+    parts.push(`DTC証跡除外${invalidDtcEvidenceCount || invalidDtcEvidenceFieldIds.length}${fieldLabel ? `(${fieldLabel})` : ""}`);
+  }
   if (!parts.length && issueCount === 0) return "要確認なし";
   return parts.length ? parts.join(" / ") : `${issueCount}件`;
 }
@@ -9057,6 +9092,7 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   const webSerialNoDataDeltaValue = summary.webSerialNoDataDelta ?? summary.web_serial_no_data_delta;
   const webSerialExpectedEmptyCommandDeltaValue = summary.webSerialExpectedEmptyCommandDelta ?? summary.web_serial_expected_empty_command_delta;
   const webSerialUnresolvedNoDataDeltaValue = summary.webSerialUnresolvedNoDataDelta ?? summary.web_serial_unresolved_no_data_delta;
+  const invalidDtcEvidenceDeltaValue = summary.invalidDtcEvidenceObservationDelta ?? summary.invalid_dtc_evidence_observation_delta;
   const issueDelta = Number.isFinite(Number(issueDeltaValue)) ? Number(issueDeltaValue) : 0;
   const rawDelta = Number.isFinite(Number(rawDeltaValue)) ? Number(rawDeltaValue) : 0;
   const readinessDelta = Number.isFinite(Number(readinessDeltaValue)) ? Number(readinessDeltaValue) : 0;
@@ -9067,6 +9103,7 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   const webSerialNoDataDelta = Number.isFinite(Number(webSerialNoDataDeltaValue)) ? Number(webSerialNoDataDeltaValue) : 0;
   const webSerialExpectedEmptyCommandDelta = Number.isFinite(Number(webSerialExpectedEmptyCommandDeltaValue)) ? Number(webSerialExpectedEmptyCommandDeltaValue) : 0;
   const webSerialUnresolvedNoDataDelta = Number.isFinite(Number(webSerialUnresolvedNoDataDeltaValue)) ? Number(webSerialUnresolvedNoDataDeltaValue) : webSerialNoDataDelta;
+  const invalidDtcEvidenceDelta = Number.isFinite(Number(invalidDtcEvidenceDeltaValue)) ? Number(invalidDtcEvidenceDeltaValue) : 0;
   const parts = [];
   if (issueDelta !== 0) parts.push(`品質${issueDelta > 0 ? "+" : ""}${issueDelta}`);
   if (rawDelta !== 0) parts.push(`RAW${rawDelta > 0 ? "+" : ""}${rawDelta}`);
@@ -9077,6 +9114,8 @@ function formatReadoutQualityComparisonSummary(summary, fallback = NO_DATA) {
   if (webSerialNegativeResponseDelta !== 0) parts.push(`NRC${webSerialNegativeResponseDelta > 0 ? "+" : ""}${webSerialNegativeResponseDelta}`);
   if (webSerialExpectedEmptyCommandDelta !== 0) parts.push(`正常空結果${webSerialExpectedEmptyCommandDelta > 0 ? "+" : ""}${webSerialExpectedEmptyCommandDelta}`);
   if (webSerialUnresolvedNoDataDelta !== 0) parts.push(`NO DATA${webSerialUnresolvedNoDataDelta > 0 ? "+" : ""}${webSerialUnresolvedNoDataDelta}`);
+  if (invalidDtcEvidenceDelta !== 0) parts.push(`DTC証跡${invalidDtcEvidenceDelta > 0 ? "+" : ""}${invalidDtcEvidenceDelta}`);
+  if (summary.invalidDtcEvidenceFieldIdsChanged === true || summary.invalid_dtc_evidence_field_ids_changed === true) parts.push("DTC証跡項目変化");
   if (summary.issueIdsChanged === true) parts.push("項目変化");
   if (summary.reviewRequiredChanged === true) parts.push("確認状態変化");
   const reviewActionSummary = summary.reviewActionSummary || summary.review_action_summary || null;

@@ -13630,6 +13630,13 @@
       dtcEvidenceFieldReport?.invalidObservationCount,
       dtcEvidenceFieldReport?.invalid_observation_count
     );
+    const invalidDtcEvidenceFieldIds = [...new Set((Array.isArray(dtcEvidenceFieldReport?.invalidFieldIds)
+      ? dtcEvidenceFieldReport.invalidFieldIds
+      : Array.isArray(dtcEvidenceFieldReport?.invalid_field_ids)
+        ? dtcEvidenceFieldReport.invalid_field_ids
+        : [])
+      .filter(Boolean)
+      .map(String))].sort();
     const dtcEvidenceValidationStatus = String(
       dtcEvidenceFieldReport?.validationStatus
       || dtcEvidenceFieldReport?.validation_status
@@ -13666,6 +13673,8 @@
       onboard_monitor_failed_count: onboardMonitorFailedCount,
       invalidDtcEvidenceObservationCount,
       invalid_dtc_evidence_observation_count: invalidDtcEvidenceObservationCount,
+      invalidDtcEvidenceFieldIds,
+      invalid_dtc_evidence_field_ids: [...invalidDtcEvidenceFieldIds],
       dtcEvidenceValidationStatus,
       dtc_evidence_validation_status: dtcEvidenceValidationStatus,
       dtcEvidenceEligibleForAnalysis,
@@ -13731,6 +13740,7 @@
         onboardMonitorFailedCount,
         webSerialResponseReviewCount,
         invalidDtcEvidenceObservationCount,
+        invalidDtcEvidenceFieldIds: [...invalidDtcEvidenceFieldIds],
         dtcEvidenceEligibleForAnalysis,
         dtcEvidenceEligibleForApplicability: dtcEvidenceEligibleForAnalysis
       },
@@ -20988,7 +20998,8 @@
       readiness_incomplete: readCount(currentSummary, "readinessIncompleteCount") - readCount(importedQualitySummary, "readinessIncompleteCount"),
       mode09_key_items_missing: readCount(currentSummary, "ecuInfoMissingKeyCount") - readCount(importedQualitySummary, "ecuInfoMissingKeyCount"),
       onboard_monitor_test_failed: readCount(currentSummary, "onboardMonitorFailedCount") - readCount(importedQualitySummary, "onboardMonitorFailedCount"),
-      web_serial_response_quality: readCount(currentSummary, "webSerialResponseReviewCount") - readCount(importedQualitySummary, "webSerialResponseReviewCount")
+      web_serial_response_quality: readCount(currentSummary, "webSerialResponseReviewCount") - readCount(importedQualitySummary, "webSerialResponseReviewCount"),
+      invalid_dtc_evidence_excluded: readCount(currentSummary, "invalidDtcEvidenceObservationCount") - readCount(importedQualitySummary, "invalidDtcEvidenceObservationCount")
     };
     const webSerialResponseOutcomeDeltas = {
       negative_response: readCount(currentSummary, "webSerialNegativeResponseCount") - readCount(importedQualitySummary, "webSerialNegativeResponseCount"),
@@ -21010,14 +21021,19 @@
       raw_pid_values_need_conversion: "live_pid_snapshot",
       readiness_incomplete: "readiness_snapshot",
       mode09_key_items_missing: "ecu_info_snapshot",
-      onboard_monitor_test_failed: "onboard_monitor_snapshot"
+      onboard_monitor_test_failed: "onboard_monitor_snapshot",
+      invalid_dtc_evidence_excluded: "dtc_snapshot"
     };
+    const importedInvalidDtcEvidenceFieldIds = readIds(importedQualitySummary, "invalidDtcEvidenceFieldIds");
+    const currentInvalidDtcEvidenceFieldIds = readIds(currentSummary, "invalidDtcEvidenceFieldIds");
+    const invalidDtcEvidenceFieldIdsChanged = importedInvalidDtcEvidenceFieldIds.join("|") !== currentInvalidDtcEvidenceFieldIds.join("|");
     const issueAddedIds = diffIds(currentIssueIds, importedIssueIds);
     const issueRemovedIds = diffIds(importedIssueIds, currentIssueIds);
     const reviewIssueIds = [...new Set([
       ...issueAddedIds,
       ...issueRemovedIds,
       ...changedIssueCountIds,
+      ...(invalidDtcEvidenceFieldIdsChanged ? ["invalid_dtc_evidence_excluded"] : []),
       ...(readFlag(importedQualitySummary, "reviewRequired") !== readFlag(currentSummary, "reviewRequired") ? currentIssueIds : [])
     ].filter(Boolean))].sort();
     const reviewTargetReadoutIds = [...new Set(reviewIssueIds.map((id) => issueReviewReadoutMap[id]).filter(Boolean))];
@@ -21027,8 +21043,8 @@
       schema_version: "readout_quality_review_action_v1",
       actionId: "review_readout_quality_change",
       action_id: "review_readout_quality_change",
-      actionRequired: reviewTargetReadoutIds.length > 0 || changedIssueCountIds.length > 0 || importedIssueIds.join("|") !== currentIssueIds.join("|"),
-      action_required: reviewTargetReadoutIds.length > 0 || changedIssueCountIds.length > 0 || importedIssueIds.join("|") !== currentIssueIds.join("|"),
+      actionRequired: reviewTargetReadoutIds.length > 0 || changedIssueCountIds.length > 0 || invalidDtcEvidenceFieldIdsChanged || importedIssueIds.join("|") !== currentIssueIds.join("|"),
+      action_required: reviewTargetReadoutIds.length > 0 || changedIssueCountIds.length > 0 || invalidDtcEvidenceFieldIdsChanged || importedIssueIds.join("|") !== currentIssueIds.join("|"),
       reasonIds: reviewIssueIds,
       reason_ids: reviewIssueIds,
       readoutIds: reviewTargetReadoutIds,
@@ -21093,6 +21109,14 @@
       ecu_info_missing_key_delta: issueFieldDeltas.mode09_key_items_missing,
       onboardMonitorFailedDelta: issueFieldDeltas.onboard_monitor_test_failed,
       onboard_monitor_failed_delta: issueFieldDeltas.onboard_monitor_test_failed,
+      invalidDtcEvidenceObservationDelta: issueFieldDeltas.invalid_dtc_evidence_excluded,
+      invalid_dtc_evidence_observation_delta: issueFieldDeltas.invalid_dtc_evidence_excluded,
+      importedInvalidDtcEvidenceFieldIds,
+      imported_invalid_dtc_evidence_field_ids: importedInvalidDtcEvidenceFieldIds,
+      currentInvalidDtcEvidenceFieldIds,
+      current_invalid_dtc_evidence_field_ids: currentInvalidDtcEvidenceFieldIds,
+      invalidDtcEvidenceFieldIdsChanged,
+      invalid_dtc_evidence_field_ids_changed: invalidDtcEvidenceFieldIdsChanged,
       webSerialResponseReviewDelta: issueFieldDeltas.web_serial_response_quality,
       web_serial_response_review_delta: issueFieldDeltas.web_serial_response_quality,
       webSerialResponseOutcomeDeltas,
@@ -21119,6 +21143,14 @@
     const readinessIncompleteCount = toCount("readinessIncompleteCount", "readiness_incomplete_count", 0);
     const ecuInfoMissingKeyCount = toCount("ecuInfoMissingKeyCount", "ecu_info_missing_key_count", 0);
     const onboardMonitorFailedCount = toCount("onboardMonitorFailedCount", "onboard_monitor_failed_count", 0);
+    const invalidDtcEvidenceObservationCount = toCount("invalidDtcEvidenceObservationCount", "invalid_dtc_evidence_observation_count", 0);
+    const invalidDtcEvidenceFieldIds = [...new Set((Array.isArray(summary.invalidDtcEvidenceFieldIds)
+      ? summary.invalidDtcEvidenceFieldIds
+      : Array.isArray(summary.invalid_dtc_evidence_field_ids)
+        ? summary.invalid_dtc_evidence_field_ids
+        : [])
+      .filter(Boolean)
+      .map(String))].sort();
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
     const webSerialPendingNegativeResponseCount = toCount("webSerialPendingNegativeResponseCount", "web_serial_pending_negative_response_count", 0);
     const webSerialNoDataCount = toCount("webSerialNoDataCount", "web_serial_no_data_count", 0);
@@ -21149,6 +21181,7 @@
       ...(readinessIncompleteCount > 0 ? ["readiness_incomplete"] : []),
       ...(ecuInfoMissingKeyCount > 0 ? ["mode09_key_items_missing"] : []),
       ...(onboardMonitorFailedCount > 0 ? ["onboard_monitor_test_failed"] : []),
+      ...(invalidDtcEvidenceObservationCount > 0 || invalidDtcEvidenceFieldIds.length > 0 ? ["invalid_dtc_evidence_excluded"] : []),
       ...(webSerialResponseReviewCount > 0 ? ["web_serial_response_quality"] : [])
     ])].sort();
     const issueCount = Math.max(toCount("issueCount", "issue_count", issueIds.length), issueIds.length);
@@ -21174,6 +21207,14 @@
       ecu_info_missing_key_count: ecuInfoMissingKeyCount,
       onboardMonitorFailedCount,
       onboard_monitor_failed_count: onboardMonitorFailedCount,
+      invalidDtcEvidenceObservationCount,
+      invalid_dtc_evidence_observation_count: invalidDtcEvidenceObservationCount,
+      invalidDtcEvidenceFieldIds,
+      invalid_dtc_evidence_field_ids: invalidDtcEvidenceFieldIds,
+      dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
+      dtc_evidence_eligible_for_analysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
+      dtcEvidenceEligibleForApplicability: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
+      dtc_evidence_eligible_for_applicability: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
       webSerialResponseReviewCount,
       web_serial_response_review_count: webSerialResponseReviewCount,
       webSerialNegativeResponseCount,
