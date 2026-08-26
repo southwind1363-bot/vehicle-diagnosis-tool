@@ -14582,19 +14582,28 @@
       || (Array.isArray(dtcSnapshot?.codes) && dtcSnapshot.codes.length > 0)
       || (Array.isArray(quality.dtcEvidenceComparisonScopeKeys) && quality.dtcEvidenceComparisonScopeKeys.length > 0)
       || (Array.isArray(quality.dtc_evidence_comparison_scope_keys) && quality.dtc_evidence_comparison_scope_keys.length > 0);
-    const requirements = [
-      { id: "dtc_evidence_scope", complete: sampleObserved && readFlag("dtcEvidenceScopeComplete", "dtc_evidence_scope_complete") },
-      { id: "acquisition_context", complete: sampleObserved && readFlag("dtcEvidenceAcquisitionContextComplete", "dtc_evidence_acquisition_context_complete") },
-      { id: "transport_context", complete: sampleObserved && readFlag("dtcEvidenceTransportContextComplete", "dtc_evidence_transport_context_complete") },
-      { id: "readout_contract", complete: sampleObserved && readFlag("dtcEvidenceReadoutContractComplete", "dtc_evidence_readout_contract_complete") },
-      { id: "response_contract", complete: sampleObserved && readFlag("dtcEvidenceResponseContractComplete", "dtc_evidence_response_contract_complete") },
-      { id: "negative_response_context", complete: sampleObserved && readFlag("dtcEvidenceNegativeResponseContextComplete", "dtc_evidence_negative_response_context_complete") },
-      { id: "response_attempt_context", complete: sampleObserved && readFlag("dtcEvidenceResponseAttemptContextComplete", "dtc_evidence_response_attempt_context_complete") },
-      { id: "evidence_validation_reported", complete: sampleObserved && readFlag("dtcEvidenceValidationReported", "dtc_evidence_validation_reported") },
-      { id: "evidence_values_valid", complete: sampleObserved && readFlag("dtcEvidenceEligibleForAnalysis", "dtc_evidence_eligible_for_analysis") }
+    const requirementInputs = [
+      ["dtc_evidence_scope", "dtcEvidenceScopeComplete", "dtc_evidence_scope_complete", ["vehicle_maker", "vehicle_model_code", "vehicle_year", "source_ecu", "dtc_code"]],
+      ["acquisition_context", "dtcEvidenceAcquisitionContextComplete", "dtc_evidence_acquisition_context_complete", ["captured_at", "protocol", "scan_session_id"]],
+      ["transport_context", "dtcEvidenceTransportContextComplete", "dtc_evidence_transport_context_complete", ["readout_attempt_id", "communication_route", "vci_identity"]],
+      ["readout_contract", "dtcEvidenceReadoutContractComplete", "dtc_evidence_readout_contract_complete", ["dtc_readout_category", "requested_service"]],
+      ["response_contract", "dtcEvidenceResponseContractComplete", "dtc_evidence_response_contract_complete", ["response_service", "ecu_response_status"]],
+      ["negative_response_context", "dtcEvidenceNegativeResponseContextComplete", "dtc_evidence_negative_response_context_complete", ["negative_response_code", "response_pending_observed"]],
+      ["response_attempt_context", "dtcEvidenceResponseAttemptContextComplete", "dtc_evidence_response_attempt_context_complete", ["negative_requested_service", "response_count", "response_wait_ms"]],
+      ["evidence_validation_reported", "dtcEvidenceValidationReported", "dtc_evidence_validation_reported", ["dtc_evidence_validation_report"]],
+      ["evidence_values_valid", "dtcEvidenceEligibleForAnalysis", "dtc_evidence_eligible_for_analysis", ["validated_dtc_evidence_values"]]
     ];
+    const requirements = requirementInputs.map(([id, camelKey, snakeKey, evidenceFieldIds]) => ({
+      id,
+      complete: sampleObserved && readFlag(camelKey, snakeKey),
+      evidenceFieldIds: [...evidenceFieldIds],
+      evidence_field_ids: [...evidenceFieldIds]
+    }));
     const completeRequirementIds = requirements.filter((item) => item.complete).map((item) => item.id);
     const missingRequirementIds = requirements.filter((item) => !item.complete).map((item) => item.id);
+    const nextMissingRequirement = requirements.find((item) => !item.complete) || null;
+    const nextMissingRequirementId = nextMissingRequirement?.id || null;
+    const nextMissingEvidenceFieldIds = nextMissingRequirement?.evidenceFieldIds || [];
     const contractCompleteForSampleReview = sampleObserved && missingRequirementIds.length === 0;
     const status = !sampleObserved
       ? "sample_not_observed"
@@ -14603,8 +14612,8 @@
         : "incomplete";
 
     return {
-      schemaVersion: "manufacturer_sample_readiness_summary_v1",
-      schema_version: "manufacturer_sample_readiness_summary_v1",
+      schemaVersion: "manufacturer_sample_readiness_summary_v2",
+      schema_version: "manufacturer_sample_readiness_summary_v2",
       status,
       sampleObserved,
       sample_observed: sampleObserved,
@@ -14614,10 +14623,17 @@
       complete_requirement_count: completeRequirementIds.length,
       completeRequirementIds,
       complete_requirement_ids: [...completeRequirementIds],
+      requirements: requirements.map((item) => ({ ...item, evidenceFieldIds: [...item.evidenceFieldIds], evidence_field_ids: [...item.evidence_field_ids] })),
       missingRequirementCount: missingRequirementIds.length,
       missing_requirement_count: missingRequirementIds.length,
       missingRequirementIds,
       missing_requirement_ids: [...missingRequirementIds],
+      nextMissingRequirementId,
+      next_missing_requirement_id: nextMissingRequirementId,
+      nextMissingEvidenceFieldIds: [...nextMissingEvidenceFieldIds],
+      next_missing_evidence_field_ids: [...nextMissingEvidenceFieldIds],
+      collectionGuidanceAvailable: missingRequirementIds.length > 0,
+      collection_guidance_available: missingRequirementIds.length > 0,
       contractCompleteForSampleReview,
       contract_complete_for_sample_review: contractCompleteForSampleReview,
       realVehicleVerified: false,
