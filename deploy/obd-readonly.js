@@ -28118,6 +28118,9 @@
         ? pendingCount === negativeResponseCount ? "pending_response" : "negative_response"
         : reportedStatus;
       const responseTimeMs = Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null;
+      const rowCapturedAtValue = row?.captured_at || row?.capturedAt || row?.timestamp || sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
+      const rowCapturedAt = /^\d{4}-\d{2}-\d{2}T/.test(String(rowCapturedAtValue || "")) && Number.isFinite(Date.parse(rowCapturedAtValue)) ? rowCapturedAtValue : null;
+      const rowProtocol = normalizeProtocolProvenanceValue(row?.protocol || row?.obd_protocol || row?.communicationProtocol || row?.communication_protocol || sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null);
       return {
         id,
         name,
@@ -28139,7 +28142,9 @@
         negativeResponseLabels,
         negative_response_labels: negativeResponseLabels,
         responseTimeMs,
-        response_time_ms: responseTimeMs
+        response_time_ms: responseTimeMs,
+        ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
+        ...(rowProtocol ? { protocol: rowProtocol } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28162,7 +28167,9 @@
         pendingNegativeResponseCount: row.pendingNegativeResponseCount,
         negativeRequestedServices: [...row.negativeRequestedServices].sort(),
         negativeResponseLabels: [...row.negativeResponseLabels].sort(),
-        responseTimeMs: row.responseTimeMs
+        responseTimeMs: row.responseTimeMs,
+        capturedAt: row.capturedAt || null,
+        protocol: row.protocol || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32393,6 +32400,8 @@
           id: responseId,
           name: ecuName || responseId,
           status: responseStatus,
+          ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
+          ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(Number.isFinite(responseTimeMs) && responseTimeMs >= 0 ? { response_time_ms: responseTimeMs } : {}),
           ...(Number.isInteger(negativeResponseCount) && negativeResponseCount >= 0 ? { negative_response_count: negativeResponseCount } : {}),
           ...(negativeResponseLabel ? { negative_response_labels: [negativeResponseLabel] } : {}),
@@ -33804,22 +33813,33 @@
     const normalizeCsvEcuIdentity = (value) => normalizeComparableCanEcuAddress(value)
       || String(value || "").trim().toUpperCase().slice(0, 80)
       || null;
-    const explicitResponseStatusesByEcu = new Map();
+    const explicitResponsesByEcu = new Map();
     (ecuResponseSummary?.ecus || []).forEach((row) => {
       const ecuId = normalizeCsvEcuIdentity(row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id);
       if (!ecuId) return;
-      const statuses = explicitResponseStatusesByEcu.get(ecuId) || new Set();
-      statuses.add(String(row?.status || row?.responseStatus || row?.response_status || "unknown").trim().toLowerCase().replace(/[\s-]+/g, "_"));
-      explicitResponseStatusesByEcu.set(ecuId, statuses);
+      const responses = explicitResponsesByEcu.get(ecuId) || [];
+      responses.push({
+        status: String(row?.status || row?.responseStatus || row?.response_status || "unknown").trim().toLowerCase().replace(/[\s-]+/g, "_"),
+        capturedAt: row?.capturedAt || row?.captured_at || ecuResponseSummary?.capturedAt || ecuResponseSummary?.captured_at || null,
+        protocol: normalizeProtocolProvenanceValue(row?.protocol || ecuResponseSummary?.protocol || ecuResponseSummary?.obd_protocol || null)
+      });
+      explicitResponsesByEcu.set(ecuId, responses);
     });
     const positiveResponseStatuses = new Set(["reported", "responded", "response", "ok", "success", "available", "positive", "negative_response", "pending_response"]);
     const unavailableResponseStatuses = new Set(["no_response", "blocked", "timeout", "failed", "error", "unavailable"]);
+    const isSameCsvReadoutScope = (dtcRow, response) => {
+      const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
+      const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
+      if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
+      if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
+      return true;
+    };
     const conflictingDtcRowsByEcu = new Map();
     const reconciledDtcRows = (mergedDtcSnapshot?.dtcs || []).map((row) => {
       const ecuId = normalizeCsvEcuIdentity(row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.sourceEcu || row?.source_ecu);
-      const statuses = ecuId ? explicitResponseStatusesByEcu.get(ecuId) : null;
-      const hasPositiveResponse = statuses ? [...statuses].some((status) => positiveResponseStatuses.has(status)) : false;
-      const unavailableStatuses = statuses ? [...statuses].filter((status) => unavailableResponseStatuses.has(status)) : [];
+      const scopedResponses = ecuId ? (explicitResponsesByEcu.get(ecuId) || []).filter((response) => isSameCsvReadoutScope(row, response)) : [];
+      const hasPositiveResponse = scopedResponses.some((response) => positiveResponseStatuses.has(response.status));
+      const unavailableStatuses = [...new Set(scopedResponses.map((response) => response.status).filter((status) => unavailableResponseStatuses.has(status)))];
       if (!ecuId || hasPositiveResponse || unavailableStatuses.length === 0) return row;
       const conflictRows = conflictingDtcRowsByEcu.get(ecuId) || [];
       conflictRows.push(row);
@@ -33837,8 +33857,8 @@
     const ecuDtcResponseReconciliationRows = [...conflictingDtcRowsByEcu.entries()].map(([ecuId, rows]) => ({
       ecuId,
       ecu_id: ecuId,
-      responseStatuses: [...explicitResponseStatusesByEcu.get(ecuId)].sort(),
-      response_statuses: [...explicitResponseStatusesByEcu.get(ecuId)].sort(),
+      responseStatuses: [...new Set(explicitResponsesByEcu.get(ecuId).map((response) => response.status))].sort(),
+      response_statuses: [...new Set(explicitResponsesByEcu.get(ecuId).map((response) => response.status))].sort(),
       dtcCodes: [...new Set(rows.map((row) => row?.code).filter(Boolean))].sort(),
       dtc_codes: [...new Set(rows.map((row) => row?.code).filter(Boolean))].sort(),
       dtcRowCount: rows.length,
