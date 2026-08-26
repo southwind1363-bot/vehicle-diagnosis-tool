@@ -26505,6 +26505,9 @@
           const udsResponseSubfunction = redactSensitiveText(String(row.udsResponseSubfunction || row.uds_response_subfunction || row.responseSubfunction || row.response_subfunction || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsNegativeResponseCode = redactSensitiveText(String(row.udsNegativeResponseCode || row.uds_negative_response_code || row.negativeResponseCode || row.negative_response_code || row.nrc || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsResponseState = redactSensitiveText(String(row.udsResponseState || row.uds_response_state || row.responseState || row.response_state || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcMemorySelection = redactSensitiveText(String(row.udsDtcMemorySelection || row.uds_dtc_memory_selection || row.dtcMemorySelection || row.dtc_memory_selection || row.memorySelection || row.memory_selection || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcFormatIdentifier = redactSensitiveText(String(row.udsDtcFormatIdentifier || row.uds_dtc_format_identifier || row.dtcFormatIdentifier || row.dtc_format_identifier || row.formatIdentifier || row.format_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcStatusAvailabilityMask = redactSensitiveText(String(row.udsDtcStatusAvailabilityMask || row.uds_dtc_status_availability_mask || row.dtcStatusAvailabilityMask || row.dtc_status_availability_mask || row.statusAvailabilityMask || row.status_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26587,6 +26590,9 @@
             ...(udsResponseSubfunction ? { udsResponseSubfunction, uds_response_subfunction: udsResponseSubfunction } : {}),
             ...(udsNegativeResponseCode ? { udsNegativeResponseCode, uds_negative_response_code: udsNegativeResponseCode } : {}),
             ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {}),
+            ...(udsDtcMemorySelection ? { udsDtcMemorySelection, uds_dtc_memory_selection: udsDtcMemorySelection } : {}),
+            ...(udsDtcFormatIdentifier ? { udsDtcFormatIdentifier, uds_dtc_format_identifier: udsDtcFormatIdentifier } : {}),
+            ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26729,6 +26735,9 @@
       const udsResponseSubfunction = redactSensitiveText(String(rowValue.udsResponseSubfunction || rowValue.uds_response_subfunction || rowValue.responseSubfunction || rowValue.response_subfunction || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsNegativeResponseCode = redactSensitiveText(String(rowValue.udsNegativeResponseCode || rowValue.uds_negative_response_code || rowValue.negativeResponseCode || rowValue.negative_response_code || rowValue.nrc || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsResponseState = redactSensitiveText(String(rowValue.udsResponseState || rowValue.uds_response_state || rowValue.responseState || rowValue.response_state || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcMemorySelection = redactSensitiveText(String(rowValue.udsDtcMemorySelection || rowValue.uds_dtc_memory_selection || rowValue.dtcMemorySelection || rowValue.dtc_memory_selection || rowValue.memorySelection || rowValue.memory_selection || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcFormatIdentifier = redactSensitiveText(String(rowValue.udsDtcFormatIdentifier || rowValue.uds_dtc_format_identifier || rowValue.dtcFormatIdentifier || rowValue.dtc_format_identifier || rowValue.formatIdentifier || rowValue.format_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcStatusAvailabilityMask = redactSensitiveText(String(rowValue.udsDtcStatusAvailabilityMask || rowValue.uds_dtc_status_availability_mask || rowValue.dtcStatusAvailabilityMask || rowValue.dtc_status_availability_mask || rowValue.statusAvailabilityMask || rowValue.status_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26799,6 +26808,9 @@
         ...(udsResponseSubfunction ? { udsResponseSubfunction, uds_response_subfunction: udsResponseSubfunction } : {}),
         ...(udsNegativeResponseCode ? { udsNegativeResponseCode, uds_negative_response_code: udsNegativeResponseCode } : {}),
         ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {}),
+        ...(udsDtcMemorySelection ? { udsDtcMemorySelection, uds_dtc_memory_selection: udsDtcMemorySelection } : {}),
+        ...(udsDtcFormatIdentifier ? { udsDtcFormatIdentifier, uds_dtc_format_identifier: udsDtcFormatIdentifier } : {}),
+        ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28354,6 +28366,9 @@
       const udsResponseSubfunction = redactSensitiveText(String(row?.udsResponseSubfunction || row?.uds_response_subfunction || row?.responseSubfunction || row?.response_subfunction || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsNegativeResponseCode = redactSensitiveText(String(row?.udsNegativeResponseCode || row?.uds_negative_response_code || row?.negativeResponseCode || row?.negative_response_code || row?.nrc || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsResponseState = redactSensitiveText(String(row?.udsResponseState || row?.uds_response_state || row?.responseState || row?.response_state || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcMemorySelection = redactSensitiveText(String(row?.udsDtcMemorySelection || row?.uds_dtc_memory_selection || row?.dtcMemorySelection || row?.dtc_memory_selection || row?.memorySelection || row?.memory_selection || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcFormatIdentifier = redactSensitiveText(String(row?.udsDtcFormatIdentifier || row?.uds_dtc_format_identifier || row?.dtcFormatIdentifier || row?.dtc_format_identifier || row?.formatIdentifier || row?.format_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcStatusAvailabilityMask = redactSensitiveText(String(row?.udsDtcStatusAvailabilityMask || row?.uds_dtc_status_availability_mask || row?.dtcStatusAvailabilityMask || row?.dtc_status_availability_mask || row?.statusAvailabilityMask || row?.status_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return {
         id,
         name,
@@ -28423,7 +28438,10 @@
         ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {}),
         ...(udsResponseSubfunction ? { udsResponseSubfunction, uds_response_subfunction: udsResponseSubfunction } : {}),
         ...(udsNegativeResponseCode ? { udsNegativeResponseCode, uds_negative_response_code: udsNegativeResponseCode } : {}),
-        ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {})
+        ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {}),
+        ...(udsDtcMemorySelection ? { udsDtcMemorySelection, uds_dtc_memory_selection: udsDtcMemorySelection } : {}),
+        ...(udsDtcFormatIdentifier ? { udsDtcFormatIdentifier, uds_dtc_format_identifier: udsDtcFormatIdentifier } : {}),
+        ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28494,7 +28512,10 @@
         udsDataIdentifier: row.udsDataIdentifier || null,
         udsResponseSubfunction: row.udsResponseSubfunction || null,
         udsNegativeResponseCode: row.udsNegativeResponseCode || null,
-        udsResponseState: row.udsResponseState || null
+        udsResponseState: row.udsResponseState || null,
+        udsDtcMemorySelection: row.udsDtcMemorySelection || null,
+        udsDtcFormatIdentifier: row.udsDtcFormatIdentifier || null,
+        udsDtcStatusAvailabilityMask: row.udsDtcStatusAvailabilityMask || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32412,6 +32433,8 @@
     const udsResponseSubfunctionIndex = findIndex("uds response subfunction", "uds_response_subfunction", "response subfunction", "response_subfunction", "UDS応答サブファンクション");
     const udsNegativeResponseCodeIndex = findIndex("uds negative response code", "uds_negative_response_code", "negative response code", "negative_response_code", "nrc", "UDS否定応答コード", "NRC");
     const udsResponseStateIndex = findIndex("uds response state", "uds_response_state", "response state", "response_state", "UDS応答状態");
+    const udsDtcMemorySelectionIndex = findIndex("uds dtc memory selection", "uds_dtc_memory_selection", "dtc memory selection", "dtc_memory_selection", "memory selection", "memory_selection", "UDS DTCメモリ選択");
+    const udsDtcFormatIdentifierIndex = findIndex("uds dtc format identifier", "uds_dtc_format_identifier", "dtc format identifier", "dtc_format_identifier", "format identifier", "format_identifier", "UDS DTCフォーマット識別子");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32557,6 +32580,9 @@
       const rowUdsResponseSubfunction = cellAt(udsResponseSubfunctionIndex, 80) || null;
       const rowUdsNegativeResponseCode = cellAt(udsNegativeResponseCodeIndex, 80) || null;
       const rowUdsResponseState = cellAt(udsResponseStateIndex, 80) || null;
+      const rowUdsDtcMemorySelection = cellAt(udsDtcMemorySelectionIndex, 80) || null;
+      const rowUdsDtcFormatIdentifier = cellAt(udsDtcFormatIdentifierIndex, 80) || null;
+      const rowUdsDtcStatusAvailabilityMask = cellAt(dtcStatusAvailabilityMaskIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32748,6 +32774,9 @@
           ...(rowUdsResponseSubfunction ? { uds_response_subfunction: rowUdsResponseSubfunction } : {}),
           ...(rowUdsNegativeResponseCode ? { uds_negative_response_code: rowUdsNegativeResponseCode } : {}),
           ...(rowUdsResponseState ? { uds_response_state: rowUdsResponseState } : {}),
+          ...(rowUdsDtcMemorySelection ? { uds_dtc_memory_selection: rowUdsDtcMemorySelection } : {}),
+          ...(rowUdsDtcFormatIdentifier ? { uds_dtc_format_identifier: rowUdsDtcFormatIdentifier } : {}),
+          ...(rowUdsDtcStatusAvailabilityMask ? { uds_dtc_status_availability_mask: rowUdsDtcStatusAvailabilityMask } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32904,6 +32933,9 @@
           ...(rowUdsResponseSubfunction ? { uds_response_subfunction: rowUdsResponseSubfunction } : {}),
           ...(rowUdsNegativeResponseCode ? { uds_negative_response_code: rowUdsNegativeResponseCode } : {}),
           ...(rowUdsResponseState ? { uds_response_state: rowUdsResponseState } : {}),
+          ...(rowUdsDtcMemorySelection ? { uds_dtc_memory_selection: rowUdsDtcMemorySelection } : {}),
+          ...(rowUdsDtcFormatIdentifier ? { uds_dtc_format_identifier: rowUdsDtcFormatIdentifier } : {}),
+          ...(rowUdsDtcStatusAvailabilityMask ? { uds_dtc_status_availability_mask: rowUdsDtcStatusAvailabilityMask } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34383,6 +34415,9 @@
         udsResponseSubfunction: row?.udsResponseSubfunction || row?.uds_response_subfunction || row?.responseSubfunction || row?.response_subfunction || null,
         udsNegativeResponseCode: row?.udsNegativeResponseCode || row?.uds_negative_response_code || row?.negativeResponseCode || row?.negative_response_code || row?.nrc || null,
         udsResponseState: row?.udsResponseState || row?.uds_response_state || row?.responseState || row?.response_state || null,
+        udsDtcMemorySelection: row?.udsDtcMemorySelection || row?.uds_dtc_memory_selection || row?.dtcMemorySelection || row?.dtc_memory_selection || row?.memorySelection || row?.memory_selection || null,
+        udsDtcFormatIdentifier: row?.udsDtcFormatIdentifier || row?.uds_dtc_format_identifier || row?.dtcFormatIdentifier || row?.dtc_format_identifier || row?.formatIdentifier || row?.format_identifier || null,
+        udsDtcStatusAvailabilityMask: row?.udsDtcStatusAvailabilityMask || row?.uds_dtc_status_availability_mask || row?.dtcStatusAvailabilityMask || row?.dtc_status_availability_mask || row?.statusAvailabilityMask || row?.status_availability_mask || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34449,6 +34484,9 @@
       const dtcUdsResponseSubfunction = dtcRow?.udsResponseSubfunction || dtcRow?.uds_response_subfunction || dtcRow?.responseSubfunction || dtcRow?.response_subfunction || null;
       const dtcUdsNegativeResponseCode = dtcRow?.udsNegativeResponseCode || dtcRow?.uds_negative_response_code || dtcRow?.negativeResponseCode || dtcRow?.negative_response_code || dtcRow?.nrc || null;
       const dtcUdsResponseState = dtcRow?.udsResponseState || dtcRow?.uds_response_state || dtcRow?.responseState || dtcRow?.response_state || null;
+      const dtcUdsDtcMemorySelection = dtcRow?.udsDtcMemorySelection || dtcRow?.uds_dtc_memory_selection || dtcRow?.dtcMemorySelection || dtcRow?.dtc_memory_selection || dtcRow?.memorySelection || dtcRow?.memory_selection || null;
+      const dtcUdsDtcFormatIdentifier = dtcRow?.udsDtcFormatIdentifier || dtcRow?.uds_dtc_format_identifier || dtcRow?.dtcFormatIdentifier || dtcRow?.dtc_format_identifier || dtcRow?.formatIdentifier || dtcRow?.format_identifier || null;
+      const dtcUdsDtcStatusAvailabilityMask = dtcRow?.udsDtcStatusAvailabilityMask || dtcRow?.uds_dtc_status_availability_mask || dtcRow?.dtcStatusAvailabilityMask || dtcRow?.dtc_status_availability_mask || dtcRow?.statusAvailabilityMask || dtcRow?.status_availability_mask || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34494,6 +34532,9 @@
       if (dtcUdsResponseSubfunction && response.udsResponseSubfunction && normalizeCsvDiagnosticAddressIdentity(dtcUdsResponseSubfunction) !== normalizeCsvDiagnosticAddressIdentity(response.udsResponseSubfunction)) return false;
       if (dtcUdsNegativeResponseCode && response.udsNegativeResponseCode && normalizeCsvDiagnosticAddressIdentity(dtcUdsNegativeResponseCode) !== normalizeCsvDiagnosticAddressIdentity(response.udsNegativeResponseCode)) return false;
       if (dtcUdsResponseState && response.udsResponseState && normalizeCsvEcuHierarchyScope(dtcUdsResponseState) !== normalizeCsvEcuHierarchyScope(response.udsResponseState)) return false;
+      if (dtcUdsDtcMemorySelection && response.udsDtcMemorySelection && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcMemorySelection) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcMemorySelection)) return false;
+      if (dtcUdsDtcFormatIdentifier && response.udsDtcFormatIdentifier && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcFormatIdentifier) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcFormatIdentifier)) return false;
+      if (dtcUdsDtcStatusAvailabilityMask && response.udsDtcStatusAvailabilityMask && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcStatusAvailabilityMask) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcStatusAvailabilityMask)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
