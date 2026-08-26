@@ -26466,6 +26466,9 @@
           const readoutAttemptId = redactSensitiveText(String(row.readoutAttemptId || row.readout_attempt_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const ecuGroup = redactSensitiveText(String(row.ecuGroup || row.ecu_group || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const ecuSystem = redactSensitiveText(String(row.ecuSystem || row.ecu_system || row.systemHierarchy || row.system_hierarchy || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+          const parentEcuId = redactSensitiveText(String(row.parentEcuId || row.parent_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const subEcuId = redactSensitiveText(String(row.subEcuId || row.sub_ecu_id || row.childEcuId || row.child_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const resultRowId = redactSensitiveText(String(row.resultRowId || row.result_row_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26509,6 +26512,9 @@
             ...(readoutAttemptId ? { readoutAttemptId, readout_attempt_id: readoutAttemptId } : {}),
             ...(ecuGroup ? { ecuGroup, ecu_group: ecuGroup } : {}),
             ...(ecuSystem ? { ecuSystem, ecu_system: ecuSystem } : {}),
+            ...(parentEcuId ? { parentEcuId, parent_ecu_id: parentEcuId } : {}),
+            ...(subEcuId ? { subEcuId, sub_ecu_id: subEcuId } : {}),
+            ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26612,6 +26618,9 @@
       const readoutAttemptId = redactSensitiveText(String(rowValue.readoutAttemptId || rowValue.readout_attempt_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuGroup = redactSensitiveText(String(rowValue.ecuGroup || rowValue.ecu_group || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuSystem = redactSensitiveText(String(rowValue.ecuSystem || rowValue.ecu_system || rowValue.systemHierarchy || rowValue.system_hierarchy || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const parentEcuId = redactSensitiveText(String(rowValue.parentEcuId || rowValue.parent_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const subEcuId = redactSensitiveText(String(rowValue.subEcuId || rowValue.sub_ecu_id || rowValue.childEcuId || rowValue.child_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const resultRowId = redactSensitiveText(String(rowValue.resultRowId || rowValue.result_row_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26643,6 +26652,9 @@
         ...(readoutAttemptId ? { readoutAttemptId, readout_attempt_id: readoutAttemptId } : {}),
         ...(ecuGroup ? { ecuGroup, ecu_group: ecuGroup } : {}),
         ...(ecuSystem ? { ecuSystem, ecu_system: ecuSystem } : {}),
+        ...(parentEcuId ? { parentEcuId, parent_ecu_id: parentEcuId } : {}),
+        ...(subEcuId ? { subEcuId, sub_ecu_id: subEcuId } : {}),
+        ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28159,6 +28171,9 @@
       const readoutAttemptId = redactSensitiveText(String(row?.readoutAttemptId || row?.readout_attempt_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuGroup = redactSensitiveText(String(row?.ecuGroup || row?.ecu_group || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuSystem = redactSensitiveText(String(row?.ecuSystem || row?.ecu_system || row?.systemHierarchy || row?.system_hierarchy || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const parentEcuId = redactSensitiveText(String(row?.parentEcuId || row?.parent_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const subEcuId = redactSensitiveText(String(row?.subEcuId || row?.sub_ecu_id || row?.childEcuId || row?.child_ecu_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const resultRowId = redactSensitiveText(String(row?.resultRowId || row?.result_row_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       return {
         id,
         name,
@@ -28189,7 +28204,10 @@
         ...(scanSessionId ? { scanSessionId, scan_session_id: scanSessionId } : {}),
         ...(readoutAttemptId ? { readoutAttemptId, readout_attempt_id: readoutAttemptId } : {}),
         ...(ecuGroup ? { ecuGroup, ecu_group: ecuGroup } : {}),
-        ...(ecuSystem ? { ecuSystem, ecu_system: ecuSystem } : {})
+        ...(ecuSystem ? { ecuSystem, ecu_system: ecuSystem } : {}),
+        ...(parentEcuId ? { parentEcuId, parent_ecu_id: parentEcuId } : {}),
+        ...(subEcuId ? { subEcuId, sub_ecu_id: subEcuId } : {}),
+        ...(resultRowId ? { resultRowId, result_row_id: resultRowId } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28221,7 +28239,10 @@
         scanSessionId: row.scanSessionId || null,
         readoutAttemptId: row.readoutAttemptId || null,
         ecuGroup: row.ecuGroup || null,
-        ecuSystem: row.ecuSystem || null
+        ecuSystem: row.ecuSystem || null,
+        parentEcuId: row.parentEcuId || null,
+        subEcuId: row.subEcuId || null,
+        resultRowId: row.resultRowId || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32097,6 +32118,9 @@
     const readoutAttemptIdIndex = findIndex("readout attempt id", "readout_attempt_id", "attempt id", "request id", "read attempt id", "読取試行id", "要求id");
     const ecuGroupIndex = findIndex("ecu group", "ecu_group", "module group", "system group", "ECUグループ", "モジュールグループ", "システムグループ");
     const ecuSystemIndex = findIndex("ecu system", "ecu_system", "ecu system path", "system hierarchy", "system_hierarchy", "ECUシステム", "ECUシステム階層", "システム階層");
+    const parentEcuIdIndex = findIndex("parent ecu id", "parent_ecu_id", "parent module id", "parent_module_id", "親ecuid", "親ecu id", "親モジュールid");
+    const subEcuIdIndex = findIndex("sub ecu id", "sub_ecu_id", "child ecu id", "child_ecu_id", "sub module id", "sub_module_id", "サブecuid", "サブecu id", "子ecuid", "子ecu id");
+    const resultRowIdIndex = findIndex("result row id", "result_row_id", "result id", "result_id", "report row id", "report_row_id", "結果行id", "結果id", "帳票行id");
     const observationConditionIndex = findIndex("observation condition", "observation_condition", "measurement condition", "condition", "観察条件", "測定条件");
     const vehicleMakerIndex = findIndex("maker", "make", "manufacturer", "brand", "vehicle maker", "vehicle make", "メーカー", "製造者");
     const vehicleModelIndex = findIndex("model", "model name", "vehicle model", "car model", "車種", "車名");
@@ -32214,6 +32238,9 @@
       const rowReadoutAttemptId = cellAt(readoutAttemptIdIndex, 120) || null;
       const rowEcuGroup = cellAt(ecuGroupIndex, 120) || null;
       const rowEcuSystem = cellAt(ecuSystemIndex, 160) || null;
+      const rowParentEcuId = cellAt(parentEcuIdIndex, 120) || null;
+      const rowSubEcuId = cellAt(subEcuIdIndex, 120) || null;
+      const rowResultRowId = cellAt(resultRowIdIndex, 120) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32363,6 +32390,9 @@
           ...(rowReadoutAttemptId ? { readout_attempt_id: rowReadoutAttemptId } : {}),
           ...(rowEcuGroup ? { ecu_group: rowEcuGroup } : {}),
           ...(rowEcuSystem ? { ecu_system: rowEcuSystem } : {}),
+          ...(rowParentEcuId ? { parent_ecu_id: rowParentEcuId } : {}),
+          ...(rowSubEcuId ? { sub_ecu_id: rowSubEcuId } : {}),
+          ...(rowResultRowId ? { result_row_id: rowResultRowId } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32480,6 +32510,9 @@
           ...(rowReadoutAttemptId ? { readout_attempt_id: rowReadoutAttemptId } : {}),
           ...(rowEcuGroup ? { ecu_group: rowEcuGroup } : {}),
           ...(rowEcuSystem ? { ecu_system: rowEcuSystem } : {}),
+          ...(rowParentEcuId ? { parent_ecu_id: rowParentEcuId } : {}),
+          ...(rowSubEcuId ? { sub_ecu_id: rowSubEcuId } : {}),
+          ...(rowResultRowId ? { result_row_id: rowResultRowId } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -33892,9 +33925,13 @@
     const readoutInterface = Object.values(mergedReadoutInterface).some(Boolean) ? normalizeReadoutInterfaceSnapshot(mergedReadoutInterface) : undefined;
     const adapterIdentity = declaredAdapterIdentity;
     const mergedDtcSnapshot = dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0];
-    const normalizeCsvEcuIdentity = (value) => normalizeComparableCanEcuAddress(value)
-      || String(value || "").trim().toUpperCase().slice(0, 80)
-      || null;
+    const normalizeCsvEcuIdentity = (value) => {
+      const normalized = String(value || "").trim().toUpperCase().slice(0, 80);
+      const compactHex = normalized.replace(/^0X/, "");
+      return normalizeComparableCanEcuAddress(value)
+        || (/^(?:[0-9A-F]{3}|[0-9A-F]{8})$/.test(compactHex) ? compactHex : normalized)
+        || null;
+    };
     const explicitResponsesByEcu = new Map();
     (ecuResponseSummary?.ecus || []).forEach((row) => {
       const ecuId = normalizeCsvEcuIdentity(row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id);
@@ -33911,6 +33948,9 @@
         readoutAttemptId: row?.readoutAttemptId || row?.readout_attempt_id || null,
         ecuGroup: row?.ecuGroup || row?.ecu_group || null,
         ecuSystem: row?.ecuSystem || row?.ecu_system || row?.systemHierarchy || row?.system_hierarchy || null,
+        parentEcuId: row?.parentEcuId || row?.parent_ecu_id || null,
+        subEcuId: row?.subEcuId || row?.sub_ecu_id || row?.childEcuId || row?.child_ecu_id || null,
+        resultRowId: row?.resultRowId || row?.result_row_id || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -33938,12 +33978,18 @@
       const dtcReadoutAttemptId = dtcRow?.readoutAttemptId || dtcRow?.readout_attempt_id || null;
       const dtcEcuGroup = dtcRow?.ecuGroup || dtcRow?.ecu_group || null;
       const dtcEcuSystem = dtcRow?.ecuSystem || dtcRow?.ecu_system || dtcRow?.systemHierarchy || dtcRow?.system_hierarchy || null;
+      const dtcParentEcuId = dtcRow?.parentEcuId || dtcRow?.parent_ecu_id || null;
+      const dtcSubEcuId = dtcRow?.subEcuId || dtcRow?.sub_ecu_id || dtcRow?.childEcuId || dtcRow?.child_ecu_id || null;
+      const dtcResultRowId = dtcRow?.resultRowId || dtcRow?.result_row_id || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
       if (dtcReadoutAttemptId && response.readoutAttemptId && dtcReadoutAttemptId !== response.readoutAttemptId) return false;
       if (dtcEcuGroup && response.ecuGroup && normalizeCsvEcuHierarchyScope(dtcEcuGroup) !== normalizeCsvEcuHierarchyScope(response.ecuGroup)) return false;
       if (dtcEcuSystem && response.ecuSystem && normalizeCsvEcuHierarchyScope(dtcEcuSystem) !== normalizeCsvEcuHierarchyScope(response.ecuSystem)) return false;
+      if (dtcParentEcuId && response.parentEcuId && normalizeCsvEcuIdentity(dtcParentEcuId) !== normalizeCsvEcuIdentity(response.parentEcuId)) return false;
+      if (dtcSubEcuId && response.subEcuId && normalizeCsvEcuIdentity(dtcSubEcuId) !== normalizeCsvEcuIdentity(response.subEcuId)) return false;
+      if (dtcResultRowId && response.resultRowId && normalizeCsvEcuHierarchyScope(dtcResultRowId) !== normalizeCsvEcuHierarchyScope(response.resultRowId)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
