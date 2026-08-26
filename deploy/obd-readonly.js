@@ -13995,6 +13995,15 @@
     const dtcEvidenceResponsePendingObservedValues = [...new Set(dtcEvidenceScopeInputs
       .map(resolveDtcEvidenceResponsePendingObserved)
       .filter((value) => typeof value === "boolean"))];
+    const dtcEvidenceNegativeRequestedServices = [...new Set(dtcEvidenceScopeInputs
+      .flatMap(readDtcEvidenceNegativeRequestedServices)
+      .filter(Boolean))].sort();
+    const dtcEvidenceResponseCounts = [...new Set(dtcEvidenceScopeInputs
+      .map(readDtcEvidenceResponseCount)
+      .filter((value) => value !== null))].sort((left, right) => left - right);
+    const dtcEvidenceResponseWaitMsValues = [...new Set(dtcEvidenceScopeInputs
+      .map(readDtcEvidenceResponseWaitMs)
+      .filter((value) => value !== null))].sort((left, right) => left - right);
     const dtcEvidenceCapturedAt = dtcEvidenceCapturedAtValues.length === 1 ? dtcEvidenceCapturedAtValues[0] : null;
     const dtcEvidenceProtocol = dtcEvidenceProtocolValues.length === 1 ? dtcEvidenceProtocolValues[0] : null;
     const dtcEvidenceScanSessionId = dtcEvidenceScanSessionIds.length === 1 ? dtcEvidenceScanSessionIds[0] : null;
@@ -14007,6 +14016,9 @@
     const dtcEvidenceEcuResponseStatus = dtcEvidenceEcuResponseStatuses.length === 1 ? dtcEvidenceEcuResponseStatuses[0] : null;
     const dtcEvidenceNegativeResponseCode = dtcEvidenceNegativeResponseCodes.length === 1 ? dtcEvidenceNegativeResponseCodes[0] : null;
     const dtcEvidenceResponsePendingObserved = dtcEvidenceResponsePendingObservedValues.length === 1 ? dtcEvidenceResponsePendingObservedValues[0] : null;
+    const dtcEvidenceNegativeRequestedService = dtcEvidenceNegativeRequestedServices.length === 1 ? dtcEvidenceNegativeRequestedServices[0] : null;
+    const dtcEvidenceResponseCount = dtcEvidenceResponseCounts.length === 1 ? dtcEvidenceResponseCounts[0] : null;
+    const dtcEvidenceResponseWaitMs = dtcEvidenceResponseWaitMsValues.length === 1 ? dtcEvidenceResponseWaitMsValues[0] : null;
     const dtcEvidenceAcquisitionContextComplete = dtcEvidenceScopeInputs.length > 0
       && Boolean(dtcEvidenceCapturedAt)
       && Boolean(dtcEvidenceProtocol)
@@ -14027,6 +14039,17 @@
         dtcEvidenceNegativeResponseCode,
         dtcEvidenceEcuResponseStatus,
         dtcEvidenceResponsePendingObserved
+      );
+    const dtcEvidenceResponseAttemptContextComplete = dtcEvidenceScopeInputs.length > 0
+      && dtcEvidenceNegativeRequestedServices.length <= 1
+      && dtcEvidenceResponseCounts.length === 1
+      && dtcEvidenceResponseWaitMsValues.length === 1
+      && isDtcEvidenceResponseAttemptContextValid(
+        dtcEvidenceNegativeRequestedService,
+        dtcEvidenceRequestedService,
+        dtcEvidenceEcuResponseStatus,
+        dtcEvidenceResponseCount,
+        dtcEvidenceResponseWaitMs
       );
     const reportedInvalidDtcEvidenceScopedIssueKeys = Array.isArray(dtcEvidenceFieldReport?.scopedInvalidIssueKeys)
       ? dtcEvidenceFieldReport.scopedInvalidIssueKeys
@@ -14144,6 +14167,14 @@
       dtc_evidence_response_pending_observed: dtcEvidenceResponsePendingObserved,
       dtcEvidenceNegativeResponseContextComplete,
       dtc_evidence_negative_response_context_complete: dtcEvidenceNegativeResponseContextComplete,
+      dtcEvidenceNegativeRequestedService,
+      dtc_evidence_negative_requested_service: dtcEvidenceNegativeRequestedService,
+      dtcEvidenceResponseCount,
+      dtc_evidence_response_count: dtcEvidenceResponseCount,
+      dtcEvidenceResponseWaitMs,
+      dtc_evidence_response_wait_ms: dtcEvidenceResponseWaitMs,
+      dtcEvidenceResponseAttemptContextComplete,
+      dtc_evidence_response_attempt_context_complete: dtcEvidenceResponseAttemptContextComplete,
       dtcEvidenceScopeComplete,
       dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
@@ -21534,6 +21565,12 @@
     const currentDtcEvidenceNegativeResponseCode = normalizeDtcEvidenceNegativeResponseCodeValue(readAliasValue(currentSummary, "dtcEvidenceNegativeResponseCode"));
     const importedDtcEvidenceResponsePendingObserved = readAliasValue(importedQualitySummary, "dtcEvidenceResponsePendingObserved");
     const currentDtcEvidenceResponsePendingObserved = readAliasValue(currentSummary, "dtcEvidenceResponsePendingObserved");
+    const importedDtcEvidenceNegativeRequestedService = normalizeDtcEvidenceRequestedServiceValue(readAliasValue(importedQualitySummary, "dtcEvidenceNegativeRequestedService"));
+    const currentDtcEvidenceNegativeRequestedService = normalizeDtcEvidenceRequestedServiceValue(readAliasValue(currentSummary, "dtcEvidenceNegativeRequestedService"));
+    const importedDtcEvidenceResponseCount = normalizeDtcEvidenceResponseCountValue(readAliasValue(importedQualitySummary, "dtcEvidenceResponseCount"));
+    const currentDtcEvidenceResponseCount = normalizeDtcEvidenceResponseCountValue(readAliasValue(currentSummary, "dtcEvidenceResponseCount"));
+    const importedDtcEvidenceResponseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(readAliasValue(importedQualitySummary, "dtcEvidenceResponseWaitMs"));
+    const currentDtcEvidenceResponseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(readAliasValue(currentSummary, "dtcEvidenceResponseWaitMs"));
     const importedDtcEvidenceAcquisitionContextComplete = readFlag(importedQualitySummary, "dtcEvidenceAcquisitionContextComplete")
       && Boolean(importedDtcEvidenceCapturedAt && importedDtcEvidenceProtocol && importedDtcEvidenceScanSessionId);
     const currentDtcEvidenceAcquisitionContextComplete = readFlag(currentSummary, "dtcEvidenceAcquisitionContextComplete")
@@ -21554,6 +21591,10 @@
       && isDtcEvidenceNegativeResponseContextValid(importedDtcEvidenceNegativeResponseCode, importedDtcEvidenceEcuResponseStatus, importedDtcEvidenceResponsePendingObserved);
     const currentDtcEvidenceNegativeResponseContextComplete = readFlag(currentSummary, "dtcEvidenceNegativeResponseContextComplete")
       && isDtcEvidenceNegativeResponseContextValid(currentDtcEvidenceNegativeResponseCode, currentDtcEvidenceEcuResponseStatus, currentDtcEvidenceResponsePendingObserved);
+    const importedDtcEvidenceResponseAttemptContextComplete = readFlag(importedQualitySummary, "dtcEvidenceResponseAttemptContextComplete")
+      && isDtcEvidenceResponseAttemptContextValid(importedDtcEvidenceNegativeRequestedService, importedDtcEvidenceRequestedService, importedDtcEvidenceEcuResponseStatus, importedDtcEvidenceResponseCount, importedDtcEvidenceResponseWaitMs);
+    const currentDtcEvidenceResponseAttemptContextComplete = readFlag(currentSummary, "dtcEvidenceResponseAttemptContextComplete")
+      && isDtcEvidenceResponseAttemptContextValid(currentDtcEvidenceNegativeRequestedService, currentDtcEvidenceRequestedService, currentDtcEvidenceEcuResponseStatus, currentDtcEvidenceResponseCount, currentDtcEvidenceResponseWaitMs);
     const dtcEvidenceProtocolMatch = Boolean(importedDtcEvidenceProtocol && importedDtcEvidenceProtocol === currentDtcEvidenceProtocol);
     const dtcEvidenceCaptureOrderValid = Boolean(importedDtcEvidenceCapturedAt && currentDtcEvidenceCapturedAt
       && Date.parse(currentDtcEvidenceCapturedAt) > Date.parse(importedDtcEvidenceCapturedAt));
@@ -21580,6 +21621,15 @@
     const dtcEvidenceResponsePendingObservedMatch = importedDtcEvidenceNegativeResponseContextComplete
       && currentDtcEvidenceNegativeResponseContextComplete
       && importedDtcEvidenceResponsePendingObserved === currentDtcEvidenceResponsePendingObserved;
+    const dtcEvidenceNegativeRequestedServiceMatch = importedDtcEvidenceResponseAttemptContextComplete
+      && currentDtcEvidenceResponseAttemptContextComplete
+      && importedDtcEvidenceNegativeRequestedService === currentDtcEvidenceNegativeRequestedService;
+    const dtcEvidenceResponseCountMatch = importedDtcEvidenceResponseAttemptContextComplete
+      && currentDtcEvidenceResponseAttemptContextComplete
+      && importedDtcEvidenceResponseCount === currentDtcEvidenceResponseCount;
+    const dtcEvidenceResponseWaitMsMatch = importedDtcEvidenceResponseAttemptContextComplete
+      && currentDtcEvidenceResponseAttemptContextComplete
+      && importedDtcEvidenceResponseWaitMs === currentDtcEvidenceResponseWaitMs;
     const importedDtcEvidenceValidationReported = readFlag(importedQualitySummary, "dtcEvidenceValidationReported") || importedInvalidDtcEvidenceIssueKeys.length > 0;
     const currentDtcEvidenceValidationReported = readFlag(currentSummary, "dtcEvidenceValidationReported") || currentInvalidDtcEvidenceIssueKeys.length > 0;
     const dtcEvidenceVehicleScopeMatch = Boolean(importedDtcEvidenceVehicleScopeKey && importedDtcEvidenceVehicleScopeKey === currentDtcEvidenceVehicleScopeKey);
@@ -21611,7 +21661,12 @@
       !importedDtcEvidenceNegativeResponseContextComplete ? "imported_dtc_evidence_negative_response_context_incomplete" : null,
       !currentDtcEvidenceNegativeResponseContextComplete ? "current_dtc_evidence_negative_response_context_incomplete" : null,
       importedDtcEvidenceNegativeResponseContextComplete && currentDtcEvidenceNegativeResponseContextComplete && !dtcEvidenceNegativeResponseCodeMatch ? "dtc_evidence_negative_response_code_mismatch" : null,
-      importedDtcEvidenceNegativeResponseContextComplete && currentDtcEvidenceNegativeResponseContextComplete && !dtcEvidenceResponsePendingObservedMatch ? "dtc_evidence_response_pending_state_mismatch" : null
+      importedDtcEvidenceNegativeResponseContextComplete && currentDtcEvidenceNegativeResponseContextComplete && !dtcEvidenceResponsePendingObservedMatch ? "dtc_evidence_response_pending_state_mismatch" : null,
+      !importedDtcEvidenceResponseAttemptContextComplete ? "imported_dtc_evidence_response_attempt_context_incomplete" : null,
+      !currentDtcEvidenceResponseAttemptContextComplete ? "current_dtc_evidence_response_attempt_context_incomplete" : null,
+      importedDtcEvidenceResponseAttemptContextComplete && currentDtcEvidenceResponseAttemptContextComplete && !dtcEvidenceNegativeRequestedServiceMatch ? "dtc_evidence_negative_requested_service_mismatch" : null,
+      importedDtcEvidenceResponseAttemptContextComplete && currentDtcEvidenceResponseAttemptContextComplete && !dtcEvidenceResponseCountMatch ? "dtc_evidence_response_count_mismatch" : null,
+      importedDtcEvidenceResponseAttemptContextComplete && currentDtcEvidenceResponseAttemptContextComplete && !dtcEvidenceResponseWaitMsMatch ? "dtc_evidence_response_wait_mismatch" : null
     ].filter(Boolean);
     const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported
       && currentDtcEvidenceValidationReported
@@ -21832,6 +21887,28 @@
       imported_dtc_evidence_negative_response_context_complete: importedDtcEvidenceNegativeResponseContextComplete,
       currentDtcEvidenceNegativeResponseContextComplete,
       current_dtc_evidence_negative_response_context_complete: currentDtcEvidenceNegativeResponseContextComplete,
+      importedDtcEvidenceNegativeRequestedService,
+      imported_dtc_evidence_negative_requested_service: importedDtcEvidenceNegativeRequestedService,
+      currentDtcEvidenceNegativeRequestedService,
+      current_dtc_evidence_negative_requested_service: currentDtcEvidenceNegativeRequestedService,
+      dtcEvidenceNegativeRequestedServiceMatch,
+      dtc_evidence_negative_requested_service_match: dtcEvidenceNegativeRequestedServiceMatch,
+      importedDtcEvidenceResponseCount,
+      imported_dtc_evidence_response_count: importedDtcEvidenceResponseCount,
+      currentDtcEvidenceResponseCount,
+      current_dtc_evidence_response_count: currentDtcEvidenceResponseCount,
+      dtcEvidenceResponseCountMatch,
+      dtc_evidence_response_count_match: dtcEvidenceResponseCountMatch,
+      importedDtcEvidenceResponseWaitMs,
+      imported_dtc_evidence_response_wait_ms: importedDtcEvidenceResponseWaitMs,
+      currentDtcEvidenceResponseWaitMs,
+      current_dtc_evidence_response_wait_ms: currentDtcEvidenceResponseWaitMs,
+      dtcEvidenceResponseWaitMsMatch,
+      dtc_evidence_response_wait_ms_match: dtcEvidenceResponseWaitMsMatch,
+      importedDtcEvidenceResponseAttemptContextComplete,
+      imported_dtc_evidence_response_attempt_context_complete: importedDtcEvidenceResponseAttemptContextComplete,
+      currentDtcEvidenceResponseAttemptContextComplete,
+      current_dtc_evidence_response_attempt_context_complete: currentDtcEvidenceResponseAttemptContextComplete,
       dtcEvidenceScopeBlockedReasonIds,
       dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       dtcEvidenceResolutionComparisonAvailable,
@@ -21936,6 +22013,11 @@
     const dtcEvidenceResponsePendingObserved = pickDefined(summary.dtcEvidenceResponsePendingObserved, summary.dtc_evidence_response_pending_observed);
     const dtcEvidenceNegativeResponseContextComplete = pickDefined(summary.dtcEvidenceNegativeResponseContextComplete, summary.dtc_evidence_negative_response_context_complete, false) === true
       && isDtcEvidenceNegativeResponseContextValid(dtcEvidenceNegativeResponseCode, dtcEvidenceEcuResponseStatus, dtcEvidenceResponsePendingObserved);
+    const dtcEvidenceNegativeRequestedService = normalizeDtcEvidenceRequestedServiceValue(pickDefined(summary.dtcEvidenceNegativeRequestedService, summary.dtc_evidence_negative_requested_service));
+    const dtcEvidenceResponseCount = normalizeDtcEvidenceResponseCountValue(pickDefined(summary.dtcEvidenceResponseCount, summary.dtc_evidence_response_count));
+    const dtcEvidenceResponseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(pickDefined(summary.dtcEvidenceResponseWaitMs, summary.dtc_evidence_response_wait_ms));
+    const dtcEvidenceResponseAttemptContextComplete = pickDefined(summary.dtcEvidenceResponseAttemptContextComplete, summary.dtc_evidence_response_attempt_context_complete, false) === true
+      && isDtcEvidenceResponseAttemptContextValid(dtcEvidenceNegativeRequestedService, dtcEvidenceRequestedService, dtcEvidenceEcuResponseStatus, dtcEvidenceResponseCount, dtcEvidenceResponseWaitMs);
     const dtcEvidenceValidationReported = pickDefined(summary.dtcEvidenceValidationReported, summary.dtc_evidence_validation_reported, false) === true
       || invalidDtcEvidenceIssueKeys.length > 0;
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
@@ -22044,6 +22126,14 @@
       dtc_evidence_response_pending_observed: dtcEvidenceResponsePendingObserved,
       dtcEvidenceNegativeResponseContextComplete,
       dtc_evidence_negative_response_context_complete: dtcEvidenceNegativeResponseContextComplete,
+      dtcEvidenceNegativeRequestedService,
+      dtc_evidence_negative_requested_service: dtcEvidenceNegativeRequestedService,
+      dtcEvidenceResponseCount,
+      dtc_evidence_response_count: dtcEvidenceResponseCount,
+      dtcEvidenceResponseWaitMs,
+      dtc_evidence_response_wait_ms: dtcEvidenceResponseWaitMs,
+      dtcEvidenceResponseAttemptContextComplete,
+      dtc_evidence_response_attempt_context_complete: dtcEvidenceResponseAttemptContextComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
@@ -27712,6 +27802,10 @@
       const requestedService = normalizeDtcEvidenceRequestedServiceValue(rowValue.requestedService || rowValue.requested_service || rowValue.udsRequestedService || rowValue.uds_requested_service);
       const responseService = normalizeDtcEvidenceResponseServiceValue(rowValue.responseService || rowValue.response_service);
       const ecuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(rowValue.ecuResponseStatus || rowValue.ecu_response_status || rowValue.responseStatus || rowValue.response_status);
+      const negativeRequestedServices = readDtcEvidenceNegativeRequestedServices(rowValue);
+      const negativeRequestedService = negativeRequestedServices.length === 1 ? negativeRequestedServices[0] : null;
+      const responseCount = readDtcEvidenceResponseCount(rowValue);
+      const responseWaitMs = readDtcEvidenceResponseWaitMs(rowValue);
       const scanSessionId = redactSensitiveText(String(rowValue.scanSessionId || rowValue.scan_session_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const readoutAttemptId = redactSensitiveText(String(rowValue.readoutAttemptId || rowValue.readout_attempt_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const readoutRoute = redactSensitiveText(String(rowValue.readoutRoute || rowValue.readout_route || rowValue.interfaceRoute || rowValue.interface_route || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
@@ -27824,6 +27918,9 @@
         ...(requestedService ? { requestedService, requested_service: requestedService } : {}),
         ...(responseService ? { responseService, response_service: responseService } : {}),
         ...(ecuResponseStatus ? { ecuResponseStatus, ecu_response_status: ecuResponseStatus } : {}),
+        ...(negativeRequestedService ? { negativeRequestedService, negative_requested_service: negativeRequestedService } : {}),
+        ...(responseCount !== null ? { responseCount, response_count: responseCount } : {}),
+        ...(responseWaitMs !== null ? { responseWaitMs, response_wait_ms: responseWaitMs } : {}),
         ...(scanSessionId ? { scanSessionId, scan_session_id: scanSessionId } : {}),
         ...(readoutAttemptId ? { readoutAttemptId, readout_attempt_id: readoutAttemptId } : {}),
         ...(readoutRoute ? { readoutRoute, readout_route: readoutRoute } : {}),
@@ -33728,6 +33825,52 @@
     return false;
   }
 
+  function readDtcEvidenceNegativeRequestedServices(row = {}) {
+    return [...new Set([
+      row?.negativeRequestedService,
+      row?.negative_requested_service,
+      row?.dtcNegativeResponseService,
+      row?.dtc_negative_response_service,
+      ...(Array.isArray(row?.negativeRequestedServices) ? row.negativeRequestedServices : []),
+      ...(Array.isArray(row?.negative_requested_services) ? row.negative_requested_services : [])
+    ].map(normalizeDtcEvidenceRequestedServiceValue).filter(Boolean))];
+  }
+
+  function normalizeDtcEvidenceResponseCountValue(value) {
+    if (value === null || value === undefined || String(value).trim() === "") return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 10000 ? parsed : null;
+  }
+
+  function readDtcEvidenceResponseCount(row = {}) {
+    return normalizeDtcEvidenceResponseCountValue(row?.responseCount ?? row?.response_count);
+  }
+
+  function normalizeDtcEvidenceResponseWaitMsValue(value) {
+    if (value === null || value === undefined || String(value).trim() === "") return null;
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 600000 ? parsed : null;
+  }
+
+  function readDtcEvidenceResponseWaitMs(row = {}) {
+    return normalizeDtcEvidenceResponseWaitMsValue(
+      row?.responseWaitMs
+      ?? row?.response_wait_ms
+      ?? row?.responseTimeoutMs
+      ?? row?.response_timeout_ms
+      ?? row?.waitTimeoutMs
+      ?? row?.wait_timeout_ms
+    );
+  }
+
+  function isDtcEvidenceResponseAttemptContextValid(negativeRequestedService, requestedService, ecuResponseStatus, responseCount, responseWaitMs) {
+    if (!Number.isSafeInteger(responseCount) || !Number.isSafeInteger(responseWaitMs)) return false;
+    if (["reported", "negative_response", "pending_response"].includes(ecuResponseStatus) && responseCount < 1) return false;
+    if (["negative_response", "pending_response"].includes(ecuResponseStatus)) return Boolean(negativeRequestedService && requestedService);
+    if (["reported", "no_response", "timeout", "blocked", "failed", "unavailable"].includes(ecuResponseStatus)) return negativeRequestedService === null;
+    return false;
+  }
+
   function buildDtcEvidenceVehicleScopeKey(vehicleProfile = null) {
     const profile = normalizeVehicleProfileInput(vehicleProfile) || {};
     const maker = normalizeDtcEvidenceScopePart(profile.maker, 60);
@@ -34038,6 +34181,8 @@
     const maxIndex = findIndex("max", "maximum", "max limit");
     const ecuResponseIdIndex = findIndex("ecu response id", "ecu id", "module id", "response id", "ECU応答ID");
     const responseTimeIndex = findIndex("response time ms", "response_time_ms", "response time", "latency ms", "latency");
+    const responseWaitIndex = findIndex("response wait ms", "response_wait_ms", "response timeout ms", "response_timeout_ms", "wait timeout ms", "wait_timeout_ms", "応答待機時間ms", "応答タイムアウトms");
+    const responseCountIndex = findIndex("response count", "response_count", "responses", "応答回数");
     const negativeResponseCountIndex = findIndex("negative response count", "negative_response_count", "negative count");
     const negativeResponseLabelIndex = findIndex("negative response label", "negative_response_label", "negative label");
     const requestedServiceIndex = findIndex("requested service", "requested_service", "request service", "service", "readout service", "diagnostic service", "intent");
@@ -34264,6 +34409,9 @@
       const rowRequestedService = normalizeDtcEvidenceRequestedServiceValue(cellAt(requestedServiceIndex, 40));
       const rowResponseService = normalizeDtcEvidenceResponseServiceValue(cellAt(responseServiceIndex, 24));
       const rowEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(cellAt(ecuResponseStatusIndex, 40));
+      const rowNegativeRequestedService = normalizeDtcEvidenceRequestedServiceValue(cellAt(negativeRequestedServiceIndex, 24));
+      const rowResponseCount = normalizeDtcEvidenceResponseCountValue(cellAt(responseCountIndex, 12));
+      const rowResponseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(cellAt(responseWaitIndex, 24));
       const rowEcuGroup = cellAt(ecuGroupIndex, 120) || null;
       const rowEcuSystem = cellAt(ecuSystemIndex, 160) || null;
       const rowParentEcuId = cellAt(parentEcuIdIndex, 120) || null;
@@ -34490,6 +34638,9 @@
           ...(rowRequestedService ? { requested_service: rowRequestedService } : {}),
           ...(rowResponseService ? { response_service: rowResponseService } : {}),
           ...(rowEcuResponseStatus ? { ecu_response_status: rowEcuResponseStatus } : {}),
+          ...(rowNegativeRequestedService ? { negative_requested_service: rowNegativeRequestedService } : {}),
+          ...(rowResponseCount !== null ? { response_count: rowResponseCount } : {}),
+          ...(rowResponseWaitMs !== null ? { response_wait_ms: rowResponseWaitMs } : {}),
           ...(rowScanSessionId ? { scan_session_id: rowScanSessionId } : {}),
           ...(rowReadoutAttemptId ? { readout_attempt_id: rowReadoutAttemptId } : {}),
           ...(cellAt(readoutRouteIndex, 80) ? { readout_route: cellAt(readoutRouteIndex, 80) } : {}),
