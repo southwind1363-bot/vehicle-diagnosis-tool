@@ -8298,9 +8298,10 @@
       && dtcEcuResponseRows.some(isPositiveDtcEcuResponse);
     // Failed snapshots cannot contribute values; partial DTC scans may retain explicit ECU response provenance only.
     const readableDtcSnapshot = isReadableDiagnosticSnapshot(dtcSnapshot, ["dtcReadoutStatus", "dtc_readout_status"]) ? dtcSnapshot : {};
+    const eligibleDtcEcuResponseRows = dtcEcuResponseRows.filter((item) => item?.ecuResponseConflict !== true && item?.ecu_response_conflict !== true && item?.applicabilityEvidenceEligible !== false && item?.applicability_evidence_eligible !== false);
     const observedDtcEcuResponseRows = hasObjectContent(readableDtcSnapshot)
-      ? dtcEcuResponseRows.filter(isObservableDtcEcuResponse)
-      : dtcEcuResponseRows.filter((item) => hasPartialReportedDtcEcuEvidence && isPositiveDtcEcuResponse(item)
+      ? eligibleDtcEcuResponseRows.filter(isObservableDtcEcuResponse)
+      : eligibleDtcEcuResponseRows.filter((item) => hasPartialReportedDtcEcuEvidence && isPositiveDtcEcuResponse(item)
         || ["negative_response", "pending_response", "unparsed", "no_response"].includes(normalizeDtcEcuResponseStatus(item)));
     const readableLivePidSnapshot = isReadableDiagnosticSnapshot(livePidSnapshot, ["livePidReadoutStatus", "live_pid_readout_status"]) ? livePidSnapshot : {};
     const readableFreezeFrameSnapshot = isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]) ? freezeFrameSnapshot : {};
@@ -8398,7 +8399,9 @@
     };
     add("dtc_snapshot", [
       { ecuId: dtcSnapshot?.sourceEcu || dtcSnapshot?.source_ecu, ecuName: dtcSnapshot?.sourceEcuName || dtcSnapshot?.source_ecu_name },
-      ...(dtcSnapshot?.dtcs || []).map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address, ecuName: item?.ecuName || item?.ecu_name })),
+      ...(dtcSnapshot?.dtcs || [])
+        .filter((item) => item?.ecuResponseConflict !== true && item?.ecu_response_conflict !== true && item?.applicabilityEvidenceEligible !== false && item?.applicability_evidence_eligible !== false)
+        .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address, ecuName: item?.ecuName || item?.ecu_name })),
       ...observedDtcEcuResponseRows
         .map((item) => ({ ecuId: item?.ecu || item?.ecu_id || item?.ecuId || item?.address || item?.module || item?.module_id || item?.moduleId, ecuName: item?.ecuName || item?.ecu_name || item?.name || item?.label || item?.displayName || item?.display_name, readoutStatus: item?.status || item?.responseStatus || item?.response_status || null }))
     ]);
@@ -26452,6 +26455,9 @@
           const responseServices = normalizeDtcEcuServiceList(row.responseServices, row.response_services);
           const negativeRequestedServices = normalizeDtcEcuServiceList(row.negativeRequestedServices, row.negative_requested_services, row.negativeServices, row.negative_services);
           const negativeResponseLabels = normalizeDtcEcuLabels(row.negativeResponseLabels, row.negative_response_labels);
+          const ecuResponseConflict = row.ecuResponseConflict === true || row.ecu_response_conflict === true;
+          const applicabilityEvidenceEligible = !ecuResponseConflict && row.applicabilityEvidenceEligible !== false && row.applicability_evidence_eligible !== false;
+          const dtcEvidenceStatus = redactSensitiveText(String(row.dtcEvidenceStatus || row.dtc_evidence_status || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26487,6 +26493,13 @@
             negative_requested_services: negativeRequestedServices,
             negativeResponseLabels,
             negative_response_labels: negativeResponseLabels,
+            ...(dtcEvidenceStatus ? { dtcEvidenceStatus, dtc_evidence_status: dtcEvidenceStatus } : {}),
+            ...(ecuResponseConflict ? {
+              ecuResponseConflict: true,
+              ecu_response_conflict: true,
+              applicabilityEvidenceEligible,
+              applicability_evidence_eligible: applicabilityEvidenceEligible
+            } : {}),
             dtcs: childDtcs,
             codes: [...new Set(childDtcs.map((item) => item.code))]
           }] : null;
@@ -26569,6 +26582,13 @@
       const functionalGroupRaw = readDtcFunctionalGroupRawAlias(rowValue);
       const severityAvailabilityMask = readDtcSeverityAvailabilityMaskAlias(rowValue);
       const freezeFrameAvailable = [rowValue.freeze_frame_available, rowValue.freezeFrameAvailable, rowValue.freezeFrame, rowValue.freeze_frame].some(isExplicitTrueFlag);
+      const ecuResponseConflict = rowValue.ecuResponseConflict === true || rowValue.ecu_response_conflict === true;
+      const applicabilityEvidenceEligible = !ecuResponseConflict && rowValue.applicabilityEvidenceEligible !== false && rowValue.applicability_evidence_eligible !== false;
+      const ecuResponseConflictStatuses = [...new Set([rowValue.ecuResponseConflictStatuses, rowValue.ecu_response_conflict_statuses]
+        .filter(Array.isArray)
+        .flat()
+        .map((value) => redactSensitiveText(String(value || "")).trim().toLowerCase().replace(/[\s-]+/g, "_").slice(0, 80))
+        .filter(Boolean))].slice(0, 12);
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26593,6 +26613,14 @@
         ...(rowProtocol ? { protocol: rowProtocol } : {}),
         freezeFrameAvailable,
         freeze_frame_available: freezeFrameAvailable,
+        ...(ecuResponseConflict ? {
+          ecuResponseConflict: true,
+          ecu_response_conflict: true,
+          ecuResponseConflictStatuses,
+          ecu_response_conflict_statuses: [...ecuResponseConflictStatuses],
+          applicabilityEvidenceEligible,
+          applicability_evidence_eligible: applicabilityEvidenceEligible
+        } : {}),
         ...(extendedDataRecordNumber !== null ? {
           extendedDataRecordNumber,
           extended_data_record_number: extendedDataRecordNumber,
@@ -26643,6 +26671,7 @@
     const allNormalizedDtcs = [...byCode.values()];
     const reportedDtcEcuResponses = explicitEcuResponses.filter((row) => ["reported", "responded", "ok"].includes(String(row.status || "unknown").trim().toLowerCase()));
     const matchesReportedDtcEcu = (row) => {
+      if (row?.ecuResponseConflict === true || row?.ecu_response_conflict === true) return true;
       if (explicitEcuResponses.length === 0) return true;
       if (reportedDtcEcuResponses.length === explicitEcuResponses.length) return true;
       const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
@@ -26656,6 +26685,47 @@
       });
     };
     const normalizedDtcs = allNormalizedDtcs.filter(matchesReportedDtcEcu);
+    const sourceEcuDtcResponseReconciliationSummary = sourceInput.ecuDtcResponseReconciliationSummary || sourceInput.ecu_dtc_response_reconciliation_summary || null;
+    const reconciliationRowsByEcu = new Map();
+    normalizedDtcs.filter((row) => row.ecuResponseConflict === true || row.ecu_response_conflict === true).forEach((row) => {
+      const ecuId = normalizeDtcResponseEcu(row.ecu || row.sourceEcu || row.source_ecu || "") || null;
+      if (!ecuId) return;
+      const current = reconciliationRowsByEcu.get(ecuId) || { dtcCodes: new Set(), responseStatuses: new Set() };
+      current.dtcCodes.add(row.code);
+      (row.ecuResponseConflictStatuses || row.ecu_response_conflict_statuses || []).forEach((status) => current.responseStatuses.add(status));
+      reconciliationRowsByEcu.set(ecuId, current);
+    });
+    const ecuDtcResponseReconciliationRows = [...reconciliationRowsByEcu.entries()].map(([ecuId, evidence]) => ({
+      ecuId,
+      ecu_id: ecuId,
+      responseStatuses: [...evidence.responseStatuses].sort(),
+      response_statuses: [...evidence.responseStatuses].sort(),
+      dtcCodes: [...evidence.dtcCodes].sort(),
+      dtc_codes: [...evidence.dtcCodes].sort(),
+      dtcRowCount: normalizedDtcs.filter((row) => (row.ecuResponseConflict === true || row.ecu_response_conflict === true) && normalizeDtcResponseEcu(row.ecu || "") === ecuId).length,
+      dtc_row_count: normalizedDtcs.filter((row) => (row.ecuResponseConflict === true || row.ecu_response_conflict === true) && normalizeDtcResponseEcu(row.ecu || "") === ecuId).length,
+      reviewRequired: true,
+      review_required: true
+    }));
+    const explicitEcuResponseTableCountValue = Number(sourceEcuDtcResponseReconciliationSummary?.explicitEcuResponseTableCount ?? sourceEcuDtcResponseReconciliationSummary?.explicit_ecu_response_table_count);
+    const explicitEcuResponseTableCount = Number.isSafeInteger(explicitEcuResponseTableCountValue) && explicitEcuResponseTableCountValue >= 0 && explicitEcuResponseTableCountValue <= 1000 ? explicitEcuResponseTableCountValue : 0;
+    const ecuDtcResponseReconciliationSummary = ecuDtcResponseReconciliationRows.length ? {
+      schemaVersion: "csv_ecu_dtc_response_reconciliation_summary_v1",
+      schema_version: "csv_ecu_dtc_response_reconciliation_summary_v1",
+      explicitEcuResponseTableCount,
+      explicit_ecu_response_table_count: explicitEcuResponseTableCount,
+      conflictCount: ecuDtcResponseReconciliationRows.length,
+      conflict_count: ecuDtcResponseReconciliationRows.length,
+      conflictEcuIds: ecuDtcResponseReconciliationRows.map((row) => row.ecuId),
+      conflict_ecu_ids: ecuDtcResponseReconciliationRows.map((row) => row.ecuId),
+      rows: ecuDtcResponseReconciliationRows,
+      reviewRequired: true,
+      review_required: true,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    } : null;
     const observedSourceEcus = [...new Set(normalizedDtcs.map((item) => item.ecu || item.ecu_id || item.ecuId || item.address || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
     const resolvedSourceEcuName = sourceEcuName || (normalizedDtcs.length === 1 ? normalizedDtcs[0].ecuName || null : null);
@@ -26828,6 +26898,10 @@
       codeCount,
       code_count: codeCount,
       dtcs: normalizedDtcs,
+      ...(ecuDtcResponseReconciliationSummary ? {
+        ecuDtcResponseReconciliationSummary,
+        ecu_dtc_response_reconciliation_summary: ecuDtcResponseReconciliationSummary
+      } : {}),
       dtcCount,
       dtc_count: dtcCount,
       udsDtcExtendedDataRecordResponses,
@@ -33604,7 +33678,8 @@
           supported_pid_readout_status: "reported"
         })
       : supportedPidSnapshots[0];
-    const ecuResponseSummaries = tableSessions
+    const explicitEcuResponseTableSessions = tableSessions.filter((session) => Number(session?.importClassification?.bucketCounts?.ecuResponseRows || session?.import_classification?.bucket_counts?.ecu_response_rows || 0) > 0);
+    const ecuResponseSummaries = explicitEcuResponseTableSessions
       .map((session) => session.ecuResponseSummary)
       .filter((summary) => Array.isArray(summary?.ecus) && summary.ecus.length);
     const ecuResponseCapturedAtValues = [...new Set(ecuResponseSummaries.map((summary) => summary.capturedAt || summary.captured_at || null).filter(Boolean))];
@@ -33725,9 +33800,97 @@
       }), {});
     const readoutInterface = Object.values(mergedReadoutInterface).some(Boolean) ? normalizeReadoutInterfaceSnapshot(mergedReadoutInterface) : undefined;
     const adapterIdentity = declaredAdapterIdentity;
+    const mergedDtcSnapshot = dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0];
+    const normalizeCsvEcuIdentity = (value) => normalizeComparableCanEcuAddress(value)
+      || String(value || "").trim().toUpperCase().slice(0, 80)
+      || null;
+    const explicitResponseStatusesByEcu = new Map();
+    (ecuResponseSummary?.ecus || []).forEach((row) => {
+      const ecuId = normalizeCsvEcuIdentity(row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id);
+      if (!ecuId) return;
+      const statuses = explicitResponseStatusesByEcu.get(ecuId) || new Set();
+      statuses.add(String(row?.status || row?.responseStatus || row?.response_status || "unknown").trim().toLowerCase().replace(/[\s-]+/g, "_"));
+      explicitResponseStatusesByEcu.set(ecuId, statuses);
+    });
+    const positiveResponseStatuses = new Set(["reported", "responded", "response", "ok", "success", "available", "positive", "negative_response", "pending_response"]);
+    const unavailableResponseStatuses = new Set(["no_response", "blocked", "timeout", "failed", "error", "unavailable"]);
+    const conflictingDtcRowsByEcu = new Map();
+    const reconciledDtcRows = (mergedDtcSnapshot?.dtcs || []).map((row) => {
+      const ecuId = normalizeCsvEcuIdentity(row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.sourceEcu || row?.source_ecu);
+      const statuses = ecuId ? explicitResponseStatusesByEcu.get(ecuId) : null;
+      const hasPositiveResponse = statuses ? [...statuses].some((status) => positiveResponseStatuses.has(status)) : false;
+      const unavailableStatuses = statuses ? [...statuses].filter((status) => unavailableResponseStatuses.has(status)) : [];
+      if (!ecuId || hasPositiveResponse || unavailableStatuses.length === 0) return row;
+      const conflictRows = conflictingDtcRowsByEcu.get(ecuId) || [];
+      conflictRows.push(row);
+      conflictingDtcRowsByEcu.set(ecuId, conflictRows);
+      return {
+        ...row,
+        ecuResponseConflict: true,
+        ecu_response_conflict: true,
+        ecuResponseConflictStatuses: unavailableStatuses,
+        ecu_response_conflict_statuses: [...unavailableStatuses],
+        applicabilityEvidenceEligible: false,
+        applicability_evidence_eligible: false
+      };
+    });
+    const ecuDtcResponseReconciliationRows = [...conflictingDtcRowsByEcu.entries()].map(([ecuId, rows]) => ({
+      ecuId,
+      ecu_id: ecuId,
+      responseStatuses: [...explicitResponseStatusesByEcu.get(ecuId)].sort(),
+      response_statuses: [...explicitResponseStatusesByEcu.get(ecuId)].sort(),
+      dtcCodes: [...new Set(rows.map((row) => row?.code).filter(Boolean))].sort(),
+      dtc_codes: [...new Set(rows.map((row) => row?.code).filter(Boolean))].sort(),
+      dtcRowCount: rows.length,
+      dtc_row_count: rows.length,
+      reviewRequired: true,
+      review_required: true
+    }));
+    const ecuDtcResponseReconciliationSummary = {
+      schemaVersion: "csv_ecu_dtc_response_reconciliation_summary_v1",
+      schema_version: "csv_ecu_dtc_response_reconciliation_summary_v1",
+      explicitEcuResponseTableCount: explicitEcuResponseTableSessions.length,
+      explicit_ecu_response_table_count: explicitEcuResponseTableSessions.length,
+      conflictCount: ecuDtcResponseReconciliationRows.length,
+      conflict_count: ecuDtcResponseReconciliationRows.length,
+      conflictEcuIds: ecuDtcResponseReconciliationRows.map((row) => row.ecuId),
+      conflict_ecu_ids: ecuDtcResponseReconciliationRows.map((row) => row.ecuId),
+      rows: ecuDtcResponseReconciliationRows,
+      reviewRequired: ecuDtcResponseReconciliationRows.length > 0,
+      review_required: ecuDtcResponseReconciliationRows.length > 0,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false
+    };
+    const reconciledDtcEcuResponses = (mergedDtcSnapshot?.ecuResponses || mergedDtcSnapshot?.ecu_responses || []).map((row) => {
+      const ecuId = normalizeCsvEcuIdentity(row?.ecu || row?.ecu_id || row?.ecuId || row?.address || row?.sourceEcu || row?.source_ecu);
+      if (!ecuId || !conflictingDtcRowsByEcu.has(ecuId)) return row;
+      const dtcEvidenceStatus = row?.status || row?.responseStatus || row?.response_status || "reported";
+      return {
+        ...row,
+        status: "unknown",
+        dtcEvidenceStatus,
+        dtc_evidence_status: dtcEvidenceStatus,
+        ecuResponseConflict: true,
+        ecu_response_conflict: true,
+        applicabilityEvidenceEligible: false,
+        applicability_evidence_eligible: false
+      };
+    });
+    const reconciledDtcSnapshot = mergedDtcSnapshot && ecuDtcResponseReconciliationRows.length
+      ? {
+        ...mergedDtcSnapshot,
+        dtcs: reconciledDtcRows,
+        ecuResponses: reconciledDtcEcuResponses,
+        ecu_responses: reconciledDtcEcuResponses,
+        ecuDtcResponseReconciliationSummary,
+        ecu_dtc_response_reconciliation_summary: ecuDtcResponseReconciliationSummary
+      }
+      : mergedDtcSnapshot;
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
-      dtcSnapshot: dtcSnapshots.length > 1 ? mergeDtcSnapshots(...dtcSnapshots) : dtcSnapshots[0],
+      dtcSnapshot: reconciledDtcSnapshot,
       livePidSnapshot,
       livePidTimeline,
       freezeFrameSnapshot,
@@ -33739,6 +33902,7 @@
       vehicleProfile,
       readoutInterface,
       adapterIdentity,
+      warnings: ecuDtcResponseReconciliationRows.length ? ["csv_ecu_dtc_response_conflict"] : [],
       importClassification: {
         schemaVersion: "scanner_csv_import_v1",
         schema_version: "scanner_csv_import_v1",
@@ -33748,7 +33912,9 @@
         tableCount: tableSessions.length,
         table_count: tableSessions.length,
         sourceLength: text.length,
-        source_length: text.length
+        source_length: text.length,
+        ecuDtcResponseReconciliationSummary,
+        ecu_dtc_response_reconciliation_summary: ecuDtcResponseReconciliationSummary
       },
       retainedRawText: false,
       retained_raw_text: false
@@ -34361,6 +34527,10 @@
     if (isReadableDiagnosticSnapshot(freezeFrameSnapshot, ["freezeFrameReadoutStatus", "freeze_frame_readout_status"])
       && (freezeFrameAssociationSummary?.reviewRequired === true || freezeFrameAssociationSummary?.review_required === true)) {
       warnings.push("freeze_frame_association_review_required");
+    }
+    const ecuDtcResponseReconciliationSummary = dtcSnapshot?.ecuDtcResponseReconciliationSummary || dtcSnapshot?.ecu_dtc_response_reconciliation_summary || null;
+    if (ecuDtcResponseReconciliationSummary?.reviewRequired === true || ecuDtcResponseReconciliationSummary?.review_required === true) {
+      warnings.push("csv_ecu_dtc_response_conflict");
     }
     if (ecuInfoSnapshot.hadSensitiveIdentifier) warnings.push("sensitive_identifier_redacted");
     const resolvedMetadata = buildResolvedSessionMetadata({ metadataOverrides, ecuInfoSnapshot });

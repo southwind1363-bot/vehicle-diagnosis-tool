@@ -176,8 +176,8 @@
         "label":  "メーカー固有診断",
         "target_level":  "Techstream級の車種別DTC、データリスト、作業サポート",
         "current_status":  "取込基盤拡張中",
-        "progress_percent":  16,
-        "current_basis":  "メーカー固有DTC用ロードマップ、J2534候補、Techstream等の貼り付け解析入口、Toyota系3桁INFのテキスト・CSV証跡分離を実装",
+        "progress_percent":  18,
+        "current_basis":  "メーカー固有DTC用ロードマップ、J2534候補、Techstream等の貼り付け解析入口、Toyota系3桁INFの証跡分離、複数表CSVのECU応答矛盾照合を実装",
         "done":  [
                      "メーカー固有を汎用DTCと混ぜない方針",
                      "車種、年式、ECU、サブコードを分離する方針",
@@ -185,7 +185,8 @@
                      "Techstream等の読取結果貼り付けを先行解析する方針",
                      "3桁INFコードを2桁FTBから分離し同一DTCの複数INFをJSON再読込まで保持",
                      "構造化CSVのINF専用列をFTBと分離しフリーズフレーム・JSON再読込まで保持",
-                     "INF・ECU名・DTC状態・読取時刻・通信方式をDTC行単位でbridge/CSV/JSONへ保持"
+                     "INF・ECU名・DTC状態・読取時刻・通信方式をDTC行単位でbridge/CSV/JSONへ保持",
+                     "複数セクションCSVの明示ECU応答を正式状態として採用し、矛盾DTCを保持・警告しながら適用照合の成功根拠から除外"
                  ],
         "missing":  [
                         "車種別ECU構成",
@@ -193,7 +194,7 @@
                         "データリスト項目",
                         "メーカー診断機表示のサンプル"
                     ],
-        "next_build":  "Techstream等の複数セクション表でECU単位の読取状態とDTC証跡を統合し、車種別定義照合前の入力範囲を拡張する。",
+        "next_build":  "同一ECUのサービス別・読取時刻別の応答範囲を分離し、複数セクション診断レポートの証跡対応を精密化する。",
         "safety_gate":  "車種適合未確認なら未確認として扱う",
         "source":  "ローカル検証集計と開発ロードマップ",
         "source_date":  "2026-08-26",
