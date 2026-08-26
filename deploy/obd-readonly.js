@@ -14578,6 +14578,7 @@
       ? readoutQualitySummary
       : {};
     const readFlag = (camelKey, snakeKey) => quality[camelKey] === true || quality[snakeKey] === true;
+    const readValue = (camelKey, snakeKey, fallback = null) => quality[camelKey] ?? quality[snakeKey] ?? fallback;
     const sampleObserved = (Array.isArray(dtcSnapshot?.dtcs) && dtcSnapshot.dtcs.length > 0)
       || (Array.isArray(dtcSnapshot?.codes) && dtcSnapshot.codes.length > 0)
       || (Array.isArray(quality.dtcEvidenceComparisonScopeKeys) && quality.dtcEvidenceComparisonScopeKeys.length > 0)
@@ -14605,6 +14606,29 @@
     const nextMissingRequirementId = nextMissingRequirement?.id || null;
     const nextMissingEvidenceFieldIds = nextMissingRequirement?.evidenceFieldIds || [];
     const contractCompleteForSampleReview = sampleObserved && missingRequirementIds.length === 0;
+    const dtcEvidenceComparisonScopeKeys = Array.isArray(quality.dtcEvidenceComparisonScopeKeys)
+      ? quality.dtcEvidenceComparisonScopeKeys
+      : Array.isArray(quality.dtc_evidence_comparison_scope_keys) ? quality.dtc_evidence_comparison_scope_keys : [];
+    const encodeScopePart = (value) => encodeURIComponent(String(value ?? ""));
+    const requestScopeSuffix = [
+      ["protocol", readValue("dtcEvidenceProtocol", "dtc_evidence_protocol")],
+      ["route", readValue("dtcEvidenceCommunicationRouteKey", "dtc_evidence_communication_route_key")],
+      ["vci", readValue("dtcEvidenceVciIdentityKey", "dtc_evidence_vci_identity_key")],
+      ["category", readValue("dtcEvidenceReadoutCategory", "dtc_evidence_readout_category")],
+      ["request", readValue("dtcEvidenceRequestedService", "dtc_evidence_requested_service")],
+      ["response_count", readValue("dtcEvidenceResponseCount", "dtc_evidence_response_count")],
+      ["response_wait_ms", readValue("dtcEvidenceResponseWaitMs", "dtc_evidence_response_wait_ms")]
+    ].map(([key, value]) => `${key}=${encodeScopePart(value)}`).join(";");
+    const responseObservationSuffix = [
+      ["response", readValue("dtcEvidenceResponseService", "dtc_evidence_response_service")],
+      ["ecu_status", readValue("dtcEvidenceEcuResponseStatus", "dtc_evidence_ecu_response_status")],
+      ["nrc", readValue("dtcEvidenceNegativeResponseCode", "dtc_evidence_negative_response_code")],
+      ["pending", readValue("dtcEvidenceResponsePendingObserved", "dtc_evidence_response_pending_observed")]
+    ].map(([key, value]) => `${key}=${encodeScopePart(value)}`).join(";");
+    const requestScopeKeys = contractCompleteForSampleReview
+      ? [...new Set(dtcEvidenceComparisonScopeKeys.map((scopeKey) => `scope=${encodeScopePart(scopeKey)};${requestScopeSuffix}`))]
+      : [];
+    const responseObservationKeys = requestScopeKeys.map((requestScopeKey) => `${requestScopeKey};${responseObservationSuffix}`);
     const status = !sampleObserved
       ? "sample_not_observed"
       : contractCompleteForSampleReview
@@ -14612,8 +14636,8 @@
         : "incomplete";
 
     return {
-      schemaVersion: "manufacturer_sample_readiness_summary_v2",
-      schema_version: "manufacturer_sample_readiness_summary_v2",
+      schemaVersion: "manufacturer_sample_readiness_summary_v3",
+      schema_version: "manufacturer_sample_readiness_summary_v3",
       status,
       sampleObserved,
       sample_observed: sampleObserved,
@@ -14636,6 +14660,12 @@
       collection_guidance_available: missingRequirementIds.length > 0,
       contractCompleteForSampleReview,
       contract_complete_for_sample_review: contractCompleteForSampleReview,
+      responseDifferenceReviewReady: requestScopeKeys.length > 0,
+      response_difference_review_ready: requestScopeKeys.length > 0,
+      requestScopeKeys,
+      request_scope_keys: [...requestScopeKeys],
+      responseObservationKeys,
+      response_observation_keys: [...responseObservationKeys],
       realVehicleVerified: false,
       real_vehicle_verified: false,
       diagnosticConclusionAssigned: false,
