@@ -26508,6 +26508,9 @@
           const udsDtcMemorySelection = redactSensitiveText(String(row.udsDtcMemorySelection || row.uds_dtc_memory_selection || row.dtcMemorySelection || row.dtc_memory_selection || row.memorySelection || row.memory_selection || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsDtcFormatIdentifier = redactSensitiveText(String(row.udsDtcFormatIdentifier || row.uds_dtc_format_identifier || row.dtcFormatIdentifier || row.dtc_format_identifier || row.formatIdentifier || row.format_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsDtcStatusAvailabilityMask = redactSensitiveText(String(row.udsDtcStatusAvailabilityMask || row.uds_dtc_status_availability_mask || row.dtcStatusAvailabilityMask || row.dtc_status_availability_mask || row.statusAvailabilityMask || row.status_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcReadinessGroupIdentifier = redactSensitiveText(String(row.udsDtcReadinessGroupIdentifier || row.uds_dtc_readiness_group_identifier || row.dtcReadinessGroupIdentifier || row.dtc_readiness_group_identifier || row.readinessGroupIdentifier || row.readiness_group_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcSeverityAvailabilityMask = redactSensitiveText(String(row.udsDtcSeverityAvailabilityMask || row.uds_dtc_severity_availability_mask || row.dtcSeverityAvailabilityMask || row.dtc_severity_availability_mask || row.severityAvailabilityMask || row.severity_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDtcFunctionalGroup = redactSensitiveText(String(row.udsDtcFunctionalGroup || row.uds_dtc_functional_group || row.dtcFunctionalGroup || row.dtc_functional_group || row.wwhObdFunctionalGroup || row.wwh_obd_functional_group || row.functionalGroup || row.functional_group || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26593,6 +26596,9 @@
             ...(udsDtcMemorySelection ? { udsDtcMemorySelection, uds_dtc_memory_selection: udsDtcMemorySelection } : {}),
             ...(udsDtcFormatIdentifier ? { udsDtcFormatIdentifier, uds_dtc_format_identifier: udsDtcFormatIdentifier } : {}),
             ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {}),
+            ...(udsDtcReadinessGroupIdentifier ? { udsDtcReadinessGroupIdentifier, uds_dtc_readiness_group_identifier: udsDtcReadinessGroupIdentifier } : {}),
+            ...(udsDtcSeverityAvailabilityMask ? { udsDtcSeverityAvailabilityMask, uds_dtc_severity_availability_mask: udsDtcSeverityAvailabilityMask } : {}),
+            ...(udsDtcFunctionalGroup ? { udsDtcFunctionalGroup, uds_dtc_functional_group: udsDtcFunctionalGroup } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26738,6 +26744,9 @@
       const udsDtcMemorySelection = redactSensitiveText(String(rowValue.udsDtcMemorySelection || rowValue.uds_dtc_memory_selection || rowValue.dtcMemorySelection || rowValue.dtc_memory_selection || rowValue.memorySelection || rowValue.memory_selection || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcFormatIdentifier = redactSensitiveText(String(rowValue.udsDtcFormatIdentifier || rowValue.uds_dtc_format_identifier || rowValue.dtcFormatIdentifier || rowValue.dtc_format_identifier || rowValue.formatIdentifier || rowValue.format_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcStatusAvailabilityMask = redactSensitiveText(String(rowValue.udsDtcStatusAvailabilityMask || rowValue.uds_dtc_status_availability_mask || rowValue.dtcStatusAvailabilityMask || rowValue.dtc_status_availability_mask || rowValue.statusAvailabilityMask || rowValue.status_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcReadinessGroupIdentifier = redactSensitiveText(String(rowValue.udsDtcReadinessGroupIdentifier || rowValue.uds_dtc_readiness_group_identifier || rowValue.dtcReadinessGroupIdentifier || rowValue.dtc_readiness_group_identifier || rowValue.readinessGroupIdentifier || rowValue.readiness_group_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcSeverityAvailabilityMask = redactSensitiveText(String(rowValue.udsDtcSeverityAvailabilityMask || rowValue.uds_dtc_severity_availability_mask || rowValue.dtcSeverityAvailabilityMask || rowValue.dtc_severity_availability_mask || rowValue.severityAvailabilityMask || rowValue.severity_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcFunctionalGroup = redactSensitiveText(String(rowValue.udsDtcFunctionalGroup || rowValue.uds_dtc_functional_group || rowValue.dtcFunctionalGroup || rowValue.dtc_functional_group || rowValue.wwhObdFunctionalGroup || rowValue.wwh_obd_functional_group || rowValue.functionalGroup || rowValue.functional_group || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26811,6 +26820,9 @@
         ...(udsDtcMemorySelection ? { udsDtcMemorySelection, uds_dtc_memory_selection: udsDtcMemorySelection } : {}),
         ...(udsDtcFormatIdentifier ? { udsDtcFormatIdentifier, uds_dtc_format_identifier: udsDtcFormatIdentifier } : {}),
         ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {}),
+        ...(udsDtcReadinessGroupIdentifier ? { udsDtcReadinessGroupIdentifier, uds_dtc_readiness_group_identifier: udsDtcReadinessGroupIdentifier } : {}),
+        ...(udsDtcSeverityAvailabilityMask ? { udsDtcSeverityAvailabilityMask, uds_dtc_severity_availability_mask: udsDtcSeverityAvailabilityMask } : {}),
+        ...(udsDtcFunctionalGroup ? { udsDtcFunctionalGroup, uds_dtc_functional_group: udsDtcFunctionalGroup } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28369,6 +28381,9 @@
       const udsDtcMemorySelection = redactSensitiveText(String(row?.udsDtcMemorySelection || row?.uds_dtc_memory_selection || row?.dtcMemorySelection || row?.dtc_memory_selection || row?.memorySelection || row?.memory_selection || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcFormatIdentifier = redactSensitiveText(String(row?.udsDtcFormatIdentifier || row?.uds_dtc_format_identifier || row?.dtcFormatIdentifier || row?.dtc_format_identifier || row?.formatIdentifier || row?.format_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDtcStatusAvailabilityMask = redactSensitiveText(String(row?.udsDtcStatusAvailabilityMask || row?.uds_dtc_status_availability_mask || row?.dtcStatusAvailabilityMask || row?.dtc_status_availability_mask || row?.statusAvailabilityMask || row?.status_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcReadinessGroupIdentifier = redactSensitiveText(String(row?.udsDtcReadinessGroupIdentifier || row?.uds_dtc_readiness_group_identifier || row?.dtcReadinessGroupIdentifier || row?.dtc_readiness_group_identifier || row?.readinessGroupIdentifier || row?.readiness_group_identifier || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcSeverityAvailabilityMask = redactSensitiveText(String(row?.udsDtcSeverityAvailabilityMask || row?.uds_dtc_severity_availability_mask || row?.dtcSeverityAvailabilityMask || row?.dtc_severity_availability_mask || row?.severityAvailabilityMask || row?.severity_availability_mask || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDtcFunctionalGroup = redactSensitiveText(String(row?.udsDtcFunctionalGroup || row?.uds_dtc_functional_group || row?.dtcFunctionalGroup || row?.dtc_functional_group || row?.wwhObdFunctionalGroup || row?.wwh_obd_functional_group || row?.functionalGroup || row?.functional_group || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return {
         id,
         name,
@@ -28441,7 +28456,10 @@
         ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {}),
         ...(udsDtcMemorySelection ? { udsDtcMemorySelection, uds_dtc_memory_selection: udsDtcMemorySelection } : {}),
         ...(udsDtcFormatIdentifier ? { udsDtcFormatIdentifier, uds_dtc_format_identifier: udsDtcFormatIdentifier } : {}),
-        ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {})
+        ...(udsDtcStatusAvailabilityMask ? { udsDtcStatusAvailabilityMask, uds_dtc_status_availability_mask: udsDtcStatusAvailabilityMask } : {}),
+        ...(udsDtcReadinessGroupIdentifier ? { udsDtcReadinessGroupIdentifier, uds_dtc_readiness_group_identifier: udsDtcReadinessGroupIdentifier } : {}),
+        ...(udsDtcSeverityAvailabilityMask ? { udsDtcSeverityAvailabilityMask, uds_dtc_severity_availability_mask: udsDtcSeverityAvailabilityMask } : {}),
+        ...(udsDtcFunctionalGroup ? { udsDtcFunctionalGroup, uds_dtc_functional_group: udsDtcFunctionalGroup } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28515,7 +28533,10 @@
         udsResponseState: row.udsResponseState || null,
         udsDtcMemorySelection: row.udsDtcMemorySelection || null,
         udsDtcFormatIdentifier: row.udsDtcFormatIdentifier || null,
-        udsDtcStatusAvailabilityMask: row.udsDtcStatusAvailabilityMask || null
+        udsDtcStatusAvailabilityMask: row.udsDtcStatusAvailabilityMask || null,
+        udsDtcReadinessGroupIdentifier: row.udsDtcReadinessGroupIdentifier || null,
+        udsDtcSeverityAvailabilityMask: row.udsDtcSeverityAvailabilityMask || null,
+        udsDtcFunctionalGroup: row.udsDtcFunctionalGroup || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32358,6 +32379,9 @@
     const statusIndex = findIndex("status", "dtc status", "state", "状態", "ステータス", "DTC状態");
     const dtcStatusByteIndex = findIndex("status byte", "dtc status byte", "dtc status mask", "status of dtc", "uds status byte");
     const dtcStatusAvailabilityMaskIndex = findIndex("dtc status availability mask", "status availability mask", "dtc status mask availability");
+    const udsDtcReadinessGroupIdentifierIndex = findIndex("uds dtc readiness group identifier", "uds_dtc_readiness_group_identifier", "dtc readiness group identifier", "dtc_readiness_group_identifier", "readiness group identifier", "readiness_group_identifier", "WWH-OBDレディネスグループ識別子");
+    const udsDtcSeverityAvailabilityMaskIndex = findIndex("uds dtc severity availability mask", "uds_dtc_severity_availability_mask", "dtc severity availability mask", "dtc_severity_availability_mask", "severity availability mask", "severity_availability_mask", "WWH-OBD重大度可用性マスク");
+    const udsDtcFunctionalGroupIndex = findIndex("uds dtc functional group", "uds_dtc_functional_group", "dtc functional group", "dtc_functional_group", "wwh-obd functional group", "wwh_obd_functional_group", "functional group", "functional_group", "WWH-OBD機能グループ");
     const dtcSeverityIndex = findIndex("severity", "dtc severity", "severity byte", "dtc severity byte");
     const dtcOccurrenceCountIndex = findIndex("occurrence count", "occurrence counter", "dtc occurrence count", "dtc occurrence counter", "fault occurrence counter");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
@@ -32583,6 +32607,9 @@
       const rowUdsDtcMemorySelection = cellAt(udsDtcMemorySelectionIndex, 80) || null;
       const rowUdsDtcFormatIdentifier = cellAt(udsDtcFormatIdentifierIndex, 80) || null;
       const rowUdsDtcStatusAvailabilityMask = cellAt(dtcStatusAvailabilityMaskIndex, 80) || null;
+      const rowUdsDtcReadinessGroupIdentifier = cellAt(udsDtcReadinessGroupIdentifierIndex, 80) || null;
+      const rowUdsDtcSeverityAvailabilityMask = cellAt(udsDtcSeverityAvailabilityMaskIndex, 80) || null;
+      const rowUdsDtcFunctionalGroup = cellAt(udsDtcFunctionalGroupIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32777,6 +32804,9 @@
           ...(rowUdsDtcMemorySelection ? { uds_dtc_memory_selection: rowUdsDtcMemorySelection } : {}),
           ...(rowUdsDtcFormatIdentifier ? { uds_dtc_format_identifier: rowUdsDtcFormatIdentifier } : {}),
           ...(rowUdsDtcStatusAvailabilityMask ? { uds_dtc_status_availability_mask: rowUdsDtcStatusAvailabilityMask } : {}),
+          ...(rowUdsDtcReadinessGroupIdentifier ? { uds_dtc_readiness_group_identifier: rowUdsDtcReadinessGroupIdentifier } : {}),
+          ...(rowUdsDtcSeverityAvailabilityMask ? { uds_dtc_severity_availability_mask: rowUdsDtcSeverityAvailabilityMask } : {}),
+          ...(rowUdsDtcFunctionalGroup ? { uds_dtc_functional_group: rowUdsDtcFunctionalGroup } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32936,6 +32966,9 @@
           ...(rowUdsDtcMemorySelection ? { uds_dtc_memory_selection: rowUdsDtcMemorySelection } : {}),
           ...(rowUdsDtcFormatIdentifier ? { uds_dtc_format_identifier: rowUdsDtcFormatIdentifier } : {}),
           ...(rowUdsDtcStatusAvailabilityMask ? { uds_dtc_status_availability_mask: rowUdsDtcStatusAvailabilityMask } : {}),
+          ...(rowUdsDtcReadinessGroupIdentifier ? { uds_dtc_readiness_group_identifier: rowUdsDtcReadinessGroupIdentifier } : {}),
+          ...(rowUdsDtcSeverityAvailabilityMask ? { uds_dtc_severity_availability_mask: rowUdsDtcSeverityAvailabilityMask } : {}),
+          ...(rowUdsDtcFunctionalGroup ? { uds_dtc_functional_group: rowUdsDtcFunctionalGroup } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34418,6 +34451,9 @@
         udsDtcMemorySelection: row?.udsDtcMemorySelection || row?.uds_dtc_memory_selection || row?.dtcMemorySelection || row?.dtc_memory_selection || row?.memorySelection || row?.memory_selection || null,
         udsDtcFormatIdentifier: row?.udsDtcFormatIdentifier || row?.uds_dtc_format_identifier || row?.dtcFormatIdentifier || row?.dtc_format_identifier || row?.formatIdentifier || row?.format_identifier || null,
         udsDtcStatusAvailabilityMask: row?.udsDtcStatusAvailabilityMask || row?.uds_dtc_status_availability_mask || row?.dtcStatusAvailabilityMask || row?.dtc_status_availability_mask || row?.statusAvailabilityMask || row?.status_availability_mask || null,
+        udsDtcReadinessGroupIdentifier: row?.udsDtcReadinessGroupIdentifier || row?.uds_dtc_readiness_group_identifier || row?.dtcReadinessGroupIdentifier || row?.dtc_readiness_group_identifier || row?.readinessGroupIdentifier || row?.readiness_group_identifier || null,
+        udsDtcSeverityAvailabilityMask: row?.udsDtcSeverityAvailabilityMask || row?.uds_dtc_severity_availability_mask || row?.dtcSeverityAvailabilityMask || row?.dtc_severity_availability_mask || row?.severityAvailabilityMask || row?.severity_availability_mask || null,
+        udsDtcFunctionalGroup: row?.udsDtcFunctionalGroup || row?.uds_dtc_functional_group || row?.dtcFunctionalGroup || row?.dtc_functional_group || row?.wwhObdFunctionalGroup || row?.wwh_obd_functional_group || row?.functionalGroup || row?.functional_group || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34487,6 +34523,9 @@
       const dtcUdsDtcMemorySelection = dtcRow?.udsDtcMemorySelection || dtcRow?.uds_dtc_memory_selection || dtcRow?.dtcMemorySelection || dtcRow?.dtc_memory_selection || dtcRow?.memorySelection || dtcRow?.memory_selection || null;
       const dtcUdsDtcFormatIdentifier = dtcRow?.udsDtcFormatIdentifier || dtcRow?.uds_dtc_format_identifier || dtcRow?.dtcFormatIdentifier || dtcRow?.dtc_format_identifier || dtcRow?.formatIdentifier || dtcRow?.format_identifier || null;
       const dtcUdsDtcStatusAvailabilityMask = dtcRow?.udsDtcStatusAvailabilityMask || dtcRow?.uds_dtc_status_availability_mask || dtcRow?.dtcStatusAvailabilityMask || dtcRow?.dtc_status_availability_mask || dtcRow?.statusAvailabilityMask || dtcRow?.status_availability_mask || null;
+      const dtcUdsDtcReadinessGroupIdentifier = dtcRow?.udsDtcReadinessGroupIdentifier || dtcRow?.uds_dtc_readiness_group_identifier || dtcRow?.dtcReadinessGroupIdentifier || dtcRow?.dtc_readiness_group_identifier || dtcRow?.readinessGroupIdentifier || dtcRow?.readiness_group_identifier || null;
+      const dtcUdsDtcSeverityAvailabilityMask = dtcRow?.udsDtcSeverityAvailabilityMask || dtcRow?.uds_dtc_severity_availability_mask || dtcRow?.dtcSeverityAvailabilityMask || dtcRow?.dtc_severity_availability_mask || dtcRow?.severityAvailabilityMask || dtcRow?.severity_availability_mask || null;
+      const dtcUdsDtcFunctionalGroup = dtcRow?.udsDtcFunctionalGroup || dtcRow?.uds_dtc_functional_group || dtcRow?.dtcFunctionalGroup || dtcRow?.dtc_functional_group || dtcRow?.wwhObdFunctionalGroup || dtcRow?.wwh_obd_functional_group || dtcRow?.functionalGroup || dtcRow?.functional_group || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34535,6 +34574,9 @@
       if (dtcUdsDtcMemorySelection && response.udsDtcMemorySelection && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcMemorySelection) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcMemorySelection)) return false;
       if (dtcUdsDtcFormatIdentifier && response.udsDtcFormatIdentifier && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcFormatIdentifier) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcFormatIdentifier)) return false;
       if (dtcUdsDtcStatusAvailabilityMask && response.udsDtcStatusAvailabilityMask && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcStatusAvailabilityMask) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcStatusAvailabilityMask)) return false;
+      if (dtcUdsDtcReadinessGroupIdentifier && response.udsDtcReadinessGroupIdentifier && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcReadinessGroupIdentifier) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcReadinessGroupIdentifier)) return false;
+      if (dtcUdsDtcSeverityAvailabilityMask && response.udsDtcSeverityAvailabilityMask && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcSeverityAvailabilityMask) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcSeverityAvailabilityMask)) return false;
+      if (dtcUdsDtcFunctionalGroup && response.udsDtcFunctionalGroup && normalizeCsvDiagnosticAddressIdentity(dtcUdsDtcFunctionalGroup) !== normalizeCsvDiagnosticAddressIdentity(response.udsDtcFunctionalGroup)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
