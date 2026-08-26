@@ -21811,6 +21811,30 @@
     const manufacturerSampleResponseDifferenceStatus = !manufacturerSampleRequestScopeComparable
       ? "not_comparable"
       : manufacturerSampleResponseChanged ? "changed" : "unchanged";
+    const classifyManufacturerSampleResponseOutcome = (responseService, ecuResponseStatus, negativeResponseCode, pendingObserved) => {
+      if (pendingObserved === true || ecuResponseStatus === "pending_response" || negativeResponseCode === "78") return "pending_response";
+      if (ecuResponseStatus === "no_response") return "no_response";
+      if (responseService === "7F" || ecuResponseStatus === "negative_response") return "negative_response";
+      if (responseService && ["reported", "responded"].includes(ecuResponseStatus)) return "positive_response";
+      return "unknown";
+    };
+    const importedManufacturerSampleResponseOutcome = classifyManufacturerSampleResponseOutcome(
+      importedDtcEvidenceResponseService,
+      importedDtcEvidenceEcuResponseStatus,
+      importedDtcEvidenceNegativeResponseCode,
+      importedDtcEvidenceResponsePendingObserved
+    );
+    const currentManufacturerSampleResponseOutcome = classifyManufacturerSampleResponseOutcome(
+      currentDtcEvidenceResponseService,
+      currentDtcEvidenceEcuResponseStatus,
+      currentDtcEvidenceNegativeResponseCode,
+      currentDtcEvidenceResponsePendingObserved
+    );
+    const manufacturerSampleResponseTransitionId = manufacturerSampleRequestScopeComparable
+      ? `${importedManufacturerSampleResponseOutcome}_to_${currentManufacturerSampleResponseOutcome}`
+      : null;
+    const manufacturerSampleNegativeResponseCodeChanged = manufacturerSampleRequestScopeComparable
+      && importedDtcEvidenceNegativeResponseCode !== currentDtcEvidenceNegativeResponseCode;
     const manufacturerSampleResponseDifferenceBlockedReasonIds = [
       importedManufacturerSampleReadiness.contractCompleteForSampleReview !== true ? "imported_manufacturer_sample_incomplete" : null,
       currentManufacturerSampleReadiness.contractCompleteForSampleReview !== true ? "current_manufacturer_sample_incomplete" : null,
@@ -22050,6 +22074,14 @@
       manufacturer_sample_response_changed: manufacturerSampleResponseChanged,
       manufacturerSampleResponseDifferenceStatus,
       manufacturer_sample_response_difference_status: manufacturerSampleResponseDifferenceStatus,
+      importedManufacturerSampleResponseOutcome,
+      imported_manufacturer_sample_response_outcome: importedManufacturerSampleResponseOutcome,
+      currentManufacturerSampleResponseOutcome,
+      current_manufacturer_sample_response_outcome: currentManufacturerSampleResponseOutcome,
+      manufacturerSampleResponseTransitionId,
+      manufacturer_sample_response_transition_id: manufacturerSampleResponseTransitionId,
+      manufacturerSampleNegativeResponseCodeChanged,
+      manufacturer_sample_negative_response_code_changed: manufacturerSampleNegativeResponseCodeChanged,
       manufacturerSampleResponseDifferenceBlockedReasonIds,
       manufacturer_sample_response_difference_blocked_reason_ids: manufacturerSampleResponseDifferenceBlockedReasonIds,
       importedManufacturerSampleRequestScopeKeys,
