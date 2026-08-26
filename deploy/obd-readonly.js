@@ -13977,12 +13977,20 @@
     const dtcEvidenceVciIdentityKeys = [...new Set(dtcEvidenceScopeInputs
       .map(buildDtcEvidenceVciIdentityKey)
       .filter(Boolean))].sort();
+    const dtcEvidenceReadoutCategories = [...new Set(dtcEvidenceScopeInputs
+      .map((row) => normalizeDtcEvidenceReadoutCategory(row?.dtcReadoutCategory || row?.dtc_readout_category))
+      .filter(Boolean))].sort();
+    const dtcEvidenceRequestedServices = [...new Set(dtcEvidenceScopeInputs
+      .flatMap(readDtcEvidenceRequestedServices)
+      .filter(Boolean))].sort();
     const dtcEvidenceCapturedAt = dtcEvidenceCapturedAtValues.length === 1 ? dtcEvidenceCapturedAtValues[0] : null;
     const dtcEvidenceProtocol = dtcEvidenceProtocolValues.length === 1 ? dtcEvidenceProtocolValues[0] : null;
     const dtcEvidenceScanSessionId = dtcEvidenceScanSessionIds.length === 1 ? dtcEvidenceScanSessionIds[0] : null;
     const dtcEvidenceReadoutAttemptId = dtcEvidenceReadoutAttemptIds.length === 1 ? dtcEvidenceReadoutAttemptIds[0] : null;
     const dtcEvidenceCommunicationRouteKey = dtcEvidenceCommunicationRouteKeys.length === 1 ? dtcEvidenceCommunicationRouteKeys[0] : null;
     const dtcEvidenceVciIdentityKey = dtcEvidenceVciIdentityKeys.length === 1 ? dtcEvidenceVciIdentityKeys[0] : null;
+    const dtcEvidenceReadoutCategory = dtcEvidenceReadoutCategories.length === 1 ? dtcEvidenceReadoutCategories[0] : null;
+    const dtcEvidenceRequestedService = dtcEvidenceRequestedServices.length === 1 ? dtcEvidenceRequestedServices[0] : null;
     const dtcEvidenceAcquisitionContextComplete = dtcEvidenceScopeInputs.length > 0
       && Boolean(dtcEvidenceCapturedAt)
       && Boolean(dtcEvidenceProtocol)
@@ -13991,6 +13999,9 @@
       && Boolean(dtcEvidenceReadoutAttemptId)
       && Boolean(dtcEvidenceCommunicationRouteKey)
       && Boolean(dtcEvidenceVciIdentityKey);
+    const dtcEvidenceReadoutContractComplete = dtcEvidenceScopeInputs.length > 0
+      && Boolean(dtcEvidenceReadoutCategory)
+      && Boolean(dtcEvidenceRequestedService);
     const reportedInvalidDtcEvidenceScopedIssueKeys = Array.isArray(dtcEvidenceFieldReport?.scopedInvalidIssueKeys)
       ? dtcEvidenceFieldReport.scopedInvalidIssueKeys
       : Array.isArray(dtcEvidenceFieldReport?.scoped_invalid_issue_keys)
@@ -14089,6 +14100,12 @@
       dtc_evidence_vci_identity_key: dtcEvidenceVciIdentityKey,
       dtcEvidenceTransportContextComplete,
       dtc_evidence_transport_context_complete: dtcEvidenceTransportContextComplete,
+      dtcEvidenceReadoutCategory,
+      dtc_evidence_readout_category: dtcEvidenceReadoutCategory,
+      dtcEvidenceRequestedService,
+      dtc_evidence_requested_service: dtcEvidenceRequestedService,
+      dtcEvidenceReadoutContractComplete,
+      dtc_evidence_readout_contract_complete: dtcEvidenceReadoutContractComplete,
       dtcEvidenceScopeComplete,
       dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
@@ -21467,6 +21484,10 @@
     const currentDtcEvidenceCommunicationRouteKey = normalizeDtcEvidenceCommunicationRouteKeyValue(readAliasValue(currentSummary, "dtcEvidenceCommunicationRouteKey"));
     const importedDtcEvidenceVciIdentityKey = normalizeDtcEvidenceVciIdentityKeyValue(readAliasValue(importedQualitySummary, "dtcEvidenceVciIdentityKey"));
     const currentDtcEvidenceVciIdentityKey = normalizeDtcEvidenceVciIdentityKeyValue(readAliasValue(currentSummary, "dtcEvidenceVciIdentityKey"));
+    const importedDtcEvidenceReadoutCategory = normalizeDtcEvidenceReadoutCategory(readAliasValue(importedQualitySummary, "dtcEvidenceReadoutCategory"));
+    const currentDtcEvidenceReadoutCategory = normalizeDtcEvidenceReadoutCategory(readAliasValue(currentSummary, "dtcEvidenceReadoutCategory"));
+    const importedDtcEvidenceRequestedService = normalizeDtcEvidenceRequestedServiceValue(readAliasValue(importedQualitySummary, "dtcEvidenceRequestedService"));
+    const currentDtcEvidenceRequestedService = normalizeDtcEvidenceRequestedServiceValue(readAliasValue(currentSummary, "dtcEvidenceRequestedService"));
     const importedDtcEvidenceAcquisitionContextComplete = readFlag(importedQualitySummary, "dtcEvidenceAcquisitionContextComplete")
       && Boolean(importedDtcEvidenceCapturedAt && importedDtcEvidenceProtocol && importedDtcEvidenceScanSessionId);
     const currentDtcEvidenceAcquisitionContextComplete = readFlag(currentSummary, "dtcEvidenceAcquisitionContextComplete")
@@ -21475,6 +21496,10 @@
       && Boolean(importedDtcEvidenceReadoutAttemptId && importedDtcEvidenceCommunicationRouteKey && importedDtcEvidenceVciIdentityKey);
     const currentDtcEvidenceTransportContextComplete = readFlag(currentSummary, "dtcEvidenceTransportContextComplete")
       && Boolean(currentDtcEvidenceReadoutAttemptId && currentDtcEvidenceCommunicationRouteKey && currentDtcEvidenceVciIdentityKey);
+    const importedDtcEvidenceReadoutContractComplete = readFlag(importedQualitySummary, "dtcEvidenceReadoutContractComplete")
+      && Boolean(importedDtcEvidenceReadoutCategory && importedDtcEvidenceRequestedService);
+    const currentDtcEvidenceReadoutContractComplete = readFlag(currentSummary, "dtcEvidenceReadoutContractComplete")
+      && Boolean(currentDtcEvidenceReadoutCategory && currentDtcEvidenceRequestedService);
     const dtcEvidenceProtocolMatch = Boolean(importedDtcEvidenceProtocol && importedDtcEvidenceProtocol === currentDtcEvidenceProtocol);
     const dtcEvidenceCaptureOrderValid = Boolean(importedDtcEvidenceCapturedAt && currentDtcEvidenceCapturedAt
       && Date.parse(currentDtcEvidenceCapturedAt) > Date.parse(importedDtcEvidenceCapturedAt));
@@ -21486,6 +21511,10 @@
       && importedDtcEvidenceCommunicationRouteKey === currentDtcEvidenceCommunicationRouteKey);
     const dtcEvidenceVciIdentityMatch = Boolean(importedDtcEvidenceVciIdentityKey
       && importedDtcEvidenceVciIdentityKey === currentDtcEvidenceVciIdentityKey);
+    const dtcEvidenceReadoutCategoryMatch = Boolean(importedDtcEvidenceReadoutCategory
+      && importedDtcEvidenceReadoutCategory === currentDtcEvidenceReadoutCategory);
+    const dtcEvidenceRequestedServiceMatch = Boolean(importedDtcEvidenceRequestedService
+      && importedDtcEvidenceRequestedService === currentDtcEvidenceRequestedService);
     const importedDtcEvidenceValidationReported = readFlag(importedQualitySummary, "dtcEvidenceValidationReported") || importedInvalidDtcEvidenceIssueKeys.length > 0;
     const currentDtcEvidenceValidationReported = readFlag(currentSummary, "dtcEvidenceValidationReported") || currentInvalidDtcEvidenceIssueKeys.length > 0;
     const dtcEvidenceVehicleScopeMatch = Boolean(importedDtcEvidenceVehicleScopeKey && importedDtcEvidenceVehicleScopeKey === currentDtcEvidenceVehicleScopeKey);
@@ -21505,7 +21534,11 @@
       !currentDtcEvidenceTransportContextComplete ? "current_dtc_evidence_transport_context_incomplete" : null,
       importedDtcEvidenceTransportContextComplete && currentDtcEvidenceTransportContextComplete && !dtcEvidenceReadoutAttemptDistinct ? "dtc_evidence_readout_attempt_reused" : null,
       importedDtcEvidenceTransportContextComplete && currentDtcEvidenceTransportContextComplete && !dtcEvidenceCommunicationRouteMatch ? "dtc_evidence_communication_route_mismatch" : null,
-      importedDtcEvidenceTransportContextComplete && currentDtcEvidenceTransportContextComplete && !dtcEvidenceVciIdentityMatch ? "dtc_evidence_vci_identity_mismatch" : null
+      importedDtcEvidenceTransportContextComplete && currentDtcEvidenceTransportContextComplete && !dtcEvidenceVciIdentityMatch ? "dtc_evidence_vci_identity_mismatch" : null,
+      !importedDtcEvidenceReadoutContractComplete ? "imported_dtc_evidence_readout_contract_incomplete" : null,
+      !currentDtcEvidenceReadoutContractComplete ? "current_dtc_evidence_readout_contract_incomplete" : null,
+      importedDtcEvidenceReadoutContractComplete && currentDtcEvidenceReadoutContractComplete && !dtcEvidenceReadoutCategoryMatch ? "dtc_evidence_readout_category_mismatch" : null,
+      importedDtcEvidenceReadoutContractComplete && currentDtcEvidenceReadoutContractComplete && !dtcEvidenceRequestedServiceMatch ? "dtc_evidence_requested_service_mismatch" : null
     ].filter(Boolean);
     const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported
       && currentDtcEvidenceValidationReported
@@ -21678,6 +21711,22 @@
       imported_dtc_evidence_transport_context_complete: importedDtcEvidenceTransportContextComplete,
       currentDtcEvidenceTransportContextComplete,
       current_dtc_evidence_transport_context_complete: currentDtcEvidenceTransportContextComplete,
+      importedDtcEvidenceReadoutCategory,
+      imported_dtc_evidence_readout_category: importedDtcEvidenceReadoutCategory,
+      currentDtcEvidenceReadoutCategory,
+      current_dtc_evidence_readout_category: currentDtcEvidenceReadoutCategory,
+      dtcEvidenceReadoutCategoryMatch,
+      dtc_evidence_readout_category_match: dtcEvidenceReadoutCategoryMatch,
+      importedDtcEvidenceRequestedService,
+      imported_dtc_evidence_requested_service: importedDtcEvidenceRequestedService,
+      currentDtcEvidenceRequestedService,
+      current_dtc_evidence_requested_service: currentDtcEvidenceRequestedService,
+      dtcEvidenceRequestedServiceMatch,
+      dtc_evidence_requested_service_match: dtcEvidenceRequestedServiceMatch,
+      importedDtcEvidenceReadoutContractComplete,
+      imported_dtc_evidence_readout_contract_complete: importedDtcEvidenceReadoutContractComplete,
+      currentDtcEvidenceReadoutContractComplete,
+      current_dtc_evidence_readout_contract_complete: currentDtcEvidenceReadoutContractComplete,
       dtcEvidenceScopeBlockedReasonIds,
       dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       dtcEvidenceResolutionComparisonAvailable,
@@ -21770,6 +21819,10 @@
     const dtcEvidenceVciIdentityKey = normalizeDtcEvidenceVciIdentityKeyValue(pickDefined(summary.dtcEvidenceVciIdentityKey, summary.dtc_evidence_vci_identity_key));
     const dtcEvidenceTransportContextComplete = pickDefined(summary.dtcEvidenceTransportContextComplete, summary.dtc_evidence_transport_context_complete, false) === true
       && Boolean(dtcEvidenceReadoutAttemptId && dtcEvidenceCommunicationRouteKey && dtcEvidenceVciIdentityKey);
+    const dtcEvidenceReadoutCategory = normalizeDtcEvidenceReadoutCategory(pickDefined(summary.dtcEvidenceReadoutCategory, summary.dtc_evidence_readout_category));
+    const dtcEvidenceRequestedService = normalizeDtcEvidenceRequestedServiceValue(pickDefined(summary.dtcEvidenceRequestedService, summary.dtc_evidence_requested_service));
+    const dtcEvidenceReadoutContractComplete = pickDefined(summary.dtcEvidenceReadoutContractComplete, summary.dtc_evidence_readout_contract_complete, false) === true
+      && Boolean(dtcEvidenceReadoutCategory && dtcEvidenceRequestedService);
     const dtcEvidenceValidationReported = pickDefined(summary.dtcEvidenceValidationReported, summary.dtc_evidence_validation_reported, false) === true
       || invalidDtcEvidenceIssueKeys.length > 0;
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
@@ -21860,6 +21913,12 @@
       dtc_evidence_vci_identity_key: dtcEvidenceVciIdentityKey,
       dtcEvidenceTransportContextComplete,
       dtc_evidence_transport_context_complete: dtcEvidenceTransportContextComplete,
+      dtcEvidenceReadoutCategory,
+      dtc_evidence_readout_category: dtcEvidenceReadoutCategory,
+      dtcEvidenceRequestedService,
+      dtc_evidence_requested_service: dtcEvidenceRequestedService,
+      dtcEvidenceReadoutContractComplete,
+      dtc_evidence_readout_contract_complete: dtcEvidenceReadoutContractComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
@@ -27525,6 +27584,7 @@
       const readoutKind = redactSensitiveText(String(rowValue.readoutKind || rowValue.readout_kind || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const dtcReadoutCategoryValue = String(rowValue.dtcReadoutCategory || rowValue.dtc_readout_category || "").trim().toLowerCase();
       const dtcReadoutCategory = ["stored", "pending", "permanent"].includes(dtcReadoutCategoryValue) ? dtcReadoutCategoryValue : null;
+      const requestedService = normalizeDtcEvidenceRequestedServiceValue(rowValue.requestedService || rowValue.requested_service || rowValue.udsRequestedService || rowValue.uds_requested_service);
       const scanSessionId = redactSensitiveText(String(rowValue.scanSessionId || rowValue.scan_session_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const readoutAttemptId = redactSensitiveText(String(rowValue.readoutAttemptId || rowValue.readout_attempt_id || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const readoutRoute = redactSensitiveText(String(rowValue.readoutRoute || rowValue.readout_route || rowValue.interfaceRoute || rowValue.interface_route || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
@@ -27633,6 +27693,7 @@
         ...(readoutSection ? { readoutSection, readout_section: readoutSection } : {}),
         ...(readoutKind ? { readoutKind, readout_kind: readoutKind } : {}),
         ...(dtcReadoutCategory ? { dtcReadoutCategory, dtc_readout_category: dtcReadoutCategory } : {}),
+        ...(requestedService ? { requestedService, requested_service: requestedService } : {}),
         ...(scanSessionId ? { scanSessionId, scan_session_id: scanSessionId } : {}),
         ...(readoutAttemptId ? { readoutAttemptId, readout_attempt_id: readoutAttemptId } : {}),
         ...(readoutRoute ? { readoutRoute, readout_route: readoutRoute } : {}),
@@ -33448,6 +33509,28 @@
     return /^family=[A-Z0-9_.!~*'()%~-]+;name=(?:-|[A-Z0-9_.!~*'()%~-]+);firmware=(?:-|[A-Z0-9_.!~*'()%~-]+)$/.test(normalized) ? normalized : null;
   }
 
+  function normalizeDtcEvidenceReadoutCategory(value) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return ["stored", "pending", "permanent"].includes(normalized) ? normalized : null;
+  }
+
+  function normalizeDtcEvidenceRequestedServiceValue(value) {
+    const normalized = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+    return /^(?:03|07|0A|19)$/.test(normalized) ? normalized : null;
+  }
+
+  function readDtcEvidenceRequestedServices(row = {}) {
+    return [...new Set([
+      row?.requestedService,
+      row?.requested_service,
+      row?.udsRequestedService,
+      row?.uds_requested_service,
+      ...(Array.isArray(row?.services) ? row.services : []),
+      ...(Array.isArray(row?.requestedServices) ? row.requestedServices : []),
+      ...(Array.isArray(row?.requested_services) ? row.requested_services : [])
+    ].map(normalizeDtcEvidenceRequestedServiceValue).filter(Boolean))];
+  }
+
   function buildDtcEvidenceVehicleScopeKey(vehicleProfile = null) {
     const profile = normalizeVehicleProfileInput(vehicleProfile) || {};
     const maker = normalizeDtcEvidenceScopePart(profile.maker, 60);
@@ -33980,6 +34063,7 @@
       const rowProtocol = cellAt(protocolIndex, 80) || null;
       const rowScanSessionId = cellAt(scanSessionIdIndex, 120) || null;
       const rowReadoutAttemptId = cellAt(readoutAttemptIdIndex, 120) || null;
+      const rowRequestedService = normalizeDtcEvidenceRequestedServiceValue(cellAt(requestedServiceIndex, 40));
       const rowEcuGroup = cellAt(ecuGroupIndex, 120) || null;
       const rowEcuSystem = cellAt(ecuSystemIndex, 160) || null;
       const rowParentEcuId = cellAt(parentEcuIdIndex, 120) || null;
@@ -34203,6 +34287,7 @@
           ...(sanitizeCell(sectionHint, 120) ? { readout_section: sanitizeCell(sectionHint, 120) } : {}),
           ...(sanitizeCell(readoutKind, 80) ? { readout_kind: sanitizeCell(readoutKind, 80) } : {}),
           ...(dtcReadoutKind ? { dtc_readout_category: dtcReadoutKind } : {}),
+          ...(rowRequestedService ? { requested_service: rowRequestedService } : {}),
           ...(rowScanSessionId ? { scan_session_id: rowScanSessionId } : {}),
           ...(rowReadoutAttemptId ? { readout_attempt_id: rowReadoutAttemptId } : {}),
           ...(cellAt(readoutRouteIndex, 80) ? { readout_route: cellAt(readoutRouteIndex, 80) } : {}),
