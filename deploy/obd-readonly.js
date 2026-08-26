@@ -26481,6 +26481,9 @@
           const vehicleFuelType = redactSensitiveText(String(row.vehicleFuelType || row.vehicle_fuel_type || row.fuelType || row.fuel_type || row.fuel || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const vehicleGrade = redactSensitiveText(String(row.vehicleGrade || row.vehicle_grade || row.grade || row.trimLevel || row.trim_level || row.trim || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const vehicleSpecificationCode = redactSensitiveText(String(row.vehicleSpecificationCode || row.vehicle_specification_code || row.specificationCode || row.specification_code || row.specCode || row.spec_code || row.optionCode || row.option_code || row.variantCode || row.variant_code || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const ecuPartNumber = redactSensitiveText(String(row.ecuPartNumber || row.ecu_part_number || row.partNumber || row.part_number || row.modulePartNumber || row.module_part_number || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const ecuSoftwareId = redactSensitiveText(String(row.ecuSoftwareId || row.ecu_software_id || row.softwareId || row.software_id || row.softwareVersion || row.software_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+          const ecuCalibrationId = redactSensitiveText(String(row.ecuCalibrationId || row.ecu_calibration_id || row.calibrationId || row.calibration_id || row.calId || row.cal_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26539,6 +26542,9 @@
             ...(vehicleFuelType ? { vehicleFuelType, vehicle_fuel_type: vehicleFuelType } : {}),
             ...(vehicleGrade ? { vehicleGrade, vehicle_grade: vehicleGrade } : {}),
             ...(vehicleSpecificationCode ? { vehicleSpecificationCode, vehicle_specification_code: vehicleSpecificationCode } : {}),
+            ...(ecuPartNumber ? { ecuPartNumber, ecu_part_number: ecuPartNumber } : {}),
+            ...(ecuSoftwareId ? { ecuSoftwareId, ecu_software_id: ecuSoftwareId } : {}),
+            ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26657,6 +26663,9 @@
       const vehicleFuelType = redactSensitiveText(String(rowValue.vehicleFuelType || rowValue.vehicle_fuel_type || rowValue.fuelType || rowValue.fuel_type || rowValue.fuel || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const vehicleGrade = redactSensitiveText(String(rowValue.vehicleGrade || rowValue.vehicle_grade || rowValue.grade || rowValue.trimLevel || rowValue.trim_level || rowValue.trim || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const vehicleSpecificationCode = redactSensitiveText(String(rowValue.vehicleSpecificationCode || rowValue.vehicle_specification_code || rowValue.specificationCode || rowValue.specification_code || rowValue.specCode || rowValue.spec_code || rowValue.optionCode || rowValue.option_code || rowValue.variantCode || rowValue.variant_code || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuPartNumber = redactSensitiveText(String(rowValue.ecuPartNumber || rowValue.ecu_part_number || rowValue.partNumber || rowValue.part_number || rowValue.modulePartNumber || rowValue.module_part_number || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuSoftwareId = redactSensitiveText(String(rowValue.ecuSoftwareId || rowValue.ecu_software_id || rowValue.softwareId || rowValue.software_id || rowValue.softwareVersion || rowValue.software_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuCalibrationId = redactSensitiveText(String(rowValue.ecuCalibrationId || rowValue.ecu_calibration_id || rowValue.calibrationId || rowValue.calibration_id || rowValue.calId || rowValue.cal_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26703,6 +26712,9 @@
         ...(vehicleFuelType ? { vehicleFuelType, vehicle_fuel_type: vehicleFuelType } : {}),
         ...(vehicleGrade ? { vehicleGrade, vehicle_grade: vehicleGrade } : {}),
         ...(vehicleSpecificationCode ? { vehicleSpecificationCode, vehicle_specification_code: vehicleSpecificationCode } : {}),
+        ...(ecuPartNumber ? { ecuPartNumber, ecu_part_number: ecuPartNumber } : {}),
+        ...(ecuSoftwareId ? { ecuSoftwareId, ecu_software_id: ecuSoftwareId } : {}),
+        ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28234,6 +28246,9 @@
       const vehicleFuelType = redactSensitiveText(String(row?.vehicleFuelType || row?.vehicle_fuel_type || row?.fuelType || row?.fuel_type || row?.fuel || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const vehicleGrade = redactSensitiveText(String(row?.vehicleGrade || row?.vehicle_grade || row?.grade || row?.trimLevel || row?.trim_level || row?.trim || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const vehicleSpecificationCode = redactSensitiveText(String(row?.vehicleSpecificationCode || row?.vehicle_specification_code || row?.specificationCode || row?.specification_code || row?.specCode || row?.spec_code || row?.optionCode || row?.option_code || row?.variantCode || row?.variant_code || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuPartNumber = redactSensitiveText(String(row?.ecuPartNumber || row?.ecu_part_number || row?.partNumber || row?.part_number || row?.modulePartNumber || row?.module_part_number || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuSoftwareId = redactSensitiveText(String(row?.ecuSoftwareId || row?.ecu_software_id || row?.softwareId || row?.software_id || row?.softwareVersion || row?.software_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
+      const ecuCalibrationId = redactSensitiveText(String(row?.ecuCalibrationId || row?.ecu_calibration_id || row?.calibrationId || row?.calibration_id || row?.calId || row?.cal_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       return {
         id,
         name,
@@ -28279,7 +28294,10 @@
         ...(vehicleElectrification ? { vehicleElectrification, vehicle_electrification: vehicleElectrification } : {}),
         ...(vehicleFuelType ? { vehicleFuelType, vehicle_fuel_type: vehicleFuelType } : {}),
         ...(vehicleGrade ? { vehicleGrade, vehicle_grade: vehicleGrade } : {}),
-        ...(vehicleSpecificationCode ? { vehicleSpecificationCode, vehicle_specification_code: vehicleSpecificationCode } : {})
+        ...(vehicleSpecificationCode ? { vehicleSpecificationCode, vehicle_specification_code: vehicleSpecificationCode } : {}),
+        ...(ecuPartNumber ? { ecuPartNumber, ecu_part_number: ecuPartNumber } : {}),
+        ...(ecuSoftwareId ? { ecuSoftwareId, ecu_software_id: ecuSoftwareId } : {}),
+        ...(ecuCalibrationId ? { ecuCalibrationId, ecu_calibration_id: ecuCalibrationId } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28326,7 +28344,10 @@
         vehicleElectrification: row.vehicleElectrification || null,
         vehicleFuelType: row.vehicleFuelType || null,
         vehicleGrade: row.vehicleGrade || null,
-        vehicleSpecificationCode: row.vehicleSpecificationCode || null
+        vehicleSpecificationCode: row.vehicleSpecificationCode || null,
+        ecuPartNumber: row.ecuPartNumber || null,
+        ecuSoftwareId: row.ecuSoftwareId || null,
+        ecuCalibrationId: row.ecuCalibrationId || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32220,6 +32241,9 @@
     const vehicleElectrificationIndex = findIndex("electrification", "hybrid system", "hybrid_system", "ev system", "ev_system");
     const vehicleGradeIndex = findIndex("vehicle grade", "vehicle_grade", "grade", "trim level", "trim_level", "trim", "グレード");
     const vehicleSpecificationCodeIndex = findIndex("vehicle specification code", "vehicle_specification_code", "specification code", "specification_code", "spec code", "spec_code", "option code", "option_code", "variant code", "variant_code", "仕様コード", "オプションコード");
+    const ecuPartNumberIndex = findIndex("ecu part number", "ecu_part_number", "module part number", "module_part_number", "control unit part number", "part number", "part_number", "ECU部品番号", "ユニット部品番号");
+    const ecuSoftwareIdIndex = findIndex("ecu software id", "ecu_software_id", "software id", "software_id", "software version", "software_version", "ECUソフトウェアID", "ソフトウェアID", "ソフトウェアバージョン");
+    const ecuCalibrationIdIndex = findIndex("ecu calibration id", "ecu_calibration_id", "calibration id", "calibration_id", "cal id", "cal_id", "ECUキャリブレーションID", "キャリブレーションID");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32341,6 +32365,9 @@
       const rowVehicleFuelType = cellAt(vehicleFuelTypeIndex, 80) || null;
       const rowVehicleGrade = cellAt(vehicleGradeIndex, 80) || null;
       const rowVehicleSpecificationCode = cellAt(vehicleSpecificationCodeIndex, 120) || null;
+      const rowEcuPartNumber = cellAt(ecuPartNumberIndex, 120) || null;
+      const rowEcuSoftwareId = cellAt(ecuSoftwareIdIndex, 120) || null;
+      const rowEcuCalibrationId = cellAt(ecuCalibrationIdIndex, 160) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32508,6 +32535,9 @@
           ...(rowVehicleFuelType ? { vehicle_fuel_type: rowVehicleFuelType } : {}),
           ...(rowVehicleGrade ? { vehicle_grade: rowVehicleGrade } : {}),
           ...(rowVehicleSpecificationCode ? { vehicle_specification_code: rowVehicleSpecificationCode } : {}),
+          ...(rowEcuPartNumber ? { ecu_part_number: rowEcuPartNumber } : {}),
+          ...(rowEcuSoftwareId ? { ecu_software_id: rowEcuSoftwareId } : {}),
+          ...(rowEcuCalibrationId ? { ecu_calibration_id: rowEcuCalibrationId } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32640,6 +32670,9 @@
           ...(rowVehicleFuelType ? { vehicle_fuel_type: rowVehicleFuelType } : {}),
           ...(rowVehicleGrade ? { vehicle_grade: rowVehicleGrade } : {}),
           ...(rowVehicleSpecificationCode ? { vehicle_specification_code: rowVehicleSpecificationCode } : {}),
+          ...(rowEcuPartNumber ? { ecu_part_number: rowEcuPartNumber } : {}),
+          ...(rowEcuSoftwareId ? { ecu_software_id: rowEcuSoftwareId } : {}),
+          ...(rowEcuCalibrationId ? { ecu_calibration_id: rowEcuCalibrationId } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34090,6 +34123,9 @@
         vehicleFuelType: row?.vehicleFuelType || row?.vehicle_fuel_type || row?.fuelType || row?.fuel_type || row?.fuel || null,
         vehicleGrade: row?.vehicleGrade || row?.vehicle_grade || row?.grade || row?.trimLevel || row?.trim_level || row?.trim || null,
         vehicleSpecificationCode: row?.vehicleSpecificationCode || row?.vehicle_specification_code || row?.specificationCode || row?.specification_code || row?.specCode || row?.spec_code || row?.optionCode || row?.option_code || row?.variantCode || row?.variant_code || null,
+        ecuPartNumber: row?.ecuPartNumber || row?.ecu_part_number || row?.partNumber || row?.part_number || row?.modulePartNumber || row?.module_part_number || null,
+        ecuSoftwareId: row?.ecuSoftwareId || row?.ecu_software_id || row?.softwareId || row?.software_id || row?.softwareVersion || row?.software_version || null,
+        ecuCalibrationId: row?.ecuCalibrationId || row?.ecu_calibration_id || row?.calibrationId || row?.calibration_id || row?.calId || row?.cal_id || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34132,6 +34168,9 @@
       const dtcVehicleFuelType = dtcRow?.vehicleFuelType || dtcRow?.vehicle_fuel_type || dtcRow?.fuelType || dtcRow?.fuel_type || dtcRow?.fuel || null;
       const dtcVehicleGrade = dtcRow?.vehicleGrade || dtcRow?.vehicle_grade || dtcRow?.grade || dtcRow?.trimLevel || dtcRow?.trim_level || dtcRow?.trim || null;
       const dtcVehicleSpecificationCode = dtcRow?.vehicleSpecificationCode || dtcRow?.vehicle_specification_code || dtcRow?.specificationCode || dtcRow?.specification_code || dtcRow?.specCode || dtcRow?.spec_code || dtcRow?.optionCode || dtcRow?.option_code || dtcRow?.variantCode || dtcRow?.variant_code || null;
+      const dtcEcuPartNumber = dtcRow?.ecuPartNumber || dtcRow?.ecu_part_number || dtcRow?.partNumber || dtcRow?.part_number || dtcRow?.modulePartNumber || dtcRow?.module_part_number || null;
+      const dtcEcuSoftwareId = dtcRow?.ecuSoftwareId || dtcRow?.ecu_software_id || dtcRow?.softwareId || dtcRow?.software_id || dtcRow?.softwareVersion || dtcRow?.software_version || null;
+      const dtcEcuCalibrationId = dtcRow?.ecuCalibrationId || dtcRow?.ecu_calibration_id || dtcRow?.calibrationId || dtcRow?.calibration_id || dtcRow?.calId || dtcRow?.cal_id || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34153,6 +34192,9 @@
       if (dtcVehicleFuelType && response.vehicleFuelType && normalizeCsvEcuHierarchyScope(dtcVehicleFuelType) !== normalizeCsvEcuHierarchyScope(response.vehicleFuelType)) return false;
       if (dtcVehicleGrade && response.vehicleGrade && normalizeCsvEcuHierarchyScope(dtcVehicleGrade) !== normalizeCsvEcuHierarchyScope(response.vehicleGrade)) return false;
       if (dtcVehicleSpecificationCode && response.vehicleSpecificationCode && normalizeCsvEcuHierarchyScope(dtcVehicleSpecificationCode) !== normalizeCsvEcuHierarchyScope(response.vehicleSpecificationCode)) return false;
+      if (dtcEcuPartNumber && response.ecuPartNumber && normalizeCsvEcuHierarchyScope(dtcEcuPartNumber) !== normalizeCsvEcuHierarchyScope(response.ecuPartNumber)) return false;
+      if (dtcEcuSoftwareId && response.ecuSoftwareId && normalizeCsvEcuHierarchyScope(dtcEcuSoftwareId) !== normalizeCsvEcuHierarchyScope(response.ecuSoftwareId)) return false;
+      if (dtcEcuCalibrationId && response.ecuCalibrationId && normalizeCsvEcuHierarchyScope(dtcEcuCalibrationId) !== normalizeCsvEcuHierarchyScope(response.ecuCalibrationId)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
