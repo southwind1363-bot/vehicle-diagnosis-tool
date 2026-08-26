@@ -26499,6 +26499,9 @@
           const doipEntityLogicalAddress = redactSensitiveText(String(row.doipEntityLogicalAddress || row.doip_entity_logical_address || row.entityLogicalAddress || row.entity_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const doipVehicleAnnouncementType = redactSensitiveText(String(row.doipVehicleAnnouncementType || row.doip_vehicle_announcement_type || row.doipVehicleIdentificationResponseType || row.doip_vehicle_identification_response_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const doipRoutingActivationStatus = redactSensitiveText(String(row.doipRoutingActivationStatus || row.doip_routing_activation_status || row.routingActivationStatus || row.routing_activation_status || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDiagnosticSessionType = redactSensitiveText(String(row.udsDiagnosticSessionType || row.uds_diagnostic_session_type || row.diagnosticSessionType || row.diagnostic_session_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsRequestedService = redactSensitiveText(String(row.udsRequestedService || row.uds_requested_service || row.udsService || row.uds_service || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsDataIdentifier = redactSensitiveText(String(row.udsDataIdentifier || row.uds_data_identifier || row.dataIdentifier || row.data_identifier || row.did || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26575,6 +26578,9 @@
             ...(doipEntityLogicalAddress ? { doipEntityLogicalAddress, doip_entity_logical_address: doipEntityLogicalAddress } : {}),
             ...(doipVehicleAnnouncementType ? { doipVehicleAnnouncementType, doip_vehicle_announcement_type: doipVehicleAnnouncementType } : {}),
             ...(doipRoutingActivationStatus ? { doipRoutingActivationStatus, doip_routing_activation_status: doipRoutingActivationStatus } : {}),
+            ...(udsDiagnosticSessionType ? { udsDiagnosticSessionType, uds_diagnostic_session_type: udsDiagnosticSessionType } : {}),
+            ...(udsRequestedService ? { udsRequestedService, uds_requested_service: udsRequestedService } : {}),
+            ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26711,6 +26717,9 @@
       const doipEntityLogicalAddress = redactSensitiveText(String(rowValue.doipEntityLogicalAddress || rowValue.doip_entity_logical_address || rowValue.entityLogicalAddress || rowValue.entity_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const doipVehicleAnnouncementType = redactSensitiveText(String(rowValue.doipVehicleAnnouncementType || rowValue.doip_vehicle_announcement_type || rowValue.doipVehicleIdentificationResponseType || rowValue.doip_vehicle_identification_response_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const doipRoutingActivationStatus = redactSensitiveText(String(rowValue.doipRoutingActivationStatus || rowValue.doip_routing_activation_status || rowValue.routingActivationStatus || rowValue.routing_activation_status || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDiagnosticSessionType = redactSensitiveText(String(rowValue.udsDiagnosticSessionType || rowValue.uds_diagnostic_session_type || rowValue.diagnosticSessionType || rowValue.diagnostic_session_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsRequestedService = redactSensitiveText(String(rowValue.udsRequestedService || rowValue.uds_requested_service || rowValue.udsService || rowValue.uds_service || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDataIdentifier = redactSensitiveText(String(rowValue.udsDataIdentifier || rowValue.uds_data_identifier || rowValue.dataIdentifier || rowValue.data_identifier || rowValue.did || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26775,6 +26784,9 @@
         ...(doipEntityLogicalAddress ? { doipEntityLogicalAddress, doip_entity_logical_address: doipEntityLogicalAddress } : {}),
         ...(doipVehicleAnnouncementType ? { doipVehicleAnnouncementType, doip_vehicle_announcement_type: doipVehicleAnnouncementType } : {}),
         ...(doipRoutingActivationStatus ? { doipRoutingActivationStatus, doip_routing_activation_status: doipRoutingActivationStatus } : {}),
+        ...(udsDiagnosticSessionType ? { udsDiagnosticSessionType, uds_diagnostic_session_type: udsDiagnosticSessionType } : {}),
+        ...(udsRequestedService ? { udsRequestedService, uds_requested_service: udsRequestedService } : {}),
+        ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28324,6 +28336,9 @@
       const doipEntityLogicalAddress = redactSensitiveText(String(row?.doipEntityLogicalAddress || row?.doip_entity_logical_address || row?.entityLogicalAddress || row?.entity_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const doipVehicleAnnouncementType = redactSensitiveText(String(row?.doipVehicleAnnouncementType || row?.doip_vehicle_announcement_type || row?.doipVehicleIdentificationResponseType || row?.doip_vehicle_identification_response_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const doipRoutingActivationStatus = redactSensitiveText(String(row?.doipRoutingActivationStatus || row?.doip_routing_activation_status || row?.routingActivationStatus || row?.routing_activation_status || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDiagnosticSessionType = redactSensitiveText(String(row?.udsDiagnosticSessionType || row?.uds_diagnostic_session_type || row?.diagnosticSessionType || row?.diagnostic_session_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsRequestedService = redactSensitiveText(String(row?.udsRequestedService || row?.uds_requested_service || row?.udsService || row?.uds_service || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsDataIdentifier = redactSensitiveText(String(row?.udsDataIdentifier || row?.uds_data_identifier || row?.dataIdentifier || row?.data_identifier || row?.did || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return {
         id,
         name,
@@ -28387,7 +28402,10 @@
         ...(diagnosticSubAddress ? { diagnosticSubAddress, diagnostic_sub_address: diagnosticSubAddress } : {}),
         ...(doipEntityLogicalAddress ? { doipEntityLogicalAddress, doip_entity_logical_address: doipEntityLogicalAddress } : {}),
         ...(doipVehicleAnnouncementType ? { doipVehicleAnnouncementType, doip_vehicle_announcement_type: doipVehicleAnnouncementType } : {}),
-        ...(doipRoutingActivationStatus ? { doipRoutingActivationStatus, doip_routing_activation_status: doipRoutingActivationStatus } : {})
+        ...(doipRoutingActivationStatus ? { doipRoutingActivationStatus, doip_routing_activation_status: doipRoutingActivationStatus } : {}),
+        ...(udsDiagnosticSessionType ? { udsDiagnosticSessionType, uds_diagnostic_session_type: udsDiagnosticSessionType } : {}),
+        ...(udsRequestedService ? { udsRequestedService, uds_requested_service: udsRequestedService } : {}),
+        ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28452,7 +28470,10 @@
         diagnosticSubAddress: row.diagnosticSubAddress || null,
         doipEntityLogicalAddress: row.doipEntityLogicalAddress || null,
         doipVehicleAnnouncementType: row.doipVehicleAnnouncementType || null,
-        doipRoutingActivationStatus: row.doipRoutingActivationStatus || null
+        doipRoutingActivationStatus: row.doipRoutingActivationStatus || null,
+        udsDiagnosticSessionType: row.udsDiagnosticSessionType || null,
+        udsRequestedService: row.udsRequestedService || null,
+        udsDataIdentifier: row.udsDataIdentifier || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32364,6 +32385,9 @@
     const doipEntityLogicalAddressIndex = findIndex("doip entity logical address", "doip_entity_logical_address", "entity logical address", "entity_logical_address", "DoIP実体論理アドレス");
     const doipVehicleAnnouncementTypeIndex = findIndex("doip vehicle announcement type", "doip_vehicle_announcement_type", "doip vehicle identification response type", "doip_vehicle_identification_response_type", "DoIP車両通知種別", "DoIP車両識別応答種別");
     const doipRoutingActivationStatusIndex = findIndex("doip routing activation status", "doip_routing_activation_status", "routing activation status", "routing_activation_status", "DoIPルーティング有効化状態", "ルーティング有効化状態");
+    const udsDiagnosticSessionTypeIndex = findIndex("uds diagnostic session type", "uds_diagnostic_session_type", "diagnostic session type", "diagnostic_session_type", "UDS診断セッション種別", "診断セッション種別");
+    const udsRequestedServiceIndex = findIndex("uds requested service", "uds_requested_service", "uds service", "uds_service", "UDS要求サービス", "UDSサービス");
+    const udsDataIdentifierIndex = findIndex("uds data identifier", "uds_data_identifier", "data identifier", "data_identifier", "did", "UDSデータ識別子", "DID");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32503,6 +32527,9 @@
       const rowDoipEntityLogicalAddress = cellAt(doipEntityLogicalAddressIndex, 80) || null;
       const rowDoipVehicleAnnouncementType = cellAt(doipVehicleAnnouncementTypeIndex, 80) || null;
       const rowDoipRoutingActivationStatus = cellAt(doipRoutingActivationStatusIndex, 80) || null;
+      const rowUdsDiagnosticSessionType = cellAt(udsDiagnosticSessionTypeIndex, 80) || null;
+      const rowUdsRequestedService = cellAt(udsRequestedServiceIndex, 80) || null;
+      const rowUdsDataIdentifier = cellAt(udsDataIdentifierIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32688,6 +32715,9 @@
           ...(rowDoipEntityLogicalAddress ? { doip_entity_logical_address: rowDoipEntityLogicalAddress } : {}),
           ...(rowDoipVehicleAnnouncementType ? { doip_vehicle_announcement_type: rowDoipVehicleAnnouncementType } : {}),
           ...(rowDoipRoutingActivationStatus ? { doip_routing_activation_status: rowDoipRoutingActivationStatus } : {}),
+          ...(rowUdsDiagnosticSessionType ? { uds_diagnostic_session_type: rowUdsDiagnosticSessionType } : {}),
+          ...(rowUdsRequestedService ? { uds_requested_service: rowUdsRequestedService } : {}),
+          ...(rowUdsDataIdentifier ? { uds_data_identifier: rowUdsDataIdentifier } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32838,6 +32868,9 @@
           ...(rowDoipEntityLogicalAddress ? { doip_entity_logical_address: rowDoipEntityLogicalAddress } : {}),
           ...(rowDoipVehicleAnnouncementType ? { doip_vehicle_announcement_type: rowDoipVehicleAnnouncementType } : {}),
           ...(rowDoipRoutingActivationStatus ? { doip_routing_activation_status: rowDoipRoutingActivationStatus } : {}),
+          ...(rowUdsDiagnosticSessionType ? { uds_diagnostic_session_type: rowUdsDiagnosticSessionType } : {}),
+          ...(rowUdsRequestedService ? { uds_requested_service: rowUdsRequestedService } : {}),
+          ...(rowUdsDataIdentifier ? { uds_data_identifier: rowUdsDataIdentifier } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34311,6 +34344,9 @@
         doipEntityLogicalAddress: row?.doipEntityLogicalAddress || row?.doip_entity_logical_address || row?.entityLogicalAddress || row?.entity_logical_address || null,
         doipVehicleAnnouncementType: row?.doipVehicleAnnouncementType || row?.doip_vehicle_announcement_type || row?.doipVehicleIdentificationResponseType || row?.doip_vehicle_identification_response_type || null,
         doipRoutingActivationStatus: row?.doipRoutingActivationStatus || row?.doip_routing_activation_status || row?.routingActivationStatus || row?.routing_activation_status || null,
+        udsDiagnosticSessionType: row?.udsDiagnosticSessionType || row?.uds_diagnostic_session_type || row?.diagnosticSessionType || row?.diagnostic_session_type || null,
+        udsRequestedService: row?.udsRequestedService || row?.uds_requested_service || row?.udsService || row?.uds_service || null,
+        udsDataIdentifier: row?.udsDataIdentifier || row?.uds_data_identifier || row?.dataIdentifier || row?.data_identifier || row?.did || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34371,6 +34407,9 @@
       const dtcDoipEntityLogicalAddress = dtcRow?.doipEntityLogicalAddress || dtcRow?.doip_entity_logical_address || dtcRow?.entityLogicalAddress || dtcRow?.entity_logical_address || null;
       const dtcDoipVehicleAnnouncementType = dtcRow?.doipVehicleAnnouncementType || dtcRow?.doip_vehicle_announcement_type || dtcRow?.doipVehicleIdentificationResponseType || dtcRow?.doip_vehicle_identification_response_type || null;
       const dtcDoipRoutingActivationStatus = dtcRow?.doipRoutingActivationStatus || dtcRow?.doip_routing_activation_status || dtcRow?.routingActivationStatus || dtcRow?.routing_activation_status || null;
+      const dtcUdsDiagnosticSessionType = dtcRow?.udsDiagnosticSessionType || dtcRow?.uds_diagnostic_session_type || dtcRow?.diagnosticSessionType || dtcRow?.diagnostic_session_type || null;
+      const dtcUdsRequestedService = dtcRow?.udsRequestedService || dtcRow?.uds_requested_service || dtcRow?.udsService || dtcRow?.uds_service || null;
+      const dtcUdsDataIdentifier = dtcRow?.udsDataIdentifier || dtcRow?.uds_data_identifier || dtcRow?.dataIdentifier || dtcRow?.data_identifier || dtcRow?.did || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34410,6 +34449,9 @@
       if (dtcDoipEntityLogicalAddress && response.doipEntityLogicalAddress && normalizeCsvDiagnosticAddressIdentity(dtcDoipEntityLogicalAddress) !== normalizeCsvDiagnosticAddressIdentity(response.doipEntityLogicalAddress)) return false;
       if (dtcDoipVehicleAnnouncementType && response.doipVehicleAnnouncementType && normalizeCsvEcuHierarchyScope(dtcDoipVehicleAnnouncementType) !== normalizeCsvEcuHierarchyScope(response.doipVehicleAnnouncementType)) return false;
       if (dtcDoipRoutingActivationStatus && response.doipRoutingActivationStatus && normalizeCsvEcuHierarchyScope(dtcDoipRoutingActivationStatus) !== normalizeCsvEcuHierarchyScope(response.doipRoutingActivationStatus)) return false;
+      if (dtcUdsDiagnosticSessionType && response.udsDiagnosticSessionType && normalizeCsvEcuHierarchyScope(dtcUdsDiagnosticSessionType) !== normalizeCsvEcuHierarchyScope(response.udsDiagnosticSessionType)) return false;
+      if (dtcUdsRequestedService && response.udsRequestedService && normalizeCsvDiagnosticAddressIdentity(dtcUdsRequestedService) !== normalizeCsvDiagnosticAddressIdentity(response.udsRequestedService)) return false;
+      if (dtcUdsDataIdentifier && response.udsDataIdentifier && normalizeCsvDiagnosticAddressIdentity(dtcUdsDataIdentifier) !== normalizeCsvDiagnosticAddressIdentity(response.udsDataIdentifier)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
