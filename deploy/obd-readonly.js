@@ -10690,6 +10690,7 @@
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
+    const manufacturerSampleReadinessSummary = buildManufacturerSampleReadinessSummary(readoutQualitySummary, dtcSnapshot);
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
     const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || metadataOverrides.nextReadoutRequest || null);
     const generatedReadoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
@@ -10828,6 +10829,8 @@
       analysis_readiness_summary: analysisReadinessSummary,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      manufacturerSampleReadinessSummary,
+      manufacturer_sample_readiness_summary: manufacturerSampleReadinessSummary,
       importedSessionComparisonSummary: resolvedImportedSessionComparisonSummary,
       imported_session_comparison_summary: resolvedImportedSessionComparisonSummary,
       importedReadoutQualityReviewRequestPlanSummary,
@@ -14567,6 +14570,64 @@
       blocking_warning_ids: blockingWarningIds,
       readyForAnalysis,
       ready_for_analysis: readyForAnalysis
+    };
+  }
+
+  function buildManufacturerSampleReadinessSummary(readoutQualitySummary = null, dtcSnapshot = null) {
+    const quality = readoutQualitySummary && typeof readoutQualitySummary === "object"
+      ? readoutQualitySummary
+      : {};
+    const readFlag = (camelKey, snakeKey) => quality[camelKey] === true || quality[snakeKey] === true;
+    const sampleObserved = (Array.isArray(dtcSnapshot?.dtcs) && dtcSnapshot.dtcs.length > 0)
+      || (Array.isArray(dtcSnapshot?.codes) && dtcSnapshot.codes.length > 0)
+      || (Array.isArray(quality.dtcEvidenceComparisonScopeKeys) && quality.dtcEvidenceComparisonScopeKeys.length > 0)
+      || (Array.isArray(quality.dtc_evidence_comparison_scope_keys) && quality.dtc_evidence_comparison_scope_keys.length > 0);
+    const requirements = [
+      { id: "dtc_evidence_scope", complete: sampleObserved && readFlag("dtcEvidenceScopeComplete", "dtc_evidence_scope_complete") },
+      { id: "acquisition_context", complete: sampleObserved && readFlag("dtcEvidenceAcquisitionContextComplete", "dtc_evidence_acquisition_context_complete") },
+      { id: "transport_context", complete: sampleObserved && readFlag("dtcEvidenceTransportContextComplete", "dtc_evidence_transport_context_complete") },
+      { id: "readout_contract", complete: sampleObserved && readFlag("dtcEvidenceReadoutContractComplete", "dtc_evidence_readout_contract_complete") },
+      { id: "response_contract", complete: sampleObserved && readFlag("dtcEvidenceResponseContractComplete", "dtc_evidence_response_contract_complete") },
+      { id: "negative_response_context", complete: sampleObserved && readFlag("dtcEvidenceNegativeResponseContextComplete", "dtc_evidence_negative_response_context_complete") },
+      { id: "response_attempt_context", complete: sampleObserved && readFlag("dtcEvidenceResponseAttemptContextComplete", "dtc_evidence_response_attempt_context_complete") },
+      { id: "evidence_validation_reported", complete: sampleObserved && readFlag("dtcEvidenceValidationReported", "dtc_evidence_validation_reported") },
+      { id: "evidence_values_valid", complete: sampleObserved && readFlag("dtcEvidenceEligibleForAnalysis", "dtc_evidence_eligible_for_analysis") }
+    ];
+    const completeRequirementIds = requirements.filter((item) => item.complete).map((item) => item.id);
+    const missingRequirementIds = requirements.filter((item) => !item.complete).map((item) => item.id);
+    const contractCompleteForSampleReview = sampleObserved && missingRequirementIds.length === 0;
+    const status = !sampleObserved
+      ? "sample_not_observed"
+      : contractCompleteForSampleReview
+        ? "contract_ready_unverified"
+        : "incomplete";
+
+    return {
+      schemaVersion: "manufacturer_sample_readiness_summary_v1",
+      schema_version: "manufacturer_sample_readiness_summary_v1",
+      status,
+      sampleObserved,
+      sample_observed: sampleObserved,
+      requirementCount: requirements.length,
+      requirement_count: requirements.length,
+      completeRequirementCount: completeRequirementIds.length,
+      complete_requirement_count: completeRequirementIds.length,
+      completeRequirementIds,
+      complete_requirement_ids: [...completeRequirementIds],
+      missingRequirementCount: missingRequirementIds.length,
+      missing_requirement_count: missingRequirementIds.length,
+      missingRequirementIds,
+      missing_requirement_ids: [...missingRequirementIds],
+      contractCompleteForSampleReview,
+      contract_complete_for_sample_review: contractCompleteForSampleReview,
+      realVehicleVerified: false,
+      real_vehicle_verified: false,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
     };
   }
 
@@ -25550,6 +25611,7 @@
     const readoutCompletionSummary = summary.readoutCompletionSummary || summary.readout_completion_summary || coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = summary.analysisReadinessSummary || summary.analysis_readiness_summary || coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = summary.readoutQualitySummary || summary.readout_quality_summary || coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
+    const manufacturerSampleReadinessSummary = buildManufacturerSampleReadinessSummary(readoutQualitySummary, dtcSnapshot);
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(summary.importedCoreSessionStatus || summary.imported_core_session_status || parts.importedCoreSessionStatus || parts.imported_core_session_status || parts.session?.imported_core_session_status || null);
     const importedDiagnosticFlowSummary = normalizeImportedDiagnosticFlowSummaryAliases(summary.importedDiagnosticFlowSummary || summary.imported_diagnostic_flow_summary || parts.importedDiagnosticFlowSummary || parts.imported_diagnostic_flow_summary || parts.session?.imported_diagnostic_flow_summary || null, importedCoreSessionStatus);
     const importedReadoutCompletionSummary = normalizeImportedReadoutCompletionSummaryAliases(summary.importedReadoutCompletionSummary || summary.imported_readout_completion_summary || parts.importedReadoutCompletionSummary || parts.imported_readout_completion_summary || parts.session?.imported_readout_completion_summary || null, importedCoreSessionStatus);
@@ -25713,6 +25775,7 @@
         readout_completion_summary: readoutCompletionSummary,
         analysis_readiness_summary: analysisReadinessSummary,
         readout_quality_summary: readoutQualitySummary,
+        manufacturer_sample_readiness_summary: manufacturerSampleReadinessSummary,
         imported_core_session_status: importedCoreSessionStatus,
         imported_diagnostic_flow_summary: importedDiagnosticFlowSummary,
         imported_readout_completion_summary: importedReadoutCompletionSummary,
@@ -26800,6 +26863,7 @@
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
+    const manufacturerSampleReadinessSummary = buildManufacturerSampleReadinessSummary(readoutQualitySummary, dtcSnapshot);
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
     const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || input.nextReadoutRequest || input.next_readout_request || bridgeImport?.nextReadoutRequest || bridgeImport?.next_readout_request || bridgeImportInput?.nextReadoutRequest || bridgeImportInput?.next_readout_request || bridgeSession?.nextReadoutRequest || bridgeSession?.next_readout_request || mergedBridgeMetadata.nextReadoutRequest || null);
     const generatedReadoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
@@ -27117,6 +27181,8 @@
       analysis_readiness_summary: analysisReadinessSummary,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      manufacturerSampleReadinessSummary,
+      manufacturer_sample_readiness_summary: manufacturerSampleReadinessSummary,
       readoutRequestPlanGateSummary,
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
       nextReadoutRequest,
@@ -37545,6 +37611,7 @@
     const readoutCompletionSummary = coreSessionStatus.readoutCompletionSummary || null;
     const analysisReadinessSummary = coreSessionStatus.analysisReadinessSummary || null;
     const readoutQualitySummary = coreSessionStatus.readoutQualitySummary || diagnosticFlowSummary.readoutQualitySummary || null;
+    const manufacturerSampleReadinessSummary = buildManufacturerSampleReadinessSummary(readoutQualitySummary, dtcSnapshot);
     const readoutRequestPlanGateSummary = coreSessionStatus.readoutRequestPlanGateSummary || analysisReadinessSummary?.readoutRequestPlanGateSummary || diagnosticFlowSummary.readoutRequestPlanGateSummary || null;
     const nextReadoutRequest = normalizeReadoutRequestSummaryAliases(coreSessionStatus.nextReadoutRequest || coreSessionStatus.next_readout_request || diagnosticFlowSummary.nextReadoutRequest || diagnosticFlowSummary.next_readout_request || sessionInput.nextReadoutRequest || sessionInput.next_readout_request || null);
     const generatedReadoutRequestPlanSummary = coreSessionStatus.readoutRequestPlanSummary || coreSessionStatus.readout_request_plan_summary || diagnosticFlowSummary.readoutRequestPlanSummary || diagnosticFlowSummary.readout_request_plan_summary || null;
@@ -37767,6 +37834,8 @@
       analysis_readiness_summary: analysisReadinessSummary,
       readoutQualitySummary,
       readout_quality_summary: readoutQualitySummary,
+      manufacturerSampleReadinessSummary,
+      manufacturer_sample_readiness_summary: manufacturerSampleReadinessSummary,
       readoutRequestPlanGateSummary,
       readout_request_plan_gate_summary: readoutRequestPlanGateSummary,
       nextReadoutRequest,
