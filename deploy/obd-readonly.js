@@ -26523,6 +26523,11 @@
           const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(row.dtcFirstDetectedAt || row.dtc_first_detected_at || row.firstDetectedAt || row.first_detected_at || row.firstFailedAt || row.first_failed_at || row.firstOccurrenceAt || row.first_occurrence_at);
           const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(row.dtcLastDetectedAt || row.dtc_last_detected_at || row.lastDetectedAt || row.last_detected_at || row.lastFailedAt || row.last_failed_at || row.lastOccurrenceAt || row.last_occurrence_at);
           const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(row.dtcConfirmedAt || row.dtc_confirmed_at || row.confirmedAt || row.confirmed_at || row.confirmationAt || row.confirmation_at);
+          const dtcFaultOccurrenceDistance = normalizeDtcLifecycleMeasurementValue(row.dtcFaultOccurrenceDistance ?? row.dtc_fault_occurrence_distance ?? row.faultOccurrenceDistance ?? row.fault_occurrence_distance ?? row.faultMileage ?? row.fault_mileage ?? row.mileageAtFault ?? row.mileage_at_fault ?? row.odometerAtFault ?? row.odometer_at_fault);
+          const dtcFaultOccurrenceDistanceUnit = normalizeDtcLifecycleMeasurementUnit(row.dtcFaultOccurrenceDistanceUnit || row.dtc_fault_occurrence_distance_unit || row.faultOccurrenceDistanceUnit || row.fault_occurrence_distance_unit || row.faultMileageUnit || row.fault_mileage_unit || row.mileageAtFaultUnit || row.mileage_at_fault_unit || row.odometerAtFaultUnit || row.odometer_at_fault_unit);
+          const dtcDistanceSinceClear = normalizeDtcLifecycleMeasurementValue(row.dtcDistanceSinceClear ?? row.dtc_distance_since_clear ?? row.distanceSinceClear ?? row.distance_since_clear ?? row.mileageSinceClear ?? row.mileage_since_clear ?? row.odometerSinceClear ?? row.odometer_since_clear);
+          const dtcDistanceSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(row.dtcDistanceSinceClearUnit || row.dtc_distance_since_clear_unit || row.distanceSinceClearUnit || row.distance_since_clear_unit || row.mileageSinceClearUnit || row.mileage_since_clear_unit || row.odometerSinceClearUnit || row.odometer_since_clear_unit);
+          const dtcWarmUpCycleCount = normalizeDtcLifecycleMeasurementValue(row.dtcWarmUpCycleCount ?? row.dtc_warm_up_cycle_count ?? row.warmUpCycleCount ?? row.warm_up_cycle_count ?? row.warmupCycleCount ?? row.warmup_cycle_count ?? row.warmUpCyclesSinceClear ?? row.warm_up_cycles_since_clear ?? row.warmupsSinceClear ?? row.warmups_since_clear);
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26623,6 +26628,11 @@
             ...(dtcFirstDetectedAt ? { dtcFirstDetectedAt, dtc_first_detected_at: dtcFirstDetectedAt } : {}),
             ...(dtcLastDetectedAt ? { dtcLastDetectedAt, dtc_last_detected_at: dtcLastDetectedAt } : {}),
             ...(dtcConfirmedAt ? { dtcConfirmedAt, dtc_confirmed_at: dtcConfirmedAt } : {}),
+            ...(dtcFaultOccurrenceDistance ? { dtcFaultOccurrenceDistance, dtc_fault_occurrence_distance: dtcFaultOccurrenceDistance } : {}),
+            ...(dtcFaultOccurrenceDistanceUnit ? { dtcFaultOccurrenceDistanceUnit, dtc_fault_occurrence_distance_unit: dtcFaultOccurrenceDistanceUnit } : {}),
+            ...(dtcDistanceSinceClear ? { dtcDistanceSinceClear, dtc_distance_since_clear: dtcDistanceSinceClear } : {}),
+            ...(dtcDistanceSinceClearUnit ? { dtcDistanceSinceClearUnit, dtc_distance_since_clear_unit: dtcDistanceSinceClearUnit } : {}),
+            ...(dtcWarmUpCycleCount ? { dtcWarmUpCycleCount, dtc_warm_up_cycle_count: dtcWarmUpCycleCount } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26783,6 +26793,11 @@
       const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcFirstDetectedAt || rowValue.dtc_first_detected_at || rowValue.firstDetectedAt || rowValue.first_detected_at || rowValue.firstFailedAt || rowValue.first_failed_at || rowValue.firstOccurrenceAt || rowValue.first_occurrence_at);
       const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcLastDetectedAt || rowValue.dtc_last_detected_at || rowValue.lastDetectedAt || rowValue.last_detected_at || rowValue.lastFailedAt || rowValue.last_failed_at || rowValue.lastOccurrenceAt || rowValue.last_occurrence_at);
       const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(rowValue.dtcConfirmedAt || rowValue.dtc_confirmed_at || rowValue.confirmedAt || rowValue.confirmed_at || rowValue.confirmationAt || rowValue.confirmation_at);
+      const dtcFaultOccurrenceDistance = normalizeDtcLifecycleMeasurementValue(rowValue.dtcFaultOccurrenceDistance ?? rowValue.dtc_fault_occurrence_distance ?? rowValue.faultOccurrenceDistance ?? rowValue.fault_occurrence_distance ?? rowValue.faultMileage ?? rowValue.fault_mileage ?? rowValue.mileageAtFault ?? rowValue.mileage_at_fault ?? rowValue.odometerAtFault ?? rowValue.odometer_at_fault);
+      const dtcFaultOccurrenceDistanceUnit = normalizeDtcLifecycleMeasurementUnit(rowValue.dtcFaultOccurrenceDistanceUnit || rowValue.dtc_fault_occurrence_distance_unit || rowValue.faultOccurrenceDistanceUnit || rowValue.fault_occurrence_distance_unit || rowValue.faultMileageUnit || rowValue.fault_mileage_unit || rowValue.mileageAtFaultUnit || rowValue.mileage_at_fault_unit || rowValue.odometerAtFaultUnit || rowValue.odometer_at_fault_unit);
+      const dtcDistanceSinceClear = normalizeDtcLifecycleMeasurementValue(rowValue.dtcDistanceSinceClear ?? rowValue.dtc_distance_since_clear ?? rowValue.distanceSinceClear ?? rowValue.distance_since_clear ?? rowValue.mileageSinceClear ?? rowValue.mileage_since_clear ?? rowValue.odometerSinceClear ?? rowValue.odometer_since_clear);
+      const dtcDistanceSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(rowValue.dtcDistanceSinceClearUnit || rowValue.dtc_distance_since_clear_unit || rowValue.distanceSinceClearUnit || rowValue.distance_since_clear_unit || rowValue.mileageSinceClearUnit || rowValue.mileage_since_clear_unit || rowValue.odometerSinceClearUnit || rowValue.odometer_since_clear_unit);
+      const dtcWarmUpCycleCount = normalizeDtcLifecycleMeasurementValue(rowValue.dtcWarmUpCycleCount ?? rowValue.dtc_warm_up_cycle_count ?? rowValue.warmUpCycleCount ?? rowValue.warm_up_cycle_count ?? rowValue.warmupCycleCount ?? rowValue.warmup_cycle_count ?? rowValue.warmUpCyclesSinceClear ?? rowValue.warm_up_cycles_since_clear ?? rowValue.warmupsSinceClear ?? rowValue.warmups_since_clear);
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26871,6 +26886,11 @@
         ...(dtcFirstDetectedAt ? { dtcFirstDetectedAt, dtc_first_detected_at: dtcFirstDetectedAt } : {}),
         ...(dtcLastDetectedAt ? { dtcLastDetectedAt, dtc_last_detected_at: dtcLastDetectedAt } : {}),
         ...(dtcConfirmedAt ? { dtcConfirmedAt, dtc_confirmed_at: dtcConfirmedAt } : {}),
+        ...(dtcFaultOccurrenceDistance ? { dtcFaultOccurrenceDistance, dtc_fault_occurrence_distance: dtcFaultOccurrenceDistance } : {}),
+        ...(dtcFaultOccurrenceDistanceUnit ? { dtcFaultOccurrenceDistanceUnit, dtc_fault_occurrence_distance_unit: dtcFaultOccurrenceDistanceUnit } : {}),
+        ...(dtcDistanceSinceClear ? { dtcDistanceSinceClear, dtc_distance_since_clear: dtcDistanceSinceClear } : {}),
+        ...(dtcDistanceSinceClearUnit ? { dtcDistanceSinceClearUnit, dtc_distance_since_clear_unit: dtcDistanceSinceClearUnit } : {}),
+        ...(dtcWarmUpCycleCount ? { dtcWarmUpCycleCount, dtc_warm_up_cycle_count: dtcWarmUpCycleCount } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28444,6 +28464,11 @@
       const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(row?.dtcFirstDetectedAt || row?.dtc_first_detected_at || row?.firstDetectedAt || row?.first_detected_at || row?.firstFailedAt || row?.first_failed_at || row?.firstOccurrenceAt || row?.first_occurrence_at);
       const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(row?.dtcLastDetectedAt || row?.dtc_last_detected_at || row?.lastDetectedAt || row?.last_detected_at || row?.lastFailedAt || row?.last_failed_at || row?.lastOccurrenceAt || row?.last_occurrence_at);
       const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(row?.dtcConfirmedAt || row?.dtc_confirmed_at || row?.confirmedAt || row?.confirmed_at || row?.confirmationAt || row?.confirmation_at);
+      const dtcFaultOccurrenceDistance = normalizeDtcLifecycleMeasurementValue(row?.dtcFaultOccurrenceDistance ?? row?.dtc_fault_occurrence_distance ?? row?.faultOccurrenceDistance ?? row?.fault_occurrence_distance ?? row?.faultMileage ?? row?.fault_mileage ?? row?.mileageAtFault ?? row?.mileage_at_fault ?? row?.odometerAtFault ?? row?.odometer_at_fault);
+      const dtcFaultOccurrenceDistanceUnit = normalizeDtcLifecycleMeasurementUnit(row?.dtcFaultOccurrenceDistanceUnit || row?.dtc_fault_occurrence_distance_unit || row?.faultOccurrenceDistanceUnit || row?.fault_occurrence_distance_unit || row?.faultMileageUnit || row?.fault_mileage_unit || row?.mileageAtFaultUnit || row?.mileage_at_fault_unit || row?.odometerAtFaultUnit || row?.odometer_at_fault_unit);
+      const dtcDistanceSinceClear = normalizeDtcLifecycleMeasurementValue(row?.dtcDistanceSinceClear ?? row?.dtc_distance_since_clear ?? row?.distanceSinceClear ?? row?.distance_since_clear ?? row?.mileageSinceClear ?? row?.mileage_since_clear ?? row?.odometerSinceClear ?? row?.odometer_since_clear);
+      const dtcDistanceSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(row?.dtcDistanceSinceClearUnit || row?.dtc_distance_since_clear_unit || row?.distanceSinceClearUnit || row?.distance_since_clear_unit || row?.mileageSinceClearUnit || row?.mileage_since_clear_unit || row?.odometerSinceClearUnit || row?.odometer_since_clear_unit);
+      const dtcWarmUpCycleCount = normalizeDtcLifecycleMeasurementValue(row?.dtcWarmUpCycleCount ?? row?.dtc_warm_up_cycle_count ?? row?.warmUpCycleCount ?? row?.warm_up_cycle_count ?? row?.warmupCycleCount ?? row?.warmup_cycle_count ?? row?.warmUpCyclesSinceClear ?? row?.warm_up_cycles_since_clear ?? row?.warmupsSinceClear ?? row?.warmups_since_clear);
       return {
         id,
         name,
@@ -28531,7 +28556,12 @@
         ...(udsDtcStatusSource ? { udsDtcStatusSource, uds_dtc_status_source: udsDtcStatusSource } : {}),
         ...(dtcFirstDetectedAt ? { dtcFirstDetectedAt, dtc_first_detected_at: dtcFirstDetectedAt } : {}),
         ...(dtcLastDetectedAt ? { dtcLastDetectedAt, dtc_last_detected_at: dtcLastDetectedAt } : {}),
-        ...(dtcConfirmedAt ? { dtcConfirmedAt, dtc_confirmed_at: dtcConfirmedAt } : {})
+        ...(dtcConfirmedAt ? { dtcConfirmedAt, dtc_confirmed_at: dtcConfirmedAt } : {}),
+        ...(dtcFaultOccurrenceDistance ? { dtcFaultOccurrenceDistance, dtc_fault_occurrence_distance: dtcFaultOccurrenceDistance } : {}),
+        ...(dtcFaultOccurrenceDistanceUnit ? { dtcFaultOccurrenceDistanceUnit, dtc_fault_occurrence_distance_unit: dtcFaultOccurrenceDistanceUnit } : {}),
+        ...(dtcDistanceSinceClear ? { dtcDistanceSinceClear, dtc_distance_since_clear: dtcDistanceSinceClear } : {}),
+        ...(dtcDistanceSinceClearUnit ? { dtcDistanceSinceClearUnit, dtc_distance_since_clear_unit: dtcDistanceSinceClearUnit } : {}),
+        ...(dtcWarmUpCycleCount ? { dtcWarmUpCycleCount, dtc_warm_up_cycle_count: dtcWarmUpCycleCount } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28620,7 +28650,12 @@
         udsDtcStatusSource: row.udsDtcStatusSource || null,
         dtcFirstDetectedAt: row.dtcFirstDetectedAt || null,
         dtcLastDetectedAt: row.dtcLastDetectedAt || null,
-        dtcConfirmedAt: row.dtcConfirmedAt || null
+        dtcConfirmedAt: row.dtcConfirmedAt || null,
+        dtcFaultOccurrenceDistance: row.dtcFaultOccurrenceDistance || null,
+        dtcFaultOccurrenceDistanceUnit: row.dtcFaultOccurrenceDistanceUnit || null,
+        dtcDistanceSinceClear: row.dtcDistanceSinceClear || null,
+        dtcDistanceSinceClearUnit: row.dtcDistanceSinceClearUnit || null,
+        dtcWarmUpCycleCount: row.dtcWarmUpCycleCount || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32477,6 +32512,11 @@
     const dtcFirstDetectedAtIndex = findIndex("dtc first detected at", "dtc_first_detected_at", "first detected at", "first_detected_at", "first failed at", "first_failed_at", "first occurrence at", "first_occurrence_at", "DTC初回検出時刻");
     const dtcLastDetectedAtIndex = findIndex("dtc last detected at", "dtc_last_detected_at", "last detected at", "last_detected_at", "last failed at", "last_failed_at", "last occurrence at", "last_occurrence_at", "DTC最終検出時刻");
     const dtcConfirmedAtIndex = findIndex("dtc confirmed at", "dtc_confirmed_at", "confirmed at", "confirmed_at", "confirmation at", "confirmation_at", "DTC確定時刻");
+    const dtcFaultOccurrenceDistanceIndex = findIndex("dtc fault occurrence distance", "dtc_fault_occurrence_distance", "fault occurrence distance", "fault_occurrence_distance", "fault mileage", "fault_mileage", "mileage at fault", "mileage_at_fault", "odometer at fault", "odometer_at_fault", "故障発生時走行距離");
+    const dtcFaultOccurrenceDistanceUnitIndex = findIndex("dtc fault occurrence distance unit", "dtc_fault_occurrence_distance_unit", "fault occurrence distance unit", "fault_occurrence_distance_unit", "fault mileage unit", "fault_mileage_unit", "mileage at fault unit", "mileage_at_fault_unit", "odometer at fault unit", "odometer_at_fault_unit", "故障発生時走行距離単位");
+    const dtcDistanceSinceClearIndex = findIndex("dtc distance since clear", "dtc_distance_since_clear", "distance since clear", "distance_since_clear", "mileage since clear", "mileage_since_clear", "odometer since clear", "odometer_since_clear", "消去後走行距離");
+    const dtcDistanceSinceClearUnitIndex = findIndex("dtc distance since clear unit", "dtc_distance_since_clear_unit", "distance since clear unit", "distance_since_clear_unit", "mileage since clear unit", "mileage_since_clear_unit", "odometer since clear unit", "odometer_since_clear_unit", "消去後走行距離単位");
+    const dtcWarmUpCycleCountIndex = findIndex("dtc warm up cycle count", "dtc_warm_up_cycle_count", "warm up cycle count", "warm_up_cycle_count", "warmup cycle count", "warmup_cycle_count", "warm up cycles since clear", "warm_up_cycles_since_clear", "warmups since clear", "warmups_since_clear", "ウォームアップ回数");
     const ecuIndex = findIndex("ecu", "module", "control module", "system", "address", "ユニット");
     const freezeFrameIndex = findIndex("freeze frame available", "freeze frame", "has freeze frame", "freeze_frame_available", "フリーズフレーム");
     const readoutKindIndex = findIndex("readout", "readout type", "section", "snapshot", "data type", "record type", "読取区分", "セクション");
@@ -32715,6 +32755,11 @@
       const rowDtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcFirstDetectedAtIndex, 80));
       const rowDtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcLastDetectedAtIndex, 80));
       const rowDtcConfirmedAt = normalizeDtcEvidenceTimestampValue(cellAt(dtcConfirmedAtIndex, 80));
+      const rowDtcFaultOccurrenceDistance = normalizeDtcLifecycleMeasurementValue(cellAt(dtcFaultOccurrenceDistanceIndex, 80));
+      const rowDtcFaultOccurrenceDistanceUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcFaultOccurrenceDistanceUnitIndex, 24));
+      const rowDtcDistanceSinceClear = normalizeDtcLifecycleMeasurementValue(cellAt(dtcDistanceSinceClearIndex, 80));
+      const rowDtcDistanceSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(cellAt(dtcDistanceSinceClearUnitIndex, 24));
+      const rowDtcWarmUpCycleCount = normalizeDtcLifecycleMeasurementValue(cellAt(dtcWarmUpCycleCountIndex, 80));
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32924,6 +32969,11 @@
           ...(rowDtcFirstDetectedAt ? { dtc_first_detected_at: rowDtcFirstDetectedAt } : {}),
           ...(rowDtcLastDetectedAt ? { dtc_last_detected_at: rowDtcLastDetectedAt } : {}),
           ...(rowDtcConfirmedAt ? { dtc_confirmed_at: rowDtcConfirmedAt } : {}),
+          ...(rowDtcFaultOccurrenceDistance ? { dtc_fault_occurrence_distance: rowDtcFaultOccurrenceDistance } : {}),
+          ...(rowDtcFaultOccurrenceDistanceUnit ? { dtc_fault_occurrence_distance_unit: rowDtcFaultOccurrenceDistanceUnit } : {}),
+          ...(rowDtcDistanceSinceClear ? { dtc_distance_since_clear: rowDtcDistanceSinceClear } : {}),
+          ...(rowDtcDistanceSinceClearUnit ? { dtc_distance_since_clear_unit: rowDtcDistanceSinceClearUnit } : {}),
+          ...(rowDtcWarmUpCycleCount ? { dtc_warm_up_cycle_count: rowDtcWarmUpCycleCount } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -33098,6 +33148,11 @@
           ...(rowDtcFirstDetectedAt ? { dtc_first_detected_at: rowDtcFirstDetectedAt } : {}),
           ...(rowDtcLastDetectedAt ? { dtc_last_detected_at: rowDtcLastDetectedAt } : {}),
           ...(rowDtcConfirmedAt ? { dtc_confirmed_at: rowDtcConfirmedAt } : {}),
+          ...(rowDtcFaultOccurrenceDistance ? { dtc_fault_occurrence_distance: rowDtcFaultOccurrenceDistance } : {}),
+          ...(rowDtcFaultOccurrenceDistanceUnit ? { dtc_fault_occurrence_distance_unit: rowDtcFaultOccurrenceDistanceUnit } : {}),
+          ...(rowDtcDistanceSinceClear ? { dtc_distance_since_clear: rowDtcDistanceSinceClear } : {}),
+          ...(rowDtcDistanceSinceClearUnit ? { dtc_distance_since_clear_unit: rowDtcDistanceSinceClearUnit } : {}),
+          ...(rowDtcWarmUpCycleCount ? { dtc_warm_up_cycle_count: rowDtcWarmUpCycleCount } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34595,6 +34650,11 @@
         dtcFirstDetectedAt: normalizeDtcEvidenceTimestampValue(row?.dtcFirstDetectedAt || row?.dtc_first_detected_at || row?.firstDetectedAt || row?.first_detected_at || row?.firstFailedAt || row?.first_failed_at || row?.firstOccurrenceAt || row?.first_occurrence_at),
         dtcLastDetectedAt: normalizeDtcEvidenceTimestampValue(row?.dtcLastDetectedAt || row?.dtc_last_detected_at || row?.lastDetectedAt || row?.last_detected_at || row?.lastFailedAt || row?.last_failed_at || row?.lastOccurrenceAt || row?.last_occurrence_at),
         dtcConfirmedAt: normalizeDtcEvidenceTimestampValue(row?.dtcConfirmedAt || row?.dtc_confirmed_at || row?.confirmedAt || row?.confirmed_at || row?.confirmationAt || row?.confirmation_at),
+        dtcFaultOccurrenceDistance: normalizeDtcLifecycleMeasurementValue(row?.dtcFaultOccurrenceDistance ?? row?.dtc_fault_occurrence_distance ?? row?.faultOccurrenceDistance ?? row?.fault_occurrence_distance ?? row?.faultMileage ?? row?.fault_mileage ?? row?.mileageAtFault ?? row?.mileage_at_fault ?? row?.odometerAtFault ?? row?.odometer_at_fault),
+        dtcFaultOccurrenceDistanceUnit: normalizeDtcLifecycleMeasurementUnit(row?.dtcFaultOccurrenceDistanceUnit || row?.dtc_fault_occurrence_distance_unit || row?.faultOccurrenceDistanceUnit || row?.fault_occurrence_distance_unit || row?.faultMileageUnit || row?.fault_mileage_unit || row?.mileageAtFaultUnit || row?.mileage_at_fault_unit || row?.odometerAtFaultUnit || row?.odometer_at_fault_unit),
+        dtcDistanceSinceClear: normalizeDtcLifecycleMeasurementValue(row?.dtcDistanceSinceClear ?? row?.dtc_distance_since_clear ?? row?.distanceSinceClear ?? row?.distance_since_clear ?? row?.mileageSinceClear ?? row?.mileage_since_clear ?? row?.odometerSinceClear ?? row?.odometer_since_clear),
+        dtcDistanceSinceClearUnit: normalizeDtcLifecycleMeasurementUnit(row?.dtcDistanceSinceClearUnit || row?.dtc_distance_since_clear_unit || row?.distanceSinceClearUnit || row?.distance_since_clear_unit || row?.mileageSinceClearUnit || row?.mileage_since_clear_unit || row?.odometerSinceClearUnit || row?.odometer_since_clear_unit),
+        dtcWarmUpCycleCount: normalizeDtcLifecycleMeasurementValue(row?.dtcWarmUpCycleCount ?? row?.dtc_warm_up_cycle_count ?? row?.warmUpCycleCount ?? row?.warm_up_cycle_count ?? row?.warmupCycleCount ?? row?.warmup_cycle_count ?? row?.warmUpCyclesSinceClear ?? row?.warm_up_cycles_since_clear ?? row?.warmupsSinceClear ?? row?.warmups_since_clear),
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34620,6 +34680,14 @@
     const normalizeCsvDiagnosticCounterIdentity = (value) => {
       const normalized = String(value ?? "").trim();
       return /^\d+$/.test(normalized) ? String(Number(normalized)) : normalizeCsvEcuHierarchyScope(normalized);
+    };
+    const normalizeCsvDiagnosticMeasurementIdentity = (value) => {
+      const normalized = String(value ?? "").trim();
+      if (/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalized)) {
+        const numeric = Number(normalized);
+        if (Number.isFinite(numeric)) return String(numeric);
+      }
+      return normalizeCsvEcuHierarchyScope(normalized);
     };
     const normalizeCsvDiagnosticTimestampIdentity = (value) => {
       const timestamp = normalizeDtcEvidenceTimestampValue(value);
@@ -34687,6 +34755,11 @@
       const dtcFirstDetectedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcFirstDetectedAt || dtcRow?.dtc_first_detected_at || dtcRow?.firstDetectedAt || dtcRow?.first_detected_at || dtcRow?.firstFailedAt || dtcRow?.first_failed_at || dtcRow?.firstOccurrenceAt || dtcRow?.first_occurrence_at);
       const dtcLastDetectedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcLastDetectedAt || dtcRow?.dtc_last_detected_at || dtcRow?.lastDetectedAt || dtcRow?.last_detected_at || dtcRow?.lastFailedAt || dtcRow?.last_failed_at || dtcRow?.lastOccurrenceAt || dtcRow?.last_occurrence_at);
       const dtcConfirmedAt = normalizeDtcEvidenceTimestampValue(dtcRow?.dtcConfirmedAt || dtcRow?.dtc_confirmed_at || dtcRow?.confirmedAt || dtcRow?.confirmed_at || dtcRow?.confirmationAt || dtcRow?.confirmation_at);
+      const dtcFaultOccurrenceDistance = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcFaultOccurrenceDistance ?? dtcRow?.dtc_fault_occurrence_distance ?? dtcRow?.faultOccurrenceDistance ?? dtcRow?.fault_occurrence_distance ?? dtcRow?.faultMileage ?? dtcRow?.fault_mileage ?? dtcRow?.mileageAtFault ?? dtcRow?.mileage_at_fault ?? dtcRow?.odometerAtFault ?? dtcRow?.odometer_at_fault);
+      const dtcFaultOccurrenceDistanceUnit = normalizeDtcLifecycleMeasurementUnit(dtcRow?.dtcFaultOccurrenceDistanceUnit || dtcRow?.dtc_fault_occurrence_distance_unit || dtcRow?.faultOccurrenceDistanceUnit || dtcRow?.fault_occurrence_distance_unit || dtcRow?.faultMileageUnit || dtcRow?.fault_mileage_unit || dtcRow?.mileageAtFaultUnit || dtcRow?.mileage_at_fault_unit || dtcRow?.odometerAtFaultUnit || dtcRow?.odometer_at_fault_unit);
+      const dtcDistanceSinceClear = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcDistanceSinceClear ?? dtcRow?.dtc_distance_since_clear ?? dtcRow?.distanceSinceClear ?? dtcRow?.distance_since_clear ?? dtcRow?.mileageSinceClear ?? dtcRow?.mileage_since_clear ?? dtcRow?.odometerSinceClear ?? dtcRow?.odometer_since_clear);
+      const dtcDistanceSinceClearUnit = normalizeDtcLifecycleMeasurementUnit(dtcRow?.dtcDistanceSinceClearUnit || dtcRow?.dtc_distance_since_clear_unit || dtcRow?.distanceSinceClearUnit || dtcRow?.distance_since_clear_unit || dtcRow?.mileageSinceClearUnit || dtcRow?.mileage_since_clear_unit || dtcRow?.odometerSinceClearUnit || dtcRow?.odometer_since_clear_unit);
+      const dtcWarmUpCycleCount = normalizeDtcLifecycleMeasurementValue(dtcRow?.dtcWarmUpCycleCount ?? dtcRow?.dtc_warm_up_cycle_count ?? dtcRow?.warmUpCycleCount ?? dtcRow?.warm_up_cycle_count ?? dtcRow?.warmupCycleCount ?? dtcRow?.warmup_cycle_count ?? dtcRow?.warmUpCyclesSinceClear ?? dtcRow?.warm_up_cycles_since_clear ?? dtcRow?.warmupsSinceClear ?? dtcRow?.warmups_since_clear);
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34750,6 +34823,11 @@
       if (dtcFirstDetectedAt && response.dtcFirstDetectedAt && normalizeCsvDiagnosticTimestampIdentity(dtcFirstDetectedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcFirstDetectedAt)) return false;
       if (dtcLastDetectedAt && response.dtcLastDetectedAt && normalizeCsvDiagnosticTimestampIdentity(dtcLastDetectedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcLastDetectedAt)) return false;
       if (dtcConfirmedAt && response.dtcConfirmedAt && normalizeCsvDiagnosticTimestampIdentity(dtcConfirmedAt) !== normalizeCsvDiagnosticTimestampIdentity(response.dtcConfirmedAt)) return false;
+      if (dtcFaultOccurrenceDistance && response.dtcFaultOccurrenceDistance && normalizeCsvDiagnosticMeasurementIdentity(dtcFaultOccurrenceDistance) !== normalizeCsvDiagnosticMeasurementIdentity(response.dtcFaultOccurrenceDistance)) return false;
+      if (dtcFaultOccurrenceDistanceUnit && response.dtcFaultOccurrenceDistanceUnit && normalizeCsvEcuHierarchyScope(dtcFaultOccurrenceDistanceUnit) !== normalizeCsvEcuHierarchyScope(response.dtcFaultOccurrenceDistanceUnit)) return false;
+      if (dtcDistanceSinceClear && response.dtcDistanceSinceClear && normalizeCsvDiagnosticMeasurementIdentity(dtcDistanceSinceClear) !== normalizeCsvDiagnosticMeasurementIdentity(response.dtcDistanceSinceClear)) return false;
+      if (dtcDistanceSinceClearUnit && response.dtcDistanceSinceClearUnit && normalizeCsvEcuHierarchyScope(dtcDistanceSinceClearUnit) !== normalizeCsvEcuHierarchyScope(response.dtcDistanceSinceClearUnit)) return false;
+      if (dtcWarmUpCycleCount && response.dtcWarmUpCycleCount && normalizeCsvDiagnosticCounterIdentity(dtcWarmUpCycleCount) !== normalizeCsvDiagnosticCounterIdentity(response.dtcWarmUpCycleCount)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
@@ -36811,6 +36889,16 @@
   function normalizeDtcEvidenceTimestampValue(value) {
     const timestamp = String(value || "").trim();
     return /^\d{4}-\d{2}-\d{2}T/.test(timestamp) && Number.isFinite(Date.parse(timestamp)) ? timestamp : null;
+  }
+
+  function normalizeDtcLifecycleMeasurementValue(value) {
+    const normalized = redactSensitiveText(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, 80);
+    return normalized || null;
+  }
+
+  function normalizeDtcLifecycleMeasurementUnit(value) {
+    const normalized = redactSensitiveText(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, 24);
+    return normalized || null;
   }
 
   function normalizeDtcEvidenceProtocol(row, fallback = null) {
