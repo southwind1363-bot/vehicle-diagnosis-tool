@@ -10672,6 +10672,9 @@
       ecuResponseSummary,
       supportedPidMatrix,
       webSerialReadoutSummary: metadataOverrides.webSerialReadoutSummary,
+      dtcEvidenceFieldReport: metadataOverrides.importClassification?.dtcEvidenceFieldReport
+        || metadataOverrides.importClassification?.dtc_evidence_field_report
+        || null,
       warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
@@ -11367,6 +11370,11 @@
         ecuResponseSummary,
         supportedPidMatrix,
         webSerialReadoutSummary: metadataOverrides.webSerialReadoutSummary,
+        dtcEvidenceFieldReport: parts.importClassification?.dtcEvidenceFieldReport
+          || parts.importClassification?.dtc_evidence_field_report
+          || parts.import_classification?.dtcEvidenceFieldReport
+          || parts.import_classification?.dtc_evidence_field_report
+          || null,
         warnings: resolvedWarnings,
         nextReadoutCandidates: resolvedNextReadoutCandidates
       });
@@ -12922,6 +12930,7 @@
     ecuResponseSummary = null,
     supportedPidMatrix = null,
     webSerialReadoutSummary = null,
+    dtcEvidenceFieldReport = null,
     warnings = [],
     nextReadoutCandidates = [],
     sessionCaptureIntegritySummary = null
@@ -13617,12 +13626,23 @@
     const readinessIncompleteCount = isReadableDiagnosticSnapshot(readinessSnapshot, ["readinessReadoutStatus", "readiness_readout_status"]) ? readCount(readinessSnapshot?.incompleteCount) : 0;
     const ecuInfoMissingKeyCount = isReadableDiagnosticSnapshot(ecuInfoSnapshot, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]) ? readCount(ecuInfoSnapshot?.keyItemSummary?.missingCount) : 0;
     const onboardMonitorFailedCount = isReadableDiagnosticSnapshot(onboardMonitorSnapshot, ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]) ? readCount(onboardMonitorSnapshot?.failedCount) : 0;
+    const invalidDtcEvidenceObservationCount = readCount(
+      dtcEvidenceFieldReport?.invalidObservationCount,
+      dtcEvidenceFieldReport?.invalid_observation_count
+    );
+    const dtcEvidenceValidationStatus = String(
+      dtcEvidenceFieldReport?.validationStatus
+      || dtcEvidenceFieldReport?.validation_status
+      || "not_reported"
+    );
+    const dtcEvidenceEligibleForAnalysis = invalidDtcEvidenceObservationCount === 0;
     const readoutQualityIssues = [
       rawPidUndecodedCount > 0 ? { id: "raw_pid_values_need_conversion", count: rawPidUndecodedCount, severity: "review" } : null,
       readinessIncompleteCount > 0 ? { id: "readiness_incomplete", count: readinessIncompleteCount, severity: "review" } : null,
       ecuInfoMissingKeyCount > 0 ? { id: "mode09_key_items_missing", count: ecuInfoMissingKeyCount, severity: "review" } : null,
       onboardMonitorFailedCount > 0 ? { id: "onboard_monitor_test_failed", count: onboardMonitorFailedCount, severity: "review" } : null,
-      webSerialResponseReviewCount > 0 ? { id: "web_serial_response_quality", count: webSerialResponseReviewCount, severity: "review" } : null
+      webSerialResponseReviewCount > 0 ? { id: "web_serial_response_quality", count: webSerialResponseReviewCount, severity: "review" } : null,
+      invalidDtcEvidenceObservationCount > 0 ? { id: "invalid_dtc_evidence_excluded", count: invalidDtcEvidenceObservationCount, severity: "review" } : null
     ].filter(Boolean);
     const readoutQualitySummary = {
       schemaVersion: "readout_quality_summary_v1",
@@ -13644,6 +13664,14 @@
       ecu_info_missing_key_count: ecuInfoMissingKeyCount,
       onboardMonitorFailedCount,
       onboard_monitor_failed_count: onboardMonitorFailedCount,
+      invalidDtcEvidenceObservationCount,
+      invalid_dtc_evidence_observation_count: invalidDtcEvidenceObservationCount,
+      dtcEvidenceValidationStatus,
+      dtc_evidence_validation_status: dtcEvidenceValidationStatus,
+      dtcEvidenceEligibleForAnalysis,
+      dtc_evidence_eligible_for_analysis: dtcEvidenceEligibleForAnalysis,
+      dtcEvidenceEligibleForApplicability: dtcEvidenceEligibleForAnalysis,
+      dtc_evidence_eligible_for_applicability: dtcEvidenceEligibleForAnalysis,
       webSerialResponseReviewCount,
       web_serial_response_review_count: webSerialResponseReviewCount,
       webSerialNegativeResponseCount,
@@ -13701,7 +13729,10 @@
         readinessIncompleteCount,
         ecuInfoMissingKeyCount,
         onboardMonitorFailedCount,
-        webSerialResponseReviewCount
+        webSerialResponseReviewCount,
+        invalidDtcEvidenceObservationCount,
+        dtcEvidenceEligibleForAnalysis,
+        dtcEvidenceEligibleForApplicability: dtcEvidenceEligibleForAnalysis
       },
       {
         id: "vehicle_applicability",
@@ -23153,6 +23184,11 @@
       ecuResponseSummary: summary.ecuResponseSummary || summary.ecu_response_summary || null,
       supportedPidMatrix: summary.supportedPidMatrix || summary.supported_pid_matrix || null,
       webSerialReadoutSummary: summary.webSerialReadoutSummary || summary.web_serial_readout_summary || null,
+      dtcEvidenceFieldReport: summary.importClassification?.dtcEvidenceFieldReport
+        || summary.importClassification?.dtc_evidence_field_report
+        || summary.import_classification?.dtcEvidenceFieldReport
+        || summary.import_classification?.dtc_evidence_field_report
+        || null,
       warnings: warnings || summary.warnings || summary.warning_flags || [],
       nextReadoutCandidates: nextReadoutCandidates || summary.nextReadoutCandidates || summary.next_readout_candidates || []
     });
@@ -25738,6 +25774,13 @@
       ecuResponseSummary,
       supportedPidMatrix,
       webSerialReadoutSummary,
+      dtcEvidenceFieldReport: scannerAnalysis?.importClassification?.dtcEvidenceFieldReport
+        || scannerAnalysis?.importClassification?.dtc_evidence_field_report
+        || scannerAnalysis?.import_classification?.dtcEvidenceFieldReport
+        || scannerAnalysis?.import_classification?.dtc_evidence_field_report
+        || mergedBridgeMetadata.importClassification?.dtcEvidenceFieldReport
+        || mergedBridgeMetadata.importClassification?.dtc_evidence_field_report
+        || null,
       warnings: mergedBridgeMetadata.warnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates
     });
@@ -36162,6 +36205,9 @@
       ecuResponseSummary,
       supportedPidMatrix,
       webSerialReadoutSummary,
+      dtcEvidenceFieldReport: importClassification?.dtcEvidenceFieldReport
+        || importClassification?.dtc_evidence_field_report
+        || null,
       warnings: resolvedWarnings,
       nextReadoutCandidates: resolvedNextReadoutCandidates,
       sessionCaptureIntegritySummary
