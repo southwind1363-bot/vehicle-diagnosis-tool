@@ -26502,6 +26502,9 @@
           const udsDiagnosticSessionType = redactSensitiveText(String(row.udsDiagnosticSessionType || row.uds_diagnostic_session_type || row.diagnosticSessionType || row.diagnostic_session_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsRequestedService = redactSensitiveText(String(row.udsRequestedService || row.uds_requested_service || row.udsService || row.uds_service || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const udsDataIdentifier = redactSensitiveText(String(row.udsDataIdentifier || row.uds_data_identifier || row.dataIdentifier || row.data_identifier || row.did || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsResponseSubfunction = redactSensitiveText(String(row.udsResponseSubfunction || row.uds_response_subfunction || row.responseSubfunction || row.response_subfunction || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsNegativeResponseCode = redactSensitiveText(String(row.udsNegativeResponseCode || row.uds_negative_response_code || row.negativeResponseCode || row.negative_response_code || row.nrc || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+          const udsResponseState = redactSensitiveText(String(row.udsResponseState || row.uds_response_state || row.responseState || row.response_state || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
@@ -26581,6 +26584,9 @@
             ...(udsDiagnosticSessionType ? { udsDiagnosticSessionType, uds_diagnostic_session_type: udsDiagnosticSessionType } : {}),
             ...(udsRequestedService ? { udsRequestedService, uds_requested_service: udsRequestedService } : {}),
             ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {}),
+            ...(udsResponseSubfunction ? { udsResponseSubfunction, uds_response_subfunction: udsResponseSubfunction } : {}),
+            ...(udsNegativeResponseCode ? { udsNegativeResponseCode, uds_negative_response_code: udsNegativeResponseCode } : {}),
+            ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {}),
             ...(ecuResponseConflict ? {
               ecuResponseConflict: true,
               ecu_response_conflict: true,
@@ -26720,6 +26726,9 @@
       const udsDiagnosticSessionType = redactSensitiveText(String(rowValue.udsDiagnosticSessionType || rowValue.uds_diagnostic_session_type || rowValue.diagnosticSessionType || rowValue.diagnostic_session_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsRequestedService = redactSensitiveText(String(rowValue.udsRequestedService || rowValue.uds_requested_service || rowValue.udsService || rowValue.uds_service || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDataIdentifier = redactSensitiveText(String(rowValue.udsDataIdentifier || rowValue.uds_data_identifier || rowValue.dataIdentifier || rowValue.data_identifier || rowValue.did || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsResponseSubfunction = redactSensitiveText(String(rowValue.udsResponseSubfunction || rowValue.uds_response_subfunction || rowValue.responseSubfunction || rowValue.response_subfunction || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsNegativeResponseCode = redactSensitiveText(String(rowValue.udsNegativeResponseCode || rowValue.uds_negative_response_code || rowValue.negativeResponseCode || rowValue.negative_response_code || rowValue.nrc || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsResponseState = redactSensitiveText(String(rowValue.udsResponseState || rowValue.uds_response_state || rowValue.responseState || rowValue.response_state || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return codes.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
@@ -26787,6 +26796,9 @@
         ...(udsDiagnosticSessionType ? { udsDiagnosticSessionType, uds_diagnostic_session_type: udsDiagnosticSessionType } : {}),
         ...(udsRequestedService ? { udsRequestedService, uds_requested_service: udsRequestedService } : {}),
         ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {}),
+        ...(udsResponseSubfunction ? { udsResponseSubfunction, uds_response_subfunction: udsResponseSubfunction } : {}),
+        ...(udsNegativeResponseCode ? { udsNegativeResponseCode, uds_negative_response_code: udsNegativeResponseCode } : {}),
+        ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {}),
         ...(ecuResponseConflict ? {
           ecuResponseConflict: true,
           ecu_response_conflict: true,
@@ -28339,6 +28351,9 @@
       const udsDiagnosticSessionType = redactSensitiveText(String(row?.udsDiagnosticSessionType || row?.uds_diagnostic_session_type || row?.diagnosticSessionType || row?.diagnostic_session_type || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsRequestedService = redactSensitiveText(String(row?.udsRequestedService || row?.uds_requested_service || row?.udsService || row?.uds_service || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const udsDataIdentifier = redactSensitiveText(String(row?.udsDataIdentifier || row?.uds_data_identifier || row?.dataIdentifier || row?.data_identifier || row?.did || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsResponseSubfunction = redactSensitiveText(String(row?.udsResponseSubfunction || row?.uds_response_subfunction || row?.responseSubfunction || row?.response_subfunction || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsNegativeResponseCode = redactSensitiveText(String(row?.udsNegativeResponseCode || row?.uds_negative_response_code || row?.negativeResponseCode || row?.negative_response_code || row?.nrc || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const udsResponseState = redactSensitiveText(String(row?.udsResponseState || row?.uds_response_state || row?.responseState || row?.response_state || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       return {
         id,
         name,
@@ -28405,7 +28420,10 @@
         ...(doipRoutingActivationStatus ? { doipRoutingActivationStatus, doip_routing_activation_status: doipRoutingActivationStatus } : {}),
         ...(udsDiagnosticSessionType ? { udsDiagnosticSessionType, uds_diagnostic_session_type: udsDiagnosticSessionType } : {}),
         ...(udsRequestedService ? { udsRequestedService, uds_requested_service: udsRequestedService } : {}),
-        ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {})
+        ...(udsDataIdentifier ? { udsDataIdentifier, uds_data_identifier: udsDataIdentifier } : {}),
+        ...(udsResponseSubfunction ? { udsResponseSubfunction, uds_response_subfunction: udsResponseSubfunction } : {}),
+        ...(udsNegativeResponseCode ? { udsNegativeResponseCode, uds_negative_response_code: udsNegativeResponseCode } : {}),
+        ...(udsResponseState ? { udsResponseState, uds_response_state: udsResponseState } : {})
       };
     });
     const normalizeEcuSummaryIdentity = (value) => {
@@ -28473,7 +28491,10 @@
         doipRoutingActivationStatus: row.doipRoutingActivationStatus || null,
         udsDiagnosticSessionType: row.udsDiagnosticSessionType || null,
         udsRequestedService: row.udsRequestedService || null,
-        udsDataIdentifier: row.udsDataIdentifier || null
+        udsDataIdentifier: row.udsDataIdentifier || null,
+        udsResponseSubfunction: row.udsResponseSubfunction || null,
+        udsNegativeResponseCode: row.udsNegativeResponseCode || null,
+        udsResponseState: row.udsResponseState || null
       });
       return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
     })).values()];
@@ -32388,6 +32409,9 @@
     const udsDiagnosticSessionTypeIndex = findIndex("uds diagnostic session type", "uds_diagnostic_session_type", "diagnostic session type", "diagnostic_session_type", "UDS診断セッション種別", "診断セッション種別");
     const udsRequestedServiceIndex = findIndex("uds requested service", "uds_requested_service", "uds service", "uds_service", "UDS要求サービス", "UDSサービス");
     const udsDataIdentifierIndex = findIndex("uds data identifier", "uds_data_identifier", "data identifier", "data_identifier", "did", "UDSデータ識別子", "DID");
+    const udsResponseSubfunctionIndex = findIndex("uds response subfunction", "uds_response_subfunction", "response subfunction", "response_subfunction", "UDS応答サブファンクション");
+    const udsNegativeResponseCodeIndex = findIndex("uds negative response code", "uds_negative_response_code", "negative response code", "negative_response_code", "nrc", "UDS否定応答コード", "NRC");
+    const udsResponseStateIndex = findIndex("uds response state", "uds_response_state", "response state", "response_state", "UDS応答状態");
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -32530,6 +32554,9 @@
       const rowUdsDiagnosticSessionType = cellAt(udsDiagnosticSessionTypeIndex, 80) || null;
       const rowUdsRequestedService = cellAt(udsRequestedServiceIndex, 80) || null;
       const rowUdsDataIdentifier = cellAt(udsDataIdentifierIndex, 80) || null;
+      const rowUdsResponseSubfunction = cellAt(udsResponseSubfunctionIndex, 80) || null;
+      const rowUdsNegativeResponseCode = cellAt(udsNegativeResponseCodeIndex, 80) || null;
+      const rowUdsResponseState = cellAt(udsResponseStateIndex, 80) || null;
       if (rowProtocol) observedProtocols.add(rowProtocol);
       const rowObservationCondition = normalizeObservationCondition(cellAt(observationConditionIndex, 40));
       if (!vehicleProfileValues.maker) vehicleProfileValues.maker = cellAt(vehicleMakerIndex, 80) || null;
@@ -32718,6 +32745,9 @@
           ...(rowUdsDiagnosticSessionType ? { uds_diagnostic_session_type: rowUdsDiagnosticSessionType } : {}),
           ...(rowUdsRequestedService ? { uds_requested_service: rowUdsRequestedService } : {}),
           ...(rowUdsDataIdentifier ? { uds_data_identifier: rowUdsDataIdentifier } : {}),
+          ...(rowUdsResponseSubfunction ? { uds_response_subfunction: rowUdsResponseSubfunction } : {}),
+          ...(rowUdsNegativeResponseCode ? { uds_negative_response_code: rowUdsNegativeResponseCode } : {}),
+          ...(rowUdsResponseState ? { uds_response_state: rowUdsResponseState } : {}),
           ...(normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) ? { captured_at: normalizeDtcEvidenceCapturedAt(null, rowCapturedAt) } : {}),
           ...(normalizeDtcEvidenceProtocol(null, rowProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, rowProtocol) } : {}),
           freezeFrameAvailable: Number.isInteger(freezeFrameIndex) ? hasFreezeFrame(cells[freezeFrameIndex]) : false
@@ -32871,6 +32901,9 @@
           ...(rowUdsDiagnosticSessionType ? { uds_diagnostic_session_type: rowUdsDiagnosticSessionType } : {}),
           ...(rowUdsRequestedService ? { uds_requested_service: rowUdsRequestedService } : {}),
           ...(rowUdsDataIdentifier ? { uds_data_identifier: rowUdsDataIdentifier } : {}),
+          ...(rowUdsResponseSubfunction ? { uds_response_subfunction: rowUdsResponseSubfunction } : {}),
+          ...(rowUdsNegativeResponseCode ? { uds_negative_response_code: rowUdsNegativeResponseCode } : {}),
+          ...(rowUdsResponseState ? { uds_response_state: rowUdsResponseState } : {}),
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
           ...(requestedService ? { services: [requestedService] } : {}),
@@ -34347,6 +34380,9 @@
         udsDiagnosticSessionType: row?.udsDiagnosticSessionType || row?.uds_diagnostic_session_type || row?.diagnosticSessionType || row?.diagnostic_session_type || null,
         udsRequestedService: row?.udsRequestedService || row?.uds_requested_service || row?.udsService || row?.uds_service || null,
         udsDataIdentifier: row?.udsDataIdentifier || row?.uds_data_identifier || row?.dataIdentifier || row?.data_identifier || row?.did || null,
+        udsResponseSubfunction: row?.udsResponseSubfunction || row?.uds_response_subfunction || row?.responseSubfunction || row?.response_subfunction || null,
+        udsNegativeResponseCode: row?.udsNegativeResponseCode || row?.uds_negative_response_code || row?.negativeResponseCode || row?.negative_response_code || row?.nrc || null,
+        udsResponseState: row?.udsResponseState || row?.uds_response_state || row?.responseState || row?.response_state || null,
         services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
           .filter(Array.isArray)
           .flat()
@@ -34410,6 +34446,9 @@
       const dtcUdsDiagnosticSessionType = dtcRow?.udsDiagnosticSessionType || dtcRow?.uds_diagnostic_session_type || dtcRow?.diagnosticSessionType || dtcRow?.diagnostic_session_type || null;
       const dtcUdsRequestedService = dtcRow?.udsRequestedService || dtcRow?.uds_requested_service || dtcRow?.udsService || dtcRow?.uds_service || null;
       const dtcUdsDataIdentifier = dtcRow?.udsDataIdentifier || dtcRow?.uds_data_identifier || dtcRow?.dataIdentifier || dtcRow?.data_identifier || dtcRow?.did || null;
+      const dtcUdsResponseSubfunction = dtcRow?.udsResponseSubfunction || dtcRow?.uds_response_subfunction || dtcRow?.responseSubfunction || dtcRow?.response_subfunction || null;
+      const dtcUdsNegativeResponseCode = dtcRow?.udsNegativeResponseCode || dtcRow?.uds_negative_response_code || dtcRow?.negativeResponseCode || dtcRow?.negative_response_code || dtcRow?.nrc || null;
+      const dtcUdsResponseState = dtcRow?.udsResponseState || dtcRow?.uds_response_state || dtcRow?.responseState || dtcRow?.response_state || null;
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcScanSessionId && response.scanSessionId && dtcScanSessionId !== response.scanSessionId) return false;
@@ -34452,6 +34491,9 @@
       if (dtcUdsDiagnosticSessionType && response.udsDiagnosticSessionType && normalizeCsvEcuHierarchyScope(dtcUdsDiagnosticSessionType) !== normalizeCsvEcuHierarchyScope(response.udsDiagnosticSessionType)) return false;
       if (dtcUdsRequestedService && response.udsRequestedService && normalizeCsvDiagnosticAddressIdentity(dtcUdsRequestedService) !== normalizeCsvDiagnosticAddressIdentity(response.udsRequestedService)) return false;
       if (dtcUdsDataIdentifier && response.udsDataIdentifier && normalizeCsvDiagnosticAddressIdentity(dtcUdsDataIdentifier) !== normalizeCsvDiagnosticAddressIdentity(response.udsDataIdentifier)) return false;
+      if (dtcUdsResponseSubfunction && response.udsResponseSubfunction && normalizeCsvDiagnosticAddressIdentity(dtcUdsResponseSubfunction) !== normalizeCsvDiagnosticAddressIdentity(response.udsResponseSubfunction)) return false;
+      if (dtcUdsNegativeResponseCode && response.udsNegativeResponseCode && normalizeCsvDiagnosticAddressIdentity(dtcUdsNegativeResponseCode) !== normalizeCsvDiagnosticAddressIdentity(response.udsNegativeResponseCode)) return false;
+      if (dtcUdsResponseState && response.udsResponseState && normalizeCsvEcuHierarchyScope(dtcUdsResponseState) !== normalizeCsvEcuHierarchyScope(response.udsResponseState)) return false;
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
       const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.dtcReadoutCategory || dtcRow?.dtc_readout_category || dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
