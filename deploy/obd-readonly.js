@@ -32032,7 +32032,9 @@
     const responseTimeIndex = findIndex("response time ms", "response_time_ms", "response time", "latency ms", "latency");
     const negativeResponseCountIndex = findIndex("negative response count", "negative_response_count", "negative count");
     const negativeResponseLabelIndex = findIndex("negative response label", "negative_response_label", "negative label");
-    const negativeRequestedServiceIndex = findIndex("negative requested service", "negative_requested_service", "requested service");
+    const requestedServiceIndex = findIndex("requested service", "requested_service", "request service", "service", "readout service", "diagnostic service", "intent");
+    const responseServiceIndex = findIndex("response service", "response_service", "positive response service");
+    const negativeRequestedServiceIndex = findIndex("negative requested service", "negative_requested_service");
     const pidIndex = findIndex("pid", "obd pid", "parameter id");
     const labelIndex = findIndex("parameter", "parameter name", "item", "item name", "label", "data item", "項目", "項目名", "パラメーター", "パラメータ", "データ項目");
     const valueIndex = findIndex("value", "reading", "result", "measured value", "measurement", "値", "測定値", "結果", "読取値");
@@ -32395,13 +32397,17 @@
         const responseTimeMs = Number(cellAt(responseTimeIndex, 24));
         const negativeResponseCount = Number(cellAt(negativeResponseCountIndex, 12));
         const negativeResponseLabel = cellAt(negativeResponseLabelIndex, 120);
-        const negativeRequestedService = cellAt(negativeRequestedServiceIndex, 24).toUpperCase();
+        const requestedService = cellAt(requestedServiceIndex, 40).toUpperCase();
+        const responseService = cellAt(responseServiceIndex, 24).toUpperCase();
+        const negativeRequestedService = (cellAt(negativeRequestedServiceIndex, 24) || (/^(?:negative_response|no_response|blocked|timeout|failed|error|unavailable)$/.test(responseStatus.replace(/[\s-]+/g, "_")) ? requestedService : "")).toUpperCase();
         if (responseId && responseStatus) ecuResponseRows.push({
           id: responseId,
           name: ecuName || responseId,
           status: responseStatus,
           ...(rowCapturedAt ? { captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {}),
+          ...(requestedService ? { services: [requestedService] } : {}),
+          ...(responseService ? { response_services: [responseService] } : {}),
           ...(Number.isFinite(responseTimeMs) && responseTimeMs >= 0 ? { response_time_ms: responseTimeMs } : {}),
           ...(Number.isInteger(negativeResponseCount) && negativeResponseCount >= 0 ? { negative_response_count: negativeResponseCount } : {}),
           ...(negativeResponseLabel ? { negative_response_labels: [negativeResponseLabel] } : {}),
@@ -33821,17 +33827,32 @@
       responses.push({
         status: String(row?.status || row?.responseStatus || row?.response_status || "unknown").trim().toLowerCase().replace(/[\s-]+/g, "_"),
         capturedAt: row?.capturedAt || row?.captured_at || ecuResponseSummary?.capturedAt || ecuResponseSummary?.captured_at || null,
-        protocol: normalizeProtocolProvenanceValue(row?.protocol || ecuResponseSummary?.protocol || ecuResponseSummary?.obd_protocol || null)
+        protocol: normalizeProtocolProvenanceValue(row?.protocol || ecuResponseSummary?.protocol || ecuResponseSummary?.obd_protocol || null),
+        services: [...new Set([row?.services, row?.requestedServices, row?.requested_services, row?.responseServices, row?.response_services, row?.negativeRequestedServices, row?.negative_requested_services]
+          .filter(Array.isArray)
+          .flat()
+          .map((value) => String(value || "").trim().toUpperCase())
+          .filter(Boolean))]
       });
       explicitResponsesByEcu.set(ecuId, responses);
     });
     const positiveResponseStatuses = new Set(["reported", "responded", "response", "ok", "success", "available", "positive", "negative_response", "pending_response"]);
     const unavailableResponseStatuses = new Set(["no_response", "blocked", "timeout", "failed", "error", "unavailable"]);
+    const normalizeCsvDtcServiceCategory = (value) => {
+      const normalized = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+      if (["03", "43", "stored", "current", "confirmed", "active", "read_stored_dtc", "mode_03", "mode03"].includes(normalized)) return "stored";
+      if (["07", "47", "pending", "tentative", "read_pending_dtc", "mode_07", "mode07"].includes(normalized)) return "pending";
+      if (["0a", "4a", "permanent", "read_permanent_dtc", "mode_0a", "mode0a"].includes(normalized)) return "permanent";
+      return null;
+    };
     const isSameCsvReadoutScope = (dtcRow, response) => {
       const dtcCapturedAt = dtcRow?.capturedAt || dtcRow?.captured_at || null;
       const dtcProtocol = normalizeProtocolProvenanceValue(dtcRow?.protocol || null);
       if (dtcCapturedAt && response.capturedAt && dtcCapturedAt !== response.capturedAt) return false;
       if (dtcProtocol && response.protocol && dtcProtocol !== response.protocol) return false;
+      const dtcServiceCategory = normalizeCsvDtcServiceCategory(dtcRow?.status || dtcRow?.reportedStatus || dtcRow?.reported_status);
+      const responseServiceCategories = [...new Set((response.services || []).map(normalizeCsvDtcServiceCategory).filter(Boolean))];
+      if (dtcServiceCategory && responseServiceCategories.length && !responseServiceCategories.includes(dtcServiceCategory)) return false;
       return true;
     };
     const conflictingDtcRowsByEcu = new Map();
