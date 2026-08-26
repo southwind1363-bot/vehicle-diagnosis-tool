@@ -10941,6 +10941,10 @@
       || parts.imported_readout_request_plan_gate_comparison_summary
       || parts.importedCoreReadoutInventoryComparisonSummary
       || parts.imported_core_readout_inventory_comparison_summary
+      || parts.causeCandidateLog
+      || parts.cause_candidate_log
+      || parts.causeCandidateLogReferenceComparisonSummary
+      || parts.cause_candidate_log_reference_comparison_summary
       || Array.isArray(parts.warningFlags)
       || Array.isArray(parts.warning_flags)
       || parts.capturedAt
@@ -11139,12 +11143,20 @@
       imported_next_readout_guard_comparison_summary: pickPresent(parts.imported_next_readout_guard_comparison_summary, parts.importedNextReadoutGuardComparisonSummary, nested.imported_next_readout_guard_comparison_summary, nested.importedNextReadoutGuardComparisonSummary, null),
       importedCoreReadoutInventoryComparisonSummary: pickPresent(parts.importedCoreReadoutInventoryComparisonSummary, parts.imported_core_readout_inventory_comparison_summary, nested.importedCoreReadoutInventoryComparisonSummary, nested.imported_core_readout_inventory_comparison_summary, null),
       imported_core_readout_inventory_comparison_summary: pickPresent(parts.imported_core_readout_inventory_comparison_summary, parts.importedCoreReadoutInventoryComparisonSummary, nested.imported_core_readout_inventory_comparison_summary, nested.importedCoreReadoutInventoryComparisonSummary, null),
+      causeCandidateLog: pickPresent(parts.causeCandidateLog, parts.cause_candidate_log, nested.causeCandidateLog, nested.cause_candidate_log, null),
+      cause_candidate_log: pickPresent(parts.cause_candidate_log, parts.causeCandidateLog, nested.cause_candidate_log, nested.causeCandidateLog, null),
+      causeCandidateLogReferenceComparisonSummary: pickPresent(parts.causeCandidateLogReferenceComparisonSummary, parts.cause_candidate_log_reference_comparison_summary, nested.causeCandidateLogReferenceComparisonSummary, nested.cause_candidate_log_reference_comparison_summary, null),
+      cause_candidate_log_reference_comparison_summary: pickPresent(parts.cause_candidate_log_reference_comparison_summary, parts.causeCandidateLogReferenceComparisonSummary, nested.cause_candidate_log_reference_comparison_summary, nested.causeCandidateLogReferenceComparisonSummary, null),
       ...mergedMetadata
     };
   }
 
   function normalizeBridgeSummaryAliases(parts = {}) {
     const metadataOverrides = getSessionMetadataOverrides(parts);
+    const causeCandidateLog = normalizeCauseCandidateLog(parts.causeCandidateLog || parts.cause_candidate_log || null);
+    const causeCandidateLogReferenceComparisonSummary = normalizeCauseCandidateLogReferenceComparisonSummary(
+      parts.causeCandidateLogReferenceComparisonSummary || parts.cause_candidate_log_reference_comparison_summary || null
+    );
     const readoutCoverageInput = getReadoutCoverageInput(parts);
     const nativeConnectorBoundary = normalizeNativeConnectorBoundary(parts.nativeConnectorBoundary || parts.native_connector_boundary || {});
     const nativeConnectorScanLifecycle = normalizeNativeConnectorScanLifecycle(parts.nativeConnectorScanLifecycle || parts.native_connector_scan_lifecycle || {});
@@ -11541,6 +11553,10 @@
       vehicleApplicability: resolvedMetadata.vehicleApplicability,
       observationContext: resolvedMetadata.observationContext,
       observation_context: resolvedMetadata.observationContext,
+      causeCandidateLog,
+      cause_candidate_log: causeCandidateLog,
+      causeCandidateLogReferenceComparisonSummary,
+      cause_candidate_log_reference_comparison_summary: causeCandidateLogReferenceComparisonSummary,
       readoutInterface: resolvedMetadata.readoutInterface,
       readout_interface: resolvedMetadata.readoutInterface,
       connectionStatus,
@@ -12352,6 +12368,227 @@
       same_vehicle_confirmed: sameVehicleConfirmed,
       sameVehicleConfirmationSource: sameVehicleConfirmed ? "operator" : null,
       same_vehicle_confirmation_source: sameVehicleConfirmed ? "operator" : null,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function normalizeCauseCandidateLog(input = null) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const uniqueStrings = (values, pattern, limit = 32, maxLength = 120) => [...new Set((Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim())
+      .filter((value) => value && value.length <= maxLength && (!pattern || pattern.test(value))))].slice(0, limit);
+    const allowedSourceTypes = new Set(["interview", "symptom_flow", "dtc_definition"]);
+    const candidates = (Array.isArray(input.candidates) ? input.candidates : [])
+      .slice(0, 64)
+      .map((item, index) => {
+        const label = String(item?.label || "").trim().slice(0, 240);
+        const sourceType = String(item?.sourceType || item?.source_type || "").trim();
+        if (!label || !allowedSourceTypes.has(sourceType)) return null;
+        const evidenceRefs = uniqueStrings(item?.evidenceRefs || item?.evidence_refs, /^(?:interview|symptom|dtc):[a-z0-9_.:-]+$/i, 12);
+        const applicabilityStatus = ["matched", "partial", "mismatch", "unknown", "unverified"].includes(item?.applicabilityStatus || item?.applicability_status)
+          ? item.applicabilityStatus || item.applicability_status
+          : "unknown";
+        return {
+          id: /^cause_candidate_\d{3}$/.test(String(item?.id || "")) ? item.id : `cause_candidate_${String(index + 1).padStart(3, "0")}`,
+          kind: String(item?.kind || "candidate").trim().slice(0, 64),
+          label,
+          sourceType,
+          source_type: sourceType,
+          sourceId: item?.sourceId || item?.source_id ? String(item.sourceId || item.source_id).trim().slice(0, 120) : null,
+          source_id: item?.sourceId || item?.source_id ? String(item.sourceId || item.source_id).trim().slice(0, 120) : null,
+          evidenceRefs,
+          evidence_refs: evidenceRefs,
+          applicabilityStatus,
+          applicability_status: applicabilityStatus,
+          sourceUrl: /^https:\/\//i.test(String(item?.sourceUrl || item?.source_url || "")) ? String(item.sourceUrl || item.source_url).slice(0, 500) : null,
+          source_url: /^https:\/\//i.test(String(item?.sourceUrl || item?.source_url || "")) ? String(item.sourceUrl || item.source_url).slice(0, 500) : null,
+          sourceDate: /^\d{4}-\d{2}-\d{2}$/.test(String(item?.sourceDate || item?.source_date || "")) ? String(item.sourceDate || item.source_date) : null,
+          source_date: /^\d{4}-\d{2}-\d{2}$/.test(String(item?.sourceDate || item?.source_date || "")) ? String(item.sourceDate || item.source_date) : null,
+          candidateOnly: true,
+          candidate_only: true,
+          confirmed: false,
+          rank: null
+        };
+      })
+      .filter(Boolean);
+    const allowedResolutionStatuses = new Set(["resolved", "improved", "persisting", "worsened", "changed", "clear"]);
+    const referenceEntries = (Array.isArray(input.referenceEntries) ? input.referenceEntries : Array.isArray(input.reference_entries) ? input.reference_entries : [])
+      .slice(0, 8)
+      .map((item) => {
+        const status = String(item?.resolutionStatus || item?.resolution_status || "");
+        if (item?.kind !== "post_repair_dtc_evidence_quality" || !allowedResolutionStatuses.has(status)) return null;
+        const evidenceRefs = uniqueStrings(item?.evidenceRefs || item?.evidence_refs, /^dtc_evidence:[a-z0-9_]+\|[a-z0-9_]+$/i, 32);
+        const readCount = (camelKey, snakeKey) => {
+          const value = Number(item?.[camelKey] ?? item?.[snakeKey]);
+          return Number.isFinite(value) ? Math.min(10000, Math.max(0, Math.round(value))) : 0;
+        };
+        const resolvedCount = readCount("resolvedCount", "resolved_count");
+        const persistingCount = readCount("persistingCount", "persisting_count");
+        const newCount = readCount("newCount", "new_count");
+        return {
+          id: "cause_reference_dtc_evidence_quality_001",
+          kind: "post_repair_dtc_evidence_quality",
+          label: `DTC証跡品質 ${status} / 解消${resolvedCount}・継続${persistingCount}・新規${newCount}`,
+          sourceType: "post_repair_reassessment",
+          source_type: "post_repair_reassessment",
+          evidenceRefs,
+          evidence_refs: evidenceRefs,
+          resolutionStatus: status,
+          resolution_status: status,
+          resolvedCount,
+          resolved_count: resolvedCount,
+          persistingCount,
+          persisting_count: persistingCount,
+          newCount,
+          new_count: newCount,
+          candidate: false,
+          affectsRanking: false,
+          affects_ranking: false,
+          diagnosticConclusionAssigned: false,
+          diagnostic_conclusion_assigned: false,
+          repairOutcomeConfirmed: false,
+          repair_outcome_confirmed: false,
+          readOnly: true,
+          read_only: true,
+          wouldTransmit: false,
+          would_transmit: false,
+          vehicleCommandEnabled: false,
+          vehicle_command_enabled: false
+        };
+      })
+      .filter(Boolean);
+    const sourceTypes = [...new Set(candidates.map((item) => item.sourceType))];
+    return {
+      schemaVersion: "cause_candidate_log_v1",
+      schema_version: "cause_candidate_log_v1",
+      candidates,
+      candidateCount: candidates.length,
+      candidate_count: candidates.length,
+      sourceTypes,
+      source_types: sourceTypes,
+      referenceEntries,
+      reference_entries: referenceEntries,
+      referenceEntryCount: referenceEntries.length,
+      reference_entry_count: referenceEntries.length,
+      candidateOnly: true,
+      candidate_only: true,
+      confirmedCount: 0,
+      confirmed_count: 0,
+      rankingAssigned: false,
+      ranking_assigned: false,
+      retainedInterviewValues: false,
+      retained_interview_values: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function buildCauseCandidateLogReferenceComparisonSummary(previousInput = null, currentInput = null) {
+    const previous = normalizeCauseCandidateLog(previousInput);
+    const current = normalizeCauseCandidateLog(currentInput);
+    const comparisonAvailable = Boolean(previous && current);
+    const readReferenceKeys = (log) => [...new Set((log?.referenceEntries || []).flatMap((item) => item.evidenceRefs || []))].sort();
+    const previousKeys = comparisonAvailable ? readReferenceKeys(previous) : [];
+    const currentKeys = comparisonAvailable ? readReferenceKeys(current) : [];
+    const addedReferenceKeys = comparisonAvailable ? currentKeys.filter((key) => !previousKeys.includes(key)).slice(0, 32) : [];
+    const resolvedReferenceKeys = comparisonAvailable ? previousKeys.filter((key) => !currentKeys.includes(key)).slice(0, 32) : [];
+    const persistingReferenceKeys = comparisonAvailable ? currentKeys.filter((key) => previousKeys.includes(key)).slice(0, 32) : [];
+    const previousStatus = previous?.referenceEntries?.[0]?.resolutionStatus || null;
+    const currentStatus = current?.referenceEntries?.[0]?.resolutionStatus || null;
+    const statusChanged = comparisonAvailable && previousStatus !== currentStatus;
+    return {
+      schemaVersion: "cause_candidate_log_reference_comparison_v1",
+      schema_version: "cause_candidate_log_reference_comparison_v1",
+      comparisonAvailable,
+      comparison_available: comparisonAvailable,
+      status: !comparisonAvailable ? "not_comparable" : addedReferenceKeys.length || resolvedReferenceKeys.length || statusChanged ? "changed" : "unchanged",
+      previousResolutionStatus: previousStatus,
+      previous_resolution_status: previousStatus,
+      currentResolutionStatus: currentStatus,
+      current_resolution_status: currentStatus,
+      statusChanged,
+      status_changed: statusChanged,
+      addedReferenceKeys,
+      added_reference_keys: addedReferenceKeys,
+      addedReferenceCount: addedReferenceKeys.length,
+      added_reference_count: addedReferenceKeys.length,
+      resolvedReferenceKeys,
+      resolved_reference_keys: resolvedReferenceKeys,
+      resolvedReferenceCount: resolvedReferenceKeys.length,
+      resolved_reference_count: resolvedReferenceKeys.length,
+      persistingReferenceKeys,
+      persisting_reference_keys: persistingReferenceKeys,
+      persistingReferenceCount: persistingReferenceKeys.length,
+      persisting_reference_count: persistingReferenceKeys.length,
+      candidateCountChanged: false,
+      candidate_count_changed: false,
+      affectsRanking: false,
+      affects_ranking: false,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function normalizeCauseCandidateLogReferenceComparisonSummary(input = null) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const comparisonAvailable = input.comparisonAvailable === true || input.comparison_available === true;
+    const readKeys = (camelKey, snakeKey) => [...new Set((Array.isArray(input[camelKey]) ? input[camelKey] : Array.isArray(input[snakeKey]) ? input[snakeKey] : [])
+      .map((value) => String(value || "").trim())
+      .filter((value) => /^dtc_evidence:[a-z0-9_]+\|[a-z0-9_]+$/i.test(value)))].slice(0, 32);
+    const addedReferenceKeys = comparisonAvailable ? readKeys("addedReferenceKeys", "added_reference_keys") : [];
+    const resolvedReferenceKeys = comparisonAvailable ? readKeys("resolvedReferenceKeys", "resolved_reference_keys") : [];
+    const persistingReferenceKeys = comparisonAvailable ? readKeys("persistingReferenceKeys", "persisting_reference_keys") : [];
+    const allowedStatuses = new Set(["resolved", "improved", "persisting", "worsened", "changed", "clear"]);
+    const previousStatusValue = String(input.previousResolutionStatus || input.previous_resolution_status || "");
+    const currentStatusValue = String(input.currentResolutionStatus || input.current_resolution_status || "");
+    const previousResolutionStatus = allowedStatuses.has(previousStatusValue) ? previousStatusValue : null;
+    const currentResolutionStatus = allowedStatuses.has(currentStatusValue) ? currentStatusValue : null;
+    const statusChanged = comparisonAvailable && previousResolutionStatus !== currentResolutionStatus;
+    return {
+      schemaVersion: "cause_candidate_log_reference_comparison_v1",
+      schema_version: "cause_candidate_log_reference_comparison_v1",
+      comparisonAvailable,
+      comparison_available: comparisonAvailable,
+      status: !comparisonAvailable ? "not_comparable" : addedReferenceKeys.length || resolvedReferenceKeys.length || statusChanged ? "changed" : "unchanged",
+      previousResolutionStatus,
+      previous_resolution_status: previousResolutionStatus,
+      currentResolutionStatus,
+      current_resolution_status: currentResolutionStatus,
+      statusChanged,
+      status_changed: statusChanged,
+      addedReferenceKeys,
+      added_reference_keys: addedReferenceKeys,
+      addedReferenceCount: addedReferenceKeys.length,
+      added_reference_count: addedReferenceKeys.length,
+      resolvedReferenceKeys,
+      resolved_reference_keys: resolvedReferenceKeys,
+      resolvedReferenceCount: resolvedReferenceKeys.length,
+      resolved_reference_count: resolvedReferenceKeys.length,
+      persistingReferenceKeys,
+      persisting_reference_keys: persistingReferenceKeys,
+      persistingReferenceCount: persistingReferenceKeys.length,
+      persisting_reference_count: persistingReferenceKeys.length,
+      candidateCountChanged: false,
+      candidate_count_changed: false,
+      affectsRanking: false,
+      affects_ranking: false,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
       readOnly: true,
       read_only: true,
       wouldTransmit: false,
@@ -24829,6 +25066,10 @@
     const importedSessionComparisonSummary = summary.importedSessionComparisonSummary
       || summary.imported_session_comparison_summary
       || null;
+    const causeCandidateLog = normalizeCauseCandidateLog(summary.causeCandidateLog || summary.cause_candidate_log || null);
+    const causeCandidateLogReferenceComparisonSummary = normalizeCauseCandidateLogReferenceComparisonSummary(
+      summary.causeCandidateLogReferenceComparisonSummary || summary.cause_candidate_log_reference_comparison_summary || null
+    );
     const importedCoreComparisonSummary = summary.importedCoreComparisonSummary || summary.imported_core_comparison_summary || importedSessionComparisonSummary?.coreComparison || importedSessionComparisonSummary?.core_comparison || null;
     const importedDiagnosticFlowComparisonSummary = summary.importedDiagnosticFlowComparisonSummary || summary.imported_diagnostic_flow_comparison_summary || importedSessionComparisonSummary?.diagnosticFlowComparison || importedSessionComparisonSummary?.diagnostic_flow_comparison || null;
     const importedReadoutCompletionComparisonSummary = summary.importedReadoutCompletionComparisonSummary || summary.imported_readout_completion_comparison_summary || importedSessionComparisonSummary?.readoutCompletionComparison || importedSessionComparisonSummary?.readout_completion_comparison || null;
@@ -24915,6 +25156,8 @@
         imported_readout_request_plan_gate_comparison_summary: importedReadoutRequestPlanGateComparisonSummary,
         imported_next_readout_guard_comparison_summary: importedNextReadoutGuardComparisonSummary,
         imported_core_readout_inventory_comparison_summary: importedCoreReadoutInventoryComparisonSummary,
+        cause_candidate_log: causeCandidateLog,
+        cause_candidate_log_reference_comparison_summary: causeCandidateLogReferenceComparisonSummary,
         imported_readout_quality_review_request_plan_summary: importedReadoutQualityReviewRequestPlanSummary,
         imported_next_readout_guard_review_request_plan_summary: importedNextReadoutGuardReviewRequestPlanSummary,
         imported_vehicle_applicability_changed_row_summary: importedVehicleApplicabilityChangedRowSummary,
@@ -24938,6 +25181,10 @@
 
   function buildBridgeDiagnosticImport(parts = {}) {
     const summary = resolveBridgeSummary(parts);
+    const causeCandidateLog = normalizeCauseCandidateLog(summary.causeCandidateLog || summary.cause_candidate_log || null);
+    const causeCandidateLogReferenceComparisonSummary = normalizeCauseCandidateLogReferenceComparisonSummary(
+      summary.causeCandidateLogReferenceComparisonSummary || summary.cause_candidate_log_reference_comparison_summary || null
+    );
     const dtcSnapshot = summary.dtcSnapshot || summary.dtc_snapshot || normalizeDtcSnapshot({ source: "local_bridge", codes: summary.codes || summary.dtc_codes || [] });
     const livePidSnapshot = summary.livePidSnapshot || summary.live_pid_snapshot || normalizeBridgeLivePidSnapshot({
       monitorValues: summary.monitorValues || [],
@@ -25579,6 +25826,28 @@
         : null;
     const monitorById = new Map();
     const bridgeSession = bridgeImport?.bridgeSession || bridgeImport?.bridge_session || null;
+    const causeCandidateLog = normalizeCauseCandidateLog(
+      input.causeCandidateLog
+      || input.cause_candidate_log
+      || bridgeImport?.causeCandidateLog
+      || bridgeImport?.cause_candidate_log
+      || bridgeSession?.causeCandidateLog
+      || bridgeSession?.cause_candidate_log
+      || bridgeImportInput?.causeCandidateLog
+      || bridgeImportInput?.cause_candidate_log
+      || null
+    );
+    const causeCandidateLogReferenceComparisonSummary = normalizeCauseCandidateLogReferenceComparisonSummary(
+      input.causeCandidateLogReferenceComparisonSummary
+      || input.cause_candidate_log_reference_comparison_summary
+      || bridgeImport?.causeCandidateLogReferenceComparisonSummary
+      || bridgeImport?.cause_candidate_log_reference_comparison_summary
+      || bridgeSession?.causeCandidateLogReferenceComparisonSummary
+      || bridgeSession?.cause_candidate_log_reference_comparison_summary
+      || bridgeImportInput?.causeCandidateLogReferenceComparisonSummary
+      || bridgeImportInput?.cause_candidate_log_reference_comparison_summary
+      || null
+    );
     const ecuResponseSummary = bridgeImport?.ecuResponseSummary || bridgeImport?.ecu_response_summary || bridgeSession?.ecuResponseSummary || bridgeSession?.ecu_response_summary || null;
     const importedCoreSessionStatus = normalizeCoreSessionStatusAliases(input.importedCoreSessionStatus
       || input.imported_core_session_status
@@ -26330,6 +26599,10 @@
       imported_session_comparison_summary: importedSessionComparisonSummary,
       postRepairReassessmentSummary,
       post_repair_reassessment_summary: postRepairReassessmentSummary,
+      causeCandidateLog,
+      cause_candidate_log: causeCandidateLog,
+      causeCandidateLogReferenceComparisonSummary,
+      cause_candidate_log_reference_comparison_summary: causeCandidateLogReferenceComparisonSummary,
       hadSensitiveIdentifier: scannerAnalysis.hadSensitiveIdentifier || mergedBridgeMetadata.hadSensitiveIdentifier,
       sourceLength: Math.max(scannerAnalysis.sourceLength || 0, mergedBridgeMetadata.sourceLength),
       retainedRawText: false,
@@ -32688,6 +32961,8 @@
       importedReadoutRequestPlanGateSummary: trustedImportedReadoutRequestPlanGateSummary || undefined,
       importedNextReadoutGuardSummary: trustedImportedNextReadoutGuardSummary || undefined,
       importedCoreReadoutInventorySummary: trustedImportedCoreReadoutInventorySummary || undefined,
+      causeCandidateLog: isTrustedBridgeSessionExport ? pick("causeCandidateLog", "cause_candidate_log") || undefined : undefined,
+      causeCandidateLogReferenceComparisonSummary: isTrustedBridgeSessionExport ? pick("causeCandidateLogReferenceComparisonSummary", "cause_candidate_log_reference_comparison_summary") || undefined : undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       observationContext: scannerJsonObservationContext || undefined,
@@ -35829,6 +36104,10 @@
 
   function buildDiagnosticScanSession(input = {}) {
     const sessionInput = getDiagnosticSessionInput(input);
+    const causeCandidateLog = normalizeCauseCandidateLog(sessionInput.causeCandidateLog || sessionInput.cause_candidate_log || null);
+    const causeCandidateLogReferenceComparisonSummary = normalizeCauseCandidateLogReferenceComparisonSummary(
+      sessionInput.causeCandidateLogReferenceComparisonSummary || sessionInput.cause_candidate_log_reference_comparison_summary || null
+    );
     const manufacturerPidVehicleReadoutPackageCollection = normalizeManufacturerPidVehicleReadoutPackageCollection(pickPresent(
       sessionInput.manufacturerPidVehicleReadoutPackages,
       sessionInput.manufacturer_pid_vehicle_readout_packages,
@@ -36654,6 +36933,10 @@
       imported_session_comparison_summary: importedSessionComparisonSummary,
       postRepairReassessmentSummary,
       post_repair_reassessment_summary: postRepairReassessmentSummary,
+      causeCandidateLog,
+      cause_candidate_log: causeCandidateLog,
+      causeCandidateLogReferenceComparisonSummary,
+      cause_candidate_log_reference_comparison_summary: causeCandidateLogReferenceComparisonSummary,
       monitorValueSummary,
       monitor_value_summary: monitorValueSummary,
       importClassification: resolvedImportClassification,
@@ -38758,6 +39041,9 @@
     normalizeVehicleApplicabilitySnapshot,
     buildVehicleApplicabilityFieldMatchSummary,
     normalizeObservationContext,
+    normalizeCauseCandidateLog,
+    buildCauseCandidateLogReferenceComparisonSummary,
+    normalizeCauseCandidateLogReferenceComparisonSummary,
     buildPostRepairReassessmentSummary,
     normalizeReadoutInterfaceSnapshot,
     normalizeObdReportedProfile,

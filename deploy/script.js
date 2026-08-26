@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3369件",
+  validationCheckLabel: "OBD安全検証 3372件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "DTC証跡品質の原因候補参照を固定",
+  recentMilestone: "原因候補ログの保存・再取込監査を固定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.224";
+const APP_VERSION = "3.13.225";
 const APP_LAST_UPDATED = "2026-08-26";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2422,6 +2422,14 @@ function buildDiagnosis(input) {
   ]);
   const postRepairReassessmentSummary = obdDevSession.lastSession?.postRepairReassessmentSummary || obdDevSession.lastSession?.post_repair_reassessment_summary || null;
   const causeCandidateLog = buildCauseCandidateLog(input, obd, flow, interview, dtcApplicability, postRepairReassessmentSummary);
+  const previousCauseCandidateLog = obdDevSession.lastSession?.importedCauseCandidateLog
+    || obdDevSession.lastSession?.imported_cause_candidate_log
+    || obdDevSession.lastSession?.causeCandidateLog
+    || obdDevSession.lastSession?.cause_candidate_log
+    || null;
+  const causeCandidateLogReferenceComparisonSummary = typeof window.ObdReadOnly?.buildCauseCandidateLogReferenceComparisonSummary === "function"
+    ? window.ObdReadOnly.buildCauseCandidateLogReferenceComparisonSummary(previousCauseCandidateLog, causeCandidateLog)
+    : null;
   const measurements = buildMeasurements(flow, interview, workflowMatches);
   const liveDataGuidance = buildLiveDataGuidance(workflowMatches);
   const nextMeasurementCandidatePlan = buildNextMeasurementCandidatePlan(
@@ -2442,6 +2450,7 @@ function buildDiagnosis(input) {
     interview: interview.insights.length ? interview.insights : [NO_DATA],
     guesses: buildGuesses(obd, flow, interview),
     causeCandidateLog,
+    causeCandidateLogReferenceComparisonSummary,
     modernReferences,
     quickView: buildQuickView(input, obd, flow, interview, safetyTags, modernGenericMatches, workflowMatches),
     summary: buildDiagnosisSummary(input, obd, flow, interview, modernReferences, safetyTags),
@@ -2862,16 +2871,45 @@ function buildCauseCandidateLog(input = {}, obd = null, flow = null, interview =
   };
 }
 
-function formatCauseCandidateLogEntries(log = null) {
+function formatCauseCandidateLogEntries(log = null, comparison = null) {
   const candidates = Array.isArray(log?.candidates) ? log.candidates : [];
   const referenceEntries = Array.isArray(log?.referenceEntries) ? log.referenceEntries : Array.isArray(log?.reference_entries) ? log.reference_entries : [];
+  const comparisonAvailable = comparison?.comparisonAvailable === true || comparison?.comparison_available === true;
+  const comparisonRow = comparisonAvailable
+    ? `DTC証跡参照監査 / 追加${comparison.addedReferenceCount ?? comparison.added_reference_count ?? 0}・継続${comparison.persistingReferenceCount ?? comparison.persisting_reference_count ?? 0}・解消${comparison.resolvedReferenceCount ?? comparison.resolved_reference_count ?? 0} / 候補順位・診断結論には不使用`
+    : null;
   const rows = [
     ...candidates.map((item) => `${item.id} / ${item.sourceType} / ${item.label} / 根拠: ${item.evidenceRefs?.join(", ") || NO_DATA} / 未確定`),
-    ...referenceEntries.map((item) => `${item.id} / 参照情報 / ${item.label} / 候補順位・診断結論には不使用`)
+    ...referenceEntries.map((item) => `${item.id} / 参照情報 / ${item.label} / 候補順位・診断結論には不使用`),
+    ...(comparisonRow ? [comparisonRow] : [])
   ];
   return rows.length
     ? rows
     : ["記録できる原因候補はありません。"];
+}
+
+function retainCauseCandidateLogInCurrentSession(result = null) {
+  if (!obdDevSession.lastSession || !result?.causeCandidateLog || typeof window.ObdReadOnly?.normalizeCauseCandidateLog !== "function") return;
+  const causeCandidateLog = window.ObdReadOnly.normalizeCauseCandidateLog(result.causeCandidateLog);
+  const causeCandidateLogReferenceComparisonSummary = typeof window.ObdReadOnly?.normalizeCauseCandidateLogReferenceComparisonSummary === "function"
+    ? window.ObdReadOnly.normalizeCauseCandidateLogReferenceComparisonSummary(result.causeCandidateLogReferenceComparisonSummary)
+    : null;
+  const importedCauseCandidateLog = window.ObdReadOnly.normalizeCauseCandidateLog(
+    obdDevSession.lastSession.importedCauseCandidateLog
+    || obdDevSession.lastSession.imported_cause_candidate_log
+    || obdDevSession.lastSession.causeCandidateLog
+    || obdDevSession.lastSession.cause_candidate_log
+    || null
+  );
+  obdDevSession.lastSession = {
+    ...obdDevSession.lastSession,
+    importedCauseCandidateLog,
+    imported_cause_candidate_log: importedCauseCandidateLog,
+    causeCandidateLog,
+    cause_candidate_log: causeCandidateLog,
+    causeCandidateLogReferenceComparisonSummary,
+    cause_candidate_log_reference_comparison_summary: causeCandidateLogReferenceComparisonSummary
+  };
 }
 
 function normalizeMeasurementCandidateMatchText(value) {
@@ -3747,6 +3785,7 @@ function buildSafetyMessage(tags) {
 }
 
 function renderDiagnosis(result) {
+  retainCauseCandidateLogInCurrentSession(result);
   emptyState.hidden = true;
   confidenceBadge.textContent = `確信度: ${result.confidence}`;
   renderSimilarCases();
@@ -3762,7 +3801,7 @@ function renderDiagnosis(result) {
   renderItems(factList, result.facts);
   renderItems(interviewList, result.interview);
   renderItems(guessList, result.guesses);
-  renderItems(causeCandidateLogList, formatCauseCandidateLogEntries(result.causeCandidateLog));
+  renderItems(causeCandidateLogList, formatCauseCandidateLogEntries(result.causeCandidateLog, result.causeCandidateLogReferenceComparisonSummary));
   renderItems(modernGenericList, result.modernReferences.generic);
   renderItems(vehiclePatternList, result.modernReferences.vehiclePatterns);
   renderItems(recallTsbList, result.modernReferences.recallTsb);
