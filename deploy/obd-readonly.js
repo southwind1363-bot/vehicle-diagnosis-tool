@@ -12658,6 +12658,15 @@
     const dtcEvidenceResolutionStatus = dtcEvidenceResolutionComparisonAvailable
       ? String(readoutQualityComparison?.dtcEvidenceResolutionStatus || readoutQualityComparison?.dtc_evidence_resolution_status || "not_comparable")
       : "not_comparable";
+    const dtcEvidenceScopeBlockedReasonIds = dtcEvidenceResolutionComparisonAvailable
+      ? []
+      : [...new Set((Array.isArray(readoutQualityComparison?.dtcEvidenceScopeBlockedReasonIds)
+        ? readoutQualityComparison.dtcEvidenceScopeBlockedReasonIds
+        : Array.isArray(readoutQualityComparison?.dtc_evidence_scope_blocked_reason_ids)
+          ? readoutQualityComparison.dtc_evidence_scope_blocked_reason_ids
+          : [])
+        .filter((id) => /^[a-z0-9_]+$/i.test(String(id)))
+        .map(String))].slice(0, 8);
     const readResolutionKeys = (camelKey, snakeKey) => dtcEvidenceResolutionComparisonAvailable
       ? [...new Set((Array.isArray(readoutQualityComparison?.[camelKey])
         ? readoutQualityComparison[camelKey]
@@ -12793,6 +12802,8 @@
       dtc_evidence_resolution_comparison_available: dtcEvidenceResolutionComparisonAvailable,
       dtcEvidenceResolutionStatus,
       dtc_evidence_resolution_status: dtcEvidenceResolutionStatus,
+      dtcEvidenceScopeBlockedReasonIds,
+      dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       resolvedInvalidDtcEvidenceIssueKeys,
       resolved_invalid_dtc_evidence_issue_keys: resolvedInvalidDtcEvidenceIssueKeys,
       resolvedInvalidDtcEvidenceIssueCount: resolvedInvalidDtcEvidenceIssueKeys.length,
@@ -13930,6 +13941,57 @@
       })
       .filter(Boolean))].sort();
     const dtcEvidenceValidationReported = Boolean(dtcEvidenceFieldReport && typeof dtcEvidenceFieldReport === "object");
+    const dtcEvidenceVehicleScopeKey = String(
+      dtcEvidenceFieldReport?.vehicleScopeKey
+      || dtcEvidenceFieldReport?.vehicle_scope_key
+      || buildDtcEvidenceVehicleScopeKey(applicability)
+      || ""
+    ).trim() || null;
+    const dtcEvidenceScopeInputs = Array.isArray(normalizedDtcStatusSnapshot?.dtcs)
+      ? normalizedDtcStatusSnapshot.dtcs
+      : [];
+    const dtcEvidenceComparisonScopeKeys = [...new Set(dtcEvidenceScopeInputs
+      .map((row) => buildDtcEvidenceComparisonScopeKey(
+        dtcEvidenceVehicleScopeKey,
+        row?.sourceEcu || row?.source_ecu || row?.ecu || row?.address,
+        row?.code || row?.dtc || row?.dtcCode || row?.dtc_code,
+        row?.subcode || row?.sub_code || row?.oemDetailCode || row?.oem_detail_code
+      ))
+      .filter(Boolean))].sort();
+    const reportedInvalidDtcEvidenceScopedIssueKeys = Array.isArray(dtcEvidenceFieldReport?.scopedInvalidIssueKeys)
+      ? dtcEvidenceFieldReport.scopedInvalidIssueKeys
+      : Array.isArray(dtcEvidenceFieldReport?.scoped_invalid_issue_keys)
+        ? dtcEvidenceFieldReport.scoped_invalid_issue_keys
+        : [];
+    const derivedInvalidDtcEvidenceScopedIssueKeys = invalidDtcEvidenceObservations.map((observation) => {
+      const comparisonScopeKey = buildDtcEvidenceComparisonScopeKey(
+        dtcEvidenceVehicleScopeKey,
+        observation?.sourceEcu || observation?.source_ecu || observation?.ecu,
+        observation?.dtcCode || observation?.dtc_code || observation?.code,
+        observation?.dtcSubcode || observation?.dtc_subcode || observation?.subcode
+      );
+      const fieldId = String(observation?.fieldId || observation?.field_id || "").trim();
+      const reason = String(observation?.reason || "invalid_value").trim();
+      return comparisonScopeKey && fieldId ? `${comparisonScopeKey};issue=${fieldId}|${reason}` : null;
+    });
+    const invalidDtcEvidenceScopedIssueKeys = [...new Set([...reportedInvalidDtcEvidenceScopedIssueKeys, ...derivedInvalidDtcEvidenceScopedIssueKeys]
+      .filter((key) => /^maker=.+;model=.+;year=.+;ecu=.+;dtc=[PBCU][0-9A-F]{4,6}(?::[^;]+)?;issue=[a-z0-9_]+\|[a-z0-9_]+$/i.test(String(key)))
+      .map(String))].sort();
+    const dtcEvidenceScopeComplete = dtcEvidenceValidationReported
+      && Boolean(dtcEvidenceVehicleScopeKey)
+      && dtcEvidenceScopeInputs.length > 0
+      && dtcEvidenceScopeInputs.every((row) => Boolean(buildDtcEvidenceComparisonScopeKey(
+        dtcEvidenceVehicleScopeKey,
+        row?.sourceEcu || row?.source_ecu || row?.ecu || row?.address,
+        row?.code || row?.dtc || row?.dtcCode || row?.dtc_code,
+        row?.subcode || row?.sub_code || row?.oemDetailCode || row?.oem_detail_code
+      )))
+      && invalidDtcEvidenceObservations.every((observation) => Boolean(buildDtcEvidenceComparisonScopeKey(
+        dtcEvidenceVehicleScopeKey,
+        observation?.sourceEcu || observation?.source_ecu || observation?.ecu,
+        observation?.dtcCode || observation?.dtc_code || observation?.code,
+        observation?.dtcSubcode || observation?.dtc_subcode || observation?.subcode
+      )));
     const dtcEvidenceValidationStatus = String(
       dtcEvidenceFieldReport?.validationStatus
       || dtcEvidenceFieldReport?.validation_status
@@ -13972,6 +14034,14 @@
       invalid_dtc_evidence_reason_counts: { ...invalidDtcEvidenceReasonCounts },
       invalidDtcEvidenceIssueKeys,
       invalid_dtc_evidence_issue_keys: [...invalidDtcEvidenceIssueKeys],
+      invalidDtcEvidenceScopedIssueKeys,
+      invalid_dtc_evidence_scoped_issue_keys: [...invalidDtcEvidenceScopedIssueKeys],
+      dtcEvidenceVehicleScopeKey,
+      dtc_evidence_vehicle_scope_key: dtcEvidenceVehicleScopeKey,
+      dtcEvidenceComparisonScopeKeys,
+      dtc_evidence_comparison_scope_keys: [...dtcEvidenceComparisonScopeKeys],
+      dtcEvidenceScopeComplete,
+      dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceValidationStatus,
@@ -21328,12 +21398,35 @@
     const invalidDtcEvidenceFieldIdsChanged = importedInvalidDtcEvidenceFieldIds.join("|") !== currentInvalidDtcEvidenceFieldIds.join("|");
     const importedInvalidDtcEvidenceIssueKeys = readIds(importedQualitySummary, "invalidDtcEvidenceIssueKeys");
     const currentInvalidDtcEvidenceIssueKeys = readIds(currentSummary, "invalidDtcEvidenceIssueKeys");
+    const importedInvalidDtcEvidenceScopedIssueKeys = readIds(importedQualitySummary, "invalidDtcEvidenceScopedIssueKeys");
+    const currentInvalidDtcEvidenceScopedIssueKeys = readIds(currentSummary, "invalidDtcEvidenceScopedIssueKeys");
+    const importedDtcEvidenceComparisonScopeKeys = readIds(importedQualitySummary, "dtcEvidenceComparisonScopeKeys");
+    const currentDtcEvidenceComparisonScopeKeys = readIds(currentSummary, "dtcEvidenceComparisonScopeKeys");
+    const importedDtcEvidenceVehicleScopeKey = String(readAliasValue(importedQualitySummary, "dtcEvidenceVehicleScopeKey") || "").trim() || null;
+    const currentDtcEvidenceVehicleScopeKey = String(readAliasValue(currentSummary, "dtcEvidenceVehicleScopeKey") || "").trim() || null;
+    const importedDtcEvidenceScopeComplete = readFlag(importedQualitySummary, "dtcEvidenceScopeComplete");
+    const currentDtcEvidenceScopeComplete = readFlag(currentSummary, "dtcEvidenceScopeComplete");
     const importedDtcEvidenceValidationReported = readFlag(importedQualitySummary, "dtcEvidenceValidationReported") || importedInvalidDtcEvidenceIssueKeys.length > 0;
     const currentDtcEvidenceValidationReported = readFlag(currentSummary, "dtcEvidenceValidationReported") || currentInvalidDtcEvidenceIssueKeys.length > 0;
-    const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported && currentDtcEvidenceValidationReported;
-    const resolvedInvalidDtcEvidenceIssueKeys = dtcEvidenceResolutionComparisonAvailable ? diffIds(importedInvalidDtcEvidenceIssueKeys, currentInvalidDtcEvidenceIssueKeys) : [];
-    const newInvalidDtcEvidenceIssueKeys = dtcEvidenceResolutionComparisonAvailable ? diffIds(currentInvalidDtcEvidenceIssueKeys, importedInvalidDtcEvidenceIssueKeys) : [];
-    const persistingInvalidDtcEvidenceIssueKeys = dtcEvidenceResolutionComparisonAvailable ? importedInvalidDtcEvidenceIssueKeys.filter((key) => currentInvalidDtcEvidenceIssueKeys.includes(key)) : [];
+    const dtcEvidenceVehicleScopeMatch = Boolean(importedDtcEvidenceVehicleScopeKey && importedDtcEvidenceVehicleScopeKey === currentDtcEvidenceVehicleScopeKey);
+    const dtcEvidenceComparisonScopeMatch = importedDtcEvidenceComparisonScopeKeys.length > 0
+      && importedDtcEvidenceComparisonScopeKeys.join("|") === currentDtcEvidenceComparisonScopeKeys.join("|");
+    const dtcEvidenceScopeBlockedReasonIds = [
+      !importedDtcEvidenceScopeComplete ? "imported_dtc_evidence_scope_incomplete" : null,
+      !currentDtcEvidenceScopeComplete ? "current_dtc_evidence_scope_incomplete" : null,
+      importedDtcEvidenceScopeComplete && currentDtcEvidenceScopeComplete && !dtcEvidenceVehicleScopeMatch ? "dtc_evidence_vehicle_scope_mismatch" : null,
+      importedDtcEvidenceScopeComplete && currentDtcEvidenceScopeComplete && dtcEvidenceVehicleScopeMatch && !dtcEvidenceComparisonScopeMatch ? "dtc_evidence_ecu_dtc_scope_mismatch" : null
+    ].filter(Boolean);
+    const dtcEvidenceResolutionComparisonAvailable = importedDtcEvidenceValidationReported
+      && currentDtcEvidenceValidationReported
+      && dtcEvidenceScopeBlockedReasonIds.length === 0;
+    const resolvedInvalidDtcEvidenceScopedIssueKeys = dtcEvidenceResolutionComparisonAvailable ? diffIds(importedInvalidDtcEvidenceScopedIssueKeys, currentInvalidDtcEvidenceScopedIssueKeys) : [];
+    const newInvalidDtcEvidenceScopedIssueKeys = dtcEvidenceResolutionComparisonAvailable ? diffIds(currentInvalidDtcEvidenceScopedIssueKeys, importedInvalidDtcEvidenceScopedIssueKeys) : [];
+    const persistingInvalidDtcEvidenceScopedIssueKeys = dtcEvidenceResolutionComparisonAvailable ? importedInvalidDtcEvidenceScopedIssueKeys.filter((key) => currentInvalidDtcEvidenceScopedIssueKeys.includes(key)) : [];
+    const toIssueKeys = (keys = []) => [...new Set(keys.map((key) => String(key).split(";issue=").at(-1)).filter((key) => /^[a-z0-9_]+\|[a-z0-9_]+$/i.test(key)))].sort();
+    const resolvedInvalidDtcEvidenceIssueKeys = toIssueKeys(resolvedInvalidDtcEvidenceScopedIssueKeys);
+    const newInvalidDtcEvidenceIssueKeys = toIssueKeys(newInvalidDtcEvidenceScopedIssueKeys);
+    const persistingInvalidDtcEvidenceIssueKeys = toIssueKeys(persistingInvalidDtcEvidenceScopedIssueKeys);
     const dtcEvidenceResolutionStatus = !dtcEvidenceResolutionComparisonAvailable
       ? "not_comparable"
       : currentInvalidDtcEvidenceIssueKeys.length === 0 && importedInvalidDtcEvidenceIssueKeys.length > 0
@@ -21439,6 +21532,20 @@
       imported_dtc_evidence_validation_reported: importedDtcEvidenceValidationReported,
       currentDtcEvidenceValidationReported,
       current_dtc_evidence_validation_reported: currentDtcEvidenceValidationReported,
+      importedDtcEvidenceVehicleScopeKey,
+      imported_dtc_evidence_vehicle_scope_key: importedDtcEvidenceVehicleScopeKey,
+      currentDtcEvidenceVehicleScopeKey,
+      current_dtc_evidence_vehicle_scope_key: currentDtcEvidenceVehicleScopeKey,
+      dtcEvidenceVehicleScopeMatch,
+      dtc_evidence_vehicle_scope_match: dtcEvidenceVehicleScopeMatch,
+      importedDtcEvidenceComparisonScopeKeys,
+      imported_dtc_evidence_comparison_scope_keys: importedDtcEvidenceComparisonScopeKeys,
+      currentDtcEvidenceComparisonScopeKeys,
+      current_dtc_evidence_comparison_scope_keys: currentDtcEvidenceComparisonScopeKeys,
+      dtcEvidenceComparisonScopeMatch,
+      dtc_evidence_comparison_scope_match: dtcEvidenceComparisonScopeMatch,
+      dtcEvidenceScopeBlockedReasonIds,
+      dtc_evidence_scope_blocked_reason_ids: dtcEvidenceScopeBlockedReasonIds,
       dtcEvidenceResolutionComparisonAvailable,
       dtc_evidence_resolution_comparison_available: dtcEvidenceResolutionComparisonAvailable,
       dtcEvidenceResolutionStatus,
@@ -21449,6 +21556,12 @@
       persisting_invalid_dtc_evidence_issue_keys: persistingInvalidDtcEvidenceIssueKeys,
       newInvalidDtcEvidenceIssueKeys,
       new_invalid_dtc_evidence_issue_keys: newInvalidDtcEvidenceIssueKeys,
+      resolvedInvalidDtcEvidenceScopedIssueKeys,
+      resolved_invalid_dtc_evidence_scoped_issue_keys: resolvedInvalidDtcEvidenceScopedIssueKeys,
+      persistingInvalidDtcEvidenceScopedIssueKeys,
+      persisting_invalid_dtc_evidence_scoped_issue_keys: persistingInvalidDtcEvidenceScopedIssueKeys,
+      newInvalidDtcEvidenceScopedIssueKeys,
+      new_invalid_dtc_evidence_scoped_issue_keys: newInvalidDtcEvidenceScopedIssueKeys,
       webSerialResponseReviewDelta: issueFieldDeltas.web_serial_response_quality,
       web_serial_response_review_delta: issueFieldDeltas.web_serial_response_quality,
       webSerialResponseOutcomeDeltas,
@@ -21494,6 +21607,24 @@
         : [])
       .filter((key) => /^[a-z0-9_]+\|[a-z0-9_]+$/i.test(String(key)))
       .map(String))].sort();
+    const invalidDtcEvidenceScopedIssueKeys = [...new Set((Array.isArray(summary.invalidDtcEvidenceScopedIssueKeys)
+      ? summary.invalidDtcEvidenceScopedIssueKeys
+      : Array.isArray(summary.invalid_dtc_evidence_scoped_issue_keys)
+        ? summary.invalid_dtc_evidence_scoped_issue_keys
+        : [])
+      .filter((key) => /^maker=.+;model=.+;year=.+;ecu=.+;dtc=[PBCU][0-9A-F]{4,6}(?::[^;]+)?;issue=[a-z0-9_]+\|[a-z0-9_]+$/i.test(String(key)))
+      .map(String))].sort();
+    const dtcEvidenceVehicleScopeKey = String(summary.dtcEvidenceVehicleScopeKey || summary.dtc_evidence_vehicle_scope_key || "").trim() || null;
+    const dtcEvidenceComparisonScopeKeys = [...new Set((Array.isArray(summary.dtcEvidenceComparisonScopeKeys)
+      ? summary.dtcEvidenceComparisonScopeKeys
+      : Array.isArray(summary.dtc_evidence_comparison_scope_keys)
+        ? summary.dtc_evidence_comparison_scope_keys
+        : [])
+      .filter((key) => /^maker=.+;model=.+;year=.+;ecu=.+;dtc=[PBCU][0-9A-F]{4,6}(?::[^;]+)?$/i.test(String(key)))
+      .map(String))].sort();
+    const dtcEvidenceScopeComplete = pickDefined(summary.dtcEvidenceScopeComplete, summary.dtc_evidence_scope_complete, false) === true
+      && Boolean(dtcEvidenceVehicleScopeKey)
+      && dtcEvidenceComparisonScopeKeys.length > 0;
     const dtcEvidenceValidationReported = pickDefined(summary.dtcEvidenceValidationReported, summary.dtc_evidence_validation_reported, false) === true
       || invalidDtcEvidenceIssueKeys.length > 0;
     const webSerialNegativeResponseCount = toCount("webSerialNegativeResponseCount", "web_serial_negative_response_count", 0);
@@ -21560,6 +21691,14 @@
       invalid_dtc_evidence_reason_counts: invalidDtcEvidenceReasonCounts,
       invalidDtcEvidenceIssueKeys,
       invalid_dtc_evidence_issue_keys: invalidDtcEvidenceIssueKeys,
+      invalidDtcEvidenceScopedIssueKeys,
+      invalid_dtc_evidence_scoped_issue_keys: invalidDtcEvidenceScopedIssueKeys,
+      dtcEvidenceVehicleScopeKey,
+      dtc_evidence_vehicle_scope_key: dtcEvidenceVehicleScopeKey,
+      dtcEvidenceComparisonScopeKeys,
+      dtc_evidence_comparison_scope_keys: dtcEvidenceComparisonScopeKeys,
+      dtcEvidenceScopeComplete,
+      dtc_evidence_scope_complete: dtcEvidenceScopeComplete,
       dtcEvidenceValidationReported,
       dtc_evidence_validation_reported: dtcEvidenceValidationReported,
       dtcEvidenceEligibleForAnalysis: invalidDtcEvidenceObservationCount === 0 && invalidDtcEvidenceFieldIds.length === 0,
@@ -32864,7 +33003,10 @@
             || "",
           invalidFieldObservations: importedDtcEvidenceFieldReportInput.invalidFieldObservations
             || importedDtcEvidenceFieldReportInput.invalid_field_observations
-            || []
+            || [],
+          vehicleScopeKey: importedDtcEvidenceFieldReportInput.vehicleScopeKey
+            || importedDtcEvidenceFieldReportInput.vehicle_scope_key
+            || null
         }
       )
       : null;
@@ -33092,6 +33234,33 @@
     return { present: true, valid, value: valid ? normalized : null, reason: valid ? null : "unsupported_unit" };
   }
 
+  function normalizeDtcEvidenceScopePart(value, maxLength = 80) {
+    const normalized = redactSensitiveText(String(value ?? ""))
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maxLength)
+      .toUpperCase();
+    return normalized ? encodeURIComponent(normalized) : null;
+  }
+
+  function buildDtcEvidenceVehicleScopeKey(vehicleProfile = null) {
+    const profile = normalizeVehicleProfileInput(vehicleProfile) || {};
+    const maker = normalizeDtcEvidenceScopePart(profile.maker, 60);
+    const model = normalizeDtcEvidenceScopePart(profile.modelCode || profile.model_code || profile.model, 80);
+    const year = normalizeDtcEvidenceScopePart(profile.year, 16);
+    if (!maker || !model || !year) return null;
+    return `maker=${maker};model=${model};year=${year}`;
+  }
+
+  function buildDtcEvidenceComparisonScopeKey(vehicleScopeKey, ecu, dtcCode, dtcSubcode = null) {
+    const vehicle = String(vehicleScopeKey || "").trim();
+    const ecuScope = normalizeDtcEvidenceScopePart(ecu, 60);
+    const normalizedCode = String(dtcCode || "").replace(/\s+/g, "").toUpperCase();
+    const normalizedSubcode = normalizeDtcEvidenceScopePart(dtcSubcode, 24);
+    if (!vehicle || !ecuScope || !/^[PBCU][0-9A-F]{4,6}$/.test(normalizedCode)) return null;
+    return `${vehicle};ecu=${ecuScope};dtc=${normalizedCode}${normalizedSubcode ? `:${normalizedSubcode}` : ""}`;
+  }
+
   function buildDtcEvidenceFieldReport(recognizedFields = [], unknownColumns = [], tableReportCount = 1, options = {}) {
     const schemaIds = new Set(DTC_EVIDENCE_FIELD_SCHEMA.map((field) => field.id));
     const sourceFieldSchemaVersion = String(options.sourceFieldSchemaVersion || options.source_field_schema_version || DTC_EVIDENCE_FIELD_SCHEMA_VERSION).trim();
@@ -33141,8 +33310,11 @@
         const rowNumberValue = Number(observation?.rowNumber ?? observation?.row_number);
         const rowNumber = Number.isInteger(rowNumberValue) && rowNumberValue > 0 ? rowNumberValue : null;
         const scope = ["dtc_row", "ecu_response_row", "csv_row"].includes(observation?.scope) ? observation.scope : "csv_row";
+        const sourceEcu = normalizeDtcEvidenceScopePart(observation?.sourceEcu || observation?.source_ecu || observation?.ecu, 60);
+        const dtcCode = String(observation?.dtcCode || observation?.dtc_code || observation?.code || "").replace(/\s+/g, "").toUpperCase();
+        const dtcSubcode = normalizeDtcEvidenceScopePart(observation?.dtcSubcode || observation?.dtc_subcode || observation?.subcode, 24);
         if (!schemaIds.has(fieldId) || !["invalid_timestamp", "invalid_number", "invalid_integer", "unsupported_unit"].includes(reason)) return null;
-        const key = [fieldId, reason, rowNumber || "", scope].join("|");
+        const key = [fieldId, reason, rowNumber || "", scope, sourceEcu || "", dtcCode || "", dtcSubcode || ""].join("|");
         if (invalidObservationKeys.has(key)) return null;
         invalidObservationKeys.add(key);
         return {
@@ -33150,13 +33322,26 @@
           field_id: fieldId,
           reason,
           ...(rowNumber ? { rowNumber, row_number: rowNumber } : {}),
-          scope
+          scope,
+          ...(sourceEcu ? { sourceEcu, source_ecu: sourceEcu } : {}),
+          ...(/^[PBCU][0-9A-F]{4,6}$/.test(dtcCode) ? { dtcCode, dtc_code: dtcCode } : {}),
+          ...(dtcSubcode ? { dtcSubcode, dtc_subcode: dtcSubcode } : {})
         };
       })
       .filter(Boolean);
     const invalidFieldIds = [...new Set(invalidFieldObservations.map((observation) => observation.fieldId))];
     const schemaFields = DTC_EVIDENCE_FIELD_SCHEMA.map((field) => ({ ...field }));
     const normalizedTableReportCount = Math.max(0, Number(tableReportCount) || 0);
+    const vehicleScopeKey = String(options.vehicleScopeKey || options.vehicle_scope_key || buildDtcEvidenceVehicleScopeKey(options.vehicleProfile || options.vehicle_profile) || "").trim() || null;
+    const comparisonScopeKeys = [...new Set(invalidFieldObservations
+      .map((observation) => buildDtcEvidenceComparisonScopeKey(vehicleScopeKey, observation.sourceEcu, observation.dtcCode, observation.dtcSubcode))
+      .filter(Boolean))].sort();
+    const scopedInvalidIssueKeys = [...new Set(invalidFieldObservations
+      .map((observation) => {
+        const comparisonScopeKey = buildDtcEvidenceComparisonScopeKey(vehicleScopeKey, observation.sourceEcu, observation.dtcCode, observation.dtcSubcode);
+        return comparisonScopeKey ? `${comparisonScopeKey};issue=${observation.fieldId}|${observation.reason}` : null;
+      })
+      .filter(Boolean))].sort();
     return {
       schemaVersion: "dtc_evidence_field_report_v1",
       schema_version: "dtc_evidence_field_report_v1",
@@ -33188,6 +33373,14 @@
       invalid_field_count: invalidFieldIds.length,
       invalidObservationCount: invalidFieldObservations.length,
       invalid_observation_count: invalidFieldObservations.length,
+      vehicleScopeKey,
+      vehicle_scope_key: vehicleScopeKey,
+      comparisonScopeKeys,
+      comparison_scope_keys: [...comparisonScopeKeys],
+      scopedInvalidIssueKeys,
+      scoped_invalid_issue_keys: [...scopedInvalidIssueKeys],
+      scopeComplete: invalidFieldObservations.every((observation) => Boolean(buildDtcEvidenceComparisonScopeKey(vehicleScopeKey, observation.sourceEcu, observation.dtcCode, observation.dtcSubcode))),
+      scope_complete: invalidFieldObservations.every((observation) => Boolean(buildDtcEvidenceComparisonScopeKey(vehicleScopeKey, observation.sourceEcu, observation.dtcCode, observation.dtcSubcode))),
       invalidValuesRetained: false,
       invalid_values_retained: false,
       validationStatus: invalidFieldObservations.length ? "invalid_evidence_excluded" : "valid",
@@ -33554,6 +33747,9 @@
       if (!cells) return;
       const cellAt = (index, length) => Number.isInteger(index) ? sanitizeCell(cells[index], length) : "";
       const rowEvidenceScope = /(?:ecu\s*responses?|module\s*responses?|ecu応答)/i.test(cellAt(readoutKindIndex, 80) || sectionHint) ? "ecu_response_row" : "dtc_row";
+      const rowEvidenceEcu = cellAt(ecuIndex, 60) || cellAt(ecuResponseIdIndex, 60) || null;
+      const rowEvidenceDtcCode = cellAt(dtcIndex, 24) || null;
+      const rowEvidenceDtcSubcode = cellAt(subcodeIndex, 24) || cellAt(oemDetailCodeIndex, 24) || null;
       const readDtcEvidenceField = (fieldId, index, length = 80) => {
         const validation = validateDtcEvidenceFieldValue(fieldId, cellAt(index, length));
         if (!validation.valid) {
@@ -33561,7 +33757,10 @@
             fieldId,
             reason: validation.reason,
             rowNumber: headerLineIndex + rowIndex + 2,
-            scope: rowEvidenceScope
+            scope: rowEvidenceScope,
+            sourceEcu: rowEvidenceEcu,
+            dtcCode: rowEvidenceDtcCode,
+            dtcSubcode: rowEvidenceDtcSubcode
           });
         }
         return validation.value;
@@ -34238,7 +34437,8 @@
     const observedProtocolList = [...observedProtocols];
     const multipleProtocols = observedProtocolList.length > 1;
     const dtcEvidenceFieldReport = buildDtcEvidenceFieldReport(recognizedDtcEvidenceFields, unknownDtcEvidenceColumns, 1, {
-      invalidFieldObservations: invalidDtcEvidenceFieldObservations
+      invalidFieldObservations: invalidDtcEvidenceFieldObservations,
+      vehicleProfile: normalizedVehicleProfile
     });
     const importClassification = {
       schemaVersion: "scanner_csv_import_v1",
