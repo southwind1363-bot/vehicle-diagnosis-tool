@@ -32373,6 +32373,20 @@
           ? snapshot.monitors.length
           : 0), 0);
     })();
+    const importedImportClassification = pick("importClassification", "import_classification");
+    const importedDtcEvidenceFieldReportInput = importedImportClassification?.dtcEvidenceFieldReport
+      || importedImportClassification?.dtc_evidence_field_report
+      || null;
+    const importedDtcEvidenceFieldReport = isTrustedBridgeSessionExport
+      && importedDtcEvidenceFieldReportInput
+      && typeof importedDtcEvidenceFieldReportInput === "object"
+      && !Array.isArray(importedDtcEvidenceFieldReportInput)
+      ? buildDtcEvidenceFieldReport(
+        importedDtcEvidenceFieldReportInput.recognizedFields || importedDtcEvidenceFieldReportInput.recognized_fields || [],
+        importedDtcEvidenceFieldReportInput.unknownColumns || importedDtcEvidenceFieldReportInput.unknown_columns || [],
+        importedDtcEvidenceFieldReportInput.tableReportCount || importedDtcEvidenceFieldReportInput.table_report_count || 0
+      )
+      : null;
     const importClassification = {
       schemaVersion: "scanner_json_import_v1",
       schema_version: "scanner_json_import_v1",
@@ -32405,6 +32419,10 @@
       observed_protocols: observedProtocols,
       multipleProtocols,
       multiple_protocols: multipleProtocols,
+      ...(importedDtcEvidenceFieldReport ? {
+        dtcEvidenceFieldReport: importedDtcEvidenceFieldReport,
+        dtc_evidence_field_report: importedDtcEvidenceFieldReport
+      } : {}),
       hadSensitiveIdentifier,
       had_sensitive_identifier: hadSensitiveIdentifier,
       retainedRawText: false,
@@ -32484,6 +32502,88 @@
       retained_raw_text: false,
       retainedRawFrames: false,
       retained_raw_frames: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  const DTC_EVIDENCE_FIELD_SCHEMA = Object.freeze([
+    ["dtc_first_detected_at", "timestamp", "none"],
+    ["dtc_last_detected_at", "timestamp", "none"],
+    ["dtc_confirmed_at", "timestamp", "none"],
+    ["dtc_fault_occurrence_distance", "decimal_or_text", "separate_field"],
+    ["dtc_fault_occurrence_distance_unit", "unit_text", "unit_field"],
+    ["dtc_distance_since_clear", "decimal_or_text", "separate_field"],
+    ["dtc_distance_since_clear_unit", "unit_text", "unit_field"],
+    ["dtc_warm_up_cycle_count", "integer_or_text", "none"],
+    ["dtc_ignition_cycle_count", "integer_or_text", "none"],
+    ["dtc_fault_duration", "decimal_or_text", "separate_field"],
+    ["dtc_fault_duration_unit", "unit_text", "unit_field"],
+    ["dtc_time_since_clear", "decimal_or_text", "separate_field"],
+    ["dtc_time_since_clear_unit", "unit_text", "unit_field"],
+    ["dtc_failure_occurrence_count", "integer_or_text", "none"],
+    ["dtc_recovery_count", "integer_or_text", "none"],
+    ["dtc_last_cleared_at", "timestamp", "none"],
+    ["dtc_confirmation_threshold", "decimal_or_text", "none"],
+    ["dtc_recovery_threshold", "decimal_or_text", "none"],
+    ["dtc_aging_cycle_count", "integer_or_text", "none"]
+  ].map(([id, valueType, unitPolicy]) => Object.freeze({
+    id,
+    valueType,
+    value_type: valueType,
+    unitPolicy,
+    unit_policy: unitPolicy,
+    scope: "dtc_ecu_response_row",
+    required: false
+  })));
+
+  function buildDtcEvidenceFieldReport(recognizedFields = [], unknownColumns = [], tableReportCount = 1) {
+    const schemaIds = new Set(DTC_EVIDENCE_FIELD_SCHEMA.map((field) => field.id));
+    const recognized = [...new Set((Array.isArray(recognizedFields) ? recognizedFields : [])
+      .map((field) => String(field || "").trim())
+      .filter((field) => schemaIds.has(field)))];
+    const recognizedSet = new Set(recognized);
+    const missingOptional = DTC_EVIDENCE_FIELD_SCHEMA.map((field) => field.id).filter((id) => !recognizedSet.has(id));
+    const unknown = [...new Set((Array.isArray(unknownColumns) ? unknownColumns : [])
+      .map((column) => redactSensitiveText(String(column || "")).replace(/\s+/g, " ").trim().slice(0, 80))
+      .filter(Boolean))];
+    const schemaFields = DTC_EVIDENCE_FIELD_SCHEMA.map((field) => ({ ...field }));
+    const normalizedTableReportCount = Math.max(0, Number(tableReportCount) || 0);
+    return {
+      schemaVersion: "dtc_evidence_field_report_v1",
+      schema_version: "dtc_evidence_field_report_v1",
+      fieldSchemaVersion: "dtc_evidence_field_schema_v1",
+      field_schema_version: "dtc_evidence_field_schema_v1",
+      fieldCount: schemaFields.length,
+      field_count: schemaFields.length,
+      schemaFields,
+      schema_fields: schemaFields.map((field) => ({ ...field })),
+      recognizedFields: recognized,
+      recognized_fields: [...recognized],
+      recognizedFieldCount: recognized.length,
+      recognized_field_count: recognized.length,
+      missingOptionalFields: missingOptional,
+      missing_optional_fields: [...missingOptional],
+      missingOptionalFieldCount: missingOptional.length,
+      missing_optional_field_count: missingOptional.length,
+      requiredFieldCount: 0,
+      required_field_count: 0,
+      requiredMissingCount: 0,
+      required_missing_count: 0,
+      unknownColumns: unknown,
+      unknown_columns: [...unknown],
+      unknownColumnCount: unknown.length,
+      unknown_column_count: unknown.length,
+      tableReportCount: normalizedTableReportCount,
+      table_report_count: normalizedTableReportCount,
+      reviewRequired: unknown.length > 0,
+      review_required: unknown.length > 0,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      retainedRawText: false,
+      retained_raw_text: false,
       wouldTransmit: false,
       would_transmit: false,
       vehicleCommandEnabled: false,
@@ -32680,6 +32780,43 @@
     const udsResponseStateIndex = findIndex("uds response state", "uds_response_state", "response state", "response_state", "UDS応答状態");
     const udsDtcMemorySelectionIndex = findIndex("uds dtc memory selection", "uds_dtc_memory_selection", "dtc memory selection", "dtc_memory_selection", "memory selection", "memory_selection", "UDS DTCメモリ選択");
     const udsDtcFormatIdentifierIndex = findIndex("uds dtc format identifier", "uds_dtc_format_identifier", "dtc format identifier", "dtc_format_identifier", "format identifier", "format_identifier", "UDS DTCフォーマット識別子");
+    const dtcEvidenceFieldIndexes = new Map([
+      ["dtc_first_detected_at", dtcFirstDetectedAtIndex],
+      ["dtc_last_detected_at", dtcLastDetectedAtIndex],
+      ["dtc_confirmed_at", dtcConfirmedAtIndex],
+      ["dtc_fault_occurrence_distance", dtcFaultOccurrenceDistanceIndex],
+      ["dtc_fault_occurrence_distance_unit", dtcFaultOccurrenceDistanceUnitIndex],
+      ["dtc_distance_since_clear", dtcDistanceSinceClearIndex],
+      ["dtc_distance_since_clear_unit", dtcDistanceSinceClearUnitIndex],
+      ["dtc_warm_up_cycle_count", dtcWarmUpCycleCountIndex],
+      ["dtc_ignition_cycle_count", dtcIgnitionCycleCountIndex],
+      ["dtc_fault_duration", dtcFaultDurationIndex],
+      ["dtc_fault_duration_unit", dtcFaultDurationUnitIndex],
+      ["dtc_time_since_clear", dtcTimeSinceClearIndex],
+      ["dtc_time_since_clear_unit", dtcTimeSinceClearUnitIndex],
+      ["dtc_failure_occurrence_count", dtcFailureOccurrenceCountIndex],
+      ["dtc_recovery_count", dtcRecoveryCountIndex],
+      ["dtc_last_cleared_at", dtcLastClearedAtIndex],
+      ["dtc_confirmation_threshold", dtcConfirmationThresholdIndex],
+      ["dtc_recovery_threshold", dtcRecoveryThresholdIndex],
+      ["dtc_aging_cycle_count", dtcAgingCycleCountIndex]
+    ]);
+    const recognizedDtcEvidenceFields = [...dtcEvidenceFieldIndexes]
+      .filter(([, index]) => Number.isInteger(index))
+      .map(([id]) => id);
+    const knownDtcColumnIndexes = new Set([
+      dtcIndex, dtcFormatIndex, dtcDescriptionIndex, subcodeIndex, oemDetailCodeIndex, statusIndex,
+      dtcStatusByteIndex, dtcStatusAvailabilityMaskIndex, udsDtcReadinessGroupIdentifierIndex,
+      udsDtcSeverityAvailabilityMaskIndex, udsDtcFunctionalGroupIndex, udsDtcExtendedDataRecordNumberIndex,
+      udsDtcSnapshotRecordNumberIndex, udsDtcRecordTypeIndex, dtcSeverityIndex, dtcOccurrenceCountIndex,
+      dtcFaultDetectionCounterIndex, dtcFunctionalUnitIndex, dtcStatusSourceIndex,
+      ...dtcEvidenceFieldIndexes.values(), udsDtcMemorySelectionIndex, udsDtcFormatIdentifierIndex
+    ].filter(Number.isInteger));
+    const unknownDtcEvidenceColumns = headers
+      .map((header, index) => ({ header, index, normalized: normalizeHeader(header) }))
+      .filter(({ index, normalized }) => normalized.startsWith("dtc") && !knownDtcColumnIndexes.has(index))
+      .map(({ header }) => header);
+    const dtcEvidenceFieldReport = buildDtcEvidenceFieldReport(recognizedDtcEvidenceFields, unknownDtcEvidenceColumns, 1);
     const readoutInterfaceLabelIndex = findIndex("readout interface", "interface label", "vci label", "scanner label");
     const readoutDeviceModelIndex = findIndex("device model", "interface model", "vci model", "adapter model");
     const readoutRouteIndex = findIndex("readout route", "interface route");
@@ -33496,6 +33633,8 @@
       observed_protocols: observedProtocolList,
       multipleProtocols,
       multiple_protocols: multipleProtocols,
+      dtcEvidenceFieldReport,
+      dtc_evidence_field_report: dtcEvidenceFieldReport,
       hadSensitiveIdentifier,
       had_sensitive_identifier: hadSensitiveIdentifier,
       retainedRawText: false,
@@ -35063,6 +35202,14 @@
         ecu_dtc_response_reconciliation_summary: ecuDtcResponseReconciliationSummary
       }
       : mergedDtcSnapshot;
+    const tableDtcEvidenceFieldReports = tableSessions
+      .map((session) => session?.importClassification?.dtcEvidenceFieldReport || session?.import_classification?.dtc_evidence_field_report)
+      .filter((report) => report && typeof report === "object");
+    const dtcEvidenceFieldReport = buildDtcEvidenceFieldReport(
+      tableDtcEvidenceFieldReports.flatMap((report) => report.recognizedFields || report.recognized_fields || []),
+      tableDtcEvidenceFieldReports.flatMap((report) => report.unknownColumns || report.unknown_columns || []),
+      tableDtcEvidenceFieldReports.length
+    );
     const mergedSession = buildDiagnosticScanSession({
       source: "scanner_csv_import",
       dtcSnapshot: reconciledDtcSnapshot,
@@ -35088,6 +35235,8 @@
         table_count: tableSessions.length,
         sourceLength: text.length,
         source_length: text.length,
+        dtcEvidenceFieldReport,
+        dtc_evidence_field_report: dtcEvidenceFieldReport,
         ecuDtcResponseReconciliationSummary,
         ecu_dtc_response_reconciliation_summary: ecuDtcResponseReconciliationSummary
       },
