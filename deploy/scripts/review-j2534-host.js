@@ -1,7 +1,7 @@
 import { discoverJ2534RegistryDrivers, runJ2534WorkerReview } from "../local-bridge-readonly.js";
 
 const devices = discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true });
-const result = runJ2534WorkerReview(devices, {
+const result = await runJ2534WorkerReview(devices, {
   manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review"),
   timeout_ms: 5000
 });

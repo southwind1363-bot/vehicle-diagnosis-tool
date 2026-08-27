@@ -1,6 +1,6 @@
 import http from "node:http";
 import { createHash } from "node:crypto";
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -933,15 +933,28 @@ export function prepareJ2534WorkerReviewRequest(devices = [], options = {}) {
   };
 }
 
-export function runJ2534WorkerReview(devices = [], options = {}) {
+export async function runJ2534WorkerReview(devices = [], options = {}) {
   const preparation = prepareJ2534WorkerReviewRequest(devices, options);
   if (!preparation.worker_request) return normalizeJ2534WorkerReviewProcessResult(preparation);
-  const processResult = spawnSync(process.execPath, [J2534_WORKER_SCRIPT_PATH], {
-    input: JSON.stringify(preparation.worker_request),
-    encoding: "utf8",
-    timeout: preparation.timeout_ms,
-    windowsHide: true,
-    maxBuffer: 64 * 1024
+  const processResult = await new Promise((resolve) => {
+    const child = execFile(process.execPath, [J2534_WORKER_SCRIPT_PATH], {
+      encoding: "utf8",
+      timeout: preparation.timeout_ms,
+      windowsHide: true,
+      maxBuffer: 64 * 1024
+    }, (error, stdout) => {
+      const timedOut = error?.killed === true && error.signal === "SIGTERM" && error.code === null;
+      resolve({
+        pid: child.pid,
+        status: error ? (Number.isInteger(error.code) ? error.code : null) : 0,
+        signal: error?.signal || null,
+        error: timedOut ? { code: "ETIMEDOUT" } : error,
+        stdout
+      });
+    });
+    // A worker may close stdin before consuming the request; its exit remains authoritative.
+    child.stdin.on("error", () => {});
+    child.stdin.end(JSON.stringify(preparation.worker_request));
   });
   return normalizeJ2534WorkerReviewProcessResult(preparation, processResult);
 }
@@ -970,10 +983,10 @@ export function normalizeJ2534WorkerReviewProcessResult(preparation = {}, proces
       process_exit_code: null
     };
   }
-  if (processResult?.error?.code === "ETIMEDOUT" || processResult?.signal === "SIGTERM") {
+  if (processResult?.error?.code === "ETIMEDOUT") {
     return { ...base, execution_status: "worker_timed_out", blockers: ["worker_review_timeout"], worker_review: null, process_exit_code: null };
   }
-  if (!processResult || processResult.status !== 0) {
+  if (!processResult || processResult.error || processResult.status !== 0) {
     return { ...base, execution_status: "worker_failed", blockers: ["worker_review_process_failed"], worker_review: null, process_exit_code: Number.isInteger(processResult?.status) ? processResult.status : null };
   }
   let workerReview = null;
