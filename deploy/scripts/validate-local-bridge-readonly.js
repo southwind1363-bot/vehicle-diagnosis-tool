@@ -1,4 +1,4 @@
-import { createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, parseJ2534RegistryDrivers } from "../local-bridge-readonly.js";
+import { createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest } from "../local-bridge-readonly.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -101,6 +101,25 @@ check(incompleteJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_
 check(readyJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_static_check_complete" && readyJ2534DiscoveryEnvironment.next_check === "manual_vci_connection_review" && readyJ2534DiscoveryEnvironment.open_review_status === "manual_review_required" && readyJ2534DiscoveryEnvironment.open_review_blockers?.join(",") === "manual_vci_connection_review_required" && readyJ2534DiscoveryEnvironment.pass_thru_open_allowed === false && readyJ2534DiscoveryEnvironment.pass_thru_open_attempted === false && readyJ2534DiscoveryEnvironment.vehicle_connection_attempted === false && readyJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment incorrectly enabled or attempted PassThruOpen after static checks");
 check(readyJ2534DiscoveryEnvironment.worker_contract_version === J2534_WORKER_CONTRACT_VERSION && readyJ2534DiscoveryEnvironment.worker_execution_status === "disabled_review_only" && readyJ2534DiscoveryEnvironment.dll_load_attempted === false, "J2534 discovery environment did not expose the disabled isolated worker contract");
 check(mixedJ2534DiscoveryEnvironment.driver_readiness_status === "readonly_static_check_complete" && mixedJ2534DiscoveryEnvironment.static_ready_vci_count === 1 && mixedJ2534DiscoveryEnvironment.static_blocked_vci_count === 1 && mixedJ2534DiscoveryEnvironment.selected_static_ready_device_id === "fixture-ready-j2534" && mixedJ2534DiscoveryEnvironment.vehicle_command_enabled === false, "J2534 discovery environment did not retain a compatible read-only candidate beside an incompatible driver");
+const blockedJ2534WorkerPreparation = prepareJ2534WorkerReviewRequest([], { manual_connection_review_confirmed: true, timeout_ms: 5000 });
+const pendingJ2534WorkerPreparation = prepareJ2534WorkerReviewRequest([{
+  id: "fixture-ready-j2534",
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: true,
+  driver_readonly_api_ready: true,
+  function_library: "C:\\private\\must-not-leak.dll"
+}], { manual_connection_review_confirmed: false, timeout_ms: 5000 });
+const readyJ2534WorkerPreparation = prepareJ2534WorkerReviewRequest([{
+  id: "fixture-ready-j2534",
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: true,
+  driver_readonly_api_ready: true,
+  function_library: "C:\\private\\must-not-leak.dll"
+}], { manual_connection_review_confirmed: true, timeout_ms: 5000 });
+const preparedJ2534WorkerReview = reviewJ2534PassThruOpenRequest(readyJ2534WorkerPreparation.worker_request);
+check(blockedJ2534WorkerPreparation.preparation_status === "blocked" && blockedJ2534WorkerPreparation.blockers.includes("no_static_ready_driver") && blockedJ2534WorkerPreparation.worker_request === null && blockedJ2534WorkerPreparation.dll_load_attempted === false && blockedJ2534WorkerPreparation.vehicle_command_enabled === false, "J2534 parent preparation did not reject a missing static-ready driver");
+check(pendingJ2534WorkerPreparation.preparation_status === "blocked" && pendingJ2534WorkerPreparation.blockers?.join(",") === "manual_connection_review_not_confirmed" && pendingJ2534WorkerPreparation.worker_request === null && !JSON.stringify(pendingJ2534WorkerPreparation).includes("must-not-leak.dll") && pendingJ2534WorkerPreparation.pass_thru_open_attempted === false, "J2534 parent preparation did not retain manual review or leaked a raw driver path");
+check(readyJ2534WorkerPreparation.schema_version === "j2534-worker-review-preparation-v1" && readyJ2534WorkerPreparation.preparation_status === "ready_for_worker_review" && readyJ2534WorkerPreparation.worker_request?.selected_device_id === "fixture-ready-j2534" && readyJ2534WorkerPreparation.worker_request?.timeout_ms === 5000 && readyJ2534WorkerPreparation.worker_request?.vehicle_command_enabled === false && preparedJ2534WorkerReview.review_status === "ready_for_isolated_implementation" && preparedJ2534WorkerReview.worker_execution_enabled === false && preparedJ2534WorkerReview.dll_load_attempted === false && !JSON.stringify(readyJ2534WorkerPreparation).includes("must-not-leak.dll"), "J2534 parent preparation did not produce a bounded path-free disabled worker review request");
 const j2534RequiredApis = [
   "PassThruOpen",
   "PassThruClose",
@@ -891,6 +910,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 197");
+  console.log("Local bridge read-only checks: 200");
   console.log("Errors: 0");
 }

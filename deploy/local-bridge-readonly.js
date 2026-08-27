@@ -891,6 +891,47 @@ export function getJ2534DiscoveryEnvironment(devices = []) {
   };
 }
 
+export function prepareJ2534WorkerReviewRequest(devices = [], options = {}) {
+  const registeredDevices = Array.isArray(devices) ? devices : [];
+  const environment = getJ2534DiscoveryEnvironment(registeredDevices);
+  const selectedDeviceId = String(environment.selected_static_ready_device_id || "").trim();
+  const selectedDevice = registeredDevices.find((device) => device?.id === selectedDeviceId) || null;
+  const timeoutMs = Number(options.timeout_ms ?? options.timeoutMs ?? 5000);
+  const manualConnectionReviewConfirmed = options.manual_connection_review_confirmed === true
+    || options.manualConnectionReviewConfirmed === true;
+  const blockers = [];
+  if (!selectedDevice) blockers.push("no_static_ready_driver");
+  if (environment.driver_readiness_status !== "readonly_static_check_complete") blockers.push("driver_static_check_incomplete");
+  if (environment.open_review_status !== "manual_review_required") blockers.push("open_review_not_ready");
+  if (!manualConnectionReviewConfirmed) blockers.push("manual_connection_review_not_confirmed");
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 10000) blockers.push("worker_timeout_out_of_range");
+  const workerRequest = blockers.length ? null : {
+    operation: "review_pass_thru_open",
+    selected_device_id: selectedDeviceId,
+    driver_readiness_status: environment.driver_readiness_status,
+    open_review_status: environment.open_review_status,
+    manual_connection_review_confirmed: true,
+    timeout_ms: timeoutMs,
+    vehicle_command_enabled: false
+  };
+  return {
+    schema_version: "j2534-worker-review-preparation-v1",
+    preparation_status: blockers.length ? "blocked" : "ready_for_worker_review",
+    blockers: [...new Set(blockers)],
+    selected_device_id: selectedDeviceId || null,
+    timeout_ms: Number.isInteger(timeoutMs) && timeoutMs >= 1000 && timeoutMs <= 10000 ? timeoutMs : null,
+    worker_contract_version: environment.worker_contract_version,
+    worker_request: workerRequest,
+    raw_driver_path_included: false,
+    worker_execution_enabled: false,
+    dll_load_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  };
+}
+
 function getJ2534DriverReadiness(device = {}) {
   if (device?.driver_library_inspection_status !== "inspected") return "static_inspection_pending";
   if (device?.driver_runtime_compatible !== true) return "runtime_architecture_mismatch";
