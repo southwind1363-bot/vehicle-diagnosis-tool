@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3407件",
   bridgeValidationCheckLabel: "bridge検証 218件",
-  recentMilestone: "ファイル・貼付け待機中の古い入力とエラーを破棄",
+  recentMilestone: "不完全なオフライン更新を拒否し旧版を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.258";
+const APP_VERSION = "3.13.260";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -304,6 +304,7 @@ const resetButton = document.querySelector("#resetButton");
 const themeButton = document.querySelector("#themeButton");
 const dataStatus = document.querySelector("#dataStatus");
 const offlineCacheStatus = document.querySelector("#offlineCacheStatus");
+let offlineCacheStatusRevision = 0;
 const symptomSelect = document.querySelector("#symptomSelect");
 const vehicleInput = document.querySelector("#vehicle");
 const vehicleMakerSelect = document.querySelector("#vehicleMaker");
@@ -1233,58 +1234,118 @@ async function registerOfflineCache() {
   }
 
   try {
-    const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);
-    await registration.update();
-    const response = await fetch(OFFLINE_ASSET_MANIFEST, { cache: "no-store" });
-    if (!response.ok) {
-      setOfflineCacheStatus("端末内オフライン診断データの一覧を取得できませんでした。", true);
-      return;
-    }
-
-    const payload = await response.json();
-    const urls = Array.isArray(payload.assets) ? payload.assets.filter((url) => typeof url === "string" && url) : [];
-    if (!urls.length) {
-      setOfflineCacheStatus("端末内オフライン診断データの一覧が空です。", true);
-      return;
-    }
-
-    setOfflineCacheStatus(`端末内オフライン診断データを準備中です。予定 ${urls.length} 件。`);
-
-    const postCacheMessage = () => {
-      const worker = registration.active || registration.waiting || registration.installing;
-      worker?.postMessage({ type: "PRECACHE_URLS", urls });
+    const registration = await getOfflineRegistration();
+    let observedWorker = null;
+    let installFailed = false;
+    const refresh = () => {
+      if (!installFailed && registration.active?.state === "activated"
+        && (!observedWorker || observedWorker === registration.active)) {
+        const worker = registration.active;
+        void refreshOfflineCacheStatus(worker, () => registration.active === worker && !installFailed);
+      }
     };
-
-    if (registration.installing) {
-      registration.installing.addEventListener("statechange", postCacheMessage);
+    const observe = () => {
+      const worker = registration.installing || registration.waiting
+        || (registration.active?.state === "activating" ? registration.active : null);
+      if (!worker || worker === observedWorker) return;
+      observedWorker = worker;
+      installFailed = false;
+      setOfflineCacheStatus("端末内オフライン診断データを準備中です。");
+      const onStateChange = () => {
+        if (observedWorker !== worker) return;
+        if (worker.state === "redundant") {
+          installFailed = true;
+          setOfflineCacheStatus("今回のオフライン更新は採用されませんでした。", true);
+        } else if (worker.state === "activated") {
+          void refreshOfflineCacheStatus(worker, () => registration.active === worker && !installFailed);
+        }
+      };
+      worker.addEventListener("statechange", onStateChange);
+      onStateChange();
+    };
+    registration.addEventListener("updatefound", observe);
+    setOfflineCacheStatus("端末内オフライン診断データの準備状態を確認中です。");
+    observe();
+    refresh();
+    navigator.serviceWorker.ready.then(refresh).catch(() => {});
+    navigator.serviceWorker.addEventListener("controllerchange", () => { observe(); refresh(); });
+    try {
+      await registration.update();
+      observe();
+      refresh();
+      if (!observedWorker && !registration.active) {
+        setOfflineCacheStatus("この版の端末内オフライン診断データは未準備です。", true);
+      }
+    } catch (_) {
+      if (registration.active?.state === "activated") refresh();
+      else if (!observedWorker && !installFailed) setOfflineCacheStatus("端末内オフライン診断データの更新を確認できませんでした。", true);
     }
-    postCacheMessage();
-    navigator.serviceWorker.ready
-      .then(() => refreshOfflineCacheStatus(urls))
-      .catch(() => setOfflineCacheStatus("端末内オフライン診断データの準備状態を確認できませんでした。", true));
-    navigator.serviceWorker.addEventListener("controllerchange", () => refreshOfflineCacheStatus(urls), { once: true });
   } catch (_) {
     setOfflineCacheStatus("端末内オフライン診断データの準備を開始できませんでした。", true);
   }
 }
 
+async function getOfflineRegistration() {
+  let existing;
+  try { existing = await navigator.serviceWorker.getRegistration?.(); } catch (_) { /* Fall back to registration. */ }
+  const worker = existing?.active;
+  if (worker?.state === "activated") {
+    const identity = await getOfflineWorkerIdentity(worker);
+    if (existing.active === worker && worker.state === "activated" && identity?.version === APP_VERSION
+      && identity?.cacheName === `vehicle-diagnosis-tool-${APP_VERSION}`) return existing;
+  }
+  const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);
+  return registration;
+}
+
+function getOfflineWorkerIdentity(worker) {
+  return new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const finish = (value) => {
+      clearTimeout(timer);
+      channel.port1.close();
+      channel.port2.close();
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), 2000);
+    channel.port1.onmessage = (event) => finish(event.data);
+    try { worker.postMessage({ type: "GET_OFFLINE_IDENTITY" }, [channel.port2]); } catch (_) { finish(null); }
+  });
+}
+
 function setOfflineCacheStatus(message, isError = false) {
+  offlineCacheStatusRevision += 1;
   if (!offlineCacheStatus) return;
   offlineCacheStatus.textContent = message;
   offlineCacheStatus.classList.toggle("error", isError);
 }
 
-async function refreshOfflineCacheStatus(urls = []) {
-  if (!offlineCacheStatus || !("caches" in window)) return;
-  const cached = await Promise.all(urls.map(async (url) => Boolean(await caches.match(new Request(url)))));
-  const cachedCount = cached.filter(Boolean).length;
-  const complete = cachedCount === urls.length;
-  setOfflineCacheStatus(
-    complete
-      ? `端末内オフライン診断データ: ${cachedCount}/${urls.length} 件を準備済みです。`
-      : `端末内オフライン診断データ: ${cachedCount}/${urls.length} 件を準備済みです。通信中に残りを取得します。`,
-    false
-  );
+async function refreshOfflineCacheStatus(worker, isStillCurrent = () => true) {
+  if (!offlineCacheStatus || !("caches" in window) || worker?.state !== "activated") return;
+  const revision = ++offlineCacheStatusRevision;
+  try {
+    const cacheName = `vehicle-diagnosis-tool-${APP_VERSION}`;
+    const identity = await getOfflineWorkerIdentity(worker);
+    if (identity?.version !== APP_VERSION || identity?.cacheName !== cacheName) throw new Error("offline_worker_unverified");
+    if (!(await caches.has(cacheName))) throw new Error("offline_cache_missing");
+    const cache = await caches.open(cacheName);
+    const response = await cache.match(OFFLINE_ASSET_MANIFEST);
+    if (!response) throw new Error("offline_manifest_missing");
+    const payload = await response.json();
+    const urls = payload.assets;
+    if (payload.version !== APP_VERSION || !Array.isArray(urls) || !urls.length || urls.length !== payload.asset_count) throw new Error("offline_manifest_invalid");
+    const cached = await Promise.all(urls.map(async (url) => Boolean(await cache.match(new Request(url)))));
+    const cachedCount = cached.filter(Boolean).length;
+    if (revision !== offlineCacheStatusRevision || worker.state !== "activated" || !isStillCurrent()) return;
+    setOfflineCacheStatus(
+      cachedCount === urls.length
+        ? `端末内オフライン診断データ: ${cachedCount}/${urls.length} 件を準備済みです。`
+        : `端末内オフライン診断データ: ${cachedCount}/${urls.length} 件。必要なデータが不足しています。`,
+      cachedCount !== urls.length
+    );
+  } catch (_) {
+    if (revision === offlineCacheStatusRevision && worker.state === "activated" && isStillCurrent()) setOfflineCacheStatus("この版の端末内オフライン診断データは確認できていません。", true);
+  }
 }
 
 function activateTab(targetId) {
