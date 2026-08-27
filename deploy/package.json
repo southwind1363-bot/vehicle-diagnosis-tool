@@ -6,6 +6,8 @@
   "scripts": {
     "start": "C:\\Progra~1\\nodejs\\node.exe server.js",
     "dev": "C:\\Progra~1\\nodejs\\node.exe server.js",
+    "workstation:dev": "node scripts/start-local-workstation.js",
+    "validate:workstation": "node scripts/validate-local-workstation.js",
     "bridge:dev": "C:\\Progra~1\\nodejs\\node.exe local-bridge-readonly.js",
     "bridge:j2534:dev": "C:\\Progra~1\\nodejs\\node.exe scripts/start-j2534-readonly-bridge.js",
     "inspect:j2534": "C:\\Progra~1\\nodejs\\node.exe scripts/inspect-j2534-drivers.js",
