@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3407件",
   bridgeValidationCheckLabel: "bridge検証 218件",
-  recentMilestone: "ブリッジ要求の重複防止とロック後の応答破棄",
+  recentMilestone: "診断データ取込み後の古いブリッジ応答を破棄",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.256";
+const APP_VERSION = "3.13.257";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10790,6 +10790,9 @@ function analyzeObdScannerImport(options = {}) {
       readoutInterface: buildSelectedObdReadoutInterface()
     });
   }
+  if (!mergeWithCurrentSession && obdDevSession.lastSession !== currentSession) {
+    cancelObdBridgeOperation();
+  }
   const mergedSession = bridgeImport || hasScannerText ? (obdDevSession.lastSession || null) : null;
   const mergedCodes = mergedSession?.dtcSnapshot?.codes || analysis.codes;
   const mergedDtcs = mergedSession?.dtcSnapshot?.dtcs || [];
@@ -11597,6 +11600,7 @@ function importObdScannerFile(event) {
 }
 
 function clearObdScannerImport() {
+  cancelObdBridgeOperation();
   obdScannerText.value = "";
   obdDetectedCodes.innerHTML = "";
   obdMonitorGrid.innerHTML = "";

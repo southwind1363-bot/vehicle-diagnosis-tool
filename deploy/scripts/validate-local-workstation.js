@@ -47,6 +47,135 @@ function deferred() {
   return { promise, resolve };
 }
 
+function addScannerImportHarness(client, format = "json") {
+  const source = appSource.match(/function analyzeObdScannerImport\(options = \{\}\) \{[\s\S]*?\r?\n\}/)[0];
+  vm.runInContext(source, client);
+  for (const name of ["clearObdScannerImport", "importObdScannerFile", "pasteObdScannerImport", "normalizeObdScannerImportFileText"]) {
+    vm.runInContext(appSource.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], client);
+  }
+  // Stub parser results and display helpers; exercise the complete handler's session ownership and bridge lifecycle.
+  for (const name of new Set([...source.matchAll(/\b(format\w+)\(/g)].map((match) => match[1]))) client[name] = () => "";
+  for (const name of ["getSessionNextReadoutCandidates", "getObdFreezeFrameTriggerEntries", "getNonBlockingWarningLabels", "readCoreSessionAliasArray"]) client[name] = () => [];
+  for (const name of ["renderObdImportToolHints", "renderObdMonitorValues", "renderObdWorkflowGuide", "renderObdDeveloperSessionSummary", "appendObdAnalysisReadoutSummary"]) client[name] = () => {};
+  for (const name of ["buildSelectedObdReadoutInterface", "buildSelectedObdVehicleProfile", "buildSelectedObdVehicleApplicability", "getReadoutCoverageDisplay"]) client[name] = () => null;
+  client.buildCoreReadinessHeadline = () => "";
+  client.buildCoreAnalysisPendingStatus = () => "PENDING";
+  client.hasBridgeDiagnosticImportPipelineSupport = () => true;
+  client.hasBridgeMergeDiagnosticInputsSupport = () => true;
+  client.hasBridgeDiagnosticScanSessionSupport = () => true;
+  client.NO_DATA = "";
+  client.OEM_SCANNER_TOOL_HINTS = new Set();
+  client.obdScannerText = { value: "valid import", focus: () => {} };
+  for (const name of ["obdDetectedCodes", "obdMonitorGrid", "obdMonitorInsightList", "obdImportStatus", "obdMonitorStatus", "obdMonitorCount"]) client[name] = {};
+  const analysis = { source: "imported", codes: [], monitorValues: [], monitorInsights: [] };
+  client.window = { ObdReadOnly: {
+    buildDiagnosticScanSessionFromJson: () => format === "json" ? analysis : null,
+    buildDiagnosticScanSessionFromCsv: () => format === "csv" ? analysis : null,
+    analyzeScannerText: () => analysis,
+    buildBridgeDiagnosticImport: () => ({}),
+    mergeDiagnosticInputs: () => analysis,
+    buildDiagnosticScanSession: (input) => ({ ...analysis, ...(input.scan_session || input) })
+  } };
+  return client;
+}
+
+async function validateScannerImportOwnership(webUrl) {
+  const response = () => new Response(JSON.stringify({ ok: true, data: {}, errors: [] }));
+  for (const format of ["json", "csv", "text"]) {
+    const ready = deferred();
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async () => {
+      await ready.promise;
+      return response();
+    }), format);
+    let accepted = 0;
+    const pending = client.runObdLocalBridgeRead("Old read", "read_stored_dtc", {}, () => {
+      accepted += 1;
+      client.obdDevSession.lastSession = { source: "old-response" };
+    });
+    let imported;
+    try {
+      client.analyzeObdScannerImport();
+      imported = client.obdDevSession.lastSession;
+    } finally {
+      ready.resolve();
+      await pending;
+    }
+    check(imported && client.obdDevSession.lastSession === imported && accepted === 0 && client.obdBridgeOperation === null, `${format} import was overwritten by an older bridge response`);
+  }
+  for (const scenario of ["rejected", "empty", "builder-error", "internal-merge"]) {
+    const ready = deferred();
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async () => {
+      await ready.promise;
+      return response();
+    }), scenario === "internal-merge" ? "text" : "json");
+    const previous = { source: "previous" };
+    client.obdDevSession.lastSession = previous;
+    if (scenario === "rejected") client.window.ObdReadOnly.buildDiagnosticScanSessionFromJson = () => ({ accepted: false, errors: ["invalid_file"] });
+    if (scenario === "empty") client.obdScannerText.value = "";
+    if (scenario === "builder-error") client.window.ObdReadOnly.buildDiagnosticScanSession = () => { throw new Error("invalid_session"); };
+    let accepted = 0;
+    const pending = client.runObdLocalBridgeRead("Preserved read", "read_stored_dtc", {}, () => { accepted += 1; });
+    try {
+      if (scenario === "builder-error") assert.throws(() => client.analyzeObdScannerImport(), /invalid_session/);
+      else client.analyzeObdScannerImport({ mergeWithCurrentSession: scenario === "internal-merge" });
+      check(client.obdBridgeOperation?.cancelled === false, `${scenario} unnecessarily cancelled the pending bridge read`);
+      if (scenario !== "internal-merge") check(client.obdDevSession.lastSession === previous, `${scenario} replaced the current session`);
+    } finally {
+      ready.resolve();
+      await pending;
+    }
+    check(accepted === 1 && client.obdBridgeOperation === null, `${scenario} prevented the pending read from completing`);
+  }
+  for (const entry of ["file", "clipboard", "clear"]) {
+    const ready = deferred();
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async () => {
+      await ready.promise;
+      return response();
+    }));
+    const previous = { source: "previous" };
+    client.obdDevSession.lastSession = previous;
+    let accepted = 0;
+    const pending = client.runObdLocalBridgeRead("Old read", "read_stored_dtc", {}, () => {
+      accepted += 1;
+      client.obdImportStatus.textContent = "OLD_RESULT";
+    });
+    let expectedStatus;
+    let expectedSession;
+    try {
+      if (entry === "file") {
+        let reader;
+        client.FileReader = class {
+          constructor() { reader = this; }
+          readAsText() {}
+        };
+        const input = { value: "selected.json", files: [{ name: "selected.json", size: 100, type: "application/json" }] };
+        client.importObdScannerFile({ currentTarget: input });
+        check(client.obdBridgeOperation?.cancelled === false && client.obdDevSession.lastSession === previous, "Starting file acquisition cancelled the read before validation");
+        reader.result = "valid import";
+        reader.onload();
+        check(input.value === "", "Completed file import retained its file input");
+      } else if (entry === "clipboard") {
+        const clipboard = deferred();
+        client.navigator = { clipboard: { readText: () => clipboard.promise } };
+        const pasting = client.pasteObdScannerImport();
+        check(client.obdBridgeOperation?.cancelled === false, "Clipboard permission wait cancelled the bridge read");
+        clipboard.resolve("valid import");
+        await pasting;
+      } else {
+        client.clearObdScannerImport();
+        check(client.obdScannerText.value === "" && client.obdDevSession.lastSession === previous, "Clear removed the retained session or failed to clear the input");
+      }
+      expectedStatus = client.obdImportStatus.textContent;
+      expectedSession = client.obdDevSession.lastSession;
+      check(client.obdBridgeOperation?.cancelled === true, `${entry} did not cancel the older bridge operation`);
+    } finally {
+      ready.resolve();
+      await pending;
+    }
+    check(accepted === 0 && client.obdDevSession.lastSession === expectedSession && client.obdImportStatus.textContent === expectedStatus, `${entry} result was changed by a late bridge response`);
+  }
+}
+
 async function validateBridgeOperationLifecycle(webUrl) {
   const successResponse = () => new Response(JSON.stringify({ ok: true, data: {}, errors: [], would_transmit: false }));
   const ready = deferred();
@@ -348,6 +477,7 @@ try {
     const fallbackStatus = await legacyClient.sendObdLocalBridgeStatusIntent("bridge_status");
     check(fallbackStatus.ok === true && fallbackRequests.length === 2 && fallbackRequests[1] === publicEndpoints[0], "Legacy static UI did not fall back to the existing separate bridge");
     await validateBridgeOperationLifecycle(workstation.webUrl);
+    await validateScannerImportOwnership(workstation.webUrl);
     await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
     check((await fetch(workstation.webUrl)).status === 200, "A competing launcher stopped the existing workstation");
   } finally {
