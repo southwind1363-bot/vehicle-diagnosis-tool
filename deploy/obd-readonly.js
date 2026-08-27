@@ -34004,11 +34004,75 @@
     };
   }
 
-  function buildManufacturerSampleCollectionTemplateTsv() {
+  function buildManufacturerSampleCollectionTemplateTsv(session = null) {
     const template = getManufacturerSampleCollectionTemplate();
+    const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
+    const dtcs = Array.isArray(dtcSnapshot?.dtcs) ? dtcSnapshot.dtcs.slice(0, 500) : [];
+    if (!dtcs.length) {
+      return [
+        template.columnHeaders.join(template.delimiter),
+        template.columns.map(() => "").join(template.delimiter)
+      ].join("\n");
+    }
+    const vehicleProfile = session?.vehicleProfile || session?.vehicle_profile || {};
+    const adapterIdentity = session?.adapterIdentity || session?.adapter_identity || {};
+    const readoutQuality = session?.readoutQualitySummary || session?.readout_quality_summary || {};
+    const camelCaseId = (id) => String(id || "").replace(/_([a-z])/g, (_match, letter) => letter.toUpperCase());
+    const firstValue = (sources, ...keys) => {
+      for (const source of sources) {
+        if (!source || typeof source !== "object") continue;
+        for (const key of keys) {
+          const value = source[key] ?? source[camelCaseId(key)];
+          if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+        }
+      }
+      return "";
+    };
+    const escapeCell = (value) => {
+      const normalized = redactSensitiveText(String(value ?? ""))
+        .replace(/[\r\n]+/g, " ")
+        .trim()
+        .slice(0, 200);
+      return /["\t]/.test(normalized) ? `"${normalized.replace(/"/g, '""')}"` : normalized;
+    };
+    const rows = dtcs.map((dtc) => {
+      const sources = [dtc, readoutQuality];
+      const values = {
+        dtc_code: firstValue([dtc], "code"),
+        dtc_status: firstValue([dtc], "reported_status", "status"),
+        source_ecu: firstValue([dtc], "ecu", "source_ecu", "ecu_name"),
+        vehicle_maker: firstValue([vehicleProfile], "maker"),
+        vehicle_model_code: firstValue([dtc, vehicleProfile], "vehicle_model_code", "model_code"),
+        vehicle_year: firstValue([dtc, vehicleProfile], "vehicle_model_year", "year"),
+        captured_at: firstValue(sources, "captured_at", "dtc_evidence_captured_at"),
+        protocol: firstValue(sources, "protocol", "dtc_evidence_protocol"),
+        scan_session_id: firstValue(sources, "scan_session_id", "dtc_evidence_scan_session_id"),
+        readout_attempt_id: firstValue(sources, "readout_attempt_id", "dtc_evidence_readout_attempt_id"),
+        communication_route: firstValue([dtc], "readout_route", "communication_route"),
+        network_bus: firstValue([dtc], "network_bus"),
+        network_channel: firstValue([dtc], "network_channel"),
+        gateway_route: firstValue([dtc], "gateway_route"),
+        vci_family: firstValue([dtc, adapterIdentity], "adapter_family", "family"),
+        vci_name: firstValue([dtc, adapterIdentity], "adapter_name", "name", "product_name"),
+        vci_firmware: firstValue([dtc, adapterIdentity], "adapter_firmware_version", "firmware_version", "firmware"),
+        dtc_readout_category: firstValue(sources, "dtc_readout_category", "readout_kind", "dtc_evidence_readout_category"),
+        requested_service: firstValue(sources, "requested_service", "dtc_evidence_requested_service"),
+        response_service: firstValue(sources, "response_service", "dtc_evidence_response_service"),
+        ecu_response_status: firstValue(sources, "ecu_response_status", "dtc_evidence_ecu_response_status"),
+        negative_requested_service: firstValue(sources, "negative_requested_service", "dtc_evidence_negative_requested_service"),
+        response_count: firstValue(sources, "response_count", "dtc_evidence_response_count"),
+        response_wait_ms: firstValue(sources, "response_wait_ms", "dtc_evidence_response_wait_ms"),
+        negative_response_code: firstValue(sources, "uds_negative_response_code", "negative_response_code", "dtc_evidence_negative_response_code"),
+        response_state: firstValue([dtc], "uds_response_state", "response_state")
+      };
+      DTC_EVIDENCE_FIELD_SCHEMA.forEach((field) => {
+        values[field.id] = firstValue([dtc], field.id);
+      });
+      return template.columns.map((column) => escapeCell(values[column.id])).join(template.delimiter);
+    });
     return [
       template.columnHeaders.join(template.delimiter),
-      template.columns.map(() => "").join(template.delimiter)
+      ...rows
     ].join("\n");
   }
 
