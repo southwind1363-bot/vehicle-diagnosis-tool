@@ -182,6 +182,51 @@
         "利用者の明示確認とキャンセル導線",
         "失敗時の復旧手順と再スキャン"
       ])
+    }),
+    Object.freeze({
+      id: "epb_service_mode",
+      label: "EPB整備モード",
+      state: "blocked-until-safe",
+      commandClass: "state-changing",
+      currentAvailability: "安全検証完了まで無効",
+      goal: "電動パーキングブレーキの整備位置移行と復帰を、車種適合と復旧条件が揃ってから段階的に扱う",
+      requiredBeforeEnable: Object.freeze([
+        "対象車種、ECU、EPB方式、バッテリー電圧条件の確認",
+        "実行前スキャン、DTC、フリーズフレーム、現在のEPB状態保存",
+        "整備モード移行、復帰、失敗時の復旧手順",
+        "作業中の車両保持、輪止め、ブレーキ安全条件の確認",
+        "利用者の明示確認とキャンセル導線"
+      ])
+    }),
+    Object.freeze({
+      id: "abs_bleed",
+      label: "ABSエア抜き",
+      state: "blocked-until-safe",
+      commandClass: "state-changing",
+      currentAvailability: "安全検証完了まで無効",
+      goal: "ABS/VSC系のエア抜き作動を、車種別手順、液量、順序、復旧条件が揃ってから段階的に扱う",
+      requiredBeforeEnable: Object.freeze([
+        "対象車種、ABS/VSC ECU、油圧系統、作業順序の適合確認",
+        "実行前スキャン、DTC、ブレーキ液量、警告灯状態保存",
+        "ポンプ、ソレノイド作動の対象と停止条件の確認",
+        "ペダル操作、液補充、再スキャン、試運転前確認の記録",
+        "失敗時の復旧手順と作業中止条件"
+      ])
+    }),
+    Object.freeze({
+      id: "active_test",
+      label: "アクティブテスト",
+      state: "blocked-until-safe",
+      commandClass: "state-changing",
+      currentAvailability: "安全検証完了まで無効",
+      goal: "ファン、リレー、ソレノイド等の作動要求を、機能ごとの安全条件と停止条件が揃ってから個別に扱う",
+      requiredBeforeEnable: Object.freeze([
+        "対象ECU、作動部品、要求サービス、車両状態の適合確認",
+        "実行前スキャン、関連DTC、作動前状態の保存",
+        "作動時間、停止条件、危険部位への接近禁止条件",
+        "利用者の明示確認、即時停止、失敗時復旧",
+        "作動後の再スキャンと結果ログ"
+      ])
     })
   ]);
 
@@ -197,6 +242,49 @@
       Object.freeze({ id: "cancellation_path_ready", label: "取消導線", evidenceKey: "cancellationPathReady" }),
       Object.freeze({ id: "post_clear_rescan_plan", label: "消去後再スキャン計画", evidenceKey: "postClearRescanPlan" }),
       Object.freeze({ id: "recovery_plan", label: "失敗時復旧計画", evidenceKey: "recoveryPlan" }),
+      Object.freeze({ id: "hardware_protocol_qualified", label: "VCI・通信条件の実機確認", evidenceKey: "hardwareProtocolQualified" }),
+      Object.freeze({ id: "independent_safety_review", label: "独立した安全検証", evidenceKey: "independentSafetyReview" })
+    ]),
+    epb_service_mode: Object.freeze([
+      Object.freeze({ id: "operator_authentication", label: "操作者認証", evidenceKey: "operatorAuthenticated" }),
+      Object.freeze({ id: "vehicle_applicability_confirmed", label: "車種・ECU・EPB方式適合確認", evidenceKey: "vehicleApplicabilityConfirmed" }),
+      Object.freeze({ id: "battery_voltage_confirmed", label: "バッテリー電圧条件確認", evidenceKey: "batteryVoltageConfirmed" }),
+      Object.freeze({ id: "pre_operation_scan_saved", label: "実行前スキャン保存", evidenceKey: "preOperationScanSaved" }),
+      Object.freeze({ id: "epb_state_saved", label: "EPB現在状態保存", evidenceKey: "epbStateSaved" }),
+      Object.freeze({ id: "maintenance_mode_sequence_verified", label: "整備モード移行・復帰手順確認", evidenceKey: "maintenanceModeSequenceVerified" }),
+      Object.freeze({ id: "vehicle_secured", label: "車両保持・輪止め確認", evidenceKey: "vehicleSecured" }),
+      Object.freeze({ id: "confirmation_path_ready", label: "明示確認と取消導線", evidenceKey: "confirmationPathReady" }),
+      Object.freeze({ id: "recovery_plan", label: "失敗時復旧計画", evidenceKey: "recoveryPlan" }),
+      Object.freeze({ id: "post_operation_rescan_plan", label: "復帰後再スキャン計画", evidenceKey: "postOperationRescanPlan" }),
+      Object.freeze({ id: "hardware_protocol_qualified", label: "VCI・通信条件の実機確認", evidenceKey: "hardwareProtocolQualified" }),
+      Object.freeze({ id: "independent_safety_review", label: "独立した安全検証", evidenceKey: "independentSafetyReview" })
+    ]),
+    abs_bleed: Object.freeze([
+      Object.freeze({ id: "operator_authentication", label: "操作者認証", evidenceKey: "operatorAuthenticated" }),
+      Object.freeze({ id: "vehicle_applicability_confirmed", label: "車種・ABS/VSC ECU適合確認", evidenceKey: "vehicleApplicabilityConfirmed" }),
+      Object.freeze({ id: "hydraulic_circuit_confirmed", label: "油圧系統と作業順序確認", evidenceKey: "hydraulicCircuitConfirmed" }),
+      Object.freeze({ id: "pre_operation_scan_saved", label: "実行前スキャン保存", evidenceKey: "preOperationScanSaved" }),
+      Object.freeze({ id: "brake_fluid_level_confirmed", label: "ブレーキ液量確認", evidenceKey: "brakeFluidLevelConfirmed" }),
+      Object.freeze({ id: "warning_state_saved", label: "警告灯・DTC状態保存", evidenceKey: "warningStateSaved" }),
+      Object.freeze({ id: "actuator_sequence_verified", label: "ポンプ・ソレノイド作動順序確認", evidenceKey: "actuatorSequenceVerified" }),
+      Object.freeze({ id: "stop_conditions_ready", label: "停止条件と作業中止条件", evidenceKey: "stopConditionsReady" }),
+      Object.freeze({ id: "recovery_plan", label: "失敗時復旧計画", evidenceKey: "recoveryPlan" }),
+      Object.freeze({ id: "post_operation_rescan_plan", label: "作業後再スキャン計画", evidenceKey: "postOperationRescanPlan" }),
+      Object.freeze({ id: "hardware_protocol_qualified", label: "VCI・通信条件の実機確認", evidenceKey: "hardwareProtocolQualified" }),
+      Object.freeze({ id: "independent_safety_review", label: "独立した安全検証", evidenceKey: "independentSafetyReview" })
+    ]),
+    active_test: Object.freeze([
+      Object.freeze({ id: "operator_authentication", label: "操作者認証", evidenceKey: "operatorAuthenticated" }),
+      Object.freeze({ id: "vehicle_applicability_confirmed", label: "車種・ECU・作動部品適合確認", evidenceKey: "vehicleApplicabilityConfirmed" }),
+      Object.freeze({ id: "operation_allowlist_entry", label: "機能別作動許可リスト", evidenceKey: "operationAllowlistEntry" }),
+      Object.freeze({ id: "pre_operation_scan_saved", label: "実行前スキャン保存", evidenceKey: "preOperationScanSaved" }),
+      Object.freeze({ id: "pre_operation_state_saved", label: "作動前状態保存", evidenceKey: "preOperationStateSaved" }),
+      Object.freeze({ id: "duration_limit_defined", label: "作動時間上限", evidenceKey: "durationLimitDefined" }),
+      Object.freeze({ id: "stop_conditions_ready", label: "即時停止条件", evidenceKey: "stopConditionsReady" }),
+      Object.freeze({ id: "hazard_zone_confirmed", label: "危険部位への接近禁止確認", evidenceKey: "hazardZoneConfirmed" }),
+      Object.freeze({ id: "confirmation_path_ready", label: "明示確認と取消導線", evidenceKey: "confirmationPathReady" }),
+      Object.freeze({ id: "recovery_plan", label: "失敗時復旧計画", evidenceKey: "recoveryPlan" }),
+      Object.freeze({ id: "post_operation_rescan_plan", label: "作動後再スキャン計画", evidenceKey: "postOperationRescanPlan" }),
       Object.freeze({ id: "hardware_protocol_qualified", label: "VCI・通信条件の実機確認", evidenceKey: "hardwareProtocolQualified" }),
       Object.freeze({ id: "independent_safety_review", label: "独立した安全検証", evidenceKey: "independentSafetyReview" })
     ])
@@ -13661,13 +13749,24 @@
     };
     const readoutRequestPlanSummary = buildReadoutRequestPlanSummary(pendingReadoutRequestPlan, readoutRequestPlanGateSummary, nextReadoutRequest);
     const nextReadoutRequestSafetySummary = buildNextReadoutRequestSafetySummary(nextReadoutRequest, readoutRequestPlanSummary);
+    const finalPendingReadoutQueueHead = pendingReadoutQueue[0] || null;
+    nextPendingReadoutId = finalPendingReadoutQueueHead?.id || null;
+    nextPendingReadoutState = nextPendingReadoutId ? {
+      ...(pendingReadoutStateById[nextPendingReadoutId] || {}),
+      ...finalPendingReadoutQueueHead
+    } : null;
+    const nextPendingReadoutStatusReason = nextPendingReadoutState?.statusReason
+      || nextPendingReadoutState?.status_reason
+      || null;
     Object.assign(pendingReadoutQueueSummary, {
-      nextReadoutId: pendingReadoutQueue[0]?.id || null,
-      next_readout_id: pendingReadoutQueue[0]?.id || null,
-      nextReadoutLabel: pendingReadoutQueue[0]?.label || null,
-      next_readout_label: pendingReadoutQueue[0]?.label || null,
-      nextReadoutStatus: pendingReadoutQueue[0]?.status || null,
-      next_readout_status: pendingReadoutQueue[0]?.status || null,
+      nextReadoutId: nextPendingReadoutState?.id || null,
+      next_readout_id: nextPendingReadoutState?.id || null,
+      nextReadoutLabel: nextPendingReadoutState?.label || null,
+      next_readout_label: nextPendingReadoutState?.label || null,
+      nextReadoutStatus: nextPendingReadoutState?.status || null,
+      next_readout_status: nextPendingReadoutState?.status || null,
+      nextReadoutStatusReason: nextPendingReadoutStatusReason,
+      next_readout_status_reason: nextPendingReadoutStatusReason,
       recommendedReadoutId: nextReadoutSummary?.id || null,
       recommended_readout_id: nextReadoutSummary?.id || null,
       recommendedReadoutLabel: nextReadoutSummary?.label || null,
@@ -13684,9 +13783,7 @@
       recommended_readout_is_pending: nextReadoutSummary?.isPending === true
     });
     const directCompletionPercent = Math.round((capturedReadoutIds.length / requiredReadouts.length) * 100);
-    const completionPercent = normalizedCoverage.totalCategories > 0
-      ? Math.max(directCompletionPercent, normalizedCoverage.capturedPercent)
-      : directCompletionPercent;
+    const completionPercent = directCompletionPercent;
     const readoutProgressSummary = {
       schemaVersion: "readout_progress_summary_v1",
       schema_version: "readout_progress_summary_v1",
