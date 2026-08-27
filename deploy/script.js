@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "不完全なオフライン更新を拒否し旧版を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.263";
+const APP_VERSION = "3.13.264";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5817,11 +5817,13 @@ async function probeObdLocalBridge(contextLabel = "ローカルブリッジ") {
     obdDevStatus.textContent = `${contextLabel}を確認しています。`;
     const response = await sendObdLocalBridgeStatusIntent("bridge_status", {}, { discover: true, operation });
     throwIfObdBridgeOperationCancelled(operation);
+    if (!response.ok) throw new Error(response.errors.join(" / ") || "bridge_response_not_ok");
     const status = window.ObdReadOnly.normalizeBridgeConnectionStatus(response);
     let adapterIdentity = null;
     try {
       const adapterResponse = await sendObdLocalBridgeStatusIntent("adapter_identity", {}, { operation });
       throwIfObdBridgeOperationCancelled(operation);
+      if (!adapterResponse.ok) throw new Error(adapterResponse.errors.join(" / ") || "bridge_response_not_ok");
       adapterIdentity = window.ObdReadOnly.normalizeBridgeAdapterIdentity(adapterResponse);
     } catch (adapterError) {
       throwIfObdBridgeOperationCancelled(operation);
@@ -5958,6 +5960,7 @@ function finishObdBridgeOperation(operation, resultMessage) {
 
 function formatObdLocalBridgeFailure(error) {
   const codes = String(error?.message || error || "").split(" / ");
+  if (codes.includes("bridge_response_invalid")) return "ブリッジの応答形式または要求IDが一致しません。結果は採用していません。PC側と画面の版を確認してください。";
   if (codes.includes("pairing_token_mismatch")) return "ブリッジ接続キーが一致しません。起動時のペアリング値を「ブリッジ接続キー（今回のみ）」へ入力し直してください。";
   if (codes.includes("bridge_pairing_token_not_configured")) return "ブリッジ側の接続キーが未設定です。ブリッジの起動設定を確認してください。";
   if (codes.includes("vci_not_detected")) return "VCI未検出です。PCのドライバー登録と機器の接続を確認してください。車両データは未取得です。";
@@ -5987,6 +5990,7 @@ async function fetchObdLocalBridgeEndpoint(endpoint, request, operation = null) 
     const json = await response.json();
     throwIfObdBridgeOperationCancelled(operation);
     if (controller?.signal.aborted) throw new Error("local_bridge_timeout");
+    validateObdLocalBridgeResponse(json, request);
     return json;
   } catch (error) {
     throwIfObdBridgeOperationCancelled(operation);
@@ -5995,6 +5999,20 @@ async function fetchObdLocalBridgeEndpoint(endpoint, request, operation = null) 
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
     operation?.controller?.signal.removeEventListener("abort", cancelWait);
+  }
+}
+
+function validateObdLocalBridgeResponse(response, request) {
+  const isObject = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+  if (!isObject(response)
+    || typeof request.request_id !== "string" || !request.request_id
+    || response.request_id !== request.request_id
+    || typeof response.ok !== "boolean" || typeof response.blocked !== "boolean"
+    || response.would_transmit !== false
+    || !Array.isArray(response.errors) || !response.errors.every((error) => typeof error === "string")
+    || !(response.data === null || isObject(response.data))
+    || (response.ok && (response.blocked || response.errors.length || !isObject(response.data)))) {
+    throw new Error("bridge_response_invalid");
   }
 }
 

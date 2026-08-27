@@ -218,12 +218,12 @@ function addScannerImportHarness(client, format = "json") {
 }
 
 async function validateScannerImportOwnership(webUrl) {
-  const response = () => new Response(JSON.stringify({ ok: true, data: {}, errors: [] }));
+  const response = (init) => new Response(JSON.stringify({ request_id: JSON.parse(init.body).request_id, ok: true, blocked: false, would_transmit: false, data: {}, errors: [] }));
   for (const format of ["json", "csv", "text"]) {
     const ready = deferred();
-    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async () => {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async (url, init) => {
       await ready.promise;
-      return response();
+      return response(init);
     }), format);
     let accepted = 0;
     const pending = client.runObdLocalBridgeRead("Old read", "read_stored_dtc", {}, () => {
@@ -242,9 +242,9 @@ async function validateScannerImportOwnership(webUrl) {
   }
   for (const scenario of ["rejected", "empty", "builder-error", "internal-merge"]) {
     const ready = deferred();
-    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async () => {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async (url, init) => {
       await ready.promise;
-      return response();
+      return response(init);
     }), scenario === "internal-merge" ? "text" : "json");
     const previous = { source: "previous" };
     client.obdDevSession.lastSession = previous;
@@ -266,9 +266,9 @@ async function validateScannerImportOwnership(webUrl) {
   }
   for (const entry of ["file", "clipboard", "clear"]) {
     const ready = deferred();
-    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async () => {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async (url, init) => {
       await ready.promise;
-      return response();
+      return response(init);
     }));
     const previous = { source: "previous" };
     client.obdDevSession.lastSession = previous;
@@ -314,15 +314,89 @@ async function validateScannerImportOwnership(webUrl) {
   }
 }
 
+async function validateBridgeResponseEnvelopes(webUrl) {
+  const valid = { request_id: "expected", ok: true, blocked: false, would_transmit: false, errors: [], data: {} };
+  const invalid = [null, [], "response", {},
+    ...[{ request_id: "old-request" }, { request_id: null }, { ok: "true" }, { blocked: "false" },
+      { would_transmit: true }, { would_transmit: null }, { errors: "failure" }, { errors: [{}] },
+      { errors: ["pairing_token_mismatch"] }, { blocked: true }, { data: null }, { data: [] }, { data: "data" }]
+      .map((change) => ({ ...valid, ...change }))
+  ];
+  for (const field of Object.keys(valid)) {
+    const missing = { ...valid };
+    delete missing[field];
+    invalid.push(missing);
+  }
+  for (const envelope of invalid) {
+    const client = createClient(webUrl, options.pairingToken, async () => Response.json(envelope));
+    await assert.rejects(client.fetchObdLocalBridgeEndpoint(webUrl, { request_id: "expected" }), /bridge_response_invalid/);
+    check(client.obdDevSession.bridgeEndpoint === null, "Invalid response selected a bridge endpoint");
+  }
+  for (const envelope of [valid, { ...valid, ok: false, errors: ["vci_not_detected"] }, { ...valid, ok: false, blocked: true, errors: ["pairing_token_mismatch"], data: null }]) {
+    const client = createClient(webUrl, options.pairingToken, async () => Response.json(envelope));
+    const response = await client.fetchObdLocalBridgeEndpoint(webUrl, { request_id: "expected" });
+    check(JSON.stringify(response) === JSON.stringify(envelope), "Valid negative response lost its original error information");
+  }
+  let rejectResponse = true;
+  let accepted = 0;
+  const client = createClient(webUrl, options.pairingToken, async (url, init) => Response.json({ ...valid, request_id: rejectResponse ? "old-request" : JSON.parse(init.body).request_id }));
+  client.obdDevSession.bridgeEndpoint = `${webUrl}/previous`;
+  client.obdDevSession.lastSession = { source: "retained-session" };
+  await client.runObdLocalBridgeRead("DTC", "read_stored_dtc", {}, () => { accepted += 1; });
+  check(accepted === 0 && client.obdBridgeOperation === null && client.obdDevSession.bridgeEndpoint === `${webUrl}/previous` && client.obdDevSession.lastSession.source === "retained-session", "Invalid read response replaced data or retained the busy state");
+  check(client.obdDevStatus.textContent.includes("応答形式または要求ID"), "Invalid response did not explain the compatibility failure");
+  rejectResponse = false;
+  await client.runObdLocalBridgeRead("DTC", "read_stored_dtc", {}, () => { accepted += 1; });
+  check(accepted === 1, "Valid retry was rejected after an invalid response");
+  let normalized = 0;
+  const probe = createClient(webUrl, options.pairingToken, async (url, init) => Response.json({ ...valid, request_id: JSON.parse(init.body).request_id, ok: false, blocked: true, data: null, errors: ["bridge_pairing_token_not_configured"] }));
+  probe.window = { ObdReadOnly: { normalizeBridgeConnectionStatus: () => { normalized += 1; return {}; } } };
+  probe.obdDevSession.bridgeEndpoint = `${webUrl}/previous`;
+  probe.obdDevSession.bridgeStatus = "previous-status";
+  probe.obdDevSession.adapterIdentity = "previous-adapter";
+  await probe.probeObdLocalBridge();
+  check(normalized === 0 && probe.obdDevSession.bridgeStatus === "previous-status" && probe.obdDevSession.adapterIdentity === "previous-adapter" && probe.obdDevSession.bridgeEndpoint === `${webUrl}/previous`, "Negative status response replaced the previous connection metadata");
+  check(probe.obdBridgeOperation === null && probe.obdDevStatus.textContent.includes("接続キーが未設定"), "Negative probe did not report its error or release the busy state");
+  const fallbackBodies = [];
+  const fallback = createClient(webUrl, options.pairingToken, async (url, init) => {
+    const request = JSON.parse(init.body);
+    fallbackBodies.push(request);
+    return Response.json({ ...valid, request_id: fallbackBodies.length === 1 ? "wrong-id" : request.request_id });
+  });
+  await fallback.sendObdLocalBridgeStatusIntent("bridge_status");
+  check(fallbackBodies.length === 2 && fallbackBodies[0].request_id === fallbackBodies[1].request_id && fallback.obdDevSession.bridgeEndpoint !== `${webUrl}/local-bridge/v1/request`, "Invalid first response prevented discovery or selected the wrong endpoint");
+  let negativeRequests = 0;
+  const negative = createClient(webUrl, options.pairingToken, async (url, init) => {
+    negativeRequests += 1;
+    return Response.json({ ...valid, request_id: JSON.parse(init.body).request_id, ok: false, errors: ["vci_not_detected"] });
+  });
+  await negative.runObdLocalBridgeRead("DTC", "read_stored_dtc", {}, () => { accepted += 1; });
+  check(negativeRequests === 1 && accepted === 1 && negative.obdDevStatus.textContent.includes("VCI未検出"), "Valid negative response retried transport or reached the success callback");
+  let adapterNormalizations = 0;
+  const optional = createClient(webUrl, options.pairingToken, async (url, init) => {
+    const request = JSON.parse(init.body);
+    return Response.json({ ...valid, request_id: request.request_id, ...(request.intent === "adapter_identity" ? { ok: false, blocked: true, errors: ["intent_not_implemented"], data: null } : {}) });
+  });
+  optional.window = { ObdReadOnly: {
+    normalizeBridgeConnectionStatus: () => ({ displayStatus: "VALID_STATUS" }),
+    normalizeBridgeAdapterIdentity: () => { adapterNormalizations += 1; return { adapterName: "INVALID_ADAPTER" }; }
+  } };
+  optional.obdDevSession.adapterIdentity = "previous-adapter";
+  optional.renderObdDeveloperSessionSummary = () => {};
+  optional.appendObdDeveloperLog = () => {};
+  await optional.probeObdLocalBridge();
+  check(adapterNormalizations === 0 && optional.obdDevSession.bridgeStatus.displayStatus === "VALID_STATUS" && optional.obdDevSession.adapterIdentity === null && optional.obdDevStatus.textContent.includes("識別未取得"), "Negative optional adapter response was normalized or hid a valid bridge status");
+}
+
 async function validateBridgeOperationLifecycle(webUrl) {
-  const successResponse = () => new Response(JSON.stringify({ ok: true, data: {}, errors: [], would_transmit: false }));
+  const successResponse = (init) => new Response(JSON.stringify({ request_id: JSON.parse(init.body).request_id, ok: true, blocked: false, data: {}, errors: [], would_transmit: false }));
   const ready = deferred();
   let sent = 0;
   let accepted = 0;
-  const client = createClient(webUrl, options.pairingToken, async () => {
+  const client = createClient(webUrl, options.pairingToken, async (url, init) => {
     sent += 1;
     await ready.promise;
-    return successResponse();
+    return successResponse(init);
   });
   const first = client.runObdLocalBridgeRead("First", "list_vci", {}, () => { accepted += 1; });
   const progressMessage = client.obdDevStatus.textContent;
@@ -365,10 +439,10 @@ async function validateBridgeOperationLifecycle(webUrl) {
 
   const late = deferred();
   let lateRequests = 0;
-  const lateClient = createClient(webUrl, options.pairingToken, async () => {
+  const lateClient = createClient(webUrl, options.pairingToken, async (url, init) => {
     lateRequests += 1;
     await late.promise;
-    return successResponse();
+    return successResponse(init);
   });
   const lateRead = lateClient.runObdLocalBridgeRead("Late", "list_vci", {}, () => { accepted += 1; });
   lateClient.lockObdAccess();
@@ -384,7 +458,7 @@ async function validateBridgeOperationLifecycle(webUrl) {
   check(accepted === 2 && lateClient.obdDevSession.bridgeEndpoint === null && lateClient.obdBridgeOperation === null && lateClient.obdDevStatus.textContent === "DEFAULT_GATE", "A cancelled response was restored after unlocking");
 
   const noAbortReady = deferred();
-  const noAbortClient = createClient(webUrl, options.pairingToken, async () => { await noAbortReady.promise; return successResponse(); });
+  const noAbortClient = createClient(webUrl, options.pairingToken, async (url, init) => { await noAbortReady.promise; return successResponse(init); });
   noAbortClient.AbortController = undefined;
   const noAbortRead = noAbortClient.runObdLocalBridgeRead("Logical cancel", "list_vci", {}, () => { accepted += 1; });
   noAbortClient.clearObdBridgePairingToken();
@@ -416,7 +490,7 @@ async function validateBridgeOperationLifecycle(webUrl) {
     const request = JSON.parse(init.body);
     assert.equal(Object.hasOwn(request, "operation"), false);
     if (fallbackSignals.length === 1) { fallbackTimer(); throw new Error("timed out"); }
-    return successResponse();
+    return successResponse(init);
   });
   fallbackClient.setTimeout = (callback) => { fallbackTimer = callback; return 1; };
   fallbackClient.clearTimeout = () => {};
@@ -446,11 +520,11 @@ async function validateBridgeOperationLifecycle(webUrl) {
   const adapterReady = deferred();
   let probeRequests = 0;
   const probeEndpoints = [];
-  const probeClient = createClient(webUrl, options.pairingToken, async (url) => {
+  const probeClient = createClient(webUrl, options.pairingToken, async (url, init) => {
     probeRequests += 1;
     probeEndpoints.push(url);
     if (probeRequests === 2) { adapterStarted.resolve(); await adapterReady.promise; }
-    return successResponse();
+    return successResponse(init);
   });
   probeClient.window = { ObdReadOnly: {
     normalizeBridgeConnectionStatus: () => ({ displayStatus: "NEW_STATUS" }),
@@ -638,6 +712,7 @@ try {
     check(fallbackBodies.length === 2 && fallbackBodies[0].request_id === fallbackBodies[1].request_id && fallbackBodies.every((body) => !Object.hasOwn(body, "pairing_token")), "Endpoint discovery changed the request ID or exposed pairing credentials");
     const fallbackReadout = await legacyClient.sendObdLocalBridgeIntent("read_stored_dtc", {}, { discover: true });
     check(fallbackReadout.errors.includes("vci_not_detected") && fallbackReadout.would_transmit === false && fallbackBodies.length === 4 && fallbackBodies[2].request_id === fallbackBodies[3].request_id && fallbackBodies[2].request_id !== fallbackBodies[0].request_id && fallbackBodies.slice(2).every((body) => body.pairing_token === options.pairingToken), "Paired endpoint discovery changed the request ID, lost credentials, or enabled transmission");
+    await validateBridgeResponseEnvelopes(workstation.webUrl);
     await validateBridgeOperationLifecycle(workstation.webUrl);
     await validateScannerImportOwnership(workstation.webUrl);
     await validateScannerAcquisitionOrder(workstation.webUrl);
