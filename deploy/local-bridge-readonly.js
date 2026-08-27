@@ -936,7 +936,16 @@ export function prepareJ2534WorkerReviewRequest(devices = [], options = {}) {
 export async function runJ2534WorkerReview(devices = [], options = {}) {
   const preparation = prepareJ2534WorkerReviewRequest(devices, options);
   if (!preparation.worker_request) return normalizeJ2534WorkerReviewProcessResult(preparation);
+  const signal = options.signal;
+  if (signal != null && !(signal instanceof AbortSignal)) {
+    return normalizeJ2534WorkerReviewProcessResult(preparation, { error: { code: "INVALID_ABORT_SIGNAL" } });
+  }
+  if (signal?.aborted) {
+    return normalizeJ2534WorkerReviewProcessResult(preparation, { error: { code: "ABORT_ERR" } });
+  }
   const processResult = await new Promise((resolve) => {
+    let cancelled = false;
+    let result = null;
     const child = execFile(process.execPath, [J2534_WORKER_SCRIPT_PATH], {
       encoding: "utf8",
       timeout: preparation.timeout_ms,
@@ -944,14 +953,25 @@ export async function runJ2534WorkerReview(devices = [], options = {}) {
       maxBuffer: 64 * 1024
     }, (error, stdout) => {
       const timedOut = error?.killed === true && error.signal === "SIGTERM" && error.code === null;
-      resolve({
+      result = {
         pid: child.pid,
         status: error ? (Number.isInteger(error.code) ? error.code : null) : 0,
         signal: error?.signal || null,
-        error: timedOut ? { code: "ETIMEDOUT" } : error,
+        error: cancelled ? { code: "ABORT_ERR" } : timedOut ? { code: "ETIMEDOUT" } : error,
         stdout
-      });
+      };
     });
+    const cancelReview = () => {
+      cancelled = true;
+      child.kill();
+    };
+    // Resolve only after close, including when a spawn error invokes the callback earlier.
+    child.once("close", () => {
+      signal?.removeEventListener("abort", cancelReview);
+      resolve({ ...result, closed: true });
+    });
+    signal?.addEventListener("abort", cancelReview, { once: true });
+    if (signal?.aborted) cancelReview();
     // A worker may close stdin before consuming the request; its exit remains authoritative.
     child.stdin.on("error", () => {});
     child.stdin.end(JSON.stringify(preparation.worker_request));
@@ -967,6 +987,7 @@ export function normalizeJ2534WorkerReviewProcessResult(preparation = {}, proces
     timeout_ms: preparation?.timeout_ms || null,
     worker_contract_version: preparation?.worker_contract_version || J2534_WORKER_CONTRACT_VERSION,
     review_worker_process_started: Boolean(request && Number.isInteger(processResult?.pid) && processResult.pid > 0),
+    review_worker_process_exited: Boolean(request && Number.isInteger(processResult?.pid) && processResult.pid > 0 && processResult.closed === true),
     worker_execution_enabled: false,
     dll_load_attempted: false,
     pass_thru_open_attempted: false,
@@ -982,6 +1003,9 @@ export function normalizeJ2534WorkerReviewProcessResult(preparation = {}, proces
       worker_review: null,
       process_exit_code: null
     };
+  }
+  if (processResult?.error?.code === "ABORT_ERR") {
+    return { ...base, execution_status: "worker_cancelled", blockers: ["worker_review_cancelled"], worker_review: null, process_exit_code: null };
   }
   if (processResult?.error?.code === "ETIMEDOUT") {
     return { ...base, execution_status: "worker_timed_out", blockers: ["worker_review_timeout"], worker_review: null, process_exit_code: null };

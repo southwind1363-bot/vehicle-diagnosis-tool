@@ -1,6 +1,7 @@
 import { createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534WorkerReview } from "../local-bridge-readonly.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
+import { getEventListeners } from "node:events";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -123,18 +124,43 @@ check(blockedJ2534WorkerPreparation.preparation_status === "blocked" && blockedJ
 check(pendingJ2534WorkerPreparation.preparation_status === "blocked" && pendingJ2534WorkerPreparation.blockers?.join(",") === "manual_connection_review_not_confirmed" && pendingJ2534WorkerPreparation.worker_request === null && !JSON.stringify(pendingJ2534WorkerPreparation).includes("must-not-leak.dll") && pendingJ2534WorkerPreparation.pass_thru_open_attempted === false, "J2534 parent preparation did not retain manual review or leaked a raw driver path");
 check(readyJ2534WorkerPreparation.schema_version === "j2534-worker-review-preparation-v1" && readyJ2534WorkerPreparation.preparation_status === "ready_for_worker_review" && readyJ2534WorkerPreparation.worker_request?.selected_device_id === "fixture-ready-j2534" && readyJ2534WorkerPreparation.worker_request?.timeout_ms === 5000 && readyJ2534WorkerPreparation.worker_request?.vehicle_command_enabled === false && preparedJ2534WorkerReview.review_status === "ready_for_isolated_implementation" && preparedJ2534WorkerReview.worker_execution_enabled === false && preparedJ2534WorkerReview.dll_load_attempted === false && !JSON.stringify(readyJ2534WorkerPreparation).includes("must-not-leak.dll"), "J2534 parent preparation did not produce a bounded path-free disabled worker review request");
 const blockedJ2534WorkerExecution = await runJ2534WorkerReview([], { manual_connection_review_confirmed: true, timeout_ms: 5000 });
+const completedJ2534WorkerController = new AbortController();
 const pendingJ2534WorkerExecution = runJ2534WorkerReview([{
   id: "fixture-ready-j2534",
   driver_library_inspection_status: "inspected",
   driver_runtime_compatible: true,
   driver_readonly_api_ready: true,
   function_library: "C:\\private\\must-not-leak.dll"
-}], { manual_connection_review_confirmed: true, timeout_ms: 5000 });
+}], { manual_connection_review_confirmed: true, timeout_ms: 5000, signal: completedJ2534WorkerController.signal });
 let j2534WorkerSettled = false;
 pendingJ2534WorkerExecution.then(() => { j2534WorkerSettled = true; });
 await new Promise((resolve) => setImmediate(resolve));
 check(!j2534WorkerSettled, "J2534 worker review blocked the parent event loop until completion");
 const completedJ2534WorkerExecution = await pendingJ2534WorkerExecution;
+const completedJ2534AbortListenerCount = getEventListeners(completedJ2534WorkerController.signal, "abort").length;
+completedJ2534WorkerController.abort();
+check(completedJ2534WorkerExecution.execution_status === "review_completed" && completedJ2534WorkerExecution.review_worker_process_exited === true && completedJ2534AbortListenerCount === 0, "A completed J2534 review retained an abort listener or completion preceded child close");
+const cancellationJ2534Devices = [{
+  id: "fixture-ready-j2534", driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: true, driver_readonly_api_ready: true
+}];
+const preAbortedJ2534Controller = new AbortController();
+preAbortedJ2534Controller.abort("C:\\private\\must-not-leak.dll");
+const preAbortedJ2534Review = await runJ2534WorkerReview(cancellationJ2534Devices, {
+  manual_connection_review_confirmed: true, signal: preAbortedJ2534Controller.signal
+});
+check(preAbortedJ2534Review.execution_status === "worker_cancelled" && preAbortedJ2534Review.review_worker_process_started === false && preAbortedJ2534Review.worker_review === null && !JSON.stringify(preAbortedJ2534Review).includes("must-not-leak.dll"), "An already cancelled J2534 review spawned a child or exposed the abort reason");
+const activeJ2534Controller = new AbortController();
+const activeJ2534Review = runJ2534WorkerReview(cancellationJ2534Devices, {
+  manual_connection_review_confirmed: true, signal: activeJ2534Controller.signal
+});
+activeJ2534Controller.abort("C:\\private\\must-not-leak.dll");
+const cancelledJ2534Review = await activeJ2534Review;
+check(cancelledJ2534Review.execution_status === "worker_cancelled" && cancelledJ2534Review.blockers?.join(",") === "worker_review_cancelled" && cancelledJ2534Review.review_worker_process_started === true && cancelledJ2534Review.review_worker_process_exited === true && cancelledJ2534Review.worker_review === null && cancelledJ2534Review.vehicle_command_enabled === false && !JSON.stringify(cancelledJ2534Review).includes("must-not-leak.dll"), "J2534 cancellation did not wait for child close or failed to discard review output");
+const invalidJ2534Cancellation = await runJ2534WorkerReview(cancellationJ2534Devices, {
+  manual_connection_review_confirmed: true, signal: { aborted: false }
+});
+check(invalidJ2534Cancellation.execution_status === "worker_failed" && invalidJ2534Cancellation.review_worker_process_started === false && invalidJ2534Cancellation.worker_review === null, "An invalid J2534 abort signal started a review process");
 const timedOutJ2534WorkerProcess = spawnSync(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
   timeout: 1000, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024
 });
@@ -956,6 +982,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 210");
+  console.log("Local bridge read-only checks: 214");
   console.log("Errors: 0");
 }
