@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "不完全なオフライン更新を拒否し旧版を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.260";
+const APP_VERSION = "3.13.262";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -12136,8 +12136,7 @@ function saveCase() {
     return;
   }
 
-  savedCases.unshift(record);
-  persistCases();
+  if (!persistCases([record, ...savedCases])) return;
   caseForm.reset();
   setDefaultCaseDate();
   setNextCaseId();
@@ -12220,9 +12219,9 @@ function isCaseRecord(item) {
     && ["id", "maker", "model", "symptom", "confirmedFacts", "finalCause", "work"].some((key) => key in item);
 }
 
-function findDuplicateCase(record) {
+function findDuplicateCase(record, cases = savedCases) {
   const key = duplicateKey(record);
-  return savedCases.find((item) => duplicateKey(item) === key);
+  return cases.find((item) => duplicateKey(item) === key);
 }
 
 function duplicateKey(item) {
@@ -12422,8 +12421,7 @@ function handleCaseDelete(event) {
   if (!button) return;
   if (!confirm("この整備事例を削除しますか？")) return;
 
-  savedCases = savedCases.filter((item) => item.id !== button.dataset.deleteCase);
-  persistCases();
+  if (!persistCases(savedCases.filter((item) => item.id !== button.dataset.deleteCase))) return;
   renderCases();
   renderSimilarCases();
 }
@@ -12455,19 +12453,23 @@ function exportCasesJson() {
 
 function seedDummyCases() {
   const dummyCases = createDummyCases();
+  const nextCases = [...savedCases];
   let added = 0;
   let skipped = 0;
 
   dummyCases.forEach((record) => {
-    if (findDuplicateCase(record) || savedCases.some((item) => item.id === record.id)) {
+    if (findDuplicateCase(record, nextCases) || nextCases.some((item) => item.id === record.id)) {
       skipped += 1;
       return;
     }
-    savedCases.unshift(record);
+    nextCases.unshift(record);
     added += 1;
   });
 
-  persistCases();
+  if (!persistCases(nextCases)) {
+    renderOpsResults([caseStatus.textContent]);
+    return;
+  }
   renderCases();
   renderSimilarCases();
   updateCaseQualityPreview();
@@ -12518,7 +12520,6 @@ function createDummyCases() {
 
 function runSelfCheck() {
   const results = [];
-  const before = savedCases.length;
   const testRecord = normalizeCase({
     id: `CASE-SELFTEST-${Date.now()}`,
     schemaVersion: 2,
@@ -12547,28 +12548,38 @@ function runSelfCheck() {
     sources: "セルフチェック"
   });
 
-  savedCases.unshift(testRecord);
-  persistCases();
-  results.push(savedCases.length === before + 1 ? "保存チェック: OK" : "保存チェック: NG");
+  const candidateCases = [testRecord, ...savedCases];
+  const temporaryKey = `${CASES_KEY}:selftest:${createId()}`;
+  try {
+    localStorage.setItem(temporaryKey, JSON.stringify(candidateCases));
+    const restored = JSON.parse(localStorage.getItem(temporaryKey));
+    results.push(Array.isArray(restored) && restored.length === candidateCases.length && restored[0]?.id === testRecord.id
+      ? "一時領域の保存・再読込チェック: OK" : "一時領域の保存・再読込チェック: NG");
+  } catch (error) {
+    results.push("一時領域の保存・再読込チェック: NG（空き容量・保存権限を確認）");
+  } finally {
+    try {
+      localStorage.removeItem(temporaryKey);
+      results.push("セルフチェック用一時データ削除: OK");
+    } catch (error) {
+      results.push("セルフチェック用一時データ削除: NG（実際の整備事例は変更していません）");
+    }
+  }
 
-  const found = savedCases.filter((item) => [item.model, item.symptom, item.obdCode].join(" ").includes("P0171"));
+  const found = candidateCases.filter((item) => [item.model, item.symptom, item.obdCode].join(" ").includes("P0171"));
   results.push(found.length ? "検索チェック: OK" : "検索チェック: NG");
 
-  const csvPreview = buildCasesCsv(savedCases);
+  const csvPreview = buildCasesCsv(candidateCases);
   results.push(csvPreview.includes("事例ID") && csvPreview.includes(testRecord.id) ? "CSV出力チェック: OK" : "CSV出力チェック: NG");
 
-  const backup = buildCasesBackup();
+  const backup = buildCasesBackup(candidateCases);
   results.push(backup.records.some((item) => item.id === testRecord.id) ? "JSONバックアップチェック: OK" : "JSONバックアップチェック: NG");
 
   const importPreview = [...backup.records, null].filter(isCaseRecord).map(normalizeCase);
   const importCheck = importPreview.some((item) => item.id === testRecord.id) && importPreview.length === backup.records.length;
   results.push(importCheck ? "JSONインポート形式・不正行除外チェック: OK" : "JSONインポート形式・不正行除外チェック: NG");
 
-  savedCases = savedCases.filter((item) => item.id !== testRecord.id);
-  persistCases();
-  renderCases();
-  renderSimilarCases();
-  results.push("セルフチェック用データ削除: OK");
+  results.push("実際の整備事例: 変更なし");
   renderOpsResults(results);
 }
 
@@ -12587,13 +12598,13 @@ function clearAllLocalStorage() {
   renderOpsResults(["アプリ保存データ全削除: OK"]);
 }
 
-function buildCasesBackup() {
+function buildCasesBackup(cases = savedCases) {
   return {
     schemaVersion: 2,
     exportedAt: new Date().toISOString(),
     app: "vehicle-diagnosis-tool",
     appVersion: APP_VERSION,
-    records: savedCases.map(normalizeCase)
+    records: cases.map(normalizeCase)
   };
 }
 
@@ -12633,21 +12644,22 @@ function importCasesJson(event) {
       let added = 0;
       let skipped = 0;
       let invalid = 0;
+      const nextCases = [...savedCases];
       records.forEach((item) => {
         if (!isCaseRecord(item)) {
           invalid += 1;
           return;
         }
         const record = normalizeCase(item);
-        if (findDuplicateCase(record) || savedCases.some((item) => item.id === record.id)) {
+        if (findDuplicateCase(record, nextCases) || nextCases.some((item) => item.id === record.id)) {
           skipped += 1;
           return;
         }
-        savedCases.push(record);
+        nextCases.push(record);
         added += 1;
       });
 
-      persistCases();
+      if (!persistCases(nextCases)) return;
       renderCases();
       renderSimilarCases();
       caseStatus.textContent = `JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`;
@@ -12690,8 +12702,16 @@ function loadCases() {
   }
 }
 
-function persistCases() {
-  localStorage.setItem(CASES_KEY, JSON.stringify(savedCases));
+function persistCases(nextCases) {
+  try {
+    localStorage.setItem(CASES_KEY, JSON.stringify(nextCases));
+  } catch (error) {
+    caseStatus.textContent = "端末内への保存に失敗しました。一覧は変更していません。空き容量・保存権限を確認してください。";
+    alert(caseStatus.textContent);
+    return false;
+  }
+  savedCases = nextCases;
+  return true;
 }
 
 function setDefaultCaseDate() {
