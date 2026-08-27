@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3407件",
   bridgeValidationCheckLabel: "bridge検証 218件",
-  recentMilestone: "診断データ取込み後の古いブリッジ応答を破棄",
+  recentMilestone: "ファイル・貼付け待機中の古い入力とエラーを破棄",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.257";
+const APP_VERSION = "3.13.258";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -511,6 +511,7 @@ let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled
 let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
 let obdBridgePairingToken = "";
 let obdBridgeOperation = null;
+let obdScannerImportOperation = null;
 let activeObdStage = "setup";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"]);
@@ -683,6 +684,7 @@ seedDummyButton.addEventListener("click", seedDummyCases);
 runSelfTestButton.addEventListener("click", runSelfCheck);
 clearStorageButton.addEventListener("click", clearAllLocalStorage);
 obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
+obdScannerText.addEventListener("input", invalidateObdScannerImport);
 obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);
 obdImportFileInput?.addEventListener("change", importObdScannerFile);
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
@@ -1887,6 +1889,7 @@ function formatNextReadoutSummary(candidates, options = {}) {
 
 function syncObdVehicleInput() {
   cancelObdBridgeOperation();
+  invalidateObdScannerImport();
   const values = [
     selectedVehicleValue(obdVehicleMakerSelect),
     selectedVehicleValue(obdVehicleModelSelect),
@@ -5024,6 +5027,7 @@ async function unlockObdAccess() {
 }
 
 function lockObdAccess() {
+  invalidateObdScannerImport();
   obdAccessUnlocked = false;
   clearObdBridgePairingToken();
   sessionStorage.removeItem(OBD_ACCESS_MODE_KEY);
@@ -5055,6 +5059,7 @@ function unlockObdDeveloperMode() {
 }
 
 function lockObdDeveloperMode() {
+  invalidateObdScannerImport();
   obdDevModeUnlocked = false;
   clearObdBridgePairingToken();
   sessionStorage.removeItem(OBD_DEV_MODE_KEY);
@@ -5571,6 +5576,7 @@ async function readObdDeveloperCoreScan() {
 
 function beginWebSerialReadoutProfile(readoutProfile) {
   if (!["initial_diagnostic", "quick_condition"].includes(readoutProfile)) return false;
+  invalidateObdScannerImport();
   const vehicleProfile = buildSelectedObdVehicleProfile();
   obdDevSession.scanSessionId = `web-serial-${Date.now().toString(36)}`;
   obdDevSession.vehicleProfile = vehicleProfile;
@@ -10630,6 +10636,7 @@ function renderObdSafetyInterlock(interlock) {
 }
 
 function analyzeObdScannerImport(options = {}) {
+  invalidateObdScannerImport();
   const scannerText = obdScannerText.value;
   const hasScannerText = scannerText.trim().length > 0;
   const mergeWithCurrentSession = options?.mergeWithCurrentSession === true;
@@ -11530,24 +11537,60 @@ function downloadManufacturerSampleTemplate() {
     : "空の実機サンプルTSVを保存しました。車両・ECU・要求・応答を1行ずつ記録し、この欄から再取込できます。";
 }
 
+function invalidateObdScannerImport() {
+  obdScannerImportOperation = null;
+}
+
+function beginObdScannerImport() {
+  const operation = { textAtStart: obdScannerText.value, sessionAtStart: obdDevSession.lastSession };
+  obdScannerImportOperation = operation;
+  return operation;
+}
+
+function isCurrentObdScannerImport(operation) {
+  if (obdScannerImportOperation !== operation) return false;
+  if (obdScannerText.value !== operation.textAtStart || obdDevSession.lastSession !== operation.sessionAtStart) {
+    invalidateObdScannerImport();
+    return false;
+  }
+  return true;
+}
+
+function applyObdScannerImportText(text) {
+  invalidateObdScannerImport();
+  obdScannerText.value = text;
+  try {
+    analyzeObdScannerImport();
+  } catch (error) {
+    obdImportStatus.textContent = "診断結果を解析できませんでした。入力形式を確認してください。";
+  }
+}
+
 async function pasteObdScannerImport() {
+  const operation = beginObdScannerImport();
   if (!navigator.clipboard?.readText) {
+    invalidateObdScannerImport();
     obdScannerText.focus();
     obdImportStatus.textContent = "このブラウザではクリップボードを読めません。読取結果を長押しして貼り付けてから「診断機データを解析」を押してください。";
     return;
   }
+  let text;
   try {
-    const text = await navigator.clipboard.readText();
-    if (!text.trim()) {
-      obdImportStatus.textContent = "クリップボードに診断結果がありません。";
-      return;
-    }
-    obdScannerText.value = text;
-    analyzeObdScannerImport();
+    text = await navigator.clipboard.readText();
   } catch (error) {
+    if (!isCurrentObdScannerImport(operation)) return;
+    invalidateObdScannerImport();
     obdScannerText.focus();
     obdImportStatus.textContent = "クリップボードを読めませんでした。読取結果を長押しして貼り付けてから「診断機データを解析」を押してください。";
+    return;
   }
+  if (!isCurrentObdScannerImport(operation)) return;
+  invalidateObdScannerImport();
+  if (!text.trim()) {
+    obdImportStatus.textContent = "クリップボードに診断結果がありません。";
+    return;
+  }
+  applyObdScannerImportText(text);
 }
 
 function normalizeObdScannerImportFileText(value, file = {}) {
@@ -11566,40 +11609,57 @@ function importObdScannerFile(event) {
   const input = event.currentTarget;
   const file = input?.files?.[0];
   if (!file) return;
+  const operation = beginObdScannerImport();
 
   const acceptedTypes = new Set(["application/json", "text/csv", "text/tab-separated-values", "text/plain", "text/html"]);
   const hasAcceptedExtension = /\.(json|csv|tsv|txt|html?|htm)$/i.test(file.name || "");
   if (!hasAcceptedExtension && !acceptedTypes.has(file.type)) {
+    invalidateObdScannerImport();
     obdImportStatus.textContent = "JSON、CSV、TSV、テキスト、またはHTML形式の診断結果を選択してください。";
     input.value = "";
     return;
   }
   if (file.size > 2000000) {
+    invalidateObdScannerImport();
     obdImportStatus.textContent = "診断結果ファイルは2 MB以下にしてください。";
     input.value = "";
     return;
   }
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    const text = normalizeObdScannerImportFileText(typeof reader.result === "string" ? reader.result : "", file);
-    if (!text.trim()) {
-      obdImportStatus.textContent = "選択したファイルに診断結果がありません。";
-      input.value = "";
-      return;
-    }
-    obdScannerText.value = text;
-    input.value = "";
-    analyzeObdScannerImport();
-  };
-  reader.onerror = () => {
+  const onFailure = () => {
+    if (!isCurrentObdScannerImport(operation)) return;
+    invalidateObdScannerImport();
     obdImportStatus.textContent = "診断結果ファイルを読めませんでした。";
     input.value = "";
   };
-  reader.readAsText(file, "utf-8");
+  try {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (!isCurrentObdScannerImport(operation)) return;
+      let text;
+      try {
+        text = normalizeObdScannerImportFileText(typeof reader.result === "string" ? reader.result : "", file);
+      } catch (error) {
+        onFailure();
+        return;
+      }
+      invalidateObdScannerImport();
+      input.value = "";
+      if (!text.trim()) {
+        obdImportStatus.textContent = "選択したファイルに診断結果がありません。";
+        return;
+      }
+      applyObdScannerImportText(text);
+    };
+    reader.onerror = onFailure;
+    reader.readAsText(file, "utf-8");
+  } catch (error) {
+    onFailure();
+  }
 }
 
 function clearObdScannerImport() {
+  invalidateObdScannerImport();
   cancelObdBridgeOperation();
   obdScannerText.value = "";
   obdDetectedCodes.innerHTML = "";
