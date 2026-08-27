@@ -10,6 +10,7 @@
     "validate:workstation": "node scripts/validate-local-workstation.js",
     "validate:offline": "node scripts/validate-offline-cache.js",
     "validate:case-storage": "node scripts/validate-case-storage.js",
+    "validate:serial": "node scripts/validate-serial-lifecycle.js",
     "bridge:dev": "C:\\Progra~1\\nodejs\\node.exe local-bridge-readonly.js",
     "bridge:j2534:dev": "C:\\Progra~1\\nodejs\\node.exe scripts/start-j2534-readonly-bridge.js",
     "inspect:j2534": "C:\\Progra~1\\nodejs\\node.exe scripts/inspect-j2534-drivers.js",

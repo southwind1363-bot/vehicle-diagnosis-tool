@@ -15,6 +15,8 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   const context = vm.createContext({
     location: new URL(webUrl), obdDevSession: { bridgeEndpoint: null },
     obdDevModeUnlocked: true, obdBridgePairingToken: "", obdBridgeOperation: null, obdScannerImportOperation: null,
+    // Serial lifecycle behavior is covered by validate-serial-lifecycle.js.
+    obdSerialRevision: 0, obdSerialResultOwner: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null, disconnectObdDeveloperVci: async () => {},
     obdBridgePairingControls: {}, obdBridgePairingInput: { value: "" },
     obdBridgePairingApplyButton: {}, obdBridgePairingClearButton: {}, obdBridgePairingStatus: {},
     obdDevPasswordInput: { value: "" }, obdDevStatus: {},

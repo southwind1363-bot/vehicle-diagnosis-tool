@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "不完全なオフライン更新を拒否し旧版を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.266";
+const APP_VERSION = "3.13.268";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -516,6 +516,10 @@ let obdAccessUnlocked = readOptionalBrowserSetting(OBD_ACCESS_MODE_KEY, true) ==
 let obdDevModeUnlocked = readOptionalBrowserSetting(OBD_DEV_MODE_KEY, true) === "enabled";
 let obdBridgePairingToken = "";
 let obdBridgeOperation = null;
+let obdSerialRevision = 0;
+let obdSerialResultOwner = null;
+let obdSerialConnectPending = false;
+let obdSerialDisconnectOperation = null;
 let obdScannerImportOperation = null;
 let activeObdStage = "setup";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
@@ -2977,6 +2981,8 @@ function formatCauseCandidateLogEntries(log = null, comparison = null) {
 
 function retainCauseCandidateLogInCurrentSession(result = null) {
   if (!obdDevSession.lastSession || !result?.causeCandidateLog || typeof window.ObdReadOnly?.normalizeCauseCandidateLog !== "function") return;
+  const serialOwned = obdSerialResultOwner?.revision === obdSerialRevision
+    && obdSerialResultOwner.expectedLastSession === obdDevSession.lastSession;
   const causeCandidateLog = window.ObdReadOnly.normalizeCauseCandidateLog(result.causeCandidateLog);
   const causeCandidateLogReferenceComparisonSummary = typeof window.ObdReadOnly?.normalizeCauseCandidateLogReferenceComparisonSummary === "function"
     ? window.ObdReadOnly.normalizeCauseCandidateLogReferenceComparisonSummary(result.causeCandidateLogReferenceComparisonSummary)
@@ -2997,6 +3003,7 @@ function retainCauseCandidateLogInCurrentSession(result = null) {
     causeCandidateLogReferenceComparisonSummary,
     cause_candidate_log_reference_comparison_summary: causeCandidateLogReferenceComparisonSummary
   };
+  if (serialOwned) obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
 }
 
 function normalizeMeasurementCandidateMatchText(value) {
@@ -5095,8 +5102,9 @@ async function unlockObdAccess() {
 function lockObdAccess() {
   invalidateObdScannerImport();
   obdAccessUnlocked = false;
+  void disconnectObdDeveloperVci({ reason: "access_locked" });
   clearObdBridgePairingToken();
-  sessionStorage.removeItem(OBD_ACCESS_MODE_KEY);
+  try { sessionStorage.removeItem(OBD_ACCESS_MODE_KEY); } catch (_error) { /* Runtime lock still applies. */ }
   obdAccessPasswordInput.value = "";
   renderObdAccessGate();
 }
@@ -5127,8 +5135,9 @@ function unlockObdDeveloperMode() {
 function lockObdDeveloperMode() {
   invalidateObdScannerImport();
   obdDevModeUnlocked = false;
+  void disconnectObdDeveloperVci({ reason: "developer_locked" });
   clearObdBridgePairingToken();
-  sessionStorage.removeItem(OBD_DEV_MODE_KEY);
+  try { sessionStorage.removeItem(OBD_DEV_MODE_KEY); } catch (_error) { /* Runtime lock still applies. */ }
   obdDevSession.previewMode = null;
   clearRequestedInterfaceSelection();
   obdDevStatus.textContent = "詳細読取メニューをロックしました。";
@@ -5145,14 +5154,20 @@ function handleObdPrimaryAction() {
 }
 
 async function connectObdDeveloperVci() {
-  if (!obdDevModeUnlocked) return;
-  if (obdBridgeOperation) return;
+  if (!obdAccessUnlocked || !obdDevModeUnlocked) return;
+  if (obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation) return;
   if (!["disconnected"].includes(obdDevSession.connectionState)) return;
   if (!("serial" in navigator)) {
     obdDevStatus.textContent = "このブラウザはWeb Serialに対応していません。";
     return;
   }
 
+  const revision = ++obdSerialRevision;
+  obdSerialResultOwner = { revision, expectedLastSession: obdDevSession.lastSession };
+  obdSerialConnectPending = true;
+  let port = null;
+  let opened = false;
+  let installed = false;
   try {
     resetWebSerialConnectionAttemptMetadata();
     setObdDeveloperConnectionState("selecting");
@@ -5160,10 +5175,14 @@ async function connectObdDeveloperVci() {
     clearRequestedInterfaceSelection();
     const baudRate = Number(obdDevBaudRate.value) || 38400;
     obdDevStatus.textContent = "VCIを選択してください。";
-    const port = await navigator.serial.requestPort();
+    port = await navigator.serial.requestPort();
+    throwIfObdSerialOperationCancelled(revision);
     setObdDeveloperConnectionState("opening");
     await port.open({ baudRate });
+    opened = true;
+    throwIfObdSerialOperationCancelled(revision);
     obdDevSession.port = port;
+    installed = true;
     obdDevSession.reader = port.readable.getReader();
     obdDevSession.writer = port.writable.getWriter();
     obdDevSession.decoder = new TextDecoder();
@@ -5192,16 +5211,20 @@ async function connectObdDeveloperVci() {
     obdDevSession.freezeFrameCapabilityResponse = null;
     obdDevSession.ecuInfoReadoutResponses = [];
     obdDevSession.lastSession = null;
+    obdSerialResultOwner.expectedLastSession = null;
     obdDevSession.initializing = true;
     setObdDeveloperConnectionState("initializing");
     obdDevStatus.textContent = `VCI読取を開始しました。通信速度 ${baudRate}。`;
     readElmDeveloperLoop();
     renderObdDeveloperGate();
     await initializeElmDeveloperAdapter();
+    throwIfObdSerialOperationCancelled(revision);
     obdDevSession.initializing = false;
     await identifyObdDeveloperVci();
+    throwIfObdSerialOperationCancelled(revision);
     if (obdDevSession.port) setObdDeveloperConnectionState("ready");
   } catch (error) {
+if (!continueObdSerialOperation(revision)) return;
     obdDevSession.initializing = false;
     if (isWebSerialPortSelectionCancelled(error) && !obdDevSession.port) {
       setObdDeveloperConnectionState("disconnected", "port_selection_cancelled");
@@ -5213,7 +5236,15 @@ async function connectObdDeveloperVci() {
     const failureReason = getWebSerialConnectionFailureReason(obdDevSession.connectionState, obdDevSession.adapterInitializationSummary);
     const failureMessage = formatWebSerialConnectionFailure(failureReason, obdDevSession.adapterInitializationSummary, error);
     await disconnectObdDeveloperVci({ reason: failureReason, statusMessage: failureMessage });
-    retainWebSerialConnectionAttempt();
+    if (continueObdSerialOperation(revision)) {
+      retainWebSerialConnectionAttempt();
+      obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
+    }
+  } finally {
+    if (opened && !installed) {
+      try { await port.close(); } catch (_error) { /* Only this attempt's opened port is owned here. */ }
+    }
+    obdSerialConnectPending = false;
   }
 }
 
@@ -5262,9 +5293,14 @@ function handleObdSerialDisconnect(event) {
 }
 
 async function disconnectObdDeveloperVci(options = {}) {
-  if (obdDevSession.connectionState === "disconnecting") return;
   const reason = typeof options?.reason === "string" ? options.reason : "operator_disconnect";
+  // Transport loss retains the original attempt's failure evidence; explicit cancellation invalidates it.
+  if (["operator_disconnect", "access_locked", "developer_locked"].includes(reason)) obdSerialRevision += 1;
+  if (obdSerialDisconnectOperation) return obdSerialDisconnectOperation.promise;
+  if (obdDevSession.connectionState === "disconnected" && !obdDevSession.port && !obdSerialConnectPending) return;
   const statusMessage = typeof options?.statusMessage === "string" ? options.statusMessage : null;
+  const operation = {};
+  obdSerialDisconnectOperation = operation;
   const { reader, writer, port } = obdDevSession;
   setObdDeveloperConnectionState("disconnecting", reason);
   obdDevSession.reader = null;
@@ -5282,27 +5318,49 @@ async function disconnectObdDeveloperVci(options = {}) {
   obdDevSession.coreScanInProgress = false;
   obdDevSession.coreScanStopReason = null;
 
-  try {
+  operation.promise = (async () => {
+    // Defer completion until the coalesced cleanup promise has been assigned.
+    await Promise.resolve();
     if (reader) {
-      await reader.cancel().catch(() => {});
-      reader.releaseLock();
+      try { await reader.cancel(); } catch (_error) { /* Continue releasing other resources. */ }
+      try { reader.releaseLock(); } catch (_error) { /* Continue releasing other resources. */ }
     }
     if (writer) {
-      writer.releaseLock();
+      try { writer.releaseLock(); } catch (_error) { /* Still attempt to close the port. */ }
     }
     if (port) {
-      await port.close().catch(() => {});
+      try { await port.close(); } catch (_error) { /* Detached resources cannot be reused. */ }
     }
-  } finally {
+    if (obdSerialDisconnectOperation !== operation) return;
+    obdSerialDisconnectOperation = null;
     obdDevSession.disconnectedAt = new Date().toISOString();
     setObdDeveloperConnectionState("disconnected", reason);
     clearRequestedInterfaceSelection();
     obdDevStatus.textContent = statusMessage || (reason === "operator_disconnect" ? "VCI読取を停止しました。" : "VCI接続が終了したため、安全に読取を停止しました。");
     renderObdDeveloperGate();
+  })();
+  return operation.promise;
+}
+
+function isCurrentObdSerialOperation(revision) {
+  return revision === obdSerialRevision && obdAccessUnlocked && obdDevModeUnlocked;
+}
+
+function continueObdSerialOperation(revision) {
+  if (!isCurrentObdSerialOperation(revision) || obdSerialResultOwner?.revision !== revision) return false;
+  if (obdSerialResultOwner.expectedLastSession !== obdDevSession.lastSession) {
+    void disconnectObdDeveloperVci({ reason: "operator_disconnect" });
+    return false;
   }
+  return true;
+}
+
+function throwIfObdSerialOperationCancelled(revision) {
+  if (!continueObdSerialOperation(revision)) throw new Error("elm_operation_cancelled");
 }
 
 async function initializeElmDeveloperAdapter() {
+  const revision = obdSerialRevision;
   const initSteps = [
     { command: "ATZ", step: "adapter_reset" },
     { command: "ATE0", step: "disable_echo" },
@@ -5318,7 +5376,9 @@ async function initializeElmDeveloperAdapter() {
     let response;
     try {
       response = await sendElmDeveloperCommand(command, timeoutMs);
+      throwIfObdSerialOperationCancelled(revision);
     } catch (error) {
+      if (!continueObdSerialOperation(revision)) throw error;
       obdDevSession.adapterInitializationSummary = buildWebSerialAdapterInitializationSummary({
         status: "failed",
         baudRate: obdDevSession.adapterInitializationSummary?.baudRate,
@@ -5356,10 +5416,12 @@ async function initializeElmDeveloperAdapter() {
 }
 
 async function identifyObdDeveloperVci() {
+  const revision = obdSerialRevision;
   const commands = ["ATI", "AT@1"];
   const commandResponses = [];
   for (const command of commands) {
     const response = await sendElmDeveloperCommand(command, 2500);
+    throwIfObdSerialOperationCancelled(revision);
     if (classifyWebSerialCommandResponse(command, response).commandStatus === "completed") {
       commandResponses.push({ command, response });
     }
@@ -5393,6 +5455,8 @@ function mergeWebSerialAdapterIdentity(previous = null, update = null) {
 }
 
 async function captureObdDeveloperProtocolAfterStoredDtc() {
+  const revision = obdSerialRevision;
+  if (!continueObdSerialOperation(revision)) return false;
   if (!obdDevSession.writer || !obdDevSession.reader || obdDevSession.readInProgress) return false;
   const commands = ["ATDP", "ATDPN"];
   const commandResponses = [];
@@ -5402,20 +5466,24 @@ async function captureObdDeveloperProtocolAfterStoredDtc() {
   try {
     for (const command of commands) {
       const response = await sendElmDeveloperCommand(command, 2500);
+      throwIfObdSerialOperationCancelled(revision);
       if (classifyWebSerialCommandResponse(command, response).commandStatus === "completed") {
         commandResponses.push({ command, response });
       }
     }
   } catch (error) {
+    if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
     if (message.startsWith("elm_response_timeout:") || message.startsWith("elm_transport_")) {
       await disconnectObdDeveloperVci({ reason: message.startsWith("elm_response_timeout:") ? "response_timeout" : "transport_failed" });
     }
     return false;
   } finally {
-    obdDevSession.readInProgress = false;
-    if (obdDevSession.port && obdDevSession.connectionState !== "disconnecting") setObdDeveloperConnectionState("ready");
-    renderObdDeveloperGate();
+    if (continueObdSerialOperation(revision)) {
+      obdDevSession.readInProgress = false;
+      if (obdDevSession.port && obdDevSession.connectionState !== "disconnecting") setObdDeveloperConnectionState("ready");
+      renderObdDeveloperGate();
+    }
   }
   const adapterIdentity = mergeWebSerialAdapterIdentity(obdDevSession.adapterIdentity, buildWebSerialAdapterIdentity(commandResponses));
   if (adapterIdentity) obdDevSession.adapterIdentity = adapterIdentity;
@@ -5594,15 +5662,20 @@ function hasWebSerialEcuInfoTypeCoverage(snapshot, commands = []) {
 }
 
 async function readObdDeveloperDtc() {
+  const revision = obdSerialRevision;
   const storedReadCompleted = await runObdDeveloperRead("保存DTC読取", ["03"]);
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!storedReadCompleted || !hasWebSerialDtcStatusReport("stored")) return false;
   await captureObdDeveloperProtocolAfterStoredDtc();
-  if (!obdDevSession.port) return false;
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   await runObdDeveloperRead("保留・永久DTC読取", ["07", "0A"]);
+  if (!continueObdSerialOperation(revision)) return false;
   return hasWebSerialDtcCoverage(["stored", "pending", "permanent"]);
 }
 
 async function readObdDeveloperCoreScan() {
+  const revision = obdSerialRevision;
+  if (!continueObdSerialOperation(revision)) return;
   if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
   if (!beginWebSerialReadoutProfile("initial_diagnostic")) return;
   obdDevSession.coreScanInProgress = true;
@@ -5621,6 +5694,7 @@ async function readObdDeveloperCoreScan() {
     for (const readStep of readSteps) {
       if (!obdDevSession.port) break;
       const readCompleted = await readStep.read();
+      if (!continueObdSerialOperation(revision)) return;
       if (obdDevSession.port && readCompleted !== true) incompleteLabels.push(readStep.label);
       if (obdDevSession.coreScanStopReason) break;
     }
@@ -5634,9 +5708,11 @@ async function readObdDeveloperCoreScan() {
       obdDevStatus.textContent = "基本読取を完了しました。";
     }
   } finally {
-    obdDevSession.coreScanInProgress = false;
-    obdDevSession.coreScanStopReason = null;
-    renderObdDeveloperGate();
+    if (continueObdSerialOperation(revision)) {
+      obdDevSession.coreScanInProgress = false;
+      obdDevSession.coreScanStopReason = null;
+      renderObdDeveloperGate();
+    }
   }
 }
 
@@ -5664,10 +5740,13 @@ function beginWebSerialReadoutProfile(readoutProfile) {
   renderObdMonitorValues([], []);
   hideResult();
   renderObdDeveloperSessionSummary(null);
+  if (obdSerialResultOwner?.revision === obdSerialRevision) obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
   return true;
 }
 
 async function readObdDeveloperQuickCondition() {
+  const revision = obdSerialRevision;
+  if (!continueObdSerialOperation(revision)) return;
   if (obdDevSession.coreScanInProgress || !obdDevSession.port) return;
   if (!beginWebSerialReadoutProfile("quick_condition")) return;
   obdDevSession.coreScanInProgress = true;
@@ -5683,6 +5762,7 @@ async function readObdDeveloperQuickCondition() {
     for (const readStep of readSteps) {
       if (!obdDevSession.port) break;
       const readCompleted = await readStep.read();
+      if (!continueObdSerialOperation(revision)) return;
       if (obdDevSession.port && readCompleted !== true) incompleteLabels.push(readStep.label);
       if (obdDevSession.coreScanStopReason) break;
     }
@@ -5696,14 +5776,18 @@ async function readObdDeveloperQuickCondition() {
       obdDevStatus.textContent = "クイック状態確認を完了しました。追加診断には基本読取を実行してください。";
     }
   } finally {
-    obdDevSession.coreScanInProgress = false;
-    obdDevSession.coreScanStopReason = null;
-    renderObdDeveloperGate();
+    if (continueObdSerialOperation(revision)) {
+      obdDevSession.coreScanInProgress = false;
+      obdDevSession.coreScanStopReason = null;
+      renderObdDeveloperGate();
+    }
   }
 }
 
 async function readObdDeveloperFreezeFrame() {
+  const revision = obdSerialRevision;
   const readCompleted = await runObdDeveloperRead("フリーズフレーム起点DTC読取", ["0202"]);
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   const freezeFrameSnapshot = obdDevSession.lastSession?.freezeFrameSnapshot;
   if (!readCompleted || !hasWebSerialFreezeFrameCoverage(freezeFrameSnapshot)) return false;
   if (!hasWebSerialFreezeFrameTriggerDtc(freezeFrameSnapshot)) {
@@ -5712,6 +5796,7 @@ async function readObdDeveloperFreezeFrame() {
     return true;
   }
   const capabilityReadCompleted = await runObdDeveloperRead("フリーズフレーム対応PID読取", ["0200"]);
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!capabilityReadCompleted || !hasWebSerialFreezeFrameCapabilityReport(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot)) return false;
   const supportedPids = getWebSerialFreezeFrameSupportedPidsForTriggerScopes(obdDevSession.freezeFrameCapabilityResponse, freezeFrameSnapshot);
   if (!supportedPids.has("02")) {
@@ -5726,16 +5811,21 @@ async function readObdDeveloperFreezeFrame() {
     return true;
   }
   const valuesReadCompleted = await runObdDeveloperRead("フリーズフレーム値読取", supportedCommands);
+  if (!continueObdSerialOperation(revision)) return false;
   return valuesReadCompleted && hasWebSerialFreezeFrameCoverage(obdDevSession.lastSession?.freezeFrameSnapshot);
 }
 
 async function readObdDeveloperReadiness() {
+  const revision = obdSerialRevision;
   const readCompleted = await runObdDeveloperRead("レディネス読取", ["0101"]);
+  if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialReadinessCoverage(obdDevSession.lastSession?.readinessSnapshot);
 }
 
 async function readObdDeveloperEcuInfo() {
+  const revision = obdSerialRevision;
   const supportReadCompleted = await runObdDeveloperRead("ECU情報対応確認", ["0900"]);
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   const ecuInfoSnapshot = obdDevSession.lastSession?.ecuInfoSnapshot;
   if (!supportReadCompleted || !isWebSerialReadoutReported(ecuInfoSnapshot, "ecuInfoReadoutStatus", "ecu_info_readout_status")) return false;
   const supportedInfoTypes = new Set(ecuInfoSnapshot?.supportInfoTypesSummary?.ids || []);
@@ -5754,22 +5844,29 @@ async function readObdDeveloperEcuInfo() {
     return true;
   }
   const readCompleted = await runObdDeveloperRead("ECU情報読取", supportedCommands);
+  if (!continueObdSerialOperation(revision)) return false;
   const completedSnapshot = obdDevSession.lastSession?.ecuInfoSnapshot;
   return readCompleted && hasWebSerialEcuInfoTypeCoverage(completedSnapshot, supportedCommands);
 }
 
 async function readObdDeveloperOnboardMonitor() {
+  const revision = obdSerialRevision;
   const readCompleted = await runObdDeveloperRead("Mode06読取", ["06"]);
+  if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialOnboardMonitorCoverage(obdDevSession.lastSession?.onboardMonitorSnapshot);
 }
 
 async function readObdDeveloperPermanentDtc() {
+  const revision = obdSerialRevision;
   const readCompleted = await runObdDeveloperRead("永久DTC読取", ["0A"]);
+  if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialDtcStatusReport("permanent");
 }
 
 async function readObdDeveloperLiveSnapshot() {
+  const revision = obdSerialRevision;
   const supportReadCompleted = await readObdDeveloperSupportedPidMaps();
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!supportReadCompleted) return false;
   const supportedPids = new Set(obdDevSession.supportedPidSet);
   const supportedCommands = obdDevSession.selectedPidList.filter((command) => supportedPids.has(command.slice(2)));
@@ -5779,11 +5876,14 @@ async function readObdDeveloperLiveSnapshot() {
     return true;
   }
   const readCompleted = await runObdDeveloperRead("ライブデータ読取", supportedCommands);
+  if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialLivePidCoverage(obdDevSession.lastSession?.livePidSnapshot);
 }
 
 async function readObdDeveloperQuickLiveSnapshot() {
+  const revision = obdSerialRevision;
   const supportReadCompleted = await readObdDeveloperSupportedPidMaps();
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!supportReadCompleted) return false;
   const supportedPids = new Set(obdDevSession.supportedPidSet);
   const supportedCommands = WEB_SERIAL_QUICK_LIVE_PID_COMMANDS.filter((command) => supportedPids.has(command.slice(2)));
@@ -5793,17 +5893,22 @@ async function readObdDeveloperQuickLiveSnapshot() {
     return true;
   }
   const readCompleted = await runObdDeveloperRead("クイックライブ値読取", supportedCommands);
+  if (!continueObdSerialOperation(revision)) return false;
   return readCompleted && hasWebSerialLivePidCoverage(obdDevSession.lastSession?.livePidSnapshot);
 }
 
 async function readObdDeveloperSupportedPidMaps() {
+  const revision = obdSerialRevision;
+  if (!continueObdSerialOperation(revision)) return false;
   if (obdDevSession.supportedPidDiscoveryComplete) return true;
   const baseReadCompleted = await runObdDeveloperRead("対応PID確認", ["0100"]);
+  if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
   if (!baseReadCompleted || !hasWebSerialSupportedPidPage(obdDevSession.lastSession?.supportedPidMatrix, "00")) return false;
   for (const basePid of ["20", "40", "60", "80", "A0", "C0", "E0"]) {
     const supportedPids = new Set(obdDevSession.lastSession?.supportedPidMatrix?.supportedPids || []);
     if (!supportedPids.has(basePid)) break;
     const pageReadCompleted = await runObdDeveloperRead("対応PID確認", [`01${basePid}`]);
+    if (!continueObdSerialOperation(revision) || !obdDevSession.port) return false;
     if (!pageReadCompleted || !hasWebSerialSupportedPidPage(obdDevSession.lastSession?.supportedPidMatrix, basePid)) return false;
   }
   const supportedPidMatrix = obdDevSession.lastSession?.supportedPidMatrix || null;
@@ -5934,12 +6039,13 @@ async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
 }
 
 function isObdBridgeOperationBlocked() {
-  return Boolean(obdBridgeOperation || obdDevSession.port || obdDevSession.readInProgress || obdDevSession.initializing || obdDevSession.coreScanInProgress)
+  return Boolean(obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation || obdDevSession.port || obdDevSession.readInProgress || obdDevSession.initializing || obdDevSession.coreScanInProgress)
     || Boolean(obdDevSession.connectionState && obdDevSession.connectionState !== "disconnected");
 }
 
 function beginObdBridgeOperation() {
   if (isObdBridgeOperationBlocked()) return null;
+  obdSerialRevision += 1;
   const operation = { cancelled: false, controller: typeof AbortController === "function" ? new AbortController() : null };
   obdBridgeOperation = operation;
   renderObdDeveloperGate();
@@ -6638,6 +6744,8 @@ function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) 
 }
 
 async function runObdDeveloperRead(label, commands) {
+  const revision = obdSerialRevision;
+  if (!continueObdSerialOperation(revision)) return false;
   if (!obdDevSession.writer || !obdDevSession.reader) {
     obdDevStatus.textContent = "VCI読取が開始されていません。";
     return false;
@@ -6662,6 +6770,7 @@ async function runObdDeveloperRead(label, commands) {
       attemptedCommandCount += 1;
       currentCommandStartedAt = Date.now();
       const response = await sendElmDeveloperCommand(command, 3500);
+      throwIfObdSerialOperationCancelled(revision);
       commandResponses.push({ command, response, responseElapsedMs: Math.max(0, Date.now() - currentCommandStartedAt) });
       currentCommandStartedAt = null;
       chunks.push(["ATI", "AT@1", "ATDP", "ATDPN"].includes(command) ? "[adapter identity response not retained]" : response);
@@ -6676,12 +6785,14 @@ async function runObdDeveloperRead(label, commands) {
       replaceReadinessSnapshot,
       replaceOnboardMonitorSnapshot
     });
+    obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
     if (outcome.stopScope === "scan" && obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = outcome.stopReason;
     obdDevStatus.textContent = outcome.readoutCompleted
       ? `${label}が完了しました。取れた値だけ表示します。`
       : `${label}は未完了です。応答品質を記録し、取得できた値だけ表示します。`;
     return outcome.readoutCompleted;
   } catch (error) {
+    if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
     const timedOut = message.startsWith("elm_response_timeout:");
     const failedCommandElapsedMs = currentCommandStartedAt === null ? null : Math.max(0, Date.now() - currentCommandStartedAt);
@@ -6695,17 +6806,21 @@ async function runObdDeveloperRead(label, commands) {
       replaceReadinessSnapshot,
       replaceOnboardMonitorSnapshot
     }));
+    obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
     const transportFailed = timedOut || message.startsWith("elm_transport_");
     if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
+    if (!continueObdSerialOperation(revision)) return false;
     if (obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = "transport_error";
     obdDevStatus.textContent = timedOut
       ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`
       : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`;
     return false;
   } finally {
-    obdDevSession.readInProgress = false;
-    if (obdDevSession.port && obdDevSession.connectionState !== "disconnecting") setObdDeveloperConnectionState("ready");
-    renderObdDeveloperGate();
+    if (continueObdSerialOperation(revision)) {
+      obdDevSession.readInProgress = false;
+      if (obdDevSession.port && obdDevSession.connectionState !== "disconnecting") setObdDeveloperConnectionState("ready");
+      renderObdDeveloperGate();
+    }
   }
 }
 
@@ -7127,17 +7242,24 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
 }
 
 async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
+  const revision = obdSerialRevision;
+  throwIfObdSerialOperationCancelled(revision);
   const normalized = String(command || "").trim().toUpperCase();
   if (!isAllowedObdDeveloperCommand(normalized)) {
     throw new Error(`許可していないコマンドです: ${normalized}`);
   }
+  const { writer, port, encoder } = obdDevSession;
+  if (!writer || !port || !obdDevSession.readLoopActive) throw new Error("elm_transport_disconnected");
   obdDevSession.textBuffer = "";
   try {
-    await obdDevSession.writer.write(obdDevSession.encoder.encode(`${normalized}\r`));
+    await writer.write(encoder.encode(`${normalized}\r`));
   } catch (_error) {
     throw new Error(`elm_transport_write_failed:${normalized}`);
   }
+  throwIfObdSerialOperationCancelled(revision);
+  if (obdDevSession.writer !== writer || obdDevSession.port !== port) throw new Error("elm_transport_disconnected");
   const response = await readElmDeveloperResponse(timeoutMs);
+  throwIfObdSerialOperationCancelled(revision);
   if (!response) throw new Error(`elm_response_timeout:${normalized}`);
   return response;
 }
@@ -7187,8 +7309,10 @@ function takeCompletedElmDeveloperResponse(buffer) {
 }
 
 async function readElmDeveloperResponse(timeoutMs) {
+  const revision = obdSerialRevision;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
+    throwIfObdSerialOperationCancelled(revision);
     if (!obdDevSession.port || !obdDevSession.readLoopActive) throw new Error("elm_transport_disconnected");
     if (hasCompletedElmDeveloperResponse(obdDevSession.textBuffer)) {
       return takeCompletedElmDeveloperResponse(obdDevSession.textBuffer);
