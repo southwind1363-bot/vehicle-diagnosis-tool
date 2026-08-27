@@ -13,7 +13,7 @@ const clientSource = appSource.slice(appSource.indexOf("async function runObdLoc
 function createClient(webUrl, token, fetchRequest = fetch) {
   const context = vm.createContext({
     location: new URL(webUrl), obdDevSession: { bridgeEndpoint: null },
-    obdDevModeUnlocked: true, obdBridgePairingToken: "",
+    obdDevModeUnlocked: true, obdBridgePairingToken: "", obdBridgeOperation: null,
     obdBridgePairingControls: {}, obdBridgePairingInput: { value: "" },
     obdBridgePairingApplyButton: {}, obdBridgePairingClearButton: {}, obdBridgePairingStatus: {},
     obdDevPasswordInput: { value: "" }, obdDevStatus: {},
@@ -35,7 +35,175 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   for (const name of ["unlockObdDeveloperMode", "lockObdDeveloperMode", "lockObdAccess"]) {
     vm.runInContext(appSource.match(new RegExp(`function ${name}\\(\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
   }
+  for (const name of ["startInterfaceCandidateCheck", "startGeneralBridgeCheck", "previewSelectedObdInterface", "prepareSelectedObdInterface", "loadObdInterfacePreviewSample", "connectObdDeveloperVci"]) {
+    vm.runInContext(appSource.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
+  }
   return context;
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function validateBridgeOperationLifecycle(webUrl) {
+  const successResponse = () => new Response(JSON.stringify({ ok: true, data: {}, errors: [], would_transmit: false }));
+  const ready = deferred();
+  let sent = 0;
+  let accepted = 0;
+  const client = createClient(webUrl, options.pairingToken, async () => {
+    sent += 1;
+    await ready.promise;
+    return successResponse();
+  });
+  const first = client.runObdLocalBridgeRead("First", "list_vci", {}, () => { accepted += 1; });
+  const progressMessage = client.obdDevStatus.textContent;
+  client.obdDevSession.requestedInterfaceId = "original-interface";
+  client.startInterfaceCandidateCheck({ id: "different-interface" });
+  client.startGeneralBridgeCheck();
+  client.previewSelectedObdInterface();
+  client.prepareSelectedObdInterface();
+  client.loadObdInterfacePreviewSample("user-vci-elm327");
+  await client.connectObdDeveloperVci();
+  check(client.obdDevSession.requestedInterfaceId === "original-interface" && client.obdDevStatus.textContent === progressMessage, "Busy caller changed interface, preview, or status before the operation guard");
+  const duplicate = client.runObdLocalBridgeRead("Duplicate", "list_vci", {}, () => { accepted += 1; });
+  const duplicateProbe = client.probeObdLocalBridge();
+  client.obdBridgePairingInput.value = "replacement-pairing-key";
+  client.applyObdBridgePairingToken();
+  try {
+    check(sent === 1 && client.obdBridgePairingToken === "" && client.obdBridgePairingApplyButton.disabled, "Duplicate operation or pairing change was accepted during a bridge request");
+  } finally {
+    ready.resolve();
+    await first;
+    await duplicate;
+    await duplicateProbe;
+  }
+  check(accepted === 1 && client.obdBridgeOperation === null && !client.obdBridgePairingApplyButton.disabled, "Successful operation did not release its busy slot");
+  await client.runObdLocalBridgeRead("Retry", "list_vci", {}, () => { accepted += 1; });
+  check(sent === 2 && accepted === 2, "A finished operation prevented the next read");
+
+  let aborted = false;
+  let abortRequests = 0;
+  const abortClient = createClient(webUrl, options.pairingToken, (url, init) => {
+    abortRequests += 1;
+    return new Promise((resolve, reject) => {
+      init.signal.addEventListener("abort", () => { aborted = true; reject(new Error("aborted")); }, { once: true });
+    });
+  });
+  const abortedRead = abortClient.runObdLocalBridgeRead("Cancel", "list_vci", {}, () => { accepted += 1; });
+  abortClient.lockObdDeveloperMode();
+  await abortedRead;
+  check(aborted && abortRequests === 1 && accepted === 2 && abortClient.obdDevSession.bridgeEndpoint === null && abortClient.obdBridgeOperation === null, "Lock did not abort waiting, retried another endpoint, or applied a late result");
+
+  const late = deferred();
+  let lateRequests = 0;
+  const lateClient = createClient(webUrl, options.pairingToken, async () => {
+    lateRequests += 1;
+    await late.promise;
+    return successResponse();
+  });
+  const lateRead = lateClient.runObdLocalBridgeRead("Late", "list_vci", {}, () => { accepted += 1; });
+  lateClient.lockObdAccess();
+  lateClient.obdAccessUnlocked = true;
+  const tooSoon = lateClient.runObdLocalBridgeRead("Too soon", "list_vci", {}, () => { accepted += 1; });
+  try {
+    check(lateRequests === 1 && lateClient.obdBridgeOperation !== null, "Cancellation released the busy slot before the old request settled");
+  } finally {
+    late.resolve();
+    await lateRead;
+    await tooSoon;
+  }
+  check(accepted === 2 && lateClient.obdDevSession.bridgeEndpoint === null && lateClient.obdBridgeOperation === null && lateClient.obdDevStatus.textContent === "DEFAULT_GATE", "A cancelled response was restored after unlocking");
+
+  const noAbortReady = deferred();
+  const noAbortClient = createClient(webUrl, options.pairingToken, async () => { await noAbortReady.promise; return successResponse(); });
+  noAbortClient.AbortController = undefined;
+  const noAbortRead = noAbortClient.runObdLocalBridgeRead("Logical cancel", "list_vci", {}, () => { accepted += 1; });
+  noAbortClient.clearObdBridgePairingToken();
+  check(noAbortClient.obdBridgeOperation?.cancelled === true, "Missing AbortController released ownership before settlement");
+  noAbortReady.resolve();
+  await noAbortRead;
+  check(accepted === 2 && noAbortClient.obdDevSession.bridgeEndpoint === null && noAbortClient.obdBridgeOperation === null, "Logical cancellation accepted a late response without AbortController");
+
+  const bodyStarted = deferred();
+  const bodyReady = deferred();
+  let bodyTimer;
+  let bodyTimerCleared = false;
+  const bodyClient = createClient(webUrl, options.pairingToken, async () => ({ ok: true, json: async () => { bodyStarted.resolve(); return bodyReady.promise; } }));
+  bodyClient.setTimeout = (callback) => { bodyTimer = callback; return 1; };
+  bodyClient.clearTimeout = () => { bodyTimerCleared = true; };
+  const bodyRead = bodyClient.fetchObdLocalBridgeEndpoint(`${webUrl}/local-bridge/v1/request`, {});
+  const timedOut = assert.rejects(bodyRead, /local_bridge_timeout/);
+  await bodyStarted.promise;
+  check(!bodyTimerCleared, "Response headers ended the timeout before the body was parsed");
+  bodyTimer();
+  bodyReady.resolve({ ok: true });
+  await timedOut;
+  check(bodyTimerCleared, "Body timeout left a timer behind");
+
+  let fallbackTimer;
+  const fallbackSignals = [];
+  const fallbackClient = createClient(webUrl, options.pairingToken, async (url, init) => {
+    fallbackSignals.push(init.signal);
+    const request = JSON.parse(init.body);
+    assert.equal(Object.hasOwn(request, "operation"), false);
+    if (fallbackSignals.length === 1) { fallbackTimer(); throw new Error("timed out"); }
+    return successResponse();
+  });
+  fallbackClient.setTimeout = (callback) => { fallbackTimer = callback; return 1; };
+  fallbackClient.clearTimeout = () => {};
+  await fallbackClient.runObdLocalBridgeRead("Fallback", "list_vci", {}, () => { accepted += 1; });
+  check(accepted === 3 && fallbackSignals.length === 2 && fallbackSignals[0].aborted && !fallbackSignals[1].aborted && fallbackSignals[0] !== fallbackSignals[1], "Normal timeout fallback reused an aborted controller or lost the successful result");
+
+  const serialClient = createClient(webUrl, options.pairingToken, async () => { throw new Error("Must not call bridge while serial is active"); });
+  serialClient.obdDevSession.connectionState = "selecting";
+  check(serialClient.beginObdBridgeOperation() === null, "Bridge operation overlapped the Web Serial device picker");
+  serialClient.obdDevSession.connectionState = "disconnected";
+  const owner = serialClient.beginObdBridgeOperation();
+  serialClient.finishObdBridgeOperation({}, "Wrong owner");
+  check(serialClient.obdBridgeOperation === owner, "A stale completion released another operation's busy slot");
+  serialClient.finishObdBridgeOperation(owner, "Done");
+  serialClient.obdDevSession.connectionState = "ready";
+  serialClient.obdDevSession.previewMode = "previous-preview";
+  serialClient.ensureObdVehicleSelection = () => true;
+  serialClient.resolveObdInterfaceId = () => "user-vci-elm327";
+  serialClient.obdVehicleInput = { value: "Test vehicle" };
+  serialClient.window = { ObdReadOnly: { getVehicleInterfaceCatalog: () => [] } };
+  serialClient.getObdInterfaceReadoutRoute = () => ({ route: "native_connector_required" });
+  serialClient.getSelectedObdInterfaceLabel = () => "Test interface";
+  serialClient.prepareSelectedObdInterface();
+  check(serialClient.obdDevSession.previewMode === null, "Serial connection unnecessarily blocked non-bridge preparation guidance");
+
+  const adapterStarted = deferred();
+  const adapterReady = deferred();
+  let probeRequests = 0;
+  const probeEndpoints = [];
+  const probeClient = createClient(webUrl, options.pairingToken, async (url) => {
+    probeRequests += 1;
+    probeEndpoints.push(url);
+    if (probeRequests === 2) { adapterStarted.resolve(); await adapterReady.promise; }
+    return successResponse();
+  });
+  probeClient.window = { ObdReadOnly: {
+    normalizeBridgeConnectionStatus: () => ({ displayStatus: "NEW_STATUS" }),
+    normalizeBridgeAdapterIdentity: () => ({ adapterName: "NEW_ADAPTER" })
+  } };
+  probeClient.obdDevSession.bridgeStatus = "previous-status";
+  probeClient.obdDevSession.adapterIdentity = "previous-adapter";
+  probeClient.obdDevSession.bridgeEndpoint = "http://127.0.0.1:9999/v1/bridge";
+  probeClient.renderObdDeveloperSessionSummary = () => {};
+  probeClient.appendObdDeveloperLog = () => {};
+  const probing = probeClient.probeObdLocalBridge();
+  await adapterStarted.promise;
+  await probeClient.runObdLocalBridgeRead("Concurrent", "list_vci", {}, () => { accepted += 1; });
+  check(probeRequests === 2 && accepted === 3, "Read operation overlapped adapter identification");
+  probeClient.lockObdDeveloperMode();
+  adapterReady.resolve();
+  await probing;
+  check(probeEndpoints.length === 2 && probeEndpoints.every((url) => url === `${webUrl}/local-bridge/v1/request`), "Adapter identification used the old endpoint instead of the newly discovered endpoint");
+  check(probeClient.obdDevSession.bridgeStatus === "previous-status" && probeClient.obdDevSession.adapterIdentity === "previous-adapter" && probeClient.obdDevSession.bridgeEndpoint === "http://127.0.0.1:9999/v1/bridge" && probeClient.obdBridgeOperation === null, "Cancelled multi-step probe mixed the new endpoint with previous connection metadata");
+  check(appSource.replace(/\r\n/g, "\n").includes('function syncObdVehicleInput() {\n  cancelObdBridgeOperation();') && appSource.includes('document.querySelectorAll("[data-obd-bridge-request]")'), "Vehicle changes or public bridge controls lost operation protection");
 }
 const previousReplay = process.env.LOCAL_BRIDGE_REPLAY_LOG;
 const previousPairing = process.env.LOCAL_BRIDGE_PAIRING_TOKEN;
@@ -179,6 +347,7 @@ try {
     });
     const fallbackStatus = await legacyClient.sendObdLocalBridgeStatusIntent("bridge_status");
     check(fallbackStatus.ok === true && fallbackRequests.length === 2 && fallbackRequests[1] === publicEndpoints[0], "Legacy static UI did not fall back to the existing separate bridge");
+    await validateBridgeOperationLifecycle(workstation.webUrl);
     await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
     check((await fetch(workstation.webUrl)).status === 200, "A competing launcher stopped the existing workstation");
   } finally {

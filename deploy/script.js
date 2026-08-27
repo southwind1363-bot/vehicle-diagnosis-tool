@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3407件",
   bridgeValidationCheckLabel: "bridge検証 218件",
-  recentMilestone: "ブリッジの認証・接続エラーと操作結果を明確化",
+  recentMilestone: "ブリッジ要求の重複防止とロック後の応答破棄",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.255";
+const APP_VERSION = "3.13.256";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -510,6 +510,7 @@ let activeResultView = "flow";
 let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled";
 let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
 let obdBridgePairingToken = "";
+let obdBridgeOperation = null;
 let activeObdStage = "setup";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"]);
@@ -1885,6 +1886,7 @@ function formatNextReadoutSummary(candidates, options = {}) {
 }
 
 function syncObdVehicleInput() {
+  cancelObdBridgeOperation();
   const values = [
     selectedVehicleValue(obdVehicleMakerSelect),
     selectedVehicleValue(obdVehicleModelSelect),
@@ -2217,6 +2219,8 @@ function scrollToObdSection(targetId) {
 }
 
 function renderObdPreviewButtons() {
+  if (obdPreviewSelectedButton) obdPreviewSelectedButton.disabled = Boolean(obdBridgeOperation);
+  if (obdPrepareSelectedButton) obdPrepareSelectedButton.disabled = Boolean(obdBridgeOperation);
   const selectedInterfaceId = resolveObdInterfaceId();
   const previewInterfaceId = obdDevSession.previewMode || "";
   [
@@ -2225,6 +2229,7 @@ function renderObdPreviewButtons() {
     [obdPreviewJ2534Button, "user-vci-techstream-j2534"]
   ].forEach(([button, interfaceId]) => {
     if (!button) return;
+    button.disabled = Boolean(obdBridgeOperation);
     const selected = selectedInterfaceId === interfaceId;
     const active = previewInterfaceId === interfaceId;
     button.classList.toggle("is-selected", selected);
@@ -2356,6 +2361,7 @@ function ensureObdVehicleSelection() {
 }
 
 function previewSelectedObdInterface() {
+  if (obdBridgeOperation) return;
   if (!ensureObdVehicleSelection()) return;
   clearRequestedInterfaceSelection();
   loadObdInterfacePreviewSample(resolveObdInterfaceId());
@@ -2366,6 +2372,7 @@ function previewSelectedObdInterface() {
 }
 
 function prepareSelectedObdInterface() {
+  if (obdBridgeOperation) return;
   if (!ensureObdVehicleSelection()) return;
   const interfaceId = resolveObdInterfaceId();
   const selectedVehicle = obdVehicleInput.value.trim() || "車両未選択";
@@ -2380,6 +2387,7 @@ function prepareSelectedObdInterface() {
     return;
   }
   if (item && isBridgeBackedInterfaceCandidate(interfaceId)) {
+    if (isObdBridgeOperationBlocked()) return;
     obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle}: 読取準備を開始。次はローカルブリッジ確認です。`;
     startInterfaceCandidateCheck(item);
     return;
@@ -4450,6 +4458,7 @@ function getInterfaceCandidateCheckSummary(item) {
 }
 
 function startInterfaceCandidateCheck(item) {
+  if (isObdBridgeOperationBlocked()) return;
   obdDevSession.requestedInterfaceId = item?.id || null;
   const guide = getInterfaceCandidateGuideByItem(item);
   const selectedVehicle = obdVehicleInput.value.trim();
@@ -4635,6 +4644,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
 }
 
 function loadObdInterfacePreviewSample(interfaceId) {
+  if (obdBridgeOperation) return;
   const preview = getObdInterfacePreviewConfig(interfaceId);
   obdDevSession.previewMode = interfaceId;
   obdDevSession.connectedAt = new Date().toISOString();
@@ -4670,6 +4680,7 @@ function loadObdInterfacePreviewSample(interfaceId) {
 }
 
 function startGeneralBridgeCheck() {
+  if (isObdBridgeOperationBlocked()) return;
   clearRequestedInterfaceSelection();
   probeObdLocalBridge();
 }
@@ -4908,12 +4919,16 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   const primaryActionNeedsSerial = selectedInterfaceId === "user-vci-elm327" && selectedReadoutRoute?.route === "desktop_web_serial";
   const readBusy = obdDevSession.readInProgress === true;
   const serialBusy = readBusy || obdDevSession.initializing === true || obdDevSession.coreScanInProgress === true;
+  const bridgeUnavailable = !unlocked || isObdBridgeOperationBlocked();
+  document.querySelectorAll("[data-obd-bridge-request]").forEach((button) => {
+    button.disabled = isObdBridgeOperationBlocked();
+  });
 
   obdDevModeBadge.textContent = unlocked ? "詳細有効" : "ロック中";
   obdDevControls.hidden = !unlocked;
   renderObdBridgePairingControls();
   obdDevLockButton.disabled = !unlocked;
-  obdDevConnectButton.disabled = !unlocked || connected || (primaryActionNeedsSerial && !serialReady);
+  obdDevConnectButton.disabled = !unlocked || Boolean(obdBridgeOperation) || connected || (primaryActionNeedsSerial && !serialReady);
   obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady, nativeConnectorRoute });
   obdDevIdentifyButton.disabled = !unlocked || !connected || serialBusy;
   obdDevCoreScanButton.disabled = !unlocked || !connected || serialBusy;
@@ -4924,17 +4939,17 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevSnapshotButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadEcuInfoButton.disabled = !unlocked || !connected || serialBusy;
   obdDevReadOnboardMonitorButton.disabled = !unlocked || !connected || serialBusy;
-  obdDevBridgeStatusButton.disabled = !unlocked;
-  obdDevBridgeVciButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgeDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgePendingDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgePermanentDtcButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgeEcuInfoButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgeMonitorButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgeSupportedPidButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgeFreezeFrameButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgeReadinessButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
-  obdDevBridgeLiveButton.disabled = !unlocked || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeStatusButton.disabled = bridgeUnavailable;
+  obdDevBridgeVciButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeDtcButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgePendingDtcButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgePermanentDtcButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeEcuInfoButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeMonitorButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeSupportedPidButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeFreezeFrameButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeReadinessButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
+  obdDevBridgeLiveButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
   obdDevDisconnectButton.disabled = !connected;
   obdDevConnectionState.textContent = connected
     ? selectedInterfaceId === "user-vci-elm327"
@@ -5060,6 +5075,7 @@ function handleObdPrimaryAction() {
 
 async function connectObdDeveloperVci() {
   if (!obdDevModeUnlocked) return;
+  if (obdBridgeOperation) return;
   if (!["disconnected"].includes(obdDevSession.connectionState)) return;
   if (!("serial" in navigator)) {
     obdDevStatus.textContent = "このブラウザはWeb Serialに対応していません。";
@@ -5727,27 +5743,34 @@ async function readObdDeveloperSupportedPidMaps() {
 }
 
 async function probeObdLocalBridge(contextLabel = "ローカルブリッジ") {
+  const operation = beginObdBridgeOperation();
+  if (!operation) return;
   let resultMessage = "";
   try {
     obdDevStatus.textContent = `${contextLabel}を確認しています。`;
-    const response = await sendObdLocalBridgeStatusIntent("bridge_status", {}, { discover: true });
+    const response = await sendObdLocalBridgeStatusIntent("bridge_status", {}, { discover: true, operation });
+    throwIfObdBridgeOperationCancelled(operation);
     const status = window.ObdReadOnly.normalizeBridgeConnectionStatus(response);
-    obdDevSession.bridgeStatus = status;
+    let adapterIdentity = null;
     try {
-      const adapterResponse = await sendObdLocalBridgeStatusIntent("adapter_identity", {});
-      obdDevSession.adapterIdentity = window.ObdReadOnly.normalizeBridgeAdapterIdentity(adapterResponse);
+      const adapterResponse = await sendObdLocalBridgeStatusIntent("adapter_identity", {}, { operation });
+      throwIfObdBridgeOperationCancelled(operation);
+      adapterIdentity = window.ObdReadOnly.normalizeBridgeAdapterIdentity(adapterResponse);
     } catch (adapterError) {
-      obdDevSession.adapterIdentity = null;
+      throwIfObdBridgeOperationCancelled(operation);
       appendObdDeveloperLog(`adapter_identity\n${adapterError?.message || adapterError}`);
     }
+    throwIfObdBridgeOperationCancelled(operation);
+    if (operation.endpoint) obdDevSession.bridgeEndpoint = operation.endpoint;
+    obdDevSession.bridgeStatus = status;
+    obdDevSession.adapterIdentity = adapterIdentity;
     const adapterLabel = obdDevSession.adapterIdentity?.adapterName || obdDevSession.adapterIdentity?.adapterFamily || "識別未取得";
     resultMessage = `${contextLabel}: ${status.displayStatus} / ${adapterLabel}`;
     renderObdDeveloperSessionSummary(null);
   } catch (error) {
     resultMessage = `${contextLabel}を確認できません: ${formatObdLocalBridgeFailure(error)}`;
   } finally {
-    renderObdDeveloperGate();
-    if (obdDevModeUnlocked && resultMessage) obdDevStatus.textContent = resultMessage;
+    finishObdBridgeOperation(operation, resultMessage);
   }
 }
 
@@ -5816,10 +5839,14 @@ async function readObdLocalBridgeLiveSnapshot() {
 
 async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
   if (!obdDevModeUnlocked) return;
+  const operation = beginObdBridgeOperation();
+  if (!operation) return;
   let resultMessage = "";
   try {
     obdDevStatus.textContent = `${label}中です。`;
-    const response = await sendObdLocalBridgeIntent(intent, payload);
+    const response = await sendObdLocalBridgeIntent(intent, payload, { operation });
+    throwIfObdBridgeOperationCancelled(operation);
+    if (operation.endpoint) obdDevSession.bridgeEndpoint = operation.endpoint;
     if (response.blocked === true || response.ok === false) {
       throw new Error((response.errors || []).join(" / ") || "bridge_response_not_ok");
     }
@@ -5828,9 +5855,38 @@ async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
   } catch (error) {
     resultMessage = `${label}に失敗しました: ${formatObdLocalBridgeFailure(error)}`;
   } finally {
-    renderObdDeveloperGate();
-    if (obdDevModeUnlocked && resultMessage) obdDevStatus.textContent = resultMessage;
+    finishObdBridgeOperation(operation, resultMessage);
   }
+}
+
+function isObdBridgeOperationBlocked() {
+  return Boolean(obdBridgeOperation || obdDevSession.port || obdDevSession.readInProgress || obdDevSession.initializing || obdDevSession.coreScanInProgress)
+    || Boolean(obdDevSession.connectionState && obdDevSession.connectionState !== "disconnected");
+}
+
+function beginObdBridgeOperation() {
+  if (isObdBridgeOperationBlocked()) return null;
+  const operation = { cancelled: false, controller: typeof AbortController === "function" ? new AbortController() : null };
+  obdBridgeOperation = operation;
+  renderObdDeveloperGate();
+  return operation;
+}
+
+function cancelObdBridgeOperation() {
+  if (!obdBridgeOperation) return;
+  obdBridgeOperation.cancelled = true;
+  obdBridgeOperation.controller?.abort();
+}
+
+function throwIfObdBridgeOperationCancelled(operation) {
+  if (operation && (operation.cancelled || obdBridgeOperation !== operation)) throw new Error("local_bridge_cancelled");
+}
+
+function finishObdBridgeOperation(operation, resultMessage) {
+  if (obdBridgeOperation !== operation) return;
+  obdBridgeOperation = null;
+  renderObdDeveloperGate();
+  if (!operation.cancelled && obdDevModeUnlocked && resultMessage) obdDevStatus.textContent = resultMessage;
 }
 
 function formatObdLocalBridgeFailure(error) {
@@ -5846,8 +5902,11 @@ function formatObdLocalBridgeFailure(error) {
   return "ブリッジの応答を確認できません。PC側の起動状態・接続先・対応機能を確認してください。";
 }
 
-async function fetchObdLocalBridgeEndpoint(endpoint, request) {
+async function fetchObdLocalBridgeEndpoint(endpoint, request, operation = null) {
+  throwIfObdBridgeOperationCancelled(operation);
   const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const cancelWait = () => controller?.abort();
+  operation?.controller?.signal.addEventListener("abort", cancelWait, { once: true });
   const timeoutId = controller ? setTimeout(() => controller.abort(), OBD_LOCAL_BRIDGE_TIMEOUT_MS) : null;
   try {
     const response = await fetch(endpoint, {
@@ -5858,25 +5917,30 @@ async function fetchObdLocalBridgeEndpoint(endpoint, request) {
       ...(controller ? { signal: controller.signal } : {})
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.json();
+    const json = await response.json();
+    throwIfObdBridgeOperationCancelled(operation);
+    if (controller?.signal.aborted) throw new Error("local_bridge_timeout");
+    return json;
   } catch (error) {
+    throwIfObdBridgeOperationCancelled(operation);
     if (controller?.signal.aborted) throw new Error("local_bridge_timeout");
     throw error;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
+    operation?.controller?.signal.removeEventListener("abort", cancelWait);
   }
 }
 
 function renderObdBridgePairingControls() {
   obdBridgePairingControls.hidden = !obdDevModeUnlocked;
-  obdBridgePairingInput.disabled = !obdDevModeUnlocked;
-  obdBridgePairingApplyButton.disabled = !obdDevModeUnlocked;
+  obdBridgePairingInput.disabled = !obdDevModeUnlocked || Boolean(obdBridgeOperation);
+  obdBridgePairingApplyButton.disabled = !obdDevModeUnlocked || Boolean(obdBridgeOperation);
   obdBridgePairingClearButton.disabled = !obdDevModeUnlocked || !obdBridgePairingToken;
   obdBridgePairingStatus.textContent = obdBridgePairingToken ? "今回の接続キーを使用中（端末には保存しません）" : "詳細トークンと共通";
 }
 
 function applyObdBridgePairingToken() {
-  if (!obdDevModeUnlocked) return;
+  if (!obdDevModeUnlocked || obdBridgeOperation) return;
   const token = obdBridgePairingInput.value;
   if (token.length < 12) {
     obdBridgePairingStatus.textContent = "ブリッジ接続キーは12文字以上必要です。";
@@ -5888,13 +5952,15 @@ function applyObdBridgePairingToken() {
 }
 
 function clearObdBridgePairingToken() {
+  cancelObdBridgeOperation();
   obdBridgePairingToken = "";
   obdBridgePairingInput.value = "";
   renderObdBridgePairingControls();
 }
 
 function getObdLocalBridgeEndpoints(options = {}) {
-  if (!options.discover && obdDevSession.bridgeEndpoint) return [obdDevSession.bridgeEndpoint];
+  const endpoint = options.operation?.endpoint || obdDevSession.bridgeEndpoint;
+  if (!options.discover && endpoint) return [endpoint];
   const endpoints = OBD_LOCAL_BRIDGE_PORTS.flatMap((port) => OBD_LOCAL_BRIDGE_PATHS.map((path) => `http://127.0.0.1:${port}${path}`));
   if (location.protocol === "http:" && location.hostname === "127.0.0.1") {
     endpoints.unshift(`${location.origin}/local-bridge/v1/request`);
@@ -5919,11 +5985,15 @@ async function sendObdLocalBridgeIntent(intent, payload = {}, options = {}) {
 
   let lastError = null;
   for (const endpoint of endpoints) {
+    throwIfObdBridgeOperationCancelled(options.operation);
     try {
-      const json = await fetchObdLocalBridgeEndpoint(endpoint, request);
-      obdDevSession.bridgeEndpoint = endpoint;
+      const json = await fetchObdLocalBridgeEndpoint(endpoint, request, options.operation);
+      throwIfObdBridgeOperationCancelled(options.operation);
+      if (options.operation) options.operation.endpoint = endpoint;
+      else obdDevSession.bridgeEndpoint = endpoint;
       return json;
     } catch (error) {
+      throwIfObdBridgeOperationCancelled(options.operation);
       lastError = error;
     }
   }
@@ -5966,11 +6036,15 @@ async function sendObdLocalBridgeStatusIntent(intent, payload = {}, options = {}
 
   let lastError = null;
   for (const endpoint of endpoints) {
+    throwIfObdBridgeOperationCancelled(options.operation);
     try {
-      const json = await fetchObdLocalBridgeEndpoint(endpoint, request);
-      obdDevSession.bridgeEndpoint = endpoint;
+      const json = await fetchObdLocalBridgeEndpoint(endpoint, request, options.operation);
+      throwIfObdBridgeOperationCancelled(options.operation);
+      if (options.operation) options.operation.endpoint = endpoint;
+      else obdDevSession.bridgeEndpoint = endpoint;
       return json;
     } catch (error) {
+      throwIfObdBridgeOperationCancelled(options.operation);
       lastError = error;
     }
   }
@@ -10288,7 +10362,8 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     button.textContent = item.requiresLocalBridge ? "ローカルブリッジ準備後" : "準備中";
 
     if (item.id === "local_bridge") {
-      button.disabled = false;
+      button.dataset.obdBridgeRequest = "true";
+      button.disabled = isObdBridgeOperationBlocked();
       button.textContent = "読取確認";
       button.addEventListener("click", () => {
         startGeneralBridgeCheck();
@@ -10348,7 +10423,8 @@ function renderObdInterfaceRoadmap(items, interfaceCatalog = []) {
     button.title = getInterfaceCandidateProbeLabel(display);
 
     if (isBridgeBackedInterfaceCandidate(item.id)) {
-      button.disabled = false;
+      button.dataset.obdBridgeRequest = "true";
+      button.disabled = isObdBridgeOperationBlocked();
       button.textContent = getInterfaceCandidateActionLabel(display);
       button.title = getInterfaceCandidateProbeLabel(display);
       button.addEventListener("click", () => {
