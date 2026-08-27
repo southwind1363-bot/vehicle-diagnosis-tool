@@ -39,6 +39,10 @@
   </nav>
 
   <main class="tab-shell">
+    <section id="caseStorageWarning" hidden aria-label="保存事例の読込エラー">
+      <p id="caseStorageWarningText" class="data-status error" role="alert"></p>
+      <button id="retryCaseStorageButton" class="secondary-button" type="button">保存事例を再読込</button>
+    </section>
     <section id="diagnosis-panel" class="tab-panel is-active" data-tab-panel>
       <div class="app-shell">
         <section class="panel" aria-labelledby="inputTitle">

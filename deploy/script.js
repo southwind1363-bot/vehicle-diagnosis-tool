@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "不完全なオフライン更新を拒否し旧版を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.264";
+const APP_VERSION = "3.13.266";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -381,6 +381,9 @@ const exportCsvButton = document.querySelector("#exportCsvButton");
 const exportJsonButton = document.querySelector("#exportJsonButton");
 const importJsonInput = document.querySelector("#importJsonInput");
 const caseStatus = document.querySelector("#caseStatus");
+const caseStorageWarning = document.querySelector("#caseStorageWarning");
+const caseStorageWarningText = document.querySelector("#caseStorageWarningText");
+const retryCaseStorageButton = document.querySelector("#retryCaseStorageButton");
 const caseQualityScore = document.querySelector("#caseQualityScore");
 const caseQualityIssues = document.querySelector("#caseQualityIssues");
 const appVersion = document.querySelector("#appVersion");
@@ -505,11 +508,12 @@ const OBD_NEXT_READOUT_ACTIONS = Object.freeze({
 const tabPanels = document.querySelectorAll("[data-tab-panel]");
 
 let dataStore = fallbackData;
+let caseStorageReadError = "";
 let savedCases = loadCases();
 let copyToastTimer = null;
 let activeResultView = "flow";
-let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled";
-let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
+let obdAccessUnlocked = readOptionalBrowserSetting(OBD_ACCESS_MODE_KEY, true) === "enabled";
+let obdDevModeUnlocked = readOptionalBrowserSetting(OBD_DEV_MODE_KEY, true) === "enabled";
 let obdBridgePairingToken = "";
 let obdBridgeOperation = null;
 let obdScannerImportOperation = null;
@@ -568,7 +572,7 @@ const obdDevSession = {
 
 appVersion.textContent = APP_VERSION;
 lastUpdated.textContent = APP_LAST_UPDATED;
-applyTheme(localStorage.getItem(THEME_KEY) || "light");
+applyTheme(readOptionalBrowserSetting(THEME_KEY) || "light");
 setDefaultCaseDate();
 loadData();
 renderCases();
@@ -731,9 +735,10 @@ obdPreviewThinkcarButton?.addEventListener("click", () => loadObdInterfacePrevie
 obdPreviewJ2534Button?.addEventListener("click", () => loadObdInterfacePreviewSample("user-vci-techstream-j2534"));
 obdScrollTargetButtons.forEach((button) => button.addEventListener("click", () => scrollToObdSection(button.dataset.obdScrollTarget)));
 noticeCloseButton.addEventListener("click", () => {
-  localStorage.setItem(NOTICE_KEY, "accepted");
+  writeOptionalBrowserSetting(NOTICE_KEY, "accepted");
   noticeModal.close();
 });
+retryCaseStorageButton.addEventListener("click", reloadSavedCases);
 
 mobileGptOpenButton.addEventListener("click", () => {
   window.open(MY_GPT_URL, "_blank");
@@ -750,7 +755,7 @@ tabButtons.forEach((button) => {
 themeButton.addEventListener("click", () => {
   const nextTheme = document.body.classList.contains("dark") ? "light" : "dark";
   applyTheme(nextTheme);
-  localStorage.setItem(THEME_KEY, nextTheme);
+  writeOptionalBrowserSetting(THEME_KEY, nextTheme);
 });
 
 async function loadData() {
@@ -12364,13 +12369,18 @@ function containsPersonalInfoRisk(record) {
 }
 
 function renderCases() {
+  renderCaseStorageWarning();
   const keyword = caseSearch.value.trim().toLowerCase();
   const filtered = savedCases.filter((item) => {
     const target = [item.maker, item.model, item.symptom, item.obdCode, item.finalCause, item.confirmedFacts].join(" ").toLowerCase();
     return target.includes(keyword);
   });
 
-  renderCaseCards(caseList, filtered, "保存済み事例はまだありません。");
+  renderCaseCards(caseList, filtered, caseStorageReadError ? "保存事例を読み込めていません。" : "保存済み事例はまだありません。");
+  if (caseStorageReadError) {
+    caseStatus.textContent = caseStorageReadError;
+    return;
+  }
   if (!keyword) {
     caseStatus.textContent = `整備事例はこのブラウザのlocalStorageに保存されます。保存件数: ${savedCases.length}件`;
   } else {
@@ -12379,6 +12389,10 @@ function renderCases() {
 }
 
 function renderSimilarCases() {
+  if (caseStorageReadError) {
+    renderCaseCards(similarCases, [], "保存事例が未読込のため、類似事例は未確認です。");
+    return;
+  }
   const input = getInput();
   const terms = collectUnique([
     input.obdCode,
@@ -12445,6 +12459,7 @@ function handleCaseDelete(event) {
 }
 
 function exportCasesCsv() {
+  if (caseStorageReadError) { alert(caseStorageReadError); return; }
   if (!savedCases.length) {
     alert("エクスポートできる整備事例がありません。");
     return;
@@ -12460,6 +12475,7 @@ function exportCasesCsv() {
 }
 
 function exportCasesJson() {
+  if (caseStorageReadError) { alert(caseStorageReadError); return; }
   const backup = buildCasesBackup();
   const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
   const link = document.createElement("a");
@@ -12605,15 +12621,28 @@ function clearAllLocalStorage() {
   if (!confirm("このアプリの整備事例、テーマ設定、注意事項確認状態をすべて削除しますか？")) return;
   if (!confirm("本当に削除しますか？この操作は元に戻せません。")) return;
 
-  localStorage.removeItem(CASES_KEY);
-  localStorage.removeItem(THEME_KEY);
-  localStorage.removeItem(NOTICE_KEY);
+  try {
+    localStorage.removeItem(CASES_KEY);
+  } catch (error) {
+    renderOpsResults(["保存事例を削除できませんでした。事例一覧と読込エラー状態は変更していません。"]);
+    return;
+  }
   savedCases = [];
+  caseStorageReadError = "";
+  let preferencesCleared = true;
+  for (const key of [THEME_KEY, NOTICE_KEY]) {
+    try {
+      localStorage.removeItem(key);
+    } catch (error) {
+      preferencesCleared = false;
+    }
+  }
+  renderCaseStorageWarning();
   applyTheme("light");
   renderCases();
   renderSimilarCases();
   updateCaseQualityPreview();
-  renderOpsResults(["アプリ保存データ全削除: OK"]);
+  renderOpsResults([preferencesCleared ? "アプリ保存データ全削除: OK" : "整備事例の削除: OK / テーマ・注意事項の設定削除: 一部失敗"]);
 }
 
 function buildCasesBackup(cases = savedCases) {
@@ -12642,7 +12671,7 @@ function renderOpsResults(items) {
 }
 
 function showInitialNotice() {
-  if (localStorage.getItem(NOTICE_KEY) === "accepted") return;
+  if (readOptionalBrowserSetting(NOTICE_KEY) === "accepted") return;
   if (typeof noticeModal.showModal === "function") {
     noticeModal.showModal();
   }
@@ -12709,18 +12738,61 @@ function selectedSymptomName(symptomId) {
 }
 
 function loadCases() {
-  const stored = localStorage.getItem(CASES_KEY);
-  if (!stored) return [];
-
   try {
+    const stored = localStorage.getItem(CASES_KEY);
+    if (stored === null) {
+      caseStorageReadError = "";
+      return [];
+    }
     const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed.filter(isCaseRecord).map(normalizeCase) : [];
+    if (!Array.isArray(parsed) || !parsed.every(isCaseRecord)) throw new Error("invalid_saved_cases");
+    const cases = parsed.map(normalizeCase);
+    caseStorageReadError = "";
+    return cases;
   } catch (error) {
+    caseStorageReadError = "保存事例を読み込めません。元データ保護のため、事例の変更・出力を停止しています。";
     return [];
   }
 }
 
+function renderCaseStorageWarning() {
+  caseStorageWarning.hidden = !caseStorageReadError;
+  caseStorageWarningText.textContent = caseStorageReadError;
+}
+
+function reloadSavedCases() {
+  const cases = loadCases();
+  renderCaseStorageWarning();
+  if (caseStorageReadError) return;
+  savedCases = cases;
+  renderCases();
+  renderSimilarCases();
+  updateCaseQualityPreview();
+  caseStatus.textContent = `保存事例を再読込しました。保存件数: ${savedCases.length}件`;
+}
+
+function readOptionalBrowserSetting(key, session = false) {
+  try {
+    return (session ? sessionStorage : localStorage).getItem(key);
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeOptionalBrowserSetting(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    // Theme and notice preferences must not interrupt the current screen.
+  }
+}
+
 function persistCases(nextCases) {
+  if (caseStorageReadError) {
+    caseStatus.textContent = caseStorageReadError;
+    alert(caseStorageReadError);
+    return false;
+  }
   try {
     localStorage.setItem(CASES_KEY, JSON.stringify(nextCases));
   } catch (error) {
