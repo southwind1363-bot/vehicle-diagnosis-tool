@@ -36,13 +36,20 @@ export async function startLocalWorkstation(options = {}) {
   if (process.env.LOCAL_BRIDGE_REPLAY_LOG) throw new Error("workstation_replay_not_allowed");
   const pairingToken = String(options.pairingToken ?? process.env.LOCAL_BRIDGE_PAIRING_TOKEN ?? randomBytes(24).toString("hex"));
   if (pairingToken.length < 12) throw new Error("workstation_pairing_token_too_short");
-  const webServer = http.createServer(express().use(express.static(deployDirectory)));
   const bridgeServer = createLocalBridgeApp({
     pairingToken,
     discoverJ2534: true,
     j2534RegistryText: options.j2534RegistryText,
     enableSampleReadouts: false
   });
+  const webApp = express();
+  // Keep the original request stream and pairing checks in the bridge handler.
+  webApp.post("/local-bridge/v1/request", (request, response) => {
+    response.setHeader("Cache-Control", "no-store");
+    request.url = "/v1/request";
+    bridgeServer.emit("request", request, response);
+  });
+  const webServer = http.createServer(webApp.use(express.static(deployDirectory)));
   let closing = null;
   const close = () => {
     if (!closing) closing = (async () => { await closeServer(webServer); await closeServer(bridgeServer); })();
