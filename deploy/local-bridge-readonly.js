@@ -1,6 +1,6 @@
 import http from "node:http";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,6 +16,7 @@ const MAX_PE_EXPORT_NAMES = 4096;
 const J2534_HOST_ARCHITECTURE = process.arch === "ia32" ? "x86" : process.arch === "x64" ? "x64" : process.arch === "arm64" ? "arm64" : "unknown";
 const J2534_HOST_BITNESS = J2534_HOST_ARCHITECTURE === "x86" ? 32 : J2534_HOST_ARCHITECTURE === "unknown" ? null : 64;
 const J2534_WORKER_CONTRACT_VERSION = "j2534-readonly-worker-v1";
+const J2534_WORKER_SCRIPT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "scripts", "j2534-readonly-worker.js");
 const J2534_REQUIRED_API_NAMES = Object.freeze([
   "PassThruOpen",
   "PassThruClose",
@@ -929,6 +930,103 @@ export function prepareJ2534WorkerReviewRequest(devices = [], options = {}) {
     vehicle_connection_attempted: false,
     would_transmit: false,
     vehicle_command_enabled: false
+  };
+}
+
+export function runJ2534WorkerReview(devices = [], options = {}) {
+  const preparation = prepareJ2534WorkerReviewRequest(devices, options);
+  if (!preparation.worker_request) return normalizeJ2534WorkerReviewProcessResult(preparation);
+  const processResult = spawnSync(process.execPath, [J2534_WORKER_SCRIPT_PATH], {
+    input: JSON.stringify(preparation.worker_request),
+    encoding: "utf8",
+    timeout: preparation.timeout_ms,
+    windowsHide: true,
+    maxBuffer: 64 * 1024
+  });
+  return normalizeJ2534WorkerReviewProcessResult(preparation, processResult);
+}
+
+export function normalizeJ2534WorkerReviewProcessResult(preparation = {}, processResult = null) {
+  const request = preparation?.worker_request;
+  const base = {
+    schema_version: "j2534-worker-review-execution-v1",
+    selected_device_id: preparation?.selected_device_id || null,
+    timeout_ms: preparation?.timeout_ms || null,
+    worker_contract_version: preparation?.worker_contract_version || J2534_WORKER_CONTRACT_VERSION,
+    review_worker_process_started: Boolean(request && Number.isInteger(processResult?.pid) && processResult.pid > 0),
+    worker_execution_enabled: false,
+    dll_load_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  };
+  if (!request) {
+    return {
+      ...base,
+      execution_status: "preparation_blocked",
+      blockers: Array.isArray(preparation?.blockers) ? [...new Set(preparation.blockers)] : ["worker_request_not_prepared"],
+      worker_review: null,
+      process_exit_code: null
+    };
+  }
+  if (processResult?.error?.code === "ETIMEDOUT" || processResult?.signal === "SIGTERM") {
+    return { ...base, execution_status: "worker_timed_out", blockers: ["worker_review_timeout"], worker_review: null, process_exit_code: null };
+  }
+  if (!processResult || processResult.status !== 0) {
+    return { ...base, execution_status: "worker_failed", blockers: ["worker_review_process_failed"], worker_review: null, process_exit_code: Number.isInteger(processResult?.status) ? processResult.status : null };
+  }
+  let workerReview = null;
+  try {
+    workerReview = JSON.parse(String(processResult.stdout || "").trim());
+  } catch {
+    return { ...base, execution_status: "invalid_worker_response", blockers: ["worker_review_invalid_json"], worker_review: null, process_exit_code: 0 };
+  }
+  const allowedBlockers = new Set([
+    "operation_not_allowed", "selected_device_not_confirmed", "driver_static_check_incomplete",
+    "open_review_not_ready", "manual_connection_review_not_confirmed", "worker_timeout_out_of_range",
+    "raw_driver_path_not_accepted", "vehicle_command_requested"
+  ]);
+  const validReview = workerReview
+    && workerReview.contract_version === J2534_WORKER_CONTRACT_VERSION
+    && workerReview.operation === "review_pass_thru_open"
+    && workerReview.selected_device_id === request.selected_device_id
+    && workerReview.timeout_ms === request.timeout_ms
+    && Array.isArray(workerReview.blockers)
+    && workerReview.blockers.every((item) => allowedBlockers.has(item))
+    && ((workerReview.review_status === "ready_for_isolated_implementation" && workerReview.blockers.length === 0)
+      || (workerReview.review_status === "blocked" && workerReview.blockers.length > 0))
+    && workerReview.worker_execution_enabled === false
+    && workerReview.dll_load_attempted === false
+    && workerReview.pass_thru_open_attempted === false
+    && workerReview.vehicle_connection_attempted === false
+    && workerReview.vehicle_communication_started === false
+    && workerReview.would_transmit === false
+    && workerReview.vehicle_command_enabled === false;
+  if (!validReview) {
+    return { ...base, execution_status: "invalid_worker_response", blockers: ["worker_review_contract_mismatch"], worker_review: null, process_exit_code: 0 };
+  }
+  const sanitizedReview = {
+    contract_version: workerReview.contract_version,
+    operation: workerReview.operation,
+    review_status: workerReview.review_status,
+    blockers: [...new Set(workerReview.blockers)],
+    selected_device_id: workerReview.selected_device_id,
+    timeout_ms: workerReview.timeout_ms,
+    worker_execution_enabled: false,
+    dll_load_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    vehicle_communication_started: false,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  };
+  return {
+    ...base,
+    execution_status: sanitizedReview.review_status === "ready_for_isolated_implementation" ? "review_completed" : "review_blocked",
+    blockers: sanitizedReview.blockers,
+    worker_review: sanitizedReview,
+    process_exit_code: 0
   };
 }
 

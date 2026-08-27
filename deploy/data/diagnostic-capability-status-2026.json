@@ -128,8 +128,8 @@
         "label":  "ローカルブリッジ / VCI連携",
         "target_level":  "ELM327 / J2534 / CAN / CAN FD を段階的に読取へ統合",
         "current_status":  "読取入口あり",
-        "progress_percent":  79,
-        "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化、bridge/session alias 吸収、ECU応答サービス来歴、主要読取の部分成功を含むECU別状態、Web Serial終端確認、既定サンプル読取遮断、J2534 workerレビュー要求の親側生成を反映。",
+        "progress_percent":  80,
+        "current_basis":  "Web側モデルとPC側ローカルブリッジで DTC / FF / 対応PID / ECU情報 / Mode06 / レディネスを read-only 統合。status / list_vci / adapter_identity の正規化、bridge/session alias 吸収、ECU応答サービス来歴、主要読取の部分成功を含むECU別状態、Web Serial終端確認、既定サンプル読取遮断、J2534 workerレビュー要求の親側生成と隔離実行結果の正規化を反映。",
         "done":  [
                      "bridge status / list_vci / adapter_identity / DTC / freeze frame / live PID / supported PID / readiness / ECU info / Mode06 の read-only 正規化",
                      "THINKCAR / Techstream J2534 / ELM327 / CANable の候補整理",
@@ -158,7 +158,8 @@
                      "J2534登録状態・確認レジストリ・ブリッジ32/64bitをread-onlyセッションへ保持",
                      "PassThruOpen前のブロッカー・未試行状態・手動確認ゲートをread-onlyセッションへ保持",
                      "J2534 DLL非実行の別プロセスレビュー契約とタイムアウト・生パス拒否を実装",
-                     "J2534検出結果から静的準備済みVCIだけを選び、手動確認・タイムアウト・生パス非保持を満たすworkerレビュー要求を親側で生成"
+                     "J2534検出結果から静的準備済みVCIだけを選び、手動確認・タイムアウト・生パス非保持を満たすworkerレビュー要求を親側で生成",
+                     "J2534隔離workerを親側から起動し、成功・準備不足・タイムアウト・不正出力をパス非保持のread-only結果へ正規化"
                  ],
         "missing":  [
                         "実VCIドライバ連携",

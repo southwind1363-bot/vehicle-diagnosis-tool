@@ -1,4 +1,4 @@
-import { createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest } from "../local-bridge-readonly.js";
+import { createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534WorkerReview } from "../local-bridge-readonly.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -13,6 +13,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "package.json"), "utf8"));
 const j2534BridgeStarterSource = fs.readFileSync(path.join(scriptDir, "start-j2534-readonly-bridge.js"), "utf8");
 const j2534WorkerPath = path.join(scriptDir, "j2534-readonly-worker.js");
+const j2534HostReviewSource = fs.readFileSync(path.join(scriptDir, "review-j2534-host.js"), "utf8");
 const monitorDefinitionRows = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "data", "obd-monitor-definitions.json"), "utf8"));
 const monitorDefinitionIds = new Set(monitorDefinitionRows.map((row) => row.id));
 const bridgeComputedValueIds = new Set([
@@ -36,6 +37,7 @@ const j2534UnavailableReadIntents = [
 ];
 check(packageManifest.scripts?.["bridge:j2534:dev"] === "C:\\Progra~1\\nodejs\\node.exe scripts/start-j2534-readonly-bridge.js" && j2534BridgeStarterSource.includes('process.env.LOCAL_BRIDGE_DISCOVER_J2534 = "1"') && j2534BridgeStarterSource.includes("createLocalBridgeApp()") && j2534BridgeStarterSource.includes("vehicle_command_enabled=false"), "J2534 bridge starter must explicitly enable only static read-only discovery");
 check(packageManifest.scripts?.["review:j2534-worker"] === "C:\\Progra~1\\nodejs\\node.exe scripts/j2534-readonly-worker.js", "J2534 isolated review worker script is not registered");
+check(packageManifest.scripts?.["review:j2534-host"] === "C:\\Progra~1\\nodejs\\node.exe scripts/review-j2534-host.js" && j2534HostReviewSource.includes('discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true })') && j2534HostReviewSource.includes('manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review")') && j2534HostReviewSource.includes('runJ2534WorkerReview(devices,') && j2534HostReviewSource.includes('timeout_ms: 5000'), "J2534 host review CLI must derive drivers from static discovery and require manual confirmation");
 const blockedJ2534WorkerReview = reviewJ2534PassThruOpenRequest({
   operation: "review_pass_thru_open",
   selected_device_id: "j2534-ready-fixture",
@@ -120,6 +122,41 @@ const preparedJ2534WorkerReview = reviewJ2534PassThruOpenRequest(readyJ2534Worke
 check(blockedJ2534WorkerPreparation.preparation_status === "blocked" && blockedJ2534WorkerPreparation.blockers.includes("no_static_ready_driver") && blockedJ2534WorkerPreparation.worker_request === null && blockedJ2534WorkerPreparation.dll_load_attempted === false && blockedJ2534WorkerPreparation.vehicle_command_enabled === false, "J2534 parent preparation did not reject a missing static-ready driver");
 check(pendingJ2534WorkerPreparation.preparation_status === "blocked" && pendingJ2534WorkerPreparation.blockers?.join(",") === "manual_connection_review_not_confirmed" && pendingJ2534WorkerPreparation.worker_request === null && !JSON.stringify(pendingJ2534WorkerPreparation).includes("must-not-leak.dll") && pendingJ2534WorkerPreparation.pass_thru_open_attempted === false, "J2534 parent preparation did not retain manual review or leaked a raw driver path");
 check(readyJ2534WorkerPreparation.schema_version === "j2534-worker-review-preparation-v1" && readyJ2534WorkerPreparation.preparation_status === "ready_for_worker_review" && readyJ2534WorkerPreparation.worker_request?.selected_device_id === "fixture-ready-j2534" && readyJ2534WorkerPreparation.worker_request?.timeout_ms === 5000 && readyJ2534WorkerPreparation.worker_request?.vehicle_command_enabled === false && preparedJ2534WorkerReview.review_status === "ready_for_isolated_implementation" && preparedJ2534WorkerReview.worker_execution_enabled === false && preparedJ2534WorkerReview.dll_load_attempted === false && !JSON.stringify(readyJ2534WorkerPreparation).includes("must-not-leak.dll"), "J2534 parent preparation did not produce a bounded path-free disabled worker review request");
+const blockedJ2534WorkerExecution = runJ2534WorkerReview([], { manual_connection_review_confirmed: true, timeout_ms: 5000 });
+const completedJ2534WorkerExecution = runJ2534WorkerReview([{
+  id: "fixture-ready-j2534",
+  driver_library_inspection_status: "inspected",
+  driver_runtime_compatible: true,
+  driver_readonly_api_ready: true,
+  function_library: "C:\\private\\must-not-leak.dll"
+}], { manual_connection_review_confirmed: true, timeout_ms: 5000 });
+const timedOutJ2534WorkerProcess = spawnSync(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
+  timeout: 1000, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024
+});
+const timedOutJ2534WorkerExecution = normalizeJ2534WorkerReviewProcessResult(readyJ2534WorkerPreparation, timedOutJ2534WorkerProcess);
+const invalidJ2534WorkerExecution = normalizeJ2534WorkerReviewProcessResult(readyJ2534WorkerPreparation, { status: 0, stdout: "not-json", stderr: "C:\\private\\must-not-leak.dll" });
+check(blockedJ2534WorkerExecution.execution_status === "preparation_blocked" && blockedJ2534WorkerExecution.review_worker_process_started === false && blockedJ2534WorkerExecution.worker_review === null && blockedJ2534WorkerExecution.vehicle_command_enabled === false, "J2534 parent runner started a review worker for a blocked preparation");
+check(completedJ2534WorkerExecution.execution_status === "review_completed" && completedJ2534WorkerExecution.review_worker_process_started === true && completedJ2534WorkerExecution.worker_review?.review_status === "ready_for_isolated_implementation" && completedJ2534WorkerExecution.worker_review?.selected_device_id === "fixture-ready-j2534" && completedJ2534WorkerExecution.dll_load_attempted === false && completedJ2534WorkerExecution.pass_thru_open_attempted === false && !JSON.stringify(completedJ2534WorkerExecution).includes("must-not-leak.dll"), "J2534 parent runner did not return a sanitized isolated review result");
+check(timedOutJ2534WorkerProcess.error?.code === "ETIMEDOUT" && timedOutJ2534WorkerExecution.execution_status === "worker_timed_out" && timedOutJ2534WorkerExecution.review_worker_process_started === true && timedOutJ2534WorkerExecution.blockers?.join(",") === "worker_review_timeout" && timedOutJ2534WorkerExecution.worker_review === null && !Object.hasOwn(timedOutJ2534WorkerExecution, "stderr"), "J2534 parent runner did not fail closed after terminating a timed-out child process");
+check(invalidJ2534WorkerExecution.execution_status === "invalid_worker_response" && invalidJ2534WorkerExecution.blockers?.join(",") === "worker_review_invalid_json" && invalidJ2534WorkerExecution.worker_review === null && !JSON.stringify(invalidJ2534WorkerExecution).includes("must-not-leak.dll"), "J2534 parent runner accepted malformed output or leaked worker stderr");
+const mismatchedJ2534WorkerResults = [
+  { operation: "open" }, { selected_device_id: "other-device" }, { timeout_ms: 10000 },
+  { review_status: "unknown" }, { worker_execution_enabled: true }, { dll_load_attempted: true },
+  { pass_thru_open_attempted: true }, { vehicle_connection_attempted: true },
+  { vehicle_communication_started: true }, { would_transmit: true }, { vehicle_command_enabled: true }
+].map((overrides) => normalizeJ2534WorkerReviewProcessResult(readyJ2534WorkerPreparation, {
+  status: 0, stdout: JSON.stringify({ ...preparedJ2534WorkerReview, ...overrides })
+}));
+const unsafeBlockerJ2534WorkerResult = normalizeJ2534WorkerReviewProcessResult(readyJ2534WorkerPreparation, {
+  status: 0, stdout: JSON.stringify({ ...preparedJ2534WorkerReview, review_status: "blocked", blockers: ["C:\\private\\must-not-leak.dll"] })
+});
+const failedJ2534WorkerResults = [
+  { status: null, error: { code: "ENOENT", message: "C:\\private\\must-not-leak.dll" } },
+  { status: 1, pid: 1234, stderr: "C:\\private\\must-not-leak.dll" }
+].map((result) => normalizeJ2534WorkerReviewProcessResult(readyJ2534WorkerPreparation, result));
+check(mismatchedJ2534WorkerResults.every((result) => result.execution_status === "invalid_worker_response" && result.blockers?.join(",") === "worker_review_contract_mismatch" && result.worker_review === null), "J2534 parent runner accepted a changed request identity or unsafe execution flags");
+check(unsafeBlockerJ2534WorkerResult.execution_status === "invalid_worker_response" && unsafeBlockerJ2534WorkerResult.worker_review === null && !JSON.stringify(unsafeBlockerJ2534WorkerResult).includes("must-not-leak.dll"), "J2534 parent runner exposed an unrecognized worker blocker");
+check(failedJ2534WorkerResults.every((result) => result.execution_status === "worker_failed" && result.worker_review === null && !JSON.stringify(result).includes("must-not-leak.dll")) && failedJ2534WorkerResults[0].review_worker_process_started === false && failedJ2534WorkerResults[1].review_worker_process_started === true && failedJ2534WorkerResults[1].process_exit_code === 1, "J2534 parent runner did not distinguish launch failure from a failed child process");
 const j2534RequiredApis = [
   "PassThruOpen",
   "PassThruClose",
@@ -910,6 +947,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 200");
+  console.log("Local bridge read-only checks: 208");
   console.log("Errors: 0");
 }
