@@ -3820,7 +3820,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 3394件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('実機応答差分を診断画面へ統合'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 3397件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 197件"') && appSource.includes('実機サンプル収集テンプレート契約を固定'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4435,7 +4435,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "実機応答差分を診断画面へ統合"'), "OBD core progress should describe the latest completed OEM DTC evidence milestone");
+check(appSource.includes('recentMilestone: "実機サンプル収集テンプレート契約を固定"'), "OBD core progress should describe the latest completed OEM DTC evidence milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4772,7 +4772,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "実機応答差分を診断画面へ統合"'), "OBD core progress snapshot should show the latest completed OEM DTC evidence milestone");
+check(appSource.includes('recentMilestone: "実機サンプル収集テンプレート契約を固定"'), "OBD core progress snapshot should show the latest completed OEM DTC evidence milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -24884,6 +24884,57 @@ const scopedInvalidDtcEvidenceSession = obd.buildDiagnosticScanSessionFromCsv([
 const scopedInvalidDtcEvidenceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scopedInvalidDtcEvidenceSession)));
 const scopedInvalidDtcEvidenceQuality = scopedInvalidDtcEvidenceSession?.coreSessionStatus?.readoutQualitySummary;
 check(scopedInvalidDtcEvidenceSession?.importClassification?.dtcEvidenceFieldReport?.invalidFieldObservations?.[0]?.sourceEcu === "7E2" && scopedInvalidDtcEvidenceSession?.importClassification?.dtcEvidenceFieldReport?.invalidFieldObservations?.[0]?.dtcCode === "P0A80" && scopedInvalidDtcEvidenceSession?.importClassification?.dtcEvidenceFieldReport?.invalidFieldObservations?.[0]?.scanSessionId === "SCAN-AFTER" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceScopeComplete === true && scopedInvalidDtcEvidenceQuality?.dtcEvidenceAcquisitionContextComplete === true && scopedInvalidDtcEvidenceQuality?.dtcEvidenceTransportContextComplete === true && scopedInvalidDtcEvidenceQuality?.dtcEvidenceReadoutContractComplete === true && scopedInvalidDtcEvidenceQuality?.dtcEvidenceResponseContractComplete === true && scopedInvalidDtcEvidenceQuality?.dtcEvidenceNegativeResponseContextComplete === true && scopedInvalidDtcEvidenceQuality?.dtcEvidenceResponseAttemptContextComplete === true && scopedInvalidDtcEvidenceQuality?.dtcEvidenceNegativeResponseCode === null && scopedInvalidDtcEvidenceQuality?.dtcEvidenceResponsePendingObserved === false && scopedInvalidDtcEvidenceQuality?.dtcEvidenceNegativeRequestedService === null && scopedInvalidDtcEvidenceQuality?.dtcEvidenceResponseCount === 1 && scopedInvalidDtcEvidenceQuality?.dtcEvidenceResponseWaitMs === 120 && scopedInvalidDtcEvidenceQuality?.dtcEvidenceCapturedAt === "2026-08-26T01:00:00.000Z" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceProtocol === "ISO15765-4" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceScanSessionId === "SCAN-AFTER" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceReadoutAttemptId === "ATTEMPT-AFTER" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceCommunicationRouteKey === "route=LOCAL_BRIDGE;bus=CAN;channel=1;gateway=DIRECT" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceVciIdentityKey === "family=J2534;name=TEST%20VCI;firmware=1.0" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceReadoutCategory === "stored" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceRequestedService === "03" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceResponseService === "43" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceEcuResponseStatus === "reported" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceVehicleScopeKey === "maker=TEST%20MAKER;model=TEST-1;year=2026" && scopedInvalidDtcEvidenceQuality?.dtcEvidenceComparisonScopeKeys?.[0] === "maker=TEST%20MAKER;model=TEST-1;year=2026;ecu=7E2;dtc=P0A80" && scopedInvalidDtcEvidenceQuality?.invalidDtcEvidenceScopedIssueKeys?.[0]?.endsWith(";issue=dtc_first_detected_at|invalid_timestamp") && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceScopeComplete === true && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceAcquisitionContextComplete === true && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceTransportContextComplete === true && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceReadoutContractComplete === true && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceResponseContractComplete === true && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceNegativeResponseContextComplete === true && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceResponseAttemptContextComplete === true && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceNegativeResponseCode === null && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceResponsePendingObserved === false && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceResponseCount === 1 && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceResponseWaitMs === 120 && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceResponseService === "43" && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.dtcEvidenceEcuResponseStatus === "reported" && scopedInvalidDtcEvidenceRoundTrip?.coreSessionStatus?.readoutQualitySummary?.invalidDtcEvidenceScopedIssueKeys?.length === 1 && scopedInvalidDtcEvidenceRoundTrip?.vehicleCommandEnabled === false && scopedInvalidDtcEvidenceRoundTrip?.wouldTransmit === false, "DTC evidence validation scope, acquisition context, transport context, readout contract, response contract, negative-response context, and response-attempt context must survive read-only CSV and JSON roundtrip");
+const manufacturerSampleCollectionTemplate = obd.getManufacturerSampleCollectionTemplate();
+const buildManufacturerTemplateSample = (responseOverrides = {}) => {
+  const valuesByHeader = {
+    DTC: "P0A80",
+    Status: "Stored",
+    ECU: "7E2",
+    Maker: "Test Maker",
+    "Model Code": "TEST-1",
+    Year: "2026",
+    "Captured At": "2026-08-26T01:00:00.000Z",
+    Protocol: "ISO15765-4",
+    "Scan Session ID": "scan-template",
+    "Readout Attempt ID": "attempt-template",
+    "Readout Route": "local_bridge",
+    "Network Bus": "CAN",
+    "Network Channel": "1",
+    "Gateway Route": "direct",
+    "Adapter Family": "J2534",
+    "Adapter Name": "Test VCI",
+    "Firmware Version": "1.0",
+    "Readout Type": "stored",
+    "Requested Service": "03",
+    "Response Service": "43",
+    "ECU Response Status": "reported",
+    "Negative Requested Service": "",
+    "Response Count": "1",
+    "Response Wait Ms": "120",
+    "UDS Negative Response Code": "",
+    "UDS Response State": "Completed",
+    dtc_first_detected_at: "2026-08-26T00:55:00.000Z",
+    ...responseOverrides
+  };
+  return [
+    manufacturerSampleCollectionTemplate.columnHeaders.join(manufacturerSampleCollectionTemplate.delimiter),
+    manufacturerSampleCollectionTemplate.columnHeaders.map((header) => valuesByHeader[header] || "").join(manufacturerSampleCollectionTemplate.delimiter)
+  ].join("\n");
+};
+const positiveManufacturerTemplateSession = obd.buildDiagnosticScanSessionFromCsv(buildManufacturerTemplateSample());
+const negativeManufacturerTemplateSession = obd.buildDiagnosticScanSessionFromCsv(buildManufacturerTemplateSample({
+  "Scan Session ID": "scan-template-negative",
+  "Readout Attempt ID": "attempt-template-negative",
+  "Response Service": "7F",
+  "ECU Response Status": "negative_response",
+  "Negative Requested Service": "03",
+  "UDS Negative Response Code": "22",
+  "UDS Response State": "Negative Response"
+}));
+const emptyManufacturerTemplateSession = obd.buildDiagnosticScanSessionFromCsv(manufacturerSampleCollectionTemplate.columnHeaders.join(manufacturerSampleCollectionTemplate.delimiter));
+check(manufacturerSampleCollectionTemplate?.schemaVersion === "manufacturer_sample_collection_template_v1" && manufacturerSampleCollectionTemplate?.fieldSchemaVersion === "dtc_evidence_field_schema_v1" && manufacturerSampleCollectionTemplate?.format === "tsv" && manufacturerSampleCollectionTemplate?.delimiter === "\t" && manufacturerSampleCollectionTemplate?.coreColumns?.length === 26 && manufacturerSampleCollectionTemplate?.optionalEvidenceColumns?.length === 19 && manufacturerSampleCollectionTemplate?.columns?.length === 45 && manufacturerSampleCollectionTemplate?.conditionalRules?.length === 4 && manufacturerSampleCollectionTemplate?.excludedIdentifierIds?.join(",") === "vin,registration_number,vci_serial_number,activation_code" && !manufacturerSampleCollectionTemplate?.columnHeaders?.some((header) => /vin|serial|activation/i.test(header)) && manufacturerSampleCollectionTemplate?.readOnly === true && manufacturerSampleCollectionTemplate?.vehicleCommandEnabled === false && manufacturerSampleCollectionTemplate?.wouldTransmit === false, "Manufacturer sample collection template must match the evidence schema without collecting unnecessary identifiers or enabling commands");
+check(positiveManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.contractCompleteForSampleReview === true && positiveManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.requestScopeKeys?.length === 1 && positiveManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.responseObservationKeys?.[0]?.includes("response=43") && positiveManufacturerTemplateSession?.importClassification?.dtcEvidenceFieldReport?.recognizedFieldCount === 19 && positiveManufacturerTemplateSession?.vehicleCommandEnabled === false && positiveManufacturerTemplateSession?.wouldTransmit === false, "A positive-response row created from the manufacturer sample template must satisfy the read-only nine-requirement intake contract");
+check(negativeManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.contractCompleteForSampleReview === true && negativeManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.requestScopeKeys?.[0] === positiveManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.requestScopeKeys?.[0] && negativeManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.responseObservationKeys?.[0]?.includes("response=7F") && negativeManufacturerTemplateSession?.manufacturerSampleReadinessSummary?.responseObservationKeys?.[0]?.includes("nrc=22") && emptyManufacturerTemplateSession === null && negativeManufacturerTemplateSession?.vehicleCommandEnabled === false && negativeManufacturerTemplateSession?.wouldTransmit === false, "Negative-response template rows must remain comparable to positive rows while an empty template creates no diagnostic result");
 const completeManufacturerSampleSession = obd.buildDiagnosticScanSessionFromCsv([
   "DTC\tStatus\tECU\tMaker\tModel Code\tYear\tDTC First Detected At\tCaptured At\tProtocol\tScan Session ID\tReadout Attempt ID\tReadout Route\tNetwork Bus\tNetwork Channel\tGateway Route\tAdapter Family\tAdapter Name\tFirmware Version\tReadout Type\tRequested Service\tResponse Service\tECU Response Status\tNegative Requested Service\tResponse Count\tResponse Wait Ms",
   "P0A80\tStored\t7E2\tTest Maker\tTEST-1\t2026\t2026-08-26T00:55:00.000Z\t2026-08-26T01:00:00.000Z\tISO15765-4\tscan-after\tattempt-after\tlocal_bridge\tCAN\t1\tdirect\tJ2534\tTest VCI\t1.0\tstored\t03\t43\treported\t\t1\t120"
@@ -27349,6 +27400,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("OBD read-only safety checks: 3394");
+  console.log("OBD read-only safety checks: 3397");
   console.log("Errors: 0");
 }

@@ -33924,6 +33924,86 @@
     });
   }));
 
+  function getManufacturerSampleCollectionTemplate() {
+    const coreColumns = [
+      ["dtc_code", "DTC"],
+      ["dtc_status", "Status"],
+      ["source_ecu", "ECU"],
+      ["vehicle_maker", "Maker"],
+      ["vehicle_model_code", "Model Code"],
+      ["vehicle_year", "Year"],
+      ["captured_at", "Captured At"],
+      ["protocol", "Protocol"],
+      ["scan_session_id", "Scan Session ID"],
+      ["readout_attempt_id", "Readout Attempt ID"],
+      ["communication_route", "Readout Route"],
+      ["network_bus", "Network Bus"],
+      ["network_channel", "Network Channel"],
+      ["gateway_route", "Gateway Route"],
+      ["vci_family", "Adapter Family"],
+      ["vci_name", "Adapter Name"],
+      ["vci_firmware", "Firmware Version"],
+      ["dtc_readout_category", "Readout Type"],
+      ["requested_service", "Requested Service"],
+      ["response_service", "Response Service"],
+      ["ecu_response_status", "ECU Response Status"],
+      ["negative_requested_service", "Negative Requested Service"],
+      ["response_count", "Response Count"],
+      ["response_wait_ms", "Response Wait Ms"],
+      ["negative_response_code", "UDS Negative Response Code"],
+      ["response_state", "UDS Response State"]
+    ].map(([id, header]) => ({ id, header }));
+    const optionalEvidenceColumns = DTC_EVIDENCE_FIELD_SCHEMA.map((field) => ({
+      id: field.id,
+      header: field.id,
+      valueType: field.valueType,
+      value_type: field.value_type,
+      validationRule: field.validationRule,
+      validation_rule: field.validation_rule,
+      unitFamily: field.unitFamily,
+      unit_family: field.unit_family
+    }));
+    const columns = [...coreColumns, ...optionalEvidenceColumns];
+    const columnHeaders = columns.map((column) => column.header);
+    const emptyRow = Object.fromEntries(columns.map((column) => [column.id, ""]));
+    const excludedIdentifierIds = ["vin", "registration_number", "vci_serial_number", "activation_code"];
+    return {
+      schemaVersion: "manufacturer_sample_collection_template_v1",
+      schema_version: "manufacturer_sample_collection_template_v1",
+      fieldSchemaVersion: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+      field_schema_version: DTC_EVIDENCE_FIELD_SCHEMA_VERSION,
+      format: "tsv",
+      delimiter: "\t",
+      columns: columns.map((column) => ({ ...column })),
+      columnHeaders,
+      column_headers: [...columnHeaders],
+      coreColumns: coreColumns.map((column) => ({ ...column })),
+      core_columns: coreColumns.map((column) => ({ ...column })),
+      optionalEvidenceColumns: optionalEvidenceColumns.map((column) => ({ ...column })),
+      optional_evidence_columns: optionalEvidenceColumns.map((column) => ({ ...column })),
+      emptyRow,
+      empty_row: { ...emptyRow },
+      conditionalRules: [
+        { outcome: "positive_response", requiredFieldIds: ["response_service", "ecu_response_status", "response_count", "response_wait_ms"] },
+        { outcome: "negative_response", requiredFieldIds: ["response_service", "ecu_response_status", "negative_requested_service", "negative_response_code", "response_count", "response_wait_ms"] },
+        { outcome: "pending_response", requiredFieldIds: ["response_service", "ecu_response_status", "negative_requested_service", "negative_response_code", "response_state", "response_count", "response_wait_ms"] },
+        { outcome: "no_response", requiredFieldIds: ["ecu_response_status", "response_count", "response_wait_ms"] }
+      ].map((rule) => ({ ...rule, required_field_ids: [...rule.requiredFieldIds] })),
+      excludedIdentifierIds,
+      excluded_identifier_ids: [...excludedIdentifierIds],
+      retainsRawPayload: false,
+      retains_raw_payload: false,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function validateDtcEvidenceFieldValue(fieldId, value) {
     const normalized = redactSensitiveText(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, 80);
     if (!normalized) return { present: false, valid: true, value: null, reason: null };
@@ -40143,6 +40223,7 @@
     getFreezeFrameItems,
     getReadinessMonitors,
     getEcuInfoItems,
+    getManufacturerSampleCollectionTemplate,
     getVehicleOperationPlan,
     getServiceOperationReadinessRequirements,
     getServiceExperimentContract,
