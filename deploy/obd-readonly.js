@@ -1357,6 +1357,36 @@
     };
   }
 
+  function buildServiceOperationEvidenceFromReadiness(readiness = {}) {
+    const checks = Array.isArray(readiness?.checks) ? readiness.checks : [];
+    return checks.reduce((evidence, check) => {
+      const evidenceKey = check?.evidenceKey || check?.evidence_key || null;
+      if (evidenceKey && check?.complete === true) evidence[evidenceKey] = true;
+      return evidence;
+    }, {});
+  }
+
+  function normalizeServiceOperationReadinessPlanAliases(value = null, fallbackEvidenceByOperation = {}) {
+    const plan = value && typeof value === "object" && !Array.isArray(value) ? value : null;
+    const operationReadiness = Array.isArray(plan?.operationReadiness)
+      ? plan.operationReadiness
+      : Array.isArray(plan?.operation_readiness)
+        ? plan.operation_readiness
+        : [];
+    if (!operationReadiness.length) return buildServiceOperationReadinessPlan(fallbackEvidenceByOperation);
+
+    const evidenceByOperation = {};
+    operationReadiness.forEach((readiness) => {
+      const operationId = readiness?.operationId || readiness?.operation_id || null;
+      if (!operationId) return;
+      evidenceByOperation[operationId] = {
+        ...getServiceOperationReadinessEvidence(fallbackEvidenceByOperation, operationId),
+        ...buildServiceOperationEvidenceFromReadiness(readiness)
+      };
+    });
+    return buildServiceOperationReadinessPlan(evidenceByOperation);
+  }
+
   function getMobileReadoutTransportPlan() {
     return mobileReadoutTransportPlan.map((item) => ({
       ...item,
@@ -25896,6 +25926,18 @@
       || parts.web_serial_readout_summary
       || null
     );
+    const serviceOperationReadinessPlanInput = pickDefined(
+      summary.serviceOperationReadinessPlan,
+      summary.service_operation_readiness_plan,
+      parts.serviceOperationReadinessPlan,
+      parts.service_operation_readiness_plan,
+      parts.session?.serviceOperationReadinessPlan,
+      parts.session?.service_operation_readiness_plan,
+      null
+    );
+    const serviceOperationReadinessPlan = serviceOperationReadinessPlanInput
+      ? normalizeServiceOperationReadinessPlanAliases(serviceOperationReadinessPlanInput)
+      : null;
     const obdReportedProfile = buildObdReportedProfile(
       livePidSnapshot,
       getObdReportedProfileInput(summary) || getObdReportedProfileInput(parts)
@@ -26080,6 +26122,7 @@
         manufacturer_pid_vehicle_readout_comparison_summary: manufacturerPidVehicleReadoutComparisonSummary,
         web_serial_readout_summary: webSerialReadoutSummary,
         readout_coverage: normalizeReadoutCoverageSnapshot(summary.readoutCoverage || buildReadoutCoverageSnapshot()),
+        ...(serviceOperationReadinessPlan ? { service_operation_readiness_plan: serviceOperationReadinessPlan } : {}),
         freeze_frame_snapshot: summary.freezeFrameSnapshot || normalizeBridgeFreezeFrameSnapshot(),
         monitor_values: cloneBridgeArrayItems(summary.monitorValues),
         monitor_value_summary: summary.monitorValueSummary || buildMonitorValueSummary(cloneBridgeArrayItems(summary.monitorValues)),
@@ -33516,6 +33559,9 @@
     const trustedImportedCoreReadoutInventorySummary = isTrustedBridgeSessionExport
       ? pick("importedCoreReadoutInventorySummary", "imported_core_readout_inventory_summary")
       : null;
+    const trustedServiceOperationReadinessPlan = isTrustedBridgeSessionExport
+      ? pick("serviceOperationReadinessPlan", "service_operation_readiness_plan")
+      : null;
     const bridgeIntent = String(importSession.intent || "").trim().toLowerCase();
     const hasBridgeFreezeFrameResponse = hasBridgeResponsePayload && bridgeIntent === "read_freeze_frame";
     const hasBridgeEcuInfoResponse = hasBridgeResponsePayload && bridgeIntent === "read_ecu_info";
@@ -33967,6 +34013,7 @@
       importedCoreReadoutInventorySummary: trustedImportedCoreReadoutInventorySummary || undefined,
       causeCandidateLog: isTrustedBridgeSessionExport ? pick("causeCandidateLog", "cause_candidate_log") || undefined : undefined,
       causeCandidateLogReferenceComparisonSummary: isTrustedBridgeSessionExport ? pick("causeCandidateLogReferenceComparisonSummary", "cause_candidate_log_reference_comparison_summary") || undefined : undefined,
+      serviceOperationReadinessPlan: trustedServiceOperationReadinessPlan || undefined,
       vehicleProfile: scannerJsonVehicleProfile || undefined,
       vehicleApplicability: scannerJsonVehicleApplicability || undefined,
       observationContext: scannerJsonObservationContext || undefined,
@@ -37723,6 +37770,10 @@
     const importedReadoutRequestPlanGateSummary = normalizeImportedReadoutRequestPlanGateSummaryAliases(sessionInput.importedReadoutRequestPlanGateSummary || sessionInput.imported_readout_request_plan_gate_summary || sessionInput.readoutRequestPlanGateSummary || sessionInput.readout_request_plan_gate_summary || null, importedCoreSessionStatus);
     const importedNextReadoutGuardSummary = normalizeImportedNextReadoutGuardSummaryAliases(sessionInput.importedNextReadoutGuardSummary || sessionInput.imported_next_readout_guard_summary || sessionInput.nextReadoutGuardSummary || sessionInput.next_readout_guard_summary || null, importedCoreSessionStatus);
     const importedCoreReadoutInventorySummary = normalizeCoreReadoutInventorySummaryAliases(sessionInput.importedCoreReadoutInventorySummary || sessionInput.imported_core_readout_inventory_summary || sessionInput.coreReadoutInventorySummary || sessionInput.core_readout_inventory_summary || null);
+    const serviceOperationReadinessPlan = normalizeServiceOperationReadinessPlanAliases(
+      pickDefined(sessionInput.serviceOperationReadinessPlan, sessionInput.service_operation_readiness_plan, null),
+      pickDefined(sessionInput.serviceOperationEvidence, sessionInput.service_operation_evidence, {})
+    );
     const bridgeSession = sanitizeSensitiveIdentifiersForRetention(sessionInput.bridgeSession || sessionInput.bridge_session || null);
     const bridgeExportPayload = sanitizeSensitiveIdentifiersForRetention(sessionInput.exportPayload || sessionInput.export_payload || sessionInput.bridgeExportPayload || sessionInput.bridge_export_payload || null);
     const storedDtcSnapshotInput = sessionInput.storedDtcSnapshot || sessionInput.stored_dtc_snapshot || sessionInput.storedDtcResponse || sessionInput.stored_dtc_response || null;
@@ -38444,6 +38495,8 @@
       supported_pid_matrix: supportedPidMatrix,
       readoutCoverage,
       readout_coverage: readoutCoverage,
+      serviceOperationReadinessPlan,
+      service_operation_readiness_plan: serviceOperationReadinessPlan,
       bridgeSession,
       bridge_session: bridgeSession,
       bridgeExportPayload,
