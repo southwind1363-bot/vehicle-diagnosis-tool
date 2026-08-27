@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "不完全なオフライン更新を拒否し旧版を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.262";
+const APP_VERSION = "3.13.263";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6040,7 +6040,7 @@ async function sendObdLocalBridgeIntent(intent, payload = {}, options = {}) {
   const pairingToken = obdBridgePairingToken || localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
   if (pairingToken.length < 12) throw new Error("詳細トークンが未設定です。");
   const request = {
-    request_id: generateId(),
+    request_id: createId(),
     api_version: "v1",
     intent,
     timestamp: new Date().toISOString(),
@@ -6093,7 +6093,7 @@ async function sendObdLocalBridgeStatusIntent(intent, payload = {}, options = {}
     throw new Error(`unsupported_public_local_bridge_intent ${intent}`);
   }
   const request = {
-    request_id: generateId(),
+    request_id: createId(),
     api_version: "v1",
     intent,
     timestamp: new Date().toISOString(),

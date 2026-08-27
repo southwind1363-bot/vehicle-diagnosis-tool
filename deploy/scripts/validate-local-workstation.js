@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import fs from "node:fs";
 import vm from "node:vm";
+import { webcrypto } from "node:crypto";
 import { startLocalWorkstation } from "./start-local-workstation.js";
 
 let checks = 0;
@@ -21,12 +22,13 @@ function createClient(webUrl, token, fetchRequest = fetch) {
     renderObdDeveloperGate: () => {}, clearRequestedInterfaceSelection: () => {},
     obdAccessUnlocked: true, obdAccessPasswordInput: { value: "" },
     OBD_ACCESS_MODE_KEY: "test-access", renderObdAccessGate: () => {},
-    localStorage: { getItem: () => token }, generateId: () => "workstation-client-test",
+    localStorage: { getItem: () => token }, window: { crypto: webcrypto }, crypto: webcrypto,
     fetch: fetchRequest, AbortController, setTimeout, clearTimeout
   });
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
   vm.runInContext(`${constants}\n${clientSource}`, context);
+  vm.runInContext(appSource.match(/function createId\(\) \{[\s\S]*?\r?\n\}/)[0], context);
   vm.runInContext(appSource.slice(appSource.indexOf("function invalidateObdScannerImport("), appSource.indexOf("async function pasteObdScannerImport(")), context);
   vm.runInContext(appSource.slice(appSource.indexOf("async function probeObdLocalBridge("), appSource.indexOf("async function listObdLocalBridgeVci(")), context);
   context.renderObdDeveloperGate = () => {
@@ -509,14 +511,30 @@ try {
     check(!JSON.stringify(health).includes(options.pairingToken) && !JSON.stringify(readout).includes(options.pairingToken), "Workstation exposed its pairing token in bridge responses");
     const localEndpoint = `${workstation.webUrl}/local-bridge/v1/request`;
     const requests = [];
+    const requestBodies = [];
     const client = createClient(workstation.webUrl, options.pairingToken, (url, init) => {
       requests.push(url);
+      requestBodies.push(JSON.parse(init.body));
       return fetch(url, init);
     });
     const status = await client.sendObdLocalBridgeStatusIntent("bridge_status");
     check(status.ok === true && requests.length === 1 && requests[0] === localEndpoint && client.obdDevSession.bridgeEndpoint === localEndpoint, "UI did not discover its own workstation bridge first on custom ports");
     const localReadout = await client.sendObdLocalBridgeIntent("read_stored_dtc");
     check(localReadout.ok === false && localReadout.errors.includes("vci_not_detected") && localReadout.would_transmit === false && requests[1] === localEndpoint, "UI paired readout bypassed the local bridge safety checks");
+    check(requestBodies.every((body) => /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.request_id)) && requestBodies[0].request_id !== requestBodies[1].request_id, "Actual application helper did not generate distinct UUIDs for separate bridge operations");
+    check(!Object.hasOwn(requestBodies[0], "pairing_token") && requestBodies[1].pairing_token === options.pairingToken, "Request ID repair changed public versus paired request credentials");
+    check(requestBodies.every((body) => body.api_version === "v1" && Number.isFinite(Date.parse(body.timestamp))), "Request ID repair changed the bridge envelope");
+    const fallbackIdBodies = [];
+    const fallbackIdClient = createClient(workstation.webUrl, options.pairingToken, (url, init) => {
+      fallbackIdBodies.push(JSON.parse(init.body));
+      return fetch(url, init);
+    });
+    fallbackIdClient.window = {};
+    delete fallbackIdClient.crypto;
+    const fallbackIdStatus = await fallbackIdClient.sendObdLocalBridgeStatusIntent("bridge_status");
+    const fallbackIdReadout = await fallbackIdClient.sendObdLocalBridgeIntent("read_stored_dtc");
+    check(fallbackIdStatus.ok === true && fallbackIdReadout.errors.includes("vci_not_detected") && fallbackIdBodies.every((body) => /^\d+-[0-9a-f]+$/.test(body.request_id)), "Browser without randomUUID could not use the existing request ID fallback");
+    check(fallbackIdBodies[0].request_id !== fallbackIdBodies[1].request_id && fallbackIdReadout.would_transmit === false, "Fallback IDs were reused or enabled vehicle transmission");
     const wrongClient = createClient(workstation.webUrl, "wrong-pairing-token");
     const wrongReadout = await wrongClient.sendObdLocalBridgeIntent("read_stored_dtc");
     check(wrongReadout.blocked === true && wrongReadout.errors.includes("pairing_token_mismatch"), "Same-origin routing bypassed pairing");
@@ -591,6 +609,9 @@ try {
     const requestCountBeforeWrite = requests.length;
     await assert.rejects(client.sendObdLocalBridgeIntent("clear_dtc"));
     check(requests.length === requestCountBeforeWrite, "UI sent a forbidden write intent");
+    await assert.rejects(client.sendObdLocalBridgeStatusIntent("read_stored_dtc"));
+    await assert.rejects(client.sendObdLocalBridgeStatusIntent("clear_dtc"));
+    check(requests.length === requestCountBeforeWrite, "Public status helper sent a paired read or forbidden write intent");
     const localRequest = (body) => fetch(localEndpoint, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
     });
@@ -606,12 +627,17 @@ try {
     client.obdDevSession.bridgeEndpoint = "http://127.0.0.1:17653/v1";
     check(client.getObdLocalBridgeEndpoints()[0] === client.obdDevSession.bridgeEndpoint && client.getObdLocalBridgeEndpoints({ discover: true })[0] === localEndpoint, "Cached endpoint or explicit rediscovery regressed");
     const fallbackRequests = [];
+    const fallbackBodies = [];
     const legacyClient = createClient(workstation.webUrl, options.pairingToken, (url, init) => {
       fallbackRequests.push(url);
+      fallbackBodies.push(JSON.parse(init.body));
       return url === localEndpoint ? Promise.resolve(new Response(null, { status: 404 })) : fetch(`${workstation.bridgeUrl}/v1/request`, init);
     });
     const fallbackStatus = await legacyClient.sendObdLocalBridgeStatusIntent("bridge_status");
     check(fallbackStatus.ok === true && fallbackRequests.length === 2 && fallbackRequests[1] === publicEndpoints[0], "Legacy static UI did not fall back to the existing separate bridge");
+    check(fallbackBodies.length === 2 && fallbackBodies[0].request_id === fallbackBodies[1].request_id && fallbackBodies.every((body) => !Object.hasOwn(body, "pairing_token")), "Endpoint discovery changed the request ID or exposed pairing credentials");
+    const fallbackReadout = await legacyClient.sendObdLocalBridgeIntent("read_stored_dtc", {}, { discover: true });
+    check(fallbackReadout.errors.includes("vci_not_detected") && fallbackReadout.would_transmit === false && fallbackBodies.length === 4 && fallbackBodies[2].request_id === fallbackBodies[3].request_id && fallbackBodies[2].request_id !== fallbackBodies[0].request_id && fallbackBodies.slice(2).every((body) => body.pairing_token === options.pairingToken), "Paired endpoint discovery changed the request ID, lost credentials, or enabled transmission");
     await validateBridgeOperationLifecycle(workstation.webUrl);
     await validateScannerImportOwnership(workstation.webUrl);
     await validateScannerAcquisitionOrder(workstation.webUrl);
