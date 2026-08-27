@@ -1257,6 +1257,12 @@
     return (serviceOperationReadinessRequirements[operationId] || []).map((item) => ({ ...item }));
   }
 
+  function getServiceOperationReadinessEvidence(evidenceByOperation, operationId) {
+    if (!evidenceByOperation || typeof evidenceByOperation !== "object") return {};
+    const directEvidence = evidenceByOperation[operationId];
+    return directEvidence && typeof directEvidence === "object" ? directEvidence : evidenceByOperation;
+  }
+
   function getServiceExperimentContract() {
     return {
       ...serviceExperimentContract,
@@ -1308,6 +1314,46 @@
       requiresExternalSafetyValidation: true,
       requires_external_safety_validation: true,
       reason: "準備条件の記録と検証だけを行います。このモデルから車両へコマンドは送信しません。"
+    };
+  }
+
+  function buildServiceOperationReadinessPlan(evidenceByOperation = {}) {
+    const operationReadiness = vehicleOperationPlan
+      .filter((operation) => operation.commandClass === "state-changing")
+      .map((operation) => buildServiceOperationReadiness(
+        operation.id,
+        getServiceOperationReadinessEvidence(evidenceByOperation, operation.id)
+      ));
+    const missingRequirementIds = [...new Set(operationReadiness.flatMap((item) => item.missingRequirementIds || []))];
+    const implementationEligibleOperationIds = operationReadiness
+      .filter((item) => item.ownerExperimentEligibleForImplementation === true)
+      .map((item) => item.operationId)
+      .filter(Boolean);
+
+    return {
+      schemaVersion: "service_operation_readiness_plan_v1",
+      schema_version: "service_operation_readiness_plan_v1",
+      contract: getServiceExperimentContract(),
+      operationReadiness,
+      operation_readiness: operationReadiness,
+      operationCount: operationReadiness.length,
+      operation_count: operationReadiness.length,
+      implementationEligibleOperationIds,
+      implementation_eligible_operation_ids: [...implementationEligibleOperationIds],
+      implementationEligibleCount: implementationEligibleOperationIds.length,
+      implementation_eligible_count: implementationEligibleOperationIds.length,
+      missingRequirementIds,
+      missing_requirement_ids: [...missingRequirementIds],
+      missingRequirementCount: missingRequirementIds.length,
+      missing_requirement_count: missingRequirementIds.length,
+      publicExecutionEnabled: false,
+      public_execution_enabled: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false
     };
   }
 
@@ -40547,6 +40593,7 @@
     getVehicleOperationPlan,
     getServiceOperationReadinessRequirements,
     getServiceExperimentContract,
+    buildServiceOperationReadinessPlan,
     getElmTransportProfile,
     buildServiceOperationReadiness,
     getMobileReadoutTransportPlan,
