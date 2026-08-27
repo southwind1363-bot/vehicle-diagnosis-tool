@@ -17,6 +17,7 @@ const J2534_HOST_ARCHITECTURE = process.arch === "ia32" ? "x86" : process.arch =
 const J2534_HOST_BITNESS = J2534_HOST_ARCHITECTURE === "x86" ? 32 : J2534_HOST_ARCHITECTURE === "unknown" ? null : 64;
 const J2534_WORKER_CONTRACT_VERSION = "j2534-readonly-worker-v1";
 const J2534_WORKER_SCRIPT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "scripts", "j2534-readonly-worker.js");
+let j2534WorkerReviewActive = false;
 const J2534_REQUIRED_API_NAMES = Object.freeze([
   "PassThruOpen",
   "PassThruClose",
@@ -943,6 +944,18 @@ export async function runJ2534WorkerReview(devices = [], options = {}) {
   if (signal?.aborted) {
     return normalizeJ2534WorkerReviewProcessResult(preparation, { error: { code: "ABORT_ERR" } });
   }
+  if (j2534WorkerReviewActive) {
+    return normalizeJ2534WorkerReviewProcessResult(preparation, { error: { code: "J2534_REVIEW_BUSY" } });
+  }
+  j2534WorkerReviewActive = true;
+  try {
+    return await executeJ2534WorkerReview(preparation, signal);
+  } finally {
+    j2534WorkerReviewActive = false;
+  }
+}
+
+async function executeJ2534WorkerReview(preparation, signal) {
   const processResult = await new Promise((resolve) => {
     let cancelled = false;
     let result = null;
@@ -1003,6 +1016,9 @@ export function normalizeJ2534WorkerReviewProcessResult(preparation = {}, proces
       worker_review: null,
       process_exit_code: null
     };
+  }
+  if (processResult?.error?.code === "J2534_REVIEW_BUSY") {
+    return { ...base, execution_status: "worker_busy", blockers: ["worker_review_in_progress"], worker_review: null, process_exit_code: null };
   }
   if (processResult?.error?.code === "ABORT_ERR") {
     return { ...base, execution_status: "worker_cancelled", blockers: ["worker_review_cancelled"], worker_review: null, process_exit_code: null };

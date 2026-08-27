@@ -134,6 +134,13 @@ const pendingJ2534WorkerExecution = runJ2534WorkerReview([{
 }], { manual_connection_review_confirmed: true, timeout_ms: 5000, signal: completedJ2534WorkerController.signal });
 let j2534WorkerSettled = false;
 pendingJ2534WorkerExecution.then(() => { j2534WorkerSettled = true; });
+const concurrentJ2534Reviews = [];
+for (const id of ["fixture-ready-j2534", "fixture-other-j2534"]) {
+  concurrentJ2534Reviews.push(await runJ2534WorkerReview([{
+    id, driver_library_inspection_status: "inspected", driver_runtime_compatible: true, driver_readonly_api_ready: true
+  }], { manual_connection_review_confirmed: true }));
+}
+check(concurrentJ2534Reviews.every((result) => result.execution_status === "worker_busy" && result.blockers?.join(",") === "worker_review_in_progress" && result.review_worker_process_started === false && result.worker_review === null && result.vehicle_command_enabled === false), "Concurrent J2534 reviews started extra workers or failed to report the busy state");
 await new Promise((resolve) => setImmediate(resolve));
 check(!j2534WorkerSettled, "J2534 worker review blocked the parent event loop until completion");
 const completedJ2534WorkerExecution = await pendingJ2534WorkerExecution;
@@ -155,12 +162,21 @@ const activeJ2534Review = runJ2534WorkerReview(cancellationJ2534Devices, {
   manual_connection_review_confirmed: true, signal: activeJ2534Controller.signal
 });
 activeJ2534Controller.abort("C:\\private\\must-not-leak.dll");
+const closingJ2534Review = await runJ2534WorkerReview(cancellationJ2534Devices, { manual_connection_review_confirmed: true });
+check(closingJ2534Review.execution_status === "worker_busy" && closingJ2534Review.review_worker_process_started === false, "J2534 cancellation released the worker slot before child close");
 const cancelledJ2534Review = await activeJ2534Review;
 check(cancelledJ2534Review.execution_status === "worker_cancelled" && cancelledJ2534Review.blockers?.join(",") === "worker_review_cancelled" && cancelledJ2534Review.review_worker_process_started === true && cancelledJ2534Review.review_worker_process_exited === true && cancelledJ2534Review.worker_review === null && cancelledJ2534Review.vehicle_command_enabled === false && !JSON.stringify(cancelledJ2534Review).includes("must-not-leak.dll"), "J2534 cancellation did not wait for child close or failed to discard review output");
 const invalidJ2534Cancellation = await runJ2534WorkerReview(cancellationJ2534Devices, {
   manual_connection_review_confirmed: true, signal: { aborted: false }
 });
 check(invalidJ2534Cancellation.execution_status === "worker_failed" && invalidJ2534Cancellation.review_worker_process_started === false && invalidJ2534Cancellation.worker_review === null, "An invalid J2534 abort signal started a review process");
+const retriedJ2534Review = await runJ2534WorkerReview(cancellationJ2534Devices, { manual_connection_review_confirmed: true });
+check(retriedJ2534Review.execution_status === "review_completed" && retriedJ2534Review.review_worker_process_exited === true, "J2534 review could not retry after cancellation and an invalid abort signal");
+const rejectedJ2534Review = await runJ2534WorkerReview([{
+  ...cancellationJ2534Devices[0], id: "fixture-invalid id"
+}], { manual_connection_review_confirmed: true });
+const recoveredJ2534Review = await runJ2534WorkerReview(cancellationJ2534Devices, { manual_connection_review_confirmed: true });
+check(rejectedJ2534Review.execution_status === "invalid_worker_response" && rejectedJ2534Review.review_worker_process_exited === true && recoveredJ2534Review.execution_status === "review_completed", "J2534 worker response rejection retained the worker slot or blocked recovery");
 const timedOutJ2534WorkerProcess = spawnSync(process.execPath, ["-e", "setInterval(() => {}, 1000)"], {
   timeout: 1000, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024
 });
@@ -982,6 +998,6 @@ if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
 } else {
-  console.log("Local bridge read-only checks: 214");
+  console.log("Local bridge read-only checks: 218");
   console.log("Errors: 0");
 }
