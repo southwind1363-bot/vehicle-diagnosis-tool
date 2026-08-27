@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3407件",
   bridgeValidationCheckLabel: "bridge検証 218件",
-  recentMilestone: "PC画面から同時起動ブリッジへの接続経路を統合",
+  recentMilestone: "再起動後のブリッジ接続キーを画面から設定",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.253";
+const APP_VERSION = "3.13.254";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -428,6 +428,11 @@ const obdDevPasswordInput = document.querySelector("#obdDevPasswordInput");
 const obdDevBaudRate = document.querySelector("#obdDevBaudRate");
 const obdDevUnlockButton = document.querySelector("#obdDevUnlockButton");
 const obdDevLockButton = document.querySelector("#obdDevLockButton");
+const obdBridgePairingControls = document.querySelector("#obdBridgePairingControls");
+const obdBridgePairingInput = document.querySelector("#obdBridgePairingInput");
+const obdBridgePairingApplyButton = document.querySelector("#obdBridgePairingApplyButton");
+const obdBridgePairingClearButton = document.querySelector("#obdBridgePairingClearButton");
+const obdBridgePairingStatus = document.querySelector("#obdBridgePairingStatus");
 const obdDevModeBadge = document.querySelector("#obdDevModeBadge");
 const obdDevControls = document.querySelector("#obdDevControls");
 const obdDevIdentifyButton = document.querySelector("#obdDevIdentifyButton");
@@ -504,6 +509,7 @@ let copyToastTimer = null;
 let activeResultView = "flow";
 let obdAccessUnlocked = sessionStorage.getItem(OBD_ACCESS_MODE_KEY) === "enabled";
 let obdDevModeUnlocked = sessionStorage.getItem(OBD_DEV_MODE_KEY) === "enabled";
+let obdBridgePairingToken = "";
 let activeObdStage = "setup";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"]);
@@ -691,6 +697,8 @@ obdAccessPasswordInput.addEventListener("keydown", (event) => {
 });
 obdDevUnlockButton.addEventListener("click", unlockObdDeveloperMode);
 obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
+obdBridgePairingApplyButton.addEventListener("click", applyObdBridgePairingToken);
+obdBridgePairingClearButton.addEventListener("click", clearObdBridgePairingToken);
 obdDevConnectButton.addEventListener("click", handleObdPrimaryAction);
 obdDevIdentifyButton.addEventListener("click", identifyObdDeveloperVci);
 obdDevCoreScanButton.addEventListener("click", readObdDeveloperCoreScan);
@@ -4903,6 +4911,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
 
   obdDevModeBadge.textContent = unlocked ? "詳細有効" : "ロック中";
   obdDevControls.hidden = !unlocked;
+  renderObdBridgePairingControls();
   obdDevLockButton.disabled = !unlocked;
   obdDevConnectButton.disabled = !unlocked || connected || (primaryActionNeedsSerial && !serialReady);
   obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady, nativeConnectorRoute });
@@ -5001,6 +5010,7 @@ async function unlockObdAccess() {
 
 function lockObdAccess() {
   obdAccessUnlocked = false;
+  clearObdBridgePairingToken();
   sessionStorage.removeItem(OBD_ACCESS_MODE_KEY);
   obdAccessPasswordInput.value = "";
   renderObdAccessGate();
@@ -5031,6 +5041,7 @@ function unlockObdDeveloperMode() {
 
 function lockObdDeveloperMode() {
   obdDevModeUnlocked = false;
+  clearObdBridgePairingToken();
   sessionStorage.removeItem(OBD_DEV_MODE_KEY);
   obdDevSession.previewMode = null;
   clearRequestedInterfaceSelection();
@@ -5839,6 +5850,32 @@ async function fetchObdLocalBridgeEndpoint(endpoint, request) {
   }
 }
 
+function renderObdBridgePairingControls() {
+  obdBridgePairingControls.hidden = !obdDevModeUnlocked;
+  obdBridgePairingInput.disabled = !obdDevModeUnlocked;
+  obdBridgePairingApplyButton.disabled = !obdDevModeUnlocked;
+  obdBridgePairingClearButton.disabled = !obdDevModeUnlocked || !obdBridgePairingToken;
+  obdBridgePairingStatus.textContent = obdBridgePairingToken ? "今回の接続キーを使用中（端末には保存しません）" : "詳細トークンと共通";
+}
+
+function applyObdBridgePairingToken() {
+  if (!obdDevModeUnlocked) return;
+  const token = obdBridgePairingInput.value;
+  if (token.length < 12) {
+    obdBridgePairingStatus.textContent = "ブリッジ接続キーは12文字以上必要です。";
+    return;
+  }
+  obdBridgePairingToken = token;
+  obdBridgePairingInput.value = "";
+  renderObdBridgePairingControls();
+}
+
+function clearObdBridgePairingToken() {
+  obdBridgePairingToken = "";
+  obdBridgePairingInput.value = "";
+  renderObdBridgePairingControls();
+}
+
 function getObdLocalBridgeEndpoints(options = {}) {
   if (!options.discover && obdDevSession.bridgeEndpoint) return [obdDevSession.bridgeEndpoint];
   const endpoints = OBD_LOCAL_BRIDGE_PORTS.flatMap((port) => OBD_LOCAL_BRIDGE_PATHS.map((path) => `http://127.0.0.1:${port}${path}`));
@@ -5850,7 +5887,7 @@ function getObdLocalBridgeEndpoints(options = {}) {
 
 async function sendObdLocalBridgeIntent(intent, payload = {}, options = {}) {
   if (!isAllowedLocalBridgeIntent(intent)) throw new Error(`許可していないIntentです: ${intent}`);
-  const pairingToken = localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
+  const pairingToken = obdBridgePairingToken || localStorage.getItem(OBD_DEV_TOKEN_KEY) || "";
   if (pairingToken.length < 12) throw new Error("詳細トークンが未設定です。");
   const request = {
     request_id: generateId(),

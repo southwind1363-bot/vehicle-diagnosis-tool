@@ -8,16 +8,28 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-token", j2534RegistryText: "" };
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const clientSource = appSource.slice(appSource.indexOf("async function fetchObdLocalBridgeEndpoint("), appSource.indexOf("const WEB_SERIAL_ADAPTER_ERROR_LINES"));
 function createClient(webUrl, token, fetchRequest = fetch) {
   const context = vm.createContext({
     location: new URL(webUrl), obdDevSession: { bridgeEndpoint: null },
+    obdDevModeUnlocked: true, obdBridgePairingToken: "",
+    obdBridgePairingControls: {}, obdBridgePairingInput: { value: "" },
+    obdBridgePairingApplyButton: {}, obdBridgePairingClearButton: {}, obdBridgePairingStatus: {},
+    obdDevPasswordInput: { value: "" }, obdDevStatus: {},
+    sessionStorage: { setItem: () => {}, removeItem: () => {} }, OBD_DEV_MODE_KEY: "test-mode",
+    renderObdDeveloperGate: () => {}, clearRequestedInterfaceSelection: () => {},
+    obdAccessUnlocked: true, obdAccessPasswordInput: { value: "" },
+    OBD_ACCESS_MODE_KEY: "test-access", renderObdAccessGate: () => {},
     localStorage: { getItem: () => token }, generateId: () => "workstation-client-test",
     fetch: fetchRequest, AbortController, setTimeout, clearTimeout
   });
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
   vm.runInContext(`${constants}\n${clientSource}`, context);
+  for (const name of ["unlockObdDeveloperMode", "lockObdDeveloperMode", "lockObdAccess"]) {
+    vm.runInContext(appSource.match(new RegExp(`function ${name}\\(\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
+  }
   return context;
 }
 const previousReplay = process.env.LOCAL_BRIDGE_REPLAY_LOG;
@@ -70,6 +82,40 @@ try {
     const wrongClient = createClient(workstation.webUrl, "wrong-pairing-token");
     const wrongReadout = await wrongClient.sendObdLocalBridgeIntent("read_stored_dtc");
     check(wrongReadout.blocked === true && wrongReadout.errors.includes("pairing_token_mismatch"), "Same-origin routing bypassed pairing");
+    const renewedClient = createClient(workstation.webUrl, "saved-details-token");
+    renewedClient.obdBridgePairingInput.value = options.pairingToken;
+    renewedClient.applyObdBridgePairingToken();
+    check(renewedClient.obdBridgePairingInput.value === "" && renewedClient.obdBridgePairingToken === options.pairingToken && renewedClient.localStorage.getItem() === "saved-details-token", "Runtime pairing changed the saved unlock token or retained the input value");
+    const renewedReadout = await renewedClient.sendObdLocalBridgeIntent("read_stored_dtc");
+    check(renewedReadout.errors.includes("vci_not_detected") && !renewedReadout.errors.includes("pairing_token_mismatch"), "Restarted bridge did not accept the separately supplied runtime key");
+    renewedClient.obdBridgePairingInput.value = "short";
+    renewedClient.applyObdBridgePairingToken();
+    check(renewedClient.obdBridgePairingToken === options.pairingToken && renewedClient.obdBridgePairingStatus.textContent.includes("12"), "Invalid runtime key replaced a configured key");
+    renewedClient.renderObdBridgePairingControls();
+    check(!JSON.stringify(renewedClient.obdDevSession).includes(options.pairingToken) && !renewedClient.obdBridgePairingStatus.textContent.includes(options.pairingToken), "Runtime key leaked into diagnostic state or status text");
+    renewedClient.clearObdBridgePairingToken();
+    const clearedReadout = await renewedClient.sendObdLocalBridgeIntent("read_stored_dtc");
+    check(clearedReadout.errors.includes("pairing_token_mismatch") && renewedClient.obdBridgePairingClearButton.disabled, "Clearing runtime pairing failed to restore the saved-token behavior");
+    renewedClient.obdBridgePairingInput.value = options.pairingToken;
+    renewedClient.applyObdBridgePairingToken();
+    renewedClient.lockObdDeveloperMode();
+    check(renewedClient.obdBridgePairingToken === "" && renewedClient.obdBridgePairingInput.value === "" && renewedClient.obdBridgePairingControls.hidden && renewedClient.obdBridgePairingApplyButton.disabled, "Locking left runtime pairing credentials or controls active");
+    renewedClient.obdBridgePairingInput.value = options.pairingToken;
+    renewedClient.applyObdBridgePairingToken();
+    check(renewedClient.obdBridgePairingToken === "", "Locked details accepted a runtime key");
+    renewedClient.obdDevPasswordInput.value = options.pairingToken;
+    renewedClient.unlockObdDeveloperMode();
+    check(renewedClient.obdDevModeUnlocked === false, "Bridge pairing key bypassed the saved details lock");
+    renewedClient.obdDevPasswordInput.value = "saved-details-token";
+    renewedClient.unlockObdDeveloperMode();
+    check(renewedClient.obdDevModeUnlocked === true && renewedClient.obdBridgePairingToken === "", "Existing details token no longer unlocks or restored a discarded runtime key");
+    check(createClient(workstation.webUrl, "saved-details-token").obdBridgePairingToken === "", "Reloaded UI retained a runtime key");
+    renewedClient.obdBridgePairingInput.value = options.pairingToken;
+    renewedClient.applyObdBridgePairingToken();
+    renewedClient.lockObdAccess();
+    check(renewedClient.obdAccessUnlocked === false && renewedClient.obdBridgePairingToken === "" && renewedClient.obdBridgePairingInput.value === "", "Top-level access lock retained the runtime pairing key");
+    check(indexSource.includes('id="obdBridgePairingControls" hidden') && indexSource.includes('id="obdBridgePairingInput" type="password" autocomplete="off" minlength="12"') && indexSource.includes('id="obdBridgePairingStatus" class="data-status" role="status"'), "Pairing UI lost initial hiding, password input, or accessible status");
+    check(appSource.includes('obdBridgePairingApplyButton.addEventListener("click", applyObdBridgePairingToken)') && appSource.includes('obdBridgePairingClearButton.addEventListener("click", clearObdBridgePairingToken)'), "Pairing UI buttons are not connected to the tested handlers");
     await assert.rejects(client.sendObdLocalBridgeIntent("clear_dtc"));
     check(requests.length === 2, "UI sent a forbidden write intent");
     const localRequest = (body) => fetch(localEndpoint, {

@@ -728,6 +728,17 @@
             <button id="obdDevUnlockButton" class="secondary-button" type="button">詳細機能を有効化</button>
             <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
           </div>
+          <div id="obdBridgePairingControls" hidden>
+            <div class="obd-dev-gate">
+              <label>
+                ブリッジ接続キー（今回のみ）
+                <input id="obdBridgePairingInput" type="password" autocomplete="off" minlength="12" placeholder="起動時のペアリング値" disabled>
+              </label>
+              <button id="obdBridgePairingApplyButton" class="secondary-button" type="button" disabled>適用</button>
+              <button id="obdBridgePairingClearButton" class="secondary-button" type="button" disabled>解除</button>
+            </div>
+            <p id="obdBridgePairingStatus" class="data-status" role="status">詳細トークンと共通</p>
+          </div>
           <div id="obdDevControls" class="obd-dev-controls" hidden>
             <span class="obd-dev-group-label">読取確認</span>
             <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>読取基盤確認</button>
