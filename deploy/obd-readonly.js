@@ -34004,6 +34004,14 @@
     };
   }
 
+  function buildManufacturerSampleCollectionTemplateTsv() {
+    const template = getManufacturerSampleCollectionTemplate();
+    return [
+      template.columnHeaders.join(template.delimiter),
+      template.columns.map(() => "").join(template.delimiter)
+    ].join("\n");
+  }
+
   function validateDtcEvidenceFieldValue(fieldId, value) {
     const normalized = redactSensitiveText(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, 80);
     if (!normalized) return { present: false, valid: true, value: null, reason: null };
@@ -40224,6 +40232,7 @@
     getReadinessMonitors,
     getEcuInfoItems,
     getManufacturerSampleCollectionTemplate,
+    buildManufacturerSampleCollectionTemplateTsv,
     getVehicleOperationPlan,
     getServiceOperationReadinessRequirements,
     getServiceExperimentContract,

@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3397件",
+  validationCheckLabel: "OBD安全検証 3399件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "実機サンプル収集テンプレート契約を固定",
+  recentMilestone: "実機サンプルTSV収集導線を公開",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.242";
+const APP_VERSION = "3.13.243";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -468,6 +468,7 @@ const obdAnalyzeButton = document.querySelector("#obdAnalyzeButton");
 const obdImportPasteButton = document.querySelector("#obdImportPasteButton");
 const obdImportFileInput = document.querySelector("#obdImportFileInput");
 const obdSampleButton = document.querySelector("#obdSampleButton");
+const obdManufacturerSampleTemplateButton = document.querySelector("#obdManufacturerSampleTemplateButton");
 const obdImportClearButton = document.querySelector("#obdImportClearButton");
 const obdImportStatus = document.querySelector("#obdImportStatus");
 const obdImportToolHints = document.querySelector("#obdImportToolHints");
@@ -678,6 +679,7 @@ obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
 obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);
 obdImportFileInput?.addEventListener("change", importObdScannerFile);
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
+obdManufacturerSampleTemplateButton?.addEventListener("click", downloadManufacturerSampleTemplate);
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
 obdAccessUnlockButton.addEventListener("click", unlockObdAccess);
@@ -11362,6 +11364,26 @@ function loadObdMonitorSample() {
     "Control Module Voltage: 14.2 V"
   ].join("\n");
   analyzeObdScannerImport();
+}
+
+function downloadManufacturerSampleTemplate() {
+  const buildTemplate = window.ObdReadOnly?.buildManufacturerSampleCollectionTemplateTsv;
+  if (typeof buildTemplate !== "function") {
+    obdImportStatus.textContent = "実機サンプルTSVを準備できませんでした。画面を再読み込みしてください。";
+    return;
+  }
+  const tsv = buildTemplate();
+  const blob = new Blob([`\uFEFF${tsv}`], { type: "text/tab-separated-values;charset=utf-8" });
+  const link = document.createElement("a");
+  const objectUrl = URL.createObjectURL(blob);
+  link.href = objectUrl;
+  link.download = `メーカー実機サンプル_${new Date().toISOString().slice(0, 10)}.tsv`;
+  link.hidden = true;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  obdImportStatus.textContent = "実機サンプルTSVを保存しました。車両・ECU・要求・応答を1行ずつ記録し、この欄から再取込できます。";
 }
 
 async function pasteObdScannerImport() {
