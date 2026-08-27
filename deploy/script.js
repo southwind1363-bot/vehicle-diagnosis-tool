@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "不完全なオフライン更新を拒否し旧版を保持",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.268";
+const APP_VERSION = "3.13.270";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -698,6 +698,7 @@ obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);
 obdImportFileInput?.addEventListener("change", importObdScannerFile);
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
 obdManufacturerSampleTemplateButton?.addEventListener("click", downloadManufacturerSampleTemplate);
+document.querySelectorAll("[data-obd-session-export]").forEach((button) => button.addEventListener("click", downloadObdSessionJson));
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
 obdAccessUnlockButton.addEventListener("click", unlockObdAccess);
@@ -4983,6 +4984,7 @@ function renderObdProgressOverview() {
 }
 
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
+  renderObdSessionExportControls();
   const unlocked = obdDevModeUnlocked === true;
   const connected = Boolean(obdDevSession.port) && !["disconnected", "disconnecting"].includes(obdDevSession.connectionState);
   const previewActive = Boolean(obdDevSession.previewMode);
@@ -5245,6 +5247,7 @@ if (!continueObdSerialOperation(revision)) return;
       try { await port.close(); } catch (_error) { /* Only this attempt's opened port is owned here. */ }
     }
     obdSerialConnectPending = false;
+    renderObdSessionExportControls();
   }
 }
 
@@ -10027,6 +10030,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
 }
 
 function renderObdDeveloperSessionSummary(session = null) {
+  renderObdSessionExportControls();
   renderObdDiagnosticFlowPanel(session);
   obdDevSessionSummary.innerHTML = "";
   const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;
@@ -11323,6 +11327,7 @@ function analyzeObdScannerImport(options = {}) {
     renderObdWorkflowGuide();
     renderObdDeveloperSessionSummary(obdDevSession.lastSession);
   }
+  renderObdSessionExportControls();
 }
 
 function buildObdDtcDisplayKey(item = null) {
@@ -11719,6 +11724,70 @@ function loadObdMonitorSample() {
   analyzeObdScannerImport();
 }
 
+function getObdSessionExportBlockReason() {
+  if (!obdDevSession.lastSession) return "保存する読取結果がありません。";
+  const session = obdDevSession.lastSession;
+  if (typeof session !== "object" || Array.isArray(session) || !Object.keys(session).length
+    || session.accepted === false || session.ok === false || session.blocked === true) return "この読取結果は保存できません。";
+  if (obdBridgeOperation || obdScannerImportOperation || obdSerialConnectPending || obdSerialDisconnectOperation
+    || obdDevSession.readInProgress || obdDevSession.initializing || obdDevSession.coreScanInProgress
+    || ["selecting", "opening", "initializing", "reading", "disconnecting"].includes(obdDevSession.connectionState)) {
+    return "読取・取込処理の完了または停止後に保存してください。";
+  }
+  if (session.previewMode || session.preview_mode || session.source === "interface_preview" || session.source_type === "interface_preview") {
+    return "接続前プレビューは読取結果として保存できません。";
+  }
+  if (typeof window.ObdReadOnly?.buildBridgeSessionExportPayload !== "function") return "JSON保存機能を読み込めていません。";
+  return "";
+}
+
+function renderObdSessionExportControls() {
+  const reason = getObdSessionExportBlockReason();
+  document.querySelectorAll("[data-obd-session-export]").forEach((button) => {
+    button.disabled = Boolean(reason);
+    button.title = reason || "現在の読取セッションをJSONファイルに保存";
+  });
+}
+
+function setObdSessionExportStatus(message) {
+  document.querySelectorAll("[data-obd-session-export-status]").forEach((status) => { status.textContent = message; });
+}
+
+function downloadObdSessionJson() {
+  const reason = getObdSessionExportBlockReason();
+  if (reason) {
+    setObdSessionExportStatus(reason);
+    return false;
+  }
+  let link = null;
+  let objectUrl = null;
+  try {
+    const payload = window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession);
+    if (payload?.schema_version !== "bridge_session_export_v1" || !payload.session || typeof payload.session !== "object") throw new Error("invalid_export");
+    const blob = new Blob([JSON.stringify(payload)], { type: "application/json;charset=utf-8" });
+    // Match the existing file-import limit so every download can be opened again.
+    if (blob.size > 2000000) {
+      setObdSessionExportStatus("読取結果が再取込上限の2 MBを超えるため、JSON保存を開始しませんでした。元の結果は保持しています。");
+      return false;
+    }
+    link = document.createElement("a");
+    objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = `diagnostic-session-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    setObdSessionExportStatus("読取結果のJSON保存を開始しました。");
+    return true;
+  } catch (_error) {
+    setObdSessionExportStatus("JSON保存を開始できませんでした。読取結果は変更していません。");
+    return false;
+  } finally {
+    link?.remove();
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
+}
+
 function downloadManufacturerSampleTemplate() {
   const buildExport = window.ObdReadOnly?.buildManufacturerSampleCollectionExport;
   if (typeof buildExport !== "function") {
@@ -11747,11 +11816,13 @@ function downloadManufacturerSampleTemplate() {
 
 function invalidateObdScannerImport() {
   obdScannerImportOperation = null;
+  renderObdSessionExportControls();
 }
 
 function beginObdScannerImport() {
   const operation = { textAtStart: obdScannerText.value, sessionAtStart: obdDevSession.lastSession };
   obdScannerImportOperation = operation;
+  renderObdSessionExportControls();
   return operation;
 }
 

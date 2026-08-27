@@ -22,6 +22,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
     obdDevPasswordInput: { value: "" }, obdDevStatus: {},
     sessionStorage: { setItem: () => {}, removeItem: () => {} }, OBD_DEV_MODE_KEY: "test-mode",
     renderObdDeveloperGate: () => {}, clearRequestedInterfaceSelection: () => {},
+    renderObdSessionExportControls: () => {},
     obdAccessUnlocked: true, obdAccessPasswordInput: { value: "" },
     OBD_ACCESS_MODE_KEY: "test-access", renderObdAccessGate: () => {},
     localStorage: { getItem: () => token }, window: { crypto: webcrypto }, crypto: webcrypto,
@@ -30,6 +31,10 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
   vm.runInContext(`${constants}\n${clientSource}`, context);
+  context.renderObdSessionExportControls = () => {
+    context.exportControlSession = context.obdDevSession.lastSession;
+    context.exportControlImportBusy = Boolean(context.obdScannerImportOperation);
+  };
   vm.runInContext(appSource.match(/function createId\(\) \{[\s\S]*?\r?\n\}/)[0], context);
   vm.runInContext(appSource.slice(appSource.indexOf("function invalidateObdScannerImport("), appSource.indexOf("async function pasteObdScannerImport(")), context);
   vm.runInContext(appSource.slice(appSource.indexOf("async function probeObdLocalBridge("), appSource.indexOf("async function listObdLocalBridgeVci(")), context);
@@ -236,6 +241,7 @@ async function validateScannerImportOwnership(webUrl) {
     try {
       client.analyzeObdScannerImport();
       imported = client.obdDevSession.lastSession;
+      check(client.exportControlSession === imported && client.exportControlImportBusy === false, `${format}: successful import did not refresh export controls for the new session`);
     } finally {
       ready.resolve();
       await pending;

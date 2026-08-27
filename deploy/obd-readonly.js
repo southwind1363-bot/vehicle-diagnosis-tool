@@ -33458,7 +33458,11 @@
       || scannerJsonVehicle.supportedEngineCodes?.length > 0
       || scannerJsonVehicle.supportedEcus?.length > 0
       || (isTrustedBridgeSessionExport && ["matched", "partial", "manual", "unlisted", "unknown"].includes(scannerJsonVehicle.status));
-    const scannerJsonVehicleProfile = hasScannerJsonVehicleIdentity
+    const hasScannerJsonProfileIdentity = Boolean(scannerJsonVehicleProfileInput?.maker || scannerJsonVehicleProfileInput?.model
+      || scannerJsonVehicleProfileInput?.modelCode || scannerJsonVehicleProfileInput?.year || scannerJsonVehicleProfileInput?.engineCode);
+    const scannerJsonVehicleProfile = hasScannerJsonProfileIdentity
+      ? scannerJsonVehicleProfileInput
+      : hasScannerJsonVehicleIdentity
       ? {
         maker: scannerJsonVehicle.maker,
         model: scannerJsonVehicle.model,

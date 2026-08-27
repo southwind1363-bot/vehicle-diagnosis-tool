@@ -30,6 +30,7 @@ function client() {
     sessionStorage: { removeItem: () => {} }, TextDecoder, TextEncoder, setTimeout,
     navigator: { serial: { requestPort: async () => { calls.select += 1; return port; } } },
     clearRequestedInterfaceSelection: () => {}, renderObdDeveloperGate: () => {}, renderObdAccessGate: () => {},
+    renderObdSessionExportControls: () => {},
     invalidateObdScannerImport: () => {}, clearObdBridgePairingToken: () => {},
     buildWebSerialAdapterInitializationSummary: (value) => value,
     buildSelectedObdVehicleProfile: () => ({}), buildSelectedObdVehicleApplicability: () => ({}), buildSelectedObdObservationContext: () => ({}),
@@ -334,5 +335,18 @@ for (const imported of [false, true]) {
   } else {
     check(c.obdDevSession.port && c.obdDevSession.lastSession.dtcSnapshot === snapshot && c.obdDevSession.lastSession.causeCandidateLog.label === "annotation", "Same-session diagnosis annotations must preserve transport and DTC snapshot");
   }
+}
+{
+  const { context: c } = client();
+  const button = {};
+  c.document = { querySelectorAll: () => [button] };
+  c.window = { ObdReadOnly: { buildBridgeSessionExportPayload: () => ({}) } };
+  c.obdScannerImportOperation = null;
+  load(c, ["getObdSessionExportBlockReason", "renderObdSessionExportControls"]);
+  c.renderObdDeveloperGate = c.renderObdSessionExportControls;
+  c.navigator.serial.requestPort = async () => { const error = new Error("cancelled"); error.name = "NotFoundError"; throw error; };
+  await c.connectObdDeveloperVci();
+  check(!c.obdSerialConnectPending && c.obdDevSession.lastSession.marker === "saved" && button.disabled === false,
+    "Cancelling device selection must re-enable export of the previously retained result");
 }
 console.log(`Serial lifecycle checks: ${checks} / Errors: 0`);

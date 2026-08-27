@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import vm from "node:vm";
 import "./validate-serial-lifecycle.js";
+import "./validate-session-export.js";
 
 const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8");
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
