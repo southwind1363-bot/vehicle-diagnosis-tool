@@ -34036,7 +34036,7 @@
       return /["\t]/.test(normalized) ? `"${normalized.replace(/"/g, '""')}"` : normalized;
     };
     const rows = dtcs.map((dtc) => {
-      const sources = [dtc, readoutQuality];
+      const sources = dtcs.length === 1 ? [dtc, readoutQuality] : [dtc];
       const values = {
         dtc_code: firstValue([dtc], "code"),
         dtc_status: firstValue([dtc], "reported_status", "status"),
@@ -34076,6 +34076,77 @@
     ].join("\n");
   }
 
+  function parseManufacturerSampleTsvRow(line, delimiter = "\t") {
+    const cells = [];
+    let cell = "";
+    let quoted = false;
+    for (let index = 0; index < line.length; index += 1) {
+      const character = line[index];
+      if (character === '"') {
+        if (quoted && line[index + 1] === '"') {
+          cell += '"';
+          index += 1;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (character === delimiter && !quoted) {
+        cells.push(cell.trim());
+        cell = "";
+      } else {
+        cell += character;
+      }
+    }
+    cells.push(cell.trim());
+    return quoted ? null : cells;
+  }
+
+  function auditManufacturerSampleCollectionRow(values = {}) {
+    const present = (...ids) => ids.every((id) => String(values[id] ?? "").trim() !== "");
+    const row = {
+      readout_route: values.communication_route,
+      network_bus: values.network_bus,
+      network_channel: values.network_channel,
+      gateway_route: values.gateway_route,
+      adapter_family: values.vci_family,
+      adapter_name: values.vci_name,
+      adapter_firmware_version: values.vci_firmware,
+      requested_service: values.requested_service,
+      response_service: values.response_service,
+      ecu_response_status: values.ecu_response_status,
+      negative_requested_service: values.negative_requested_service,
+      negative_response_code: values.negative_response_code,
+      response_count: values.response_count,
+      response_wait_ms: values.response_wait_ms,
+      response_state: values.response_state
+    };
+    const requestedService = normalizeDtcEvidenceRequestedServiceValue(values.requested_service);
+    const responseService = normalizeDtcEvidenceResponseServiceValue(values.response_service);
+    const ecuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(values.ecu_response_status);
+    const negativeResponseCode = normalizeDtcEvidenceNegativeResponseCodeValue(values.negative_response_code);
+    const responsePendingObserved = resolveDtcEvidenceResponsePendingObserved(row);
+    const negativeRequestedService = normalizeDtcEvidenceRequestedServiceValue(values.negative_requested_service);
+    const responseCount = normalizeDtcEvidenceResponseCountValue(values.response_count);
+    const responseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(values.response_wait_ms);
+    const evidenceValuesValid = DTC_EVIDENCE_FIELD_SCHEMA.every((field) => validateDtcEvidenceFieldValue(field.id, values[field.id]).valid);
+    const requirements = [
+      { id: "dtc_evidence_scope", complete: present("vehicle_maker", "vehicle_model_code", "vehicle_year", "source_ecu", "dtc_code") },
+      { id: "acquisition_context", complete: Boolean(normalizeDtcEvidenceTimestampValue(values.captured_at) && present("protocol", "scan_session_id")) },
+      { id: "transport_context", complete: Boolean(present("readout_attempt_id") && buildDtcEvidenceCommunicationRouteKey(row) && buildDtcEvidenceVciIdentityKey(row)) },
+      { id: "readout_contract", complete: Boolean(normalizeDtcEvidenceReadoutCategory(values.dtc_readout_category) && requestedService) },
+      { id: "response_contract", complete: isDtcEvidenceResponseContractValid(responseService, ecuResponseStatus) },
+      { id: "negative_response_context", complete: isDtcEvidenceNegativeResponseContextValid(negativeResponseCode, ecuResponseStatus, responsePendingObserved) },
+      { id: "response_attempt_context", complete: isDtcEvidenceResponseAttemptContextValid(negativeRequestedService, requestedService, ecuResponseStatus, responseCount, responseWaitMs) },
+      { id: "evidence_validation_reported", complete: true },
+      { id: "evidence_values_valid", complete: evidenceValuesValid }
+    ];
+    const missingRequirementIds = requirements.filter((item) => !item.complete).map((item) => item.id);
+    return {
+      complete: missingRequirementIds.length === 0,
+      missingRequirementIds,
+      missing_requirement_ids: [...missingRequirementIds]
+    };
+  }
+
   function buildManufacturerSampleCollectionExport(session = null) {
     const template = getManufacturerSampleCollectionTemplate();
     const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
@@ -34085,13 +34156,28 @@
     const readiness = session?.manufacturerSampleReadinessSummary
       || session?.manufacturer_sample_readiness_summary
       || buildManufacturerSampleReadinessSummary(readoutQuality, dtcSnapshot);
-    const missingRequirementIds = Array.isArray(readiness?.missingRequirementIds)
+    const sessionMissingRequirementIds = Array.isArray(readiness?.missingRequirementIds)
       ? readiness.missingRequirementIds.slice(0, 20)
       : Array.isArray(readiness?.missing_requirement_ids)
         ? readiness.missing_requirement_ids.slice(0, 20)
         : [];
-    const contractCompleteForSampleReview = readiness?.contractCompleteForSampleReview === true
-      || readiness?.contract_complete_for_sample_review === true;
+    const tsv = buildManufacturerSampleCollectionTemplateTsv(session);
+    const rowLines = exportedRowCount > 0 ? tsv.split("\n").slice(1) : [];
+    const rowAudits = rowLines.map((line) => {
+      const cells = parseManufacturerSampleTsvRow(line, template.delimiter);
+      if (!cells || cells.length !== template.columns.length) return { complete: false, missingRequirementIds: ["row_format"] };
+      const values = Object.fromEntries(template.columns.map((column, index) => [column.id, cells[index] ?? ""]));
+      return auditManufacturerSampleCollectionRow(values);
+    });
+    const completeRowCount = rowAudits.filter((audit) => audit.complete).length;
+    const incompleteRowNumbers = rowAudits
+      .map((audit, index) => audit.complete ? null : index + 1)
+      .filter((index) => index !== null);
+    const missingRequirementIds = [...new Set([
+      ...sessionMissingRequirementIds,
+      ...rowAudits.flatMap((audit) => audit.missingRequirementIds || [])
+    ])].slice(0, 20);
+    const contractCompleteForSampleReview = exportedRowCount > 0 && completeRowCount === exportedRowCount;
     return {
       schemaVersion: "manufacturer_sample_collection_export_v1",
       schema_version: "manufacturer_sample_collection_export_v1",
@@ -34100,7 +34186,7 @@
       fieldSchemaVersion: template.fieldSchemaVersion,
       field_schema_version: template.fieldSchemaVersion,
       format: template.format,
-      tsv: buildManufacturerSampleCollectionTemplateTsv(session),
+      tsv,
       sourceDtcCount,
       source_dtc_count: sourceDtcCount,
       exportedRowCount,
@@ -34108,6 +34194,14 @@
       truncated: sourceDtcCount > exportedRowCount,
       hasDataRows: exportedRowCount > 0,
       has_data_rows: exportedRowCount > 0,
+      completeRowCount,
+      complete_row_count: completeRowCount,
+      incompleteRowCount: exportedRowCount - completeRowCount,
+      incomplete_row_count: exportedRowCount - completeRowCount,
+      incompleteRowNumbers: incompleteRowNumbers.slice(0, 100),
+      incomplete_row_numbers: incompleteRowNumbers.slice(0, 100),
+      incompleteRowNumberListTruncated: incompleteRowNumbers.length > 100,
+      incomplete_row_number_list_truncated: incompleteRowNumbers.length > 100,
       contractCompleteForSampleReview,
       contract_complete_for_sample_review: contractCompleteForSampleReview,
       missingRequirementCount: missingRequirementIds.length,

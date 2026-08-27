@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3406件",
+  validationCheckLabel: "OBD安全検証 3407件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "実機証跡TSVの件数・欠損監査を追加",
+  recentMilestone: "実機証跡TSVをDTC行単位で監査",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.245";
+const APP_VERSION = "3.13.246";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11386,7 +11386,7 @@ function downloadManufacturerSampleTemplate() {
   obdImportStatus.textContent = exportBundle.truncated
     ? `DTC ${exportBundle.exportedRowCount}/${exportBundle.sourceDtcCount}件を保存しました。上限500件を超えたため、残りは別セッションで収集してください。`
     : exportBundle.exportedRowCount > 0 && exportBundle.contractCompleteForSampleReview !== true
-      ? `読取済みDTC ${exportBundle.exportedRowCount}件を保存しました。証跡不足 ${exportBundle.missingRequirementCount}項目は空欄のままです。`
+      ? `読取済みDTC ${exportBundle.exportedRowCount}件を保存しました。証跡不足 ${exportBundle.incompleteRowCount}行 / ${exportBundle.missingRequirementCount}要件は空欄のままです。`
       : exportBundle.exportedRowCount > 0
         ? `読取済みDTC ${exportBundle.exportedRowCount}件を実機サンプルTSVへ保存しました。この欄から再取込できます。`
     : "空の実機サンプルTSVを保存しました。車両・ECU・要求・応答を1行ずつ記録し、この欄から再取込できます。";
