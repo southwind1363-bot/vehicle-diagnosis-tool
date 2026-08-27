@@ -9,7 +9,7 @@ const check = (condition, message) => { assert.ok(condition, message); checks +=
 const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-token", j2534RegistryText: "" };
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
-const clientSource = appSource.slice(appSource.indexOf("async function fetchObdLocalBridgeEndpoint("), appSource.indexOf("const WEB_SERIAL_ADAPTER_ERROR_LINES"));
+const clientSource = appSource.slice(appSource.indexOf("async function runObdLocalBridgeRead("), appSource.indexOf("const WEB_SERIAL_ADAPTER_ERROR_LINES"));
 function createClient(webUrl, token, fetchRequest = fetch) {
   const context = vm.createContext({
     location: new URL(webUrl), obdDevSession: { bridgeEndpoint: null },
@@ -27,6 +27,11 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
   vm.runInContext(`${constants}\n${clientSource}`, context);
+  vm.runInContext(appSource.slice(appSource.indexOf("async function probeObdLocalBridge("), appSource.indexOf("async function listObdLocalBridgeVci(")), context);
+  context.renderObdDeveloperGate = () => {
+    context.obdDevStatus.textContent = "DEFAULT_GATE";
+    context.renderObdBridgePairingControls();
+  };
   for (const name of ["unlockObdDeveloperMode", "lockObdDeveloperMode", "lockObdAccess"]) {
     vm.runInContext(appSource.match(new RegExp(`function ${name}\\(\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
   }
@@ -82,6 +87,40 @@ try {
     const wrongClient = createClient(workstation.webUrl, "wrong-pairing-token");
     const wrongReadout = await wrongClient.sendObdLocalBridgeIntent("read_stored_dtc");
     check(wrongReadout.blocked === true && wrongReadout.errors.includes("pairing_token_mismatch"), "Same-origin routing bypassed pairing");
+    let successCalls = 0;
+    await wrongClient.runObdLocalBridgeRead("DTC", "read_stored_dtc", {}, () => { successCalls += 1; });
+    check(wrongClient.obdDevStatus.textContent.includes("接続キーが一致しません") && successCalls === 0, "Pairing failure was hidden by the gate render or reached success handling");
+    await client.runObdLocalBridgeRead("DTC", "read_stored_dtc", {}, () => { successCalls += 1; });
+    check(client.obdDevStatus.textContent.includes("VCI未検出") && client.obdDevStatus.textContent.includes("未取得") && successCalls === 0, "Missing VCI was shown as a successful read or its reason was overwritten");
+    await client.runObdLocalBridgeRead("VCI一覧", "list_vci", {}, () => { successCalls += 1; });
+    check(client.obdDevStatus.textContent === "VCI一覧が完了しました。" && successCalls === 1, "Successful status operation lost its completion message");
+    const displayClient = createClient(workstation.webUrl, options.pairingToken);
+    for (const [code, label] of [
+      ["vci_not_connected", "VCIは未接続"], ["bridge_pairing_token_not_configured", "接続キーが未設定"],
+      ["local_bridge_timeout", "時間切れ"], ["sample_mode_no_vehicle_readout", "サンプルモード"],
+      ["write_intent_blocked", "要求は無効"], ["詳細トークンが未設定です。", "未設定"]
+    ]) {
+      displayClient.sendObdLocalBridgeIntent = async () => { throw new Error(code); };
+      await displayClient.runObdLocalBridgeRead("確認", "read_stored_dtc", {}, () => { successCalls += 1; });
+      check(displayClient.obdDevStatus.textContent.includes(label) && successCalls === 1, `Bridge failure lost its distinct reason: ${code}`);
+    }
+    displayClient.sendObdLocalBridgeIntent = async () => { throw new Error(`unrecognized ${options.pairingToken} C:/private/driver.dll`); };
+    await displayClient.runObdLocalBridgeRead("確認", "read_stored_dtc", {}, () => { successCalls += 1; });
+    check(displayClient.obdDevStatus.textContent.includes("応答を確認できません") && !displayClient.obdDevStatus.textContent.includes(options.pairingToken) && !displayClient.obdDevStatus.textContent.includes("private"), "Unknown transport error exposed raw credentials or paths");
+    displayClient.sendObdLocalBridgeStatusIntent = async () => { throw new Error("local_bridge_timeout"); };
+    await displayClient.probeObdLocalBridge();
+    check(displayClient.obdDevStatus.textContent.includes("時間切れ"), "Bridge discovery failure was overwritten by the gate");
+    client.window = { ObdReadOnly: {
+      normalizeBridgeConnectionStatus: () => ({ displayStatus: "TEST_STATUS" }),
+      normalizeBridgeAdapterIdentity: () => ({ adapterName: "TEST_ADAPTER" })
+    } };
+    client.renderObdDeveloperSessionSummary = () => {};
+    client.appendObdDeveloperLog = () => {};
+    await client.probeObdLocalBridge();
+    check(client.obdDevStatus.textContent.includes("TEST_STATUS / TEST_ADAPTER"), "Bridge discovery result was replaced with a generic ready message");
+    displayClient.sendObdLocalBridgeIntent = async () => { displayClient.obdDevModeUnlocked = false; throw new Error("pairing_token_mismatch"); };
+    await displayClient.runObdLocalBridgeRead("確認", "read_stored_dtc", {}, () => { successCalls += 1; });
+    check(displayClient.obdDevStatus.textContent === "DEFAULT_GATE", "Late failure overwrote the newly locked gate");
     const renewedClient = createClient(workstation.webUrl, "saved-details-token");
     renewedClient.obdBridgePairingInput.value = options.pairingToken;
     renewedClient.applyObdBridgePairingToken();
@@ -116,8 +155,9 @@ try {
     check(renewedClient.obdAccessUnlocked === false && renewedClient.obdBridgePairingToken === "" && renewedClient.obdBridgePairingInput.value === "", "Top-level access lock retained the runtime pairing key");
     check(indexSource.includes('id="obdBridgePairingControls" hidden') && indexSource.includes('id="obdBridgePairingInput" type="password" autocomplete="off" minlength="12"') && indexSource.includes('id="obdBridgePairingStatus" class="data-status" role="status"'), "Pairing UI lost initial hiding, password input, or accessible status");
     check(appSource.includes('obdBridgePairingApplyButton.addEventListener("click", applyObdBridgePairingToken)') && appSource.includes('obdBridgePairingClearButton.addEventListener("click", clearObdBridgePairingToken)'), "Pairing UI buttons are not connected to the tested handlers");
+    const requestCountBeforeWrite = requests.length;
     await assert.rejects(client.sendObdLocalBridgeIntent("clear_dtc"));
-    check(requests.length === 2, "UI sent a forbidden write intent");
+    check(requests.length === requestCountBeforeWrite, "UI sent a forbidden write intent");
     const localRequest = (body) => fetch(localEndpoint, {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
     });

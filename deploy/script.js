@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 3407件",
   bridgeValidationCheckLabel: "bridge検証 218件",
-  recentMilestone: "再起動後のブリッジ接続キーを画面から設定",
+  recentMilestone: "ブリッジの認証・接続エラーと操作結果を明確化",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.254";
+const APP_VERSION = "3.13.255";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5727,6 +5727,7 @@ async function readObdDeveloperSupportedPidMaps() {
 }
 
 async function probeObdLocalBridge(contextLabel = "ローカルブリッジ") {
+  let resultMessage = "";
   try {
     obdDevStatus.textContent = `${contextLabel}を確認しています。`;
     const response = await sendObdLocalBridgeStatusIntent("bridge_status", {}, { discover: true });
@@ -5740,12 +5741,13 @@ async function probeObdLocalBridge(contextLabel = "ローカルブリッジ") {
       appendObdDeveloperLog(`adapter_identity\n${adapterError?.message || adapterError}`);
     }
     const adapterLabel = obdDevSession.adapterIdentity?.adapterName || obdDevSession.adapterIdentity?.adapterFamily || "識別未取得";
-    obdDevStatus.textContent = `${contextLabel}: ${status.displayStatus} / ${adapterLabel}`;
+    resultMessage = `${contextLabel}: ${status.displayStatus} / ${adapterLabel}`;
     renderObdDeveloperSessionSummary(null);
   } catch (error) {
-    obdDevStatus.textContent = `${contextLabel}を確認できません: ${error?.message || error}`;
+    resultMessage = `${contextLabel}を確認できません: ${formatObdLocalBridgeFailure(error)}`;
   } finally {
     renderObdDeveloperGate();
+    if (obdDevModeUnlocked && resultMessage) obdDevStatus.textContent = resultMessage;
   }
 }
 
@@ -5814,6 +5816,7 @@ async function readObdLocalBridgeLiveSnapshot() {
 
 async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
   if (!obdDevModeUnlocked) return;
+  let resultMessage = "";
   try {
     obdDevStatus.textContent = `${label}中です。`;
     const response = await sendObdLocalBridgeIntent(intent, payload);
@@ -5821,12 +5824,26 @@ async function runObdLocalBridgeRead(label, intent, payload, onSuccess) {
       throw new Error((response.errors || []).join(" / ") || "bridge_response_not_ok");
     }
     onSuccess(response);
-    obdDevStatus.textContent = `${label}が完了しました。`;
+    resultMessage = `${label}が完了しました。`;
   } catch (error) {
-    obdDevStatus.textContent = `${label}に失敗しました: ${error?.message || error}`;
+    resultMessage = `${label}に失敗しました: ${formatObdLocalBridgeFailure(error)}`;
   } finally {
     renderObdDeveloperGate();
+    if (obdDevModeUnlocked && resultMessage) obdDevStatus.textContent = resultMessage;
   }
+}
+
+function formatObdLocalBridgeFailure(error) {
+  const codes = String(error?.message || error || "").split(" / ");
+  if (codes.includes("pairing_token_mismatch")) return "ブリッジ接続キーが一致しません。起動時のペアリング値を「ブリッジ接続キー（今回のみ）」へ入力し直してください。";
+  if (codes.includes("bridge_pairing_token_not_configured")) return "ブリッジ側の接続キーが未設定です。ブリッジの起動設定を確認してください。";
+  if (codes.includes("vci_not_detected")) return "VCI未検出です。PCのドライバー登録と機器の接続を確認してください。車両データは未取得です。";
+  if (codes.includes("vci_not_connected")) return "ドライバーは検出済みですが、VCIは未接続です。ドライバーの登録だけでは車両を読み取れません。";
+  if (codes.includes("local_bridge_timeout")) return "ブリッジの応答が時間切れになりました。PC側のブリッジが動作しているか確認してください。";
+  if (codes.includes("sample_mode_no_vehicle_readout")) return "サンプルモードのため車両データは取得できません。実車読取の結果ではありません。";
+  if (codes.includes("write_intent_blocked")) return "車両状態を変更する要求は無効です。実行していません。";
+  if (codes.includes("詳細トークンが未設定です。")) return "詳細トークンまたは今回のブリッジ接続キーが未設定です。";
+  return "ブリッジの応答を確認できません。PC側の起動状態・接続先・対応機能を確認してください。";
 }
 
 async function fetchObdLocalBridgeEndpoint(endpoint, request) {
