@@ -34076,6 +34076,57 @@
     ].join("\n");
   }
 
+  function buildManufacturerSampleCollectionExport(session = null) {
+    const template = getManufacturerSampleCollectionTemplate();
+    const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
+    const sourceDtcCount = Array.isArray(dtcSnapshot?.dtcs) ? dtcSnapshot.dtcs.length : 0;
+    const exportedRowCount = Math.min(sourceDtcCount, 500);
+    const readoutQuality = session?.readoutQualitySummary || session?.readout_quality_summary || null;
+    const readiness = session?.manufacturerSampleReadinessSummary
+      || session?.manufacturer_sample_readiness_summary
+      || buildManufacturerSampleReadinessSummary(readoutQuality, dtcSnapshot);
+    const missingRequirementIds = Array.isArray(readiness?.missingRequirementIds)
+      ? readiness.missingRequirementIds.slice(0, 20)
+      : Array.isArray(readiness?.missing_requirement_ids)
+        ? readiness.missing_requirement_ids.slice(0, 20)
+        : [];
+    const contractCompleteForSampleReview = readiness?.contractCompleteForSampleReview === true
+      || readiness?.contract_complete_for_sample_review === true;
+    return {
+      schemaVersion: "manufacturer_sample_collection_export_v1",
+      schema_version: "manufacturer_sample_collection_export_v1",
+      templateSchemaVersion: template.schemaVersion,
+      template_schema_version: template.schemaVersion,
+      fieldSchemaVersion: template.fieldSchemaVersion,
+      field_schema_version: template.fieldSchemaVersion,
+      format: template.format,
+      tsv: buildManufacturerSampleCollectionTemplateTsv(session),
+      sourceDtcCount,
+      source_dtc_count: sourceDtcCount,
+      exportedRowCount,
+      exported_row_count: exportedRowCount,
+      truncated: sourceDtcCount > exportedRowCount,
+      hasDataRows: exportedRowCount > 0,
+      has_data_rows: exportedRowCount > 0,
+      contractCompleteForSampleReview,
+      contract_complete_for_sample_review: contractCompleteForSampleReview,
+      missingRequirementCount: missingRequirementIds.length,
+      missing_requirement_count: missingRequirementIds.length,
+      missingRequirementIds,
+      missing_requirement_ids: [...missingRequirementIds],
+      retainsRawPayload: false,
+      retains_raw_payload: false,
+      diagnosticConclusionAssigned: false,
+      diagnostic_conclusion_assigned: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
   function validateDtcEvidenceFieldValue(fieldId, value) {
     const normalized = redactSensitiveText(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, 80);
     if (!normalized) return { present: false, valid: true, value: null, reason: null };
@@ -40297,6 +40348,7 @@
     getEcuInfoItems,
     getManufacturerSampleCollectionTemplate,
     buildManufacturerSampleCollectionTemplateTsv,
+    buildManufacturerSampleCollectionExport,
     getVehicleOperationPlan,
     getServiceOperationReadinessRequirements,
     getServiceExperimentContract,

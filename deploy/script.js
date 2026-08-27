@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 3403件",
+  validationCheckLabel: "OBD安全検証 3406件",
   bridgeValidationCheckLabel: "bridge検証 197件",
-  recentMilestone: "読取済み実機証跡のTSV再取込を固定",
+  recentMilestone: "実機証跡TSVの件数・欠損監査を追加",
   scopeNote: "ロードマップ大分類％とは別に、内部診断コアの変化を追跡"
 });
-const APP_VERSION = "3.13.244";
+const APP_VERSION = "3.13.245";
 const APP_LAST_UPDATED = "2026-08-27";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11367,14 +11367,13 @@ function loadObdMonitorSample() {
 }
 
 function downloadManufacturerSampleTemplate() {
-  const buildTemplate = window.ObdReadOnly?.buildManufacturerSampleCollectionTemplateTsv;
-  if (typeof buildTemplate !== "function") {
+  const buildExport = window.ObdReadOnly?.buildManufacturerSampleCollectionExport;
+  if (typeof buildExport !== "function") {
     obdImportStatus.textContent = "実機サンプルTSVを準備できませんでした。画面を再読み込みしてください。";
     return;
   }
-  const exportedDtcCount = obdDevSession.lastSession?.dtcSnapshot?.dtcs?.length || 0;
-  const tsv = buildTemplate(obdDevSession.lastSession);
-  const blob = new Blob([`\uFEFF${tsv}`], { type: "text/tab-separated-values;charset=utf-8" });
+  const exportBundle = buildExport(obdDevSession.lastSession);
+  const blob = new Blob([`\uFEFF${exportBundle.tsv}`], { type: "text/tab-separated-values;charset=utf-8" });
   const link = document.createElement("a");
   const objectUrl = URL.createObjectURL(blob);
   link.href = objectUrl;
@@ -11384,8 +11383,12 @@ function downloadManufacturerSampleTemplate() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-  obdImportStatus.textContent = exportedDtcCount > 0
-    ? `読取済みDTC ${exportedDtcCount}件を実機サンプルTSVへ保存しました。この欄から再取込できます。`
+  obdImportStatus.textContent = exportBundle.truncated
+    ? `DTC ${exportBundle.exportedRowCount}/${exportBundle.sourceDtcCount}件を保存しました。上限500件を超えたため、残りは別セッションで収集してください。`
+    : exportBundle.exportedRowCount > 0 && exportBundle.contractCompleteForSampleReview !== true
+      ? `読取済みDTC ${exportBundle.exportedRowCount}件を保存しました。証跡不足 ${exportBundle.missingRequirementCount}項目は空欄のままです。`
+      : exportBundle.exportedRowCount > 0
+        ? `読取済みDTC ${exportBundle.exportedRowCount}件を実機サンプルTSVへ保存しました。この欄から再取込できます。`
     : "空の実機サンプルTSVを保存しました。車両・ECU・要求・応答を1行ずつ記録し、この欄から再取込できます。";
 }
 
