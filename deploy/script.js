@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.314";
+const APP_VERSION = "3.13.315";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7960,6 +7960,61 @@ function formatObdBridgeEcuKeySummary(summary = null) {
   return `${summary.capturedCount}/${summary.totalCount}${missing ? ` / 未取得 ${missing}` : ""}`;
 }
 
+function formatObdEcuSupportCapture(snapshot = null) {
+  const captured = snapshot?.supportInfoTypesCaptured ?? snapshot?.support_info_types_captured;
+  return captured === true ? "取得済み" : captured === false ? "未取得" : "未確認";
+}
+
+function formatObdEcuInfoItemLine(item = {}) {
+  const ecu = item.sourceEcu || item.source_ecu || "ECU未記録";
+  const did = item.dataIdentifier || item.data_identifier;
+  const infoType = item.infoType || item.info_type;
+  const identifier = did ? ` / DID 0x${did}` : infoType ? ` / Mode09 タイプ ${infoType}` : "";
+  const sensitive = item.privacyClass === "sensitive_identifier" || item.privacy_class === "sensitive_identifier";
+  const value = sensitive ? "識別情報（非表示）" : item.value == null || item.value === "" ? NO_DATA
+    : typeof item.value === "object" ? JSON.stringify(item.value) : String(item.value);
+  return `[${ecu}] ${item.label || item.id || "項目"}${identifier}: ${value}`;
+}
+
+function buildObdEcuInfoDisplayLines(snapshot = null) {
+  const items = snapshot?.items || [];
+  const ecus = snapshot?.ecuInfoEcuSnapshots || snapshot?.ecu_info_ecu_snapshots || [];
+  const status = snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status;
+  if (!items.length && !ecus.length && !(snapshot?.itemCount > 0)
+    && !["reported", "blocked", "unparsed"].includes(status) && formatObdEcuSupportCapture(snapshot) !== "取得済み") return [];
+  const keySummary = snapshot?.keyItemSummary;
+  const supported = snapshot?.supportInfoTypesSummary || snapshot?.support_info_types_summary;
+  const expected = summarizeObdExpectedItems(snapshot?.expectedItems || []);
+  const lines = [
+    `記録項目数: ${snapshot?.itemCount ?? items.length} / 表示明細: ${items.length}`,
+    `Mode09対応情報タイプ00: ${formatObdEcuSupportCapture(snapshot)}`
+  ];
+  (ecus.length ? ecus : [snapshot]).forEach((group) => {
+    const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
+    lines.push(`[${ecu}] 読取状態: ${formatObdReadoutStatus(group.ecuInfoReadoutStatus || group.ecu_info_readout_status, "状態未確認")}`);
+    const service = group.ecuInfoNegativeResponseService || group.ecu_info_negative_response_service;
+    const code = group.ecuInfoNegativeResponseCode || group.ecu_info_negative_response_code;
+    if (service || code) lines.push(`[${ecu}] 負応答: サービス ${service || NO_DATA} / NRC ${code || NO_DATA}`);
+    const errors = group.errorCodes || group.error_codes || [];
+    errors.forEach((error) => lines.push(`[${ecu}] ${formatReadoutErrorCodes([error])}`));
+  });
+  lines.push(...items.map(formatObdEcuInfoItemLine));
+  if (!items.length) lines.push("項目明細: 登録データなし");
+  lines.push(`主要要約: ${formatObdBridgeEcuKeySummary(keySummary)}`);
+  if (expected.totalCount) lines.push(`取得状況: ${expected.capturedCount}/${expected.totalCount}`);
+  if (supported?.count) {
+    lines.push(`対応タイプ00: ${supported.count}件`);
+    lines.push(`対応: ${(supported.labels || []).join(" / ") || NO_DATA}`);
+  }
+  if (keySummary?.totalCount) {
+    lines.push(`主要項目: ${keySummary.capturedCount}/${keySummary.totalCount}`);
+    lines.push(`取得: ${keySummary.capturedLabels?.length ? keySummary.capturedLabels.join(" / ") : "なし"}`);
+    lines.push(`未取得: ${keySummary.missingLabels?.length ? keySummary.missingLabels.join(" / ") : "なし"}`);
+  }
+  if (expected.missingCount) lines.push(`未取得用途: ${formatObdExpectedItemPreview(expected.missing, "diagnosticUse", 3)}`);
+  return lines;
+}
+
 function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
   if (!snapshot?.testCount) return NO_DATA;
   const parts = [`${snapshot.testCount}件`];
@@ -9006,38 +9061,8 @@ function renderObdBridgeSessionDetails(session = null) {
     sections.push(["DTC状態", [summary, ...lines].filter(Boolean)]);
   }
 
-  const ecuItems = ecuInfoSnapshot?.items || [];
-  if (ecuItems.length) {
-    const keySummary = ecuInfoSnapshot?.keyItemSummary;
-    const supportedTypeSummary = ecuInfoSnapshot?.supportInfoTypesSummary;
-    const ecuExpectedSummary = summarizeObdExpectedItems(ecuInfoSnapshot?.expectedItems || []);
-    const lines = [];
-    lines.push(`主要要約: ${formatObdBridgeEcuKeySummary(keySummary)}`);
-    if (ecuExpectedSummary.totalCount) {
-      lines.push(`取得状況: ${ecuExpectedSummary.capturedCount}/${ecuExpectedSummary.totalCount}`);
-    }
-    if (supportedTypeSummary?.count) {
-      lines.push(`対応タイプ00: ${supportedTypeSummary.count}件`);
-      lines.push(`対応: ${supportedTypeSummary.labels.slice(0, 6).join(" / ")}${supportedTypeSummary.count > 6 ? "..." : ""}`);
-    }
-    if (keySummary?.totalCount) {
-      lines.push(`主要項目: ${keySummary.capturedCount}/${keySummary.totalCount}`);
-      lines.push(`取得: ${keySummary.capturedLabels?.length ? keySummary.capturedLabels.join(" / ") : "なし"}`);
-      lines.push(`未取得: ${keySummary.missingLabels?.length ? keySummary.missingLabels.join(" / ") : "なし"}`);
-    }
-    if (ecuInfoSnapshot?.supportInfoTypesCaptured === false) {
-      lines.push("Mode09\u5bfe\u5fdc\u60c5\u5831\u30bf\u30a4\u30d700: \u672a\u53d6\u5f97");
-    }
-    if (ecuExpectedSummary.missingCount) {
-      lines.push(`未取得用途: ${formatObdExpectedItemPreview(ecuExpectedSummary.missing, "diagnosticUse", 3)}`);
-    }
-    lines.push(...ecuItems.slice(0, 6).map((item) => {
-      const dataIdentifier = item?.dataIdentifier || item?.data_identifier || null;
-      const didSuffix = dataIdentifier ? ` / DID 0x${dataIdentifier}` : "";
-      return `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}${didSuffix}`;
-    }));
-    sections.push(["ECU情報", lines]);
-  }
+  const ecuInfoLines = buildObdEcuInfoDisplayLines(ecuInfoSnapshot);
+  if (ecuInfoLines.length) sections.push(["ECU情報", ecuInfoLines]);
 
   const ecuResponses = session?.ecuResponseSummary?.ecus || [];
   if (ecuResponses.length) {
@@ -10665,7 +10690,7 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["ECU通信", ecuInfoProtocolLabel],
     ["主要ECU情報", ecuInfoSnapshot?.keyItemSummary?.totalCount ? `${ecuInfoSnapshot.keyItemSummary.capturedCount}/${ecuInfoSnapshot.keyItemSummary.totalCount}` : NO_DATA],
     ["Mode09対応", ecuInfoSnapshot?.supportInfoTypesSummary?.count ?? 0],
-    ["Mode09対応タイプ00", ecuInfoSnapshot?.supportInfoTypesCaptured === false ? "未取得" : "取得済み"],
+    ["Mode09対応タイプ00", formatObdEcuSupportCapture(ecuInfoSnapshot)],
     ["FF", freezeFrameSummaryLabel],
     ["FF読取状態", freezeFrameReadoutStatusLabel],
     ["FF起点番号", freezeFrameTriggerNumber === null ? NO_DATA : `#${freezeFrameTriggerNumber}`],
