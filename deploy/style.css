@@ -1291,6 +1291,7 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-session-detail-card {
   display: grid;
+  align-content: start;
   gap: 8px;
   border: 1px solid var(--line);
   border-radius: 7px;

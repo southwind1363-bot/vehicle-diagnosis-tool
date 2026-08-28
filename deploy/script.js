@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.316";
+const APP_VERSION = "3.13.317";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8015,6 +8015,47 @@ function buildObdEcuInfoDisplayLines(snapshot = null) {
   return lines;
 }
 
+function buildObdEcuResponseDisplayLines(summary = null) {
+  const rows = summary?.ecus || [];
+  if (!rows.length) return [];
+  const lines = [`応答記録: ${rows.length}件`];
+  const statusLabels = {
+    reported: "応答取得", responded: "応答取得", response: "応答取得", ok: "応答取得",
+    success: "応答取得", available: "応答取得", positive: "肯定応答", positive_response: "肯定応答",
+    negative_response: "負応答", pending_response: "応答保留", no_response: "無応答",
+    unparsed: "応答未解析", blocked: "読取拒否", unknown: "状態未確認"
+  };
+  const formatCount = (value) => Number.isInteger(value) && value >= 0 ? String(value) : "未記録";
+  rows.forEach((row, index) => {
+    const address = row.address || "ECUアドレス未記録";
+    const label = row.name || row.id || "名称未記録";
+    const status = row.status == null || row.status === "" ? "unknown" : String(row.status);
+    const statusKey = status.trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const prefix = `#${index + 1} [${address}]`;
+    const statusLabel = Object.prototype.hasOwnProperty.call(statusLabels, statusKey) ? statusLabels[statusKey] : "未分類";
+    lines.push(`${prefix} ${label} / 記録状態: ${statusLabel} (${status})`);
+    if (row.id && row.id !== row.address && row.id !== row.name) lines.push(`${prefix} 記録ID: ${row.id}`);
+    lines.push(`${prefix} 報告DTC件数: ${formatCount(row.dtcCount ?? row.dtc_count)} / 応答回数: ${formatCount(row.responseCount ?? row.response_count)}`);
+    lines.push(`${prefix} 記録の負応答集計: ${formatCount(row.negativeResponseCount ?? row.negative_response_count)} / うち保留: ${formatCount(row.pendingNegativeResponseCount ?? row.pending_negative_response_count)}`);
+    const services = row.services || [];
+    const responseServices = row.responseServices || row.response_services || [];
+    const negativeServices = row.negativeRequestedServices || row.negative_requested_services || [];
+    const negativeLabels = row.negativeResponseLabels || row.negative_response_labels || [];
+    lines.push(`${prefix} 記録サービス: ${services.length ? services.join(", ") : "未記録"} / 応答サービス: ${responseServices.length ? responseServices.join(", ") : "未記録"}`);
+    if (negativeServices.length) lines.push(`${prefix} 負応答対象サービス: ${negativeServices.join(", ")}`);
+    if (negativeLabels.length) lines.push(`${prefix} 負応答記録: ${negativeLabels.join(" / ")}`);
+    const metadata = [
+      ["読取区分", row.readoutSection || row.readout_section],
+      ["読取種別", row.readoutKind || row.readout_kind],
+      ["試行ID", row.readoutAttemptId || row.readout_attempt_id],
+      ["通信", row.protocol],
+      ["記録時刻", row.capturedAt || row.captured_at]
+    ].filter(([, value]) => value != null && value !== "");
+    if (metadata.length) lines.push(`${prefix} ${metadata.map(([key, value]) => `${key}: ${value}`).join(" / ")}`);
+  });
+  return lines;
+}
+
 function buildObdSupportedPidDisplayLines(snapshot = null) {
   const pids = snapshot?.supportedPids || snapshot?.supported_pids || [];
   const pages = snapshot?.supportedPidPageBases || snapshot?.supported_pid_page_bases || [];
@@ -9099,15 +9140,8 @@ function renderObdBridgeSessionDetails(session = null) {
   const ecuInfoLines = buildObdEcuInfoDisplayLines(ecuInfoSnapshot);
   if (ecuInfoLines.length) sections.push(["ECU情報", ecuInfoLines]);
 
-  const ecuResponses = session?.ecuResponseSummary?.ecus || [];
-  if (ecuResponses.length) {
-    sections.push(["ECU応答", ecuResponses.slice(0, 6).map((item) => {
-      const services = item.services?.length ? ` / Svc ${item.services.join(",")}` : "";
-      const negatives = item.negativeResponseCount ? ` / 否定応答${item.negativeResponseCount}` : "";
-      const dtcs = Number.isInteger(item.dtcCount) ? ` / DTC ${item.dtcCount}` : "";
-      return `${item.name || item.address || item.id}: ${item.status || "unknown"}${dtcs}${services}${negatives}`;
-    })]);
-  }
+  const ecuResponseLines = buildObdEcuResponseDisplayLines(session?.ecuResponseSummary || session?.ecu_response_summary);
+  if (ecuResponseLines.length) sections.push(["ECU応答", ecuResponseLines]);
 
   const adapterIdentity = sessionAdapterIdentity
     ? { ...(obdDevSession.adapterIdentity || {}), ...sessionAdapterIdentity }
