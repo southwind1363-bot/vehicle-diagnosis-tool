@@ -6,6 +6,7 @@ import "./validate-mode06-normalization.js";
 import "./validate-supported-pid-roundtrip.js";
 import "./validate-ecu-response-timing.js";
 import "./validate-response-attempt-numbers.js";
+import "./validate-dtc-evidence-input.js";
 
 const failures = [];
 let checks = 0;

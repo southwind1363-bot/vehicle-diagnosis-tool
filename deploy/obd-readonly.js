@@ -34428,7 +34428,7 @@
     const negativeRequestedService = normalizeDtcEvidenceRequestedServiceValue(values.negative_requested_service);
     const responseCount = normalizeDtcEvidenceResponseCountValue(values.response_count);
     const responseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(values.response_wait_ms);
-    const evidenceValuesValid = DTC_EVIDENCE_FIELD_SCHEMA.every((field) => validateDtcEvidenceFieldValue(field.id, values[field.id]).valid);
+    const evidenceValuesValid = DTC_EVIDENCE_FIELD_SCHEMA.every((field) => validateDtcEvidenceFieldValue(field.id, values[field.id], field.valueType === "unit_text" ? 24 : 80).valid);
     const requirements = [
       { id: "dtc_evidence_scope", complete: present("vehicle_maker", "vehicle_model_code", "vehicle_year", "source_ecu", "dtc_code") },
       { id: "acquisition_context", complete: Boolean(normalizeDtcEvidenceTimestampValue(values.captured_at) && present("protocol", "scan_session_id")) },
@@ -34522,11 +34522,18 @@
     };
   }
 
-  function validateDtcEvidenceFieldValue(fieldId, value) {
-    const normalized = redactSensitiveText(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, 80);
-    if (!normalized) return { present: false, valid: true, value: null, reason: null };
+  function validateDtcEvidenceFieldValue(fieldId, value, maxLength = 80) {
+    if (value === null || value === undefined || typeof value === "string" && value.trim() === "") return { present: false, valid: true, value: null, reason: null };
     const field = DTC_EVIDENCE_FIELD_SCHEMA.find((item) => item.id === fieldId);
     if (!field) return { present: true, valid: false, value: null, reason: "invalid_value" };
+    const invalidReason = field.validationRule === "iso_8601_timestamp" ? "invalid_timestamp"
+      : field.validationRule === "nonnegative_integer_text" ? "invalid_integer"
+        : field.validationRule === "nonnegative_decimal_text" ? "invalid_number" : "unsupported_unit";
+    if (typeof value !== "string" && typeof value !== "number") return { present: true, valid: false, value: null, reason: invalidReason };
+    const text = String(value).trim();
+    // Validate the complete field before redaction or formatting can erase an invalid suffix.
+    if (text.length > maxLength) return { present: true, valid: false, value: null, reason: invalidReason };
+    const normalized = redactSensitiveText(text).replace(/\s+/g, " ").trim();
     if (field.validationRule === "iso_8601_timestamp") {
       const timestamp = normalizeDtcEvidenceTimestampValue(normalized);
       return { present: true, valid: Boolean(timestamp), value: timestamp, reason: timestamp ? null : "invalid_timestamp" };
@@ -35243,7 +35250,7 @@
       const rowEvidenceDtcCode = cellAt(dtcIndex, 24) || null;
       const rowEvidenceDtcSubcode = cellAt(subcodeIndex, 24) || cellAt(oemDetailCodeIndex, 24) || null;
       const readDtcEvidenceField = (fieldId, index, length = 80) => {
-        const validation = validateDtcEvidenceFieldValue(fieldId, cellAt(index, length));
+        const validation = validateDtcEvidenceFieldValue(fieldId, cells[index], length);
         if (!validation.valid) {
           invalidDtcEvidenceFieldObservations.push({
             fieldId,
