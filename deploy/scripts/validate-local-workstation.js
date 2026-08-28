@@ -11,6 +11,7 @@ import { EventEmitter } from "node:events";
 import { startLocalWorkstation, openWorkstationBrowser } from "./start-local-workstation.js";
 import { validateWorkstationAssets } from "./workstation-assets.js";
 import "./validate-sample-preview.js";
+import "./validate-readout-vehicle.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };

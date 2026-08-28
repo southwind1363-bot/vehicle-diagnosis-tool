@@ -31,6 +31,7 @@ function client() {
     navigator: { serial: { requestPort: async () => { calls.select += 1; return port; } } },
     clearRequestedInterfaceSelection: () => {}, renderObdDeveloperGate: () => {}, renderObdAccessGate: () => {},
     renderObdSessionExportControls: () => {},
+    renderObdReadoutVehicle: () => {},
     invalidateObdScannerImport: () => {}, clearObdBridgePairingToken: () => {},
     buildWebSerialAdapterInitializationSummary: (value) => value,
     buildSelectedObdVehicleProfile: () => ({}), buildSelectedObdVehicleApplicability: () => ({}), buildSelectedObdObservationContext: () => ({}),

@@ -1677,6 +1677,20 @@ body.dark .flow-node-measure .flow-step {
   display: none;
 }
 
+.obd-readout-vehicle {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  gap: 12px 20px;
+  margin: 0 0 18px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.obd-readout-vehicle[hidden] { display: none; }
+.obd-readout-vehicle > div { min-width: 0; }
+.obd-readout-vehicle dt { color: var(--muted); font-size: 0.82rem; margin-bottom: 5px; }
+.obd-readout-vehicle dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+
 .obd-results-nav {
   position: sticky;
   top: 70px;

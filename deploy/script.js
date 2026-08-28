@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.296";
+const APP_VERSION = "3.13.297";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11998,7 +11998,36 @@ function getObdSessionExportBlockReason() {
   return "";
 }
 
+function renderObdReadoutVehicle(session = null) {
+  const summary = document.getElementById("obdReadoutVehicle");
+  if (!summary) return;
+  summary.replaceChildren();
+  summary.hidden = !session || typeof session !== "object" || Array.isArray(session);
+  if (summary.hidden) return;
+  const profile = session.vehicleProfile || session.vehicle_profile || null;
+  const applicability = session.vehicleApplicability || session.vehicle_applicability || null;
+  const preview = session.previewMode || session.preview_mode || session.source === "interface_preview" || session.source_type === "interface_preview";
+  const recorded = (value) => value === null || value === undefined || value === "" ? "未記録" : String(value);
+  const fields = [
+    [preview ? "プレビューの車両（未読取）" : "読取結果の車両", formatVehicleProfileLabel(profile, "未記録")],
+    ["型式", recorded(profile?.modelCode ?? profile?.model_code)],
+    ["年式", recorded(profile?.year)],
+    ["エンジン型式", recorded(profile?.engineCode ?? profile?.engine_code)],
+    ["車種適合", formatVehicleApplicabilitySummary(applicability, "未判定")]
+  ];
+  for (const [label, value] of fields) {
+    const group = document.createElement("div");
+    const term = document.createElement("dt");
+    const detail = document.createElement("dd");
+    term.textContent = label;
+    detail.textContent = value;
+    group.append(term, detail);
+    summary.appendChild(group);
+  }
+}
+
 function renderObdSessionExportControls() {
+  renderObdReadoutVehicle(obdDevSession.lastSession);
   const reason = getObdSessionExportBlockReason();
   document.querySelectorAll("[data-obd-session-export]").forEach((button) => {
     button.disabled = Boolean(reason);

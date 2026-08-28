@@ -20,6 +20,7 @@ function client(session = { source: "web_serial" }) {
   const fail = (stage) => { if (options.failure === stage) throw new Error(stage); };
   const c = vm.createContext({
     obdDevSession: { lastSession: session, connectionState: "disconnected" },
+    renderObdReadoutVehicle: () => {},
     obdBridgeOperation: null, obdScannerImportOperation: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
     window: { ObdReadOnly: { buildBridgeSessionExportPayload: (value) => {
       calls.build += 1; fail("build");
