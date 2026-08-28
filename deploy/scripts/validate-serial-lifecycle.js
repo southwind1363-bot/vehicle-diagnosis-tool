@@ -1137,4 +1137,113 @@ for (const stage of ["initialize", "identify"]) {
   await c.disconnectObdDeveloperVci();
 }
 
+const failedConnectionReasons = ["serial_response_too_large", "serial_read_failed", "serial_stream_closed", "device_disconnected",
+  "response_timeout", "serial_write_timeout", "transport_failed", "connection_failed"];
+for (const reason of failedConnectionReasons) {
+  const { context: c } = client();
+  load(c, ["buildWebSerialConnectionStatus"]);
+  c.obdDevSession.lastDisconnectReason = reason;
+  c.obdDevSession.adapterInitializationSummary = { initializationStatus: "completed" };
+  const before = { ...c.obdDevSession };
+  const status = c.buildWebSerialConnectionStatus();
+  check(status.ok === false && status.status === "transport_error" && status.vciConnected === false
+    && status.vehicleConnected === null && status.lastDisconnectReason === reason && status.last_disconnect_reason === reason,
+    `${reason}: a connection failure without readout attempts was recorded as successful`);
+  check(status.displayStatus === "Web Serial通信エラー" && status.display_status === status.displayStatus
+    && status.vehicleCommandEnabled === false && status.wouldTransmit === false
+    && Object.keys(before).every((key) => c.obdDevSession[key] === before[key]),
+    `${reason}: failure status changed diagnostics, safety flags, or display aliases`);
+}
+
+for (const reason of [null, "operator_disconnect", "access_locked", "developer_locked", "port_selection_cancelled"]) {
+  const { context: c } = client();
+  load(c, ["buildWebSerialConnectionStatus"]);
+  c.obdDevSession.lastDisconnectReason = reason;
+  const status = c.buildWebSerialConnectionStatus();
+  check(status.ok === true && status.status === "disconnected" && status.vciConnected === false && status.vehicleConnected === null,
+    `${reason}: an idle or explicitly cancelled connection became a fabricated transport error`);
+  c.obdDevSession.readoutAttempts = [{ status: "failed", transportErrorCount: 1, stopReason: "transport_error" }];
+  check(c.buildWebSerialConnectionStatus().ok === false, `${reason}: manual cancellation erased an actual recorded failure`);
+}
+
+for (const summary of [null, { initializationStatus: "completed" }, { initialization_status: "failed" }]) {
+  const { context: c } = client();
+  load(c, ["buildWebSerialConnectionStatus"]);
+  c.obdDevSession.lastDisconnectReason = "adapter_initialization_failed";
+  c.obdDevSession.adapterInitializationSummary = summary;
+  const status = c.buildWebSerialConnectionStatus();
+  check(status.ok === false && status.status === "adapter_initialization_failed" && status.displayStatus.includes("初期化を完了できません")
+    && status.vciConnected === false && status.adapterInitializationSummary === (summary || undefined),
+    "Explicit initialization failure was lost when the initialization summary was absent or stale");
+}
+
+{
+  const { context: c } = client();
+  load(c, ["buildWebSerialConnectionStatus"]);
+  c.obdDevSession.lastDisconnectReason = "serial_read_failed";
+  for (const outcome of [{ adapterErrorCount: 1 }, { unableToConnectCount: 1 }, { transportErrorCount: 1 }]) {
+    const status = c.buildWebSerialConnectionStatus(outcome);
+    const expectedDisplay = outcome.adapterErrorCount ? "Web Serialアダプターエラー"
+      : outcome.unableToConnectCount ? "車両通信を確立できません" : "Web Serial通信エラー";
+    check(status.status === "transport_error" && status.displayStatus === expectedDisplay && status.ok === false
+      && status.vehicleConnected === (outcome.unableToConnectCount ? false : null),
+      "Retained transport classification changed existing readout error explanations or inferred a vehicle connection");
+  }
+  c.obdDevSession.adapterInitializationSummary = { initializationStatus: "failed" };
+  check(c.buildWebSerialConnectionStatus({ transportErrorCount: 1 }).status === "adapter_initialization_failed",
+    "Retained transport failure overrode an initialization failure");
+  await c.connectObdDeveloperVci();
+  const recovered = c.buildWebSerialConnectionStatus();
+  check(recovered.status === "adapter_connected" && recovered.ok === true && recovered.vciConnected === true
+    && recovered.vehicleConnected === null && !recovered.lastDisconnectReason, "Fresh connection reused the prior failure reason");
+  await c.disconnectObdDeveloperVci();
+}
+
+const coreContext = vm.createContext({ window: {} });
+vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), coreContext);
+const core = coreContext.window.ObdReadOnly;
+for (const reason of failedConnectionReasons) {
+  for (const cleanupFirst of [false, true]) {
+    if (!["serial_response_too_large", "serial_read_failed", "serial_stream_closed"].includes(reason)) continue;
+    const { context: c, port, calls } = client();
+    const clock = installWriteDeadlineHarness(c);
+    load(c, ["identifyObdDeveloperVci", "readElmDeveloperLoop", "isCurrentWebSerialReadLoop", "readElmDeveloperResponse",
+      "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse", "buildWebSerialConnectionStatus", "retainWebSerialConnectionAttempt"]);
+    c.window = coreContext.window;
+    c.hasBridgeDiagnosticScanSessionSupport = () => true;
+    c.buildSelectedObdReadoutInterface = () => ({ readoutRoute: "desktop_web_serial" });
+    c.renderObdDeveloperSessionSummary = () => {};
+    c.initializeElmDeveloperAdapter = async () => { c.obdDevSession.adapterInitializationSummary = { initializationStatus: "completed" }; };
+    const incoming = deferred();
+    const cleanup = deferred();
+    const sent = [];
+    port.readable.getReader = () => ({ read: () => incoming.promise, cancel: () => cleanup.promise, releaseLock: () => {} });
+    port.writable.getWriter = () => ({ write: async (bytes) => { sent.push(new TextDecoder().decode(bytes).trim()); }, releaseLock: () => {} });
+    const connecting = c.connectObdDeveloperVci();
+    await settle();
+    if (reason === "serial_read_failed") incoming.reject(new Error("receive failed"));
+    else incoming.resolve(reason === "serial_stream_closed" ? { done: true } : { done: false, value: new TextEncoder().encode("X".repeat(12001)) });
+    await settle();
+    if (cleanupFirst) { cleanup.resolve(); await settle(); }
+    clock.advance(40);
+    await settle();
+    if (!cleanupFirst) cleanup.resolve();
+    await connecting;
+    const session = c.obdDevSession.lastSession;
+    check(sent.join(",") === "ATI" && calls.close === 1 && session.connectionStatus.ok === false
+      && session.connectionStatus.status === "transport_error" && session.connectionStatus.vehicleConnected === null,
+      `${reason}/${cleanupFirst}: failed initial identity read was saved as a successful connection`);
+    const recovered = core.buildDiagnosticScanSessionFromJson(JSON.stringify(core.buildBridgeSessionExportPayload(session)));
+    check(recovered.connectionStatus.ok === false && recovered.connectionStatus.status === "transport_error"
+      && recovered.connectionStatus.lastDisconnectReason === session.connectionStatus.lastDisconnectReason
+      && recovered.connectionStatus.last_disconnect_reason === recovered.connectionStatus.lastDisconnectReason
+      && recovered.vehicleCommandEnabled === false && recovered.wouldTransmit === false,
+      `${reason}/${cleanupFirst}: saved/reimported failure lost its status, cause, aliases, or safety flags`);
+    check((recovered.dtcSnapshot?.dtcs?.length || 0) === 0 && (recovered.livePidSnapshot?.monitorValues?.length || 0) === 0
+      && !recovered.readoutCoverage?.items?.some((item) => item.id === "connection_status")
+      && !recovered.warnings?.includes("local_bridge_disabled") && clock.timers.size === 0,
+      `${reason}/${cleanupFirst}: failed connection fabricated diagnostic values or bridge coverage`);
+  }
+}
+
 console.log(`Serial lifecycle checks: ${checks} / Errors: 0`);

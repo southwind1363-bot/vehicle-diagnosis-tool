@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.283";
+const APP_VERSION = "3.13.284";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7143,11 +7143,15 @@ function buildWebSerialConnectionStatus(outcome = null) {
   const latestAttempt = outcome && typeof outcome === "object"
     ? outcome
     : (obdDevSession.readoutAttempts || []).at(-1) || null;
-  const transportError = Number(latestAttempt?.transportErrorCount) > 0;
+  const transportError = Number(latestAttempt?.transportErrorCount) > 0 || [
+    "serial_response_too_large", "serial_read_failed", "serial_stream_closed", "device_disconnected",
+    "response_timeout", "serial_write_timeout", "transport_failed", "connection_failed"
+  ].includes(obdDevSession.lastDisconnectReason);
   const adapterError = Number(latestAttempt?.adapterErrorCount) > 0;
   const vehicleLinkError = Number(latestAttempt?.unableToConnectCount) > 0;
   const adapterInitializationSummary = obdDevSession.adapterInitializationSummary;
-  const adapterInitializationFailed = (adapterInitializationSummary?.initializationStatus || adapterInitializationSummary?.initialization_status) === "failed";
+  const adapterInitializationFailed = (adapterInitializationSummary?.initializationStatus || adapterInitializationSummary?.initialization_status) === "failed"
+    || obdDevSession.lastDisconnectReason === "adapter_initialization_failed";
   const retainedConnectionFailure = ["port_selection_failed", "port_open_failed", "adapter_identification_failed"].includes(obdDevSession.lastDisconnectReason)
     ? obdDevSession.lastDisconnectReason
     : null;
