@@ -614,6 +614,9 @@ async function validateScannerAcquisitionOrder(webUrl) {
           client.obdSerialResultOwner = { revision: client.obdSerialRevision, expectedLastSession: null };
         }
         const pending = startPendingScannerAcquisition(client, kind);
+        const retainedDisplay = [client.obdDetectedCodes, client.obdMonitorGrid, client.obdMonitorInsightList, client.obdImportStatus, client.obdMonitorStatus, client.obdMonitorCount];
+        if (action === "clear") retainedDisplay.forEach((element, index) => Object.assign(element, { innerHTML: `retained-${index}`, textContent: `warning-${index}`, hidden: false }));
+        const beforeClear = JSON.stringify(retainedDisplay);
         if (action === "clear") client.clearObdScannerImport();
         if (action === "analyze") client.analyzeObdScannerImport();
         if (action === "internal-merge") client.analyzeObdScannerImport({ mergeWithCurrentSession: true });
@@ -632,6 +635,7 @@ async function validateScannerAcquisitionOrder(webUrl) {
         if (outcome === "success") await pending.complete("old input");
         else await pending.fail();
         check(client.obdScannerText.value === expectedText && client.obdDevSession.lastSession === expectedSession && client.obdImportStatus.textContent === expectedStatus && client.obdScannerImportOperation === null, `${kind} ${outcome} restored input or status after ${action}`);
+        if (action === "clear") check(JSON.stringify(retainedDisplay) === beforeClear, `${kind}/${outcome}: Clear or late acquisition changed retained readout display`);
       }
     }
     for (const newerKind of ["file", "clipboard"]) {
@@ -820,6 +824,62 @@ async function validateScannerReplacementConfirmation(webUrl) {
   check(prompts === 0 && mergeCalls === 1 && merging.obdDevSession.lastSession !== previous, "Internal readout merge prompted or failed to process results");
 }
 
+function validateScannerInputClear(webUrl) {
+  const displayNames = ["obdDetectedCodes", "obdMonitorGrid", "obdMonitorInsightList", "obdImportStatus", "obdMonitorStatus", "obdMonitorCount"];
+  const activeSessions = [
+    { source: "scanner_text", dtcSnapshot: { dtcs: [{ code: "P0171", ecu: "7E8" }] } },
+    { source: "web_serial", dtcSnapshot: { dtcs: [], dtcReadoutStatus: "reported" } },
+    { source: "local_bridge", connectionStatus: { status: "failed" } }
+  ];
+  const inactiveSessions = [null, {}, [], { accepted: false }, { ok: false }, { blocked: true },
+    { previewMode: true }, { preview_mode: true }, { source: "interface_preview" }, { source_type: "interface_preview" }];
+  const binding = appSource.match(/^obdImportClearButton\.addEventListener\("click",[^\r\n]+/m)?.[0];
+  check(Boolean(binding), "Scanner clear command is not bound");
+  for (const [active, sessions] of [[true, activeSessions], [false, inactiveSessions]]) {
+    for (const session of sessions) {
+      const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+      client.obdDevSession.lastSession = session;
+      const sessionBefore = JSON.stringify(session);
+      client.obdDevSession.previewMode = "stale-global-preview";
+      const owner = { revision: 17, expectedLastSession: session };
+      client.obdSerialResultOwner = owner;
+      client.obdSerialRevision = 17;
+      for (const name of displayNames) Object.assign(client[name], { innerHTML: `retained-${name}`, textContent: `warning-${name}`, hidden: false });
+      const before = JSON.stringify(displayNames.map((name) => client[name]));
+      let hintRenders = 0;
+      let aborts = 0;
+      let analyses = 0;
+      client.renderObdImportToolHints = () => { hintRenders += 1; };
+      client.analyzeObdScannerImport = () => { analyses += 1; };
+      for (const name of ["renderObdMonitorValues", "renderObdBridgeSessionDetails", "downloadObdSessionJson"]) client[name] = () => assert.fail(`Input clear invoked ${name}`);
+      for (const name of Object.keys(client.window.ObdReadOnly)) client.window.ObdReadOnly[name] = () => assert.fail(`Input clear invoked parser ${name}`);
+      client.window.confirm = () => assert.fail("Input clear requested replacement confirmation");
+      client.obdScannerImportOperation = {};
+      const bridge = { cancelled: false, controller: { abort: () => { aborts += 1; } } };
+      client.obdBridgeOperation = bridge;
+      let click;
+      client.obdImportClearButton = { addEventListener: (event, handler) => { assert.equal(event, "click"); click = handler; } };
+      vm.runInContext(binding, client);
+      assert.equal(click, client.clearObdScannerImport);
+      click();
+      check(client.obdScannerText.value === "" && client.obdScannerImportOperation === null && bridge.cancelled && aborts === 1,
+        "Input clear lost its acquisition invalidation or bridge cancellation");
+      check(client.obdDevSession.lastSession === session && JSON.stringify(session) === sessionBefore && client.obdSerialResultOwner === owner && client.obdSerialRevision === 17 && analyses === 0,
+        "Input clear changed the retained session, serial ownership, or reanalyzed data");
+      check(client.exportControlSession === session && !client.exportControlImportBusy, "Input clear failed to refresh export readiness for the retained session");
+      if (active) {
+        check(JSON.stringify(displayNames.map((name) => client[name])) === before && hintRenders === 0,
+          "Input clear changed retained DTC/PID values, warnings, hints or counts");
+      } else {
+        check(client.obdDetectedCodes.innerHTML === "" && client.obdMonitorGrid.innerHTML === "" && client.obdMonitorInsightList.innerHTML === ""
+          && client.obdMonitorInsightList.hidden && client.obdMonitorCount.textContent === "0項目" && client.obdImportStatus.textContent === "PENDING"
+          && client.obdMonitorStatus.textContent === "読取後にライブデータを表示します。" && hintRenders === 1,
+        "Input clear failed to reset the empty, rejected or preview display");
+      }
+    }
+  }
+}
+
 function addScannerImportHarness(client, format = "json") {
   const source = appSource.match(/function analyzeObdScannerImport\(options = \{\}\) \{[\s\S]*?\r?\n\}/)[0];
   vm.runInContext(source, client);
@@ -921,6 +981,9 @@ async function validateScannerImportOwnership(webUrl) {
     }));
     const previous = { source: "previous" };
     client.obdDevSession.lastSession = previous;
+    const retainedDisplay = [client.obdDetectedCodes, client.obdMonitorGrid, client.obdMonitorInsightList, client.obdImportStatus, client.obdMonitorStatus, client.obdMonitorCount];
+    if (entry === "clear") retainedDisplay.forEach((element, index) => Object.assign(element, { innerHTML: `retained-${index}`, textContent: `warning-${index}`, hidden: false }));
+    const beforeClear = JSON.stringify(retainedDisplay);
     let accepted = 0;
     const pending = client.runObdLocalBridgeRead("Old read", "read_stored_dtc", {}, () => {
       accepted += 1;
@@ -960,6 +1023,7 @@ async function validateScannerImportOwnership(webUrl) {
       await pending;
     }
     check(accepted === 0 && client.obdDevSession.lastSession === expectedSession && client.obdImportStatus.textContent === expectedStatus, `${entry} result was changed by a late bridge response`);
+    if (entry === "clear") check(JSON.stringify(retainedDisplay) === beforeClear, "Clear or late bridge response changed the retained display");
   }
 }
 
@@ -1512,6 +1576,7 @@ try {
     await validateScannerAcquisitionOrder(workstation.webUrl);
     await validateScannerParserIntegration(workstation.webUrl);
     await validateScannerReplacementConfirmation(workstation.webUrl);
+    validateScannerInputClear(workstation.webUrl);
     await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
     await validateWindowsLauncher(webPort);
     await validateWorkstationConsoleExit();
