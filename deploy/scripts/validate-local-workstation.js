@@ -7,7 +7,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { webcrypto } from "node:crypto";
-import { startLocalWorkstation } from "./start-local-workstation.js";
+import { EventEmitter } from "node:events";
+import { startLocalWorkstation, openWorkstationBrowser } from "./start-local-workstation.js";
 import { validateWorkstationAssets } from "./workstation-assets.js";
 
 let checks = 0;
@@ -15,6 +16,76 @@ const check = (condition, message) => { assert.ok(condition, message); checks +=
 const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-token", j2534RegistryText: "" };
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+async function validateBrowserLaunch() {
+  const url = "http://127.0.0.1:3001";
+  const calls = [];
+  const launch = (...args) => { calls.push(args.slice(0, 3)); args[3](null); };
+  check(await openWorkstationBrowser(url, { platform: "win32", execFile: launch }), "Browser launch request was not accepted");
+  const [file, args, options] = calls[0];
+  check(path.win32.isAbsolute(file) && path.win32.basename(file) === "rundll32.exe"
+    && JSON.stringify(args) === JSON.stringify(["url.dll,FileProtocolHandler", url])
+    && options.windowsHide === true && options.timeout === 5000 && !options.shell, "Browser launch used a shell or leaked extra arguments");
+  for (const invalid of ["https://127.0.0.1:3001", "http://localhost:3001", "http://127.0.0.1:0", "http://127.0.0.1:65536",
+    "http://127.0.0.1:3001/?token=private", "http://127.0.0.1:3001#private", "http://user:private@127.0.0.1:3001", "http://example.com:3001", "file:///C:/private", null]) {
+    check(!await openWorkstationBrowser(invalid, { platform: "win32", execFile: launch }), "Invalid browser destination was accepted");
+  }
+  check(!await openWorkstationBrowser(url, { platform: "linux", execFile: launch }) && calls.length === 1, "Unsupported platform or invalid URL launched a process");
+  const cancelled = new AbortController();
+  cancelled.abort();
+  check(!await openWorkstationBrowser(url, { platform: "win32", execFile: launch, signal: cancelled.signal }) && calls.length === 1, "Cancelled launch started a browser");
+  for (const failure of ["callback", "throw"]) {
+    check(!await openWorkstationBrowser(url, { platform: "win32", execFile: (...args) => {
+      if (failure === "throw") throw new Error("private launch error");
+      args[3](new Error("private launch error"));
+    } }), "Browser failure escaped its fallback");
+  }
+  const controller = new AbortController();
+  const pending = openWorkstationBrowser(url, { platform: "win32", signal: controller.signal, execFile: (...args) => {
+    args[2].signal.addEventListener("abort", () => args[3](new Error("aborted")), { once: true });
+  } });
+  controller.abort();
+  check(!await pending, "Browser launch ignored cancellation");
+
+  const starter = fs.readFileSync(new URL("./start-local-workstation.js", import.meta.url), "utf8");
+  const cli = starter.slice(starter.indexOf("if (process.argv[1] &&"))
+    .replaceAll("fileURLToPath(import.meta.url)", "starterPath");
+  for (const kind of ["success", "failed", "pending", "suppressed", "default", "startup-error"]) {
+    const ready = deferred();
+    const opened = deferred();
+    const input = new EventEmitter();
+    input.close = () => input.emit("close");
+    const processMock = new EventEmitter();
+    processMock.argv = ["node", path.resolve("starter.js"), ...(kind === "default" ? [] : ["--open-browser"]), ...(kind === "suppressed" ? ["--no-browser"] : [])];
+    processMock.stdin = { pause() {} };
+    const messages = [];
+    const launchCalls = [];
+    let closes = 0;
+    const context = { process: processMock, path, starterPath: path.resolve("starter.js"), AbortController,
+      console: { log: (...args) => messages.push(args.join(" ")), error: (...args) => messages.push(args.join(" ")) },
+      createInterface: () => input, startLocalWorkstation: () => ready.promise,
+      openWorkstationBrowser: (value, settings) => { launchCalls.push({ value, settings }); return opened.promise; } };
+    const startup = vm.runInNewContext(`(async () => { ${cli} })()`, context);
+    check(launchCalls.length === 0, "Browser opened before workstation readiness");
+    if (kind === "startup-error") ready.reject(new Error("startup failed"));
+    else ready.resolve({ webUrl: url, bridgeUrl: "http://127.0.0.1:8765", pairingToken: "private-key", close: async () => { closes += 1; } });
+    await startup;
+    const expectedLaunch = ["success", "failed", "pending"].includes(kind);
+    check(launchCalls.length === Number(expectedLaunch), `${kind}: browser launch opt-in or readiness gate failed`);
+    if (expectedLaunch) check(launchCalls[0].value === url, "Browser URL included pairing data or a bridge endpoint");
+    if (kind === "startup-error") { check(processMock.exitCode === 1, "Startup failure lost its failure status"); continue; }
+    if (kind !== "pending") {
+      opened.resolve(kind === "success");
+      await Promise.resolve();
+      check(closes === 0 && messages.some((message) => message.includes("ブラウザーを自動で開けませんでした")) === (kind === "failed"), "Browser fallback stopped services or was reported on an unrequested launch");
+    }
+    input.emit("line", "q");
+    await Promise.resolve();
+    if (kind === "pending") { opened.resolve(false); await Promise.resolve(); }
+    check(closes === 1 && (!expectedLaunch || launchCalls[0].settings.signal.aborted), "Shutdown left browser launch or servers active");
+    if (kind === "pending") check(!messages.some((message) => message.includes("サーバーは起動しています")), "Late browser failure claimed a stopped server was active");
+  }
+}
 
 async function validateWorkstationConsoleExit() {
   const launcherPath = fileURLToPath(new URL("../start-workstation.cmd", import.meta.url));
@@ -87,11 +158,12 @@ async function validateWorkstationConsoleExit() {
 async function validateWindowsLauncher(occupiedWebPort) {
   if (process.platform !== "win32") return;
   const launcherPath = fileURLToPath(new URL("../start-workstation.cmd", import.meta.url));
+  check(!/(?<!\r)\n/.test(fs.readFileSync(launcherPath, "utf8")), "Windows launcher must retain CRLF line endings for label jumps");
   const run = (file, env = {}, noPause = true) => new Promise((resolve) => {
     const environment = { ...process.env, NODE_PATH: "" };
     delete environment.LOCAL_BRIDGE_REPLAY_LOG;
     delete environment.LOCAL_BRIDGE_PAIRING_TOKEN;
-    const child = execFile(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `""${file}"${noPause ? " --no-pause" : ""}"`], {
+    const child = execFile(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `""${file}"${noPause === "no-browser" ? " --no-browser" : noPause ? " --no-pause" : ""}"`], {
       cwd: os.tmpdir(), windowsHide: true, windowsVerbatimArguments: true, timeout: 15000,
       env: { ...environment, ...env }
     }, (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
@@ -109,18 +181,20 @@ async function validateWindowsLauncher(occupiedWebPort) {
     const fixtureLauncher = path.join(fixtureDir, "start-workstation.cmd");
     fs.copyFileSync(launcherPath, fixtureLauncher);
     const missingDependency = await run(fixtureLauncher);
-    check(missingDependency.code === 1 && missingDependency.output.includes("Required packages are missing"), "Windows launcher did not explain missing dependencies");
+    check(missingDependency.code === 1 && missingDependency.output.includes("Required packages are missing"), `Windows launcher did not explain missing dependencies: ${JSON.stringify(missingDependency)}`);
     // A finite child verifies forwarding without starting a second long-lived server.
     fs.mkdirSync(path.join(fixtureDir, "node_modules", "express"), { recursive: true });
     fs.writeFileSync(path.join(fixtureDir, "node_modules", "express", "index.js"), "");
     fs.mkdirSync(path.join(fixtureDir, "scripts"));
-    fs.writeFileSync(path.join(fixtureDir, "scripts", "start-local-workstation.js"), 'console.log("launcher-child"); process.exitCode = Number(process.env.LAUNCHER_TEST_EXIT);');
+    fs.writeFileSync(path.join(fixtureDir, "scripts", "start-local-workstation.js"), 'console.log("launcher-child", JSON.stringify(process.argv.slice(2))); process.exitCode = Number(process.env.LAUNCHER_TEST_EXIT);');
     for (const code of [0, 7]) {
       const child = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: String(code) });
-      check(child.code === code && child.output.includes("launcher-child"), `Windows launcher lost child exit ${code} or mishandled spaces and shell characters in its folder`);
+      check(child.code === code && child.output.includes("launcher-child []"), `Windows launcher lost child exit ${code}, opened a browser in headless mode, or mishandled spaces in its folder`);
     }
     const pausedFailure = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: "7" }, false);
-    check(pausedFailure.code === 7 && pausedFailure.output.includes("launcher-child"), "Windows launcher lost the child failure code after the default pause");
+    check(pausedFailure.code === 7 && pausedFailure.output.includes('launcher-child ["--open-browser"]'), "Windows launcher lost the child failure code or omitted normal browser launch");
+    const noBrowser = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: "0" }, "no-browser");
+    check(noBrowser.code === 0 && noBrowser.output.includes("launcher-child []"), "Explicit no-browser launcher option was ignored");
   } finally {
     assert.equal(path.dirname(path.resolve(fixtureDir)), path.resolve(os.tmpdir()));
     assert(path.basename(fixtureDir).startsWith("vehicle launcher & test-"));
@@ -973,6 +1047,7 @@ async function validateBridgeOperationLifecycle(webUrl) {
   check(probeClient.obdDevSession.bridgeStatus === "previous-status" && probeClient.obdDevSession.adapterIdentity === "previous-adapter" && probeClient.obdDevSession.bridgeEndpoint === "http://127.0.0.1:9999/v1/bridge" && probeClient.obdBridgeOperation === null, "Cancelled multi-step probe mixed the new endpoint with previous connection metadata");
   check(appSource.replace(/\r\n/g, "\n").includes('function syncObdVehicleInput() {\n  cancelObdBridgeOperation();') && appSource.includes('document.querySelectorAll("[data-obd-bridge-request]")'), "Vehicle changes or public bridge controls lost operation protection");
 }
+await validateBrowserLaunch();
 await validatePortableNpmScripts();
 await validateWorkstationAssetPreflight();
 

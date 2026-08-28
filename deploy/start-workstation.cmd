@@ -9,7 +9,10 @@ if errorlevel 1 goto node_error
 node -e "require.resolve('express')" >nul 2>&1
 if errorlevel 1 goto dependency_error
 
-node "scripts\start-local-workstation.js"
+set "browser_option=--open-browser"
+if /i "%~1"=="--no-browser" set "browser_option="
+if /i "%~1"=="--no-pause" set "browser_option="
+node "scripts\start-local-workstation.js" %browser_option%
 set "workstation_exit=%errorlevel%"
 goto finish
 

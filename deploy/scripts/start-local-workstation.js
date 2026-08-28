@@ -2,11 +2,26 @@ import express from "express";
 import http from "node:http";
 import { randomBytes } from "node:crypto";
 import { createInterface } from "node:readline";
+import { execFile } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { validateWorkstationAssets } from "./workstation-assets.js";
 
 const deployDirectory = fileURLToPath(new URL("../", import.meta.url));
+
+export function openWorkstationBrowser(webUrl, options = {}) {
+  // Never pass tokens, paths, or arbitrary URLs to the operating system launcher.
+  if ((options.platform ?? process.platform) !== "win32" || typeof webUrl !== "string"
+    || !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(webUrl)
+    || Number(webUrl.split(":").at(-1)) > 65535 || options.signal?.aborted) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    try {
+      (options.execFile ?? execFile)(path.win32.join(process.env.SystemRoot || "C:\\Windows", "System32", "rundll32.exe"),
+        ["url.dll,FileProtocolHandler", webUrl], { windowsHide: true, timeout: 5000, signal: options.signal },
+        (error) => resolve(!error));
+    } catch { resolve(false); }
+  });
+}
 
 function listen(server, port) {
   return new Promise((resolve, reject) => {
@@ -84,9 +99,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.log(`ペアリング値（外部共有しないでください）: ${workstation.pairingToken}`);
     console.log("DLLロード・車両接続・車両送信は無効です。終了: q + Enter または Ctrl+C");
     const input = createInterface({ input: process.stdin, terminal: false, crlfDelay: Infinity });
+    const browserAbort = new AbortController();
     let stopping = null;
     const stop = () => {
       if (!stopping) stopping = (async () => {
+        browserAbort.abort();
         input.removeListener("close", stop);
         input.close();
         process.stdin.pause();
@@ -103,6 +120,11 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     input.once("close", stop);
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
+    if (process.argv.includes("--open-browser") && !process.argv.includes("--no-browser")) {
+      void openWorkstationBrowser(workstation.webUrl, { signal: browserAbort.signal }).then((opened) => {
+        if (!opened && !stopping) console.log("ブラウザーを自動で開けませんでした。上の診断画面URLを手動で開いてください。サーバーは起動しています。");
+      });
+    }
   } catch (error) {
     console.error(error.code === "workstation_assets_invalid"
       ? `ローカル資材を確認できません（${error.asset.slice(0, 160)}）。同じ版のdeployフォルダーを一式復元してから再起動してください。`
