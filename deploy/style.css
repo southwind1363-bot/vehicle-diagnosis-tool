@@ -1838,6 +1838,37 @@ body.dark .flow-node-measure .flow-step {
   line-height: 1.7;
 }
 
+.obd-sample-dialog {
+  width: min(760px, calc(100% - 24px));
+  height: min(720px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.obd-sample-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+.obd-sample-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.obd-sample-header h2 { font-size: 1.1rem; margin-bottom: 6px; }
+.obd-sample-header p { margin-bottom: 0; color: var(--manual); }
+.obd-sample-header form { flex-shrink: 0; }
+.obd-sample-body { min-height: 0; overflow: auto; padding: 0 16px 16px; }
+.obd-sample-section { padding-top: 16px; }
+.obd-sample-section + .obd-sample-section { border-top: 1px solid var(--line); }
+.obd-sample-section h3 { font-size: 1rem; }
+.obd-sample-section li { line-height: 1.8; overflow-wrap: anywhere; }
+
 .mobile-gpt-overlay {
   position: fixed;
   inset: 0;

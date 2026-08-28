@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.295";
+const APP_VERSION = "3.13.296";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -699,6 +699,7 @@ obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);
 obdImportFileInput?.addEventListener("change", importObdScannerFile);
 document.querySelector("#obdSessionOpenButton")?.addEventListener("click", () => obdImportFileInput?.click());
 obdSampleButton.addEventListener("click", loadObdMonitorSample);
+document.querySelector("#obdResultsSampleButton")?.addEventListener("click", loadObdMonitorSample);
 obdManufacturerSampleTemplateButton?.addEventListener("click", downloadManufacturerSampleTemplate);
 document.querySelectorAll("[data-obd-session-export]").forEach((button) => button.addEventListener("click", downloadObdSessionJson));
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
@@ -11898,8 +11899,8 @@ function renderObdMonitorInsights(insights = []) {
   obdMonitorInsightList.hidden = false;
 }
 
-function loadObdMonitorSample() {
-  obdScannerText.value = [
+function getObdMonitorSampleText() {
+  return [
     "Toyota Techstream",
     "J2534",
     "Current DTCs",
@@ -11938,7 +11939,46 @@ function loadObdMonitorSample() {
     "LTFT B1: 8.6 %",
     "Control Module Voltage: 14.2 V"
   ].join("\n");
-  analyzeObdScannerImport();
+}
+
+function loadObdMonitorSample() {
+  const dialog = document.getElementById("obdSampleDialog");
+  const body = document.getElementById("obdSampleBody");
+  const status = document.getElementById("obdSampleStatus");
+  if (!dialog || !body || !status || typeof dialog.showModal !== "function") return;
+  body.replaceChildren();
+  status.textContent = "架空データ・実車未読取";
+  if (!dialog.open) dialog.showModal();
+  try {
+    // Keep fixture parsing and rendering outside the active diagnostic session.
+    const sample = window.ObdReadOnly.analyzeScannerText(getObdMonitorSampleText());
+    const fragment = document.createDocumentFragment();
+    const addSection = (title, lines) => {
+      const section = document.createElement("section");
+      section.className = "obd-sample-section";
+      const heading = document.createElement("h3");
+      heading.textContent = title;
+      const list = document.createElement("ul");
+      for (const line of lines.length ? lines : ["入力例にデータなし"]) {
+        const item = document.createElement("li");
+        item.textContent = line;
+        list.appendChild(item);
+      }
+      section.append(heading, list);
+      fragment.appendChild(section);
+    };
+    const valueLine = (item) => `${item.label}: ${item.value ?? "未取得"}${item.unit ? ` ${item.unit}` : ""}`;
+    const statuses = { stored: "保存", pending: "保留", permanent: "永久" };
+    addSection("DTC", (sample.dtcSnapshot?.dtcs || []).map((item) => `${item.code} / ${statuses[item.status] || item.status || "状態未取得"}`));
+    addSection("ライブデータ", (sample.monitorValues || []).map(valueLine));
+    addSection("フリーズフレーム", (sample.freezeFrameSnapshot?.monitorValues || []).map(valueLine));
+    addSection("レディネス", (sample.readinessSnapshot?.monitors || []).map((item) =>
+      `${item.label} (${item.id}): ${item.complete === true ? "完了" : item.complete === false ? "未完了" : "未取得"}`));
+    body.replaceChildren(fragment);
+  } catch (_error) {
+    body.replaceChildren();
+    status.textContent = "入力例を表示できませんでした。現在の読取結果は変更していません。";
+  }
 }
 
 function getObdSessionExportBlockReason() {

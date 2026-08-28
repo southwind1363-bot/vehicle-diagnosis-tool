@@ -10,6 +10,7 @@ import { webcrypto } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { startLocalWorkstation, openWorkstationBrowser } from "./start-local-workstation.js";
 import { validateWorkstationAssets } from "./workstation-assets.js";
+import "./validate-sample-preview.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };

@@ -137,7 +137,7 @@
             <div class="button-row">
               <button id="obdImportPasteButton" class="secondary-button" type="button">クリップボードを貼付</button>
               <button id="obdAnalyzeButton" class="primary-button" type="button">診断機データを解析</button>
-              <button id="obdSampleButton" class="secondary-button" type="button">入力例を表示</button>
+              <button id="obdSampleButton" class="secondary-button" type="button">入力例（架空データ）</button>
               <button id="obdManufacturerSampleTemplateButton" class="secondary-button" type="button">実機サンプルTSV</button>
               <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
               <button id="obdImportClearButton" class="secondary-button" type="button">入力をクリア</button>
@@ -687,6 +687,7 @@
         <div class="button-row">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
           <button id="obdSessionOpenButton" class="secondary-button" type="button">読取結果ファイルを開く</button>
+          <button id="obdResultsSampleButton" class="secondary-button" type="button">入力例（架空データ）</button>
         </div>
         <p class="data-status" data-obd-session-export-status role="status"></p>
 
@@ -916,6 +917,17 @@
       </section>
     </section>
   </main>
+
+  <dialog id="obdSampleDialog" class="notice-modal obd-sample-dialog" aria-labelledby="obdSampleTitle" aria-describedby="obdSampleStatus">
+    <header class="obd-sample-header">
+      <div>
+        <h2 id="obdSampleTitle">読取データの入力例</h2>
+        <p id="obdSampleStatus" role="status">架空データ・実車未読取</p>
+      </div>
+      <form method="dialog"><button class="secondary-button" autofocus>閉じる</button></form>
+    </header>
+    <div id="obdSampleBody" class="obd-sample-body"></div>
+  </dialog>
 
   <dialog id="noticeModal" class="notice-modal">
     <h2>利用前の注意</h2>
