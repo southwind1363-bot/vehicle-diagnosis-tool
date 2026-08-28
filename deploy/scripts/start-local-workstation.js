@@ -1,6 +1,7 @@
 import express from "express";
 import http from "node:http";
 import { randomBytes } from "node:crypto";
+import { createInterface } from "node:readline";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLocalBridgeApp } from "../local-bridge-readonly.js";
@@ -78,12 +79,23 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.log(`診断画面: ${workstation.webUrl}`);
     console.log(`J2534静的確認ブリッジ: ${workstation.bridgeUrl}`);
     console.log(`ペアリング値（外部共有しないでください）: ${workstation.pairingToken}`);
-    console.log("DLLロード・車両接続・車両送信は無効です。終了: Ctrl+C");
-    const stop = async () => {
-      await workstation.close();
-      process.removeListener("SIGINT", stop);
-      process.removeListener("SIGTERM", stop);
+    console.log("DLLロード・車両接続・車両送信は無効です。終了: q + Enter または Ctrl+C");
+    const input = createInterface({ input: process.stdin, terminal: false, crlfDelay: Infinity });
+    let stopping = null;
+    const stop = () => {
+      if (!stopping) stopping = (async () => {
+        input.close();
+        process.stdin.pause();
+        await workstation.close();
+        process.removeListener("SIGINT", stop);
+        process.removeListener("SIGTERM", stop);
+        console.log("診断画面と確認ブリッジを終了しました。");
+      })();
+      return stopping;
     };
+    input.on("line", (line) => {
+      if (["q", "exit"].includes(line.trim().toLowerCase())) void stop();
+    });
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
   } catch (error) {

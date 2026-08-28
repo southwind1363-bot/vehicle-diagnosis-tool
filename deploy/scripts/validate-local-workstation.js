@@ -15,6 +15,66 @@ const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-tok
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
+async function validateWorkstationConsoleExit() {
+  const launcherPath = fileURLToPath(new URL("../start-workstation.cmd", import.meta.url));
+  const starterPath = fileURLToPath(new URL("./start-local-workstation.js", import.meta.url));
+  for (const command of ["q\nq\n", " EXIT \r\n"]) {
+    const environment = { ...process.env, PORT: "0", LOCAL_BRIDGE_PORT: "0", LOCAL_BRIDGE_PAIRING_TOKEN: options.pairingToken };
+    delete environment.LOCAL_BRIDGE_REPLAY_LOG;
+    const ready = deferred();
+    let child;
+    let output = "";
+    const exited = new Promise((resolve) => {
+      const windows = process.platform === "win32";
+      child = execFile(windows ? process.env.ComSpec || "cmd.exe" : process.execPath,
+        windows ? ["/d", "/s", "/c", `""${launcherPath}" --no-pause"`] : [starterPath],
+        { cwd: os.tmpdir(), env: environment, windowsHide: true, windowsVerbatimArguments: windows, timeout: 15000 },
+        (error, stdout) => resolve({ code: error?.code ?? 0, output: stdout }));
+      child.stdin.on("error", () => {});
+      child.stdout.on("data", (chunk) => {
+        output += chunk.toString();
+        const urls = output.match(/http:\/\/127\.0\.0\.1:\d+/g);
+        if (urls?.length >= 2) ready.resolve(urls);
+      });
+    });
+    const pendingRequests = [];
+    try {
+      const urls = await Promise.race([ready.promise, exited.then(() => null)]);
+      check(urls?.length >= 2, "Console launcher exited before both local servers were ready");
+      child.stdin.write("continue\n");
+      const page = await fetch(urls[0], { signal: AbortSignal.timeout(5000) });
+      await page.arrayBuffer();
+      const health = await (await fetch(`${urls[1]}/health`, { signal: AbortSignal.timeout(5000) })).json();
+      check(page.status === 200 && health.vehicle_command_enabled === false && health.sample_readouts_enabled === false, "Console launcher stopped on unrelated input or enabled vehicle commands");
+      if (command.includes("EXIT")) {
+        // Incomplete bodies keep both HTTP servers busy while shutdown is requested.
+        for (const endpoint of [`${urls[0]}/local-bridge/v1/request`, `${urls[1]}/v1/request`]) {
+          const request = http.request(endpoint, { method: "POST", headers: { "Content-Type": "application/json" } });
+          pendingRequests.push(request);
+          request.on("error", () => {});
+          const connected = new Promise((resolve, reject) => {
+            request.once("error", reject);
+            request.once("socket", (socket) => socket.connecting ? socket.once("connect", resolve) : resolve());
+          });
+          request.write("{");
+          await connected;
+        }
+      }
+      child.stdin.end(command);
+      const result = await exited;
+      check(result.code === 0 && (result.output.match(/診断画面と確認ブリッジを終了しました。/g) || []).length === 1, "Console shutdown failed, timed out, or ran more than once");
+      const rebound = await startLocalWorkstation({ ...options, webPort: Number(new URL(urls[0]).port), bridgePort: Number(new URL(urls[1]).port) });
+      try {
+        check(rebound.webServer.listening && rebound.bridgeServer.listening, "Console shutdown did not release both ports for the next start");
+      } finally { await rebound.close(); }
+    } finally {
+      pendingRequests.forEach((request) => request.destroy());
+      if (!child.stdin.destroyed && !child.stdin.writableEnded) child.stdin.end("q\n");
+      await exited;
+    }
+  }
+}
+
 async function validateWindowsLauncher(occupiedWebPort) {
   if (process.platform !== "win32") return;
   const launcherPath = fileURLToPath(new URL("../start-workstation.cmd", import.meta.url));
@@ -776,6 +836,7 @@ try {
     await validateScannerParserIntegration(workstation.webUrl);
     await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
     await validateWindowsLauncher(webPort);
+    await validateWorkstationConsoleExit();
     check((await fetch(workstation.webUrl)).status === 200, "A competing launcher stopped the existing workstation");
   } finally {
     await workstation.close();
