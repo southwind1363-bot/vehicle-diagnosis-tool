@@ -13,6 +13,7 @@ import { validateWorkstationAssets } from "./workstation-assets.js";
 import "./validate-sample-preview.js";
 import "./validate-readout-vehicle.js";
 import "./validate-status-disclosures.js";
+import "./validate-quality-disclosure.js";
 import "./validate-monitor-filter.js";
 import "./validate-dtc-filter.js";
 import "./validate-freeze-frame-display.js";
@@ -1141,7 +1142,7 @@ function validateScannerInputClear(webUrl) {
 function addScannerImportHarness(client, format = "json") {
   const source = appSource.match(/function analyzeObdScannerImport\(options = \{\}\) \{[\s\S]*?\r?\n\}/)[0];
   vm.runInContext(source, client);
-  for (const name of ["hasActiveObdReadoutForExitWarning", "clearObdScannerImport", "importObdScannerFile", "pasteObdScannerImport", "normalizeObdScannerImportFileText", "beginWebSerialReadoutProfile", "syncObdVehicleInput", "isCurrentObdSerialOperation", "continueObdSerialOperation"]) {
+  for (const name of ["hasActiveObdReadoutForExitWarning", "clearObdScannerImport", "importObdScannerFile", "pasteObdScannerImport", "normalizeObdScannerImportFileText", "beginWebSerialReadoutProfile", "syncObdVehicleInput", "isCurrentObdSerialOperation", "continueObdSerialOperation", "getImportedReadoutQualityForDisplay"]) {
     vm.runInContext(appSource.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], client);
   }
   // Stub parser results and display helpers; exercise the complete handler's session ownership and bridge lifecycle.
@@ -1149,6 +1150,10 @@ function addScannerImportHarness(client, format = "json") {
   for (const name of ["getSessionNextReadoutCandidates", "getObdFreezeFrameTriggerEntries", "getNonBlockingWarningLabels", "readCoreSessionAliasArray"]) client[name] = () => [];
   for (const name of ["renderObdImportToolHints", "renderObdMonitorValues", "renderObdWorkflowGuide", "renderObdDeveloperSessionSummary", "appendObdAnalysisReadoutSummary"]) client[name] = () => {};
   client.renderObdBridgeSessionDetails = (session) => { client.detailRenderedSession = session; };
+  client.renderObdDeveloperSessionSummary = (session) => {
+    client.summaryRenderedSession = session;
+    client.renderObdBridgeSessionDetails(session);
+  };
   for (const name of ["buildSelectedObdReadoutInterface", "buildSelectedObdVehicleProfile", "buildSelectedObdVehicleApplicability", "getReadoutCoverageDisplay"]) client[name] = () => null;
   client.buildCoreReadinessHeadline = () => "";
   client.buildCoreAnalysisPendingStatus = () => "PENDING";
@@ -1184,6 +1189,23 @@ function addScannerImportHarness(client, format = "json") {
 
 async function validateScannerImportOwnership(webUrl) {
   const response = (init) => new Response(JSON.stringify({ request_id: JSON.parse(init.body).request_id, ok: true, blocked: false, would_transmit: false, data: {}, errors: [] }));
+  for (const importedQuality of [undefined, {}, { invalidDtcEvidenceObservationCount: 2 }]) {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    for (const name of ["readReadoutQualityDisplayCount", "formatDtcEvidenceFieldIds", "formatDtcEvidenceReasonCounts", "formatReadoutQualitySummary"]) {
+      vm.runInContext(appSource.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], client);
+    }
+    client.NO_DATA = "unrecorded";
+    client.window.ObdReadOnly.buildDiagnosticScanSessionFromJson = () => ({
+      source: "imported", codes: [], monitorValues: [], monitorInsights: [],
+      importedReadoutQualitySummary: importedQuality
+    });
+    client.analyzeObdScannerImport();
+    const status = client.obdImportStatus.textContent;
+    check(client.summaryRenderedSession === client.obdDevSession.lastSession, "Zero-DTC import did not refresh summary and flow panels");
+    check(status.includes("標準形式のDTCは検出できませんでした"), "Zero-DTC disclosure fixture did not exercise the fallback result");
+    check(status.includes("受信品質") === (importedQuality !== undefined), "Zero-DTC import lost or invented received quality");
+    if (importedQuality) check(status.includes(importedQuality.invalidDtcEvidenceObservationCount ? "DTC証跡除外2" : "unrecorded"), "Zero-DTC import lost the received quality label");
+  }
   for (const format of ["json", "csv", "text"]) {
     const ready = deferred();
     const client = addScannerImportHarness(createClient(webUrl, options.pairingToken, async (url, init) => {
@@ -1201,6 +1223,7 @@ async function validateScannerImportOwnership(webUrl) {
       imported = client.obdDevSession.lastSession;
       check(client.exportControlSession === imported && client.exportControlImportBusy === false, `${format}: successful import did not refresh export controls for the new session`);
       check(client.detailRenderedSession === imported, `${format}: successful import did not refresh the detailed readout display`);
+      check(client.summaryRenderedSession === imported, `${format}: successful import did not refresh summary and flow panels`);
     } finally {
       ready.resolve();
       await pending;

@@ -1251,6 +1251,8 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-diagnostic-flow-card {
   display: grid;
+  min-width: 0;
+  overflow-wrap: anywhere;
   gap: 4px;
   border: 1px solid var(--line);
   border-radius: 7px;
