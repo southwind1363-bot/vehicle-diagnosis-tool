@@ -30857,18 +30857,24 @@
             ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
           };
       });
+    const readMode06Number = (value) => {
+      if (typeof value !== "number" && (typeof value !== "string" || !value.trim())) return NaN;
+      const number = Number(value);
+      return Number.isFinite(number) ? number : NaN;
+    };
     const tests = rows
       .map((row, index) => {
         if (!row || typeof row !== "object") return null;
         const testId = String(row.test_id || row.testId || row.tid || row.mid || row.monitor_id || row.monitorId || row.test || row.test_code || row.testCode || row.test_id_hex || row.testIdHex || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
         const componentId = String(row.component_id || row.componentId || row.cid || row.component || row.component_code || row.componentCode || row.component_id_hex || row.componentIdHex || "").toUpperCase().replace(/^0X/, "").padStart(2, "0").slice(-2);
-        const value = Number(row.value ?? row.measured ?? row.measured_value ?? row.measuredValue ?? row.result ?? row.test_value ?? row.testValue ?? row.current_value ?? row.currentValue ?? row.raw_value ?? row.rawValue);
-        const min = Number(row.min ?? row.minimum ?? row.min_value ?? row.minValue ?? row.min_limit ?? row.minLimit);
-        const max = Number(row.max ?? row.maximum ?? row.max_value ?? row.maxValue ?? row.max_limit ?? row.maxLimit);
+        const value = readMode06Number(row.value ?? row.measured ?? row.measured_value ?? row.measuredValue ?? row.result ?? row.test_value ?? row.testValue ?? row.current_value ?? row.currentValue ?? row.raw_value ?? row.rawValue);
+        const min = readMode06Number(row.min ?? row.minimum ?? row.min_value ?? row.minValue ?? row.min_limit ?? row.minLimit);
+        const max = readMode06Number(row.max ?? row.maximum ?? row.max_value ?? row.maxValue ?? row.max_limit ?? row.maxLimit);
         const hasLimits = Number.isFinite(min) && Number.isFinite(max);
         const statusText = typeof row.status === "string" ? row.status.trim().toLowerCase() : "";
         const explicitPassed = row.passed === true || row.pass === true || row.isPassed === true || row.is_passed === true || statusText === "pass" || statusText === "passed";
-        const explicitFailed = row.failed === true || row.fail === true || row.isFailed === true || row.is_failed === true || row.passed === false || row.pass === false || ["fail", "failed", "not_passed", "not passed", "out_of_range", "out of range"].includes(statusText);
+        // Unknown results carry passed:false; it is not affirmative failure evidence.
+        const explicitFailed = row.failed === true || row.fail === true || row.isFailed === true || row.is_failed === true || (statusText !== "unknown" && (row.passed === false || row.pass === false)) || ["fail", "failed", "not_passed", "not passed", "out_of_range", "out of range"].includes(statusText);
         const passed = hasLimits && Number.isFinite(value) ? value >= min && value <= max : explicitPassed ? true : explicitFailed ? false : false;
         if (!testId || !componentId || !Number.isFinite(value)) return null;
         const status = hasLimits ? (passed ? "pass" : "fail") : explicitPassed ? "pass" : explicitFailed ? "fail" : "unknown";

@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.312";
+const APP_VERSION = "3.13.313";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7963,9 +7963,36 @@ function formatObdBridgeEcuKeySummary(summary = null) {
 function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
   if (!snapshot?.testCount) return NO_DATA;
   const parts = [`${snapshot.testCount}件`];
-  if (snapshot.failedCount > 0) parts.push(`範囲外${snapshot.failedCount}`);
+  if (snapshot.passedCount > 0) parts.push(`合格${snapshot.passedCount}`);
+  if (snapshot.failedCount > 0) parts.push(`不合格${snapshot.failedCount}`);
   if (snapshot.unknownCount > 0) parts.push(`未判定${snapshot.unknownCount}`);
   return parts.join(" / ");
+}
+
+function formatObdOnboardMonitorTestLine(item = {}) {
+  const testId = item.testId ?? item.tid ?? "未記録";
+  const componentId = item.componentId ?? item.cid ?? "未記録";
+  const ecu = item.sourceEcu || item.source_ecu || "ECU未記録";
+  const status = item.status === "pass" ? "合格" : item.status === "fail" ? "不合格"
+    : !item.status || item.status === "unknown" ? "未判定" : `未判定 (${item.status})`;
+  const min = formatObdBridgeReadoutValue({ value: item.min, unit: item.min == null ? null : item.unit });
+  const max = formatObdBridgeReadoutValue({ value: item.max, unit: item.max == null ? null : item.unit });
+  return `[${ecu}] TID ${testId} / CID ${componentId}: 記録値 ${formatObdBridgeReadoutValue(item)} / 下限 ${min} / 上限 ${max} / 記録判定: ${status}`;
+}
+
+function buildObdOnboardMonitorDisplayLines(snapshot = null) {
+  const tests = snapshot?.tests || [];
+  const ecuSnapshots = snapshot?.onboardMonitorEcuSnapshots || snapshot?.onboard_monitor_ecu_snapshots || [];
+  if (!tests.length && !ecuSnapshots.length) return [];
+  const lines = [`要約: ${formatObdBridgeOnboardMonitorSummary(snapshot)}`];
+  (ecuSnapshots.length ? ecuSnapshots : [snapshot]).forEach((group) => {
+    const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
+    lines.push(`${ecu}: ${formatObdReadoutStatus(group.onboardMonitorReadoutStatus || group.onboard_monitor_readout_status, "状態未確認")}`);
+  });
+  lines.push(...tests.map(formatObdOnboardMonitorTestLine));
+  if (!tests.length) lines.push("検査結果: 登録データなし");
+  lines.push("TID/CIDの意味と単位は車種別の整備書で確認してください。記録判定は車両全体の正常・異常を示すものではありません。");
+  return lines;
 }
 
 function summarizeObdBridgeReadiness(snapshot = null) {
@@ -9079,16 +9106,8 @@ function renderObdBridgeSessionDetails(session = null) {
     sections.push(["ライブ履歴", lines]);
   }
 
-  const monitorTests = onboardMonitorSnapshot?.tests || [];
-  if (monitorTests.length) {
-    const lines = [`要約: ${formatObdBridgeOnboardMonitorSummary(onboardMonitorSnapshot)}`];
-    lines.push(...monitorTests.slice(0, 6).map((item) => {
-      const id = [item.testId || item.tid, item.componentId || item.cid].filter(Boolean).join("/");
-      const status = item.status ? ` ${item.status}` : "";
-      return `${id || item.id || "test"}: ${formatObdBridgeReadoutValue(item)}${status}`;
-    }));
-    sections.push(["Mode06", lines]);
-  }
+  const monitorLines = buildObdOnboardMonitorDisplayLines(onboardMonitorSnapshot);
+  if (monitorLines.length) sections.push(["Mode06", monitorLines]);
 
   const readinessLines = buildObdReadinessDisplayLines(readinessSnapshot);
   if (readinessLines.length) sections.push(["レディネス", readinessLines]);

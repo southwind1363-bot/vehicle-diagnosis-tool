@@ -17,6 +17,7 @@ import "./validate-monitor-filter.js";
 import "./validate-dtc-filter.js";
 import "./validate-freeze-frame-display.js";
 import "./validate-readiness-display.js";
+import "./validate-mode06-display.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
