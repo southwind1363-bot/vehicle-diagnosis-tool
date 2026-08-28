@@ -7,22 +7,26 @@ const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const core = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), core);
 const obd = core.window.ObdReadOnly;
-const names = ["getObdSessionExportBlockReason", "renderObdSessionExportControls", "setObdSessionExportStatus", "downloadObdSessionJson"];
+const names = ["hasActiveObdReadoutForExitWarning", "handleObdReadoutBeforeUnload", "syncObdReadoutExitGuard", "getObdSessionExportBlockReason", "renderObdSessionExportControls", "setObdSessionExportStatus", "downloadObdSessionJson"];
 const code = names.map((name) => source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))?.[0] || assert.fail(`Missing ${name}`)).join("\n");
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 
 function client(session = { source: "web_serial" }) {
-  const calls = { blobs: [], clicks: 0, removed: 0, revoked: [], timers: [], build: 0 };
+  const calls = { blobs: [], clicks: 0, removed: 0, revoked: [], timers: [], build: 0, listeners: new Set(), attached: 0, detached: 0 };
   const options = {};
   const buttons = [{}, {}];
   const statuses = [{}, {}];
   const fail = (stage) => { if (options.failure === stage) throw new Error(stage); };
   const c = vm.createContext({
     obdDevSession: { lastSession: session, connectionState: "disconnected" },
+    obdReadoutExitGuardAttached: false,
     renderObdReadoutVehicle: () => {},
     obdBridgeOperation: null, obdScannerImportOperation: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
-    window: { ObdReadOnly: { buildBridgeSessionExportPayload: (value) => {
+    window: {
+      addEventListener: (event, handler) => { assert.equal(event, "beforeunload"); calls.attached += 1; calls.listeners.add(handler); },
+      removeEventListener: (event, handler) => { assert.equal(event, "beforeunload"); calls.detached += 1; calls.listeners.delete(handler); },
+      ObdReadOnly: { buildBridgeSessionExportPayload: (value) => {
       calls.build += 1; fail("build");
       if (options.payload) return options.payload;
       return obd.buildBridgeSessionExportPayload(value);
@@ -79,6 +83,7 @@ for (const blocked of ["none", "bridge", "import", "connect", "cleanup", "read",
   if (blocked === "empty") c.obdDevSession.lastSession = {};
   if (blocked === "rejected") c.obdDevSession.lastSession.accepted = false;
   c.renderObdSessionExportControls();
+  check(calls.listeners.size === (["none", "preview", "array", "empty", "rejected"].includes(blocked) ? 0 : 1), `${blocked}: exit warning incorrectly depends on export availability`);
   check(buttons.every((button) => button.disabled && button.title), `${blocked}: blocked export control must state its reason`);
   check(c.downloadObdSessionJson() === false && calls.build === 0 && calls.clicks === 0 && statuses.every((status) => status.textContent), `${blocked}: blocked handler must not produce a file`);
 }
@@ -87,11 +92,13 @@ for (const failure of ["build", "blob", "url", "element", "append", "click", "se
   const { c, calls, options, statuses } = client();
   const original = c.obdDevSession.lastSession;
   const before = JSON.stringify(original);
+  c.syncObdReadoutExitGuard();
   options.failure = failure;
   if (failure === "serialization") { options.payload = { schema_version: "bridge_session_export_v1", session: {} }; options.payload.self = options.payload; }
   if (failure === "invalid") options.payload = {};
   if (failure === "oversize") options.payload = { schema_version: "bridge_session_export_v1", session: { text: "x".repeat(2000000) } };
   check(c.downloadObdSessionJson() === false && calls.clicks === 0, `${failure}: a failed export must not report success`);
+  check(calls.listeners.size === 1, `${failure}: failed download removed exit protection`);
   check(c.obdDevSession.lastSession === original && JSON.stringify(original) === before && statuses.every((status) => status.textContent.includes("保持") || status.textContent.includes("変更していません")), `${failure}: original result must be preserved`);
   calls.timers.forEach((callback) => callback());
   check(calls.revoked.length === calls.blobs.length, `${failure}: created object URL leaked`);
@@ -113,6 +120,7 @@ const before = JSON.stringify(sample);
 c.renderObdSessionExportControls();
 check(buttons.every((button) => !button.disabled), "Completed results must be downloadable without an active connection");
 check(c.downloadObdSessionJson() === true && calls.clicks === 1, "Real session export failed");
+check(calls.listeners.size === 1 && c.hasActiveObdReadoutForExitWarning(), "Download initiation or stale global preview state removed exit protection");
 const text = await calls.blobs[0].text();
 const payload = JSON.parse(text);
 const restored = obd.buildDiagnosticScanSessionFromJson(text);
@@ -145,5 +153,43 @@ for (const [profileKey, applicabilityKey] of [["vehicleProfile", "vehicleApplica
     check(!JSON.stringify(result.vehicleProfile).includes("JTDBR32E720123456"), `${mode}: profile restoration retained VIN`);
     if (mode === "separate") check(result.vehicleApplicability.engineCode === "ENGINE-B" && result.vehicleProfile.engineCode === "ENGINE-A", "Vehicle profile must not rewrite separate applicability evidence");
   }
+}
+for (const session of [null, undefined, [], {}, "invalid", { accepted: false }, { ok: false }, { blocked: true },
+  { previewMode: true }, { preview_mode: true }, { source: "interface_preview" }, { source_type: "interface_preview" }]) {
+  const test = client(session ?? null);
+  test.c.syncObdReadoutExitGuard();
+  let prevented = false;
+  const event = { preventDefault: () => { prevented = true; } };
+  test.c.handleObdReadoutBeforeUnload(event);
+  check(test.calls.listeners.size === 0 && !prevented && event.returnValue === undefined, "Empty, rejected or preview data prompted on exit");
+}
+for (const session of [{ source: "scanner_text", dtcSnapshot: { dtcs: [], dtcReadoutStatus: "reported" } },
+  { source: "web_serial", connectionStatus: { status: "failed" } }, restored]) {
+  const test = client(session);
+  test.c.obdDevSession.previewMode = "stale-preview";
+  test.c.syncObdReadoutExitGuard();
+  test.c.syncObdReadoutExitGuard();
+  const handler = [...test.calls.listeners][0];
+  const event = { prevented: 0, preventDefault() { this.prevented += 1; } };
+  handler(event);
+  check(event.prevented === 1 && event.returnValue === true && test.calls.attached === 1, "Retained results did not prompt exactly once");
+  check(test.calls.build === 0 && test.calls.blobs.length === 0 && test.calls.timers.length === 0 && test.c.obdDevSession.lastSession === session, "Exit warning exported, scheduled work, or replaced session data");
+  test.c.obdDevSession.lastSession = null;
+  test.c.syncObdReadoutExitGuard();
+  test.c.syncObdReadoutExitGuard();
+  handler({ preventDefault: () => assert.fail("Stale handler prompted after session removal") });
+  check(test.calls.listeners.size === 0 && test.calls.detached === 1, "Empty state retained a browser lifecycle listener");
+}
+const unserializable = { source: "web_serial", toJSON: () => assert.fail("Exit warning serialized a session") };
+unserializable.self = unserializable;
+const circular = client(unserializable);
+circular.c.syncObdReadoutExitGuard();
+circular.c.handleObdReadoutBeforeUnload({ preventDefault() {} });
+check(circular.calls.listeners.size === 1 && circular.calls.build === 0, "Unserializable results lost exit protection");
+const assignments = [...source.matchAll(/obdDevSession\.lastSession = /g)];
+check(assignments.length === 10, "Session assignment audit must be updated when producers change");
+for (const assignment of assignments) {
+  const end = source.indexOf(";", assignment.index);
+  check(source.slice(end + 1).trimStart().startsWith("syncObdReadoutExitGuard();"), "Session replacement must synchronize exit protection before rendering or awaiting");
 }
 console.log(`Session export checks: ${checks} / Errors: 0 / Fixture bytes: ${calls.blobs[0].size}`);

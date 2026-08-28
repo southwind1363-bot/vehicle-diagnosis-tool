@@ -541,6 +541,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
     sessionStorage: { setItem: () => {}, removeItem: () => {} }, OBD_DEV_MODE_KEY: "test-mode",
     renderObdDeveloperGate: () => {}, clearRequestedInterfaceSelection: () => {},
     renderObdSessionExportControls: () => {},
+    syncObdReadoutExitGuard: () => {},
     obdAccessUnlocked: true, obdAccessPasswordInput: { value: "" },
     OBD_ACCESS_MODE_KEY: "test-access", renderObdAccessGate: () => {},
     localStorage: { getItem: () => token }, window: { crypto: webcrypto }, crypto: webcrypto,
