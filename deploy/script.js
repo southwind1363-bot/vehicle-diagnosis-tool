@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.317";
+const APP_VERSION = "3.13.318";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8015,7 +8015,7 @@ function buildObdEcuInfoDisplayLines(snapshot = null) {
   return lines;
 }
 
-function buildObdEcuResponseDisplayLines(summary = null) {
+function buildObdEcuResponseDisplayLines(summary = null, indexOffset = 0) {
   const rows = summary?.ecus || [];
   if (!rows.length) return [];
   const lines = [`応答記録: ${rows.length}件`];
@@ -8031,7 +8031,7 @@ function buildObdEcuResponseDisplayLines(summary = null) {
     const label = row.name || row.id || "名称未記録";
     const status = row.status == null || row.status === "" ? "unknown" : String(row.status);
     const statusKey = status.trim().toLowerCase().replace(/[\s-]+/g, "_");
-    const prefix = `#${index + 1} [${address}]`;
+    const prefix = `#${indexOffset + index + 1} [${address}]`;
     const statusLabel = Object.prototype.hasOwnProperty.call(statusLabels, statusKey) ? statusLabels[statusKey] : "未分類";
     lines.push(`${prefix} ${label} / 記録状態: ${statusLabel} (${status})`);
     if (row.id && row.id !== row.address && row.id !== row.name) lines.push(`${prefix} 記録ID: ${row.id}`);
@@ -8054,6 +8054,92 @@ function buildObdEcuResponseDisplayLines(summary = null) {
     if (metadata.length) lines.push(`${prefix} ${metadata.map(([key, value]) => `${key}: ${value}`).join(" / ")}`);
   });
   return lines;
+}
+
+function createObdEcuResponseCard(summary = null) {
+  const card = document.createElement("article");
+  card.className = "obd-session-detail-card obd-ecu-response-card";
+  const heading = document.createElement("strong");
+  heading.textContent = "ECU応答";
+  const toolbar = document.createElement("div");
+  toolbar.className = "obd-monitor-filter";
+  const label = document.createElement("label");
+  label.htmlFor = "obdEcuResponseSearch";
+  label.textContent = "ECU応答検索";
+  const searchRow = document.createElement("div");
+  searchRow.className = "obd-monitor-search-row";
+  const input = document.createElement("input");
+  input.id = "obdEcuResponseSearch";
+  input.type = "search";
+  input.maxLength = 100;
+  input.autocomplete = "off";
+  input.placeholder = "ECU / アドレス / 記録内の文字列";
+  input.setAttribute("aria-controls", "obdEcuResponseRecords");
+  const statusLabel = document.createElement("label");
+  statusLabel.htmlFor = "obdEcuResponseStatus";
+  statusLabel.textContent = "記録状態";
+  const status = document.createElement("select");
+  status.id = "obdEcuResponseStatus";
+  status.setAttribute("aria-controls", "obdEcuResponseRecords");
+  const allStatuses = document.createElement("option");
+  allStatuses.value = "";
+  allStatuses.textContent = "すべて";
+  status.appendChild(allStatuses);
+  const statuses = new Set();
+  const clear = document.createElement("button");
+  clear.type = "button";
+  clear.className = "secondary-button";
+  clear.textContent = "\u00d7";
+  clear.title = "ECU応答検索を解除";
+  clear.setAttribute("aria-label", clear.title);
+  const count = document.createElement("p");
+  count.className = "data-status";
+  count.setAttribute("role", "status");
+  const empty = document.createElement("p");
+  empty.className = "empty-state";
+  empty.textContent = "検索に一致する応答記録はありません。";
+  const list = document.createElement("ul");
+  list.id = "obdEcuResponseRecords";
+  const normalize = (value) => String(value || "").normalize("NFKC").toLowerCase();
+  const records = (summary?.ecus || []).map((row, index) => {
+    const lines = buildObdEcuResponseDisplayLines({ ecus: [row] }, index).slice(1);
+    const item = document.createElement("li");
+    item.className = "obd-ecu-response-record";
+    lines.forEach((line) => {
+      const detail = document.createElement("div");
+      detail.textContent = line;
+      item.appendChild(detail);
+    });
+    list.appendChild(item);
+    const recordedStatus = row.status == null || row.status === "" ? "unknown" : String(row.status);
+    if (!statuses.has(recordedStatus)) {
+      const option = document.createElement("option");
+      option.value = recordedStatus;
+      option.textContent = recordedStatus;
+      status.appendChild(option);
+      statuses.add(recordedStatus);
+    }
+    return { item, recordedStatus, searchText: normalize(lines.join(" ")) };
+  });
+  const refresh = () => {
+    const terms = normalize(input.value).trim().split(/\s+/).filter(Boolean);
+    let visible = 0;
+    records.forEach(({ item, recordedStatus, searchText }) => {
+      item.hidden = (status.value !== "" && status.value !== recordedStatus) || !terms.every((term) => searchText.includes(term));
+      if (!item.hidden) visible += 1;
+    });
+    clear.disabled = input.value.length === 0 && status.value === "";
+    count.textContent = terms.length || status.value ? `絞込中: ${visible} / ${records.length}応答記録` : `全${records.length}応答記録を表示`;
+    empty.hidden = visible > 0;
+  };
+  input.addEventListener("input", refresh);
+  status.addEventListener("change", refresh);
+  clear.addEventListener("click", () => { input.value = ""; status.value = ""; refresh(); input.focus(); });
+  searchRow.append(input, clear);
+  toolbar.append(label, searchRow, statusLabel, status, count);
+  card.append(heading, toolbar, empty, list);
+  refresh();
+  return card;
 }
 
 function buildObdSupportedPidDisplayLines(snapshot = null) {
@@ -9255,6 +9341,10 @@ function renderObdBridgeSessionDetails(session = null) {
   }
 
   sections.forEach(([title, lines]) => {
+    if (title === "ECU応答") {
+      obdDevSessionDetails.appendChild(createObdEcuResponseCard(session?.ecuResponseSummary || session?.ecu_response_summary));
+      return;
+    }
     const card = document.createElement("article");
     card.className = "obd-session-detail-card";
     const heading = document.createElement("strong");

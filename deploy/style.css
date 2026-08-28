@@ -1313,6 +1313,12 @@ body.dark .flow-node-measure .flow-step {
   line-height: 1.45;
 }
 
+.obd-ecu-response-card { min-width: 0; }
+.obd-ecu-response-card .obd-monitor-filter { margin-top: 0; }
+.obd-ecu-response-record { overflow-wrap: anywhere; }
+.obd-ecu-response-record + .obd-ecu-response-record { margin-top: 8px; }
+.obd-ecu-response-record[hidden] { display: none; }
+
 .obd-request-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
