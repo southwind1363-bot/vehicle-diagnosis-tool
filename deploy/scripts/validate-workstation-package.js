@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { packageWorkstation } from "./package-workstation.js";
+import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
@@ -18,7 +19,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "script.js"), 'const APP_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
-  for (const entry of ["start-workstation.cmd", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
   const pkg = { name: "fixture", version: "1.0.0", type: "module", dependencies: { express: "1.0.0" } };
   const lock = { lockfileVersion: 3, packages: { "": { name: pkg.name, version: pkg.version, dependencies: pkg.dependencies } } };
   for (const name of ["node_modules/express", "node_modules/express/node_modules/nested"]) {
@@ -54,7 +55,64 @@ try {
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
-  check(packaged.scripts.start === "node scripts/start-local-workstation.js" && Object.keys(packaged.scripts).length === 2, "Package retained unavailable development commands");
+  check(packaged.scripts.start === "node scripts/start-local-workstation.js" && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
+    && Object.keys(packaged.scripts).length === 3, "Package retained unavailable development commands");
+  const integrity = verifyWorkstationPackage(result.directory);
+  check(integrity.fileCount + 1 === result.fileCount && integrity.appVersion === result.appVersion, "Integrity file count does not include every packaged file except the manifest itself");
+  check(instructions.includes("verify-workstation.cmd") && instructions.includes("署名・真正性・実車適合の証明ではありません"), "Integrity instructions overclaim verification");
+  const integrityPath = path.join(result.directory, "package-integrity.json");
+  const originalManifest = fs.readFileSync(integrityPath);
+  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js"]) {
+    const target = path.join(result.directory, relative);
+    const original = fs.readFileSync(target);
+    const changed = Buffer.from(original);
+    changed[0] ^= 1;
+    fs.writeFileSync(target, changed);
+    assert.throws(() => verifyWorkstationPackage(result.directory), (error) => error.code === "package_integrity_hash_mismatch" && error.file === relative);
+    check(fs.readFileSync(target).equals(changed), "Verification changed a corrupt file");
+    fs.writeFileSync(target, Buffer.concat([original, Buffer.from("extra")]));
+    assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_size_mismatch/);
+    fs.unlinkSync(target);
+    assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_file_missing/);
+    fs.writeFileSync(target, original);
+    check(verifyWorkstationPackage(result.directory).fileCount === integrity.fileCount, "Restored package did not verify");
+  }
+  for (const mutate of [
+    (m) => { m.schemaVersion = "unknown"; },
+    (m) => { m.algorithm = "md5"; },
+    (m) => { m.appVersion = 1; },
+    (m) => { m.appVersion = "9.9.9"; },
+    (m) => { m.files = []; },
+    (m) => { m.files.push({ ...m.files[0], path: m.files[0].path.toUpperCase() }); },
+    (m) => { m.files[0].size = true; },
+    (m) => { m.files[0].size = -1; },
+    (m) => { m.files[0].sha256 = "bad"; },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "script.js"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "style.css"); },
+    (m) => { m.files.push({ ...m.files[0], path: "package-integrity.json" }); },
+    ...["../outside.txt", "/outside.txt", "C:/outside.txt", "a\\b", "x/../y", "x//y", "x./y", "x:y"].map((entryPath) => (m) => { m.files.push({ ...m.files[0], path: entryPath }); })
+  ]) {
+    const manifest = JSON.parse(originalManifest);
+    mutate(manifest);
+    fs.writeFileSync(integrityPath, JSON.stringify(manifest));
+    assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_/);
+    check(true, "Invalid integrity manifest was accepted");
+  }
+  fs.writeFileSync(integrityPath, "{");
+  assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_manifest_invalid/);
+  fs.writeFileSync(integrityPath, " ".repeat(4 * 1024 * 1024 + 1));
+  assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_manifest_invalid/);
+  fs.unlinkSync(integrityPath);
+  assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_file_missing/);
+  fs.writeFileSync(integrityPath, originalManifest);
+  const linkedDirectory = path.join(result.directory, "linked-files");
+  fs.symlinkSync(valid.sourceDirectory, linkedDirectory, process.platform === "win32" ? "junction" : "dir");
+  const linkedManifest = JSON.parse(originalManifest);
+  linkedManifest.files.push({ ...linkedManifest.files.find((entry) => entry.path === "script.js"), path: "linked-files/script.js" });
+  fs.writeFileSync(integrityPath, JSON.stringify(linkedManifest));
+  assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_link_not_allowed/);
+  fs.writeFileSync(integrityPath, originalManifest);
+  check(verifyWorkstationPackage(result.directory).fileCount === integrity.fileCount, "Unlisted files should not be read or included in copy verification");
   assert.throws(() => packageWorkstation(valid), /workstation_package_exists/);
   check(fs.readdirSync(valid.outputDirectory).length === 1, "Repeated packaging modified an existing package or leaked staging files");
 
@@ -116,6 +174,8 @@ try {
   check(fs.readdirSync(competing.outputDirectory).length === 1, "Concurrent publication left locks or staging behind");
 
   const actual = packageWorkstation({ outputDirectory: path.join(root, "relocated") });
+  const verified = await run(`import {pathToFileURL} from "node:url";import path from "node:path";const {verifyWorkstationPackage}=await import(pathToFileURL(path.join(process.argv[1],"scripts/verify-workstation-package.js")));console.log(verifyWorkstationPackage(process.argv[1]).appVersion);`, [actual.directory]);
+  check(verified.code === 0 && verified.output.trim() === actual.appVersion, "Relocated verifier borrowed runtime files or failed offline");
   const smoke = `
     import assert from "node:assert/strict";
     import fs from "node:fs";
@@ -134,7 +194,7 @@ try {
       const response=await fetch(app.webUrl);
       assert.equal(response.status,200);
       await response.arrayBuffer();
-      for(const file of ["/saved-session.json","/data/saved-session.json","/package-info.json","/node_modules/express/package.json","/scripts/start-local-workstation.js"]) {
+      for(const file of ["/saved-session.json","/data/saved-session.json","/package-info.json","/package-integrity.json","/verify-workstation.cmd","/scripts/verify-workstation-package.js","/node_modules/express/package.json","/scripts/start-local-workstation.js"]) {
         const denied=await fetch(app.webUrl+file);
         assert.equal(denied.status,404);
         assert.equal(await denied.text(),"");

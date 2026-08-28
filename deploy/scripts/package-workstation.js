@@ -1,11 +1,13 @@
 import fs from "node:fs";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { validateWorkstationAssets } from "./workstation-assets.js";
+import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 
 const deployDirectory = fileURLToPath(new URL("../", import.meta.url));
-const RUNTIME_FILES = ["start-workstation.cmd", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"];
+const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"];
 
 function exists(entry) {
   try { fs.lstatSync(entry); return true; } catch (error) { if (error.code === "ENOENT") return false; throw error; }
@@ -97,6 +99,11 @@ export function packageWorkstation(options = {}) {
   let staging;
   let published = false;
   let fileCount = 0;
+  const integrityFiles = [];
+  const recordFile = (relative) => {
+    const bytes = fs.readFileSync(path.join(staging, relative));
+    integrityFiles.push({ path: relative, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
+  };
   const copyFile = (relative) => {
     const from = safeSource(relative);
     const stat = fs.statSync(from);
@@ -104,6 +111,7 @@ export function packageWorkstation(options = {}) {
     const target = path.join(staging, relative);
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.copyFileSync(from, target, fs.constants.COPYFILE_EXCL);
+    recordFile(relative);
     fileCount += 1;
   };
   const copyDependency = (relative, depth = 0) => {
@@ -126,12 +134,17 @@ export function packageWorkstation(options = {}) {
     for (const [name] of dependencies) copyDependency(name);
     copyFile("package-lock.json");
     fs.writeFileSync(path.join(staging, "package.json"), JSON.stringify({ name: pkg.name, version: pkg.version, type: "module", private: true,
-      scripts: { start: "node scripts/start-local-workstation.js", "workstation:dev": "node scripts/start-local-workstation.js" }, dependencies: pkg.dependencies }, null, 2) + "\n", { flag: "wx" });
+      scripts: { start: "node scripts/start-local-workstation.js", "workstation:dev": "node scripts/start-local-workstation.js", "verify:package": "node scripts/verify-workstation-package.js" }, dependencies: pkg.dependencies }, null, 2) + "\n", { flag: "wx" });
     fs.writeFileSync(path.join(staging, "README.txt"), `自動車整備ツール ${status.version}\n\nNode.js 22以降とnpmを事前に導入し、フォルダー全体を移してください。Node.js 24 LTSを推奨します。\nstart-workstation.cmdを開き、表示された診断画面URLへアクセスしてください。\n依存ライブラリは同梱済みです。起動時のnpm installやインターネット接続は不要です。\n終了は起動画面でqを入力してEnter。接続キーは外部共有しないでください。\nNode本体・VCIドライバー・個人の保存データは同梱していません。\n車両送信の権限や実車適合は元の版から変更していません。\n`, { flag: "wx" });
     validateWorkstationAssets(staging);
     validatePackagedDependencies(staging);
-    const info = { appVersion: status.version, dependencyCount: dependencies.length, includesNode: false, fileCount: fileCount + 3 };
+    fs.appendFileSync(path.join(staging, "README.txt"), "\n移行後はverify-workstation.cmdを開いてファイル内容を検査できます。追加の導入や通信はありません。\n不一致・欠落時は元のパッケージを一式移し直してください。自動修復はしません。\n同梱一覧との一致検査であり、署名・真正性・実車適合の証明ではありません。一覧外の追加ファイルは検査しません。\n");
+    const info = { appVersion: status.version, dependencyCount: dependencies.length, includesNode: false, fileCount: fileCount + 4 };
     fs.writeFileSync(path.join(staging, "package-info.json"), JSON.stringify(info, null, 2) + "\n", { flag: "wx" });
+    for (const relative of ["package.json", "README.txt", "package-info.json"]) recordFile(relative);
+    fs.writeFileSync(path.join(staging, "package-integrity.json"), JSON.stringify({ schemaVersion: "workstation_package_integrity_v1", algorithm: "sha256",
+      appVersion: status.version, files: integrityFiles.sort((a, b) => a.path.localeCompare(b.path, "en")) }, null, 2) + "\n", { flag: "wx" });
+    verifyWorkstationPackage(staging);
     if (exists(destination)) throw new Error("workstation_package_exists");
     fs.renameSync(staging, destination);
     published = true;
