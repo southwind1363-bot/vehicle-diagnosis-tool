@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const failures = [];
+let checks = 0;
 const token = "local-bridge-test-token";
 const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", enableSampleReadouts: true });
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -226,6 +227,7 @@ const j2534RequiredApis = [
 ];
 
 function check(condition, message) {
+  checks += 1;
   if (!condition) failures.push(message);
 }
 
@@ -994,10 +996,12 @@ try {
   await new Promise((resolve) => replayServer.close(resolve));
 }
 
+const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+const publishedCheckCount = Number(appSource.match(/bridgeValidationCheckLabel: "bridge検証 (\d+)件"/)?.[1]);
+if (publishedCheckCount !== checks) failures.push(`Published bridge check count ${publishedCheckCount} does not match executed checks ${checks}`);
+console.log(`Local bridge read-only checks: ${checks}`);
+console.log(`Errors: ${failures.length}`);
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
-} else {
-  console.log("Local bridge read-only checks: 218");
-  console.log("Errors: 0");
 }

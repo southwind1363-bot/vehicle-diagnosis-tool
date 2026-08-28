@@ -3,6 +3,8 @@ import vm from "node:vm";
 import "./validate-serial-lifecycle.js";
 import "./validate-session-export.js";
 
+const failures = [];
+let checks = 0;
 const source = fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8");
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -150,7 +152,6 @@ vm.createContext(context);
 vm.runInContext(source, context);
 
 const obd = context.window.ObdReadOnly;
-const failures = [];
 const blockedPostRepairReassessment = obd.buildPostRepairReassessmentSummary({
   observationContext: { conditions: ["post_repair"] },
   importedSessionComparisonSummary: { comparedSectionCount: 2, hasChanges: true }
@@ -2774,6 +2775,7 @@ const coreSummaryFunctionChecks = () => {
 };
 
 function check(condition, message) {
+  checks += 1;
   if (!condition) failures.push(message);
 }
 normalizeNextReadoutCandidatesFunctionChecks();
@@ -3822,7 +3824,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && appSource.includes('validationCheckLabel: "OBD安全検証 3418件"') && appSource.includes('bridgeValidationCheckLabel: "bridge検証 218件"') && appSource.includes('サービス安全条件を診断セッション保存へ統合'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('サービス安全条件を診断セッション保存へ統合'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -27521,10 +27523,11 @@ const legacyCompletedStalePrimarySession = obd.buildDiagnosticScanSession({ impo
 } });
 check(legacySavedCustomPrimarySession.importedCoreSessionStatus?.primaryBlockingReasonId === "custom_review" && legacySavedCustomPrimarySession.importedCoreSessionStatus?.primaryBlockingSummary?.marker === "keep_custom_primary" && legacySavedCustomPrimarySession.importedCoreSessionStatus?.analysisBlockerById?.custom_review?.marker === "keep_custom_reason" && legacyCompletedStalePrimarySession.importedCoreSessionStatus?.primaryBlockingReasonId === null && legacyCompletedStalePrimarySession.importedCoreSessionStatus?.primaryBlockingReadoutId === null && legacyCompletedStalePrimarySession.importedCoreSessionStatus?.primaryBlockingSummary === null && [legacySavedCustomPrimarySession, legacyCompletedStalePrimarySession].every((session) => session.vehicleCommandEnabled === false && session.wouldTransmit === false), "Primary blocker recovery overwrote custom evidence or retained a completed readout blocker");
 
+const publishedCheckCount = Number(appSource.match(/validationCheckLabel: "OBD安全検証 (\d+)件"/)?.[1]);
+if (publishedCheckCount !== checks) failures.push(`Published OBD check count ${publishedCheckCount} does not match executed checks ${checks}`);
+console.log(`OBD read-only safety checks: ${checks}`);
+console.log(`Errors: ${failures.length}`);
 if (failures.length) {
   failures.forEach((failure) => console.error(`ERROR: ${failure}`));
   process.exitCode = 1;
-} else {
-  console.log("OBD read-only safety checks: 3418");
-  console.log("Errors: 0");
 }
