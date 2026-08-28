@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.278";
+const APP_VERSION = "3.13.279";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5256,7 +5256,9 @@ if (!continueObdSerialOperation(revision)) return;
       renderObdDeveloperGate();
       return;
     }
-    const failureReason = getWebSerialConnectionFailureReason(obdDevSession.connectionState, obdDevSession.adapterInitializationSummary);
+    const failureReason = obdDevSession.lastDisconnectReason === "serial_response_too_large"
+      ? "serial_response_too_large"
+      : getWebSerialConnectionFailureReason(obdDevSession.connectionState, obdDevSession.adapterInitializationSummary);
     const failureMessage = formatWebSerialConnectionFailure(failureReason, obdDevSession.adapterInitializationSummary, error);
     await disconnectObdDeveloperVci({ reason: failureReason, statusMessage: failureMessage });
     if (continueObdSerialOperation(revision)) {
@@ -5360,7 +5362,9 @@ async function disconnectObdDeveloperVci(options = {}) {
     obdDevSession.disconnectedAt = new Date().toISOString();
     setObdDeveloperConnectionState("disconnected", reason);
     clearRequestedInterfaceSelection();
-    obdDevStatus.textContent = statusMessage || (reason === "operator_disconnect" ? "VCI読取を停止しました。" : "VCI接続が終了したため、安全に読取を停止しました。");
+    obdDevStatus.textContent = statusMessage || (reason === "serial_response_too_large"
+      ? formatWebSerialConnectionFailure(reason)
+      : reason === "operator_disconnect" ? "VCI読取を停止しました。" : "VCI接続が終了したため、安全に読取を停止しました。");
     renderObdDeveloperGate();
   })();
   return operation.promise;
@@ -6819,6 +6823,7 @@ async function runObdDeveloperRead(label, commands) {
     if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
     const timedOut = message.startsWith("elm_response_timeout:");
+    const responseTooLarge = obdDevSession.lastDisconnectReason === "serial_response_too_large" && message.startsWith("elm_transport_");
     const failedCommandElapsedMs = currentCommandStartedAt === null ? null : Math.max(0, Date.now() - currentCommandStartedAt);
     const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { timedOut, transportErrorCount: true, attemptedCommandCount, failedCommandElapsedMs });
     recordWebSerialReadoutAttempt({ label, startedAt, outcome });
@@ -6832,10 +6837,12 @@ async function runObdDeveloperRead(label, commands) {
     }));
     obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
     const transportFailed = timedOut || message.startsWith("elm_transport_");
-    if (transportFailed) await disconnectObdDeveloperVci({ reason: timedOut ? "response_timeout" : "transport_failed" });
+    if (transportFailed) await disconnectObdDeveloperVci({ reason: responseTooLarge ? "serial_response_too_large" : timedOut ? "response_timeout" : "transport_failed" });
     if (!continueObdSerialOperation(revision)) return false;
     if (obdDevSession.coreScanInProgress) obdDevSession.coreScanStopReason = "transport_error";
-    obdDevStatus.textContent = timedOut
+    obdDevStatus.textContent = responseTooLarge
+      ? `${formatWebSerialConnectionFailure("serial_response_too_large")}${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`
+      : timedOut
       ? `${label}の応答がタイムアウトしたため、安全に切断しました。${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`
       : `${label}に失敗しました: ${message}${partialReadoutRetained ? " 読取実行結果を保持しています。" : ""}`;
     return false;
@@ -7018,6 +7025,7 @@ function formatWebSerialAdapterInitializationFailure(summary = null, error = nul
 }
 
 function formatWebSerialConnectionFailure(reason, summary = null, error = null) {
+  if (reason === "serial_response_too_large") return "VCI応答が受信上限を超えたため切断しました。上限を超えた応答は診断に取り込んでいません。";
   if (reason === "port_selection_failed") return "VCI選択を開始できませんでした。ブラウザのシリアル権限とHTTPS環境を確認してください。";
   if (reason === "port_open_failed") return "VCIポートを開けませんでした。別アプリでの使用、通信速度、接続状態を確認してください。";
   if (reason === "adapter_identification_failed") return "VCI識別応答を確認できませんでした。アダプター電源とファームウェア応答を確認してください。";
@@ -7309,8 +7317,13 @@ async function readElmDeveloperLoop(reader = obdDevSession.reader, port = obdDev
         transportLossReason = "serial_stream_closed";
         break;
       }
-      obdDevSession.textBuffer += obdDevSession.decoder.decode(result.value || new Uint8Array(), { stream: true });
-      obdDevSession.textBuffer = obdDevSession.textBuffer.slice(-12000);
+      const decoded = obdDevSession.decoder.decode(result.value || new Uint8Array(), { stream: true });
+      if (obdDevSession.textBuffer.length + decoded.length > 12000) {
+        obdDevSession.textBuffer = "";
+        transportLossReason = "serial_response_too_large";
+        break;
+      }
+      obdDevSession.textBuffer += decoded;
     } catch (_error) {
       if (isCurrentWebSerialReadLoop(reader, port)) {
         obdDevStatus.textContent = "VCI受信が停止しました。読取をやり直してください。";

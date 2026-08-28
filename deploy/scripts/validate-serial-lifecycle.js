@@ -349,4 +349,123 @@ for (const imported of [false, true]) {
   check(!c.obdSerialConnectPending && c.obdDevSession.lastSession.marker === "saved" && button.disabled === false,
     "Cancelling device selection must re-enable export of the previously retained result");
 }
+async function streamingClient() {
+  const result = await readClient();
+  const c = result.context;
+  load(c, ["readElmDeveloperLoop", "isCurrentWebSerialReadLoop", "readElmDeveloperResponse", "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse", "sendElmDeveloperCommand", "isAllowedObdDeveloperCommand"]);
+  vm.runInContext(source.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = [\s\S]*?;/)[0], c);
+  let incoming = deferred();
+  const reader = c.obdDevSession.reader;
+  reader.read = () => incoming.promise;
+  reader.cancel = async () => incoming.resolve({ done: true });
+  const deliver = (text) => {
+    const pending = incoming;
+    incoming = deferred();
+    pending.resolve({ done: false, value: new TextEncoder().encode(text) });
+  };
+  return { ...result, deliver, loop: c.readElmDeveloperLoop() };
+}
+
+for (const length of [11999, 12000, 12001]) {
+  for (const split of [false, true]) {
+    const { context: c, calls, deliver, loop } = await streamingClient();
+    const saved = c.obdDevSession.lastSession = { marker: "previous valid diagnostic result" };
+    c.obdSerialResultOwner.expectedLastSession = saved;
+    const payload = "X".repeat(length - 1) + ">";
+    const response = c.readElmDeveloperResponse(500).then((value) => ({ value }), (error) => ({ error }));
+    if (split) {
+      deliver(payload.slice(0, 11995));
+      await settle();
+      deliver(payload.slice(11995));
+    } else deliver(payload);
+    const result = await response;
+    if (length > 12000) {
+      check(result.error?.message === "elm_transport_disconnected" && !result.value, `${length}/${split}: oversized response was accepted or treated as a timeout`);
+      await loop;
+      if (c.obdSerialDisconnectOperation) await c.obdSerialDisconnectOperation.promise;
+      check(!c.obdDevSession.port && c.obdDevSession.textBuffer === "" && calls.close === 1
+        && c.obdDevSession.lastDisconnectReason === "serial_response_too_large", `${length}/${split}: overflow did not clear input and disconnect once`);
+    } else {
+      check(result.value === payload.slice(0, -1) && c.obdDevSession.port && calls.close === 0, `${length}/${split}: bounded response was truncated or disconnected`);
+      await c.disconnectObdDeveloperVci();
+      await loop;
+    }
+    check(c.obdDevSession.lastSession === saved, `${length}/${split}: bare transport handling changed the saved diagnostic result`);
+  }
+}
+
+{
+  const { context: c, deliver, loop } = await streamingClient();
+  load(c, ["formatWebSerialConnectionFailure"]);
+  const writes = [];
+  c.obdDevSession.writer.write = async (bytes) => {
+    const command = new TextDecoder().decode(bytes).trim();
+    writes.push(command);
+    deliver(command === "03" ? "43 01 33\r>" : "X".repeat(12000) + "\r47 02 00\r>");
+  };
+  check(await c.runObdDeveloperRead("read", ["03", "07", "0A"]) === false, "Overflow must fail the active read attempt");
+  await loop;
+  if (c.obdSerialDisconnectOperation) await c.obdSerialDisconnectOperation.promise;
+  check(writes.join(",") === "03,07" && c.recorded.length === 1 && c.recorded[0].outcome.transportErrorCount,
+    "Overflow sent a follow-up command or lost transport failure evidence");
+  check(c.retained.length === 1 && c.retained[0].responses.length === 1
+    && c.retained[0].responses[0].response === "43 01 33" && !c.obdDevSession.port,
+    "Overflow retained truncated input or discarded the earlier complete response");
+  check(c.obdDevStatus.textContent.includes("受信上限") && c.obdDevSession.lastDisconnectReason === "serial_response_too_large",
+    "Active read failure hid the overflow reason");
+}
+
+for (const suffix of ["", ">\r\n ", "\r47 02 00\r>"]) {
+  const { context: c, deliver, loop } = await streamingClient();
+  const response = c.readElmDeveloperResponse(500).then((value) => ({ value }), (error) => ({ error }));
+  deliver("X".repeat(12001) + suffix);
+  const result = await response;
+  check(result.error?.message === "elm_transport_disconnected" && !result.value, "Oversized input with missing prompt, whitespace, or valid-looking suffix was accepted");
+  await loop;
+  if (c.obdSerialDisconnectOperation) await c.obdSerialDisconnectOperation.promise;
+  check(c.obdDevSession.textBuffer === "" && !c.obdDevSession.port, "Oversized suffix response survived cleanup");
+}
+
+{
+  const { context: c, calls, deliver, loop } = await streamingClient();
+  c.obdDevSession.reader.cancel = async () => {};
+  await c.disconnectObdDeveloperVci();
+  c.readElmDeveloperLoop = () => {};
+  await c.connectObdDeveloperVci();
+  const replacement = c.obdDevSession.port;
+  c.obdDevSession.textBuffer = "new response>";
+  deliver("X".repeat(12000) + ">");
+  await loop;
+  check(c.obdDevSession.port === replacement && c.obdDevSession.textBuffer === "new response>" && calls.close === 1,
+    "Late oversized input from an old reader changed the new connection");
+  await c.disconnectObdDeveloperVci();
+}
+
+for (const stage of ["initialize", "identify"]) {
+  for (const cleanupFirst of [false, true]) {
+    const { context: c, calls, port } = client();
+    load(c, ["readElmDeveloperLoop", "isCurrentWebSerialReadLoop", "formatWebSerialConnectionFailure"]);
+    const incoming = deferred();
+    const cleanup = deferred();
+    const response = deferred();
+    port.readable.getReader = () => ({ read: () => incoming.promise, cancel: () => cleanup.promise, releaseLock: () => {} });
+    if (stage === "initialize") c.initializeElmDeveloperAdapter = () => response.promise;
+    else c.identifyObdDeveloperVci = () => response.promise;
+    const connecting = c.connectObdDeveloperVci();
+    await settle();
+    incoming.resolve({ done: false, value: new TextEncoder().encode("X".repeat(12000) + ">") });
+    await settle();
+    check(c.obdDevSession.port === null && c.obdDevSession.lastDisconnectReason === "serial_response_too_large",
+      `${stage}/${cleanupFirst}: initialization overflow did not immediately detach transport`);
+    if (cleanupFirst) { cleanup.resolve(); await settle(); }
+    response.reject(new Error("elm_transport_disconnected"));
+    await settle();
+    if (!cleanupFirst) cleanup.resolve();
+    await connecting;
+    check(c.obdDevSession.lastDisconnectReason === "serial_response_too_large" && calls.close === 1 && calls.failure === 1
+      && c.obdDevSession.connectionState === "disconnected" && c.obdSerialDisconnectOperation === null
+      && c.obdDevStatus.textContent.includes("受信上限"), `${stage}/${cleanupFirst}: connection cleanup overwrote the overflow reason or repeated port cleanup`);
+  }
+}
+
 console.log(`Serial lifecycle checks: ${checks} / Errors: 0`);
