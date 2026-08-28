@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.313";
+const APP_VERSION = "3.13.314";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7983,14 +7983,18 @@ function formatObdOnboardMonitorTestLine(item = {}) {
 function buildObdOnboardMonitorDisplayLines(snapshot = null) {
   const tests = snapshot?.tests || [];
   const ecuSnapshots = snapshot?.onboardMonitorEcuSnapshots || snapshot?.onboard_monitor_ecu_snapshots || [];
-  if (!tests.length && !ecuSnapshots.length) return [];
-  const lines = [`要約: ${formatObdBridgeOnboardMonitorSummary(snapshot)}`];
+  const summaryOnly = !tests.length && snapshot?.testCount > 0;
+  if (!tests.length && !ecuSnapshots.length && !summaryOnly) return [];
+  const lines = [`${summaryOnly ? "記録された集計（検査明細なし）" : "要約"}: ${formatObdBridgeOnboardMonitorSummary(snapshot)}`];
   (ecuSnapshots.length ? ecuSnapshots : [snapshot]).forEach((group) => {
     const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
     lines.push(`${ecu}: ${formatObdReadoutStatus(group.onboardMonitorReadoutStatus || group.onboard_monitor_readout_status, "状態未確認")}`);
+    if (ecuSnapshots.length && !group.tests?.length && group.testCount > 0) {
+      lines.push(`${ecu}: 記録された集計（検査明細なし）: ${formatObdBridgeOnboardMonitorSummary(group)}`);
+    }
   });
   lines.push(...tests.map(formatObdOnboardMonitorTestLine));
-  if (!tests.length) lines.push("検査結果: 登録データなし");
+  if (!tests.length) lines.push("検査明細: 登録データなし");
   lines.push("TID/CIDの意味と単位は車種別の整備書で確認してください。記録判定は車両全体の正常・異常を示すものではありません。");
   return lines;
 }
@@ -8603,7 +8607,7 @@ function formatObdBridgeWarningLabel(code = "") {
     freeze_frame_available: "フリーズフレームあり",
     freeze_frame_association_review_required: "FFのDTC・PID対応確認が必要",
     readiness_incomplete: "レディネス未完了あり",
-    onboard_monitor_test_failed: "Mode06で範囲外あり",
+    onboard_monitor_test_failed: "Mode06に不合格の記録あり",
     negative_obd_response_present: "OBD負応答あり",
     obd_response_pending_observed: "ECU応答保留あり",
     compare_values_under_same_conditions: "同条件比較が必要",
@@ -11167,6 +11171,13 @@ function renderObdSafetyInterlock(interlock) {
 function analyzeObdScannerImport(options = {}) {
   invalidateObdScannerImport();
   const scannerText = obdScannerText.value;
+  if (typeof window.ObdReadOnly?.getDiagnosticSessionJsonPolicy === "function") {
+    const policy = window.ObdReadOnly.getDiagnosticSessionJsonPolicy(scannerText);
+    if (!policy.accepted) {
+      obdImportStatus.textContent = "読取入力の形式またはサイズが取込条件を満たしていません。現在の読取結果を保持しています。";
+      return;
+    }
+  }
   const hasScannerText = scannerText.trim().length > 0;
   const mergeWithCurrentSession = options?.mergeWithCurrentSession === true;
   const currentSession = obdDevSession.lastSession;
@@ -12198,10 +12209,17 @@ function downloadObdSessionJson() {
   try {
     const payload = window.ObdReadOnly.buildBridgeSessionExportPayload(obdDevSession.lastSession);
     if (payload?.schema_version !== "bridge_session_export_v1" || !payload.session || typeof payload.session !== "object") throw new Error("invalid_export");
-    const blob = new Blob([JSON.stringify(payload)], { type: "application/json;charset=utf-8" });
+    const text = JSON.stringify(payload);
+    const blob = new Blob([text], { type: "application/json;charset=utf-8" });
     // Match the existing file-import limit so every download can be opened again.
-    if (blob.size > 2000000) {
-      setObdSessionExportStatus("読取結果が再取込上限の2 MBを超えるため、JSON保存を開始しませんでした。元の結果は保持しています。");
+    const hasSessionJsonPolicy = typeof window.ObdReadOnly.getDiagnosticSessionJsonPolicy === "function";
+    const maxBytes = hasSessionJsonPolicy ? (window.ObdReadOnly.diagnosticSessionMaxBytes || 2000000) : 2000000;
+    if (blob.size > maxBytes) {
+      setObdSessionExportStatus(`読取結果が再取込上限の${maxBytes / 1000000} MBを超えるため、JSON保存を開始しませんでした。元の結果は保持しています。`);
+      return false;
+    }
+    if (hasSessionJsonPolicy && !window.ObdReadOnly.getDiagnosticSessionJsonPolicy(text).accepted) {
+      setObdSessionExportStatus("再取込できるセッションJSONとして確認できないため、保存を開始しませんでした。元の結果は保持しています。");
       return false;
     }
     link = document.createElement("a");
@@ -12282,13 +12300,28 @@ function confirmObdReadoutReplacement() {
 }
 
 function validateObdScannerImportTextSize(text) {
+  const archiveMaxBytes = typeof window.ObdReadOnly?.getDiagnosticSessionJsonPolicy === "function"
+    ? (window.ObdReadOnly.diagnosticSessionMaxBytes || 2000000) : 2000000;
+  let maxBytes = archiveMaxBytes;
   try {
-    if (text.length <= 2000000 && new Blob([text]).size <= 2000000) return true;
+    if (text.length <= archiveMaxBytes) {
+      const bytes = new Blob([text]).size;
+      if (bytes <= archiveMaxBytes) {
+        if (typeof window.ObdReadOnly?.getDiagnosticSessionJsonPolicy !== "function") return bytes <= 2000000;
+        const policy = window.ObdReadOnly.getDiagnosticSessionJsonPolicy(text);
+        if (policy.accepted) return true;
+        maxBytes = policy.maxBytes;
+        if (bytes <= maxBytes) {
+          obdImportStatus.textContent = "診断JSONの形式を確認できないため解析を開始しませんでした。現在の読取結果は変更していません。";
+          return false;
+        }
+      }
+    }
   } catch (_error) {
     obdImportStatus.textContent = "入力サイズを確認できないため解析を開始しませんでした。現在の読取結果は変更していません。";
     return false;
   }
-  obdImportStatus.textContent = "診断結果の入力はUTF-8で2 MB以下にしてください。入力を切り詰めず、現在の読取結果は変更していません。";
+  obdImportStatus.textContent = `この形式の入力はUTF-8で${maxBytes / 1000000} MB以下にしてください。入力を切り詰めず、現在の読取結果は変更していません。`;
   return false;
 }
 
@@ -12368,9 +12401,11 @@ function importObdScannerFile(event) {
     input.value = "";
     return;
   }
-  if (file.size > 2000000) {
+  const isSessionJsonCandidate = file.type === "application/json" || /\.json$/i.test(file.name || "");
+  const fileMaxBytes = isSessionJsonCandidate ? (window.ObdReadOnly?.diagnosticSessionMaxBytes || 2000000) : 2000000;
+  if (file.size > fileMaxBytes) {
     invalidateObdScannerImport();
-    obdImportStatus.textContent = "診断結果ファイルは2 MB以下にしてください。";
+    obdImportStatus.textContent = `診断結果ファイルは${fileMaxBytes / 1000000} MB以下にしてください。`;
     input.value = "";
     return;
   }

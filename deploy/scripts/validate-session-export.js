@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import "./validate-session-json-policy.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
@@ -123,6 +124,29 @@ check(c.downloadObdSessionJson() === true && calls.clicks === 1, "Real session e
 check(calls.listeners.size === 1 && c.hasActiveObdReadoutForExitWarning(), "Download initiation or stale global preview state removed exit protection");
 const text = await calls.blobs[0].text();
 const payload = JSON.parse(text);
+for (const size of [2500000, 4000000, 4000001]) {
+  const { c, calls, options } = client(sample);
+  Object.assign(c.window.ObdReadOnly, { diagnosticSessionMaxBytes: obd.diagnosticSessionMaxBytes, getDiagnosticSessionJsonPolicy: obd.getDiagnosticSessionJsonPolicy });
+  const archive = obd.buildBridgeSessionExportPayload(sample);
+  archive.padding = "";
+  archive.padding = "x".repeat(size - Buffer.byteLength(JSON.stringify(archive), "utf8"));
+  options.payload = archive;
+  check(c.downloadObdSessionJson() === (size <= 4000000), "Session archive export does not match the shared byte limit");
+  check(calls.clicks === Number(size <= 4000000), "Oversized session created a download, or valid session failed to download");
+  calls.timers.forEach((callback) => callback());
+}
+{
+  const { c, calls, options } = client(sample);
+  Object.assign(c.window.ObdReadOnly, { diagnosticSessionMaxBytes: obd.diagnosticSessionMaxBytes, getDiagnosticSessionJsonPolicy: obd.getDiagnosticSessionJsonPolicy });
+  options.payload = { schema_version: "bridge_session_export_v1", session: [] };
+  check(c.downloadObdSessionJson() === false && calls.clicks === 0, "Invalid session envelope was downloadable");
+}
+{
+  const { c, calls, options } = client(sample);
+  c.window.ObdReadOnly.diagnosticSessionMaxBytes = 4000000;
+  options.payload = { schema_version: "bridge_session_export_v1", session: { text: "x".repeat(2500000) } };
+  check(c.downloadObdSessionJson() === false && calls.clicks === 0, "Missing shared policy allowed an archive the legacy importer cannot open");
+}
 const restored = obd.buildDiagnosticScanSessionFromJson(text);
 check(payload.schema_version === "bridge_session_export_v1" && payload.vehicle_command_enabled === false && payload.retained_raw_text === false, "Archive must use the existing read-only export contract");
 check(!text.includes("JTDBR32E720123456") && !text.includes("private-connection-token") && !text.includes("unretained raw vehicle data"), "Archive leaked identifying or raw connection data");

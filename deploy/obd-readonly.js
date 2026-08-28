@@ -5,6 +5,9 @@
   const VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{17}\b/g;
   const PARTIALLY_MASKED_VIN_PATTERN = /\b[A-HJ-NPR-Z0-9]{3,10}(?:\.{2,}|…+)[A-HJ-NPR-Z0-9]{3,10}\b/gi;
   const NUMBER_PATTERN = /[-+]?\d+(?:\.\d+)?/;
+  const DIAGNOSTIC_SESSION_MAX_BYTES = 4000000;
+  const SCANNER_JSON_MAX_BYTES = 500000;
+  const SCANNER_TEXT_MAX_BYTES = 2000000;
 
   const fallbackMonitorDefinitions = Object.freeze([
     { id: "engine_speed", label: "エンジン回転数", unit: "rpm", category: "エンジン", aliases: ["engine rpm", "engine speed", "rpm", "エンジン回転数", "回転数"] },
@@ -33422,12 +33425,78 @@
     };
   }
 
+  function getDiagnosticSessionJsonPolicy(value) {
+    const rawText = String(value || "");
+    const text = rawText.trim();
+    const isJson = /^[{[]/.test(text);
+    const result = (kind, maxBytes, error = null) => ({ isJson, accepted: error === null, kind, maxBytes, error });
+    // Measure the entire input, including wrapper and surrounding whitespace, before parsing.
+    const byteLength = rawText.length > DIAGNOSTIC_SESSION_MAX_BYTES ? rawText.length : getUtf8ByteLength(rawText);
+    if (!isJson) return result("text", SCANNER_TEXT_MAX_BYTES, byteLength > SCANNER_TEXT_MAX_BYTES ? "text_too_large" : null);
+    if (byteLength > DIAGNOSTIC_SESSION_MAX_BYTES) return result("scanner", DIAGNOSTIC_SESSION_MAX_BYTES, "input_too_large");
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      // Invalid ordinary scanner text retains its old fallback; declared archives must not.
+      if (/"(?:schema_version|schemaVersion)"\s*:\s*"native_connector_contract_v1"|"(?:native_connector_archive|nativeConnectorArchive)"\s*:/.test(text)) {
+        return result("native", nativeConnectorContract.maxArchiveBytes, "invalid_native_archive");
+      }
+      if (/"(?:schema_version|schemaVersion)"\s*:\s*"bridge_session_export_v1"/.test(text)) {
+        return result("session", DIAGNOSTIC_SESSION_MAX_BYTES, "invalid_session_envelope");
+      }
+      return result("scanner", SCANNER_TEXT_MAX_BYTES, byteLength > SCANNER_TEXT_MAX_BYTES ? "text_too_large" : null);
+    }
+    const isObject = (item) => Boolean(item && typeof item === "object" && !Array.isArray(item));
+    const owns = (item, key) => isObject(item) && Object.prototype.hasOwnProperty.call(item, key);
+    const hasSchema = (item, schema) => isObject(item) && (item.schema_version === schema || item.schemaVersion === schema);
+    // Keep selection identical to buildDiagnosticScanSessionFromJson; an outer marker is not a selected envelope.
+    const report = [parsed.report, parsed.scan_report, parsed.scanReport].find(isObject) || null;
+    const envelope = parsed.bridge_export_payload || parsed.bridgeExportPayload || report || parsed;
+    const sessionKeys = ["session", "scan_session", "scanSession", "bridge_session", "bridgeSession"];
+    const session = sessionKeys.map((key) => envelope?.[key]).find(Boolean) || envelope;
+    const containers = [parsed, envelope, session];
+    const archiveKeys = ["native_connector_archive", "nativeConnectorArchive"];
+    const nativeCandidates = [...containers, ...containers.flatMap((item) => archiveKeys.map((key) => item?.[key]))];
+    const hasArchiveShape = (item) => owns(item, "envelopes") && Boolean(item.completion_manifest || item.completionManifest);
+    const hasNativeDeclaration = nativeCandidates.some((item) => hasSchema(item, "native_connector_contract_v1")
+      || (owns(item, "envelopes") && (owns(item, "completion_manifest") || owns(item, "completionManifest"))))
+      || containers.some((item) => archiveKeys.some((key) => owns(item, key)));
+    const isSessionExport = [parsed, envelope].some((item) => hasSchema(item, "bridge_session_export_v1"));
+    if (hasNativeDeclaration) {
+      if (byteLength > nativeConnectorContract.maxArchiveBytes) return result("native", nativeConnectorContract.maxArchiveBytes, "native_archive_too_large");
+      const nativeArchive = parsed.native_connector_archive || parsed.nativeConnectorArchive || parsed;
+      const mixedExport = nativeCandidates.some((item) => hasSchema(item, "bridge_session_export_v1"));
+      if (mixedExport || !hasArchiveShape(nativeArchive)) return result("native", nativeConnectorContract.maxArchiveBytes, "invalid_native_archive");
+      // Content and completion-manifest validation remain with the existing native validator.
+      return result("native", nativeConnectorContract.maxArchiveBytes);
+    }
+    if (isSessionExport) {
+      const invalidSession = !isObject(envelope) || !isObject(session)
+        || sessionKeys.some((key) => owns(envelope, key) && !isObject(envelope[key]));
+      const conflictingSchema = [parsed, envelope].some((item) => hasSchema(item, "bridge_session_export_v1")
+        && [item.schema_version, item.schemaVersion].some((schema) => schema !== undefined && schema !== "bridge_session_export_v1"));
+      if (invalidSession || conflictingSchema) return result("session", DIAGNOSTIC_SESSION_MAX_BYTES, "invalid_session_envelope");
+      // Preserve legacy <=2 MB parsing; only a selected, read-only session envelope gains extra capacity.
+      if (byteLength > SCANNER_TEXT_MAX_BYTES) {
+        const unsafeFlags = [parsed, envelope, session].some((item) => isObject(item) && (
+          ["connection_enabled", "connectionEnabled", "vehicle_command_enabled", "vehicleCommandEnabled", "execution_enabled", "executionEnabled", "would_transmit", "wouldTransmit", "retained_raw_frames", "retainedRawFrames", "retained_raw_text", "retainedRawText"]
+            .some((key) => owns(item, key) && item[key] !== false)
+          || ["read_only", "readOnly"].some((key) => owns(item, key) && item[key] !== true)
+        ));
+        if (!hasSchema(envelope, "bridge_session_export_v1") || session === envelope || !Object.keys(session).length || unsafeFlags) {
+          return result("session", DIAGNOSTIC_SESSION_MAX_BYTES, "invalid_session_envelope");
+        }
+      }
+      return result("session", DIAGNOSTIC_SESSION_MAX_BYTES);
+    }
+    return result("scanner", SCANNER_JSON_MAX_BYTES, byteLength > SCANNER_JSON_MAX_BYTES ? "scanner_json_too_large" : null);
+  }
+
   function buildDiagnosticScanSessionFromJson(value, options = {}) {
+    const jsonPolicy = getDiagnosticSessionJsonPolicy(value);
+    if (!jsonPolicy.isJson || !jsonPolicy.accepted) return null;
     const text = String(value || "").trim();
-    const textByteLength = getUtf8ByteLength(text);
-    const trustedBridgeExportMarker = /"(?:schema_version|schemaVersion)"\s*:\s*"bridge_session_export_v1"/.test(text.slice(0, 4096));
-    const declaredNativeConnectorArchiveMarker = /"(?:schema_version|schemaVersion)"\s*:\s*"native_connector_contract_v1"/.test(text.slice(0, 4096));
-    if (!text || textByteLength > nativeConnectorContract.maxArchiveBytes || (!trustedBridgeExportMarker && !declaredNativeConnectorArchiveMarker && textByteLength > 500000) || !/^[{[]/.test(text)) return null;
     let parsed;
     try {
       parsed = JSON.parse(text);
@@ -33493,7 +33562,6 @@
     const isTrustedBridgeSessionExport = [parsedPayload, exportPayload].some((payload) => (
       payload && typeof payload === "object" && (payload.schema_version === "bridge_session_export_v1" || payload.schemaVersion === "bridge_session_export_v1")
     ));
-    if (text.length > 500000 && !isTrustedBridgeSessionExport) return null;
     const session = exportPayload.session || exportPayload.scan_session || exportPayload.scanSession || exportPayload.bridge_session || exportPayload.bridgeSession || exportPayload;
     if (!session || typeof session !== "object" || Array.isArray(session)) return null;
     const bridgeResponseSession = getDiagnosticSessionInput(session);
@@ -40629,6 +40697,8 @@
 
   window.ObdReadOnly = Object.freeze({
     policy,
+    diagnosticSessionMaxBytes: DIAGNOSTIC_SESSION_MAX_BYTES,
+    getDiagnosticSessionJsonPolicy,
     configureMonitorDefinitions,
     configurePidReferenceThresholds,
     configureManufacturerPidReferenceCandidates,

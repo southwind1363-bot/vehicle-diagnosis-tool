@@ -42,6 +42,23 @@ for (const key of ["onboardMonitorEcuSnapshots", "onboard_monitor_ecu_snapshots"
 }
 check(context.formatObdBridgeOnboardMonitorSummary({ testCount: 3, passedCount: 1, failedCount: 1, unknownCount: 1 })
   === "3件 / 合格1 / 不合格1 / 未判定1", "Summary inferred failure means an out-of-range value");
+check(source.includes('onboard_monitor_test_failed: "Mode06に不合格の記録あり"') && !source.includes('onboard_monitor_test_failed: "Mode06で範囲外あり"'), "Failure warning inferred a limit comparison from a recorded failure");
+for (const status of ["reported", "blocked", "unparsed", "unknown"]) {
+  const summary = { testCount: 3, passedCount: 1, failedCount: 1, unknownCount: 1, tests: [], sourceEcu: "7E8", onboardMonitorReadoutStatus: status };
+  const before = JSON.stringify(summary);
+  const lines = context.buildObdOnboardMonitorDisplayLines(summary);
+  check(lines[0] === "記録された集計（検査明細なし）: 3件 / 合格1 / 不合格1 / 未判定1", "Count-only evidence was hidden or presented as measured tests");
+  check(lines.includes("検査明細: 登録データなし") && !lines.some((line) => line.includes("記録値")), "Count-only evidence fabricated test values");
+  check(lines.includes(`7E8: ${context.formatObdReadoutStatus(status)}`), "Count-only evidence lost readout disposition");
+  check(JSON.stringify(summary) === before, "Count-only display changed stored counts");
+}
+const mixed = { tests: [tests[0]], testCount: 1, unknownCount: 1, onboardMonitorEcuSnapshots: [
+  { sourceEcu: "7E8", tests: [tests[0]], testCount: 1, unknownCount: 1, onboardMonitorReadoutStatus: "reported" },
+  { sourceEcu: "7E9", tests: [], testCount: 2, failedCount: 2, onboardMonitorReadoutStatus: "reported" }
+] };
+const mixedLines = context.buildObdOnboardMonitorDisplayLines(mixed);
+check(mixedLines.includes("7E9: 記録された集計（検査明細なし）: 2件 / 不合格2") && mixedLines.includes(context.formatObdOnboardMonitorTestLine(tests[0])), "Mixed detail/summary ECU results were hidden or combined");
+check(!mixedLines.some((line) => line.startsWith("7E8: 記録された集計")), "Measured ECU was mislabeled as summary-only");
 const coreContext = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), coreContext);
 const obd = coreContext.window.ObdReadOnly;
@@ -59,6 +76,18 @@ check(lines.some((line) => line.startsWith("[7E8] TID 01 / CID 01:") && line.end
 check(lines.some((line) => line.startsWith("[7E9] TID 01 / CID 01:") && line.endsWith("記録判定: 未判定")), "Unknown test became a failure due to passed:false");
 check(lines.includes("7EA: 読取拒否"), "Blocked ECU missing from normalized display");
 check(JSON.stringify(session) === before && exportSession() === beforeExport, "Mode06 display changed diagnostic data or export");
+for (const input of [
+  { testCount: 3, passedCount: 1, failedCount: 1, unknownCount: 1 },
+  { failedCount: 1, tests: [{ testId: "01", componentId: "01", value: null, status: "fail" }] }
+]) {
+  const originalSession = obd.buildDiagnosticScanSession({ onboardMonitorSnapshot: input });
+  const imported = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(originalSession)));
+  const before = JSON.stringify(imported);
+  const importedLines = context.buildObdOnboardMonitorDisplayLines(imported.onboardMonitorSnapshot);
+  check(importedLines[0].startsWith("記録された集計（検査明細なし）:"), "Reimported count-only result was not distinguished from test detail");
+  check(imported.onboardMonitorSnapshot.tests.length === 0 && !importedLines.some((line) => line.includes("記録値")), "Missing measurement was fabricated during display");
+  check(JSON.stringify(imported) === before, "Imported session changed during summary presentation");
+}
 const details = extract("renderObdBridgeSessionDetails");
 check(details.includes("buildObdOnboardMonitorDisplayLines(onboardMonitorSnapshot)") && details.includes('sections.push(["Mode06", monitorLines])'), "Detailed view does not use full Mode06 display");
 check(details.includes("item.textContent = line;"), "Mode06 must render literal text");

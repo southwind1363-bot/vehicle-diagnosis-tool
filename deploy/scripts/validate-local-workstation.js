@@ -887,6 +887,46 @@ async function validateScannerReplacementConfirmation(webUrl) {
 }
 
 async function validateScannerInputSize(webUrl) {
+  const policyCore = vm.createContext({ window: {} });
+  vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), policyCore);
+  const policyApi = policyCore.window.ObdReadOnly;
+  const sessionArchive = policyApi.buildBridgeSessionExportPayload(policyApi.buildDiagnosticScanSession({ onboardMonitorSnapshot: { testCount: 3, failedCount: 1 } }));
+  sessionArchive.padding = "x".repeat(2100000);
+  const archiveText = JSON.stringify(sessionArchive);
+  const invalidInputs = ["x".repeat(4000001), JSON.stringify({ dtcs: ["P0420"], padding: "x".repeat(500001) }),
+    JSON.stringify({ schema_version: "native_connector_contract_v1", padding: "x".repeat(2000001) }),
+    JSON.stringify({ schema_version: "bridge_session_export_v1", session: [], padding: "x".repeat(2100000) })];
+  for (const kind of ["manual", "clipboard", "file"]) {
+    for (const [text, accepted] of [[archiveText, true], ...invalidInputs.map((text) => [text, false])]) {
+      const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+      Object.assign(client.window.ObdReadOnly, { diagnosticSessionMaxBytes: policyApi.diagnosticSessionMaxBytes, getDiagnosticSessionJsonPolicy: policyApi.getDiagnosticSessionJsonPolicy });
+      const previous = { source: "web_serial", dtcSnapshot: { codes: ["P0171"] } };
+      client.obdDevSession.lastSession = previous;
+      const previousInput = client.obdScannerText.value;
+      let analyses = 0;
+      let confirmations = 0;
+      client.analyzeObdScannerImport = () => { analyses += 1; };
+      client.window.confirm = () => { confirmations += 1; return true; };
+      if (kind === "manual") { client.obdScannerText.value = text; client.analyzeObdScannerImportManually(); }
+      else await startPendingScannerAcquisition(client, kind, kind === "file" && accepted
+        ? { value: "session.json", files: [{ name: "session.json", type: "application/json", size: Buffer.byteLength(text, "utf8") }] }
+        : undefined).complete(text);
+      check(analyses === Number(accepted) && confirmations === Number(accepted), `${kind}: shared JSON policy did not gate replacement and analysis`);
+      check(client.obdDevSession.lastSession === previous, `${kind}: size classification replaced the session`);
+      check(client.obdScannerText.value === (accepted || kind === "manual" ? text : previousInput), `${kind}: rejected acquisition changed input`);
+    }
+  }
+  for (const text of [invalidInputs[1], "x".repeat(2000001)]) {
+    const rejectedInternal = addScannerImportHarness(createClient(webUrl, options.pairingToken), "text");
+    rejectedInternal.obdScannerText.value = text;
+    Object.assign(rejectedInternal.window.ObdReadOnly, { getDiagnosticSessionJsonPolicy: policyApi.getDiagnosticSessionJsonPolicy });
+    const retained = { source: "web_serial" };
+    rejectedInternal.obdDevSession.lastSession = retained;
+    let fallbacks = 0;
+    rejectedInternal.window.ObdReadOnly.buildDiagnosticScanSessionFromCsv = () => { fallbacks += 1; return null; };
+    rejectedInternal.analyzeObdScannerImport({ mergeWithCurrentSession: true });
+    check(fallbacks === 0 && rejectedInternal.obdDevSession.lastSession === retained, "Rejected input reached fallback or replaced the active session");
+  }
   for (const [unit, count, suffix] of [["a", 2000000, ""], ["a", 2000000, "a"], ["\u6c34", 666666, "aa"], ["\u6c34", 666666, "aaa"],
     ["\ud83d\ude00", 500000, ""], ["\ud83d\ude00", 500000, "a"], ["\ud800", 666666, "aa"], ["\ud800", 666666, "aaa"], [" ", 2000001, ""]]) {
     const text = unit.repeat(count) + suffix;
