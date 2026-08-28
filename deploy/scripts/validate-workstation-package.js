@@ -5,6 +5,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { packageWorkstation } from "./package-workstation.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
+import { formatJ2534WorkstationInspection } from "./inspect-workstation-j2534.js";
 
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
@@ -19,7 +20,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "script.js"), 'const APP_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
-  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
   const pkg = { name: "fixture", version: "1.0.0", type: "module", dependencies: { express: "1.0.0" } };
   const lock = { lockfileVersion: 3, packages: { "": { name: pkg.name, version: pkg.version, dependencies: pkg.dependencies } } };
   for (const name of ["node_modules/express", "node_modules/express/node_modules/nested"]) {
@@ -42,6 +43,26 @@ const run = (code, args, environment = {}) => new Promise((resolve) => {
   child.stdin.end();
 });
 try {
+  const staticReady = { id: "fixture-ready", label: "Fixture VCI", driver_library_inspection_status: "inspected", driver_runtime_compatible: true, driver_readonly_api_ready: true, driver_library_bitness: 64 };
+  for (const [device, expected] of [
+    [staticReady, "静的検査済み（実機接続は未確認）"],
+    [{ ...staticReady, driver_library_inspection_status: "missing" }, "DLLの静的検査が未完了"],
+    [{ ...staticReady, driver_runtime_compatible: false, driver_library_bitness: 32 }, "32bit DLLは64bit Node.jsに直接ロードできません"],
+    [{ ...staticReady, driver_readonly_api_ready: false }, "読取に必要なAPIを確認できません"]
+  ]) {
+    const report = formatJ2534WorkstationInspection([device], "win32");
+    check(report.includes(expected) && report.includes("1. Fixture VCI"), "Driver readiness report lost its per-device result");
+    check(report.includes("車両通信: 未実施 / DLL実行: 未実施") && report.includes("車種適合、車両応答を確認できません"), "Static inspection overstated connection or compatibility");
+  }
+  check(formatJ2534WorkstationInspection([], "win32").includes("登録ドライバーを検出できません"), "Missing registration was not explained");
+  check(formatJ2534WorkstationInspection([], "linux").includes("Windows専用") && !formatJ2534WorkstationInspection([], "linux").includes("登録検出:"), "Unsupported OS reported a Windows registry result");
+  const mixed = formatJ2534WorkstationInspection([staticReady, { ...staticReady, id: "blocked", driver_runtime_compatible: false }], "win32");
+  check(mixed.includes("静的検査済み: 1件 / 要確認: 1件") && mixed.includes("構成が一致していません"), "A ready device hid a blocked driver");
+  const privateInput = { ...staticReady, label: "Fixture\x1b\r\n\u202eVCI", driver_library_path: "C:/private/driver.dll", pairing_token: "private-token" };
+  const before = JSON.stringify(privateInput);
+  const sanitized = formatJ2534WorkstationInspection([privateInput], "win32");
+  check(!/[\x1b\r\u202e]/.test(sanitized) && !sanitized.includes("C:/private") && !sanitized.includes("private-token"), "Inspection disclosed private fields or terminal control characters");
+  check(JSON.stringify(privateInput) === before, "Formatting changed a driver result");
   const valid = fixture();
   fs.writeFileSync(path.join(valid.sourceDirectory, ".env"), "private-fixture");
   fs.writeFileSync(path.join(valid.sourceDirectory, "saved-case.json"), "private-fixture");
@@ -55,6 +76,7 @@ try {
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
+  check(instructions.includes("inspect-workstation-j2534.cmd") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")), "Package omitted the standalone J2534 preparation check");
   check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
     && packaged.scripts["workstation:dev"] === packaged.scripts.start && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
     && Object.keys(packaged.scripts).length === 3, "Package retained unavailable development commands");
@@ -63,7 +85,7 @@ try {
   check(instructions.includes("verify-workstation.cmd") && instructions.includes("署名・真正性・実車適合の証明ではありません"), "Integrity instructions overclaim verification");
   const integrityPath = path.join(result.directory, "package-integrity.json");
   const originalManifest = fs.readFileSync(integrityPath);
-  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js"]) {
+  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js"]) {
     const target = path.join(result.directory, relative);
     const original = fs.readFileSync(target);
     const changed = Buffer.from(original);
@@ -90,6 +112,8 @@ try {
     (m) => { m.files[0].sha256 = "bad"; },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "script.js"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "style.css"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "inspect-workstation-j2534.cmd"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/inspect-workstation-j2534.js"); },
     (m) => { m.files.push({ ...m.files[0], path: "package-integrity.json" }); },
     ...["../outside.txt", "/outside.txt", "C:/outside.txt", "a\\b", "x/../y", "x//y", "x./y", "x:y"].map((entryPath) => (m) => { m.files.push({ ...m.files[0], path: entryPath }); })
   ]) {
@@ -182,7 +206,7 @@ try {
     const env = { ...process.env, NODE_PATH: "", PORT: "0", LOCAL_BRIDGE_PORT: "0" };
     for (const key of ["NODE_OPTIONS", "LOCAL_BRIDGE_REPLAY_LOG", "LOCAL_BRIDGE_PAIRING_TOKEN"]) delete env[key];
     const windows = process.platform === "win32";
-    const command = entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
+    const command = entry === "inspect" ? '""inspect-workstation-j2534.cmd" --no-pause"' : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
       { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
       (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
@@ -193,16 +217,24 @@ try {
     check(launched.code === 0 && launched.output.includes("Package files match:") && launched.output.includes("診断画面:"), `${entry}: verified packaged startup failed: ${launched.output}`);
     check(launched.output.indexOf("Package files match:") < launched.output.indexOf("診断画面:"), `${entry}: started before package verification`);
   }
-  for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true]]) {
+  if (process.platform === "win32") {
+    const inspection = await runEntry("inspect");
+    check(inspection.code === 0 && inspection.output.includes("J2534接続準備チェック"), `Packaged J2534 inspection failed: ${inspection.output}`);
+    check(inspection.output.includes("Package files match:") && inspection.output.indexOf("Package files match:") < inspection.output.indexOf("J2534接続準備チェック"), "Driver inspection started before package verification");
+    check(!inspection.output.includes("診断画面:") && !inspection.output.includes("ペアリング値") && inspection.output.includes("車両通信: 未実施 / DLL実行: 未実施"), "Driver inspection started a server or overstated vehicle access");
+  }
+  const guardedEntries = process.platform === "win32" ? [...entries, "inspect"] : entries;
+  for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true], ["scripts/inspect-workstation-j2534.js", false]]) {
     const target = path.join(actual.directory, relative);
     const original = fs.readFileSync(target);
     try {
       if (missing) fs.unlinkSync(target);
       else fs.writeFileSync(target, 'throw new Error("dependency-loaded-before-check");');
-      for (const entry of entries) {
+      for (const entry of guardedEntries) {
         const blocked = await runEntry(entry);
         check(blocked.code !== 0 && !blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値"), `${entry}: ${relative} failure started a server or disclosed a key`);
         check(!blocked.output.includes("dependency-loaded-before-check"), `${entry}: damaged dependency executed before verification`);
+        if (entry === "inspect") check(!blocked.output.includes("J2534接続準備チェック"), "Failed verification reached driver inspection");
         check(missing ? !fs.existsSync(target) : fs.readFileSync(target, "utf8").startsWith("throw new Error"), `${entry}: failed verification repaired or removed files`);
       }
     } finally { fs.writeFileSync(target, original); }
@@ -226,7 +258,7 @@ try {
       const response=await fetch(app.webUrl);
       assert.equal(response.status,200);
       await response.arrayBuffer();
-      for(const file of ["/saved-session.json","/data/saved-session.json","/package-info.json","/package-integrity.json","/verify-workstation.cmd","/scripts/verify-workstation-package.js","/node_modules/express/package.json","/scripts/start-local-workstation.js"]) {
+      for(const file of ["/saved-session.json","/data/saved-session.json","/package-info.json","/package-integrity.json","/verify-workstation.cmd","/inspect-workstation-j2534.cmd","/scripts/inspect-workstation-j2534.js","/scripts/verify-workstation-package.js","/node_modules/express/package.json","/scripts/start-local-workstation.js"]) {
         const denied=await fetch(app.webUrl+file);
         assert.equal(denied.status,404);
         assert.equal(await denied.text(),"");

@@ -51,7 +51,8 @@ export function verifyWorkstationPackage(directory) {
     if (totalBytes > 1024 * 1024 * 1024) fail("package_integrity_manifest_invalid");
   }
   for (const required of ["index.html", "script.js", "obd-readonly.js", "offline-assets.json", "package.json", "package-lock.json",
-    "package-info.json", "start-workstation.cmd", "verify-workstation.cmd", "scripts/verify-workstation-package.js"]) {
+    "package-info.json", "start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd",
+    "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js"]) {
     if (!seen.has(required)) fail("package_integrity_manifest_incomplete", required);
   }
   for (const entry of manifest.files) {
