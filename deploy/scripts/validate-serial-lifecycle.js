@@ -294,7 +294,7 @@ for (const name of ["initializeElmDeveloperAdapter", "identifyObdDeveloperVci", 
     c.obdDevSession.readInProgress = true;
     if (fail) waiting.reject(new Error("elm_transport_disconnected"));
     else waiting.resolve("OK");
-    if (name === "captureObdDeveloperProtocolAfterStoredDtc") check(await pending === false, "Cancelled protocol capture must stop");
+    if (name !== "initializeElmDeveloperAdapter") check(await pending === false, "Cancelled identification or protocol capture must stop");
     else await assert.rejects(pending);
     check(sent === 1 && c.obdDevSession.adapterInitializationSummary === metadata && c.obdDevSession.readInProgress, `${name}/${fail}: stale metadata or read lock update`);
   }
@@ -858,6 +858,132 @@ for (const stage of ["initialize", "identify"]) {
   check(c.obdDevSession.lastSession === retained && !retained.connectionStatus.ok,
     `${stage}: late cleanup replaced the retained connection failure`);
   }
+}
+
+{
+  const { context: c } = await readClient();
+  installWriteDeadlineHarness(c);
+  const response = deferred();
+  const sent = [];
+  c.obdDevSession.writer.write = async (bytes) => sent.push(new TextDecoder().decode(bytes).trim());
+  c.readElmDeveloperResponse = () => response.promise;
+  const first = c.sendElmDeveloperCommand("03");
+  await settle();
+  c.obdDevSession.textBuffer = "43 01";
+  const second = c.sendElmDeveloperCommand("07").then((value) => ({ value }), (error) => ({ error }));
+  await settle();
+  check(sent.join(",") === "03" && c.obdDevSession.textBuffer === "43 01",
+    "A second command overwrote the active response buffer after write completion");
+  check((await second).error?.message === "elm_write_busy", "Response-wait overlap was not rejected as busy");
+  response.resolve("43 01 33");
+  check(await first === "43 01 33", "Overlap rejection changed the owning command result");
+  await c.disconnectObdDeveloperVci();
+}
+
+for (const wallJump of [-3600000, 0, 3600000]) {
+  const { context: c } = await readClient();
+  const clock = installWriteDeadlineHarness(c);
+  load(c, ["readElmDeveloperResponse", "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse"]);
+  let wall = 10000000;
+  c.Date = class extends Date { static now() { return wall; } };
+  c.obdDevSession.textBuffer = "";
+  const pending = c.readElmDeveloperResponse(50);
+  wall += wallJump;
+  clock.advance(40);
+  await settle();
+  check(clock.timers.size === 1, "Wall-clock correction ended the response wait early");
+  c.obdDevSession.textBuffer = "43 01 33>";
+  clock.advance(10);
+  check(await pending === "", "Response received at the monotonic deadline was accepted");
+  check(clock.timers.size === 0, "Response deadline left a polling timer active");
+  await c.disconnectObdDeveloperVci();
+}
+
+for (const cause of ["lock", "import", "port", "reader", "command"]) {
+  const { context: c, port } = await readClient();
+  const clock = installWriteDeadlineHarness(c);
+  load(c, ["readElmDeveloperResponse", "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse"]);
+  const pending = c.readElmDeveloperResponse(50).then((value) => ({ value }), (error) => ({ error }));
+  if (cause === "lock") c.lockObdAccess();
+  if (cause === "import") c.obdDevSession.lastSession = { marker: "replacement" };
+  if (cause === "port") c.obdDevSession.port = { marker: "new port" };
+  if (cause === "reader") c.obdDevSession.reader = { marker: "new reader" };
+  if (cause === "command") c.obdDevSession.pendingCommandOperation = { marker: "replacement command" };
+  c.obdDevSession.textBuffer = "new result>";
+  clock.advance(50);
+  check(Boolean((await pending).error) && c.obdDevSession.textBuffer === "new result>" && clock.timers.size === 0,
+    `${cause}: final deadline wake accepted a response or timeout from a replacement owner`);
+  c.obdDevSession.port = port;
+  c.obdDevSession.reader = null;
+  await c.disconnectObdDeveloperVci();
+}
+
+for (const lateReject of [false, true]) {
+  const { context: c, port } = await readClient();
+  installWriteDeadlineHarness(c);
+  const oldResponse = deferred();
+  const newResponse = deferred();
+  c.obdDevSession.writer.write = async () => {};
+  c.readElmDeveloperResponse = () => oldResponse.promise;
+  const old = c.sendElmDeveloperCommand("03").then((value) => ({ value }), (error) => ({ error }));
+  await settle();
+  await c.disconnectObdDeveloperVci({ reason: "serial_read_failed" });
+  check(c.obdDevSession.pendingCommandOperation === null && c.beginObdBridgeOperation() !== null,
+    "Response wait unnecessarily blocked bridge after completed transport cleanup");
+  c.obdBridgeOperation = null;
+  await c.connectObdDeveloperVci();
+  c.obdDevSession.writer.write = async () => {};
+  c.readElmDeveloperResponse = () => newResponse.promise;
+  const current = c.sendElmDeveloperCommand("07");
+  await settle();
+  const owner = c.obdDevSession.pendingCommandOperation;
+  if (lateReject) oldResponse.reject(new Error("old response failed"));
+  else oldResponse.resolve("43 01 33");
+  check(Boolean((await old).error) && c.obdDevSession.port === port && c.obdDevSession.pendingCommandOperation === owner,
+    "Old response settlement cleared the replacement command ownership");
+  newResponse.resolve("47 00");
+  check(await current === "47 00" && c.obdDevSession.pendingCommandOperation === null,
+    "Replacement command could not complete after old response settlement");
+  await c.disconnectObdDeveloperVci();
+}
+
+for (const mode of ["success", "timeout", "transport", "overflow"]) {
+  const { context: c } = await readClient();
+  installWriteDeadlineHarness(c);
+  load(c, ["identifyObdDeveloperVci", "captureObdDeveloperProtocolAfterStoredDtc"]);
+  const response = deferred();
+  const sent = [];
+  c.obdDevSession.writer.write = async (bytes) => sent.push(new TextDecoder().decode(bytes).trim());
+  c.readElmDeveloperResponse = () => response.promise;
+  c.buildWebSerialAdapterIdentity = (rows) => ({ commands: rows.map((row) => row.command) });
+  c.mergeWebSerialAdapterIdentity = (_old, next) => next;
+  let logs = 0;
+  c.appendObdDeveloperLog = () => { logs += 1; };
+  const saved = c.obdDevSession.lastSession;
+  const originalIdentity = c.obdDevSession.adapterIdentity;
+  const pending = c.identifyObdDeveloperVci();
+  await settle();
+  c.obdDevSession.textBuffer = "ELM partial";
+  check(await c.identifyObdDeveloperVci() === false && await c.runObdDeveloperRead("overlap", ["03"]) === false
+    && await c.captureObdDeveloperProtocolAfterStoredDtc() === false && c.obdDevSession.readInProgress
+    && sent.join(",") === "ATI" && c.obdDevSession.textBuffer === "ELM partial"
+    && c.recorded.length === 0 && c.retained.length === 0, "Overlap changed manual identification ownership or created false diagnostic results");
+  if (mode === "success") response.resolve("ELM327");
+  if (mode === "timeout") response.resolve("");
+  if (mode === "transport") response.reject(new Error("elm_transport_disconnected"));
+  if (mode === "overflow") {
+    await c.disconnectObdDeveloperVci({ reason: "serial_response_too_large" });
+    response.reject(new Error("elm_transport_disconnected"));
+  }
+  await pending;
+  check(!c.obdDevSession.readInProgress && !c.obdDevSession.pendingCommandOperation && c.obdDevSession.lastSession === saved,
+    `${mode}: manual identification leaked busy state or replaced saved diagnosis`);
+  if (mode === "success") check(sent.join(",") === "ATI,AT@1" && logs === 1 && c.obdDevSession.adapterIdentity.commands.length === 2,
+    "Normal two-command adapter identification failed");
+  else check(sent.join(",") === "ATI" && logs === 0 && c.obdDevSession.adapterIdentity === originalIdentity && !c.obdDevSession.port
+    && c.obdDevSession.lastDisconnectReason === (mode === "overflow" ? "serial_response_too_large" : mode === "timeout" ? "response_timeout" : "transport_failed"),
+    `${mode}: failed manual identification reused transport or retained partial identity`);
+  await c.disconnectObdDeveloperVci();
 }
 
 console.log(`Serial lifecycle checks: ${checks} / Errors: 0`);
