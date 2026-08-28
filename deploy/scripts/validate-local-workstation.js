@@ -200,6 +200,8 @@ async function validateScannerAcquisitionOrder(webUrl) {
         if (action === "empty-scan") {
           client.obdScannerText.value = "";
           client.obdDevSession.lastSession = null;
+          Object.assign(client.obdDevSession, { connectionState: "ready", port: {}, reader: {}, writer: {}, readLoopActive: true });
+          client.obdSerialResultOwner = { revision: client.obdSerialRevision, expectedLastSession: null };
         }
         const pending = startPendingScannerAcquisition(client, kind);
         if (action === "clear") client.clearObdScannerImport();
@@ -213,7 +215,7 @@ async function validateScannerAcquisitionOrder(webUrl) {
           if (action === "edit-back") client.editScannerText("valid import");
         }
         if (action === "vehicle-change") client.syncObdVehicleInput();
-        if (action === "empty-scan") client.beginWebSerialReadoutProfile("initial_diagnostic");
+        if (action === "empty-scan") check(client.beginWebSerialReadoutProfile("initial_diagnostic") === true, "Ready simulated serial connection must admit an empty scan");
         const expectedText = client.obdScannerText.value;
         const expectedSession = client.obdDevSession.lastSession;
         const expectedStatus = client.obdImportStatus.textContent;
@@ -293,7 +295,7 @@ async function validateScannerParserIntegration(webUrl) {
 function addScannerImportHarness(client, format = "json") {
   const source = appSource.match(/function analyzeObdScannerImport\(options = \{\}\) \{[\s\S]*?\r?\n\}/)[0];
   vm.runInContext(source, client);
-  for (const name of ["clearObdScannerImport", "importObdScannerFile", "pasteObdScannerImport", "normalizeObdScannerImportFileText", "beginWebSerialReadoutProfile", "syncObdVehicleInput"]) {
+  for (const name of ["clearObdScannerImport", "importObdScannerFile", "pasteObdScannerImport", "normalizeObdScannerImportFileText", "beginWebSerialReadoutProfile", "syncObdVehicleInput", "isCurrentObdSerialOperation", "continueObdSerialOperation"]) {
     vm.runInContext(appSource.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], client);
   }
   // Stub parser results and display helpers; exercise the complete handler's session ownership and bridge lifecycle.

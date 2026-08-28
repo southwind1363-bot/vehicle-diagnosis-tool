@@ -986,4 +986,155 @@ for (const mode of ["success", "timeout", "transport", "overflow"]) {
   await c.disconnectObdDeveloperVci();
 }
 
+function installProfileHarness(c) {
+  load(c, ["beginWebSerialReadoutProfile", "readObdDeveloperCoreScan", "readObdDeveloperQuickCondition"]);
+  const effects = [];
+  c.obdScannerText = { value: "previous readout" };
+  c.obdDetectedCodes = { innerHTML: "previous DTCs" };
+  c.invalidateObdScannerImport = () => effects.push("invalidate");
+  c.renderObdMonitorValues = () => effects.push("monitor");
+  c.hideResult = () => effects.push("hide");
+  c.renderObdDeveloperSessionSummary = () => effects.push("summary");
+  return effects;
+}
+
+{
+  const { context: c } = await readClient();
+  const effects = installProfileHarness(c);
+  const saved = c.obdDevSession.lastSession = { marker: "previous diagnostic result" };
+  c.obdSerialResultOwner.expectedLastSession = saved;
+  const response = deferred();
+  c.sendElmDeveloperCommand = () => response.promise;
+  const pending = c.runObdDeveloperRead("individual read", ["03"]);
+  const admitted = c.beginWebSerialReadoutProfile("initial_diagnostic");
+  check(admitted === false && effects.length === 0 && c.obdDevSession.lastSession === saved
+    && c.obdSerialResultOwner.expectedLastSession === saved && c.obdDevSession.readInProgress,
+    "Starting a scan during an individual read reset its result or ownership");
+  response.resolve("43 01 33");
+  check(await pending === true && c.retained.length === 1 && c.recorded.length === 1,
+    "Refused scan start prevented the owning read from completing");
+  await c.disconnectObdDeveloperVci();
+}
+
+const profileBlockers = [
+  ["read", (c) => { c.obdDevSession.readInProgress = true; }],
+  ["initializing", (c) => { c.obdDevSession.initializing = true; }],
+  ["scan", (c) => { c.obdDevSession.coreScanInProgress = true; }],
+  ["command", (c) => { c.obdDevSession.pendingCommandOperation = {}; }],
+  ["write", (c) => { c.obdDevSession.pendingWriteOperation = {}; }],
+  ["bridge", (c) => { c.obdBridgeOperation = {}; }],
+  ["connect", (c) => { c.obdSerialConnectPending = true; }],
+  ["disconnect", (c) => { c.obdSerialDisconnectOperation = {}; }],
+  ["port", (c) => { c.obdDevSession.port = null; }],
+  ["reader", (c) => { c.obdDevSession.reader = null; }],
+  ["writer", (c) => { c.obdDevSession.writer = null; }],
+  ["read-loop", (c) => { c.obdDevSession.readLoopActive = false; }],
+  ["access", (c) => { c.obdAccessUnlocked = false; }],
+  ["developer", (c) => { c.obdDevModeUnlocked = false; }],
+  ["revision", (c) => { c.obdSerialRevision += 1; }],
+  ["owner", (c) => { c.obdSerialResultOwner = null; }],
+  ...["disconnected", "selecting", "opening", "initializing", "reading", "disconnecting"].map((state) =>
+    [state, (c) => { c.obdDevSession.connectionState = state; }])
+];
+for (const profile of ["initial_diagnostic", "quick_condition"]) {
+  for (const [label, block] of profileBlockers) {
+    const { context: c } = await readClient();
+    const effects = installProfileHarness(c);
+    const saved = c.obdDevSession.lastSession = { marker: "saved result" };
+    c.obdSerialResultOwner.expectedLastSession = saved;
+    c.obdDevSession.lastRawText = "prior log";
+    c.obdDevSession.readoutAttempts = [{ marker: "prior attempt" }];
+    c.obdDevSession.livePidTimeline = [{ marker: "prior sample" }];
+    block(c);
+    const before = { ...c.obdDevSession };
+    const owner = c.obdSerialResultOwner;
+    const revision = c.obdSerialRevision;
+    const admitted = c.beginWebSerialReadoutProfile(profile);
+    await c.readObdDeveloperCoreScan();
+    await c.readObdDeveloperQuickCondition();
+    check(admitted === false && effects.length === 0
+      && Object.keys(before).every((key) => c.obdDevSession[key] === before[key])
+      && c.obdSerialResultOwner === owner && c.obdSerialRevision === revision
+      && c.obdScannerText.value === "previous readout" && c.obdDetectedCodes.innerHTML === "previous DTCs",
+      `${profile}/${label}: rejected profile start mutated retained diagnostics, UI, or ownership`);
+  }
+}
+
+for (const entry of ["readObdDeveloperCoreScan", "readObdDeveloperQuickCondition"]) {
+  for (const busy of [false, true]) {
+    const { context: c } = await readClient();
+    const effects = installProfileHarness(c);
+    const saved = c.obdDevSession.lastSession = { marker: "saved before scan" };
+    c.obdSerialResultOwner.expectedLastSession = saved;
+    c.obdDevSession.readInProgress = busy;
+    const steps = [];
+    for (const name of ["readObdDeveloperDtc", "readObdDeveloperFreezeFrame", "readObdDeveloperReadiness",
+      "readObdDeveloperEcuInfo", "readObdDeveloperOnboardMonitor", "readObdDeveloperLiveSnapshot", "readObdDeveloperQuickLiveSnapshot"]) {
+      c[name] = async () => {
+        check(c.obdDevSession.coreScanInProgress && c.obdDevSession.lastSession === null
+          && c.obdSerialResultOwner.expectedLastSession === null, "Admitted scan did not establish a fresh owned profile before reading");
+        steps.push(name);
+        return true;
+      };
+    }
+    await c[entry]();
+    if (busy) check(steps.length === 0 && effects.length === 0 && c.obdDevSession.lastSession === saved
+      && c.obdDevSession.readInProgress, `${entry}: busy workflow reset the previous read before refusing commands`);
+    else {
+      const expected = entry === "readObdDeveloperCoreScan"
+        ? ["readObdDeveloperDtc", "readObdDeveloperFreezeFrame", "readObdDeveloperReadiness", "readObdDeveloperEcuInfo", "readObdDeveloperOnboardMonitor", "readObdDeveloperLiveSnapshot"]
+        : ["readObdDeveloperDtc", "readObdDeveloperReadiness", "readObdDeveloperQuickLiveSnapshot"];
+      check(steps.join(",") === expected.join(",") && effects.join(",") === "invalidate,monitor,hide,summary"
+        && !c.obdDevSession.coreScanInProgress && c.obdDevSession.readoutProfile === (entry === "readObdDeveloperCoreScan" ? "initial_diagnostic" : "quick_condition"),
+        `${entry}: idle admission changed the profile or diagnostic read order`);
+    }
+    await c.disconnectObdDeveloperVci();
+  }
+}
+
+for (const entry of ["direct", "readObdDeveloperCoreScan", "readObdDeveloperQuickCondition"]) {
+  const { context: c } = await readClient();
+  const effects = installProfileHarness(c);
+  const owner = c.obdSerialResultOwner;
+  const imported = c.obdDevSession.lastSession = { marker: "imported replacement" };
+  if (entry === "direct") c.beginWebSerialReadoutProfile("quick_condition");
+  else await c[entry]();
+  check(c.obdDevSession.port === null && c.obdDevSession.lastSession === imported && c.obdSerialResultOwner === owner
+    && owner.expectedLastSession !== imported && effects.length === 0 && c.obdScannerText.value === "previous readout",
+    `${entry}: ownership loss must cancel old transport without resetting or adopting imported results`);
+  await c.obdSerialDisconnectOperation?.promise;
+}
+
+for (const stage of ["initialize", "identify"]) {
+  const result = stage === "initialize" ? client() : await readClient();
+  const { context: c } = result;
+  const effects = installProfileHarness(c);
+  const response = deferred();
+  let sends = 0;
+  c.sendElmDeveloperCommand = () => { sends += 1; return response.promise; };
+  let pending;
+  if (stage === "initialize") {
+    c.initializeElmDeveloperAdapter = () => c.sendElmDeveloperCommand("ATZ");
+    pending = c.connectObdDeveloperVci();
+  } else {
+    load(c, ["identifyObdDeveloperVci"]);
+    c.appendObdDeveloperLog = () => {};
+    c.buildWebSerialAdapterIdentity = () => ({ marker: "adapter" });
+    c.mergeWebSerialAdapterIdentity = (_old, value) => value;
+    pending = c.identifyObdDeveloperVci();
+  }
+  await settle();
+  const saved = c.obdDevSession.lastSession;
+  const sessionId = c.obdDevSession.scanSessionId;
+  await c.readObdDeveloperCoreScan();
+  await c.readObdDeveloperQuickCondition();
+  check(effects.length === 0 && sends === 1 && c.obdDevSession.lastSession === saved && c.obdDevSession.scanSessionId === sessionId,
+    `${stage}: profile entry reset an active adapter operation`);
+  response.resolve("OK");
+  await pending;
+  check(c.obdDevSession.port && c.obdDevSession.connectionState === "ready" && !c.obdDevSession.readInProgress,
+    `${stage}: refused scan prevented the adapter operation from finishing`);
+  await c.disconnectObdDeveloperVci();
+}
+
 console.log(`Serial lifecycle checks: ${checks} / Errors: 0`);
