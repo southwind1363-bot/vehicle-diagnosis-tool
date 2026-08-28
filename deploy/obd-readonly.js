@@ -33654,8 +33654,13 @@
     const trustedImportedReadoutCompletionSummary = isTrustedBridgeSessionExport
       ? pick("importedReadoutCompletionSummary", "imported_readout_completion_summary")
       : null;
+    const trustedSourceReadoutQualitySummary = isTrustedBridgeSessionExport
+      ? pick("readoutQualitySummary", "readout_quality_summary")
+      : null;
     const trustedImportedReadoutQualitySummary = isTrustedBridgeSessionExport
       ? pick("importedReadoutQualitySummary", "imported_readout_quality_summary")
+        ?? (hasManufacturerSampleInvalidEvidenceHistory({ readoutQualitySummary: trustedSourceReadoutQualitySummary })
+          ? trustedSourceReadoutQualitySummary : undefined)
       : null;
     const trustedImportedReadoutRequestPlanGateSummary = isTrustedBridgeSessionExport
       ? pick("importedReadoutRequestPlanGateSummary", "imported_readout_request_plan_gate_summary")
