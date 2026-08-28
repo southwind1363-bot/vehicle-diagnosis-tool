@@ -1677,6 +1677,23 @@ body.dark .flow-node-measure .flow-step {
   display: none;
 }
 
+.obd-readout-details {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.obd-readout-details > summary {
+  padding: 14px 0;
+  min-height: 44px;
+  font-weight: 700;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+#obdDevSessionDetails:not([hidden]) + .obd-readout-details-empty {
+  display: none;
+}
+
 .obd-policy-list {
   line-height: 1.8;
 }

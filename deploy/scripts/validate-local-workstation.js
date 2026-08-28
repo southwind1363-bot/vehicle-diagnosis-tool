@@ -28,17 +28,19 @@ function validateReadoutNavigation() {
       if (child.parentElement) child.parentElement.children = child.parentElement.children.filter((item) => item !== child);
       this.children.push(child); child.parentElement = this; return child;
     }
-    closest(selector) { return selector === `#${this.id}` ? this : this.parentElement?.closest(selector) || null; }
+    closest(selector) { return selector === `#${this.id}` || (selector === "details" && this.tagName === "DETAILS") ? this : this.parentElement?.closest(selector) || null; }
     setAttribute() {}
     scrollIntoView() { this.scrolled += 1; }
   }
   const nodes = Object.fromEntries(["obd-panel", "diagnosis-panel", "data-panel", "obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost",
-    "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdMonitorGrid", "obdDevSessionSummary", "obdConnectionProfile"]
+    "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdMonitorGrid", "obdDevSessionSummary", "obdConnectionProfile", "obdReadoutDetails", "obdDevSessionDetails"]
     .map((id) => [id, new Element(id)]));
   const attach = (parent, child) => nodes[parent].appendChild(nodes[child]);
   attach("diagnosis-panel", "obdReadoutHome"); attach("obdReadoutHome", "obdReadoutSurface");
   attach("obdReadoutSurface", "obdImportStatus"); attach("obdReadoutSurface", "obdMonitorGrid");
   attach("obdStageResultsView", "obdReadoutResultsHost");
+  attach("obdStageResultsView", "obdReadoutDetails"); attach("obdReadoutDetails", "obdDevSessionDetails");
+  nodes.obdReadoutDetails.tagName = "DETAILS";
   attach("obdStageDetailsView", "obdDevSessionSummary"); attach("obdStageDetailsView", "obdConnectionProfile");
   const context = vm.createContext({ document: { getElementById: (id) => nodes[id] }, window: { scrollTo() {} },
     tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false,
@@ -60,18 +62,23 @@ function validateReadoutNavigation() {
     check(nodes.obdReadoutSurface.parentElement === (tab === "obd-panel" ? nodes.obdReadoutResultsHost : nodes.obdReadoutHome), "Tab switch failed to return the shared readout surface");
     check(nodes.obdMonitorGrid.values === values && nodes.obdImportStatus.textContent === "0 DTC / acquired", "Tab switch replaced readout nodes or values");
   }
-  for (const [target, stage] of [["obdImportStatus", "results"], ["obdMonitorGrid", "results"], ["obdDevSessionSummary", "details"], ["obdConnectionProfile", "details"]]) {
+  for (const [target, stage] of [["obdImportStatus", "results"], ["obdMonitorGrid", "results"], ["obdDevSessionSummary", "details"], ["obdConnectionProfile", "details"], ["obdReadoutDetails", "results"], ["obdDevSessionDetails", "results"]]) {
+    nodes.obdReadoutDetails.open = false;
     context.renderObdStageView("setup");
     context.scrollToObdSection(target);
     check(context.activeObdStage === stage && nodes[target].scrolled === 1, "Result shortcut scrolled into a hidden tab");
+    if (target === "obdReadoutDetails" || target === "obdDevSessionDetails") check(nodes.obdReadoutDetails.open, "Result shortcut did not open the enclosing disclosure");
   }
   context.obdAccessUnlocked = false;
   context.renderObdStageView("setup");
+  nodes.obdReadoutDetails.open = false;
+  context.scrollToObdSection("obdReadoutDetails");
+  check(!nodes.obdReadoutDetails.open, "Locked navigation opened protected readout details");
   context.scrollToObdSection("obdImportStatus");
   check(context.obdStagePanel.hidden && nodes.obdReadoutSurface.parentElement === nodes.obdReadoutHome && nodes.obdImportStatus.scrolled === 1, "Lock did not restore the readout surface or blocked navigation");
   context.scrollToObdSection("missing");
   check(nodes.obdReadoutHome.children.length === 1 && nodes.obdReadoutResultsHost.children.length === 0, "Navigation duplicated readout elements");
-  for (const id of ["obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost", "obdImportStatus", "obdMonitorGrid"]) {
+  for (const id of ["obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost", "obdImportStatus", "obdMonitorGrid", "obdReadoutDetails", "obdDevSessionDetails"]) {
     check(indexSource.split(`id="${id}"`).length === 2, `Readout ID ${id} is missing or duplicated`);
   }
 }
@@ -633,6 +640,7 @@ function addScannerImportHarness(client, format = "json") {
   for (const name of new Set([...source.matchAll(/\b(format\w+)\(/g)].map((match) => match[1]))) client[name] = () => "";
   for (const name of ["getSessionNextReadoutCandidates", "getObdFreezeFrameTriggerEntries", "getNonBlockingWarningLabels", "readCoreSessionAliasArray"]) client[name] = () => [];
   for (const name of ["renderObdImportToolHints", "renderObdMonitorValues", "renderObdWorkflowGuide", "renderObdDeveloperSessionSummary", "appendObdAnalysisReadoutSummary"]) client[name] = () => {};
+  client.renderObdBridgeSessionDetails = (session) => { client.detailRenderedSession = session; };
   for (const name of ["buildSelectedObdReadoutInterface", "buildSelectedObdVehicleProfile", "buildSelectedObdVehicleApplicability", "getReadoutCoverageDisplay"]) client[name] = () => null;
   client.buildCoreReadinessHeadline = () => "";
   client.buildCoreAnalysisPendingStatus = () => "PENDING";
@@ -684,6 +692,7 @@ async function validateScannerImportOwnership(webUrl) {
       client.analyzeObdScannerImport();
       imported = client.obdDevSession.lastSession;
       check(client.exportControlSession === imported && client.exportControlImportBusy === false, `${format}: successful import did not refresh export controls for the new session`);
+      check(client.detailRenderedSession === imported, `${format}: successful import did not refresh the detailed readout display`);
     } finally {
       ready.resolve();
       await pending;

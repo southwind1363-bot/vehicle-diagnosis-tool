@@ -144,10 +144,10 @@
               <label class="import-button">診断結果ファイル<input id="obdImportFileInput" type="file" accept="application/json,text/csv,text/tab-separated-values,text/plain,text/html,.json,.csv,.tsv,.txt,.html,.htm"></label>
             </div>
 
+            <p class="data-status" data-obd-session-export-status role="status"></p>
             <div id="obdReadoutHome">
             <div id="obdReadoutSurface">
             <section class="result-block obd-import-result">
-              <p class="data-status" data-obd-session-export-status role="status"></p>
               <h3>DTC結果</h3>
               <p id="obdImportStatus" class="empty-state">読取後にDTCを表示します。</p>
               <div id="obdImportToolHints" class="obd-import-hints" hidden></div>
@@ -686,12 +686,19 @@
 
         <div class="button-row">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
+          <button class="secondary-button" type="button" data-obd-scroll-target="obdReadoutDetails">FF・ECU・取得状態</button>
         </div>
         <p class="data-status" data-obd-session-export-status role="status"></p>
 
         <div id="obdDiagnosticFlowPanelResults" class="obd-diagnostic-flow-panel" data-obd-diagnostic-flow-panel hidden></div>
 
         <div id="obdReadoutResultsHost"></div>
+
+        <details id="obdReadoutDetails" class="obd-readout-details">
+          <summary>フリーズフレーム・レディネス・ECU情報・取得状態</summary>
+          <div id="obdDevSessionDetails" class="obd-session-details" hidden></div>
+          <p class="empty-state obd-readout-details-empty">追加の読取データはありません。</p>
+        </details>
 
         </div>
 
@@ -795,7 +802,6 @@
           <p id="obdDevStatus" class="data-status">詳細トークンを設定した端末だけ詳細読取メニューを使えます。送信は読取専用のみです。</p>
           <div id="obdDiagnosticFlowPanel" class="obd-diagnostic-flow-panel" data-obd-diagnostic-flow-panel hidden></div>
           <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
-          <div id="obdDevSessionDetails" class="obd-session-details" hidden></div>
         </section>
 
         <section class="obd-operation-panel" aria-labelledby="obdOperationTitle">
