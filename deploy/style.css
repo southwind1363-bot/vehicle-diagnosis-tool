@@ -1576,7 +1576,7 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-monitor-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -1596,6 +1596,24 @@ body.dark .flow-node-measure .flow-step {
   border-left-color: #d97706;
   background: color-mix(in srgb, var(--panel-subtle) 88%, #f59e0b 12%);
 }
+
+.obd-monitor-filter {
+  max-width: 540px;
+  margin-top: 14px;
+}
+
+.obd-monitor-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.obd-monitor-search-row input { min-width: 0; }
+.obd-monitor-search-row input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.obd-monitor-search-row button { padding: 0; min-height: 44px; font-size: 1.5rem; }
+.obd-monitor-filter[hidden],
+.obd-monitor-card[hidden] { display: none; }
 
 .obd-monitor-card.is-raw {
   border-left-color: #2563eb;
@@ -1732,6 +1750,7 @@ body.dark .flow-node-measure .flow-step {
 
 #obdDetectedCodes,
 #obdMonitorGrid,
+#obdMonitorFilter,
 #obdImportStatus,
 #obdMonitorStatus,
 #obdReadoutDetails,
@@ -1987,9 +2006,6 @@ body.dark .flow-node-measure .flow-step {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .obd-monitor-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 560px) {

@@ -169,6 +169,15 @@
                 <summary>取得状況・注意事項</summary>
                 <p id="obdMonitorStatus" class="empty-state">読取後にライブデータを表示します。</p>
               </details>
+              <div id="obdMonitorFilter" class="obd-monitor-filter" hidden>
+                <label for="obdMonitorSearch">ライブ値検索</label>
+                <div class="obd-monitor-search-row">
+                  <input id="obdMonitorSearch" type="search" maxlength="100" placeholder="項目名 / PID / ECU" autocomplete="off" aria-controls="obdMonitorGrid">
+                  <button id="obdMonitorSearchClear" class="secondary-button" type="button" aria-label="検索を解除" title="検索を解除" disabled>&times;</button>
+                </div>
+                <p id="obdMonitorFilterCount" class="data-status" role="status"></p>
+              </div>
+              <p id="obdMonitorFilterEmpty" class="empty-state" hidden>検索に一致する計測項目はありません。</p>
               <div id="obdMonitorGrid" class="obd-monitor-grid"></div>
               <div id="obdMonitorInsightList" class="obd-monitor-insights" hidden></div>
               <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件とメーカー整備書の基準値を確認してください。</p>

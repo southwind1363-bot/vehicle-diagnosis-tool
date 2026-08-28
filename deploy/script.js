@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.307";
+const APP_VERSION = "3.13.308";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -494,6 +494,37 @@ const mobileGptCloseButton = document.querySelector("#mobileGptCloseButton");
 const tabButtons = document.querySelectorAll("[data-tab-target]");
 
 initializeObdStatusDisclosures();
+initializeObdMonitorFilter();
+
+function initializeObdMonitorFilter() {
+  const toolbar = document.querySelector("#obdMonitorFilter");
+  const input = document.querySelector("#obdMonitorSearch");
+  const clear = document.querySelector("#obdMonitorSearchClear");
+  const count = document.querySelector("#obdMonitorFilterCount");
+  const empty = document.querySelector("#obdMonitorFilterEmpty");
+  if (!toolbar || !input || !clear || !count || !empty || typeof MutationObserver === "undefined") return;
+  const normalize = (text) => String(text || "").normalize("NFKC").toLowerCase();
+  const refresh = () => {
+    const cards = Array.from(obdMonitorGrid.children);
+    if (!cards.length) input.value = "";
+    const terms = normalize(input.value).trim().split(/\s+/).filter(Boolean);
+    let visible = 0;
+    for (const card of cards) {
+      const matches = terms.every((term) => normalize(card.dataset.monitorSearch).includes(term));
+      card.hidden = !matches;
+      if (matches) visible += 1;
+    }
+    toolbar.hidden = cards.length === 0;
+    clear.disabled = input.value.length === 0;
+    count.textContent = terms.length ? `絞込中: ${visible} / ${cards.length}項目` : `全${cards.length}項目を表示`;
+    empty.hidden = !cards.length || visible > 0;
+  };
+  input.addEventListener("input", refresh);
+  clear.addEventListener("click", () => { input.value = ""; refresh(); input.focus(); });
+  // Observe replacements only; changing card visibility must not trigger another refresh.
+  new MutationObserver(refresh).observe(obdMonitorGrid, { childList: true });
+  refresh();
+}
 
 function initializeObdStatusDisclosures() {
   document.querySelectorAll(".obd-status-details").forEach((details) => {
@@ -2344,6 +2375,10 @@ function scrollToObdSection(targetId) {
   if (!obdAccessUnlocked) return;
   const emptyReadoutStatus = { obdDetectedCodes: "obdImportStatus", obdMonitorGrid: "obdMonitorStatus" }[targetId];
   if (emptyReadoutStatus && !target.children.length) target = document.getElementById(emptyReadoutStatus) || target;
+  if (targetId === "obdMonitorGrid") {
+    const filter = document.getElementById("obdMonitorFilter");
+    if (filter && !filter.hidden) target = filter;
+  }
   if (!document.getElementById("obd-panel")?.classList.contains("is-active")) {
     activateTab("obd-panel");
     // Cancel the tab-to-top animation before moving to a specific result.
@@ -11882,6 +11917,8 @@ function renderObdMonitorValues(values, insights = []) {
     if (item.undecodedRaw === true) card.classList.add("is-raw");
 
     const sourceEcu = item.sourceEcu || item.source_ecu || null;
+    card.dataset.monitorSearch = [item.label, item.id, item.pid, sourceEcu, item.category, item.unit]
+      .filter((value) => typeof value === "string" || typeof value === "number").join(" ");
     const category = document.createElement("span");
     category.className = "obd-monitor-category";
     category.textContent = [item.category, sourceEcu ? `ECU ${sourceEcu}` : null].filter(Boolean).join(" / ") || "ライブデータ";
