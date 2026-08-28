@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 import http from "node:http";
 import fs from "node:fs";
 import vm from "node:vm";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { execFile } from "node:child_process";
 import { webcrypto } from "node:crypto";
 import { startLocalWorkstation } from "./start-local-workstation.js";
 
@@ -10,6 +14,51 @@ const check = (condition, message) => { assert.ok(condition, message); checks +=
 const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-token", j2534RegistryText: "" };
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+async function validateWindowsLauncher(occupiedWebPort) {
+  if (process.platform !== "win32") return;
+  const launcherPath = fileURLToPath(new URL("../start-workstation.cmd", import.meta.url));
+  const run = (file, env = {}, noPause = true) => new Promise((resolve) => {
+    const environment = { ...process.env, NODE_PATH: "" };
+    delete environment.LOCAL_BRIDGE_REPLAY_LOG;
+    delete environment.LOCAL_BRIDGE_PAIRING_TOKEN;
+    const child = execFile(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `""${file}"${noPause ? " --no-pause" : ""}"`], {
+      cwd: os.tmpdir(), windowsHide: true, windowsVerbatimArguments: true, timeout: 15000,
+      env: { ...environment, ...env }
+    }, (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
+    child.stdin.end("\n");
+  });
+  const missingNode = await run(launcherPath, { PATH: "" });
+  check(missingNode.code === 1 && missingNode.output.includes("Node.js was not found"), "Windows launcher did not explain missing Node.js or preserve its failure code");
+  const replay = await run(launcherPath, { LOCAL_BRIDGE_REPLAY_LOG: "must-not-be-read.log" });
+  check(replay.code === 1 && replay.output.includes("ローカル起動に失敗しました") && !replay.output.includes("診断画面:"), "Windows launcher bypassed replay protection or depended on the caller's working directory");
+  const conflict = await run(launcherPath, { PORT: String(occupiedWebPort), LOCAL_BRIDGE_PORT: "0" });
+  check(conflict.code === 1 && conflict.output.includes("起動先ポートは使用中") && !conflict.output.includes("ペアリング値"), "Windows launcher hid a port conflict or exposed a pairing key after failed startup");
+
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle launcher & test-"));
+  try {
+    const fixtureLauncher = path.join(fixtureDir, "start-workstation.cmd");
+    fs.copyFileSync(launcherPath, fixtureLauncher);
+    const missingDependency = await run(fixtureLauncher);
+    check(missingDependency.code === 1 && missingDependency.output.includes("Required packages are missing"), "Windows launcher did not explain missing dependencies");
+    // A finite child verifies forwarding without starting a second long-lived server.
+    fs.mkdirSync(path.join(fixtureDir, "node_modules", "express"), { recursive: true });
+    fs.writeFileSync(path.join(fixtureDir, "node_modules", "express", "index.js"), "");
+    fs.mkdirSync(path.join(fixtureDir, "scripts"));
+    fs.writeFileSync(path.join(fixtureDir, "scripts", "start-local-workstation.js"), 'console.log("launcher-child"); process.exitCode = Number(process.env.LAUNCHER_TEST_EXIT);');
+    for (const code of [0, 7]) {
+      const child = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: String(code) });
+      check(child.code === code && child.output.includes("launcher-child"), `Windows launcher lost child exit ${code} or mishandled spaces and shell characters in its folder`);
+    }
+    const pausedFailure = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: "7" }, false);
+    check(pausedFailure.code === 7 && pausedFailure.output.includes("launcher-child"), "Windows launcher lost the child failure code after the default pause");
+  } finally {
+    assert.equal(path.dirname(path.resolve(fixtureDir)), path.resolve(os.tmpdir()));
+    assert(path.basename(fixtureDir).startsWith("vehicle launcher & test-"));
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+}
+
 const clientSource = appSource.slice(appSource.indexOf("async function runObdLocalBridgeRead("), appSource.indexOf("const WEB_SERIAL_ADAPTER_ERROR_LINES"));
 function createClient(webUrl, token, fetchRequest = fetch) {
   const context = vm.createContext({
@@ -726,6 +775,7 @@ try {
     await validateScannerAcquisitionOrder(workstation.webUrl);
     await validateScannerParserIntegration(workstation.webUrl);
     await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
+    await validateWindowsLauncher(webPort);
     check((await fetch(workstation.webUrl)).status === 200, "A competing launcher stopped the existing workstation");
   } finally {
     await workstation.close();
