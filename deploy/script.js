@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.311";
+const APP_VERSION = "3.13.312";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8012,6 +8012,37 @@ function formatObdBridgeReadinessSummary(snapshot = null, options = {}) {
   return parts.length ? parts.join(" / ") : NO_DATA;
 }
 
+function formatObdReadinessMonitorLine(item = {}) {
+  const status = item.supported === false ? "非対応"
+    : item.supported !== true ? "対応状態不明"
+      : item.complete === true ? "完了"
+        : item.complete === false ? "未完了" : "完了状態不明";
+  const ecu = item.sourceEcu || item.source_ecu || "ECU未記録";
+  return `${item.label || item.id || "項目"}: ${status} [${ecu}]${item.diagnosticUse ? ` / ${item.diagnosticUse}` : ""}`;
+}
+
+function buildObdReadinessDisplayLines(snapshot = null) {
+  const ecuSnapshots = snapshot?.readinessEcuSnapshots || snapshot?.readiness_ecu_snapshots || [];
+  if (!snapshot?.monitors?.length && !ecuSnapshots.length) return [];
+  const groups = ecuSnapshots.length ? ecuSnapshots : [snapshot];
+  const lines = ecuSnapshots.length > 1 ? [`ECU別 ${ecuSnapshots.length}系統 / 集約判定なし`] : [];
+  groups.forEach((group) => {
+    const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
+    const readoutStatus = group.readinessReadoutStatus || group.readiness_readout_status;
+    lines.push(`${ecu}: ${formatObdReadoutStatus(readoutStatus, "状態未確認")}`);
+    lines.push(`MIL: ${group.milOn === true ? "ON" : group.milOn === false ? "OFF" : "未判定"} / ${formatObdBridgeReadinessSummary(group, { includeObservedCount: true })}`);
+    const ignitionType = group.readinessIgnitionType || group.readiness_ignition_type;
+    if (ignitionType === "spark" || ignitionType === "compression") {
+      lines.push(`PID 01 観測点火方式: ${ignitionType === "compression" ? "圧縮着火" : "火花点火"}`);
+    }
+    lines.push(...(group.monitors || []).map(formatObdReadinessMonitorLine));
+    if (!group.monitors?.length) lines.push("監視項目: 登録データなし");
+    const unknownLabels = (group.knownMonitors || []).filter((item) => item?.observed === false).map((item) => item.label || item.id);
+    if (unknownLabels.length) lines.push(`未取得: ${unknownLabels.join(" / ")}`);
+  });
+  return lines;
+}
+
 function summarizeObdExpectedItems(items = []) {
   const expectedItems = Array.isArray(items) ? items : [];
   const captured = expectedItems.filter((item) => item?.captured);
@@ -9059,40 +9090,8 @@ function renderObdBridgeSessionDetails(session = null) {
     sections.push(["Mode06", lines]);
   }
 
-  const readinessMonitors = readinessSnapshot?.monitors || [];
-  if (readinessMonitors.length) {
-    const incomplete = readinessMonitors.filter((item) => item.supported === true && item.complete === false);
-    const supported = readinessMonitors.filter((item) => item.supported === true && (item.complete === true || item.complete === false));
-    const unsupported = readinessMonitors.filter((item) => item.supported === false);
-    const supportUnknown = readinessMonitors.filter((item) => item.supported === null || item.supported === undefined);
-    const completionUnknown = readinessMonitors.filter((item) => item.supported === true && (item.complete === null || item.complete === undefined));
-    const visible = (incomplete.length ? incomplete : supported).slice(0, 6);
-    const unknownLabels = (readinessSnapshot?.knownMonitors || [])
-      .filter((item) => item?.observed === false)
-      .slice(0, 4)
-      .map((item) => item.label || item.id);
-    const lines = [
-      `MIL: ${readinessSnapshot.milOn === true ? "ON" : readinessSnapshot.milOn === false ? "OFF" : "未判定"} / ${formatObdBridgeReadinessSummary(readinessSnapshot, { includeObservedCount: true })}`,
-      ...visible.map((item) => `${item.label || item.id}: ${item.complete ? "完了" : "未完了"}${item.diagnosticUse ? ` / ${item.diagnosticUse}` : ""}`)
-    ];
-    const readinessIgnitionType = readinessSnapshot.readinessIgnitionType || readinessSnapshot.readiness_ignition_type || null;
-    if (readinessIgnitionType === "spark" || readinessIgnitionType === "compression") {
-      lines.splice(1, 0, `PID 01 観測点火方式: ${readinessIgnitionType === "compression" ? "圧縮着火" : "火花点火"}`);
-    }
-    if (unsupported.length) {
-      lines.push(`非対応: ${unsupported.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
-    }
-    if (supportUnknown.length) {
-      lines.push(`対応状態不明: ${supportUnknown.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
-    }
-    if (completionUnknown.length) {
-      lines.push(`完了状態不明: ${completionUnknown.slice(0, 4).map((item) => item.label || item.id).join(" / ")}`);
-    }
-    if (unknownLabels.length) {
-      lines.push(`未取得: ${unknownLabels.join(" / ")}`);
-    }
-    sections.push(["レディネス", lines]);
-  }
+  const readinessLines = buildObdReadinessDisplayLines(readinessSnapshot);
+  if (readinessLines.length) sections.push(["レディネス", readinessLines]);
 
   const supportedPids = supportedPidMatrix?.supportedPids || [];
   if (supportedPids.length) {
