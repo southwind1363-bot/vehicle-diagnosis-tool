@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.304";
+const APP_VERSION = "3.13.305";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -3070,7 +3070,7 @@ function retainCauseCandidateLogInCurrentSession(result = null) {
     causeCandidateLogReferenceComparisonSummary,
     cause_candidate_log_reference_comparison_summary: causeCandidateLogReferenceComparisonSummary
   };
-  syncObdReadoutExitGuard();
+  handleObdReadoutSessionReplacement();
   if (serialOwned) obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
 }
 
@@ -4797,7 +4797,7 @@ function loadObdInterfacePreviewSample(interfaceId) {
   obdDevSession.bridgeVciList = preview.bridgeVciList;
   obdDevSession.adapterIdentity = preview.session.adapterIdentity;
   obdDevSession.lastSession = preview.session;
-  syncObdReadoutExitGuard();
+  handleObdReadoutSessionReplacement();
 
   const monitorValues = preview.session.livePidSnapshot?.monitorValues || [];
   const insights = preview.session.livePidSnapshot?.monitorInsights || [];
@@ -5291,7 +5291,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.freezeFrameCapabilityResponse = null;
     obdDevSession.ecuInfoReadoutResponses = [];
     obdDevSession.lastSession = null;
-    syncObdReadoutExitGuard();
+    handleObdReadoutSessionReplacement();
     obdSerialResultOwner.expectedLastSession = null;
     obdDevSession.initializing = true;
     setObdDeveloperConnectionState("initializing");
@@ -5890,7 +5890,7 @@ function beginWebSerialReadoutProfile(readoutProfile) {
   obdDevSession.freezeFrameCapabilityResponse = null;
   obdDevSession.ecuInfoReadoutResponses = [];
   obdDevSession.lastSession = null;
-  syncObdReadoutExitGuard();
+  handleObdReadoutSessionReplacement();
   obdDevSession.readoutProfile = readoutProfile;
   obdScannerText.value = "";
   obdDetectedCodes.innerHTML = "";
@@ -7191,7 +7191,7 @@ function retainWebSerialConnectionAttempt() {
     would_transmit: false
   });
   obdDevSession.lastSession = session;
-  syncObdReadoutExitGuard();
+  handleObdReadoutSessionReplacement();
   renderObdDeveloperSessionSummary(session);
   return session;
 }
@@ -7415,7 +7415,7 @@ function retainObdDeveloperReadout(commandResponses = [], chunks = [], options =
     live_pid_timeline_summary: livePidTimelineSummary
   };
   obdDevSession.lastSession = session;
-  syncObdReadoutExitGuard();
+  handleObdReadoutSessionReplacement();
   renderObdDeveloperReadout(session);
   return session;
 }
@@ -7700,7 +7700,7 @@ function renderObdBridgeReadout(parts = {}) {
     warnings: importResult.warnings || importResult.bridgeSession?.warnings || previousSession.warnings || undefined
   });
   obdDevSession.lastSession = session;
-  syncObdReadoutExitGuard();
+  handleObdReadoutSessionReplacement();
   const monitorValues = livePidSnapshot?.monitorValues || [];
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
   const currentCodes = currentDtcSnapshot?.dtcs?.filter((item) => item?.code) || [];
@@ -11202,7 +11202,7 @@ function analyzeObdScannerImport(options = {}) {
       readoutInterface: currentReadoutInterface,
       webSerialReadoutSummary: currentWebSerialReadoutSummary || undefined
     });
-    syncObdReadoutExitGuard();
+    handleObdReadoutSessionReplacement();
   }
   if (structuredImportSession && hasBridgeDiagnosticScanSessionSupport()) {
     const importedVehicleProfile = structuredImportSession.vehicleProfile || structuredImportSession.vehicle_profile || null;
@@ -11229,7 +11229,7 @@ function analyzeObdScannerImport(options = {}) {
       importedCoreReadoutInventorySummary: mergeWithCurrentSession ? currentCoreReadoutInventorySummary || undefined : undefined,
       importedManufacturerPidVehicleReadoutPackages: compareManufacturerPidVehicleReadouts ? currentManufacturerPidVehicleReadoutPackages : undefined
     });
-    syncObdReadoutExitGuard();
+    handleObdReadoutSessionReplacement();
   }
   if (!bridgeImport && !structuredImportSession && hasScannerText && hasBridgeDiagnosticScanSessionSupport()) {
     const textImportVehicleProfile = buildSelectedObdVehicleProfile();
@@ -11255,7 +11255,7 @@ function analyzeObdScannerImport(options = {}) {
       vehicleApplicability: buildSelectedObdVehicleApplicability(textImportVehicleProfile) || undefined,
       readoutInterface: buildSelectedObdReadoutInterface()
     });
-    syncObdReadoutExitGuard();
+    handleObdReadoutSessionReplacement();
   }
   if (!mergeWithCurrentSession && obdDevSession.lastSession !== currentSession) {
     cancelObdBridgeOperation();
@@ -12049,6 +12049,11 @@ function getObdSessionExportBlockReason() {
   }
   if (typeof window.ObdReadOnly?.buildBridgeSessionExportPayload !== "function") return "JSON保存機能を読み込めていません。";
   return "";
+}
+
+function handleObdReadoutSessionReplacement() {
+  syncObdReadoutExitGuard();
+  setObdSessionExportStatus("");
 }
 
 function renderObdReadoutVehicle(session = null) {

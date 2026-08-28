@@ -7,7 +7,7 @@ const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const core = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), core);
 const obd = core.window.ObdReadOnly;
-const names = ["hasActiveObdReadoutForExitWarning", "handleObdReadoutBeforeUnload", "syncObdReadoutExitGuard", "getObdSessionExportBlockReason", "renderObdSessionExportControls", "setObdSessionExportStatus", "downloadObdSessionJson"];
+const names = ["hasActiveObdReadoutForExitWarning", "handleObdReadoutBeforeUnload", "syncObdReadoutExitGuard", "handleObdReadoutSessionReplacement", "getObdSessionExportBlockReason", "renderObdSessionExportControls", "setObdSessionExportStatus", "downloadObdSessionJson"];
 const code = names.map((name) => source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))?.[0] || assert.fail(`Missing ${name}`)).join("\n");
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
@@ -190,6 +190,31 @@ const assignments = [...source.matchAll(/obdDevSession\.lastSession = /g)];
 check(assignments.length === 10, "Session assignment audit must be updated when producers change");
 for (const assignment of assignments) {
   const end = source.indexOf(";", assignment.index);
-  check(source.slice(end + 1).trimStart().startsWith("syncObdReadoutExitGuard();"), "Session replacement must synchronize exit protection before rendering or awaiting");
+  check(source.slice(end + 1).trimStart().startsWith("handleObdReadoutSessionReplacement();"), "Session replacement must synchronize exit protection and clear stale export status before rendering or awaiting");
 }
+for (const next of [{ source: "web_serial", sessionId: "same-id", value: 900 }, { source: "interface_preview" }, null, {}]) {
+  const previous = { source: "web_serial", sessionId: "same-id", value: 800 };
+  const test = client(previous);
+  test.c.renderObdSessionExportControls();
+  for (const notice of ["保存を開始しました", "JSON保存を開始できませんでした", "再取込上限を超えています"]) {
+    test.c.setObdSessionExportStatus(notice);
+    test.c.renderObdSessionExportControls();
+    check(test.statuses.every((status) => status.textContent === notice), "Routine render removed the current session's export notification");
+    test.c.obdDevSession.lastSession = next;
+    const before = JSON.stringify(next);
+    test.c.handleObdReadoutSessionReplacement();
+    check(test.statuses.every((status) => status.textContent === "") && test.c.obdDevSession.lastSession === next && JSON.stringify(next) === before,
+      "Session replacement retained stale export status or mutated the new session");
+    check(test.calls.listeners.size === (next?.source === "web_serial" ? 1 : 0), "Export status cleanup changed exit protection");
+    check(test.calls.build === 0 && test.calls.blobs.length === 0 && test.calls.clicks === 0 && test.calls.timers.length === 0,
+      "Session presentation update initiated an export or scheduled work");
+  }
+}
+const unchanged = client({ source: "web_serial" });
+unchanged.c.setObdSessionExportStatus("current-notice");
+unchanged.c.obdScannerImportOperation = {};
+unchanged.c.renderObdSessionExportControls();
+unchanged.c.obdScannerImportOperation = null;
+unchanged.c.renderObdSessionExportControls();
+check(unchanged.statuses.every((status) => status.textContent === "current-notice"), "Import busy/idle refresh removed a same-session notification");
 console.log(`Session export checks: ${checks} / Errors: 0 / Fixture bytes: ${calls.blobs[0].size}`);

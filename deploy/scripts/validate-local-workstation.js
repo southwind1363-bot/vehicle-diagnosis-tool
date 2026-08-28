@@ -550,6 +550,9 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
   vm.runInContext(`${constants}\n${clientSource}`, context);
+  context.exportStatuses = ["", ""];
+  context.setObdSessionExportStatus = (message) => { context.exportStatuses.fill(message); };
+  vm.runInContext(appSource.match(/function handleObdReadoutSessionReplacement\(\) \{[\s\S]*?\r?\n\}/)[0], context);
   context.renderObdSessionExportControls = () => {
     context.exportControlSession = context.obdDevSession.lastSession;
     context.exportControlImportBusy = Boolean(context.obdScannerImportOperation);
@@ -736,6 +739,7 @@ async function validateScannerReplacementConfirmation(webUrl) {
       const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
       const previous = { source: "scanner_text", dtcSnapshot: { dtcs: [] } };
       client.obdDevSession.lastSession = previous;
+      client.setObdSessionExportStatus("previous-export-notice");
       const oldText = client.obdScannerText.value;
       const before = retainDisplay(client);
       let prompts = 0;
@@ -757,6 +761,7 @@ async function validateScannerReplacementConfirmation(webUrl) {
       }
       check(prompts === (decision === "missing" ? 0 : 1), `${kind}/${decision}: replacement confirmation was missing or duplicated`);
       check(client.obdScannerImportOperation === null && !client.exportControlImportBusy, `${kind}/${decision}: import remained busy`);
+      check(client.exportStatuses.every((status) => status === (decision === "accept" ? "" : "previous-export-notice")), `${kind}/${decision}: export notification did not follow actual session replacement`);
       if (decision === "accept") {
         check(analyses === 1 && client.obdDevSession.lastSession !== previous && client.obdBridgeOperation.cancelled, `${kind}: approved replacement did not use the existing analysis/ownership path`);
       } else {
@@ -816,10 +821,12 @@ async function validateScannerReplacementConfirmation(webUrl) {
     client.obdBridgeOperation = { cancelled: false };
     const before = retainDisplay(client);
     client.renderObdImportToolHints = () => assert.fail("Rejected input cleared retained hints");
+    client.setObdSessionExportStatus("previous-export-notice");
     client.window.ObdReadOnly[format === "json" ? "buildDiagnosticScanSessionFromJson" : "buildDiagnosticScanSessionFromCsv"] = () => ({ accepted: false, errors: ["invalid_file"] });
     client.applyObdScannerImportText("rejected input");
     check(client.obdDevSession.lastSession === previous && displayed(client) === before && !client.obdBridgeOperation.cancelled
       && client.obdImportStatus.textContent.includes("invalid_file") && client.obdImportStatus.textContent.includes("保持"), `${format}: rejected replacement cleared previous results`);
+    check(client.exportStatuses.every((status) => status === "previous-export-notice"), `${format}: rejected replacement cleared current export notification`);
   }
   const merging = addScannerImportHarness(createClient(webUrl, options.pairingToken), "text");
   const previous = { source: "web_serial" };
@@ -845,6 +852,7 @@ async function validateScannerJsonFileSyntax(webUrl) {
       for (const session of [null, { source: "scanner_text", dtcSnapshot: { codes: ["P0171"] } }]) {
         const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
         client.obdDevSession.lastSession = session;
+        client.setObdSessionExportStatus("previous-export-notice");
         const inputBefore = client.obdScannerText.value;
         const display = [client.obdDetectedCodes, client.obdMonitorGrid, client.obdMonitorInsightList, client.obdMonitorStatus, client.obdMonitorCount];
         display.forEach((element) => Object.assign(element, { innerHTML: "retained", textContent: "warning", hidden: false }));
@@ -862,6 +870,7 @@ async function validateScannerJsonFileSyntax(webUrl) {
         check(prompts === 0 && normalizations === 0 && analyses === 0, `${declaration.name}: malformed JSON reached confirmation, normalization or analysis`);
         check(client.obdScannerText.value === inputBefore && client.obdDevSession.lastSession === session && JSON.stringify(display) === before && !client.obdBridgeOperation.cancelled,
           "Malformed JSON changed existing input, results or bridge operation");
+        check(client.exportStatuses.every((status) => status === "previous-export-notice"), "Malformed JSON cleared the current session export notification");
         check(input.value === "" && client.obdScannerImportOperation === null && client.exportControlSession === session && !client.exportControlImportBusy,
           "Malformed JSON left its picker/busy state uncleared or lost export availability");
         check(client.obdImportStatus.textContent.includes("JSONの構文") && !client.obdImportStatus.textContent.includes("P0420"), "Malformed JSON error leaked input content or omitted the syntax failure");
@@ -922,6 +931,7 @@ function validateScannerInputClear(webUrl) {
       const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
       client.obdDevSession.lastSession = session;
       const sessionBefore = JSON.stringify(session);
+      client.setObdSessionExportStatus("current-export-notice");
       client.obdDevSession.previewMode = "stale-global-preview";
       const owner = { revision: 17, expectedLastSession: session };
       client.obdSerialResultOwner = owner;
@@ -949,6 +959,7 @@ function validateScannerInputClear(webUrl) {
       check(client.obdDevSession.lastSession === session && JSON.stringify(session) === sessionBefore && client.obdSerialResultOwner === owner && client.obdSerialRevision === 17 && analyses === 0,
         "Input clear changed the retained session, serial ownership, or reanalyzed data");
       check(client.exportControlSession === session && !client.exportControlImportBusy, "Input clear failed to refresh export readiness for the retained session");
+      check(client.exportStatuses.every((status) => status === "current-export-notice"), "Input clear removed an export notification without replacing its session");
       if (active) {
         check(JSON.stringify(displayNames.map((name) => client[name])) === before && hintRenders === 0,
           "Input clear changed retained DTC/PID values, warnings, hints or counts");

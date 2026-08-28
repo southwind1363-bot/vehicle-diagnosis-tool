@@ -33,6 +33,7 @@ function client() {
     renderObdSessionExportControls: () => {},
     renderObdReadoutVehicle: () => {},
     syncObdReadoutExitGuard: () => {},
+    handleObdReadoutSessionReplacement: () => {},
     invalidateObdScannerImport: () => {}, clearObdBridgePairingToken: () => {},
     buildWebSerialAdapterInitializationSummary: (value) => value,
     buildSelectedObdVehicleProfile: () => ({}), buildSelectedObdVehicleApplicability: () => ({}), buildSelectedObdObservationContext: () => ({}),
