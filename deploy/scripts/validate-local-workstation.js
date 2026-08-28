@@ -143,7 +143,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
     obdAccessUnlocked: true, obdAccessPasswordInput: { value: "" },
     OBD_ACCESS_MODE_KEY: "test-access", renderObdAccessGate: () => {},
     localStorage: { getItem: () => token }, window: { crypto: webcrypto }, crypto: webcrypto,
-    fetch: fetchRequest, AbortController, setTimeout, clearTimeout
+    fetch: fetchRequest, AbortController, setTimeout, clearTimeout, performance
   });
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
@@ -515,6 +515,116 @@ async function validateBridgeResponseEnvelopes(webUrl) {
   check(adapterNormalizations === 0 && optional.obdDevSession.bridgeStatus.displayStatus === "VALID_STATUS" && optional.obdDevSession.adapterIdentity === null && optional.obdDevStatus.textContent.includes("識別未取得"), "Negative optional adapter response was normalized or hid a valid bridge status");
 }
 
+async function validateBridgeResponseDeadlines(webUrl) {
+  for (const phase of ["headers", "body"]) {
+    for (const abortAvailable of [true, false]) {
+      for (const offset of [-1, 0, 1]) {
+        const started = deferred();
+        const ready = deferred();
+        const envelope = { request_id: "deadline-test", ok: true, blocked: false, errors: [], data: {}, would_transmit: false };
+        let now = 100;
+        let bodyReads = 0;
+        let signal;
+        const timers = new Set();
+        const client = createClient(webUrl, options.pairingToken, async (url, init) => {
+          signal = init.signal;
+          if (phase === "headers") { started.resolve(); await ready.promise; }
+          return { ok: true, json: async () => {
+            bodyReads += 1;
+            if (phase === "body") { started.resolve(); await ready.promise; }
+            return envelope;
+          } };
+        });
+        if (!abortAvailable) client.AbortController = undefined;
+        client.performance = { now: () => now };
+        client.setTimeout = (callback) => { timers.add(callback); return callback; };
+        client.clearTimeout = (timer) => timers.delete(timer);
+        const operation = client.beginObdBridgeOperation();
+        const pending = client.fetchObdLocalBridgeEndpoint(webUrl, { request_id: "deadline-test" }, operation)
+          .then((value) => ({ value }), (error) => ({ error }));
+        await started.promise;
+        now += vm.runInContext("OBD_LOCAL_BRIDGE_TIMEOUT_MS", client) + offset;
+        check(client.obdBridgeOperation === operation && client.beginObdBridgeOperation() === null,
+          `${phase}/${abortAvailable}/${offset}: unsettled response released the busy slot`);
+        // Do not fire the timer: a delayed event loop must not admit an expired response.
+        ready.resolve();
+        const result = await pending;
+        const expired = offset >= 0;
+        check(expired ? result.error?.message === "local_bridge_timeout" : result.value === envelope,
+          `${phase}/${abortAvailable}/${offset}: response deadline boundary was not enforced`);
+        check(bodyReads === (expired && phase === "headers" ? 0 : 1)
+          && (!abortAvailable || signal.aborted === expired) && timers.size === 0
+          && client.obdBridgeOperation === operation && client.obdDevSession.bridgeEndpoint === null,
+          `${phase}/${abortAvailable}/${offset}: deadline handling parsed stale data or changed ownership`);
+        client.finishObdBridgeOperation(operation, "");
+      }
+    }
+  }
+  for (const cancelled of [false, true]) {
+    let now = 0;
+    let adopted = 0;
+    const signals = [];
+    const client = createClient(webUrl, options.pairingToken, async (url, init) => {
+      signals.push(init.signal);
+      if (signals.length === 1) {
+        now += vm.runInContext("OBD_LOCAL_BRIDGE_TIMEOUT_MS", client);
+        if (cancelled) client.cancelObdBridgeOperation();
+      }
+      return Response.json({ request_id: JSON.parse(init.body).request_id, ok: true, blocked: false,
+        errors: [], data: { attempt: signals.length }, would_transmit: false });
+    });
+    client.performance = { now: () => now };
+    client.setTimeout = () => 1;
+    client.clearTimeout = () => {};
+    const previous = { id: "retained-session" };
+    client.obdDevSession.lastSession = previous;
+    await client.runObdLocalBridgeRead("Deadline fallback", "list_vci", {}, (response) => { adopted = response.data.attempt; });
+    check(signals.length === (cancelled ? 1 : 2) && adopted === (cancelled ? 0 : 2)
+      && signals[0].aborted && (cancelled || (signals[1] !== signals[0] && !signals[1].aborted))
+      && client.obdBridgeOperation === null && client.obdDevSession.lastSession === previous,
+      `${cancelled}: deadline fallback reused expiry, adopted a late result, or ignored cancellation`);
+  }
+  for (const failure of ["http", "json", "network", "cancel", "replaced"]) {
+    for (const expired of [false, true]) {
+      const ready = deferred();
+      const started = deferred();
+      const original = new Error("original_failure");
+      let now = 0;
+      let signal;
+      const client = createClient(webUrl, options.pairingToken, async (url, init) => {
+        signal = init.signal;
+        if (failure !== "json") { started.resolve(); await ready.promise; }
+        if (failure === "network") throw original;
+        return { ok: failure !== "http", status: 503, json: async () => {
+          if (failure === "json") { started.resolve(); await ready.promise; }
+          throw original;
+        } };
+      });
+      client.performance = { now: () => now };
+      client.setTimeout = () => 1;
+      client.clearTimeout = () => {};
+      const operation = client.beginObdBridgeOperation();
+      const pending = client.fetchObdLocalBridgeEndpoint(webUrl, { request_id: "failure-test" }, operation)
+        .then(() => null, (error) => error);
+      await started.promise;
+      now = expired ? vm.runInContext("OBD_LOCAL_BRIDGE_TIMEOUT_MS", client) : 1;
+      if (failure === "cancel") client.cancelObdBridgeOperation();
+      if (failure === "replaced") client.obdBridgeOperation = { cancelled: false };
+      ready.resolve();
+      const error = await pending;
+      const cancelled = failure === "cancel" || failure === "replaced";
+      const expected = cancelled ? "local_bridge_cancelled" : expired ? "local_bridge_timeout"
+        : failure === "http" ? "HTTP 503" : original.message;
+      check(error?.message === expected && (cancelled || signal.aborted === expired),
+        `${failure}/${expired}: cancellation, deadline, or original error precedence changed`);
+      const owner = client.obdBridgeOperation;
+      client.finishObdBridgeOperation(operation, "");
+      check(client.obdBridgeOperation === (failure === "replaced" ? owner : null),
+        `${failure}/${expired}: stale completion released a replacement operation`);
+    }
+  }
+}
+
 async function validateBridgeOperationLifecycle(webUrl) {
   const successResponse = (init) => new Response(JSON.stringify({ request_id: JSON.parse(init.body).request_id, ok: true, blocked: false, data: {}, errors: [], would_transmit: false }));
   const ready = deferred();
@@ -840,6 +950,7 @@ try {
     const fallbackReadout = await legacyClient.sendObdLocalBridgeIntent("read_stored_dtc", {}, { discover: true });
     check(fallbackReadout.errors.includes("vci_not_detected") && fallbackReadout.would_transmit === false && fallbackBodies.length === 4 && fallbackBodies[2].request_id === fallbackBodies[3].request_id && fallbackBodies[2].request_id !== fallbackBodies[0].request_id && fallbackBodies.slice(2).every((body) => body.pairing_token === options.pairingToken), "Paired endpoint discovery changed the request ID, lost credentials, or enabled transmission");
     await validateBridgeResponseEnvelopes(workstation.webUrl);
+    await validateBridgeResponseDeadlines(workstation.webUrl);
     await validateBridgeOperationLifecycle(workstation.webUrl);
     await validateScannerImportOwnership(workstation.webUrl);
     await validateScannerAcquisitionOrder(workstation.webUrl);

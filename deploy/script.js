@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.286";
+const APP_VERSION = "3.13.287";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6191,7 +6191,15 @@ function formatObdLocalBridgeFailure(error) {
 
 async function fetchObdLocalBridgeEndpoint(endpoint, request, operation = null) {
   throwIfObdBridgeOperationCancelled(operation);
+  const deadline = performance.now() + OBD_LOCAL_BRIDGE_TIMEOUT_MS;
   const controller = typeof AbortController === "function" ? new AbortController() : null;
+  const checkResponseDeadline = () => {
+    throwIfObdBridgeOperationCancelled(operation);
+    if (controller?.signal.aborted || performance.now() >= deadline) {
+      controller?.abort();
+      throw new Error("local_bridge_timeout");
+    }
+  };
   const cancelWait = () => controller?.abort();
   operation?.controller?.signal.addEventListener("abort", cancelWait, { once: true });
   const timeoutId = controller ? setTimeout(() => controller.abort(), OBD_LOCAL_BRIDGE_TIMEOUT_MS) : null;
@@ -6203,15 +6211,14 @@ async function fetchObdLocalBridgeEndpoint(endpoint, request, operation = null) 
       cache: "no-store",
       ...(controller ? { signal: controller.signal } : {})
     });
+    checkResponseDeadline();
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const json = await response.json();
-    throwIfObdBridgeOperationCancelled(operation);
-    if (controller?.signal.aborted) throw new Error("local_bridge_timeout");
+    checkResponseDeadline();
     validateObdLocalBridgeResponse(json, request);
     return json;
   } catch (error) {
-    throwIfObdBridgeOperationCancelled(operation);
-    if (controller?.signal.aborted) throw new Error("local_bridge_timeout");
+    checkResponseDeadline();
     throw error;
   } finally {
     if (timeoutId) clearTimeout(timeoutId);
