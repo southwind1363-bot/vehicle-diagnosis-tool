@@ -1534,6 +1534,12 @@ body.dark .flow-node-measure .flow-step {
   font-size: 1.1rem;
 }
 
+.obd-dtc-readout-state {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
 .obd-dtc-status,
 .obd-monitor-category {
   color: var(--accent-strong);

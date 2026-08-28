@@ -35,7 +35,7 @@ const context = vm.createContext({
   formatDtcReference: (code, subcode) => `${code}:${subcode}`, activateTab: () => {},
   getInput: () => ({ retainedMarker: "input" }), buildDiagnosis: (input) => { diagnosisInput = input; return {}; }, renderDiagnosis: () => {}
 });
-vm.runInContext(["initializeObdReadoutFilter", "initializeObdDtcFilter", "createObdDtcCard", "handleDetectedDtcClick", "scrollToObdSection"].map(extract).join("\n"), context);
+vm.runInContext(["initializeObdReadoutFilter", "initializeObdDtcFilter", "formatObdBridgeDtcStatusLabel", "buildObdDtcDisplayKey", "createObdDtcCard", "handleDetectedDtcClick", "scrollToObdSection"].map(extract).join("\n"), context);
 context.initializeObdDtcFilter();
 check(nodes.obdDtcFilter.hidden && subscriptions.length === 1, "DTC filter must wait for cards");
 const cards = dtcs.map((dtc) => context.createObdDtcCard(dtc, dtcs, vehicle));
@@ -74,5 +74,42 @@ for (const hasRows of [true, false]) {
   vm.runInContext(extract("scrollToObdSection"), nav);
   nav.scrollToObdSection("obdDetectedCodes");
   check(scrolled === (hasRows ? "search" : "status"), "DTC navigation hid search or empty-readout status");
+}
+const stateCases = [
+  [{ status: "stored" }, "保存DTC", null],
+  [{ status: "pending" }, "保留DTC", null],
+  [{ status: "permanent" }, "永久DTC", null],
+  [{}, "DTC状態不明", null],
+  [{ status: "unknown", reportedStatus: "pending" }, "DTC状態不明", "pending"],
+  [{ status: "stored", reported_status: "permanent" }, "保存DTC", "permanent"],
+  [{ status: "pending", reportedStatus: " PENDING " }, "保留DTC", null],
+  [{ status: "active", reportedStatus: "Current" }, "DTC状態不明 / 分類値: active", "Current"],
+  [{ status: "unknown", statusByte: "FF" }, "DTC状態不明", null],
+  [{ kind: "pending" }, "保留DTC", null],
+  [{ dtc_status: "permanent" }, "永久DTC", null],
+  [{ dtcStatus: " Stored " }, "保存DTC", null],
+  [{ status: "stored", kind: "pending" }, "保存DTC", null],
+  [{ status: " ", reportedStatus: "permanent" }, "DTC状態不明", "permanent"],
+  [{ status: "<img src=x>" }, "DTC状態不明 / 分類値: <img src=x>", null]
+];
+for (const [fields, label, reported] of stateCases) {
+  const dtc = { code: "P0300", ecu: "7E8", ...fields };
+  const before = JSON.stringify(dtc);
+  const card = context.createObdDtcCard(dtc, [dtc], vehicle);
+  const state = card.children.find((child) => child.className === "obd-dtc-readout-state");
+  const report = card.children.find((child) => child.textContent.startsWith("診断機報告ステータス:"));
+  check(state?.textContent === label && card.dataset.dtcSearch.includes(label.split(" / ")[0]), "DTC state missing, inferred or not searchable");
+  check(reported ? report?.textContent === `診断機報告ステータス: ${reported}` : !report, "Conflicting report was hidden or identical report duplicated");
+  check(JSON.stringify(dtc) === before, "Rendering DTC state changed its source record");
+}
+const stateRecords = ["stored", "pending", "permanent"].map((status) => ({ code: "P0300", ecu: "7E8", status }));
+const stateCards = stateRecords.map((record) => context.createObdDtcCard(record, stateRecords, vehicle));
+context.obdDetectedCodes.children = stateCards;
+subscriptions[0].callback();
+check(new Set(stateRecords.map((record) => context.buildObdDtcDisplayKey(record))).size === 3 && nodes.obdDtcFilterCount.textContent === "全3件を表示", "State-distinct DTCs merged or lost from count");
+for (const [query, index] of [["保存", 0], ["保留", 1], ["永久", 2], ["P0300 7e8 pending", 1]]) {
+  nodes.obdDtcSearch.value = query;
+  nodes.obdDtcSearch.handlers.input();
+  check(stateCards.filter((card) => !card.hidden).length === 1 && !stateCards[index].hidden && nodes.obdDtcFilterCount.textContent === "絞込中: 1 / 3件", "State search selected the wrong DTC instance");
 }
 console.log(`DTC filter checks: ${checks} / Errors: 0`);

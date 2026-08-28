@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.309";
+const APP_VERSION = "3.13.310";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11640,6 +11640,9 @@ function buildObdDtcDisplayKey(item = null) {
 function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride = null) {
   const dtc = codeOrDtc && typeof codeOrDtc === "object" ? codeOrDtc : { code: codeOrDtc };
   const code = dtc.code;
+  const status = String(dtc.status || dtc.kind || dtc.dtc_status || dtc.dtcStatus || "unknown").trim().toLowerCase() || "unknown";
+  const hasKnownStatus = ["stored", "pending", "permanent"].includes(status);
+  const statusLabel = hasKnownStatus ? `${formatObdBridgeDtcStatusLabel(status)}DTC` : "DTC状態不明";
   const subcode = dtc.subcode || dtc.sub_code || null;
   const oemDetailCode = dtc.oemDetailCode || dtc.oem_detail_code || dtc.infCode || dtc.inf_code || null;
   const statusByte = dtc.statusByte || dtc.status_byte || dtc.dtcStatusByte || dtc.dtc_status_byte || null;
@@ -11669,7 +11672,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const firstCheck = registered?.firstChecks?.[0] || registered?.check_order?.[0] || modern?.check_order?.[0];
   const wrapper = document.createElement("article");
   wrapper.className = "obd-dtc-card";
-  wrapper.dataset.dtcSearch = [displayCode, code, subcode, oemDetailCode, ecuDisplay]
+  wrapper.dataset.dtcSearch = [displayCode, code, subcode, oemDetailCode, ecuDisplay, status, statusLabel, reportedStatus]
     .filter((value) => typeof value === "string" || typeof value === "number").join(" ");
 
   const head = document.createElement("div");
@@ -11685,6 +11688,12 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   head.appendChild(badge);
   if (manufacturerSpecific) badge.textContent = "メーカー固有・報告値";
   wrapper.appendChild(head);
+
+  const readoutState = document.createElement("p");
+  readoutState.className = "obd-dtc-readout-state";
+  readoutState.textContent = statusLabel;
+  if (!hasKnownStatus && status !== "unknown") readoutState.textContent += ` / 分類値: ${status}`;
+  wrapper.appendChild(readoutState);
 
   const description = document.createElement("p");
   description.className = "obd-dtc-description";
@@ -11804,7 +11813,7 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
     wrapper.appendChild(note);
   }
 
-  if (reportedStatus && !["stored", "pending", "permanent"].includes(String(reportedStatus).toLowerCase())) {
+  if (reportedStatus && String(reportedStatus).trim().toLowerCase() !== status) {
     const reported = document.createElement("p");
     reported.className = "obd-dtc-check";
     reported.textContent = `診断機報告ステータス: ${reportedStatus}`;
