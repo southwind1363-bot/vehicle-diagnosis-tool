@@ -29922,6 +29922,15 @@
     });
   }
 
+  function normalizeEcuResponseTimeMsValue(value) {
+    if (typeof value !== "number" && typeof value !== "string") return null;
+    if (typeof value === "string" && !/^\+?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim())) return null;
+    const parsed = Number(value);
+    // A nonzero decimal below Number's range is not a measured zero.
+    if (parsed === 0 && typeof value === "string" && /[1-9]/.test(value.split(/e/i)[0])) return null;
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+
   function normalizeEcuResponseSummary(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
@@ -29971,7 +29980,9 @@
         && ["reported", "responded", "response", "ok", "success", "available", "positive", "negative_response"].includes(normalizedReportedStatus)
         ? pendingCount === negativeResponseCount ? "pending_response" : "negative_response"
         : reportedStatus;
-      const responseTimeMs = Number.isFinite(Number(row?.response_time_ms)) ? Number(row.response_time_ms) : Number.isFinite(Number(row?.responseTimeMs)) ? Number(row.responseTimeMs) : Number.isFinite(Number(row?.response_time)) ? Number(row.response_time) : Number.isFinite(Number(row?.responseTime)) ? Number(row.responseTime) : Number.isFinite(Number(row?.latency_ms)) ? Number(row.latency_ms) : Number.isFinite(Number(row?.latencyMs)) ? Number(row.latencyMs) : Number.isFinite(Number(row?.elapsed_ms)) ? Number(row.elapsed_ms) : Number.isFinite(Number(row?.elapsedMs)) ? Number(row.elapsedMs) : null;
+      const responseTimeMs = [row?.response_time_ms, row?.responseTimeMs, row?.response_time, row?.responseTime,
+        row?.latency_ms, row?.latencyMs, row?.elapsed_ms, row?.elapsedMs]
+        .map(normalizeEcuResponseTimeMsValue).find((value) => value !== null) ?? null;
       const responseWaitMs = readDtcEvidenceResponseWaitMs(row);
       const rowCapturedAtValue = row?.captured_at || row?.capturedAt || row?.timestamp || sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
       const rowCapturedAt = /^\d{4}-\d{2}-\d{2}T/.test(String(rowCapturedAtValue || "")) && Number.isFinite(Date.parse(rowCapturedAtValue)) ? rowCapturedAtValue : null;
@@ -35664,7 +35675,7 @@
         recordReadoutMetadata("ecu_response", rowCapturedAt, rowProtocol);
         const responseId = cellAt(ecuResponseIdIndex, 120) || ecu;
         const responseStatus = cellAt(statusIndex, 40).toLowerCase();
-        const responseTimeMs = Number(cellAt(responseTimeIndex, 24));
+        const responseTimeMs = normalizeEcuResponseTimeMsValue(cells[responseTimeIndex]);
         const negativeResponseCount = Number(cellAt(negativeResponseCountIndex, 12));
         const negativeResponseLabel = cellAt(negativeResponseLabelIndex, 120);
         const requestedService = cellAt(requestedServiceIndex, 40).toUpperCase();
