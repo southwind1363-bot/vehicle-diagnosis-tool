@@ -148,4 +148,37 @@ for (const [readout, snapshotKey, statusKey] of [
   const allInvalid = obd.buildDiagnosticScanSessionFromCsv(`Readout,PID,Value\n${readout},05,false\nReadout,PID,Value\n${readout},0C,0x20`);
   check(allInvalid?.[snapshotKey]?.monitorValues.length === 0 && allInvalid[snapshotKey].errorCodes.includes("invalid_pid_numeric_value"), `${readout}: all-invalid CSV tables became missing evidence`);
 }
+const longCsvValues = ["0".repeat(160) + "85", "0".repeat(159) + "1e2", "0".repeat(160) + "bad",
+  "0".repeat(161), "0." + "0".repeat(158) + "1", "0".repeat(160) + ',"invalid"'];
+for (const [readout, snapshotKey, statusKey, coverageId] of [
+  ["Live Data", "livePidSnapshot", "livePidReadoutStatus", "live_pid_snapshot"],
+  ["Freeze Frame", "freezeFrameSnapshot", "freezeFrameReadoutStatus", "freeze_frame_snapshot"]
+]) {
+  for (const delimiter of [",", ";", "\t"]) {
+    const encode = (cells) => cells.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(delimiter);
+    const header = ["Readout", "PID", "Value", "Captured At"].join(delimiter);
+    for (const value of longCsvValues) {
+      const invalidTable = `${header}\n${encode([readout, "05", value, "2026-08-29T11:00:01Z"])}`;
+      const session = obd.buildDiagnosticScanSessionFromCsv(invalidTable);
+      const snapshot = session?.[snapshotKey];
+      check(snapshot?.monitorValues.length === 0, `${readout}: long CSV cell became a truncated numeric measurement`);
+      check(["unparsed", "blocked"].includes(snapshot[statusKey]) && snapshot.errorCodes.includes("invalid_pid_numeric_value"), `${readout}: long CSV cell did not retain rejection evidence`);
+      check(session.readoutCoverage.itemById[coverageId].available === false, `${readout}: long CSV cell completed coverage`);
+      const validTable = `${header}\n${encode([readout, "05", "85", "2026-08-29T11:00:00Z"])}`;
+      const combined = obd.buildDiagnosticScanSessionFromCsv(`${validTable}\n${invalidTable}`);
+      check(combined[snapshotKey].monitorValues.length === 0 && combined[snapshotKey].capturedAt === "2026-08-29T11:00:01Z", `${readout}: truncated or older CSV value became current`);
+      const roundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(combined)));
+      check(roundTrip[snapshotKey].monitorValues.length === 0 && roundTrip[snapshotKey].errorCodes.includes("invalid_pid_numeric_value"), `${readout}: long CSV rejection was lost on JSON round trip`);
+    }
+    for (const value of ["0".repeat(160), "0".repeat(158) + "85", " -40 ", "1e2"]) {
+      const session = obd.buildDiagnosticScanSessionFromCsv(`${header}\n${encode([readout, "05", value, "2026-08-29T11:00:00Z"])}`);
+      check(session?.[snapshotKey]?.monitorValues[0]?.value === Number(value), `${readout}: valid full-length CSV number changed`);
+    }
+  }
+  const textValue = "Gasoline ".repeat(30);
+  const textSession = obd.buildDiagnosticScanSessionFromCsv(`Readout,Parameter,Value\n${readout},Fuel Type,${textValue}`);
+  check(textSession?.[snapshotKey]?.monitorValues[0]?.value === textValue.trim().slice(0, 160), `${readout}: text PID display bound changed`);
+  const privateSession = obd.buildDiagnosticScanSessionFromCsv(`Readout,Parameter,Value\n${readout},Fuel Type,VIN: JTDKB20U793123456`);
+  check(privateSession !== null && !JSON.stringify(privateSession).includes("JTDKB20U793123456"), `${readout}: untruncated input leaked an identifier`);
+}
 console.log(`PID numeric input checks: ${checks} / Errors: 0`);

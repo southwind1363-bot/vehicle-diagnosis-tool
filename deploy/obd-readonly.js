@@ -35923,7 +35923,8 @@
         const row = {
           ...(pid ? { pid } : {}),
           ...(label ? { label } : {}),
-          value: rawValue,
+          // Validate the full sanitized PID value before applying the numeric length limit.
+          value: cellAt(valueIndex, text.length),
           unit: cellAt(unitIndex, 40),
           ...(ecu ? { source_ecu: ecu } : {}),
           ...(ecuName ? { source_ecu_name: ecuName } : {}),
