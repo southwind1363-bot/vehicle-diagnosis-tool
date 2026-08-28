@@ -27,7 +27,7 @@ function client() {
     obdDevStatus: {}, obdDevBaudRate: { value: "38400" }, obdDevPasswordInput: { value: "" }, obdAccessPasswordInput: { value: "" },
     OBD_DEV_MODE_KEY: "dev", OBD_ACCESS_MODE_KEY: "access",
     ELM327_CONNECTION_STATES: ["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"],
-    sessionStorage: { removeItem: () => {} }, TextDecoder, TextEncoder, setTimeout,
+    sessionStorage: { removeItem: () => {} }, TextDecoder, TextEncoder, setTimeout, clearTimeout, performance,
     navigator: { serial: { requestPort: async () => { calls.select += 1; return port; } } },
     clearRequestedInterfaceSelection: () => {}, renderObdDeveloperGate: () => {}, renderObdAccessGate: () => {},
     renderObdSessionExportControls: () => {},
@@ -591,6 +591,273 @@ for (const rejectWrite of [false, true]) {
   check(await c.sendElmDeveloperCommand("03") === "43 00" && !c.obdDevSession.pendingWriteOperation,
     "Normal write did not continue to response polling or release ownership");
   await c.disconnectObdDeveloperVci();
+}
+
+function installWriteDeadlineHarness(c) {
+  load(c, ["sendElmDeveloperCommand", "isAllowedObdDeveloperCommand"]);
+  vm.runInContext(source.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = [\s\S]*?;/)[0], c);
+  let now = 0;
+  let nextId = 0;
+  const timers = new Map();
+  c.performance = { now: () => now };
+  c.setTimeout = (callback, delay) => { const id = ++nextId; timers.set(id, { callback, due: now + delay }); return id; };
+  c.clearTimeout = (id) => timers.delete(id);
+  return {
+    timers,
+    advance(ms, fire = true) {
+      now += ms;
+      if (fire) for (const [id, timer] of [...timers]) {
+        if (timer.due <= now && timers.delete(id)) timer.callback();
+      }
+    }
+  };
+}
+
+for (const completedCount of [0, 1]) {
+  for (const lateReject of [false, true]) {
+    for (const priorLoss of [false, true]) {
+    const { context: c, port } = await readClient();
+    const clock = installWriteDeadlineHarness(c);
+    loadDeveloperGate(c);
+    const writing = deferred();
+    const sent = [];
+    let polls = 0;
+    c.obdDevSession.writer.write = async (bytes) => {
+      sent.push(new TextDecoder().decode(bytes).trim());
+      if (sent.length > completedCount) await writing.promise;
+    };
+    c.readElmDeveloperResponse = async () => { polls += 1; return "43 01 33"; };
+    const context = {
+      supportedPidDiscoveryComplete: true, supportedPidSet: ["0C"],
+      supportedPidReadoutResponses: [{ command: "0100", response: "41 00 BE 3E B8 13" }],
+      freezeFrameCapabilityResponse: "42 00 00 BE 3E B8 13", livePidTimeline: [{ marker: "prior sample" }],
+      observationContext: { marker: "prior observation" }
+    };
+    Object.assign(c.obdDevSession, context);
+    const retain = c.retainObdDeveloperReadout;
+    let retainedContext;
+    c.retainObdDeveloperReadout = (...args) => {
+      retainedContext = Object.fromEntries(Object.keys(context).map((key) => [key, c.obdDevSession[key]]));
+      return retain(...args);
+    };
+    const pending = c.runObdDeveloperRead("deadline", ["03", "07", "0A"]);
+    await settle();
+    if (priorLoss) {
+      void c.disconnectObdDeveloperVci({ reason: "serial_read_failed" });
+      check(c.obdDevSession.observationContext === null && c.obdDevSession.supportedPidSet.length === 0,
+        "Ordinary receiver disconnect no longer resets live transport context");
+    }
+    clock.advance(3500);
+    check(await pending === false && c.obdSerialDisconnectOperation && !c.obdDevSession.port,
+      "Write deadline did not finish the read caller while cleanup remained pending");
+    check(sent.length === completedCount + 1 && polls === completedCount && c.recorded.length === 1
+      && c.recorded[0].outcome.timedOut && c.recorded[0].outcome.transportErrorCount
+      && c.retained.length === 1 && c.retained[0].responses.length === completedCount,
+      "Write timeout lost partial evidence, claimed success, or sent a subsequent command");
+    check(Object.keys(context).every((key) => retainedContext[key] === context[key]), "Write timeout cleared diagnostic context before failure retention");
+    check(c.obdDevConnectButton.disabled && (priorLoss || c.obdDevStatus.textContent.includes("送信待ち時間を超過"))
+      && c.beginObdBridgeOperation() === null && clock.timers.size === 0, "Timeout quarantine or timer cleanup is missing");
+    const cleanup = c.obdSerialDisconnectOperation.promise;
+    if (lateReject) writing.reject(new Error("late rejection"));
+    else writing.resolve();
+    await cleanup;
+    await settle();
+    check(c.recorded.length === 1 && c.retained.length === 1 && polls === completedCount && sent.length === completedCount + 1
+      && !c.obdDevSession.pendingWriteOperation && !c.obdSerialDisconnectOperation,
+      "Late actual-write completion resumed a timed-out command or leaked ownership");
+    check(Object.keys(context).every((key) => c.obdDevSession[key] === context[key]), "Cleanup completion discarded timeout evidence before the next connection");
+    await c.connectObdDeveloperVci();
+    check(c.obdDevSession.port === port && !c.obdDevSession.supportedPidDiscoveryComplete && c.obdDevSession.supportedPidSet.length === 0
+      && c.obdDevSession.supportedPidReadoutResponses.length === 0 && c.obdDevSession.freezeFrameCapabilityResponse === null
+      && c.obdDevSession.livePidTimeline.length === 0 && c.obdDevSession.observationContext !== context.observationContext,
+      "New connection reused diagnostic context from the timed-out transport");
+    await c.disconnectObdDeveloperVci();
+    }
+  }
+}
+
+for (const elapsed of [19, 20]) {
+  for (const rejectWrite of [false, true]) {
+  const { context: c } = await readClient();
+  const clock = installWriteDeadlineHarness(c);
+  const writing = deferred();
+  c.obdDevSession.writer.write = () => writing.promise;
+  let responseTimeout;
+  c.readElmDeveloperResponse = async (timeout) => { responseTimeout = timeout; return "43 00"; };
+  const pending = c.sendElmDeveloperCommand("03", 20).then((value) => ({ value }), (error) => ({ error }));
+  clock.advance(elapsed, false);
+  if (rejectWrite) writing.reject(new Error("write rejected before timer callback"));
+  else writing.resolve();
+  const result = await pending;
+  if (elapsed === 19 && rejectWrite) check(result.error?.message === "elm_transport_write_failed:03" && responseTimeout === undefined,
+    "Pre-deadline rejection was misclassified as timeout");
+  else if (elapsed === 19) check(result.value === "43 00" && responseTimeout === 20, "Successful write did not receive its separate full response deadline");
+  else check(result.error?.message === "elm_transport_write_timeout:03" && responseTimeout === undefined,
+    "Overdue write was accepted before the delayed timer callback ran");
+  if (c.obdSerialDisconnectOperation) await c.obdSerialDisconnectOperation.promise;
+  check(clock.timers.size === 0 && !c.obdDevSession.pendingWriteOperation, "Completed write leaked its deadline timer or ownership");
+  await c.disconnectObdDeveloperVci();
+  }
+}
+
+for (const stage of ["initialize", "identify", "manual-identify", "protocol"]) {
+  const result = stage.startsWith("manual") || stage === "protocol" ? await readClient() : client();
+  const { context: c, calls } = result;
+  const clock = installWriteDeadlineHarness(c);
+  loadDeveloperGate(c);
+  load(c, ["identifyObdDeveloperVci", "captureObdDeveloperProtocolAfterStoredDtc"]);
+  const writing = deferred();
+  let sent = 0;
+  const write = () => { sent += 1; return writing.promise; };
+  const saved = c.obdDevSession.lastSession = { marker: "saved diagnostic result" };
+  if (c.obdSerialResultOwner) c.obdSerialResultOwner.expectedLastSession = saved;
+  c.retainWebSerialConnectionAttempt = () => {
+    calls.failure += 1;
+    c.obdDevSession.lastSession = { reason: c.obdDevSession.lastDisconnectReason, state: c.obdDevSession.connectionState };
+  };
+  c.readElmDeveloperResponse = async () => { throw new Error("unexpected response polling"); };
+  let pending;
+  if (stage === "initialize" || stage === "identify") {
+    result.port.writable.getWriter = () => ({ write, releaseLock: () => {} });
+    c.initializeElmDeveloperAdapter = stage === "initialize"
+      ? () => c.sendElmDeveloperCommand("ATZ", 5000)
+      : async () => { c.obdDevSession.adapterInitializationSummary = { initializationStatus: "completed" }; };
+    pending = c.connectObdDeveloperVci();
+  } else {
+    c.obdDevSession.writer.write = write;
+    pending = stage === "protocol" ? c.captureObdDeveloperProtocolAfterStoredDtc() : c.identifyObdDeveloperVci();
+  }
+  await settle();
+  clock.advance(stage === "initialize" ? 5000 : 2500);
+  await pending;
+  check(sent === 1 && c.obdSerialDisconnectOperation && !c.obdDevSession.port && clock.timers.size === 0,
+    `${stage}: write-timeout caller hung, sent a second command, or bypassed quarantine`);
+  if (stage === "initialize" || stage === "identify") {
+    check(calls.failure === 1 && c.obdDevSession.lastSession.reason === (stage === "initialize" ? "adapter_initialization_failed" : "adapter_identification_failed")
+      && c.obdSerialResultOwner.expectedLastSession === c.obdDevSession.lastSession, `${stage}: initial failure was not recorded before cleanup wait`);
+  } else check(c.obdDevSession.lastSession === saved, `${stage}: timeout replaced an existing diagnostic session`);
+  const cleanup = c.obdSerialDisconnectOperation.promise;
+  writing.resolve();
+  await cleanup;
+  check(sent === 1 && !c.obdSerialDisconnectOperation, `${stage}: late write completion restarted identification or protocol capture`);
+}
+
+for (const failure of ["reader", "writer", "close", "slow-close"]) {
+  const { context: c, port } = await readClient();
+  const clock = installWriteDeadlineHarness(c);
+  loadDeveloperGate(c);
+  const writing = deferred();
+  const closing = deferred();
+  c.obdDevSession.writer.write = () => writing.promise;
+  if (failure === "reader") c.obdDevSession.reader.cancel = async () => { throw new Error("reader failure"); };
+  if (failure === "writer") c.obdDevSession.writer.releaseLock = () => { throw new Error("writer failure"); };
+  port.close = async () => {
+    if (failure === "close") throw new Error("close failure");
+    if (failure === "slow-close") await closing.promise;
+  };
+  const pending = c.sendElmDeveloperCommand("03", 20).then((value) => ({ value }), (error) => ({ error }));
+  clock.advance(20);
+  check((await pending).error?.message === "elm_transport_write_timeout:03", "Cleanup failure blocked the command deadline");
+  const cleanup = c.obdSerialDisconnectOperation.promise;
+  writing.resolve();
+  await settle();
+  if (failure === "slow-close") {
+    check(c.obdSerialDisconnectOperation && c.beginObdBridgeOperation() === null, "Timeout released a slow-close barrier");
+    closing.resolve();
+  }
+  await cleanup;
+  if (failure !== "slow-close") {
+    c.renderObdDeveloperGate();
+    check(c.obdSerialDisconnectOperation?.cleanupFailed && c.obdDevConnectButton.disabled
+      && c.obdDevConnectionState.textContent === "終了未確認", "Timed-out write cleanup failure released quarantine");
+  } else check(!c.obdSerialDisconnectOperation, "Confirmed timeout cleanup remained stuck");
+}
+
+{
+  const { context: c } = await readClient();
+  const clock = installWriteDeadlineHarness(c);
+  const writing = deferred();
+  c.obdDevSession.writer.write = () => writing.promise;
+  const pending = c.sendElmDeveloperCommand("03", 20).then((value) => ({ value }), (error) => ({ error }));
+  c.lockObdAccess();
+  const cleanup = c.obdSerialDisconnectOperation.promise;
+  const replacement = c.obdDevSession.lastSession = { marker: "new imported session" };
+  c.obdDevStatus.textContent = "new imported status";
+  clock.advance(20);
+  check(Boolean((await pending).error) && c.obdDevSession.lastSession === replacement
+    && c.obdDevStatus.textContent === "new imported status" && c.obdDevSession.lastDisconnectReason === "access_locked",
+    "Old write deadline overwrote explicit cancellation or replacement data");
+  writing.reject(new Error("cancelled writer failed late"));
+  await cleanup;
+  check(c.obdDevSession.lastSession === replacement && clock.timers.size === 0, "Late rejected write changed imported data or leaked a timer");
+}
+
+{
+  const { context: c } = await readClient();
+  const clock = installWriteDeadlineHarness(c);
+  let writes = 0;
+  c.obdDevSession.writer.write = async () => { writes += 1; };
+  for (const timeout of [0, -1, NaN, Infinity, 60001]) {
+    await assert.rejects(c.sendElmDeveloperCommand("03", timeout), /elm_write_timeout_invalid/);
+  }
+  await assert.rejects(c.sendElmDeveloperCommand("04", 20));
+  check(writes === 0 && clock.timers.size === 0 && !c.obdDevSession.pendingWriteOperation,
+    "Invalid deadlines or DTC erase reached the writer");
+  await c.disconnectObdDeveloperVci();
+}
+
+for (const cancel of [false, true]) {
+  const { context: c } = await readClient();
+  const clock = installWriteDeadlineHarness(c);
+  const writing = deferred();
+  c.obdDevSession.writer.write = () => writing.promise;
+  c.obdDevSession.observationContext = { marker: "old observation" };
+  const pending = c.runObdDeveloperRead("receiver loss", ["03"]);
+  void c.disconnectObdDeveloperVci({ reason: "serial_read_failed" });
+  if (cancel) c.lockObdAccess();
+  const replacement = c.obdDevSession.lastSession = { marker: "new result" };
+  clock.advance(3500);
+  check(await pending === false && c.retained.length === 0 && c.recorded.length === 0
+    && c.obdDevSession.lastSession === replacement && c.obdDevSession.observationContext === null,
+    "Old timeout restored context after cancellation or replacement");
+  const cleanup = c.obdSerialDisconnectOperation.promise;
+  writing.resolve();
+  await cleanup;
+}
+
+for (const stage of ["initialize", "identify"]) {
+  for (const lossReason of ["serial_read_failed", "serial_response_too_large"]) {
+  const { context: c, port } = client();
+  const clock = installWriteDeadlineHarness(c);
+  load(c, ["identifyObdDeveloperVci", "buildWebSerialConnectionStatus", "retainWebSerialConnectionAttempt"]);
+  const writing = deferred();
+  port.writable.getWriter = () => ({ write: () => writing.promise, releaseLock: () => {} });
+  c.hasBridgeDiagnosticScanSessionSupport = () => true;
+  c.buildSelectedObdReadoutInterface = () => ({});
+  c.renderObdDeveloperSessionSummary = () => {};
+  c.window = { ObdReadOnly: { buildDiagnosticScanSession: (value) => value } };
+  c.initializeElmDeveloperAdapter = stage === "initialize" ? async () => {
+    try { await c.sendElmDeveloperCommand("ATZ", 5000); }
+    catch (error) { c.obdDevSession.adapterInitializationSummary = { initializationStatus: "failed" }; throw error; }
+  } : async () => { c.obdDevSession.adapterInitializationSummary = { initializationStatus: "completed" }; };
+  const pending = c.connectObdDeveloperVci();
+  await settle();
+  const observation = c.obdDevSession.observationContext;
+  void c.disconnectObdDeveloperVci({ reason: lossReason });
+  clock.advance(stage === "initialize" ? 5000 : 2500);
+  await pending;
+  const retained = c.obdDevSession.lastSession;
+  check(retained.connectionStatus.ok === false && retained.connectionStatus.status === (stage === "initialize"
+    ? "adapter_initialization_failed" : "adapter_identification_failed") && retained.connectionStatus.vehicleCommandEnabled === false,
+    `${stage}: receiver loss before write timeout recorded a successful connection`);
+  check(retained.observationContext === observation && c.obdSerialResultOwner.expectedLastSession === retained,
+    `${stage}: connection timeout lost observation context or result ownership`);
+  const cleanup = c.obdSerialDisconnectOperation.promise;
+  writing.reject(new Error("late sink rejection"));
+  await cleanup;
+  check(c.obdDevSession.lastSession === retained && !retained.connectionStatus.ok,
+    `${stage}: late cleanup replaced the retained connection failure`);
+  }
 }
 
 console.log(`Serial lifecycle checks: ${checks} / Errors: 0`);

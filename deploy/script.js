@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.280";
+const APP_VERSION = "3.13.281";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5072,6 +5072,8 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
     obdDevConnectionState.textContent = obdSerialDisconnectOperation.cleanupFailed ? "終了未確認" : "終了処理中";
     obdDevStatus.textContent = obdSerialDisconnectOperation.cleanupFailed
       ? "VCIの終了処理を確認できないため、再接続を禁止しています。車両側の停止は未確認です。"
+      : obdSerialDisconnectOperation.writeTimedOut
+        ? "VCIへの送信待ち時間を超過しました。終了処理が未確認のため再接続は禁止しています。車両側の停止は未確認です。"
       : obdSerialDisconnectOperation.writePending
         ? "VCIへの未完了送信と終了処理を確認中です。再接続はできません。車両側の停止は未確認です。"
         : "VCIの終了処理を待っています。再接続はできません。車両側の停止は未確認です。";
@@ -5263,12 +5265,20 @@ if (!continueObdSerialOperation(revision)) return;
       renderObdDeveloperGate();
       return;
     }
-    const failureReason = obdDevSession.lastDisconnectReason === "serial_response_too_large"
-      ? "serial_response_too_large"
+    const writeTimedOut = error?.message?.startsWith("elm_transport_write_timeout:");
+    const failureReason = writeTimedOut && error.connectionFailureReason
+      ? error.connectionFailureReason
+      : obdDevSession.lastDisconnectReason === "serial_response_too_large"
+        ? "serial_response_too_large"
       : getWebSerialConnectionFailureReason(obdDevSession.connectionState, obdDevSession.adapterInitializationSummary);
     const failureMessage = formatWebSerialConnectionFailure(failureReason, obdDevSession.adapterInitializationSummary, error);
-    await disconnectObdDeveloperVci({ reason: failureReason, statusMessage: failureMessage });
+    const cleanup = disconnectObdDeveloperVci({ reason: failureReason, statusMessage: failureMessage });
+    if (!writeTimedOut) await cleanup;
     if (continueObdSerialOperation(revision)) {
+      if (writeTimedOut) {
+        if (error.diagnosticContext) Object.assign(obdDevSession, error.diagnosticContext);
+        obdDevSession.lastDisconnectReason = failureReason;
+      }
       retainWebSerialConnectionAttempt();
       obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
     }
@@ -5338,17 +5348,31 @@ async function disconnectObdDeveloperVci(options = {}) {
   const pendingWrite = obdDevSession.pendingWriteOperation;
   const waitForWrite = Boolean(pendingWrite && pendingWrite.writer === writer && pendingWrite.port === port);
   operation.writePending = waitForWrite;
+  operation.writeTimedOut = waitForWrite && pendingWrite.timedOut === true;
+  if (waitForWrite) {
+    pendingWrite.diagnosticContext = {
+      supportedPidDiscoveryComplete: obdDevSession.supportedPidDiscoveryComplete,
+      supportedPidSet: obdDevSession.supportedPidSet,
+      supportedPidReadoutResponses: obdDevSession.supportedPidReadoutResponses,
+      freezeFrameCapabilityResponse: obdDevSession.freezeFrameCapabilityResponse,
+      livePidTimeline: obdDevSession.livePidTimeline,
+      observationContext: obdDevSession.observationContext
+    };
+  }
   setObdDeveloperConnectionState("disconnecting", reason);
   obdDevSession.reader = null;
   obdDevSession.writer = null;
   obdDevSession.port = null;
   obdDevSession.readLoopActive = false;
-  obdDevSession.supportedPidDiscoveryComplete = false;
-  obdDevSession.supportedPidSet = [];
-  obdDevSession.supportedPidReadoutResponses = [];
-  obdDevSession.freezeFrameCapabilityResponse = null;
-  obdDevSession.livePidTimeline = [];
-  obdDevSession.observationContext = null;
+  // A timed-out command's caller still needs this evidence to retain its failed attempt.
+  if (!operation.writeTimedOut) {
+    obdDevSession.supportedPidDiscoveryComplete = false;
+    obdDevSession.supportedPidSet = [];
+    obdDevSession.supportedPidReadoutResponses = [];
+    obdDevSession.freezeFrameCapabilityResponse = null;
+    obdDevSession.livePidTimeline = [];
+    obdDevSession.observationContext = null;
+  }
   obdDevSession.readInProgress = false;
   obdDevSession.initializing = false;
   obdDevSession.coreScanInProgress = false;
@@ -5475,7 +5499,13 @@ async function identifyObdDeveloperVci() {
   const commands = ["ATI", "AT@1"];
   const commandResponses = [];
   for (const command of commands) {
-    const response = await sendElmDeveloperCommand(command, 2500);
+    let response;
+    try {
+      response = await sendElmDeveloperCommand(command, 2500);
+    } catch (error) {
+      if (!obdSerialConnectPending && error?.message?.startsWith("elm_transport_write_timeout:")) return false;
+      throw error;
+    }
     throwIfObdSerialOperationCancelled(revision);
     if (classifyWebSerialCommandResponse(command, response).commandStatus === "completed") {
       commandResponses.push({ command, response });
@@ -5529,6 +5559,7 @@ async function captureObdDeveloperProtocolAfterStoredDtc() {
   } catch (error) {
     if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
+    if (message.startsWith("elm_transport_write_timeout:")) return false;
     if (message.startsWith("elm_response_timeout:") || message.startsWith("elm_transport_")) {
       await disconnectObdDeveloperVci({ reason: message.startsWith("elm_response_timeout:") ? "response_timeout" : "transport_failed" });
     }
@@ -6851,7 +6882,9 @@ async function runObdDeveloperRead(label, commands) {
     if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
     if (message === "elm_write_busy") return false;
-    const timedOut = message.startsWith("elm_response_timeout:");
+    const writeTimedOut = message.startsWith("elm_transport_write_timeout:");
+    if (writeTimedOut && error.diagnosticContext) Object.assign(obdDevSession, error.diagnosticContext);
+    const timedOut = writeTimedOut || message.startsWith("elm_response_timeout:");
     const responseTooLarge = obdDevSession.lastDisconnectReason === "serial_response_too_large" && message.startsWith("elm_transport_");
     const failedCommandElapsedMs = currentCommandStartedAt === null ? null : Math.max(0, Date.now() - currentCommandStartedAt);
     const outcome = buildWebSerialReadoutOutcome(commands, commandResponses, { timedOut, transportErrorCount: true, attemptedCommandCount, failedCommandElapsedMs });
@@ -6865,6 +6898,7 @@ async function runObdDeveloperRead(label, commands) {
       replaceOnboardMonitorSnapshot
     }));
     obdSerialResultOwner.expectedLastSession = obdDevSession.lastSession;
+    if (writeTimedOut) return false;
     const transportFailed = timedOut || message.startsWith("elm_transport_");
     if (transportFailed) await disconnectObdDeveloperVci({ reason: responseTooLarge ? "serial_response_too_large" : timedOut ? "response_timeout" : "transport_failed" });
     if (!continueObdSerialOperation(revision)) return false;
@@ -7312,17 +7346,49 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
   const { writer, port, encoder } = obdDevSession;
   if (!writer || !port || !obdDevSession.readLoopActive) throw new Error("elm_transport_disconnected");
   if (obdSerialDisconnectOperation || obdDevSession.pendingWriteOperation) throw new Error("elm_write_busy");
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0 || timeoutMs > 60000) throw new Error("elm_write_timeout_invalid");
   let settleWrite;
   const operation = { writer, port, settledPromise: new Promise((resolve) => { settleWrite = resolve; }) };
   obdDevSession.pendingWriteOperation = operation;
   obdDevSession.textBuffer = "";
+  const started = performance.now();
+  const timeoutError = new Error(`elm_transport_write_timeout:${normalized}`);
+  timeoutError.connectionFailureReason = obdSerialConnectPending
+    ? getWebSerialConnectionFailureReason(obdDevSession.connectionState, obdDevSession.adapterInitializationSummary)
+    : "serial_write_timeout";
+  const expire = () => {
+    if (!operation.timedOut) {
+      operation.timedOut = true;
+      if (obdDevSession.writer === writer && obdDevSession.port === port) {
+        void disconnectObdDeveloperVci({ reason: timeoutError.connectionFailureReason });
+      }
+      timeoutError.diagnosticContext = operation.diagnosticContext;
+    }
+    return timeoutError;
+  };
+  const writing = (async () => {
+    try {
+      await writer.write(encoder.encode(`${normalized}\r`));
+    } finally {
+      try {
+        if (performance.now() - started >= timeoutMs) throw expire();
+      } finally {
+        if (obdDevSession.pendingWriteOperation === operation) obdDevSession.pendingWriteOperation = null;
+        settleWrite();
+      }
+    }
+  })();
+  let timer;
   try {
-    await writer.write(encoder.encode(`${normalized}\r`));
+    await Promise.race([
+      writing,
+      new Promise((_, reject) => { timer = setTimeout(() => reject(expire()), timeoutMs); })
+    ]);
   } catch (_error) {
+    if (operation.timedOut) throw timeoutError;
     throw new Error(`elm_transport_write_failed:${normalized}`);
   } finally {
-    if (obdDevSession.pendingWriteOperation === operation) obdDevSession.pendingWriteOperation = null;
-    settleWrite();
+    clearTimeout(timer);
   }
   throwIfObdSerialOperationCancelled(revision);
   if (obdDevSession.writer !== writer || obdDevSession.port !== port) throw new Error("elm_transport_disconnected");
