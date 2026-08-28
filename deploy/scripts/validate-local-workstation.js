@@ -250,6 +250,8 @@ async function validatePortableNpmScripts() {
   assert.deepEqual(manifest.scripts, {
     start: "node server.js", dev: "node server.js",
     "workstation:dev": "node scripts/start-local-workstation.js",
+    "package:workstation": "node scripts/package-workstation.js",
+    "validate:package": "node scripts/validate-workstation-package.js",
     "validate:workstation": "node scripts/validate-local-workstation.js",
     "validate:offline": "node scripts/validate-offline-cache.js",
     "validate:case-storage": "node scripts/validate-case-storage.js",
@@ -264,7 +266,7 @@ async function validatePortableNpmScripts() {
     "validate:dtc-import": "node scripts/validate-verified-dtc-import.js",
     "validate:obd": "node scripts/validate-obd-readonly.js",
     "validate:bridge": "node scripts/validate-local-bridge-readonly.js",
-    "validate:release": "npm run validate:obd && npm run validate:bridge && npm run validate:workstation && npm run validate:offline && npm run validate:data",
+    "validate:release": "npm run validate:obd && npm run validate:bridge && npm run validate:workstation && npm run validate:package && npm run validate:offline && npm run validate:data",
     "report:coverage": "node scripts/report-dtc-coverage.js",
     "import:dtc:sample": 'node scripts/import-verified-dtc-csv.js --input scripts/fixtures/verified-dtc-sample.csv --source "検証用サンプル" --source-url "https://example.invalid/verified-dtc-sample" --source-date "2026-05-31"'
   });
