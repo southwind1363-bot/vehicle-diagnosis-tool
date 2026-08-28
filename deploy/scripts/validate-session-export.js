@@ -44,6 +44,23 @@ function client(session = { source: "web_serial" }) {
 
 check((html.match(/data-obd-session-export disabled/g) || []).length === 2, "Both import and OBD result surfaces need a disabled-until-ready export command");
 check(source.includes('button.addEventListener("click", downloadObdSessionJson)'), "Export controls must be connected to the real handler");
+const openBinding = source.split(/\r?\n/).find((line) => line.startsWith('document.querySelector("#obdSessionOpenButton")'));
+check(Boolean(openBinding), "Results file-open command must be bound");
+let chooseFile = null;
+let filePickerCalls = 0;
+vm.runInNewContext(openBinding, {
+  document: { querySelector: (selector) => {
+    check(selector === "#obdSessionOpenButton", "File-open binding targets the wrong command");
+    return { addEventListener: (event, handler) => { check(event === "click", "File picker must require a click"); chooseFile = handler; } };
+  } },
+  obdImportFileInput: { click: () => { filePickerCalls += 1; } }
+});
+check(filePickerCalls === 0, "Initializing results must not open a file picker");
+chooseFile();
+check(filePickerCalls === 1, "Results file-open command must reuse the original file input");
+const resultsHtml = html.split('id="obdStageResultsView"')[1].split('id="obdStageDetailsView"')[0];
+check(resultsHtml.includes('id="obdSessionOpenButton"') && html.split('id="obdSessionOpenButton"').length === 2, "File-open command must occur once inside results");
+check(html.split('id="obdImportFileInput"').length === 2 && source.includes('obdImportFileInput?.addEventListener("change", importObdScannerFile)'), "File-open command must retain the single existing import path");
 for (const blocked of ["none", "bridge", "import", "connect", "cleanup", "read", "initialize", "scan", "opening", "preview", "missing-api", "array", "empty", "rejected"]) {
   const { c, calls, buttons, statuses } = client();
   if (blocked === "none") c.obdDevSession.lastSession = null;
