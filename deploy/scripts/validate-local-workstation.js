@@ -18,14 +18,18 @@ const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "
 async function validateWorkstationConsoleExit() {
   const launcherPath = fileURLToPath(new URL("../start-workstation.cmd", import.meta.url));
   const starterPath = fileURLToPath(new URL("./start-local-workstation.js", import.meta.url));
-  for (const command of ["q\nq\n", " EXIT \r\n"]) {
+  for (const { command, direct = false, closeBeforeReady = false, keepInputOpen = false } of [
+    { command: "q\nq\n", keepInputOpen: true }, { command: " EXIT \r\n", keepInputOpen: true },
+    { command: "", direct: true }, { command: "unfinished", direct: true },
+    { command: "", direct: true, closeBeforeReady: true }
+  ]) {
     const environment = { ...process.env, PORT: "0", LOCAL_BRIDGE_PORT: "0", LOCAL_BRIDGE_PAIRING_TOKEN: options.pairingToken };
     delete environment.LOCAL_BRIDGE_REPLAY_LOG;
     const ready = deferred();
     let child;
     let output = "";
     const exited = new Promise((resolve) => {
-      const windows = process.platform === "win32";
+      const windows = process.platform === "win32" && !direct;
       child = execFile(windows ? process.env.ComSpec || "cmd.exe" : process.execPath,
         windows ? ["/d", "/s", "/c", `""${launcherPath}" --no-pause"`] : [starterPath],
         { cwd: os.tmpdir(), env: environment, windowsHide: true, windowsVerbatimArguments: windows, timeout: 15000 },
@@ -36,17 +40,20 @@ async function validateWorkstationConsoleExit() {
         const urls = output.match(/http:\/\/127\.0\.0\.1:\d+/g);
         if (urls?.length >= 2) ready.resolve(urls);
       });
+      if (closeBeforeReady) child.stdin.end();
     });
     const pendingRequests = [];
     try {
       const urls = await Promise.race([ready.promise, exited.then(() => null)]);
       check(urls?.length >= 2, "Console launcher exited before both local servers were ready");
-      child.stdin.write("continue\n");
-      const page = await fetch(urls[0], { signal: AbortSignal.timeout(5000) });
-      await page.arrayBuffer();
-      const health = await (await fetch(`${urls[1]}/health`, { signal: AbortSignal.timeout(5000) })).json();
-      check(page.status === 200 && health.vehicle_command_enabled === false && health.sample_readouts_enabled === false, "Console launcher stopped on unrelated input or enabled vehicle commands");
-      if (command.includes("EXIT")) {
+      if (!closeBeforeReady) {
+        child.stdin.write("continue\n");
+        const page = await fetch(urls[0], { signal: AbortSignal.timeout(5000) });
+        await page.arrayBuffer();
+        const health = await (await fetch(`${urls[1]}/health`, { signal: AbortSignal.timeout(5000) })).json();
+        check(page.status === 200 && health.vehicle_command_enabled === false && health.sample_readouts_enabled === false, "Console launcher stopped on unrelated input or enabled vehicle commands");
+      }
+      if (!closeBeforeReady && (command.includes("EXIT") || command === "")) {
         // Incomplete bodies keep both HTTP servers busy while shutdown is requested.
         for (const endpoint of [`${urls[0]}/local-bridge/v1/request`, `${urls[1]}/v1/request`]) {
           const request = http.request(endpoint, { method: "POST", headers: { "Content-Type": "application/json" } });
@@ -60,7 +67,8 @@ async function validateWorkstationConsoleExit() {
           await connected;
         }
       }
-      child.stdin.end(command);
+      if (keepInputOpen) child.stdin.write(command);
+      else if (!child.stdin.writableEnded) child.stdin.end(command);
       const result = await exited;
       check(result.code === 0 && (result.output.match(/診断画面と確認ブリッジを終了しました。/g) || []).length === 1, "Console shutdown failed, timed out, or ran more than once");
       const rebound = await startLocalWorkstation({ ...options, webPort: Number(new URL(urls[0]).port), bridgePort: Number(new URL(urls[1]).port) });

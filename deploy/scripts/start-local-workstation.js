@@ -84,6 +84,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     let stopping = null;
     const stop = () => {
       if (!stopping) stopping = (async () => {
+        input.removeListener("close", stop);
         input.close();
         process.stdin.pause();
         await workstation.close();
@@ -96,6 +97,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     input.on("line", (line) => {
       if (["q", "exit"].includes(line.trim().toLowerCase())) void stop();
     });
+    input.once("close", stop);
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
   } catch (error) {
