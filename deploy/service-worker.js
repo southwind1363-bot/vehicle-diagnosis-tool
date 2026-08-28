@@ -1,7 +1,8 @@
 const CACHE_PREFIX = "vehicle-diagnosis-tool";
-const CACHE_VERSION = "3.13.276";
+const CACHE_VERSION = "3.13.277";
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 const OFFLINE_MANIFEST_URL = "offline-assets.json";
+const OFFLINE_DOWNLOAD_TIMEOUT_MS = 15000;
 const CORE_ASSETS = [
   "./",
   "index.html",
@@ -12,18 +13,36 @@ const CORE_ASSETS = [
   OFFLINE_MANIFEST_URL
 ];
 
+async function fetchOfflineDownload(url) {
+  const controller = new AbortController();
+  const started = performance.now();
+  const timer = setTimeout(() => controller.abort(), OFFLINE_DOWNLOAD_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { cache: "reload", signal: controller.signal });
+    if (!response.ok || /\bno-store\b/i.test(response.headers.get("Cache-Control") || "")) throw new Error("offline_download_unavailable");
+    // Finish network input before storage; preserve the original response metadata.
+    await response.clone().arrayBuffer();
+    if (controller.signal.aborted || performance.now() - started >= OFFLINE_DOWNLOAD_TIMEOUT_MS) throw new Error("offline_download_timeout");
+    return response;
+  } catch (error) {
+    controller.abort();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function cacheUrls(urls) {
   const cache = await caches.open(CACHE_NAME);
   const uniqueUrls = [...new Set(urls.map((url) => new URL(url, self.registration.scope).href))];
   const failures = [];
   let next = 0;
   await Promise.all(Array.from({ length: Math.min(4, uniqueUrls.length) }, async () => {
-    while (next < uniqueUrls.length) {
+    while (next < uniqueUrls.length && failures.length === 0) {
       const url = uniqueUrls[next++];
       try {
         const request = new Request(url, { cache: "reload" });
-        const response = await fetch(request);
-        if (!response.ok || /\bno-store\b/i.test(response.headers.get("Cache-Control") || "")) throw new Error("uncacheable_asset");
+        const response = await fetchOfflineDownload(request);
         if (url === new URL("script.js", self.registration.scope).href) {
           const versions = [...(await response.clone().text()).matchAll(/const APP_VERSION = "([^"]+)";/g)];
           if (versions.length !== 1 || versions[0][1] !== CACHE_VERSION) throw new Error("offline_app_version_mismatch");
@@ -39,8 +58,7 @@ async function cacheUrls(urls) {
 }
 
 async function loadOfflineManifest() {
-  const response = await fetch(OFFLINE_MANIFEST_URL, { cache: "reload" });
-  if (!response.ok || /\bno-store\b/i.test(response.headers.get("Cache-Control") || "")) throw new Error("offline_manifest_unavailable");
+  const response = await fetchOfflineDownload(OFFLINE_MANIFEST_URL);
   const payload = await response.clone().json();
   if (payload.version !== CACHE_VERSION || !Number.isInteger(payload.asset_count) || payload.asset_count < 1
     || !Array.isArray(payload.assets) || payload.assets.length !== payload.asset_count) throw new Error("offline_manifest_invalid");

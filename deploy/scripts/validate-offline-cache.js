@@ -14,7 +14,8 @@ const check = (value, message) => { assert.ok(value, message); checks += 1; };
 function createWorker(options = {}) {
   const stores = new Map();
   const listeners = {};
-  const stats = { waiting: 0, claimed: 0, active: 0, peak: 0, fetched: [] };
+  const stats = { waiting: 0, claimed: 0, active: 0, peak: 0, fetched: [], aborted: 0, pendingWrites: 0 };
+  let monotonicTime = 0;
   const resolve = (input) => new URL(typeof input === "string" ? input : input.url, base).href;
   class BrowserRequest extends Request {
     constructor(input, init) { super(resolve(input), init); }
@@ -29,9 +30,14 @@ function createWorker(options = {}) {
       const entries = stores.get(name);
       return {
         put: async (request, response) => {
-          if (options.delayPut) await new Promise((done) => setTimeout(done, 3));
-          if (options.failPut && resolve(request).endsWith(options.failPut)) throw new Error("quota_exceeded");
-          entries.set(resolve(request), response.clone());
+          stats.pendingWrites += 1;
+          try {
+            if (options.delayPut) await new Promise((done) => setTimeout(done, 3));
+            if (options.slowManifestPut && resolve(request).endsWith("offline-assets.json")) await new Promise((done) => setTimeout(done, 150));
+            if (options.failPut && resolve(request).endsWith(options.failPut)) throw new Error("quota_exceeded");
+            const body = await response.arrayBuffer();
+            entries.set(resolve(request), new Response(body, { status: response.status, headers: response.headers }));
+          } finally { stats.pendingWrites -= 1; }
         },
         match: async (request) => {
           if (options.failMatch) throw new Error("cache_read_failed");
@@ -48,7 +54,10 @@ function createWorker(options = {}) {
     }
   };
   const context = vm.createContext({
-    URL, Request: BrowserRequest, Response, caches, console, setTimeout, clearTimeout, MessageChannel,
+    URL, Request: BrowserRequest, Response, AbortController, caches, console,
+    performance: { now: () => options.downloadElapsedMs === undefined ? performance.now() : (monotonicTime += options.downloadElapsedMs) },
+    setTimeout: (callback, delay) => setTimeout(callback, delay === 15000 ? options.downloadTimeoutMs ?? delay : delay),
+    clearTimeout, MessageChannel,
     self: {
       location: { origin: new URL(base).origin, href: `${base}service-worker.js` },
       registration: { scope: base, active: options.activeWorker },
@@ -56,12 +65,31 @@ function createWorker(options = {}) {
       skipWaiting: async () => { stats.waiting += 1; },
       clients: { claim: async () => { stats.claimed += 1; } }
     },
-    fetch: async (request) => {
+    fetch: async (request, init = {}) => {
       const url = resolve(request);
       stats.fetched.push(url);
       stats.active += 1;
       stats.peak = Math.max(stats.peak, stats.active);
       try {
+        const signal = init.signal || request.signal;
+        signal?.addEventListener("abort", () => { stats.aborted += 1; }, { once: true });
+        if (options.stallFetch && url.endsWith(options.stallFetch)) {
+          return await new Promise((resolve, reject) => {
+            const abort = () => reject(new Error("download_aborted"));
+            if (signal?.aborted) abort();
+            else signal?.addEventListener("abort", abort, { once: true });
+          });
+        }
+        if (options.stallBody && url.endsWith(options.stallBody)) {
+          return new Response(new ReadableStream({
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode("partial response"));
+              const abort = () => controller.error(new Error("body_aborted"));
+              if (signal?.aborted) abort();
+              else signal?.addEventListener("abort", abort, { once: true });
+            }
+          }), { headers: options.noStore ? { "Cache-Control": "no-store" } : {} });
+        }
         await new Promise((done) => setTimeout(done, 1));
         if (options.offline || (options.failFetch && url.endsWith(options.failFetch))) throw new Error("network_down");
         if (options.httpFailure && url.endsWith(options.httpFailure)) return new Response("unavailable", { status: 503 });
@@ -102,12 +130,47 @@ for (const failure of [{ failFetch: "data/dtc-scope-rules.json", delayPut: true 
   check(worker.stats.waiting === 0 && worker.stats.active === 0, "Incomplete install activated or left downloads running");
   check(await (await old.match("index.html")).text() === "previous screen", "Failed update damaged the previous offline screen");
   check(!(await (await worker.caches.open(cacheName)).match("offline-assets.json")), "Failed candidate published its completion manifest");
+  if (failure.httpFailure === "style.css") check(worker.stats.fetched.length < manifest.asset_count, "Known failed install continued scheduling the remaining downloads");
   delete failure.failFetch;
   delete failure.httpFailure;
   delete failure.failPut;
   await worker.lifecycle("install");
   check(worker.stats.waiting === 1 && await (await worker.caches.open(cacheName)).match("offline-assets.json"), "Partial candidate could not be retried to completion");
 }
+
+for (const failure of [
+  { stallFetch: "offline-assets.json" }, { stallFetch: "style.css", delayPut: true },
+  { stallBody: "offline-assets.json" }, { stallBody: "script.js" }, { stallBody: "data/dtc-scope-rules.json" }
+]) {
+  const stalled = createWorker({ ...failure, downloadTimeoutMs: 100 });
+  const previous = await stalled.caches.open("vehicle-diagnosis-tool-previous");
+  await previous.put("index.html", new Response("previous screen"));
+  await assert.rejects(stalled.lifecycle("install"));
+  check(stalled.stats.aborted === 1 && stalled.stats.active === 0 && stalled.stats.pendingWrites === 0 && stalled.stats.waiting === 0, "Timed-out download activated or returned before other downloads/writes settled");
+  check(!stalled.stores.has(cacheName) && await (await previous.match("index.html")).text() === "previous screen", "Download timeout published a candidate or damaged the previous cache");
+  delete stalled.options.stallFetch;
+  delete stalled.options.stallBody;
+  await stalled.lifecycle("install");
+  check(stalled.stats.waiting === 1 && await (await stalled.caches.open(cacheName)).match("offline-assets.json"), "Timed-out candidate could not be retried successfully");
+}
+for (const elapsed of [14999, 15000]) {
+  const timed = createWorker({ downloadElapsedMs: elapsed, downloadTimeoutMs: 100 });
+  const download = vm.runInContext('fetchOfflineDownload("data/boundary.json")', timed.context);
+  if (elapsed < 15000) {
+    const response = await download;
+    await new Promise((done) => setTimeout(done, 150));
+    check((await response.text()).includes("boundary.json") && timed.stats.aborted === 0, "Successful download lost its body or retained its abort timer");
+  } else {
+    await assert.rejects(download, /offline_download_timeout/);
+    check(timed.stats.aborted === 1, "Expired monotonic deadline was accepted before the timer callback ran");
+  }
+}
+const slowStorage = createWorker({ slowManifestPut: true, downloadTimeoutMs: 100 });
+await slowStorage.lifecycle("install");
+check(slowStorage.stats.aborted === 0 && slowStorage.stats.pendingWrites === 0 && slowStorage.stats.waiting === 1, "Download deadline aborted a completed response during storage or skipped waiting for publication");
+const rejectedBody = createWorker({ stallBody: "style.css", noStore: true, downloadTimeoutMs: 100 });
+await assert.rejects(vm.runInContext('fetchOfflineDownload("style.css")', rejectedBody.context), /offline_download_unavailable/);
+check(rejectedBody.stats.aborted === 1, "Rejected response left an unread network body running");
 
 for (const invalid of [
   { ...manifest, version: "wrong" }, { ...manifest, asset_count: 0 },
