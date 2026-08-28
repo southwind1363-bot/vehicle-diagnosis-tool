@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { webcrypto } from "node:crypto";
 import { startLocalWorkstation } from "./start-local-workstation.js";
+import { validateWorkstationAssets } from "./workstation-assets.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
@@ -124,6 +125,123 @@ async function validateWindowsLauncher(occupiedWebPort) {
     assert.equal(path.dirname(path.resolve(fixtureDir)), path.resolve(os.tmpdir()));
     assert(path.basename(fixtureDir).startsWith("vehicle launcher & test-"));
     fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+}
+
+async function validateWorkstationAssetPreflight() {
+  const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle assets & test-"));
+  let next = 0;
+  const fixture = () => {
+    const directory = path.join(fixtureRoot, String(next++));
+    fs.mkdirSync(path.join(directory, "data"), { recursive: true });
+    const assets = ["./", "index.html", "style.css", "script.js", "obd-readonly.js", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js", "data/readout.json"];
+    for (const asset of assets.filter((asset) => asset !== "./")) fs.writeFileSync(path.join(directory, asset), "fixture");
+    fs.writeFileSync(path.join(directory, "script.js"), 'const APP_VERSION = "test-1";');
+    fs.writeFileSync(path.join(directory, "service-worker.js"), 'const CACHE_VERSION = "test-1";');
+    const manifest = { version: "test-1", asset_count: assets.length, assets };
+    const save = () => fs.writeFileSync(path.join(directory, "offline-assets.json"), JSON.stringify(manifest));
+    save();
+    return { directory, manifest, save };
+  };
+  const rejects = (item, asset) => {
+    assert.throws(() => validateWorkstationAssets(item.directory), (error) => error.code === "workstation_assets_invalid" && error.asset === asset);
+    check(true, `Incomplete workstation rejected: ${asset}`);
+  };
+  try {
+    const valid = fixture();
+    assert.deepEqual(validateWorkstationAssets(valid.directory), { version: "test-1", assetCount: 9 });
+    check(true, "Complete local assets passed startup inspection");
+    for (const asset of ["offline-assets.json", "script.js", "data/readout.json"]) {
+      const item = fixture();
+      fs.unlinkSync(path.join(item.directory, asset));
+      rejects(item, asset);
+    }
+    for (const asset of ["script.js", "data/readout.json"]) {
+      const item = fixture();
+      fs.writeFileSync(path.join(item.directory, asset), "");
+      rejects(item, asset);
+    }
+    for (const [asset, content] of [["offline-assets.json", "{"], ["script.js", 'const APP_VERSION = "old";'],
+      ["service-worker.js", 'const CACHE_VERSION = "old";'], ["script.js", 'const APP_VERSION = "test-1"; const APP_VERSION = "test-1";']]) {
+      const item = fixture();
+      fs.writeFileSync(path.join(item.directory, asset), content);
+      rejects(item, asset);
+    }
+    for (const asset of ["../outside.json", "/index.html", "https://example.invalid/file", "data\\readout.json", "data/%2e%2e/file", "data/../file", "data//file", "data/./file", "data/file.", "script.js?x=1", "script.js#x", "C:/file", "SCRIPT.js", ""]) {
+      const item = fixture();
+      item.manifest.assets.push(asset);
+      item.manifest.asset_count += 1;
+      item.save();
+      rejects(item, "offline-assets.json");
+    }
+    for (const mutate of [(value) => { value.asset_count += 1; }, (value) => { value.version = null; },
+      (value) => { value.assets = value.assets.map((asset) => asset === "style.css" ? "STYLE.CSS" : asset); },
+      (value) => { value.assets = value.assets.filter((asset) => asset !== "obd-readonly.js"); value.asset_count -= 1; }]) {
+      const item = fixture();
+      mutate(item.manifest);
+      item.save();
+      rejects(item, "offline-assets.json");
+    }
+    const directoryAsset = fixture();
+    fs.unlinkSync(path.join(directoryAsset.directory, "data/readout.json"));
+    fs.mkdirSync(path.join(directoryAsset.directory, "data/readout.json"));
+    rejects(directoryAsset, "data/readout.json");
+    const nonregular = fixture();
+    const nonregularPath = fs.realpathSync(path.join(nonregular.directory, "data/readout.json"));
+    const originalStat = fs.statSync;
+    const originalOpen = fs.openSync;
+    let openedNonregular = false;
+    try {
+      fs.statSync = (file, ...args) => file === nonregularPath ? { isFile: () => false } : originalStat(file, ...args);
+      fs.openSync = (file, ...args) => {
+        if (file === nonregularPath) openedNonregular = true;
+        return originalOpen(file, ...args);
+      };
+      rejects(nonregular, "data/readout.json");
+      check(!openedNonregular, "Preflight opened a nonregular file before rejecting it");
+    } finally {
+      fs.statSync = originalStat;
+      fs.openSync = originalOpen;
+    }
+    const oversized = fixture();
+    fs.truncateSync(path.join(oversized.directory, "data/readout.json"), 64 * 1024 * 1024 + 1);
+    rejects(oversized, "data/readout.json");
+    const linked = fixture();
+    fs.symlinkSync(path.join(valid.directory, "data"), path.join(linked.directory, "linked"), process.platform === "win32" ? "junction" : "dir");
+    linked.manifest.assets.push("linked/readout.json");
+    linked.manifest.asset_count += 1;
+    linked.save();
+    rejects(linked, "linked/readout.json");
+
+    for (const missing of ["data/readout.json", "local-bridge-readonly.js", "offline-assets.json"]) {
+      const cli = fixture();
+      fs.mkdirSync(path.join(cli.directory, "scripts"));
+      for (const name of ["start-local-workstation.js", "workstation-assets.js"]) {
+        fs.copyFileSync(new URL(`./${name}`, import.meta.url), path.join(cli.directory, "scripts", name));
+      }
+      fs.writeFileSync(path.join(cli.directory, "package.json"), '{"type":"module"}');
+      fs.writeFileSync(path.join(cli.directory, "local-bridge-readonly.js"), 'export function createLocalBridgeApp() { console.log("BRIDGE_CREATED"); throw new Error("unexpected_bridge_creation"); }');
+      const expressDirectory = path.join(cli.directory, "node_modules", "express");
+      fs.mkdirSync(expressDirectory, { recursive: true });
+      fs.writeFileSync(path.join(expressDirectory, "package.json"), '{"type":"module","exports":"./index.js"}');
+      fs.writeFileSync(path.join(expressDirectory, "index.js"), 'export default function express() { throw new Error("unexpected_web_creation"); }');
+      fs.unlinkSync(path.join(cli.directory, missing));
+      const environment = { ...process.env, PORT: "0", LOCAL_BRIDGE_PORT: "0", LOCAL_BRIDGE_PAIRING_TOKEN: options.pairingToken };
+      delete environment.LOCAL_BRIDGE_REPLAY_LOG;
+      const result = await new Promise((resolve) => {
+        const child = execFile(process.execPath, [path.join(cli.directory, "scripts", "start-local-workstation.js")],
+          { cwd: os.tmpdir(), env: environment, windowsHide: true, timeout: 5000 },
+          (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
+        child.stdin.end();
+      });
+      check(result.code === 1 && result.output.includes("ローカル資材") && result.output.includes(missing)
+        && !result.output.includes("BRIDGE_CREATED") && !result.output.includes("診断画面:") && !result.output.includes(options.pairingToken),
+        "Incomplete startup did not stop before bridge creation or exposed connection information");
+    }
+  } finally {
+    assert.equal(path.dirname(path.resolve(fixtureRoot)), path.resolve(os.tmpdir()));
+    assert(path.basename(fixtureRoot).startsWith("vehicle assets & test-"));
+    fs.rmSync(fixtureRoot, { recursive: true, force: true });
   }
 }
 
@@ -854,6 +972,7 @@ async function validateBridgeOperationLifecycle(webUrl) {
   check(appSource.replace(/\r\n/g, "\n").includes('function syncObdVehicleInput() {\n  cancelObdBridgeOperation();') && appSource.includes('document.querySelectorAll("[data-obd-bridge-request]")'), "Vehicle changes or public bridge controls lost operation protection");
 }
 await validatePortableNpmScripts();
+await validateWorkstationAssetPreflight();
 
 const previousReplay = process.env.LOCAL_BRIDGE_REPLAY_LOG;
 const previousPairing = process.env.LOCAL_BRIDGE_PAIRING_TOKEN;

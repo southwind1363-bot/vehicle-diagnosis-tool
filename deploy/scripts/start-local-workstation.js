@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { createInterface } from "node:readline";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createLocalBridgeApp } from "../local-bridge-readonly.js";
+import { validateWorkstationAssets } from "./workstation-assets.js";
 
 const deployDirectory = fileURLToPath(new URL("../", import.meta.url));
 
@@ -35,8 +35,11 @@ export async function startLocalWorkstation(options = {}) {
   }
   // A workstation must never inherit saved log replay as a live connection candidate.
   if (process.env.LOCAL_BRIDGE_REPLAY_LOG) throw new Error("workstation_replay_not_allowed");
-  const pairingToken = String(options.pairingToken ?? process.env.LOCAL_BRIDGE_PAIRING_TOKEN ?? randomBytes(24).toString("hex"));
-  if (pairingToken.length < 12) throw new Error("workstation_pairing_token_too_short");
+  const configuredPairingToken = options.pairingToken ?? process.env.LOCAL_BRIDGE_PAIRING_TOKEN;
+  if (configuredPairingToken !== undefined && String(configuredPairingToken).length < 12) throw new Error("workstation_pairing_token_too_short");
+  validateWorkstationAssets(deployDirectory);
+  const pairingToken = String(configuredPairingToken ?? randomBytes(24).toString("hex"));
+  const { createLocalBridgeApp } = await import("../local-bridge-readonly.js");
   const bridgeServer = createLocalBridgeApp({
     pairingToken,
     discoverJ2534: true,
@@ -101,7 +104,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     process.on("SIGINT", stop);
     process.on("SIGTERM", stop);
   } catch (error) {
-    console.error(error.code === "EADDRINUSE" ? "起動先ポートは使用中です。PORTまたはLOCAL_BRIDGE_PORTを変更してください。" : "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");
+    console.error(error.code === "workstation_assets_invalid"
+      ? `ローカル資材を確認できません（${error.asset.slice(0, 160)}）。同じ版のdeployフォルダーを一式復元してから再起動してください。`
+      : error.code === "EADDRINUSE" ? "起動先ポートは使用中です。PORTまたはLOCAL_BRIDGE_PORTを変更してください。" : "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");
     process.exitCode = 1;
   }
 }
