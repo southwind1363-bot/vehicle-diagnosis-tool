@@ -12,6 +12,7 @@ import { startLocalWorkstation, openWorkstationBrowser } from "./start-local-wor
 import { validateWorkstationAssets } from "./workstation-assets.js";
 import "./validate-sample-preview.js";
 import "./validate-readout-vehicle.js";
+import "./validate-status-disclosures.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
@@ -39,8 +40,13 @@ function validateReadoutNavigation() {
     .map((id) => [id, new Element(id)]));
   const attach = (parent, child) => nodes[parent].appendChild(nodes[child]);
   attach("diagnosis-panel", "obdReadoutHome"); attach("obdReadoutHome", "obdReadoutSurface");
-  attach("obdReadoutSurface", "obdImportStatus"); attach("obdReadoutSurface", "obdMonitorGrid");
-  attach("obdReadoutSurface", "obdDetectedCodes"); attach("obdReadoutSurface", "obdMonitorStatus");
+  for (const status of ["obdImportStatus", "obdMonitorStatus"]) {
+    const disclosure = new Element(`${status}-details`);
+    disclosure.tagName = "DETAILS";
+    nodes.obdReadoutSurface.appendChild(disclosure);
+    disclosure.appendChild(nodes[status]);
+  }
+  attach("obdReadoutSurface", "obdMonitorGrid"); attach("obdReadoutSurface", "obdDetectedCodes");
   attach("obdStageResultsView", "obdReadoutResultsHost");
   attach("obdStageResultsView", "obdReadoutDetails"); attach("obdReadoutDetails", "obdDevSessionDetails");
   nodes.obdReadoutDetails.tagName = "DETAILS";
@@ -92,7 +98,9 @@ function validateReadoutNavigation() {
     nodes[target].children = [];
     nodes[status].textContent = "Readout unavailable; not an all-clear result";
     const previousScroll = nodes[status].scrolled;
+    nodes[status].parentElement.open = false;
     context.scrollToObdSection(target);
+    check(nodes[status].parentElement.open, "Empty results left their status disclosure closed");
     check(nodes[status].scrolled === previousScroll + 1 && nodes[target].scrolled === 1, "Empty readout navigation must show status rather than an empty grid");
     check(nodes[status].textContent === "Readout unavailable; not an all-clear result" && context.activeObdStage === "results", "Navigation changed readout status or selected the wrong stage");
   }

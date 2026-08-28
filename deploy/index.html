@@ -149,8 +149,11 @@
             <div id="obdReadoutSurface">
             <section class="result-block obd-import-result">
               <h3>DTC結果</h3>
-              <p id="obdImportStatus" class="empty-state">読取後にDTCを表示します。</p>
-              <div id="obdImportToolHints" class="obd-import-hints" hidden></div>
+              <details id="obdDtcStatusDetails" class="obd-status-details" open>
+                <summary>取得状況・注意事項</summary>
+                <p id="obdImportStatus" class="empty-state">読取後にDTCを表示します。</p>
+                <div id="obdImportToolHints" class="obd-import-hints" hidden></div>
+              </details>
               <div id="obdDetectedCodes" class="obd-code-list"></div>
             </section>
 
@@ -162,7 +165,10 @@
                 </div>
                 <span id="obdMonitorCount" class="confidence-badge">0項目</span>
               </div>
-              <p id="obdMonitorStatus" class="empty-state">読取後にライブデータを表示します。</p>
+              <details id="obdLiveStatusDetails" class="obd-status-details" open>
+                <summary>取得状況・注意事項</summary>
+                <p id="obdMonitorStatus" class="empty-state">読取後にライブデータを表示します。</p>
+              </details>
               <div id="obdMonitorGrid" class="obd-monitor-grid"></div>
               <div id="obdMonitorInsightList" class="obd-monitor-insights" hidden></div>
               <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件とメーカー整備書の基準値を確認してください。</p>

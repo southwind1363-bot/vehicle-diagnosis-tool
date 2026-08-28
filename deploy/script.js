@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.297";
+const APP_VERSION = "3.13.298";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -492,6 +492,23 @@ const mobileGptModal = document.querySelector("#mobileGptModal");
 const mobileGptOpenButton = document.querySelector("#mobileGptOpenButton");
 const mobileGptCloseButton = document.querySelector("#mobileGptCloseButton");
 const tabButtons = document.querySelectorAll("[data-tab-target]");
+
+initializeObdStatusDisclosures();
+
+function initializeObdStatusDisclosures() {
+  document.querySelectorAll(".obd-status-details").forEach((details) => {
+    details.open = true;
+    if (typeof MutationObserver === "undefined") {
+      details.querySelector("summary")?.addEventListener("click", (event) => event.preventDefault());
+      return;
+    }
+    // New results and errors must be visible even after a manual collapse.
+    const observer = new MutationObserver(() => { details.open = true; });
+    details.querySelectorAll("p, .obd-import-hints").forEach((content) => {
+      observer.observe(content, { childList: true, characterData: true, subtree: true, attributes: true, attributeFilter: ["hidden"] });
+    });
+  });
+}
 
 const OBD_NEXT_READOUT_ACTIONS = Object.freeze({
   dtc_snapshot: Object.freeze({ button: () => (obdDevSession.bridgeEndpoint ? obdDevBridgeDtcButton : obdDevReadDtcButton), label: "DTC読取" }),
