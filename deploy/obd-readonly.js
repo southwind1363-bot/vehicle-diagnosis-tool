@@ -34329,6 +34329,21 @@
       }
       return "";
     };
+    const firstEvidenceValue = (sources, ...keys) => {
+      for (const source of sources) {
+        if (!source || typeof source !== "object") continue;
+        for (const key of keys) {
+          const value = source[key] ?? source[camelCaseId(key)];
+          if (value !== undefined && value !== null && !(typeof value === "string" && value.trim() === "")) return value;
+        }
+      }
+      return "";
+    };
+    const exportAttemptInteger = (value, normalize) => {
+      if (value === "") return "";
+      const parsed = normalize(value);
+      return parsed === null ? "invalid_integer" : String(parsed);
+    };
     const escapeCell = (value) => {
       const normalized = redactSensitiveText(String(value ?? ""))
         .replace(/[\r\n]+/g, " ")
@@ -34361,13 +34376,15 @@
         response_service: firstValue(sources, "response_service", "dtc_evidence_response_service"),
         ecu_response_status: firstValue(sources, "ecu_response_status", "dtc_evidence_ecu_response_status"),
         negative_requested_service: firstValue(sources, "negative_requested_service", "dtc_evidence_negative_requested_service"),
-        response_count: firstValue(sources, "response_count", "dtc_evidence_response_count"),
-        response_wait_ms: firstValue(sources, "response_wait_ms", "dtc_evidence_response_wait_ms"),
+        response_count: exportAttemptInteger(firstEvidenceValue(sources, "response_count", "dtc_evidence_response_count"), normalizeDtcEvidenceResponseCountValue),
+        response_wait_ms: exportAttemptInteger(firstEvidenceValue(sources, "response_wait_ms", "dtc_evidence_response_wait_ms"), normalizeDtcEvidenceResponseWaitMsValue),
         negative_response_code: firstValue(sources, "uds_negative_response_code", "negative_response_code", "dtc_evidence_negative_response_code"),
         response_state: firstValue([dtc], "uds_response_state", "response_state")
       };
       DTC_EVIDENCE_FIELD_SCHEMA.forEach((field) => {
-        values[field.id] = firstValue([dtc], field.id);
+        const validation = validateDtcEvidenceFieldValue(field.id, firstEvidenceValue([dtc], field.id), field.valueType === "unit_text" ? 24 : 80);
+        // Keep rejection visible on TSV reimport without serializing the rejected value.
+        values[field.id] = validation.valid ? validation.value ?? "" : validation.reason;
       });
       return template.columns.map((column) => escapeCell(values[column.id])).join(template.delimiter);
     });
