@@ -545,7 +545,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
     obdAccessUnlocked: true, obdAccessPasswordInput: { value: "" },
     OBD_ACCESS_MODE_KEY: "test-access", renderObdAccessGate: () => {},
     localStorage: { getItem: () => token }, window: { crypto: webcrypto }, crypto: webcrypto,
-    fetch: fetchRequest, AbortController, setTimeout, clearTimeout, performance
+    fetch: fetchRequest, AbortController, Blob, setTimeout, clearTimeout, performance
   });
   const constants = ["OBD_DEV_TOKEN_KEY", "OBD_LOCAL_BRIDGE_PORTS", "OBD_LOCAL_BRIDGE_PATHS", "OBD_LOCAL_BRIDGE_TIMEOUT_MS"]
     .map((name) => appSource.match(new RegExp(`const ${name} = [^;]+;`))?.[0]).join("\n");
@@ -838,6 +838,81 @@ async function validateScannerReplacementConfirmation(webUrl) {
   merging.window.ObdReadOnly.mergeDiagnosticInputs = (...args) => { mergeCalls += 1; return merge(...args); };
   merging.analyzeObdScannerImport({ mergeWithCurrentSession: true });
   check(prompts === 0 && mergeCalls === 1 && merging.obdDevSession.lastSession !== previous, "Internal readout merge prompted or failed to process results");
+}
+
+async function validateScannerInputSize(webUrl) {
+  for (const [unit, count, suffix] of [["a", 2000000, ""], ["a", 2000000, "a"], ["\u6c34", 666666, "aa"], ["\u6c34", 666666, "aaa"],
+    ["\ud83d\ude00", 500000, ""], ["\ud83d\ude00", 500000, "a"], ["\ud800", 666666, "aa"], ["\ud800", 666666, "aaa"], [" ", 2000001, ""]]) {
+    const text = unit.repeat(count) + suffix;
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    let allocations = 0;
+    client.Blob = class extends Blob { constructor(parts) { allocations += 1; super(parts); } };
+    const expected = Buffer.byteLength(text, "utf8") <= 2000000;
+    check(client.validateObdScannerImportTextSize(text) === expected, "Input size guard disagreed with UTF-8 byte boundary");
+    check(allocations === (text.length > 2000000 ? 0 : 1), "Oversized character input was encoded before rejection");
+  }
+  for (const kind of ["manual", "clipboard", "file"]) {
+    for (const failure of ["oversize", "missing-blob", "blob-error"]) {
+      const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+      const session = { source: "scanner_text", dtcSnapshot: { codes: ["P0171"] } };
+      client.obdDevSession.lastSession = session;
+      client.setObdSessionExportStatus("current-export-notice");
+      const originalText = client.obdScannerText.value;
+      const text = failure === "oversize" ? "\u6c34".repeat(666667) : "replacement input";
+      const displays = [client.obdDetectedCodes, client.obdMonitorGrid, client.obdMonitorInsightList, client.obdMonitorStatus, client.obdMonitorCount];
+      displays.forEach((element) => Object.assign(element, { innerHTML: "retained-result", textContent: "retained-warning", hidden: false }));
+      const before = JSON.stringify(displays);
+      let prompts = 0;
+      let analyses = 0;
+      client.window.confirm = () => { prompts += 1; return true; };
+      client.analyzeObdScannerImport = () => { analyses += 1; };
+      client.obdBridgeOperation = { cancelled: false };
+      if (failure === "missing-blob") client.Blob = undefined;
+      if (failure === "blob-error") client.Blob = class { constructor() { throw new Error("private-size-detail"); } };
+      if (kind === "manual") {
+        client.obdScannerText.value = text;
+        client.analyzeObdScannerImportManually();
+      } else {
+        const pending = startPendingScannerAcquisition(client, kind);
+        if (kind === "file") client.normalizeObdScannerImportFileText = () => text;
+        await pending.complete(kind === "file" ? "small raw file" : text);
+        if (kind === "file") check(pending.input.value === "", "Rejected decoded file retained its picker value");
+      }
+      check(prompts === 0 && analyses === 0 && client.obdDevSession.lastSession === session && !client.obdBridgeOperation.cancelled,
+        `${kind}/${failure}: rejected size reached confirmation/analysis or changed the session/bridge`);
+      check(client.obdScannerText.value === (kind === "manual" ? text : originalText) && JSON.stringify(displays) === before
+        && client.exportStatuses.every((status) => status === "current-export-notice"), `${kind}/${failure}: rejection changed current input or result presentation`);
+      check(client.obdScannerImportOperation === null && !client.exportControlImportBusy && client.obdImportStatus.textContent.includes(failure === "oversize" ? "2 MB" : "サイズを確認できない")
+        && !client.obdImportStatus.textContent.includes("private"), `${kind}/${failure}: rejection left busy state or leaked errors`);
+      client.Blob = Blob;
+      client.applyObdScannerImportText("small retry");
+      check(analyses === 1 && prompts === 1 && client.obdScannerText.value === "small retry", `${kind}/${failure}: bounded retry could not reach normal analysis`);
+    }
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    const text = "a".repeat(2000000);
+    let analyses = 0;
+    client.analyzeObdScannerImport = () => { analyses += 1; };
+    if (kind === "manual") { client.obdScannerText.value = text; client.analyzeObdScannerImportManually(); }
+    else await startPendingScannerAcquisition(client, kind).complete(text);
+    check(analyses === 1 && client.obdScannerText.value === text, `${kind}: exact-limit input was rejected or truncated`);
+  }
+  for (const kind of ["file", "clipboard"]) {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    const pending = startPendingScannerAcquisition(client, kind);
+    client.editScannerText("newer input");
+    client.obdImportStatus.textContent = "NEW_STATUS";
+    let checksCalled = 0;
+    client.validateObdScannerImportTextSize = () => { checksCalled += 1; return false; };
+    await pending.complete("a".repeat(2000001));
+    check(checksCalled === 0 && client.obdScannerText.value === "newer input" && client.obdImportStatus.textContent === "NEW_STATUS", `${kind}: stale large acquisition changed newer input/status`);
+  }
+  const internal = addScannerImportHarness(createClient(webUrl, options.pairingToken), "text");
+  const session = { source: "web_serial" };
+  internal.obdDevSession.lastSession = session;
+  let checked = 0;
+  internal.validateObdScannerImportTextSize = () => { checked += 1; return false; };
+  internal.analyzeObdScannerImport({ mergeWithCurrentSession: true });
+  check(checked === 0 && internal.obdDevSession.lastSession !== session, "Manual input size guard changed internal readout merge");
 }
 
 async function validateScannerJsonFileSyntax(webUrl) {
@@ -1671,6 +1746,7 @@ try {
     await validateScannerReplacementConfirmation(workstation.webUrl);
     validateScannerInputClear(workstation.webUrl);
     await validateScannerJsonFileSyntax(workstation.webUrl);
+    await validateScannerInputSize(workstation.webUrl);
     await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
     await validateWindowsLauncher(webPort);
     await validateWorkstationConsoleExit();
