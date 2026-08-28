@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.284";
+const APP_VERSION = "3.13.285";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7177,7 +7177,9 @@ function buildWebSerialConnectionStatus(outcome = null) {
       : "Web Serial未接続";
   const resolvedDisplayStatus = adapterInitializationFailed
     ? "Web Serialアダプター初期化を完了できません"
-    : vehicleLinkError
+    : transportError
+      ? displayStatus
+      : vehicleLinkError
       ? "車両通信を確立できません"
       : adapterError
         ? "Web Serialアダプターエラー"
@@ -7190,7 +7192,9 @@ function buildWebSerialConnectionStatus(outcome = null) {
               : displayStatus;
   const nextAction = adapterInitializationFailed
     ? "アダプター電源、通信速度、初期化応答を確認してから、読取専用で再接続"
-    : vehicleLinkError
+    : transportError
+      ? "アダプター接続と通信速度を確認してから、読取専用で再接続"
+      : vehicleLinkError
       ? "イグニッション状態、OBDコネクター接続、車両プロトコル、アダプター状態を確認してから、読取専用で再試行"
       : adapterError
         ? "アダプター電源、ファームウェア応答、シリアル設定を確認してから、読取専用で再試行"
@@ -7200,11 +7204,9 @@ function buildWebSerialConnectionStatus(outcome = null) {
             ? "別アプリの使用、通信速度、接続状態を確認してから再接続"
             : retainedConnectionFailure === "adapter_identification_failed"
               ? "アダプター電源とファームウェア応答を確認してから再接続"
-              : transportError
-                ? "アダプター接続と通信速度を確認してから、読取専用で再接続"
-                : adapterConnected
-                  ? "読取専用でDTCまたは対応PIDを確認"
-                  : "Web Serialで読取アダプターを選択";
+              : adapterConnected
+                ? "読取専用でDTCまたは対応PIDを確認"
+                : "Web Serialで読取アダプターを選択";
   return {
     source: "web_serial",
     intent: "connection_status",

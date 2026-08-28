@@ -1183,11 +1183,10 @@ for (const summary of [null, { initializationStatus: "completed" }, { initializa
   c.obdDevSession.lastDisconnectReason = "serial_read_failed";
   for (const outcome of [{ adapterErrorCount: 1 }, { unableToConnectCount: 1 }, { transportErrorCount: 1 }]) {
     const status = c.buildWebSerialConnectionStatus(outcome);
-    const expectedDisplay = outcome.adapterErrorCount ? "Web Serialアダプターエラー"
-      : outcome.unableToConnectCount ? "車両通信を確立できません" : "Web Serial通信エラー";
-    check(status.status === "transport_error" && status.displayStatus === expectedDisplay && status.ok === false
+    check(status.status === "transport_error" && status.displayStatus === "Web Serial通信エラー" && status.ok === false
+      && status.nextAction === "アダプター接続と通信速度を確認してから、読取専用で再接続"
       && status.vehicleConnected === (outcome.unableToConnectCount ? false : null),
-      "Retained transport classification changed existing readout error explanations or inferred a vehicle connection");
+      "Retained transport classification disagrees with its explanation or next action");
   }
   c.obdDevSession.adapterInitializationSummary = { initializationStatus: "failed" };
   check(c.buildWebSerialConnectionStatus({ transportErrorCount: 1 }).status === "adapter_initialization_failed",
@@ -1243,6 +1242,55 @@ for (const reason of failedConnectionReasons) {
       && !recovered.readoutCoverage?.items?.some((item) => item.id === "connection_status")
       && !recovered.warnings?.includes("local_bridge_disabled") && clock.timers.size === 0,
       `${reason}/${cleanupFirst}: failed connection fabricated diagnostic values or bridge coverage`);
+  }
+}
+
+{
+  const { context: c } = client();
+  load(c, ["buildWebSerialConnectionStatus"]);
+  const messages = {
+    adapter_initialization_failed: ["Web Serialアダプター初期化を完了できません", "アダプター電源、通信速度、初期化応答を確認してから、読取専用で再接続"],
+    transport_error: ["Web Serial通信エラー", "アダプター接続と通信速度を確認してから、読取専用で再接続"],
+    vehicle_link_error: ["車両通信を確立できません", "イグニッション状態、OBDコネクター接続、車両プロトコル、アダプター状態を確認してから、読取専用で再試行"],
+    adapter_error: ["Web Serialアダプターエラー", "アダプター電源、ファームウェア応答、シリアル設定を確認してから、読取専用で再試行"],
+    port_selection_failed: ["Web Serial機器選択を開始できません", "HTTPS環境とブラウザのシリアル権限を確認してから再選択"],
+    port_open_failed: ["Web Serialポートを開けません", "別アプリの使用、通信速度、接続状態を確認してから再接続"],
+    adapter_identification_failed: ["Web Serialアダプターを識別できません", "アダプター電源とファームウェア応答を確認してから再接続"],
+    adapter_connected: ["Web Serialアダプター接続中", "読取専用でDTCまたは対応PIDを確認"],
+    disconnected: ["Web Serial未接続", "Web Serialで読取アダプターを選択"]
+  };
+  for (const reason of [null, "operator_disconnect", "port_selection_failed", "port_open_failed", "adapter_identification_failed", "serial_read_failed"]) {
+    for (let mask = 0; mask < 16; mask += 1) {
+      const initializationFailed = Boolean(mask & 1);
+      const transportError = Boolean(mask & 2) || reason === "serial_read_failed";
+      const vehicleLinkError = Boolean(mask & 4);
+      const adapterError = Boolean(mask & 8);
+      const stageFailure = ["port_selection_failed", "port_open_failed", "adapter_identification_failed"].includes(reason) ? reason : null;
+      for (const connected of [false, true]) {
+        const outcome = { status: "partial", stopReason: "retained_reason", transportErrorCount: mask & 2 ? 1 : 0,
+          unableToConnectCount: mask & 4 ? 1 : 0, adapterErrorCount: mask & 8 ? 1 : 0 };
+        Object.assign(c.obdDevSession, { port: connected ? {} : null, connectionState: connected ? "ready" : "disconnected",
+          lastDisconnectReason: reason, adapterInitializationSummary: initializationFailed ? { initializationStatus: "failed" } : null,
+          readoutAttempts: [outcome] });
+        const before = { ...c.obdDevSession };
+        const status = c.buildWebSerialConnectionStatus();
+        const expectedStatus = initializationFailed ? "adapter_initialization_failed" : transportError ? "transport_error"
+          : vehicleLinkError ? "vehicle_link_error" : adapterError ? "adapter_error" : stageFailure || (connected ? "adapter_connected" : "disconnected");
+        const [display, action] = messages[expectedStatus];
+        check(status.status === expectedStatus && status.displayStatus === display && status.display_status === display
+          && status.nextAction === action && status.next_action === action,
+          `${reason}/${mask}/${connected}: explanation or next action does not match the existing status precedence`);
+        check(status.ok === !(initializationFailed || transportError || vehicleLinkError || adapterError || stageFailure)
+          && status.vciConnected === (connected && !transportError && !initializationFailed)
+          && status.vci_connected === status.vciConnected && status.vehicleConnected === (vehicleLinkError ? false : null)
+          && status.vehicle_connected === status.vehicleConnected && status.latestReadoutStatus === "partial"
+          && status.latestReadoutStopReason === "retained_reason" && status.lastDisconnectReason === (reason || undefined)
+          && status.vehicleCommandEnabled === false && status.wouldTransmit === false
+          && status.vehicle_command_enabled === false && status.would_transmit === false
+          && Object.keys(before).every((key) => c.obdDevSession[key] === before[key]),
+          `${reason}/${mask}/${connected}: presentation alignment changed diagnostic metadata or safety flags`);
+      }
+    }
   }
 }
 
