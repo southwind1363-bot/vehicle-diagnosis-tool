@@ -30,19 +30,21 @@ function validateReadoutNavigation() {
     }
     closest(selector) { return selector === `#${this.id}` || (selector === "details" && this.tagName === "DETAILS") ? this : this.parentElement?.closest(selector) || null; }
     setAttribute() {}
-    scrollIntoView() { this.scrolled += 1; }
+    scrollIntoView(options) { this.scrolled += 1; this.scrollOptions = options; }
   }
   const nodes = Object.fromEntries(["obd-panel", "diagnosis-panel", "data-panel", "obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost",
-    "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdMonitorGrid", "obdDevSessionSummary", "obdConnectionProfile", "obdReadoutDetails", "obdDevSessionDetails"]
+    "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdDetectedCodes", "obdMonitorGrid", "obdMonitorStatus", "obdDevSessionSummary", "obdConnectionProfile", "obdReadoutDetails", "obdDevSessionDetails"]
     .map((id) => [id, new Element(id)]));
   const attach = (parent, child) => nodes[parent].appendChild(nodes[child]);
   attach("diagnosis-panel", "obdReadoutHome"); attach("obdReadoutHome", "obdReadoutSurface");
   attach("obdReadoutSurface", "obdImportStatus"); attach("obdReadoutSurface", "obdMonitorGrid");
+  attach("obdReadoutSurface", "obdDetectedCodes"); attach("obdReadoutSurface", "obdMonitorStatus");
   attach("obdStageResultsView", "obdReadoutResultsHost");
   attach("obdStageResultsView", "obdReadoutDetails"); attach("obdReadoutDetails", "obdDevSessionDetails");
   nodes.obdReadoutDetails.tagName = "DETAILS";
   attach("obdStageDetailsView", "obdDevSessionSummary"); attach("obdStageDetailsView", "obdConnectionProfile");
-  const context = vm.createContext({ document: { getElementById: (id) => nodes[id] }, window: { scrollTo() {} },
+  const scrollCalls = [];
+  const context = vm.createContext({ document: { getElementById: (id) => nodes[id] }, window: { scrollY: 320, scrollTo: (options) => scrollCalls.push(options) },
     tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false,
     obdStagePanel: {}, obdStageBadge: {}, obdStageStatus: {}, obdStageTabs: [], activeObdStage: "setup", getObdAutoStage: () => "setup",
     ...Object.fromEntries(["obdStageSetupView", "obdStageResultsView", "obdStageDetailsView"].map((id) => [id, nodes[id]])) });
@@ -57,16 +59,21 @@ function validateReadoutNavigation() {
   nodes.obdImportStatus.textContent = "0 DTC / acquired";
   nodes.obdMonitorGrid.values = [{ value: 0, unit: "km/h" }, { value: 88, unit: "C" }];
   const values = nodes.obdMonitorGrid.values;
+  nodes.obdMonitorGrid.appendChild(new Element("pid-value"));
+  nodes.obdDetectedCodes.appendChild(new Element("dtc-value"));
   for (const tab of ["diagnosis-panel", "data-panel", "obd-panel", "diagnosis-panel", "obd-panel"]) {
     context.activateTab(tab);
     check(nodes.obdReadoutSurface.parentElement === (tab === "obd-panel" ? nodes.obdReadoutResultsHost : nodes.obdReadoutHome), "Tab switch failed to return the shared readout surface");
     check(nodes.obdMonitorGrid.values === values && nodes.obdImportStatus.textContent === "0 DTC / acquired", "Tab switch replaced readout nodes or values");
   }
-  for (const [target, stage] of [["obdImportStatus", "results"], ["obdMonitorGrid", "results"], ["obdDevSessionSummary", "details"], ["obdConnectionProfile", "details"], ["obdReadoutDetails", "results"], ["obdDevSessionDetails", "results"]]) {
+  for (const [target, stage] of [["obdImportStatus", "results"], ["obdDetectedCodes", "results"], ["obdMonitorGrid", "results"], ["obdDevSessionSummary", "details"], ["obdConnectionProfile", "details"], ["obdReadoutDetails", "results"], ["obdDevSessionDetails", "results"]]) {
     nodes.obdReadoutDetails.open = false;
     context.renderObdStageView("setup");
+    const previousPageScrolls = scrollCalls.length;
     context.scrollToObdSection(target);
+    check(scrollCalls.length === previousPageScrolls, "Within-tab navigation must not start a competing page-top scroll");
     check(context.activeObdStage === stage && nodes[target].scrolled === 1, "Result shortcut scrolled into a hidden tab");
+    check(nodes[target].scrollOptions.behavior === "instant", "Result navigation must not race the tab scroll animation");
     if (target === "obdReadoutDetails" || target === "obdDevSessionDetails") check(nodes.obdReadoutDetails.open, "Result shortcut did not open the enclosing disclosure");
   }
   context.obdAccessUnlocked = false;
@@ -78,6 +85,23 @@ function validateReadoutNavigation() {
   check(context.obdStagePanel.hidden && nodes.obdReadoutSurface.parentElement === nodes.obdReadoutHome && nodes.obdImportStatus.scrolled === 1, "Lock did not restore the readout surface or blocked navigation");
   context.scrollToObdSection("missing");
   check(nodes.obdReadoutHome.children.length === 1 && nodes.obdReadoutResultsHost.children.length === 0, "Navigation duplicated readout elements");
+  context.obdAccessUnlocked = true;
+  for (const [target, status] of [["obdDetectedCodes", "obdImportStatus"], ["obdMonitorGrid", "obdMonitorStatus"]]) {
+    nodes[target].children = [];
+    nodes[status].textContent = "Readout unavailable; not an all-clear result";
+    const previousScroll = nodes[status].scrolled;
+    context.scrollToObdSection(target);
+    check(nodes[status].scrolled === previousScroll + 1 && nodes[target].scrolled === 1, "Empty readout navigation must show status rather than an empty grid");
+    check(nodes[status].textContent === "Readout unavailable; not an all-clear result" && context.activeObdStage === "results", "Navigation changed readout status or selected the wrong stage");
+  }
+  const resultNavigation = indexSource.match(/<nav class="obd-results-nav"[\s\S]*?<\/nav>/)?.[0] || "";
+  for (const target of ["obdDetectedCodes", "obdMonitorGrid", "obdReadoutDetails", "obdImportStatus"]) {
+    check(resultNavigation.includes(`data-obd-scroll-target="${target}"`), `Results navigation is missing ${target}`);
+  }
+  context.activateTab("diagnosis-panel");
+  context.scrollToObdSection("obdReadoutDetails");
+  check(scrollCalls.at(-1).behavior === "instant" && scrollCalls.at(-1).top === 320, "Cross-tab result navigation must cancel the tab animation");
+  check(nodes["obd-panel"].classList.contains("is-active") && nodes.obdReadoutDetails.open, "Cross-tab shortcut failed to open the readout result");
   for (const id of ["obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost", "obdImportStatus", "obdMonitorGrid", "obdReadoutDetails", "obdDevSessionDetails"]) {
     check(indexSource.split(`id="${id}"`).length === 2, `Readout ID ${id} is missing or duplicated`);
   }

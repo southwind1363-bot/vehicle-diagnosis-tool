@@ -1677,6 +1677,36 @@ body.dark .flow-node-measure .flow-step {
   display: none;
 }
 
+.obd-results-nav {
+  position: sticky;
+  top: 70px;
+  z-index: 40;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px 0;
+  margin-bottom: 12px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
+}
+
+.obd-results-nav button {
+  min-width: 0;
+  min-height: 52px;
+  padding: 6px;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+#obdDetectedCodes,
+#obdMonitorGrid,
+#obdImportStatus,
+#obdMonitorStatus,
+#obdReadoutDetails,
+#obdDevSessionDetails {
+  scroll-margin-top: 150px;
+}
+
 .obd-readout-details {
   margin-top: 20px;
   border-top: 1px solid var(--line);

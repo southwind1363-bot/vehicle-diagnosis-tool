@@ -687,9 +687,15 @@
         <div class="button-row">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
           <button id="obdSessionOpenButton" class="secondary-button" type="button">読取結果ファイルを開く</button>
-          <button class="secondary-button" type="button" data-obd-scroll-target="obdReadoutDetails">FF・ECU・取得状態</button>
         </div>
         <p class="data-status" data-obd-session-export-status role="status"></p>
+
+        <nav class="obd-results-nav" aria-label="読取結果内の移動">
+          <button class="secondary-button" type="button" data-obd-scroll-target="obdDetectedCodes">DTC一覧</button>
+          <button class="secondary-button" type="button" data-obd-scroll-target="obdMonitorGrid">ライブ値</button>
+          <button class="secondary-button" type="button" data-obd-scroll-target="obdReadoutDetails">FF・ECU</button>
+          <button class="secondary-button" type="button" data-obd-scroll-target="obdImportStatus">取得状況</button>
+        </nav>
 
         <div id="obdDiagnosticFlowPanelResults" class="obd-diagnostic-flow-panel" data-obd-diagnostic-flow-panel hidden></div>
 
