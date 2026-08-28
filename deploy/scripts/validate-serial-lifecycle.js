@@ -222,15 +222,22 @@ for (const fail of [false, true]) {
   await assert.rejects(c.sendElmDeveloperCommand("04"));
   check(writes === 0, "DTC erase must remain outside the read-only command allowlist");
   const pending = c.sendElmDeveloperCommand("03");
+  const rejected = assert.rejects(pending);
   c.lockObdAccess();
-  await c.disconnectObdDeveloperVci();
+  const closing = c.disconnectObdDeveloperVci();
   c.obdAccessUnlocked = true;
+  await settle();
   await c.connectObdDeveloperVci();
-  c.obdDevSession.textBuffer = "new response>";
+  check(c.obdSerialDisconnectOperation && !c.obdDevSession.port, `${fail}: reconnect bypassed unfinished write cleanup`);
+  check(c.beginObdBridgeOperation() === null, `${fail}: bridge bypassed unfinished write cleanup`);
   if (fail) waiting.reject(new Error("write failed"));
   else waiting.resolve();
-  await assert.rejects(pending);
-  check(writes === 1 && c.obdDevSession.textBuffer === "new response>", `${fail}: stale write consumed a new connection response`);
+  await rejected;
+  await closing;
+  await c.connectObdDeveloperVci();
+  c.obdDevSession.textBuffer = "new response>";
+  await settle();
+  check(writes === 1 && c.obdDevSession.port && c.obdDevSession.textBuffer === "new response>", `${fail}: settled old write changed a new connection response`);
 }
 
 {
@@ -466,6 +473,124 @@ for (const stage of ["initialize", "identify"]) {
       && c.obdDevSession.connectionState === "disconnected" && c.obdSerialDisconnectOperation === null
       && c.obdDevStatus.textContent.includes("受信上限"), `${stage}/${cleanupFirst}: connection cleanup overwrote the overflow reason or repeated port cleanup`);
   }
+}
+
+function loadDeveloperGate(c) {
+  const gate = source.match(/function renderObdDeveloperGate\([^\n]*\) \{[\s\S]*?\r?\n\}/)[0];
+  for (const [, name] of gate.matchAll(/\b(obd[A-Z]\w*)\.(?:textContent|disabled|hidden|value)/g)) {
+    if (!(name in c)) c[name] = { textContent: "", value: "" };
+  }
+  c.document = { querySelectorAll: () => [] };
+  c.window = { ObdReadOnly: { getCapability: () => ({ secureContext: true, webSerialSupported: true }) } };
+  c.getSelectedObdInterfaceLabel = () => "ELM327";
+  c.resolveObdInterfaceId = () => "user-vci-elm327";
+  c.getObdInterfaceReadoutRoute = () => ({ route: "desktop_web_serial" });
+  c.getObdPrimaryActionLabel = () => "connect";
+  c.getRequestedInterfaceReadyStatus = c.getRequestedInterfaceIdleStatus = () => "";
+  c.getObdAutoStage = () => "setup";
+  for (const name of ["renderObdBridgePairingControls", "renderObdPreviewButtons", "renderObdWorkflowGuide", "renderObdDeveloperSessionSummary", "renderObdStageView"]) c[name] = () => {};
+  vm.runInContext(gate, c);
+}
+
+for (const failWrite of [false, true]) {
+  for (const cleanup of ["normal", "reader-cancel", "reader-release", "writer-release", "close", "slow-close"]) {
+    const { context: c, port, calls } = await readClient();
+    load(c, ["sendElmDeveloperCommand", "isAllowedObdDeveloperCommand"]);
+    vm.runInContext(source.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = [\s\S]*?;/)[0], c);
+    loadDeveloperGate(c);
+    const writing = deferred();
+    const closing = deferred();
+    const actions = [];
+    let polls = 0;
+    c.readElmDeveloperResponse = async () => { polls += 1; return "43 00"; };
+    const record = (name) => { actions.push(name); if (cleanup === name) throw new Error(name); };
+    c.obdDevSession.reader.cancel = async () => record("reader-cancel");
+    c.obdDevSession.reader.releaseLock = () => record("reader-release");
+    c.obdDevSession.writer.releaseLock = () => record("writer-release");
+    c.obdDevSession.writer.write = () => { actions.push("write"); return writing.promise; };
+    port.close = async () => { record("close"); if (cleanup === "slow-close") await closing.promise; };
+    const saved = c.obdDevSession.lastSession = { marker: "valid result" };
+    c.obdSerialResultOwner.expectedLastSession = saved;
+    const pending = c.sendElmDeveloperCommand("03").then((value) => ({ value }), (error) => ({ error }));
+    c.obdDevSession.textBuffer = "owner buffer";
+    await assert.rejects(c.sendElmDeveloperCommand("07"), /elm_write_busy/);
+    check(actions.join(",") === "write" && c.obdDevSession.textBuffer === "owner buffer", "Overlapping write changed the owning buffer or sent a command");
+    check(await c.runObdDeveloperRead("overlap", ["07"]) === false && c.recorded.length === 0 && c.retained.length === 0
+      && c.obdDevSession.lastSession === saved && c.obdDevSession.port === port && actions.join(",") === "write",
+      "Overlapping read produced a diagnostic failure or disconnected the owning write");
+    const cleanupPromise = c.disconnectObdDeveloperVci();
+    await settle();
+    await c.connectObdDeveloperVci();
+    check(c.obdSerialDisconnectOperation && c.obdDevSession.connectionState === "disconnecting" && !c.obdDevSession.port
+      && !actions.includes("writer-release") && !actions.includes("close") && calls.select === 1 && polls === 0,
+      `${failWrite}/${cleanup}: unfinished write was released or reused`);
+    c.lockObdDeveloperMode();
+    c.obdDevModeUnlocked = true;
+    c.renderObdDeveloperGate();
+    check(c.obdDevConnectButton.disabled && c.obdDevStatus.textContent.includes("車両側の停止は未確認")
+      && c.beginObdBridgeOperation() === null, `${cleanup}: lock/unlock hid quarantine or allowed bridge requests`);
+    if (failWrite) writing.reject(new Error("late write failure"));
+    else writing.resolve();
+    const result = await pending;
+    await settle();
+    check(result.error && !result.value && polls === 0 && c.obdDevSession.pendingWriteOperation === null,
+      `${failWrite}/${cleanup}: late write outcome started response polling or retained pending ownership`);
+    if (cleanup === "slow-close") {
+      check(c.obdSerialDisconnectOperation && c.beginObdBridgeOperation() === null, "Slow close released the cleanup barrier early");
+      closing.resolve();
+    }
+    await cleanupPromise;
+    check(actions.join(",") === "write,reader-cancel,reader-release,writer-release,close" && c.obdDevSession.lastSession === saved,
+      `${failWrite}/${cleanup}: cleanup repeated resources or replaced the diagnostic session`);
+    if (["normal", "slow-close"].includes(cleanup)) {
+      check(!c.obdSerialDisconnectOperation && !c.obdDevConnectButton.disabled, "Confirmed cleanup did not release connection controls");
+      await c.connectObdDeveloperVci();
+      check(c.obdDevSession.port && calls.select === 2, "Fresh connection was blocked after actual write and cleanup completed");
+      await c.disconnectObdDeveloperVci();
+    } else {
+      await c.disconnectObdDeveloperVci();
+      await c.connectObdDeveloperVci();
+      c.renderObdDeveloperGate();
+      check(c.obdSerialDisconnectOperation?.cleanupFailed && c.obdDevConnectButton.disabled && calls.select === 1
+        && c.obdDevConnectionState.textContent === "終了未確認" && c.beginObdBridgeOperation() === null,
+        `${cleanup}: unconfirmed cleanup was marked disconnected or retried`);
+    }
+  }
+}
+
+for (const rejectWrite of [false, true]) {
+  const { context: c, port } = await readClient();
+  load(c, ["sendElmDeveloperCommand", "isAllowedObdDeveloperCommand"]);
+  vm.runInContext(source.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = [\s\S]*?;/)[0], c);
+  const writing = deferred();
+  const stream = new WritableStream({ write: () => writing.promise });
+  c.obdDevSession.writer = stream.getWriter();
+  let closed = 0;
+  port.close = async () => { assert.equal(stream.locked, false); closed += 1; };
+  c.readElmDeveloperResponse = async () => { throw new Error("unexpected response polling"); };
+  const result = c.sendElmDeveloperCommand("03").then((value) => ({ value }), (error) => ({ error }));
+  const close = c.disconnectObdDeveloperVci();
+  await settle();
+  check(stream.locked && closed === 0 && c.obdSerialDisconnectOperation, "Real WritableStream lock was released before the pending write settled");
+  if (rejectWrite) writing.reject(new Error("underlying sink rejected"));
+  else writing.resolve();
+  check(Boolean((await result).error), "Real stream late completion was accepted after disconnect");
+  await close;
+  check(!stream.locked && closed === 1 && !c.obdSerialDisconnectOperation, "Real WritableStream cleanup did not release the port exactly once");
+}
+
+{
+  const { context: c } = await readClient();
+  load(c, ["sendElmDeveloperCommand", "isAllowedObdDeveloperCommand"]);
+  vm.runInContext(source.match(/const WEB_SERIAL_READ_ONLY_COMMANDS = [\s\S]*?;/)[0], c);
+  c.obdDevSession.writer.write = () => { throw new Error("synchronous write failure"); };
+  await assert.rejects(c.sendElmDeveloperCommand("03"), /elm_transport_write_failed:03/);
+  check(c.obdDevSession.pendingWriteOperation === null, "Synchronous write failure leaked ownership");
+  c.obdDevSession.writer.write = async () => {};
+  c.readElmDeveloperResponse = async () => "43 00";
+  check(await c.sendElmDeveloperCommand("03") === "43 00" && !c.obdDevSession.pendingWriteOperation,
+    "Normal write did not continue to response polling or release ownership");
+  await c.disconnectObdDeveloperVci();
 }
 
 console.log(`Serial lifecycle checks: ${checks} / Errors: 0`);

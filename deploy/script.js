@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.279";
+const APP_VERSION = "3.13.280";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5027,7 +5027,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevControls.hidden = !unlocked;
   renderObdBridgePairingControls();
   obdDevLockButton.disabled = !unlocked;
-  obdDevConnectButton.disabled = !unlocked || Boolean(obdBridgeOperation) || connected || (primaryActionNeedsSerial && !serialReady);
+  obdDevConnectButton.disabled = !unlocked || Boolean(obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation) || connected || (primaryActionNeedsSerial && !serialReady);
   obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady, nativeConnectorRoute });
   obdDevIdentifyButton.disabled = !unlocked || !connected || serialBusy;
   obdDevCoreScanButton.disabled = !unlocked || !connected || serialBusy;
@@ -5068,7 +5068,14 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
             : "読取前プレビュー中"
         : "読取待機中";
 
-  if (!unlocked) {
+  if (obdSerialDisconnectOperation) {
+    obdDevConnectionState.textContent = obdSerialDisconnectOperation.cleanupFailed ? "終了未確認" : "終了処理中";
+    obdDevStatus.textContent = obdSerialDisconnectOperation.cleanupFailed
+      ? "VCIの終了処理を確認できないため、再接続を禁止しています。車両側の停止は未確認です。"
+      : obdSerialDisconnectOperation.writePending
+        ? "VCIへの未完了送信と終了処理を確認中です。再接続はできません。車両側の停止は未確認です。"
+        : "VCIの終了処理を待っています。再接続はできません。車両側の停止は未確認です。";
+  } else if (!unlocked) {
     obdDevStatus.textContent = "この端末に詳細トークンを設定した場合だけ詳細読取メニューを有効化できます。送信は読取専用のみです。";
   } else if (primaryActionNeedsSerial && !serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
@@ -5328,6 +5335,9 @@ async function disconnectObdDeveloperVci(options = {}) {
   const operation = {};
   obdSerialDisconnectOperation = operation;
   const { reader, writer, port } = obdDevSession;
+  const pendingWrite = obdDevSession.pendingWriteOperation;
+  const waitForWrite = Boolean(pendingWrite && pendingWrite.writer === writer && pendingWrite.port === port);
+  operation.writePending = waitForWrite;
   setObdDeveloperConnectionState("disconnecting", reason);
   obdDevSession.reader = null;
   obdDevSession.writer = null;
@@ -5348,16 +5358,32 @@ async function disconnectObdDeveloperVci(options = {}) {
     // Defer completion until the coalesced cleanup promise has been assigned.
     await Promise.resolve();
     if (reader) {
-      try { await reader.cancel(); } catch (_error) { /* Continue releasing other resources. */ }
-      try { reader.releaseLock(); } catch (_error) { /* Continue releasing other resources. */ }
+      try { await reader.cancel(); } catch (_error) {
+        if (waitForWrite) operation.cleanupFailed = true;
+      }
+      try { reader.releaseLock(); } catch (_error) {
+        if (waitForWrite) operation.cleanupFailed = true;
+      }
+    }
+    if (waitForWrite) {
+      await pendingWrite.settledPromise;
+      operation.writePending = false;
     }
     if (writer) {
-      try { writer.releaseLock(); } catch (_error) { /* Still attempt to close the port. */ }
+      try { writer.releaseLock(); } catch (_error) {
+        if (waitForWrite) operation.cleanupFailed = true;
+      }
     }
     if (port) {
-      try { await port.close(); } catch (_error) { /* Detached resources cannot be reused. */ }
+      try { await port.close(); } catch (_error) {
+        if (waitForWrite) operation.cleanupFailed = true;
+      }
     }
     if (obdSerialDisconnectOperation !== operation) return;
+    if (operation.cleanupFailed) {
+      renderObdDeveloperGate();
+      return;
+    }
     obdSerialDisconnectOperation = null;
     obdDevSession.disconnectedAt = new Date().toISOString();
     setObdDeveloperConnectionState("disconnected", reason);
@@ -5367,6 +5393,7 @@ async function disconnectObdDeveloperVci(options = {}) {
       : reason === "operator_disconnect" ? "VCI読取を停止しました。" : "VCI接続が終了したため、安全に読取を停止しました。");
     renderObdDeveloperGate();
   })();
+  renderObdDeveloperGate();
   return operation.promise;
 }
 
@@ -6774,6 +6801,7 @@ function buildWebSerialReadoutOutcome(commands, commandResponses, options = {}) 
 async function runObdDeveloperRead(label, commands) {
   const revision = obdSerialRevision;
   if (!continueObdSerialOperation(revision)) return false;
+  if (obdDevSession.pendingWriteOperation || obdSerialDisconnectOperation) return false;
   if (!obdDevSession.writer || !obdDevSession.reader) {
     obdDevStatus.textContent = "VCI読取が開始されていません。";
     return false;
@@ -6822,6 +6850,7 @@ async function runObdDeveloperRead(label, commands) {
   } catch (error) {
     if (!continueObdSerialOperation(revision)) return false;
     const message = error?.message || String(error);
+    if (message === "elm_write_busy") return false;
     const timedOut = message.startsWith("elm_response_timeout:");
     const responseTooLarge = obdDevSession.lastDisconnectReason === "serial_response_too_large" && message.startsWith("elm_transport_");
     const failedCommandElapsedMs = currentCommandStartedAt === null ? null : Math.max(0, Date.now() - currentCommandStartedAt);
@@ -7282,11 +7311,18 @@ async function sendElmDeveloperCommand(command, timeoutMs = 3000) {
   }
   const { writer, port, encoder } = obdDevSession;
   if (!writer || !port || !obdDevSession.readLoopActive) throw new Error("elm_transport_disconnected");
+  if (obdSerialDisconnectOperation || obdDevSession.pendingWriteOperation) throw new Error("elm_write_busy");
+  let settleWrite;
+  const operation = { writer, port, settledPromise: new Promise((resolve) => { settleWrite = resolve; }) };
+  obdDevSession.pendingWriteOperation = operation;
   obdDevSession.textBuffer = "";
   try {
     await writer.write(encoder.encode(`${normalized}\r`));
   } catch (_error) {
     throw new Error(`elm_transport_write_failed:${normalized}`);
+  } finally {
+    if (obdDevSession.pendingWriteOperation === operation) obdDevSession.pendingWriteOperation = null;
+    settleWrite();
   }
   throwIfObdSerialOperationCancelled(revision);
   if (obdDevSession.writer !== writer || obdDevSession.port !== port) throw new Error("elm_transport_disconnected");
