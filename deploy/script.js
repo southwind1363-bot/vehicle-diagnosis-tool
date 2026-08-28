@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.310";
+const APP_VERSION = "3.13.311";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7755,11 +7755,7 @@ function renderObdBridgeReadout(parts = {}) {
   const currentDtcResponseFormatLabel = formatObdDtcResponseFormat(currentDtcResponseFormats, "");
   const currentReportedDtcEcuCountLabel = formatObdReportedDtcEcuCountSummary(currentDtcSnapshot);
 
-  if (monitorValues.length) {
-    renderObdMonitorValues(monitorValues, livePidSnapshot.monitorInsights || []);
-  } else if (freezeFrameValues.length) {
-    renderObdMonitorValues(freezeFrameValues, freezeFrameSnapshot.monitorInsights || []);
-  }
+  renderObdBridgeMeasurementValues(livePidSnapshot, freezeFrameSnapshot);
   if (currentCodes.length) {
     obdDetectedCodes.innerHTML = "";
     [...new Map(dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [buildObdDtcDisplayKey(item), item])).values()].forEach((item) => obdDetectedCodes.appendChild(createObdDtcCard(item, dtcSnapshot.dtcs, session.vehicleProfile || session.vehicle_profile || null)));
@@ -7923,6 +7919,22 @@ function formatObdBridgeCompositeValue(value, depth = 0) {
     return entries.length ? entries.join(" / ") : NO_DATA;
   }
   return String(value);
+}
+
+function renderObdBridgeMeasurementValues(livePidSnapshot, freezeFrameSnapshot) {
+  const values = livePidSnapshot?.monitorValues || [];
+  renderObdMonitorValues(values, livePidSnapshot?.monitorInsights || []);
+  if (!values.length && freezeFrameSnapshot?.monitorValues?.length) {
+    obdMonitorStatus.textContent = "表示できるライブ値はありません。フリーズフレームは「FF・ECU」に表示します。";
+  }
+}
+
+function formatObdFreezeFrameValueLine(item = {}) {
+  const ecu = item.sourceEcu || item.source_ecu || "ECU未記録";
+  const frameNumber = item.freezeFrameNumber ?? item.freeze_frame_number;
+  const frame = Number.isInteger(frameNumber) && frameNumber >= 0 ? `FF #${frameNumber}` : "FF番号未記録";
+  const raw = item.decoded === false || item.undecodedRaw === true ? " / 未換算" : "";
+  return `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)} [${ecu} / ${frame}]${raw}`;
 }
 
 function formatObdBridgeReadoutValue(item = {}) {
@@ -9096,7 +9108,7 @@ function renderObdBridgeSessionDetails(session = null) {
     const freezeFrameEcuScopeLines = freezeFrameEcuSnapshots.length > 1
       ? [
         `ECU別保存: ${freezeFrameEcuSnapshots.length} ECU`,
-        ...freezeFrameEcuSnapshots.slice(0, 3).map((snapshot) => {
+        ...freezeFrameEcuSnapshots.map((snapshot) => {
           const ecu = snapshot?.sourceEcu || snapshot?.source_ecu || "ECU未記録";
           const capturedAt = snapshot?.capturedAt || snapshot?.captured_at || "時刻未記録";
           const protocol = snapshot?.protocol || snapshot?.obd_protocol || "通信方式未記録";
@@ -9107,7 +9119,7 @@ function renderObdBridgeSessionDetails(session = null) {
     const lines = [];
     lines.push(...freezeFrameEcuScopeLines);
     if (freezeFrameTriggerEntries.length) {
-      lines.push(`起点DTC: ${freezeFrameTriggerEntries.slice(0, 4).map(formatObdFreezeFrameTriggerEntry).join(" / ")}`);
+      lines.push(`起点DTC: ${freezeFrameTriggerEntries.map(formatObdFreezeFrameTriggerEntry).join(" / ")}`);
     } else if (freezeFrameSnapshot?.triggerDtc) {
       lines.push(`起点DTC: ${freezeFrameSnapshot.triggerDtc}`);
     }
@@ -9120,7 +9132,7 @@ function renderObdBridgeSessionDetails(session = null) {
     if (freezeExpectedSummary.missingCount) {
       lines.push(`未取得用途: ${formatObdExpectedItemPreview(freezeExpectedSummary.missing, "purpose", 3)}`);
     }
-    lines.push(...freezeFrameValues.slice(0, 6).map((item) => `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)}`));
+    lines.push(...freezeFrameValues.map(formatObdFreezeFrameValueLine));
     sections.push(["フリーズフレーム", lines]);
   }
 
