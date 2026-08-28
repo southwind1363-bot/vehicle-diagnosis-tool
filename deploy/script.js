@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.301";
+const APP_VERSION = "3.13.302";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -711,7 +711,7 @@ caseForm.addEventListener("input", updateCaseQualityPreview);
 seedDummyButton.addEventListener("click", seedDummyCases);
 runSelfTestButton.addEventListener("click", runSelfCheck);
 clearStorageButton.addEventListener("click", clearAllLocalStorage);
-obdAnalyzeButton.addEventListener("click", analyzeObdScannerImport);
+obdAnalyzeButton.addEventListener("click", analyzeObdScannerImportManually);
 obdScannerText.addEventListener("input", invalidateObdScannerImport);
 obdImportPasteButton?.addEventListener("click", pasteObdScannerImport);
 obdImportFileInput?.addEventListener("change", importObdScannerFile);
@@ -11178,6 +11178,10 @@ function analyzeObdScannerImport(options = {}) {
     && (structuredImportSession.accepted === false || structuredImportSession.ok === false || structuredImportSession.blocked === true);
   if (structuredImportRejected) {
     const errors = Array.isArray(structuredImportSession.errors) ? structuredImportSession.errors.filter(Boolean) : [];
+    if (hasActiveObdReadoutForExitWarning()) {
+      obdImportStatus.textContent = `診断結果ファイルを取り込めませんでした: ${errors.slice(0, 3).join(" / ") || "検証に失敗"}。現在の読取結果を保持しています。`;
+      return;
+    }
     obdDetectedCodes.innerHTML = "";
     obdMonitorGrid.innerHTML = "";
     obdMonitorInsightList.innerHTML = "";
@@ -12171,8 +12175,31 @@ function isCurrentObdScannerImport(operation) {
   return true;
 }
 
+function confirmObdReadoutReplacement() {
+  if (!hasActiveObdReadoutForExitWarning()) return true;
+  try {
+    if (typeof window.confirm === "function" && window.confirm("現在の読取結果を新しい入力で置き換えますか？\n残す場合はキャンセルして、読取結果をJSON保存してください。") === true) return true;
+  } catch (error) {
+    obdImportStatus.textContent = "置換確認を表示できませんでした。現在の読取結果を保持しています。";
+    return false;
+  }
+  obdImportStatus.textContent = "読取結果の置換を中止しました。現在の読取結果を保持しています。";
+  return false;
+}
+
+function analyzeObdScannerImportManually() {
+  invalidateObdScannerImport();
+  if (!obdScannerText.value.trim()) {
+    obdImportStatus.textContent = "外部診断機の読取結果を入力してください。";
+    return;
+  }
+  if (!confirmObdReadoutReplacement()) return;
+  analyzeObdScannerImport();
+}
+
 function applyObdScannerImportText(text) {
   invalidateObdScannerImport();
+  if (text.trim() && !confirmObdReadoutReplacement()) return;
   obdScannerText.value = text;
   try {
     analyzeObdScannerImport();
