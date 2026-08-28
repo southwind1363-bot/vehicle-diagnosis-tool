@@ -8,6 +8,7 @@ import "./validate-ecu-response-timing.js";
 import "./validate-response-attempt-numbers.js";
 import "./validate-dtc-evidence-input.js";
 import "./validate-manufacturer-evidence-export.js";
+import "./validate-manufacturer-history-export.js";
 
 const failures = [];
 let checks = 0;

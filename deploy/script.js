@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.322";
+const APP_VERSION = "3.13.323";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -12428,7 +12428,15 @@ function downloadManufacturerSampleTemplate() {
     obdImportStatus.textContent = "実機サンプルTSVを準備できませんでした。画面を再読み込みしてください。";
     return;
   }
-  const exportBundle = buildExport(obdDevSession.lastSession);
+  let exportBundle;
+  try {
+    exportBundle = buildExport(obdDevSession.lastSession);
+  } catch (error) {
+    obdImportStatus.textContent = error?.code === "manufacturer_sample_tsv_invalid_evidence_history"
+      ? "補足値を除外した履歴はTSVでは保持できないため、保存を開始しませんでした。読取結果は保持しています。「読取結果をJSON保存」を使用してください。"
+      : "実機サンプルTSVを準備できませんでした。読取結果は変更していません。";
+    return;
+  }
   const blob = new Blob([`\uFEFF${exportBundle.tsv}`], { type: "text/tab-separated-values;charset=utf-8" });
   const link = document.createElement("a");
   const objectUrl = URL.createObjectURL(blob);

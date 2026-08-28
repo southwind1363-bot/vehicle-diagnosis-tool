@@ -34305,7 +34305,33 @@
     };
   }
 
+  function hasManufacturerSampleInvalidEvidenceHistory(session) {
+    const hasEntries = (value) => Array.isArray(value) && value.length > 0;
+    const positiveCount = (value) => (typeof value === "number" || typeof value === "string" && /^\d+$/.test(value.trim()))
+      && Number.isFinite(Number(value)) && Number(value) > 0;
+    const reports = [session?.importClassification, session?.import_classification]
+      .flatMap((classification) => [classification?.dtcEvidenceFieldReport, classification?.dtc_evidence_field_report]);
+    if (reports.some((report) => report && (
+      [report.invalidFieldObservations, report.invalid_field_observations, report.invalidFieldIds, report.invalid_field_ids].some(hasEntries)
+      || [report.invalidObservationCount, report.invalid_observation_count, report.invalidFieldCount, report.invalid_field_count].some(positiveCount)
+      || [report.validationStatus, report.validation_status].includes("invalid_evidence_excluded")
+    ))) return true;
+    const summaries = [session, session?.coreSessionStatus, session?.core_session_status]
+      .flatMap((parent) => [parent?.readoutQualitySummary, parent?.readout_quality_summary, parent?.importedReadoutQualitySummary, parent?.imported_readout_quality_summary]);
+    return summaries.some((summary) => summary && (
+      [summary.invalidDtcEvidenceFieldIds, summary.invalid_dtc_evidence_field_ids].some(hasEntries)
+      || [summary.invalidDtcEvidenceObservationCount, summary.invalid_dtc_evidence_observation_count].some(positiveCount)
+      || [summary.dtcEvidenceValidationStatus, summary.dtc_evidence_validation_status].includes("invalid_evidence_excluded")
+    ));
+  }
+
   function buildManufacturerSampleCollectionTemplateTsv(session = null) {
+    // The fixed TSV columns cannot preserve prior rejection scope or acquisition history.
+    if (hasManufacturerSampleInvalidEvidenceHistory(session)) {
+      const error = new Error("manufacturer_sample_tsv_invalid_evidence_history");
+      error.code = "manufacturer_sample_tsv_invalid_evidence_history";
+      throw error;
+    }
     const template = getManufacturerSampleCollectionTemplate();
     const dtcSnapshot = session?.dtcSnapshot || session?.dtc_snapshot || null;
     const dtcs = Array.isArray(dtcSnapshot?.dtcs) ? dtcSnapshot.dtcs.slice(0, 500) : [];
