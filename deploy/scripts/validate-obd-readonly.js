@@ -5,6 +5,7 @@ import "./validate-session-export.js";
 import "./validate-mode06-normalization.js";
 import "./validate-supported-pid-roundtrip.js";
 import "./validate-ecu-response-timing.js";
+import "./validate-response-attempt-numbers.js";
 
 const failures = [];
 let checks = 0;

@@ -34691,10 +34691,15 @@
     ].map(normalizeDtcEvidenceRequestedServiceValue).filter(Boolean))];
   }
 
-  function normalizeDtcEvidenceResponseCountValue(value) {
-    if (value === null || value === undefined || String(value).trim() === "") return null;
+  function normalizeDtcEvidenceBoundedInteger(value, maximum) {
+    if (typeof value !== "number" && typeof value !== "string") return null;
+    if (typeof value === "string" && !/^\d+$/.test(value.trim())) return null;
     const parsed = Number(value);
-    return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 10000 ? parsed : null;
+    return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= maximum ? parsed : null;
+  }
+
+  function normalizeDtcEvidenceResponseCountValue(value) {
+    return normalizeDtcEvidenceBoundedInteger(value, 10000);
   }
 
   function readDtcEvidenceResponseCount(row = {}) {
@@ -34702,9 +34707,7 @@
   }
 
   function normalizeDtcEvidenceResponseWaitMsValue(value) {
-    if (value === null || value === undefined || String(value).trim() === "") return null;
-    const parsed = Number(value);
-    return Number.isSafeInteger(parsed) && parsed >= 0 && parsed <= 600000 ? parsed : null;
+    return normalizeDtcEvidenceBoundedInteger(value, 600000);
   }
 
   function readDtcEvidenceResponseWaitMs(row = {}) {
@@ -35265,8 +35268,8 @@
       const rowResponseService = normalizeDtcEvidenceResponseServiceValue(cellAt(responseServiceIndex, 24));
       const rowEcuResponseStatus = normalizeDtcEvidenceEcuResponseStatus(cellAt(ecuResponseStatusIndex, 40));
       const rowNegativeRequestedService = normalizeDtcEvidenceRequestedServiceValue(cellAt(negativeRequestedServiceIndex, 24));
-      const rowResponseCount = normalizeDtcEvidenceResponseCountValue(cellAt(responseCountIndex, 12));
-      const rowResponseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(cellAt(responseWaitIndex, 24));
+      const rowResponseCount = normalizeDtcEvidenceResponseCountValue(cells[responseCountIndex]);
+      const rowResponseWaitMs = normalizeDtcEvidenceResponseWaitMsValue(cells[responseWaitIndex]);
       const rowEcuGroup = cellAt(ecuGroupIndex, 120) || null;
       const rowEcuSystem = cellAt(ecuSystemIndex, 160) || null;
       const rowParentEcuId = cellAt(parentEcuIdIndex, 120) || null;
