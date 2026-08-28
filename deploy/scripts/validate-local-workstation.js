@@ -591,7 +591,8 @@ function startPendingScannerAcquisition(client, kind, input = { value: "selected
     return {
       input,
       complete: async (value) => { reader.result = value; reader.onload(); },
-      fail: async () => { reader.onerror(); }
+      fail: async () => { reader.onerror(); },
+      abort: async () => { reader.onabort?.(); }
     };
   }
   const clipboard = deferred();
@@ -606,7 +607,7 @@ function startPendingScannerAcquisition(client, kind, input = { value: "selected
 async function validateScannerAcquisitionOrder(webUrl) {
   for (const kind of ["file", "clipboard"]) {
     for (const action of ["clear", "analyze", "internal-merge", "access-lock", "details-lock", "new-session", "manual-input", "edit-back", "vehicle-change", "empty-scan"]) {
-      for (const outcome of ["success", "error"]) {
+      for (const outcome of (kind === "file" ? ["success", "error", "abort"] : ["success", "error"])) {
         const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
         const previous = { source: "previous" };
         client.obdDevSession.lastSession = previous;
@@ -636,6 +637,7 @@ async function validateScannerAcquisitionOrder(webUrl) {
         const expectedSession = client.obdDevSession.lastSession;
         const expectedStatus = client.obdImportStatus.textContent;
         if (outcome === "success") await pending.complete("old input");
+        else if (outcome === "abort") await pending.abort();
         else await pending.fail();
         check(client.obdScannerText.value === expectedText && client.obdDevSession.lastSession === expectedSession && client.obdImportStatus.textContent === expectedStatus && client.obdScannerImportOperation === null, `${kind} ${outcome} restored input or status after ${action}`);
         if (action === "clear") check(JSON.stringify(retainedDisplay) === beforeClear, `${kind}/${outcome}: Clear or late acquisition changed retained readout display`);
@@ -683,6 +685,45 @@ async function validateScannerAcquisitionOrder(webUrl) {
     const input = { value: "selected.json", files: [{ name: "selected.json", size: 1 }] };
     client.importObdScannerFile({ currentTarget: input });
     check(client.obdScannerImportOperation === null && input.value === "" && client.obdImportStatus.textContent.includes("ファイルを読めません"), `Synchronous FileReader ${failure} failure escaped cleanup`);
+  }
+}
+
+async function validateScannerFileAbort(webUrl) {
+  for (const active of [false, true]) {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    const previous = active ? { source: "scanner_text", dtcSnapshot: { codes: ["P0171"] } } : null;
+    client.obdDevSession.lastSession = previous;
+    client.setObdSessionExportStatus("retained-export-notice");
+    const displays = [client.obdDetectedCodes, client.obdMonitorGrid, client.obdMonitorInsightList, client.obdMonitorStatus, client.obdMonitorCount];
+    displays.forEach((element) => Object.assign(element, { innerHTML: "retained", textContent: "retained", hidden: false }));
+    const snapshot = JSON.stringify(displays);
+    let prompts = 0;
+    let analyses = 0;
+    client.window.confirm = () => { prompts += 1; return true; };
+    const analyze = client.analyzeObdScannerImport;
+    client.analyzeObdScannerImport = (...args) => { analyses += 1; return analyze(...args); };
+    const pending = startPendingScannerAcquisition(client, "file");
+    check(client.exportControlImportBusy, "File read did not enter busy state");
+    await pending.abort();
+    check(client.obdScannerImportOperation === null && !client.exportControlImportBusy && pending.input.value === "", "Aborted file read stranded import busy state or picker value");
+    check(client.obdDevSession.lastSession === previous && client.obdScannerText.value === "valid import" && JSON.stringify(displays) === snapshot
+      && client.exportStatuses.every((value) => value === "retained-export-notice"), "Aborted file read changed retained data, display or export notice");
+    check(prompts === 0 && analyses === 0 && client.obdImportStatus.textContent.includes("ファイルを読めません"), "Aborted file read reached analysis/confirmation or lost its feedback");
+    for (const kind of ["file", "clipboard"]) {
+      pending.input.value = "selected.txt";
+      const retry = startPendingScannerAcquisition(client, kind, pending.input);
+      const operation = client.obdScannerImportOperation;
+      client.obdImportStatus.textContent = "newer-import";
+      await pending.abort();
+      check(client.obdScannerImportOperation === operation && client.exportControlImportBusy && pending.input.value === "selected.txt"
+        && client.obdImportStatus.textContent === "newer-import", `Late abort disturbed newer ${kind} acquisition`);
+      await retry.complete("retry input");
+      const session = client.obdDevSession.lastSession;
+      const status = client.obdImportStatus.textContent;
+      await pending.abort();
+      check(session && session !== previous && client.obdDevSession.lastSession === session && client.obdScannerImportOperation === null
+        && client.obdImportStatus.textContent === status && client.obdScannerText.value === "retry input", `${kind}: retry or late abort lost completed readout`);
+    }
   }
 }
 
@@ -1742,6 +1783,7 @@ try {
     await validateBridgeOperationLifecycle(workstation.webUrl);
     await validateScannerImportOwnership(workstation.webUrl);
     await validateScannerAcquisitionOrder(workstation.webUrl);
+    await validateScannerFileAbort(workstation.webUrl);
     await validateScannerParserIntegration(workstation.webUrl);
     await validateScannerReplacementConfirmation(workstation.webUrl);
     validateScannerInputClear(workstation.webUrl);
