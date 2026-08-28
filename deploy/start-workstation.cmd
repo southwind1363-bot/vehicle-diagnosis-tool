@@ -6,6 +6,9 @@ if errorlevel 1 goto directory_error
 node --version >nul 2>&1
 if errorlevel 1 goto node_error
 
+node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 22 ? 0 : 1)" >nul 2>&1
+if errorlevel 1 goto runtime_error
+
 node -e "require.resolve('express')" >nul 2>&1
 if errorlevel 1 goto dependency_error
 
@@ -30,6 +33,12 @@ goto finish
 :dependency_error
 echo Required packages are missing. Run npm install in the deploy folder first.
 echo Internet is required for initial setup, not for local startup afterward.
+set "workstation_exit=1"
+goto finish
+
+:runtime_error
+echo Node.js 22 or newer is required. Node.js 24 LTS is recommended.
+echo Update Node.js before using this launcher. No software was installed automatically.
 set "workstation_exit=1"
 
 :finish

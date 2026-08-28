@@ -20,6 +20,31 @@ const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-tok
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
+async function validateWorkstationRuntime() {
+  const launcher = fs.readFileSync(new URL("../start-workstation.cmd", import.meta.url), "utf8");
+  const command = launcher.match(/node -e "([^"]*process\.exit[^"]*)"/)?.[1];
+  check(Boolean(command) && launcher.indexOf(command) < launcher.indexOf("require.resolve('express')"), "Launcher must check runtime before dependencies or startup");
+  const starter = fs.readFileSync(new URL("./start-local-workstation.js", import.meta.url), "utf8");
+  const code = starter.match(/export async function startLocalWorkstation\([^)]*\) \{[\s\S]*?\r?\n\}/)?.[0]?.replace(/^export /, "");
+  check(Boolean(code), "Runtime test could not locate workstation entry point");
+  for (const [version, supported] of [["8.17.0", false], ["12.22.12", false], ["16.20.2", false], ["18.20.8", false],
+    ["20.20.0", false], ["21.7.3", false], ["22.0.0", true], ["22.20.0", true], ["24.15.0", true], ["26.0.0", true], ["invalid", false]]) {
+    let exitCode;
+    let assetChecks = 0;
+    const context = vm.createContext({
+      process: { versions: { node: version }, env: {}, exit: (code) => { exitCode = code; } }, deployDirectory: "unused",
+      validateWorkstationAssets: () => { assetChecks += 1; throw new Error("runtime-passed"); }
+    });
+    vm.runInContext(command, context);
+    check(exitCode === (supported ? 0 : 1), `Launcher runtime decision differs for Node ${version}`);
+    vm.runInContext(code, context);
+    await assert.rejects(context.startLocalWorkstation(), supported ? /runtime-passed/ : /workstation_node_version_unsupported/);
+    check(assetChecks === (supported ? 1 : 0), `Node ${version} reached file inspection or listener startup before runtime check`);
+  }
+}
+
+await validateWorkstationRuntime();
+
 function validateReadoutNavigation() {
   class Element {
     constructor(id) {
@@ -282,6 +307,18 @@ async function validateWindowsLauncher(occupiedWebPort) {
     fs.copyFileSync(launcherPath, fixtureLauncher);
     const missingDependency = await run(fixtureLauncher);
     check(missingDependency.code === 1 && missingDependency.output.includes("Required packages are missing"), `Windows launcher did not explain missing dependencies: ${JSON.stringify(missingDependency)}`);
+    const oldRuntime = path.join(fixtureDir, "old-runtime.cjs");
+    fs.writeFileSync(oldRuntime, 'Object.defineProperty(process.versions, "node", { value: "20.20.0" });');
+    const unsupportedRuntime = await run(fixtureLauncher, { NODE_OPTIONS: `--require "${oldRuntime}"` });
+    check(unsupportedRuntime.code === 1 && unsupportedRuntime.output.includes("Node.js 22 or newer is required")
+      && !unsupportedRuntime.output.includes("Required packages are missing") && !unsupportedRuntime.output.includes("launcher-child"), "Windows launcher did not stop an unsupported runtime before dependency lookup");
+    const directRuntime = await new Promise((resolve) => {
+      const child = execFile(process.execPath, ["--require", oldRuntime, fileURLToPath(new URL("./start-local-workstation.js", import.meta.url))],
+        { cwd: os.tmpdir(), windowsHide: true, timeout: 10000 },
+        (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
+      child.stdin.end();
+    });
+    check(directRuntime.code === 1 && directRuntime.output.includes("Node.js 22以降が必要") && !directRuntime.output.includes("http://127.0.0.1"), "Direct startup did not report the unsupported runtime before listener startup");
     // A finite child verifies forwarding without starting a second long-lived server.
     fs.mkdirSync(path.join(fixtureDir, "node_modules", "express"), { recursive: true });
     fs.writeFileSync(path.join(fixtureDir, "node_modules", "express", "index.js"), "");

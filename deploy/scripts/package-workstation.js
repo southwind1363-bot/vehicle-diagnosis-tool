@@ -127,7 +127,7 @@ export function packageWorkstation(options = {}) {
     copyFile("package-lock.json");
     fs.writeFileSync(path.join(staging, "package.json"), JSON.stringify({ name: pkg.name, version: pkg.version, type: "module", private: true,
       scripts: { start: "node scripts/start-local-workstation.js", "workstation:dev": "node scripts/start-local-workstation.js" }, dependencies: pkg.dependencies }, null, 2) + "\n", { flag: "wx" });
-    fs.writeFileSync(path.join(staging, "README.txt"), `自動車整備ツール ${status.version}\n\nNode.jsとnpmを事前に導入し、フォルダー全体を移してください。\nstart-workstation.cmdを開き、表示された診断画面URLへアクセスしてください。\n依存ライブラリは同梱済みです。起動時のnpm installやインターネット接続は不要です。\n終了は起動画面でqを入力してEnter。接続キーは外部共有しないでください。\nNode本体・VCIドライバー・個人の保存データは同梱していません。\n車両送信の権限や実車適合は元の版から変更していません。\n`, { flag: "wx" });
+    fs.writeFileSync(path.join(staging, "README.txt"), `自動車整備ツール ${status.version}\n\nNode.js 22以降とnpmを事前に導入し、フォルダー全体を移してください。Node.js 24 LTSを推奨します。\nstart-workstation.cmdを開き、表示された診断画面URLへアクセスしてください。\n依存ライブラリは同梱済みです。起動時のnpm installやインターネット接続は不要です。\n終了は起動画面でqを入力してEnter。接続キーは外部共有しないでください。\nNode本体・VCIドライバー・個人の保存データは同梱していません。\n車両送信の権限や実車適合は元の版から変更していません。\n`, { flag: "wx" });
     validateWorkstationAssets(staging);
     validatePackagedDependencies(staging);
     const info = { appVersion: status.version, dependencyCount: dependencies.length, includesNode: false, fileCount: fileCount + 3 };
@@ -157,7 +157,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   try {
     const result = packageWorkstation();
     console.log(`オフライン移行用フォルダー: ${result.directory}`);
-    console.log(`版: ${result.appVersion} / 依存ライブラリ: ${result.dependencyCount} / Node.jsとnpmの事前導入が必要です。`);
+    console.log(`版: ${result.appVersion} / 依存ライブラリ: ${result.dependencyCount} / Node.js 22以降とnpmの事前導入が必要です（24 LTS推奨）。`);
   } catch (error) {
     console.error(`移行用フォルダーを作成できません: ${error.code === "workstation_assets_invalid" ? "配布資材を確認してください" : error.message.startsWith("workstation_package_") ? error.message : "資材または依存ライブラリの読込に失敗しました"}`);
     process.exitCode = 1;

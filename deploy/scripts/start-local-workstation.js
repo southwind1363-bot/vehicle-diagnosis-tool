@@ -43,6 +43,7 @@ function closeServer(server) {
 }
 
 export async function startLocalWorkstation(options = {}) {
+  if (!(Number(process.versions.node.split(".")[0]) >= 22)) throw new Error("workstation_node_version_unsupported");
   const webPort = Number(options.webPort ?? process.env.PORT ?? 3001);
   const bridgePort = Number(options.bridgePort ?? process.env.LOCAL_BRIDGE_PORT ?? 8765);
   if (![webPort, bridgePort].every((port) => Number.isInteger(port) && port >= 0 && port <= 65535)) {
@@ -137,6 +138,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   } catch (error) {
     console.error(error.code === "workstation_assets_invalid"
       ? `ローカル資材を確認できません（${error.asset.slice(0, 160)}）。同じ版のdeployフォルダーを一式復元してから再起動してください。`
+      : error.message === "workstation_node_version_unsupported" ? "Node.js 22以降が必要です。Node.js 24 LTSを推奨します。自動インストールは行いません。"
       : error.code === "EADDRINUSE" ? "起動先ポートは使用中です。PORTまたはLOCAL_BRIDGE_PORTを変更してください。" : "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");
     process.exitCode = 1;
   }

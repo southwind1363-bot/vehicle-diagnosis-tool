@@ -52,6 +52,8 @@ try {
     && !fs.existsSync(path.join(result.directory, "node_modules", "extraneous")), "Package included unlisted private files");
   check(fs.readFileSync(path.join(result.directory, "node_modules/express/node_modules/nested/LICENSE"), "utf8") === "fixture-license", "Nested dependency or license was omitted");
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
+  const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
+  check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
   check(packaged.scripts.start === "node scripts/start-local-workstation.js" && Object.keys(packaged.scripts).length === 2, "Package retained unavailable development commands");
   assert.throws(() => packageWorkstation(valid), /workstation_package_exists/);
   check(fs.readdirSync(valid.outputDirectory).length === 1, "Repeated packaging modified an existing package or leaked staging files");
