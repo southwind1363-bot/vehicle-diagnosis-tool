@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { webcrypto } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { startLocalWorkstation, openWorkstationBrowser } from "./start-local-workstation.js";
+import { startLocalWorkstation, openWorkstationBrowser, describeWorkstationPortError } from "./start-local-workstation.js";
 import { validateWorkstationAssets } from "./workstation-assets.js";
 import "./validate-sample-preview.js";
 import "./validate-readout-vehicle.js";
@@ -50,10 +50,27 @@ async function validateWorkstationRuntime() {
     vm.runInContext(code, context);
     await assert.rejects(context.startLocalWorkstation(), supported ? /runtime-passed/ : /workstation_node_version_unsupported/);
     check(assetChecks === (supported ? 1 : 0), `Node ${version} reached file inspection or listener startup before runtime check`);
+    if (supported) {
+      await assert.rejects(context.startLocalWorkstation({ webPort: 3001, bridgePort: 3001 }), { code: "workstation_ports_overlap" });
+      check(assetChecks === 1, "Overlapping ports reached asset inspection or bridge creation");
+    }
   }
 }
 
 await validateWorkstationRuntime();
+
+for (const service of ["web", "bridge"]) {
+  const message = describeWorkstationPortError({ code: "EADDRINUSE", workstationService: service, workstationPort: 54321, message: "private-token C:/private/driver.dll" });
+  check(message.includes(service === "web" ? "診断画面用ポート 54321" : "確認ブリッジ用ポート 54321"), "Port error lost its failing service or numeric port");
+  check(message.includes(service === "web" ? "ならPORTを変更" : "ならLOCAL_BRIDGE_PORTを変更"), "Port error named the wrong setting");
+  check(message.includes("保存領域も別") === (service === "web"), "Web port recovery omitted the saved-origin warning");
+  check(!message.includes("private") && !message.includes("http"), "Port error exposed raw error details or offered an unverified URL");
+}
+for (const value of [0, -1, 65536, NaN, "3001", "private-token"]) {
+  check(describeWorkstationPortError({ code: "EADDRINUSE", workstationService: "web", workstationPort: value }).startsWith("起動先ポートは使用中"), "Malformed port error was printed as a verified endpoint");
+}
+check(describeWorkstationPortError({ code: "EADDRINUSE", workstationService: "private-token", workstationPort: 3001 }).startsWith("起動先ポートは使用中"), "Unknown service escaped the generic port message");
+check(describeWorkstationPortError(null) === null && describeWorkstationPortError(new Error("private-token")) === null, "Non-port error was treated as an address conflict");
 
 function validateReadoutNavigation() {
   class Element {
@@ -198,7 +215,7 @@ async function validateBrowserLaunch() {
     let closes = 0;
     const context = { process: processMock, path, starterPath: path.resolve("starter.js"), AbortController,
       console: { log: (...args) => messages.push(args.join(" ")), error: (...args) => messages.push(args.join(" ")) },
-      createInterface: () => input, startLocalWorkstation: () => ready.promise,
+      createInterface: () => input, startLocalWorkstation: () => ready.promise, describeWorkstationPortError,
       openWorkstationBrowser: (value, settings) => { launchCalls.push({ value, settings }); return opened.promise; } };
     const startup = vm.runInNewContext(`(async () => { ${cli} })()`, context);
     check(launchCalls.length === 0, "Browser opened before workstation readiness");
@@ -309,7 +326,11 @@ async function validateWindowsLauncher(occupiedWebPort) {
   const replay = await run(launcherPath, { LOCAL_BRIDGE_REPLAY_LOG: "must-not-be-read.log" });
   check(replay.code === 1 && replay.output.includes("ローカル起動に失敗しました") && !replay.output.includes("診断画面:"), "Windows launcher bypassed replay protection or depended on the caller's working directory");
   const conflict = await run(launcherPath, { PORT: String(occupiedWebPort), LOCAL_BRIDGE_PORT: "0" });
-  check(conflict.code === 1 && conflict.output.includes("起動先ポートは使用中") && !conflict.output.includes("ペアリング値"), "Windows launcher hid a port conflict or exposed a pairing key after failed startup");
+  check(conflict.code === 1 && conflict.output.includes(`診断画面用ポート ${occupiedWebPort} は使用中`) && conflict.output.includes("保存領域も別") && !conflict.output.includes("ペアリング値"), "Windows launcher hid a web port conflict or exposed a pairing key after failed startup");
+  const bridgeConflict = await run(launcherPath, { PORT: "0", LOCAL_BRIDGE_PORT: String(occupiedWebPort) });
+  check(bridgeConflict.code === 1 && bridgeConflict.output.includes(`確認ブリッジ用ポート ${occupiedWebPort} は使用中`) && bridgeConflict.output.includes("LOCAL_BRIDGE_PORT") && !bridgeConflict.output.includes("ペアリング値"), "Windows launcher did not distinguish a bridge port conflict");
+  const overlap = await run(launcherPath, { PORT: String(occupiedWebPort), LOCAL_BRIDGE_PORT: String(occupiedWebPort) });
+  check(overlap.code === 1 && overlap.output.includes("同じポートが設定") && !overlap.output.includes("ペアリング値"), "Windows launcher did not reject identical listener ports before startup");
 
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle launcher & test-"));
   try {
@@ -1878,7 +1899,7 @@ try {
     validateScannerInputClear(workstation.webUrl);
     await validateScannerJsonFileSyntax(workstation.webUrl);
     await validateScannerInputSize(workstation.webUrl);
-    await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
+    await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE", workstationService: "web", workstationPort: webPort });
     await validateWindowsLauncher(webPort);
     await validateWorkstationConsoleExit();
     check((await fetch(workstation.webUrl)).status === 200, "A competing launcher stopped the existing workstation");
@@ -1890,7 +1911,8 @@ try {
   const occupied = http.createServer((request, response) => response.end("occupied"));
   await new Promise((resolve) => occupied.listen(0, "127.0.0.1", resolve));
   try {
-    await assert.rejects(startLocalWorkstation({ ...options, webPort, bridgePort: occupied.address().port }), { code: "EADDRINUSE" });
+    await assert.rejects(startLocalWorkstation({ ...options, webPort, bridgePort: occupied.address().port }), { code: "EADDRINUSE", workstationService: "bridge", workstationPort: occupied.address().port });
+    check(await (await fetch(`http://127.0.0.1:${occupied.address().port}`)).text() === "occupied", "Failed startup stopped or replaced the existing service");
     const retry = await startLocalWorkstation({ ...options, webPort, pairingToken: undefined });
     try {
       check(retry.webServer.listening && occupied.listening, "Failed bridge startup leaked the UI port or stopped the occupied server");
@@ -1902,6 +1924,7 @@ try {
     await new Promise((resolve) => occupied.close(resolve));
   }
   await assert.rejects(startLocalWorkstation({ ...options, webPort: -1 }), /invalid_workstation_port/);
+  await assert.rejects(startLocalWorkstation({ ...options, webPort, bridgePort: webPort }), { code: "workstation_ports_overlap" });
   await assert.rejects(startLocalWorkstation({ ...options, pairingToken: "short" }), /workstation_pairing_token_too_short/);
   check(true, "Invalid settings rejected");
   process.env.LOCAL_BRIDGE_REPLAY_LOG = "must-not-be-read.log";

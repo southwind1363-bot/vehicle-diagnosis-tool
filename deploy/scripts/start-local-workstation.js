@@ -23,11 +23,32 @@ export function openWorkstationBrowser(webUrl, options = {}) {
   });
 }
 
-function listen(server, port) {
+export function describeWorkstationPortError(error = {}) {
+  if (error?.code === "workstation_ports_overlap") {
+    return "画面と確認ブリッジに同じポートが設定されています。PORTとLOCAL_BRIDGE_PORTを別の値にして再起動してください。今回の起動は行っていません。";
+  }
+  if (error?.code !== "EADDRINUSE") return null;
+  const service = error.workstationService;
+  const port = error.workstationPort;
+  if (!["web", "bridge"].includes(service) || !Number.isInteger(port) || port < 1 || port > 65535) {
+    return "起動先ポートは使用中です。PORTまたはLOCAL_BRIDGE_PORTを確認してください。他のプログラムは停止していません。";
+  }
+  const setting = service === "web" ? "PORT" : "LOCAL_BRIDGE_PORT";
+  return `${service === "web" ? "診断画面" : "確認ブリッジ"}用ポート ${port} は使用中です。今回の起動を中止しました。\n`
+    + `本ツールを起動済みなら既存の起動ウィンドウを確認してください。別のアプリが使用中なら${setting}を変更してください。他のプログラムは停止していません。`
+    + (service === "web" ? "\n画面ポートを変更すると保存領域も別になります。元のURLの保存データは残ります。" : "");
+}
+
+function listen(server, port, service) {
   return new Promise((resolve, reject) => {
-    server.once("error", reject);
+    const failed = (error) => {
+      error.workstationService = service;
+      error.workstationPort = port;
+      reject(error);
+    };
+    server.once("error", failed);
     server.listen(port, "127.0.0.1", () => {
-      server.removeListener("error", reject);
+      server.removeListener("error", failed);
       resolve();
     });
   });
@@ -48,6 +69,9 @@ export async function startLocalWorkstation(options = {}) {
   const bridgePort = Number(options.bridgePort ?? process.env.LOCAL_BRIDGE_PORT ?? 8765);
   if (![webPort, bridgePort].every((port) => Number.isInteger(port) && port >= 0 && port <= 65535)) {
     throw new Error("invalid_workstation_port");
+  }
+  if (webPort !== 0 && webPort === bridgePort) {
+    throw Object.assign(new Error("workstation_ports_overlap"), { code: "workstation_ports_overlap" });
   }
   // A workstation must never inherit saved log replay as a live connection candidate.
   if (process.env.LOCAL_BRIDGE_REPLAY_LOG) throw new Error("workstation_replay_not_allowed");
@@ -85,8 +109,8 @@ export async function startLocalWorkstation(options = {}) {
     return closing;
   };
   try {
-    await listen(webServer, webPort);
-    await listen(bridgeServer, bridgePort);
+    await listen(webServer, webPort, "web");
+    await listen(bridgeServer, bridgePort, "bridge");
   } catch (error) {
     await close();
     throw error;
@@ -139,7 +163,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error(error.code === "workstation_assets_invalid"
       ? `ローカル資材を確認できません（${error.asset.slice(0, 160)}）。同じ版のdeployフォルダーを一式復元してから再起動してください。`
       : error.message === "workstation_node_version_unsupported" ? "Node.js 22以降が必要です。Node.js 24 LTSを推奨します。自動インストールは行いません。"
-      : error.code === "EADDRINUSE" ? "起動先ポートは使用中です。PORTまたはLOCAL_BRIDGE_PORTを変更してください。" : "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");
+      : describeWorkstationPortError(error) || "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");
     process.exitCode = 1;
   }
 }
