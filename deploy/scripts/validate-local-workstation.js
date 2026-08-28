@@ -323,7 +323,7 @@ async function validateWorkstationAssetPreflight() {
   };
   try {
     const valid = fixture();
-    assert.deepEqual(validateWorkstationAssets(valid.directory), { version: "test-1", assetCount: 9 });
+    assert.deepEqual(validateWorkstationAssets(valid.directory), { version: "test-1", assetCount: 9, assets: valid.manifest.assets });
     check(true, "Complete local assets passed startup inspection");
     for (const asset of ["offline-assets.json", "script.js", "data/readout.json"]) {
       const item = fixture();
@@ -1178,6 +1178,35 @@ try {
       servedAssets += 1;
     }
     check(servedAssets === manifest.asset_count, "Workstation did not serve every declared offline asset");
+    for (const assetPath of ["/", "/script.js?version=current", "/data/diagnostic-workflows.json"]) {
+      const response = await fetch(`${workstation.webUrl}${assetPath}`, { method: "HEAD" });
+      check(response.status === 200 && (await response.text()) === "", `HEAD failed for app asset: ${assetPath}`);
+    }
+    const rawRequest = (assetPath, method = "GET") => new Promise((resolve, reject) => {
+      const request = http.request(workstation.webUrl, { path: assetPath, method }, (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () => resolve({ status: response.statusCode, body: Buffer.concat(chunks).toString() }));
+        response.on("error", reject);
+      });
+      request.on("error", reject);
+      request.end();
+    });
+    for (const assetPath of ["/package.json", "/package-lock.json", "/server.js", "/README.md", "/start-workstation.cmd",
+      "/scripts/start-local-workstation.js", "/scripts/", "/node_modules/express/package.json", "/node_modules/express/",
+      "/workstation-packages/", "/data/saved-session.json", "/data/", "/%70ackage.json", "/%2e%2e/package.json",
+      "/data/../package.json", "/data/%2e%2e/package.json", "/data%5c..%5cpackage.json", "//package.json", "/package.json?asset=script.js", "/SCRIPT.JS"]) {
+      const response = await rawRequest(assetPath);
+      check(response.status === 404 && response.body === "", `Local-only file or noncanonical path was served: ${assetPath}`);
+    }
+    for (const method of ["HEAD", "POST", "PUT", "DELETE", "OPTIONS"]) {
+      const response = await rawRequest("/package.json", method);
+      check(response.status === 404 && response.body === "", `Local-only file was exposed through ${method}`);
+    }
+    for (const method of ["POST", "PUT", "DELETE", "OPTIONS"]) {
+      const response = await rawRequest("/script.js", method);
+      check(response.status === 404 && response.body === "", `Static asset accepted unsupported method ${method}`);
+    }
     const health = await (await fetch(`${workstation.bridgeUrl}/health`)).json();
     check(health.j2534_discovery_requested === true && health.sample_mode === false && health.replay_mode === false && health.sample_readouts_enabled === false && health.vehicle_command_enabled === false, "Workstation enabled replay, sample readouts, or vehicle commands");
     const request = async (intent, token) => (await fetch(`${workstation.bridgeUrl}/v1/request`, {

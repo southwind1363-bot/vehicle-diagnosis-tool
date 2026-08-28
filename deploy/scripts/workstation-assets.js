@@ -62,5 +62,5 @@ export function validateWorkstationAssets(directory) {
     const versions = [...(sources.get(file) || "").matchAll(new RegExp(`const ${marker} = "([^"]+)";`, "g"))];
     if (versions.length !== 1 || versions[0][1] !== manifest.version) throw assetError(file);
   }
-  return { version: manifest.version, assetCount: manifest.asset_count };
+  return { version: manifest.version, assetCount: manifest.asset_count, assets: [...manifest.assets] };
 }

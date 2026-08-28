@@ -114,9 +114,46 @@ try {
   check(fs.readdirSync(competing.outputDirectory).length === 1, "Concurrent publication left locks or staging behind");
 
   const actual = packageWorkstation({ outputDirectory: path.join(root, "relocated") });
-  const smoke = `import assert from "node:assert/strict";import fs from "node:fs";import path from "node:path";import {pathToFileURL} from "node:url";import {validatePackagedDependencies} from ${JSON.stringify(moduleUrl)};const root=process.argv[1];validatePackagedDependencies(root);assert(fs.existsSync(path.join(root,"scripts/j2534-readonly-worker.js")));const {startLocalWorkstation}=await import(pathToFileURL(path.join(root,"scripts/start-local-workstation.js")));let app;try{app=await startLocalWorkstation({webPort:0,bridgePort:0,j2534RegistryText:""});const response=await fetch(app.webUrl);assert.equal(response.status,200);await response.arrayBuffer();const health=await(await fetch(app.bridgeUrl+"/health")).json();assert.equal(health.vehicle_command_enabled,false);assert.equal(health.sample_readouts_enabled,false);console.log("isolated-ready");}finally{await app?.close();}`;
+  const smoke = `
+    import assert from "node:assert/strict";
+    import fs from "node:fs";
+    import path from "node:path";
+    import {pathToFileURL} from "node:url";
+    import {validatePackagedDependencies} from ${JSON.stringify(moduleUrl)};
+    const root=process.argv[1];
+    validatePackagedDependencies(root);
+    assert(fs.existsSync(path.join(root,"scripts/j2534-readonly-worker.js")));
+    fs.writeFileSync(path.join(root,"saved-session.json"),"private-fixture");
+    fs.writeFileSync(path.join(root,"data","saved-session.json"),"private-fixture");
+    const {startLocalWorkstation}=await import(pathToFileURL(path.join(root,"scripts/start-local-workstation.js")));
+    let app;
+    try {
+      app=await startLocalWorkstation({webPort:0,bridgePort:0,j2534RegistryText:""});
+      const response=await fetch(app.webUrl);
+      assert.equal(response.status,200);
+      await response.arrayBuffer();
+      for(const file of ["/saved-session.json","/data/saved-session.json","/package-info.json","/node_modules/express/package.json","/scripts/start-local-workstation.js"]) {
+        const denied=await fetch(app.webUrl+file);
+        assert.equal(denied.status,404);
+        assert.equal(await denied.text(),"");
+      }
+      console.log("static-private-denied");
+      const health=await(await fetch(app.bridgeUrl+"/health")).json();
+      assert.equal(health.vehicle_command_enabled,false);
+      assert.equal(health.sample_readouts_enabled,false);
+      console.log("isolated-ready");
+    } finally {await app?.close();}
+  `;
   const healthy = await run(smoke, [actual.directory]);
   check(healthy.code === 0 && healthy.output.includes("isolated-ready"), `Relocated package failed isolated startup: ${healthy.output}`);
+  check(healthy.code === 0 && healthy.output.includes("static-private-denied"), "Relocated package exposed local-only files over HTTP");
+  const manifestPath = path.join(actual.directory, "offline-assets.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  manifest.assets = manifest.assets.filter((asset) => asset !== "./");
+  manifest.asset_count = manifest.assets.length;
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest));
+  const withoutRootAlias = await run(smoke, [actual.directory]);
+  check(withoutRootAlias.code === 0 && withoutRootAlias.output.includes("isolated-ready"), "Valid index.html-only manifest lost the launcher root URL");
   const dependency = path.join(actual.directory, "node_modules/accepts/index.js");
   fs.renameSync(dependency, `${dependency}.disabled`);
   const broken = await run(smoke, [actual.directory]);

@@ -52,7 +52,8 @@ export async function startLocalWorkstation(options = {}) {
   if (process.env.LOCAL_BRIDGE_REPLAY_LOG) throw new Error("workstation_replay_not_allowed");
   const configuredPairingToken = options.pairingToken ?? process.env.LOCAL_BRIDGE_PAIRING_TOKEN;
   if (configuredPairingToken !== undefined && String(configuredPairingToken).length < 12) throw new Error("workstation_pairing_token_too_short");
-  validateWorkstationAssets(deployDirectory);
+  const validatedAssets = validateWorkstationAssets(deployDirectory);
+  const publicPaths = new Set(["/", "/offline-assets.json", ...validatedAssets.assets.map((asset) => asset === "./" ? "/" : `/${asset}`)]);
   const pairingToken = String(configuredPairingToken ?? randomBytes(24).toString("hex"));
   const { createLocalBridgeApp } = await import("../local-bridge-readonly.js");
   const bridgeServer = createLocalBridgeApp({
@@ -67,6 +68,14 @@ export async function startLocalWorkstation(options = {}) {
     response.setHeader("Cache-Control", "no-store");
     request.url = "/v1/request";
     bridgeServer.emit("request", request, response);
+  });
+  // Only validated app assets belong on HTTP; local logs and runtime files do not.
+  webApp.use((request, response, next) => {
+    if (!["GET", "HEAD"].includes(request.method) || !publicPaths.has(request.path)) {
+      response.status(404).end();
+      return;
+    }
+    next();
   });
   const webServer = http.createServer(webApp.use(express.static(deployDirectory)));
   let closing = null;
