@@ -144,6 +144,8 @@
               <label class="import-button">診断結果ファイル<input id="obdImportFileInput" type="file" accept="application/json,text/csv,text/tab-separated-values,text/plain,text/html,.json,.csv,.tsv,.txt,.html,.htm"></label>
             </div>
 
+            <div id="obdReadoutHome">
+            <div id="obdReadoutSurface">
             <section class="result-block obd-import-result">
               <p class="data-status" data-obd-session-export-status role="status"></p>
               <h3>DTC結果</h3>
@@ -165,6 +167,8 @@
               <div id="obdMonitorInsightList" class="obd-monitor-insights" hidden></div>
               <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件とメーカー整備書の基準値を確認してください。</p>
             </section>
+            </div>
+            </div>
           </details>
         </section>
 
@@ -687,29 +691,7 @@
 
         <div id="obdDiagnosticFlowPanelResults" class="obd-diagnostic-flow-panel" data-obd-diagnostic-flow-panel hidden></div>
 
-        <section class="result-block obd-import-result">
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">VEHICLE DTC</p>
-              <h3>車両DTC / フリーズフレーム</h3>
-            </div>
-            <span class="confidence-badge">読取結果</span>
-          </div>
-          <p class="empty-state">車両を読取すると、故障コードと関連情報をここにまとめて表示します。</p>
-        </section>
-
-        <section class="result-block obd-monitor-result">
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">REAL-TIME LIVE DATA</p>
-              <h3>ライブデータモニター</h3>
-            </div>
-            <span class="confidence-badge">0項目</span>
-          </div>
-          <p class="empty-state">車両未読取です。読取後に対応PIDの値を更新します。</p>
-          <div class="obd-monitor-grid"></div>
-          <p class="obd-monitor-caution">表示値だけで確定せず、条件とメーカー資料を並べて確認してください。</p>
-        </section>
+        <div id="obdReadoutResultsHost"></div>
 
         </div>
 

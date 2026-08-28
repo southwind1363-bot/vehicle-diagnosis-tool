@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.291";
+const APP_VERSION = "3.13.292";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1397,7 +1397,17 @@ function activateTab(targetId) {
     }
   });
 
+  syncObdReadoutSurface();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function syncObdReadoutSurface() {
+  const surface = document.getElementById("obdReadoutSurface");
+  const panel = document.getElementById("obd-panel");
+  const showInObd = obdAccessUnlocked === true && panel?.classList.contains("is-active") && !panel.hidden;
+  const host = document.getElementById(showInObd ? "obdReadoutResultsHost" : "obdReadoutHome");
+  // Move the existing nodes so live updates and button listeners retain their identity.
+  if (surface && host && surface.parentElement !== host) host.appendChild(surface);
 }
 
 function renderSymptomOptions() {
@@ -2311,6 +2321,11 @@ function scrollToObdSection(targetId) {
   if (!targetId) return;
   const target = document.getElementById(targetId);
   if (!target) return;
+  if (!obdAccessUnlocked) return;
+  activateTab("obd-panel");
+  const stage = target.closest("#obdReadoutSurface") ? "results"
+    : target.closest("#obdStageDetailsView") ? "details" : "setup";
+  renderObdStageView(stage);
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -4053,6 +4068,7 @@ function getObdAutoStage() {
 }
 
 function renderObdStageView(preferredStage = activeObdStage) {
+  syncObdReadoutSurface();
   if (!obdStagePanel) return;
   const unlocked = obdAccessUnlocked === true;
   obdStagePanel.hidden = !unlocked;

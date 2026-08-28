@@ -17,6 +17,65 @@ const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-tok
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
+function validateReadoutNavigation() {
+  class Element {
+    constructor(id) {
+      this.id = id; this.hidden = false; this.parentElement = null; this.children = []; this.dataset = {}; this.scrolled = 0;
+      this.classes = new Set();
+      this.classList = { contains: (name) => this.classes.has(name), toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name) };
+    }
+    appendChild(child) {
+      if (child.parentElement) child.parentElement.children = child.parentElement.children.filter((item) => item !== child);
+      this.children.push(child); child.parentElement = this; return child;
+    }
+    closest(selector) { return selector === `#${this.id}` ? this : this.parentElement?.closest(selector) || null; }
+    setAttribute() {}
+    scrollIntoView() { this.scrolled += 1; }
+  }
+  const nodes = Object.fromEntries(["obd-panel", "diagnosis-panel", "data-panel", "obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost",
+    "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdMonitorGrid", "obdDevSessionSummary", "obdConnectionProfile"]
+    .map((id) => [id, new Element(id)]));
+  const attach = (parent, child) => nodes[parent].appendChild(nodes[child]);
+  attach("diagnosis-panel", "obdReadoutHome"); attach("obdReadoutHome", "obdReadoutSurface");
+  attach("obdReadoutSurface", "obdImportStatus"); attach("obdReadoutSurface", "obdMonitorGrid");
+  attach("obdStageResultsView", "obdReadoutResultsHost");
+  attach("obdStageDetailsView", "obdDevSessionSummary"); attach("obdStageDetailsView", "obdConnectionProfile");
+  const context = vm.createContext({ document: { getElementById: (id) => nodes[id] }, window: { scrollTo() {} },
+    tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false,
+    obdStagePanel: {}, obdStageBadge: {}, obdStageStatus: {}, obdStageTabs: [], activeObdStage: "setup", getObdAutoStage: () => "setup",
+    ...Object.fromEntries(["obdStageSetupView", "obdStageResultsView", "obdStageDetailsView"].map((id) => [id, nodes[id]])) });
+  for (const name of ["syncObdReadoutSurface", "activateTab", "renderObdStageView", "scrollToObdSection"]) {
+    vm.runInContext(appSource.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
+  }
+  context.activateTab("obd-panel");
+  check(nodes.obdReadoutSurface.parentElement === nodes.obdReadoutHome, "Locked OBD moved readouts into a protected view");
+  context.obdAccessUnlocked = true;
+  context.renderObdStageView("results");
+  check(nodes.obdReadoutSurface.parentElement === nodes.obdReadoutResultsHost && !nodes.obdStageResultsView.hidden, "OBD results still showed a disconnected placeholder");
+  nodes.obdImportStatus.textContent = "0 DTC / acquired";
+  nodes.obdMonitorGrid.values = [{ value: 0, unit: "km/h" }, { value: 88, unit: "C" }];
+  const values = nodes.obdMonitorGrid.values;
+  for (const tab of ["diagnosis-panel", "data-panel", "obd-panel", "diagnosis-panel", "obd-panel"]) {
+    context.activateTab(tab);
+    check(nodes.obdReadoutSurface.parentElement === (tab === "obd-panel" ? nodes.obdReadoutResultsHost : nodes.obdReadoutHome), "Tab switch failed to return the shared readout surface");
+    check(nodes.obdMonitorGrid.values === values && nodes.obdImportStatus.textContent === "0 DTC / acquired", "Tab switch replaced readout nodes or values");
+  }
+  for (const [target, stage] of [["obdImportStatus", "results"], ["obdMonitorGrid", "results"], ["obdDevSessionSummary", "details"], ["obdConnectionProfile", "details"]]) {
+    context.renderObdStageView("setup");
+    context.scrollToObdSection(target);
+    check(context.activeObdStage === stage && nodes[target].scrolled === 1, "Result shortcut scrolled into a hidden tab");
+  }
+  context.obdAccessUnlocked = false;
+  context.renderObdStageView("setup");
+  context.scrollToObdSection("obdImportStatus");
+  check(context.obdStagePanel.hidden && nodes.obdReadoutSurface.parentElement === nodes.obdReadoutHome && nodes.obdImportStatus.scrolled === 1, "Lock did not restore the readout surface or blocked navigation");
+  context.scrollToObdSection("missing");
+  check(nodes.obdReadoutHome.children.length === 1 && nodes.obdReadoutResultsHost.children.length === 0, "Navigation duplicated readout elements");
+  for (const id of ["obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost", "obdImportStatus", "obdMonitorGrid"]) {
+    check(indexSource.split(`id="${id}"`).length === 2, `Readout ID ${id} is missing or duplicated`);
+  }
+}
+
 async function validateBrowserLaunch() {
   const url = "http://127.0.0.1:3001";
   const calls = [];
@@ -1047,6 +1106,7 @@ async function validateBridgeOperationLifecycle(webUrl) {
   check(probeClient.obdDevSession.bridgeStatus === "previous-status" && probeClient.obdDevSession.adapterIdentity === "previous-adapter" && probeClient.obdDevSession.bridgeEndpoint === "http://127.0.0.1:9999/v1/bridge" && probeClient.obdBridgeOperation === null, "Cancelled multi-step probe mixed the new endpoint with previous connection metadata");
   check(appSource.replace(/\r\n/g, "\n").includes('function syncObdVehicleInput() {\n  cancelObdBridgeOperation();') && appSource.includes('document.querySelectorAll("[data-obd-bridge-request]")'), "Vehicle changes or public bridge controls lost operation protection");
 }
+validateReadoutNavigation();
 await validateBrowserLaunch();
 await validatePortableNpmScripts();
 await validateWorkstationAssetPreflight();
