@@ -14,6 +14,7 @@ import "./validate-sample-preview.js";
 import "./validate-readout-vehicle.js";
 import "./validate-status-disclosures.js";
 import "./validate-monitor-filter.js";
+import "./validate-dtc-filter.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };

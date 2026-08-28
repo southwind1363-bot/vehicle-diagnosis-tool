@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.308";
+const APP_VERSION = "3.13.309";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -495,34 +495,44 @@ const tabButtons = document.querySelectorAll("[data-tab-target]");
 
 initializeObdStatusDisclosures();
 initializeObdMonitorFilter();
+initializeObdDtcFilter();
 
 function initializeObdMonitorFilter() {
-  const toolbar = document.querySelector("#obdMonitorFilter");
-  const input = document.querySelector("#obdMonitorSearch");
-  const clear = document.querySelector("#obdMonitorSearchClear");
-  const count = document.querySelector("#obdMonitorFilterCount");
-  const empty = document.querySelector("#obdMonitorFilterEmpty");
+  initializeObdReadoutFilter(obdMonitorGrid, "obdMonitor", "monitorSearch", "項目");
+}
+
+function initializeObdDtcFilter() {
+  initializeObdReadoutFilter(obdDetectedCodes, "obdDtc", "dtcSearch", "件");
+}
+
+function initializeObdReadoutFilter(grid, prefix, searchKey, unit) {
+  const toolbar = document.querySelector(`#${prefix}Filter`);
+  const input = document.querySelector(`#${prefix}Search`);
+  const clear = document.querySelector(`#${prefix}SearchClear`);
+  const count = document.querySelector(`#${prefix}FilterCount`);
+  const empty = document.querySelector(`#${prefix}FilterEmpty`);
   if (!toolbar || !input || !clear || !count || !empty || typeof MutationObserver === "undefined") return;
   const normalize = (text) => String(text || "").normalize("NFKC").toLowerCase();
   const refresh = () => {
-    const cards = Array.from(obdMonitorGrid.children);
+    const cards = Array.from(grid.children);
     if (!cards.length) input.value = "";
     const terms = normalize(input.value).trim().split(/\s+/).filter(Boolean);
     let visible = 0;
     for (const card of cards) {
-      const matches = terms.every((term) => normalize(card.dataset.monitorSearch).includes(term));
+      const searchText = normalize(card.dataset[searchKey]);
+      const matches = terms.every((term) => searchText.includes(term));
       card.hidden = !matches;
       if (matches) visible += 1;
     }
     toolbar.hidden = cards.length === 0;
     clear.disabled = input.value.length === 0;
-    count.textContent = terms.length ? `絞込中: ${visible} / ${cards.length}項目` : `全${cards.length}項目を表示`;
+    count.textContent = terms.length ? `絞込中: ${visible} / ${cards.length}${unit}` : `全${cards.length}${unit}を表示`;
     empty.hidden = !cards.length || visible > 0;
   };
   input.addEventListener("input", refresh);
   clear.addEventListener("click", () => { input.value = ""; refresh(); input.focus(); });
   // Observe replacements only; changing card visibility must not trigger another refresh.
-  new MutationObserver(refresh).observe(obdMonitorGrid, { childList: true });
+  new MutationObserver(refresh).observe(grid, { childList: true });
   refresh();
 }
 
@@ -2375,8 +2385,9 @@ function scrollToObdSection(targetId) {
   if (!obdAccessUnlocked) return;
   const emptyReadoutStatus = { obdDetectedCodes: "obdImportStatus", obdMonitorGrid: "obdMonitorStatus" }[targetId];
   if (emptyReadoutStatus && !target.children.length) target = document.getElementById(emptyReadoutStatus) || target;
-  if (targetId === "obdMonitorGrid") {
-    const filter = document.getElementById("obdMonitorFilter");
+  const filterId = { obdMonitorGrid: "obdMonitorFilter", obdDetectedCodes: "obdDtcFilter" }[targetId];
+  if (filterId) {
+    const filter = document.getElementById(filterId);
     if (filter && !filter.hidden) target = filter;
   }
   if (!document.getElementById("obd-panel")?.classList.contains("is-active")) {
@@ -11658,6 +11669,8 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
   const firstCheck = registered?.firstChecks?.[0] || registered?.check_order?.[0] || modern?.check_order?.[0];
   const wrapper = document.createElement("article");
   wrapper.className = "obd-dtc-card";
+  wrapper.dataset.dtcSearch = [displayCode, code, subcode, oemDetailCode, ecuDisplay]
+    .filter((value) => typeof value === "string" || typeof value === "number").join(" ");
 
   const head = document.createElement("div");
   head.className = "obd-dtc-head";

@@ -1613,6 +1613,7 @@ body.dark .flow-node-measure .flow-step {
 .obd-monitor-search-row input::-webkit-search-cancel-button { -webkit-appearance: none; }
 .obd-monitor-search-row button { padding: 0; min-height: 44px; font-size: 1.5rem; }
 .obd-monitor-filter[hidden],
+.obd-dtc-card[hidden],
 .obd-monitor-card[hidden] { display: none; }
 
 .obd-monitor-card.is-raw {
@@ -1749,6 +1750,7 @@ body.dark .flow-node-measure .flow-step {
 }
 
 #obdDetectedCodes,
+#obdDtcFilter,
 #obdMonitorGrid,
 #obdMonitorFilter,
 #obdImportStatus,

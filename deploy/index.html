@@ -154,6 +154,15 @@
                 <p id="obdImportStatus" class="empty-state">読取後にDTCを表示します。</p>
                 <div id="obdImportToolHints" class="obd-import-hints" hidden></div>
               </details>
+              <div id="obdDtcFilter" class="obd-monitor-filter" hidden>
+                <label for="obdDtcSearch">DTC検索</label>
+                <div class="obd-monitor-search-row">
+                  <input id="obdDtcSearch" type="search" maxlength="100" placeholder="DTC / ECU / サブコード" autocomplete="off" aria-controls="obdDetectedCodes">
+                  <button id="obdDtcSearchClear" class="secondary-button" type="button" aria-label="DTC検索を解除" title="DTC検索を解除" disabled>&times;</button>
+                </div>
+                <p id="obdDtcFilterCount" class="data-status" role="status"></p>
+              </div>
+              <p id="obdDtcFilterEmpty" class="empty-state" hidden>検索に一致するDTCはありません。</p>
               <div id="obdDetectedCodes" class="obd-code-list"></div>
             </section>
 
