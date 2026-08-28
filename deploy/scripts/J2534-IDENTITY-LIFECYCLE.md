@@ -47,12 +47,45 @@ deadline and cancellation handler. A hung call cannot be safely timed out with
 not normal adapter cleanup. The current tests exercise synchronous hangs and a
 crash using only synthetic methods in a child process; no vendor DLL is loaded.
 
+## Development Worker Supervision
+
+`j2534-identity-supervisor.js` now hosts the lifecycle in the fixed synthetic
+worker. `runJ2534IdentityFixture` requires `mode: "fixture"`; it accepts only a
+listed scenario, an integer `timeout_ms` of 1000-10000 (default 5000), and an
+optional AbortSignal. No executable, DLL path, native backend, or Node flags can
+be supplied. The worker path is module-relative and `NODE_OPTIONS`/`NODE_PATH`
+are removed case-insensitively from its environment. This is process isolation
+for tests, not an OS security sandbox or native-driver execution permission.
+
+The parent caps combined stdout/stderr at 4096 bytes and retains the first
+observed failure reason. Cancellation, timeout, or overflow requests SIGKILL;
+the singleton busy guard is held until `close`, not after a kill request or
+`exit` alone. Failed termination does not release the guard. The deadline bounds
+when termination is requested, not an absolute guarantee of OS process exit.
+Cancellation uses Node's `addAbortListener` so another listener cannot suppress
+it with `stopImmediatePropagation`. Listener setup failure requests termination
+and still waits for `close`; disposal also covers partial registration failure.
+
+Only zero exit plus closed streams permits parsing one bounded JSON envelope.
+Schema, scenario, literal fixture marker, steps, status codes, versions, errors,
+and cleanup relationships must agree. Raw stdout/stderr and exception text are
+not returned. Valid worker completion can still contain a failed lifecycle.
+Killed/crashed/invalid workers yield no lifecycle result and unconfirmed fixture
+cleanup, even if they printed a result first. Real adapter cleanup is always
+`not_tested`; successful synthetic cleanup is never evidence of native cleanup.
+
+Run `npm run validate:j2534-supervisor` for process execution,
+abort/deadline/overflow races, the 4096/4097-byte boundary, malformed responses,
+spawn/kill failures, busy ownership through `close`, and subsequent reuse. This
+module remains absent from the public bridge and PC distribution.
+
 ## Remaining Integration
 
 1. Implement and verify native ABI and DLL-loading isolation for a selected,
    statically inspected registered driver; do not accept public raw DLL paths.
-2. Establish native-worker startup, deadline, cancellation, crash, and recovery
-   reporting. Existing review-only requests remain unchanged until then.
+2. Adapt the fixture-verified supervision to the native worker, with explicit
+   recovery after uncertain cleanup. Existing review-only requests remain
+   unchanged; the fixture supervisor is not native-worker verification.
 3. Review driver provenance, actual adapter behavior, user authorization, and
    test conditions before a real Open/ReadVersion/Close trial.
 4. Add vehicle-channel operations separately with their own verified protocol,
@@ -67,6 +100,8 @@ are not assumed to apply to other J2534 drivers:
 - [PassThruOpen](https://quantexlab.com/en/develop/j2534/pt_open.html)
 - [PassThruReadVersion](https://quantexlab.com/en/develop/j2534/pt_readver.html)
 - [PassThruClose](https://quantexlab.com/en/develop/j2534/pt_close.html)
+- [Node.js child process lifecycle and termination](https://nodejs.org/api/child_process.html)
+- [Node.js cancellation listeners](https://nodejs.org/api/events.html#eventsaddabortlistenersignal-listener)
 
 Run `npm run validate:j2534-lifecycle`. The suite tests call ordering, device
 ID zero/bounds, malformed statuses/buffers, exceptions, cancellation, concurrent
