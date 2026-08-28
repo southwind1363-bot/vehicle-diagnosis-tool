@@ -577,7 +577,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-function startPendingScannerAcquisition(client, kind, input = { value: "selected.json", files: [{ name: "selected.json", size: 100, type: "application/json" }] }) {
+function startPendingScannerAcquisition(client, kind, input = { value: "selected.txt", files: [{ name: "selected.txt", size: 100, type: "text/plain" }] }) {
   if (kind === "file") {
     let reader;
     client.FileReader = class {
@@ -643,7 +643,7 @@ async function validateScannerAcquisitionOrder(webUrl) {
       const older = startPendingScannerAcquisition(client, kind);
       const newer = startPendingScannerAcquisition(client, newerKind, older.input);
       await older.complete("old input");
-      check(client.obdScannerText.value === "valid import" && (!newer.input || newer.input.value === "selected.json"), `${kind} old completion reset the newer ${newerKind} input`);
+      check(client.obdScannerText.value === "valid import" && (!newer.input || newer.input.value === "selected.txt"), `${kind} old completion reset the newer ${newerKind} input`);
       await newer.complete("new input");
       const imported = client.obdDevSession.lastSession;
       const status = client.obdImportStatus.textContent;
@@ -695,10 +695,19 @@ async function validateScannerParserIntegration(webUrl) {
     client.buildObdDtcDisplayKey = (dtc) => JSON.stringify(dtc);
     client.createObdDtcCard = (dtc) => dtc;
     client.obdDetectedCodes.appendChild = () => {};
-    const pending = startPendingScannerAcquisition(client, kind);
+    const pending = startPendingScannerAcquisition(client, kind, { value: "archive.json", files: [{ name: "archive.json", type: "application/json", size: Buffer.byteLength(json) }] });
     await pending.complete(json);
     const imported = client.obdDevSession.lastSession;
     check(imported?.dtcSnapshot?.dtcs?.some((dtc) => dtc.code === "P0171" && dtc.ecu === "7E8" && dtc.status === "stored") && imported.vehicleCommandEnabled === false && client.obdScannerImportOperation === null, `${kind} acquisition failed to preserve a real exported DTC session`);
+    if (kind === "file") {
+      const malformed = '{"dtcs":[{"code":"P0420"}]';
+      check(obd.buildDiagnosticScanSessionFromJson(malformed) === null && obd.analyzeScannerText(malformed).codes.includes("P0420"), "Malformed JSON fixture no longer exercises permissive text fallback");
+      const oldInput = client.obdScannerText.value;
+      const broken = startPendingScannerAcquisition(client, kind, { value: "broken.json", files: [{ name: "broken.json", type: "application/json", size: malformed.length }] });
+      await broken.complete(malformed);
+      check(client.obdDevSession.lastSession === imported && client.obdScannerText.value === oldInput && client.obdImportStatus.textContent.includes("JSONの構文"),
+        "Broken JSON reached real scanner fallback or replaced the archived readout");
+    }
     const stale = startPendingScannerAcquisition(client, kind);
     client.clearObdScannerImport();
     await stale.complete(json);
@@ -822,6 +831,79 @@ async function validateScannerReplacementConfirmation(webUrl) {
   merging.window.ObdReadOnly.mergeDiagnosticInputs = (...args) => { mergeCalls += 1; return merge(...args); };
   merging.analyzeObdScannerImport({ mergeWithCurrentSession: true });
   check(prompts === 0 && mergeCalls === 1 && merging.obdDevSession.lastSession !== previous, "Internal readout merge prompted or failed to process results");
+}
+
+async function validateScannerJsonFileSyntax(webUrl) {
+  const declarations = [
+    { name: "broken.json", type: "application/json" }, { name: "broken.JSON", type: "text/plain" },
+    { name: "broken.json", type: "text/html" }, { name: "report.html", type: "application/json" },
+    { name: "no-extension", type: "application/json" }
+  ];
+  const invalidTexts = ['{"dtcs":[{"code":"P0420"}]', '{"code":"P0420",}', '["P0420",]', '{"code":"P0420"} trailing', '{code:"P0420"}', '{"code":"P0420" /* comment */}'];
+  for (const declaration of declarations) {
+    for (const text of invalidTexts) {
+      for (const session of [null, { source: "scanner_text", dtcSnapshot: { codes: ["P0171"] } }]) {
+        const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+        client.obdDevSession.lastSession = session;
+        const inputBefore = client.obdScannerText.value;
+        const display = [client.obdDetectedCodes, client.obdMonitorGrid, client.obdMonitorInsightList, client.obdMonitorStatus, client.obdMonitorCount];
+        display.forEach((element) => Object.assign(element, { innerHTML: "retained", textContent: "warning", hidden: false }));
+        const before = JSON.stringify(display);
+        let prompts = 0;
+        let normalizations = 0;
+        let analyses = 0;
+        client.window.confirm = () => { prompts += 1; return true; };
+        client.normalizeObdScannerImportFileText = (value) => { normalizations += 1; return value; };
+        client.analyzeObdScannerImport = () => { analyses += 1; };
+        client.obdBridgeOperation = { cancelled: false };
+        const input = { value: declaration.name, files: [{ ...declaration, size: Buffer.byteLength(text) }] };
+        const pending = startPendingScannerAcquisition(client, "file", input);
+        await pending.complete(text);
+        check(prompts === 0 && normalizations === 0 && analyses === 0, `${declaration.name}: malformed JSON reached confirmation, normalization or analysis`);
+        check(client.obdScannerText.value === inputBefore && client.obdDevSession.lastSession === session && JSON.stringify(display) === before && !client.obdBridgeOperation.cancelled,
+          "Malformed JSON changed existing input, results or bridge operation");
+        check(input.value === "" && client.obdScannerImportOperation === null && client.exportControlSession === session && !client.exportControlImportBusy,
+          "Malformed JSON left its picker/busy state uncleared or lost export availability");
+        check(client.obdImportStatus.textContent.includes("JSONの構文") && !client.obdImportStatus.textContent.includes("P0420"), "Malformed JSON error leaked input content or omitted the syntax failure");
+      }
+    }
+  }
+  for (const text of ['{"dtcs":[]}', '[{"code":"P0171"}]', 'null', 'false', '0', '"P0420"', '\ufeff {"note":"日本語"}\r\n']) {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    let normalizations = 0;
+    let analyses = 0;
+    client.normalizeObdScannerImportFileText = (value) => { normalizations += 1; return value; };
+    client.analyzeObdScannerImport = () => { analyses += 1; };
+    const pending = startPendingScannerAcquisition(client, "file", { value: "valid.json", files: [{ name: "valid.json", size: Buffer.byteLength(text) }] });
+    await pending.complete(text);
+    check(analyses === 1 && normalizations === 1 && client.obdScannerText.value === text, "Syntax gate changed valid JSON content or imposed a schema rule");
+  }
+  for (const outcome of ["empty", "stale", "reselect"]) {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    const input = { value: "broken.json", files: [{ name: "broken.json", size: 100 }] };
+    const pending = startPendingScannerAcquisition(client, "file", input);
+    if (outcome === "stale") {
+      client.editScannerText("newer input");
+      client.obdImportStatus.textContent = "NEW_STATUS";
+    }
+    await pending.complete(outcome === "empty" ? " \ufeff\r\n " : '{"P0420":');
+    if (outcome === "empty") check(client.obdImportStatus.textContent.includes("診断結果がありません"), "Empty JSON file lost existing empty-file handling");
+    if (outcome === "stale") check(input.value === "broken.json" && client.obdScannerText.value === "newer input" && client.obdImportStatus.textContent === "NEW_STATUS", "Stale malformed JSON reset newer UI state");
+    if (outcome === "reselect") {
+      const retry = startPendingScannerAcquisition(client, "file", input);
+      await retry.complete('{"dtcs":[]}');
+      check(client.obdDevSession.lastSession && client.obdScannerText.value === '{"dtcs":[]}' && client.obdScannerImportOperation === null, "Corrected same-name JSON could not be reselected");
+    }
+  }
+  for (const declaration of [{ name: "report.txt", type: "text/plain" }, { name: "report.csv", type: "text/csv" }, { name: "report.html", type: "text/html" }]) {
+    const client = addScannerImportHarness(createClient(webUrl, options.pairingToken));
+    let normalized = 0;
+    let analyzed = 0;
+    client.normalizeObdScannerImportFileText = (value) => { normalized += 1; return value; };
+    client.analyzeObdScannerImport = () => { analyzed += 1; };
+    await startPendingScannerAcquisition(client, "file", { value: declaration.name, files: [{ ...declaration, size: 100 }] }).complete('{"code":"P0420"');
+    check(normalized === 1 && analyzed === 1, "JSON-only syntax gate changed another file format's intake path");
+  }
 }
 
 function validateScannerInputClear(webUrl) {
@@ -998,7 +1080,7 @@ async function validateScannerImportOwnership(webUrl) {
           constructor() { reader = this; }
           readAsText() {}
         };
-        const input = { value: "selected.json", files: [{ name: "selected.json", size: 100, type: "application/json" }] };
+        const input = { value: "selected.txt", files: [{ name: "selected.txt", size: 100, type: "text/plain" }] };
         client.importObdScannerFile({ currentTarget: input });
         check(client.obdBridgeOperation?.cancelled === false && client.obdDevSession.lastSession === previous, "Starting file acquisition cancelled the read before validation");
         reader.result = "valid import";
@@ -1577,6 +1659,7 @@ try {
     await validateScannerParserIntegration(workstation.webUrl);
     await validateScannerReplacementConfirmation(workstation.webUrl);
     validateScannerInputClear(workstation.webUrl);
+    await validateScannerJsonFileSyntax(workstation.webUrl);
     await assert.rejects(startLocalWorkstation({ ...options, webPort }), { code: "EADDRINUSE" });
     await validateWindowsLauncher(webPort);
     await validateWorkstationConsoleExit();

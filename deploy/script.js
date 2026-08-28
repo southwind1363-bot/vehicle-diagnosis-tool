@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.303";
+const APP_VERSION = "3.13.304";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -12278,9 +12278,21 @@ function importObdScannerFile(event) {
     const reader = new FileReader();
     reader.onload = () => {
       if (!isCurrentObdScannerImport(operation)) return;
+      const rawText = typeof reader.result === "string" ? reader.result : "";
+      const isJson = file.type === "application/json" || /\.json$/i.test(file.name || "");
+      if (isJson && rawText.trim()) {
+        try {
+          JSON.parse(rawText.trim());
+        } catch (error) {
+          invalidateObdScannerImport();
+          input.value = "";
+          obdImportStatus.textContent = "JSONの構文を読み取れません。ファイルが途中で切れていないか確認してください。現在の読取結果は変更していません。";
+          return;
+        }
+      }
       let text;
       try {
-        text = normalizeObdScannerImportFileText(typeof reader.result === "string" ? reader.result : "", file);
+        text = normalizeObdScannerImportFileText(rawText, file);
       } catch (error) {
         onFailure();
         return;
