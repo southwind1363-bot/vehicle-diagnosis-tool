@@ -3372,7 +3372,11 @@
 
   function preserveExplicitReadoutFailure(snapshot = {}, input = {}, statusKeys = []) {
     const withErrorCodes = (result) => {
-      const errorCodes = readBridgeResponseErrorCodes(input);
+      const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshot);
+      const inputErrorCodes = readBridgeResponseErrorCodes(input);
+      const errorCodes = snapshotErrorCodes.includes("invalid_pid_numeric_value")
+        ? mergePidReadoutErrorCodes(snapshotErrorCodes, inputErrorCodes)
+        : inputErrorCodes;
       return errorCodes.length ? { ...result, errorCodes, error_codes: [...errorCodes] } : result;
     };
     const failureStatus = getExplicitReadoutFailureStatus(input);
@@ -3390,6 +3394,7 @@
   }
 
   function preserveExplicitStoredReadoutStatus(snapshot = {}, input = {}, statusKeys = []) {
+    if (readBridgeResponseErrorCodes(snapshot).includes("invalid_pid_numeric_value")) return snapshot;
     const withErrorCodes = (result) => {
       const errorCodes = readBridgeResponseErrorCodes(input);
       return errorCodes.length ? { ...result, errorCodes, error_codes: [...errorCodes] } : result;
@@ -4593,7 +4598,9 @@
           };
       });
     const structuredMonitorValues = values
-      .map((row, index) => normalizeBridgePidValue(row, index))
+      .map((row, index) => normalizeBridgePidValue(row, index, () => {
+        if (!sourceErrorCodes.includes("invalid_pid_numeric_value")) sourceErrorCodes.unshift("invalid_pid_numeric_value");
+      }))
       .filter(Boolean);
     const decodedRawEcuLivePidSnapshots = new Map();
     const rawEcuLivePidMonitorValues = livePidEcuSnapshots.flatMap((ecuRow) => {
@@ -4645,7 +4652,9 @@
           ...row,
           source_ecu: row?.source_ecu || row?.sourceEcu || ecu,
           source_ecu_name: row?.source_ecu_name || row?.sourceEcuName || ecuName
-        }, index))
+        }, index, () => {
+          if (!scopedErrorCodes.includes("invalid_pid_numeric_value")) scopedErrorCodes.unshift("invalid_pid_numeric_value");
+        }))
         .filter(Boolean);
       const scopedSafety = readBridgeSnapshotSafety(ecuRow, scopedMonitorValues.length > 0);
       const explicitScopedStatus = String(ecuRow?.livePidReadoutStatus || ecuRow?.live_pid_readout_status || ecuRow?.readoutStatus || ecuRow?.readout_status || "").trim().toLowerCase();
@@ -4725,9 +4734,9 @@
     ].map((value) => redactSensitiveText(String(value || "")).replace(/\s+/g, " ").trim().slice(0, 80)).filter(Boolean))].slice(0, 32);
     const explicitReadoutStatus = data.livePidReadoutStatus || data.live_pid_readout_status || null;
     const livePidEcuStatuses = normalizedLivePidEcuSnapshots.map((snapshot) => snapshot.livePidReadoutStatus || snapshot.live_pid_readout_status || "unknown");
-    const scopedErrorCodes = [...new Set(normalizedLivePidEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
-    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes])].slice(0, 12);
-    const effectiveBridgeSafety = scopedErrorCodes.length && resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
+    const scopedErrorCodes = mergePidReadoutErrorCodes(...normalizedLivePidEcuSnapshots.map((snapshot) => readBridgeResponseErrorCodes(snapshot)));
+    const errorCodes = mergePidReadoutErrorCodes(sourceErrorCodes, scopedErrorCodes);
+    const effectiveBridgeSafety = errorCodes.length && resolvedBridgeSafety.ok && resolvedBridgeSafety.blocked === false
       ? { ...resolvedBridgeSafety, ok: false, unparsed: true }
       : resolvedBridgeSafety;
     const reportedEcuCount = livePidEcuStatuses.filter((status) => status === "reported").length;
@@ -5484,8 +5493,7 @@
         error_codes: Array.from(errorCodes)
       };
     }
-    return {
-      ...normalizeFreezeFrameSnapshot({
+    const snapshot = normalizeFreezeFrameSnapshot({
       source: "local_bridge",
       captured_at: data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null,
       protocol,
@@ -5500,8 +5508,12 @@
       trigger_dtc_entries: data.trigger_dtc_entries || data.triggerDtcEntries || data.freeze_frame_trigger_entries || data.freezeFrameTriggerEntries || data.associated_dtc_entries || data.associatedDtcEntries || [],
       trigger_frame_number: data.trigger_frame_number ?? data.triggerFrameNumber ?? data.frame_number ?? data.frameNumber ?? null,
       values: freezeFrameValues,
-      freeze_frame_ecu_snapshots: freezeFrameEcuSnapshotRows
-      }),
+      freeze_frame_ecu_snapshots: freezeFrameEcuSnapshotRows,
+      errorCodes
+    });
+    const snapshotErrorCodes = mergePidReadoutErrorCodes(errorCodes, readBridgeResponseErrorCodes(snapshot));
+    return {
+      ...snapshot,
       protocolProvenance,
       protocol_provenance: protocolProvenance,
       diagnosticProtocol: protocolProvenance.diagnosticProtocol,
@@ -5511,14 +5523,14 @@
       networkProtocol: protocolProvenance.networkProtocol,
       network_protocol: protocolProvenance.networkProtocol,
       intent: "read_freeze_frame",
-      ok: resolvedBridgeSafety.ok,
+      ok: resolvedBridgeSafety.ok && !snapshotErrorCodes.includes("invalid_pid_numeric_value"),
       blocked: resolvedBridgeSafety.blocked,
       wouldTransmit: resolvedBridgeSafety.wouldTransmit,
       would_transmit: resolvedBridgeSafety.wouldTransmit,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
-      errorCodes,
-      error_codes: [...errorCodes]
+      errorCodes: snapshotErrorCodes,
+      error_codes: [...snapshotErrorCodes]
     };
   }
 
@@ -6256,7 +6268,25 @@
     };
   }
 
-  function normalizeBridgePidValue(row, index) {
+  function mergePidReadoutErrorCodes(...groups) {
+    const codes = [...new Set(groups.flat())];
+    // Retain the numeric validation failure even when upstream errors fill the display limit.
+    return (codes.includes("invalid_pid_numeric_value")
+      ? ["invalid_pid_numeric_value", ...codes.filter((code) => code !== "invalid_pid_numeric_value")]
+      : codes).slice(0, 12);
+  }
+
+  function readBridgePidNumber(value) {
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    if (typeof value !== "string") return null;
+    const text = value.trim();
+    if (!text || text.length > 160 || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)) return null;
+    const number = Number(text);
+    if (!Number.isFinite(number) || (number === 0 && /[1-9]/.test(text.split(/[eE]/)[0]))) return null;
+    return number;
+  }
+
+  function normalizeBridgePidValue(row, index, onInvalidNumeric) {
     if (!row || typeof row !== "object") return null;
     const labelAlias = row.label || row.name || row.monitor_label || row.monitorLabel || row.monitor_name || row.monitorName || row.displayLabel || row.display_label || null;
     const id = String(row.id || row.monitor_id || row.monitorId || row.sensor_id || row.sensorId || row.pid || row.code || row.pid_code || row.pidCode || row.pid_id || row.pidId || "").trim();
@@ -6280,8 +6310,11 @@
       || rawValueType === "raw_hex";
     const rawValue = row.value ?? row.result ?? row.reading ?? row.current_value ?? row.currentValue ?? row.display_value ?? row.displayValue ?? row.raw_value ?? row.rawValue ?? row.value_raw ?? row.valueRaw ?? null;
     const valueType = definition?.valueType || row.value_type || row.valueType || (typeof rawValue === "string" && !NUMBER_PATTERN.test(rawValue) ? "text" : "number");
-    const parsedValue = valueType === "boolean" ? rawValue === true : valueType === "text" || isUndecodedRaw ? String(rawValue ?? "").slice(0, 160) : Number(rawValue);
-    if (valueType === "number" && !isUndecodedRaw && !Number.isFinite(parsedValue)) return null;
+    const parsedValue = valueType === "boolean" ? rawValue === true : valueType === "text" || isUndecodedRaw ? String(rawValue ?? "").slice(0, 160) : readBridgePidNumber(rawValue);
+    if (valueType === "number" && !isUndecodedRaw && parsedValue === null) {
+      if (typeof onInvalidNumeric === "function") onInvalidNumeric();
+      return null;
+    }
     if (valueType === "text" && !parsedValue) return null;
     if (isUndecodedRaw && !parsedValue) return null;
     const freezeFrameNumber = Number.isInteger(row.freeze_frame_number)
@@ -28860,12 +28893,13 @@
         ecuSnapshots: [],
         ecu_snapshots: []
       });
+      const normalizedErrorCodes = mergePidReadoutErrorCodes(snapshotErrorCodes, readBridgeResponseErrorCodes(normalizedSnapshot));
       return {
         ...normalizedSnapshot,
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
-        errorCodes: snapshotErrorCodes,
-        error_codes: [...snapshotErrorCodes],
+        errorCodes: normalizedErrorCodes,
+        error_codes: [...normalizedErrorCodes],
         freezeFrameScope: "single_ecu",
         freeze_frame_scope: "single_ecu"
       };
@@ -28989,7 +29023,9 @@
           };
       });
     const localMonitorValues = rows
-      .map((row, index) => normalizeBridgePidValue(row, index))
+      .map((row, index) => normalizeBridgePidValue(row, index, () => {
+        if (!sourceErrorCodes.includes("invalid_pid_numeric_value")) sourceErrorCodes.unshift("invalid_pid_numeric_value");
+      }))
       .filter(Boolean)
       .filter(matchesReportedFreezeFrameEcu)
       .map((item) => {
@@ -29235,8 +29271,8 @@
     const freezeFrameAssociationSummary = buildFreezeFrameAssociationSummary(triggerDtcEntries, monitorValues);
     const explicitReadoutStatus = String(sourceInput.freezeFrameReadoutStatus || sourceInput.freeze_frame_readout_status || sourceInput.readoutStatus || sourceInput.readout_status || "").trim().toLowerCase();
     const freezeFrameEcuStatuses = freezeFrameEcuSnapshots.map((snapshot) => String(snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status || "unknown").trim().toLowerCase());
-    const scopedErrorCodes = [...new Set(freezeFrameEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
-    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes])].slice(0, 12);
+    const scopedErrorCodes = mergePidReadoutErrorCodes(...freezeFrameEcuSnapshots.map((snapshot) => readBridgeResponseErrorCodes(snapshot)));
+    const errorCodes = mergePidReadoutErrorCodes(sourceErrorCodes, scopedErrorCodes);
     const freezeFrameStatusCandidates = [
       ...(["reported", "unparsed", "blocked", "unknown"].includes(explicitReadoutStatus) ? [explicitReadoutStatus] : []),
       ...freezeFrameEcuStatuses,
@@ -37004,6 +37040,27 @@
       })
       .filter(Boolean);
     if (tableSessions.length < 2) return tableSessions[0] || buildDiagnosticScanSessionFromCsvTable(text, options);
+    const retainPidNumericFailure = (selectedSnapshot, snapshotKey, statusKeys) => {
+      const failedSnapshots = tableSessions.map((session) => session[snapshotKey])
+        .filter((snapshot) => readBridgeResponseErrorCodes(snapshot).includes("invalid_pid_numeric_value"));
+      if (!failedSnapshots.length) return selectedSnapshot;
+      const capturedTime = (snapshot) => {
+        const capturedAt = snapshot?.capturedAt || snapshot?.captured_at || "";
+        return /^\d{4}-\d{2}-\d{2}T/.test(capturedAt) ? Date.parse(capturedAt) : Number.NaN;
+      };
+      const latestFailure = failedSnapshots.reduce((latest, snapshot) =>
+        Number.isFinite(capturedTime(snapshot)) && (!Number.isFinite(capturedTime(latest)) || capturedTime(snapshot) >= capturedTime(latest))
+          ? snapshot : latest);
+      // A rejected newer table must not make an older measurement look current.
+      const snapshot = !selectedSnapshot || (Number.isFinite(capturedTime(latestFailure))
+        && (!Number.isFinite(capturedTime(selectedSnapshot)) || capturedTime(latestFailure) >= capturedTime(selectedSnapshot)))
+        ? latestFailure : selectedSnapshot;
+      const errorCodes = mergePidReadoutErrorCodes(readBridgeResponseErrorCodes(snapshot), ...failedSnapshots.map(readBridgeResponseErrorCodes));
+      const blocked = [snapshot, ...failedSnapshots].some((item) => statusKeys.some((key) => item?.[key] === "blocked"));
+      return statusKeys.reduce((result, key) => ({ ...result, [key]: blocked ? "blocked" : "unparsed" }), {
+        ...snapshot, ok: false, blocked, errorCodes, error_codes: [...errorCodes]
+      });
+    };
     const firstReported = (snapshotKey, statusKey, countKey) => tableSessions
       .map((session) => session[snapshotKey])
       .find((snapshot) => snapshot && (snapshot[statusKey] === "reported" || Number(snapshot[countKey]) > 0));
@@ -37084,7 +37141,7 @@
     const livePidCapturedAtValues = [...new Set(livePidSnapshots.map((snapshot) => snapshot.capturedAt || snapshot.captured_at || null).filter(Boolean))];
     const livePidProtocolValues = [...new Set(livePidSnapshots.map((snapshot) => snapshot.protocol || snapshot.obd_protocol || null).filter(Boolean))];
     const latestLivePidTimelineSample = livePidTimeline.samples.at(-1) || null;
-    const livePidSnapshot = latestLivePidTimelineSample
+    const selectedLivePidSnapshot = latestLivePidTimelineSample
       ? {
         ...normalizeBridgeLivePidSnapshot({
           source: "scanner_csv_import",
@@ -37107,6 +37164,7 @@
         source: "scanner_csv_import"
       }
       : livePidSnapshots[0];
+    const livePidSnapshot = retainPidNumericFailure(selectedLivePidSnapshot, "livePidSnapshot", ["livePidReadoutStatus", "live_pid_readout_status"]);
     const supportedPidSnapshots = tableSessions
       .map((session) => session.supportedPidMatrix)
       .filter((snapshot) => snapshot && (snapshot.supportedPidReadoutStatus === "reported" || Number(snapshot.supportedCount) > 0));
@@ -37207,7 +37265,7 @@
       .filter(Boolean))];
     const canMergeFreezeFrameSnapshots = freezeFrameSnapshots.length > 1 && freezeFrameScopes.size === 1 && [...freezeFrameScopes][0] !== "::::";
     const canAggregateFreezeFrameEcuSnapshots = freezeFrameSnapshots.length > 1 && freezeFrameEcuIds.length > 1;
-    const freezeFrameSnapshot = canMergeFreezeFrameSnapshots || canAggregateFreezeFrameEcuSnapshots
+    const selectedFreezeFrameSnapshot = canMergeFreezeFrameSnapshots || canAggregateFreezeFrameEcuSnapshots
       ? normalizeFreezeFrameSnapshot({
         source: "scanner_csv_import",
         ...(canMergeFreezeFrameSnapshots ? {
@@ -37224,6 +37282,7 @@
         freeze_frame_readout_status: "reported"
       })
       : freezeFrameSnapshots[0];
+    const freezeFrameSnapshot = retainPidNumericFailure(selectedFreezeFrameSnapshot, "freezeFrameSnapshot", ["freezeFrameReadoutStatus", "freeze_frame_readout_status"]);
     const mergedVehicleProfile = tableSessions
       .map((session) => session.vehicleProfile || session.vehicle_profile || {})
       .reduce((profile, candidate) => ({
