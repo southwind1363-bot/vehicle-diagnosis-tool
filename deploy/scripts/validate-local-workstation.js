@@ -127,6 +127,76 @@ async function validateWindowsLauncher(occupiedWebPort) {
   }
 }
 
+async function validatePortableNpmScripts() {
+  const manifest = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"));
+  assert.deepEqual(manifest.scripts, {
+    start: "node server.js", dev: "node server.js",
+    "workstation:dev": "node scripts/start-local-workstation.js",
+    "validate:workstation": "node scripts/validate-local-workstation.js",
+    "validate:offline": "node scripts/validate-offline-cache.js",
+    "validate:case-storage": "node scripts/validate-case-storage.js",
+    "validate:serial": "node scripts/validate-serial-lifecycle.js",
+    "validate:session-export": "node scripts/validate-session-export.js",
+    "bridge:dev": "node local-bridge-readonly.js",
+    "bridge:j2534:dev": "node scripts/start-j2534-readonly-bridge.js",
+    "inspect:j2534": "node scripts/inspect-j2534-drivers.js",
+    "review:j2534-worker": "node scripts/j2534-readonly-worker.js",
+    "review:j2534-host": "node scripts/review-j2534-host.js",
+    "validate:data": "node scripts/validate-data.js",
+    "validate:dtc-import": "node scripts/validate-verified-dtc-import.js",
+    "validate:obd": "node scripts/validate-obd-readonly.js",
+    "validate:bridge": "node scripts/validate-local-bridge-readonly.js",
+    "validate:release": "npm run validate:obd && npm run validate:bridge && npm run validate:workstation && npm run validate:offline && npm run validate:data",
+    "report:coverage": "node scripts/report-dtc-coverage.js",
+    "import:dtc:sample": 'node scripts/import-verified-dtc-csv.js --input scripts/fixtures/verified-dtc-sample.csv --source "検証用サンプル" --source-url "https://example.invalid/verified-dtc-sample" --source-date "2026-05-31"'
+  });
+  check(true, "Portable npm scripts retained their entries, arguments, and release order");
+  for (const [name, command] of Object.entries(manifest.scripts)) {
+    if (name === "validate:release") continue;
+    const entry = command.match(/^node ([a-z0-9/-]+\.js)(?: |$)/i)?.[1];
+    check(Boolean(entry) && fs.existsSync(new URL(`../${entry}`, import.meta.url)),
+      `${name}: npm command requires a machine-specific runtime or has no script entry`);
+  }
+  if (process.platform !== "win32") return;
+  const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle npm & test-"));
+  try {
+    const binDir = path.join(fixtureDir, "node_modules", ".bin");
+    const probe = path.join(fixtureDir, "runtime-probe.cjs");
+    const resultPath = path.join(fixtureDir, "result.json");
+    fs.mkdirSync(binDir, { recursive: true });
+    fs.writeFileSync(probe, 'require("node:fs").writeFileSync(process.env.RUNTIME_PROBE_RESULT, JSON.stringify({ args: process.argv.slice(2), cwd: process.cwd() })); process.exitCode = Number(process.env.RUNTIME_PROBE_EXIT);');
+    fs.writeFileSync(path.join(binDir, "node.cmd"), `@"${process.execPath}" "${probe}" %*\r\n`);
+    const cases = [
+      ["start", ["server.js"], 0],
+      ["bridge:j2534:dev", ["scripts/start-j2534-readonly-bridge.js"], 7],
+      ["import:dtc:sample", ["scripts/import-verified-dtc-csv.js", "--input", "scripts/fixtures/verified-dtc-sample.csv", "--source", "検証用サンプル", "--source-url", "https://example.invalid/verified-dtc-sample", "--source-date", "2026-05-31"], 0]
+    ];
+    fs.writeFileSync(path.join(fixtureDir, "package.json"), JSON.stringify({ private: true,
+      scripts: Object.fromEntries(cases.map(([name]) => [name, manifest.scripts[name]])) }));
+    for (const [name, args, code] of cases) {
+      const entry = path.join(fixtureDir, args[0]);
+      fs.mkdirSync(path.dirname(entry), { recursive: true });
+      // A bypassed PATH wrapper must never start a real server or hardware process.
+      fs.writeFileSync(entry, 'process.exitCode = 99;');
+      if (fs.existsSync(resultPath)) fs.unlinkSync(resultPath);
+      const result = await new Promise((resolve) => {
+        execFile(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `npm.cmd --prefix "${fixtureDir}" run "${name}" --silent`], {
+          cwd: os.tmpdir(), windowsHide: true, windowsVerbatimArguments: true, timeout: 15000,
+          env: { ...process.env, RUNTIME_PROBE_RESULT: resultPath, RUNTIME_PROBE_EXIT: String(code),
+            npm_config_update_notifier: "false", npm_config_logs_max: "0", npm_config_script_shell: process.env.ComSpec || "cmd.exe" }
+        }, (error) => resolve({ code: error?.code ?? 0 }));
+      });
+      check(result.code === code && fs.existsSync(resultPath), `${name}: npm bypassed the PATH runtime or lost its exit code`);
+      assert.deepEqual(JSON.parse(fs.readFileSync(resultPath, "utf8")), { args, cwd: fixtureDir });
+      check(true, `${name}: portable npm invocation preserved arguments`);
+    }
+  } finally {
+    assert.equal(path.dirname(path.resolve(fixtureDir)), path.resolve(os.tmpdir()));
+    assert(path.basename(fixtureDir).startsWith("vehicle npm & test-"));
+    fs.rmSync(fixtureDir, { recursive: true, force: true });
+  }
+}
+
 const clientSource = appSource.slice(appSource.indexOf("async function runObdLocalBridgeRead("), appSource.indexOf("const WEB_SERIAL_ADAPTER_ERROR_LINES"));
 function createClient(webUrl, token, fetchRequest = fetch) {
   const context = vm.createContext({
@@ -783,6 +853,8 @@ async function validateBridgeOperationLifecycle(webUrl) {
   check(probeClient.obdDevSession.bridgeStatus === "previous-status" && probeClient.obdDevSession.adapterIdentity === "previous-adapter" && probeClient.obdDevSession.bridgeEndpoint === "http://127.0.0.1:9999/v1/bridge" && probeClient.obdBridgeOperation === null, "Cancelled multi-step probe mixed the new endpoint with previous connection metadata");
   check(appSource.replace(/\r\n/g, "\n").includes('function syncObdVehicleInput() {\n  cancelObdBridgeOperation();') && appSource.includes('document.querySelectorAll("[data-obd-bridge-request]")'), "Vehicle changes or public bridge controls lost operation protection");
 }
+await validatePortableNpmScripts();
+
 const previousReplay = process.env.LOCAL_BRIDGE_REPLAY_LOG;
 const previousPairing = process.env.LOCAL_BRIDGE_PAIRING_TOKEN;
 delete process.env.LOCAL_BRIDGE_REPLAY_LOG;

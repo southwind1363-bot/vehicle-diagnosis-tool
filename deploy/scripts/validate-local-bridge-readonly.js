@@ -37,9 +37,9 @@ const j2534UnavailableReadIntents = [
   "read_readiness",
   "read_live_pid_snapshot"
 ];
-check(packageManifest.scripts?.["bridge:j2534:dev"] === "C:\\Progra~1\\nodejs\\node.exe scripts/start-j2534-readonly-bridge.js" && j2534BridgeStarterSource.includes('process.env.LOCAL_BRIDGE_DISCOVER_J2534 = "1"') && j2534BridgeStarterSource.includes("createLocalBridgeApp()") && j2534BridgeStarterSource.includes("vehicle_command_enabled=false"), "J2534 bridge starter must explicitly enable only static read-only discovery");
-check(packageManifest.scripts?.["review:j2534-worker"] === "C:\\Progra~1\\nodejs\\node.exe scripts/j2534-readonly-worker.js", "J2534 isolated review worker script is not registered");
-check(packageManifest.scripts?.["review:j2534-host"] === "C:\\Progra~1\\nodejs\\node.exe scripts/review-j2534-host.js" && j2534HostReviewSource.includes('discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true })') && j2534HostReviewSource.includes('manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review")') && j2534HostReviewSource.includes('runJ2534WorkerReview(devices,') && j2534HostReviewSource.includes('timeout_ms: 5000'), "J2534 host review CLI must derive drivers from static discovery and require manual confirmation");
+check(packageManifest.scripts?.["bridge:j2534:dev"] === "node scripts/start-j2534-readonly-bridge.js" && j2534BridgeStarterSource.includes('process.env.LOCAL_BRIDGE_DISCOVER_J2534 = "1"') && j2534BridgeStarterSource.includes("createLocalBridgeApp()") && j2534BridgeStarterSource.includes("vehicle_command_enabled=false"), "J2534 bridge starter must explicitly enable only static read-only discovery");
+check(packageManifest.scripts?.["review:j2534-worker"] === "node scripts/j2534-readonly-worker.js", "J2534 isolated review worker script is not registered");
+check(packageManifest.scripts?.["review:j2534-host"] === "node scripts/review-j2534-host.js" && j2534HostReviewSource.includes('discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true })') && j2534HostReviewSource.includes('manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review")') && j2534HostReviewSource.includes('runJ2534WorkerReview(devices,') && j2534HostReviewSource.includes('timeout_ms: 5000'), "J2534 host review CLI must derive drivers from static discovery and require manual confirmation");
 const blockedJ2534WorkerReview = reviewJ2534PassThruOpenRequest({
   operation: "review_pass_thru_open",
   selected_device_id: "j2534-ready-fixture",
