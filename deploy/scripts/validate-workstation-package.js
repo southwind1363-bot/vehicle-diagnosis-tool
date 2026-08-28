@@ -55,7 +55,8 @@ try {
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
-  check(packaged.scripts.start === "node scripts/start-local-workstation.js" && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
+  check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
+    && packaged.scripts["workstation:dev"] === packaged.scripts.start && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
     && Object.keys(packaged.scripts).length === 3, "Package retained unavailable development commands");
   const integrity = verifyWorkstationPackage(result.directory);
   check(integrity.fileCount + 1 === result.fileCount && integrity.appVersion === result.appVersion, "Integrity file count does not include every packaged file except the manifest itself");
@@ -176,6 +177,37 @@ try {
   const actual = packageWorkstation({ outputDirectory: path.join(root, "relocated") });
   const verified = await run(`import {pathToFileURL} from "node:url";import path from "node:path";const {verifyWorkstationPackage}=await import(pathToFileURL(path.join(process.argv[1],"scripts/verify-workstation-package.js")));console.log(verifyWorkstationPackage(process.argv[1]).appVersion);`, [actual.directory]);
   check(verified.code === 0 && verified.output.trim() === actual.appVersion, "Relocated verifier borrowed runtime files or failed offline");
+  const entries = process.platform === "win32" ? ["cmd", "start", "workstation:dev"] : ["start", "workstation:dev"];
+  const runEntry = (entry) => new Promise((resolve) => {
+    const env = { ...process.env, NODE_PATH: "", PORT: "0", LOCAL_BRIDGE_PORT: "0" };
+    for (const key of ["NODE_OPTIONS", "LOCAL_BRIDGE_REPLAY_LOG", "LOCAL_BRIDGE_PAIRING_TOKEN"]) delete env[key];
+    const windows = process.platform === "win32";
+    const command = entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
+    const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
+      { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
+      (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
+    child.stdin.end("q\n");
+  });
+  for (const entry of entries) {
+    const launched = await runEntry(entry);
+    check(launched.code === 0 && launched.output.includes("Package files match:") && launched.output.includes("診断画面:"), `${entry}: verified packaged startup failed: ${launched.output}`);
+    check(launched.output.indexOf("Package files match:") < launched.output.indexOf("診断画面:"), `${entry}: started before package verification`);
+  }
+  for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true]]) {
+    const target = path.join(actual.directory, relative);
+    const original = fs.readFileSync(target);
+    try {
+      if (missing) fs.unlinkSync(target);
+      else fs.writeFileSync(target, 'throw new Error("dependency-loaded-before-check");');
+      for (const entry of entries) {
+        const blocked = await runEntry(entry);
+        check(blocked.code !== 0 && !blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値"), `${entry}: ${relative} failure started a server or disclosed a key`);
+        check(!blocked.output.includes("dependency-loaded-before-check"), `${entry}: damaged dependency executed before verification`);
+        check(missing ? !fs.existsSync(target) : fs.readFileSync(target, "utf8").startsWith("throw new Error"), `${entry}: failed verification repaired or removed files`);
+      }
+    } finally { fs.writeFileSync(target, original); }
+  }
+  check(verifyWorkstationPackage(actual.directory).appVersion === actual.appVersion, "Startup failure tests did not restore the package");
   const smoke = `
     import assert from "node:assert/strict";
     import fs from "node:fs";

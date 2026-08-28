@@ -342,6 +342,23 @@ async function validateWindowsLauncher(occupiedWebPort) {
     check(pausedFailure.code === 7 && pausedFailure.output.includes('launcher-child ["--open-browser"]'), "Windows launcher lost the child failure code or omitted normal browser launch");
     const noBrowser = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: "0" }, "no-browser");
     check(noBrowser.code === 0 && noBrowser.output.includes("launcher-child []"), "Explicit no-browser launcher option was ignored");
+    const verifier = path.join(fixtureDir, "scripts", "verify-workstation-package.js");
+    fs.writeFileSync(verifier, 'console.log("package-verification"); process.exitCode = Number(process.env.VERIFY_TEST_EXIT);');
+    for (const marker of ["package-info.json", "package-integrity.json"]) {
+      const markerPath = path.join(fixtureDir, marker);
+      fs.writeFileSync(markerPath, "{}");
+      for (const code of [0, 1, 7]) {
+        const child = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: "0", VERIFY_TEST_EXIT: String(code) });
+        check(child.output.includes("package-verification"), `${marker}: packaged launcher skipped verification`);
+        check(child.code === (code ? 1 : 0) && child.output.includes("launcher-child") === (code === 0), `${marker}: verification failure started the application or lost its exit status`);
+        if (code === 0) check(child.output.indexOf("package-verification") < child.output.indexOf("launcher-child"), "Package verification ran after application startup");
+      }
+      fs.unlinkSync(markerPath);
+    }
+    fs.writeFileSync(path.join(fixtureDir, "package-info.json"), "{}");
+    fs.unlinkSync(verifier);
+    const missingVerifier = await run(fixtureLauncher, { LAUNCHER_TEST_EXIT: "0" });
+    check(missingVerifier.code === 1 && missingVerifier.output.includes("Package verification failed") && !missingVerifier.output.includes("launcher-child"), "Missing package verifier did not stop startup");
   } finally {
     assert.equal(path.dirname(path.resolve(fixtureDir)), path.resolve(os.tmpdir()));
     assert(path.basename(fixtureDir).startsWith("vehicle launcher & test-"));

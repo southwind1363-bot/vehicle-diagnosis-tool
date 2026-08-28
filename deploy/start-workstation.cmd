@@ -9,6 +9,15 @@ if errorlevel 1 goto node_error
 node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 22 ? 0 : 1)" >nul 2>&1
 if errorlevel 1 goto runtime_error
 
+if exist "package-info.json" goto package_check
+if exist "package-integrity.json" goto package_check
+goto dependency_check
+
+:package_check
+node "scripts\verify-workstation-package.js"
+if errorlevel 1 goto package_error
+
+:dependency_check
 node -e "require.resolve('express')" >nul 2>&1
 if errorlevel 1 goto dependency_error
 
@@ -33,6 +42,12 @@ goto finish
 :dependency_error
 echo Required packages are missing. Run npm install in the deploy folder first.
 echo Internet is required for initial setup, not for local startup afterward.
+set "workstation_exit=1"
+goto finish
+
+:package_error
+echo Package verification failed. Restore the complete original package before starting.
+echo No server or vehicle connection was started. No files were repaired.
 set "workstation_exit=1"
 goto finish
 
