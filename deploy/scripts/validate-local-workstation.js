@@ -19,6 +19,7 @@ import "./validate-freeze-frame-display.js";
 import "./validate-readiness-display.js";
 import "./validate-mode06-display.js";
 import "./validate-ecu-info-display.js";
+import "./validate-supported-pid-display.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };

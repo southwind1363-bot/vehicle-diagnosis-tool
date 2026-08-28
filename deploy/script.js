@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.315";
+const APP_VERSION = "3.13.316";
 const APP_LAST_UPDATED = "2026-08-28";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -8015,6 +8015,41 @@ function buildObdEcuInfoDisplayLines(snapshot = null) {
   return lines;
 }
 
+function buildObdSupportedPidDisplayLines(snapshot = null) {
+  const pids = snapshot?.supportedPids || snapshot?.supported_pids || [];
+  const pages = snapshot?.supportedPidPageBases || snapshot?.supported_pid_page_bases || [];
+  const ecus = snapshot?.supportedPidEcuSnapshots || snapshot?.supported_pid_ecu_snapshots || [];
+  const status = snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status;
+  const errors = snapshot?.errorCodes || snapshot?.error_codes || [];
+  if (!pids.length && !pages.length && !ecus.length && !errors.length && !["reported", "blocked", "unparsed"].includes(status)) return [];
+  const scope = snapshot?.supportedPidAggregationScope || snapshot?.supported_pid_aggregation_scope;
+  const scopeLabel = { single_ecu: "単一ECU", multiple_ecus_union: "複数ECUの和集合", unspecified: "未確認" }[scope] || "未確認";
+  const lines = [
+    `記録上の集約範囲: ${scopeLabel}`,
+    `全体の読取状態: ${formatObdReadoutStatus(status, "状態未確認")}`,
+    `集約記録PID: ${pids.length}件${pids.length ? ` / ${pids.join(", ")}` : " / 記録なし"}`,
+    `集約記録ページ: ${pages.length ? pages.join(" / ") : "未記録"}`
+  ];
+  if (ecus.length) {
+    const ecuIds = new Set(ecus.map((group) => group.sourceEcu || group.source_ecu).filter(Boolean));
+    lines.push(`明細: 識別済みECU ${ecuIds.size} / 応答 ${ecus.length}`);
+  }
+  errors.forEach((error) => lines.push(`全体: ${formatReadoutErrorCodes([error])}`));
+  (ecus.length ? ecus : [snapshot]).forEach((group) => {
+    const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
+    const groupStatus = group.supportedPidReadoutStatus || group.supported_pid_readout_status;
+    const groupPids = group.supportedPids || group.supported_pids || [];
+    const groupPages = group.supportedPidPageBases || group.supported_pid_page_bases || [];
+    const groupErrors = group.errorCodes || group.error_codes || [];
+    lines.push(`[${ecu}] 読取状態: ${formatObdReadoutStatus(groupStatus, "状態未確認")}`);
+    const label = groupStatus === "reported" ? "対応PID" : "記録PID（対応未確認）";
+    lines.push(`[${ecu}] ${label}: ${groupPids.length}件${groupPids.length ? ` / ${groupPids.join(", ")}` : " / 記録なし"}`);
+    lines.push(`[${ecu}] 記録ページ: ${groupPages.length ? groupPages.join(" / ") : "未記録"}`);
+    groupErrors.forEach((error) => lines.push(`[${ecu}] ${formatReadoutErrorCodes([error])}`));
+  });
+  return lines;
+}
+
 function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
   if (!snapshot?.testCount) return NO_DATA;
   const parts = [`${snapshot.testCount}件`];
@@ -9141,11 +9176,8 @@ function renderObdBridgeSessionDetails(session = null) {
   const readinessLines = buildObdReadinessDisplayLines(readinessSnapshot);
   if (readinessLines.length) sections.push(["レディネス", readinessLines]);
 
-  const supportedPids = supportedPidMatrix?.supportedPids || [];
-  if (supportedPids.length) {
-    const suffix = supportedPids.length > 18 ? "..." : "";
-    sections.push(["対応PID", [`${supportedPids.length}件: ${supportedPids.slice(0, 18).join(", ")}${suffix}`]]);
-  }
+  const supportedPidLines = buildObdSupportedPidDisplayLines(supportedPidMatrix);
+  if (supportedPidLines.length) sections.push(["対応PID", supportedPidLines]);
 
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
   const freezeFrameTriggerEntries = getObdFreezeFrameTriggerEntries(freezeFrameSnapshot);
@@ -10712,7 +10744,8 @@ function renderObdDeveloperSessionSummary(session = null) {
     ["レディネス読取状態", readinessReadoutStatusLabel],
     ["Mode06", onboardMonitorSnapshot?.testCount ? formatObdBridgeOnboardMonitorSummary(onboardMonitorSnapshot) : 0],
     ["Mode06読取状態", onboardMonitorReadoutStatusLabel],
-    ["対応PID", supportedPidMatrix?.supportedCount ?? 0],
+    ["記録PID", (supportedPidMatrix?.supportedPids || supportedPidMatrix?.supported_pids || []).length],
+    ["対応PID（辞書一致）", supportedPidMatrix?.supportedCount ?? 0],
     ["対応PIDページ", supportedPidPageLabel],
     ["対応PID読取状態", supportedPidReadoutStatusLabel],
     ["開始", startedAtLabel],

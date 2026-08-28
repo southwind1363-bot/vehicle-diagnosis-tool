@@ -3411,6 +3411,28 @@
     }));
   }
 
+  function preserveSupportedPidReadoutStatus(snapshot = {}, input = {}) {
+    const statusKeys = ["supportedPidReadoutStatus", "supported_pid_readout_status"];
+    const preserved = preserveExplicitStoredReadoutStatus(
+      preserveExplicitReadoutFailure(snapshot, input, statusKeys), input, statusKeys
+    );
+    const data = getBridgeResponseDataEnvelope(input) || input;
+    const ecuSnapshots = firstSupportedPidArray(
+      data?.supportedPidEcuSnapshots, data?.supported_pid_ecu_snapshots, data?.ecuSnapshots, data?.ecu_snapshots
+    );
+    // Retain recorded refusals, not a bridge safety block synthesized during normalization.
+    const hasBlockedReadout = [input, data, ...ecuSnapshots].some((value) =>
+      String(value?.supportedPidReadoutStatus || value?.supported_pid_readout_status
+        || value?.readoutStatus || value?.readout_status || "").trim().toLowerCase() === "blocked"
+    );
+    return hasBlockedReadout ? {
+      ...preserved,
+      supportedPidReadoutStatus: "blocked",
+      supported_pid_readout_status: "blocked",
+      ok: false
+    } : preserved;
+  }
+
   function readBridgeProtocol(data = {}) {
     return data.protocol || data.obd_protocol || data.communication_protocol || data.communicationProtocol || data.diagnostic_protocol || data.diagnosticProtocol || data.transport_protocol || data.transportProtocol || data.network_protocol || data.networkProtocol || data.protocol_name || data.protocolName || data.bus_protocol || data.busProtocol || null;
   }
@@ -33890,7 +33912,7 @@
       && ["supported_pid_matrix_v1"].includes(supportedPidInput.schemaVersion || supportedPidInput.schema_version || "");
     const supportedPidMatrix = hasSupportedPidInput
       ? {
-        ...preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(hasBridgeSupportedPidResponse
+        ...preserveSupportedPidReadoutStatus(hasBridgeSupportedPidResponse
           ? normalizeBridgeSupportedPidSnapshot(importSession)
           : isTypedSupportedPidSnapshot
           ? buildSupportedPidMatrix(toSnapshotInput(supportedPidInput, "supported_pids"))
@@ -33898,7 +33920,7 @@
             ? { supported_pids: supportedPidInput, source: scannerJsonSource }
             : typeof supportedPidInput === "string"
               ? { supported_pid_list: supportedPidInput, source: scannerJsonSource }
-              : toSnapshotInput(supportedPidInput, "supported_pids")), supportedPidInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]), supportedPidInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]),
+              : toSnapshotInput(supportedPidInput, "supported_pids")), supportedPidInput),
         source: scannerJsonSource
       }
       : null;
@@ -38095,7 +38117,7 @@
           || (String(sessionInput.source || sessionInput.source_type || "") === "native_connector" && [ecuInfoSnapshotInput?.ecu_info_ecu_snapshots, ecuInfoSnapshotInput?.ecuInfoEcuSnapshots].some(Array.isArray)))
           ? normalizeBridgeEcuInfoSnapshot(ecuInfoSnapshotInput)
           : normalizeEcuInfoSnapshot(ecuInfoSnapshotInput)), ecuInfoSafetyInput, ["ecuInfoReadoutStatus", "ecu_info_readout_status"]);
-    const supportedPidMatrix = preserveExplicitStoredReadoutStatus(preserveExplicitReadoutFailure(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
+    const supportedPidMatrix = preserveSupportedPidReadoutStatus(withSchemaVersionAlias(supportedPidMatrixInput?.schemaVersion
       ? (hasGenericSupportedPidEcuRows(supportedPidMatrixInput) || !Array.isArray(supportedPidMatrixInput.supportedPids) || !Array.isArray(supportedPidMatrixInput.items) ? buildSupportedPidMatrix(supportedPidMatrixInput) : supportedPidMatrixInput)
       : (supportedPidResponseInput?.raw || supportedPidResponseInput?.response || Array.isArray(supportedPidResponseInput?.bytes))
         ? decodeSupportedPidResponse(supportedPidResponseInput)
@@ -38107,7 +38129,7 @@
         || Array.isArray(supportedPidMatrixInput?.ecu_snapshots)
         || Array.isArray(supportedPidMatrixInput?.ecuSnapshots))
         ? normalizeBridgeSupportedPidSnapshot(supportedPidMatrixInput)
-        : buildSupportedPidMatrix(supportedPidMatrixInput)), supportedPidMatrixInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]), supportedPidMatrixInput, ["supportedPidReadoutStatus", "supported_pid_readout_status"]);
+        : buildSupportedPidMatrix(supportedPidMatrixInput)), supportedPidMatrixInput);
     const ecuResponseSummary = withSchemaVersionAlias(normalizeEcuResponseSummary(hasObjectContent(ecuResponseSummaryInput)
       ? ecuResponseSummaryInput
       : buildReadoutEcuResponseSummaryInput({ dtcSnapshot, livePidSnapshot, freezeFrameSnapshot, readinessSnapshot, onboardMonitorSnapshot, ecuInfoSnapshot, supportedPidMatrix }, sessionInput.source || sessionInput.source_type || "diagnostic_core", sessionInput.protocol || sessionInput.obd_protocol || null)));

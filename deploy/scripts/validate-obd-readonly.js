@@ -3,6 +3,7 @@ import vm from "node:vm";
 import "./validate-serial-lifecycle.js";
 import "./validate-session-export.js";
 import "./validate-mode06-normalization.js";
+import "./validate-supported-pid-roundtrip.js";
 
 const failures = [];
 let checks = 0;
@@ -4729,7 +4730,7 @@ check(appSource.includes('function formatUdsDtcSubfunction(value, fallback = NO_
 check(appSource.includes('function formatObdReportedDtcEcuCountSummary(snapshot = null, fallback = "")') && appSource.includes('["ECU報告DTC件数", `${reportedDtcEcuCountLabel} (個別DTC詳細未展開)`]') && appSource.includes('個別DTC一覧は未展開です。'), "OBD UI should show reported ECU DTC counts without inventing individual DTCs");
 check(appSource.includes('function formatObdReportedDtcStatusSummary(snapshot = null, fallback = "")') && appSource.includes('["DTC診断機報告状態", reportedDtcStatusLabel]'), "OBD session summary should display scanner-reported DTC states without converting them into OBD status categories");
 check(appSource.includes('const ecuInfoResponseFormatLabel = formatObdEcuInfoResponseFormat') && appSource.includes('UDS ReadDataByIdentifier (unparsed)') && appSource.includes('["ECU情報応答形式", ecuInfoResponseFormatLabel]'), "OBD session summary should expose ECU information response format without interpreting UDS values");
-check(appSource.includes('const dataIdentifier = item?.dataIdentifier || item?.data_identifier || null;') && appSource.includes('DID 0x${dataIdentifier}'), "ECU info details should display a reported UDS data identifier without interpreting the value");
+check(appSource.includes('const did = item.dataIdentifier || item.data_identifier;') && appSource.includes('DID 0x${did}') && appSource.includes('items.map(formatObdEcuInfoItemLine)'), "ECU info details should display a reported UDS data identifier without interpreting the value");
 check(appSource.includes('const currentDtcReadoutStatus = currentDtcSnapshot?.dtcReadoutStatus') && appSource.includes('currentDtcReadoutStatus === "unparsed"') && appSource.includes('DTCは0件として扱いません。') && appSource.includes('currentDtcReadoutStatus === "blocked"'), "Bridge DTC status text should not present unparsed or blocked responses as zero DTCs");
 check(appSource.includes('function buildObdDtcDisplayKey(item = null)') && appSource.includes('return `${code}:${subcode}:${oemDetailCode}:${ecu}:${status}:${reportedStatus}`;') && appSource.includes('codes.map((item) => [buildObdDtcDisplayKey(item), item])') && appSource.includes('dtcSnapshot.dtcs.filter((item) => item?.code).map((item) => [buildObdDtcDisplayKey(item), item])') && appSource.includes('mergedDtcs.filter((item) => item?.code).map((item) => [buildObdDtcDisplayKey(item), item])'), "DTC display must retain distinct OBD, OEM detail, and reported status evidence for the same code and ECU");
 if (dtcDisplayKeyFunctionSource) {
