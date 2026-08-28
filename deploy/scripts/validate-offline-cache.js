@@ -250,9 +250,11 @@ check((await worker.request("style.css")).ok, "Cache lookup failure blocked a su
 
 function createStatusClient(worker, registration) {
   const events = {};
+  const status = { textContent: "", isError: false };
+  status.classList = { toggle: (name, enabled) => { if (name === "error") status.isError = enabled; } };
   const context = vm.createContext({
     APP_VERSION: manifest.version, OFFLINE_ASSET_MANIFEST: "offline-assets.json", offlineCacheStatusRevision: 0,
-    offlineCacheStatus: { textContent: "", classList: { toggle: () => {} } },
+    offlineCacheStatus: status,
     window: { caches: worker.caches, isSecureContext: true }, caches: worker.caches,
     URL, Request: worker.context.Request, MessageChannel, setTimeout, clearTimeout,
     navigator: { serviceWorker: {
@@ -275,6 +277,59 @@ const oldWorker = { ...active, postMessage: (data, ports) => ports[0].postMessag
 statusClient.setOfflineCacheStatus("PENDING");
 await statusClient.refreshOfflineCacheStatus(oldWorker);
 check(!statusClient.offlineCacheStatus.textContent.includes("準備済み"), "Old worker readiness mislabeled the new version as ready");
+check(statusClient.offlineCacheStatus.textContent.includes("版を照合できません") && statusClient.offlineCacheStatus.isError, "Unverified worker identity did not report version verification failure");
+
+const manifestUrl = new URL("offline-assets.json", base).href;
+for (const [scenario, expected] of [
+  ["missing-api", "オフライン保存機能を確認できません"],
+  ["missing-cache", "保存されていません"],
+  ["missing-manifest", "資材一覧が保存されていません"],
+  ["unreadable-manifest", "資材一覧を読み取れません"],
+  ["null-manifest", "版または件数が一致しません"],
+  ["wrong-version", "版または件数が一致しません"],
+  ["wrong-count", "版または件数が一致しません"],
+  ["missing-asset", "必要なデータが不足"],
+  ["storage-open", "保存データを読み出せません"],
+  ["storage-match", "保存データを読み出せません"],
+  ["storage-has", "保存データを読み出せません"]
+]) {
+  const fixture = createWorker();
+  const entries = new Map(statusWorker.stores.get(cacheName));
+  fixture.stores.set(cacheName, entries);
+  const client = createStatusClient(fixture, {});
+  const originalHas = fixture.caches.has;
+  if (scenario === "missing-api") delete client.window.caches;
+  if (scenario === "missing-cache") fixture.stores.delete(cacheName);
+  if (scenario === "missing-manifest") entries.delete(manifestUrl);
+  if (scenario === "unreadable-manifest") entries.set(manifestUrl, new Response("{"));
+  if (scenario === "null-manifest") entries.set(manifestUrl, new Response("null"));
+  if (scenario === "wrong-version") entries.set(manifestUrl, new Response(JSON.stringify({ ...manifest, version: "previous" })));
+  if (scenario === "wrong-count") entries.set(manifestUrl, new Response(JSON.stringify({ ...manifest, asset_count: manifest.asset_count + 1 })));
+  if (scenario === "missing-asset") entries.delete(new URL("style.css", base).href);
+  if (scenario === "storage-open") fixture.options.failOpen = true;
+  if (scenario === "storage-match") fixture.options.failMatch = true;
+  if (scenario === "storage-has") fixture.caches.has = async () => { throw new Error("PRIVATE_DETAIL"); };
+  client.setOfflineCacheStatus("準備済み");
+  const cacheKeys = [...fixture.stores.keys()];
+  await client.refreshOfflineCacheStatus(active);
+  check(client.offlineCacheStatus.textContent.includes(expected) && client.offlineCacheStatus.isError
+    && !client.offlineCacheStatus.textContent.includes("準備済み") && !client.offlineCacheStatus.textContent.includes("PRIVATE_DETAIL"), `${scenario}: failure status was misleading or leaked exception details`);
+  check(JSON.stringify([...fixture.stores.keys()]) === JSON.stringify(cacheKeys) && fixture.stats.fetched.length === 0
+    && fixture.stats.pendingWrites === 0 && fixture.stats.waiting === 0, `${scenario}: readiness inspection changed caches or triggered downloads`);
+  fixture.stores.set(cacheName, new Map(statusWorker.stores.get(cacheName)));
+  fixture.caches.has = originalHas;
+  fixture.options.failOpen = false;
+  fixture.options.failMatch = false;
+  client.window.caches = fixture.caches;
+  await client.refreshOfflineCacheStatus(active);
+  check(client.offlineCacheStatus.textContent.includes("210/210") && !client.offlineCacheStatus.isError, `${scenario}: recovered readiness retained an error`);
+}
+
+const obsoleteClient = createStatusClient(statusWorker, {});
+delete obsoleteClient.window.caches;
+obsoleteClient.setOfflineCacheStatus("NEWER_STATUS");
+await obsoleteClient.refreshOfflineCacheStatus(active, () => false);
+check(obsoleteClient.offlineCacheStatus.textContent === "NEWER_STATUS", "Obsolete cache inspection overwrote the current status when CacheStorage was unavailable");
 const lateRefresh = statusClient.refreshOfflineCacheStatus(active);
 statusClient.setOfflineCacheStatus("INSTALL_FAILED", true);
 await lateRefresh;
@@ -296,6 +351,7 @@ const redundant = { state: "redundant", addEventListener: () => {} };
 const failedClient = createStatusClient(statusWorker, { active: oldWorker, installing: redundant, update: async () => {}, addEventListener: () => {} });
 await failedClient.registerOfflineCache();
 check(failedClient.offlineCacheStatus.textContent.includes("更新は採用されません"), "Initial redundant worker failure was overwritten by a checking/ready message");
+check(failedClient.offlineCacheStatus.textContent.includes("失敗理由は未確認") && failedClient.offlineCacheStatus.isError, "Redundant install claimed a specific failure cause or successful offline availability");
 let stateChanged;
 const activating = { ...active, state: "activating", addEventListener: (name, callback) => { stateChanged = callback; } };
 const activatingClient = createStatusClient(statusWorker, { active: activating, update: async () => {}, addEventListener: () => {} });
