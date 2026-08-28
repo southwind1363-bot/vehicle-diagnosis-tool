@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.331";
+const APP_VERSION = "3.13.332";
 const APP_LAST_UPDATED = "2026-08-29";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1399,10 +1399,12 @@ async function refreshOfflineCacheStatus(worker, isStillCurrent = () => true) {
     return;
   }
   const revision = ++offlineCacheStatusRevision;
+  const isCurrent = () => revision === offlineCacheStatusRevision && worker.state === "activated" && isStillCurrent();
   let failureMessage = "端末内の保存データを読み出せませんでした。この版のオフライン利用は未確認です。";
   try {
     const cacheName = `vehicle-diagnosis-tool-${APP_VERSION}`;
     const identity = await getOfflineWorkerIdentity(worker);
+    if (!isCurrent()) return;
     if (identity?.version !== APP_VERSION || identity?.cacheName !== cacheName) {
       failureMessage = "画面とオフライン基盤の版を照合できません。この版のオフライン利用は未確認です。";
       throw new Error("offline_worker_unverified");
@@ -1411,8 +1413,11 @@ async function refreshOfflineCacheStatus(worker, isStillCurrent = () => true) {
       failureMessage = "この版の端末内オフライン診断データは保存されていません。";
       throw new Error("offline_cache_missing");
     }
+    if (!isCurrent()) return;
     const cache = await caches.open(cacheName);
+    if (!isCurrent()) return;
     const response = await cache.match(OFFLINE_ASSET_MANIFEST);
+    if (!isCurrent()) return;
     if (!response) {
       failureMessage = "オフライン資材一覧が保存されていません。準備完了は未確認です。";
       throw new Error("offline_manifest_missing");
@@ -1427,9 +1432,19 @@ async function refreshOfflineCacheStatus(worker, isStillCurrent = () => true) {
       failureMessage = "保存されたオフライン資材一覧の版または件数が一致しません。準備完了は未確認です。";
       throw new Error("offline_manifest_invalid");
     }
-    const cached = await Promise.all(urls.map(async (url) => Boolean(await cache.match(new Request(url)))));
-    const cachedCount = cached.filter(Boolean).length;
-    if (revision !== offlineCacheStatusRevision || worker.state !== "activated" || !isStillCurrent()) return;
+    let next = 0;
+    let cachedCount = 0;
+    let failed = false;
+    await Promise.all(Array.from({ length: Math.min(4, urls.length) }, async () => {
+      while (!failed && isCurrent() && next < urls.length) {
+        const url = urls[next++];
+        try {
+          if (await cache.match(new Request(url))) cachedCount += 1;
+        } catch (_) { failed = true; }
+      }
+    }));
+    if (!isCurrent()) return;
+    if (failed) throw new Error("offline_cache_read_failed");
     setOfflineCacheStatus(
       cachedCount === urls.length
         ? `端末内オフライン診断データ: ${cachedCount}/${urls.length} 件を準備済みです。`

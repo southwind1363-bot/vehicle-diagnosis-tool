@@ -280,6 +280,67 @@ check(!statusClient.offlineCacheStatus.textContent.includes("準備済み"), "Ol
 check(statusClient.offlineCacheStatus.textContent.includes("版を照合できません") && statusClient.offlineCacheStatus.isError, "Unverified worker identity did not report version verification failure");
 
 const manifestUrl = new URL("offline-assets.json", base).href;
+async function waitForStatusProbe(predicate) {
+  const deadline = Date.now() + 2000;
+  while (!predicate() && Date.now() < deadline) await new Promise((done) => setTimeout(done, 1));
+  assert.ok(predicate(), "Readiness probe did not reach its expected state");
+}
+function createStatusProbe() {
+  const fixture = createWorker();
+  fixture.stores.set(cacheName, new Map(statusWorker.stores.get(cacheName)));
+  const open = fixture.caches.open;
+  const probe = { active: 0, peak: 0, calls: [], pending: [] };
+  fixture.caches.open = async (...args) => {
+    const cache = await open(...args);
+    return { ...cache, match: (request) => {
+      if (new URL(typeof request === "string" ? request : request.url, base).href === manifestUrl) return cache.match(request);
+      probe.calls.push(request.url);
+      probe.active += 1;
+      probe.peak = Math.max(probe.peak, probe.active);
+      return new Promise((resolve, reject) => probe.pending.push(async (fail = false) => {
+        try {
+          if (fail) throw new Error("PRIVATE_STORAGE_DETAIL");
+          resolve(await cache.match(request));
+        } catch (error) { reject(error); }
+        finally { probe.active -= 1; }
+      }));
+    } };
+  };
+  return { fixture, probe, client: createStatusClient(fixture, {}) };
+}
+for (const scenario of ["complete", "new-status", "changed-worker", "changed-owner", "storage-error"]) {
+  const { fixture, probe, client } = createStatusProbe();
+  const worker = { ...active };
+  let currentOwner = true;
+  let finished = false;
+  client.setOfflineCacheStatus("CHECKING");
+  const completion = client.refreshOfflineCacheStatus(worker, () => currentOwner).then(() => { finished = true; });
+  await waitForStatusProbe(() => probe.pending.length >= 4 || finished);
+  check(probe.active === 4 && probe.peak === 4 && probe.calls.length === 4, "Readiness inspection started more than four simultaneous cache reads");
+  if (scenario === "new-status") client.setOfflineCacheStatus("NEWER_STATUS");
+  if (scenario === "changed-worker") worker.state = "redundant";
+  if (scenario === "changed-owner") currentOwner = false;
+  if (scenario === "storage-error") {
+    await probe.pending.shift()(true);
+    await Promise.resolve();
+    check(!finished && probe.active === 3 && client.offlineCacheStatus.textContent === "CHECKING", "Readiness failure returned before in-flight reads settled");
+  }
+  while (!finished) {
+    await Promise.all(probe.pending.splice(0).map((settle) => settle()));
+    await waitForStatusProbe(() => finished || probe.pending.length > 0);
+  }
+  await completion;
+  check(probe.active === 0 && probe.peak === 4, "Readiness inspection left reads in flight or exceeded its concurrency bound");
+  if (scenario === "complete") {
+    check(probe.calls.length === manifest.asset_count && new Set(probe.calls).size === manifest.asset_count
+      && client.offlineCacheStatus.textContent.includes(`${manifest.asset_count}/${manifest.asset_count}`), "Batched readiness skipped, repeated, or miscounted assets");
+  } else {
+    check(probe.calls.length === 4, "Obsolete or failed inspection scheduled more cache reads");
+    if (scenario === "storage-error") check(client.offlineCacheStatus.isError && !client.offlineCacheStatus.textContent.includes("PRIVATE_STORAGE_DETAIL"), "Readiness failure was hidden or exposed storage details");
+    else check(client.offlineCacheStatus.textContent === (scenario === "new-status" ? "NEWER_STATUS" : "CHECKING"), "Obsolete inspection replaced the newer status");
+  }
+  check(fixture.stats.fetched.length === 0 && fixture.stats.pendingWrites === 0, "Readiness batching downloaded or modified cache data");
+}
 for (const [scenario, expected] of [
   ["missing-api", "オフライン保存機能を確認できません"],
   ["missing-cache", "保存されていません"],
