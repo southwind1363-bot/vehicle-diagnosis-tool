@@ -3379,7 +3379,12 @@
         : inputErrorCodes;
       return errorCodes.length ? { ...result, errorCodes, error_codes: [...errorCodes] } : result;
     };
-    const failureStatus = getExplicitReadoutFailureStatus(input);
+    let failureStatus = getExplicitReadoutFailureStatus(input);
+    if (failureStatus === "unparsed" && readBridgeResponseErrorCodes(snapshot).includes("invalid_pid_numeric_value")
+      && [ snapshot.livePidEcuSnapshots, snapshot.live_pid_ecu_snapshots, snapshot.freezeFrameEcuSnapshots, snapshot.freeze_frame_ecu_snapshots ]
+        .filter(Array.isArray).flat().some((child) => getExplicitReadoutFailureStatus(child) === "blocked"
+          || [child?.livePidReadoutStatus, child?.live_pid_readout_status, child?.freezeFrameReadoutStatus, child?.freeze_frame_readout_status, child?.readoutStatus, child?.readout_status]
+            .some((status) => String(status || "").trim().toLowerCase() === "blocked"))) failureStatus = "blocked";
     if (!failureStatus) return withErrorCodes(snapshot);
     const blocked = failureStatus === "blocked";
     return withErrorCodes(statusKeys.reduce((result, key) => ({ ...result, [key]: failureStatus }), {
@@ -6346,6 +6351,190 @@
     };
   }
 
+  function guardCanonicalPidSnapshot(snapshot, kind = "live") {
+    const isFreezeFrame = kind === "freeze_frame";
+    const statusKeys = isFreezeFrame ? ["freezeFrameReadoutStatus", "freeze_frame_readout_status"] : ["livePidReadoutStatus", "live_pid_readout_status"];
+    const childKeys = isFreezeFrame ? ["freeze_frame_ecu_snapshots", "freezeFrameEcuSnapshots"] : ["live_pid_ecu_snapshots", "livePidEcuSnapshots"];
+    const rowKeys = isFreezeFrame
+      ? ["values", "freeze_frame", "freezeFrame", "freeze_frame_values", "freezeFrameValues", "freeze_frame_rows", "freezeFrameRows", "pid_values", "pidValues", "monitorValues", "monitor_values", "items"]
+      : ["values", "monitor_values", "monitorValues", "pid_values", "pidValues", "live_pid_values", "livePidValues", "live_data", "liveData", "items"];
+    const selectArray = (input, keys) => keys.map((key) => input?.[key]).find((rows) => Array.isArray(rows) && rows.length)
+      || keys.map((key) => input?.[key]).find(Array.isArray) || [];
+    const readScope = (input) => readObdResponseSourceEcu({ ...input, source_ecu: input?.source_ecu || input?.sourceEcu || input?.ecu || input?.ecu_id || input?.ecuId || input?.address || input?.module || input?.module_id || input?.moduleId });
+    const scopedView = (row, parent) => {
+      const source = readScope(row) || readScope(parent);
+      return source && row && typeof row === "object" ? { ...row, sourceEcu: source, source_ecu: source } : row;
+    };
+    const rowCache = new Map();
+    const snapshotCache = new Map();
+    const cleanRows = (rows) => {
+      if (rowCache.has(rows)) return rowCache.get(rows);
+      let retained = null;
+      rows.forEach((row, index) => {
+        let invalid = false;
+        if (typeof row?.value !== "number" || !Number.isFinite(row.value)) {
+          normalizeBridgePidValue(row, index, () => { invalid = true; });
+        }
+        if (invalid && !retained) retained = rows.slice(0, index);
+        if (!invalid && retained) retained.push(row);
+      });
+      const result = retained || rows;
+      rowCache.set(rows, result);
+      return result;
+    };
+    const visit = (input) => {
+      if (!input || typeof input !== "object" || Array.isArray(input)) return input;
+      if (snapshotCache.has(input)) return snapshotCache.get(input);
+      snapshotCache.set(input, input);
+      const originalRows = Array.isArray(input.monitorValues) ? input.monitorValues : selectArray(input, rowKeys);
+      const originalChildren = selectArray(input, childKeys);
+      const replacements = {};
+      let changed = false;
+      for (const key of rowKeys) {
+        if (!Array.isArray(input[key])) continue;
+        replacements[key] = cleanRows(input[key]);
+        changed ||= replacements[key] !== input[key];
+      }
+      const childArrays = new Map();
+      for (const key of childKeys) {
+        if (!Array.isArray(input[key])) continue;
+        if (!childArrays.has(input[key])) {
+          const children = input[key].map(visit);
+          childArrays.set(input[key], children.some((child, index) => child !== input[key][index]) ? children : input[key]);
+        }
+        replacements[key] = childArrays.get(input[key]);
+        changed ||= replacements[key] !== input[key];
+      }
+      if (!changed) return input;
+      const children = childArrays.get(originalChildren) || originalChildren;
+      const rows = cleanRows(originalRows);
+      const working = { ...input, ...replacements, monitorValues: rows, monitor_values: rows,
+        [childKeys[0]]: children, [childKeys[1]]: children, monitorValueSummary: null, monitor_value_summary: null };
+      const scopedChildren = children.map((child) => scopedView(child, null));
+      const derivationInput = { ...scopedView(working, null), [childKeys[0]]: scopedChildren, [childKeys[1]]: scopedChildren };
+      const derived = isFreezeFrame ? normalizeFreezeFrameSnapshot(derivationInput) : normalizeBridgeLivePidSnapshot(derivationInput);
+      const childStatus = (child) => {
+        if (!child || typeof child !== "object" || Array.isArray(child)) return "unknown";
+        const statuses = [...statusKeys, "readoutStatus", "readout_status"].map((key) => String(child?.[key] || "").trim().toLowerCase());
+        const failure = getExplicitReadoutFailureStatus(child);
+        if (failure === "blocked" || statuses.includes("blocked")) return "blocked";
+        if (failure === "unparsed" || statuses.includes("unparsed") || readBridgeResponseErrorCodes(child).length) return "unparsed";
+        const explicit = statuses.find((status) => ["reported", "unknown"].includes(status));
+        if (explicit) return explicit;
+        const normalized = isFreezeFrame ? normalizeFreezeFrameSnapshot(scopedView(child, null)) : normalizeBridgeLivePidSnapshot(scopedView(child, null));
+        return normalized[statusKeys[0]] || "unknown";
+      };
+      const childStatuses = new Map(children.map((child) => [child, childStatus(child)]));
+      const normalizedChildren = children.filter((child) => child && typeof child === "object" && readScope(child))
+        .map((child) => ({ ...scopedView(child, null), [statusKeys[0]]: childStatuses.get(child) }));
+      const reportedChildren = normalizedChildren.filter((child) => child[statusKeys[0]] === "reported");
+      const matchesReportedEcu = (row, inheritedSource = readScope(input)) => {
+        if (!normalizedChildren.length) return true;
+        const source = String(readScope(row) || inheritedSource || "").trim().toUpperCase();
+        if (!source) return reportedChildren.length === normalizedChildren.length;
+        return reportedChildren.some((child) => {
+          const candidate = String(readScope(child) || "").trim().toUpperCase();
+          return source === candidate || isComparableCanEcuAddressMatch(normalizeComparableCanEcuAddress(source), normalizeComparableCanEcuAddress(candidate));
+        });
+      };
+      const eligibleChildren = children.filter((child) => childStatuses.get(child) === "reported" && matchesReportedEcu(child));
+      let monitorValues = rows.filter((row) => matchesReportedEcu(row));
+      let monitorViews = monitorValues.map((row) => scopedView(row, input));
+      if (!monitorValues.length && children.length) {
+        monitorValues = eligibleChildren
+          .flatMap((child) => Array.isArray(child?.monitorValues) ? child.monitorValues : selectArray(child, rowKeys));
+        monitorViews = eligibleChildren.flatMap((child) => (Array.isArray(child?.monitorValues) ? child.monitorValues : selectArray(child, rowKeys))
+          .map((row) => scopedView(row, child)));
+      }
+      const errorCodes = mergePidReadoutErrorCodes(["invalid_pid_numeric_value"], readBridgeResponseErrorCodes(input), ...children.map(readBridgeResponseErrorCodes));
+      const blocked = getExplicitReadoutFailureStatus(input) === "blocked" || statusKeys.some((key) => input[key] === "blocked")
+        || normalizedChildren.some((child) => child[statusKeys[0]] === "blocked");
+      const result = { ...working, monitorValues, monitor_values: monitorValues, errorCodes, error_codes: [...errorCodes],
+        ok: false, blocked, wouldTransmit: false, would_transmit: false, vehicleCommandEnabled: false, vehicle_command_enabled: false,
+        [statusKeys[0]]: blocked ? "blocked" : "unparsed", [statusKeys[1]]: blocked ? "blocked" : "unparsed" };
+      for (const key of rowKeys) {
+        if (key !== "monitorValues" && key !== "monitor_values" && Array.isArray(result[key])) result[key] = result[key].filter((row) => matchesReportedEcu(row));
+      }
+      const setAliases = (camel, snake, value) => { result[camel] = value; result[snake] = value; };
+      setAliases("monitorValueSummary", "monitor_value_summary", buildMonitorValueSummary(classifyRetainedPidRows(monitorValues)));
+      setAliases("monitorInsights", "monitor_insights", analyzeRetainedPidMeasurements(monitorValues));
+      for (const key of ["valueCount", "value_count"]) if (key in input) result[key] = monitorValues.length;
+      const aggregateKeys = isFreezeFrame ? ["freezeFrameEcuAggregateSummary", "freeze_frame_ecu_aggregate_summary"] : ["livePidEcuAggregateSummary", "live_pid_ecu_aggregate_summary"];
+      const aggregate = normalizedChildren.length ? { schemaVersion: isFreezeFrame ? "freeze_frame_ecu_aggregate_summary_v1" : "live_pid_ecu_aggregate_summary_v1" } : null;
+      if (aggregate) {
+        aggregate.schema_version = aggregate.schemaVersion;
+        aggregate.ecuCount = aggregate.ecu_count = normalizedChildren.length;
+        for (const status of ["reported", "blocked", "unparsed", "unknown"]) {
+          aggregate[`${status}EcuCount`] = aggregate[`${status}_ecu_count`] = normalizedChildren.filter((child) => child[statusKeys[0]] === status).length;
+        }
+        aggregate.errorResponseCount = aggregate.error_response_count = normalizedChildren.filter((child) => readBridgeResponseErrorCodes(child).length).length;
+        aggregate.errorCodes = mergePidReadoutErrorCodes(...normalizedChildren.map(readBridgeResponseErrorCodes));
+        aggregate.error_codes = [...aggregate.errorCodes];
+        aggregate.allReported = aggregate.all_reported = aggregate.reportedEcuCount === aggregate.ecuCount;
+      }
+      setAliases(...aggregateKeys, aggregate);
+      if (isFreezeFrame) {
+        const expectedItems = (input.expectedItems || input.expected_items || derived.expectedItems || []).map((item) => {
+          const captured = monitorViews.filter((row) => (item.monitorId && row?.id === item.monitorId) || (item.pid && row?.pid === item.pid));
+          const capturedEcuIds = [...new Set(captured.map(readScope).filter(Boolean))].sort();
+          return { ...item, captured: captured.length > 0, capturedEcuIds, captured_ecu_ids: capturedEcuIds,
+            capturedEcuCount: capturedEcuIds.length, captured_ecu_count: capturedEcuIds.length };
+        });
+        setAliases("expectedItems", "expected_items", expectedItems);
+        setAliases("expectedItemCount", "expected_item_count", expectedItems.length);
+        setAliases("capturedItemCount", "captured_item_count", monitorValues.length);
+        let triggerViews = selectArray(input, ["triggerDtcEntries", "trigger_dtc_entries"]).map((row) => scopedView(row, input));
+        if (children.length) {
+          for (const [camel, snake] of [["triggerDtcEntries", "trigger_dtc_entries"], ["udsDtcSnapshotRecords", "uds_dtc_snapshot_records"], ["udsDtcStoredDataRecords", "uds_dtc_stored_data_records"]]) {
+            const entries = (parent) => selectArray(parent, [camel, snake]).map((row) => ({ row, view: scopedView(row, parent) }))
+              .filter(({ view }) => matchesReportedEcu(view));
+            const local = entries(input);
+            const nested = eligibleChildren.flatMap(entries);
+            let retained = local.length ? local : nested;
+            if (camel === "triggerDtcEntries") {
+              retained = [...new Map([...local, ...nested].map((entry) => {
+                const item = entry.view;
+                const key = [item.code, item.subcode || item.sub_code || "", item.oemDetailCode || item.oem_detail_code || "",
+                  String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_"),
+                  normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || "", item.frameNumber ?? item.frame_number ?? "", readScope(item) || ""].join("::");
+                return [key, entry];
+              })).values()];
+              triggerViews = retained.map(({ view }) => view);
+            }
+            setAliases(camel, snake, retained.map(({ row }) => row));
+          }
+          const triggers = result.triggerDtcEntries;
+          setAliases("triggerDtc", "trigger_dtc", triggers.length === 1 ? triggers[0].code : triggers.length ? null : matchesReportedEcu(input) ? input.triggerDtc || input.trigger_dtc || null : null);
+          setAliases("triggerFrameNumber", "trigger_frame_number", triggers.length === 1 ? triggers[0].frameNumber ?? triggers[0].frame_number ?? null : triggers.length ? null : matchesReportedEcu(input) ? input.triggerFrameNumber ?? input.trigger_frame_number ?? null : null);
+        }
+        setAliases("freezeFrameNumberSummary", "freeze_frame_number_summary", buildFreezeFrameNumberSummary(monitorValues));
+        setAliases("freezeFrameAssociationSummary", "freeze_frame_association_summary", buildFreezeFrameAssociationSummary(triggerViews, monitorViews));
+      }
+      snapshotCache.set(input, result);
+      return result;
+    };
+    return visit(snapshot);
+  }
+
+  function classifyRetainedPidRows(values) {
+    return values.map((row) => {
+      if (!row || typeof row !== "object") return row;
+      const decoded = pickDefined(row.decoded, row.is_decoded, row.isDecoded);
+      const raw = decoded === false || ["false", "0", "no", "raw", "raw_hex", "undecoded"].includes(String(decoded ?? "").trim().toLowerCase())
+        || isExplicitTrueFlag(pickDefined(row.undecodedRaw, row.undecoded_raw, row.isUndecodedRaw, row.is_undecoded_raw))
+        || String(pickDefined(row.value_type, row.valueType, "")).trim().toLowerCase() === "raw_hex";
+      return raw ? { ...row, decoded: false, valueType: "raw_hex" } : row;
+    });
+  }
+
+  function analyzeRetainedPidMeasurements(values) {
+    return analyzeMonitorValues(classifyRetainedPidRows(values).filter((row) => buildMonitorValueSummary([row]).numericCount === 1));
+  }
+
+  function pidSummaryRows(values, snapshot) {
+    return readBridgeResponseErrorCodes(snapshot).includes("invalid_pid_numeric_value") ? classifyRetainedPidRows(values) : values;
+  }
+
   function buildMonitorValueSummary(values = []) {
     const rows = Array.isArray(values) ? values : [];
     const isUndecodedRaw = (item) => item?.decoded === false
@@ -6488,7 +6677,7 @@
       ? (hasGenericLivePidEcuRows(livePidSnapshotInput)
           ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
           : livePidSnapshotInput?.monitorValues
-          ? livePidSnapshotInput
+          ? guardCanonicalPidSnapshot(livePidSnapshotInput)
           : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes)) && !livePidResponseHasStructuredValues
             ? decodeLivePidResponse(livePidResponseInput)
             : normalizeBridgeLivePidSnapshot(livePidSnapshotInput))
@@ -6528,7 +6717,7 @@
     );
     const freezeFrameSnapshot = hasFreezeFrameSnapshotInput
       ? (freezeFrameSnapshotInput?.schemaVersion
-          ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+          ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : guardCanonicalPidSnapshot(freezeFrameSnapshotInput, "freeze_frame"))
           : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput))
       : null;
     const freezeFrameDirectValues = firstPopulatedCoverageArray(
@@ -7084,8 +7273,8 @@
       freezeFrameSnapshot?.freezeFrameValues,
       freezeFrameSnapshot?.freeze_frame_values
     );
-    const livePidMonitorValueSummary = resolveMonitorValueSummary(livePidValueEntries, livePidSnapshot?.monitorValueSummary, livePidSnapshot?.monitor_value_summary);
-    const freezeFrameMonitorValueSummary = resolveMonitorValueSummary(freezeFrameValueEntries, freezeFrameSnapshot?.monitorValueSummary, freezeFrameSnapshot?.monitor_value_summary);
+    const livePidMonitorValueSummary = resolveMonitorValueSummary(pidSummaryRows(livePidValueEntries, livePidSnapshot), livePidSnapshot?.monitorValueSummary, livePidSnapshot?.monitor_value_summary);
+    const freezeFrameMonitorValueSummary = resolveMonitorValueSummary(pidSummaryRows(freezeFrameValueEntries, freezeFrameSnapshot), freezeFrameSnapshot?.monitorValueSummary, freezeFrameSnapshot?.monitor_value_summary);
     const ecuInfoItemEntries = firstPopulatedInventoryArray(ecuInfoSnapshot?.items, ecuInfoSnapshot?.values, ecuInfoSnapshot?.ecu_info_items, ecuInfoSnapshot?.ecuInfoItems);
     const onboardMonitorTestEntries = firstPopulatedInventoryArray(
       onboardMonitorSnapshot?.tests,
@@ -10637,13 +10826,13 @@
     const normalizedLivePidSnapshot = hasGenericLivePidEcuRows(livePidSnapshotInput)
       ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
       : livePidSnapshotInput?.monitorValues
-        ? livePidSnapshotInput
+        ? guardCanonicalPidSnapshot(livePidSnapshotInput)
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || parts.pidSamples || parts.pid_samples || []);
     const latestLivePidTimelineSample = livePidTimeline.samples.at(-1) || null;
-    const livePidSnapshot = !hasObjectContent(livePidSnapshotInput) && latestLivePidTimelineSample
+    let livePidSnapshot = !hasObjectContent(livePidSnapshotInput) && latestLivePidTimelineSample
       ? normalizeBridgeLivePidSnapshot({
         source: parts.source || parts.source_type || "local_bridge",
         captured_at: latestLivePidTimelineSample.capturedAt || latestLivePidTimelineSample.captured_at || null,
@@ -10652,17 +10841,23 @@
         monitor_values: latestLivePidTimelineSample.monitorValues || latestLivePidTimelineSample.monitor_values || []
       })
       : normalizedLivePidSnapshot;
-    const monitorValues = Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length
+    if (Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length && !readBridgeResponseErrorCodes(livePidSnapshot).includes("invalid_pid_numeric_value")) {
+      const candidate = { ...livePidSnapshot, monitorValues: directMonitorValuesInput, monitor_values: directMonitorValuesInput };
+      const guarded = guardCanonicalPidSnapshot(candidate);
+      if (guarded !== candidate) livePidSnapshot = guarded;
+    }
+    const hasInvalidPidNumber = readBridgeResponseErrorCodes(livePidSnapshot).includes("invalid_pid_numeric_value");
+    const monitorValues = hasInvalidPidNumber ? cloneBridgeArrayItems(livePidSnapshot.monitorValues) : Array.isArray(directMonitorValuesInput) && directMonitorValuesInput.length
       ? directMonitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorValues);
-    const monitorValueSummary = resolveMonitorValueSummary(
+    const monitorValueSummary = hasInvalidPidNumber ? buildMonitorValueSummary(classifyRetainedPidRows(monitorValues)) : resolveMonitorValueSummary(
       monitorValues,
       parts.monitorValueSummary,
       parts.monitor_value_summary,
       livePidSnapshot.monitorValueSummary,
       livePidSnapshot.monitor_value_summary
     );
-    const monitorInsights = Array.isArray(directMonitorInsightsInput) && directMonitorInsightsInput.length
+    const monitorInsights = hasInvalidPidNumber ? analyzeRetainedPidMeasurements(monitorValues) : Array.isArray(directMonitorInsightsInput) && directMonitorInsightsInput.length
       ? directMonitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : cloneBridgeArrayItems(livePidSnapshot.monitorInsights);
     const supportedPidResponseInput = supportedPidMatrixInput && typeof supportedPidMatrixInput === "object" && !Array.isArray(supportedPidMatrixInput)
@@ -10711,7 +10906,7 @@
           : ecuInfoSnapshotInput)
       : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : guardCanonicalPidSnapshot(freezeFrameSnapshotInput, "freeze_frame"))
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
@@ -11433,7 +11628,7 @@
       ? onboardMonitorSnapshotInput
       : normalizeBridgeOnboardMonitorSnapshot(onboardMonitorSnapshotInput || {}));
     const freezeFrameSnapshot = withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : guardCanonicalPidSnapshot(freezeFrameSnapshotInput, "freeze_frame"))
       : normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput || {}));
     const livePidResponseInput = livePidSnapshotInput && typeof livePidSnapshotInput === "object" && !Array.isArray(livePidSnapshotInput)
       ? (livePidSnapshotInput.data && typeof livePidSnapshotInput.data === "object"
@@ -11444,27 +11639,33 @@
           }
           : livePidSnapshotInput)
       : livePidSnapshotInput;
-    const livePidSnapshot = hasGenericLivePidEcuRows(livePidSnapshotInput)
+    let livePidSnapshot = hasGenericLivePidEcuRows(livePidSnapshotInput)
       ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
       : livePidSnapshotInput?.monitorValues
-        ? livePidSnapshotInput
+        ? guardCanonicalPidSnapshot(livePidSnapshotInput)
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput);
     const livePidTimeline = normalizeLivePidTimeline(parts.livePidTimeline || parts.live_pid_timeline || parts.livePidSamples || parts.live_pid_samples || parts.pidSamples || parts.pid_samples || []);
-    const monitorValues = Array.isArray(monitorValuesInput) && monitorValuesInput.length
+    if (Array.isArray(monitorValuesInput) && monitorValuesInput.length && !readBridgeResponseErrorCodes(livePidSnapshot).includes("invalid_pid_numeric_value")) {
+      const candidate = { ...livePidSnapshot, monitorValues: monitorValuesInput, monitor_values: monitorValuesInput };
+      const guarded = guardCanonicalPidSnapshot(candidate);
+      if (guarded !== candidate) livePidSnapshot = guarded;
+    }
+    const hasInvalidPidNumber = readBridgeResponseErrorCodes(livePidSnapshot).includes("invalid_pid_numeric_value");
+    const monitorValues = hasInvalidPidNumber ? cloneBridgeArrayItems(livePidSnapshot.monitorValues) : Array.isArray(monitorValuesInput) && monitorValuesInput.length
       ? monitorValuesInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : Array.isArray(livePidSnapshot.monitorValues)
         ? livePidSnapshot.monitorValues.map((item) => (item && typeof item === "object" ? { ...item } : item))
         : [];
-    const monitorValueSummary = resolveMonitorValueSummary(
+    const monitorValueSummary = hasInvalidPidNumber ? buildMonitorValueSummary(classifyRetainedPidRows(monitorValues)) : resolveMonitorValueSummary(
       monitorValues,
       parts.monitorValueSummary,
       parts.monitor_value_summary,
       livePidSnapshot.monitorValueSummary,
       livePidSnapshot.monitor_value_summary
     );
-    const monitorInsights = Array.isArray(monitorInsightsInput)
+    const monitorInsights = hasInvalidPidNumber ? analyzeRetainedPidMeasurements(monitorValues) : Array.isArray(monitorInsightsInput)
       ? monitorInsightsInput.map((item) => (item && typeof item === "object" ? { ...item } : item))
       : [];
     const hasReadinessSnapshotInput = hasObjectContent(readinessSnapshotInput);
@@ -12417,7 +12618,7 @@
     ].find((value) => Array.isArray(value) && value.length > 0)
       || [snapshot?.monitorValues, snapshot?.monitor_values, snapshot?.values].find(Array.isArray)
       || [];
-    return resolveMonitorValueSummary(monitorValues, snapshot?.monitorValueSummary, snapshot?.monitor_value_summary).undecodedRawCount;
+    return resolveMonitorValueSummary(pidSummaryRows(monitorValues, snapshot), snapshot?.monitorValueSummary, snapshot?.monitor_value_summary).undecodedRawCount;
   }
 
   function appendCommonCoreWarnings(warnings, {
@@ -14121,8 +14322,8 @@
       freezeFrameSnapshot?.freezeFrameValues,
       freezeFrameSnapshot?.freeze_frame_values
     );
-    const livePidQualityValueSummary = resolveMonitorValueSummary(livePidQualityValues, livePidSnapshot?.monitorValueSummary, livePidSnapshot?.monitor_value_summary);
-    const freezeFrameQualityValueSummary = resolveMonitorValueSummary(freezeFrameQualityValues, freezeFrameSnapshot?.monitorValueSummary, freezeFrameSnapshot?.monitor_value_summary);
+    const livePidQualityValueSummary = resolveMonitorValueSummary(pidSummaryRows(livePidQualityValues, livePidSnapshot), livePidSnapshot?.monitorValueSummary, livePidSnapshot?.monitor_value_summary);
+    const freezeFrameQualityValueSummary = resolveMonitorValueSummary(pidSummaryRows(freezeFrameQualityValues, freezeFrameSnapshot), freezeFrameSnapshot?.monitorValueSummary, freezeFrameSnapshot?.monitor_value_summary);
     const normalizedWebSerialReadoutSummary = normalizeWebSerialReadoutSummary(webSerialReadoutSummary);
     const webSerialNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.negativeResponseCount, normalizedWebSerialReadoutSummary?.negative_response_count);
     const webSerialPendingNegativeResponseCount = readCount(normalizedWebSerialReadoutSummary?.pendingNegativeResponseCount, normalizedWebSerialReadoutSummary?.pending_negative_response_count);
@@ -38075,7 +38276,7 @@
     const normalizedLivePidSnapshot = preserveExplicitReadoutFailure(hasGenericLivePidEcuRows(livePidSnapshotInput)
       ? normalizeBridgeLivePidSnapshot(livePidSnapshotInput)
       : livePidSnapshotInput?.monitorValues
-        ? livePidSnapshotInput
+        ? guardCanonicalPidSnapshot(livePidSnapshotInput)
       : (livePidResponseInput?.raw || livePidResponseInput?.response || Array.isArray(livePidResponseInput?.bytes))
         ? decodeLivePidResponse(livePidResponseInput)
         : normalizeBridgeLivePidSnapshot(livePidSnapshotInput), livePidSnapshotInput, ["livePidReadoutStatus", "live_pid_readout_status"]);
@@ -38204,7 +38405,7 @@
       ? { ...ecuInfoSnapshotInput, blocked: true }
       : ecuInfoSnapshotInput;
     const freezeFrameSnapshot = preserveExplicitReadoutFailure(withSchemaVersionAlias(freezeFrameSnapshotInput?.schemaVersion
-      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) || !Array.isArray(freezeFrameSnapshotInput.monitorValues) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : freezeFrameSnapshotInput)
+      ? (hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput) ? normalizeBridgeFreezeFrameSnapshot(freezeFrameSnapshotInput) : needsFreezeFrameScopedNormalization(freezeFrameSnapshotInput) || !Array.isArray(freezeFrameSnapshotInput.monitorValues) ? normalizeFreezeFrameSnapshot(freezeFrameSnapshotInput) : guardCanonicalPidSnapshot(freezeFrameSnapshotInput, "freeze_frame"))
       : (freezeFrameResponseInput?.raw || freezeFrameResponseInput?.response || Array.isArray(freezeFrameResponseInput?.bytes))
         ? decodeFreezeFrameResponse(freezeFrameResponseInput)
         : ((freezeFrameSnapshotInput?.data && typeof freezeFrameSnapshotInput.data === "object" && !Array.isArray(freezeFrameSnapshotInput.data)) || hasGenericFreezeFrameEcuRows(freezeFrameSnapshotInput))
@@ -38618,8 +38819,8 @@
       resolveMonitorValueSummary([], freezeFrameSnapshot.monitorValueSummary, freezeFrameSnapshot.monitor_value_summary)
     );
     const monitorValueSummary = resolveMonitorValueSummary([
-      ...livePidSnapshot.monitorValues,
-      ...freezeFrameSnapshot.monitorValues
+      ...pidSummaryRows(livePidSnapshot.monitorValues, livePidSnapshot),
+      ...pidSummaryRows(freezeFrameSnapshot.monitorValues, freezeFrameSnapshot)
     ], mergedMonitorValueSummary);
     const resolvedImportClassification = resolveImportClassification(importClassification);
     const sanitizedPrimaryProtocol = normalizeProtocolProvenanceValue(protocol);
