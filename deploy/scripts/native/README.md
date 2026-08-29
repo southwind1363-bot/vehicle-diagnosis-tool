@@ -6,7 +6,8 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package remain unchanged at 3.13.333.
+The public app and PC package metadata are 3.13.334. This native binding remains
+development-only and is not bundled in either release.
 
 ## Validation
 

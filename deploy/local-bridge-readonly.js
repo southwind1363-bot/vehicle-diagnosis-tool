@@ -16,8 +16,10 @@ const MAX_PE_EXPORT_NAMES = 4096;
 const J2534_HOST_ARCHITECTURE = process.arch === "ia32" ? "x86" : process.arch === "x64" ? "x64" : process.arch === "arm64" ? "arm64" : "unknown";
 const J2534_HOST_BITNESS = J2534_HOST_ARCHITECTURE === "x86" ? 32 : J2534_HOST_ARCHITECTURE === "unknown" ? null : 64;
 const J2534_WORKER_CONTRACT_VERSION = "j2534-readonly-worker-v1";
+const J2534_REGISTERED_DRIVER_DESCRIPTOR_VERSION = "j2534-registered-driver-descriptor-v1";
 const J2534_WORKER_SCRIPT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "scripts", "j2534-readonly-worker.js");
 let j2534WorkerReviewActive = false;
+const j2534RegisteredDriverDescriptorSecrets = new WeakMap();
 const J2534_REQUIRED_API_NAMES = Object.freeze([
   "PassThruOpen",
   "PassThruClose",
@@ -52,6 +54,11 @@ const J2534_RESTRICTED_API_NAMES = Object.freeze([
   "PassThruStopPeriodicMsg",
   "PassThruSetProgrammingVoltage",
   "PassThruIoctl"
+]);
+const J2534_IDENTITY_API_NAMES = Object.freeze([
+  "PassThruOpen",
+  "PassThruReadVersion",
+  "PassThruClose"
 ]);
 const REPLAY_RESPONSE_SERVICES = new Set([0x41, 0x42, 0x43, 0x46, 0x47, 0x49, 0x4A, 0x7F]);
 const READ_INTENTS = new Set([
@@ -1098,13 +1105,10 @@ function selectPreferredJ2534Driver(devices = []) {
 }
 
 export function parseJ2534RegistryDrivers(text = "", options = {}) {
-  const rows = [];
-  let current = null;
-  const appendCurrent = () => {
-    if (!current?.functionLibrary) return;
+  return parseJ2534RegistryEntries(text).map((current) => {
     const label = current.name || current.vendor || "J2534 Pass-Thru";
     const libraryInspection = options.inspectLibraries === true ? inspectJ2534LibraryFile(current.functionLibrary) : null;
-    rows.push({
+    return {
       id: createStableJ2534DeviceId(current),
       label,
       vendor: current.vendor || "unknown",
@@ -1133,7 +1137,16 @@ export function parseJ2534RegistryDrivers(text = "", options = {}) {
       connected: false,
       connection_status: "driver_detected_not_opened",
       vehicle_command_enabled: false
-    });
+    };
+  });
+}
+
+function parseJ2534RegistryEntries(text = "") {
+  const rows = [];
+  let current = null;
+  const appendCurrent = () => {
+    if (!current?.functionLibrary) return;
+    rows.push({ ...current });
   };
   String(text || "").split(/\r?\n/).forEach((line) => {
     if (/^HKEY_LOCAL_MACHINE\\/i.test(line.trim())) {
@@ -1149,6 +1162,131 @@ export function parseJ2534RegistryDrivers(text = "", options = {}) {
   });
   appendCurrent();
   return rows;
+}
+
+export function createJ2534RegisteredDriverDescriptor(options = {}) {
+  const registryText = options.enabled === true ? readJ2534RegistryText() : "";
+  return createJ2534RegisteredDriverDescriptorFromRegistry(
+    registryText,
+    options.selectedDeviceId,
+    "live_windows_registry"
+  );
+}
+
+export function createJ2534RegisteredDriverFixtureDescriptor(options = {}) {
+  return createJ2534RegisteredDriverDescriptorFromRegistry(
+    typeof options.registryText === "string" ? options.registryText : "",
+    options.selectedDeviceId,
+    "test_fixture_registry"
+  );
+}
+
+function createJ2534RegisteredDriverDescriptorFromRegistry(registryText, requestedDeviceId, descriptorSource) {
+  const selectedDeviceId = String(requestedDeviceId || "").trim();
+  const entry = parseJ2534RegistryEntries(registryText)
+    .find((item) => createStableJ2534DeviceId(item) === selectedDeviceId);
+  const blocked = (status, blockers) => deepFreezeJ2534Value({
+    contract_version: J2534_REGISTERED_DRIVER_DESCRIPTOR_VERSION,
+    descriptor_status: status,
+    blockers,
+    selected_device_id: selectedDeviceId || null,
+    execution_enabled: false,
+    dll_load_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    vehicle_command_enabled: false
+  });
+  if (!selectedDeviceId) return blocked("blocked", ["selected_device_not_confirmed"]);
+  if (!entry) return blocked("blocked", ["registered_driver_not_found"]);
+  if (process.platform !== "win32") return blocked("platform_unsupported", ["platform_unsupported"]);
+  const inspection = inspectRegisteredJ2534Library(entry.functionLibrary);
+  const descriptor = deepFreezeJ2534Value({
+    contract_version: J2534_REGISTERED_DRIVER_DESCRIPTOR_VERSION,
+    descriptor_status: inspection.blockers.length ? "blocked" : "static_identity_descriptor_ready",
+    blockers: inspection.blockers,
+    selected_device_id: selectedDeviceId,
+    descriptor_source: descriptorSource,
+    registry_view: /\\WOW6432Node\\/i.test(entry.registryKey) ? "wow6432" : "native",
+    driver_architecture: inspection.pe_architecture,
+    driver_bitness: inspection.pe_bitness,
+    bridge_runtime_architecture: J2534_HOST_ARCHITECTURE,
+    bridge_runtime_bitness: J2534_HOST_BITNESS,
+    runtime_compatible: inspection.runtime_compatible,
+    file_size: inspection.file_size,
+    sha256: inspection.sha256,
+    exact_identity_apis: inspection.detected_identity_apis,
+    missing_exact_identity_apis: inspection.missing_identity_apis,
+    exact_identity_api_ready: inspection.missing_identity_apis.length === 0,
+    exact_readonly_apis: inspection.detected_readonly_apis,
+    missing_exact_readonly_apis: inspection.missing_readonly_apis,
+    exact_readonly_api_ready: inspection.missing_readonly_apis.length === 0,
+    fixed_drive_verification_status: "native_loader_required",
+    execution_enabled: false,
+    dll_load_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    vehicle_command_enabled: false
+  });
+  const issuableBlockers = new Set(["native_fixed_drive_verification_required"]);
+  if (inspection.fingerprint && inspection.blockers.every((blocker) => issuableBlockers.has(blocker))) {
+    j2534RegisteredDriverDescriptorSecrets.set(descriptor, {
+      selectedDeviceId,
+      descriptorSource,
+      libraryPath: inspection.library_path,
+      fingerprint: inspection.fingerprint
+    });
+  }
+  return descriptor;
+}
+
+export function verifyJ2534RegisteredDriverDescriptor(descriptor) {
+  const secret = descriptor && typeof descriptor === "object"
+    ? j2534RegisteredDriverDescriptorSecrets.get(descriptor)
+    : null;
+  if (!secret) {
+    return deepFreezeJ2534Value({
+      contract_version: J2534_REGISTERED_DRIVER_DESCRIPTOR_VERSION,
+      selected_device_id: null,
+      verification_status: "rejected",
+      blockers: ["descriptor_not_issued"],
+      execution_enabled: false,
+      dll_load_attempted: false,
+      pass_thru_open_attempted: false,
+      vehicle_connection_attempted: false,
+      vehicle_command_enabled: false
+    });
+  }
+  const base = {
+    contract_version: J2534_REGISTERED_DRIVER_DESCRIPTOR_VERSION,
+    selected_device_id: secret.selectedDeviceId,
+    descriptor_source: secret.descriptorSource,
+    execution_enabled: false,
+    dll_load_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    vehicle_command_enabled: false
+  };
+  const inspection = inspectRegisteredJ2534Library(secret.libraryPath);
+  const sameFile = secret.fingerprint
+    && inspection.fingerprint
+    && inspection.fingerprint.device === secret.fingerprint.device
+    && inspection.fingerprint.inode === secret.fingerprint.inode
+    && inspection.fingerprint.size === secret.fingerprint.size
+    && inspection.fingerprint.mtime_ns === secret.fingerprint.mtime_ns
+    && inspection.fingerprint.ctime_ns === secret.fingerprint.ctime_ns
+    && inspection.fingerprint.sha256 === secret.fingerprint.sha256;
+  const blockers = [...inspection.blockers];
+  if (secret.descriptorSource !== "live_windows_registry") blockers.unshift("fixture_registry_source_not_executable");
+  if (!sameFile) blockers.unshift("registered_driver_file_changed");
+  return deepFreezeJ2534Value({
+    ...base,
+    verification_status: blockers.length ? "rejected" : "verified_static_identity",
+    blockers: [...new Set(blockers)],
+    sha256: inspection.sha256,
+    file_size: inspection.file_size,
+    driver_architecture: inspection.pe_architecture,
+    driver_bitness: inspection.pe_bitness
+  });
 }
 
 function createStableJ2534DeviceId(driver = {}) {
@@ -1239,6 +1377,128 @@ function isJ2534NetworkLibraryPath(filePath = "") {
   return normalized.startsWith("\\\\") || normalized.startsWith("\\\\?\\unc\\");
 }
 
+function inspectRegisteredJ2534Library(filePath = "") {
+  const resolvedPath = resolveJ2534LibraryPath(filePath);
+  const failed = (blocker) => ({
+    blockers: [blocker],
+    library_path: resolvedPath,
+    fingerprint: null,
+    pe_architecture: null,
+    pe_bitness: null,
+    runtime_compatible: false,
+    file_size: null,
+    sha256: null,
+    detected_identity_apis: [],
+    missing_identity_apis: [...J2534_IDENTITY_API_NAMES],
+    detected_readonly_apis: [],
+    missing_readonly_apis: [...J2534_READONLY_REQUIRED_API_NAMES]
+  });
+  if (!resolvedPath) return failed("registered_driver_path_missing");
+  if (/%[A-Za-z_][A-Za-z0-9_]*%/.test(resolvedPath)) return failed("registered_driver_environment_unresolved");
+  if (isJ2534NetworkLibraryPath(resolvedPath) || /^\\\\[?.]\\/i.test(resolvedPath)) return failed("registered_driver_path_not_local");
+  if (!/^[A-Za-z]:\\/.test(resolvedPath) || !path.win32.isAbsolute(resolvedPath)) return failed("registered_driver_path_not_absolute");
+  if (resolvedPath.slice(2).includes(":")) return failed("registered_driver_alternate_stream_blocked");
+  if (resolvedPath.split(/[\\/]+/).some((part) => part === "." || part === "..")) return failed("registered_driver_path_not_canonical");
+  if (path.win32.extname(resolvedPath).toLowerCase() !== ".dll") return failed("registered_driver_not_dll");
+  const canonicalPath = path.win32.normalize(resolvedPath);
+  const reparseStatus = getJ2534ReparsePathStatus(canonicalPath);
+  if (reparseStatus === "reparse") return failed("registered_driver_reparse_path_blocked");
+  if (reparseStatus === "inspection_failed") return failed("registered_driver_reparse_check_failed");
+  let handle;
+  try {
+    handle = fs.openSync(canonicalPath, "r");
+    const before = fs.fstatSync(handle, { bigint: true });
+    if (!before.isFile()) return failed("registered_driver_not_file");
+    if (before.size <= 0n || before.size > BigInt(MAX_J2534_LIBRARY_SIZE)) {
+      return failed(before.size > BigInt(MAX_J2534_LIBRARY_SIZE) ? "registered_driver_file_too_large" : "registered_driver_file_empty");
+    }
+    const fileSize = Number(before.size);
+    const buffer = Buffer.allocUnsafe(fileSize);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const bytesRead = fs.readSync(handle, buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) break;
+      offset += bytesRead;
+    }
+    const after = fs.fstatSync(handle, { bigint: true });
+    if (offset !== buffer.length
+      || before.dev !== after.dev
+      || before.ino !== after.ino
+      || before.size !== after.size
+      || before.mtimeNs !== after.mtimeNs
+      || before.ctimeNs !== after.ctimeNs) {
+      return failed("registered_driver_changed_during_read");
+    }
+    const metadata = readPortableExecutableMetadata(buffer);
+    if (!metadata) return failed("registered_driver_invalid_pe");
+    const exactExports = new Set(metadata.callableExportNames);
+    const detectedIdentityApis = J2534_IDENTITY_API_NAMES.filter((name) => exactExports.has(name));
+    const missingIdentityApis = J2534_IDENTITY_API_NAMES.filter((name) => !exactExports.has(name));
+    const detectedReadonlyApis = J2534_READONLY_REQUIRED_API_NAMES.filter((name) => exactExports.has(name));
+    const missingReadonlyApis = J2534_READONLY_REQUIRED_API_NAMES.filter((name) => !exactExports.has(name));
+    const blockers = ["native_fixed_drive_verification_required"];
+    if (metadata.exportTableStatus !== "parsed") blockers.push("registered_driver_export_table_incomplete");
+    if (missingIdentityApis.length) {
+      const hasNamedButUncallableIdentity = missingIdentityApis.some((name) => metadata.exportNames.includes(name));
+      const hasDecoratedIdentity = missingIdentityApis.some((name) => metadata.exportNames.some((rawName) => rawName !== name && normalizePeExportName(rawName) === name));
+      blockers.push(hasNamedButUncallableIdentity
+        ? "registered_driver_identity_exports_not_callable"
+        : hasDecoratedIdentity
+          ? "registered_driver_identity_exports_decorated_only"
+          : "registered_driver_identity_exports_missing");
+    }
+    if (missingReadonlyApis.length) blockers.push("registered_driver_readonly_exports_missing");
+    const runtimeCompatible = metadata.architecture !== "unknown" && metadata.architecture === J2534_HOST_ARCHITECTURE;
+    if (!runtimeCompatible) blockers.push("registered_driver_runtime_architecture_mismatch");
+    const sha256 = createHash("sha256").update(buffer).digest("hex");
+    return {
+      blockers: [...new Set(blockers)],
+      library_path: canonicalPath,
+      fingerprint: {
+        device: String(before.dev),
+        inode: String(before.ino),
+        size: String(before.size),
+        mtime_ns: String(before.mtimeNs),
+        ctime_ns: String(before.ctimeNs),
+        sha256
+      },
+      pe_architecture: metadata.architecture,
+      pe_bitness: metadata.bitness,
+      runtime_compatible: runtimeCompatible,
+      file_size: fileSize,
+      sha256,
+      detected_identity_apis: detectedIdentityApis,
+      missing_identity_apis: missingIdentityApis,
+      detected_readonly_apis: detectedReadonlyApis,
+      missing_readonly_apis: missingReadonlyApis
+    };
+  } catch (error) {
+    return failed(error?.code === "ENOENT" ? "registered_driver_file_not_found" : "registered_driver_read_failed");
+  } finally {
+    if (handle !== undefined) fs.closeSync(handle);
+  }
+}
+
+function getJ2534ReparsePathStatus(filePath) {
+  const root = path.win32.parse(filePath).root;
+  let current = root;
+  try {
+    for (const part of filePath.slice(root.length).split("\\").filter(Boolean)) {
+      current = path.win32.join(current, part);
+      if (fs.lstatSync(current).isSymbolicLink()) return "reparse";
+    }
+    return "clear";
+  } catch {
+    return "inspection_failed";
+  }
+}
+
+function deepFreezeJ2534Value(value) {
+  if (!value || typeof value !== "object" || Object.isFrozen(value)) return value;
+  Object.values(value).forEach(deepFreezeJ2534Value);
+  return Object.freeze(value);
+}
+
 function readPortableExecutableMetadata(buffer) {
   if (!Buffer.isBuffer(buffer) || buffer.length < 0x40 || buffer.readUInt16LE(0) !== 0x5A4D) return null;
   const peOffset = buffer.readUInt32LE(0x3C);
@@ -1262,25 +1522,37 @@ function readPortableExecutableMetadata(buffer) {
       virtualSize: buffer.readUInt32LE(offset + 8),
       virtualAddress: buffer.readUInt32LE(offset + 12),
       rawSize: buffer.readUInt32LE(offset + 16),
-      rawOffset: buffer.readUInt32LE(offset + 20)
+      rawOffset: buffer.readUInt32LE(offset + 20),
+      characteristics: buffer.readUInt32LE(offset + 36)
     });
   }
   const rvaToOffset = (rva, length = 1) => {
-    const section = sections.find((item) => rva >= item.virtualAddress && rva - item.virtualAddress < Math.max(item.virtualSize, item.rawSize));
+    const section = sections.find((item) => rva >= item.virtualAddress && rva - item.virtualAddress < item.rawSize);
     if (!section) return null;
     const offset = section.rawOffset + (rva - section.virtualAddress);
-    return offset >= 0 && offset + length <= buffer.length ? offset : null;
+    return rva - section.virtualAddress + length <= section.rawSize && offset >= 0 && offset + length <= buffer.length ? offset : null;
   };
   const exportRva = buffer.readUInt32LE(dataDirectoryOffset);
-  if (!exportRva) return { architecture, bitness, exportTableStatus: "missing", exportNames: [] };
+  const exportSize = buffer.readUInt32LE(dataDirectoryOffset + 4);
+  if (!exportRva) return { architecture, bitness, exportTableStatus: "missing", exportNames: [], callableExportNames: [] };
   const exportOffset = rvaToOffset(exportRva, 40);
-  if (exportOffset === null) return { architecture, bitness, exportTableStatus: "malformed", exportNames: [] };
+  if (exportOffset === null) return { architecture, bitness, exportTableStatus: "malformed", exportNames: [], callableExportNames: [] };
+  const functionCount = buffer.readUInt32LE(exportOffset + 20);
   const nameCount = buffer.readUInt32LE(exportOffset + 24);
+  const functionsRva = buffer.readUInt32LE(exportOffset + 28);
   const namesRva = buffer.readUInt32LE(exportOffset + 32);
-  if (nameCount > MAX_PE_EXPORT_NAMES) return { architecture, bitness, exportTableStatus: "name_limit_exceeded", exportNames: [] };
+  const ordinalsRva = buffer.readUInt32LE(exportOffset + 36);
+  if (nameCount > MAX_PE_EXPORT_NAMES || functionCount > MAX_PE_EXPORT_NAMES) {
+    return { architecture, bitness, exportTableStatus: "name_limit_exceeded", exportNames: [], callableExportNames: [] };
+  }
   const namesOffset = nameCount ? rvaToOffset(namesRva, nameCount * 4) : null;
-  if (nameCount && namesOffset === null) return { architecture, bitness, exportTableStatus: "malformed", exportNames: [] };
+  const ordinalsOffset = nameCount ? rvaToOffset(ordinalsRva, nameCount * 2) : null;
+  const functionsOffset = functionCount ? rvaToOffset(functionsRva, functionCount * 4) : null;
+  if (nameCount && (namesOffset === null || ordinalsOffset === null || functionsOffset === null)) {
+    return { architecture, bitness, exportTableStatus: "malformed", exportNames: [], callableExportNames: [] };
+  }
   const exportNames = [];
+  const callableExportNames = [];
   for (let index = 0; index < nameCount; index += 1) {
     const nameRva = buffer.readUInt32LE(namesOffset + index * 4);
     const nameOffset = rvaToOffset(nameRva);
@@ -1288,9 +1560,23 @@ function readPortableExecutableMetadata(buffer) {
     const terminator = buffer.indexOf(0, nameOffset);
     if (terminator < 0 || terminator - nameOffset > 160) continue;
     const name = buffer.toString("ascii", nameOffset, terminator);
-    if (/^[A-Za-z_][A-Za-z0-9_@?$]*$/.test(name)) exportNames.push(name);
+    if (!/^[A-Za-z_][A-Za-z0-9_@?$]*$/.test(name)) continue;
+    exportNames.push(name);
+    const ordinal = buffer.readUInt16LE(ordinalsOffset + index * 2);
+    if (ordinal >= functionCount) continue;
+    const functionRva = buffer.readUInt32LE(functionsOffset + ordinal * 4);
+    const forwarded = exportSize > 0 && functionRva >= exportRva && functionRva < exportRva + exportSize;
+    const functionSection = sections.find((item) => functionRva >= item.virtualAddress && functionRva - item.virtualAddress < item.rawSize);
+    const executable = Boolean(functionSection && (functionSection.characteristics & 0x20000000));
+    if (functionRva && !forwarded && executable && rvaToOffset(functionRva) !== null) callableExportNames.push(name);
   }
-  return { architecture, bitness, exportTableStatus: "parsed", exportNames: [...new Set(exportNames)] };
+  return {
+    architecture,
+    bitness,
+    exportTableStatus: "parsed",
+    exportNames: [...new Set(exportNames)],
+    callableExportNames: [...new Set(callableExportNames)]
+  };
 }
 
 function normalizePeExportName(name = "") {

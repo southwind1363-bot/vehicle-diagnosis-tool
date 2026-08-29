@@ -1,4 +1,4 @@
-import { createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534WorkerReview } from "../local-bridge-readonly.js";
+import { createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import { getEventListeners } from "node:events";
@@ -255,7 +255,7 @@ function buildTestPeLibrary(machine, bitness, exportNames) {
   buffer.writeUInt32LE(peOffset, 0x3C);
   buffer.writeUInt32LE(0x00004550, peOffset);
   buffer.writeUInt16LE(machine, peOffset + 4);
-  buffer.writeUInt16LE(1, peOffset + 6);
+  buffer.writeUInt16LE(2, peOffset + 6);
   buffer.writeUInt16LE(optionalHeaderSize, peOffset + 20);
   buffer.writeUInt16LE(bitness === 64 ? 0x20B : 0x10B, optionalHeaderOffset);
   buffer.writeUInt32LE(0x1000, dataDirectoryOffset);
@@ -265,6 +265,14 @@ function buildTestPeLibrary(machine, bitness, exportNames) {
   buffer.writeUInt32LE(0x1000, sectionOffset + 12);
   buffer.writeUInt32LE(0x600, sectionOffset + 16);
   buffer.writeUInt32LE(0x200, sectionOffset + 20);
+  buffer.writeUInt32LE(0x40000040, sectionOffset + 36);
+  const textSectionOffset = sectionOffset + 40;
+  buffer.write(".text", textSectionOffset, "ascii");
+  buffer.writeUInt32LE(0x200, textSectionOffset + 8);
+  buffer.writeUInt32LE(0x2000, textSectionOffset + 12);
+  buffer.writeUInt32LE(0x200, textSectionOffset + 16);
+  buffer.writeUInt32LE(0x800, textSectionOffset + 20);
+  buffer.writeUInt32LE(0x60000020, textSectionOffset + 36);
   const exportOffset = 0x200;
   buffer.writeUInt32LE(exportNames.length, exportOffset + 20);
   buffer.writeUInt32LE(exportNames.length, exportOffset + 24);
@@ -273,7 +281,7 @@ function buildTestPeLibrary(machine, bitness, exportNames) {
   buffer.writeUInt32LE(0x10E0, exportOffset + 36);
   let nameRva = 0x1200;
   exportNames.forEach((name, index) => {
-    buffer.writeUInt32LE(0x1400 + index * 4, 0x260 + index * 4);
+    buffer.writeUInt32LE(0x2000 + index * 4, 0x260 + index * 4);
     buffer.writeUInt32LE(nameRva, 0x2A0 + index * 4);
     buffer.writeUInt16LE(index, 0x2E0 + index * 2);
     buffer.write(`${name}\0`, 0x200 + (nameRva - 0x1000), "ascii");
@@ -407,6 +415,114 @@ try {
     ].join("\n"), { inspectLibraries: true });
     check(inspectedRegistryDrivers[0]?.driver_library_architecture === "x86" && inspectedRegistryDrivers[0]?.driver_library_bitness === 32 && inspectedRegistryDrivers[0]?.driver_runtime_compatibility_status === (process.arch === "ia32" ? "compatible" : "architecture_mismatch") && inspectedRegistryDrivers[0]?.driver_required_api_ready === true && inspectedRegistryDrivers[0]?.driver_readonly_api_ready === true && inspectedRegistryDrivers[0]?.driver_detected_required_api_count === 14 && inspectedRegistryDrivers[0]?.driver_detected_readonly_api_count === 10, "J2534 registry discovery did not attach safe DLL compatibility metadata");
     check(!JSON.stringify(inspectedRegistryDrivers).includes(x86LibraryPath) && inspectedRegistryDrivers[0]?.vehicle_command_enabled === false, "J2534 registry discovery exposed a DLL path or enabled vehicle commands");
+    const descriptorLibraryPath = path.join(j2534PeFixtureDir, "j2534-descriptor-ready.dll");
+    fs.writeFileSync(descriptorLibraryPath, buildTestPeLibrary(matchingMachine, matchingBitness, j2534RequiredApis));
+    const descriptorRegistryText = [
+      "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Descriptor VCI",
+      "    Name    REG_SZ    Descriptor J2534 VCI",
+      "    Vendor    REG_SZ    Fixture Vendor",
+      `    FunctionLibrary    REG_SZ    ${descriptorLibraryPath}`
+    ].join("\n");
+    const descriptorDeviceId = parseJ2534RegistryDrivers(descriptorRegistryText)[0]?.id;
+    const missingSelectionDescriptor = createJ2534RegisteredDriverFixtureDescriptor({ registryText: descriptorRegistryText });
+    const registeredDescriptor = createJ2534RegisteredDriverFixtureDescriptor({
+      registryText: descriptorRegistryText,
+      selectedDeviceId: descriptorDeviceId
+    });
+    const injectedProductionDescriptor = createJ2534RegisteredDriverDescriptor({
+      registryText: descriptorRegistryText,
+      selectedDeviceId: descriptorDeviceId
+    });
+    check(missingSelectionDescriptor.descriptor_status === "blocked" && missingSelectionDescriptor.blockers.includes("selected_device_not_confirmed"), "J2534 registered descriptor did not require an explicit selected device");
+    check(injectedProductionDescriptor.descriptor_status === "blocked" && injectedProductionDescriptor.blockers.includes("registered_driver_not_found"), "J2534 production descriptor accepted caller-supplied registry text");
+    check(Object.isFrozen(missingSelectionDescriptor) && Object.isFrozen(missingSelectionDescriptor.blockers), "J2534 blocked descriptor was not deeply frozen");
+    if (process.platform === "win32") {
+      check(registeredDescriptor.descriptor_status === "blocked" && registeredDescriptor.blockers.includes("native_fixed_drive_verification_required") && registeredDescriptor.exact_identity_api_ready === true && registeredDescriptor.exact_readonly_api_ready === true && registeredDescriptor.runtime_compatible === true, "J2534 registered descriptor did not retain the native fixed-drive verification gate after exact static inspection");
+      check(Object.isFrozen(registeredDescriptor) && Object.isFrozen(registeredDescriptor.blockers) && Object.isFrozen(registeredDescriptor.exact_identity_apis) && Object.isFrozen(registeredDescriptor.exact_readonly_apis), "J2534 registered descriptor was not deeply frozen");
+      check(registeredDescriptor.execution_enabled === false && registeredDescriptor.dll_load_attempted === false && registeredDescriptor.pass_thru_open_attempted === false && registeredDescriptor.vehicle_connection_attempted === false && registeredDescriptor.vehicle_command_enabled === false, "J2534 registered descriptor enabled execution or vehicle communication");
+      check(!JSON.stringify(registeredDescriptor).includes(descriptorLibraryPath) && !JSON.stringify(registeredDescriptor).includes(j2534PeFixtureDir), "J2534 registered descriptor exposed its private DLL path");
+      const verifiedDescriptor = verifyJ2534RegisteredDriverDescriptor(registeredDescriptor);
+      const clonedDescriptor = structuredClone(registeredDescriptor);
+      const rejectedClone = verifyJ2534RegisteredDriverDescriptor(clonedDescriptor);
+      const throwingProxyResult = verifyJ2534RegisteredDriverDescriptor(new Proxy({}, { get: () => { throw new Error("must not read unissued descriptor"); } }));
+      check(verifiedDescriptor.verification_status === "rejected" && verifiedDescriptor.blockers.includes("native_fixed_drive_verification_required") && verifiedDescriptor.blockers.includes("fixture_registry_source_not_executable") && verifiedDescriptor.sha256 === registeredDescriptor.sha256 && verifiedDescriptor.dll_load_attempted === false, "J2534 fixture descriptor did not reverify identity while retaining native and live-registry gates");
+      check(rejectedClone.verification_status === "rejected" && rejectedClone.blockers.includes("descriptor_not_issued"), "J2534 registered descriptor accepted a cloned object without its opaque issuance record");
+      check(throwingProxyResult.verification_status === "rejected" && throwingProxyResult.blockers.includes("descriptor_not_issued"), "J2534 registered descriptor read properties from an unissued object");
+
+      const decoratedRegistryText = [
+        "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Decorated VCI",
+        "    Name    REG_SZ    Decorated J2534 VCI",
+        "    Vendor    REG_SZ    Fixture Vendor",
+        `    FunctionLibrary    REG_SZ    ${x86LibraryPath}`
+      ].join("\n");
+      const decoratedDeviceId = parseJ2534RegistryDrivers(decoratedRegistryText)[0]?.id;
+      const decoratedDescriptor = createJ2534RegisteredDriverFixtureDescriptor({ registryText: decoratedRegistryText, selectedDeviceId: decoratedDeviceId });
+      check(decoratedDescriptor.descriptor_status === "blocked" && decoratedDescriptor.blockers.includes("registered_driver_identity_exports_decorated_only") && decoratedDescriptor.missing_exact_identity_apis.includes("PassThruOpen"), "J2534 registered descriptor accepted decorated identity exports that the native binding cannot resolve");
+
+      const namedOnlyLibraryPath = path.join(j2534PeFixtureDir, "j2534-named-only.dll");
+      const namedOnlyLibrary = buildTestPeLibrary(matchingMachine, matchingBitness, j2534RequiredApis);
+      for (let index = 0; index < j2534RequiredApis.length; index += 1) namedOnlyLibrary.writeUInt32LE(0, 0x260 + index * 4);
+      fs.writeFileSync(namedOnlyLibraryPath, namedOnlyLibrary);
+      const namedOnlyRegistryText = [
+        "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Named Only VCI",
+        "    Name    REG_SZ    Named Only J2534 VCI",
+        "    Vendor    REG_SZ    Fixture Vendor",
+        `    FunctionLibrary    REG_SZ    ${namedOnlyLibraryPath}`
+      ].join("\n");
+      const namedOnlyDeviceId = parseJ2534RegistryDrivers(namedOnlyRegistryText)[0]?.id;
+      const namedOnlyDescriptor = createJ2534RegisteredDriverFixtureDescriptor({ registryText: namedOnlyRegistryText, selectedDeviceId: namedOnlyDeviceId });
+      check(namedOnlyDescriptor.descriptor_status === "blocked" && namedOnlyDescriptor.blockers.includes("registered_driver_identity_exports_not_callable") && namedOnlyDescriptor.exact_identity_api_ready === false, "J2534 registered descriptor accepted named exports without callable EAT entries");
+
+      const buildDescriptorForLibrary = (libraryPath, name) => {
+        const registryText = [
+          `HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\${name}`,
+          `    Name    REG_SZ    ${name}`,
+          "    Vendor    REG_SZ    Fixture Vendor",
+          `    FunctionLibrary    REG_SZ    ${libraryPath}`
+        ].join("\n");
+        const deviceId = parseJ2534RegistryDrivers(registryText)[0]?.id;
+        return createJ2534RegisteredDriverFixtureDescriptor({ registryText, selectedDeviceId: deviceId });
+      };
+      const nonExecutableLibraryPath = path.join(j2534PeFixtureDir, "j2534-non-executable-export.dll");
+      const nonExecutableLibrary = buildTestPeLibrary(matchingMachine, matchingBitness, j2534RequiredApis);
+      for (let index = 0; index < j2534RequiredApis.length; index += 1) nonExecutableLibrary.writeUInt32LE(0x1500 + index * 4, 0x260 + index * 4);
+      fs.writeFileSync(nonExecutableLibraryPath, nonExecutableLibrary);
+      const nonExecutableDescriptor = buildDescriptorForLibrary(nonExecutableLibraryPath, "Non-executable Export VCI");
+      check(nonExecutableDescriptor.blockers.includes("registered_driver_identity_exports_not_callable") && nonExecutableDescriptor.exact_identity_api_ready === false, "J2534 registered descriptor accepted function RVAs in a non-executable section");
+
+      const virtualTailLibraryPath = path.join(j2534PeFixtureDir, "j2534-virtual-tail-export.dll");
+      const virtualTailLibrary = buildTestPeLibrary(matchingMachine, matchingBitness, j2534RequiredApis);
+      const fixtureOptionalHeaderSize = matchingBitness === 64 ? 0xF0 : 0xE0;
+      const fixtureSectionOffset = 0x80 + 24 + fixtureOptionalHeaderSize;
+      virtualTailLibrary.writeUInt32LE(0x800, fixtureSectionOffset + 8);
+      for (let index = 0; index < j2534RequiredApis.length; index += 1) virtualTailLibrary.writeUInt32LE(0x1700 + index * 4, 0x260 + index * 4);
+      fs.writeFileSync(virtualTailLibraryPath, virtualTailLibrary);
+      const virtualTailDescriptor = buildDescriptorForLibrary(virtualTailLibraryPath, "Virtual Tail Export VCI");
+      check(virtualTailDescriptor.blockers.includes("registered_driver_identity_exports_not_callable") && virtualTailDescriptor.exact_identity_api_ready === false, "J2534 registered descriptor accepted function RVAs without file-backed section bytes");
+
+      const unsafeRegistryCases = [
+        ["\\\\diagnostic-share\\drivers\\j2534.dll", "registered_driver_path_not_local"],
+        [`${descriptorLibraryPath}:stream`, "registered_driver_alternate_stream_blocked"],
+        [path.join(j2534PeFixtureDir, "missing-descriptor.dll"), "registered_driver_reparse_check_failed"]
+      ];
+      for (const [unsafePath, blocker] of unsafeRegistryCases) {
+        const unsafeRegistryText = [
+          "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Unsafe VCI",
+          "    Name    REG_SZ    Unsafe J2534 VCI",
+          "    Vendor    REG_SZ    Fixture Vendor",
+          `    FunctionLibrary    REG_SZ    ${unsafePath}`
+        ].join("\n");
+        const unsafeDeviceId = parseJ2534RegistryDrivers(unsafeRegistryText)[0]?.id;
+        const unsafeDescriptor = createJ2534RegisteredDriverFixtureDescriptor({ registryText: unsafeRegistryText, selectedDeviceId: unsafeDeviceId });
+        check(unsafeDescriptor.descriptor_status === "blocked" && unsafeDescriptor.blockers.includes(blocker) && !JSON.stringify(unsafeDescriptor).includes(unsafePath), `J2534 registered descriptor did not safely reject ${blocker}`);
+      }
+
+      fs.writeFileSync(descriptorLibraryPath, buildTestPeLibrary(mismatchedMachine, mismatchedBitness, j2534RequiredApis));
+      const replacedVerification = verifyJ2534RegisteredDriverDescriptor(registeredDescriptor);
+      check(replacedVerification.verification_status === "rejected" && replacedVerification.blockers.includes("registered_driver_file_changed"), "J2534 registered descriptor did not reject a replaced DLL");
+    } else {
+      check(registeredDescriptor.descriptor_status === "platform_unsupported" && registeredDescriptor.blockers.includes("platform_unsupported"), "J2534 registered descriptor did not fail closed on a non-Windows host");
+    }
     const prioritizedJ2534RegistryText = [
       "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Incompatible VCI",
       "    Name    REG_SZ    Incompatible J2534 VCI",
