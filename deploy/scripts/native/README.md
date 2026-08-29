@@ -22,15 +22,33 @@ The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 80-byte buffers, missing exports, ordering, exceptions, disposal serialization,
 guard damage (including overwrite followed by an exception), same-thread
 reentrancy, uncertain ownership, and rejection of driver CLI arguments.
-Managed delegates stay rooted for their use. These callbacks use the same
-managed delegate types as the binding: they are NOT an independent native ABI
-test and cannot prove calling-convention compatibility with a vendor DLL.
+Managed delegates stay rooted for their use. Those callbacks use the same
+managed delegate types as the binding, so those callbacks alone are not native
+ABI evidence.
+
+The validator also builds deterministic, import-free PE32 and PE32+ fixture DLLs
+from fixed templates. It accepts no machine code, export names, paths, or driver
+inputs. Separate `.text` (RX), `.rdata` (R), and `.reloc` (R/discardable)
+sections prevent RWX memory; entry point is zero, exports are exact and sorted,
+and ASLR/NX plus relocation data are required. x86 uses StdCall stack cleanup;
+x64 uses the Windows x64 ABI. The DLLs execute actual native
+Open/ReadVersion/Close code in separate x86/x64 processes and are then deleted.
+Tests cover a high-bit device ID, signed Open failure, distinct buffers and tail
+bytes, individual missing exports, decorated-only x86 export rejection,
+cross-architecture rejection, guard poisoning, and deterministic SHA-256.
+This provides independent native fixture ABI evidence.
+
+The native success fixture rejects a non-NULL Open name and rejects any
+ReadVersion/Close ID other than the exact high-bit ID returned by Open. A
+successful lifecycle therefore checks argument forwarding at the native side,
+not only the managed result object.
 
 A fixed Windows `version.dll` is actually loaded, rejected for missing J2534
 exports, and its acquired library reference released. Reference release does
 not prove the DLL fully unloaded; other references can exist. No vendor code
-or real adapter cleanup has been tested. An independent C/C++ fixture DLL and
-real driver/VCI trials are still required before claiming compatibility.
+or real adapter cleanup has been tested. The generated fixture is not a
+compiler-built C reference; real driver/VCI trials are still required before
+claiming compatibility.
 
 ## Safety Boundaries
 
@@ -64,8 +82,8 @@ real driver/VCI trials are still required before claiming compatibility.
 
 ## Next Gates
 
-1. Independently built native fixture exports on both architectures, including
-   buffer bounds, status widths, and crash/hang behavior.
+1. Cross-check the generated fixture with a compiler-built C reference when a
+   reviewed native toolchain is available; add crash/hang worker cases.
 2. A native helper IPC adapter for the existing supervised lifecycle, with
    driver architecture selection, bounded output, and no public raw DLL path.
 3. Driver provenance, registered static inspection, explicit trial approval,

@@ -51,6 +51,62 @@ internal static class NativeIdentityTests
         byte[] bytes = System.Text.Encoding.ASCII.GetBytes(value + "\0");
         Marshal.Copy(bytes, 0, target, bytes.Length);
     }
+    private static string FixturePath(string name)
+    { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, name + ".dll"); }
+    private static void RejectLoad(string name)
+    { Reject(delegate { WindowsIdentityLibrary.Load(FixturePath(name)); }, "native_library_load_failed"); }
+    private static void CheckNativeBuffer(byte[] actual, string text, byte marker, string message)
+    {
+        byte[] expected = new byte[80];
+        for (int i = 0; i < expected.Length; i++) expected[i] = 0xA5;
+        byte[] written = System.Text.Encoding.ASCII.GetBytes(text + "\0");
+        Array.Copy(written, expected, written.Length); expected[79] = marker;
+        Check(actual.Length == expected.Length, message);
+        for (int i = 0; i < expected.Length; i++) Check(actual[i] == expected[i], message + " at " + i);
+    }
+    private static void RunNativeFixtures()
+    {
+        WindowsIdentityLibrary successLibrary = WindowsIdentityLibrary.Load(FixturePath("success"));
+        using (J2534IdentityNative binding = new J2534IdentityNative(successLibrary))
+        {
+            uint id; Check(binding.Open(out id) == 0 && id == 0xF1234567, "Native Open ABI changed the unsigned ID");
+            NativeVersions versions = binding.ReadVersion(id);
+            Check(versions.Status == 0, "Native ReadVersion status changed");
+            CheckNativeBuffer(versions.Firmware, "fixture-fw", 0xF1, "Native firmware buffer changed");
+            CheckNativeBuffer(versions.Dll, "fixture-dll", 0xD1, "Native DLL buffer changed");
+            CheckNativeBuffer(versions.Api, "04.04", 0xA1, "Native API buffer changed");
+            Check(binding.Close(id) == 0, "Native Close ABI failed");
+        }
+        Check(successLibrary.ReferenceReleased, "Native success fixture reference was retained");
+
+        WindowsIdentityLibrary failedLibrary = WindowsIdentityLibrary.Load(FixturePath("open-failure"));
+        using (J2534IdentityNative binding = new J2534IdentityNative(failedLibrary))
+        { uint id; Check(binding.Open(out id) == -7, "Native signed failure status changed"); }
+        Check(failedLibrary.ReferenceReleased, "Explicit native Open failure retained the reference");
+
+        WindowsIdentityLibrary overrunLibrary = WindowsIdentityLibrary.Load(FixturePath("overrun"));
+        using (J2534IdentityNative binding = new J2534IdentityNative(overrunLibrary))
+        {
+            uint id; binding.Open(out id);
+            Reject(delegate { binding.ReadVersion(id); }, "native_version_buffer_overrun");
+            Reject(delegate { binding.Close(id); }, "native_identity_corrupted");
+        }
+        Check(!overrunLibrary.ReferenceReleased, "Corrupt native fixture was unloaded in-process");
+
+        foreach (string missing in new string[] { "missing-open", "missing-read", "missing-close" })
+        {
+            WindowsIdentityLibrary library = WindowsIdentityLibrary.Load(FixturePath(missing));
+            Reject(delegate { new J2534IdentityNative(library); }, "native_identity_binding_failed");
+            Check(library.ReferenceReleased, "Missing native export retained its reference");
+        }
+        if (IntPtr.Size == 4)
+        {
+            WindowsIdentityLibrary decorated = WindowsIdentityLibrary.Load(FixturePath("decorated-open-only"));
+            Reject(delegate { new J2534IdentityNative(decorated); }, "native_identity_binding_failed");
+            Check(decorated.ReferenceReleased, "Decorated-only export was accepted or retained");
+        }
+        RejectLoad("wrong-architecture");
+    }
     private static MockIdentityLibrary Fixture(uint deviceId)
     {
         return new MockIdentityLibrary {
@@ -216,11 +272,12 @@ internal static class NativeIdentityTests
         WindowsIdentityLibrary systemLibrary = WindowsIdentityLibrary.Load(Path.Combine(Environment.SystemDirectory, "version.dll"));
         Reject(delegate { new J2534IdentityNative(systemLibrary); }, "native_identity_binding_failed");
         Check(systemLibrary.ReferenceReleased, "Missing system-DLL exports did not release our library reference");
+        RunNativeFixtures();
     }
     public static int Main(string[] args)
     {
         if (args.Length != 1 || args[0] != "--self-test") return 2;
-        try { Run(); Console.WriteLine("Native identity binding checks: " + checks + " / bitness: " + (IntPtr.Size * 8) + " / vendor DLL executed: false / Errors: 0"); return 0; }
+        try { Run(); Console.WriteLine("Native identity binding checks: " + checks + " / bitness: " + (IntPtr.Size * 8) + " / generated fixture DLL executed: true / vendor DLL executed: false / Errors: 0"); return 0; }
         catch (Exception error) { Console.Error.WriteLine(error.Message); return 1; }
     }
 }

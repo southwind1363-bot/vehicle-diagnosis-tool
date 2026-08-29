@@ -10,7 +10,7 @@ J2534の次工程として、接続・識別情報取得・終了の内部処理
 
 内部処理を固定の模擬ワーカーで実行する監視処理も追加しました。中止・タイムアウト・出力超過では終了要求後も子プロセスの終了確認まで二重起動を防ぎ、異常終了した出力を成功結果として採用しません。検証は `npm run validate:j2534-supervisor`。これは模擬環境の検証で、実機DLLを動かすワーカーとの接続はまだありません。
 
-Windows DLL呼出し部のソースを追加しました。`PassThruOpen / PassThruReadVersion / PassThruClose` の3関数と80バイトの情報受渡しを実装し、32bit・64bitの個別テストを `npm run validate:j2534-native` で行います。テストは管理コードの模擬関数とWindows標準DLLの関数不足確認だけで、実VCIドライバーは実行しません。独立したネイティブDLLによる呼出規約の検証、監視ワーカーへの統合、実機試験が残っています。公開版・PC配布版には同梱していません。[検証範囲と残作業](scripts/native/README.md)
+Windows DLL呼出し部のソースを追加しました。`PassThruOpen / PassThruReadVersion / PassThruClose` の3関数と80バイトの情報受渡しを実装し、32bit・64bitの個別テストを `npm run validate:j2534-native` で行います。固定テンプレートから生成してテスト後に削除するネイティブDLLにより、Windowsローダー、完全一致エクスポート、x86 StdCallとx64 ABI、バッファ破損時の停止を実際に検証します。実VCIドライバーは実行せず、監視ワーカーへの統合と実機試験は残っています。公開版・PC配布版には同梱していません。[検証範囲と残作業](scripts/native/README.md)
 
 現在 `localhost:3000` で動かす最新版は、この `deploy` フォルダ直下の構成です。
 

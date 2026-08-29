@@ -3,7 +3,9 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
+import { buildJ2534NativeFixture } from "./native/build-j2534-native-fixture.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
@@ -19,6 +21,78 @@ function execute(file, args) {
   });
 }
 
+function validateFixturePe(buffer, platform, expectedNames) {
+  assert.equal(buffer.readUInt16LE(0), 0x5a4d, "Fixture has no DOS signature");
+  const pe = buffer.readUInt32LE(0x3c);
+  assert.equal(buffer.toString("binary", pe, pe + 4), "PE\0\0");
+  assert.equal(buffer.readUInt16LE(pe + 4), platform.name === "x64" ? 0x8664 : 0x14c);
+  assert.equal(buffer.readUInt16LE(pe + 6), 3, "Fixture section count changed");
+  const optional = pe + 24;
+  const is64 = platform.name === "x64";
+  assert.equal(buffer.readUInt16LE(optional), is64 ? 0x20b : 0x10b);
+  assert.equal(buffer.readUInt32LE(optional + 16), 0, "Fixture gained an entry point");
+  assert.equal(buffer.readUInt16LE(optional + 70) & 0x140, 0x140, "Fixture lost ASLR/NX flags");
+  const directories = optional + (is64 ? 112 : 96);
+  const exportRva = buffer.readUInt32LE(directories);
+  const exportSize = buffer.readUInt32LE(directories + 4);
+  assert.equal(buffer.readUInt32LE(directories + 8), 0, "Fixture gained imports");
+  assert.equal(buffer.readUInt32LE(directories + 48), 0, "Fixture gained debug data");
+  assert.equal(buffer.readUInt32LE(directories + 72), 0, "Fixture gained TLS");
+  assert.equal(buffer.readUInt32LE(directories + 40), 0x3000, "Fixture lost relocation data");
+  assert.equal(buffer.readUInt32LE(directories + 44), 12, "Fixture relocation size changed");
+  const sectionTable = optional + (is64 ? 0xf0 : 0xe0);
+  [[".text", 0x60000020], [".rdata", 0x40000040], [".reloc", 0x42000040]].forEach(([name, characteristics], index) => {
+    const offset = sectionTable + index * 40;
+    assert.equal(buffer.toString("ascii", offset, offset + 8).replace(/\0+$/, ""), name);
+    assert.equal(buffer.readUInt32LE(offset + 36), characteristics, `${name} permissions changed`);
+  });
+  const rvaToOffset = value => {
+    for (let index = 0; index < 3; index++) {
+      const offset = sectionTable + index * 40;
+      const virtual = buffer.readUInt32LE(offset + 12);
+      const size = buffer.readUInt32LE(offset + 16);
+      if (value >= virtual && value < virtual + size) return buffer.readUInt32LE(offset + 20) + value - virtual;
+    }
+    throw new Error("Fixture RVA is outside its sections");
+  };
+  const exportOffset = rvaToOffset(exportRva);
+  const functionCount = buffer.readUInt32LE(exportOffset + 20);
+  const nameCount = buffer.readUInt32LE(exportOffset + 24);
+  assert.equal(functionCount, nameCount);
+  const functionsOffset = rvaToOffset(buffer.readUInt32LE(exportOffset + 28));
+  const namesOffset = rvaToOffset(buffer.readUInt32LE(exportOffset + 32));
+  const names = [];
+  for (let index = 0; index < nameCount; index++) {
+    const functionRva = buffer.readUInt32LE(functionsOffset + index * 4);
+    assert.ok(functionRva < exportRva || functionRva >= exportRva + exportSize, "Fixture export became a forwarder");
+    let nameOffset = rvaToOffset(buffer.readUInt32LE(namesOffset + index * 4));
+    let end = nameOffset;
+    while (end < buffer.length && buffer[end] !== 0) end++;
+    assert.ok(end < buffer.length, "Fixture export name is unterminated");
+    names.push(buffer.toString("ascii", nameOffset, end));
+  }
+  assert.deepEqual(names, [...names].sort(), "Fixture exports are not sorted");
+  assert.deepEqual(names, expectedNames, "Fixture export inventory changed");
+  const relocOffset = rvaToOffset(0x3000);
+  assert.equal(buffer.readUInt32LE(relocOffset), 0x1000);
+  assert.equal(buffer.readUInt32LE(relocOffset + 4), 12);
+  assert.equal(buffer.readUInt16LE(relocOffset + 8), 0);
+  assert.equal(buffer.readUInt16LE(relocOffset + 10), 0);
+}
+
+function fixtureNames(scenario) {
+  if (scenario === "decorated-open-only") return ["_PassThruOpen@8"];
+  return ["PassThruClose", "PassThruOpen", "PassThruReadVersion"].filter(name =>
+    !(scenario === "missing-open" && name === "PassThruOpen")
+    && !(scenario === "missing-read" && name === "PassThruReadVersion")
+    && !(scenario === "missing-close" && name === "PassThruClose"));
+}
+
+function containsDll(directory) {
+  return fs.readdirSync(directory, { withFileTypes: true }).some(entry => entry.isDirectory()
+    ? containsDll(path.join(directory, entry.name)) : entry.name.toLowerCase().endsWith(".dll"));
+}
+
 async function main() {
   assert.equal(process.platform, "win32", "Native binding validation requires Windows and .NET Framework compilers");
   const windows = process.env.SystemRoot || "C:\\Windows";
@@ -32,10 +106,48 @@ async function main() {
   }
   const tempRoot = path.resolve(os.tmpdir());
   const directory = fs.mkdtempSync(path.join(tempRoot, "vehicle-j2534-native-"));
+  const rootIdentity = fs.statSync(directory);
+  const createdFiles = [];
+  const createdDirectories = [];
+  const assertIdentity = (target, identity) => {
+    const current = fs.lstatSync(target);
+    assert.ok(!current.isSymbolicLink() && current.isDirectory(), "Test directory identity changed");
+    assert.equal(current.dev, identity.dev, "Test directory device changed");
+    assert.equal(current.ino, identity.ino, "Test directory identity changed");
+  };
+  const writeCreatedFile = (target, contents) => {
+    fs.writeFileSync(target, contents, { flag: "wx" }); createdFiles.push(target);
+    assert.deepEqual(fs.readFileSync(target), contents, "Generated fixture changed after writing");
+  };
   let total = 0;
   try {
+    assert.throws(() => buildJ2534NativeFixture("arm64", "success"), /native_fixture_option_rejected/);
+    assert.throws(() => buildJ2534NativeFixture("x64", "decorated-open-only"), /native_fixture_option_rejected/);
+    total += 2;
     for (const platform of platforms) {
-      const executable = path.join(directory, `identity-test-${platform.name}.exe`);
+      const platformDirectory = path.join(directory, platform.name);
+      fs.mkdirSync(platformDirectory); createdDirectories.push({ path: platformDirectory, identity: fs.statSync(platformDirectory) });
+      for (const scenario of ["success", "open-failure", "overrun", "missing-open", "missing-read", "missing-close"])
+      {
+        const fixture = buildJ2534NativeFixture(platform.name, scenario);
+        validateFixturePe(fixture, platform, fixtureNames(scenario)); total++;
+        writeCreatedFile(path.join(platformDirectory, `${scenario}.dll`), fixture);
+      }
+      if (platform.name === "x86")
+      {
+        const decorated = buildJ2534NativeFixture("x86", "decorated-open-only");
+        validateFixturePe(decorated, platform, fixtureNames("decorated-open-only")); total++;
+        writeCreatedFile(path.join(platformDirectory, "decorated-open-only.dll"), decorated);
+      }
+      const opposite = platform.name === "x86" ? "x64" : "x86";
+      writeCreatedFile(path.join(platformDirectory, "wrong-architecture.dll"), buildJ2534NativeFixture(opposite, "success"));
+      const first = buildJ2534NativeFixture(platform.name, "success");
+      const second = buildJ2534NativeFixture(platform.name, "success");
+      assert.equal(createHash("sha256").update(first).digest("hex"), createHash("sha256").update(second).digest("hex"), "Fixture generation is not reproducible");
+      total++;
+
+      const executable = path.join(platformDirectory, "identity-test.exe");
+      createdFiles.push(executable);
       const compiled = await execute(platform.compiler, [
         "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
         `/out:${executable}`, ...sources,
@@ -44,7 +156,7 @@ async function main() {
       const tested = await execute(executable, ["--self-test"]);
       assert.equal(tested.error, null, `Native tests failed (${platform.name}): ${tested.stdout}${tested.stderr}`);
       assert.equal(tested.stderr, "");
-      const result = /^Native identity binding checks: (\d+) \/ bitness: (32|64) \/ vendor DLL executed: false \/ Errors: 0\s*$/.exec(tested.stdout);
+      const result = /^Native identity binding checks: (\d+) \/ bitness: (32|64) \/ generated fixture DLL executed: true \/ vendor DLL executed: false \/ Errors: 0\s*$/.exec(tested.stdout);
       assert.ok(result, `Unexpected self-test output (${platform.name})`);
       assert.equal(Number(result[2]), platform.bits, "Wrong worker architecture");
       assert.ok(Number(result[1]) > 0);
@@ -60,9 +172,18 @@ async function main() {
     const resolved = path.resolve(directory);
     assert.equal(path.dirname(resolved), tempRoot, "Refusing cleanup outside test temp root");
     assert.ok(path.basename(resolved).startsWith("vehicle-j2534-native-"));
-    fs.rmSync(resolved, { recursive: true, force: true });
+    assertIdentity(resolved, rootIdentity);
+    for (const child of createdDirectories) assertIdentity(child.path, child.identity);
+    for (const file of createdFiles.reverse()) if (fs.existsSync(file)) fs.unlinkSync(file);
+    for (const child of createdDirectories.reverse()) {
+      assert.deepEqual(fs.readdirSync(child.path), [], "Refusing to remove a test directory containing unknown files");
+      fs.rmdirSync(child.path);
+    }
+    assert.deepEqual(fs.readdirSync(resolved), [], "Refusing to remove a test root containing unknown files");
+    fs.rmdirSync(resolved);
   }
-  console.log(`J2534 native binding checks: ${total} / independent native ABI: not tested / Errors: 0`);
+  assert.equal(containsDll(path.join(scriptsDirectory, "native")), false, "Generated fixture DLL remained in the repository");
+  console.log(`J2534 native binding checks: ${total} / independent native fixture ABI: tested / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
 }
 
 main().catch(error => { console.error(error.message); process.exitCode = 1; });
