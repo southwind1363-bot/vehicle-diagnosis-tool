@@ -81,8 +81,13 @@ module remains absent from the public bridge and PC distribution.
 
 ## Remaining Integration
 
-1. Implement and verify native ABI and DLL-loading isolation for a selected,
-   statically inspected registered driver; do not accept public raw DLL paths.
+The Windows native binding source and architecture-specific self-tests are now
+implemented separately in [native/README.md](native/README.md). This is partial
+binding verification, not a verified native backend or real VCI compatibility.
+
+1. Verify the binding with an independent native fixture DLL, then integrate
+   DLL-loading isolation for a selected, statically inspected registered driver;
+   do not accept public raw DLL paths.
 2. Adapt the fixture-verified supervision to the native worker, with explicit
    recovery after uncertain cleanup. Existing review-only requests remain
    unchanged; the fixture supervisor is not native-worker verification.
