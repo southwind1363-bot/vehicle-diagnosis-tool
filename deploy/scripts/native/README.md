@@ -18,6 +18,24 @@ It fails rather than silently skipping if Windows or a compiler is unavailable.
 This platform-specific command is separate from the portable release suite.
 No new dependencies, vendor DLLs, drivers, or devices are installed or executed.
 
+`J2534RegisteredDriverPreflight.cs` is a separate non-executing verifier. It
+opens a registered-library candidate with `CreateFileW`, denies write/delete
+sharing, and derives the normalized final path, fixed volume, file identity,
+size, SHA-256, and PE machine from one handle. It never calls `LoadLibraryExW`,
+`GetProcAddress`, or any J2534 export. The fixture worker accepts no DLL path
+and reports only path-free booleans and stable blockers. Verification output is
+not a reusable load token; a future isolated worker must repeat the checks
+immediately before any reviewed load.
+
+The x86 and x64 fixture workers also require the PE machine to match their own
+runtime. During an instrumented fixture-only callback, write, rename, and
+delete attempts must fail while the verification handle is held; a read/write
+open must succeed after verification returns. The production build has no such
+callback. The current volume serial plus 64-bit file index is useful identity
+evidence on NTFS but is not a complete ReFS 128-bit file ID, so future loader
+work must add `GetFileInformationByHandleEx(FileIdInfo)` before claiming that
+coverage.
+
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate
 80-byte buffers, missing exports, ordering, exceptions, disposal serialization,
@@ -110,8 +128,9 @@ in the repository or PC package, and no production entry point imports it.
 
 1. Cross-check the generated fixture with a compiler-built C reference when a
    reviewed native toolchain is available.
-2. Adapt the fixture-only worker contract to a separately reviewed registered
-   driver descriptor and helper IPC package, without exposing a raw DLL path.
+2. Connect the non-executing native preflight to a separately reviewed
+   registered-driver descriptor and private helper IPC package, without
+   exposing a raw DLL path.
 3. Driver provenance, registered static inspection, explicit trial approval,
    and actual Open/ReadVersion/Close evidence before vehicle-channel work.
 
@@ -121,6 +140,9 @@ Checked 2026-08-29; vendor documentation describes its API, not universal
 compatibility with every J2534 implementation.
 
 - [Windows LoadLibraryExW](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw)
+- [Windows CreateFileW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew)
+- [Windows GetFinalPathNameByHandleW](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-getfinalpathnamebyhandlew)
+- [Windows BY_HANDLE_FILE_INFORMATION](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-by_handle_file_information)
 - [Windows FreeLibrary](https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-freelibrary)
 - [Marshal.GetDelegateForFunctionPointer](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.marshal.getdelegateforfunctionpointer?view=netframework-4.8.1)
 - [Marshal.GetFunctionPointerForDelegate](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.marshal.getfunctionpointerfordelegate?view=netframework-4.8.1)

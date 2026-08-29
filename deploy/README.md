@@ -14,6 +14,8 @@ Windows DLL呼出し部のソースを追加しました。`PassThruOpen / PassT
 
 生成ネイティブDLL専用のx86/x64ワーカー監視も追加しました。正常、Open失敗、破損、ハング、クラッシュ、結果出力後ハングを別プロセスで確認し、異常終了時の結果やcleanupを成功扱いしません。実行要求にはEXE/DLLパスを出さず、検証用ファイルの場所・ID・サイズ・SHA-256を毎回確認します。これは開発用fixtureの隔離確認であり、実ベンダーDLL・実VCI・車両通信の開放ではありません。
 
+登録J2534 DLLを実行せずに検査するWindowsネイティブpreflightも追加しました。同一ファイルhandleから固定ドライブ、最終パス、reparse、volume/file ID、サイズ、SHA-256、PE machineを照合し、x86/x64 fixtureで拒否条件を確認します。結果はロード許可として再利用せず、実ベンダーDLLのロード、export解決、Open、車両接続は行いません。
+
 現在 `localhost:3000` で動かす最新版は、この `deploy` フォルダ直下の構成です。
 
 ```text
