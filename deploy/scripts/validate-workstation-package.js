@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
 import { packageWorkstation } from "./package-workstation.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
@@ -15,12 +17,16 @@ function fixture() {
   const sourceDirectory = path.join(root, `source-${next}`);
   const outputDirectory = path.join(root, `output-${next++}`);
   fs.mkdirSync(path.join(sourceDirectory, "scripts"), { recursive: true });
+  fs.mkdirSync(path.join(sourceDirectory, "scripts", "native"), { recursive: true });
   const assets = ["./", "index.html", "style.css", "script.js", "obd-readonly.js", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js"];
   for (const asset of assets.filter((asset) => asset !== "./")) fs.writeFileSync(path.join(sourceDirectory, asset), "fixture");
   fs.writeFileSync(path.join(sourceDirectory, "script.js"), 'const APP_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
   for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  fs.copyFileSync(new URL("./j2534-registered-driver-native-preflight.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-registered-driver-native-preflight.js"));
+  for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534RegisteredDriverPreflightWorker.cs"])
+    fs.copyFileSync(new URL(`./native/${name}`, import.meta.url), path.join(sourceDirectory, "scripts", "native", name));
   const pkg = { name: "fixture", version: "1.0.0", type: "module", dependencies: { express: "1.0.0" } };
   const lock = { lockfileVersion: 3, packages: { "": { name: pkg.name, version: pkg.version, dependencies: pkg.dependencies } } };
   for (const name of ["node_modules/express", "node_modules/express/node_modules/nested"]) {
@@ -77,15 +83,29 @@ try {
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
   check(instructions.includes("inspect-workstation-j2534.cmd") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")), "Package omitted the standalone J2534 preparation check");
+  check(["scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
   check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
     && packaged.scripts["workstation:dev"] === packaged.scripts.start && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
     && Object.keys(packaged.scripts).length === 3, "Package retained unavailable development commands");
   const integrity = verifyWorkstationPackage(result.directory);
   check(integrity.fileCount + 1 === result.fileCount && integrity.appVersion === result.appVersion, "Integrity file count does not include every packaged file except the manifest itself");
+  const packagedWorker = path.join(result.directory, "scripts", "native", "j2534-registered-driver-preflight-x64.exe");
+  const preflightTarget = path.join(result.directory, "packaged-preflight-target.dll");
+  fs.copyFileSync(packagedWorker, preflightTarget, fs.constants.COPYFILE_EXCL);
+  const preflightBytes = fs.readFileSync(preflightTarget);
+  const packagedRunner = await import(`${pathToFileURL(path.join(result.directory, "scripts", "j2534-registered-driver-native-preflight.js")).href}?fixture=${Date.now()}`);
+  const packagedPreflight = await packagedRunner.runJ2534NativePreflight({
+    selected_device_id: "j2534-package-fixture-x64", descriptor_source: "live_windows_registry",
+    private_library_path: preflightTarget, expected_sha256: createHash("sha256").update(preflightBytes).digest("hex"),
+    expected_file_size: preflightBytes.length, expected_architecture: "x64"
+  }, { timeout_ms: 5000 });
+  fs.unlinkSync(preflightTarget);
+  check(packagedPreflight.verification_status === "verified_non_executable" && packagedPreflight.execution_enabled === false
+    && packagedPreflight.vehicle_communication_started === false && !JSON.stringify(packagedPreflight).includes(preflightTarget), "Packaged J2534 preflight did not complete through private IPC without exposing or executing the target");
   check(instructions.includes("verify-workstation.cmd") && instructions.includes("署名・真正性・実車適合の証明ではありません"), "Integrity instructions overclaim verification");
   const integrityPath = path.join(result.directory, "package-integrity.json");
   const originalManifest = fs.readFileSync(integrityPath);
-  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js"]) {
+  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     const target = path.join(result.directory, relative);
     const original = fs.readFileSync(target);
     const changed = Buffer.from(original);
@@ -114,6 +134,9 @@ try {
     (m) => { m.files = m.files.filter((entry) => entry.path !== "style.css"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "inspect-workstation-j2534.cmd"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/inspect-workstation-j2534.js"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/j2534-registered-driver-native-preflight.js"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/native/j2534-preflight-workers.json"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/native/j2534-registered-driver-preflight-x86.exe"); },
     (m) => { m.files.push({ ...m.files[0], path: "package-integrity.json" }); },
     ...["../outside.txt", "/outside.txt", "C:/outside.txt", "a\\b", "x/../y", "x//y", "x./y", "x:y"].map((entryPath) => (m) => { m.files.push({ ...m.files[0], path: entryPath }); })
   ]) {

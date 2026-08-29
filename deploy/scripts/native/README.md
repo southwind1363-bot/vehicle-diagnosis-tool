@@ -6,7 +6,7 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.334. This native binding remains
+The public app and PC package metadata are 3.13.335. This native binding remains
 development-only and is not bundled in either release.
 
 ## Validation
@@ -120,17 +120,18 @@ inherited. File identity and hash checks narrow accidental substitution but do
 not make the check-to-spawn/load sequence race-free against a local attacker.
 
 Actual x86/x64 child processes test native ReadVersion hangs, illegal-instruction
-crashes, cancellation, concurrent busy rejection, and result-then-hang. This is
-development fixture isolation only. No native worker executable or DLL remains
-in the repository or PC package, and no production entry point imports it.
+crashes, cancellation, concurrent busy rejection, and result-then-hang. The
+executable fixture remains development-only and is not packaged. Separately,
+the PC package build compiles the non-executing registered-driver preflight for
+x86 and x64, records both SHA-256 values in a strict worker manifest, and the
+runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
 
 ## Next Gates
 
 1. Cross-check the generated fixture with a compiler-built C reference when a
    reviewed native toolchain is available.
-2. Connect the non-executing native preflight to a separately reviewed
-   registered-driver descriptor and private helper IPC package, without
-   exposing a raw DLL path.
+2. Verify the packaged private-IPC preflight against the installed registered
+   driver on the target Windows tablet without loading the vendor DLL.
 3. Driver provenance, registered static inspection, explicit trial approval,
    and actual Open/ReadVersion/Close evidence before vehicle-channel work.
 

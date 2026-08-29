@@ -1,4 +1,4 @@
-import { createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
+import { createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import { getEventListeners } from "node:events";
@@ -445,9 +445,13 @@ try {
       const clonedDescriptor = structuredClone(registeredDescriptor);
       const rejectedClone = verifyJ2534RegisteredDriverDescriptor(clonedDescriptor);
       const throwingProxyResult = verifyJ2534RegisteredDriverDescriptor(new Proxy({}, { get: () => { throw new Error("must not read unissued descriptor"); } }));
+      const rejectedNativeFixture = await runJ2534RegisteredDriverNativePreflight(registeredDescriptor);
+      const rejectedNativeClone = await runJ2534RegisteredDriverNativePreflight(clonedDescriptor);
       check(verifiedDescriptor.verification_status === "rejected" && verifiedDescriptor.blockers.includes("native_fixed_drive_verification_required") && verifiedDescriptor.blockers.includes("fixture_registry_source_not_executable") && verifiedDescriptor.sha256 === registeredDescriptor.sha256 && verifiedDescriptor.dll_load_attempted === false, "J2534 fixture descriptor did not reverify identity while retaining native and live-registry gates");
       check(rejectedClone.verification_status === "rejected" && rejectedClone.blockers.includes("descriptor_not_issued"), "J2534 registered descriptor accepted a cloned object without its opaque issuance record");
       check(throwingProxyResult.verification_status === "rejected" && throwingProxyResult.blockers.includes("descriptor_not_issued"), "J2534 registered descriptor read properties from an unissued object");
+      check(rejectedNativeFixture.verification_status === "rejected" && rejectedNativeFixture.blockers.join(",") === "live_registry_descriptor_required" && rejectedNativeFixture.execution_enabled === false && rejectedNativeFixture.dll_load_attempted === false && !JSON.stringify(rejectedNativeFixture).includes(descriptorLibraryPath), "J2534 native preflight accepted or exposed a fixture-registry descriptor");
+      check(rejectedNativeClone.verification_status === "rejected" && rejectedNativeClone.blockers.join(",") === "descriptor_not_issued" && rejectedNativeClone.execution_enabled === false, "J2534 native preflight accepted a cloned descriptor");
 
       const decoratedRegistryText = [
         "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Decorated VCI",

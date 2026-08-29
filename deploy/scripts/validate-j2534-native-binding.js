@@ -13,14 +13,17 @@ const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
 const preflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534NativePreflightFixtureWorker.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
+const productionPreflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534RegisteredDriverPreflightWorker.cs"]
+  .map(name => path.join(scriptsDirectory, "native", name));
 
-function execute(file, args) {
+function execute(file, args, input = null) {
   const env = Object.fromEntries(Object.entries(process.env)
     .filter(([key]) => !/^(NODE_(OPTIONS|PATH)|COR_|CORECLR_|COMPLUS_)/i.test(key)));
   return new Promise(resolve => {
-    execFile(file, args, {
+    const child = execFile(file, args, {
       windowsHide: true, shell: false, timeout: 30000, maxBuffer: 65536, env,
     }, (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+    if (input !== null) child.stdin.end(input, "utf8");
   });
 }
 
@@ -198,6 +201,14 @@ async function main() {
       ]);
       assert.equal(productionPreflightCompile.error, null, `Production native preflight compilation failed (${platform.name}): ${productionPreflightCompile.stdout}${productionPreflightCompile.stderr}`);
       total++;
+      const productionPreflightWorker = path.join(platformDirectory, "j2534-registered-driver-preflight.exe");
+      createdFiles.push(productionPreflightWorker);
+      const productionWorkerCompile = await execute(platform.compiler, [
+        "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
+        "/reference:System.Runtime.Serialization.dll", `/out:${productionPreflightWorker}`, ...productionPreflightSources,
+      ]);
+      assert.equal(productionWorkerCompile.error, null, `Production native preflight worker compilation failed (${platform.name}): ${productionWorkerCompile.stdout}${productionWorkerCompile.stderr}`);
+      total++;
       const preflightDescriptor = name => {
         const target = path.join(platformDirectory, name);
         const bytes = fs.readFileSync(target);
@@ -226,6 +237,29 @@ async function main() {
         assert.equal(preflightSuccess[field], false, `Native preflight enabled ${field}`);
       assert.equal(preflightSuccess.fixture_identity_mutation_rejected, true);
       total += 17;
+      const privateWorkerRequest = {
+        contract_version: "j2534-native-preflight-request-v1", operation: "verify_registered_driver_non_executable",
+        request_nonce: `native-worker-${platform.name}-nonce-000000000001`, selected_device_id: `j2534-worker-${platform.name}`,
+        descriptor_version: "j2534-registered-driver-descriptor-v1", descriptor_source: "live_windows_registry",
+        private_library_path: path.join(platformDirectory, "success.dll"), expected_sha256: preflightDescriptor("success.dll").sha256,
+        expected_file_size: preflightDescriptor("success.dll").size, expected_architecture: platform.name,
+        execution_enabled: false, vehicle_command_enabled: false
+      };
+      const directWorker = await execute(productionPreflightWorker, [], JSON.stringify(privateWorkerRequest));
+      assert.equal(directWorker.error, null, `Production preflight worker failed (${platform.name}): ${directWorker.stdout}${directWorker.stderr}`);
+      assert.equal(directWorker.stderr, "");
+      assert.ok(!directWorker.stdout.includes(platformDirectory), "Production preflight worker exposed its private path");
+      const directResponse = JSON.parse(directWorker.stdout);
+      assert.equal(directResponse.verification_status, "verified_non_executable");
+      assert.equal(directResponse.request_nonce, privateWorkerRequest.request_nonce);
+      assert.equal(directResponse.vehicle_communication_started, false);
+      assert.equal(directResponse.would_transmit, false);
+      total += 7;
+      const extraKeyWorker = await execute(productionPreflightWorker, [], JSON.stringify({ ...privateWorkerRequest, extra: true }));
+      assert.equal(extraKeyWorker.error?.code, 2);
+      assert.equal(extraKeyWorker.stdout, "");
+      assert.equal(extraKeyWorker.stderr, "");
+      total += 3;
       const rejectedPreflights = [
         ["sha-mismatch", "success.dll", null, "native_file_sha256_mismatch"],
         ["size-mismatch", "success.dll", null, "native_file_size_mismatch"],
@@ -256,7 +290,7 @@ async function main() {
       assert.equal(rejectedPreflightArgs.stdout, "");
       assert.equal(rejectedPreflightArgs.stderr, "");
       total += 3;
-      const preflightSourceText = preflightSources.map(source => fs.readFileSync(source, "utf8")).join("\n");
+      const preflightSourceText = [...new Set([...preflightSources, ...productionPreflightSources])].map(source => fs.readFileSync(source, "utf8")).join("\n");
       assert.ok(!/LoadLibraryExW\s*\(|GetProcAddress\s*\(|PassThruOpen\s*\(/.test(preflightSourceText), "Native preflight source gained a DLL execution API");
       const preflightImports = [...preflightSourceText.matchAll(/private static extern [^;]+?\s+(\w+)\s*\(/g)].map(match => match[1]).sort();
       assert.deepEqual(preflightImports, ["CreateFileW", "GetDriveTypeW", "GetFileInformationByHandle", "GetFinalPathNameByHandleW"].sort(), "Native preflight P/Invoke allowlist changed");

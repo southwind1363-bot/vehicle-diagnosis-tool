@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
@@ -7,7 +8,7 @@ import { validateWorkstationAssets } from "./workstation-assets.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 
 const deployDirectory = fileURLToPath(new URL("../", import.meta.url));
-const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"];
+const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-registered-driver-native-preflight.js"];
 
 function exists(entry) {
   try { fs.lstatSync(entry); return true; } catch (error) { if (error.code === "ENOENT") return false; throw error; }
@@ -123,6 +124,31 @@ export function packageWorkstation(options = {}) {
       else copyFile(child);
     }
   };
+  const compileNativePreflightWorkers = () => {
+    if (process.platform !== "win32") throw new Error("workstation_package_native_compiler_unsupported");
+    const windows = process.env.SystemRoot || process.env.WINDIR || "C:\\Windows";
+    const sources = [safeSource("scripts/native/J2534RegisteredDriverPreflight.cs"), safeSource("scripts/native/J2534RegisteredDriverPreflightWorker.cs")];
+    const nativeOutput = path.join(staging, "scripts", "native");
+    fs.mkdirSync(nativeOutput, { recursive: true });
+    const workers = {};
+    for (const [architecture, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) {
+      const compiler = fs.realpathSync(path.join(windows, "Microsoft.NET", framework, "v4.0.30319", "csc.exe"));
+      const file = `j2534-registered-driver-preflight-${architecture}.exe`;
+      const output = path.join(nativeOutput, file);
+      execFileSync(compiler, ["/nologo", "/target:exe", `/platform:${architecture}`, "/optimize+", "/warnaserror+",
+        "/reference:System.Runtime.Serialization.dll", `/out:${output}`, ...sources], {
+        cwd: nativeOutput, windowsHide: true, shell: false, timeout: 30000, maxBuffer: 65536,
+        env: { SystemRoot: windows, WINDIR: windows, TEMP: process.env.TEMP || nativeOutput, TMP: process.env.TMP || nativeOutput }
+      });
+      const bytes = fs.readFileSync(output);
+      workers[architecture] = { file, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") };
+      recordFile(`scripts/native/${file}`); fileCount += 1;
+    }
+    fs.writeFileSync(path.join(nativeOutput, "j2534-preflight-workers.json"), JSON.stringify({
+      schema_version: "j2534-native-preflight-workers-v1", workers
+    }, null, 2) + "\n", { flag: "wx" });
+    recordFile("scripts/native/j2534-preflight-workers.json"); fileCount += 1;
+  };
   try {
     if (exists(destination)) throw new Error("workstation_package_exists");
     staging = fs.mkdtempSync(path.join(outputRoot, ".workstation-staging-"));
@@ -133,6 +159,7 @@ export function packageWorkstation(options = {}) {
     }
     for (const [name] of dependencies) copyDependency(name);
     copyFile("package-lock.json");
+    compileNativePreflightWorkers();
     const checkedStart = "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js";
     fs.writeFileSync(path.join(staging, "package.json"), JSON.stringify({ name: pkg.name, version: pkg.version, type: "module", private: true,
       scripts: { start: checkedStart, "workstation:dev": checkedStart, "verify:package": "node scripts/verify-workstation-package.js" }, dependencies: pkg.dependencies }, null, 2) + "\n", { flag: "wx" });

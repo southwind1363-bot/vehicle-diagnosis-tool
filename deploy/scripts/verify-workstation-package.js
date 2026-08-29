@@ -52,7 +52,9 @@ export function verifyWorkstationPackage(directory) {
   }
   for (const required of ["index.html", "script.js", "obd-readonly.js", "offline-assets.json", "package.json", "package-lock.json",
     "package-info.json", "start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd",
-    "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js"]) {
+    "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js",
+    "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json",
+    "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     if (!seen.has(required)) fail("package_integrity_manifest_incomplete", required);
   }
   for (const entry of manifest.files) {

@@ -4,6 +4,7 @@ import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runJ2534NativePreflight } from "./scripts/j2534-registered-driver-native-preflight.js";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
@@ -1287,6 +1288,54 @@ export function verifyJ2534RegisteredDriverDescriptor(descriptor) {
     driver_architecture: inspection.pe_architecture,
     driver_bitness: inspection.pe_bitness
   });
+}
+
+export async function runJ2534RegisteredDriverNativePreflight(descriptor, options = {}) {
+  const secret = descriptor && typeof descriptor === "object"
+    ? j2534RegisteredDriverDescriptorSecrets.get(descriptor)
+    : null;
+  const blocked = (selectedDeviceId, blocker) => deepFreezeJ2534Value({
+    contract_version: "j2534-native-preflight-response-v1",
+    selected_device_id: selectedDeviceId || null,
+    verification_status: "rejected",
+    blockers: [blocker],
+    fixed_drive_verified: false,
+    final_path_matches: false,
+    file_identity_stable: false,
+    sha256_matches: false,
+    size_matches: false,
+    architecture_matches: false,
+    runtime_architecture_matches: false,
+    dll_load_attempted: false,
+    get_proc_address_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    vehicle_communication_started: false,
+    would_transmit: false,
+    vehicle_command_enabled: false,
+    execution_enabled: false
+  });
+  if (!secret) return blocked(null, "descriptor_not_issued");
+  if (secret.descriptorSource !== "live_windows_registry")
+    return blocked(secret.selectedDeviceId, "live_registry_descriptor_required");
+  const sameFingerprint = (left, right) => left && right
+    && left.device === right.device && left.inode === right.inode && left.size === right.size
+    && left.mtime_ns === right.mtime_ns && left.ctime_ns === right.ctime_ns && left.sha256 === right.sha256;
+  const before = inspectRegisteredJ2534Library(secret.libraryPath);
+  if (!sameFingerprint(secret.fingerprint, before.fingerprint))
+    return blocked(secret.selectedDeviceId, "registered_driver_file_changed");
+  const result = await runJ2534NativePreflight({
+    selected_device_id: secret.selectedDeviceId,
+    descriptor_source: secret.descriptorSource,
+    private_library_path: secret.libraryPath,
+    expected_sha256: secret.fingerprint.sha256,
+    expected_file_size: before.file_size,
+    expected_architecture: before.pe_architecture
+  }, options);
+  const after = inspectRegisteredJ2534Library(secret.libraryPath);
+  if (!sameFingerprint(secret.fingerprint, after.fingerprint))
+    return blocked(secret.selectedDeviceId, "registered_driver_file_changed");
+  return deepFreezeJ2534Value(result);
 }
 
 function createStableJ2534DeviceId(driver = {}) {

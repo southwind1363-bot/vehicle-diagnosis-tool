@@ -17,6 +17,8 @@ namespace VehicleDiagnosis.Native
         internal bool GetProcAddressAttempted = false;
         internal bool PassThruOpenAttempted = false;
         internal bool VehicleConnectionAttempted = false;
+        internal bool VehicleCommunicationStarted = false;
+        internal bool WouldTransmit = false;
         internal bool VehicleCommandEnabled = false;
         internal bool ExecutionEnabled = false;
     }
