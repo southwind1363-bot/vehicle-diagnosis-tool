@@ -4,7 +4,9 @@
 
 ## 現在の完成版
 
-3.13.336以降のPC配布版は `inspect-workstation-j2534.cmd` を開くと、登録ドライバー、DLLの32/64bit、静的検査結果と次の確認を日本語で表示します。番号を選ぶと、対象DLLをロードしない専用workerで固定ドライブ、同一ファイル、SHA-256、サイズ、PE構成を再確認します。VCI・車両の接続は不要です。配布版は内容検査に成功してから確認を開始します。DLL実行、`PassThruOpen`、車両通信、ファイル保存、外部送信はありません。検査合格でも実車適合・接続成功ではなく、実機通信機能の実装と試験は残っています。自動実行では `inspect-workstation-j2534.cmd --preflight-index 番号 --no-pause` を使えます。既存の `npm run inspect:j2534` のJSON出力は変更していません。
+3.13.336以降のPC配布版は `inspect-workstation-j2534.cmd` を開くと、登録ドライバー、DLLの32/64bit、静的検査結果と次の確認を日本語で表示します。番号を選ぶと、対象DLLをロードしない専用workerで固定ドライブ、同一ファイル、SHA-256、サイズ、PE構成を再確認します。VCI・車両の接続は不要です。配布版は内容検査に成功してから確認を開始します。DLL実行、`PassThruOpen`、車両通信、ファイル保存、外部送信はありません。検査合格でも実車適合・接続成功ではなく、実機通信機能の実装と試験は残っています。自動実行では `inspect-workstation-j2534.cmd --preflight-index 番号 --no-pause` を使えます。`npm run inspect:j2534` は既存項目を維持し、identity probe readinessを追加表示します。
+
+J2534の初回DLL実行は通常の非実行preflightと分離します。`j2534-identity-probe-readiness-v1` はlive registry descriptor、同一操作内preflight、配布整合性、Authenticode、quarantine、全体mutex、対話確認を個別に保持しますが、現在は未実装workerゲートを必ず残し、DLLロード、`PassThruOpen`、車両通信を許可しません。公開オブジェクトや検査結果は実行許可証として再利用できません。
 
 J2534の次工程として、接続・識別情報取得・終了の内部処理と模擬応答による異常系検証を追加しました。実DLLローダーや公開ブリッジには未接続で、実機通信の開放ではありません。検証は `npm run validate:j2534-lifecycle`、設計と残作業は [J2534内部接続処理](scripts/J2534-IDENTITY-LIFECYCLE.md) を参照してください。進捗率は実機確認前のため変更していません。
 

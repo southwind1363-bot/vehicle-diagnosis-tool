@@ -901,6 +901,71 @@ export function getJ2534DiscoveryEnvironment(devices = []) {
   };
 }
 
+export function buildJ2534IdentityProbeReadiness(devices = [], options = {}) {
+  const registeredDevices = Array.isArray(devices) ? devices : [];
+  const selectedDeviceId = typeof options?.selected_device_id === "string"
+    ? options.selected_device_id.trim()
+    : typeof options?.selectedDeviceId === "string" ? options.selectedDeviceId.trim() : "";
+  const selectedDevice = selectedDeviceId
+    ? registeredDevices.find((device) => device?.id === selectedDeviceId) || null
+    : null;
+  const descriptor = options?.descriptor;
+  const descriptorSecret = descriptor && typeof descriptor === "object"
+    ? j2534RegisteredDriverDescriptorSecrets.get(descriptor)
+    : null;
+  // A future one-shot orchestrator must issue and consume nonce-bound preflight evidence.
+  // Public result objects are never accepted as proof that preflight ran in this operation.
+  const verifiedPreflight = false;
+  const descriptorReady = descriptorSecret?.descriptorSource === "live_windows_registry"
+    && descriptorSecret.selectedDeviceId === selectedDeviceId
+    && descriptor?.selected_device_id === selectedDeviceId
+    && descriptor?.exact_identity_api_ready === true
+    && descriptor?.execution_enabled === false && descriptor?.dll_load_attempted === false
+    && descriptor?.pass_thru_open_attempted === false && descriptor?.vehicle_command_enabled === false;
+  // These gates require future opaque evidence issuers. Caller-provided status strings are never authorization.
+  const packageIntegrityVerified = false;
+  const authenticodeVerified = false;
+  const quarantineClear = false;
+  const globalMutexAcquired = false;
+  const interactiveConfirmation = false;
+  const blockers = [];
+  if (!registeredDevices.length) blockers.push("no_registered_driver");
+  if (!selectedDeviceId) blockers.push("selected_device_not_confirmed");
+  else if (!selectedDevice) blockers.push("selected_driver_not_registered");
+  if (!descriptorReady) blockers.push("live_registry_descriptor_not_verified");
+  if (!verifiedPreflight) blockers.push("native_preflight_not_verified_in_operation");
+  if (!packageIntegrityVerified) blockers.push("package_integrity_not_verified");
+  if (!authenticodeVerified) blockers.push("driver_authenticode_not_verified");
+  if (!quarantineClear) blockers.push("identity_probe_quarantine_not_clear");
+  if (!globalMutexAcquired) blockers.push("identity_probe_global_mutex_not_acquired");
+  if (!interactiveConfirmation) blockers.push("interactive_trial_confirmation_required");
+  blockers.push("identity_probe_worker_not_implemented");
+  const uniqueBlockers = Object.freeze([...new Set(blockers)]);
+  return Object.freeze({
+    schema_version: "j2534-identity-probe-readiness-v1",
+    readiness_status: "blocked",
+    blockers: uniqueBlockers,
+    selected_device_id: selectedDeviceId || null,
+    registered_driver_confirmed: Boolean(selectedDevice),
+    live_registry_descriptor_verified: descriptorReady,
+    native_preflight_verified_in_operation: verifiedPreflight,
+    package_integrity_verified: packageIntegrityVerified,
+    authenticode_status: authenticodeVerified ? "verified_trusted" : "not_verified",
+    quarantine_status: quarantineClear ? "clear" : "not_clear",
+    global_mutex_status: globalMutexAcquired ? "acquired" : "not_acquired",
+    interactive_trial_confirmation: interactiveConfirmation,
+    evidence_authorizes_execution: false,
+    identity_probe_execution_enabled: false,
+    dll_load_attempted: false,
+    pass_thru_open_allowed: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    vehicle_communication_started: false,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  });
+}
+
 export function prepareJ2534WorkerReviewRequest(devices = [], options = {}) {
   const registeredDevices = Array.isArray(devices) ? devices : [];
   const environment = getJ2534DiscoveryEnvironment(registeredDevices);

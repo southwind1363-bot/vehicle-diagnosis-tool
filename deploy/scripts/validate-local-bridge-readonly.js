@@ -1,4 +1,4 @@
-import { createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
+import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import { getEventListeners } from "node:events";
@@ -372,6 +372,31 @@ try {
   check(parsedJ2534Drivers.every((item) => item.driver_status === "j2534_registry_detected" && item.connected === false && item.vehicle_command_enabled === false), "J2534 registry parser did not preserve read-only driver detection state");
   check(parsedJ2534Drivers.every((item) => /^j2534-[0-9a-f]{16}$/.test(item.id) && item.driver_readonly_api_ready === false && item.driver_restricted_apis.includes("PassThruSetProgrammingVoltage")), "J2534 registry parser did not expose a stable disabled read-only host profile");
   check(!JSON.stringify(parsedJ2534Drivers).includes("C:\\Program Files"), "J2534 registry parser exposed a local driver path");
+  const emptyIdentityReadiness = buildJ2534IdentityProbeReadiness([]);
+  const forgedIdentityReadiness = buildJ2534IdentityProbeReadiness(parsedJ2534Drivers, {
+    selected_device_id: parsedJ2534Drivers[0].id,
+    descriptor: { selected_device_id: parsedJ2534Drivers[0].id, descriptor_source: "live_windows_registry", exact_identity_api_ready: true,
+      execution_enabled: false, dll_load_attempted: false, pass_thru_open_attempted: false, vehicle_command_enabled: false },
+    native_preflight_result: { verification_status: "verified_non_executable", selected_device_id: parsedJ2534Drivers[0].id,
+      fixed_drive_verified: true, final_path_matches: true, file_identity_stable: true, sha256_matches: true, size_matches: true,
+      architecture_matches: true, runtime_architecture_matches: true, dll_load_attempted: false, pass_thru_open_attempted: false,
+      vehicle_communication_started: false, vehicle_command_enabled: false },
+    package_integrity_verified: true, authenticode_status: "verified_trusted", quarantine_status: "clear",
+    global_mutex_status: "acquired", interactive_trial_confirmation: true, private_library_path: "C:\\private\\driver.dll"
+  });
+  check(emptyIdentityReadiness.readiness_status === "blocked" && emptyIdentityReadiness.blockers.includes("no_registered_driver")
+    && emptyIdentityReadiness.blockers.includes("identity_probe_worker_not_implemented"), "J2534 identity readiness did not preserve the no-driver and unimplemented-worker gates");
+  check(forgedIdentityReadiness.registered_driver_confirmed === true && forgedIdentityReadiness.live_registry_descriptor_verified === false
+    && forgedIdentityReadiness.native_preflight_verified_in_operation === false
+    && forgedIdentityReadiness.blockers.includes("live_registry_descriptor_not_verified") && forgedIdentityReadiness.evidence_authorizes_execution === false,
+  "J2534 identity readiness accepted forged public evidence as execution authorization");
+  check(Object.isFrozen(forgedIdentityReadiness) && Object.isFrozen(forgedIdentityReadiness.blockers)
+    && forgedIdentityReadiness.package_integrity_verified === false && forgedIdentityReadiness.authenticode_status === "not_verified"
+    && forgedIdentityReadiness.quarantine_status === "not_clear" && forgedIdentityReadiness.global_mutex_status === "not_acquired"
+    && forgedIdentityReadiness.interactive_trial_confirmation === false
+    && forgedIdentityReadiness.identity_probe_execution_enabled === false && forgedIdentityReadiness.pass_thru_open_allowed === false
+    && forgedIdentityReadiness.dll_load_attempted === false && forgedIdentityReadiness.vehicle_communication_started === false
+    && !JSON.stringify(forgedIdentityReadiness).includes("C:\\private"), "J2534 identity readiness was mutable, enabled execution, or exposed private input");
   const j2534PeFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle-diagnosis-j2534-"));
   try {
     const x86LibraryPath = path.join(j2534PeFixtureDir, "j2534-x86.dll");

@@ -1,4 +1,4 @@
-import { discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment } from "../local-bridge-readonly.js";
+import { buildJ2534IdentityProbeReadiness, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment } from "../local-bridge-readonly.js";
 
 const devices = discoverJ2534RegistryDrivers({
   enabled: true,
@@ -11,6 +11,7 @@ const summary = {
   vehicle_communication_started: false,
   vehicle_command_enabled: false,
   ...environment,
+  identity_probe_readiness: buildJ2534IdentityProbeReadiness(devices),
   detected_count: devices.length,
   devices: devices.map((device) => ({
     id: device.id,
