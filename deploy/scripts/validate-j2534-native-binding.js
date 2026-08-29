@@ -6,6 +6,7 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { buildJ2534NativeFixture } from "./native/build-j2534-native-fixture.js";
+import { createJ2534NativeFixtureSupervisor, parseJ2534NativeFixtureOutput } from "./j2534-native-fixture-supervisor.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
@@ -13,7 +14,7 @@ const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
 
 function execute(file, args) {
   const env = Object.fromEntries(Object.entries(process.env)
-    .filter(([key]) => !["NODE_OPTIONS", "NODE_PATH"].includes(key.toUpperCase())));
+    .filter(([key]) => !/^(NODE_(OPTIONS|PATH)|COR_|CORECLR_|COMPLUS_)/i.test(key)));
   return new Promise(resolve => {
     execFile(file, args, {
       windowsHide: true, shell: false, timeout: 30000, maxBuffer: 65536, env,
@@ -127,7 +128,7 @@ async function main() {
     for (const platform of platforms) {
       const platformDirectory = path.join(directory, platform.name);
       fs.mkdirSync(platformDirectory); createdDirectories.push({ path: platformDirectory, identity: fs.statSync(platformDirectory) });
-      for (const scenario of ["success", "open-failure", "overrun", "missing-open", "missing-read", "missing-close"])
+      for (const scenario of ["success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close"])
       {
         const fixture = buildJ2534NativeFixture(platform.name, scenario);
         validateFixturePe(fixture, platform, fixtureNames(scenario)); total++;
@@ -167,6 +168,71 @@ async function main() {
       assert.equal(rejected.stdout, "");
       assert.equal(rejected.stderr, "");
       total += 3;
+
+      const worker = path.join(platformDirectory, "j2534-native-fixture-worker.exe");
+      createdFiles.push(worker);
+      const workerCompile = await execute(platform.compiler, [
+        "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+", `/out:${worker}`,
+        sources[0], path.join(scriptsDirectory, "native", "J2534NativeFixtureWorker.cs"),
+      ]);
+      assert.equal(workerCompile.error, null, `Native worker compilation failed (${platform.name}): ${workerCompile.stdout}${workerCompile.stderr}`);
+      const rejectedWorker = await execute(worker, ["--fixture", "../driver.dll"]);
+      assert.equal(rejectedWorker.error?.code, 2); assert.equal(rejectedWorker.stdout, ""); assert.equal(rejectedWorker.stderr, ""); total += 3;
+      const fileDescriptor = name => {
+        const target = path.join(platformDirectory, name);
+        return { path: target, sha256: createHash("sha256").update(fs.readFileSync(target)).digest("hex") };
+      };
+      const descriptor = {
+        temp_root: directory, architecture: platform.name, worker: fileDescriptor("j2534-native-fixture-worker.exe"),
+        fixtures: Object.fromEntries(["success", "open-failure", "overrun", "hang", "crash"].map(name => [name, fileDescriptor(`${name}.dll`)]))
+      };
+      const supervisor = createJ2534NativeFixtureSupervisor(descriptor);
+      assert.throws(() => createJ2534NativeFixtureSupervisor({ ...descriptor, temp_root: platformDirectory }), /native_fixture_descriptor_invalid/); total++;
+      descriptor.worker.path = path.join(platformDirectory, "forbidden-worker.exe");
+      process.env.COR_ENABLE_PROFILING = "1"; process.env.COR_PROFILER = "{00000000-0000-0000-0000-000000000001}";
+      for (const [scenario, expected] of [["success", "completed"], ["open-failure", "open_failed"], ["overrun", "corrupted"]]) {
+        const supervised = await supervisor.run({ mode: "native_fixture", scenario });
+        assert.equal(supervised.execution_status, "worker_completed"); assert.equal(supervised.result.lifecycle.status, expected);
+        assert.equal(supervised.native_fixture_execution_confirmed, true); assert.equal(supervised.vendor_dll_executed, false);
+        total += 4;
+        if (scenario === "success") {
+          const encoded = JSON.stringify(supervised.result);
+          for (const mutate of [
+            value => { value.vendor_dll_executed = true; }, value => { value.architecture = opposite; },
+            value => { value.lifecycle.steps.close.attempted = false; }, value => { value.lifecycle.module_reference = "retained"; },
+            value => { value.lifecycle.versions.api = "x".repeat(80); }, value => { value.lifecycle.versions.api = " 04.04"; },
+            value => { value.private_path = "C:/private/driver.dll"; }
+          ]) {
+            const invalid = JSON.parse(encoded); mutate(invalid);
+            assert.equal(parseJ2534NativeFixtureOutput(JSON.stringify(invalid), "success", platform.name), null); total++;
+          }
+        }
+      }
+      for (const scenario of ["hang", "result-then-hang"]) {
+        const supervised = await supervisor.run({ mode: "native_fixture", scenario, timeout_ms: 1000 });
+        assert.equal(supervised.execution_status, "worker_timed_out"); assert.equal(supervised.result, null);
+        assert.equal(supervised.native_fixture_execution_confirmed, false); assert.equal(supervised.fixture_cleanup_status, "unconfirmed"); total += 4;
+      }
+      const crashed = await supervisor.run({ mode: "native_fixture", scenario: "crash", timeout_ms: 3000 });
+      assert.equal(crashed.execution_status, "worker_failed"); assert.equal(crashed.result, null); assert.equal(crashed.fixture_cleanup_status, "unconfirmed"); total += 3;
+      const controller = new AbortController();
+      const hanging = supervisor.run({ mode: "native_fixture", scenario: "hang", timeout_ms: 3000, signal: controller.signal });
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const busy = await supervisor.run({ mode: "native_fixture", scenario: "success" });
+      assert.equal(busy.execution_status, "worker_busy"); controller.abort();
+      const cancelled = await hanging;
+      assert.equal(cancelled.execution_status, "worker_cancelled"); assert.equal(cancelled.worker_exited, true); total += 3;
+      const successPath = path.join(platformDirectory, "success.dll");
+      const original = fs.readFileSync(successPath); const changed = Buffer.from(original); changed[changed.length - 1] ^= 1;
+      fs.writeFileSync(successPath, changed);
+      const tampered = await supervisor.run({ mode: "native_fixture", scenario: "success" });
+      assert.equal(tampered.execution_status, "worker_failed"); assert.deepEqual(tampered.errors, ["worker_spawn_failed"]); total += 2;
+      fs.writeFileSync(successPath, original);
+      for (const options of [{}, { mode: "native_fixture", scenario: "../driver.dll" }, { mode: "native_fixture", scenario: "success", worker_path: "other.exe" }]) {
+        const blocked = await supervisor.run(options);
+        assert.equal(blocked.execution_status, "request_blocked"); assert.equal(blocked.worker_started, false); total += 2;
+      }
+      delete process.env.COR_ENABLE_PROFILING; delete process.env.COR_PROFILER;
     }
   } finally {
     const resolved = path.resolve(directory);
@@ -183,6 +249,11 @@ async function main() {
     fs.rmdirSync(resolved);
   }
   assert.equal(containsDll(path.join(scriptsDirectory, "native")), false, "Generated fixture DLL remained in the repository");
+  for (const relative of ["../local-bridge-readonly.js", "./j2534-readonly-worker.js", "./package-workstation.js"]) {
+    const production = fs.readFileSync(new URL(relative, import.meta.url), "utf8");
+    assert.ok(!production.includes("j2534-native-fixture-supervisor") && !production.includes("bounded-fixture-worker") && !production.includes("J2534NativeFixtureWorker"), "Development native worker reached a production entry point");
+    total++;
+  }
   console.log(`J2534 native binding checks: ${total} / independent native fixture ABI: tested / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
 }
 

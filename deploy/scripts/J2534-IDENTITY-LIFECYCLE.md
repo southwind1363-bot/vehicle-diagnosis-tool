@@ -84,14 +84,17 @@ module remains absent from the public bridge and PC distribution.
 The Windows native binding source and architecture-specific self-tests are now
 implemented separately in [native/README.md](native/README.md). This is partial
 binding verification, not a verified native backend or real VCI compatibility.
+The generated native fixture is also executed in bounded x86/x64 child workers;
+hang, crash, corruption, and result-before-hang remain isolated test evidence.
+No worker executable, fixture DLL, or vendor driver is shipped or production-wired.
 
 1. Cross-check the generated PE32/PE32+ native fixture with a compiler-built C
    reference when a reviewed native toolchain is available.
 2. Integrate DLL-loading isolation for a selected, statically inspected
    registered driver; do not accept public raw DLL paths.
-3. Adapt the fixture-verified supervision to the native worker, with explicit
-   recovery after uncertain cleanup. Existing review-only requests remain
-   unchanged; the fixture supervisor is not native-worker verification.
+3. Adapt the native fixture worker contract to a reviewed registered-driver
+   descriptor and distributable helper, with explicit recovery after uncertain
+   cleanup. Existing review-only requests remain unchanged.
 4. Review driver provenance, actual adapter behavior, user authorization, and
    test conditions before a real Open/ReadVersion/Close trial.
 5. Add vehicle-channel operations separately with their own verified protocol,

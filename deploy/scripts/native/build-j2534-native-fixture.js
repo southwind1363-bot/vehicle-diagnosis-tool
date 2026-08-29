@@ -1,6 +1,6 @@
 const ARCHITECTURES = new Set(["x86", "x64"]);
 const SCENARIOS = new Set([
-  "success", "open-failure", "overrun", "missing-open", "missing-read", "missing-close", "decorated-open-only",
+  "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -73,6 +73,8 @@ function scenarioCode(architecture, scenario) {
       ? [0x8b, 0x44, 0x24, 0x08, 0xc6, 0x40, 0x50, 0x00, 0x31, 0xc0, 0xc2, 0x10, 0x00]
       : [0xc6, 0x42, 0x50, 0x00, 0x31, 0xc0, 0xc3]);
   }
+  if (scenario === "hang") code.read = Buffer.from([0xeb, 0xfe]);
+  if (scenario === "crash") code.read = Buffer.from([0x0f, 0x0b]);
   code.open = guardedOpen(architecture, code.open);
   code.read = guardedDevice(architecture, code.read, 0x10);
   code.close = guardedDevice(architecture, code.close, 0x04);

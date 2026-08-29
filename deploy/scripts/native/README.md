@@ -80,12 +80,37 @@ claiming compatibility.
 - Locks cannot interrupt a hung DLL. The future parent must enforce a process
   deadline and treat forced termination as unconfirmed adapter cleanup.
 
+## Development Worker Isolation
+
+`J2534NativeFixtureWorker.cs` connects the binding only to generated fixture
+DLLs in its own temporary architecture directory. Its CLI accepts exactly
+`--fixture` and one fixed scenario; it accepts no DLL path, driver path, command,
+or extra argument. The worker and every fixture are pinned by canonical temp
+location, file identity, size, and SHA-256 before every process start.
+
+The shared bounded supervisor retains its busy guard until child `close`, caps
+combined stdout/stderr at 4096 bytes, rejects any native-worker stderr, and
+discards output after cancellation, timeout, crash, overflow, or other abnormal
+exit. Native success, explicit Open failure, and detected guard corruption have
+separate strict envelopes. Corruption records Close as unattempted and the DLL
+reference as retained. A result printed before a later hang is not accepted.
+Forced process termination always leaves fixture cleanup unconfirmed.
+The native child receives only SystemRoot/WINDIR and temporary-directory
+environment values; Node flags and CLR/CoreCLR/COMPlus profiler controls are not
+inherited. File identity and hash checks narrow accidental substitution but do
+not make the check-to-spawn/load sequence race-free against a local attacker.
+
+Actual x86/x64 child processes test native ReadVersion hangs, illegal-instruction
+crashes, cancellation, concurrent busy rejection, and result-then-hang. This is
+development fixture isolation only. No native worker executable or DLL remains
+in the repository or PC package, and no production entry point imports it.
+
 ## Next Gates
 
 1. Cross-check the generated fixture with a compiler-built C reference when a
-   reviewed native toolchain is available; add crash/hang worker cases.
-2. A native helper IPC adapter for the existing supervised lifecycle, with
-   driver architecture selection, bounded output, and no public raw DLL path.
+   reviewed native toolchain is available.
+2. Adapt the fixture-only worker contract to a separately reviewed registered
+   driver descriptor and helper IPC package, without exposing a raw DLL path.
 3. Driver provenance, registered static inspection, explicit trial approval,
    and actual Open/ReadVersion/Close evidence before vehicle-channel work.
 
