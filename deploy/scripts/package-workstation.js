@@ -168,7 +168,7 @@ export function packageWorkstation(options = {}) {
     validatePackagedDependencies(staging);
     fs.appendFileSync(path.join(staging, "README.txt"), "\n移行後はverify-workstation.cmdを開いてファイル内容を検査できます。追加の導入や通信はありません。\n不一致・欠落時は元のパッケージを一式移し直してください。自動修復はしません。\n同梱一覧との一致検査であり、署名・真正性・実車適合の証明ではありません。一覧外の追加ファイルは検査しません。\n");
     fs.appendFileSync(path.join(staging, "README.txt"), "通常のstart-workstation.cmd起動とnpm startでは、検査成功後にサーバーを起動します。\n検査一覧やpackage-info.jsonを削除せず、フォルダー一式を保管してください。\n");
-    fs.appendFileSync(path.join(staging, "README.txt"), "\nJ2534接続準備はinspect-workstation-j2534.cmdを開いて確認してください。登録ドライバーとDLLの静的検査結果を日本語で表示します。\nVCI・車両を接続する必要はありません。DLL実行、実機通信、ファイル保存、外部送信は行いません。静的検査済みでも実車適合や接続成功の証明ではありません。\n");
+    fs.appendFileSync(path.join(staging, "README.txt"), "\nJ2534接続準備はinspect-workstation-j2534.cmdを開いて確認してください。登録ドライバーとDLLの静的検査結果を日本語で表示し、選択した番号は専用workerで非実行検査できます。\nVCI・車両を接続する必要はありません。DLLロード、PassThruOpen、実機通信、ファイル保存、外部送信は行いません。検査合格でも実車適合や接続成功の証明ではありません。\n");
     const info = { appVersion: status.version, dependencyCount: dependencies.length, includesNode: false, fileCount: fileCount + 4 };
     fs.writeFileSync(path.join(staging, "package-info.json"), JSON.stringify(info, null, 2) + "\n", { flag: "wx" });
     for (const relative of ["package.json", "README.txt", "package-info.json"]) recordFile(relative);

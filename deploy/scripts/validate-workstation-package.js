@@ -7,7 +7,7 @@ import { pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
 import { packageWorkstation } from "./package-workstation.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
-import { formatJ2534WorkstationInspection } from "./inspect-workstation-j2534.js";
+import { formatJ2534NativePreflightResult, formatJ2534WorkstationInspection, parseJ2534PreflightSelection, runJ2534WorkstationPreflight } from "./inspect-workstation-j2534.js";
 
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
@@ -69,6 +69,38 @@ try {
   const sanitized = formatJ2534WorkstationInspection([privateInput], "win32");
   check(!/[\x1b\r\u202e]/.test(sanitized) && !sanitized.includes("C:/private") && !sanitized.includes("private-token"), "Inspection disclosed private fields or terminal control characters");
   check(JSON.stringify(privateInput) === before, "Formatting changed a driver result");
+  check(parseJ2534PreflightSelection([], 2).status === "none"
+    && parseJ2534PreflightSelection(["--preflight-index", "2"], 2).index === 1, "J2534 preflight selection did not preserve one-based explicit selection");
+  for (const args of [["--preflight-index", "0"], ["--preflight-index", "3"], ["--preflight-index", "1", "extra"], ["--unknown", "1"], ["--preflight-index"]])
+    check(parseJ2534PreflightSelection(args, 2).status === "invalid", `J2534 preflight selection accepted invalid arguments: ${args.join(" ")}`);
+  const privatePreflight = formatJ2534NativePreflightResult({ verification_status: "rejected", blockers: ["native_preflight_timeout"], private_library_path: "C:/private/driver.dll", request_nonce: "private-nonce" }, privateInput, 0);
+  check(privatePreflight.includes("非実行の事前検査を完了できませんでした") && privatePreflight.includes("native_preflight_timeout")
+    && privatePreflight.includes("PassThruOpen: 未実施") && privatePreflight.includes("車両への送信: 未実施")
+    && !privatePreflight.includes("C:/private") && !privatePreflight.includes("private-token") && !privatePreflight.includes("private-nonce"), "J2534 preflight result leaked private data or overstated execution");
+  let selectedDeviceId = null;
+  let selectedTimeout = null;
+  const selectedReport = await runJ2534WorkstationPreflight([staticReady, { ...staticReady, id: "fixture-second", label: "Second VCI" }], 1, {
+    createDescriptor: ({ enabled, selectedDeviceId: id }) => { check(enabled === true, "J2534 preflight did not require live discovery"); selectedDeviceId = id; return Object.freeze({ opaque: true }); },
+    runPreflight: async (descriptor, options) => { check(descriptor.opaque === true, "J2534 preflight changed the issued descriptor"); selectedTimeout = options.timeout_ms; return { verification_status: "rejected", blockers: ["native_preflight_timeout"] }; }
+  });
+  check(selectedDeviceId === "fixture-second" && selectedTimeout === 5000 && selectedReport.passed === false
+    && selectedReport.output.includes("2. Second VCI"), "J2534 preflight did not use only the explicitly selected registration or report rejection");
+  for (const blocker of ["native_preflight_timeout", "native_preflight_worker_missing", "registered_driver_file_changed"]) {
+    const rejected = await runJ2534WorkstationPreflight([staticReady], 0, {
+      createDescriptor: () => Object.freeze({ opaque: true }),
+      runPreflight: async () => ({ verification_status: "rejected", blockers: [blocker] })
+    });
+    check(rejected.passed === false && rejected.output.includes(blocker), `J2534 ${blocker} did not produce a failed CLI outcome`);
+  }
+  const verifiedPreflight = await runJ2534WorkstationPreflight([staticReady], 0, {
+    createDescriptor: () => Object.freeze({ opaque: true }),
+    runPreflight: async () => ({ verification_status: "verified_non_executable", blockers: [], fixed_drive_verified: true,
+      final_path_matches: true, file_identity_stable: true, sha256_matches: true, size_matches: true,
+      architecture_matches: true, runtime_architecture_matches: true })
+  });
+  check(verifiedPreflight.passed === true && verifiedPreflight.output.includes("非実行の事前検査に合格しました"), "Verified J2534 non-executing preflight did not produce a successful CLI outcome");
+  await assert.rejects(() => runJ2534WorkstationPreflight([staticReady], -1, { createDescriptor: () => { throw new Error("must-not-run"); } }), /j2534_preflight_selection_invalid/);
+  check(true, "Invalid J2534 selection reached descriptor issuance");
   const valid = fixture();
   fs.writeFileSync(path.join(valid.sourceDirectory, ".env"), "private-fixture");
   fs.writeFileSync(path.join(valid.sourceDirectory, "saved-case.json"), "private-fixture");
@@ -229,7 +261,9 @@ try {
     const env = { ...process.env, NODE_PATH: "", PORT: "0", LOCAL_BRIDGE_PORT: "0" };
     for (const key of ["NODE_OPTIONS", "LOCAL_BRIDGE_REPLAY_LOG", "LOCAL_BRIDGE_PAIRING_TOKEN"]) delete env[key];
     const windows = process.platform === "win32";
-    const command = entry === "inspect" ? '""inspect-workstation-j2534.cmd" --no-pause"' : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
+    const command = entry === "inspect" ? '""inspect-workstation-j2534.cmd" --no-pause"'
+      : entry === "inspect-invalid" ? '""inspect-workstation-j2534.cmd" --preflight-index 0 --no-pause"'
+      : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
       { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
       (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
@@ -245,6 +279,10 @@ try {
     check(inspection.code === 0 && inspection.output.includes("J2534接続準備チェック"), `Packaged J2534 inspection failed: ${inspection.output}`);
     check(inspection.output.includes("Package files match:") && inspection.output.indexOf("Package files match:") < inspection.output.indexOf("J2534接続準備チェック"), "Driver inspection started before package verification");
     check(!inspection.output.includes("診断画面:") && !inspection.output.includes("ペアリング値") && inspection.output.includes("車両通信: 未実施 / DLL実行: 未実施"), "Driver inspection started a server or overstated vehicle access");
+    check(!inspection.output.includes("J2534登録ドライバー 非実行事前検査"), "Non-interactive J2534 inspection ran preflight without explicit selection");
+    const invalidInspection = await runEntry("inspect-invalid");
+    check(invalidInspection.code === 2 && invalidInspection.output.includes("Package files match:")
+      && invalidInspection.output.includes("検査番号を確認できません") && !invalidInspection.output.includes("DLLロード: 実施"), "Invalid packaged J2534 selection was not rejected after package verification");
   }
   const guardedEntries = process.platform === "win32" ? [...entries, "inspect"] : entries;
   for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true], ["scripts/inspect-workstation-j2534.js", false]]) {
@@ -261,6 +299,22 @@ try {
         check(missing ? !fs.existsSync(target) : fs.readFileSync(target, "utf8").startsWith("throw new Error"), `${entry}: failed verification repaired or removed files`);
       }
     } finally { fs.writeFileSync(target, original); }
+  }
+  if (process.platform === "win32") {
+    const packageInfoPath = path.join(actual.directory, "package-info.json");
+    const packageIntegrityPath = path.join(actual.directory, "package-integrity.json");
+    const packageInfo = fs.readFileSync(packageInfoPath);
+    const packageIntegrity = fs.readFileSync(packageIntegrityPath);
+    try {
+      fs.unlinkSync(packageInfoPath);
+      fs.unlinkSync(packageIntegrityPath);
+      const blocked = await runEntry("inspect");
+      check(blocked.code === 1 && blocked.output.includes("Package verification files are missing")
+        && !blocked.output.includes("J2534接続準備チェック"), "J2534 inspection failed open when both package verification files were missing");
+    } finally {
+      fs.writeFileSync(packageInfoPath, packageInfo);
+      fs.writeFileSync(packageIntegrityPath, packageIntegrity);
+    }
   }
   check(verifyWorkstationPackage(actual.directory).appVersion === actual.appVersion, "Startup failure tests did not restore the package");
   const smoke = `

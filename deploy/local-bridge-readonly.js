@@ -1228,7 +1228,10 @@ function createJ2534RegisteredDriverDescriptorFromRegistry(registryText, request
     vehicle_connection_attempted: false,
     vehicle_command_enabled: false
   });
-  const issuableBlockers = new Set(["native_fixed_drive_verification_required"]);
+  const issuableBlockers = new Set([
+    "native_fixed_drive_verification_required",
+    "registered_driver_runtime_architecture_mismatch"
+  ]);
   if (inspection.fingerprint && inspection.blockers.every((blocker) => issuableBlockers.has(blocker))) {
     j2534RegisteredDriverDescriptorSecrets.set(descriptor, {
       selectedDeviceId,
@@ -1322,6 +1325,13 @@ export async function runJ2534RegisteredDriverNativePreflight(descriptor, option
     && left.device === right.device && left.inode === right.inode && left.size === right.size
     && left.mtime_ns === right.mtime_ns && left.ctime_ns === right.ctime_ns && left.sha256 === right.sha256;
   const before = inspectRegisteredJ2534Library(secret.libraryPath);
+  const issuableBlockers = new Set([
+    "native_fixed_drive_verification_required",
+    "registered_driver_runtime_architecture_mismatch"
+  ]);
+  if (!before.fingerprint || !before.blockers.includes("native_fixed_drive_verification_required")
+    || !before.blockers.every((blocker) => issuableBlockers.has(blocker)))
+    return blocked(secret.selectedDeviceId, "registered_driver_preflight_ineligible");
   if (!sameFingerprint(secret.fingerprint, before.fingerprint))
     return blocked(secret.selectedDeviceId, "registered_driver_file_changed");
   const result = await runJ2534NativePreflight({

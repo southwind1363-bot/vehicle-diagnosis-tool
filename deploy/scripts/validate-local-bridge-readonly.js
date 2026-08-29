@@ -453,6 +453,25 @@ try {
       check(rejectedNativeFixture.verification_status === "rejected" && rejectedNativeFixture.blockers.join(",") === "live_registry_descriptor_required" && rejectedNativeFixture.execution_enabled === false && rejectedNativeFixture.dll_load_attempted === false && !JSON.stringify(rejectedNativeFixture).includes(descriptorLibraryPath), "J2534 native preflight accepted or exposed a fixture-registry descriptor");
       check(rejectedNativeClone.verification_status === "rejected" && rejectedNativeClone.blockers.join(",") === "descriptor_not_issued" && rejectedNativeClone.execution_enabled === false, "J2534 native preflight accepted a cloned descriptor");
 
+      const mismatchedRegistryText = [
+        "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Opposite Architecture VCI",
+        "    Name    REG_SZ    Opposite Architecture J2534 VCI",
+        "    Vendor    REG_SZ    Fixture Vendor",
+        `    FunctionLibrary    REG_SZ    ${mismatchedLibraryPath}`
+      ].join("\n");
+      const mismatchedDeviceId = parseJ2534RegistryDrivers(mismatchedRegistryText)[0]?.id;
+      const mismatchedDescriptor = createJ2534RegisteredDriverFixtureDescriptor({ registryText: mismatchedRegistryText, selectedDeviceId: mismatchedDeviceId });
+      const mismatchedVerification = verifyJ2534RegisteredDriverDescriptor(mismatchedDescriptor);
+      const mismatchedNativeFixture = await runJ2534RegisteredDriverNativePreflight(mismatchedDescriptor);
+      check(mismatchedDescriptor.descriptor_status === "blocked" && mismatchedDescriptor.runtime_compatible === false
+        && mismatchedDescriptor.blockers.includes("registered_driver_runtime_architecture_mismatch")
+        && mismatchedDescriptor.blockers.includes("native_fixed_drive_verification_required"), "J2534 opposite-architecture descriptor changed normal readiness or lost its safety gates");
+      check(!mismatchedVerification.blockers.includes("descriptor_not_issued")
+        && mismatchedVerification.blockers.includes("fixture_registry_source_not_executable")
+        && mismatchedVerification.blockers.includes("registered_driver_runtime_architecture_mismatch"), "J2534 opposite-architecture driver was not privately issued for architecture-matched non-executing preflight");
+      check(mismatchedNativeFixture.blockers.join(",") === "live_registry_descriptor_required"
+        && mismatchedNativeFixture.dll_load_attempted === false && mismatchedNativeFixture.vehicle_communication_started === false, "J2534 opposite-architecture fixture bypassed the live-registry gate");
+
       const decoratedRegistryText = [
         "HKEY_LOCAL_MACHINE\\SOFTWARE\\PassThruSupport.04.04\\Fixture Vendor\\Decorated VCI",
         "    Name    REG_SZ    Decorated J2534 VCI",
