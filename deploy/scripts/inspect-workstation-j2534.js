@@ -72,7 +72,8 @@ const isVerifiedNonExecutablePreflight = (result) => result?.verification_status
   && result?.size_matches === true && result?.architecture_matches === true
   && result?.runtime_architecture_matches === true
   && result?.authenticode_status === "verified_file_policy"
-  && result?.authenticode_network_retrieval_allowed === false;
+  && result?.authenticode_network_retrieval_allowed === false
+  && result?.global_mutex_status === "acquired_for_preflight";
 
 export function formatJ2534NativePreflightResult(result = {}, device = {}, index = 0) {
   const driverBits = device?.driver_library_bitness === 32 || device?.driver_library_bitness === 64 ? `${device.driver_library_bitness}bit` : "未確認";

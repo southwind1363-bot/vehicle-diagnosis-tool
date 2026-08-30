@@ -35,6 +35,7 @@ namespace VehicleDiagnosis.Native
         [DataMember(Name = "blockers")] internal string[] Blockers = new string[] { "native_preflight_request_invalid" };
         [DataMember(Name = "authenticode_status")] internal string AuthenticodeStatus = "not_verified";
         [DataMember(Name = "authenticode_network_retrieval_allowed")] internal bool AuthenticodeNetworkRetrievalAllowed = false;
+        [DataMember(Name = "global_mutex_status")] internal string GlobalMutexStatus = "not_acquired";
         [DataMember(Name = "fixed_drive_verified")] internal bool FixedDriveVerified;
         [DataMember(Name = "final_path_matches")] internal bool FinalPathMatches;
         [DataMember(Name = "file_identity_stable")] internal bool FileIdentityStable;
@@ -135,27 +136,41 @@ namespace VehicleDiagnosis.Native
                     || request.DescriptorSource != "live_windows_registry"
                     || !SafeToken(request.RequestNonce, 32, 64) || !SafeToken(request.SelectedDeviceId, 8, 96)
                     || request.ExecutionEnabled || request.VehicleCommandEnabled) return 2;
-                RegisteredDriverPreflightResult result = J2534RegisteredDriverPreflight.Verify(request.PrivateLibraryPath,
-                    request.ExpectedSha256, request.ExpectedFileSize, request.ExpectedArchitecture);
-                WriteResponse(new PreflightResponse {
-                    RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
-                    DescriptorVersion = request.DescriptorVersion, VerificationStatus = result.Status,
-                    Blockers = result.Blockers, AuthenticodeStatus = result.AuthenticodeStatus,
-                    AuthenticodeNetworkRetrievalAllowed = result.AuthenticodeNetworkRetrievalAllowed,
-                    FixedDriveVerified = result.FixedDriveVerified,
-                    FinalPathMatches = result.FinalPathMatches, FileIdentityStable = result.FileIdentityStable,
-                    Sha256Matches = result.Sha256Matches, SizeMatches = result.SizeMatches,
-                    ArchitectureMatches = result.ArchitectureMatches,
-                    RuntimeArchitectureMatches = result.RuntimeArchitectureMatches,
-                    DllLoadAttempted = result.DllLoadAttempted,
-                    GetProcAddressAttempted = result.GetProcAddressAttempted,
-                    PassThruOpenAttempted = result.PassThruOpenAttempted,
-                    VehicleConnectionAttempted = result.VehicleConnectionAttempted,
-                    VehicleCommunicationStarted = result.VehicleCommunicationStarted,
-                    WouldTransmit = result.WouldTransmit,
-                    VehicleCommandEnabled = result.VehicleCommandEnabled,
-                    ExecutionEnabled = result.ExecutionEnabled
-                });
+                J2534GlobalMutexLease lease;
+                if (!J2534GlobalMutexLease.TryAcquire(out lease))
+                {
+                    WriteResponse(new PreflightResponse {
+                        RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
+                        DescriptorVersion = request.DescriptorVersion,
+                        Blockers = new string[] { "native_global_mutex_not_acquired" }
+                    });
+                    return 0;
+                }
+                using (lease)
+                {
+                    RegisteredDriverPreflightResult result = J2534RegisteredDriverPreflight.Verify(request.PrivateLibraryPath,
+                        request.ExpectedSha256, request.ExpectedFileSize, request.ExpectedArchitecture);
+                    WriteResponse(new PreflightResponse {
+                        RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
+                        DescriptorVersion = request.DescriptorVersion, VerificationStatus = result.Status,
+                        Blockers = result.Blockers, AuthenticodeStatus = result.AuthenticodeStatus,
+                        AuthenticodeNetworkRetrievalAllowed = result.AuthenticodeNetworkRetrievalAllowed,
+                        GlobalMutexStatus = "acquired_for_preflight",
+                        FixedDriveVerified = result.FixedDriveVerified,
+                        FinalPathMatches = result.FinalPathMatches, FileIdentityStable = result.FileIdentityStable,
+                        Sha256Matches = result.Sha256Matches, SizeMatches = result.SizeMatches,
+                        ArchitectureMatches = result.ArchitectureMatches,
+                        RuntimeArchitectureMatches = result.RuntimeArchitectureMatches,
+                        DllLoadAttempted = result.DllLoadAttempted,
+                        GetProcAddressAttempted = result.GetProcAddressAttempted,
+                        PassThruOpenAttempted = result.PassThruOpenAttempted,
+                        VehicleConnectionAttempted = result.VehicleConnectionAttempted,
+                        VehicleCommunicationStarted = result.VehicleCommunicationStarted,
+                        WouldTransmit = result.WouldTransmit,
+                        VehicleCommandEnabled = result.VehicleCommandEnabled,
+                        ExecutionEnabled = result.ExecutionEnabled
+                    });
+                }
                 return 0;
             }
             catch { return 2; }

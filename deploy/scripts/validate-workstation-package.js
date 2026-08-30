@@ -25,7 +25,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
   for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
   fs.copyFileSync(new URL("./j2534-registered-driver-native-preflight.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-registered-driver-native-preflight.js"));
-  for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534RegisteredDriverPreflightWorker.cs"])
+  for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534GlobalMutexLease.cs", "J2534RegisteredDriverPreflightWorker.cs"])
     fs.copyFileSync(new URL(`./native/${name}`, import.meta.url), path.join(sourceDirectory, "scripts", "native", name));
   const pkg = { name: "fixture", version: "1.0.0", type: "module", dependencies: { express: "1.0.0" } };
   const lock = { lockfileVersion: 3, packages: { "": { name: pkg.name, version: pkg.version, dependencies: pkg.dependencies } } };
@@ -96,12 +96,12 @@ try {
     createDescriptor: () => Object.freeze({ opaque: true }),
     runPreflight: async () => ({ verification_status: "verified_non_executable", blockers: [], fixed_drive_verified: true,
       final_path_matches: true, file_identity_stable: true, sha256_matches: true, size_matches: true,
-      architecture_matches: true, runtime_architecture_matches: true, authenticode_status: "verified_file_policy", authenticode_network_retrieval_allowed: false })
+      architecture_matches: true, runtime_architecture_matches: true, authenticode_status: "verified_file_policy", authenticode_network_retrieval_allowed: false, global_mutex_status: "acquired_for_preflight" })
   });
   check(verifiedPreflight.passed === true && verifiedPreflight.output.includes("非実行の事前検査に合格しました") && verifiedPreflight.output.includes("WinVerifyTrust / ネットワーク取得なし"), "Verified J2534 non-executing preflight did not produce a successful CLI outcome");
   const unsignedPreflight = await runJ2534WorkstationPreflight([staticReady], 0, {
     createDescriptor: () => Object.freeze({ opaque: true }),
-    runPreflight: async () => ({ verification_status: "rejected", blockers: ["native_authenticode_not_trusted"], authenticode_status: "not_trusted", authenticode_network_retrieval_allowed: false })
+    runPreflight: async () => ({ verification_status: "rejected", blockers: ["native_authenticode_not_trusted"], authenticode_status: "not_trusted", authenticode_network_retrieval_allowed: false, global_mutex_status: "acquired_for_preflight" })
   });
   check(unsignedPreflight.passed === false && unsignedPreflight.output.includes("Windowsの署名ポリシー") && unsignedPreflight.output.includes("native_authenticode_not_trusted"), "Untrusted J2534 driver did not produce a safe CLI rejection");
   await assert.rejects(() => runJ2534WorkstationPreflight([staticReady], -1, { createDescriptor: () => { throw new Error("must-not-run"); } }), /j2534_preflight_selection_invalid/);
@@ -136,7 +136,7 @@ try {
     expected_file_size: preflightBytes.length, expected_architecture: "x64"
   }, { timeout_ms: 5000 });
 
-  check(packagedPreflight.verification_status === "verified_non_executable" && packagedPreflight.authenticode_status === "verified_file_policy" && packagedPreflight.authenticode_network_retrieval_allowed === false && packagedPreflight.execution_enabled === false
+  check(packagedPreflight.verification_status === "verified_non_executable" && packagedPreflight.authenticode_status === "verified_file_policy" && packagedPreflight.authenticode_network_retrieval_allowed === false && packagedPreflight.global_mutex_status === "acquired_for_preflight" && packagedPreflight.execution_enabled === false
     && packagedPreflight.vehicle_communication_started === false && !JSON.stringify(packagedPreflight).includes(preflightTarget), "Packaged J2534 preflight did not complete through private IPC without exposing or executing the target");
   check(instructions.includes("verify-workstation.cmd") && instructions.includes("署名・真正性・実車適合の証明ではありません"), "Integrity instructions overclaim verification");
   const integrityPath = path.join(result.directory, "package-integrity.json");

@@ -6,7 +6,7 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.348. This native binding remains
+The public app and PC package metadata are 3.13.349. This native binding remains
 development-only and is not bundled in either release.
 
 ## Validation
@@ -49,6 +49,12 @@ immediately before native preflight. A changed or incomplete package is rejected
 before the worker starts. This is copy-integrity evidence only, cannot be
 supplied by public caller fields, and does not prove publisher authenticity or
 authorize DLL loading, PassThruOpen, or vehicle communication.
+
+The production preflight worker also acquires the Windows named Global mutex
+before opening the candidate DLL and holds it through the complete non-executing
+preflight. Contention fails without waiting. Separate x86/x64 process fixtures
+verify exclusion and acquisition after release. The lease currently ends with
+preflight and therefore is not authorization for a future identity load.
 
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate

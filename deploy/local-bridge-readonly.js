@@ -1422,7 +1422,7 @@ export async function runJ2534RegisteredDriverNativePreflight(descriptor, option
 
 const J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS = Object.freeze([
   "contract_version", "selected_device_id", "verification_status", "blockers",
-  "authenticode_status", "authenticode_network_retrieval_allowed", "fixed_drive_verified",
+  "authenticode_status", "authenticode_network_retrieval_allowed", "global_mutex_status", "fixed_drive_verified",
   "final_path_matches", "file_identity_stable", "sha256_matches",
   "size_matches", "architecture_matches", "runtime_architecture_matches", "dll_load_attempted",
   "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted",
@@ -1611,6 +1611,7 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
           "architecture_matches", "runtime_architecture_matches"].every((key) => result[key] === true)
         && result.authenticode_status === "verified_file_policy"
         && result.authenticode_network_retrieval_allowed === false
+        && result.global_mutex_status === "acquired_for_preflight"
         && ["dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted",
           "vehicle_communication_started", "would_transmit", "vehicle_command_enabled", "execution_enabled"].every((key) => result[key] === false);
     } catch {

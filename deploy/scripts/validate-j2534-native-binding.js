@@ -13,7 +13,7 @@ const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
 const preflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534NativePreflightFixtureWorker.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
-const productionPreflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534RegisteredDriverPreflightWorker.cs"]
+const productionPreflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534GlobalMutexLease.cs", "J2534RegisteredDriverPreflightWorker.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
 
 function execute(file, args, input = null) {
@@ -209,6 +209,19 @@ async function main() {
       ]);
       assert.equal(productionWorkerCompile.error, null, `Production native preflight worker compilation failed (${platform.name}): ${productionWorkerCompile.stdout}${productionWorkerCompile.stderr}`);
       total++;
+      const mutexFixture = path.join(platformDirectory, "j2534-global-mutex-tests.exe");
+      createdFiles.push(mutexFixture);
+      const mutexCompile = await execute(platform.compiler, [
+        "/nologo", "/target:exe", "/platform:" + platform.name, "/optimize+", "/warnaserror+",
+        "/out:" + mutexFixture,
+        path.join(scriptsDirectory, "native", "J2534GlobalMutexLease.cs"),
+        path.join(scriptsDirectory, "native", "J2534GlobalMutexLeaseTests.cs")
+      ]);
+      assert.equal(mutexCompile.error, null, "Global mutex fixture compilation failed: " + mutexCompile.stdout + mutexCompile.stderr);
+      const mutexResult = await execute(mutexFixture, []);
+      assert.equal(mutexResult.error, null, "Global mutex process fixture failed: " + mutexResult.stdout + mutexResult.stderr);
+      assert.equal(mutexResult.stdout.trim(), "global-mutex-process-checks-ok");
+      total += 3;
       const preflightDescriptor = name => {
         const target = path.join(platformDirectory, name);
         const bytes = fs.readFileSync(target);
@@ -262,6 +275,7 @@ async function main() {
       assert.equal(directResponse.would_transmit, false);
       assert.equal(directResponse.authenticode_status, "verified_file_policy");
       assert.equal(directResponse.authenticode_network_retrieval_allowed, false);
+      assert.equal(directResponse.global_mutex_status, "acquired_for_preflight");
       total += 9;
       const unsignedRequest = {
         ...privateWorkerRequest, request_nonce: `native-worker-${platform.name}-nonce-unsigned-0001`,
@@ -275,6 +289,7 @@ async function main() {
       assert.equal(unsignedResponse.verification_status, "rejected");
       assert.deepEqual(unsignedResponse.blockers, ["native_authenticode_not_trusted"]);
       assert.equal(unsignedResponse.authenticode_status, "not_trusted");
+      assert.equal(unsignedResponse.global_mutex_status, "acquired_for_preflight");
       assert.equal(unsignedResponse.dll_load_attempted, false);
       total += 6;
       const extraKeyWorker = await execute(productionPreflightWorker, [], JSON.stringify({ ...privateWorkerRequest, extra: true }));
