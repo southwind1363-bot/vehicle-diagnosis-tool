@@ -9808,6 +9808,63 @@
       vehicle_command_enabled: false
     };
   }
+  function buildUdsReadTransportResponseLifecycle(responseEvidence = {}, adapterBoundary = {}) {
+    const evidenceStatus = String(responseEvidence.status || "not_attempted");
+    const evidenceAccepted = responseEvidence.evidenceValid === true;
+    const lifecycleByStatus = {
+      not_attempted: { state: "not_started", terminal: false, nextActionId: "implement_adapter_before_attempt" },
+      response_received: { state: "response_received", terminal: true, nextActionId: "preserve_decoded_response" },
+      negative_response: { state: "negative_response", terminal: true, nextActionId: "review_negative_response" },
+      pending: { state: "response_pending", terminal: false, nextActionId: "wait_within_pending_limit" },
+      timeout: { state: "timed_out", terminal: true, nextActionId: "review_transport_and_timing" },
+      transport_error: { state: "transport_failed", terminal: true, nextActionId: "review_transport_error" },
+      cancelled: { state: "cancelled", terminal: true, nextActionId: "review_cancellation" }
+    };
+    const lifecycle = evidenceAccepted
+      ? lifecycleByStatus[evidenceStatus] || { state: "invalid_evidence", terminal: false, nextActionId: "reject_response_attempt_evidence" }
+      : { state: "invalid_evidence", terminal: false, nextActionId: "reject_response_attempt_evidence" };
+    const responseReceived = evidenceAccepted && evidenceStatus === "response_received";
+    const pending = evidenceAccepted && evidenceStatus === "pending";
+    const timeoutObserved = evidenceAccepted && evidenceStatus === "timeout";
+    const transportErrorObserved = evidenceAccepted && evidenceStatus === "transport_error";
+    return {
+      schemaVersion: "uds_read_transport_response_lifecycle_v1",
+      schema_version: "uds_read_transport_response_lifecycle_v1",
+      state: lifecycle.state,
+      evidenceStatus,
+      evidence_status: evidenceStatus,
+      evidenceAccepted,
+      evidence_accepted: evidenceAccepted,
+      terminal: lifecycle.terminal,
+      responseReceived,
+      response_received: responseReceived,
+      pending,
+      timeoutObserved,
+      timeout_observed: timeoutObserved,
+      transportErrorObserved,
+      transport_error_observed: transportErrorObserved,
+      adapterImplemented: adapterBoundary.adapterImplemented === true,
+      adapter_implemented: adapterBoundary.adapterImplemented === true,
+      dispatchEnabled: false,
+      dispatch_enabled: false,
+      retainedRawFrames: false,
+      retained_raw_frames: false,
+      retainedRawResponse: false,
+      retained_raw_response: false,
+      planningOnly: true,
+      planning_only: true,
+      nextActionId: lifecycle.nextActionId,
+      next_action_id: lifecycle.nextActionId,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
   function buildUdsReadRequestManifest(summary = {}, context = {}) {
     const directDataIdentifier = pickDefined(summary.dataIdentifier, summary.data_identifier, null);
     const summaryCandidates = Array.isArray(summary.dataIdentifierCandidates)
@@ -9897,6 +9954,7 @@
     const udsReadTransportAdapterBoundary = buildUdsReadTransportAdapterBoundary(udsReadTransportPlan);
     const responseAttemptInput = pickPresent(summary.udsReadResponseAttemptEvidence, summary.uds_read_response_attempt_evidence, summary.responseAttemptEvidence, summary.response_attempt_evidence, context.udsReadResponseAttemptEvidence, context.uds_read_response_attempt_evidence, null);
     const udsReadResponseAttemptEvidence = buildUdsReadResponseAttemptEvidence(responseAttemptInput, udsReadTransportPlan);
+    const udsReadTransportResponseLifecycle = buildUdsReadTransportResponseLifecycle(udsReadResponseAttemptEvidence, udsReadTransportAdapterBoundary);
     const executionBlockReason = selectionStatus === "verified"
       ? udsReadTransportPlan.executionBlockReason
       : executionBlockReasonByStatus[selectionStatus];
@@ -9931,6 +9989,8 @@
       uds_read_transport_adapter_boundary: udsReadTransportAdapterBoundary,
       udsReadResponseAttemptEvidence,
       uds_read_response_attempt_evidence: udsReadResponseAttemptEvidence,
+      udsReadTransportResponseLifecycle,
+      uds_read_transport_response_lifecycle: udsReadTransportResponseLifecycle,
       transportPlanningReady: udsReadTransportPlan.planningReady,
       transport_planning_ready: udsReadTransportPlan.planningReady,
       executionBlockReason,
@@ -10127,6 +10187,7 @@
       udsReadRequestManifestInput?.udsReadResponseAttemptEvidence || udsReadRequestManifestInput?.uds_read_response_attempt_evidence || null,
       normalizedUdsReadTransportPlan
     );
+    const normalizedUdsReadTransportResponseLifecycle = buildUdsReadTransportResponseLifecycle(normalizedUdsReadResponseAttemptEvidence, normalizedUdsReadTransportAdapterBoundary);
     const normalizedUdsManifestExecutionBlockReason = normalizedUdsManifestSelectionStatus === "verified"
       ? normalizedUdsReadTransportPlan.executionBlockReason
       : udsManifestExecutionBlockReasonByStatus[normalizedUdsManifestSelectionStatus] || "uds_data_identifier_invalid";
@@ -10162,6 +10223,8 @@
         uds_read_transport_adapter_boundary: normalizedUdsReadTransportAdapterBoundary,
         udsReadResponseAttemptEvidence: normalizedUdsReadResponseAttemptEvidence,
         uds_read_response_attempt_evidence: normalizedUdsReadResponseAttemptEvidence,
+        udsReadTransportResponseLifecycle: normalizedUdsReadTransportResponseLifecycle,
+        uds_read_transport_response_lifecycle: normalizedUdsReadTransportResponseLifecycle,
         transportPlanningReady: normalizedUdsReadTransportPlan.planningReady,
         transport_planning_ready: normalizedUdsReadTransportPlan.planningReady,
         executionBlockReason: normalizedUdsManifestExecutionBlockReason,

@@ -94,6 +94,7 @@ const UDS_READ_TRANSPORT_ADAPTER_BOUNDARY = Object.freeze({
   adapter_implemented: false,
   dispatch_enabled: false,
   response_attempt_evidence_required: true,
+  response_lifecycle_schema_version: "uds_read_transport_response_lifecycle_v1",
   retained_raw_frames: false,
   execution_enabled: false,
   read_only: true,
