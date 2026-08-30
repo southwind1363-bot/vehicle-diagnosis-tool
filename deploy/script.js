@@ -227,7 +227,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.338";
+const APP_VERSION = "3.13.339";
 const APP_LAST_UPDATED = "2026-08-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2124,7 +2124,7 @@ function isObdInterfaceAutoRequested() {
 function getObdInterfaceSelectionNote(capability = window.ObdReadOnly?.getCapability?.()) {
   if (!isObdInterfaceAutoRequested()) return "手動選択";
   const serialReady = capability?.secureContext === true && capability?.webSerialSupported === true;
-  if (isMobileDevice()) return "自動判定: スマホ用 ELM327 を優先（iPhone接続契約は実装済み、アプリ本体の配布と実機確認は未完了）";
+  if (isMobileDevice()) return "自動判定: スマホ用 ELM327 を優先（iPhone BLEホストと未署名実機ビルドは検証済み、Apple署名・実機確認待ち）";
   if (serialReady) return "自動判定: Web Serial 対応のため ELM327 を優先";
   return "自動判定: Web Serial 非対応のため有線OBD2/J2534適合確認を優先";
 }
@@ -2218,7 +2218,7 @@ function getObdDevelopmentOperationNote(interfaceId) {
 
 function getObdAvailableReadoutNote(interfaceId) {
   if (interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios") {
-    return "現在使える読取: 外部ログの補助取込。iPhone接続契約は実装済みですが、アプリ本体の配布と直接アダプター実機確認は未完了です。";
+    return "現在使える読取: 外部ログの補助取込。iPhone BLEホストと未署名実機ビルドは検証済みですが、Apple署名・iPhoneインストール・直接アダプター実機確認は未完了です。";
   }
   return {
     "user-vci-elm327": "現在使える読取: DTC / ライブデータ / フリーズフレーム / 対応PIDの読取前確認、PCではWeb Serial読取へ移行。",
@@ -2256,7 +2256,7 @@ function getObdAccessStatusMessage(unlocked, capability = window.ObdReadOnly?.ge
   }
   if (interfaceId === "user-vci-elm327") {
     if (getObdInterfaceReadoutRoute(interfaceId)?.platform === "ios") {
-      return `${autoPrefix}ELM327 を使います。iPhone接続契約は実装済みですが、アプリ本体の配布と実アダプター確認は未完了です。外部ログ取込は補助経路として利用できます。`;
+      return `${autoPrefix}ELM327 を使います。iPhone BLEホストと未署名実機ビルドは検証済みですが、Apple署名・iPhoneインストール・実アダプター確認は未完了です。外部ログ取込は補助経路として利用できます。`;
     }
     return capability?.webSerialSupported
       ? `${autoPrefix}ELM327 を使います。デスクトップ版Chrome系ブラウザから読取を開始できます。`
@@ -2309,7 +2309,7 @@ function renderObdConnectionGuide() {
   const interfaceRoute = getObdInterfaceReadoutRoute(interfaceId);
   const isIosElm = interfaceId === "user-vci-elm327" && interfaceRoute?.platform === "ios";
   const lines = isIosElm ? [
-    "端末: iPhone接続契約は実装済み。アプリ本体の配布と実機確認は未完了",
+    "端末: iPhone BLEホストと未署名実機ビルドは検証済み。Apple署名・インストール・実機確認待ち",
     "読取手順: 自前iPhoneコネクタ実装後にELM327へ接続 -> read-only DTC/PID/FF/ECU読取",
     "安全: 車両送信は無効。BLE実機読取は適合確認待ち"
   ] : {
@@ -2366,7 +2366,7 @@ function renderObdConnectionGuide() {
     routeLabel.textContent = "実装経路";
     const routeValue = interfaceRoute.route === "native_connector_required"
       ? interfaceId === "user-vci-elm327"
-        ? "iPhone接続契約は実装済み。BLEホストアプリの配布と実機確認は未完了"
+        ? "iPhone BLEホストと未署名実機ビルドは検証済み。Apple署名・インストール・実機確認待ち"
         : "iPhone direct transport is unimplemented; BLE/SDK protocol verification required"
       : interfaceRoute.route === "desktop_web_serial"
         ? "Web Serial（read-only実装済み・実機確認待ち）"
@@ -2583,7 +2583,7 @@ function prepareSelectedObdInterface() {
   if (readoutRoute?.route === "native_connector_required") {
     obdDevSession.previewMode = null;
     clearRequestedInterfaceSelection();
-    obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle}: iPhone接続契約は実装済みですが、アプリ本体の配布と実アダプター確認は未完了です。現時点の外部ログ取込は接続確認用の補助経路です。`;
+    obdDevStatus.textContent = `${getSelectedObdInterfaceLabel()} / ${selectedVehicle}: iPhone BLEホストと未署名実機ビルドは検証済みですが、Apple署名・iPhoneインストール・実アダプター確認は未完了です。現時点の外部ログ取込は接続確認用の補助経路です。`;
     renderObdDeveloperGate();
     return;
   }
@@ -4801,7 +4801,7 @@ function getObdInterfacePreviewConfig(interfaceId) {
     statusText: `${selected.label}の読取前プレビューです。今見える項目を確認し、読取は ${selected.connectionStatus.nextAction}。`,
     previewStatus: `読取前プレビュー中: 今見える項目を確認。読取は ${selected.connectionStatus.nextAction}`,
     previewGuide: [
-      `スマホ単体: ${interfaceId === "user-vci-elm327" ? "ELM327用iPhone接続契約は実装済み・BLEホストアプリの配布と実機確認待ち" : interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR通信仕様確認と専用iPhoneコネクタ実装待ち" : "表示確認のみ"}`,
+      `スマホ単体: ${interfaceId === "user-vci-elm327" ? "ELM327用iPhone BLEホストと未署名実機ビルドは検証済み・Apple署名と実機確認待ち" : interfaceId === "user-vci-thinkcar-bluetooth" ? "THINKCAR通信仕様確認と専用iPhoneコネクタ実装待ち" : "表示確認のみ"}`,
       `読取入口: ${selected.connectionStatus.nextAction.replace(/^読取は/, "").replace(/で確認$/, "")}`,
       `操作順: ${previewRoute}`,
       "表示項目: DTC / フリーズフレーム / ライブデータ / ECU情報 / Mode06 / 対応PID"
@@ -5195,7 +5195,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
       ? getRequestedInterfaceReadyStatus()
       : getRequestedInterfaceIdleStatus();
     const defaultReadyMessage = nativeConnectorRoute
-      ? "iPhone接続契約は実装済みですが、BLEホストアプリの配布と実アダプター確認は未完了です。外部ログ取込は接続確認用の補助経路です。"
+      ? "iPhone BLEホストと未署名実機ビルドは検証済みですが、Apple署名・iPhoneインストール・実アダプター確認は未完了です。外部ログ取込は接続確認用の補助経路です。"
       : selectedInterfaceId === "user-vci-elm327"
       ? "ELM327/STN の読取を開始できます。"
       : selectedInterfaceId === "user-vci-techstream-j2534"
@@ -5204,7 +5204,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
           ? "Bluetooth の DTC、フリーズフレーム、ライブデータ、ECU情報確認を続けられます。"
       : `${selectedInterface} の read-only 確認を続けられます。`;
     const defaultIdleMessage = nativeConnectorRoute
-      ? `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。iPhone接続契約は実装済みですが、BLEホストアプリの配布と実アダプター確認は未完了です。`
+      ? `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。iPhone BLEホストと未署名実機ビルドは検証済みですが、Apple署名・iPhoneインストール・実アダプター確認は未完了です。`
       : selectedInterfaceId === "user-vci-elm327"
       ? `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。Web SerialのELM327/STN読取を試せます。`
       : `${selectedInterface}${selectedVehicle ? ` / ${selectedVehicle}` : ""} を選択中です。ローカルブリッジ経由のread-only確認を試せます。`;
