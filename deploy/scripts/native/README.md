@@ -31,10 +31,10 @@ The x86 and x64 fixture workers also require the PE machine to match their own
 runtime. During an instrumented fixture-only callback, write, rename, and
 delete attempts must fail while the verification handle is held; a read/write
 open must succeed after verification returns. The production build has no such
-callback. The current volume serial plus 64-bit file index is useful identity
-evidence on NTFS but is not a complete ReFS 128-bit file ID, so future loader
-work must add `GetFileInformationByHandleEx(FileIdInfo)` before claiming that
-coverage.
+callback. The verifier now combines the legacy volume serial and 64-bit file
+index evidence with `GetFileInformationByHandleEx(FileIdInfo)` and compares the
+128-bit file ID before and after hashing. This closes the previously documented
+ReFS identity gap without making the preflight result reusable as a load token.
 
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate

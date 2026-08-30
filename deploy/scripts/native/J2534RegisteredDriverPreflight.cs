@@ -35,6 +35,17 @@ namespace VehicleDiagnosis.Native
             right.FileIndexLow = 5;
             return !SameIdentity(left, right);
         }
+        internal static bool FixtureFileId128MutationRejected()
+        {
+            FileIdInformation left = new FileIdInformation { VolumeSerialNumber = 1, FileId = new byte[16] };
+            left.FileId[15] = 2;
+            FileIdInformation right = new FileIdInformation {
+                VolumeSerialNumber = left.VolumeSerialNumber,
+                FileId = (byte[])left.FileId.Clone()
+            };
+            right.FileId[15] = 3;
+            return !SameFileId(left, right);
+        }
 #endif
         private const long MaximumFileSize = 64L * 1024L * 1024L;
         private const uint GenericRead = 0x80000000;
@@ -71,6 +82,14 @@ namespace VehicleDiagnosis.Native
             internal uint FileIndexLow;
         }
 
+        [StructLayout(LayoutKind.Sequential)]
+        private struct FileIdInformation
+        {
+            internal ulong VolumeSerialNumber;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 16)]
+            internal byte[] FileId;
+        }
+
         private sealed class Rejected : Exception
         {
             internal readonly string Code;
@@ -86,6 +105,10 @@ namespace VehicleDiagnosis.Native
         [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool GetFileInformationByHandle(SafeFileHandle file, out ByHandleFileInformation information);
+        [DllImport("kernel32.dll", ExactSpelling = true, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetFileInformationByHandleEx(SafeFileHandle file, int fileInformationClass,
+            out FileIdInformation fileInformation, uint bufferSize);
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
         private static extern uint GetDriveTypeW(string rootPathName);
 
@@ -101,6 +124,7 @@ namespace VehicleDiagnosis.Native
                 {
                     if (handle == null || handle.IsInvalid) throw new Rejected("native_file_open_failed");
                     ByHandleFileInformation before = GetInformation(handle);
+                    FileIdInformation beforeFileId = GetFileIdInformation(handle);
                     if ((before.FileAttributes & (FileAttributeDirectory | FileAttributeReparsePoint)) != 0)
                         throw new Rejected("native_file_type_rejected");
                     long size = FileSize(before);
@@ -126,7 +150,9 @@ namespace VehicleDiagnosis.Native
                         using (SHA256 sha256 = SHA256.Create())
                             actualSha256 = ToHex(sha256.ComputeHash(stream));
                         ByHandleFileInformation after = GetInformation(handle);
-                        if (!SameIdentity(before, after)) throw new Rejected("native_file_identity_changed");
+                        FileIdInformation afterFileId = GetFileIdInformation(handle);
+                        if (!SameIdentity(before, after) || !SameFileId(beforeFileId, afterFileId))
+                            throw new Rejected("native_file_identity_changed");
                         result.FileIdentityStable = true;
                     }
 
@@ -189,6 +215,16 @@ namespace VehicleDiagnosis.Native
             return information;
         }
 
+        private static FileIdInformation GetFileIdInformation(SafeFileHandle handle)
+        {
+            FileIdInformation information;
+            uint size = checked((uint)Marshal.SizeOf(typeof(FileIdInformation)));
+            if (!GetFileInformationByHandleEx(handle, 18, out information, size)
+                || information.FileId == null || information.FileId.Length != 16)
+                throw new Rejected("native_file_id_information_failed");
+            return information;
+        }
+
         private static string GetFinalPath(SafeFileHandle handle, uint flags)
         {
             StringBuilder buffer = new StringBuilder(1024);
@@ -236,6 +272,15 @@ namespace VehicleDiagnosis.Native
                 && left.FileSizeHigh == right.FileSizeHigh && left.FileSizeLow == right.FileSizeLow
                 && left.LastWriteTime.High == right.LastWriteTime.High
                 && left.LastWriteTime.Low == right.LastWriteTime.Low;
+        }
+
+        private static bool SameFileId(FileIdInformation left, FileIdInformation right)
+        {
+            if (left.VolumeSerialNumber != right.VolumeSerialNumber || left.FileId == null || right.FileId == null
+                || left.FileId.Length != 16 || right.FileId.Length != 16) return false;
+            for (int index = 0; index < 16; index++)
+                if (left.FileId[index] != right.FileId[index]) return false;
+            return true;
         }
 
         private static string ReadPeArchitecture(FileStream stream)

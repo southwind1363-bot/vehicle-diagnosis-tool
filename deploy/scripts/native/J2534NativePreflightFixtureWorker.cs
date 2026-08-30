@@ -46,7 +46,8 @@ internal static class J2534NativePreflightFixtureWorker
             + ",\"fixture_rename_blocked\":" + Bool(fixtureRenameBlocked)
             + ",\"fixture_delete_blocked\":" + Bool(fixtureDeleteBlocked)
             + ",\"fixture_handle_released\":" + Bool(fixtureHandleReleased)
-            + ",\"fixture_identity_mutation_rejected\":" + Bool(J2534RegisteredDriverPreflight.FixtureIdentityMutationRejected()) + "}";
+            + ",\"fixture_identity_mutation_rejected\":" + Bool(J2534RegisteredDriverPreflight.FixtureIdentityMutationRejected())
+            + ",\"fixture_file_id_128_mutation_rejected\":" + Bool(J2534RegisteredDriverPreflight.FixtureFileId128MutationRejected()) + "}";
     }
 
     private static void VerifyShareLock(string path)

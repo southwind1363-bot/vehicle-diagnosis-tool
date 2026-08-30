@@ -236,7 +236,8 @@ async function main() {
       for (const field of ["dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted", "vehicle_command_enabled", "execution_enabled"])
         assert.equal(preflightSuccess[field], false, `Native preflight enabled ${field}`);
       assert.equal(preflightSuccess.fixture_identity_mutation_rejected, true);
-      total += 17;
+      assert.equal(preflightSuccess.fixture_file_id_128_mutation_rejected, true);
+      total += 18;
       const privateWorkerRequest = {
         contract_version: "j2534-native-preflight-request-v1", operation: "verify_registered_driver_non_executable",
         request_nonce: `native-worker-${platform.name}-nonce-000000000001`, selected_device_id: `j2534-worker-${platform.name}`,
@@ -282,9 +283,9 @@ async function main() {
       }
       const shareLockPreflight = await runPreflight("share-lock");
       assert.equal(shareLockPreflight.verification_status, "verified_non_executable");
-      for (const field of ["fixture_write_blocked", "fixture_rename_blocked", "fixture_delete_blocked", "fixture_handle_released", "fixture_identity_mutation_rejected"])
+      for (const field of ["fixture_write_blocked", "fixture_rename_blocked", "fixture_delete_blocked", "fixture_handle_released", "fixture_identity_mutation_rejected", "fixture_file_id_128_mutation_rejected"])
         assert.equal(shareLockPreflight[field], true, `Native preflight did not enforce ${field}`);
-      total += 6;
+      total += 7;
       const rejectedPreflightArgs = await execute(preflightWorker, ["--fixture", "success"]);
       assert.equal(rejectedPreflightArgs.error?.code, 2);
       assert.equal(rejectedPreflightArgs.stdout, "");
@@ -293,7 +294,7 @@ async function main() {
       const preflightSourceText = [...new Set([...preflightSources, ...productionPreflightSources])].map(source => fs.readFileSync(source, "utf8")).join("\n");
       assert.ok(!/LoadLibraryExW\s*\(|GetProcAddress\s*\(|PassThruOpen\s*\(/.test(preflightSourceText), "Native preflight source gained a DLL execution API");
       const preflightImports = [...preflightSourceText.matchAll(/private static extern [^;]+?\s+(\w+)\s*\(/g)].map(match => match[1]).sort();
-      assert.deepEqual(preflightImports, ["CreateFileW", "GetDriveTypeW", "GetFileInformationByHandle", "GetFinalPathNameByHandleW"].sort(), "Native preflight P/Invoke allowlist changed");
+      assert.deepEqual(preflightImports, ["CreateFileW", "GetDriveTypeW", "GetFileInformationByHandle", "GetFileInformationByHandleEx", "GetFinalPathNameByHandleW"].sort(), "Native preflight P/Invoke allowlist changed");
       total += 2;
 
       const worker = path.join(platformDirectory, "j2534-native-fixture-worker.exe");
