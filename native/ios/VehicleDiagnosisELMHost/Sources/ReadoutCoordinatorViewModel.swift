@@ -66,9 +66,9 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         let signal = peripheral.rssi.map { "RSSI \($0) dBm" } ?? "RSSI未報告"
         let connectable: String
         switch peripheral.isConnectable {
-        case true: connectable = "接続可能と広告"
-        case false: connectable = "接続不可と広告"
-        case nil: connectable = "接続可否未報告"
+        case .some(true): connectable = "接続可能と広告"
+        case .some(false): connectable = "接続不可と広告"
+        case .none: connectable = "接続可否未報告"
         }
         let visibleServices = peripheral.advertisedServiceUUIDs.prefix(4)
         let remainingServiceCount = peripheral.advertisedServiceUUIDs.count - visibleServices.count
