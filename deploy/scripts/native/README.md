@@ -6,7 +6,7 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.355. This native binding remains
+The public app and PC package metadata are 3.13.356. This native binding remains
 development-only and is not bundled in either release.
 
 ## Validation
@@ -183,9 +183,11 @@ runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
 
 1. Cross-check the generated fixture with a compiler-built C reference when a
    reviewed native toolchain is available.
-2. The packaged CLI now emits `j2534-native-preflight-evidence-v1` without DLL
-   paths, labels, device IDs, nonces, or execution authority. The current PC was
-   observed in the safe `no_registered_driver` state on 2026-08-30.
+2. The packaged CLI emits `j2534-native-preflight-evidence-v1` without DLL
+   paths, labels, device IDs, nonces, or execution authority. Its paired strict
+   validator enforces a 32 KiB input limit, exact keys, semantic state binding,
+   and disabled execution flags before accepting transported evidence. The
+   current PC was observed in the safe `no_registered_driver` state on 2026-08-30.
 3. Install the device vendor's registered J2534 driver on the target Windows
    tablet, then run the packaged v2 private-IPC preflight and retain only that
    sanitized evidence. Do not load the vendor DLL in this gate.

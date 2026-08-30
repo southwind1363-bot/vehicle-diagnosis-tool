@@ -99,6 +99,8 @@ No worker executable, fixture DLL, or vendor driver is shipped or production-wir
    flags, while the parent matches operation/source/device/architecture evidence.
    `j2534-native-preflight-evidence-v1` retains only sanitized status and safety
    fields; raw DLL paths, labels, device IDs, and nonces remain excluded.
+   `j2534-native-preflight-evidence-validation-v1` rejects extra/missing keys,
+   oversized input, inconsistent lifecycle states, and any enabled safety flag.
 4. The current PC reported `no_registered_driver` on 2026-08-30. Install the
    device vendor's registered J2534 driver on the target Windows tablet, verify
    the packaged CLI, and run the v2 non-executing preflight there next.

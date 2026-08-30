@@ -33,7 +33,10 @@ if /i "%~1"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~2"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~3"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~4"=="--no-pause" set "inspection_no_pause=1"
-if /i "%~1"=="--preflight-index" (
+if /i "%~1"=="--validate-evidence-stdin" (
+  if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
+  node "scripts\inspect-workstation-j2534.js" --validate-evidence-stdin
+) else if /i "%~1"=="--preflight-index" (
   if "%~2"=="" goto invalid_option
   if "%~3"=="" (
     node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2"
@@ -61,7 +64,7 @@ set "inspection_exit=%errorlevel%"
 goto finish
 
 :invalid_option
-echo Unknown inspection option. Use --preflight-index NUMBER and optionally --evidence-json.
+echo Unknown inspection option. Use --preflight-index NUMBER, --evidence-json, or --validate-evidence-stdin.
 set "inspection_exit=2"
 
 :finish

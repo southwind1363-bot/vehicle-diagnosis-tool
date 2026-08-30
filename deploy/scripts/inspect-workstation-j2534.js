@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
@@ -93,6 +94,17 @@ const safeEvidenceBlockers = (value, fallback = []) => {
   return Object.freeze(blockers.length ? blockers : sanitize(fallback));
 };
 
+const J2534_NATIVE_PREFLIGHT_EVIDENCE_KEYS = Object.freeze([
+  "schema_version", "captured_at", "evidence_scope", "platform", "bridge_runtime_architecture", "bridge_runtime_bitness",
+  "registration_status", "registered_driver_count", "selected_driver_index", "selected_driver_architecture",
+  "preflight_contract_version", "preflight_verification_status", "blockers", "authenticode_status",
+  "authenticode_network_retrieval_allowed", "global_mutex_status", "fixed_drive_verified", "final_path_matches",
+  "file_identity_stable", "sha256_matches", "size_matches", "architecture_matches", "runtime_architecture_matches",
+  "private_fields_included", "evidence_authorizes_execution", "dll_load_attempted", "get_proc_address_attempted",
+  "pass_thru_open_attempted", "vehicle_connection_attempted", "vehicle_communication_started", "would_transmit",
+  "vehicle_command_enabled", "execution_enabled"
+]);
+
 export function buildJ2534NativePreflightEvidence(devices = [], options = {}) {
   const registered = Array.isArray(devices) ? devices : [];
   const environment = getJ2534DiscoveryEnvironment(registered);
@@ -107,7 +119,9 @@ export function buildJ2534NativePreflightEvidence(devices = [], options = {}) {
     ? safeEvidenceToken(result.verification_status, ["verified_non_executable", "rejected"], "rejected")
     : "not_requested";
   const blockers = result
-    ? safeEvidenceBlockers(result.blockers, ["native_preflight_response_invalid"])
+    ? preflightStatus === "verified_non_executable"
+      ? Object.freeze([])
+      : safeEvidenceBlockers(result.blockers, ["native_preflight_response_invalid"])
     : safeEvidenceBlockers(environment.open_review_blockers, ["no_registered_driver"]);
   return Object.freeze({
     schema_version: "j2534-native-preflight-evidence-v1",
@@ -146,6 +160,85 @@ export function buildJ2534NativePreflightEvidence(devices = [], options = {}) {
   });
 }
 
+export function validateJ2534NativePreflightEvidence(value) {
+  const errors = [];
+  let evidenceSchemaVersion = null;
+  const add = (code) => { if (!errors.includes(code)) errors.push(code); };
+  const plain = (() => { try { return value !== null && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype; } catch { return false; } })();
+  if (!plain) add("j2534_evidence_contract_mismatch");
+  try {
+    if (plain && (Object.keys(value).length !== J2534_NATIVE_PREFLIGHT_EVIDENCE_KEYS.length
+      || !J2534_NATIVE_PREFLIGHT_EVIDENCE_KEYS.every((key) => Object.hasOwn(value, key)))) add("j2534_evidence_contract_mismatch");
+    if (value?.schema_version !== "j2534-native-preflight-evidence-v1"
+      || value?.evidence_scope !== "registered_driver_non_executable_preflight") add("j2534_evidence_contract_mismatch");
+    else evidenceSchemaVersion = value.schema_version;
+    if (typeof value?.captured_at !== "string" || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value.captured_at)
+      || new Date(value.captured_at).toISOString() !== value.captured_at) add("j2534_evidence_timestamp_invalid");
+    if (value?.platform !== "windows" || !["x86", "x64"].includes(value?.bridge_runtime_architecture)
+      || ![32, 64].includes(value?.bridge_runtime_bitness)
+      || (value.bridge_runtime_architecture === "x86" ? 32 : 64) !== value.bridge_runtime_bitness) add("j2534_evidence_runtime_invalid");
+    if (!Number.isInteger(value?.registered_driver_count) || value.registered_driver_count < 0 || value.registered_driver_count > 64
+      || !["no_registered_driver", "registered_driver_detected"].includes(value?.registration_status)) add("j2534_evidence_registration_invalid");
+    if (!(value?.selected_driver_index === null || (Number.isInteger(value.selected_driver_index) && value.selected_driver_index >= 1
+      && value.selected_driver_index <= value.registered_driver_count))
+      || !(value?.selected_driver_architecture === null || ["x86", "x64"].includes(value.selected_driver_architecture))) add("j2534_evidence_selection_invalid");
+    if (!(value?.preflight_contract_version === null || value.preflight_contract_version === "j2534-native-preflight-response-v2")
+      || !["not_requested", "rejected", "verified_non_executable"].includes(value?.preflight_verification_status)) add("j2534_evidence_preflight_invalid");
+    if (!Array.isArray(value?.blockers) || value.blockers.length > 8
+      || !value.blockers.every((item) => typeof item === "string" && /^[a-z0-9_]{3,96}$/.test(item))
+      || new Set(value.blockers).size !== value.blockers.length) add("j2534_evidence_blockers_invalid");
+    if (!["not_verified", "not_trusted", "verified_file_policy"].includes(value?.authenticode_status)
+      || !["not_acquired", "acquired_for_preflight"].includes(value?.global_mutex_status)) add("j2534_evidence_identity_status_invalid");
+    const checkKeys = ["fixed_drive_verified", "final_path_matches", "file_identity_stable", "sha256_matches", "size_matches",
+      "architecture_matches", "runtime_architecture_matches"];
+    if (!checkKeys.every((key) => typeof value?.[key] === "boolean")) add("j2534_evidence_identity_checks_invalid");
+    const falseKeys = ["authenticode_network_retrieval_allowed", "private_fields_included", "evidence_authorizes_execution",
+      "dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted",
+      "vehicle_communication_started", "would_transmit", "vehicle_command_enabled", "execution_enabled"];
+    if (!falseKeys.every((key) => value?.[key] === false)) add("j2534_evidence_safety_boundary_invalid");
+    const noDriver = value?.registration_status === "no_registered_driver";
+    if (noDriver && !(value.registered_driver_count === 0 && value.selected_driver_index === null
+      && value.selected_driver_architecture === null && value.preflight_contract_version === null
+      && value.preflight_verification_status === "not_requested" && value.blockers?.length === 1
+      && value.blockers[0] === "no_registered_driver")) add("j2534_evidence_no_driver_state_invalid");
+    if (!noDriver && value?.registered_driver_count < 1) add("j2534_evidence_registration_invalid");
+    const notRequested = value?.preflight_verification_status === "not_requested";
+    if (notRequested && !(value.preflight_contract_version === null && value.selected_driver_index === null
+      && value.selected_driver_architecture === null && value.authenticode_status === "not_verified"
+      && value.global_mutex_status === "not_acquired" && checkKeys.every((key) => value[key] === false))) add("j2534_evidence_not_requested_state_invalid");
+    if (!notRequested && !(value?.preflight_contract_version === "j2534-native-preflight-response-v2"
+      && Number.isInteger(value?.selected_driver_index) && ["x86", "x64"].includes(value?.selected_driver_architecture))) add("j2534_evidence_preflight_binding_invalid");
+    if (value?.preflight_verification_status === "rejected" && value.blockers?.length < 1) add("j2534_evidence_rejection_reason_missing");
+    if (value?.preflight_verification_status === "verified_non_executable" && !(value.blockers?.length === 0
+      && value.authenticode_status === "verified_file_policy" && value.global_mutex_status === "acquired_for_preflight"
+      && checkKeys.every((key) => value[key] === true))) add("j2534_evidence_verified_state_invalid");
+  } catch { add("j2534_evidence_contract_mismatch"); }
+  return Object.freeze({
+    schema_version: "j2534-native-preflight-evidence-validation-v1",
+    valid: errors.length === 0,
+    errors: Object.freeze(errors),
+    evidence_schema_version: evidenceSchemaVersion,
+    evidence_authorizes_execution: false,
+    dll_load_attempted: false,
+    vehicle_communication_started: false,
+    vehicle_command_enabled: false
+  });
+}
+
+function readBoundedJ2534EvidenceStdin(maximumBytes = 32768) {
+  const chunks = [];
+  let total = 0;
+  while (true) {
+    const buffer = Buffer.allocUnsafe(Math.min(4096, maximumBytes + 1 - total));
+    const count = fs.readSync(0, buffer, 0, buffer.length, null);
+    if (count === 0) break;
+    total += count;
+    if (total > maximumBytes) throw new Error("j2534_evidence_input_too_large");
+    chunks.push(buffer.subarray(0, count));
+  }
+  if (total === 0) throw new Error("j2534_evidence_input_empty");
+  return Buffer.concat(chunks).toString("utf8");
+}
 export function formatJ2534NativePreflightResult(result = {}, device = {}, index = 0) {
   const driverBits = device?.driver_library_bitness === 32 || device?.driver_library_bitness === 64 ? `${device.driver_library_bitness}bit` : "未確認";
   const runtimeBits = device?.bridge_runtime_bitness === 32 || device?.bridge_runtime_bitness === 64 ? `${device.bridge_runtime_bitness}bit` : "未確認";
@@ -186,30 +279,39 @@ export async function runJ2534WorkstationPreflight(devices, index, dependencies 
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    const devices = process.platform === "win32" ? discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true }) : [];
-    const parsed = parseJ2534InspectionArguments(process.argv.slice(2), devices.length);
-    if (!parsed.evidenceJson) console.log(formatJ2534WorkstationInspection(devices));
-    if (process.platform !== "win32") {
-      if (parsed.evidenceJson) console.log(JSON.stringify(buildJ2534NativePreflightEvidence(devices, { platform: process.platform })));
-      process.exitCode = 2;
+    const rawArgs = process.argv.slice(2);
+    if (rawArgs.length === 1 && rawArgs[0] === "--validate-evidence-stdin") {
+      let validation;
+      try { validation = validateJ2534NativePreflightEvidence(JSON.parse(readBoundedJ2534EvidenceStdin())); }
+      catch { validation = validateJ2534NativePreflightEvidence(null); }
+      console.log(JSON.stringify(validation));
+      if (!validation.valid) process.exitCode = 1;
     } else {
-      let selection = parsed;
-      if (selection.status === "none" && !selection.evidenceJson && process.stdin.isTTY && devices.length) {
-        const input = createInterface({ input: process.stdin, output: process.stdout });
-        try {
-          const answer = (await input.question("非実行検査する番号を入力してください。Enterのみで終了します: ")).trim();
-          selection = answer ? parseJ2534InspectionArguments(["--preflight-index", answer], devices.length) : selection;
-        } finally { input.close(); }
-      }
-      if (selection.status === "invalid") {
-        console.error("検査番号を確認できません。表示された候補番号を1件だけ指定してください。DLLロード・車両通信は行っていません。");
+      const devices = process.platform === "win32" ? discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true }) : [];
+      const parsed = parseJ2534InspectionArguments(rawArgs, devices.length);
+      if (!parsed.evidenceJson) console.log(formatJ2534WorkstationInspection(devices));
+      if (process.platform !== "win32") {
+        if (parsed.evidenceJson) console.log(JSON.stringify(buildJ2534NativePreflightEvidence(devices, { platform: process.platform })));
         process.exitCode = 2;
-      } else if (selection.status === "selected") {
-        const outcome = await runJ2534WorkstationPreflight(devices, selection.index);
-        console.log(selection.evidenceJson ? JSON.stringify(outcome.evidence) : outcome.output);
-        if (!outcome.passed) process.exitCode = 1;
-      } else if (selection.evidenceJson) {
-        console.log(JSON.stringify(buildJ2534NativePreflightEvidence(devices, { platform: process.platform })));
+      } else {
+        let selection = parsed;
+        if (selection.status === "none" && !selection.evidenceJson && process.stdin.isTTY && devices.length) {
+          const input = createInterface({ input: process.stdin, output: process.stdout });
+          try {
+            const answer = (await input.question("非実行検査する番号を入力してください。Enterのみで終了します: ")).trim();
+            selection = answer ? parseJ2534InspectionArguments(["--preflight-index", answer], devices.length) : selection;
+          } finally { input.close(); }
+        }
+        if (selection.status === "invalid") {
+          console.error("検査番号を確認できません。表示された候補番号を1件だけ指定してください。DLLロード・車両通信は行っていません。");
+          process.exitCode = 2;
+        } else if (selection.status === "selected") {
+          const outcome = await runJ2534WorkstationPreflight(devices, selection.index);
+          console.log(selection.evidenceJson ? JSON.stringify(outcome.evidence) : outcome.output);
+          if (!outcome.passed) process.exitCode = 1;
+        } else if (selection.evidenceJson) {
+          console.log(JSON.stringify(buildJ2534NativePreflightEvidence(devices, { platform: process.platform })));
+        }
       }
     }
   } catch {
