@@ -66,6 +66,11 @@ struct ReadoutCoordinatorView: View {
                     Text("接続後に、要求送信用の書込み特性と応答受信用の通知特性を選択します。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    LabeledContent("GATT候補") {
+                        Text(viewModel.characteristicCompatibilityLabel)
+                            .multilineTextAlignment(.trailing)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     Picker("送信", selection: $viewModel.selectedTransmitID) {
                         Text("選択してください").tag("")
                         ForEach(viewModel.transmitCharacteristicChoices) { choice in

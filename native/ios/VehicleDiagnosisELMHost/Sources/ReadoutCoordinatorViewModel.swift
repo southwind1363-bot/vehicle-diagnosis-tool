@@ -94,6 +94,10 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         Self.receiveCharacteristicCandidates(from: coordinator.characteristicCandidates).map(CharacteristicChoice.init(candidate:))
     }
 
+    var characteristicCompatibilityLabel: String {
+        Self.characteristicCompatibilityLabel(from: coordinator.characteristicCandidates)
+    }
+
     var archiveStateLabel: String {
         switch archiveState {
         case "Complete": return "完了"
@@ -265,6 +269,25 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
 
     static func receiveCharacteristicCandidates(from candidates: [BLECharacteristicCandidate]) -> [BLECharacteristicCandidate] {
         candidates.filter(\.supportsNotify)
+    }
+
+    static func characteristicCompatibilityLabel(from candidates: [BLECharacteristicCandidate]) -> String {
+        guard !candidates.isEmpty else { return "GATT特性未取得" }
+        let transmitCandidates = transmitCharacteristicCandidates(from: candidates)
+        let receiveCandidates = receiveCharacteristicCandidates(from: candidates)
+        guard !transmitCandidates.isEmpty, !receiveCandidates.isEmpty else {
+            return "候補不足: 送信 \(transmitCandidates.count) / 受信 \(receiveCandidates.count)"
+        }
+        let sameServicePairs = transmitCandidates.reduce(into: 0) { count, transmit in
+            count += receiveCandidates.filter { $0.serviceUUID == transmit.serviceUUID }.count
+        }
+        if transmitCandidates.count == 1, receiveCandidates.count == 1, sameServicePairs == 1 {
+            return "自動選択可能: 送信 1 / 受信 1 / 同一サービス 1組"
+        }
+        if sameServicePairs == 0 {
+            return "手動確認: 送信 \(transmitCandidates.count) / 受信 \(receiveCandidates.count) / 同一サービスの組合せなし"
+        }
+        return "手動確認: 送信 \(transmitCandidates.count) / 受信 \(receiveCandidates.count) / 同一サービス \(sameServicePairs)組"
     }
 
     func startPeripheralScan() {

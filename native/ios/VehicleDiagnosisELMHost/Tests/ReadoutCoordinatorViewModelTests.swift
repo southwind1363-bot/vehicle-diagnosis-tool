@@ -78,6 +78,26 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
             supportsWriteWithoutResponse: false
         )
         XCTAssertNil(ReadoutCoordinatorViewModel.suggestedCharacteristicIDs(from: [transmit, separateServiceReceive]))
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.characteristicCompatibilityLabel(from: []),
+            "GATT特性未取得"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.characteristicCompatibilityLabel(from: [transmit]),
+            "候補不足: 送信 1 / 受信 0"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.characteristicCompatibilityLabel(from: [transmit, receive]),
+            "自動選択可能: 送信 1 / 受信 1 / 同一サービス 1組"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.characteristicCompatibilityLabel(from: [transmit, separateServiceReceive]),
+            "手動確認: 送信 1 / 受信 1 / 同一サービスの組合せなし"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.characteristicCompatibilityLabel(from: [transmit, receive, alternateTransmit]),
+            "手動確認: 送信 2 / 受信 1 / 同一サービス 2組"
+        )
     }
 
     @MainActor

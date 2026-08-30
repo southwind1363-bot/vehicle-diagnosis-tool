@@ -17,6 +17,8 @@ The adapter search runs for 12 seconds, retains the discovered BLE devices after
 
 Each discovered candidate displays only in-memory advertisement evidence: RSSI, the advertised connectable flag, and up to four advertised service UUIDs. Missing advertisement fields do not reject a candidate, and a matching name or service never establishes ELM327 compatibility. Compatibility still requires connection, writable/notifiable GATT characteristic confirmation, and a usable read-only adapter identity response.
 
+After connection, the host displays writable, notifiable, and same-service GATT pair counts before any OBD readout starts. Only one unambiguous same-service pair is suggested automatically. Missing or ambiguous candidates remain a manual compatibility check and never enable a vehicle operation.
+
 The export action writes only a validated structured archive with its completion manifest. Raw response frames and debug logs are not retained.
 
 ## CI device artifact
