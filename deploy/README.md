@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.354では登録J2534ドライバーの非実行native preflightをv2契約へ更新しました。外側operation nonceをworker要求へ結び付け、operation/source/architecture応答一致を必須化し、C# workerでも絶対パス、64MiB上限、lowercase SHA-256、x86/x64、安全falseフラグを独立検証します。異常要求10種、null/hostile Proxy、x86/x64を確認済みです。ベンダーDLLのロード、実VCI、車両通信は行いません。進捗率は44%です。
+3.13.355ではPC配布版J2534確認へ`j2534-native-preflight-evidence-v1`匿名化JSONを追加しました。`--evidence-json`は登録数、実行環境、v2 preflight結果、安全フラグだけを出力し、DLLパス、名称、device ID、nonceを含めません。このPCのlive registryは登録0件として安全に記録し、package検証237件で整合性確認後の出力も確認済みです。ベンダーDLLのロード、実VCI、車両通信は行いません。進捗率は45%です。
 
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 
@@ -16,7 +16,7 @@
 
 3.13.339ではiPhone用ELM327 BLEホストのmacOS/Xcode実走、Simulator統合、OBD取込、`iphoneos` Release未署名IPA生成と完全未署名検証の成功を公開状態へ反映しました。これはApple署名、iPhoneへのインストール、手持ちELM327のBLE GATT適合、実車読取の完了を意味せず、接続と車両コマンドは無効のままです。
 
-3.13.336以降のPC配布版は `inspect-workstation-j2534.cmd` を開くと、登録ドライバー、DLLの32/64bit、静的検査結果と次の確認を日本語で表示します。番号を選ぶと、対象DLLをロードしない専用workerで固定ドライブ、同一ファイル、SHA-256、サイズ、PE構成を再確認します。VCI・車両の接続は不要です。配布版は内容検査に成功してから確認を開始します。DLL実行、`PassThruOpen`、車両通信、診断データ保存、外部送信はありません。worker終了未確認時だけ再試行防止の隔離状態を端末内に保存し、自動解除しません。検査合格でも実車適合・接続成功ではなく、実機通信機能の実装と試験は残っています。自動実行では `inspect-workstation-j2534.cmd --preflight-index 番号 --no-pause` を使えます。`npm run inspect:j2534` は既存項目を維持し、identity probe readinessを追加表示します。
+3.13.336以降のPC配布版は `inspect-workstation-j2534.cmd` を開くと、登録ドライバー、DLLの32/64bit、静的検査結果と次の確認を日本語で表示します。番号を選ぶと、対象DLLをロードしない専用workerで固定ドライブ、同一ファイル、SHA-256、サイズ、PE構成を再確認します。VCI・車両の接続は不要です。配布版は内容検査に成功してから確認を開始します。DLL実行、`PassThruOpen`、車両通信、診断データ保存、外部送信はありません。worker終了未確認時だけ再試行防止の隔離状態を端末内に保存し、自動解除しません。検査合格でも実車適合・接続成功ではなく、実機通信機能の実装と試験は残っています。自動実行では `inspect-workstation-j2534.cmd --preflight-index 番号 --no-pause` を使えます。匿名化証拠だけを取得する場合は `inspect-workstation-j2534.cmd --evidence-json --no-pause`、選択した登録ドライバーの非実行preflight証拠は `inspect-workstation-j2534.cmd --preflight-index 番号 --evidence-json --no-pause` を使います。`npm run inspect:j2534` は既存項目を維持し、identity probe readinessを追加表示します。
 
 J2534の初回DLL実行は通常の非実行preflightと分離します。`j2534-identity-probe-readiness-v1` はlive registry descriptor、同一操作内preflight、配布整合性、Authenticode、quarantine、全体mutex、対話確認を個別に保持しますが、現在は未実装workerゲートを必ず残し、DLLロード、`PassThruOpen`、車両通信を許可しません。公開オブジェクトや検査結果は実行許可証として再利用できません。
 

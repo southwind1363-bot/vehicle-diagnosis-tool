@@ -97,11 +97,14 @@ No worker executable, fixture DLL, or vendor driver is shipped or production-wir
    response contract bound to the outer one-time operation nonce. The worker
    independently validates path, SHA-256, size, architecture, and disabled safety
    flags, while the parent matches operation/source/device/architecture evidence.
-   Run this non-executing boundary against an installed registered driver next.
-   Public raw DLL paths remain rejected.
-4. Review driver provenance, actual adapter behavior, user authorization, and
+   `j2534-native-preflight-evidence-v1` retains only sanitized status and safety
+   fields; raw DLL paths, labels, device IDs, and nonces remain excluded.
+4. The current PC reported `no_registered_driver` on 2026-08-30. Install the
+   device vendor's registered J2534 driver on the target Windows tablet, verify
+   the packaged CLI, and run the v2 non-executing preflight there next.
+5. Review driver provenance, actual adapter behavior, user authorization, and
    test conditions before a real Open/ReadVersion/Close trial.
-5. Add vehicle-channel operations separately with their own verified protocol,
+6. Add vehicle-channel operations separately with their own verified protocol,
    applicability, preconditions, logging, stop, and recovery rules.
 
 ## Evidence and Validation

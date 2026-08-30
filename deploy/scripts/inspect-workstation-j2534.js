@@ -67,6 +67,14 @@ export function parseJ2534PreflightSelection(args = [], deviceCount = 0) {
   return Number.isSafeInteger(index) && index < deviceCount ? { status: "selected", index } : { status: "invalid", index: null };
 }
 
+export function parseJ2534InspectionArguments(args = [], deviceCount = 0) {
+  if (!Array.isArray(args)) return { status: "invalid", index: null, evidenceJson: false };
+  const evidenceCount = args.filter((item) => item === "--evidence-json").length;
+  if (evidenceCount > 1) return { status: "invalid", index: null, evidenceJson: false };
+  const selection = parseJ2534PreflightSelection(args.filter((item) => item !== "--evidence-json"), deviceCount);
+  return { ...selection, evidenceJson: evidenceCount === 1 };
+}
+
 const isVerifiedNonExecutablePreflight = (result) => result?.verification_status === "verified_non_executable"
   && result?.fixed_drive_verified === true && result?.final_path_matches === true
   && result?.file_identity_stable === true && result?.sha256_matches === true
@@ -75,6 +83,68 @@ const isVerifiedNonExecutablePreflight = (result) => result?.verification_status
   && result?.authenticode_status === "verified_file_policy"
   && result?.authenticode_network_retrieval_allowed === false
   && result?.global_mutex_status === "acquired_for_preflight";
+
+const safeEvidenceToken = (value, allowed, fallback) => allowed.includes(value) ? value : fallback;
+const safeEvidenceBlockers = (value, fallback = []) => {
+  const sanitize = (items) => [...new Set(items
+    .filter((item) => typeof item === "string" && /^[a-z0-9_]{3,96}$/.test(item))
+    .slice(0, 8))];
+  const blockers = sanitize(Array.isArray(value) ? value : []);
+  return Object.freeze(blockers.length ? blockers : sanitize(fallback));
+};
+
+export function buildJ2534NativePreflightEvidence(devices = [], options = {}) {
+  const registered = Array.isArray(devices) ? devices : [];
+  const environment = getJ2534DiscoveryEnvironment(registered);
+  const selectedIndex = Number.isInteger(options.selectedIndex) && options.selectedIndex >= 0 && options.selectedIndex < registered.length
+    ? options.selectedIndex : null;
+  const selected = selectedIndex === null ? null : registered[selectedIndex];
+  const result = options.result && typeof options.result === "object" && !Array.isArray(options.result) ? options.result : null;
+  const capturedAt = typeof options.capturedAt === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(options.capturedAt)
+    ? options.capturedAt : new Date().toISOString();
+  const platform = options.platform ?? process.platform;
+  const preflightStatus = result
+    ? safeEvidenceToken(result.verification_status, ["verified_non_executable", "rejected"], "rejected")
+    : "not_requested";
+  const blockers = result
+    ? safeEvidenceBlockers(result.blockers, ["native_preflight_response_invalid"])
+    : safeEvidenceBlockers(environment.open_review_blockers, ["no_registered_driver"]);
+  return Object.freeze({
+    schema_version: "j2534-native-preflight-evidence-v1",
+    captured_at: capturedAt,
+    evidence_scope: "registered_driver_non_executable_preflight",
+    platform: platform === "win32" ? "windows" : "unsupported",
+    bridge_runtime_architecture: safeEvidenceToken(environment.bridge_runtime_architecture, ["x86", "x64"], "unknown"),
+    bridge_runtime_bitness: [32, 64].includes(environment.bridge_runtime_bitness) ? environment.bridge_runtime_bitness : null,
+    registration_status: platform === "win32" ? environment.registration_status : "not_checked",
+    registered_driver_count: registered.length,
+    selected_driver_index: selectedIndex === null ? null : selectedIndex + 1,
+    selected_driver_architecture: safeEvidenceToken(selected?.driver_library_architecture, ["x86", "x64"], null),
+    preflight_contract_version: result?.contract_version === "j2534-native-preflight-response-v2" ? result.contract_version : null,
+    preflight_verification_status: preflightStatus,
+    blockers,
+    authenticode_status: safeEvidenceToken(result?.authenticode_status, ["not_verified", "not_trusted", "verified_file_policy"], "not_verified"),
+    authenticode_network_retrieval_allowed: false,
+    global_mutex_status: safeEvidenceToken(result?.global_mutex_status, ["not_acquired", "acquired_for_preflight"], "not_acquired"),
+    fixed_drive_verified: result?.fixed_drive_verified === true,
+    final_path_matches: result?.final_path_matches === true,
+    file_identity_stable: result?.file_identity_stable === true,
+    sha256_matches: result?.sha256_matches === true,
+    size_matches: result?.size_matches === true,
+    architecture_matches: result?.architecture_matches === true,
+    runtime_architecture_matches: result?.runtime_architecture_matches === true,
+    private_fields_included: false,
+    evidence_authorizes_execution: false,
+    dll_load_attempted: false,
+    get_proc_address_attempted: false,
+    pass_thru_open_attempted: false,
+    vehicle_connection_attempted: false,
+    vehicle_communication_started: false,
+    would_transmit: false,
+    vehicle_command_enabled: false,
+    execution_enabled: false
+  });
+}
 
 export function formatJ2534NativePreflightResult(result = {}, device = {}, index = 0) {
   const driverBits = device?.driver_library_bitness === 32 || device?.driver_library_bitness === 64 ? `${device.driver_library_bitness}bit` : "未確認";
@@ -107,22 +177,28 @@ export async function runJ2534WorkstationPreflight(devices, index, dependencies 
   const result = await runPreflight(descriptor, { timeout_ms: 5000 });
   return Object.freeze({
     output: formatJ2534NativePreflightResult(result, selected, index),
-    passed: isVerifiedNonExecutablePreflight(result)
+    passed: isVerifiedNonExecutablePreflight(result),
+    evidence: buildJ2534NativePreflightEvidence(registered, {
+      selectedIndex: index, result, capturedAt: dependencies.capturedAt, platform: dependencies.platform
+    })
   });
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const devices = process.platform === "win32" ? discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true }) : [];
-    console.log(formatJ2534WorkstationInspection(devices));
-    if (process.platform !== "win32") process.exitCode = 2;
-    else {
-      let selection = parseJ2534PreflightSelection(process.argv.slice(2), devices.length);
-      if (selection.status === "none" && process.stdin.isTTY && devices.length) {
+    const parsed = parseJ2534InspectionArguments(process.argv.slice(2), devices.length);
+    if (!parsed.evidenceJson) console.log(formatJ2534WorkstationInspection(devices));
+    if (process.platform !== "win32") {
+      if (parsed.evidenceJson) console.log(JSON.stringify(buildJ2534NativePreflightEvidence(devices, { platform: process.platform })));
+      process.exitCode = 2;
+    } else {
+      let selection = parsed;
+      if (selection.status === "none" && !selection.evidenceJson && process.stdin.isTTY && devices.length) {
         const input = createInterface({ input: process.stdin, output: process.stdout });
         try {
           const answer = (await input.question("非実行検査する番号を入力してください。Enterのみで終了します: ")).trim();
-          selection = answer ? parseJ2534PreflightSelection(["--preflight-index", answer], devices.length) : selection;
+          selection = answer ? parseJ2534InspectionArguments(["--preflight-index", answer], devices.length) : selection;
         } finally { input.close(); }
       }
       if (selection.status === "invalid") {
@@ -130,8 +206,10 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
         process.exitCode = 2;
       } else if (selection.status === "selected") {
         const outcome = await runJ2534WorkstationPreflight(devices, selection.index);
-        console.log(outcome.output);
+        console.log(selection.evidenceJson ? JSON.stringify(outcome.evidence) : outcome.output);
         if (!outcome.passed) process.exitCode = 1;
+      } else if (selection.evidenceJson) {
+        console.log(JSON.stringify(buildJ2534NativePreflightEvidence(devices, { platform: process.platform })));
       }
     }
   } catch {

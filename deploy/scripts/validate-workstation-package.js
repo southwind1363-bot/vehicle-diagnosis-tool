@@ -8,7 +8,7 @@ import { execFile } from "node:child_process";
 import { packageWorkstation } from "./package-workstation.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
-import { formatJ2534NativePreflightResult, formatJ2534WorkstationInspection, parseJ2534PreflightSelection, runJ2534WorkstationPreflight } from "./inspect-workstation-j2534.js";
+import { buildJ2534NativePreflightEvidence, formatJ2534NativePreflightResult, formatJ2534WorkstationInspection, parseJ2534InspectionArguments, parseJ2534PreflightSelection, runJ2534WorkstationPreflight } from "./inspect-workstation-j2534.js";
 
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
@@ -86,9 +86,36 @@ try {
   check(JSON.stringify(privateInput) === before, "Formatting changed a driver result");
   check(parseJ2534PreflightSelection([], 2).status === "none"
     && parseJ2534PreflightSelection(["--preflight-index", "2"], 2).index === 1, "J2534 preflight selection did not preserve one-based explicit selection");
+  check(parseJ2534InspectionArguments(["--evidence-json"], 2).status === "none"
+    && parseJ2534InspectionArguments(["--preflight-index", "2", "--evidence-json"], 2).index === 1
+    && parseJ2534InspectionArguments(["--preflight-index", "2", "--evidence-json"], 2).evidenceJson === true
+    && parseJ2534InspectionArguments(["--evidence-json", "--evidence-json"], 2).status === "invalid",
+  "J2534 evidence arguments did not preserve strict explicit selection");
+  const evidenceTime = "2026-08-30T10:00:00.000Z";
+  const noDriverEvidence = buildJ2534NativePreflightEvidence([], { capturedAt: evidenceTime, platform: "win32" });
+  check(noDriverEvidence.schema_version === "j2534-native-preflight-evidence-v1"
+    && noDriverEvidence.registration_status === "no_registered_driver" && noDriverEvidence.registered_driver_count === 0
+    && noDriverEvidence.preflight_verification_status === "not_requested" && noDriverEvidence.blockers.join(",") === "no_registered_driver"
+    && noDriverEvidence.private_fields_included === false && noDriverEvidence.evidence_authorizes_execution === false
+    && noDriverEvidence.dll_load_attempted === false && noDriverEvidence.vehicle_command_enabled === false,
+  "J2534 no-driver evidence did not preserve the non-executing safety state");
   for (const args of [["--preflight-index", "0"], ["--preflight-index", "3"], ["--preflight-index", "1", "extra"], ["--unknown", "1"], ["--preflight-index"]])
     check(parseJ2534PreflightSelection(args, 2).status === "invalid", `J2534 preflight selection accepted invalid arguments: ${args.join(" ")}`);
-  const privatePreflight = formatJ2534NativePreflightResult({ verification_status: "rejected", blockers: ["native_preflight_timeout"], private_library_path: "C:/private/driver.dll", request_nonce: "private-nonce" }, privateInput, 0);
+  const privateResult = { contract_version: "j2534-native-preflight-response-v2", verification_status: "rejected", blockers: ["native_preflight_timeout", "INVALID PRIVATE"],
+    authenticode_status: "not_verified", global_mutex_status: "not_acquired", private_library_path: "C:/private/driver.dll", request_nonce: "private-nonce", selected_device_id: "private-device" };
+  const privatePreflight = formatJ2534NativePreflightResult(privateResult, privateInput, 0);
+  const privateEvidence = buildJ2534NativePreflightEvidence([privateInput], { selectedIndex: 0, result: privateResult, capturedAt: evidenceTime, platform: "win32" });
+  const privateEvidenceJson = JSON.stringify(privateEvidence);
+  const invalidOnlyEvidence = buildJ2534NativePreflightEvidence([privateInput], {
+    selectedIndex: 0, result: { verification_status: "rejected", blockers: ["INVALID PRIVATE"] }, capturedAt: evidenceTime, platform: "win32"
+  });
+  check(privateEvidence.selected_driver_index === 1 && privateEvidence.selected_driver_architecture === null
+    && privateEvidence.preflight_contract_version === "j2534-native-preflight-response-v2"
+    && privateEvidence.preflight_verification_status === "rejected" && privateEvidence.blockers.join(",") === "native_preflight_timeout"
+    && !privateEvidenceJson.includes("Fixture") && !privateEvidenceJson.includes("C:/private")
+    && !privateEvidenceJson.includes("private-token") && !privateEvidenceJson.includes("private-nonce") && !privateEvidenceJson.includes("private-device")
+    && invalidOnlyEvidence.blockers.join(",") === "native_preflight_response_invalid",
+  "J2534 preflight evidence disclosed private identity fields or retained invalid blockers");
   check(privatePreflight.includes("非実行の事前検査を完了できませんでした") && privatePreflight.includes("native_preflight_timeout")
     && privatePreflight.includes("PassThruOpen: 未実施") && privatePreflight.includes("車両への送信: 未実施")
     && !privatePreflight.includes("C:/private") && !privatePreflight.includes("private-token") && !privatePreflight.includes("private-nonce"), "J2534 preflight result leaked private data or overstated execution");
@@ -134,7 +161,7 @@ try {
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
-  check(instructions.includes("inspect-workstation-j2534.cmd") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")), "Package omitted the standalone J2534 preparation check");
+  check(instructions.includes("inspect-workstation-j2534.cmd") && instructions.includes("--evidence-json") && instructions.includes("DLLパス、名称、device ID、nonceを含みません") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")), "Package omitted the standalone J2534 preparation check or sanitized evidence instructions");
   check(["scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
   check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
     && packaged.scripts["workstation:dev"] === packaged.scripts.start && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
@@ -319,6 +346,7 @@ try {
     for (const key of ["NODE_OPTIONS", "LOCAL_BRIDGE_REPLAY_LOG", "LOCAL_BRIDGE_PAIRING_TOKEN"]) delete env[key];
     const windows = process.platform === "win32";
     const command = entry === "inspect" ? '""inspect-workstation-j2534.cmd" --no-pause"'
+      : entry === "inspect-evidence" ? '""inspect-workstation-j2534.cmd" --evidence-json --no-pause"'
       : entry === "inspect-invalid" ? '""inspect-workstation-j2534.cmd" --preflight-index 0 --no-pause"'
       : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
@@ -337,11 +365,19 @@ try {
     check(inspection.output.includes("Package files match:") && inspection.output.indexOf("Package files match:") < inspection.output.indexOf("J2534接続準備チェック"), "Driver inspection started before package verification");
     check(!inspection.output.includes("診断画面:") && !inspection.output.includes("ペアリング値") && inspection.output.includes("車両通信: 未実施 / DLL実行: 未実施"), "Driver inspection started a server or overstated vehicle access");
     check(!inspection.output.includes("J2534登録ドライバー 非実行事前検査"), "Non-interactive J2534 inspection ran preflight without explicit selection");
+    const evidenceInspection = await runEntry("inspect-evidence");
+    const evidenceLine = evidenceInspection.output.split(/\r?\n/).find((line) => line.startsWith('{"schema_version":"j2534-native-preflight-evidence-v1"'));
+    const packagedEvidence = JSON.parse(evidenceLine || "null");
+    check(evidenceInspection.code === 0 && evidenceInspection.output.includes("Package files match:")
+      && packagedEvidence?.registration_status === "no_registered_driver" && packagedEvidence?.preflight_verification_status === "not_requested"
+      && packagedEvidence?.private_fields_included === false && packagedEvidence?.evidence_authorizes_execution === false
+      && packagedEvidence?.dll_load_attempted === false && packagedEvidence?.vehicle_communication_started === false,
+    "Packaged J2534 evidence did not verify integrity first or preserve a sanitized no-driver state");
     const invalidInspection = await runEntry("inspect-invalid");
     check(invalidInspection.code === 2 && invalidInspection.output.includes("Package files match:")
       && invalidInspection.output.includes("検査番号を確認できません") && !invalidInspection.output.includes("DLLロード: 実施"), "Invalid packaged J2534 selection was not rejected after package verification");
   }
-  const guardedEntries = process.platform === "win32" ? [...entries, "inspect"] : entries;
+  const guardedEntries = process.platform === "win32" ? [...entries, "inspect", "inspect-evidence"] : entries;
   for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true], ["scripts/inspect-workstation-j2534.js", false]]) {
     const target = path.join(actual.directory, relative);
     const original = fs.readFileSync(target);

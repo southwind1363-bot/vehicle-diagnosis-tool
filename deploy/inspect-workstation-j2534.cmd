@@ -28,24 +28,42 @@ if errorlevel 1 (
 )
 
 :inspect
+set "inspection_no_pause="
+if /i "%~1"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~2"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~3"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~4"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~1"=="--preflight-index" (
-  if not "%~3"=="" if /i not "%~3"=="--no-pause" (
-    echo Unknown inspection option. Use --preflight-index NUMBER.
-    set "inspection_exit=2"
-    goto finish
+  if "%~2"=="" goto invalid_option
+  if "%~3"=="" (
+    node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2"
+  ) else if /i "%~3"=="--no-pause" (
+    if not "%~4"=="" goto invalid_option
+    node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2"
+  ) else if /i "%~3"=="--evidence-json" (
+    if not "%~4"=="" if /i not "%~4"=="--no-pause" goto invalid_option
+    node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2" --evidence-json
+  ) else (
+    goto invalid_option
   )
-  node "scripts\inspect-workstation-j2534.js" --preflight-index "%~2"
+) else if /i "%~1"=="--evidence-json" (
+  if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
+  node "scripts\inspect-workstation-j2534.js" --evidence-json
 ) else if "%~1"=="" (
   node "scripts\inspect-workstation-j2534.js"
 ) else if /i "%~1"=="--no-pause" (
+  if not "%~2"=="" goto invalid_option
   node "scripts\inspect-workstation-j2534.js"
 ) else (
-  echo Unknown inspection option. Use --preflight-index NUMBER.
-  set "inspection_exit=2"
-  goto finish
+  goto invalid_option
 )
 set "inspection_exit=%errorlevel%"
+goto finish
+
+:invalid_option
+echo Unknown inspection option. Use --preflight-index NUMBER and optionally --evidence-json.
+set "inspection_exit=2"
 
 :finish
-if /i not "%~1"=="--no-pause" if /i not "%~3"=="--no-pause" pause
+if not defined inspection_no_pause pause
 exit /b %inspection_exit%
