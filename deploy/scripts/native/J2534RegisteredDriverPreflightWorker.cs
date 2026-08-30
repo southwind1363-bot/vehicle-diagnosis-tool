@@ -33,6 +33,8 @@ namespace VehicleDiagnosis.Native
         [DataMember(Name = "descriptor_version")] internal string DescriptorVersion;
         [DataMember(Name = "verification_status")] internal string VerificationStatus = "rejected";
         [DataMember(Name = "blockers")] internal string[] Blockers = new string[] { "native_preflight_request_invalid" };
+        [DataMember(Name = "authenticode_status")] internal string AuthenticodeStatus = "not_verified";
+        [DataMember(Name = "authenticode_network_retrieval_allowed")] internal bool AuthenticodeNetworkRetrievalAllowed = false;
         [DataMember(Name = "fixed_drive_verified")] internal bool FixedDriveVerified;
         [DataMember(Name = "final_path_matches")] internal bool FinalPathMatches;
         [DataMember(Name = "file_identity_stable")] internal bool FileIdentityStable;
@@ -138,7 +140,9 @@ namespace VehicleDiagnosis.Native
                 WriteResponse(new PreflightResponse {
                     RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
                     DescriptorVersion = request.DescriptorVersion, VerificationStatus = result.Status,
-                    Blockers = result.Blockers, FixedDriveVerified = result.FixedDriveVerified,
+                    Blockers = result.Blockers, AuthenticodeStatus = result.AuthenticodeStatus,
+                    AuthenticodeNetworkRetrievalAllowed = result.AuthenticodeNetworkRetrievalAllowed,
+                    FixedDriveVerified = result.FixedDriveVerified,
                     FinalPathMatches = result.FinalPathMatches, FileIdentityStable = result.FileIdentityStable,
                     Sha256Matches = result.Sha256Matches, SizeMatches = result.SizeMatches,
                     ArchitectureMatches = result.ArchitectureMatches,

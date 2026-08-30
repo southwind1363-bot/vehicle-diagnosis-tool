@@ -31,7 +31,9 @@ internal static class J2534NativePreflightFixtureWorker
     {
         return "{\"contract_version\":\"j2534-native-preflight-fixture-v1\",\"request_nonce\":\"" + nonce
             + "\",\"selected_device_id\":\"" + deviceId + "\",\"verification_status\":\"" + result.Status
-            + "\",\"blockers\":" + JsonArray(result.Blockers) + ",\"fixed_drive_verified\":" + Bool(result.FixedDriveVerified)
+            + "\",\"blockers\":" + JsonArray(result.Blockers)
+            + ",\"authenticode_status\":\"" + result.AuthenticodeStatus + "\",\"authenticode_network_retrieval_allowed\":" + Bool(result.AuthenticodeNetworkRetrievalAllowed)
+            + ",\"fixed_drive_verified\":" + Bool(result.FixedDriveVerified)
             + ",\"final_path_matches\":" + Bool(result.FinalPathMatches) + ",\"file_identity_stable\":" + Bool(result.FileIdentityStable)
             + ",\"sha256_matches\":" + Bool(result.Sha256Matches) + ",\"size_matches\":" + Bool(result.SizeMatches)
             + ",\"architecture_matches\":" + Bool(result.ArchitectureMatches)

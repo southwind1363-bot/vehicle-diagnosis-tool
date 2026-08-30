@@ -127,7 +127,7 @@ export function packageWorkstation(options = {}) {
   const compileNativePreflightWorkers = () => {
     if (process.platform !== "win32") throw new Error("workstation_package_native_compiler_unsupported");
     const windows = process.env.SystemRoot || process.env.WINDIR || "C:\\Windows";
-    const sources = [safeSource("scripts/native/J2534RegisteredDriverPreflight.cs"), safeSource("scripts/native/J2534RegisteredDriverPreflightWorker.cs")];
+    const sources = [safeSource("scripts/native/J2534RegisteredDriverPreflight.cs"), safeSource("scripts/native/J2534AuthenticodeVerifier.cs"), safeSource("scripts/native/J2534RegisteredDriverPreflightWorker.cs")];
     const nativeOutput = path.join(staging, "scripts", "native");
     fs.mkdirSync(nativeOutput, { recursive: true });
     const workers = {};

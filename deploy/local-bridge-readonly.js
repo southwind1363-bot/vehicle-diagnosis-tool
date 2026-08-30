@@ -922,7 +922,7 @@ function buildJ2534IdentityProbeReadinessInternal(devices = [], options = {}, tr
     && descriptor?.pass_thru_open_attempted === false && descriptor?.vehicle_command_enabled === false;
   // These gates require future opaque evidence issuers. Caller-provided status strings are never authorization.
   const packageIntegrityVerified = false;
-  const authenticodeVerified = false;
+  const authenticodeVerified = trusted.authenticodeVerified === true;
   const quarantineClear = false;
   const globalMutexAcquired = false;
   const interactiveConfirmation = false;
@@ -1420,7 +1420,8 @@ export async function runJ2534RegisteredDriverNativePreflight(descriptor, option
 
 const J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS = Object.freeze([
   "contract_version", "selected_device_id", "verification_status", "blockers",
-  "fixed_drive_verified", "final_path_matches", "file_identity_stable", "sha256_matches",
+  "authenticode_status", "authenticode_network_retrieval_allowed", "fixed_drive_verified",
+  "final_path_matches", "file_identity_stable", "sha256_matches",
   "size_matches", "architecture_matches", "runtime_architecture_matches", "dll_load_attempted",
   "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted",
   "vehicle_communication_started", "would_transmit", "vehicle_command_enabled", "execution_enabled"
@@ -1543,7 +1544,7 @@ function createJ2534IdentityPreflightOperationController(dependencies) {
       let valid = false;
       try { valid = validatePreflight(record, result) === true; } catch {}
       return valid
-        ? buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true })
+        ? buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true, authenticodeVerified: result?.authenticode_status === "verified_file_policy" })
         : rejected("native_preflight_not_verified_in_operation", record.selectedDeviceId);
     } finally {
       record.descriptor = null;
@@ -1594,6 +1595,8 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
         && Array.isArray(result.blockers) && result.blockers.length === 0
         && ["fixed_drive_verified", "final_path_matches", "file_identity_stable", "sha256_matches", "size_matches",
           "architecture_matches", "runtime_architecture_matches"].every((key) => result[key] === true)
+        && result.authenticode_status === "verified_file_policy"
+        && result.authenticode_network_retrieval_allowed === false
         && ["dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted",
           "vehicle_communication_started", "would_transmit", "vehicle_command_enabled", "execution_enabled"].every((key) => result[key] === false);
     } catch {
@@ -1611,6 +1614,7 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
       operationStatus: evidence.operationStatus,
       blockers: evidence.blockers,
       preflightVerified: evidence.preflightVerified,
+      authenticodeVerified: evidence.authenticodeVerified,
       descriptor: record?.descriptor
     });
   }

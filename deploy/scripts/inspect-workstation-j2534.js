@@ -29,7 +29,8 @@ const PREFLIGHT_BLOCKERS = {
   native_preflight_cancelled: "非実行検査が中止されました",
   native_preflight_timeout: "非実行検査が制限時間内に終了しませんでした",
   native_preflight_termination_unconfirmed: "非実行検査workerの終了を確認できません",
-  native_preflight_response_invalid: "非実行検査workerの応答を確認できません"
+  native_preflight_response_invalid: "非実行検査workerの応答を確認できません",
+  native_authenticode_not_trusted: "Windowsの署名ポリシーでJ2534ドライバーDLLを信頼済みと確認できません"
 };
 
 const safeLabel = (value) => typeof value === "string"
@@ -69,7 +70,9 @@ const isVerifiedNonExecutablePreflight = (result) => result?.verification_status
   && result?.fixed_drive_verified === true && result?.final_path_matches === true
   && result?.file_identity_stable === true && result?.sha256_matches === true
   && result?.size_matches === true && result?.architecture_matches === true
-  && result?.runtime_architecture_matches === true;
+  && result?.runtime_architecture_matches === true
+  && result?.authenticode_status === "verified_file_policy"
+  && result?.authenticode_network_retrieval_allowed === false;
 
 export function formatJ2534NativePreflightResult(result = {}, device = {}, index = 0) {
   const driverBits = device?.driver_library_bitness === 32 || device?.driver_library_bitness === 64 ? `${device.driver_library_bitness}bit` : "未確認";
@@ -78,7 +81,8 @@ export function formatJ2534NativePreflightResult(result = {}, device = {}, index
     `対象DLL構成: ${driverBits}`, `Node.js実行環境: ${runtimeBits}`, `検査方式: 対象DLLと同じ${driverBits}専用worker`];
   if (isVerifiedNonExecutablePreflight(result)) {
     lines.push("", "結果: 非実行の事前検査に合格しました",
-      "確認済み: 固定ローカルドライブ / 登録時と同一ファイル / ファイル内容・サイズ / PE構成 / 専用worker構成");
+      "確認済み: 固定ローカルドライブ / 登録時と同一ファイル / ファイル内容・サイズ / PE構成 / Windows署名ポリシー / 専用worker構成",
+      "署名確認: WinVerifyTrust / ネットワーク取得なし");
   } else {
     const blocker = Array.isArray(result?.blockers) && typeof result.blockers[0] === "string" ? result.blockers[0] : "native_preflight_failed";
     lines.push("", "結果: 非実行の事前検査を完了できませんでした",

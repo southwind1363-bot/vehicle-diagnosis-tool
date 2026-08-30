@@ -36,6 +36,13 @@ index evidence with `GetFileInformationByHandleEx(FileIdInfo)` and compares the
 128-bit file ID before and after hashing. This closes the previously documented
 ReFS identity gap without making the preflight result reusable as a load token.
 
+Production preflight also applies the Windows `WinVerifyTrust` file policy to
+the same open handle. It disables UI, restricts trust retrieval to the local
+cache, and rejects files that Windows does not trust. The x86/x64 production
+tests accept a Windows catalog-signed system DLL and reject the unsigned
+generated fixture. This verifies file trust only; it does not establish J2534
+device compatibility or authorize DLL loading.
+
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate
 80-byte buffers, missing exports, ordering, exceptions, disposal serialization,

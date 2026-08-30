@@ -169,7 +169,7 @@ export function createJ2534IdentityPreflightOperationController(dependencies = {
         return rejected("native_preflight_not_verified_in_operation", record.selectedDeviceId);
       }
       record.state = "VERIFIED_NON_EXECUTABLE";
-      return buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true });
+      return buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true, authenticodeVerified: result?.authenticode_status === "verified_file_policy" });
     } finally {
       record.descriptor = null;
       record.devices = null;

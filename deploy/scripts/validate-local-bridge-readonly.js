@@ -406,10 +406,11 @@ try {
     blockers: Object.freeze([...(evidence.blockers || []), "identity_probe_worker_not_implemented"]),
     selected_device_id: record.selectedDeviceId || null,
     native_preflight_verified_in_operation: evidence.preflightVerified === true,
+    authenticode_verified_in_operation: evidence.authenticodeVerified === true,
     identity_probe_execution_enabled: false, dll_load_attempted: false, pass_thru_open_allowed: false,
     vehicle_communication_started: false, vehicle_command_enabled: false
   });
-  const makeFixtureController = (runner = async () => ({ fixture_ok: true })) => createJ2534IdentityPreflightOperationController({
+  const makeFixtureController = (runner = async () => ({ fixture_ok: true, authenticode_status: "verified_file_policy" })) => createJ2534IdentityPreflightOperationController({
     ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "a".repeat(32),
     issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers }),
     revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers }),
@@ -428,6 +429,7 @@ try {
     fixtureController.run(fixtureIssued.operation), fixtureController.run(fixtureIssued.operation)
   ]);
   check(fixtureRunnerCalls === 1 && fixtureCompleted.native_preflight_verified_in_operation === true
+    && fixtureCompleted.authenticode_verified_in_operation === true
     && fixtureCompleted.readiness_status === "blocked" && fixtureCompleted.blockers.includes("identity_probe_worker_not_implemented")
     && fixtureParallel.blockers.includes("identity_preflight_operation_not_issued"), "J2534 identity preflight operation was not one-shot before asynchronous work");
   const fixtureReused = await fixtureController.run(fixtureIssued.operation);

@@ -11,6 +11,8 @@ namespace VehicleDiagnosis.Native
     {
         internal string Status = "rejected";
         internal string[] Blockers = new string[0];
+        internal string AuthenticodeStatus = "not_verified";
+        internal bool AuthenticodeNetworkRetrievalAllowed = false;
         internal bool FixedDriveVerified, FinalPathMatches, FileIdentityStable;
         internal bool Sha256Matches, SizeMatches, ArchitectureMatches, RuntimeArchitectureMatches;
         internal bool DllLoadAttempted = false;
@@ -165,6 +167,9 @@ namespace VehicleDiagnosis.Native
                     string runtimeArchitecture = IntPtr.Size == 4 ? "x86" : "x64";
                     result.RuntimeArchitectureMatches = String.Equals(actualArchitecture, runtimeArchitecture, StringComparison.Ordinal);
                     if (!result.RuntimeArchitectureMatches) throw new Rejected("native_runtime_architecture_mismatch");
+                    result.AuthenticodeStatus = J2534AuthenticodeVerifier.Verify(handle, canonicalPath);
+                    if (!result.AuthenticodeStatus.StartsWith("verified_", StringComparison.Ordinal))
+                        throw new Rejected("native_authenticode_not_trusted");
 #if PREFLIGHT_FIXTURE_TESTS
                     if (FixtureHandleVerified != null) FixtureHandleVerified(canonicalPath);
 #endif

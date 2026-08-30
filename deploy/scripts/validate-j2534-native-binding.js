@@ -11,9 +11,9 @@ import { createJ2534NativeFixtureSupervisor, parseJ2534NativeFixtureOutput } fro
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
-const preflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534NativePreflightFixtureWorker.cs"]
+const preflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534NativePreflightFixtureWorker.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
-const productionPreflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534RegisteredDriverPreflightWorker.cs"]
+const productionPreflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534RegisteredDriverPreflightWorker.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
 
 function execute(file, args, input = null) {
@@ -197,7 +197,7 @@ async function main() {
       createdFiles.push(productionPreflightLibrary);
       const productionPreflightCompile = await execute(platform.compiler, [
         "/nologo", "/target:library", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
-        `/out:${productionPreflightLibrary}`, preflightSources[0],
+        `/out:${productionPreflightLibrary}`, ...productionPreflightSources.slice(0, 2),
       ]);
       assert.equal(productionPreflightCompile.error, null, `Production native preflight compilation failed (${platform.name}): ${productionPreflightCompile.stdout}${productionPreflightCompile.stderr}`);
       total++;
@@ -235,15 +235,20 @@ async function main() {
         assert.equal(preflightSuccess[field], true, `Native preflight did not verify ${field}`);
       for (const field of ["dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted", "vehicle_command_enabled", "execution_enabled"])
         assert.equal(preflightSuccess[field], false, `Native preflight enabled ${field}`);
+      assert.equal(preflightSuccess.authenticode_status, "verified_fixture_only");
+      assert.equal(preflightSuccess.authenticode_network_retrieval_allowed, false);
       assert.equal(preflightSuccess.fixture_identity_mutation_rejected, true);
       assert.equal(preflightSuccess.fixture_file_id_128_mutation_rejected, true);
-      total += 18;
+      total += 20;
+      const signedSystemLibrary = path.join(process.env.SystemRoot || process.env.WINDIR || "C:\\Windows",
+        platform.name === "x86" ? "SysWOW64" : "System32", "version.dll");
+      const signedSystemBytes = fs.readFileSync(signedSystemLibrary);
       const privateWorkerRequest = {
         contract_version: "j2534-native-preflight-request-v1", operation: "verify_registered_driver_non_executable",
         request_nonce: `native-worker-${platform.name}-nonce-000000000001`, selected_device_id: `j2534-worker-${platform.name}`,
         descriptor_version: "j2534-registered-driver-descriptor-v1", descriptor_source: "live_windows_registry",
-        private_library_path: path.join(platformDirectory, "success.dll"), expected_sha256: preflightDescriptor("success.dll").sha256,
-        expected_file_size: preflightDescriptor("success.dll").size, expected_architecture: platform.name,
+        private_library_path: signedSystemLibrary, expected_sha256: createHash("sha256").update(signedSystemBytes).digest("hex"),
+        expected_file_size: signedSystemBytes.length, expected_architecture: platform.name,
         execution_enabled: false, vehicle_command_enabled: false
       };
       const directWorker = await execute(productionPreflightWorker, [], JSON.stringify(privateWorkerRequest));
@@ -255,7 +260,23 @@ async function main() {
       assert.equal(directResponse.request_nonce, privateWorkerRequest.request_nonce);
       assert.equal(directResponse.vehicle_communication_started, false);
       assert.equal(directResponse.would_transmit, false);
-      total += 7;
+      assert.equal(directResponse.authenticode_status, "verified_file_policy");
+      assert.equal(directResponse.authenticode_network_retrieval_allowed, false);
+      total += 9;
+      const unsignedRequest = {
+        ...privateWorkerRequest, request_nonce: `native-worker-${platform.name}-nonce-unsigned-0001`,
+        private_library_path: path.join(platformDirectory, "success.dll"),
+        expected_sha256: preflightDescriptor("success.dll").sha256,
+        expected_file_size: preflightDescriptor("success.dll").size
+      };
+      const unsignedWorker = await execute(productionPreflightWorker, [], JSON.stringify(unsignedRequest));
+      assert.equal(unsignedWorker.error, null);
+      const unsignedResponse = JSON.parse(unsignedWorker.stdout);
+      assert.equal(unsignedResponse.verification_status, "rejected");
+      assert.deepEqual(unsignedResponse.blockers, ["native_authenticode_not_trusted"]);
+      assert.equal(unsignedResponse.authenticode_status, "not_trusted");
+      assert.equal(unsignedResponse.dll_load_attempted, false);
+      total += 6;
       const extraKeyWorker = await execute(productionPreflightWorker, [], JSON.stringify({ ...privateWorkerRequest, extra: true }));
       assert.equal(extraKeyWorker.error?.code, 2);
       assert.equal(extraKeyWorker.stdout, "");
@@ -294,7 +315,7 @@ async function main() {
       const preflightSourceText = [...new Set([...preflightSources, ...productionPreflightSources])].map(source => fs.readFileSync(source, "utf8")).join("\n");
       assert.ok(!/LoadLibraryExW\s*\(|GetProcAddress\s*\(|PassThruOpen\s*\(/.test(preflightSourceText), "Native preflight source gained a DLL execution API");
       const preflightImports = [...preflightSourceText.matchAll(/private static extern [^;]+?\s+(\w+)\s*\(/g)].map(match => match[1]).sort();
-      assert.deepEqual(preflightImports, ["CreateFileW", "GetDriveTypeW", "GetFileInformationByHandle", "GetFileInformationByHandleEx", "GetFinalPathNameByHandleW"].sort(), "Native preflight P/Invoke allowlist changed");
+      assert.deepEqual(preflightImports, ["CreateFileW", "GetDriveTypeW", "GetFileInformationByHandle", "GetFileInformationByHandleEx", "GetFinalPathNameByHandleW", "WinVerifyTrust"].sort(), "Native preflight P/Invoke allowlist changed");
       total += 2;
 
       const worker = path.join(platformDirectory, "j2534-native-fixture-worker.exe");

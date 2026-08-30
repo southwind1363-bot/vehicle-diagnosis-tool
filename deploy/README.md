@@ -375,6 +375,8 @@ npm.cmd run bridge:dev
 npm.cmd run inspect:j2534
 ```
 
+候補番号を明示するか対話入力で選択した場合だけ、同じ非実行workerが固定ドライブ、ファイル同一性、SHA-256、PE構成に加えてWindowsの`WinVerifyTrust`署名ポリシーを確認します。署名確認はUIを出さず、ネットワーク取得を禁止してローカルキャッシュだけを使います。未署名またはWindowsが信頼済みと判定できないDLLは拒否します。これはDLLをロードせず、`PassThruOpen`や車両通信を行いません。コマンドから1件を選ぶ場合は `npm.cmd run inspect:j2534 -- --preflight-index 1` のように指定します。
+
 ### PC内で画面と確認ブリッジをまとめて起動
 
 Node.jsと、この`deploy`フォルダの依存パッケージを導入済みのPCで実行します。

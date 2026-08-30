@@ -11,13 +11,14 @@ const RESPONSE_VERSION = "j2534-native-preflight-response-v1";
 const DESCRIPTOR_VERSION = "j2534-registered-driver-descriptor-v1";
 const RESPONSE_KEYS = [
   "contract_version", "request_nonce", "selected_device_id", "descriptor_version",
-  "verification_status", "blockers", "fixed_drive_verified", "final_path_matches",
+  "verification_status", "blockers", "authenticode_status", "authenticode_network_retrieval_allowed",
+  "fixed_drive_verified", "final_path_matches",
   "file_identity_stable", "sha256_matches", "size_matches", "architecture_matches",
   "runtime_architecture_matches", "dll_load_attempted", "get_proc_address_attempted",
   "pass_thru_open_attempted", "vehicle_connection_attempted", "vehicle_communication_started",
   "would_transmit", "vehicle_command_enabled", "execution_enabled"
 ];
-const FALSE_FIELDS = ["dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted",
+const FALSE_FIELDS = ["authenticode_network_retrieval_allowed", "dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted",
   "vehicle_connection_attempted", "vehicle_communication_started", "would_transmit",
   "vehicle_command_enabled", "execution_enabled"];
 const TRUE_FIELDS = ["fixed_drive_verified", "final_path_matches", "file_identity_stable", "sha256_matches",
@@ -35,7 +36,8 @@ const safeToken = (value, min = 8, max = 96) => typeof value === "string"
 function baseResult(selectedDeviceId, status = "rejected", blockers = ["native_preflight_failed"]) {
   return {
     contract_version: RESPONSE_VERSION, selected_device_id: selectedDeviceId || null,
-    verification_status: status, blockers, fixed_drive_verified: false, final_path_matches: false,
+    verification_status: status, blockers, authenticode_status: "not_verified", authenticode_network_retrieval_allowed: false,
+    fixed_drive_verified: false, final_path_matches: false,
     file_identity_stable: false, sha256_matches: false, size_matches: false,
     architecture_matches: false, runtime_architecture_matches: false,
     dll_load_attempted: false, get_proc_address_attempted: false, pass_thru_open_attempted: false,
@@ -138,9 +140,11 @@ function parseResponse(output, request) {
     || value.request_nonce !== request.request_nonce || value.selected_device_id !== request.selected_device_id
     || value.descriptor_version !== DESCRIPTOR_VERSION || !["verified_non_executable", "rejected"].includes(value.verification_status)
     || !Array.isArray(value.blockers) || value.blockers.length > 8 || !value.blockers.every(item => safeToken(item, 3, 96))
+    || !["not_verified", "not_trusted", "verified_file_policy"].includes(value.authenticode_status)
     || FALSE_FIELDS.some(field => value[field] !== false) || TRUE_FIELDS.some(field => typeof value[field] !== "boolean")) return null;
   if (value.verification_status === "verified_non_executable"
     ? value.blockers.length !== 0 || TRUE_FIELDS.some(field => value[field] !== true)
+      || !["verified_file_policy"].includes(value.authenticode_status)
     : value.blockers.length === 0) return null;
   return value;
 }
