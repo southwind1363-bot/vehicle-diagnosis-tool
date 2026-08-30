@@ -1,0 +1,62 @@
+name: iOS Signed Development Host
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-signed-development-host
+  cancel-in-progress: false
+
+jobs:
+  signed-development-build:
+    name: Build signed iPhone development IPA
+    runs-on: macos-14
+    timeout-minutes: 30
+    environment: ios-device-signing
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Install verified XcodeGen
+        run: |
+          curl --fail --location --silent --show-error https://github.com/yonaskolb/XcodeGen/releases/download/2.46.0/xcodegen.zip --output /tmp/xcodegen.zip
+          echo "4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806  /tmp/xcodegen.zip" | shasum -a 256 --check
+          unzip -q /tmp/xcodegen.zip -d /tmp/xcodegen
+          echo "/tmp/xcodegen/xcodegen/bin" >> "$GITHUB_PATH"
+
+      - name: Validate signing workflow contract
+        run: |
+          node Scripts/validate-signed-development-workflow.mjs
+          bash -n Scripts/build-signed-development-ipa.sh
+        working-directory: native/ios/VehicleDiagnosisELMHost
+
+      - name: Run read-only connector tests
+        run: swift test
+        working-directory: native/ios/ELM327BLEConnector
+
+      - name: Validate diagnostic archive integration
+        run: npm run validate:obd
+        working-directory: deploy
+
+      - name: Generate host project
+        run: xcodegen generate
+        working-directory: native/ios/VehicleDiagnosisELMHost
+
+      - name: Build verified signed development IPA
+        env:
+          IOS_DEVELOPMENT_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_DEVELOPMENT_CERTIFICATE_P12_BASE64 }}
+          IOS_DEVELOPMENT_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DEVELOPMENT_CERTIFICATE_PASSWORD }}
+          IOS_DEVELOPMENT_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_DEVELOPMENT_PROVISIONING_PROFILE_BASE64 }}
+          SIGNING_OUTPUT_DIR: ${{ runner.temp }}/vehicle-diagnosis-elm-signed
+        run: bash Scripts/build-signed-development-ipa.sh
+        working-directory: native/ios/VehicleDiagnosisELMHost
+
+      - name: Upload signed development build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: VehicleDiagnosisELMHost-signed-development-${{ github.sha }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/vehicle-diagnosis-elm-signed/
+          if-no-files-found: error
+          retention-days: 3

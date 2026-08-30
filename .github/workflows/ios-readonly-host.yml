@@ -58,6 +58,12 @@ jobs:
         run: xcodegen generate
         working-directory: native/ios/VehicleDiagnosisELMHost
 
+      - name: Validate optional signed-development workflow
+        run: |
+          node Scripts/validate-signed-development-workflow.mjs
+          bash -n Scripts/build-signed-development-ipa.sh
+        working-directory: native/ios/VehicleDiagnosisELMHost
+
       - name: Build read-only host for iOS Simulator
         run: |
           set +e
