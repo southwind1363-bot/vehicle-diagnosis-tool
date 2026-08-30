@@ -548,7 +548,7 @@ public final class ELM327BLEConnector: NSObject {
                 }
                 adapterName = firstResponseLine(in: response, excluding: command)
                 sequence += 1
-                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber))
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber, readoutProfile: activeReadoutProfile))
             case .describeProtocol:
                 guard isUsableELMAdapterIdentityResponse(command: command, response: response) else {
                     emitFailure(for: command, error: "adapter_protocol_unavailable")
@@ -557,7 +557,7 @@ public final class ELM327BLEConnector: NSObject {
                 }
                 protocolHint = normalizedELMAdapterProtocolHint(response: response)
                 sequence += 1
-                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber))
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber, readoutProfile: activeReadoutProfile))
             case .describeProtocolNumber:
                 guard isUsableELMAdapterIdentityResponse(command: command, response: response),
                       let normalizedProtocolNumber = normalizedELMAdapterProtocolNumber(response: response)
@@ -568,7 +568,7 @@ public final class ELM327BLEConnector: NSObject {
                 }
                 protocolNumber = normalizedProtocolNumber
                 sequence += 1
-                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber))
+                emit(NativeConnectorEnvelopeFactory.adapterIdentity(context: context, sequence: sequence, adapterName: adapterName, protocolHint: protocolHint, protocolNumber: protocolNumber, readoutProfile: activeReadoutProfile))
             case .storedDTC, .pendingDTC, .permanentDTC:
                 switch OBD2ReadoutDecoder.decodeDTCs(command: command, response: response) {
                 case .success(let results):

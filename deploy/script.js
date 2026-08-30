@@ -222,7 +222,7 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7217件",
+  validationCheckLabel: "OBD安全検証 7219件",
   bridgeValidationCheckLabel: "bridge検証 358件",
   recentMilestone: "サービス安全条件を診断セッション保存へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"

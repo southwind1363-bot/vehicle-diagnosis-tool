@@ -193,6 +193,31 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
+    func testAdapterPreflightLabelsCurrentSettingWithoutClaimingVehicleProtocol() {
+        let evidence: [String: NativeConnectorJSONValue] = [
+            "adapter_protocol_hint": .string("ISO 15765-4"),
+            "adapter_protocol_number": .string("A6"),
+            "adapter_evidence_schema_version": .string("adapter_identity_evidence_v1"),
+            "adapter_response_confirmed": .bool(true),
+            "adapter_protocol_evidence_scope": .string("adapter_current_setting"),
+            "vehicle_link_checked": .bool(false),
+            "vehicle_compatibility_confirmed": .bool(false)
+        ]
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.adapterProtocolSettingLabel(from: evidence),
+            "ISO 15765-4 / ATDPN A6"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.adapterVehicleLinkStatusLabel(from: evidence),
+            "未確認（アダプター設定のみ）"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.adapterVehicleLinkStatusLabel(from: ["adapter_protocol_hint": .string("AUTO")]),
+            "未確認（旧形式）"
+        )
+    }
+
+    @MainActor
     func testReadoutLabelNamesTheRetainedAdapterIdentity() {
         let viewModel = ReadoutCoordinatorViewModel()
         XCTAssertEqual(viewModel.readoutLabel(intent: "adapter_identity", readoutID: "adapter_identity"), "アダプター識別")

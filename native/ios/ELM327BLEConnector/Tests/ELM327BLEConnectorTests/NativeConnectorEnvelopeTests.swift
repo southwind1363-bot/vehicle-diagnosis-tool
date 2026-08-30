@@ -8,7 +8,8 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
             sequence: 1,
             adapterName: "STN1170 SN: 979867700221",
             protocolHint: "AUTO, ISO 15765-4 (CAN 11/500)",
-            protocolNumber: "A6"
+            protocolNumber: "A6",
+            readoutProfile: .initialDiagnostic
         )
 
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
@@ -27,11 +28,46 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
             sequence: 1,
             adapterName: "OBD Adapter 1.0",
             protocolHint: "AUTO",
-            protocolNumber: "A0"
+            protocolNumber: "A0",
+            readoutProfile: .initialDiagnostic
         )
         let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
         XCTAssertTrue(json.contains("\"adapter_family\":\"unknown\""))
         XCTAssertFalse(json.contains("\"adapter_family\":\"ELM327\""))
+    }
+
+    func testAdapterPreflightDeclaresAdapterOnlyEvidence() throws {
+        let envelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: NativeConnectorSessionContext(),
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "AUTO, ISO 15765-4 (CAN 11/500)",
+            protocolNumber: "A6",
+            readoutProfile: .adapterPreflight
+        )
+
+        XCTAssertEqual(envelope.data["adapter_evidence_schema_version"], .string("adapter_identity_evidence_v1"))
+        XCTAssertEqual(envelope.data["adapter_response_confirmed"], .bool(true))
+        XCTAssertEqual(envelope.data["adapter_protocol_evidence_scope"], .string("adapter_current_setting"))
+        XCTAssertEqual(envelope.data["vehicle_link_checked"], .bool(false))
+        XCTAssertEqual(envelope.data["vehicle_compatibility_confirmed"], .bool(false))
+    }
+
+    func testDiagnosticAdapterIdentityDoesNotClaimPreflightEvidence() throws {
+        let envelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: NativeConnectorSessionContext(),
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "ISO 15765-4",
+            protocolNumber: "6",
+            readoutProfile: .quickCondition
+        )
+
+        XCTAssertNil(envelope.data["adapter_evidence_schema_version"])
+        XCTAssertNil(envelope.data["adapter_response_confirmed"])
+        XCTAssertNil(envelope.data["adapter_protocol_evidence_scope"])
+        XCTAssertNil(envelope.data["vehicle_link_checked"])
+        XCTAssertNil(envelope.data["vehicle_compatibility_confirmed"])
     }
 
     func testLivePidEnvelopeUsesTheExistingReadOnlyContract() throws {

@@ -38,6 +38,32 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         )
     }
 
+    private func replacingData(
+        in envelope: NativeConnectorEnvelope,
+        with data: [String: NativeConnectorJSONValue]
+    ) -> NativeConnectorEnvelope {
+        NativeConnectorEnvelope(
+            schemaVersion: envelope.schemaVersion,
+            interfaceID: envelope.interfaceID,
+            platform: envelope.platform,
+            adapterTransport: envelope.adapterTransport,
+            intent: envelope.intent,
+            capturedAt: envelope.capturedAt,
+            scanID: envelope.scanID,
+            connectionID: envelope.connectionID,
+            vehicleContextID: envelope.vehicleContextID,
+            sequence: envelope.sequence,
+            readoutID: envelope.readoutID,
+            readoutScopeID: envelope.readoutScopeID,
+            readoutAttempt: envelope.readoutAttempt,
+            ok: envelope.ok,
+            blocked: envelope.blocked,
+            wouldTransmit: envelope.wouldTransmit,
+            errors: envelope.errors,
+            data: data
+        )
+    }
+
     func testExportsSeparateTerminalManifestAfterContiguousReadOnlyEnvelopes() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         try builder.append(envelope(sequence: 1))
@@ -60,7 +86,8 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             sequence: 1,
             adapterName: "ELM327 v1.5",
             protocolHint: "ISO 15765-4",
-            protocolNumber: "A6"
+            protocolNumber: "A6",
+            readoutProfile: .initialDiagnostic
         )
 
         try builder.append(adapter)
@@ -82,7 +109,8 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             sequence: 1,
             adapterName: "ELM327 v1.5",
             protocolHint: "AUTO",
-            protocolNumber: "A0"
+            protocolNumber: "A0",
+            readoutProfile: .adapterPreflight
         ))
         try builder.complete(with: manifest(
             count: 1,
@@ -127,6 +155,111 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         )))
     }
 
+    func testAdapterPreflightRetainsLegacyEvidenceButRejectsPartialEvidence() throws {
+        let legacyBuilder = NativeConnectorScanArchiveBuilder()
+        let legacyEnvelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "AUTO",
+            protocolNumber: "A0",
+            readoutProfile: .initialDiagnostic
+        )
+        try legacyBuilder.append(legacyEnvelope)
+        try legacyBuilder.complete(with: manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+
+        let partialBuilder = NativeConnectorScanArchiveBuilder()
+        let preflightEnvelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "AUTO",
+            protocolNumber: "A0",
+            readoutProfile: .adapterPreflight
+        )
+        var partialData = preflightEnvelope.data
+        partialData.removeValue(forKey: "vehicle_link_checked")
+        try partialBuilder.append(replacingData(in: preflightEnvelope, with: partialData))
+        XCTAssertThrowsError(try partialBuilder.complete(with: manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidManifest)
+        }
+    }
+
+    func testAdapterPreflightRejectsMistypedUnknownAndContradictoryEvidence() throws {
+        let preflightEnvelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "AUTO",
+            protocolNumber: "A0",
+            readoutProfile: .adapterPreflight
+        )
+        let invalidValues: [(String, NativeConnectorJSONValue)] = [
+            ("vehicle_link_checked", .string("false")),
+            ("adapter_protocol_evidence_scope", .string("vehicle_negotiated_protocol")),
+            ("vehicle_compatibility_confirmed", .bool(true))
+        ]
+
+        for (key, value) in invalidValues {
+            let builder = NativeConnectorScanArchiveBuilder()
+            var data = preflightEnvelope.data
+            data[key] = value
+            try builder.append(replacingData(in: preflightEnvelope, with: data))
+            XCTAssertThrowsError(try builder.complete(with: manifest(
+                count: 1,
+                first: 1,
+                last: 1,
+                readoutProfile: .adapterPreflight,
+                expectedIntents: ["adapter_identity"],
+                expectedReadouts: ["adapter_identity"]
+            ))) { error in
+                XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidManifest)
+            }
+        }
+    }
+
+    func testInterruptedAdapterPreflightRetainsConfirmedAdapterEvidenceWithoutVehicleClaim() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        let preflightEnvelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: nil,
+            protocolNumber: nil,
+            readoutProfile: .adapterPreflight
+        )
+        try builder.append(preflightEnvelope)
+        try builder.complete(with: manifest(
+            state: .interrupted,
+            count: 1,
+            first: 1,
+            last: 1,
+            interruption: NativeConnectorInterruption(code: "transport:response_timeout", connectionID: context.connectionID, sequence: 1),
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+
+        let data = try builder.export().envelopes[0].data
+        XCTAssertEqual(data["adapter_response_confirmed"], .bool(true))
+        XCTAssertEqual(data["vehicle_link_checked"], .bool(false))
+        XCTAssertEqual(data["vehicle_compatibility_confirmed"], .bool(false))
+    }
+
     func testInitialProfileAllowsRetainedAdapterIdentityInItsCompletionPlan() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(
@@ -134,7 +267,8 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             sequence: 1,
             adapterName: "ELM327 v1.5",
             protocolHint: "ISO 15765-4",
-            protocolNumber: "A6"
+            protocolNumber: "A6",
+            readoutProfile: .initialDiagnostic
         ))
         try builder.append(envelope(sequence: 2))
 
@@ -351,7 +485,8 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
             sequence: 1,
             adapterName: "ELM327",
             protocolHint: "AUTO",
-            protocolNumber: nil
+            protocolNumber: nil,
+            readoutProfile: .initialDiagnostic
         ))
         try builder.complete(with: manifest(
             count: 1,

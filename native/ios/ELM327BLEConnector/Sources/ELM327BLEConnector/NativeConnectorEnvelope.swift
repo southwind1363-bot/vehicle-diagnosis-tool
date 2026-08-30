@@ -133,12 +133,20 @@ public enum NativeConnectorEnvelopeFactory {
         sequence: Int,
         adapterName: String?,
         protocolHint: String?,
-        protocolNumber: String?
+        protocolNumber: String?,
+        readoutProfile: NativeConnectorReadoutProfile
     ) -> NativeConnectorEnvelope {
         var data: [String: NativeConnectorJSONValue] = [
             "adapter_family": .string(adapterFamily(for: adapterName)),
             "vehicle_command_enabled": .bool(false)
         ]
+        if readoutProfile == .adapterPreflight {
+            data["adapter_evidence_schema_version"] = .string("adapter_identity_evidence_v1")
+            data["adapter_response_confirmed"] = .bool(true)
+            data["adapter_protocol_evidence_scope"] = .string("adapter_current_setting")
+            data["vehicle_link_checked"] = .bool(false)
+            data["vehicle_compatibility_confirmed"] = .bool(false)
+        }
         if let protocolFamily = protocolFamily(for: protocolHint) {
             data["adapter_protocol_hint"] = .string(protocolFamily)
         }

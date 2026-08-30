@@ -140,6 +140,49 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         }
     }
 
+    private var latestAdapterIdentityData: [String: NativeConnectorJSONValue]? {
+        NativeConnectorReadoutPreview.effectiveReadoutEnvelopes(from: coordinator.completedArchive?.envelopes ?? [])
+            .last(where: { $0.intent == "adapter_identity" && $0.ok && !$0.blocked && !$0.wouldTransmit })?
+            .data
+    }
+
+    var adapterProtocolSettingLabel: String {
+        guard currentReadoutProfile == .adapterPreflight else { return "未実行" }
+        return Self.adapterProtocolSettingLabel(from: latestAdapterIdentityData)
+    }
+
+    var adapterVehicleLinkStatusLabel: String {
+        guard currentReadoutProfile == .adapterPreflight else { return "未実行" }
+        return Self.adapterVehicleLinkStatusLabel(from: latestAdapterIdentityData)
+    }
+
+    static func adapterProtocolSettingLabel(from data: [String: NativeConnectorJSONValue]?) -> String {
+        guard let data else { return "未取得" }
+        let hint: String? = {
+            guard case .string(let value)? = data["adapter_protocol_hint"] else { return nil }
+            return value
+        }()
+        let number: String? = {
+            guard case .string(let value)? = data["adapter_protocol_number"] else { return nil }
+            return value
+        }()
+        if let hint, let number { return "\(hint) / ATDPN \(number)" }
+        if let hint { return hint }
+        if let number { return "ATDPN \(number)" }
+        return "未取得"
+    }
+
+    static func adapterVehicleLinkStatusLabel(from data: [String: NativeConnectorJSONValue]?) -> String {
+        guard let data else { return "未確認" }
+        guard case .string("adapter_identity_evidence_v1")? = data["adapter_evidence_schema_version"],
+              case .bool(true)? = data["adapter_response_confirmed"],
+              case .string("adapter_current_setting")? = data["adapter_protocol_evidence_scope"],
+              case .bool(false)? = data["vehicle_link_checked"],
+              case .bool(false)? = data["vehicle_compatibility_confirmed"]
+        else { return "未確認（旧形式）" }
+        return "未確認（アダプター設定のみ）"
+    }
+
     var vehicleCommunicationStatusLabel: String {
         Self.vehicleCommunicationStatusLabel(
             for: currentReadoutProfile,

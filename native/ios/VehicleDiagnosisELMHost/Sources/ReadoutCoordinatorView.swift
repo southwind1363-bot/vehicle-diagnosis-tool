@@ -95,6 +95,8 @@ struct ReadoutCoordinatorView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                     LabeledContent("確認結果", value: viewModel.adapterPreflightStatusLabel)
+                    LabeledContent("アダプター現在設定", value: viewModel.adapterProtocolSettingLabel)
+                    LabeledContent("車両リンク", value: viewModel.adapterVehicleLinkStatusLabel)
                     Button("アダプターのみ確認") {
                         viewModel.beginAdapterPreflight()
                     }

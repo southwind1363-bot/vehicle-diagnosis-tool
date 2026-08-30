@@ -838,7 +838,7 @@
     Object.freeze({
       intent: "adapter_identity",
       label: "Adapter identity",
-      dataShape: Object.freeze(["adapter_name", "adapter_family", "firmware_version", "adapter_protocol_hint", "adapter_protocol_number", "vehicle_command_enabled"]),
+      dataShape: Object.freeze(["adapter_name", "adapter_family", "firmware_version", "adapter_protocol_hint", "adapter_protocol_number", "adapter_evidence_schema_version", "adapter_response_confirmed", "adapter_protocol_evidence_scope", "vehicle_link_checked", "vehicle_compatibility_confirmed", "vehicle_command_enabled"]),
       safeDefault: Object.freeze({
         adapter_name: null,
         adapter_family: null,
@@ -3179,6 +3179,48 @@
     };
   }
 
+  function validateNativeConnectorAdapterIdentityEvidence(envelopes = [], readoutProfile = null) {
+    const evidenceKeys = [
+      "adapter_evidence_schema_version",
+      "adapter_response_confirmed",
+      "adapter_protocol_evidence_scope",
+      "vehicle_link_checked",
+      "vehicle_compatibility_confirmed"
+    ];
+    const unsupportedAliasKeys = [
+      "adapterEvidenceSchemaVersion",
+      "adapterResponseConfirmed",
+      "adapterProtocolEvidenceScope",
+      "vehicleLinkChecked",
+      "vehicleCompatibilityConfirmed"
+    ];
+    const adapterEnvelopes = envelopes.filter((envelope) => envelope && typeof envelope === "object" && envelope.intent === "adapter_identity");
+    if (adapterEnvelopes.some((envelope) => {
+      const data = envelope?.data && typeof envelope.data === "object" && !Array.isArray(envelope.data) ? envelope.data : {};
+      return unsupportedAliasKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    })) return ["adapter_identity_evidence_contract_mismatch"];
+    const hasEvidence = (envelope) => {
+      const data = envelope?.data && typeof envelope.data === "object" && !Array.isArray(envelope.data) ? envelope.data : {};
+      return evidenceKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
+    };
+    if (adapterEnvelopes.some((envelope) => envelope.ok !== true && hasEvidence(envelope))) {
+      return ["adapter_identity_evidence_contract_mismatch"];
+    }
+    const successfulEnvelopes = adapterEnvelopes.filter((envelope) => envelope.ok === true);
+    if (!successfulEnvelopes.some(hasEvidence)) return [];
+    if (readoutProfile !== "adapter_preflight") return ["adapter_identity_evidence_contract_mismatch"];
+    const valid = successfulEnvelopes.every((envelope) => {
+      const data = envelope.data;
+      return evidenceKeys.every((key) => Object.prototype.hasOwnProperty.call(data, key))
+        && data.adapter_evidence_schema_version === "adapter_identity_evidence_v1"
+        && data.adapter_response_confirmed === true
+        && data.adapter_protocol_evidence_scope === "adapter_current_setting"
+        && data.vehicle_link_checked === false
+        && data.vehicle_compatibility_confirmed === false;
+    });
+    return valid ? [] : ["adapter_identity_evidence_contract_mismatch"];
+  }
+
   function buildNativeConnectorScanSessionFromCompletionManifest(input = {}) {
     const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const envelopes = Array.isArray(source.envelopes) ? source.envelopes : [];
@@ -3205,6 +3247,8 @@
     });
     if (!normalized.manifest) return blockedResult(normalized.errors);
     const manifest = normalized.manifest;
+    const adapterEvidenceErrors = validateNativeConnectorAdapterIdentityEvidence(envelopes, manifest.readoutProfile);
+    if (adapterEvidenceErrors.length) return blockedResult(adapterEvidenceErrors);
     const matchesTerminalSegments = (actualSegments = []) => actualSegments.length === manifest.connectionSegments.length
       && actualSegments.every((segment, index) => {
         const terminal = manifest.connectionSegments[index];
@@ -4449,9 +4493,39 @@
     const sourceValue = response?.source || response?.source_type || response?.sourceType || data.source || data.source_type || data.sourceType || "local_bridge";
     const normalizedSource = String(sourceValue).trim().toLowerCase();
     const source = ["web_serial", "native_connector"].includes(normalizedSource) ? normalizedSource : "local_bridge";
-    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber", "registration_status", "registrationStatus", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "registry_roots_checked", "registryRootsChecked", "bridge_runtime_architecture", "bridgeRuntimeArchitecture", "bridge_runtime_bitness", "bridgeRuntimeBitness", "open_review_status", "openReviewStatus", "open_review_blockers", "openReviewBlockers", "pass_thru_open_allowed", "passThruOpenAllowed", "pass_thru_open_attempted", "passThruOpenAttempted", "vehicle_connection_attempted", "vehicleConnectionAttempted", "worker_contract_version", "workerContractVersion", "worker_execution_status", "workerExecutionStatus", "dll_load_attempted", "dllLoadAttempted", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
+    const adapterEvidenceAliases = Object.freeze({
+      schemaVersion: Object.freeze(["adapter_evidence_schema_version", "adapterEvidenceSchemaVersion"]),
+      responseConfirmed: Object.freeze(["adapter_response_confirmed", "adapterResponseConfirmed"]),
+      protocolScope: Object.freeze(["adapter_protocol_evidence_scope", "adapterProtocolEvidenceScope"]),
+      vehicleLinkChecked: Object.freeze(["vehicle_link_checked", "vehicleLinkChecked"]),
+      vehicleCompatibilityConfirmed: Object.freeze(["vehicle_compatibility_confirmed", "vehicleCompatibilityConfirmed"])
+    });
+    const adapterIdentityKeys = ["adapter_name", "adapterName", "name", "adapter", "adapter_family", "adapterFamily", "family", "firmware_version", "firmwareVersion", "firmware", "version", "adapter_protocol_hint", "adapterProtocolHint", "protocol_hint", "protocolHint", "adapter_protocol_number", "adapterProtocolNumber", "protocol_number", "protocolNumber", ...Object.values(adapterEvidenceAliases).flat(), "registration_status", "registrationStatus", "driver_readiness_status", "driverReadinessStatus", "next_check", "nextCheck", "registry_roots_checked", "registryRootsChecked", "bridge_runtime_architecture", "bridgeRuntimeArchitecture", "bridge_runtime_bitness", "bridgeRuntimeBitness", "open_review_status", "openReviewStatus", "open_review_blockers", "openReviewBlockers", "pass_thru_open_allowed", "passThruOpenAllowed", "pass_thru_open_attempted", "passThruOpenAttempted", "vehicle_connection_attempted", "vehicleConnectionAttempted", "worker_contract_version", "workerContractVersion", "worker_execution_status", "workerExecutionStatus", "dll_load_attempted", "dllLoadAttempted", "static_ready_vci_count", "staticReadyVciCount", "static_blocked_vci_count", "staticBlockedVciCount", "selected_static_ready_device_id", "selectedStaticReadyDeviceId"];
+    const readOwnAdapterEvidenceValues = (aliases) => aliases
+      .filter((alias) => Object.prototype.hasOwnProperty.call(data, alias))
+      .map((alias) => data[alias]);
+    const adapterEvidenceValues = {
+      schemaVersion: readOwnAdapterEvidenceValues(adapterEvidenceAliases.schemaVersion),
+      responseConfirmed: readOwnAdapterEvidenceValues(adapterEvidenceAliases.responseConfirmed),
+      protocolScope: readOwnAdapterEvidenceValues(adapterEvidenceAliases.protocolScope),
+      vehicleLinkChecked: readOwnAdapterEvidenceValues(adapterEvidenceAliases.vehicleLinkChecked),
+      vehicleCompatibilityConfirmed: readOwnAdapterEvidenceValues(adapterEvidenceAliases.vehicleCompatibilityConfirmed)
+    };
+    const adapterEvidence = Object.fromEntries(Object.entries(adapterEvidenceValues).map(([key, values]) => [key, values[0]]));
+    const adapterEvidencePresent = Object.values(adapterEvidenceValues).some((values) => values.length > 0);
+    const adapterEvidenceAliasesConsistent = Object.values(adapterEvidenceValues)
+      .every((values) => values.length <= 1 || values.every((value) => Object.is(value, values[0])));
+    const adapterEvidenceValid = !adapterEvidencePresent || (
+      adapterEvidenceAliasesConsistent
+      && Object.values(adapterEvidenceValues).every((values) => values.length > 0)
+      && adapterEvidence.schemaVersion === "adapter_identity_evidence_v1"
+      && adapterEvidence.responseConfirmed === true
+      && adapterEvidence.protocolScope === "adapter_current_setting"
+      && adapterEvidence.vehicleLinkChecked === false
+      && adapterEvidence.vehicleCompatibilityConfirmed === false
+    );
     const hasAdapterIdentityData = adapterIdentityKeys.some((key) => Object.prototype.hasOwnProperty.call(data, key));
-    const malformedAdapterIdentity = adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object" && !(["registry_roots_checked", "registryRootsChecked", "open_review_blockers", "openReviewBlockers"].includes(key) && Array.isArray(data[key])));
+    const malformedAdapterIdentity = !adapterEvidenceValid || adapterIdentityKeys.some((key) => data[key] !== undefined && data[key] !== null && typeof data[key] === "object" && !(["registry_roots_checked", "registryRootsChecked", "open_review_blockers", "openReviewBlockers"].includes(key) && Array.isArray(data[key])));
     const bridgeSafety = readBridgeSnapshotSafety(response, hasAdapterIdentityData);
     const errorCodes = readBridgeResponseErrorCodes(response);
     const resolvedBridgeSafety = malformedAdapterIdentity
@@ -4479,6 +4553,18 @@
       adapter_protocol_hint: readAdapterIdentityText(data.adapter_protocol_hint, data.adapterProtocolHint, data.protocol_hint, data.protocolHint),
       adapterProtocolNumber: readAdapterIdentityText(data.adapter_protocol_number, data.adapterProtocolNumber, data.protocol_number, data.protocolNumber),
       adapter_protocol_number: readAdapterIdentityText(data.adapter_protocol_number, data.adapterProtocolNumber, data.protocol_number, data.protocolNumber),
+      ...(adapterEvidenceValid && adapterEvidencePresent ? {
+        adapterEvidenceSchemaVersion: adapterEvidence.schemaVersion,
+        adapter_evidence_schema_version: adapterEvidence.schemaVersion,
+        adapterResponseConfirmed: adapterEvidence.responseConfirmed,
+        adapter_response_confirmed: adapterEvidence.responseConfirmed,
+        adapterProtocolEvidenceScope: adapterEvidence.protocolScope,
+        adapter_protocol_evidence_scope: adapterEvidence.protocolScope,
+        vehicleLinkChecked: adapterEvidence.vehicleLinkChecked,
+        vehicle_link_checked: adapterEvidence.vehicleLinkChecked,
+        vehicleCompatibilityConfirmed: adapterEvidence.vehicleCompatibilityConfirmed,
+        vehicle_compatibility_confirmed: adapterEvidence.vehicleCompatibilityConfirmed
+      } : {}),
       sampleMode,
       sample_mode: sampleMode,
       replayMode,

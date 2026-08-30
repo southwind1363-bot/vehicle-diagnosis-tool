@@ -150,7 +150,8 @@ public final class NativeConnectorScanArchiveBuilder {
                   manifest.expectedReadouts.contains($0.readoutID)
                       && Self.isValidScope($0.scopeID)
               }),
-              Self.isReadoutProfileConsistent(manifest)
+              Self.isReadoutProfileConsistent(manifest),
+              Self.isAdapterIdentityEvidenceConsistent(manifest: manifest, envelopes: envelopes)
         else { throw NativeConnectorScanArchiveError.invalidManifest }
         guard (manifest.scanState == .completed && manifest.interruption == nil)
               || (manifest.scanState == .interrupted && manifest.interruption != nil)
@@ -212,6 +213,37 @@ public final class NativeConnectorScanArchiveBuilder {
             if ["vehicle_command_enabled", "vehiclecommandenabled", "execution_enabled", "executionenabled", "would_transmit", "wouldtransmit"].contains(normalizedKey) && isEnabled(value) { return false }
             if ["read_only", "readonly"].contains(normalizedKey) && !isEnabled(value) { return false }
             return isSafe(value: value)
+        }
+    }
+
+    private static func isAdapterIdentityEvidenceConsistent(
+        manifest: NativeConnectorCompletionManifest,
+        envelopes: [NativeConnectorEnvelope]
+    ) -> Bool {
+        let keys = [
+            "adapter_evidence_schema_version",
+            "adapter_response_confirmed",
+            "adapter_protocol_evidence_scope",
+            "vehicle_link_checked",
+            "vehicle_compatibility_confirmed"
+        ]
+        let adapterEnvelopes = envelopes.filter { $0.intent == "adapter_identity" }
+        let hasEvidence = { (envelope: NativeConnectorEnvelope) in
+            keys.contains { envelope.data[$0] != nil }
+        }
+        guard adapterEnvelopes.filter({ !$0.ok }).allSatisfy({ !hasEvidence($0) }) else { return false }
+        let successfulEnvelopes = adapterEnvelopes.filter(\.ok)
+        guard successfulEnvelopes.contains(where: hasEvidence) else { return true }
+        guard manifest.readoutProfile == .adapterPreflight else { return false }
+
+        return successfulEnvelopes.allSatisfy { envelope in
+            guard case .string("adapter_identity_evidence_v1")? = envelope.data["adapter_evidence_schema_version"],
+                  case .bool(true)? = envelope.data["adapter_response_confirmed"],
+                  case .string("adapter_current_setting")? = envelope.data["adapter_protocol_evidence_scope"],
+                  case .bool(false)? = envelope.data["vehicle_link_checked"],
+                  case .bool(false)? = envelope.data["vehicle_compatibility_confirmed"]
+            else { return false }
+            return true
         }
     }
 
