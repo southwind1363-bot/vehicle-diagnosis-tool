@@ -406,14 +406,15 @@ try {
     blockers: Object.freeze([...(evidence.blockers || []), "identity_probe_worker_not_implemented"]),
     selected_device_id: record.selectedDeviceId || null,
     native_preflight_verified_in_operation: evidence.preflightVerified === true,
+    package_integrity_verified_in_operation: evidence.packageIntegrityVerified === true,
     authenticode_verified_in_operation: evidence.authenticodeVerified === true,
     identity_probe_execution_enabled: false, dll_load_attempted: false, pass_thru_open_allowed: false,
     vehicle_communication_started: false, vehicle_command_enabled: false
   });
   const makeFixtureController = (runner = async () => ({ fixture_ok: true, authenticode_status: "verified_file_policy" })) => createJ2534IdentityPreflightOperationController({
     ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "a".repeat(32),
-    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers }),
-    revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers }),
+    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers, packageIntegrityVerified: true }),
+    revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers, packageIntegrityVerified: true }),
     runPreflight: async (descriptor, options) => {
       fixtureRunnerCalls += 1;
       return { operationNonce: options.operationNonce, result: await runner(descriptor, options) };
@@ -429,6 +430,7 @@ try {
     fixtureController.run(fixtureIssued.operation), fixtureController.run(fixtureIssued.operation)
   ]);
   check(fixtureRunnerCalls === 1 && fixtureCompleted.native_preflight_verified_in_operation === true
+    && fixtureCompleted.package_integrity_verified_in_operation === true
     && fixtureCompleted.authenticode_verified_in_operation === true
     && fixtureCompleted.readiness_status === "blocked" && fixtureCompleted.blockers.includes("identity_probe_worker_not_implemented")
     && fixtureParallel.blockers.includes("identity_preflight_operation_not_issued"), "J2534 identity preflight operation was not one-shot before asynchronous work");
@@ -466,12 +468,22 @@ try {
   const rollbackRejected = await rollbackController.run(rollbackOperation);
   check(rollbackRejected.blockers.includes("identity_preflight_operation_expired"), "J2534 identity preflight accepted a monotonic clock rollback");
   fixtureNow = 400;
+  const packageFailureController = createJ2534IdentityPreflightOperationController({
+    ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "b".repeat(32),
+    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers, packageIntegrityVerified: true }),
+    revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers, packageIntegrityVerified: false }),
+    runPreflight: async () => { throw new Error("package gate bypassed"); },
+    validatePreflight: () => true, buildSnapshot: fixtureSnapshot
+  });
+  const packageFailure = await packageFailureController.run(packageFailureController.issue({ selected_device_id: fixtureDeviceId }).operation);
+  check(packageFailure.blockers.includes("package_integrity_not_verified") && packageFailure.native_preflight_verified_in_operation === false
+    && packageFailure.package_integrity_verified_in_operation === false, "J2534 identity preflight ran native work after package integrity changed");
   const revalidationExpiryController = createJ2534IdentityPreflightOperationController({
     ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "c".repeat(32),
-    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers }),
+    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers, packageIntegrityVerified: true }),
     revalidateRecord: (record) => {
       fixtureNow = 10401;
-      return { accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers };
+      return { accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers, packageIntegrityVerified: true };
     },
     runPreflight: async (_descriptor, options) => ({ operationNonce: options.operationNonce, result: { fixture_ok: true } }),
     validatePreflight: (_record, result) => result?.fixture_ok === true,
@@ -482,8 +494,8 @@ try {
   fixtureNow = 500;
   const nonceMismatchController = createJ2534IdentityPreflightOperationController({
     ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "d".repeat(32),
-    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers }),
-    revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers }),
+    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers, packageIntegrityVerified: true }),
+    revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers, packageIntegrityVerified: true }),
     runPreflight: async () => ({ operationNonce: "e".repeat(32), result: { fixture_ok: true } }),
     validatePreflight: (_record, result) => result?.fixture_ok === true,
     buildSnapshot: fixtureSnapshot

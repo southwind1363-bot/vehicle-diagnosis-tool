@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runJ2534NativePreflight } from "./scripts/j2534-registered-driver-native-preflight.js";
+import { verifyWorkstationPackage } from "./scripts/verify-workstation-package.js";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
@@ -19,6 +20,7 @@ const J2534_HOST_BITNESS = J2534_HOST_ARCHITECTURE === "x86" ? 32 : J2534_HOST_A
 const J2534_WORKER_CONTRACT_VERSION = "j2534-readonly-worker-v1";
 const J2534_REGISTERED_DRIVER_DESCRIPTOR_VERSION = "j2534-registered-driver-descriptor-v1";
 const J2534_WORKER_SCRIPT_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "scripts", "j2534-readonly-worker.js");
+const WORKSTATION_PACKAGE_ROOT = path.dirname(fileURLToPath(import.meta.url));
 let j2534WorkerReviewActive = false;
 const j2534RegisteredDriverDescriptorSecrets = new WeakMap();
 const J2534_REQUIRED_API_NAMES = Object.freeze([
@@ -920,8 +922,8 @@ function buildJ2534IdentityProbeReadinessInternal(devices = [], options = {}, tr
     && descriptor?.exact_identity_api_ready === true
     && descriptor?.execution_enabled === false && descriptor?.dll_load_attempted === false
     && descriptor?.pass_thru_open_attempted === false && descriptor?.vehicle_command_enabled === false;
-  // These gates require future opaque evidence issuers. Caller-provided status strings are never authorization.
-  const packageIntegrityVerified = false;
+  // Trusted operation evidence is internal only. Caller-provided status strings are never authorization.
+  const packageIntegrityVerified = trusted.packageIntegrityVerified === true;
   const authenticodeVerified = trusted.authenticodeVerified === true;
   const quarantineClear = false;
   const globalMutexAcquired = false;
@@ -1483,7 +1485,8 @@ function createJ2534IdentityPreflightOperationController(dependencies) {
       return Object.freeze({ status: "rejected", operation: null, readiness: rejected("identity_preflight_operation_issue_failed", selectedDeviceId) });
     const operation = Object.freeze({});
     operationSecrets.set(operation, {
-      selectedDeviceId, descriptor: record.descriptor, devices: record.devices, nonce,
+      selectedDeviceId, descriptor: record.descriptor, devices: record.devices,
+      packageIntegrityVerified: record.packageIntegrityVerified === true, nonce,
       issuedAt, deadline: issuedAt + ttlMs
     });
     issuedOperation = operation;
@@ -1523,6 +1526,10 @@ function createJ2534IdentityPreflightOperationController(dependencies) {
         return rejected(blocker, record.selectedDeviceId);
       }
       record.devices = current.devices;
+      record.packageIntegrityVerified = record.packageIntegrityVerified === true
+        && current.packageIntegrityVerified === true;
+      if (!record.packageIntegrityVerified)
+        return rejected("package_integrity_not_verified", record.selectedDeviceId);
       const preflightAt = now();
       if (!Number.isFinite(preflightAt) || preflightAt < startedAt || record.deadline - preflightAt < minimumRunWindowMs)
         return rejected("identity_preflight_operation_expired", record.selectedDeviceId);
@@ -1544,11 +1551,14 @@ function createJ2534IdentityPreflightOperationController(dependencies) {
       let valid = false;
       try { valid = validatePreflight(record, result) === true; } catch {}
       return valid
-        ? buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true, authenticodeVerified: result?.authenticode_status === "verified_file_policy" })
+        ? buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true,
+          packageIntegrityVerified: record.packageIntegrityVerified === true,
+          authenticodeVerified: result?.authenticode_status === "verified_file_policy" })
         : rejected("native_preflight_not_verified_in_operation", record.selectedDeviceId);
     } finally {
       record.descriptor = null;
       record.devices = null;
+      record.packageIntegrityVerified = false;
       record.nonce = null;
       activeOperation = null;
     }
@@ -1563,6 +1573,8 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
   now: () => performance.now(),
   createNonce: () => randomBytes(16).toString("hex"),
   issueRecord: (selectedDeviceId) => {
+    try { verifyWorkstationPackage(WORKSTATION_PACKAGE_ROOT); }
+    catch { return { accepted: false, blocker: "package_integrity_not_verified" }; }
     const devices = discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true });
     if (!devices.some((device) => device?.id === selectedDeviceId))
       return { accepted: false, blocker: devices.length ? "selected_driver_not_registered" : "no_registered_driver" };
@@ -1571,12 +1583,14 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
     if (!secret || secret.descriptorSource !== "live_windows_registry" || secret.selectedDeviceId !== selectedDeviceId
       || descriptor.exact_identity_api_ready !== true || descriptor.execution_enabled !== false)
       return { accepted: false, blocker: "live_registry_descriptor_not_verified" };
-    return { accepted: true, selectedDeviceId, descriptor, devices };
+    return { accepted: true, selectedDeviceId, descriptor, devices, packageIntegrityVerified: true };
   },
   revalidateRecord: (record) => {
+    try { verifyWorkstationPackage(WORKSTATION_PACKAGE_ROOT); }
+    catch { return { accepted: false, blocker: "package_integrity_not_verified" }; }
     const devices = discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true });
     return devices.some((device) => device?.id === record.selectedDeviceId)
-      ? { accepted: true, selectedDeviceId: record.selectedDeviceId, devices }
+      ? { accepted: true, selectedDeviceId: record.selectedDeviceId, devices, packageIntegrityVerified: true }
       : { accepted: false, blocker: devices.length ? "selected_driver_not_registered" : "no_registered_driver" };
   },
   runPreflight: async (descriptor, { signal, operationNonce }) => Object.freeze({
@@ -1614,6 +1628,7 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
       operationStatus: evidence.operationStatus,
       blockers: evidence.blockers,
       preflightVerified: evidence.preflightVerified,
+      packageIntegrityVerified: evidence.packageIntegrityVerified,
       authenticodeVerified: evidence.authenticodeVerified,
       descriptor: record?.descriptor
     });

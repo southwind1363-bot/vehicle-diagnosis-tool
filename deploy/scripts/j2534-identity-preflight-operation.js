@@ -95,7 +95,8 @@ export function createJ2534IdentityPreflightOperationController(dependencies = {
     const operation = Object.freeze({});
     operationSecrets.set(operation, {
       state: "ISSUED", selectedDeviceId, descriptor: record.descriptor,
-      devices: record.devices, nonce, issuedAt, deadline: issuedAt + ttlMs
+      devices: record.devices, packageIntegrityVerified: record.packageIntegrityVerified === true,
+      nonce, issuedAt, deadline: issuedAt + ttlMs
     });
     issuedOperation = operation;
     return Object.freeze({ status: "issued", operation, readiness: null });
@@ -140,6 +141,12 @@ export function createJ2534IdentityPreflightOperationController(dependencies = {
         return rejected(typeof current?.blocker === "string" ? current.blocker : "selected_driver_not_registered", record.selectedDeviceId);
       }
       record.devices = current.devices;
+      record.packageIntegrityVerified = record.packageIntegrityVerified === true
+        && current.packageIntegrityVerified === true;
+      if (!record.packageIntegrityVerified) {
+        record.state = "REJECTED";
+        return rejected("package_integrity_not_verified", record.selectedDeviceId);
+      }
       const preflightAt = now();
       if (!Number.isFinite(preflightAt) || preflightAt < startedAt || record.deadline - preflightAt < minimumRunWindowMs) {
         record.state = "EXPIRED";
@@ -169,10 +176,13 @@ export function createJ2534IdentityPreflightOperationController(dependencies = {
         return rejected("native_preflight_not_verified_in_operation", record.selectedDeviceId);
       }
       record.state = "VERIFIED_NON_EXECUTABLE";
-      return buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true, authenticodeVerified: result?.authenticode_status === "verified_file_policy" });
+      return buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true,
+        packageIntegrityVerified: record.packageIntegrityVerified === true,
+        authenticodeVerified: result?.authenticode_status === "verified_file_policy" });
     } finally {
       record.descriptor = null;
       record.devices = null;
+      record.packageIntegrityVerified = false;
       record.nonce = null;
       activeOperation = null;
     }
