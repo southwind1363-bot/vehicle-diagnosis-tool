@@ -9089,6 +9089,26 @@
       && expectedAddress.slice(6, 8) === observedAddress.slice(4, 6);
   }
 
+  function normalizeUdsCanEndpointAddress(value) {
+    const text = String(value || "").toUpperCase();
+    const match = text.match(/(?:^|[^0-9A-F])((?:7E[0-9A-F])|(?:18DA[0-9A-F]{4}))(?![0-9A-F])/);
+    return match ? match[1] : null;
+  }
+
+  function isUdsRequestResponseEcuMatch(targetAddress, sourceAddress) {
+    const target = normalizeUdsCanEndpointAddress(targetAddress);
+    const source = normalizeUdsCanEndpointAddress(sourceAddress);
+    if (!target || !source || target.length !== source.length) return false;
+    if (target === source) return true;
+    if (target.length === 3) {
+      const targetValue = Number.parseInt(target, 16);
+      const sourceValue = Number.parseInt(source, 16);
+      return targetValue >= 0x7E0 && targetValue <= 0x7E7 && sourceValue === targetValue + 8;
+    }
+    return target.startsWith("18DA") && source.startsWith("18DA")
+      && target.slice(4, 6) === source.slice(6, 8)
+      && target.slice(6, 8) === source.slice(4, 6);
+  }
   function buildVehicleApplicabilityEcuMatchSummary({
     vehicleApplicability = {},
     dtcSnapshot = {},
@@ -9438,6 +9458,33 @@
         .map((snapshot) => snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || null)
         .filter(Boolean)
         .map((value) => String(value).trim().toUpperCase()))];
+      const matchedResponseAttemptRows = ecuInfoResponseOutcomes.filter((snapshot) => {
+        const sourceAddress = snapshot?.sourceEcu || snapshot?.source_ecu || null;
+        const targetAddress = snapshot?.targetEcu || snapshot?.target_ecu || null;
+        const responseCount = Number(snapshot?.responseCount ?? snapshot?.response_count);
+        return sourceAddress && targetAddress
+          && isUdsRequestResponseEcuMatch(targetAddress, sourceAddress)
+          && Number.isSafeInteger(responseCount)
+          && responseCount > 0
+          && normalizeUdsReadRequestTimingMs(snapshot?.responseWaitMs ?? snapshot?.response_wait_ms) !== null;
+      });
+      const matchedResponseAttempt = ecuInfoResponseOutcomes.length === 1 && matchedResponseAttemptRows.length === 1
+        ? matchedResponseAttemptRows[0]
+        : null;
+      const matchedTargetEcu = matchedResponseAttempt?.targetEcu || matchedResponseAttempt?.target_ecu || null;
+      const matchedResponseWaitMs = matchedResponseAttempt
+        ? normalizeUdsReadRequestTimingMs(matchedResponseAttempt.responseWaitMs ?? matchedResponseAttempt.response_wait_ms)
+        : null;
+      const udsReadResponseAttemptEvidence = matchedResponseAttempt ? {
+        evidencePresent: true,
+        evidence_present: true,
+        status: ecuInfoOutcomeIsPending ? "pending" : "negative_response",
+        attempted: true,
+        responseCount: Number(matchedResponseAttempt.responseCount ?? matchedResponseAttempt.response_count),
+        response_count: Number(matchedResponseAttempt.responseCount ?? matchedResponseAttempt.response_count),
+        responseWaitMs: matchedResponseWaitMs,
+        response_wait_ms: matchedResponseWaitMs
+      } : null;
       const existingEcuInfoCandidateIndex = candidates.findIndex((item) => item.id === "ecu_info_snapshot");
       if (existingEcuInfoCandidateIndex >= 0) candidates.splice(existingEcuInfoCandidateIndex, 1);
       candidates.push({
@@ -9462,10 +9509,20 @@
         pending_response_services: ecuInfoOutcomeIsPending ? responseServices : [],
         pendingResponseCodes: ecuInfoOutcomeIsPending ? responseCodes : [],
         pending_response_codes: ecuInfoOutcomeIsPending ? responseCodes : [],
+        targetEcu: matchedTargetEcu,
+        target_ecu: matchedTargetEcu,
+        responseWaitMs: matchedResponseWaitMs,
+        response_wait_ms: matchedResponseWaitMs,
+        udsReadResponseAttemptEvidence,
+        uds_read_response_attempt_evidence: udsReadResponseAttemptEvidence,
         ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null,
         ecu_info_response_format: ecuInfoSnapshot?.ecu_info_response_format || ecuInfoSnapshot?.ecuInfoResponseFormat || null,
         diagnosticProtocol: ecuInfoSnapshot?.diagnosticProtocol || ecuInfoSnapshot?.diagnostic_protocol || null,
-        diagnostic_protocol: ecuInfoSnapshot?.diagnostic_protocol || ecuInfoSnapshot?.diagnosticProtocol || null
+        diagnostic_protocol: ecuInfoSnapshot?.diagnostic_protocol || ecuInfoSnapshot?.diagnosticProtocol || null,
+        transportProtocol: ecuInfoSnapshot?.transportProtocol || ecuInfoSnapshot?.transport_protocol || null,
+        transport_protocol: ecuInfoSnapshot?.transport_protocol || ecuInfoSnapshot?.transportProtocol || null,
+        networkProtocol: ecuInfoSnapshot?.networkProtocol || ecuInfoSnapshot?.network_protocol || null,
+        network_protocol: ecuInfoSnapshot?.network_protocol || ecuInfoSnapshot?.networkProtocol || null
       });
     }
     return candidates
@@ -31393,6 +31450,10 @@
       );
       const negativeResponseService = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service);
       const negativeResponseCode = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code);
+      const targetEcu = normalizeUdsCanEndpointAddress(snapshot.targetEcu || snapshot.target_ecu || snapshot.requestEcu || snapshot.request_ecu || null);
+      const responseCountInput = Number(pickDefined(snapshot.responseCount, snapshot.response_count));
+      const responseCount = Number.isSafeInteger(responseCountInput) && responseCountInput > 0 && responseCountInput <= 4096 ? responseCountInput : null;
+      const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(snapshot.responseWaitMs, snapshot.response_wait_ms));
       return {
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
@@ -31408,6 +31469,12 @@
         ecu_info_negative_response_service: negativeResponseService,
         ecuInfoNegativeResponseCode: negativeResponseCode,
         ecu_info_negative_response_code: negativeResponseCode,
+        targetEcu,
+        target_ecu: targetEcu,
+        responseCount,
+        response_count: responseCount,
+        responseWaitMs,
+        response_wait_ms: responseWaitMs,
         errorCodes: snapshotErrorCodes,
         error_codes: [...snapshotErrorCodes]
       };

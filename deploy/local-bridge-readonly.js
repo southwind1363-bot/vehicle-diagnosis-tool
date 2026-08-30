@@ -205,6 +205,10 @@ function sanitizeEcuInfoValuesForBrowser(values = []) {
   return { values: sanitizedValues, hadSensitiveIdentifier };
 }
 
+function normalizeUdsCanEndpointAddress(value) {
+  const text = String(value || "").trim().toUpperCase();
+  return /^(?:7E[0-9A-F]|18DA[0-9A-F]{4})$/.test(text) ? text : null;
+}
 function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
   const rowsByEcu = new Map();
   (Array.isArray(values) ? values : []).forEach((item) => {
@@ -232,6 +236,7 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
     .map((sourceEcu) => {
       const items = rowsByEcu.get(sourceEcu) || [];
       const outcome = outcomesByEcu.get(sourceEcu) || null;
+      const targetEcu = normalizeUdsCanEndpointAddress(outcome?.target_ecu || outcome?.targetEcu || null);
       return {
         source_ecu: sourceEcu,
         ecu_info_readout_status: outcome?.ecu_info_readout_status || (items.length ? "reported" : "unknown"),
@@ -240,6 +245,9 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
         items,
         ...(outcome?.ecu_info_negative_response_service ? { ecu_info_negative_response_service: outcome.ecu_info_negative_response_service } : {}),
         ...(outcome?.ecu_info_negative_response_code ? { ecu_info_negative_response_code: outcome.ecu_info_negative_response_code } : {}),
+        ...(targetEcu ? { target_ecu: targetEcu } : {}),
+        ...(Number.isSafeInteger(outcome?.response_count) && outcome.response_count > 0 && outcome.response_count <= 4096 ? { response_count: outcome.response_count } : {}),
+        ...(Number.isFinite(outcome?.response_wait_ms) && outcome.response_wait_ms >= 50 && outcome.response_wait_ms <= 120000 ? { response_wait_ms: Math.round(outcome.response_wait_ms) } : {}),
         ...(outcome?.error_codes?.length ? { error_codes: outcome.error_codes } : {}),
         read_only: true,
         vehicle_command_enabled: false,

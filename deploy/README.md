@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.362ではローカルbridgeのECU別UDS負応答・pendingから、target ECUとsource ECUが11bitまたは29bitの正しい要求/応答ペアで一致し、応答回数と待機時間が明示された単一証跡だけをtransport lifecycleへ接続しました。不一致ECUと複数ECUの曖昧な証跡は採用しません。raw応答非保持、adapter未実装、dispatch無効、車両コマンド無効を維持し、UDS/CAN FDソフト進捗を58%へ更新しました。
+
 3.13.361ではUDS応答試行証跡を`uds_read_transport_response_lifecycle_v1`へ接続し、未開始、応答受信、負応答、pending、timeout、transport error、cancelled、無効証跡を分離しました。保存データからは状態と安全属性を再構築し、改変された実行フラグを受け入れません。raw応答・rawフレームは保持せず、adapter未実装、dispatch無効、車両コマンド無効を維持しています。UDS/CAN FDソフト進捗を54%へ更新しました。
 
 3.13.360ではUDS ReadDataByIdentifierのtransport計画を`uds_read_transport_adapter_boundary_v1`でローカルbridgeの`read_ecu_info`境界へ接続し、`uds_read_response_attempt_evidence_v1`で未試行、応答受信、負応答、pending、timeout、transport error、cancelledを分離しました。bridgeが公開する境界も実adapter未実装、dispatch無効、rawフレーム非保持、車両コマンド無効を固定しています。矛盾する応答証跡は無効として保存し、JSON再取込後も安全属性を再構築します。UDS/CAN FDソフト進捗を50%へ更新しました。
