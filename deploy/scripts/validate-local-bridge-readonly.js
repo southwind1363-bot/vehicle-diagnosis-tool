@@ -1285,7 +1285,9 @@ try {
 
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const publishedCheckCount = Number(appSource.match(/bridgeValidationCheckLabel: "bridge検証 (\d+)件"/)?.[1]);
-if (publishedCheckCount !== checks) failures.push(`Published bridge check count ${publishedCheckCount} does not match executed checks ${checks}`);
+const nonWindowsSkippedCheckCount = process.platform === "win32" ? 0 : 19;
+const fullWindowsCheckCount = checks + nonWindowsSkippedCheckCount;
+if (publishedCheckCount !== fullWindowsCheckCount) failures.push(`Published bridge check count ${publishedCheckCount} does not match full Windows checks ${fullWindowsCheckCount} (executed ${checks} on ${process.platform})`);
 console.log(`Local bridge read-only checks: ${checks}`);
 console.log(`Errors: ${failures.length}`);
 if (failures.length) {
