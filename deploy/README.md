@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.344ではiPhone ELM327の`adapter_preflight`へ証拠範囲を追加しました。`ATDP / ATDPN`は車両で成立したプロトコルではなく「アダプター現在設定」として保存し、アダプター応答確認済み・車両リンク未確認・車種適合未確認をJSON、Web取込、iPhone表示で一貫して保持します。旧JSONは受理しつつ、部分欠落、型違い、未知の証拠種別、矛盾値は拒否します。`ATE0 / ATL0 / ATH1 / ATI / ATDP / ATDPN`だけを許可する境界と車両送信無効は維持し、macOS CI Run 800とDeploy CI Run 1205で成功しています。
+3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 
 3.13.342ではiPhoneでBLE接続後、書込み特性、通知特性、同一サービス内のGATT組合せ数を車両読取前に表示します。一意な1組だけを自動選択し、候補不足、複数候補、サービス分離は手動確認として残します。Swiftテスト、Simulator統合、OBD取込、未署名実機IPA生成はmacOS CIで成功していますが、広告やGATT構成だけではELM327適合や車両通信成功を確定しません。
 
