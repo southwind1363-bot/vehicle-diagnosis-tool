@@ -150,7 +150,9 @@ public enum NativeConnectorEnvelopeFactory {
 
     private static func adapterFamily(for adapterName: String?) -> String {
         let normalizedName = adapterName?.uppercased() ?? ""
-        return normalizedName.contains("STN") ? "STN" : "ELM327"
+        if normalizedName.contains("STN") { return "STN" }
+        if normalizedName.contains("ELM327") || normalizedName.contains("ELM 327") { return "ELM327" }
+        return "unknown"
     }
 
     private static func protocolFamily(for protocolHint: String?) -> String? {

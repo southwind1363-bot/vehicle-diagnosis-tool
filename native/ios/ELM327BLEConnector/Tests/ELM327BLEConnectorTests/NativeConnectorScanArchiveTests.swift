@@ -75,6 +75,58 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         XCTAssertEqual(try builder.export().envelopes.first?.readoutID, "adapter_identity")
     }
 
+    func testAdapterPreflightRequiresOnlyAdapterIdentityAndNoEcuScopes() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "AUTO",
+            protocolNumber: "A0"
+        ))
+        try builder.complete(with: manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+        XCTAssertEqual(try builder.export().completionManifest.readoutProfile, .adapterPreflight)
+
+        XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().complete(with: manifest(
+            count: 0,
+            first: nil,
+            last: nil,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity", "read_stored_dtc"],
+            expectedReadouts: ["adapter_identity", "stored_dtc_snapshot"]
+        )))
+        XCTAssertThrowsError(try NativeConnectorScanArchiveBuilder().complete(with: manifest(
+            count: 0,
+            first: nil,
+            last: nil,
+            scopes: [NativeConnectorReadoutScope(readoutID: "adapter_identity", scopeID: "7E8")],
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        )))
+    }
+
+    func testInterruptedAdapterPreflightCanRetainItsPlannedBoundaryWithoutIdentity() {
+        let interruption = NativeConnectorInterruption(code: "transport:response_timeout", connectionID: context.connectionID, sequence: 0)
+        XCTAssertNoThrow(try NativeConnectorScanArchiveBuilder().complete(with: manifest(
+            state: .interrupted,
+            count: 0,
+            first: nil,
+            last: nil,
+            interruption: interruption,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        )))
+    }
+
     func testInitialProfileAllowsRetainedAdapterIdentityInItsCompletionPlan() throws {
         let builder = NativeConnectorScanArchiveBuilder()
         try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(

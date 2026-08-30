@@ -118,15 +118,38 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     }
 
     var readoutProfileLabel: String {
-        Self.readoutProfileLabel(for: coordinator.completedArchive?.completionManifest.readoutProfile)
+        Self.readoutProfileLabel(for: currentReadoutProfile)
     }
 
     static func readoutProfileLabel(for profile: NativeConnectorReadoutProfile?) -> String {
         switch profile {
+        case .adapterPreflight: return "アダプター通信確認"
         case .initialDiagnostic: return "初期診断読取"
         case .quickCondition: return "クイック状態確認"
         case nil: return "未記録"
         }
+    }
+
+    var adapterPreflightStatusLabel: String {
+        guard currentReadoutProfile == .adapterPreflight else { return "未実行" }
+        switch archiveState {
+        case "Complete": return "AT通信確認済み"
+        case "Partial": return "確認失敗"
+        case "Interrupted": return "確認中断"
+        default: return connectorState == .ready ? "実行待ち" : "確認中"
+        }
+    }
+
+    var vehicleCommunicationStatusLabel: String {
+        Self.vehicleCommunicationStatusLabel(
+            for: currentReadoutProfile,
+            hasCompletedArchive: coordinator.completedArchive != nil
+        )
+    }
+
+    static func vehicleCommunicationStatusLabel(for profile: NativeConnectorReadoutProfile?, hasCompletedArchive: Bool) -> String {
+        if profile == .adapterPreflight { return "未確認（アダプターのみ）" }
+        return hasCompletedArchive ? "診断読取を実行済み（車種適合は別確認）" : "未確認"
     }
 
     var missingReadoutLabels: [String] {
@@ -237,7 +260,11 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
     }
 
     var connectorStateLabel: String {
-        switch connectorState {
+        Self.connectorStateLabel(for: connectorState, profile: currentReadoutProfile)
+    }
+
+    static func connectorStateLabel(for state: ELMConnectorState, profile: NativeConnectorReadoutProfile?) -> String {
+        switch state {
         case .idle: return "未接続"
         case .scanning: return "検索中"
         case .scanComplete: return "検索完了"
@@ -247,7 +274,8 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         case .subscribing: return "応答受信を準備中"
         case .ready: return "読取準備完了"
         case .awaitingWriteCapacity: return "アダプター送信待機中"
-        case .awaitingPrompt: return "車両応答を待機中"
+        case .awaitingPrompt:
+            return profile == .adapterPreflight ? "アダプター応答を待機中" : "車両応答を待機中"
         case .interrupted: return "中断"
         }
     }
@@ -318,6 +346,12 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         coordinator.beginInitialReadout()
     }
 
+    func beginAdapterPreflight() {
+        guard canStartReadout else { return }
+        exportURL = nil
+        coordinator.beginAdapterPreflight()
+    }
+
     func beginQuickReadout() {
         guard canStartReadout else { return }
         exportURL = nil
@@ -347,6 +381,10 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
 
     private var receiveChoice: CharacteristicChoice? {
         characteristicChoices.first(where: { $0.id == selectedReceiveID && $0.candidate.supportsNotify })
+    }
+
+    private var currentReadoutProfile: NativeConnectorReadoutProfile? {
+        coordinator.completedArchive?.completionManifest.readoutProfile ?? coordinator.activeReadoutProfile
     }
 
     private func refresh() {

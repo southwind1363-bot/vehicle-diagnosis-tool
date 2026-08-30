@@ -11,6 +11,7 @@ struct ReadoutCoordinatorView: View {
                     LabeledContent("アーカイブ", value: viewModel.archiveStateLabel)
                     LabeledContent("取得済みレコード", value: "\(viewModel.archiveRecordCount)")
                     LabeledContent("読取種別", value: viewModel.readoutProfileLabel)
+                    LabeledContent("車両通信", value: viewModel.vehicleCommunicationStatusLabel)
                     LabeledContent("読取範囲", value: viewModel.readoutCompletionLabel)
                     LabeledContent("ECU応答範囲", value: viewModel.reportedReadoutScopeLabel)
                     LabeledContent("読取時刻範囲", value: viewModel.captureRangeLabel)
@@ -89,7 +90,18 @@ struct ReadoutCoordinatorView: View {
                     .disabled(!viewModel.canConfigure)
                 }
 
-                Section("3. 読取専用スキャン") {
+                Section("3. アダプター確認") {
+                    Text("ATコマンド応答と現在のアダプター設定だけを確認します。車両へのOBD要求は送らず、車両適合やECU通信成立は判定しません。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                    LabeledContent("確認結果", value: viewModel.adapterPreflightStatusLabel)
+                    Button("アダプターのみ確認") {
+                        viewModel.beginAdapterPreflight()
+                    }
+                    .disabled(!viewModel.canStartReadout)
+                }
+
+                Section("4. 読取専用スキャン") {
                     Text("DTC、フリーズフレーム、レディネス、ECU情報、対応PID、標準PIDを読取ります。消去、アクティブテスト、書込みは送信しません。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -226,7 +238,7 @@ struct ReadoutCoordinatorView: View {
                     }
                 }
 
-                Section("4. 読取結果") {
+                Section("5. 読取結果") {
                     Button("検証済みJSONを作成") {
                         viewModel.prepareArchiveExport()
                     }

@@ -21,6 +21,19 @@ final class NativeConnectorEnvelopeTests: XCTestCase {
         XCTAssertFalse(json.contains("979867700221"))
     }
 
+    func testUnknownAdapterIdentityIsNotPromotedToELM327() throws {
+        let envelope = NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: NativeConnectorSessionContext(),
+            sequence: 1,
+            adapterName: "OBD Adapter 1.0",
+            protocolHint: "AUTO",
+            protocolNumber: "A0"
+        )
+        let json = String(data: try JSONEncoder().encode(envelope), encoding: .utf8)!
+        XCTAssertTrue(json.contains("\"adapter_family\":\"unknown\""))
+        XCTAssertFalse(json.contains("\"adapter_family\":\"ELM327\""))
+    }
+
     func testLivePidEnvelopeUsesTheExistingReadOnlyContract() throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,

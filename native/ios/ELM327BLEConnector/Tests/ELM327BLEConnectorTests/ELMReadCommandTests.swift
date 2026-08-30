@@ -2,6 +2,19 @@ import XCTest
 @testable import ELM327BLEConnector
 
 final class ELMReadCommandTests: XCTestCase {
+    func testAdapterPreflightIsAnExactAdapterOnlyAllowlist() {
+        XCTAssertEqual(
+            ELMReadCommand.adapterPreflightCommands,
+            [.disableEcho, .disableLinefeeds, .enableHeaders, .identifyAdapter, .describeProtocol, .describeProtocolNumber]
+        )
+        XCTAssertTrue(ELMReadCommand.adapterPreflightCommands.allSatisfy(\.isAdapterPreflightCommand))
+        XCTAssertTrue(ELMReadCommand.adapterPreflightCommands.allSatisfy { $0.wireValue.hasPrefix("AT") })
+        XCTAssertFalse(ELMReadCommand.adapterPreflightCommands.contains(.autoProtocol))
+        XCTAssertTrue(ELMReadCommand.adapterPreflightCommands.allSatisfy { command in
+            !["01", "02", "03", "04", "06", "07", "09", "0A"].contains { command.wireValue.hasPrefix($0) }
+        })
+    }
+
     func testInitialReadoutPlanIsAnExplicitReadOnlyAllowlist() {
         XCTAssertEqual(
             ELMReadCommand.initialReadoutCommands,

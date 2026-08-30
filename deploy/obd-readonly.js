@@ -753,13 +753,20 @@
     "live_pid_snapshot"
   ]);
   const nativeConnectorReadoutProfileRequirements = Object.freeze({
+    adapter_preflight: Object.freeze({
+      requiredReadouts: Object.freeze(["adapter_identity"]),
+      forbiddenReadouts: Object.freeze(nativeConnectorReadoutIds.filter((readoutId) => readoutId !== "adapter_identity")),
+      requireEmptyScopes: true
+    }),
     initial_diagnostic: Object.freeze({
       requiredReadouts: Object.freeze(["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "freeze_frame_snapshot", "onboard_monitor_snapshot", "supported_pid_matrix", "ecu_info_snapshot", "readiness_snapshot"]),
-      forbiddenReadouts: Object.freeze([])
+      forbiddenReadouts: Object.freeze([]),
+      requireEmptyScopes: false
     }),
     quick_condition: Object.freeze({
       requiredReadouts: Object.freeze(["stored_dtc_snapshot", "pending_dtc_snapshot", "permanent_dtc_snapshot", "supported_pid_matrix", "readiness_snapshot"]),
-      forbiddenReadouts: Object.freeze(["freeze_frame_snapshot", "onboard_monitor_snapshot", "ecu_info_snapshot"])
+      forbiddenReadouts: Object.freeze(["freeze_frame_snapshot", "onboard_monitor_snapshot", "ecu_info_snapshot"]),
+      requireEmptyScopes: false
     })
   });
 
@@ -793,7 +800,7 @@
     completionManifestSchemaVersion: "native_connector_completion_manifest_v1",
     completionManifestRecordType: "completion_manifest",
     completionManifestFields: Object.freeze(["schema_version", "record_type", "scan_state", "readout_profile", "expected_readouts", "expected_readout_scopes", "connection_segments", "interruption"]),
-    allowedReadoutProfiles: Object.freeze(["initial_diagnostic", "quick_condition"]),
+    allowedReadoutProfiles: Object.freeze(["adapter_preflight", "initial_diagnostic", "quick_condition"]),
     readoutProfileRequirements: nativeConnectorReadoutProfileRequirements,
     allowedReadoutIds: nativeConnectorReadoutIds,
     logPolicy: Object.freeze({
@@ -1483,7 +1490,7 @@
       readoutScopeFields: [...nativeConnectorContract.readoutScopeFields],
       completionManifestFields: [...nativeConnectorContract.completionManifestFields],
       allowedReadoutProfiles: [...nativeConnectorContract.allowedReadoutProfiles],
-      readoutProfileRequirements: Object.fromEntries(Object.entries(nativeConnectorContract.readoutProfileRequirements).map(([profile, requirements]) => [profile, { requiredReadouts: [...requirements.requiredReadouts], forbiddenReadouts: [...requirements.forbiddenReadouts] }])),
+      readoutProfileRequirements: Object.fromEntries(Object.entries(nativeConnectorContract.readoutProfileRequirements).map(([profile, requirements]) => [profile, { requiredReadouts: [...requirements.requiredReadouts], forbiddenReadouts: [...requirements.forbiddenReadouts], requireEmptyScopes: requirements.requireEmptyScopes === true }])),
       allowedReadoutIds: [...nativeConnectorContract.allowedReadoutIds],
       logPolicy: { ...nativeConnectorContract.logPolicy }
     };
@@ -3121,6 +3128,7 @@
     if (scanState === "completed" && readoutProfileRequirements && (
       readoutProfileRequirements.requiredReadouts.some((readoutId) => !expectedReadouts.includes(readoutId))
       || readoutProfileRequirements.forbiddenReadouts.some((readoutId) => expectedReadouts.includes(readoutId))
+      || (readoutProfileRequirements.requireEmptyScopes && expectedReadoutScopes.length > 0)
     )) errors.push("completion_manifest_readout_profile_mismatch");
     if (expectedReadouts.some((readoutId) => !expectedIntents.some((intent) => isNativeConnectorReadoutAllowedForIntent(intent, readoutId)))) errors.push("completion_manifest_readout_intent_mismatch");
     if (expectedIntents.some((intent) => !expectedReadouts.some((readoutId) => isNativeConnectorReadoutAllowedForIntent(intent, readoutId)))) errors.push("completion_manifest_intent_readout_mismatch");

@@ -49,6 +49,7 @@ public struct NativeConnectorInterruption: Codable, Sendable, Equatable {
 }
 
 public enum NativeConnectorReadoutProfile: String, Codable, Sendable, Equatable {
+    case adapterPreflight = "adapter_preflight"
     case initialDiagnostic = "initial_diagnostic"
     case quickCondition = "quick_condition"
 }

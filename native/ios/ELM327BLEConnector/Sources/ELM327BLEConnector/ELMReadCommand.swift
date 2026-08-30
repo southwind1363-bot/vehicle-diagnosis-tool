@@ -136,6 +136,17 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
     case commandedDieselExhaustFluid
     case odometer
 
+    // Adapter-only proof before any vehicle diagnostic request. Keep protocol
+    // selection out of this plan because ATSP0 changes adapter state.
+    public static let adapterPreflightCommands: [ELMReadCommand] = [
+        .disableEcho,
+        .disableLinefeeds,
+        .enableHeaders,
+        .identifyAdapter,
+        .describeProtocol,
+        .describeProtocolNumber
+    ]
+
     public static let initialReadoutCommands: [ELMReadCommand] = [
         .disableEcho,
         .disableLinefeeds,
@@ -396,6 +407,10 @@ public enum ELMReadCommand: CaseIterable, Sendable, Equatable {
         case .disableEcho, .disableLinefeeds, .enableHeaders, .autoProtocol: return true
         default: return false
         }
+    }
+
+    public var isAdapterPreflightCommand: Bool {
+        Self.adapterPreflightCommands.contains(self)
     }
 
     public var timeout: TimeInterval {

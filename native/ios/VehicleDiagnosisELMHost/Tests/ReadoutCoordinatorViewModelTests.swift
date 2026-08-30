@@ -169,10 +169,27 @@ final class ReadoutCoordinatorViewModelTests: XCTestCase {
     }
 
     @MainActor
-    func testReadoutProfileLabelKeepsInitialAndQuickScopesDistinct() {
+    func testReadoutProfileLabelKeepsAdapterInitialAndQuickScopesDistinct() {
+        XCTAssertEqual(ReadoutCoordinatorViewModel.readoutProfileLabel(for: .adapterPreflight), "アダプター通信確認")
         XCTAssertEqual(ReadoutCoordinatorViewModel.readoutProfileLabel(for: .initialDiagnostic), "初期診断読取")
         XCTAssertEqual(ReadoutCoordinatorViewModel.readoutProfileLabel(for: .quickCondition), "クイック状態確認")
         XCTAssertEqual(ReadoutCoordinatorViewModel.readoutProfileLabel(for: nil), "未記録")
+    }
+
+    @MainActor
+    func testAdapterPreflightNeverClaimsVehicleCommunication() {
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.vehicleCommunicationStatusLabel(for: .adapterPreflight, hasCompletedArchive: true),
+            "未確認（アダプターのみ）"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.connectorStateLabel(for: .awaitingPrompt, profile: .adapterPreflight),
+            "アダプター応答を待機中"
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.connectorStateLabel(for: .awaitingPrompt, profile: .initialDiagnostic),
+            "車両応答を待機中"
+        )
     }
 
     @MainActor

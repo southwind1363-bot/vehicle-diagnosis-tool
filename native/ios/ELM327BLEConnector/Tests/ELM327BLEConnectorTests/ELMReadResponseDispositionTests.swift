@@ -2,6 +2,13 @@ import XCTest
 @testable import ELM327BLEConnector
 
 final class ELMReadResponseDispositionTests: XCTestCase {
+    func testAdapterPreflightNoDataUsesAdapterSpecificFailureCodes() {
+        XCTAssertEqual(elmAdapterPreflightUnavailableError(for: .disableEcho), "adapter_setup_failed")
+        XCTAssertEqual(elmAdapterPreflightUnavailableError(for: .identifyAdapter), "adapter_identity_unavailable")
+        XCTAssertEqual(elmAdapterPreflightUnavailableError(for: .describeProtocol), "adapter_protocol_unavailable")
+        XCTAssertEqual(elmAdapterPreflightUnavailableError(for: .describeProtocolNumber), "adapter_protocol_number_unavailable")
+    }
+
     func testReadoutAvailabilityAndLinkFailuresAreSeparated() {
         XCTAssertEqual(classifyELMReadResponse("41 0C 1A F8"), .process)
         XCTAssertEqual(classifyELMReadResponse("NO DATA"), .noData)

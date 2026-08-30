@@ -3,6 +3,15 @@ import XCTest
 @testable import ELM327BLEConnector
 
 final class NativeConnectorCompletionManifestTests: XCTestCase {
+    func testReadoutProfilesRoundTripAndLegacyProfileRemainsOptional() throws {
+        for profile in [NativeConnectorReadoutProfile.adapterPreflight, .initialDiagnostic, .quickCondition] {
+            let encoded = try JSONEncoder().encode(profile)
+            XCTAssertEqual(try JSONDecoder().decode(NativeConnectorReadoutProfile.self, from: encoded), profile)
+        }
+        let legacy = Data(#"{"schema_version":"native_connector_completion_manifest_v1","record_type":"completion_manifest","platform":"ios","interface_id":"user-vci-elm327","adapter_transport":"ble_gatt","scan_id":"11111111-1111-4111-8111-111111111111","vehicle_context_id":"33333333-3333-4333-8333-333333333333","captured_at":"2026-07-21T00:00:00Z","scan_state":"completed","expected_intents":["adapter_identity"],"expected_readouts":["adapter_identity"],"expected_readout_scopes":[],"connection_segments":[{"connection_id":"22222222-2222-4222-8222-222222222222","connection_sequence":0,"first_sequence":1,"last_sequence":1,"envelope_count":1}],"interruption":null,"read_only":true,"vehicle_command_enabled":false,"execution_enabled":false,"would_transmit":false,"retained_raw_payload":false}"#.utf8)
+        XCTAssertNil(try JSONDecoder().decode(NativeConnectorCompletionManifest.self, from: legacy).readoutProfile)
+    }
+
     func testCompletedManifestUsesSeparateReadOnlyTerminalSchema() throws {
         let context = NativeConnectorSessionContext(
             scanID: UUID(uuidString: "11111111-1111-4111-8111-111111111111")!,

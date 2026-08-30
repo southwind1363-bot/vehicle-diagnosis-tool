@@ -67,6 +67,15 @@ func isUsableELMAdapterIdentityResponse(command: ELMReadCommand, response: Strin
     })
 }
 
+func elmAdapterPreflightUnavailableError(for command: ELMReadCommand) -> String {
+    switch command {
+    case .identifyAdapter: return "adapter_identity_unavailable"
+    case .describeProtocol: return "adapter_protocol_unavailable"
+    case .describeProtocolNumber: return "adapter_protocol_number_unavailable"
+    default: return "adapter_setup_failed"
+    }
+}
+
 func normalizedELMAdapterProtocolNumber(response: String) -> String? {
     let lines = response
         .split(whereSeparator: { $0.isNewline })
@@ -352,6 +361,14 @@ public final class ELM327BLEConnector: NSObject {
         )
     }
 
+    public func runAdapterPreflight() {
+        runReadout(
+            commands: ELMReadCommand.adapterPreflightCommands,
+            livePIDCommands: [],
+            readoutProfile: .adapterPreflight
+        )
+    }
+
     public func runQuickReadout() {
         runReadout(
             commands: ELMReadCommand.quickReadoutCommands,
@@ -362,6 +379,12 @@ public final class ELM327BLEConnector: NSObject {
 
     private func runReadout(commands: [ELMReadCommand], livePIDCommands: [ELMReadCommand], readoutProfile: NativeConnectorReadoutProfile) {
         guard state == .ready, transmitCharacteristic != nil, receiveCharacteristic != nil else { return fail(.characteristicNotReady) }
+        if readoutProfile == .adapterPreflight {
+            guard commands == ELMReadCommand.adapterPreflightCommands,
+                  livePIDCommands.isEmpty,
+                  commands.allSatisfy(\.isAdapterPreflightCommand)
+            else { return fail(.invalidState) }
+        }
         sessionContext = NativeConnectorSessionContext()
         activeReadoutProfile = readoutProfile
         sequence = 0
@@ -497,6 +520,11 @@ public final class ELM327BLEConnector: NSObject {
         case .noData:
             if command.isAdapterSetup {
                 emitFailure(for: command, error: "adapter_setup_failed")
+                interrupt(.invalidResponse)
+                return
+            }
+            if activeReadoutProfile == .adapterPreflight {
+                emitFailure(for: command, error: elmAdapterPreflightUnavailableError(for: command))
                 interrupt(.invalidResponse)
                 return
             }

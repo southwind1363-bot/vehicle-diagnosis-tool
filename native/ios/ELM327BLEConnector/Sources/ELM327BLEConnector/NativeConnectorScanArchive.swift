@@ -219,6 +219,10 @@ public final class NativeConnectorScanArchiveBuilder {
         guard manifest.scanState == .completed, let profile = manifest.readoutProfile else { return true }
         let expectedReadouts = Set(manifest.expectedReadouts)
         switch profile {
+        case .adapterPreflight:
+            return Set(manifest.expectedIntents) == ["adapter_identity"]
+                && expectedReadouts == ["adapter_identity"]
+                && manifest.expectedReadoutScopes.isEmpty
         case .initialDiagnostic:
             return Set([
                 "stored_dtc_snapshot",

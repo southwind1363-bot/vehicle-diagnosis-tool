@@ -10,6 +10,7 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
     public private(set) var readoutPreview = NativeConnectorReadoutPreview.empty
     public private(set) var archiveError: NativeConnectorScanArchiveError?
     public private(set) var connectorError: ELMConnectorError?
+    public private(set) var activeReadoutProfile: NativeConnectorReadoutProfile?
 
     public let connector: ELM327BLEConnector
     private let archiveBuilder = NativeConnectorScanArchiveBuilder()
@@ -52,17 +53,23 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
 
     public func beginInitialReadout() {
         guard connectorState == .ready else { return }
-        resetReadoutState()
+        resetReadoutState(profile: .initialDiagnostic)
         connector.runInitialReadout()
     }
 
     public func beginQuickReadout() {
         guard connectorState == .ready else { return }
-        resetReadoutState()
+        resetReadoutState(profile: .quickCondition)
         connector.runQuickReadout()
     }
 
-    private func resetReadoutState() {
+    public func beginAdapterPreflight() {
+        guard connectorState == .ready else { return }
+        resetReadoutState(profile: .adapterPreflight)
+        connector.runAdapterPreflight()
+    }
+
+    private func resetReadoutState(profile: NativeConnectorReadoutProfile) {
         archiveBuilder.reset()
         completedArchive = nil
         capturedEnvelopeCount = 0
@@ -71,6 +78,7 @@ public final class NativeConnectorReadoutCoordinator: NSObject, ELM327BLEConnect
         archiveError = nil
         connectorError = nil
         archiveRejected = false
+        activeReadoutProfile = profile
         notifyUpdate()
     }
 
