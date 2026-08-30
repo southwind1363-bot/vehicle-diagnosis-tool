@@ -31353,6 +31353,9 @@
         ecu_info_negative_response_service: input.data.ecuInfoNegativeResponseService || input.data.ecu_info_negative_response_service || input.ecuInfoNegativeResponseService || input.ecu_info_negative_response_service || null,
         ecu_info_negative_response_code: input.data.ecuInfoNegativeResponseCode || input.data.ecu_info_negative_response_code || input.ecuInfoNegativeResponseCode || input.ecu_info_negative_response_code || null,
         uds_did_response_evidence: input.data.udsDidResponseEvidence || input.data.uds_did_response_evidence || input.udsDidResponseEvidence || input.uds_did_response_evidence || null,
+        target_ecu: input.data.targetEcu || input.data.target_ecu || input.data.requestEcu || input.data.request_ecu || input.targetEcu || input.target_ecu || input.requestEcu || input.request_ecu || null,
+        response_count: pickDefined(input.data.responseCount, input.data.response_count, input.responseCount, input.response_count),
+        response_wait_ms: pickDefined(input.data.responseWaitMs, input.data.response_wait_ms, input.responseWaitMs, input.response_wait_ms),
         had_sensitive_identifier: input.data.hadSensitiveIdentifier === true || input.data.had_sensitive_identifier === true || input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true
       }
       : input && typeof input === "object" ? input : {};
@@ -31454,6 +31457,10 @@
       const responseCountInput = Number(pickDefined(snapshot.responseCount, snapshot.response_count));
       const responseCount = Number.isSafeInteger(responseCountInput) && responseCountInput > 0 && responseCountInput <= 4096 ? responseCountInput : null;
       const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(snapshot.responseWaitMs, snapshot.response_wait_ms));
+      const udsDidResponseEvidence = normalizeUdsDidResponseEvidenceSnapshot(
+        snapshot.udsDidResponseEvidence || snapshot.uds_did_response_evidence || null,
+        snapshotSourceEcu
+      );
       return {
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
@@ -31475,6 +31482,8 @@
         response_count: responseCount,
         responseWaitMs,
         response_wait_ms: responseWaitMs,
+        udsDidResponseEvidence,
+        uds_did_response_evidence: udsDidResponseEvidence,
         errorCodes: snapshotErrorCodes,
         error_codes: [...snapshotErrorCodes]
       };
@@ -31658,41 +31667,31 @@
     };
     const errorCodes = mergeUniqueStrings(sourceInput.errorCodes, sourceInput.error_codes, scopedErrorCodes);
     const rawUdsDidResponseEvidence = sourceInput.udsDidResponseEvidence || sourceInput.uds_did_response_evidence || null;
-    const udsDidRequestedDataIdentifiers = normalizeUdsDataIdentifierList(
-      rawUdsDidResponseEvidence?.requestedDataIdentifiers,
-      rawUdsDidResponseEvidence?.requested_data_identifiers
-    );
-    const udsDidResponseDataIdentifier = normalizeUdsDataIdentifier(
-      rawUdsDidResponseEvidence?.responseDataIdentifier ?? rawUdsDidResponseEvidence?.response_data_identifier ?? null
-    );
-    const udsDidPayloadByteCount = Number.isInteger(rawUdsDidResponseEvidence?.payloadByteCount)
-      ? rawUdsDidResponseEvidence.payloadByteCount
-      : Number.isInteger(rawUdsDidResponseEvidence?.payload_byte_count)
-        ? rawUdsDidResponseEvidence.payload_byte_count
-        : null;
-    const udsDidBoundaryStatus = ["single_did", "multiple_requested_dids_unparsed", "response_did_mismatch", "incomplete_response"]
-      .includes(String(rawUdsDidResponseEvidence?.boundaryStatus || rawUdsDidResponseEvidence?.boundary_status || ""))
-      ? String(rawUdsDidResponseEvidence.boundaryStatus || rawUdsDidResponseEvidence.boundary_status)
-      : null;
-    const udsDidResponseEvidence = rawUdsDidResponseEvidence && udsDidResponseDataIdentifier && udsDidPayloadByteCount !== null && udsDidPayloadByteCount >= 0 && udsDidPayloadByteCount <= 65535 && udsDidBoundaryStatus
+    const udsDidResponseEvidence = normalizeUdsDidResponseEvidenceSnapshot(rawUdsDidResponseEvidence, resolvedSourceEcu);
+    const childUdsResponseRows = ecuInfoEcuSnapshots.filter((snapshot) => Boolean(snapshot?.udsDidResponseEvidence));
+    const positiveUdsResponseSource = childUdsResponseRows.length === 1
+      && childUdsResponseRows[0].udsDidResponseEvidence?.boundaryStatus === "single_did"
       ? {
-        schemaVersion: "uds_did_response_evidence_v1",
-        schema_version: "uds_did_response_evidence_v1",
-        requestedDataIdentifiers: udsDidRequestedDataIdentifiers,
-        requested_data_identifiers: [...udsDidRequestedDataIdentifiers],
-        responseDataIdentifier: udsDidResponseDataIdentifier,
-        response_data_identifier: udsDidResponseDataIdentifier,
-        payloadByteCount: udsDidPayloadByteCount,
-        payload_byte_count: udsDidPayloadByteCount,
-        boundaryStatus: udsDidBoundaryStatus,
-        boundary_status: udsDidBoundaryStatus,
-        sourceEcu: resolvedSourceEcu,
-        source_ecu: resolvedSourceEcu,
-        retainedRawPayload: false,
-        retained_raw_payload: false
+        ...childUdsResponseRows[0],
+        diagnosticProtocol: childUdsResponseRows[0].diagnosticProtocol || protocolProvenance.diagnosticProtocol,
+        ecuInfoResponseFormat: childUdsResponseRows[0].ecuInfoResponseFormat || sourceInput.ecuInfoResponseFormat || sourceInput.ecu_info_response_format || null
       }
+      : rawEcuInfoEcuSnapshots.length === 0 && udsDidResponseEvidence?.boundaryStatus === "single_did"
+        ? {
+          ...sourceInput,
+          sourceEcu: resolvedSourceEcu,
+          udsDidResponseEvidence
+        }
+        : null;
+    const matchedUdsPositiveResponseLifecycle = positiveUdsResponseSource
+      ? buildMatchedUdsPositiveResponseLifecycle(positiveUdsResponseSource)
       : null;
-
+    const udsDidPositiveResponseMatchEvidence = matchedUdsPositiveResponseLifecycle?.matchEvidence || null;
+    const udsReadResponseAttemptEvidence = matchedUdsPositiveResponseLifecycle?.responseAttemptEvidence || null;
+    const udsReadTransportResponseLifecycle = matchedUdsPositiveResponseLifecycle?.responseLifecycle || null;
+    const matchedUdsTargetEcu = udsDidPositiveResponseMatchEvidence?.targetEcu || null;
+    const matchedUdsResponseCount = udsDidPositiveResponseMatchEvidence?.responseCount || null;
+    const matchedUdsResponseWaitMs = udsDidPositiveResponseMatchEvidence?.responseWaitMs ?? null;
     return {
       schemaVersion: "ecu_info_snapshot_v2",
       schema_version: "ecu_info_snapshot_v2",
@@ -31754,6 +31753,18 @@
       ecu_info_negative_response_code: ecuInfoNegativeResponseCode,
       udsDidResponseEvidence,
       uds_did_response_evidence: udsDidResponseEvidence,
+      udsDidPositiveResponseMatchEvidence,
+      uds_did_positive_response_match_evidence: udsDidPositiveResponseMatchEvidence,
+      udsReadResponseAttemptEvidence,
+      uds_read_response_attempt_evidence: udsReadResponseAttemptEvidence,
+      udsReadTransportResponseLifecycle,
+      uds_read_transport_response_lifecycle: udsReadTransportResponseLifecycle,
+      targetEcu: matchedUdsTargetEcu,
+      target_ecu: matchedUdsTargetEcu,
+      responseCount: matchedUdsResponseCount,
+      response_count: matchedUdsResponseCount,
+      responseWaitMs: matchedUdsResponseWaitMs,
+      response_wait_ms: matchedUdsResponseWaitMs,
       ...(typeof sourceInput.ok === "boolean" ? { ok: sourceInput.ok } : {}),
       blocked: sourceInput.blocked === true || sourceInput.isBlocked === true || sourceInput.is_blocked === true,
       wouldTransmit: false,
@@ -33114,6 +33125,110 @@
     return [...new Set(rows.map(normalizeUdsDataIdentifier).filter(Boolean))].slice(0, 64);
   }
 
+  function normalizeUdsDidResponseEvidenceSnapshot(input = null, sourceEcu = null) {
+    const raw = input && typeof input === "object" && !Array.isArray(input) ? input : null;
+    if (!raw) return null;
+    const requestedDataIdentifiers = normalizeUdsDataIdentifierList(
+      raw.requestedDataIdentifiers,
+      raw.requested_data_identifiers
+    );
+    const responseDataIdentifier = normalizeUdsDataIdentifier(
+      raw.responseDataIdentifier ?? raw.response_data_identifier ?? null
+    );
+    const payloadByteCount = Number.isInteger(raw.payloadByteCount)
+      ? raw.payloadByteCount
+      : Number.isInteger(raw.payload_byte_count)
+        ? raw.payload_byte_count
+        : null;
+    const boundaryStatus = ["single_did", "multiple_requested_dids_unparsed", "response_did_mismatch", "incomplete_response"]
+      .includes(String(raw.boundaryStatus || raw.boundary_status || ""))
+      ? String(raw.boundaryStatus || raw.boundary_status)
+      : null;
+    if (!responseDataIdentifier || payloadByteCount === null || payloadByteCount < 0 || payloadByteCount > 65535 || !boundaryStatus) return null;
+    const normalizedSourceEcu = normalizeUdsCanEndpointAddress(sourceEcu || raw.sourceEcu || raw.source_ecu || null);
+    return {
+      schemaVersion: "uds_did_response_evidence_v1",
+      schema_version: "uds_did_response_evidence_v1",
+      requestedDataIdentifiers,
+      requested_data_identifiers: [...requestedDataIdentifiers],
+      responseDataIdentifier,
+      response_data_identifier: responseDataIdentifier,
+      payloadByteCount,
+      payload_byte_count: payloadByteCount,
+      boundaryStatus,
+      boundary_status: boundaryStatus,
+      sourceEcu: normalizedSourceEcu,
+      source_ecu: normalizedSourceEcu,
+      retainedRawPayload: false,
+      retained_raw_payload: false
+    };
+  }
+
+  function buildMatchedUdsPositiveResponseLifecycle(input = {}) {
+    const evidence = normalizeUdsDidResponseEvidenceSnapshot(
+      input.udsDidResponseEvidence || input.uds_did_response_evidence || null,
+      input.sourceEcu || input.source_ecu || null
+    );
+    const requestedDataIdentifiers = evidence?.requestedDataIdentifiers || [];
+    const responseDataIdentifier = evidence?.responseDataIdentifier || null;
+    const targetEcu = normalizeUdsCanEndpointAddress(input.targetEcu || input.target_ecu || input.requestEcu || input.request_ecu || null);
+    const sourceEcu = normalizeUdsCanEndpointAddress(input.sourceEcu || input.source_ecu || evidence?.sourceEcu || null);
+    const responseCountInput = Number(pickDefined(input.responseCount, input.response_count));
+    const responseCount = Number.isSafeInteger(responseCountInput) && responseCountInput > 0 && responseCountInput <= 4096
+      ? responseCountInput
+      : null;
+    const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(input.responseWaitMs, input.response_wait_ms));
+    const readoutStatus = String(input.ecuInfoReadoutStatus || input.ecu_info_readout_status || input.readoutStatus || input.readout_status || "").trim().toLowerCase();
+    const responseFormat = normalizeEcuInfoResponseFormat(input.ecuInfoResponseFormat || input.ecu_info_response_format || input.responseFormat || input.response_format || null);
+    const protocolEvidence = [input.protocol, input.obd_protocol, input.diagnosticProtocol, input.diagnostic_protocol].filter(Boolean).join(" ");
+    const udsContextConfirmed = responseFormat === "uds_read_data_by_identifier" || /\buds\b/i.test(protocolEvidence);
+    const matched = evidence?.boundaryStatus === "single_did"
+      && evidence.payloadByteCount > 0
+      && readoutStatus === "reported"
+      && udsContextConfirmed
+      && requestedDataIdentifiers.length === 1
+      && requestedDataIdentifiers[0] === responseDataIdentifier
+      && targetEcu
+      && sourceEcu
+      && isUdsRequestResponseEcuMatch(targetEcu, sourceEcu)
+      && responseCount !== null
+      && responseWaitMs !== null;
+    if (!matched) return null;
+    const matchEvidence = {
+      schemaVersion: "uds_did_positive_response_match_evidence_v1",
+      schema_version: "uds_did_positive_response_match_evidence_v1",
+      requestedDataIdentifier: requestedDataIdentifiers[0],
+      requested_data_identifier: requestedDataIdentifiers[0],
+      responseDataIdentifier,
+      response_data_identifier: responseDataIdentifier,
+      targetEcu,
+      target_ecu: targetEcu,
+      sourceEcu,
+      source_ecu: sourceEcu,
+      didMatched: true,
+      did_matched: true,
+      ecuPairMatched: true,
+      ecu_pair_matched: true,
+      responseCount,
+      response_count: responseCount,
+      responseWaitMs,
+      response_wait_ms: responseWaitMs,
+      retainedRawPayload: false,
+      retained_raw_payload: false
+    };
+    const responseAttemptEvidence = buildUdsReadResponseAttemptEvidence({
+      evidencePresent: true,
+      status: "response_received",
+      attempted: true,
+      responseCount,
+      responseWaitMs
+    }, { responseWaitMs });
+    const responseLifecycle = buildUdsReadTransportResponseLifecycle(responseAttemptEvidence, {
+      adapterImplemented: false
+    });
+    return { matchEvidence, responseAttemptEvidence, responseLifecycle };
+  }
+
   function normalizeTypedDtcSnapshotInput(input = null, status = "stored", intent = "read_stored_dtc") {
     if (!hasObjectContent(input)) return null;
     if (input.schemaVersion && Array.isArray(input.dtcs)) return input;
@@ -33435,6 +33550,9 @@
           boundary_status: udsDidBoundaryStatus
         }
       } : {}),
+      target_ecu: input.target_ecu || input.targetEcu || input.request_ecu || input.requestEcu || null,
+      response_count: pickDefined(input.response_count, input.responseCount),
+      response_wait_ms: pickDefined(input.response_wait_ms, input.responseWaitMs),
       values
     });
   }

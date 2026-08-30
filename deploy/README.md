@@ -2,7 +2,7 @@
 
 登録済みJSONデータ、問診、整備事例を使って、確認順序を整理する診断補助ツールです。
 
-## 現在の完成版
+$13.13.363ではpositive UDS ReadDataByIdentifier応答から、要求DIDと応答DID、target ECUとsource ECU、応答回数と待機時間がすべて一致する単一証跡だけをresponse_received lifecycleへ接続しました。不一致DID、不一致ECU、複数UDS応答、件数・待機時間不足は採用しません。診断判定と取得済み判定は変更せず、raw応答非保持、adapter未実装、dispatch無効、車両コマンド無効を維持し、UDS/CAN FDソフト進捗を62%へ更新しました。
 
 3.13.362ではローカルbridgeのECU別UDS負応答・pendingから、target ECUとsource ECUが11bitまたは29bitの正しい要求/応答ペアで一致し、応答回数と待機時間が明示された単一証跡だけをtransport lifecycleへ接続しました。不一致ECUと複数ECUの曖昧な証跡は採用しません。raw応答非保持、adapter未実装、dispatch無効、車両コマンド無効を維持し、UDS/CAN FDソフト進捗を58%へ更新しました。
 
