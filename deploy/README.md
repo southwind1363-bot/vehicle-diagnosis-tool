@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.346ではJ2534登録ドライバーの非実行プリフライトへWindowsの128-bit File ID照合を追加しました。従来のボリューム番号・64-bitファイル索引・サイズ・更新時刻に加え、`GetFileInformationByHandleEx(FileIdInfo)`でハッシュ計算前後の同一性を検証します。x86/x64 fixtureで確認済みですが、ベンダーDLLのロード、J2534 API実行、車両通信はまだ行いません。進捗率は28%のままです。
+3.13.347ではJ2534登録ドライバーの非実行プリフライトへWindows署名ポリシー確認を追加しました。固定ドライブ・ファイル同一性・SHA-256・PE構造を確認した同じファイルハンドルを`WinVerifyTrust`へ渡し、UIとネットワーク取得を無効にした状態で未署名または信頼されないDLLを拒否します。x86/x64のWindows署名済みシステムDLLと未署名fixtureで確認済みですが、ベンダーDLLのロード、J2534 API実行、車両通信はまだ行いません。進捗率は30%です。
 
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 
