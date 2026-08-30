@@ -24,7 +24,7 @@ jobs:
   build:
     name: Build iPhone BLE host
     runs-on: macos-14
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -92,3 +92,123 @@ jobs:
             exit "$test_status"
           fi
         working-directory: native/ios/VehicleDiagnosisELMHost
+
+      - name: Validate diagnostic archive integration
+        run: npm run validate:obd
+        working-directory: deploy
+
+      - name: Record device toolchain
+        run: |
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Build and verify unsigned read-only device IPA
+        env:
+          DEVICE_DERIVED_DATA: ${{ runner.temp }}/vehicle-diagnosis-elm-device
+          DEVICE_ARTIFACT_DIR: ${{ runner.temp }}/vehicle-diagnosis-elm-artifact
+        run: |
+          set -euo pipefail
+          rm -rf "$DEVICE_DERIVED_DATA" "$DEVICE_ARTIFACT_DIR"
+          mkdir -p "$DEVICE_ARTIFACT_DIR"
+
+          assert_unsigned_code_object() {
+            local target="$1"
+            local output
+            if output="$(codesign -d "$target" 2>&1)"; then
+              echo "::error title=Code object unexpectedly signed::$target"
+              return 1
+            fi
+            if ! printf '%s\n' "$output" | grep -Fq 'code object is not signed at all'; then
+              echo "::error title=Code object signature state is ambiguous::$target: $output"
+              return 1
+            fi
+          }
+
+          assert_unsigned_bundle() {
+            local bundle="$1"
+            assert_unsigned_code_object "$bundle"
+            while IFS= read -r candidate; do
+              if file "$candidate" | grep -q 'Mach-O'; then
+                assert_unsigned_code_object "$candidate"
+              fi
+            done < <(find "$bundle" -type f)
+          }
+
+          xcodebuild \
+            -project VehicleDiagnosisELMHost.xcodeproj \
+            -scheme VehicleDiagnosisELMHost \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$DEVICE_DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY= \
+            build
+
+          app_path="$DEVICE_DERIVED_DATA/Build/Products/Release-iphoneos/VehicleDiagnosisELMHost.app"
+          plist_path="$app_path/Info.plist"
+          test -d "$app_path"
+          test "$(plutil -extract CFBundleIdentifier raw -o - "$plist_path")" = "com.mukiguri.VehicleDiagnosisELMHost"
+          plutil -extract CFBundleSupportedPlatforms json -o - "$plist_path" | grep -q 'iPhoneOS'
+          executable_name="$(plutil -extract CFBundleExecutable raw -o - "$plist_path")"
+          test -n "$executable_name"
+          test -x "$app_path/$executable_name"
+
+          if find "$app_path" \( -name _CodeSignature -o -name embedded.mobileprovision \) -print | grep -q .; then
+            echo "::error title=Unsigned IPA contains signing data::A code signature or provisioning profile was found"
+            exit 1
+          fi
+          assert_unsigned_bundle "$app_path"
+
+          short_sha="${GITHUB_SHA:0:12}"
+          ipa_name="VehicleDiagnosisELMHost-unsigned-${short_sha}-${GITHUB_RUN_NUMBER}.ipa"
+          package_root="$RUNNER_TEMP/vehicle-diagnosis-elm-package"
+          verify_root="$RUNNER_TEMP/vehicle-diagnosis-elm-verify"
+          rm -rf "$package_root" "$verify_root"
+          mkdir -p "$package_root/Payload" "$verify_root"
+          ditto "$app_path" "$package_root/Payload/VehicleDiagnosisELMHost.app"
+          (cd "$package_root" && zip -qry -y "$DEVICE_ARTIFACT_DIR/$ipa_name" Payload)
+          unzip -q "$DEVICE_ARTIFACT_DIR/$ipa_name" -d "$verify_root"
+
+          verified_app="$verify_root/Payload/VehicleDiagnosisELMHost.app"
+          app_count="$(find "$verify_root/Payload" -maxdepth 1 -type d -name '*.app' | wc -l | tr -d ' ')"
+          test "$app_count" = "1"
+          test -d "$verified_app"
+          test "$(plutil -extract CFBundleIdentifier raw -o - "$verified_app/Info.plist")" = "com.mukiguri.VehicleDiagnosisELMHost"
+          plutil -extract CFBundleSupportedPlatforms json -o - "$verified_app/Info.plist" | grep -q 'iPhoneOS'
+          verified_executable="$(plutil -extract CFBundleExecutable raw -o - "$verified_app/Info.plist")"
+          test -x "$verified_app/$verified_executable"
+          if find "$verified_app" \( -name _CodeSignature -o -name embedded.mobileprovision \) -print | grep -q .; then
+            echo "::error title=Packaged IPA contains signing data::A code signature or provisioning profile was found after extraction"
+            exit 1
+          fi
+          assert_unsigned_bundle "$verified_app"
+
+          (
+            cd "$DEVICE_ARTIFACT_DIR"
+            shasum -a 256 "$ipa_name" > "$ipa_name.sha256"
+            shasum -a 256 --check "$ipa_name.sha256"
+          )
+          ipa_sha="$(shasum -a 256 "$DEVICE_ARTIFACT_DIR/$ipa_name" | awk '{print $1}')"
+          xcode_version="$(xcodebuild -version | tr '\n' ' ' | sed 's/ *$//')"
+          sdk_version="$(xcrun --sdk iphoneos --show-sdk-version)"
+          export IPA_NAME="$ipa_name" IPA_SHA="$ipa_sha" XCODE_VERSION="$xcode_version" SDK_VERSION="$sdk_version"
+          python3 -c 'import json, os, pathlib; pathlib.Path(os.environ["DEVICE_ARTIFACT_DIR"], "unsigned-device-build.json").write_text(json.dumps({"schema_version":"ios_unsigned_device_build_v1","artifact":os.environ["IPA_NAME"],"bundle_id":"com.mukiguri.VehicleDiagnosisELMHost","commit_sha":os.environ["GITHUB_SHA"],"run_number":int(os.environ["GITHUB_RUN_NUMBER"]),"xcode_version":os.environ["XCODE_VERSION"],"iphoneos_sdk":os.environ["SDK_VERSION"],"sha256":os.environ["IPA_SHA"],"signed":False,"installable":False,"vehicle_command_enabled":False}, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")'
+
+          tampered="$RUNNER_TEMP/VehicleDiagnosisELMHost-tampered.ipa"
+          cp "$DEVICE_ARTIFACT_DIR/$ipa_name" "$tampered"
+          printf 'x' >> "$tampered"
+          if echo "$ipa_sha  $tampered" | shasum -a 256 --check >/dev/null 2>&1; then
+            echo "::error title=IPA checksum test failed::A modified IPA passed the original SHA-256"
+            exit 1
+          fi
+
+      - name: Upload unsigned device build for controlled signing
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: VehicleDiagnosisELMHost-unsigned-${{ github.sha }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/vehicle-diagnosis-elm-artifact/
+          if-no-files-found: error
+          retention-days: 14
