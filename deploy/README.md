@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.351ではJ2534非実行preflight workerの終了を確認できない場合に、端末内へ永続隔離ラッチを原子的に記録します。アプリ再起動後も自動再試行を拒否し、状態ファイルが壊れていてもfail-closed、既存理由の上書きと自動解除を行いません。保存内容にドライバーパスや診断データは含みません。ベンダーDLLのロード、VCI接続、車両通信は無効のままです。進捗率は38%です。
+3.13.352ではJ2534 native identity supervisorの安全ゲートを生成fixtureへ接続しました。明示試験確認がない起動を拒否し、起動直前に固定worker/DLL記述子を再検証、親deadlineでハングを終了させ、cleanup不明を永続隔離ラッチへ記録します。x86/x64で正常完了、タイムアウト、supervisor再生成後の拒否を確認済みです。ベンダーDLL、実VCI、車両通信には未接続です。進捗率は40%です。
 
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 

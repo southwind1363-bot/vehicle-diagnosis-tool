@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { buildJ2534NativeFixture } from "./native/build-j2534-native-fixture.js";
 import { createJ2534NativeFixtureSupervisor, parseJ2534NativeFixtureOutput } from "./j2534-native-fixture-supervisor.js";
+import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
@@ -434,6 +435,48 @@ async function main() {
       assert.equal(busy.execution_status, "worker_busy"); controller.abort();
       const cancelled = await hanging;
       assert.equal(cancelled.execution_status, "worker_cancelled"); assert.equal(cancelled.worker_exited, true); total += 3;
+      const quarantineDirectory = fs.mkdtempSync(path.join(tempRoot, `vehicle-j2534-quarantine-${platform.name}-`));
+      try {
+        const quarantineStore = createJ2534NativeQuarantineStore(quarantineDirectory);
+        const protectedDescriptor = { ...descriptor, worker: fileDescriptor("j2534-native-fixture-worker.exe") };
+        for (const controls of [null, [], { unknown: true }, { quarantineStore: {} }, { requireTrialConfirmation: "true" }])
+          assert.throws(() => createJ2534NativeFixtureSupervisor(protectedDescriptor, controls), /native_fixture_supervisor_controls_invalid/);
+        total += 5;
+        const protectedSupervisor = createJ2534NativeFixtureSupervisor(protectedDescriptor, {
+          quarantineStore, requireTrialConfirmation: true
+        });
+        const confirmationMissing = await protectedSupervisor.run({ mode: "native_fixture", scenario: "success" });
+        assert.equal(confirmationMissing.execution_status, "request_blocked");
+        assert.deepEqual(confirmationMissing.errors, ["native_identity_trial_confirmation_required"]);
+        assert.equal(confirmationMissing.worker_started, false);
+        const protectedSuccess = await protectedSupervisor.run({
+          mode: "native_fixture", scenario: "success", interactive_trial_confirmation: true
+        });
+        assert.equal(protectedSuccess.execution_status, "worker_completed");
+        assert.equal(protectedSuccess.fixture_cleanup_status, "confirmed");
+        assert.equal(quarantineStore.read().quarantined, false);
+        const protectedHang = await protectedSupervisor.run({
+          mode: "native_fixture", scenario: "hang", timeout_ms: 1000, interactive_trial_confirmation: true
+        });
+        assert.equal(protectedHang.execution_status, "worker_timed_out");
+        assert.equal(protectedHang.fixture_cleanup_status, "unconfirmed");
+        assert.equal(quarantineStore.read().reason, "cleanup_unconfirmed");
+        const recreatedSupervisor = createJ2534NativeFixtureSupervisor(protectedDescriptor, {
+          quarantineStore: createJ2534NativeQuarantineStore(quarantineDirectory), requireTrialConfirmation: true
+        });
+        const quarantinedRun = await recreatedSupervisor.run({
+          mode: "native_fixture", scenario: "success", interactive_trial_confirmation: true
+        });
+        assert.equal(quarantinedRun.execution_status, "worker_quarantined");
+        assert.deepEqual(quarantinedRun.errors, ["native_identity_quarantine_not_clear"]);
+        assert.equal(quarantinedRun.worker_started, false);
+        total += 12;
+      } finally {
+        const quarantineEntries = fs.readdirSync(quarantineDirectory);
+        assert.ok(quarantineEntries.every(name => name === "j2534-native-quarantine-v1.json"));
+        for (const name of quarantineEntries) fs.unlinkSync(path.join(quarantineDirectory, name));
+        fs.rmdirSync(quarantineDirectory);
+      }
       const successPath = path.join(platformDirectory, "success.dll");
       const original = fs.readFileSync(successPath); const changed = Buffer.from(original); changed[changed.length - 1] ^= 1;
       fs.writeFileSync(successPath, changed);

@@ -44,7 +44,17 @@ export function parseJ2534NativeFixtureOutput(output, scenario, architecture) {
 }
 
 // Development-only factory. The validator supplies a fixed, integrity-pinned temp descriptor.
-export function createJ2534NativeFixtureSupervisor(descriptor) {
+export function createJ2534NativeFixtureSupervisor(descriptor, controls = {}) {
+  if (controls === null || typeof controls !== "object" || Array.isArray(controls))
+    throw new Error("native_fixture_supervisor_controls_invalid");
+  const controlKeys = Object.keys(controls);
+  if (controlKeys.some(key => !["quarantineStore", "requireTrialConfirmation"].includes(key))
+    || (Object.hasOwn(controls, "quarantineStore")
+      && (typeof controls.quarantineStore?.read !== "function" || typeof controls.quarantineStore?.mark !== "function"))
+    || (Object.hasOwn(controls, "requireTrialConfirmation") && typeof controls.requireTrialConfirmation !== "boolean"))
+    throw new Error("native_fixture_supervisor_controls_invalid");
+  const quarantineStore = controls.quarantineStore || null;
+  const requireTrialConfirmation = controls.requireTrialConfirmation === true;
   if (!keysMatch(descriptor, ["temp_root", "architecture", "worker", "fixtures"]) || !["x86", "x64"].includes(descriptor.architecture)
     || !keysMatch(descriptor.worker, ["path", "sha256"]) || !isHash(descriptor.worker.sha256)
     || !keysMatch(descriptor.fixtures, ["success", "open-failure", "overrun", "hang", "crash"])) throw new Error("native_fixture_descriptor_invalid");
@@ -92,11 +102,28 @@ export function createJ2534NativeFixtureSupervisor(descriptor) {
       };
       let scenario, timeout, signal;
       try {
-        if (!keysMatch(options, ["mode", "scenario", ...(Object.hasOwn(options, "timeout_ms") ? ["timeout_ms"] : []), ...(Object.hasOwn(options, "signal") ? ["signal"] : [])])) throw new Error();
+        const expectedKeys = ["mode", "scenario", ...(Object.hasOwn(options, "timeout_ms") ? ["timeout_ms"] : []),
+          ...(Object.hasOwn(options, "signal") ? ["signal"] : []),
+          ...(Object.hasOwn(options, "interactive_trial_confirmation") ? ["interactive_trial_confirmation"] : [])];
+        if (!keysMatch(options, expectedKeys)) throw new Error();
         scenario = options.scenario; timeout = options.timeout_ms ?? 5000; signal = options.signal;
         if (options.mode !== "native_fixture" || !SCENARIOS.has(scenario) || !Number.isInteger(timeout) || timeout < 1000 || timeout > 10000
-          || (signal != null && !(signal instanceof AbortSignal))) throw new Error();
-      } catch { base.errors = ["native_fixture_request_invalid"]; return base; }
+          || (signal != null && !(signal instanceof AbortSignal))
+          || (requireTrialConfirmation ? options.interactive_trial_confirmation !== true
+            : Object.hasOwn(options, "interactive_trial_confirmation"))) throw new Error();
+      } catch {
+        base.errors = [requireTrialConfirmation ? "native_identity_trial_confirmation_required" : "native_fixture_request_invalid"];
+        return base;
+      }
+      if (quarantineStore) {
+        let quarantine;
+        try { quarantine = quarantineStore.read(); } catch { quarantine = { quarantined: true }; }
+        if (quarantine?.quarantined !== false) {
+          base.execution_status = "worker_quarantined";
+          base.errors = ["native_identity_quarantine_not_clear"];
+          return base;
+        }
+      }
       if (signal?.aborted) { base.execution_status = "worker_cancelled"; base.errors = ["worker_cancelled"]; return base; }
       const supervised = await runWorker({ timeout, signal, context: scenario });
       Object.assign(base, {
@@ -106,6 +133,10 @@ export function createJ2534NativeFixtureSupervisor(descriptor) {
       });
       base.native_fixture_execution_confirmed = base.result !== null;
       if (base.result) base.fixture_cleanup_status = base.result.lifecycle.cleanup_status;
+      if (quarantineStore && base.worker_started && !["confirmed", "not_required"].includes(base.fixture_cleanup_status)) {
+        const reason = base.result?.lifecycle?.status === "corrupted" ? "worker_corrupted" : "cleanup_unconfirmed";
+        try { quarantineStore.mark(reason); } catch { /* A failed latch remains fail-closed on its next read. */ }
+      }
       return base;
     }
   });

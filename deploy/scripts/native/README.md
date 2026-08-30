@@ -6,7 +6,7 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.351. This native binding remains
+The public app and PC package metadata are 3.13.352. This native binding remains
 development-only and is not bundled in either release.
 
 ## Validation
@@ -71,6 +71,13 @@ worker exit, it atomically writes a path-free state in the package's private
 native directory. Recreated controllers read that state before spawning and
 reject automatically; malformed state also blocks. There is no runtime clear or
 overwrite API. This is an accidental-retry barrier, not tamper-proof storage.
+
+The generated native-fixture supervisor can now require an explicit trial
+confirmation, revalidates its pinned worker and DLL descriptors immediately
+before spawn, applies the parent deadline, and records uncertain cleanup in the
+same persistent latch. Recreating the supervisor with that state remains blocked.
+x86/x64 fixtures verify both normal cleanup and timeout quarantine. This
+supervisor is still development-only and is not connected to a vendor worker.
 
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate
@@ -168,9 +175,9 @@ runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
    reviewed native toolchain is available.
 2. Verify the packaged private-IPC preflight against the installed registered
    driver on the target Windows tablet without loading the vendor DLL.
-3. Revalidate the registered descriptor immediately before the identity worker,
-   apply its parent deadline and the same persistent quarantine latch to every
-   uncertain cleanup, and require explicit trial approval before vendor code.
+3. Connect this supervisor to the verified-handle/Global-mutex fixture worker,
+   then define the strict registered-driver request and response contract.
+   Explicit trial approval remains mandatory before vendor code.
 4. Record actual identity evidence before any vehicle-channel work.
 
 ## References
