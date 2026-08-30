@@ -1,5 +1,5 @@
 import http from "node:http";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { execFile, execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -901,7 +901,7 @@ export function getJ2534DiscoveryEnvironment(devices = []) {
   };
 }
 
-export function buildJ2534IdentityProbeReadiness(devices = [], options = {}) {
+function buildJ2534IdentityProbeReadinessInternal(devices = [], options = {}, trusted = {}) {
   const registeredDevices = Array.isArray(devices) ? devices : [];
   const selectedDeviceId = typeof options?.selected_device_id === "string"
     ? options.selected_device_id.trim()
@@ -913,9 +913,7 @@ export function buildJ2534IdentityProbeReadiness(devices = [], options = {}) {
   const descriptorSecret = descriptor && typeof descriptor === "object"
     ? j2534RegisteredDriverDescriptorSecrets.get(descriptor)
     : null;
-  // A future one-shot orchestrator must issue and consume nonce-bound preflight evidence.
-  // Public result objects are never accepted as proof that preflight ran in this operation.
-  const verifiedPreflight = false;
+  const verifiedPreflight = trusted.preflightVerified === true && trusted.descriptor === descriptor;
   const descriptorReady = descriptorSecret?.descriptorSource === "live_windows_registry"
     && descriptorSecret.selectedDeviceId === selectedDeviceId
     && descriptor?.selected_device_id === selectedDeviceId
@@ -940,6 +938,7 @@ export function buildJ2534IdentityProbeReadiness(devices = [], options = {}) {
   if (!globalMutexAcquired) blockers.push("identity_probe_global_mutex_not_acquired");
   if (!interactiveConfirmation) blockers.push("interactive_trial_confirmation_required");
   blockers.push("identity_probe_worker_not_implemented");
+  if (Array.isArray(trusted.blockers)) blockers.push(...trusted.blockers.filter((item) => typeof item === "string" && /^[a-z0-9_]{3,96}$/.test(item)));
   const uniqueBlockers = Object.freeze([...new Set(blockers)]);
   return Object.freeze({
     schema_version: "j2534-identity-probe-readiness-v1",
@@ -947,6 +946,7 @@ export function buildJ2534IdentityProbeReadiness(devices = [], options = {}) {
     blockers: uniqueBlockers,
     selected_device_id: selectedDeviceId || null,
     registered_driver_confirmed: Boolean(selectedDevice),
+    preflight_operation_status: typeof trusted.operationStatus === "string" ? trusted.operationStatus : "not_started",
     live_registry_descriptor_verified: descriptorReady,
     native_preflight_verified_in_operation: verifiedPreflight,
     package_integrity_verified: packageIntegrityVerified,
@@ -964,6 +964,11 @@ export function buildJ2534IdentityProbeReadiness(devices = [], options = {}) {
     would_transmit: false,
     vehicle_command_enabled: false
   });
+}
+
+export function buildJ2534IdentityProbeReadiness(devices = [], options = {}) {
+  // Public values are display inputs only. They cannot provide trusted preflight evidence.
+  return buildJ2534IdentityProbeReadinessInternal(devices, options);
 }
 
 export function prepareJ2534WorkerReviewRequest(devices = [], options = {}) {
@@ -1411,6 +1416,212 @@ export async function runJ2534RegisteredDriverNativePreflight(descriptor, option
   if (!sameFingerprint(secret.fingerprint, after.fingerprint))
     return blocked(secret.selectedDeviceId, "registered_driver_file_changed");
   return deepFreezeJ2534Value(result);
+}
+
+const J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS = Object.freeze([
+  "contract_version", "selected_device_id", "verification_status", "blockers",
+  "fixed_drive_verified", "final_path_matches", "file_identity_stable", "sha256_matches",
+  "size_matches", "architecture_matches", "runtime_architecture_matches", "dll_load_attempted",
+  "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted",
+  "vehicle_communication_started", "would_transmit", "vehicle_command_enabled", "execution_enabled"
+]);
+
+const isJ2534IdentityPlainObject = (value) => {
+  try {
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+      && Object.getPrototypeOf(value) === Object.prototype;
+  } catch {
+    return false;
+  }
+};
+
+function createJ2534IdentityPreflightOperationController(dependencies) {
+  const { issueRecord, revalidateRecord, runPreflight, validatePreflight, buildSnapshot, now, createNonce,
+    ttlMs, minimumRunWindowMs } = dependencies;
+  const operationSecrets = new WeakMap();
+  const consumedOperations = new WeakSet();
+  let issuedOperation = null;
+  let activeOperation = null;
+  let poisoned = false;
+  const rejected = (blocker, selectedDeviceId = null) => buildSnapshot({ selectedDeviceId }, {
+    operationStatus: "rejected", blockers: [blocker], preflightVerified: false
+  });
+
+  function issue(options = {}) {
+    let selectedDeviceId = null;
+    try {
+      if (!isJ2534IdentityPlainObject(options) || Object.keys(options).length !== 1
+        || typeof options.selected_device_id !== "string" || !/^j2534-[0-9a-f]{16}$/.test(options.selected_device_id))
+        return Object.freeze({ status: "rejected", operation: null, readiness: rejected("selected_device_not_confirmed") });
+      selectedDeviceId = options.selected_device_id;
+    } catch {
+      return Object.freeze({ status: "rejected", operation: null, readiness: rejected("selected_device_not_confirmed") });
+    }
+    if (poisoned) return Object.freeze({ status: "rejected", operation: null, readiness: rejected("identity_preflight_process_poisoned", selectedDeviceId) });
+    if (issuedOperation !== null) {
+      const existing = operationSecrets.get(issuedOperation);
+      const currentTime = now();
+      if (existing && Number.isFinite(currentTime) && currentTime >= existing.deadline) {
+        consumedOperations.add(issuedOperation);
+        operationSecrets.delete(issuedOperation);
+        issuedOperation = null;
+      }
+    }
+    if (issuedOperation !== null || activeOperation !== null)
+      return Object.freeze({ status: "rejected", operation: null, readiness: rejected("identity_preflight_operation_busy", selectedDeviceId) });
+    let record;
+    try { record = issueRecord(selectedDeviceId); } catch { record = null; }
+    if (!isJ2534IdentityPlainObject(record) || record.accepted !== true || record.selectedDeviceId !== selectedDeviceId) {
+      let blocker = "live_registry_descriptor_not_verified";
+      try { if (typeof record?.blocker === "string") blocker = record.blocker; } catch {}
+      return Object.freeze({ status: "rejected", operation: null, readiness: rejected(blocker, selectedDeviceId) });
+    }
+    const issuedAt = now();
+    const nonce = createNonce();
+    if (!Number.isFinite(issuedAt) || typeof nonce !== "string" || !/^[a-f0-9]{32}$/.test(nonce))
+      return Object.freeze({ status: "rejected", operation: null, readiness: rejected("identity_preflight_operation_issue_failed", selectedDeviceId) });
+    const operation = Object.freeze({});
+    operationSecrets.set(operation, {
+      selectedDeviceId, descriptor: record.descriptor, devices: record.devices, nonce,
+      issuedAt, deadline: issuedAt + ttlMs
+    });
+    issuedOperation = operation;
+    return Object.freeze({ status: "issued", operation, readiness: null });
+  }
+
+  async function run(operation, options = {}) {
+    let signal;
+    try {
+      if (!isJ2534IdentityPlainObject(options) || Object.keys(options).some((key) => key !== "signal"))
+        return rejected("identity_preflight_operation_options_invalid");
+      signal = options.signal;
+      if (signal != null && !(signal instanceof AbortSignal)) return rejected("identity_preflight_operation_options_invalid");
+    } catch {
+      return rejected("identity_preflight_operation_options_invalid");
+    }
+    let record;
+    try { record = operation && typeof operation === "object" ? operationSecrets.get(operation) : null; }
+    catch { record = null; }
+    if (!record || operation !== issuedOperation || consumedOperations.has(operation))
+      return rejected("identity_preflight_operation_not_issued");
+    consumedOperations.add(operation);
+    operationSecrets.delete(operation);
+    issuedOperation = null;
+    const startedAt = now();
+    if (!Number.isFinite(startedAt) || startedAt < record.issuedAt || startedAt > record.deadline)
+      return rejected("identity_preflight_operation_expired", record.selectedDeviceId);
+    if (activeOperation !== null) return rejected("identity_preflight_operation_busy", record.selectedDeviceId);
+    activeOperation = operation;
+    try {
+      if (signal?.aborted) return rejected("identity_preflight_operation_cancelled", record.selectedDeviceId);
+      let current;
+      try { current = revalidateRecord(record); } catch { current = null; }
+      if (!isJ2534IdentityPlainObject(current) || current.accepted !== true || current.selectedDeviceId !== record.selectedDeviceId) {
+        let blocker = "selected_driver_not_registered";
+        try { if (typeof current?.blocker === "string") blocker = current.blocker; } catch {}
+        return rejected(blocker, record.selectedDeviceId);
+      }
+      record.devices = current.devices;
+      const preflightAt = now();
+      if (!Number.isFinite(preflightAt) || preflightAt < startedAt || record.deadline - preflightAt < minimumRunWindowMs)
+        return rejected("identity_preflight_operation_expired", record.selectedDeviceId);
+      let completion;
+      try { completion = await runPreflight(record.descriptor, { signal, operationNonce: record.nonce }); }
+      catch { completion = null; }
+      let result = null;
+      try {
+        if (isJ2534IdentityPlainObject(completion) && completion.operationNonce === record.nonce) result = completion.result;
+      } catch {}
+      let blockers = [];
+      try { if (Array.isArray(result?.blockers)) blockers = result.blockers; } catch {}
+      if (blockers.includes("native_preflight_termination_unconfirmed")) {
+        poisoned = true;
+        return rejected("identity_preflight_process_poisoned", record.selectedDeviceId);
+      }
+      if (signal?.aborted || blockers.includes("native_preflight_cancelled"))
+        return rejected("identity_preflight_operation_cancelled", record.selectedDeviceId);
+      let valid = false;
+      try { valid = validatePreflight(record, result) === true; } catch {}
+      return valid
+        ? buildSnapshot(record, { operationStatus: "verified_non_executable", blockers: [], preflightVerified: true })
+        : rejected("native_preflight_not_verified_in_operation", record.selectedDeviceId);
+    } finally {
+      record.descriptor = null;
+      record.devices = null;
+      record.nonce = null;
+      activeOperation = null;
+    }
+  }
+
+  return Object.freeze({ issue, run });
+}
+
+const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationController({
+  ttlMs: 15000,
+  minimumRunWindowMs: 5000,
+  now: () => performance.now(),
+  createNonce: () => randomBytes(16).toString("hex"),
+  issueRecord: (selectedDeviceId) => {
+    const devices = discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true });
+    if (!devices.some((device) => device?.id === selectedDeviceId))
+      return { accepted: false, blocker: devices.length ? "selected_driver_not_registered" : "no_registered_driver" };
+    const descriptor = createJ2534RegisteredDriverDescriptor({ enabled: true, selectedDeviceId });
+    const secret = j2534RegisteredDriverDescriptorSecrets.get(descriptor);
+    if (!secret || secret.descriptorSource !== "live_windows_registry" || secret.selectedDeviceId !== selectedDeviceId
+      || descriptor.exact_identity_api_ready !== true || descriptor.execution_enabled !== false)
+      return { accepted: false, blocker: "live_registry_descriptor_not_verified" };
+    return { accepted: true, selectedDeviceId, descriptor, devices };
+  },
+  revalidateRecord: (record) => {
+    const devices = discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true });
+    return devices.some((device) => device?.id === record.selectedDeviceId)
+      ? { accepted: true, selectedDeviceId: record.selectedDeviceId, devices }
+      : { accepted: false, blocker: devices.length ? "selected_driver_not_registered" : "no_registered_driver" };
+  },
+  runPreflight: async (descriptor, { signal, operationNonce }) => Object.freeze({
+    operationNonce,
+    result: await runJ2534RegisteredDriverNativePreflight(descriptor, { timeout_ms: 5000, signal })
+  }),
+  validatePreflight: (record, result) => {
+    try {
+      if (!result || typeof result !== "object" || Array.isArray(result)) return false;
+      const keys = Object.keys(result);
+      if (keys.length !== J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS.length
+        || !J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS.every((key) => Object.hasOwn(result, key))) return false;
+      return result.contract_version === "j2534-native-preflight-response-v1"
+        && result.selected_device_id === record.selectedDeviceId
+        && result.verification_status === "verified_non_executable"
+        && Array.isArray(result.blockers) && result.blockers.length === 0
+        && ["fixed_drive_verified", "final_path_matches", "file_identity_stable", "sha256_matches", "size_matches",
+          "architecture_matches", "runtime_architecture_matches"].every((key) => result[key] === true)
+        && ["dll_load_attempted", "get_proc_address_attempted", "pass_thru_open_attempted", "vehicle_connection_attempted",
+          "vehicle_communication_started", "would_transmit", "vehicle_command_enabled", "execution_enabled"].every((key) => result[key] === false);
+    } catch {
+      return false;
+    }
+  },
+  buildSnapshot: (record, evidence) => {
+    const devices = Array.isArray(record?.devices)
+      ? record.devices
+      : discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true });
+    return buildJ2534IdentityProbeReadinessInternal(devices, {
+      selected_device_id: record?.selectedDeviceId || "",
+      descriptor: record?.descriptor
+    }, {
+      operationStatus: evidence.operationStatus,
+      blockers: evidence.blockers,
+      preflightVerified: evidence.preflightVerified,
+      descriptor: record?.descriptor
+    });
+  }
+});
+
+export function issueJ2534IdentityPreflightOperation(options = {}) {
+  return j2534IdentityPreflightController.issue(options);
+}
+
+export async function runJ2534IdentityPreflightOperation(operation, options = {}) {
+  return j2534IdentityPreflightController.run(operation, options);
 }
 
 function createStableJ2534DeviceId(driver = {}) {

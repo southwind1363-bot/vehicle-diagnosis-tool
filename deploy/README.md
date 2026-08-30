@@ -8,6 +8,8 @@
 
 J2534の初回DLL実行は通常の非実行preflightと分離します。`j2534-identity-probe-readiness-v1` はlive registry descriptor、同一操作内preflight、配布整合性、Authenticode、quarantine、全体mutex、対話確認を個別に保持しますが、現在は未実装workerゲートを必ず残し、DLLロード、`PassThruOpen`、車両通信を許可しません。公開オブジェクトや検査結果は実行許可証として再利用できません。
 
+3.13.338ではlive registryから発行した中身のない操作handleを15秒・一回限りで消費し、同一操作内の非実行preflightだけをreadinessへ反映するorchestratorを追加しました。clone、再利用、期限切れ、並行実行、登録変更、終了未確認後の再実行を拒否します。preflight成功後も署名、quarantine、全体mutex、対話確認、identity workerは未確認のため、identity実行許可にはなりません。
+
 J2534の次工程として、接続・識別情報取得・終了の内部処理と模擬応答による異常系検証を追加しました。実DLLローダーや公開ブリッジには未接続で、実機通信の開放ではありません。検証は `npm run validate:j2534-lifecycle`、設計と残作業は [J2534内部接続処理](scripts/J2534-IDENTITY-LIFECYCLE.md) を参照してください。進捗率は実機確認前のため変更していません。
 
 内部処理を固定の模擬ワーカーで実行する監視処理も追加しました。中止・タイムアウト・出力超過では終了要求後も子プロセスの終了確認まで二重起動を防ぎ、異常終了した出力を成功結果として採用しません。検証は `npm run validate:j2534-supervisor`。これは模擬環境の検証で、実機DLLを動かすワーカーとの接続はまだありません。

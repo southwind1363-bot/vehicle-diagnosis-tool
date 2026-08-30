@@ -1,4 +1,5 @@
-import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
+import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
+import { createJ2534IdentityPreflightOperationController } from "./j2534-identity-preflight-operation.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import { getEventListeners } from "node:events";
@@ -397,6 +398,128 @@ try {
     && forgedIdentityReadiness.identity_probe_execution_enabled === false && forgedIdentityReadiness.pass_thru_open_allowed === false
     && forgedIdentityReadiness.dll_load_attempted === false && forgedIdentityReadiness.vehicle_communication_started === false
     && !JSON.stringify(forgedIdentityReadiness).includes("C:\\private"), "J2534 identity readiness was mutable, enabled execution, or exposed private input");
+  const fixtureDeviceId = parsedJ2534Drivers[0].id;
+  let fixtureNow = 100;
+  let fixtureRunnerCalls = 0;
+  const fixtureSnapshot = (record, evidence) => Object.freeze({
+    readiness_status: "blocked", preflight_operation_status: evidence.operationStatus,
+    blockers: Object.freeze([...(evidence.blockers || []), "identity_probe_worker_not_implemented"]),
+    selected_device_id: record.selectedDeviceId || null,
+    native_preflight_verified_in_operation: evidence.preflightVerified === true,
+    identity_probe_execution_enabled: false, dll_load_attempted: false, pass_thru_open_allowed: false,
+    vehicle_communication_started: false, vehicle_command_enabled: false
+  });
+  const makeFixtureController = (runner = async () => ({ fixture_ok: true })) => createJ2534IdentityPreflightOperationController({
+    ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "a".repeat(32),
+    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers }),
+    revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers }),
+    runPreflight: async (descriptor, options) => {
+      fixtureRunnerCalls += 1;
+      return { operationNonce: options.operationNonce, result: await runner(descriptor, options) };
+    },
+    validatePreflight: (record, result) => record.selectedDeviceId === fixtureDeviceId && result?.fixture_ok === true,
+    buildSnapshot: fixtureSnapshot
+  });
+  const fixtureController = makeFixtureController();
+  const fixtureIssued = fixtureController.issue({ selected_device_id: fixtureDeviceId });
+  check(fixtureIssued.status === "issued" && Object.isFrozen(fixtureIssued.operation)
+    && Object.keys(fixtureIssued.operation).length === 0, "J2534 identity preflight operation exposed state or failed to issue an opaque fixture handle");
+  const [fixtureCompleted, fixtureParallel] = await Promise.all([
+    fixtureController.run(fixtureIssued.operation), fixtureController.run(fixtureIssued.operation)
+  ]);
+  check(fixtureRunnerCalls === 1 && fixtureCompleted.native_preflight_verified_in_operation === true
+    && fixtureCompleted.readiness_status === "blocked" && fixtureCompleted.blockers.includes("identity_probe_worker_not_implemented")
+    && fixtureParallel.blockers.includes("identity_preflight_operation_not_issued"), "J2534 identity preflight operation was not one-shot before asynchronous work");
+  const fixtureReused = await fixtureController.run(fixtureIssued.operation);
+  const fixtureCloned = await fixtureController.run(structuredClone(fixtureIssued.operation));
+  check(fixtureReused.blockers.includes("identity_preflight_operation_not_issued")
+    && fixtureCloned.blockers.includes("identity_preflight_operation_not_issued"), "J2534 identity preflight accepted a reused or cloned operation");
+  const copiedOperation = fixtureController.issue({ selected_device_id: fixtureDeviceId }).operation;
+  const spreadRejected = await fixtureController.run({ ...copiedOperation });
+  const jsonRejected = await fixtureController.run(JSON.parse(JSON.stringify(copiedOperation)));
+  const throwingOptions = new Proxy({}, { getPrototypeOf() { throw new Error("fixture proxy"); } });
+  const proxyIssueRejected = fixtureController.issue(throwingOptions);
+  const proxyRunRejected = await fixtureController.run(copiedOperation, throwingOptions);
+  check(spreadRejected.blockers.includes("identity_preflight_operation_not_issued")
+    && jsonRejected.blockers.includes("identity_preflight_operation_not_issued")
+    && proxyIssueRejected.status === "rejected" && proxyRunRejected.blockers.includes("identity_preflight_operation_options_invalid"),
+  "J2534 identity preflight accepted copied state or leaked an exception from hostile options");
+  const expiringController = makeFixtureController();
+  const expiringOperation = expiringController.issue({ selected_device_id: fixtureDeviceId }).operation;
+  fixtureNow = 15101;
+  const expiredOperation = await expiringController.run(expiringOperation);
+  check(expiredOperation.blockers.includes("identity_preflight_operation_expired"), "J2534 identity preflight accepted an expired operation");
+  fixtureNow = 20;
+  const abandonedController = makeFixtureController();
+  const abandonedOperation = abandonedController.issue({ selected_device_id: fixtureDeviceId }).operation;
+  fixtureNow = 15020;
+  const replacementIssue = abandonedController.issue({ selected_device_id: fixtureDeviceId });
+  const abandonedRejected = await abandonedController.run(abandonedOperation);
+  check(replacementIssue.status === "issued" && abandonedRejected.blockers.includes("identity_preflight_operation_not_issued"),
+  "J2534 identity preflight did not release an expired unconsumed lease");
+  fixtureNow = 300;
+  const rollbackController = makeFixtureController();
+  const rollbackOperation = rollbackController.issue({ selected_device_id: fixtureDeviceId }).operation;
+  fixtureNow = 299;
+  const rollbackRejected = await rollbackController.run(rollbackOperation);
+  check(rollbackRejected.blockers.includes("identity_preflight_operation_expired"), "J2534 identity preflight accepted a monotonic clock rollback");
+  fixtureNow = 400;
+  const revalidationExpiryController = createJ2534IdentityPreflightOperationController({
+    ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "c".repeat(32),
+    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers }),
+    revalidateRecord: (record) => {
+      fixtureNow = 10401;
+      return { accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers };
+    },
+    runPreflight: async (_descriptor, options) => ({ operationNonce: options.operationNonce, result: { fixture_ok: true } }),
+    validatePreflight: (_record, result) => result?.fixture_ok === true,
+    buildSnapshot: fixtureSnapshot
+  });
+  const revalidationExpired = await revalidationExpiryController.run(revalidationExpiryController.issue({ selected_device_id: fixtureDeviceId }).operation);
+  check(revalidationExpired.blockers.includes("identity_preflight_operation_expired"), "J2534 identity preflight started native work without a full timeout window after revalidation");
+  fixtureNow = 500;
+  const nonceMismatchController = createJ2534IdentityPreflightOperationController({
+    ttlMs: 15000, minimumRunWindowMs: 5000, now: () => fixtureNow, createNonce: () => "d".repeat(32),
+    issueRecord: (selectedDeviceId) => ({ accepted: true, selectedDeviceId, descriptor: Object.freeze({ fixture: true }), devices: parsedJ2534Drivers }),
+    revalidateRecord: (record) => ({ accepted: true, selectedDeviceId: record.selectedDeviceId, devices: parsedJ2534Drivers }),
+    runPreflight: async () => ({ operationNonce: "e".repeat(32), result: { fixture_ok: true } }),
+    validatePreflight: (_record, result) => result?.fixture_ok === true,
+    buildSnapshot: fixtureSnapshot
+  });
+  const nonceMismatch = await nonceMismatchController.run(nonceMismatchController.issue({ selected_device_id: fixtureDeviceId }).operation);
+  check(nonceMismatch.blockers.includes("native_preflight_not_verified_in_operation")
+    && nonceMismatch.native_preflight_verified_in_operation === false, "J2534 identity preflight accepted completion evidence bound to another nonce");
+  fixtureNow = 200;
+  let releaseFixtureRunner;
+  const delayedController = makeFixtureController(() => new Promise((resolve) => { releaseFixtureRunner = () => resolve({ fixture_ok: true }); }));
+  const delayedFirst = delayedController.issue({ selected_device_id: fixtureDeviceId }).operation;
+  const delayedRun = delayedController.run(delayedFirst);
+  await new Promise((resolve) => setImmediate(resolve));
+  const busyIssue = delayedController.issue({ selected_device_id: fixtureDeviceId });
+  releaseFixtureRunner();
+  await delayedRun;
+  check(busyIssue.status === "rejected" && busyIssue.operation === null
+    && busyIssue.readiness.blockers.includes("identity_preflight_operation_busy"), "J2534 identity preflight allowed two issued or active operations");
+  const poisonController = makeFixtureController(async () => ({ blockers: ["native_preflight_termination_unconfirmed"] }));
+  const poisoned = await poisonController.run(poisonController.issue({ selected_device_id: fixtureDeviceId }).operation);
+  const afterPoison = poisonController.issue({ selected_device_id: fixtureDeviceId });
+  check(poisoned.blockers.includes("identity_preflight_process_poisoned") && afterPoison.status === "rejected"
+    && afterPoison.readiness.blockers.includes("identity_preflight_process_poisoned"), "J2534 identity preflight did not retain process poison after uncertain termination");
+  const abortedController = makeFixtureController();
+  const abortController = new AbortController();
+  abortController.abort();
+  const aborted = await abortedController.run(abortedController.issue({ selected_device_id: fixtureDeviceId }).operation, { signal: abortController.signal });
+  check(aborted.blockers.includes("identity_preflight_operation_cancelled"), "J2534 identity preflight ignored a pre-aborted signal");
+  const malformedController = makeFixtureController(async () => Object.defineProperty({}, "blockers", { get() { throw new Error("fixture getter"); } }));
+  const malformed = await malformedController.run(malformedController.issue({ selected_device_id: fixtureDeviceId }).operation);
+  check(malformed.blockers.includes("native_preflight_not_verified_in_operation")
+    && malformed.identity_probe_execution_enabled === false && malformed.vehicle_command_enabled === false,
+  "J2534 identity preflight leaked a malformed native result or enabled execution");
+  const productionRejected = issueJ2534IdentityPreflightOperation({ selected_device_id: "j2534-0000000000000000" });
+  const productionCloneRejected = await runJ2534IdentityPreflightOperation(Object.freeze({}));
+  check(productionRejected.status === "rejected" && productionRejected.operation === null
+    && productionRejected.readiness.identity_probe_execution_enabled === false
+    && productionCloneRejected.blockers.includes("identity_preflight_operation_not_issued"), "J2534 production preflight operation did not fail closed without a live registered descriptor");
   const j2534PeFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle-diagnosis-j2534-"));
   try {
     const x86LibraryPath = path.join(j2534PeFixtureDir, "j2534-x86.dll");
