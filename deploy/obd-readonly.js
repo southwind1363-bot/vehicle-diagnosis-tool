@@ -30752,6 +30752,7 @@
         ecu_info_response_format: input.data.ecuInfoResponseFormat || input.data.ecu_info_response_format || input.data.responseFormat || input.data.response_format || input.ecuInfoResponseFormat || input.ecu_info_response_format || input.responseFormat || input.response_format || null,
         ecu_info_negative_response_service: input.data.ecuInfoNegativeResponseService || input.data.ecu_info_negative_response_service || input.ecuInfoNegativeResponseService || input.ecu_info_negative_response_service || null,
         ecu_info_negative_response_code: input.data.ecuInfoNegativeResponseCode || input.data.ecu_info_negative_response_code || input.ecuInfoNegativeResponseCode || input.ecu_info_negative_response_code || null,
+        uds_did_response_evidence: input.data.udsDidResponseEvidence || input.data.uds_did_response_evidence || input.udsDidResponseEvidence || input.uds_did_response_evidence || null,
         had_sensitive_identifier: input.data.hadSensitiveIdentifier === true || input.data.had_sensitive_identifier === true || input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true
       }
       : input && typeof input === "object" ? input : {};
@@ -31046,6 +31047,41 @@
       missing_labels: missingKeyItems.map((item) => item.label)
     };
     const errorCodes = mergeUniqueStrings(sourceInput.errorCodes, sourceInput.error_codes, scopedErrorCodes);
+    const rawUdsDidResponseEvidence = sourceInput.udsDidResponseEvidence || sourceInput.uds_did_response_evidence || null;
+    const udsDidRequestedDataIdentifiers = normalizeUdsDataIdentifierList(
+      rawUdsDidResponseEvidence?.requestedDataIdentifiers,
+      rawUdsDidResponseEvidence?.requested_data_identifiers
+    );
+    const udsDidResponseDataIdentifier = normalizeUdsDataIdentifier(
+      rawUdsDidResponseEvidence?.responseDataIdentifier ?? rawUdsDidResponseEvidence?.response_data_identifier ?? null
+    );
+    const udsDidPayloadByteCount = Number.isInteger(rawUdsDidResponseEvidence?.payloadByteCount)
+      ? rawUdsDidResponseEvidence.payloadByteCount
+      : Number.isInteger(rawUdsDidResponseEvidence?.payload_byte_count)
+        ? rawUdsDidResponseEvidence.payload_byte_count
+        : null;
+    const udsDidBoundaryStatus = ["single_did", "multiple_requested_dids_unparsed", "response_did_mismatch", "incomplete_response"]
+      .includes(String(rawUdsDidResponseEvidence?.boundaryStatus || rawUdsDidResponseEvidence?.boundary_status || ""))
+      ? String(rawUdsDidResponseEvidence.boundaryStatus || rawUdsDidResponseEvidence.boundary_status)
+      : null;
+    const udsDidResponseEvidence = rawUdsDidResponseEvidence && udsDidResponseDataIdentifier && udsDidPayloadByteCount !== null && udsDidPayloadByteCount >= 0 && udsDidPayloadByteCount <= 65535 && udsDidBoundaryStatus
+      ? {
+        schemaVersion: "uds_did_response_evidence_v1",
+        schema_version: "uds_did_response_evidence_v1",
+        requestedDataIdentifiers: udsDidRequestedDataIdentifiers,
+        requested_data_identifiers: [...udsDidRequestedDataIdentifiers],
+        responseDataIdentifier: udsDidResponseDataIdentifier,
+        response_data_identifier: udsDidResponseDataIdentifier,
+        payloadByteCount: udsDidPayloadByteCount,
+        payload_byte_count: udsDidPayloadByteCount,
+        boundaryStatus: udsDidBoundaryStatus,
+        boundary_status: udsDidBoundaryStatus,
+        sourceEcu: resolvedSourceEcu,
+        source_ecu: resolvedSourceEcu,
+        retainedRawPayload: false,
+        retained_raw_payload: false
+      }
+      : null;
 
     return {
       schemaVersion: "ecu_info_snapshot_v2",
@@ -31106,6 +31142,8 @@
       ecu_info_negative_response_service: ecuInfoNegativeResponseService,
       ecuInfoNegativeResponseCode,
       ecu_info_negative_response_code: ecuInfoNegativeResponseCode,
+      udsDidResponseEvidence,
+      uds_did_response_evidence: udsDidResponseEvidence,
       ...(typeof sourceInput.ok === "boolean" ? { ok: sourceInput.ok } : {}),
       blocked: sourceInput.blocked === true || sourceInput.isBlocked === true || sourceInput.is_blocked === true,
       wouldTransmit: false,
@@ -32461,6 +32499,11 @@
     return /^[0-9A-F]{1,4}$/.test(normalized) ? normalized.padStart(4, "0") : null;
   }
 
+  function normalizeUdsDataIdentifierList(...values) {
+    const rows = values.flatMap((value) => Array.isArray(value) ? value : value === null || value === undefined || value === "" ? [] : [value]);
+    return [...new Set(rows.map(normalizeUdsDataIdentifier).filter(Boolean))].slice(0, 64);
+  }
+
   function normalizeTypedDtcSnapshotInput(input = null, status = "stored", intent = "read_stored_dtc") {
     if (!hasObjectContent(input)) return null;
     if (input.schemaVersion && Array.isArray(input.dtcs)) return input;
@@ -32655,6 +32698,15 @@
     const dataIdentifier = `${bytes[responseIndex + 1].toString(16).toUpperCase().padStart(2, "0")}${bytes[responseIndex + 2].toString(16).toUpperCase().padStart(2, "0")}`;
     const payload = bytes.slice(responseIndex + 3);
     if (!payload.length) return [];
+    const requestedDataIdentifiers = normalizeUdsDataIdentifierList(
+      input.requested_data_identifiers,
+      input.requestedDataIdentifiers,
+      input.request_dids,
+      input.requestDids,
+      input.requested_did,
+      input.requestedDid
+    );
+    if (requestedDataIdentifiers.length > 1 || (requestedDataIdentifiers.length === 1 && requestedDataIdentifiers[0] !== dataIdentifier)) return [];
     const sourceEcu = readObdResponseSourceEcu(input);
     const isVin = dataIdentifier === "F190";
     return [{
@@ -32698,6 +32750,26 @@
     const completeMode09FrameIndexes = mode09FrameIndexes.filter(isCompleteMode09Frame);
     const hasKnownMode09Frame = mode09FrameIndexes.length > 0;
     const hasMode09Frame = completeMode09FrameIndexes.length > 0;
+    const requestedDataIdentifiers = normalizeUdsDataIdentifierList(
+      input.requested_data_identifiers,
+      input.requestedDataIdentifiers,
+      input.request_dids,
+      input.requestDids,
+      input.requested_did,
+      input.requestedDid
+    );
+    const udsResponseIndex = hasKnownMode09Frame ? -1 : (protocolDeclaresUds ? bytes.indexOf(0x62) : bytes[0] === 0x62 ? 0 : -1);
+    const udsResponseDataIdentifier = udsResponseIndex >= 0 && udsResponseIndex + 2 < bytes.length
+      ? `${bytes[udsResponseIndex + 1].toString(16).toUpperCase().padStart(2, "0")}${bytes[udsResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0")}`
+      : null;
+    const udsPayloadByteCount = udsResponseDataIdentifier ? Math.max(0, bytes.length - (udsResponseIndex + 3)) : null;
+    const udsDidBoundaryStatus = !udsResponseDataIdentifier || udsPayloadByteCount === 0
+      ? udsResponseDataIdentifier ? "incomplete_response" : null
+      : requestedDataIdentifiers.length > 1
+        ? "multiple_requested_dids_unparsed"
+        : requestedDataIdentifiers.length === 1 && requestedDataIdentifiers[0] !== udsResponseDataIdentifier
+          ? "response_did_mismatch"
+          : "single_did";
     const rawUdsDidValues = hasKnownMode09Frame ? [] : decodeRawUdsDataByIdentifierResponse(bytes, input);
     const hasUdsDidResponse = rawUdsDidValues.length > 0 || udsDidNegativeResponse || (protocolDeclaresUds && bytes.includes(0x62)) || bytes[0] === 0x62;
     const ecuInfoResponseFormat = hasKnownMode09Frame
@@ -32744,6 +32816,14 @@
       ...(udsDidNegativeResponse ? {
         ecu_info_negative_response_service: "22",
         ecu_info_negative_response_code: bytes[negativeResponseIndex + 2].toString(16).toUpperCase().padStart(2, "0")
+      } : {}),
+      ...(udsDidBoundaryStatus ? {
+        uds_did_response_evidence: {
+          requested_data_identifiers: requestedDataIdentifiers,
+          response_data_identifier: udsResponseDataIdentifier,
+          payload_byte_count: udsPayloadByteCount,
+          boundary_status: udsDidBoundaryStatus
+        }
       } : {}),
       values
     });

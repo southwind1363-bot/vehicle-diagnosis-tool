@@ -197,9 +197,9 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q3 見込み"
   }),
   uds_canfd: Object.freeze({
-    progressPercent: 24,
-    currentBasis: "UDS / CAN FD の対象範囲と安全境界を整理済み。実 transport は未実装。",
-    nextBuild: "read-only DID / ECU 情報の応答モデルとログ整形を先に固める。",
+    progressPercent: 38,
+    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ECU別出典、ISO-TPログ取込、複数DID非推測証跡まで実装済み。実 transport は未実装。",
+    nextBuild: "CAN / CAN FD transportから同じread-only応答契約へ接続する要求マニフェストとタイミング証跡を固める。",
     etaTarget: "2026-Q4 見込み"
   }),
   doip: Object.freeze({
@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7219件",
+  validationCheckLabel: "OBD安全検証 7220件",
   bridgeValidationCheckLabel: "bridge検証 361件",
-  recentMilestone: "サービス安全条件を診断セッション保存へ統合",
+  recentMilestone: "UDS複数DID応答の非推測化と境界証跡を統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.356";
+const APP_VERSION = "3.13.357";
 const APP_LAST_UPDATED = "2026-08-30";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

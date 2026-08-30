@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.357ではraw UDS ReadDataByIdentifier応答へ要求DID一覧、応答先頭DID、payload長、境界判定を値と分離したuds_did_response_evidence_v1として追加しました。複数DID要求と要求DID不一致ではpayloadを先頭DIDの値と推測せずunparsedに留め、raw payloadやVINを証跡へ保存しません。従来の単一DID取込、ECU/プロトコル/NRC、JSON往復、送信無効を維持し、UDS/CAN FDソフト進捗を38%へ更新しました。
+
 3.13.356ではJ2534匿名化証拠へ厳格な`j2534-native-preflight-evidence-validation-v1`検証を追加しました。完全キー、32KB入力上限、時刻、実行環境、登録数、選択、v2契約、blocker、署名、mutex、identity検査、安全falseフラグの意味整合を確認し、no-driver、verified、rejectedの矛盾や改変を拒否します。package検証276件で、整合性検査後のstdin検証まで確認済みです。ベンダーDLLのロード、実VCI、車両通信は行いません。進捗率は46%です。
 
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
