@@ -1542,7 +1542,7 @@ function createJ2534IdentityPreflightOperationController(dependencies) {
       } catch {}
       let blockers = [];
       try { if (Array.isArray(result?.blockers)) blockers = result.blockers; } catch {}
-      if (blockers.includes("native_preflight_termination_unconfirmed")) {
+      if (blockers.includes("native_preflight_termination_unconfirmed") || blockers.includes("native_preflight_quarantine_not_clear")) {
         poisoned = true;
         return rejected("identity_preflight_process_poisoned", record.selectedDeviceId);
       }

@@ -6,6 +6,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
 import { packageWorkstation } from "./package-workstation.js";
+import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 import { formatJ2534NativePreflightResult, formatJ2534WorkstationInspection, parseJ2534PreflightSelection, runJ2534WorkstationPreflight } from "./inspect-workstation-j2534.js";
 
@@ -24,6 +25,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
   for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  fs.copyFileSync(new URL("./j2534-native-quarantine.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-native-quarantine.js"));
   fs.copyFileSync(new URL("./j2534-registered-driver-native-preflight.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-registered-driver-native-preflight.js"));
   for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534GlobalMutexLease.cs", "J2534RegisteredDriverPreflightWorker.cs"])
     fs.copyFileSync(new URL(`./native/${name}`, import.meta.url), path.join(sourceDirectory, "scripts", "native", name));
@@ -48,6 +50,19 @@ const run = (code, args, environment = {}) => new Promise((resolve) => {
     (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
   child.stdin.end();
 });
+const quarantineRoot = path.join(root, "quarantine-store");
+fs.mkdirSync(quarantineRoot);
+const quarantineStore = createJ2534NativeQuarantineStore(quarantineRoot);
+check(quarantineStore.read().quarantined === false && quarantineStore.read().reason === null, "Fresh J2534 quarantine store was not clear");
+assert.throws(() => quarantineStore.mark("unknown"), /j2534_quarantine_reason_invalid/);
+check(true, "J2534 quarantine store accepted an unknown reason");
+const markedQuarantine = quarantineStore.mark("termination_unconfirmed");
+check(markedQuarantine.quarantined === true && markedQuarantine.reason === "termination_unconfirmed", "J2534 quarantine state was not persisted");
+const reopenedQuarantine = createJ2534NativeQuarantineStore(quarantineRoot).read();
+check(reopenedQuarantine.quarantined === true && reopenedQuarantine.reason === "termination_unconfirmed", "J2534 quarantine did not survive controller recreation");
+check(quarantineStore.mark("worker_corrupted").reason === "termination_unconfirmed", "J2534 quarantine reason was overwritten");
+fs.writeFileSync(path.join(quarantineRoot, "j2534-native-quarantine-v1.json"), "invalid");
+check(createJ2534NativeQuarantineStore(quarantineRoot).read().reason === "state_invalid", "Malformed J2534 quarantine state failed open");
 try {
   const staticReady = { id: "fixture-ready", label: "Fixture VCI", driver_library_inspection_status: "inspected", driver_runtime_compatible: true, driver_readonly_api_ready: true, driver_library_bitness: 64 };
   for (const [device, expected] of [
@@ -120,7 +135,7 @@ try {
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
   check(instructions.includes("inspect-workstation-j2534.cmd") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")), "Package omitted the standalone J2534 preparation check");
-  check(["scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
+  check(["scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
   check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
     && packaged.scripts["workstation:dev"] === packaged.scripts.start && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
     && Object.keys(packaged.scripts).length === 3, "Package retained unavailable development commands");
@@ -138,10 +153,20 @@ try {
 
   check(packagedPreflight.verification_status === "verified_non_executable" && packagedPreflight.authenticode_status === "verified_file_policy" && packagedPreflight.authenticode_network_retrieval_allowed === false && packagedPreflight.global_mutex_status === "acquired_for_preflight" && packagedPreflight.execution_enabled === false
     && packagedPreflight.vehicle_communication_started === false && !JSON.stringify(packagedPreflight).includes(preflightTarget), "Packaged J2534 preflight did not complete through private IPC without exposing or executing the target");
+  const packagedQuarantine = createJ2534NativeQuarantineStore(path.join(result.directory, "scripts", "native"));
+  packagedQuarantine.mark("termination_unconfirmed");
+  const blockedAfterRestartState = await packagedRunner.runJ2534NativePreflight({
+    selected_device_id: "j2534-package-fixture-x64", descriptor_source: "live_windows_registry",
+    private_library_path: preflightTarget, expected_sha256: createHash("sha256").update(preflightBytes).digest("hex"),
+    expected_file_size: preflightBytes.length, expected_architecture: "x64"
+  }, { timeout_ms: 5000 });
+  check(blockedAfterRestartState.verification_status === "rejected" && blockedAfterRestartState.blockers?.join(",") === "native_preflight_quarantine_not_clear"
+    && blockedAfterRestartState.dll_load_attempted === false && blockedAfterRestartState.vehicle_communication_started === false,
+  "Packaged J2534 preflight ignored persistent quarantine state");
   check(instructions.includes("verify-workstation.cmd") && instructions.includes("署名・真正性・実車適合の証明ではありません"), "Integrity instructions overclaim verification");
   const integrityPath = path.join(result.directory, "package-integrity.json");
   const originalManifest = fs.readFileSync(integrityPath);
-  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
+  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     const target = path.join(result.directory, relative);
     const original = fs.readFileSync(target);
     const changed = Buffer.from(original);
@@ -170,6 +195,7 @@ try {
     (m) => { m.files = m.files.filter((entry) => entry.path !== "style.css"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "inspect-workstation-j2534.cmd"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/inspect-workstation-j2534.js"); },
+    (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/j2534-native-quarantine.js"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/j2534-registered-driver-native-preflight.js"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/native/j2534-preflight-workers.json"); },
     (m) => { m.files = m.files.filter((entry) => entry.path !== "scripts/native/j2534-registered-driver-preflight-x86.exe"); },

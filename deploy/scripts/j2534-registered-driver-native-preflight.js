@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 
 const REQUEST_VERSION = "j2534-native-preflight-request-v1";
 const RESPONSE_VERSION = "j2534-native-preflight-response-v1";
@@ -25,6 +26,7 @@ const TRUE_FIELDS = ["fixed_drive_verified", "final_path_matches", "file_identit
   "size_matches", "architecture_matches", "runtime_architecture_matches"];
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const nativeDirectory = path.join(scriptsDirectory, "native");
+const quarantineStore = createJ2534NativeQuarantineStore(nativeDirectory);
 let active = false;
 let terminationUnconfirmed = false;
 
@@ -88,6 +90,7 @@ function runBoundedProcess(file, args, { cwd, input = null, timeout, outputLimit
           state.termination_unconfirmed = true;
           state.error = "native_preflight_termination_unconfirmed";
           terminationUnconfirmed = true;
+          quarantineStore.mark("termination_unconfirmed");
           resolveOnce(state);
         }, 2000);
       }
@@ -154,6 +157,7 @@ function parseResponse(output, request) {
 export async function runJ2534NativePreflight(privateRequest, options = {}) {
   const selected = safeToken(privateRequest?.selected_device_id) ? privateRequest.selected_device_id : null;
   const blocked = code => baseResult(selected, "rejected", [code]);
+  if (quarantineStore.read().quarantined) return blocked("native_preflight_quarantine_not_clear");
   if (active) return blocked("native_preflight_in_progress");
   const timeout = options.timeout_ms ?? 5000;
   const signal = options.signal;

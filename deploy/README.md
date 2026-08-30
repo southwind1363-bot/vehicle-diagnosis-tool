@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.350ではJ2534の静的検証で開いた同一ファイルハンドルを閉じる前に、限定identity lifecycleを完了させる内部保持APIを追加しました。生成fixtureを使うx86/x64別プロセスで、ハンドル保持中の書込み・改名・削除拒否、Global mutexのOpen/ReadVersion/Close全体保持、終了後の解放を確認済みです。公開workerはまだこの実行APIへ接続せず、ベンダーDLLのロード、VCI接続、車両通信は無効です。進捗率は36%です。
+3.13.351ではJ2534非実行preflight workerの終了を確認できない場合に、端末内へ永続隔離ラッチを原子的に記録します。アプリ再起動後も自動再試行を拒否し、状態ファイルが壊れていてもfail-closed、既存理由の上書きと自動解除を行いません。保存内容にドライバーパスや診断データは含みません。ベンダーDLLのロード、VCI接続、車両通信は無効のままです。進捗率は38%です。
 
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 
@@ -16,7 +16,7 @@
 
 3.13.339ではiPhone用ELM327 BLEホストのmacOS/Xcode実走、Simulator統合、OBD取込、`iphoneos` Release未署名IPA生成と完全未署名検証の成功を公開状態へ反映しました。これはApple署名、iPhoneへのインストール、手持ちELM327のBLE GATT適合、実車読取の完了を意味せず、接続と車両コマンドは無効のままです。
 
-3.13.336以降のPC配布版は `inspect-workstation-j2534.cmd` を開くと、登録ドライバー、DLLの32/64bit、静的検査結果と次の確認を日本語で表示します。番号を選ぶと、対象DLLをロードしない専用workerで固定ドライブ、同一ファイル、SHA-256、サイズ、PE構成を再確認します。VCI・車両の接続は不要です。配布版は内容検査に成功してから確認を開始します。DLL実行、`PassThruOpen`、車両通信、ファイル保存、外部送信はありません。検査合格でも実車適合・接続成功ではなく、実機通信機能の実装と試験は残っています。自動実行では `inspect-workstation-j2534.cmd --preflight-index 番号 --no-pause` を使えます。`npm run inspect:j2534` は既存項目を維持し、identity probe readinessを追加表示します。
+3.13.336以降のPC配布版は `inspect-workstation-j2534.cmd` を開くと、登録ドライバー、DLLの32/64bit、静的検査結果と次の確認を日本語で表示します。番号を選ぶと、対象DLLをロードしない専用workerで固定ドライブ、同一ファイル、SHA-256、サイズ、PE構成を再確認します。VCI・車両の接続は不要です。配布版は内容検査に成功してから確認を開始します。DLL実行、`PassThruOpen`、車両通信、診断データ保存、外部送信はありません。worker終了未確認時だけ再試行防止の隔離状態を端末内に保存し、自動解除しません。検査合格でも実車適合・接続成功ではなく、実機通信機能の実装と試験は残っています。自動実行では `inspect-workstation-j2534.cmd --preflight-index 番号 --no-pause` を使えます。`npm run inspect:j2534` は既存項目を維持し、identity probe readinessを追加表示します。
 
 J2534の初回DLL実行は通常の非実行preflightと分離します。`j2534-identity-probe-readiness-v1` はlive registry descriptor、同一操作内preflight、配布整合性、Authenticode、quarantine、全体mutex、対話確認を個別に保持しますが、現在は未実装workerゲートを必ず残し、DLLロード、`PassThruOpen`、車両通信を許可しません。公開オブジェクトや検査結果は実行許可証として再利用できません。
 

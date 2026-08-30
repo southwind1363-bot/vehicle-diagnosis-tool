@@ -29,6 +29,7 @@ const PREFLIGHT_BLOCKERS = {
   native_preflight_cancelled: "非実行検査が中止されました",
   native_preflight_timeout: "非実行検査が制限時間内に終了しませんでした",
   native_preflight_termination_unconfirmed: "非実行検査workerの終了を確認できません",
+  native_preflight_quarantine_not_clear: "以前のworker終了を確認できないため、J2534検査を隔離しています",
   native_preflight_response_invalid: "非実行検査workerの応答を確認できません",
   native_authenticode_not_trusted: "Windowsの署名ポリシーでJ2534ドライバーDLLを信頼済みと確認できません"
 };
@@ -38,7 +39,7 @@ const safeLabel = (value) => typeof value === "string"
   : "名称未確認";
 
 export function formatJ2534WorkstationInspection(devices = [], platform = process.platform) {
-  const lines = ["J2534接続準備チェック", "車両通信: 未実施 / DLL実行: 未実施 / ファイル保存・外部送信: なし"];
+  const lines = ["J2534接続準備チェック", "車両通信: 未実施 / DLL実行: 未実施 / 診断データ保存・外部送信: なし / 異常終了時のみ安全隔離状態を端末保存"];
   if (platform !== "win32") return [...lines, "Windows専用です。対象のWindows PCで確認してください。"].join("\n");
   const registered = Array.isArray(devices) ? devices : [];
   const environment = getJ2534DiscoveryEnvironment(registered);

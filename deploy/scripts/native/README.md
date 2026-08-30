@@ -6,7 +6,7 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.350. This native binding remains
+The public app and PC package metadata are 3.13.351. This native binding remains
 development-only and is not bundled in either release.
 
 ## Validation
@@ -64,6 +64,13 @@ share lock and Global mutex remain held. Cross-process probes confirm mutex
 contention during that lifecycle and reacquisition after completion. This proves
 the reusable holding mechanism with generated code only; it is not wired into
 the packaged worker and no vendor DLL, VCI, or vehicle is used.
+
+The packaged parent now owns a persistent fail-closed quarantine latch for the
+non-executing preflight. If the secondary termination deadline cannot confirm
+worker exit, it atomically writes a path-free state in the package's private
+native directory. Recreated controllers read that state before spawning and
+reject automatically; malformed state also blocks. There is no runtime clear or
+overwrite API. This is an accidental-retry barrier, not tamper-proof storage.
 
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate
@@ -161,9 +168,9 @@ runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
    reviewed native toolchain is available.
 2. Verify the packaged private-IPC preflight against the installed registered
    driver on the target Windows tablet without loading the vendor DLL.
-3. Add parent deadline, persistent quarantine evidence, descriptor revalidation,
-   and explicit trial approval before wiring the holding mechanism to a vendor
-   Open/ReadVersion/Close worker.
+3. Revalidate the registered descriptor immediately before the identity worker,
+   apply its parent deadline and the same persistent quarantine latch to every
+   uncertain cleanup, and require explicit trial approval before vendor code.
 4. Record actual identity evidence before any vehicle-channel work.
 
 ## References

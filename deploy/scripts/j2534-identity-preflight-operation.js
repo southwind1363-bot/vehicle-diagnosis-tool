@@ -160,7 +160,7 @@ export function createJ2534IdentityPreflightOperationController(dependencies = {
         if (isPlainObject(completion) && completion.operationNonce === record.nonce) result = completion.result;
       } catch {}
       const resultBlockers = readBlockers(result);
-      if (resultBlockers.includes("native_preflight_termination_unconfirmed")) {
+      if (resultBlockers.includes("native_preflight_termination_unconfirmed") || resultBlockers.includes("native_preflight_quarantine_not_clear")) {
         poisoned = true;
         record.state = "POISONED";
         return rejected("identity_preflight_process_poisoned", record.selectedDeviceId);

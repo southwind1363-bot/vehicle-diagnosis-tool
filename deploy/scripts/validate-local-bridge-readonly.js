@@ -519,6 +519,11 @@ try {
   const afterPoison = poisonController.issue({ selected_device_id: fixtureDeviceId });
   check(poisoned.blockers.includes("identity_preflight_process_poisoned") && afterPoison.status === "rejected"
     && afterPoison.readiness.blockers.includes("identity_preflight_process_poisoned"), "J2534 identity preflight did not retain process poison after uncertain termination");
+  const quarantinedController = makeFixtureController(async () => ({ blockers: ["native_preflight_quarantine_not_clear"] }));
+  const quarantined = await quarantinedController.run(quarantinedController.issue({ selected_device_id: fixtureDeviceId }).operation);
+  const afterQuarantine = quarantinedController.issue({ selected_device_id: fixtureDeviceId });
+  check(quarantined.blockers.includes("identity_preflight_process_poisoned") && afterQuarantine.status === "rejected"
+    && afterQuarantine.readiness.blockers.includes("identity_preflight_process_poisoned"), "J2534 identity preflight did not retain persistent quarantine poison");
   const abortedController = makeFixtureController();
   const abortController = new AbortController();
   abortController.abort();

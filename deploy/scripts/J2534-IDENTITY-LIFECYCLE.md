@@ -93,9 +93,11 @@ No worker executable, fixture DLL, or vendor driver is shipped or production-wir
 2. The static verifier now has an internal callback that keeps its verified file
    handle and Global mutex through generated-fixture Open/ReadVersion/Close.
    The packaged worker does not supply that callback and loads no vendor DLL.
-3. Add parent deadline, persistent quarantine evidence, descriptor revalidation,
-   and explicit trial approval before adapting the holding mechanism to a
-   reviewed registered-driver descriptor. Public raw DLL paths remain rejected.
+3. The packaged non-executing preflight now persists a fail-closed quarantine
+   latch after unconfirmed termination and rejects it after process restart.
+   Apply the same latch to identity-worker cleanup, revalidate the descriptor
+   immediately before start, and require explicit trial approval. Public raw
+   DLL paths remain rejected.
 4. Review driver provenance, actual adapter behavior, user authorization, and
    test conditions before a real Open/ReadVersion/Close trial.
 5. Add vehicle-channel operations separately with their own verified protocol,
