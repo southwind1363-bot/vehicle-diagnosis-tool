@@ -6,7 +6,7 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.349. This native binding remains
+The public app and PC package metadata are 3.13.350. This native binding remains
 development-only and is not bundled in either release.
 
 ## Validation
@@ -30,8 +30,8 @@ immediately before any reviewed load.
 The x86 and x64 fixture workers also require the PE machine to match their own
 runtime. During an instrumented fixture-only callback, write, rename, and
 delete attempts must fail while the verification handle is held; a read/write
-open must succeed after verification returns. The production build has no such
-callback. The verifier now combines the legacy volume serial and 64-bit file
+open must succeed after verification returns. The packaged preflight worker does not
+supply an execution callback. The verifier now combines the legacy volume serial and 64-bit file
 index evidence with `GetFileInformationByHandleEx(FileIdInfo)` and compares the
 128-bit file ID before and after hashing. This closes the previously documented
 ReFS identity gap without making the preflight result reusable as a load token.
@@ -53,8 +53,17 @@ authorize DLL loading, PassThruOpen, or vehicle communication.
 The production preflight worker also acquires the Windows named Global mutex
 before opening the candidate DLL and holds it through the complete non-executing
 preflight. Contention fails without waiting. Separate x86/x64 process fixtures
-verify exclusion and acquisition after release. The lease currently ends with
-preflight and therefore is not authorization for a future identity load.
+verify exclusion and acquisition after release. Production still ends the lease
+with preflight and therefore does not authorize a vendor identity load.
+
+The verifier now also exposes an internal compile-time callback that runs after
+all file, architecture, hash, identity, and trust checks but before its original
+file handle closes. A development-only x86/x64 worker uses that callback with
+the generated fixture to load, Open, ReadVersion, Close, and release while the
+share lock and Global mutex remain held. Cross-process probes confirm mutex
+contention during that lifecycle and reacquisition after completion. This proves
+the reusable holding mechanism with generated code only; it is not wired into
+the packaged worker and no vendor DLL, VCI, or vehicle is used.
 
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate
@@ -152,8 +161,10 @@ runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
    reviewed native toolchain is available.
 2. Verify the packaged private-IPC preflight against the installed registered
    driver on the target Windows tablet without loading the vendor DLL.
-3. Driver provenance, registered static inspection, explicit trial approval,
-   and actual Open/ReadVersion/Close evidence before vehicle-channel work.
+3. Add parent deadline, persistent quarantine evidence, descriptor revalidation,
+   and explicit trial approval before wiring the holding mechanism to a vendor
+   Open/ReadVersion/Close worker.
+4. Record actual identity evidence before any vehicle-channel work.
 
 ## References
 

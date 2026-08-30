@@ -117,6 +117,12 @@ namespace VehicleDiagnosis.Native
         internal static RegisteredDriverPreflightResult Verify(string privatePath, string expectedSha256,
             long expectedSize, string expectedArchitecture)
         {
+            return VerifyWhileHandleHeld(privatePath, expectedSha256, expectedSize, expectedArchitecture, null);
+        }
+
+        internal static RegisteredDriverPreflightResult VerifyWhileHandleHeld(string privatePath, string expectedSha256,
+            long expectedSize, string expectedArchitecture, Action<string> verifiedOperation)
+        {
             RegisteredDriverPreflightResult result = new RegisteredDriverPreflightResult();
             try
             {
@@ -173,6 +179,7 @@ namespace VehicleDiagnosis.Native
 #if PREFLIGHT_FIXTURE_TESTS
                     if (FixtureHandleVerified != null) FixtureHandleVerified(canonicalPath);
 #endif
+                    if (verifiedOperation != null) verifiedOperation(canonicalPath);
                     result.Status = "verified_non_executable";
                     return result;
                 }

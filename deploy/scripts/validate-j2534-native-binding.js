@@ -222,11 +222,59 @@ async function main() {
       assert.equal(mutexResult.error, null, "Global mutex process fixture failed: " + mutexResult.stdout + mutexResult.stderr);
       assert.equal(mutexResult.stdout.trim(), "global-mutex-process-checks-ok");
       total += 3;
+      const verifiedIdentityWorker = path.join(platformDirectory, "j2534-verified-identity-fixture.exe");
+      createdFiles.push(verifiedIdentityWorker);
+      const verifiedIdentityCompile = await execute(platform.compiler, [
+        "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
+        "/define:PREFLIGHT_FIXTURE_TESTS", `/out:${verifiedIdentityWorker}`,
+        path.join(scriptsDirectory, "native", "J2534RegisteredDriverPreflight.cs"),
+        path.join(scriptsDirectory, "native", "J2534AuthenticodeVerifier.cs"),
+        path.join(scriptsDirectory, "native", "J2534GlobalMutexLease.cs"),
+        path.join(scriptsDirectory, "native", "J2534IdentityNative.cs"),
+        path.join(scriptsDirectory, "native", "J2534VerifiedIdentityFixtureWorker.cs")
+      ]);
+      assert.equal(verifiedIdentityCompile.error, null, `Verified identity fixture compilation failed (${platform.name}): ${verifiedIdentityCompile.stdout}${verifiedIdentityCompile.stderr}`);
+      total++;
       const preflightDescriptor = name => {
         const target = path.join(platformDirectory, name);
         const bytes = fs.readFileSync(target);
         return { sha256: createHash("sha256").update(bytes).digest("hex"), size: bytes.length };
       };
+      const verifiedDescriptor = preflightDescriptor("success.dll");
+      const verifiedArgs = scenario => ["--fixture", scenario, verifiedDescriptor.sha256, String(verifiedDescriptor.size),
+        platform.name, `verified-${platform.name}-nonce`, `verified-device-${platform.name}`];
+      const verifiedRun = await execute(verifiedIdentityWorker, verifiedArgs("success"));
+      assert.equal(verifiedRun.error, null, `Verified identity fixture failed (${platform.name}): ${verifiedRun.stdout}${verifiedRun.stderr}`);
+      assert.equal(verifiedRun.stderr, "");
+      const verifiedResponse = JSON.parse(verifiedRun.stdout);
+      assert.equal(verifiedResponse.contract_version, "j2534-verified-identity-fixture-v1");
+      assert.equal(verifiedResponse.verification_status, "verified_non_executable");
+      assert.deepEqual(verifiedResponse.blockers, []);
+      assert.equal(verifiedResponse.global_mutex_status, "held_for_identity_lifecycle");
+      assert.equal(verifiedResponse.verified_file_handle_status, "held_through_identity_lifecycle");
+      assert.equal(verifiedResponse.identity_lifecycle_status, "completed");
+      assert.equal(verifiedResponse.callback_completed, true);
+      assert.equal(verifiedResponse.fixture_write_blocked, true);
+      assert.equal(verifiedResponse.fixture_rename_blocked, true);
+      assert.equal(verifiedResponse.fixture_delete_blocked, true);
+      assert.equal(verifiedResponse.module_reference, "released");
+      assert.deepEqual(verifiedResponse.versions, { firmware: "fixture-fw", dll: "fixture-dll", api: "04.04" });
+      assert.equal(verifiedResponse.vendor_dll_executed, false);
+      assert.equal(verifiedResponse.vehicle_communication, false);
+      assert.equal(verifiedResponse.vehicle_command_enabled, false);
+      total += 15;
+      const heldRun = execute(verifiedIdentityWorker, verifiedArgs("hold"));
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const blockedDuringIdentity = await execute(mutexFixture, ["probe"]);
+      assert.equal(blockedDuringIdentity.error?.code, 3, "Global mutex was not held through identity lifecycle");
+      assert.equal(blockedDuringIdentity.stdout.trim(), "busy");
+      const heldResponse = await heldRun;
+      assert.equal(heldResponse.error, null, `Held identity fixture failed (${platform.name}): ${heldResponse.stdout}${heldResponse.stderr}`);
+      assert.equal(JSON.parse(heldResponse.stdout).verified_file_handle_status, "held_through_identity_lifecycle");
+      const releasedAfterIdentity = await execute(mutexFixture, ["probe"]);
+      assert.equal(releasedAfterIdentity.error, null, "Global mutex was not released after identity lifecycle");
+      assert.equal(releasedAfterIdentity.stdout.trim(), "acquired");
+      total += 7;
       const runPreflight = async (scenario, fileName = "success.dll", expectedSize = null) => {
         const expected = fileName === "oversized.dll"
           ? { sha256: "0".repeat(64), size: 1 }
@@ -418,13 +466,16 @@ async function main() {
     const production = fs.readFileSync(new URL(relative, import.meta.url), "utf8");
     assert.ok(!production.includes("j2534-native-fixture-supervisor") && !production.includes("bounded-fixture-worker")
       && !production.includes("J2534NativeFixtureWorker") && !production.includes("J2534NativePreflightFixtureWorker")
-      && !production.includes("j2534-native-preflight-fixture-v1"), "Development native worker reached a production entry point");
+      && !production.includes("J2534VerifiedIdentityFixtureWorker")
+      && !production.includes("j2534-native-preflight-fixture-v1") && !production.includes("j2534-verified-identity-fixture-v1"), "Development native worker reached a production entry point");
     total++;
   }
   const distributionSources = ["../offline-assets.json", "./workstation-assets.js", "./package-workstation.js"]
     .map(relative => fs.readFileSync(new URL(relative, import.meta.url), "utf8")).join("\n");
   assert.ok(!distributionSources.includes("J2534NativePreflightFixtureWorker")
-    && !distributionSources.includes("j2534-native-preflight-fixture-v1"), "Native preflight fixture reached a public or PC package manifest");
+    && !distributionSources.includes("J2534VerifiedIdentityFixtureWorker")
+    && !distributionSources.includes("j2534-native-preflight-fixture-v1")
+    && !distributionSources.includes("j2534-verified-identity-fixture-v1"), "Native preflight fixture reached a public or PC package manifest");
   total++;
   console.log(`J2534 native binding checks: ${total} / independent native fixture ABI: tested / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
 }

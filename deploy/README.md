@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.349ではJ2534 native workerへWindowsの名前付きGlobal mutexを追加しました。プリフライト開始前に非待機取得し、競合時はDLLファイルを開く前に拒否、完了時は必ず解放します。x86/x64の別プロセスfixtureで競合拒否と解放後の再取得を確認済みです。現段階の保持範囲は非実行プリフライトだけであり、ベンダーDLLのロード、J2534 API実行、車両通信はまだ行いません。進捗率は34%です。
+3.13.350ではJ2534の静的検証で開いた同一ファイルハンドルを閉じる前に、限定identity lifecycleを完了させる内部保持APIを追加しました。生成fixtureを使うx86/x64別プロセスで、ハンドル保持中の書込み・改名・削除拒否、Global mutexのOpen/ReadVersion/Close全体保持、終了後の解放を確認済みです。公開workerはまだこの実行APIへ接続せず、ベンダーDLLのロード、VCI接続、車両通信は無効です。進捗率は36%です。
 
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 

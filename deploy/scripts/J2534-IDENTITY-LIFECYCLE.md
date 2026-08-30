@@ -90,11 +90,12 @@ No worker executable, fixture DLL, or vendor driver is shipped or production-wir
 
 1. Cross-check the generated PE32/PE32+ native fixture with a compiler-built C
    reference when a reviewed native toolchain is available.
-2. Integrate DLL-loading isolation for a selected, statically inspected
-   registered driver; do not accept public raw DLL paths.
-3. Adapt the native fixture worker contract to a reviewed registered-driver
-   descriptor and distributable helper, with explicit recovery after uncertain
-   cleanup. Existing review-only requests remain unchanged.
+2. The static verifier now has an internal callback that keeps its verified file
+   handle and Global mutex through generated-fixture Open/ReadVersion/Close.
+   The packaged worker does not supply that callback and loads no vendor DLL.
+3. Add parent deadline, persistent quarantine evidence, descriptor revalidation,
+   and explicit trial approval before adapting the holding mechanism to a
+   reviewed registered-driver descriptor. Public raw DLL paths remain rejected.
 4. Review driver provenance, actual adapter behavior, user authorization, and
    test conditions before a real Open/ReadVersion/Close trial.
 5. Add vehicle-channel operations separately with their own verified protocol,
