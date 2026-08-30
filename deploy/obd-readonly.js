@@ -9626,6 +9626,98 @@
     return text === "CANFD" ? "CAN FD" : null;
   }
 
+  function buildUdsReadTransportAdapterBoundary(plan = {}) {
+    const bridgeIntent = "read_ecu_info";
+    const intentAllowed = localBridgeContract.allowedReadIntents.includes(bridgeIntent);
+    return {
+      schemaVersion: "uds_read_transport_adapter_boundary_v1",
+      schema_version: "uds_read_transport_adapter_boundary_v1",
+      boundaryType: "local_bridge",
+      boundary_type: "local_bridge",
+      bridgeContractId: localBridgeContract.id,
+      bridge_contract_id: localBridgeContract.id,
+      bridgeIntent,
+      bridge_intent: bridgeIntent,
+      intentAllowed,
+      intent_allowed: intentAllowed,
+      transportProtocol: plan.transportProtocol || null,
+      transport_protocol: plan.transportProtocol || null,
+      networkProtocol: plan.networkProtocol || null,
+      network_protocol: plan.networkProtocol || null,
+      requestMapped: intentAllowed,
+      request_mapped: intentAllowed,
+      planningReady: plan.planningReady === true && intentAllowed,
+      planning_ready: plan.planningReady === true && intentAllowed,
+      adapterImplementationStatus: "not_implemented",
+      adapter_implementation_status: "not_implemented",
+      adapterImplemented: false,
+      adapter_implemented: false,
+      dispatchEnabled: false,
+      dispatch_enabled: false,
+      responseAttemptEvidenceRequired: true,
+      response_attempt_evidence_required: true,
+      retainedRawFrames: false,
+      retained_raw_frames: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
+
+  function buildUdsReadResponseAttemptEvidence(input = null, transportPlan = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const declaredEvidencePresent = pickDefined(source.evidencePresent, source.evidence_present);
+    const evidencePresent = declaredEvidencePresent === undefined ? Object.keys(source).length > 0 : declaredEvidencePresent === true;
+    const allowedStatuses = new Set(["not_attempted", "response_received", "negative_response", "pending", "timeout", "transport_error", "cancelled"]);
+    const requestedStatus = String(pickDefined(source.status, source.attemptStatus, source.attempt_status, evidencePresent ? "invalid" : "not_attempted") || "").trim().toLowerCase();
+    const status = allowedStatuses.has(requestedStatus) ? requestedStatus : "invalid";
+    const attempted = status !== "not_attempted" && status !== "invalid";
+    const attemptedFlagMatches = pickDefined(source.attempted, source.attempt_started, attempted) === attempted;
+    const responseCountInput = Number(pickDefined(source.responseCount, source.response_count, 0));
+    const responseCount = Number.isSafeInteger(responseCountInput) && responseCountInput >= 0 && responseCountInput <= 4096 ? responseCountInput : 0;
+    const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(source.responseWaitMs, source.response_wait_ms, transportPlan.responseWaitMs, transportPlan.response_wait_ms));
+    const responseReceived = ["response_received", "negative_response", "pending"].includes(status);
+    const responseCountMatches = responseReceived ? responseCount > 0 : responseCount === 0;
+    const presenceMatchesStatus = evidencePresent || status === "not_attempted";
+    const evidenceValid = status !== "invalid" && presenceMatchesStatus && attemptedFlagMatches && responseCountMatches && (!attempted || responseWaitMs !== null);
+    return {
+      schemaVersion: "uds_read_response_attempt_evidence_v1",
+      schema_version: "uds_read_response_attempt_evidence_v1",
+      evidencePresent,
+      evidence_present: evidencePresent,
+      status,
+      attempted,
+      responseReceived,
+      response_received: responseReceived,
+      responseCount,
+      response_count: responseCount,
+      responseWaitMs,
+      response_wait_ms: responseWaitMs,
+      timeoutObserved: status === "timeout",
+      timeout_observed: status === "timeout",
+      transportErrorObserved: status === "transport_error",
+      transport_error_observed: status === "transport_error",
+      evidenceValid,
+      evidence_valid: evidenceValid,
+      retainedRawFrames: false,
+      retained_raw_frames: false,
+      retainedRawResponse: false,
+      retained_raw_response: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
   function buildUdsReadTransportPlan(summary = {}, context = {}, state = {}) {
     const protocolProvenance = mergeProtocolProvenance(summary, summary.protocolProvenance, summary.protocol_provenance, context, context.protocolProvenance, context.protocol_provenance);
     const transportProtocolInput = pickPresent(summary.transportProtocol, summary.transport_protocol, summary.requestedTransportProtocol, summary.requested_transport_protocol, protocolProvenance.transportProtocol, context.transportProtocol, context.transport_protocol, null);
@@ -9802,6 +9894,9 @@
       responseWaitMs,
       responsePendingWaitMs
     });
+    const udsReadTransportAdapterBoundary = buildUdsReadTransportAdapterBoundary(udsReadTransportPlan);
+    const responseAttemptInput = pickPresent(summary.udsReadResponseAttemptEvidence, summary.uds_read_response_attempt_evidence, summary.responseAttemptEvidence, summary.response_attempt_evidence, context.udsReadResponseAttemptEvidence, context.uds_read_response_attempt_evidence, null);
+    const udsReadResponseAttemptEvidence = buildUdsReadResponseAttemptEvidence(responseAttemptInput, udsReadTransportPlan);
     const executionBlockReason = selectionStatus === "verified"
       ? udsReadTransportPlan.executionBlockReason
       : executionBlockReasonByStatus[selectionStatus];
@@ -9832,6 +9927,10 @@
       timing_configured: responseWaitMs !== null,
       udsReadTransportPlan,
       uds_read_transport_plan: udsReadTransportPlan,
+      udsReadTransportAdapterBoundary,
+      uds_read_transport_adapter_boundary: udsReadTransportAdapterBoundary,
+      udsReadResponseAttemptEvidence,
+      uds_read_response_attempt_evidence: udsReadResponseAttemptEvidence,
       transportPlanningReady: udsReadTransportPlan.planningReady,
       transport_planning_ready: udsReadTransportPlan.planningReady,
       executionBlockReason,
@@ -10023,6 +10122,11 @@
       responseWaitMs: udsManifestResponseWaitMs,
       responsePendingWaitMs: udsManifestResponsePendingWaitMs
     });
+    const normalizedUdsReadTransportAdapterBoundary = buildUdsReadTransportAdapterBoundary(normalizedUdsReadTransportPlan);
+    const normalizedUdsReadResponseAttemptEvidence = buildUdsReadResponseAttemptEvidence(
+      udsReadRequestManifestInput?.udsReadResponseAttemptEvidence || udsReadRequestManifestInput?.uds_read_response_attempt_evidence || null,
+      normalizedUdsReadTransportPlan
+    );
     const normalizedUdsManifestExecutionBlockReason = normalizedUdsManifestSelectionStatus === "verified"
       ? normalizedUdsReadTransportPlan.executionBlockReason
       : udsManifestExecutionBlockReasonByStatus[normalizedUdsManifestSelectionStatus] || "uds_data_identifier_invalid";
@@ -10054,6 +10158,10 @@
         timing_configured: udsManifestResponseWaitMs !== null,
         udsReadTransportPlan: normalizedUdsReadTransportPlan,
         uds_read_transport_plan: normalizedUdsReadTransportPlan,
+        udsReadTransportAdapterBoundary: normalizedUdsReadTransportAdapterBoundary,
+        uds_read_transport_adapter_boundary: normalizedUdsReadTransportAdapterBoundary,
+        udsReadResponseAttemptEvidence: normalizedUdsReadResponseAttemptEvidence,
+        uds_read_response_attempt_evidence: normalizedUdsReadResponseAttemptEvidence,
         transportPlanningReady: normalizedUdsReadTransportPlan.planningReady,
         transport_planning_ready: normalizedUdsReadTransportPlan.planningReady,
         executionBlockReason: normalizedUdsManifestExecutionBlockReason,
@@ -12572,6 +12680,8 @@
         transport_protocol: normalizeProtocolProvenanceValue(pickDefined(item.transport_protocol, item.transportProtocol, item.protocol_provenance?.transport_protocol, item.protocolProvenance?.transportProtocol, null)),
         networkProtocol: normalizeProtocolProvenanceValue(pickDefined(item.networkProtocol, item.network_protocol, item.protocolProvenance?.networkProtocol, item.protocol_provenance?.network_protocol, null)),
         network_protocol: normalizeProtocolProvenanceValue(pickDefined(item.network_protocol, item.networkProtocol, item.protocol_provenance?.network_protocol, item.protocolProvenance?.networkProtocol, null)),
+        udsReadResponseAttemptEvidence: pickDefined(item.udsReadResponseAttemptEvidence, item.uds_read_response_attempt_evidence, item.responseAttemptEvidence, item.response_attempt_evidence, null),
+        uds_read_response_attempt_evidence: pickDefined(item.uds_read_response_attempt_evidence, item.udsReadResponseAttemptEvidence, item.response_attempt_evidence, item.responseAttemptEvidence, null),
         readOnly: true,
         read_only: true,
         wouldTransmit: false,
@@ -14382,6 +14492,8 @@
       transport_protocol: nextReadoutCandidate?.transport_protocol || nextReadoutCandidate?.transportProtocol || null,
       networkProtocol: nextReadoutCandidate?.networkProtocol || nextReadoutCandidate?.network_protocol || null,
       network_protocol: nextReadoutCandidate?.network_protocol || nextReadoutCandidate?.networkProtocol || null,
+      udsReadResponseAttemptEvidence: nextReadoutCandidate?.udsReadResponseAttemptEvidence || nextReadoutCandidate?.uds_read_response_attempt_evidence || null,
+      uds_read_response_attempt_evidence: nextReadoutCandidate?.uds_read_response_attempt_evidence || nextReadoutCandidate?.udsReadResponseAttemptEvidence || null,
       diagnosticProtocol: nextReadoutCandidate?.diagnosticProtocol || nextReadoutCandidate?.diagnostic_protocol || null,
       diagnostic_protocol: nextReadoutCandidate?.diagnostic_protocol || nextReadoutCandidate?.diagnosticProtocol || null,
       ecuInfoResponseFormat: nextReadoutCandidate?.ecuInfoResponseFormat || nextReadoutCandidate?.ecu_info_response_format || null,

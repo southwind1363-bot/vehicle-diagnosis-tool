@@ -83,6 +83,23 @@ const SAFE_STATUS_INTENTS = new Set([
   "list_vci",
   "adapter_identity"
 ]);
+const UDS_READ_TRANSPORT_ADAPTER_BOUNDARY = Object.freeze({
+  schema_version: "uds_read_transport_adapter_boundary_v1",
+  boundary_type: "local_bridge",
+  bridge_contract_id: "local_bridge_contract_v1",
+  bridge_intent: "read_ecu_info",
+  planned_transport_protocols: Object.freeze(["ISO-TP"]),
+  planned_network_protocols: Object.freeze(["CAN", "CAN FD"]),
+  adapter_implementation_status: "not_implemented",
+  adapter_implemented: false,
+  dispatch_enabled: false,
+  response_attempt_evidence_required: true,
+  retained_raw_frames: false,
+  execution_enabled: false,
+  read_only: true,
+  would_transmit: false,
+  vehicle_command_enabled: false
+});
 const BLOCKED_WRITE_INTENTS = new Set([
   "clear_dtc",
   "routine_control",
@@ -445,6 +462,11 @@ export function createLocalBridgeApp(options = {}) {
         replay_mode: replayMode,
         j2534_discovery_requested: j2534DiscoveryRequested,
         vci_detected_count: discoveredVciDevices.length,
+        uds_read_transport_adapter_boundary: {
+          ...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY,
+          planned_transport_protocols: [...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY.planned_transport_protocols],
+          planned_network_protocols: [...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY.planned_network_protocols]
+        },
         ...(j2534DiscoveryRequested ? {
           driver_readiness_status: j2534DiscoveryEnvironment.driver_readiness_status,
           next_check: j2534DiscoveryEnvironment.next_check
@@ -540,6 +562,11 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
         replay_loaded: replayMode,
         j2534_discovery_requested: discoveryMode,
         vci_detected_count: discoveredVciDevices.length,
+        uds_read_transport_adapter_boundary: {
+          ...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY,
+          planned_transport_protocols: [...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY.planned_transport_protocols],
+          planned_network_protocols: [...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY.planned_network_protocols]
+        },
         ...j2534StatusData
       }
     };

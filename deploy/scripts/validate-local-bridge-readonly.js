@@ -341,6 +341,7 @@ try {
   const status = await post(port, "bridge_status");
   check(status.ok === true && status.blocked === false, "bridge_status did not return ok");
   check(status.would_transmit === false, "bridge_status would transmit");
+  check(status.data.uds_read_transport_adapter_boundary?.schema_version === "uds_read_transport_adapter_boundary_v1" && status.data.uds_read_transport_adapter_boundary?.bridge_intent === "read_ecu_info" && status.data.uds_read_transport_adapter_boundary?.planned_transport_protocols?.join(",") === "ISO-TP" && status.data.uds_read_transport_adapter_boundary?.planned_network_protocols?.join(",") === "CAN,CAN FD" && status.data.uds_read_transport_adapter_boundary?.adapter_implemented === false && status.data.uds_read_transport_adapter_boundary?.dispatch_enabled === false && status.data.uds_read_transport_adapter_boundary?.vehicle_command_enabled === false, "bridge_status must expose only the disabled UDS CAN/CAN FD adapter boundary");
   check(status.data.vehicle_command_enabled === false, "bridge status enabled vehicle commands");
   check(status.data.sample_mode === true, "bridge status did not mark sample mode");
   check(status.data.vci_connected === false && status.data.vehicle_connected === false, "sample bridge incorrectly reported a physical VCI or vehicle connection");

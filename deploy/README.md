@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.360ではUDS ReadDataByIdentifierのtransport計画を`uds_read_transport_adapter_boundary_v1`でローカルbridgeの`read_ecu_info`境界へ接続し、`uds_read_response_attempt_evidence_v1`で未試行、応答受信、負応答、pending、timeout、transport error、cancelledを分離しました。bridgeが公開する境界も実adapter未実装、dispatch無効、rawフレーム非保持、車両コマンド無効を固定しています。矛盾する応答証跡は無効として保存し、JSON再取込後も安全属性を再構築します。UDS/CAN FDソフト進捗を50%へ更新しました。
+
 3.13.359では`uds_read_request_manifest_v1`へ`uds_read_transport_plan_v1`を接続しました。明示されたISO-TP、CAN/CAN FD、要求・応答ECU、応答待機時間を個別に正規化し、transport未指定、未対応network、ECU不足・不一致、待機時間未設定を個別理由で遮断します。全条件が揃っても実transportアダプター未実装として送信・実行は無効で、rawフレームやコマンド列は保持しません。JSON往復後も計画を安全フィールドだけで再構築し、UDS/CAN FDソフト進捗を46%へ更新しました。
 
 3.13.358ではUDS ReadDataByIdentifierの次読取計画へ`uds_read_request_manifest_v1`を追加しました。明示されたDID候補、確認状態、対象ECU、明示待機時間だけを保持し、単一の確認済みDIDだけを選択します。未確認、無効、複数候補、ECU不一致は個別理由で遮断し、確認済みでも実transport未実装として実行不可です。コマンド列とraw要求は保持せず、JSON往復後も全送信・実行フラグをfalseに維持し、UDS/CAN FDソフト進捗を42%へ更新しました。
