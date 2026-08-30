@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.340ではiPhone用ELM327 BLEホストの開発署名経路を追加しました。署名処理は手動起動と保護Environment承認に限定し、開発証明書・登録端末を含むプロファイル・App ID・期限・生成IPAの署名を検査し、一時資格情報を終了時に削除します。現時点ではApple資格情報を設定していないため署名済みIPA、iPhoneインストール、実機通信の完了ではなく、接続と車両コマンドは無効のままです。
+
 3.13.339ではiPhone用ELM327 BLEホストのmacOS/Xcode実走、Simulator統合、OBD取込、`iphoneos` Release未署名IPA生成と完全未署名検証の成功を公開状態へ反映しました。これはApple署名、iPhoneへのインストール、手持ちELM327のBLE GATT適合、実車読取の完了を意味せず、接続と車両コマンドは無効のままです。
 
 3.13.336以降のPC配布版は `inspect-workstation-j2534.cmd` を開くと、登録ドライバー、DLLの32/64bit、静的検査結果と次の確認を日本語で表示します。番号を選ぶと、対象DLLをロードしない専用workerで固定ドライブ、同一ファイル、SHA-256、サイズ、PE構成を再確認します。VCI・車両の接続は不要です。配布版は内容検査に成功してから確認を開始します。DLL実行、`PassThruOpen`、車両通信、ファイル保存、外部送信はありません。検査合格でも実車適合・接続成功ではなく、実機通信機能の実装と試験は残っています。自動実行では `inspect-workstation-j2534.cmd --preflight-index 番号 --no-pause` を使えます。`npm run inspect:j2534` は既存項目を維持し、identity probe readinessを追加表示します。
