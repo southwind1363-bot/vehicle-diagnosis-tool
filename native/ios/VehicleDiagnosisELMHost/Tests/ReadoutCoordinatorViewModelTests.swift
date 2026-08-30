@@ -5,6 +5,35 @@ import ELM327BLEConnector
 
 final class ReadoutCoordinatorViewModelTests: XCTestCase {
     @MainActor
+    func testPeripheralDetailKeepsAdvertisementEvidenceNonDiagnostic() {
+        let candidate = BLEPeripheralCandidate(
+            id: UUID(),
+            displayName: "OBDII",
+            rssi: -54,
+            isConnectable: true,
+            advertisedServiceUUIDs: ["FFF0", "180F"]
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.peripheralDetailLabel(candidate),
+            "RSSI -54 dBm / 接続可能と広告 / 公開サービス 180F, FFF0"
+        )
+        let unreported = BLEPeripheralCandidate(id: UUID(), displayName: "BLE peripheral")
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.peripheralDetailLabel(unreported),
+            "RSSI未報告 / 接続可否未報告 / サービスUUID未報告"
+        )
+        let manyServices = BLEPeripheralCandidate(
+            id: UUID(),
+            displayName: "OBDII",
+            advertisedServiceUUIDs: ["FFF4", "FFF2", "FFF0", "FFF5", "FFF1", "FFF3"]
+        )
+        XCTAssertEqual(
+            ReadoutCoordinatorViewModel.peripheralDetailLabel(manyServices),
+            "RSSI未報告 / 接続可否未報告 / 公開サービス FFF0, FFF1, FFF2, FFF3 他2件"
+        )
+    }
+
+    @MainActor
     func testUniqueGattCharacteristicPairIsSuggestedButAmbiguousPairsAreNot() {
         let transmit = BLECharacteristicCandidate(
             serviceUUID: "FFF0",

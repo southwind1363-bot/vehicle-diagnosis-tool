@@ -29,6 +29,9 @@ struct ReadoutCoordinatorView: View {
                     Text("iPhoneではBLE GATT対応のELM327だけを使います。Bluetooth Classic専用のELM327 miniはこの経路では使えません。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
+                    Text("名称や広告サービスだけではELM327適合を確定しません。接続後のGATT特性とATI応答まで確認します。")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                     Text(viewModel.peripheralScanStatusLabel)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -39,12 +42,17 @@ struct ReadoutCoordinatorView: View {
                         Button {
                             viewModel.selectPeripheral(peripheral)
                         } label: {
-                            HStack {
-                                Text(peripheral.displayName.isEmpty ? "名称未取得のアダプター" : peripheral.displayName)
-                                Spacer()
-                                if viewModel.selectedPeripheralID == peripheral.id {
-                                    Image(systemName: "checkmark")
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack {
+                                    Text(peripheral.displayName.isEmpty ? "名称未取得のアダプター" : peripheral.displayName)
+                                    Spacer()
+                                    if viewModel.selectedPeripheralID == peripheral.id {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
+                                Text(ReadoutCoordinatorViewModel.peripheralDetailLabel(peripheral))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
                             }
                         }
                     }

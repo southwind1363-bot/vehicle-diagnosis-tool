@@ -15,6 +15,8 @@ Bluetooth Classic-only ELM327 mini adapters cannot use this iPhone BLE GATT rout
 
 The adapter search runs for 12 seconds, retains the discovered BLE devices after it finishes, and can be run again. When no BLE device is found, treat the result as an iPhone transport incompatibility check, not a vehicle or ECU diagnosis result.
 
+Each discovered candidate displays only in-memory advertisement evidence: RSSI, the advertised connectable flag, and up to four advertised service UUIDs. Missing advertisement fields do not reject a candidate, and a matching name or service never establishes ELM327 compatibility. Compatibility still requires connection, writable/notifiable GATT characteristic confirmation, and a usable read-only adapter identity response.
+
 The export action writes only a validated structured archive with its completion manifest. Raw response frames and debug logs are not retained.
 
 ## CI device artifact

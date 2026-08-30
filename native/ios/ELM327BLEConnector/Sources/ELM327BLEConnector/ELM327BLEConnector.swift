@@ -171,6 +171,29 @@ func isReportedFreezeFrameTriggerScope(_ scopeID: String?, triggerScopeIDs: Set<
 public struct BLEPeripheralCandidate: Identifiable, Sendable {
     public let id: UUID
     public let displayName: String
+    public let rssi: Int?
+    public let isConnectable: Bool?
+    public let advertisedServiceUUIDs: [String]
+
+    public init(
+        id: UUID,
+        displayName: String,
+        rssi: Int? = nil,
+        isConnectable: Bool? = nil,
+        advertisedServiceUUIDs: [String] = []
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.rssi = rssi
+        self.isConnectable = isConnectable
+        self.advertisedServiceUUIDs = normalizedBLEAdvertisementServiceUUIDs(advertisedServiceUUIDs)
+    }
+}
+
+func normalizedBLEAdvertisementServiceUUIDs(_ values: [String]) -> [String] {
+    Array(Set(values.map {
+        $0.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+    }.filter { !$0.isEmpty })).sorted()
 }
 
 public struct BLECharacteristicCandidate: Sendable {
@@ -911,7 +934,16 @@ extension ELM327BLEConnector: CBCentralManagerDelegate {
     public func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String: Any], rssi RSSI: NSNumber) {
         guard state == .scanning else { return }
         peripherals[peripheral.identifier] = peripheral
-        delegate?.connector(self, didDiscover: BLEPeripheralCandidate(id: peripheral.identifier, displayName: peripheral.name ?? "BLE peripheral"))
+        let serviceUUIDs = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID] ?? []).map(\.uuidString)
+        let isConnectable = (advertisementData[CBAdvertisementDataIsConnectable] as? NSNumber)?.boolValue
+        let reportedRSSI = RSSI.intValue == 127 ? nil : RSSI.intValue
+        delegate?.connector(self, didDiscover: BLEPeripheralCandidate(
+            id: peripheral.identifier,
+            displayName: peripheral.name ?? "BLE peripheral",
+            rssi: reportedRSSI,
+            isConnectable: isConnectable,
+            advertisedServiceUUIDs: serviceUUIDs
+        ))
     }
 
     public func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {

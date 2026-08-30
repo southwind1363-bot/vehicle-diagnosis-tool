@@ -146,6 +146,23 @@ final class ELMReadCommandTests: XCTestCase {
         XCTAssertFalse(hasELMCharacteristicConfigurationCandidates([notifiable]))
     }
 
+    func testBleAdvertisementEvidenceNormalizesServicesWithoutInferringCompatibility() {
+        XCTAssertEqual(
+            normalizedBLEAdvertisementServiceUUIDs([" fff0 ", "180F", "FFF0", ""]),
+            ["180F", "FFF0"]
+        )
+        let candidate = BLEPeripheralCandidate(
+            id: UUID(),
+            displayName: "OBDII",
+            rssi: -61,
+            isConnectable: true,
+            advertisedServiceUUIDs: ["fff0", "FFF0"]
+        )
+        XCTAssertEqual(candidate.rssi, -61)
+        XCTAssertEqual(candidate.isConnectable, true)
+        XCTAssertEqual(candidate.advertisedServiceUUIDs, ["FFF0"])
+    }
+
     func testCompletedBleScanStillAllowsSelectingADiscoveredPeripheral() {
         XCTAssertTrue(allowsELMPeripheralSelection(state: .scanning))
         XCTAssertTrue(allowsELMPeripheralSelection(state: .scanComplete))

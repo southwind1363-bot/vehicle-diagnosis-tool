@@ -62,6 +62,22 @@ final class ReadoutCoordinatorViewModel: ObservableObject {
         }
     }
 
+    static func peripheralDetailLabel(_ peripheral: BLEPeripheralCandidate) -> String {
+        let signal = peripheral.rssi.map { "RSSI \($0) dBm" } ?? "RSSI未報告"
+        let connectable: String
+        switch peripheral.isConnectable {
+        case true: connectable = "接続可能と広告"
+        case false: connectable = "接続不可と広告"
+        case nil: connectable = "接続可否未報告"
+        }
+        let visibleServices = peripheral.advertisedServiceUUIDs.prefix(4)
+        let remainingServiceCount = peripheral.advertisedServiceUUIDs.count - visibleServices.count
+        let services = peripheral.advertisedServiceUUIDs.isEmpty
+            ? "サービスUUID未報告"
+            : "公開サービス \(visibleServices.joined(separator: ", "))\(remainingServiceCount > 0 ? " 他\(remainingServiceCount)件" : "")"
+        return "\(signal) / \(connectable) / \(services)"
+    }
+
     var canConfigure: Bool {
         connectorState == .discovering && transmitChoice != nil && receiveChoice != nil
     }
