@@ -145,14 +145,41 @@ try {
   const preflightTarget = path.join(process.env.SystemRoot || process.env.WINDIR || "C:\\Windows", "System32", "version.dll");
   const preflightBytes = fs.readFileSync(preflightTarget);
   const packagedRunner = await import(`${pathToFileURL(path.join(result.directory, "scripts", "j2534-registered-driver-native-preflight.js")).href}?fixture=${Date.now()}`);
+  const packagedRequest = {
+    selected_device_id: "j2534-package-fixture-x64", descriptor_source: "live_windows_registry",
+    private_library_path: preflightTarget, expected_sha256: createHash("sha256").update(preflightBytes).digest("hex"),
+    expected_file_size: preflightBytes.length, expected_architecture: "x64"
+  };
+  const hostileOptions = new Proxy({}, { getPrototypeOf() { throw new Error("hostile options"); } });
+  const [nullOptionsResult, hostileOptionsResult] = await Promise.all([
+    packagedRunner.runJ2534NativePreflight(packagedRequest, null),
+    packagedRunner.runJ2534NativePreflight(packagedRequest, hostileOptions)
+  ]);
+  check([nullOptionsResult, hostileOptionsResult].every((item) => item.verification_status === "rejected"
+    && item.blockers?.join(",") === "native_preflight_request_invalid"
+    && item.execution_enabled === false && item.vehicle_communication_started === false),
+  "Packaged J2534 preflight leaked hostile option errors or enabled execution");
   const packagedPreflight = await packagedRunner.runJ2534NativePreflight({
     selected_device_id: "j2534-package-fixture-x64", descriptor_source: "live_windows_registry",
     private_library_path: preflightTarget, expected_sha256: createHash("sha256").update(preflightBytes).digest("hex"),
     expected_file_size: preflightBytes.length, expected_architecture: "x64"
-  }, { timeout_ms: 5000 });
+  }, { timeout_ms: 5000, operation_nonce: "f".repeat(32) });
 
-  check(packagedPreflight.verification_status === "verified_non_executable" && packagedPreflight.authenticode_status === "verified_file_policy" && packagedPreflight.authenticode_network_retrieval_allowed === false && packagedPreflight.global_mutex_status === "acquired_for_preflight" && packagedPreflight.execution_enabled === false
+  check(packagedPreflight.contract_version === "j2534-native-preflight-response-v2"
+    && packagedPreflight.operation === "verify_registered_driver_non_executable"
+    && packagedPreflight.descriptor_source === "live_windows_registry"
+    && packagedPreflight.expected_architecture === "x64"
+    && packagedPreflight.verification_status === "verified_non_executable" && packagedPreflight.authenticode_status === "verified_file_policy" && packagedPreflight.authenticode_network_retrieval_allowed === false && packagedPreflight.global_mutex_status === "acquired_for_preflight" && packagedPreflight.execution_enabled === false
     && packagedPreflight.vehicle_communication_started === false && !JSON.stringify(packagedPreflight).includes(preflightTarget), "Packaged J2534 preflight did not complete through private IPC without exposing or executing the target");
+  const invalidOperationNonce = await packagedRunner.runJ2534NativePreflight({
+    selected_device_id: "j2534-package-fixture-x64", descriptor_source: "live_windows_registry",
+    private_library_path: preflightTarget, expected_sha256: createHash("sha256").update(preflightBytes).digest("hex"),
+    expected_file_size: preflightBytes.length, expected_architecture: "x64"
+  }, { timeout_ms: 5000, operation_nonce: "wrong" });
+  check(invalidOperationNonce.verification_status === "rejected"
+    && invalidOperationNonce.blockers?.join(",") === "native_preflight_request_invalid"
+    && invalidOperationNonce.execution_enabled === false && invalidOperationNonce.vehicle_communication_started === false,
+  "Packaged J2534 preflight accepted an invalid operation nonce");
   const packagedQuarantine = createJ2534NativeQuarantineStore(path.join(result.directory, "scripts", "native"));
   packagedQuarantine.mark("termination_unconfirmed");
   const blockedAfterRestartState = await packagedRunner.runJ2534NativePreflight({

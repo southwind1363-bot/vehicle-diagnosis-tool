@@ -410,7 +410,7 @@ async function main() {
         platform.name === "x86" ? "SysWOW64" : "System32", "version.dll");
       const signedSystemBytes = fs.readFileSync(signedSystemLibrary);
       const privateWorkerRequest = {
-        contract_version: "j2534-native-preflight-request-v1", operation: "verify_registered_driver_non_executable",
+        contract_version: "j2534-native-preflight-request-v2", operation: "verify_registered_driver_non_executable",
         request_nonce: `native-worker-${platform.name}-nonce-000000000001`, selected_device_id: `j2534-worker-${platform.name}`,
         descriptor_version: "j2534-registered-driver-descriptor-v1", descriptor_source: "live_windows_registry",
         private_library_path: signedSystemLibrary, expected_sha256: createHash("sha256").update(signedSystemBytes).digest("hex"),
@@ -422,14 +422,17 @@ async function main() {
       assert.equal(directWorker.stderr, "");
       assert.ok(!directWorker.stdout.includes(platformDirectory), "Production preflight worker exposed its private path");
       const directResponse = JSON.parse(directWorker.stdout);
-      assert.equal(directResponse.verification_status, "verified_non_executable");
+      assert.equal(directResponse.contract_version, "j2534-native-preflight-response-v2");
+      assert.equal(directResponse.operation, privateWorkerRequest.operation);
       assert.equal(directResponse.request_nonce, privateWorkerRequest.request_nonce);
+      assert.equal(directResponse.descriptor_source, privateWorkerRequest.descriptor_source);
+      assert.equal(directResponse.expected_architecture, privateWorkerRequest.expected_architecture);
       assert.equal(directResponse.vehicle_communication_started, false);
       assert.equal(directResponse.would_transmit, false);
       assert.equal(directResponse.authenticode_status, "verified_file_policy");
       assert.equal(directResponse.authenticode_network_retrieval_allowed, false);
       assert.equal(directResponse.global_mutex_status, "acquired_for_preflight");
-      total += 9;
+      total += 12;
       const unsignedRequest = {
         ...privateWorkerRequest, request_nonce: `native-worker-${platform.name}-nonce-unsigned-0001`,
         private_library_path: path.join(platformDirectory, "success.dll"),
@@ -445,11 +448,25 @@ async function main() {
       assert.equal(unsignedResponse.global_mutex_status, "acquired_for_preflight");
       assert.equal(unsignedResponse.dll_load_attempted, false);
       total += 6;
-      const extraKeyWorker = await execute(productionPreflightWorker, [], JSON.stringify({ ...privateWorkerRequest, extra: true }));
-      assert.equal(extraKeyWorker.error?.code, 2);
-      assert.equal(extraKeyWorker.stdout, "");
-      assert.equal(extraKeyWorker.stderr, "");
-      total += 3;
+      const invalidWorkerRequests = [
+        { ...privateWorkerRequest, extra: true },
+        { ...privateWorkerRequest, contract_version: "j2534-native-preflight-request-v1" },
+        { ...privateWorkerRequest, operation: "load_registered_driver" },
+        { ...privateWorkerRequest, private_library_path: "relative-driver.dll" },
+        { ...privateWorkerRequest, expected_sha256: "A".repeat(64) },
+        { ...privateWorkerRequest, expected_file_size: 0 },
+        { ...privateWorkerRequest, expected_file_size: 64 * 1024 * 1024 + 1 },
+        { ...privateWorkerRequest, expected_architecture: "arm64" },
+        { ...privateWorkerRequest, execution_enabled: true },
+        { ...privateWorkerRequest, vehicle_command_enabled: true }
+      ];
+      for (const invalidRequest of invalidWorkerRequests) {
+        const invalidWorker = await execute(productionPreflightWorker, [], JSON.stringify(invalidRequest));
+        assert.equal(invalidWorker.error?.code, 2);
+        assert.equal(invalidWorker.stdout, "");
+        assert.equal(invalidWorker.stderr, "");
+        total += 3;
+      }
       const rejectedPreflights = [
         ["sha-mismatch", "success.dll", null, "native_file_sha256_mismatch"],
         ["size-mismatch", "success.dll", null, "native_file_size_mismatch"],

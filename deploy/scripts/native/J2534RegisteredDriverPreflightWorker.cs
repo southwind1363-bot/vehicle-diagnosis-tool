@@ -27,10 +27,13 @@ namespace VehicleDiagnosis.Native
     [DataContract]
     internal sealed class PreflightResponse
     {
-        [DataMember(Name = "contract_version")] internal string ContractVersion = "j2534-native-preflight-response-v1";
+        [DataMember(Name = "contract_version")] internal string ContractVersion = "j2534-native-preflight-response-v2";
+        [DataMember(Name = "operation")] internal string Operation;
         [DataMember(Name = "request_nonce")] internal string RequestNonce;
         [DataMember(Name = "selected_device_id")] internal string SelectedDeviceId;
         [DataMember(Name = "descriptor_version")] internal string DescriptorVersion;
+        [DataMember(Name = "descriptor_source")] internal string DescriptorSource;
+        [DataMember(Name = "expected_architecture")] internal string ExpectedArchitecture;
         [DataMember(Name = "verification_status")] internal string VerificationStatus = "rejected";
         [DataMember(Name = "blockers")] internal string[] Blockers = new string[] { "native_preflight_request_invalid" };
         [DataMember(Name = "authenticode_status")] internal string AuthenticodeStatus = "not_verified";
@@ -55,6 +58,7 @@ namespace VehicleDiagnosis.Native
 
     internal static class J2534RegisteredDriverPreflightWorker
     {
+        private const long MaximumExpectedFileSize = 64L * 1024L * 1024L;
         private const int MaximumRequestBytes = 8192;
         private static readonly HashSet<string> ExactRequestKeys = new HashSet<string>(StringComparer.Ordinal) {
             "contract_version", "operation", "request_nonce", "selected_device_id", "descriptor_version",
@@ -69,6 +73,20 @@ namespace VehicleDiagnosis.Native
                 if (!((value[i] >= 'a' && value[i] <= 'z') || (value[i] >= 'A' && value[i] <= 'Z')
                     || (value[i] >= '0' && value[i] <= '9') || value[i] == '-' || value[i] == '_')) return false;
             return true;
+        }
+
+        private static bool LowerHexSha256(string value)
+        {
+            if (value == null || value.Length != 64) return false;
+            for (int i = 0; i < value.Length; i++)
+                if (!((value[i] >= '0' && value[i] <= '9') || (value[i] >= 'a' && value[i] <= 'f'))) return false;
+            return true;
+        }
+
+        private static bool SafeLibraryPath(string value)
+        {
+            try { return value != null && value.Length > 0 && value.Length <= 32767 && Path.IsPathRooted(value); }
+            catch { return false; }
         }
 
         private static string ReadBoundedRequest()
@@ -130,18 +148,22 @@ namespace VehicleDiagnosis.Native
             try
             {
                 PreflightRequest request = ParseRequest(ReadBoundedRequest());
-                if (request.ContractVersion != "j2534-native-preflight-request-v1"
+                if (request.ContractVersion != "j2534-native-preflight-request-v2"
                     || request.Operation != "verify_registered_driver_non_executable"
                     || request.DescriptorVersion != "j2534-registered-driver-descriptor-v1"
                     || request.DescriptorSource != "live_windows_registry"
                     || !SafeToken(request.RequestNonce, 32, 64) || !SafeToken(request.SelectedDeviceId, 8, 96)
+                    || !SafeLibraryPath(request.PrivateLibraryPath) || !LowerHexSha256(request.ExpectedSha256)
+                    || request.ExpectedFileSize < 1 || request.ExpectedFileSize > MaximumExpectedFileSize
+                    || (request.ExpectedArchitecture != "x86" && request.ExpectedArchitecture != "x64")
                     || request.ExecutionEnabled || request.VehicleCommandEnabled) return 2;
                 J2534GlobalMutexLease lease;
                 if (!J2534GlobalMutexLease.TryAcquire(out lease))
                 {
                     WriteResponse(new PreflightResponse {
-                        RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
-                        DescriptorVersion = request.DescriptorVersion,
+                        Operation = request.Operation, RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
+                        DescriptorVersion = request.DescriptorVersion, DescriptorSource = request.DescriptorSource,
+                        ExpectedArchitecture = request.ExpectedArchitecture,
                         Blockers = new string[] { "native_global_mutex_not_acquired" }
                     });
                     return 0;
@@ -151,8 +173,9 @@ namespace VehicleDiagnosis.Native
                     RegisteredDriverPreflightResult result = J2534RegisteredDriverPreflight.Verify(request.PrivateLibraryPath,
                         request.ExpectedSha256, request.ExpectedFileSize, request.ExpectedArchitecture);
                     WriteResponse(new PreflightResponse {
-                        RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
-                        DescriptorVersion = request.DescriptorVersion, VerificationStatus = result.Status,
+                        Operation = request.Operation, RequestNonce = request.RequestNonce, SelectedDeviceId = request.SelectedDeviceId,
+                        DescriptorVersion = request.DescriptorVersion, DescriptorSource = request.DescriptorSource,
+                        ExpectedArchitecture = request.ExpectedArchitecture, VerificationStatus = result.Status,
                         Blockers = result.Blockers, AuthenticodeStatus = result.AuthenticodeStatus,
                         AuthenticodeNetworkRetrievalAllowed = result.AuthenticodeNetworkRetrievalAllowed,
                         GlobalMutexStatus = "acquired_for_preflight",

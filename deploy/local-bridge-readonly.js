@@ -1370,8 +1370,9 @@ export async function runJ2534RegisteredDriverNativePreflight(descriptor, option
     ? j2534RegisteredDriverDescriptorSecrets.get(descriptor)
     : null;
   const blocked = (selectedDeviceId, blocker) => deepFreezeJ2534Value({
-    contract_version: "j2534-native-preflight-response-v1",
-    selected_device_id: selectedDeviceId || null,
+    contract_version: "j2534-native-preflight-response-v2",
+    operation: "verify_registered_driver_non_executable", descriptor_source: "live_windows_registry",
+    expected_architecture: null, selected_device_id: selectedDeviceId || null,
     verification_status: "rejected",
     blockers: [blocker],
     fixed_drive_verified: false,
@@ -1421,7 +1422,8 @@ export async function runJ2534RegisteredDriverNativePreflight(descriptor, option
 }
 
 const J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS = Object.freeze([
-  "contract_version", "selected_device_id", "verification_status", "blockers",
+  "contract_version", "operation", "descriptor_source", "expected_architecture",
+  "selected_device_id", "verification_status", "blockers",
   "authenticode_status", "authenticode_network_retrieval_allowed", "global_mutex_status", "fixed_drive_verified",
   "final_path_matches", "file_identity_stable", "sha256_matches",
   "size_matches", "architecture_matches", "runtime_architecture_matches", "dll_load_attempted",
@@ -1595,7 +1597,7 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
   },
   runPreflight: async (descriptor, { signal, operationNonce }) => Object.freeze({
     operationNonce,
-    result: await runJ2534RegisteredDriverNativePreflight(descriptor, { timeout_ms: 5000, signal })
+    result: await runJ2534RegisteredDriverNativePreflight(descriptor, { timeout_ms: 5000, signal, operation_nonce: operationNonce })
   }),
   validatePreflight: (record, result) => {
     try {
@@ -1603,7 +1605,10 @@ const j2534IdentityPreflightController = createJ2534IdentityPreflightOperationCo
       const keys = Object.keys(result);
       if (keys.length !== J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS.length
         || !J2534_NATIVE_PREFLIGHT_PUBLIC_KEYS.every((key) => Object.hasOwn(result, key))) return false;
-      return result.contract_version === "j2534-native-preflight-response-v1"
+      return result.contract_version === "j2534-native-preflight-response-v2"
+        && result.operation === "verify_registered_driver_non_executable"
+        && result.descriptor_source === "live_windows_registry"
+        && result.expected_architecture === record.descriptor?.driver_architecture
         && result.selected_device_id === record.selectedDeviceId
         && result.verification_status === "verified_non_executable"
         && Array.isArray(result.blockers) && result.blockers.length === 0

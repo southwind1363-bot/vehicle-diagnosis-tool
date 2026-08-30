@@ -7,12 +7,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 
-const REQUEST_VERSION = "j2534-native-preflight-request-v1";
-const RESPONSE_VERSION = "j2534-native-preflight-response-v1";
+const REQUEST_VERSION = "j2534-native-preflight-request-v2";
+const RESPONSE_VERSION = "j2534-native-preflight-response-v2";
 const DESCRIPTOR_VERSION = "j2534-registered-driver-descriptor-v1";
 const RESPONSE_KEYS = [
-  "contract_version", "request_nonce", "selected_device_id", "descriptor_version",
-  "verification_status", "blockers", "authenticode_status", "authenticode_network_retrieval_allowed", "global_mutex_status",
+  "contract_version", "operation", "request_nonce", "selected_device_id", "descriptor_version",
+  "descriptor_source", "expected_architecture", "verification_status", "blockers", "authenticode_status", "authenticode_network_retrieval_allowed", "global_mutex_status",
   "fixed_drive_verified", "final_path_matches",
   "file_identity_stable", "sha256_matches", "size_matches", "architecture_matches",
   "runtime_architecture_matches", "dll_load_attempted", "get_proc_address_attempted",
@@ -34,10 +34,16 @@ const exactKeys = (value, keys) => value && typeof value === "object" && !Array.
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const safeToken = (value, min = 8, max = 96) => typeof value === "string"
   && value.length >= min && value.length <= max && /^[A-Za-z0-9_-]+$/.test(value);
+const plainObject = value => {
+  try { return value !== null && typeof value === "object" && !Array.isArray(value)
+    && Object.getPrototypeOf(value) === Object.prototype; } catch { return false; }
+};
 
-function baseResult(selectedDeviceId, status = "rejected", blockers = ["native_preflight_failed"]) {
+function baseResult(selectedDeviceId, expectedArchitecture = null, status = "rejected", blockers = ["native_preflight_failed"]) {
   return {
-    contract_version: RESPONSE_VERSION, selected_device_id: selectedDeviceId || null,
+    contract_version: RESPONSE_VERSION, operation: "verify_registered_driver_non_executable",
+    selected_device_id: selectedDeviceId || null, descriptor_source: "live_windows_registry",
+    expected_architecture: ["x86", "x64"].includes(expectedArchitecture) ? expectedArchitecture : null,
     verification_status: status, blockers, authenticode_status: "not_verified", authenticode_network_retrieval_allowed: false, global_mutex_status: "not_acquired",
     fixed_drive_verified: false, final_path_matches: false,
     file_identity_stable: false, sha256_matches: false, size_matches: false,
@@ -140,8 +146,10 @@ function parseResponse(output, request) {
   let value;
   try { value = JSON.parse(output); } catch { return null; }
   if (!exactKeys(value, RESPONSE_KEYS) || value.contract_version !== RESPONSE_VERSION
-    || value.request_nonce !== request.request_nonce || value.selected_device_id !== request.selected_device_id
-    || value.descriptor_version !== DESCRIPTOR_VERSION || !["verified_non_executable", "rejected"].includes(value.verification_status)
+    || value.operation !== request.operation || value.request_nonce !== request.request_nonce
+    || value.selected_device_id !== request.selected_device_id || value.descriptor_version !== DESCRIPTOR_VERSION
+    || value.descriptor_source !== request.descriptor_source || value.expected_architecture !== request.expected_architecture
+    || !["verified_non_executable", "rejected"].includes(value.verification_status)
     || !Array.isArray(value.blockers) || value.blockers.length > 8 || !value.blockers.every(item => safeToken(item, 3, 96))
     || !["not_verified", "not_trusted", "verified_file_policy"].includes(value.authenticode_status)
     || !["not_acquired", "acquired_for_preflight"].includes(value.global_mutex_status)
@@ -155,28 +163,44 @@ function parseResponse(output, request) {
 }
 
 export async function runJ2534NativePreflight(privateRequest, options = {}) {
-  const selected = safeToken(privateRequest?.selected_device_id) ? privateRequest.selected_device_id : null;
-  const blocked = code => baseResult(selected, "rejected", [code]);
+  let selected = null, requestedArchitecture = null;
+  try {
+    selected = safeToken(privateRequest?.selected_device_id) ? privateRequest.selected_device_id : null;
+    requestedArchitecture = ["x86", "x64"].includes(privateRequest?.expected_architecture)
+      ? privateRequest.expected_architecture : null;
+  } catch { /* Invalid external shapes remain blocked below. */ }
+  const blocked = code => baseResult(selected, requestedArchitecture, "rejected", [code]);
   if (quarantineStore.read().quarantined) return blocked("native_preflight_quarantine_not_clear");
   if (active) return blocked("native_preflight_in_progress");
-  const timeout = options.timeout_ms ?? 5000;
-  const signal = options.signal;
-  const optionKeys = ["timeout_ms", "signal"].filter(key => Object.hasOwn(options, key));
-  if (!exactKeys(options, optionKeys)
-    || !Number.isInteger(timeout) || timeout < 1000 || timeout > 10000
-    || (signal != null && !(signal instanceof AbortSignal))) return blocked("native_preflight_request_invalid");
-  const requestKeys = ["selected_device_id", "descriptor_source", "private_library_path", "expected_sha256", "expected_file_size", "expected_architecture"];
-  if (!exactKeys(privateRequest, requestKeys) || !selected || privateRequest.descriptor_source !== "live_windows_registry"
-    || typeof privateRequest.private_library_path !== "string" || !/^[0-9a-f]{64}$/.test(privateRequest.expected_sha256)
-    || !Number.isInteger(privateRequest.expected_file_size) || privateRequest.expected_file_size < 1
-    || !["x86", "x64"].includes(privateRequest.expected_architecture)) return blocked("native_preflight_request_invalid");
+  if (!plainObject(options)) return blocked("native_preflight_request_invalid");
+  let timeout, signal, validOptions = false, validRequest = false;
+  try {
+    timeout = options.timeout_ms ?? 5000;
+    signal = options.signal;
+    const optionKeys = ["timeout_ms", "signal", "operation_nonce"].filter(key => Object.hasOwn(options, key));
+    validOptions = exactKeys(options, optionKeys)
+      && Number.isInteger(timeout) && timeout >= 1000 && timeout <= 10000
+      && (signal == null || signal instanceof AbortSignal)
+      && (!Object.hasOwn(options, "operation_nonce") || /^[a-f0-9]{32}$/.test(options.operation_nonce));
+    const requestKeys = ["selected_device_id", "descriptor_source", "private_library_path", "expected_sha256", "expected_file_size", "expected_architecture"];
+    validRequest = exactKeys(privateRequest, requestKeys) && selected
+      && privateRequest.descriptor_source === "live_windows_registry"
+      && typeof privateRequest.private_library_path === "string" && privateRequest.private_library_path.length <= 32767
+      && path.isAbsolute(privateRequest.private_library_path)
+      && !privateRequest.private_library_path.includes(String.fromCharCode(0))
+      && /^[0-9a-f]{64}$/.test(privateRequest.expected_sha256)
+      && Number.isInteger(privateRequest.expected_file_size) && privateRequest.expected_file_size >= 1
+      && privateRequest.expected_file_size <= 64 * 1024 * 1024
+      && ["x86", "x64"].includes(privateRequest.expected_architecture);
+  } catch { validOptions = false; validRequest = false; }
+  if (!validOptions || !validRequest) return blocked("native_preflight_request_invalid");
   active = true;
   try {
     if (signal?.aborted) return blocked("native_preflight_cancelled");
     const workerReal = resolvePackagedWorker(privateRequest.expected_architecture);
     const request = {
       contract_version: REQUEST_VERSION, operation: "verify_registered_driver_non_executable",
-      request_nonce: randomBytes(16).toString("hex"), selected_device_id: selected,
+      request_nonce: options.operation_nonce || randomBytes(16).toString("hex"), selected_device_id: selected,
       descriptor_version: DESCRIPTOR_VERSION, descriptor_source: privateRequest.descriptor_source,
       private_library_path: privateRequest.private_library_path, expected_sha256: privateRequest.expected_sha256,
       expected_file_size: privateRequest.expected_file_size, expected_architecture: privateRequest.expected_architecture,

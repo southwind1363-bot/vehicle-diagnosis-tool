@@ -14,6 +14,7 @@ const token = "local-bridge-test-token";
 const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", enableSampleReadouts: true });
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "package.json"), "utf8"));
+const localBridgeSource = fs.readFileSync(path.join(scriptDir, "..", "local-bridge-readonly.js"), "utf8");
 const j2534BridgeStarterSource = fs.readFileSync(path.join(scriptDir, "start-j2534-readonly-bridge.js"), "utf8");
 const j2534WorkerPath = path.join(scriptDir, "j2534-readonly-worker.js");
 const j2534HostReviewSource = fs.readFileSync(path.join(scriptDir, "review-j2534-host.js"), "utf8");
@@ -398,7 +399,13 @@ try {
     && forgedIdentityReadiness.identity_probe_execution_enabled === false && forgedIdentityReadiness.pass_thru_open_allowed === false
     && forgedIdentityReadiness.dll_load_attempted === false && forgedIdentityReadiness.vehicle_communication_started === false
     && !JSON.stringify(forgedIdentityReadiness).includes("C:\\private"), "J2534 identity readiness was mutable, enabled execution, or exposed private input");
-  const fixtureDeviceId = parsedJ2534Drivers[0].id;
+  check(localBridgeSource.includes('operation_nonce: operationNonce')
+  && localBridgeSource.includes('result.contract_version === "j2534-native-preflight-response-v2"')
+  && localBridgeSource.includes('result.operation === "verify_registered_driver_non_executable"')
+  && localBridgeSource.includes('result.descriptor_source === "live_windows_registry"')
+  && localBridgeSource.includes('result.expected_architecture === record.descriptor?.driver_architecture'),
+"J2534 production identity operation is not bound to the strict native v2 request/response contract");
+const fixtureDeviceId = parsedJ2534Drivers[0].id;
   let fixtureNow = 100;
   let fixtureRunnerCalls = 0;
   const fixtureSnapshot = (record, evidence) => Object.freeze({

@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.353ではJ2534 identity supervisorを、検証済みファイルハンドルとGlobal mutexをidentity lifecycle全体で保持する生成fixture workerへ接続しました。固定worker/DLLの起動直前再検証、明示試験確認、nonce/device一致を含む厳密応答解析、並行実行拒否、親deadline、cleanup不明時の永続隔離をx86/x64で確認済みです。ベンダーDLL、実VCI、車両通信には未接続です。進捗率は42%です。
+3.13.354では登録J2534ドライバーの非実行native preflightをv2契約へ更新しました。外側operation nonceをworker要求へ結び付け、operation/source/architecture応答一致を必須化し、C# workerでも絶対パス、64MiB上限、lowercase SHA-256、x86/x64、安全falseフラグを独立検証します。異常要求10種、null/hostile Proxy、x86/x64を確認済みです。ベンダーDLLのロード、実VCI、車両通信は行いません。進捗率は44%です。
 
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 

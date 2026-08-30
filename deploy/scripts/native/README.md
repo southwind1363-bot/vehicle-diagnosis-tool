@@ -6,7 +6,7 @@ Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
 channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.353. This native binding remains
+The public app and PC package metadata are 3.13.354. This native binding remains
 development-only and is not bundled in either release.
 
 ## Validation
@@ -80,6 +80,14 @@ mutex lifecycle evidence, rejects concurrent runs, applies the parent deadline,
 and records uncertain cleanup in the same persistent latch. Recreating the
 supervisor with that state remains blocked. This remains development-only and is
 not connected to a vendor worker.
+
+The packaged registered-driver preflight now uses the strict v2 private-IPC
+contract. The outer one-time operation nonce becomes the native request nonce;
+the response must echo the operation, live-registry source, selected device, and
+architecture. The C# worker independently rejects non-absolute paths, non-lowercase
+SHA-256 values, files outside the 1-byte to 64-MiB range, unsupported
+architectures, enabled execution flags, duplicate/extra keys, and v1 requests.
+Private paths and hashes are not returned.
 
 The tests verify managed delegate/function-pointer binding, unsigned 32-bit IDs
 (including zero), signed 32-bit status codes, NULL Open input, three separate
@@ -175,12 +183,11 @@ runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
 
 1. Cross-check the generated fixture with a compiler-built C reference when a
    reviewed native toolchain is available.
-2. Verify the packaged private-IPC preflight against the installed registered
-   driver on the target Windows tablet without loading the vendor DLL.
-3. Define the strict registered-driver identity request and response contract
-   using the verified fixture supervisor boundary. Explicit trial approval
-   remains mandatory before vendor code.
-4. Record actual identity evidence before any vehicle-channel work.
+2. Run the packaged v2 private-IPC preflight against the installed registered
+   driver on the target Windows tablet without loading the vendor DLL, then
+   record the sanitized identity evidence.
+3. Keep explicit trial approval mandatory before any vendor identity worker or
+   vehicle-channel work.
 
 ## References
 
