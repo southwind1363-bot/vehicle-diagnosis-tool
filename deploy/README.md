@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.358ではUDS ReadDataByIdentifierの次読取計画へ`uds_read_request_manifest_v1`を追加しました。明示されたDID候補、確認状態、対象ECU、明示待機時間だけを保持し、単一の確認済みDIDだけを選択します。未確認、無効、複数候補、ECU不一致は個別理由で遮断し、確認済みでも実transport未実装として実行不可です。コマンド列とraw要求は保持せず、JSON往復後も全送信・実行フラグをfalseに維持し、UDS/CAN FDソフト進捗を42%へ更新しました。
+
 3.13.357ではraw UDS ReadDataByIdentifier応答へ要求DID一覧、応答先頭DID、payload長、境界判定を値と分離したuds_did_response_evidence_v1として追加しました。複数DID要求と要求DID不一致ではpayloadを先頭DIDの値と推測せずunparsedに留め、raw payloadやVINを証跡へ保存しません。従来の単一DID取込、ECU/プロトコル/NRC、JSON往復、送信無効を維持し、UDS/CAN FDソフト進捗を38%へ更新しました。
 
 3.13.356ではJ2534匿名化証拠へ厳格な`j2534-native-preflight-evidence-validation-v1`検証を追加しました。完全キー、32KB入力上限、時刻、実行環境、登録数、選択、v2契約、blocker、署名、mutex、identity検査、安全falseフラグの意味整合を確認し、no-driver、verified、rejectedの矛盾や改変を拒否します。package検証276件で、整合性検査後のstdin検証まで確認済みです。ベンダーDLLのロード、実VCI、車両通信は行いません。進捗率は46%です。

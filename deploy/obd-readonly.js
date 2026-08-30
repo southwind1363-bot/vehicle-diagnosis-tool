@@ -9609,6 +9609,130 @@
     return new Set(capturedReadoutIds.filter((readoutId) => allowedReadoutIds.has(readoutId) && !openReadoutIds.has(readoutId)));
   }
 
+  function normalizeUdsReadRequestTimingMs(value) {
+    if (value === null || value === undefined || value === "") return null;
+    const numeric = Number(value);
+    return Number.isSafeInteger(numeric) && numeric >= 0 && numeric <= 600000 ? numeric : null;
+  }
+
+  function buildUdsReadRequestManifest(summary = {}, context = {}) {
+    const directDataIdentifier = pickDefined(summary.dataIdentifier, summary.data_identifier, null);
+    const summaryCandidates = Array.isArray(summary.dataIdentifierCandidates)
+      ? summary.dataIdentifierCandidates
+      : Array.isArray(summary.data_identifier_candidates) ? summary.data_identifier_candidates : [];
+    const contextCandidates = Array.isArray(context.dataIdentifierCandidates)
+      ? context.dataIdentifierCandidates
+      : Array.isArray(context.data_identifier_candidates) ? context.data_identifier_candidates : [];
+    const candidateInput = summaryCandidates.length
+      ? summaryCandidates
+      : contextCandidates.length
+        ? contextCandidates
+        : directDataIdentifier === null ? [] : [{
+          dataIdentifier: directDataIdentifier,
+          verified: pickDefined(summary.dataIdentifierVerified, summary.data_identifier_verified, false) === true,
+          sourceEcu: pickDefined(summary.dataIdentifierSourceEcu, summary.data_identifier_source_ecu, null)
+        }];
+    const candidateRows = (Array.isArray(candidateInput) ? candidateInput : [candidateInput])
+      .map((item) => {
+        const row = item && typeof item === "object" ? item : { dataIdentifier: item };
+        const dataIdentifier = normalizeUdsDataIdentifier(pickDefined(row.dataIdentifier, row.data_identifier, row.did, null));
+        if (!dataIdentifier) return null;
+        const sourceEcuInput = pickDefined(row.sourceEcu, row.source_ecu, row.targetEcu, row.target_ecu, row.ecu, null);
+        const sourceEcu = normalizeComparableCanEcuAddress(sourceEcuInput) || String(sourceEcuInput || "").trim().toUpperCase() || null;
+        const verificationEvidencePresent = Boolean(pickDefined(row.verificationEvidencePresent, row.verification_evidence_present, row.source, row.provenance, false));
+        return {
+          dataIdentifier,
+          data_identifier: dataIdentifier,
+          verified: pickDefined(row.verified, row.sourceVerified, row.source_verified, row.dataIdentifierVerified, row.data_identifier_verified, false) === true,
+          sourceEcu,
+          source_ecu: sourceEcu,
+          verificationEvidencePresent,
+          verification_evidence_present: verificationEvidencePresent
+        };
+      })
+      .filter(Boolean)
+      .filter((item, index, items) => items.findIndex((candidate) => candidate.dataIdentifier === item.dataIdentifier && candidate.sourceEcu === item.sourceEcu) === index)
+      .slice(0, 64);
+    const rawCandidateCount = Array.isArray(candidateInput) ? candidateInput.length : candidateInput === null || candidateInput === undefined || candidateInput === "" ? 0 : 1;
+    const targetEcuInput = pickDefined(
+      summary.targetEcu,
+      summary.target_ecu,
+      Array.isArray(summary.affectedEcuIds) && summary.affectedEcuIds.length === 1 ? summary.affectedEcuIds[0] : null,
+      Array.isArray(summary.affected_ecu_ids) && summary.affected_ecu_ids.length === 1 ? summary.affected_ecu_ids[0] : null,
+      context.targetEcu,
+      context.target_ecu,
+      null
+    );
+    const targetEcu = normalizeComparableCanEcuAddress(targetEcuInput) || String(targetEcuInput || "").trim().toUpperCase() || null;
+    const selectedCandidate = candidateRows.length === 1 ? candidateRows[0] : null;
+    const comparableTargetEcu = normalizeComparableCanEcuAddress(targetEcu);
+    const comparableSourceEcu = normalizeComparableCanEcuAddress(selectedCandidate?.sourceEcu);
+    const ecuScopeMismatch = Boolean(targetEcu && selectedCandidate?.sourceEcu && (
+      comparableTargetEcu && comparableSourceEcu
+        ? !isComparableCanEcuAddressMatch(comparableTargetEcu, comparableSourceEcu)
+        : targetEcu !== selectedCandidate.sourceEcu
+    ));
+    const selectionStatus = rawCandidateCount > 0 && candidateRows.length === 0
+      ? "invalid"
+      : candidateRows.length === 0
+        ? "missing"
+        : candidateRows.length > 1
+          ? "ambiguous"
+          : selectedCandidate.verified !== true
+            ? "unverified"
+            : ecuScopeMismatch
+              ? "ecu_scope_mismatch"
+              : "verified";
+    const executionBlockReasonByStatus = {
+      missing: "uds_data_identifier_required",
+      invalid: "uds_data_identifier_invalid",
+      unverified: "uds_data_identifier_not_verified",
+      ambiguous: "uds_data_identifier_ambiguous",
+      ecu_scope_mismatch: "uds_data_identifier_ecu_scope_mismatch",
+      verified: "uds_transport_not_implemented"
+    };
+    const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(summary.responseWaitMs, summary.response_wait_ms, context.responseWaitMs, context.response_wait_ms));
+    const responsePendingWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(summary.responsePendingWaitMs, summary.response_pending_wait_ms, context.responsePendingWaitMs, context.response_pending_wait_ms));
+    const selectedDataIdentifier = selectionStatus === "verified" ? selectedCandidate.dataIdentifier : null;
+    return {
+      schemaVersion: "uds_read_request_manifest_v1",
+      schema_version: "uds_read_request_manifest_v1",
+      serviceMode: "22",
+      service_mode: "22",
+      requestedDataIdentifiers: candidateRows.map((item) => item.dataIdentifier),
+      requested_data_identifiers: candidateRows.map((item) => item.dataIdentifier),
+      selectedDataIdentifier,
+      selected_data_identifier: selectedDataIdentifier,
+      candidateCount: candidateRows.length,
+      candidate_count: candidateRows.length,
+      verifiedCandidateCount: candidateRows.filter((item) => item.verified).length,
+      verified_candidate_count: candidateRows.filter((item) => item.verified).length,
+      selectionStatus,
+      selection_status: selectionStatus,
+      targetEcu,
+      target_ecu: targetEcu,
+      candidateSourceEcu: selectedCandidate?.sourceEcu || null,
+      candidate_source_ecu: selectedCandidate?.sourceEcu || null,
+      responseWaitMs,
+      response_wait_ms: responseWaitMs,
+      responsePendingWaitMs,
+      response_pending_wait_ms: responsePendingWaitMs,
+      timingConfigured: responseWaitMs !== null || responsePendingWaitMs !== null,
+      timing_configured: responseWaitMs !== null || responsePendingWaitMs !== null,
+      executionBlockReason: executionBlockReasonByStatus[selectionStatus],
+      execution_block_reason: executionBlockReasonByStatus[selectionStatus],
+      retainedRawRequest: false,
+      retained_raw_request: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
   function buildReadOnlyNextReadoutRequest(nextReadoutSummary = null, context = {}) {
     if (!nextReadoutSummary || typeof nextReadoutSummary !== "object" || !nextReadoutSummary.id) return null;
     const contextNextReadoutId = pickDefined(
@@ -9649,6 +9773,9 @@
     );
     const usesUdsEcuInfoReadout = nextReadoutSummary.id === "ecu_info_snapshot"
       && (ecuInfoResponseFormat === "uds_read_data_by_identifier" || /\buds\b/i.test(protocolEvidence));
+    const udsReadRequestManifest = usesUdsEcuInfoReadout
+      ? buildUdsReadRequestManifest(nextReadoutSummary, context)
+      : null;
     const dtcStatusReadoutPlan = nextReadoutSummary.id === "dtc_snapshot"
       ? (context.dtcStatusReadoutPlan || context.dtc_status_readout_plan || buildDtcStatusReadoutPlan(context.dtcStatusSummary || context.dtc_status_summary || null))
       : null;
@@ -9668,10 +9795,10 @@
           bridgeIntent: "read_ecu_info",
           serviceMode: "22",
           pid: null,
-          dataIdentifier: null,
+          dataIdentifier: udsReadRequestManifest?.selectedDataIdentifier || null,
           requiresDataIdentifier: true,
-          dataIdentifierConfigured: false,
-          executionBlockReason: "uds_data_identifier_required"
+          dataIdentifierConfigured: udsReadRequestManifest?.selectionStatus === "verified",
+          executionBlockReason: udsReadRequestManifest?.executionBlockReason || "uds_data_identifier_required"
         }
         : { bridgeIntent: "read_ecu_info", serviceMode: "09", pid: null },
       onboard_monitor_snapshot: { bridgeIntent: "read_onboard_monitor", serviceMode: "06", pid: null },
@@ -9709,6 +9836,8 @@
       executionBlockReason: request?.executionBlockReason || null,
       execution_block_reason: request?.executionBlockReason || null,
       executionEnabled: false,
+      udsReadRequestManifest,
+      uds_read_request_manifest: udsReadRequestManifest,
       execution_enabled: false,
       readOnly: true,
       read_only: true,
@@ -9745,6 +9874,72 @@
     const requiresDataIdentifier = pickDefined(input.requiresDataIdentifier, input.requires_data_identifier, false) === true;
     const dataIdentifierConfigured = pickDefined(input.dataIdentifierConfigured, input.data_identifier_configured, false) === true;
     const executionBlockReason = input.executionBlockReason || input.execution_block_reason || null;
+    const udsReadRequestManifestInput = input.udsReadRequestManifest || input.uds_read_request_manifest || null;
+    const requestedDataIdentifiers = normalizeUdsDataIdentifierList(
+      udsReadRequestManifestInput?.requestedDataIdentifiers,
+      udsReadRequestManifestInput?.requested_data_identifiers
+    );
+    const selectedDataIdentifier = normalizeUdsDataIdentifier(
+      udsReadRequestManifestInput?.selectedDataIdentifier || udsReadRequestManifestInput?.selected_data_identifier
+    );
+    const allowedSelectionStatuses = new Set(["missing", "invalid", "unverified", "ambiguous", "ecu_scope_mismatch", "verified"]);
+    const selectionStatusInput = udsReadRequestManifestInput?.selectionStatus || udsReadRequestManifestInput?.selection_status || null;
+    const selectionStatus = allowedSelectionStatuses.has(selectionStatusInput) ? selectionStatusInput : null;
+    const udsManifestTargetEcuInput = udsReadRequestManifestInput?.targetEcu || udsReadRequestManifestInput?.target_ecu || null;
+    const udsManifestTargetEcu = normalizeComparableCanEcuAddress(udsManifestTargetEcuInput) || String(udsManifestTargetEcuInput || "").trim().toUpperCase() || null;
+    const udsManifestCandidateSourceEcuInput = udsReadRequestManifestInput?.candidateSourceEcu || udsReadRequestManifestInput?.candidate_source_ecu || null;
+    const udsManifestCandidateSourceEcu = normalizeComparableCanEcuAddress(udsManifestCandidateSourceEcuInput) || String(udsManifestCandidateSourceEcuInput || "").trim().toUpperCase() || null;
+    const normalizedUdsManifestSelectionStatus = selectionStatus === "verified" && !selectedDataIdentifier ? "invalid" : selectionStatus;
+    const udsManifestExecutionBlockReasonByStatus = {
+      missing: "uds_data_identifier_required",
+      invalid: "uds_data_identifier_invalid",
+      unverified: "uds_data_identifier_not_verified",
+      ambiguous: "uds_data_identifier_ambiguous",
+      ecu_scope_mismatch: "uds_data_identifier_ecu_scope_mismatch",
+      verified: "uds_transport_not_implemented"
+    };
+    const udsManifestResponseWaitMs = normalizeUdsReadRequestTimingMs(udsReadRequestManifestInput?.responseWaitMs ?? udsReadRequestManifestInput?.response_wait_ms);
+    const udsManifestResponsePendingWaitMs = normalizeUdsReadRequestTimingMs(udsReadRequestManifestInput?.responsePendingWaitMs ?? udsReadRequestManifestInput?.response_pending_wait_ms);
+    const udsReadRequestManifest = udsReadRequestManifestInput && typeof udsReadRequestManifestInput === "object"
+      ? {
+        schemaVersion: "uds_read_request_manifest_v1",
+        schema_version: "uds_read_request_manifest_v1",
+        serviceMode: "22",
+        service_mode: "22",
+        requestedDataIdentifiers,
+        requested_data_identifiers: requestedDataIdentifiers,
+        selectedDataIdentifier: normalizedUdsManifestSelectionStatus === "verified" ? selectedDataIdentifier : null,
+        selected_data_identifier: normalizedUdsManifestSelectionStatus === "verified" ? selectedDataIdentifier : null,
+        candidateCount: requestedDataIdentifiers.length,
+        candidate_count: requestedDataIdentifiers.length,
+        verifiedCandidateCount: normalizedUdsManifestSelectionStatus === "verified" ? 1 : 0,
+        verified_candidate_count: normalizedUdsManifestSelectionStatus === "verified" ? 1 : 0,
+        selectionStatus: normalizedUdsManifestSelectionStatus,
+        selection_status: normalizedUdsManifestSelectionStatus,
+        targetEcu: udsManifestTargetEcu,
+        target_ecu: udsManifestTargetEcu,
+        candidateSourceEcu: udsManifestCandidateSourceEcu,
+        candidate_source_ecu: udsManifestCandidateSourceEcu,
+        responseWaitMs: udsManifestResponseWaitMs,
+        response_wait_ms: udsManifestResponseWaitMs,
+        responsePendingWaitMs: udsManifestResponsePendingWaitMs,
+        response_pending_wait_ms: udsManifestResponsePendingWaitMs,
+        timingConfigured: udsManifestResponseWaitMs !== null || udsManifestResponsePendingWaitMs !== null,
+        timing_configured: udsManifestResponseWaitMs !== null || udsManifestResponsePendingWaitMs !== null,
+        executionBlockReason: udsManifestExecutionBlockReasonByStatus[normalizedUdsManifestSelectionStatus] || "uds_data_identifier_invalid",
+        execution_block_reason: udsManifestExecutionBlockReasonByStatus[normalizedUdsManifestSelectionStatus] || "uds_data_identifier_invalid",
+        retainedRawRequest: false,
+        retained_raw_request: false,
+        executionEnabled: false,
+        execution_enabled: false,
+        readOnly: true,
+        read_only: true,
+        wouldTransmit: false,
+        would_transmit: false,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false
+      }
+      : null;
     const executionEnabled = dtcStatusReadoutPlan ? false : pickDefined(input.executionEnabled, input.execution_enabled, false) === true;
     const readOnly = dtcStatusReadoutPlan ? true : pickDefined(input.readOnly, input.read_only, true) !== false;
     const retainedRawText = pickDefined(input.retainedRawText, input.retained_raw_text, false) === true;
@@ -9770,6 +9965,8 @@
       data_identifier_configured: dataIdentifierConfigured,
       executionBlockReason,
       execution_block_reason: executionBlockReason,
+      udsReadRequestManifest,
+      uds_read_request_manifest: udsReadRequestManifest,
       executionEnabled,
       execution_enabled: executionEnabled,
       readOnly,
@@ -12226,6 +12423,20 @@
         pending_response_services: Array.isArray(item.pending_response_services) ? item.pending_response_services : Array.isArray(item.pendingResponseServices) ? item.pendingResponseServices : [],
         pendingResponseCodes: Array.isArray(item.pendingResponseCodes) ? item.pendingResponseCodes : Array.isArray(item.pending_response_codes) ? item.pending_response_codes : [],
         pending_response_codes: Array.isArray(item.pending_response_codes) ? item.pending_response_codes : Array.isArray(item.pendingResponseCodes) ? item.pendingResponseCodes : [],
+        dataIdentifierCandidates: cloneBridgeArrayItems(Array.isArray(item.dataIdentifierCandidates) ? item.dataIdentifierCandidates : Array.isArray(item.data_identifier_candidates) ? item.data_identifier_candidates : []),
+        data_identifier_candidates: cloneBridgeArrayItems(Array.isArray(item.data_identifier_candidates) ? item.data_identifier_candidates : Array.isArray(item.dataIdentifierCandidates) ? item.dataIdentifierCandidates : []),
+        dataIdentifier: pickDefined(item.dataIdentifier, item.data_identifier, null),
+        data_identifier: pickDefined(item.data_identifier, item.dataIdentifier, null),
+        dataIdentifierVerified: pickDefined(item.dataIdentifierVerified, item.data_identifier_verified, false) === true,
+        data_identifier_verified: pickDefined(item.data_identifier_verified, item.dataIdentifierVerified, false) === true,
+        dataIdentifierSourceEcu: pickDefined(item.dataIdentifierSourceEcu, item.data_identifier_source_ecu, null),
+        data_identifier_source_ecu: pickDefined(item.data_identifier_source_ecu, item.dataIdentifierSourceEcu, null),
+        targetEcu: pickDefined(item.targetEcu, item.target_ecu, null),
+        target_ecu: pickDefined(item.target_ecu, item.targetEcu, null),
+        responseWaitMs: normalizeUdsReadRequestTimingMs(pickDefined(item.responseWaitMs, item.response_wait_ms)),
+        response_wait_ms: normalizeUdsReadRequestTimingMs(pickDefined(item.responseWaitMs, item.response_wait_ms)),
+        responsePendingWaitMs: normalizeUdsReadRequestTimingMs(pickDefined(item.responsePendingWaitMs, item.response_pending_wait_ms)),
+        response_pending_wait_ms: normalizeUdsReadRequestTimingMs(pickDefined(item.responsePendingWaitMs, item.response_pending_wait_ms)),
         readOnly: true,
         read_only: true,
         wouldTransmit: false,
@@ -14017,7 +14228,25 @@
       queuePosition: nextReadoutQueueEntry?.position || null,
       isPending: pendingReadoutIds.includes(nextRecommendedReadoutId),
       isMissing: remainingReadoutIds.includes(nextRecommendedReadoutId),
-      isEmpty: emptyReadoutIds.includes(nextRecommendedReadoutId)
+      isEmpty: emptyReadoutIds.includes(nextRecommendedReadoutId),
+      dataIdentifierCandidates: nextReadoutCandidate?.dataIdentifierCandidates || nextReadoutCandidate?.data_identifier_candidates || [],
+      data_identifier_candidates: nextReadoutCandidate?.data_identifier_candidates || nextReadoutCandidate?.dataIdentifierCandidates || [],
+      dataIdentifier: nextReadoutCandidate?.dataIdentifier || nextReadoutCandidate?.data_identifier || null,
+      data_identifier: nextReadoutCandidate?.data_identifier || nextReadoutCandidate?.dataIdentifier || null,
+      dataIdentifierVerified: nextReadoutCandidate?.dataIdentifierVerified === true || nextReadoutCandidate?.data_identifier_verified === true,
+      data_identifier_verified: nextReadoutCandidate?.data_identifier_verified === true || nextReadoutCandidate?.dataIdentifierVerified === true,
+      dataIdentifierSourceEcu: nextReadoutCandidate?.dataIdentifierSourceEcu || nextReadoutCandidate?.data_identifier_source_ecu || null,
+      data_identifier_source_ecu: nextReadoutCandidate?.data_identifier_source_ecu || nextReadoutCandidate?.dataIdentifierSourceEcu || null,
+      targetEcu: nextReadoutCandidate?.targetEcu || nextReadoutCandidate?.target_ecu || null,
+      target_ecu: nextReadoutCandidate?.target_ecu || nextReadoutCandidate?.targetEcu || null,
+      responseWaitMs: normalizeUdsReadRequestTimingMs(nextReadoutCandidate?.responseWaitMs ?? nextReadoutCandidate?.response_wait_ms),
+      response_wait_ms: normalizeUdsReadRequestTimingMs(nextReadoutCandidate?.responseWaitMs ?? nextReadoutCandidate?.response_wait_ms),
+      responsePendingWaitMs: normalizeUdsReadRequestTimingMs(nextReadoutCandidate?.responsePendingWaitMs ?? nextReadoutCandidate?.response_pending_wait_ms),
+      response_pending_wait_ms: normalizeUdsReadRequestTimingMs(nextReadoutCandidate?.responsePendingWaitMs ?? nextReadoutCandidate?.response_pending_wait_ms),
+      diagnosticProtocol: nextReadoutCandidate?.diagnosticProtocol || nextReadoutCandidate?.diagnostic_protocol || null,
+      diagnostic_protocol: nextReadoutCandidate?.diagnostic_protocol || nextReadoutCandidate?.diagnosticProtocol || null,
+      ecuInfoResponseFormat: nextReadoutCandidate?.ecuInfoResponseFormat || nextReadoutCandidate?.ecu_info_response_format || null,
+      ecu_info_response_format: nextReadoutCandidate?.ecu_info_response_format || nextReadoutCandidate?.ecuInfoResponseFormat || null
     } : null;
     const nextReadoutRequest = buildReadOnlyNextReadoutRequest(nextReadoutSummary, readoutRequestContext);
     if (nextReadoutSummary && nextReadoutRequest) {
