@@ -203,6 +203,7 @@ jobs:
             echo "::error title=IPA checksum test failed::A modified IPA passed the original SHA-256"
             exit 1
           fi
+        working-directory: native/ios/VehicleDiagnosisELMHost
 
       - name: Upload unsigned device build for controlled signing
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
