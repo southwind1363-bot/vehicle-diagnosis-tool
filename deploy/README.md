@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.343ではiPhoneのELM327 BLEホストへ「アダプターのみ確認」を追加しました。`ATE0 / ATL0 / ATH1 / ATI / ATDP / ATDPN`だけを許可し、`ATSP0`やMode 01/02/03/04/06/07/09は送信しません。結果は独立した`adapter_preflight`として保存し、車両通信・ECU応答・車種適合の成立には昇格しません。Swiftテスト、Simulator統合、OBD取込、未署名実機IPA生成はmacOS CI Run 798で成功しています。
+3.13.344ではiPhone ELM327の`adapter_preflight`へ証拠範囲を追加しました。`ATDP / ATDPN`は車両で成立したプロトコルではなく「アダプター現在設定」として保存し、アダプター応答確認済み・車両リンク未確認・車種適合未確認をJSON、Web取込、iPhone表示で一貫して保持します。旧JSONは受理しつつ、部分欠落、型違い、未知の証拠種別、矛盾値は拒否します。`ATE0 / ATL0 / ATH1 / ATI / ATDP / ATDPN`だけを許可する境界と車両送信無効は維持し、macOS CI Run 800とDeploy CI Run 1205で成功しています。
 
 3.13.342ではiPhoneでBLE接続後、書込み特性、通知特性、同一サービス内のGATT組合せ数を車両読取前に表示します。一意な1組だけを自動選択し、候補不足、複数候補、サービス分離は手動確認として残します。Swiftテスト、Simulator統合、OBD取込、未署名実機IPA生成はmacOS CIで成功していますが、広告やGATT構成だけではELM327適合や車両通信成功を確定しません。
 
