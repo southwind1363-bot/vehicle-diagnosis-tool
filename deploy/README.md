@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.346ではJ2534登録ドライバーの非実行プリフライトへWindowsの128-bit File ID照合を追加しました。従来のボリューム番号・64-bitファイル索引・サイズ・更新時刻に加え、`GetFileInformationByHandleEx(FileIdInfo)`でハッシュ計算前後の同一性を検証します。x86/x64 fixtureで確認済みですが、ベンダーDLLのロード、J2534 API実行、車両通信はまだ行いません。進捗率は28%のままです。
+
 3.13.345ではiPhone保存JSONの復号を既存Builder検証へ統一しました。通常の`JSONDecoder`でもread-only、安全フラグ、scan/connection/vehicle境界、sequence、マニフェスト、readout profile、adapter evidenceを再検証し、正式な`decodeValidated`取込では復号前に2MB上限も適用します。証拠5項目がない安全な旧JSONと中断記録は維持し、部分証拠、危険フラグ、壊れたJSONは拒否します。車両送信無効は維持し、macOS CI Run 802とDeploy CI Run 1207で成功しています。
 
 3.13.342ではiPhoneでBLE接続後、書込み特性、通知特性、同一サービス内のGATT組合せ数を車両読取前に表示します。一意な1組だけを自動選択し、候補不足、複数候補、サービス分離は手動確認として残します。Swiftテスト、Simulator統合、OBD取込、未署名実機IPA生成はmacOS CIで成功していますが、広告やGATT構成だけではELM327適合や車両通信成功を確定しません。
