@@ -21,9 +21,22 @@ public struct NativeConnectorScanArchive: Codable, Sendable, Equatable {
         case completionManifest = "completion_manifest"
     }
 
-    public init(envelopes: [NativeConnectorEnvelope], completionManifest: NativeConnectorCompletionManifest) {
+    init(envelopes: [NativeConnectorEnvelope], completionManifest: NativeConnectorCompletionManifest) {
         self.envelopes = envelopes
         self.completionManifest = completionManifest
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedEnvelopes = try container.decode([NativeConnectorEnvelope].self, forKey: .envelopes)
+        let decodedManifest = try container.decode(NativeConnectorCompletionManifest.self, forKey: .completionManifest)
+        let builder = NativeConnectorScanArchiveBuilder()
+
+        for envelope in decodedEnvelopes {
+            try builder.append(envelope)
+        }
+        try builder.complete(with: decodedManifest)
+        self = try builder.export()
     }
 }
 

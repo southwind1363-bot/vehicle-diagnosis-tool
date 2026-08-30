@@ -590,6 +590,177 @@ final class NativeConnectorScanArchiveTests: XCTestCase {
         XCTAssertNil(object?["raw_frames"])
     }
 
+    func testValidatedDecodeRoundTripsCompletedAndInterruptedArchives() throws {
+        let completedBuilder = NativeConnectorScanArchiveBuilder()
+        try completedBuilder.append(envelope(sequence: 1))
+        try completedBuilder.append(envelope(sequence: 2, code: "P0171"))
+        try completedBuilder.complete(with: manifest())
+        let completed = try completedBuilder.export()
+
+        XCTAssertEqual(
+            try NativeConnectorScanArchive.decodeValidated(from: JSONEncoder().encode(completed)),
+            completed
+        )
+
+        let interruptedBuilder = NativeConnectorScanArchiveBuilder()
+        let interruption = NativeConnectorInterruption(
+            code: "transport:disconnected",
+            connectionID: context.connectionID,
+            sequence: 0
+        )
+        try interruptedBuilder.complete(with: manifest(
+            state: .interrupted,
+            count: 0,
+            first: nil,
+            last: nil,
+            interruption: interruption
+        ))
+        let interrupted = try interruptedBuilder.export()
+
+        XCTAssertEqual(
+            try NativeConnectorScanArchive.decodeValidated(from: JSONEncoder().encode(interrupted)),
+            interrupted
+        )
+    }
+
+    func testValidatedDecodeAcceptsEvidenceFreeAdapterArchiveForBackwardCompatibility() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "AUTO",
+            protocolNumber: "A0",
+            readoutProfile: .initialDiagnostic
+        ))
+        try builder.complete(with: manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+        let legacy = try builder.export()
+
+        let decoded = try NativeConnectorScanArchive.decodeValidated(from: JSONEncoder().encode(legacy))
+
+        XCTAssertEqual(decoded, legacy)
+        XCTAssertNil(decoded.envelopes[0].data["adapter_evidence_schema_version"])
+    }
+
+    func testValidatedDecodeRetainsInterruptedPreflightEvidence() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: nil,
+            protocolNumber: nil,
+            readoutProfile: .adapterPreflight
+        ))
+        let interruption = NativeConnectorInterruption(
+            code: "transport:response_timeout",
+            connectionID: context.connectionID,
+            sequence: 1
+        )
+        try builder.complete(with: manifest(
+            state: .interrupted,
+            count: 1,
+            first: 1,
+            last: 1,
+            interruption: interruption,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+        let archive = try builder.export()
+
+        let decoded = try NativeConnectorScanArchive.decodeValidated(from: JSONEncoder().encode(archive))
+
+        XCTAssertEqual(decoded, archive)
+        XCTAssertEqual(decoded.envelopes[0].data["adapter_response_confirmed"], .bool(true))
+        XCTAssertEqual(decoded.envelopes[0].data["vehicle_link_checked"], .bool(false))
+        XCTAssertEqual(decoded.envelopes[0].data["vehicle_compatibility_confirmed"], .bool(false))
+    }
+
+    func testValidatedDecodeRejectsPartialAdapterEvidenceAfterJsonDecoding() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(NativeConnectorEnvelopeFactory.adapterIdentity(
+            context: context,
+            sequence: 1,
+            adapterName: "ELM327 v1.5",
+            protocolHint: "AUTO",
+            protocolNumber: "A0",
+            readoutProfile: .adapterPreflight
+        ))
+        try builder.complete(with: manifest(
+            count: 1,
+            first: 1,
+            last: 1,
+            readoutProfile: .adapterPreflight,
+            expectedIntents: ["adapter_identity"],
+            expectedReadouts: ["adapter_identity"]
+        ))
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(builder.export())) as? [String: Any])
+        var envelopes = try XCTUnwrap(object["envelopes"] as? [[String: Any]])
+        var data = try XCTUnwrap(envelopes[0]["data"] as? [String: Any])
+        data.removeValue(forKey: "vehicle_link_checked")
+        envelopes[0]["data"] = data
+        object["envelopes"] = envelopes
+        let partial = try JSONSerialization.data(withJSONObject: object)
+
+        XCTAssertThrowsError(try JSONDecoder().decode(NativeConnectorScanArchive.self, from: partial)) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidManifest)
+        }
+        XCTAssertThrowsError(try NativeConnectorScanArchive.decodeValidated(from: partial)) { error in
+            XCTAssertEqual(
+                error as? NativeConnectorArchiveImportError,
+                .invalidArchive(.invalidManifest)
+            )
+        }
+    }
+
+    func testValidatedDecodeRejectsSemanticViolationsThroughBothEntryPoints() throws {
+        let builder = NativeConnectorScanArchiveBuilder()
+        try builder.append(envelope(sequence: 1))
+        try builder.complete(with: manifest(count: 1, first: 1, last: 1))
+        let encoded = try JSONEncoder().encode(builder.export())
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        var envelopes = try XCTUnwrap(object["envelopes"] as? [[String: Any]])
+        var data = try XCTUnwrap(envelopes[0]["data"] as? [String: Any])
+        data["vehicle_command_enabled"] = true
+        envelopes[0]["data"] = data
+        object["envelopes"] = envelopes
+        let unsafe = try JSONSerialization.data(withJSONObject: object)
+
+        XCTAssertThrowsError(try JSONDecoder().decode(NativeConnectorScanArchive.self, from: unsafe)) { error in
+            XCTAssertEqual(error as? NativeConnectorScanArchiveError, .invalidEnvelope)
+        }
+        XCTAssertThrowsError(try NativeConnectorScanArchive.decodeValidated(from: unsafe)) { error in
+            XCTAssertEqual(
+                error as? NativeConnectorArchiveImportError,
+                .invalidArchive(.invalidEnvelope)
+            )
+        }
+    }
+
+    func testValidatedDecodeRejectsMalformedAndOversizedJsonBeforeUse() {
+        XCTAssertThrowsError(
+            try NativeConnectorScanArchive.decodeValidated(from: Data("{".utf8))
+        ) { error in
+            XCTAssertEqual(error as? NativeConnectorArchiveImportError, .malformedArchive)
+        }
+
+        XCTAssertThrowsError(
+            try NativeConnectorScanArchive.decodeValidated(
+                from: Data(repeating: 0x20, count: NativeConnectorScanArchive.maximumTransferBytes + 1)
+            )
+        ) { error in
+            XCTAssertEqual(error as? NativeConnectorArchiveImportError, .archiveTooLarge)
+        }
+    }
+
     func testRejectsArchiveExportBeyondTheOfflineImportLimit() {
         let base = envelope(sequence: 1)
         let oversizedEnvelope = NativeConnectorEnvelope(
