@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.359では`uds_read_request_manifest_v1`へ`uds_read_transport_plan_v1`を接続しました。明示されたISO-TP、CAN/CAN FD、要求・応答ECU、応答待機時間を個別に正規化し、transport未指定、未対応network、ECU不足・不一致、待機時間未設定を個別理由で遮断します。全条件が揃っても実transportアダプター未実装として送信・実行は無効で、rawフレームやコマンド列は保持しません。JSON往復後も計画を安全フィールドだけで再構築し、UDS/CAN FDソフト進捗を46%へ更新しました。
+
 3.13.358ではUDS ReadDataByIdentifierの次読取計画へ`uds_read_request_manifest_v1`を追加しました。明示されたDID候補、確認状態、対象ECU、明示待機時間だけを保持し、単一の確認済みDIDだけを選択します。未確認、無効、複数候補、ECU不一致は個別理由で遮断し、確認済みでも実transport未実装として実行不可です。コマンド列とraw要求は保持せず、JSON往復後も全送信・実行フラグをfalseに維持し、UDS/CAN FDソフト進捗を42%へ更新しました。
 
 3.13.357ではraw UDS ReadDataByIdentifier応答へ要求DID一覧、応答先頭DID、payload長、境界判定を値と分離したuds_did_response_evidence_v1として追加しました。複数DID要求と要求DID不一致ではpayloadを先頭DIDの値と推測せずunparsedに留め、raw payloadやVINを証跡へ保存しません。従来の単一DID取込、ECU/プロトコル/NRC、JSON往復、送信無効を維持し、UDS/CAN FDソフト進捗を38%へ更新しました。

@@ -9615,6 +9615,107 @@
     return Number.isSafeInteger(numeric) && numeric >= 0 && numeric <= 600000 ? numeric : null;
   }
 
+  function normalizeUdsReadTransportProtocol(value) {
+    const text = String(value || "").trim().toUpperCase().replace(/[\s_-]+/g, "");
+    return ["ISOTP", "ISO157652"].includes(text) ? "ISO-TP" : null;
+  }
+
+  function normalizeUdsReadNetworkProtocol(value) {
+    const text = String(value || "").trim().toUpperCase().replace(/[\s_-]+/g, "");
+    if (text === "CAN") return "CAN";
+    return text === "CANFD" ? "CAN FD" : null;
+  }
+
+  function buildUdsReadTransportPlan(summary = {}, context = {}, state = {}) {
+    const protocolProvenance = mergeProtocolProvenance(summary, summary.protocolProvenance, summary.protocol_provenance, context, context.protocolProvenance, context.protocol_provenance);
+    const transportProtocolInput = pickPresent(summary.transportProtocol, summary.transport_protocol, summary.requestedTransportProtocol, summary.requested_transport_protocol, protocolProvenance.transportProtocol, context.transportProtocol, context.transport_protocol, null);
+    const networkProtocolInput = pickPresent(summary.networkProtocol, summary.network_protocol, summary.requestedNetworkProtocol, summary.requested_network_protocol, protocolProvenance.networkProtocol, context.networkProtocol, context.network_protocol, null);
+    const requestedTransportProtocol = normalizeProtocolProvenanceValue(transportProtocolInput);
+    const requestedNetworkProtocol = normalizeProtocolProvenanceValue(networkProtocolInput);
+    const transportProtocol = normalizeUdsReadTransportProtocol(transportProtocolInput);
+    const networkProtocol = normalizeUdsReadNetworkProtocol(networkProtocolInput);
+    const targetEcu = state.targetEcu || null;
+    const responseEcu = state.responseEcu || null;
+    const comparableTargetEcu = normalizeComparableCanEcuAddress(targetEcu);
+    const comparableResponseEcu = normalizeComparableCanEcuAddress(responseEcu);
+    const ecuPairMatch = Boolean(targetEcu && responseEcu && (
+      comparableTargetEcu && comparableResponseEcu
+        ? isComparableCanEcuAddressMatch(comparableTargetEcu, comparableResponseEcu)
+        : targetEcu === responseEcu
+    ));
+    const responseWaitMs = normalizeUdsReadRequestTimingMs(state.responseWaitMs);
+    const responsePendingWaitMs = normalizeUdsReadRequestTimingMs(state.responsePendingWaitMs);
+    const transportStatus = !requestedTransportProtocol ? "missing" : transportProtocol ? "configured" : "unsupported";
+    const networkStatus = !requestedNetworkProtocol ? "missing" : networkProtocol ? "configured" : "unsupported";
+    const addressingStatus = targetEcu && responseEcu ? ecuPairMatch ? "matched" : "mismatch" : targetEcu || responseEcu ? "partial" : "missing";
+    const timingStatus = responseWaitMs === null ? "missing" : "configured";
+    const blocker = state.selectionStatus !== "verified"
+      ? "uds_request_not_ready"
+      : transportStatus === "missing"
+        ? "uds_transport_protocol_required"
+        : transportStatus === "unsupported"
+          ? "uds_transport_protocol_unsupported"
+          : networkStatus === "missing"
+            ? "uds_network_protocol_required"
+            : networkStatus === "unsupported"
+              ? "uds_network_protocol_unsupported"
+              : !targetEcu
+                ? "uds_transport_target_ecu_required"
+                : !responseEcu
+                  ? "uds_transport_response_ecu_required"
+                  : !ecuPairMatch
+                    ? "uds_transport_ecu_pair_mismatch"
+                    : timingStatus === "missing"
+                      ? "uds_transport_timing_required"
+                      : "uds_transport_adapter_not_implemented";
+    const planningReady = blocker === "uds_transport_adapter_not_implemented";
+    return {
+      schemaVersion: "uds_read_transport_plan_v1",
+      schema_version: "uds_read_transport_plan_v1",
+      requestedTransportProtocol,
+      requested_transport_protocol: requestedTransportProtocol,
+      transportProtocol,
+      transport_protocol: transportProtocol,
+      transportStatus,
+      transport_status: transportStatus,
+      requestedNetworkProtocol,
+      requested_network_protocol: requestedNetworkProtocol,
+      networkProtocol,
+      network_protocol: networkProtocol,
+      networkStatus,
+      network_status: networkStatus,
+      targetEcu,
+      target_ecu: targetEcu,
+      responseEcu,
+      response_ecu: responseEcu,
+      addressingStatus,
+      addressing_status: addressingStatus,
+      ecuPairMatch,
+      ecu_pair_match: ecuPairMatch,
+      responseWaitMs,
+      response_wait_ms: responseWaitMs,
+      responsePendingWaitMs,
+      response_pending_wait_ms: responsePendingWaitMs,
+      timingStatus,
+      timing_status: timingStatus,
+      planningReady,
+      planning_ready: planningReady,
+      executionBlockReason: blocker,
+      execution_block_reason: blocker,
+      adapterImplemented: false,
+      adapter_implemented: false,
+      retainedRawFrames: false,
+      retained_raw_frames: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
   function buildUdsReadRequestManifest(summary = {}, context = {}) {
     const directDataIdentifier = pickDefined(summary.dataIdentifier, summary.data_identifier, null);
     const summaryCandidates = Array.isArray(summary.dataIdentifierCandidates)
@@ -9694,6 +9795,16 @@
     const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(summary.responseWaitMs, summary.response_wait_ms, context.responseWaitMs, context.response_wait_ms));
     const responsePendingWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(summary.responsePendingWaitMs, summary.response_pending_wait_ms, context.responsePendingWaitMs, context.response_pending_wait_ms));
     const selectedDataIdentifier = selectionStatus === "verified" ? selectedCandidate.dataIdentifier : null;
+    const udsReadTransportPlan = buildUdsReadTransportPlan(summary, context, {
+      selectionStatus,
+      targetEcu,
+      responseEcu: selectedCandidate?.sourceEcu || null,
+      responseWaitMs,
+      responsePendingWaitMs
+    });
+    const executionBlockReason = selectionStatus === "verified"
+      ? udsReadTransportPlan.executionBlockReason
+      : executionBlockReasonByStatus[selectionStatus];
     return {
       schemaVersion: "uds_read_request_manifest_v1",
       schema_version: "uds_read_request_manifest_v1",
@@ -9717,10 +9828,14 @@
       response_wait_ms: responseWaitMs,
       responsePendingWaitMs,
       response_pending_wait_ms: responsePendingWaitMs,
-      timingConfigured: responseWaitMs !== null || responsePendingWaitMs !== null,
-      timing_configured: responseWaitMs !== null || responsePendingWaitMs !== null,
-      executionBlockReason: executionBlockReasonByStatus[selectionStatus],
-      execution_block_reason: executionBlockReasonByStatus[selectionStatus],
+      timingConfigured: responseWaitMs !== null,
+      timing_configured: responseWaitMs !== null,
+      udsReadTransportPlan,
+      uds_read_transport_plan: udsReadTransportPlan,
+      transportPlanningReady: udsReadTransportPlan.planningReady,
+      transport_planning_ready: udsReadTransportPlan.planningReady,
+      executionBlockReason,
+      execution_block_reason: executionBlockReason,
       retainedRawRequest: false,
       retained_raw_request: false,
       executionEnabled: false,
@@ -9900,6 +10015,17 @@
     };
     const udsManifestResponseWaitMs = normalizeUdsReadRequestTimingMs(udsReadRequestManifestInput?.responseWaitMs ?? udsReadRequestManifestInput?.response_wait_ms);
     const udsManifestResponsePendingWaitMs = normalizeUdsReadRequestTimingMs(udsReadRequestManifestInput?.responsePendingWaitMs ?? udsReadRequestManifestInput?.response_pending_wait_ms);
+    const udsReadTransportPlanInput = udsReadRequestManifestInput?.udsReadTransportPlan || udsReadRequestManifestInput?.uds_read_transport_plan || {};
+    const normalizedUdsReadTransportPlan = buildUdsReadTransportPlan(udsReadTransportPlanInput, {}, {
+      selectionStatus: normalizedUdsManifestSelectionStatus,
+      targetEcu: udsManifestTargetEcu,
+      responseEcu: udsManifestCandidateSourceEcu,
+      responseWaitMs: udsManifestResponseWaitMs,
+      responsePendingWaitMs: udsManifestResponsePendingWaitMs
+    });
+    const normalizedUdsManifestExecutionBlockReason = normalizedUdsManifestSelectionStatus === "verified"
+      ? normalizedUdsReadTransportPlan.executionBlockReason
+      : udsManifestExecutionBlockReasonByStatus[normalizedUdsManifestSelectionStatus] || "uds_data_identifier_invalid";
     const udsReadRequestManifest = udsReadRequestManifestInput && typeof udsReadRequestManifestInput === "object"
       ? {
         schemaVersion: "uds_read_request_manifest_v1",
@@ -9924,10 +10050,14 @@
         response_wait_ms: udsManifestResponseWaitMs,
         responsePendingWaitMs: udsManifestResponsePendingWaitMs,
         response_pending_wait_ms: udsManifestResponsePendingWaitMs,
-        timingConfigured: udsManifestResponseWaitMs !== null || udsManifestResponsePendingWaitMs !== null,
-        timing_configured: udsManifestResponseWaitMs !== null || udsManifestResponsePendingWaitMs !== null,
-        executionBlockReason: udsManifestExecutionBlockReasonByStatus[normalizedUdsManifestSelectionStatus] || "uds_data_identifier_invalid",
-        execution_block_reason: udsManifestExecutionBlockReasonByStatus[normalizedUdsManifestSelectionStatus] || "uds_data_identifier_invalid",
+        timingConfigured: udsManifestResponseWaitMs !== null,
+        timing_configured: udsManifestResponseWaitMs !== null,
+        udsReadTransportPlan: normalizedUdsReadTransportPlan,
+        uds_read_transport_plan: normalizedUdsReadTransportPlan,
+        transportPlanningReady: normalizedUdsReadTransportPlan.planningReady,
+        transport_planning_ready: normalizedUdsReadTransportPlan.planningReady,
+        executionBlockReason: normalizedUdsManifestExecutionBlockReason,
+        execution_block_reason: normalizedUdsManifestExecutionBlockReason,
         retainedRawRequest: false,
         retained_raw_request: false,
         executionEnabled: false,
@@ -9940,11 +10070,12 @@
         vehicle_command_enabled: false
       }
       : null;
-    const executionEnabled = dtcStatusReadoutPlan ? false : pickDefined(input.executionEnabled, input.execution_enabled, false) === true;
-    const readOnly = dtcStatusReadoutPlan ? true : pickDefined(input.readOnly, input.read_only, true) !== false;
+    const hasUdsReadRequestManifest = Boolean(udsReadRequestManifest);
+    const executionEnabled = dtcStatusReadoutPlan || hasUdsReadRequestManifest ? false : pickDefined(input.executionEnabled, input.execution_enabled, false) === true;
+    const readOnly = dtcStatusReadoutPlan || hasUdsReadRequestManifest ? true : pickDefined(input.readOnly, input.read_only, true) !== false;
     const retainedRawText = pickDefined(input.retainedRawText, input.retained_raw_text, false) === true;
-    const wouldTransmit = dtcStatusReadoutPlan ? false : pickDefined(input.wouldTransmit, input.would_transmit, false) === true;
-    const vehicleCommandEnabled = dtcStatusReadoutPlan ? false : pickDefined(input.vehicleCommandEnabled, input.vehicle_command_enabled, false) === true;
+    const wouldTransmit = dtcStatusReadoutPlan || hasUdsReadRequestManifest ? false : pickDefined(input.wouldTransmit, input.would_transmit, false) === true;
+    const vehicleCommandEnabled = dtcStatusReadoutPlan || hasUdsReadRequestManifest ? false : pickDefined(input.vehicleCommandEnabled, input.vehicle_command_enabled, false) === true;
     return {
       ...input,
       readoutId,
@@ -9963,8 +10094,8 @@
       requires_data_identifier: requiresDataIdentifier,
       dataIdentifierConfigured,
       data_identifier_configured: dataIdentifierConfigured,
-      executionBlockReason,
-      execution_block_reason: executionBlockReason,
+      executionBlockReason: udsReadRequestManifest?.executionBlockReason || executionBlockReason,
+      execution_block_reason: udsReadRequestManifest?.executionBlockReason || executionBlockReason,
       udsReadRequestManifest,
       uds_read_request_manifest: udsReadRequestManifest,
       executionEnabled,
@@ -12437,6 +12568,10 @@
         response_wait_ms: normalizeUdsReadRequestTimingMs(pickDefined(item.responseWaitMs, item.response_wait_ms)),
         responsePendingWaitMs: normalizeUdsReadRequestTimingMs(pickDefined(item.responsePendingWaitMs, item.response_pending_wait_ms)),
         response_pending_wait_ms: normalizeUdsReadRequestTimingMs(pickDefined(item.responsePendingWaitMs, item.response_pending_wait_ms)),
+        transportProtocol: normalizeProtocolProvenanceValue(pickDefined(item.transportProtocol, item.transport_protocol, item.protocolProvenance?.transportProtocol, item.protocol_provenance?.transport_protocol, null)),
+        transport_protocol: normalizeProtocolProvenanceValue(pickDefined(item.transport_protocol, item.transportProtocol, item.protocol_provenance?.transport_protocol, item.protocolProvenance?.transportProtocol, null)),
+        networkProtocol: normalizeProtocolProvenanceValue(pickDefined(item.networkProtocol, item.network_protocol, item.protocolProvenance?.networkProtocol, item.protocol_provenance?.network_protocol, null)),
+        network_protocol: normalizeProtocolProvenanceValue(pickDefined(item.network_protocol, item.networkProtocol, item.protocol_provenance?.network_protocol, item.protocolProvenance?.networkProtocol, null)),
         readOnly: true,
         read_only: true,
         wouldTransmit: false,
@@ -14243,6 +14378,10 @@
       response_wait_ms: normalizeUdsReadRequestTimingMs(nextReadoutCandidate?.responseWaitMs ?? nextReadoutCandidate?.response_wait_ms),
       responsePendingWaitMs: normalizeUdsReadRequestTimingMs(nextReadoutCandidate?.responsePendingWaitMs ?? nextReadoutCandidate?.response_pending_wait_ms),
       response_pending_wait_ms: normalizeUdsReadRequestTimingMs(nextReadoutCandidate?.responsePendingWaitMs ?? nextReadoutCandidate?.response_pending_wait_ms),
+      transportProtocol: nextReadoutCandidate?.transportProtocol || nextReadoutCandidate?.transport_protocol || null,
+      transport_protocol: nextReadoutCandidate?.transport_protocol || nextReadoutCandidate?.transportProtocol || null,
+      networkProtocol: nextReadoutCandidate?.networkProtocol || nextReadoutCandidate?.network_protocol || null,
+      network_protocol: nextReadoutCandidate?.network_protocol || nextReadoutCandidate?.networkProtocol || null,
       diagnosticProtocol: nextReadoutCandidate?.diagnosticProtocol || nextReadoutCandidate?.diagnostic_protocol || null,
       diagnostic_protocol: nextReadoutCandidate?.diagnostic_protocol || nextReadoutCandidate?.diagnosticProtocol || null,
       ecuInfoResponseFormat: nextReadoutCandidate?.ecuInfoResponseFormat || nextReadoutCandidate?.ecu_info_response_format || null,

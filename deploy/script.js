@@ -197,9 +197,9 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q3 見込み"
   }),
   uds_canfd: Object.freeze({
-    progressPercent: 42,
-    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、複数DID非推測証跡、検証済みDID要求マニフェストまで実装済み。実 transport は未実装。",
-    nextBuild: "CAN / CAN FD transportの非実行アダプター契約へ要求マニフェストを接続し、応答待機結果を同じ証跡へ統合する。",
+    progressPercent: 46,
+    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、複数DID非推測証跡、検証済みDID要求マニフェスト、ISO-TP/CAN/CAN FD非実行transport計画まで実装済み。実transportアダプターは未実装。",
+    nextBuild: "ローカルブリッジのCAN / CAN FDアダプター境界へ計画を接続し、明示的な応答試行結果を同じ証跡へ統合する。",
     etaTarget: "2026-Q4 見込み"
   }),
   doip: Object.freeze({
@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7224件",
+  validationCheckLabel: "OBD安全検証 7228件",
   bridgeValidationCheckLabel: "bridge検証 361件",
-  recentMilestone: "確認済みUDS DIDの非実行要求マニフェストを統合",
+  recentMilestone: "UDS要求をISO-TP/CAN/CAN FD非実行transport計画へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.358";
+const APP_VERSION = "3.13.359";
 const APP_LAST_UPDATED = "2026-08-31";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
