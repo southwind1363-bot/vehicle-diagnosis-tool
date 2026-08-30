@@ -93,12 +93,12 @@ No worker executable, fixture DLL, or vendor driver is shipped or production-wir
 2. The static verifier now has an internal callback that keeps its verified file
    handle and Global mutex through generated-fixture Open/ReadVersion/Close.
    The packaged worker does not supply that callback and loads no vendor DLL.
-3. The packaged non-executing preflight persists a fail-closed quarantine latch.
-   The generated native-fixture supervisor now requires explicit trial approval,
-   revalidates pinned files immediately before start, applies its deadline, and
-   records uncertain cleanup in the same latch. Connect this supervisor to the
-   verified-handle/Global-mutex fixture worker next. Public raw DLL paths remain
-   rejected.
+3. The generated verified-identity supervisor now requires explicit trial
+   approval, revalidates pinned files immediately before start, strictly matches
+   nonce/device responses, retains the verified handle and Global mutex through
+   identity completion, applies its deadline, and persists uncertain cleanup.
+   Define the registered-driver identity request/response boundary next. Public
+   raw DLL paths remain rejected.
 4. Review driver provenance, actual adapter behavior, user authorization, and
    test conditions before a real Open/ReadVersion/Close trial.
 5. Add vehicle-channel operations separately with their own verified protocol,

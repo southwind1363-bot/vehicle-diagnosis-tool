@@ -6,7 +6,12 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { buildJ2534NativeFixture } from "./native/build-j2534-native-fixture.js";
-import { createJ2534NativeFixtureSupervisor, parseJ2534NativeFixtureOutput } from "./j2534-native-fixture-supervisor.js";
+import {
+  createJ2534NativeFixtureSupervisor,
+  createJ2534VerifiedIdentityFixtureSupervisor,
+  parseJ2534NativeFixtureOutput,
+  parseJ2534VerifiedIdentityFixtureOutput
+} from "./j2534-native-fixture-supervisor.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -264,18 +269,117 @@ async function main() {
       assert.equal(verifiedResponse.vehicle_communication, false);
       assert.equal(verifiedResponse.vehicle_command_enabled, false);
       total += 15;
-      const heldRun = execute(verifiedIdentityWorker, verifiedArgs("hold"));
-      await new Promise(resolve => setTimeout(resolve, 300));
-      const blockedDuringIdentity = await execute(mutexFixture, ["probe"]);
-      assert.equal(blockedDuringIdentity.error?.code, 3, "Global mutex was not held through identity lifecycle");
-      assert.equal(blockedDuringIdentity.stdout.trim(), "busy");
-      const heldResponse = await heldRun;
-      assert.equal(heldResponse.error, null, `Held identity fixture failed (${platform.name}): ${heldResponse.stdout}${heldResponse.stderr}`);
-      assert.equal(JSON.parse(heldResponse.stdout).verified_file_handle_status, "held_through_identity_lifecycle");
-      const releasedAfterIdentity = await execute(mutexFixture, ["probe"]);
-      assert.equal(releasedAfterIdentity.error, null, "Global mutex was not released after identity lifecycle");
-      assert.equal(releasedAfterIdentity.stdout.trim(), "acquired");
-      total += 7;
+      const verifiedSupervisorDescriptor = {
+        temp_root: directory,
+        architecture: platform.name,
+        worker: {
+          path: verifiedIdentityWorker,
+          sha256: createHash("sha256").update(fs.readFileSync(verifiedIdentityWorker)).digest("hex")
+        },
+        fixture: { path: path.join(platformDirectory, "success.dll"), ...verifiedDescriptor }
+      };
+      const verifiedQuarantineDirectory = fs.mkdtempSync(path.join(tempRoot,
+        "vehicle-j2534-quarantine-verified-" + platform.name + "-"));
+      try {
+        const verifiedQuarantineStore = createJ2534NativeQuarantineStore(verifiedQuarantineDirectory);
+        for (const controls of [null, [], { unknown: true }, { quarantineStore: {} }, { requireTrialConfirmation: "true" }])
+          assert.throws(() => createJ2534VerifiedIdentityFixtureSupervisor(verifiedSupervisorDescriptor, controls),
+            /verified_identity_supervisor_controls_invalid/);
+        assert.throws(() => createJ2534VerifiedIdentityFixtureSupervisor({
+          ...verifiedSupervisorDescriptor, worker: { ...verifiedSupervisorDescriptor.worker, path: verifiedIdentityWorker + ".other" }
+        }), /verified_identity_descriptor_invalid/);
+        total += 6;
+        const verifiedSupervisor = createJ2534VerifiedIdentityFixtureSupervisor(verifiedSupervisorDescriptor, {
+          quarantineStore: verifiedQuarantineStore, requireTrialConfirmation: true
+        });
+        const request = scenario => ({
+          mode: "verified_identity_fixture", scenario,
+          request_nonce: "supervised-" + platform.name + "-nonce",
+          selected_device_id: "supervised-device-" + platform.name,
+          interactive_trial_confirmation: true
+        });
+        const confirmationMissing = await verifiedSupervisor.run({
+          ...request("success"), interactive_trial_confirmation: undefined
+        });
+        assert.equal(confirmationMissing.execution_status, "request_blocked");
+        assert.deepEqual(confirmationMissing.errors, ["native_identity_trial_confirmation_required"]);
+        assert.equal(confirmationMissing.worker_started, false);
+        const originalSystemRoot = process.env.SystemRoot;
+        const originalWindir = process.env.WINDIR;
+        delete process.env.SystemRoot; delete process.env.WINDIR;
+        let supervisedSuccess;
+        try { supervisedSuccess = await verifiedSupervisor.run(request("success")); }
+        finally {
+          if (originalSystemRoot !== undefined) process.env.SystemRoot = originalSystemRoot;
+          if (originalWindir !== undefined) process.env.WINDIR = originalWindir;
+        }
+        assert.equal(supervisedSuccess.execution_status, "worker_completed");
+        assert.equal(supervisedSuccess.verified_identity_execution_confirmed, true);
+        assert.equal(supervisedSuccess.fixture_cleanup_status, "confirmed");
+        assert.equal(supervisedSuccess.result.request_nonce, request("success").request_nonce);
+        assert.equal(supervisedSuccess.result.selected_device_id, request("success").selected_device_id);
+        assert.equal(supervisedSuccess.result.global_mutex_status, "held_for_identity_lifecycle");
+        assert.equal(supervisedSuccess.result.verified_file_handle_status, "held_through_identity_lifecycle");
+        assert.equal(supervisedSuccess.vendor_dll_executed, false);
+        assert.equal(supervisedSuccess.vehicle_communication, false);
+        assert.equal(supervisedSuccess.vehicle_command_enabled, false);
+        assert.equal(verifiedQuarantineStore.read().quarantined, false);
+        const parserContext = {
+          architecture: platform.name, scenario: "success",
+          request_nonce: request("success").request_nonce, selected_device_id: request("success").selected_device_id
+        };
+        const encodedVerified = JSON.stringify(supervisedSuccess.result);
+        for (const mutate of [
+          value => { value.request_nonce = "different-nonce"; },
+          value => { value.global_mutex_status = "released"; },
+          value => { value.vehicle_command_enabled = true; },
+          value => { value.private_library_path = "C:/forbidden/vendor.dll"; }
+        ]) {
+          const invalid = JSON.parse(encodedVerified); mutate(invalid);
+          assert.equal(parseJ2534VerifiedIdentityFixtureOutput(JSON.stringify(invalid), parserContext), null);
+        }
+        const heldRun = verifiedSupervisor.run({ ...request("hold"), timeout_ms: 3000 });
+        await new Promise(resolve => setTimeout(resolve, 300));
+        const busy = await verifiedSupervisor.run(request("success"));
+        assert.equal(busy.execution_status, "worker_busy");
+        const blockedDuringIdentity = await execute(mutexFixture, ["probe"]);
+        assert.equal(blockedDuringIdentity.error?.code, 3, "Global mutex was not held through supervised identity lifecycle");
+        assert.equal(blockedDuringIdentity.stdout.trim(), "busy");
+        const heldResponse = await heldRun;
+        assert.equal(heldResponse.execution_status, "worker_completed");
+        assert.equal(heldResponse.fixture_cleanup_status, "confirmed");
+        assert.equal(heldResponse.result.verified_file_handle_status, "held_through_identity_lifecycle");
+        const releasedAfterIdentity = await execute(mutexFixture, ["probe"]);
+        assert.equal(releasedAfterIdentity.error, null, "Global mutex was not released after supervised identity lifecycle");
+        assert.equal(releasedAfterIdentity.stdout.trim(), "acquired");
+        const fixturePath = verifiedSupervisorDescriptor.fixture.path;
+        const fixtureOriginal = fs.readFileSync(fixturePath);
+        const fixtureChanged = Buffer.from(fixtureOriginal); fixtureChanged[fixtureChanged.length - 1] ^= 1;
+        fs.writeFileSync(fixturePath, fixtureChanged);
+        const changedDescriptor = await verifiedSupervisor.run(request("success"));
+        assert.equal(changedDescriptor.execution_status, "worker_failed");
+        assert.deepEqual(changedDescriptor.errors, ["worker_spawn_failed"]);
+        assert.equal(changedDescriptor.worker_started, false);
+        fs.writeFileSync(fixturePath, fixtureOriginal);
+        const timedOut = await verifiedSupervisor.run({ ...request("hold"), timeout_ms: 1000 });
+        assert.equal(timedOut.execution_status, "worker_timed_out");
+        assert.equal(timedOut.fixture_cleanup_status, "unconfirmed");
+        assert.equal(timedOut.worker_exited, true);
+        assert.equal(verifiedQuarantineStore.read().reason, "cleanup_unconfirmed");
+        const recreated = createJ2534VerifiedIdentityFixtureSupervisor(verifiedSupervisorDescriptor, {
+          quarantineStore: createJ2534NativeQuarantineStore(verifiedQuarantineDirectory), requireTrialConfirmation: true
+        });
+        const quarantined = await recreated.run(request("success"));
+        assert.equal(quarantined.execution_status, "worker_quarantined");
+        assert.deepEqual(quarantined.errors, ["native_identity_quarantine_not_clear"]);
+        assert.equal(quarantined.worker_started, false);
+        total += 40;
+      } finally {
+        const entries = fs.readdirSync(verifiedQuarantineDirectory);
+        assert.ok(entries.every(name => name === "j2534-native-quarantine-v1.json"));
+        for (const name of entries) fs.unlinkSync(path.join(verifiedQuarantineDirectory, name));
+        fs.rmdirSync(verifiedQuarantineDirectory);
+      }
       const runPreflight = async (scenario, fileName = "success.dll", expectedSize = null) => {
         const expected = fileName === "oversized.dll"
           ? { sha256: "0".repeat(64), size: 1 }
