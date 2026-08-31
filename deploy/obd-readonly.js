@@ -906,11 +906,12 @@
     Object.freeze({
       intent: "read_ecu_info",
       label: "ECU information snapshot",
-      dataShape: Object.freeze(["protocol", "values", "ecu_info_ecu_snapshots", "captured_at"]),
+      dataShape: Object.freeze(["protocol", "values", "ecu_info_ecu_snapshots", "uds_read_adapter_completion_manifest", "captured_at"]),
       safeDefault: Object.freeze({
         protocol: null,
         values: Object.freeze([]),
         ecu_info_ecu_snapshots: Object.freeze([]),
+        uds_read_adapter_completion_manifest: null,
         captured_at: null
       })
     }),
@@ -9525,6 +9526,8 @@
         network_protocol: ecuInfoSnapshot?.network_protocol || ecuInfoSnapshot?.networkProtocol || null
       });
     }
+    const udsReadAdapterCompletionManifest = normalizeUdsReadAdapterCompletionManifest(ecuInfoSnapshot?.udsReadAdapterCompletionManifest || ecuInfoSnapshot?.uds_read_adapter_completion_manifest || null);
+    const udsReadAdapterCompletionManifestInvalid = ecuInfoSnapshot?.udsReadAdapterCompletionManifestInvalid === true || ecuInfoSnapshot?.uds_read_adapter_completion_manifest_invalid === true;
     const ecuInfoAdapterAttemptOutcomes = ecuInfoEcuSnapshots.filter((snapshot) =>
       Boolean(normalizeUdsReadAttemptStatus(snapshot?.udsReadAttemptStatus || snapshot?.uds_read_attempt_status || null))
     );
@@ -9533,7 +9536,15 @@
         const targetAddress = snapshot?.targetEcu || snapshot?.target_ecu || null;
         const expectedResponseAddress = snapshot?.expectedResponseEcu || snapshot?.expected_response_ecu || null;
         const responseCount = Number(snapshot?.responseCount ?? snapshot?.response_count);
-        return targetAddress && expectedResponseAddress
+        const readoutAttemptId = normalizeUdsReadoutAttemptId(snapshot?.readoutAttemptId || snapshot?.readout_attempt_id || null);
+        const manifestMatches = !udsReadAdapterCompletionManifest
+          || (readoutAttemptId === udsReadAdapterCompletionManifest.readoutAttemptId
+            && normalizeUdsReadAttemptStatus(snapshot?.udsReadAttemptStatus || snapshot?.uds_read_attempt_status) === udsReadAdapterCompletionManifest.status
+            && targetAddress === udsReadAdapterCompletionManifest.targetEcu
+            && expectedResponseAddress === udsReadAdapterCompletionManifest.expectedResponseEcu
+            && responseCount === udsReadAdapterCompletionManifest.responseCount
+            && normalizeUdsReadRequestTimingMs(snapshot?.responseWaitMs ?? snapshot?.response_wait_ms) === udsReadAdapterCompletionManifest.responseWaitMs);
+        return !udsReadAdapterCompletionManifestInvalid && manifestMatches && targetAddress && expectedResponseAddress
           && isUdsRequestResponseEcuMatch(targetAddress, expectedResponseAddress)
           && responseCount === 0
           && normalizeUdsReadRequestTimingMs(snapshot?.responseWaitMs ?? snapshot?.response_wait_ms) !== null;
@@ -9569,11 +9580,16 @@
       const matchedResponseWaitMs = matchedAdapterAttempt
         ? normalizeUdsReadRequestTimingMs(matchedAdapterAttempt.responseWaitMs ?? matchedAdapterAttempt.response_wait_ms)
         : null;
+      const matchedReadoutAttemptId = matchedAdapterAttempt
+        ? normalizeUdsReadoutAttemptId(matchedAdapterAttempt.readoutAttemptId || matchedAdapterAttempt.readout_attempt_id || null)
+        : null;
       const udsReadResponseAttemptEvidence = matchedAdapterAttempt && statusDetail ? {
         evidencePresent: true,
         evidence_present: true,
         status: attemptStatus,
         attempted: true,
+        readoutAttemptId: matchedReadoutAttemptId,
+        readout_attempt_id: matchedReadoutAttemptId,
         responseCount: 0,
         response_count: 0,
         responseWaitMs: matchedResponseWaitMs,
@@ -9599,6 +9615,8 @@
         expected_response_ecu: matchedExpectedResponseEcu,
         targetEcu: matchedTargetEcu,
         target_ecu: matchedTargetEcu,
+        readoutAttemptId: matchedReadoutAttemptId,
+        readout_attempt_id: matchedReadoutAttemptId,
         responseWaitMs: matchedResponseWaitMs,
         response_wait_ms: matchedResponseWaitMs,
         udsReadResponseAttemptEvidence,
@@ -9764,7 +9782,59 @@
     const status = String(value || "").trim().toLowerCase();
     return ["timeout", "transport_error", "cancelled"].includes(status) ? status : null;
   }
-  function normalizeUdsReadTransportProtocol(value) {
+  function normalizeUdsReadoutAttemptId(value) {
+    const text = String(value || "").trim();
+    return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/.test(text) ? text : null;
+  }
+  function normalizeUdsReadAdapterCompletionManifest(input = null) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const readoutAttemptId = normalizeUdsReadoutAttemptId(pickDefined(input.readoutAttemptId, input.readout_attempt_id));
+    const status = normalizeUdsReadAttemptStatus(pickDefined(input.status, input.udsReadAttemptStatus, input.uds_read_attempt_status));
+    const targetEcu = normalizeUdsCanEndpointAddress(pickDefined(input.targetEcu, input.target_ecu));
+    const expectedResponseEcu = normalizeUdsCanEndpointAddress(pickDefined(input.expectedResponseEcu, input.expected_response_ecu));
+    const responseCount = Number(pickDefined(input.responseCount, input.response_count));
+    const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(input.responseWaitMs, input.response_wait_ms));
+    const forbiddenKeys = new Set(["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "command", "commands"]);
+    const retainsForbiddenData = (value) => value && typeof value === "object" && Object.entries(value).some(([key, child]) => forbiddenKeys.has(key.toLowerCase()) || retainsForbiddenData(child));
+    if (input.schema_version !== "uds_read_adapter_completion_manifest_v1"
+      || input.record_type !== "uds_read_adapter_completion" || input.bridge_intent !== "read_ecu_info"
+      || !readoutAttemptId || !status || !targetEcu || !expectedResponseEcu || !isUdsRequestResponseEcuMatch(targetEcu, expectedResponseEcu)
+      || responseCount !== 0 || responseWaitMs === null || responseWaitMs < 50 || responseWaitMs > 120000
+      || retainsForbiddenData(input)
+      || input.read_only !== true || input.execution_enabled !== false || input.would_transmit !== false || input.vehicle_command_enabled !== false) return null;
+    return {
+      schemaVersion: "uds_read_adapter_completion_manifest_v1",
+      schema_version: "uds_read_adapter_completion_manifest_v1",
+      recordType: "uds_read_adapter_completion",
+      record_type: "uds_read_adapter_completion",
+      bridgeIntent: "read_ecu_info",
+      bridge_intent: "read_ecu_info",
+      readoutAttemptId,
+      readout_attempt_id: readoutAttemptId,
+      status,
+      targetEcu,
+      target_ecu: targetEcu,
+      expectedResponseEcu,
+      expected_response_ecu: expectedResponseEcu,
+      responseCount: 0,
+      response_count: 0,
+      responseWaitMs,
+      response_wait_ms: responseWaitMs,
+      terminal: true,
+      retainedRawFrames: false,
+      retained_raw_frames: false,
+      retainedRawResponse: false,
+      retained_raw_response: false,
+      readOnly: true,
+      read_only: true,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }  function normalizeUdsReadTransportProtocol(value) {
     const text = String(value || "").trim().toUpperCase().replace(/[\s_-]+/g, "");
     return ["ISOTP", "ISO157652"].includes(text) ? "ISO-TP" : null;
   }
@@ -9825,6 +9895,9 @@
     const allowedStatuses = new Set(["not_attempted", "response_received", "negative_response", "pending", "timeout", "transport_error", "cancelled"]);
     const requestedStatus = String(pickDefined(source.status, source.attemptStatus, source.attempt_status, evidencePresent ? "invalid" : "not_attempted") || "").trim().toLowerCase();
     const status = allowedStatuses.has(requestedStatus) ? requestedStatus : "invalid";
+    const readoutAttemptIdInput = pickDefined(source.readoutAttemptId, source.readout_attempt_id);
+    const readoutAttemptId = normalizeUdsReadoutAttemptId(readoutAttemptIdInput);
+    const readoutAttemptIdValid = readoutAttemptIdInput === undefined || readoutAttemptIdInput === null || readoutAttemptIdInput === "" || Boolean(readoutAttemptId);
     const attempted = status !== "not_attempted" && status !== "invalid";
     const attemptedFlagMatches = pickDefined(source.attempted, source.attempt_started, attempted) === attempted;
     const responseCountInput = Number(pickDefined(source.responseCount, source.response_count, 0));
@@ -9833,7 +9906,7 @@
     const responseReceived = ["response_received", "negative_response", "pending"].includes(status);
     const responseCountMatches = responseReceived ? responseCount > 0 : responseCount === 0;
     const presenceMatchesStatus = evidencePresent || status === "not_attempted";
-    const evidenceValid = status !== "invalid" && presenceMatchesStatus && attemptedFlagMatches && responseCountMatches && (!attempted || responseWaitMs !== null);
+    const evidenceValid = status !== "invalid" && presenceMatchesStatus && attemptedFlagMatches && readoutAttemptIdValid && responseCountMatches && (!attempted || responseWaitMs !== null);
     return {
       schemaVersion: "uds_read_response_attempt_evidence_v1",
       schema_version: "uds_read_response_attempt_evidence_v1",
@@ -9841,6 +9914,8 @@
       evidence_present: evidencePresent,
       status,
       attempted,
+      readoutAttemptId,
+      readout_attempt_id: readoutAttemptId,
       responseReceived,
       response_received: responseReceived,
       responseCount,
@@ -9984,6 +10059,8 @@
       evidence_status: evidenceStatus,
       evidenceAccepted,
       evidence_accepted: evidenceAccepted,
+      readoutAttemptId: responseEvidence.readoutAttemptId || responseEvidence.readout_attempt_id || null,
+      readout_attempt_id: responseEvidence.readoutAttemptId || responseEvidence.readout_attempt_id || null,
       terminal: lifecycle.terminal,
       responseReceived,
       response_received: responseReceived,
@@ -10237,6 +10314,8 @@
       schema_version: "read_only_next_readout_request_v1",
       readoutId: nextReadoutSummary.id,
       readout_id: nextReadoutSummary.id,
+      readoutAttemptId: normalizeUdsReadoutAttemptId(pickDefined(nextReadoutSummary.readoutAttemptId, nextReadoutSummary.readout_attempt_id, null)),
+      readout_attempt_id: normalizeUdsReadoutAttemptId(pickDefined(nextReadoutSummary.readoutAttemptId, nextReadoutSummary.readout_attempt_id, null)),
       label: nextReadoutSummary.label || nextReadoutSummary.id,
       status: nextReadoutSummary.status || null,
       statusReason,
@@ -10278,6 +10357,7 @@
   function normalizeReadoutRequestSummaryAliases(input = null, fallbackDtcStatusReadoutPlan = null) {
     if (!input || typeof input !== "object") return input || null;
     const readoutId = input.readoutId || input.readout_id || input.id || null;
+    const readoutAttemptId = normalizeUdsReadoutAttemptId(pickDefined(input.readoutAttemptId, input.readout_attempt_id, null));
     const dtcStatusReadoutPlan = readoutId === "dtc_snapshot"
       ? (fallbackDtcStatusReadoutPlan || input.dtcStatusReadoutPlan || input.dtc_status_readout_plan || null)
       : null;
@@ -10400,6 +10480,8 @@
       ...input,
       readoutId,
       readout_id: readoutId,
+      readoutAttemptId,
+      readout_attempt_id: readoutAttemptId,
       bridgeIntent,
       bridge_intent: bridgeIntent,
       serviceMode,
@@ -10465,6 +10547,16 @@
       id: readoutId,
       readoutId,
       readout_id: readoutId,
+      readoutAttemptId: readoutRequest.readoutAttemptId || readoutRequest.readout_attempt_id || null,
+      readout_attempt_id: readoutRequest.readoutAttemptId || readoutRequest.readout_attempt_id || null,
+      targetEcu: readoutRequest.targetEcu || readoutRequest.target_ecu || null,
+      target_ecu: readoutRequest.targetEcu || readoutRequest.target_ecu || null,
+      expectedResponseEcu: readoutRequest.expectedResponseEcu || readoutRequest.expected_response_ecu || null,
+      expected_response_ecu: readoutRequest.expectedResponseEcu || readoutRequest.expected_response_ecu || null,
+      responseWaitMs: normalizeUdsReadRequestTimingMs(pickDefined(readoutRequest.responseWaitMs, readoutRequest.response_wait_ms)),
+      response_wait_ms: normalizeUdsReadRequestTimingMs(pickDefined(readoutRequest.responseWaitMs, readoutRequest.response_wait_ms)),
+      udsReadResponseAttemptEvidence: readoutRequest.udsReadResponseAttemptEvidence || readoutRequest.uds_read_response_attempt_evidence || null,
+      uds_read_response_attempt_evidence: readoutRequest.udsReadResponseAttemptEvidence || readoutRequest.uds_read_response_attempt_evidence || null,
       label,
       status,
       statusReason,
@@ -12884,6 +12976,10 @@
         data_identifier_source_ecu: pickDefined(item.data_identifier_source_ecu, item.dataIdentifierSourceEcu, null),
         targetEcu: pickDefined(item.targetEcu, item.target_ecu, null),
         target_ecu: pickDefined(item.target_ecu, item.targetEcu, null),
+        expectedResponseEcu: pickDefined(item.expectedResponseEcu, item.expected_response_ecu, null),
+        expected_response_ecu: pickDefined(item.expected_response_ecu, item.expectedResponseEcu, null),
+        readoutAttemptId: normalizeUdsReadoutAttemptId(pickDefined(item.readoutAttemptId, item.readout_attempt_id, null)),
+        readout_attempt_id: normalizeUdsReadoutAttemptId(pickDefined(item.readoutAttemptId, item.readout_attempt_id, null)),
         responseWaitMs: normalizeUdsReadRequestTimingMs(pickDefined(item.responseWaitMs, item.response_wait_ms)),
         response_wait_ms: normalizeUdsReadRequestTimingMs(pickDefined(item.responseWaitMs, item.response_wait_ms)),
         responsePendingWaitMs: normalizeUdsReadRequestTimingMs(pickDefined(item.responsePendingWaitMs, item.response_pending_wait_ms)),
@@ -31451,6 +31547,8 @@
         had_sensitive_identifier: input.data.hadSensitiveIdentifier === true || input.data.had_sensitive_identifier === true || input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true
       }
       : input && typeof input === "object" ? input : {};
+    const udsReadAdapterCompletionManifestInputProvided = Object.prototype.hasOwnProperty.call(sourceInput, "udsReadAdapterCompletionManifest") || Object.prototype.hasOwnProperty.call(sourceInput, "uds_read_adapter_completion_manifest");
+    const udsReadAdapterCompletionManifest = normalizeUdsReadAdapterCompletionManifest(sourceInput.udsReadAdapterCompletionManifest || sourceInput.uds_read_adapter_completion_manifest || null);
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
@@ -31548,6 +31646,7 @@
       const negativeResponseCode = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code);
       const targetEcu = normalizeUdsCanEndpointAddress(snapshot.targetEcu || snapshot.target_ecu || snapshot.requestEcu || snapshot.request_ecu || null);
       const udsReadAttemptStatus = normalizeUdsReadAttemptStatus(snapshot.udsReadAttemptStatus || snapshot.uds_read_attempt_status || snapshot.attemptStatus || snapshot.attempt_status || null);
+      const readoutAttemptId = normalizeUdsReadoutAttemptId(snapshot.readoutAttemptId || snapshot.readout_attempt_id || null);
       const responseCountInput = Number(pickDefined(snapshot.responseCount, snapshot.response_count));
       const responseCount = Number.isSafeInteger(responseCountInput)
         && responseCountInput >= (udsReadAttemptStatus ? 0 : 1)
@@ -31584,6 +31683,8 @@
         response_wait_ms: responseWaitMs,
         udsReadAttemptStatus,
         uds_read_attempt_status: udsReadAttemptStatus,
+        readoutAttemptId,
+        readout_attempt_id: readoutAttemptId,
         udsDidResponseEvidence,
         uds_did_response_evidence: udsDidResponseEvidence,
         errorCodes: snapshotErrorCodes,
@@ -31855,6 +31956,10 @@
       ecu_info_negative_response_code: ecuInfoNegativeResponseCode,
       udsDidResponseEvidence,
       uds_did_response_evidence: udsDidResponseEvidence,
+      udsReadAdapterCompletionManifest,
+      uds_read_adapter_completion_manifest: udsReadAdapterCompletionManifest,
+      udsReadAdapterCompletionManifestInvalid: udsReadAdapterCompletionManifestInputProvided && !udsReadAdapterCompletionManifest,
+      uds_read_adapter_completion_manifest_invalid: udsReadAdapterCompletionManifestInputProvided && !udsReadAdapterCompletionManifest,
       udsDidPositiveResponseMatchEvidence,
       uds_did_positive_response_match_evidence: udsDidPositiveResponseMatchEvidence,
       udsReadResponseAttemptEvidence,

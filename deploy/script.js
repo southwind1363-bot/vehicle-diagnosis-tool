@@ -197,9 +197,9 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q3 見込み"
   }),
   uds_canfd: Object.freeze({
-    progressPercent: 66,
-    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、DID要求マニフェスト、ISO-TP/CAN/CAN FD計画、bridge ECU範囲一致、positive応答、timeout、transport error、cancelledの非実行ライフサイクルまで実装済み。実transportアダプターは未実装。",
-    nextBuild: "実adapterが返す完了manifestをread_ecu_info bridge契約へ接続し、attempt IDとECU範囲を保ったまま同じread-only lifecycleへ取り込む。",
+    progressPercent: 70,
+    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、DID要求マニフェスト、bridge ECU範囲一致、terminal adapter completion manifest、attempt ID付き非実行ライフサイクルまで実装済み。実transportアダプターは未実装。",
+    nextBuild: "実adapterのpositive/negative応答完了manifestをDID・source ECU・attempt IDと照合し、同じread-only lifecycleへ取り込む。",
     etaTarget: "2026-Q4 見込み"
   }),
   doip: Object.freeze({
@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7247件",
-  bridgeValidationCheckLabel: "bridge検証 365件",
-  recentMilestone: "ECU-scoped UDS adapter失敗証跡をresponse lifecycleへ統合",
+  validationCheckLabel: "OBD安全検証 7252件",
+  bridgeValidationCheckLabel: "bridge検証 369件",
+  recentMilestone: "UDS adapter完了manifestとattempt IDをread_ecu_infoへ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.364";
+const APP_VERSION = "3.13.365";
 const APP_LAST_UPDATED = "2026-08-31";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

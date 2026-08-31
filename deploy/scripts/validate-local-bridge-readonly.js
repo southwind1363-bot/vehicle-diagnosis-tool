@@ -1,4 +1,4 @@
-import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
+import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, normalizeUdsReadAdapterCompletionManifest, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { createJ2534IdentityPreflightOperationController } from "./j2534-identity-preflight-operation.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
@@ -12,6 +12,21 @@ const failures = [];
 let checks = 0;
 const token = "local-bridge-test-token";
 const server = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", enableSampleReadouts: true });
+const udsTimeoutCompletionManifest = {
+  schema_version: "uds_read_adapter_completion_manifest_v1",
+  record_type: "uds_read_adapter_completion",
+  bridge_intent: "read_ecu_info",
+  readout_attempt_id: "uds-attempt-001",
+  status: "timeout",
+  target_ecu: "7E0",
+  expected_response_ecu: "7E8",
+  response_count: 0,
+  response_wait_ms: 1500,
+  read_only: true,
+  execution_enabled: false,
+  would_transmit: false,
+  vehicle_command_enabled: false
+};
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "package.json"), "utf8"));
 const localBridgeSource = fs.readFileSync(path.join(scriptDir, "..", "local-bridge-readonly.js"), "utf8");
@@ -44,6 +59,8 @@ check(packageManifest.scripts?.["review:j2534-worker"] === "node scripts/j2534-r
 check(localBridgeSource.includes("normalizeUdsCanEndpointAddress(outcome?.target_ecu || outcome?.targetEcu || null)") && localBridgeSource.includes("outcome?.response_count") && localBridgeSource.includes("outcome?.response_wait_ms"), "ECU information bridge outcomes must retain only bounded target and response-attempt metadata");
 check(localBridgeSource.includes('function normalizeUdsReadAttemptStatus(value)') && localBridgeSource.includes('["timeout", "transport_error", "cancelled"].includes(status)') && localBridgeSource.includes("outcome.expected_response_ecu || outcome.expectedResponseEcu"), "ECU information bridge outcomes must distinguish bounded expected-response scope for no-response adapter states");
 check(localBridgeSource.includes("...(sourceEcu ? { source_ecu: sourceEcu } : {})") && localBridgeSource.includes("responseCount >= (udsReadAttemptStatus ? 0 : 1)") && localBridgeSource.includes("...(udsReadAttemptStatus ? { uds_read_attempt_status: udsReadAttemptStatus } : {})"), "No-response adapter outcomes must allow only a zero response count without fabricating a source ECU");
+check(normalizeUdsReadAdapterCompletionManifest(udsTimeoutCompletionManifest)?.readout_attempt_id === "uds-attempt-001" && normalizeUdsReadAdapterCompletionManifest(udsTimeoutCompletionManifest)?.terminal === true, "UDS adapter completion manifest must retain a bounded readout attempt and terminal read-only outcome");
+check(normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, expected_response_ecu: "7E9" }) === null && normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, raw_frames: ["reject"] }) === null && normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, vehicle_command_enabled: true }) === null, "UDS adapter completion manifest must reject mismatched ECU scope, raw frames, and vehicle commands");
 check(packageManifest.scripts?.["review:j2534-host"] === "node scripts/review-j2534-host.js" && j2534HostReviewSource.includes('discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true })') && j2534HostReviewSource.includes('manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review")') && j2534HostReviewSource.includes('runJ2534WorkerReview(devices,') && j2534HostReviewSource.includes('timeout_ms: 5000'), "J2534 host review CLI must derive drivers from static discovery and require manual confirmation");
 const blockedJ2534WorkerReview = reviewJ2534PassThruOpenRequest({
   operation: "review_pass_thru_open",
@@ -334,6 +351,16 @@ try {
     await new Promise((resolve) => disabledSampleServer.close(resolve));
   }
 
+  const completionServer = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", udsReadAdapterCompletionManifest: udsTimeoutCompletionManifest });
+  const completionPort = await new Promise((resolve) => completionServer.listen(0, "127.0.0.1", () => resolve(completionServer.address().port)));
+  try {
+    const completionReadout = await post(completionPort, "read_ecu_info");
+    const completionSnapshot = completionReadout.data.ecu_info_ecu_snapshots?.[0];
+    check(completionReadout.ok === false && completionReadout.would_transmit === false && completionReadout.data.uds_read_adapter_completion_manifest?.readout_attempt_id === "uds-attempt-001" && completionReadout.data.readout_ecu_ids?.length === 0, "read_ecu_info must expose the adapter completion manifest without claiming a responding source ECU");
+    check(completionSnapshot?.source_ecu === undefined && completionSnapshot?.expected_response_ecu === "7E8" && completionSnapshot?.target_ecu === "7E0" && completionSnapshot?.readout_attempt_id === "uds-attempt-001" && completionSnapshot?.uds_read_attempt_status === "timeout" && completionSnapshot?.response_count === 0 && completionSnapshot?.vehicle_command_enabled === false, "read_ecu_info completion outcome must retain attempt and ECU scope with zero responses and no fabricated source ECU");
+  } finally {
+    await new Promise((resolve) => completionServer.close(resolve));
+  }
   const preflight = await fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "OPTIONS",
     headers: { Origin: "http://127.0.0.1:3001", "Access-Control-Request-Method": "POST" }

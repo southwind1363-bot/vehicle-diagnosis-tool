@@ -213,6 +213,64 @@ function normalizeUdsReadAttemptStatus(value) {
   const status = String(value || "").trim().toLowerCase();
   return ["timeout", "transport_error", "cancelled"].includes(status) ? status : null;
 }
+function isUdsRequestResponseEcuPair(targetEcu, responseEcu) {
+  if (/^7E[0-7]$/.test(targetEcu) && /^7E[89A-F]$/.test(responseEcu)) return Number.parseInt(responseEcu, 16) === Number.parseInt(targetEcu, 16) + 8;
+  return /^18DA[0-9A-F]{4}$/.test(targetEcu) && /^18DA[0-9A-F]{4}$/.test(responseEcu)
+    && targetEcu.slice(4, 6) === responseEcu.slice(6, 8)
+    && targetEcu.slice(6, 8) === responseEcu.slice(4, 6);
+}
+function normalizeReadoutAttemptId(value) {
+  const text = String(value || "").trim();
+  return /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/.test(text) ? text : null;
+}
+export function normalizeUdsReadAdapterCompletionManifest(input = null) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const readoutAttemptId = normalizeReadoutAttemptId(input.readout_attempt_id || input.readoutAttemptId);
+  const status = normalizeUdsReadAttemptStatus(input.status || input.uds_read_attempt_status || input.udsReadAttemptStatus);
+  const targetEcu = normalizeUdsCanEndpointAddress(input.target_ecu || input.targetEcu);
+  const expectedResponseEcu = normalizeUdsCanEndpointAddress(input.expected_response_ecu || input.expectedResponseEcu);
+  const responseCount = Number(input.response_count ?? input.responseCount);
+  const responseWaitMs = Number(input.response_wait_ms ?? input.responseWaitMs);
+  const forbiddenKeys = new Set(["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "command", "commands"]);
+  const retainsForbiddenData = (value) => value && typeof value === "object" && Object.entries(value).some(([key, child]) => forbiddenKeys.has(key.toLowerCase()) || retainsForbiddenData(child));
+  if (input.schema_version !== "uds_read_adapter_completion_manifest_v1"
+    || input.record_type !== "uds_read_adapter_completion"
+    || input.bridge_intent !== "read_ecu_info"
+    || !readoutAttemptId || !status || !targetEcu || !expectedResponseEcu || !isUdsRequestResponseEcuPair(targetEcu, expectedResponseEcu)
+    || responseCount !== 0 || !Number.isSafeInteger(responseWaitMs) || responseWaitMs < 50 || responseWaitMs > 120000
+    || retainsForbiddenData(input)
+    || input.read_only !== true || input.execution_enabled !== false || input.would_transmit !== false || input.vehicle_command_enabled !== false) return null;
+  return {
+    schema_version: "uds_read_adapter_completion_manifest_v1",
+    record_type: "uds_read_adapter_completion",
+    bridge_intent: "read_ecu_info",
+    readout_attempt_id: readoutAttemptId,
+    status,
+    target_ecu: targetEcu,
+    expected_response_ecu: expectedResponseEcu,
+    response_count: 0,
+    response_wait_ms: responseWaitMs,
+    terminal: true,
+    retained_raw_frames: false,
+    retained_raw_response: false,
+    read_only: true,
+    execution_enabled: false,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  };
+}
+function buildUdsReadAdapterCompletionOutcome(manifest) {
+  return manifest ? {
+    expected_response_ecu: manifest.expected_response_ecu,
+    target_ecu: manifest.target_ecu,
+    ecu_info_readout_status: "unparsed",
+    uds_read_attempt_status: manifest.status,
+    readout_attempt_id: manifest.readout_attempt_id,
+    response_count: manifest.response_count,
+    response_wait_ms: manifest.response_wait_ms,
+    error_codes: [`uds_adapter_${manifest.status}`]
+  } : null;
+}
 function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
   const rowsByEcu = new Map();
   (Array.isArray(values) ? values : []).forEach((item) => {
@@ -247,6 +305,7 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
       const expectedResponseEcu = normalizeUdsCanEndpointAddress(outcome?.expected_response_ecu || outcome?.expectedResponseEcu || null);
       const targetEcu = normalizeUdsCanEndpointAddress(outcome?.target_ecu || outcome?.targetEcu || null);
       const udsReadAttemptStatus = normalizeUdsReadAttemptStatus(outcome?.uds_read_attempt_status || outcome?.udsReadAttemptStatus || outcome?.attempt_status || outcome?.attemptStatus || null);
+      const readoutAttemptId = normalizeReadoutAttemptId(outcome?.readout_attempt_id || outcome?.readoutAttemptId || null);
       const responseCount = Number(outcome?.response_count ?? outcome?.responseCount);
       const responseCountValid = Number.isSafeInteger(responseCount)
         && responseCount >= (udsReadAttemptStatus ? 0 : 1)
@@ -262,6 +321,7 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
         ...(outcome?.ecu_info_negative_response_code ? { ecu_info_negative_response_code: outcome.ecu_info_negative_response_code } : {}),
         ...(targetEcu ? { target_ecu: targetEcu } : {}),
         ...(udsReadAttemptStatus ? { uds_read_attempt_status: udsReadAttemptStatus } : {}),
+        ...(readoutAttemptId ? { readout_attempt_id: readoutAttemptId } : {}),
         ...(responseCountValid ? { response_count: responseCount } : {}),
         ...(Number.isFinite(outcome?.response_wait_ms) && outcome.response_wait_ms >= 50 && outcome.response_wait_ms <= 120000 ? { response_wait_ms: Math.round(outcome.response_wait_ms) } : {}),
         ...(outcome?.error_codes?.length ? { error_codes: outcome.error_codes } : {}),
@@ -454,6 +514,7 @@ export function createLocalBridgeApp(options = {}) {
   const pairingToken = String(options.pairingToken || process.env.LOCAL_BRIDGE_PAIRING_TOKEN || "");
   const bridgeVersion = options.bridgeVersion || "readonly-dev-0.1.0";
   const replaySnapshot = buildReplaySnapshot(options);
+  const udsReadAdapterCompletionManifest = normalizeUdsReadAdapterCompletionManifest(options.udsReadAdapterCompletionManifest || options.uds_read_adapter_completion_manifest || null);
   const replayMode = Boolean(replaySnapshot);
   const sampleReadoutsEnabled = options.enableSampleReadouts === true;
   const j2534DiscoveryRequested = typeof options.j2534RegistryText === "string"
@@ -511,7 +572,7 @@ export function createLocalBridgeApp(options = {}) {
       return;
     }
 
-    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment, sampleReadoutsEnabled));
+    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment, sampleReadoutsEnabled, udsReadAdapterCompletionManifest));
   });
 }
 
@@ -537,7 +598,7 @@ function isReadinessSnapshotRequest(request = {}) {
     || (request.intent === "read_live_pid_snapshot" && (readoutId === "readiness_snapshot" || requestedPid === "01"));
 }
 
-function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices), sampleReadoutsEnabled = false) {
+function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices), sampleReadoutsEnabled = false, udsReadAdapterCompletionManifest = null) {
   const replayMode = Boolean(replaySnapshot);
   const discoveryMode = !replayMode && j2534DiscoveryRequested;
   const driverDetected = discoveryMode && discoveredVciDevices.length > 0;
@@ -661,6 +722,24 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     };
   }
 
+  if (!replayMode && request.intent === "read_ecu_info" && udsReadAdapterCompletionManifest) {
+    const completionOutcome = buildUdsReadAdapterCompletionOutcome(udsReadAdapterCompletionManifest);
+    const ecuInfoEcuSnapshots = buildEcuInfoEcuSnapshots([], [completionOutcome]);
+    return {
+      ...base,
+      ok: false,
+      errors: [`uds_adapter_${udsReadAdapterCompletionManifest.status}`],
+      data: {
+        protocol: "ISO15765-4-adapter-completion",
+        values: [],
+        readout_ecu_ids: [],
+        ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
+        uds_read_adapter_completion_manifest: udsReadAdapterCompletionManifest,
+        vehicle_command_enabled: false
+      }
+    };
+  }
+
   if (!replayMode && !sampleReadoutsEnabled) {
     return {
       ...base,
@@ -774,15 +853,17 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
     const replayError = replaySnapshot.readoutErrors?.ecu_info
       || (replaySnapshot.readoutObserved?.ecu_info ? null : "replay_ecu_info_not_observed");
     const ecuInfo = sanitizeEcuInfoValuesForBrowser(replaySnapshot.ecuInfoValues);
-    const ecuInfoEcuSnapshots = buildEcuInfoEcuSnapshots(ecuInfo.values, replaySnapshot.ecuInfoEcuOutcomes);
+    const completionOutcome = buildUdsReadAdapterCompletionOutcome(udsReadAdapterCompletionManifest);
+    const ecuInfoEcuSnapshots = buildEcuInfoEcuSnapshots(ecuInfo.values, [...(replaySnapshot.ecuInfoEcuOutcomes || []), ...(completionOutcome ? [completionOutcome] : [])]);
     return {
       ...base,
       ...(replayError ? { ok: false, errors: [replayError] } : {}),
       data: {
         protocol: replaySnapshot.protocol,
         values: ecuInfo.values,
-        readout_ecu_ids: ecuInfoEcuSnapshots.map((item) => item.source_ecu),
+        readout_ecu_ids: ecuInfoEcuSnapshots.map((item) => item.source_ecu).filter(Boolean),
         ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
+        ...(udsReadAdapterCompletionManifest ? { uds_read_adapter_completion_manifest: udsReadAdapterCompletionManifest } : {}),
         ...(ecuInfo.hadSensitiveIdentifier ? { had_sensitive_identifier: true } : {})
       }
     };
@@ -796,7 +877,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
       data: {
         protocol: "ISO15765-4",
         values: ecuInfo.values,
-        readout_ecu_ids: ecuInfoEcuSnapshots.map((item) => item.source_ecu),
+        readout_ecu_ids: ecuInfoEcuSnapshots.map((item) => item.source_ecu).filter(Boolean),
         ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
         ...(ecuInfo.hadSensitiveIdentifier ? { had_sensitive_identifier: true } : {})
       }
