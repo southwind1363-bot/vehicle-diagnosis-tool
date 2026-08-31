@@ -1,4 +1,4 @@
-import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, buildUdsReadAdapterCompletionManifest, normalizeUdsReadAdapterCompletionManifest, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
+import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createJ2534ProductionIdentityBoundUdsFixtureBoundary, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, buildUdsReadAdapterCompletionManifest, normalizeUdsReadAdapterCompletionManifest, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { createJ2534IdentityPreflightOperationController } from "./j2534-identity-preflight-operation.js";
 import { J2534_WORKER_CONTRACT_VERSION, buildJ2534UdsTransportResult, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
@@ -709,6 +709,31 @@ const fixtureDeviceId = parsedJ2534Drivers[0].id;
   check(productionRejected.status === "rejected" && productionRejected.operation === null
     && productionRejected.readiness.identity_probe_execution_enabled === false
     && productionCloneRejected.blockers.includes("identity_preflight_operation_not_issued"), "J2534 production preflight operation did not fail closed without a live registered descriptor");
+  let productionFixtureRuns = 0;
+  const productionUdsBoundary = createJ2534ProductionIdentityBoundUdsFixtureBoundary(Object.freeze({
+    fixture_only: true,
+    run: async () => { productionFixtureRuns += 1; throw new Error("production fixture must not run"); }
+  }));
+  const forgedProductionPreparation = await productionUdsBoundary.prepare(Object.freeze({
+    preflight_operation_status: "completed", selected_device_id: "j2534-0000000000000000",
+    native_preflight_verified_in_operation: true, package_integrity_verified_in_operation: true,
+    authenticode_verified_in_operation: true, identity_probe_execution_enabled: false,
+    dll_load_attempted: false, pass_thru_open_allowed: false, vehicle_communication_started: false,
+    vehicle_command_enabled: false
+  }), Object.freeze({
+    mode: "prepare_uds_transport_adapter", target_ecu: "7E0",
+    expected_response_ecu: "7E8", requested_data_identifier: "F189"
+  }));
+  check(forgedProductionPreparation.preparation_status === "blocked"
+    && forgedProductionPreparation.blockers.includes("j2534_identity_preflight_not_verified")
+    && forgedProductionPreparation.adapter_request === null
+    && productionUdsBoundary.createAttemptController(forgedProductionPreparation.adapter_request) === null
+    && productionFixtureRuns === 0 && forgedProductionPreparation.vehicle_command_enabled === false,
+  "J2534 production UDS boundary accepted a forged public identity snapshot or reached the fixture worker");
+  let productionTransportRejected = false;
+  try { createJ2534ProductionIdentityBoundUdsFixtureBoundary(Object.freeze({ fixture_only: false, run: async () => ({}) })); }
+  catch (error) { productionTransportRejected = error?.message === "j2534_uds_transport_adapter_dependencies_invalid"; }
+  check(productionTransportRejected, "J2534 production UDS boundary accepted a non-fixture transport supervisor");
   const j2534PeFixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle-diagnosis-j2534-"));
   try {
     const x86LibraryPath = path.join(j2534PeFixtureDir, "j2534-x86.dll");

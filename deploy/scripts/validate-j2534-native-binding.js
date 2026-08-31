@@ -17,6 +17,7 @@ import {
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { createJ2534UdsReadoutAttemptController } from "./j2534-uds-readout-attempt-controller.js";
 import { createJ2534UdsTransportAdapterRequestBoundary } from "./j2534-uds-transport-adapter-request.js";
+import { buildUdsReadAdapterCompletionManifest } from "../local-bridge-readonly.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
@@ -533,7 +534,7 @@ async function main() {
       const udsTransportSupervisor = createJ2534UdsTransportFixtureSupervisor(udsTransportDescriptor);
       assert.throws(() => createJ2534UdsTransportFixtureSupervisor({ ...udsTransportDescriptor, temp_root: platformDirectory }),
         /uds_transport_fixture_descriptor_invalid/);
-      assert.throws(() => createJ2534UdsReadoutAttemptController({ selected_device_id: "invalid device", transport_supervisor: udsTransportSupervisor }),
+      assert.throws(() => createJ2534UdsReadoutAttemptController({ selected_device_id: "invalid device", transport_supervisor: udsTransportSupervisor, build_completion_manifest: buildUdsReadAdapterCompletionManifest }),
         /j2534_uds_attempt_controller_invalid/);
       total += 2;
       const fixtureContext = (scenario, overrides = {}) => {
@@ -551,7 +552,8 @@ async function main() {
       };
       const attemptController = createJ2534UdsReadoutAttemptController({
         selected_device_id: `j2534-fixture-${platform.name}`,
-        transport_supervisor: udsTransportSupervisor
+        transport_supervisor: udsTransportSupervisor,
+        build_completion_manifest: buildUdsReadAdapterCompletionManifest
       });
       const attemptRequest = scenario => ({
         mode: "uds_readout_attempt", scenario,
@@ -584,7 +586,8 @@ async function main() {
             operation_nonce: "must-not-leak"
           };
         },
-        transport_supervisor: udsTransportSupervisor
+        transport_supervisor: udsTransportSupervisor,
+        build_completion_manifest: buildUdsReadAdapterCompletionManifest
       });
       const adapterPreparationRequest = {
         mode: "prepare_uds_transport_adapter", target_ecu: "7E0",
@@ -635,7 +638,8 @@ async function main() {
       assert.equal(hostilePreparation.adapter_request, null);
       const throwingBoundary = createJ2534UdsTransportAdapterRequestBoundary({
         run_identity_preflight: async () => { throw new Error("preflight failed"); },
-        transport_supervisor: udsTransportSupervisor
+        transport_supervisor: udsTransportSupervisor,
+        build_completion_manifest: buildUdsReadAdapterCompletionManifest
       });
       const thrownPreparation = await throwingBoundary.prepare(Object.freeze({}), adapterPreparationRequest);
       assert.deepEqual(thrownPreparation.blockers, ["j2534_identity_preflight_failed"]);
@@ -752,7 +756,8 @@ async function main() {
             const supervised = await udsTransportSupervisor.run(request);
             mutate(supervised.result);
             return supervised;
-          } }
+          } },
+          build_completion_manifest: buildUdsReadAdapterCompletionManifest
         });
         const rejected = await rejectingController.run(attemptRequest("positive"));
         assert.equal(rejected.completion_manifest, null);
@@ -772,7 +777,8 @@ async function main() {
       let releaseDelayed;
       const delayedController = createJ2534UdsReadoutAttemptController({
         selected_device_id: `j2534-fixture-${platform.name}`,
-        transport_supervisor: { run: () => new Promise(resolve => { releaseDelayed = resolve; }) }
+        transport_supervisor: { run: () => new Promise(resolve => { releaseDelayed = resolve; }) },
+        build_completion_manifest: buildUdsReadAdapterCompletionManifest
       });
       const delayedAttempt = delayedController.run(attemptRequest("positive"));
       await new Promise(resolve => setTimeout(resolve, 20));

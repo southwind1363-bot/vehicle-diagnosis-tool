@@ -8,7 +8,7 @@ import { validateWorkstationAssets } from "./workstation-assets.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 
 const deployDirectory = fileURLToPath(new URL("../", import.meta.url));
-const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js"];
+const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js"];
 
 function exists(entry) {
   try { fs.lstatSync(entry); return true; } catch (error) { if (error.code === "ENOENT") return false; throw error; }

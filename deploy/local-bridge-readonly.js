@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runJ2534NativePreflight } from "./scripts/j2534-registered-driver-native-preflight.js";
+import { createJ2534UdsTransportAdapterRequestBoundary } from "./scripts/j2534-uds-transport-adapter-request.js";
 import { verifyWorkstationPackage } from "./scripts/verify-workstation-package.js";
 
 const DEFAULT_PORT = 8765;
@@ -1891,6 +1892,14 @@ export function issueJ2534IdentityPreflightOperation(options = {}) {
 
 export async function runJ2534IdentityPreflightOperation(operation, options = {}) {
   return j2534IdentityPreflightController.run(operation, options);
+}
+
+export function createJ2534ProductionIdentityBoundUdsFixtureBoundary(transportSupervisor) {
+  return createJ2534UdsTransportAdapterRequestBoundary({
+    run_identity_preflight: runJ2534IdentityPreflightOperation,
+    transport_supervisor: transportSupervisor,
+    build_completion_manifest: buildUdsReadAdapterCompletionManifest
+  });
 }
 
 function createStableJ2534DeviceId(driver = {}) {

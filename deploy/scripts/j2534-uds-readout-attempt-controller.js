@@ -1,5 +1,4 @@
 import { randomBytes } from "node:crypto";
-import { buildUdsReadAdapterCompletionManifest } from "../local-bridge-readonly.js";
 
 const SAFE_DEVICE_ID = /^[A-Za-z0-9_.:-]{1,80}$/;
 const SAFE_ECU_ADDRESS = /^(?:7E[0-9A-F]|18DA[0-9A-F]{4})$/;
@@ -42,9 +41,10 @@ function blocked(reason, selectedDeviceId = null) {
 export function createJ2534UdsReadoutAttemptController(options = {}) {
   const hasRequestScope = options && typeof options === "object" && Object.hasOwn(options, "request_scope");
   const requestScope = hasRequestScope ? options.request_scope : null;
-  if (!exactKeys(options, ["selected_device_id", "transport_supervisor", ...(hasRequestScope ? ["request_scope"] : [])])
+  if (!exactKeys(options, ["selected_device_id", "transport_supervisor", "build_completion_manifest", ...(hasRequestScope ? ["request_scope"] : [])])
     || !SAFE_DEVICE_ID.test(options.selected_device_id)
     || typeof options.transport_supervisor?.run !== "function"
+    || typeof options.build_completion_manifest !== "function"
     || (hasRequestScope && (!exactKeys(requestScope, ["target_ecu", "expected_response_ecu", "requested_data_identifier"])
       || !SAFE_ECU_ADDRESS.test(requestScope.target_ecu) || !SAFE_ECU_ADDRESS.test(requestScope.expected_response_ecu)
       || !isRequestResponseEcuMatch(requestScope.target_ecu, requestScope.expected_response_ecu)
@@ -52,6 +52,7 @@ export function createJ2534UdsReadoutAttemptController(options = {}) {
     throw new Error("j2534_uds_attempt_controller_invalid");
   const selectedDeviceId = options.selected_device_id;
   const transportSupervisor = options.transport_supervisor;
+  const buildCompletionManifest = options.build_completion_manifest;
   let active = false;
 
   return Object.freeze({
@@ -107,7 +108,7 @@ export function createJ2534UdsReadoutAttemptController(options = {}) {
           && transportResult?.expected_response_ecu === expectedResponseEcu
           && (!Object.hasOwn(transportResult, "requested_data_identifier")
             || transportResult.requested_data_identifier === requestedDataIdentifier);
-        const completionManifest = bindingsMatch ? buildUdsReadAdapterCompletionManifest(transportResult) : null;
+        const completionManifest = bindingsMatch ? buildCompletionManifest(transportResult) : null;
         const completed = Boolean(completionManifest);
         return {
           schema_version: "j2534-uds-readout-attempt-v1",

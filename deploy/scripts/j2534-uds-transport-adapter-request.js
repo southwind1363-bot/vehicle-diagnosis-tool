@@ -53,8 +53,9 @@ function verifiedIdentity(snapshot) {
 }
 
 export function createJ2534UdsTransportAdapterRequestBoundary(dependencies = {}) {
-  if (!plainObject(dependencies) || Object.keys(dependencies).length !== 2
+  if (!plainObject(dependencies) || Object.keys(dependencies).length !== 3
     || typeof dependencies.run_identity_preflight !== "function"
+    || typeof dependencies.build_completion_manifest !== "function"
     || dependencies.transport_supervisor?.fixture_only !== true
     || typeof dependencies.transport_supervisor?.run !== "function")
     throw new Error("j2534_uds_transport_adapter_dependencies_invalid");
@@ -123,6 +124,7 @@ export function createJ2534UdsTransportAdapterRequestBoundary(dependencies = {})
       return createJ2534UdsReadoutAttemptController({
         selected_device_id: secret.selectedDeviceId,
         transport_supervisor: dependencies.transport_supervisor,
+        build_completion_manifest: dependencies.build_completion_manifest,
         request_scope: Object.freeze({
           target_ecu: adapterRequest.target_ecu,
           expected_response_ecu: adapterRequest.expected_response_ecu,

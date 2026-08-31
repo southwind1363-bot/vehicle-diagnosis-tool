@@ -4,7 +4,7 @@
 
 ## 現在の完成版
 
-3.13.372ではJ2534の検証済みidentity operationをfixture-only UDS transport adapter requestへ引き継ぐ境界を追加しました。公開preflight表示は認可に使わず、opaque operationから得たselected deviceとECU/DID scopeをWeakMapでone-shot controllerへ渡します。clone、reuse、別device指定、ECU/DID逸脱、private path・hash・nonce漏えいを拒否し、受入supervisorもfixture-onlyに限定しました。診断判定と保存形式は変更せず、vendor DLL・実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を90%へ更新しました。
+3.13.373ではproduction J2534 identity operation runnerをfixture-only UDS transport adapter request境界へ固定配線しました。caller指定runnerや公開preflight snapshotを認可に使わず、未登録driver環境、偽造snapshot、clone、reuse、ECU/DID scope逸脱をfail-closedで拒否します。completion manifest builderの依存注入により循環importを解消し、workstation packageへ必要な2モジュールを同梱しました。診断判定と保存形式は変更せず、vendor DLL・実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を92%へ更新しました。
 
 3.13.371ではJ2534 UDS readout attempt controllerを追加し、controller内部で発行したselected device、operation nonce、attempt ID、target/expected ECU、DIDをx86/x64 native fixtureへ渡し、completionまで完全一致する結果だけを採用するようにしました。別試行・別VCI・別ECU・別DIDの混入、caller指定nonce、ECU対不一致、同時実行、timeout/cancel後の結果をfail-closedで拒否します。診断判定と保存形式は変更せず、vendor DLL・実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を88%へ更新しました。
 
