@@ -1,6 +1,6 @@
 import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, buildUdsReadAdapterCompletionManifest, normalizeUdsReadAdapterCompletionManifest, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { createJ2534IdentityPreflightOperationController } from "./j2534-identity-preflight-operation.js";
-import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
+import { J2534_WORKER_CONTRACT_VERSION, buildJ2534UdsTransportResult, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import { getEventListeners } from "node:events";
 import fs from "node:fs";
@@ -141,6 +141,31 @@ check([
   { ...udsNegativeTransportResult, requested_data_identifier: "F189", response_data_identifier: "F189", payload_byte_count: 6 }
 ].every((result) => buildUdsReadAdapterCompletionManifest(result) === null), "Transport-result conversion must reject contradictory status, raw data, ECU mismatch, fabricated terminal source, and mixed response evidence");
 check(normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, source_ecu: "7E8" }) === null, "Terminal completion manifests must reject a fabricated responding source ECU");
+const j2534PositiveTransportResult = buildJ2534UdsTransportResult({ ...udsPositiveTransportResult, operation: "format_uds_read_transport_result" });
+const j2534NegativeTransportResult = buildJ2534UdsTransportResult({ ...udsNegativeTransportResult, operation: "format_uds_read_transport_result" });
+const j2534PendingTransportResult = buildJ2534UdsTransportResult({ ...udsNegativeTransportResult, operation: "format_uds_read_transport_result", transport_status: "pending", negative_response_code: "78" });
+const j2534TimeoutTransportResult = buildJ2534UdsTransportResult({ ...udsTimeoutTransportResult, operation: "format_uds_read_transport_result" });
+const isolatedJ2534TransportProcess = spawnSync(process.execPath, [j2534WorkerPath], {
+  input: JSON.stringify({ ...udsPositiveTransportResult, operation: "format_uds_read_transport_result" }),
+  encoding: "utf8",
+  timeout: 5000,
+  windowsHide: true
+});
+const isolatedJ2534TransportResult = isolatedJ2534TransportProcess.status === 0 ? JSON.parse(isolatedJ2534TransportProcess.stdout) : null;
+check(isolatedJ2534TransportResult?.schema_version === "uds_read_transport_result_v1" && isolatedJ2534TransportResult?.retained_raw_frames === false && isolatedJ2534TransportResult?.retained_raw_response === false && isolatedJ2534TransportResult?.would_transmit === false && j2534PositiveTransportResult?.adapter_family === "j2534" && buildUdsReadAdapterCompletionManifest(j2534PositiveTransportResult)?.status === "response_received" && buildUdsReadAdapterCompletionManifest(j2534NegativeTransportResult)?.status === "negative_response" && buildUdsReadAdapterCompletionManifest(j2534PendingTransportResult)?.status === "pending" && buildUdsReadAdapterCompletionManifest(j2534TimeoutTransportResult)?.status === "timeout", "J2534 worker result formatting must feed only sanitized positive, negative, pending, and terminal evidence into the completion boundary");
+check([
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", raw_frames: ["reject"] },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", response_data_identifier: "F187" },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", expected_response_ecu: "7E9" },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", source_ecu: "7E9" },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", status: "negative_response" },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", transport_status: "unexpected" },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", transport_status: "negative_response" },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", response_count: 0 },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", negative_requested_service: "22", negative_response_code: "31" },
+  { ...udsTimeoutTransportResult, operation: "format_uds_read_transport_result", source_ecu: "7E8" },
+  { ...udsPositiveTransportResult, operation: "format_uds_read_transport_result", vehicle_command_enabled: true }
+].every((result) => buildJ2534UdsTransportResult(result) === null), "J2534 worker result formatting must reject raw data, status, DID or ECU mismatch, mixed evidence, fabricated terminal sources, and vehicle commands");
 check(packageManifest.scripts?.["review:j2534-host"] === "node scripts/review-j2534-host.js" && j2534HostReviewSource.includes('discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true })') && j2534HostReviewSource.includes('manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review")') && j2534HostReviewSource.includes('runJ2534WorkerReview(devices,') && j2534HostReviewSource.includes('timeout_ms: 5000'), "J2534 host review CLI must derive drivers from static discovery and require manual confirmation");
 const blockedJ2534WorkerReview = reviewJ2534PassThruOpenRequest({
   operation: "review_pass_thru_open",

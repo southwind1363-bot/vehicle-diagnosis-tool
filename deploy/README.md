@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.368ではJ2534隔離workerへ`buildJ2534UdsTransportResult()`を追加し、受信済みのbounded証跡を`uds_read_transport_result_v1`としてone-shot出力できるようにしました。11bit/29bitの要求・応答ECU、DID、NRC、attempt ID、応答数、待機時間を検証し、raw混入、DID/ECU不一致、positive/negative混在、terminal source ECU、送信要求を拒否して既存completion境界へ接続します。DLLロード、PassThruOpen/Connect/Read/Write、実車通信は追加せず無効のまま、UDS/CAN FDソフト進捗を79%へ更新しました。
+
 3.13.367ではsanitized済みの`uds_read_transport_result_v1`から`uds_read_adapter_completion_manifest_v1`を生成するfail-closed変換境界を追加しました。positive / negative / NRC 78 pending / timeout / transport error / cancelledを受信証跡から導出し、宣言状態の矛盾、raw混入、ECU不一致、positiveとnegativeの混在、terminalでのsource ECU混入、direct manifestとの二重入力を拒否します。診断判定と取得済み判定は変更せず、実transportとdispatchは未実装・無効のまま、UDS/CAN FDソフト進捗を77%へ更新しました。
 
 3.13.366では`uds_read_adapter_completion_manifest_v1`をpositive応答、negative応答、NRC 78 pendingへ拡張しました。positiveは要求/応答DID、payload長、target/source ECU、応答回数、待機時間、attempt ID、negative/pendingはservice 22、NRC、ECU、応答回数、待機時間、attempt IDが単一結果と完全一致する場合だけ既存lifecycleへ接続します。不一致manifestは診断結果を変えず証跡だけ不採用とし、旧terminal manifest互換、raw非保持、dispatch無効、車両コマンド無効を維持してUDS/CAN FDソフト進捗を74%へ更新しました。
