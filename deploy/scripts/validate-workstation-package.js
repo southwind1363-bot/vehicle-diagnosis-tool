@@ -272,7 +272,7 @@ try {
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
-  check(instructions.includes("inspect-workstation-j2534.cmd") && instructions.includes("--evidence-json") && instructions.includes("--validate-evidence-stdin") && instructions.includes("--prepare-uds-request") && instructions.includes("32KB上限") && instructions.includes("DLLパス、名称、device ID、nonceを含みません") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")) && fs.existsSync(path.join(result.directory, "scripts/j2534-uds-preparation-evidence.js")), "Package omitted the standalone J2534 preparation check or sanitized evidence instructions");
+  check(instructions.includes("inspect-workstation-j2534.cmd") && instructions.includes("--evidence-json") && instructions.includes("--validate-evidence-stdin") && instructions.includes("--validate-uds-preparation-stdin") && instructions.includes("--prepare-uds-request") && instructions.includes("32KB上限") && instructions.includes("DLLパス、名称、device ID、nonceを含みません") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")) && fs.existsSync(path.join(result.directory, "scripts/j2534-uds-preparation-evidence.js")), "Package omitted the standalone J2534 preparation check or sanitized evidence instructions");
   check(["scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
   check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
     && packaged.scripts["workstation:dev"] === packaged.scripts.start && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
@@ -460,13 +460,20 @@ try {
       : entry === "inspect-evidence" ? '""inspect-workstation-j2534.cmd" --evidence-json --no-pause"'
       : entry === "inspect-validate" ? '""inspect-workstation-j2534.cmd" --validate-evidence-stdin --no-pause"'
       : entry === "inspect-validate-large" ? '""inspect-workstation-j2534.cmd" --validate-evidence-stdin --no-pause"'
+      : entry === "inspect-validate-uds" ? '""inspect-workstation-j2534.cmd" --validate-uds-preparation-stdin --no-pause"'
+      : entry === "inspect-validate-uds-invalid" ? '""inspect-workstation-j2534.cmd" --validate-uds-preparation-stdin --no-pause"'
+      : entry === "inspect-validate-uds-large" ? '""inspect-workstation-j2534.cmd" --validate-uds-preparation-stdin --no-pause"'
       : entry === "inspect-invalid" ? '""inspect-workstation-j2534.cmd" --preflight-index 0 --no-pause"'
       : entry === "inspect-uds-invalid" ? '""inspect-workstation-j2534.cmd" --prepare-uds-request 1 7E0 7E8 F189 --no-pause"'
       : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
       { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
       (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
-    child.stdin.end(entry === "inspect-validate" ? `${JSON.stringify(noDriverEvidence)}\n` : entry === "inspect-validate-large" ? "A".repeat(32769) : "q\n");
+    const invalidUdsEvidence = { ...udsPreparationEvidence, private_library_path: "C:/private/must-not-echo.dll", vehicle_command_enabled: true };
+    child.stdin.end(entry === "inspect-validate" ? `${JSON.stringify(noDriverEvidence)}\n`
+      : entry === "inspect-validate-large" || entry === "inspect-validate-uds-large" ? "A".repeat(32769)
+      : entry === "inspect-validate-uds" ? `${JSON.stringify(udsPreparationEvidence)}\n`
+      : entry === "inspect-validate-uds-invalid" ? `${JSON.stringify(invalidUdsEvidence)}\n` : "q\n");
   });
   for (const entry of entries) {
     const launched = await runEntry(entry);
@@ -494,6 +501,30 @@ try {
       && packagedValidation?.valid === true && packagedValidation?.errors?.length === 0
       && packagedValidation?.evidence_authorizes_execution === false && packagedValidation?.vehicle_command_enabled === false,
     "Packaged J2534 evidence validation did not verify integrity first or retain the non-executing boundary");
+    const validatedUdsPreparation = await runEntry("inspect-validate-uds");
+    const udsValidationLine = validatedUdsPreparation.output.split(/\r?\n/).find(line => line.startsWith('{"schema_version":"j2534-uds-adapter-preparation-evidence-validation-v1"'));
+    const packagedUdsValidation = JSON.parse(udsValidationLine || "null");
+    check(validatedUdsPreparation.code === 0 && validatedUdsPreparation.output.includes("Package files match:")
+      && packagedUdsValidation?.valid === true && packagedUdsValidation?.errors?.length === 0
+      && packagedUdsValidation?.evidence_schema_version === "j2534-uds-adapter-preparation-evidence-v1"
+      && packagedUdsValidation?.evidence_authorizes_execution === false && packagedUdsValidation?.pass_thru_open_attempted === false
+      && packagedUdsValidation?.vehicle_communication_started === false && packagedUdsValidation?.dispatch_enabled === false
+      && packagedUdsValidation?.vehicle_command_enabled === false && packagedUdsValidation?.execution_enabled === false,
+    "Packaged J2534 UDS preparation validation did not retain its non-executing evidence boundary");
+    const rejectedUdsValidation = await runEntry("inspect-validate-uds-invalid");
+    const rejectedUdsLine = rejectedUdsValidation.output.split(/\r?\n/).find(line => line.startsWith('{"schema_version":"j2534-uds-adapter-preparation-evidence-validation-v1"'));
+    const rejectedPackagedUds = JSON.parse(rejectedUdsLine || "null");
+    check(rejectedUdsValidation.code === 1 && rejectedPackagedUds?.valid === false
+      && rejectedPackagedUds?.errors?.join(",") === "j2534_uds_preparation_evidence_invalid"
+      && rejectedPackagedUds?.evidence_schema_version === null && rejectedPackagedUds?.vehicle_command_enabled === false
+      && !rejectedUdsValidation.output.includes("must-not-echo"),
+    "Packaged J2534 UDS preparation validation accepted or reflected mutated private evidence");
+    const oversizedUdsValidation = await runEntry("inspect-validate-uds-large");
+    const oversizedUdsLine = oversizedUdsValidation.output.split(/\r?\n/).find(line => line.startsWith('{"schema_version":"j2534-uds-adapter-preparation-evidence-validation-v1"'));
+    const oversizedPackagedUds = JSON.parse(oversizedUdsLine || "null");
+    check(oversizedUdsValidation.code === 1 && oversizedPackagedUds?.valid === false
+      && oversizedPackagedUds?.evidence_authorizes_execution === false && !oversizedUdsValidation.output.includes("AAAAA"),
+    "Packaged J2534 UDS preparation validation accepted or disclosed an oversized input");
     const oversizedValidation = await runEntry("inspect-validate-large");
     const oversizedLine = oversizedValidation.output.split(/\r?\n/).find((line) => line.startsWith('{"schema_version":"j2534-native-preflight-evidence-validation-v1"'));
     const oversizedResult = JSON.parse(oversizedLine || "null");
@@ -509,7 +540,7 @@ try {
       && !invalidUdsPreparation.output.includes('vehicle_command_enabled":true'),
     "Invalid packaged J2534 UDS preparation did not fail closed after package verification");
   }
-  const guardedEntries = process.platform === "win32" ? [...entries, "inspect", "inspect-evidence", "inspect-validate", "inspect-uds-invalid"] : entries;
+  const guardedEntries = process.platform === "win32" ? [...entries, "inspect", "inspect-evidence", "inspect-validate", "inspect-validate-uds", "inspect-uds-invalid"] : entries;
   for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true], ["scripts/inspect-workstation-j2534.js", false]]) {
     const target = path.join(actual.directory, relative);
     const original = fs.readFileSync(target);

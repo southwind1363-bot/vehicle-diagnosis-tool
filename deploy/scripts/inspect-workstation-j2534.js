@@ -3,7 +3,7 @@ import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { createJ2534ProductionIdentityBoundUdsFixtureBoundary, createJ2534RegisteredDriverDescriptor, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment, issueJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight } from "../local-bridge-readonly.js";
-import { parseJ2534UdsPreparationArguments, runJ2534UdsPreparationEvidence } from "./j2534-uds-preparation-evidence.js";
+import { parseJ2534UdsPreparationArguments, runJ2534UdsPreparationEvidence, validateJ2534UdsPreparationEvidence } from "./j2534-uds-preparation-evidence.js";
 
 const READINESS = {
   no_registered_driver: "登録ドライバーを検出できません",
@@ -281,7 +281,24 @@ export async function runJ2534WorkstationPreflight(devices, index, dependencies 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const rawArgs = process.argv.slice(2);
-    if (rawArgs.length === 1 && rawArgs[0] === "--validate-evidence-stdin") {
+    if (rawArgs.length === 1 && rawArgs[0] === "--validate-uds-preparation-stdin") {
+      let valid = false;
+      try { valid = validateJ2534UdsPreparationEvidence(JSON.parse(readBoundedJ2534EvidenceStdin())); } catch {}
+      const validation = Object.freeze({
+        schema_version: "j2534-uds-adapter-preparation-evidence-validation-v1",
+        valid,
+        errors: Object.freeze(valid ? [] : ["j2534_uds_preparation_evidence_invalid"]),
+        evidence_schema_version: valid ? "j2534-uds-adapter-preparation-evidence-v1" : null,
+        evidence_authorizes_execution: false,
+        pass_thru_open_attempted: false,
+        vehicle_communication_started: false,
+        dispatch_enabled: false,
+        vehicle_command_enabled: false,
+        execution_enabled: false
+      });
+      console.log(JSON.stringify(validation));
+      if (!valid) process.exitCode = 1;
+    } else if (rawArgs.length === 1 && rawArgs[0] === "--validate-evidence-stdin") {
       let validation;
       try { validation = validateJ2534NativePreflightEvidence(JSON.parse(readBoundedJ2534EvidenceStdin())); }
       catch { validation = validateJ2534NativePreflightEvidence(null); }

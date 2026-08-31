@@ -35,7 +35,10 @@ if /i "%~3"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~4"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~5"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~6"=="--no-pause" set "inspection_no_pause=1"
-if /i "%~1"=="--prepare-uds-request" (
+if /i "%~1"=="--validate-uds-preparation-stdin" (
+  if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
+  node "scripts\inspect-workstation-j2534.js" --validate-uds-preparation-stdin
+) else if /i "%~1"=="--prepare-uds-request" (
   if "%~2"=="" goto invalid_option
   if "%~3"=="" goto invalid_option
   if "%~4"=="" goto invalid_option
@@ -73,7 +76,7 @@ set "inspection_exit=%errorlevel%"
 goto finish
 
 :invalid_option
-echo Unknown inspection option. Use --preflight-index NUMBER, --prepare-uds-request INDEX TARGET_ECU RESPONSE_ECU DID, --evidence-json, or --validate-evidence-stdin.
+echo Unknown inspection option. Use --preflight-index NUMBER, --prepare-uds-request INDEX TARGET_ECU RESPONSE_ECU DID, --evidence-json, --validate-evidence-stdin, or --validate-uds-preparation-stdin.
 set "inspection_exit=2"
 
 :finish
