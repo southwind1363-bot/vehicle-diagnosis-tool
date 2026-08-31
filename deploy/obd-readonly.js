@@ -9230,8 +9230,8 @@
     const expectedAddressDescriptors = primaryExpectedAddress
       ? [primaryExpectedAddress]
       : [...new Set(supportedExpectedAddressDescriptors.map((value) => String(value).toUpperCase().replace(/0X/g, "")))];
-    const expectedAddressRanges = expectedAddressDescriptors.map((descriptor) => {
-      const [startInput, endInput = startInput] = String(descriptor).split("-");
+    const normalizeExpectedAddressRange = (descriptor) => {
+      const [startInput, endInput = startInput] = String(descriptor || "").split("-");
       const startAddress = normalizeComparableCanEcuAddress(startInput);
       const endAddress = normalizeComparableCanEcuAddress(endInput);
       if (!startAddress || !endAddress || startAddress.length !== endAddress.length) return null;
@@ -9239,7 +9239,8 @@
       const endValue = Number.parseInt(endAddress, 16);
       if (!Number.isFinite(startValue) || !Number.isFinite(endValue) || startValue > endValue) return null;
       return { descriptor: startAddress === endAddress ? startAddress : `${startAddress}-${endAddress}`, startAddress, endAddress, startValue, endValue };
-    }).filter(Boolean);
+    };
+    const expectedAddressRanges = expectedAddressDescriptors.map(normalizeExpectedAddressRange).filter(Boolean);
     const expectedAddresses = expectedAddressRanges.map((item) => item.descriptor);
     const expectedAddress = expectedAddresses[0] || null;
     const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;
@@ -9276,6 +9277,29 @@
       .filter((range) => !comparableObservedAddresses.some((address) => isExpectedRangeMatch(range, address)))
       .map((range) => range.descriptor);
     const partialExpectedAddressObservation = matchedExpectedAddresses.length > 0 && unmatchedExpectedAddresses.length > 0;
+    const expectedEcuObservations = expectedAddressSource === "supported_ecus"
+      ? (applicability.supportedEcus || []).map((item) => {
+        const range = normalizeExpectedAddressRange(item?.diagnosticAddress || item?.diagnostic_address || null);
+        if (!range) return null;
+        const ecuObservedAddresses = comparableObservedAddresses.filter((address) => isExpectedRangeMatch(range, address));
+        const systemName = item?.systemName || item?.system_name || null;
+        const ecuName = item?.ecuName || item?.ecu_name || null;
+        return {
+          systemName,
+          system_name: systemName,
+          ecuName,
+          ecu_name: ecuName,
+          diagnosticAddress: range.descriptor,
+          diagnostic_address: range.descriptor,
+          protocol: item?.protocol || null,
+          observedAddresses: ecuObservedAddresses,
+          observed_addresses: ecuObservedAddresses,
+          observed: ecuObservedAddresses.length > 0
+        };
+      }).filter(Boolean)
+      : [];
+    const observedExpectedEcuCount = expectedEcuObservations.filter((item) => item.observed).length;
+    const unobservedExpectedEcuCount = expectedEcuObservations.length - observedExpectedEcuCount;
     const status = !expectedAddressRanges.length
       ? "not_configured"
       : !observedAddresses.length
@@ -9339,6 +9363,14 @@
       responded_ecu_addresses: respondedEcuAddresses,
       comparableObservedAddresses,
       comparable_observed_addresses: comparableObservedAddresses,
+      expectedEcuObservations,
+      expected_ecu_observations: expectedEcuObservations,
+      expectedEcuObservationCount: expectedEcuObservations.length,
+      expected_ecu_observation_count: expectedEcuObservations.length,
+      observedExpectedEcuCount,
+      observed_expected_ecu_count: observedExpectedEcuCount,
+      unobservedExpectedEcuCount,
+      unobserved_expected_ecu_count: unobservedExpectedEcuCount,
       matchedObservedAddresses,
       matched_observed_addresses: matchedObservedAddresses,
       unmatchedComparableObservedAddresses,

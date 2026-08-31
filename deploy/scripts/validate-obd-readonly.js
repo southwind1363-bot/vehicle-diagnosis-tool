@@ -3846,7 +3846,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('複数ECU適合証拠を診断画面へ表示'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('対応ECU名と実読取アドレスを結合'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4455,10 +4455,10 @@ const chartRowsUnknownAdapter = buildLivePidTimelineChartRows?.({
 });
 check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.points?.length === 2 && chartRowsUnknownAdapter[0]?.delta === 100, "Missing adapter identity should preserve the existing live PID chart behavior");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
-check(source.includes('const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);') && source.includes('const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;') && source.includes('expected_addresses: expectedAddresses,') && source.includes('matched_expected_addresses: matchedExpectedAddresses,') && source.includes('partial_expected_address_observation: partialExpectedAddressObservation,'), "Vehicle applicability ECU matching should use supported ECU addresses only when the primary ECU address is absent and retain factual match evidence");
+check(source.includes('const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);') && source.includes('const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;') && source.includes('expected_addresses: expectedAddresses,') && source.includes('matched_expected_addresses: matchedExpectedAddresses,') && source.includes('partial_expected_address_observation: partialExpectedAddressObservation,') && source.includes('expected_ecu_observations: expectedEcuObservations,'), "Vehicle applicability ECU matching should use supported ECU addresses only when the primary ECU address is absent and retain factual per-ECU match evidence");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "複数ECU適合証拠を診断画面へ表示"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "対応ECU名と実読取アドレスを結合"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4795,7 +4795,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "複数ECU適合証拠を診断画面へ表示"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "対応ECU名と実読取アドレスを結合"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -20253,7 +20253,7 @@ check(conflictingSourceVerificationSession.vehicleApplicability?.sourceVerified 
 "Conflicting applicability source verification aliases must remain a non-blocking review through read-only JSON roundtrip");
 const scanSessionSupportedEcuMatched = obd.buildDiagnosticScanSession({
   session_id: "shop-test-supported-ecu-matched",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", source_verified: true, supported_ecus: [{ ecu_name: "ECM", diagnostic_address: "7E8" }, { ecu_name: "ABS", diagnostic_address: "7EA" }] },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", source_verified: true, supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }, { system_name: "Brake", ecu_name: "ABS", diagnostic_address: "7EA", protocol: "ISO 15765-4" }] },
   dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-08-31T00:00:00.000Z", dtcs: [{ code: "C1201", status: "stored", ecu: "7EA" }] }
 });
 check(scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched"
@@ -20269,10 +20269,25 @@ check(scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuM
   && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedExpectedAddressCount === 1
   && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.partialExpectedAddressObservation === true,
 "Supported ECU matching did not distinguish matched and unobserved expected addresses without changing match status");
+check(scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 2
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedExpectedEcuCount === 1
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unobservedExpectedEcuCount === 1
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.systemName === "Engine"
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.ecuName === "ECM"
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.protocol === "CAN"
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.observed === false
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[1]?.systemName === "Brake"
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[1]?.ecuName === "ABS"
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[1]?.diagnosticAddress === "7EA"
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[1]?.observedAddresses?.join(",") === "7EA"
+  && scanSessionSupportedEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[1]?.observed === true,
+"Supported ECU identities were not mapped to their factual observed addresses");
 const supportedEcuPartialMatchRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionSupportedEcuMatched) }));
 check(supportedEcuPartialMatchRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_expected_addresses?.[0] === "7EA"
   && supportedEcuPartialMatchRoundTrip?.diagnosticFlowSummary?.vehicle_applicability_ecu_match_summary?.unmatched_expected_addresses?.[0] === "7E8"
   && supportedEcuPartialMatchRoundTrip?.diagnosticFlowSummary?.vehicleApplicabilityEcuMatchSummary?.partial_expected_address_observation === true
+  && supportedEcuPartialMatchRoundTrip?.diagnosticFlowSummary?.vehicleApplicabilityEcuMatchSummary?.expected_ecu_observations?.[1]?.ecu_name === "ABS"
+  && supportedEcuPartialMatchRoundTrip?.diagnosticFlowSummary?.vehicleApplicabilityEcuMatchSummary?.expected_ecu_observations?.[1]?.observed_addresses?.[0] === "7EA"
   && supportedEcuPartialMatchRoundTrip?.vehicleCommandEnabled === false
   && supportedEcuPartialMatchRoundTrip?.wouldTransmit === false,
 "Partial supported ECU observation evidence did not survive read-only bridge export and JSON import");
@@ -20287,6 +20302,8 @@ check(scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilit
   && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedObservedAddresses?.[0] === "7EC"
   && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unmatchedExpectedAddressCount === 0
   && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.partialExpectedAddressObservation === false
+  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.systemName === "Powertrain"
+  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.observedAddresses?.[0] === "7EC"
   && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response",
 "Supported ECU hexadecimal range did not match a comparable observed response address");
 const scanSessionPrimaryEcuPrecedence = obd.buildDiagnosticScanSession({
@@ -20296,7 +20313,8 @@ const scanSessionPrimaryEcuPrecedence = obd.buildDiagnosticScanSession({
 });
 check(scanSessionPrimaryEcuPrecedence.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
   && scanSessionPrimaryEcuPrecedence.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedAddressSource === "ecu_address"
-  && scanSessionPrimaryEcuPrecedence.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedAddresses?.join(",") === "7E8",
+  && scanSessionPrimaryEcuPrecedence.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedAddresses?.join(",") === "7E8"
+  && scanSessionPrimaryEcuPrecedence.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.length === 0,
 "Primary applicability ECU address must retain precedence over the supported ECU fallback list");
 const supportedEcuMatchRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionSupportedEcuRangeMatched) }));
 check(supportedEcuMatchRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched"
