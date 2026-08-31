@@ -8363,6 +8363,17 @@
       const text = typeof value === "string" ? value : allowNumber && Number.isFinite(value) ? String(value) : "";
       return text.trim().slice(0, limit) || null;
     };
+    const firstNormalizedIdentityValue = (values, limit = 80, allowNumber = false) => {
+      for (const value of values) {
+        if (typeof value === "string") {
+          const normalized = value.trim().slice(0, limit);
+          if (normalized) return normalized;
+        } else if (allowNumber && Number.isFinite(value)) {
+          return value;
+        }
+      }
+      return null;
+    };
     const normalizeRangeDescriptor = (range) => {
       if (!range || typeof range !== "object" || Array.isArray(range)) return null;
       const modelCodes = normalizeCodeList([range.modelCodes || range.model_codes || range.modelCode || range.model_code].flat());
@@ -8411,20 +8422,20 @@
       return { systemName, system_name: systemName, ecuName, ecu_name: ecuName, diagnosticAddress: normalizedAddress, diagnostic_address: normalizedAddress, protocol };
     };
     const normalizedSupportedEcus = supportedEcus.map(normalizeEcuDescriptor).filter(Boolean).slice(0, 20);
-    const maker = source.maker || source.make || source.manufacturer || source.brand || source.oem || source.vehicleMaker || source.vehicle_maker || source.vehicleMake || source.vehicle_make || null;
-    const model = source.model || source.modelName || source.model_name || source.vehicleModel || source.vehicle_model || source.carModel || source.car_model || null;
-    const modelCode = source.modelCode || source.model_code || source.chassisCode || source.chassis_code || source.frameCode || source.frame_code || source.vehicleModelCode || source.vehicle_model_code || source.bodyCode || source.body_code || null;
-    const year = source.year || source.modelYear || source.model_year || source.registrationYear || source.registration_year || source.vehicleYear || source.vehicle_year || null;
-    const engineCode = source.engineCode || source.engine_code || source.engine || source.engineModel || source.engine_model || source.engineType || source.engine_type || source.powertrainCode || source.powertrain_code || null;
-    const grade = source.grade || source.trim || source.trimLevel || source.trim_level || source.vehicleGrade || source.vehicle_grade || null;
-    const market = source.market || source.region || source.country || source.destinationMarket || source.destination_market || source.salesRegion || source.sales_region || null;
-    const transmission = source.transmission || source.transmissionType || source.transmission_type || source.gearbox || source.transaxle || null;
-    const drivetrain = source.drivetrain || source.driveType || source.drive_type || source.drivetrainType || source.drivetrain_type || source.drivenWheels || source.driven_wheels || null;
-    const fuelType = source.fuelType || source.fuel_type || source.fuel || source.powertrainType || source.powertrain_type || null;
-    const electrification = source.electrification || source.hybridSystem || source.hybrid_system || source.evSystem || source.ev_system || null;
-    const targetSystem = source.targetSystem || source.target_system || source.system || source.systemName || source.system_name || source.diagnosticSystem || source.diagnostic_system || null;
-    const targetEcu = source.targetEcu || source.target_ecu || source.ecu || source.ecuName || source.ecu_name || source.module || source.moduleName || source.module_name || null;
-    const ecuAddress = source.ecuAddress || source.ecu_address || source.diagnosticAddress || source.diagnostic_address || source.physicalAddress || source.physical_address || source.address || source.canId || source.can_id || source.responseCanId || source.response_can_id || source.rxId || source.rx_id || source.responseId || source.response_id || null;
+    const maker = firstNormalizedIdentityValue([source.maker, source.make, source.manufacturer, source.brand, source.oem, source.vehicleMaker, source.vehicle_maker, source.vehicleMake, source.vehicle_make], 80);
+    const model = firstNormalizedIdentityValue([source.model, source.modelName, source.model_name, source.vehicleModel, source.vehicle_model, source.carModel, source.car_model], 120);
+    const modelCode = firstNormalizedIdentityValue([source.modelCode, source.model_code, source.chassisCode, source.chassis_code, source.frameCode, source.frame_code, source.vehicleModelCode, source.vehicle_model_code, source.bodyCode, source.body_code], 48);
+    const year = firstNormalizedIdentityValue([source.year, source.modelYear, source.model_year, source.registrationYear, source.registration_year, source.vehicleYear, source.vehicle_year], 32, true);
+    const engineCode = firstNormalizedIdentityValue([source.engineCode, source.engine_code, source.engine, source.engineModel, source.engine_model, source.engineType, source.engine_type, source.powertrainCode, source.powertrain_code], 48);
+    const grade = firstNormalizedIdentityValue([source.grade, source.trim, source.trimLevel, source.trim_level, source.vehicleGrade, source.vehicle_grade], 80);
+    const market = firstNormalizedIdentityValue([source.market, source.region, source.country, source.destinationMarket, source.destination_market, source.salesRegion, source.sales_region], 80);
+    const transmission = firstNormalizedIdentityValue([source.transmission, source.transmissionType, source.transmission_type, source.gearbox, source.transaxle], 80);
+    const drivetrain = firstNormalizedIdentityValue([source.drivetrain, source.driveType, source.drive_type, source.drivetrainType, source.drivetrain_type, source.drivenWheels, source.driven_wheels], 80);
+    const fuelType = firstNormalizedIdentityValue([source.fuelType, source.fuel_type, source.fuel, source.powertrainType, source.powertrain_type], 80);
+    const electrification = firstNormalizedIdentityValue([source.electrification, source.hybridSystem, source.hybrid_system, source.evSystem, source.ev_system], 80);
+    const targetSystem = firstNormalizedIdentityValue([source.targetSystem, source.target_system, source.system, source.systemName, source.system_name, source.diagnosticSystem, source.diagnostic_system], 80);
+    const targetEcu = firstNormalizedIdentityValue([source.targetEcu, source.target_ecu, source.ecu, source.ecuName, source.ecu_name, source.module, source.moduleName, source.module_name], 80);
+    const ecuAddress = firstNormalizedIdentityValue([source.ecuAddress, source.ecu_address, source.diagnosticAddress, source.diagnostic_address, source.physicalAddress, source.physical_address, source.address, source.canId, source.can_id, source.responseCanId, source.response_can_id, source.rxId, source.rx_id, source.responseId, source.response_id], 32, true);
     const sourceName = normalizeEvidenceText(source.sourceName || source.source_name || source.source || source.dataSource || source.data_source || source.catalogSource || source.catalog_source || source.referenceSource || source.reference_source, 160);
     const sourceUrl = normalizeSourceUrl(source.sourceUrl || source.source_url || source.referenceUrl || source.reference_url || source.catalogUrl || source.catalog_url);
     const sourceDate = normalizeEvidenceText(source.sourceDate || source.source_date || source.referenceDate || source.reference_date || source.catalogDate || source.catalog_date, 20);
@@ -8473,7 +8484,7 @@
       not_evaluated: "unknown"
     };
     const providedStatus = normalizedProvidedStatus ? providedStatusAliases[normalizedProvidedStatus] || "manual" : "";
-    const summaryLabel = source.summaryLabel || source.summary_label || source.displayLabel || source.display_label || source.summary || source.label || null;
+    const summaryLabel = firstNormalizedIdentityValue([source.summaryLabel, source.summary_label, source.displayLabel, source.display_label, source.summary, source.label], 200);
     let status = providedStatus;
     if (!status) {
       if (!maker && !model && !modelCode && !year && !engineCode) {
