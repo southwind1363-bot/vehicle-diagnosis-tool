@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7294件",
+  validationCheckLabel: "OBD安全検証 7298件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "複数ECUの一致・未観測証拠を分離",
+  recentMilestone: "複数ECU適合証拠を診断画面へ表示",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.387";
+const APP_VERSION = "3.13.388";
 const APP_LAST_UPDATED = "2026-08-31";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1955,6 +1955,27 @@ function formatVehicleApplicabilityFieldMatchSummary(summary, fallback = "") {
   const mismatchCount = Number(summary.mismatchCount ?? summary.mismatch_count ?? 0);
   const pendingCount = Number(summary.pendingCount ?? summary.pending_count ?? 0);
   return `候補照合: 一致 ${matchedCount} / 不一致 ${mismatchCount} / 未評価 ${pendingCount}`;
+}
+
+function formatVehicleApplicabilityEcuMatchSummary(summary, fallback = "") {
+  if (!summary || typeof summary !== "object") return fallback || "";
+  const matchedExpectedAddresses = Array.isArray(summary.matchedExpectedAddresses) ? summary.matchedExpectedAddresses : Array.isArray(summary.matched_expected_addresses) ? summary.matched_expected_addresses : [];
+  const unmatchedExpectedAddresses = Array.isArray(summary.unmatchedExpectedAddresses) ? summary.unmatchedExpectedAddresses : Array.isArray(summary.unmatched_expected_addresses) ? summary.unmatched_expected_addresses : [];
+  const unmatchedObservedAddresses = Array.isArray(summary.unmatchedComparableObservedAddresses) ? summary.unmatchedComparableObservedAddresses : Array.isArray(summary.unmatched_comparable_observed_addresses) ? summary.unmatched_comparable_observed_addresses : [];
+  const expectedAddresses = Array.isArray(summary.expectedAddresses) ? summary.expectedAddresses : Array.isArray(summary.expected_addresses) ? summary.expected_addresses : [];
+  const expectedAddress = summary.expectedAddress || summary.expected_address || expectedAddresses[0] || "";
+  const partialObservation = summary.partialExpectedAddressObservation === true || summary.partial_expected_address_observation === true;
+  const status = String(summary.status || "").trim().toLowerCase();
+  const state = status === "matched" ? partialObservation ? "一部観測" : "一致" : status === "mismatch" ? "要確認" : status === "not_observed" ? "応答未観測" : status === "not_comparable" ? "比較不可" : status === "not_configured" ? "未設定" : status || "未確認";
+  const source = (summary.expectedAddressSource || summary.expected_address_source) === "supported_ecus" ? "対応ECU一覧" : (summary.expectedAddressSource || summary.expected_address_source) === "ecu_address" ? "単一ECU" : "";
+  const formatAddresses = (values) => values.slice(0, 4).join(", ");
+  const parts = [`ECU適合 ${state}`];
+  if (source) parts.push(source);
+  if (matchedExpectedAddresses.length) parts.push(`一致 ${formatAddresses(matchedExpectedAddresses)}`);
+  if (unmatchedExpectedAddresses.length) parts.push(`未観測 ${formatAddresses(unmatchedExpectedAddresses)}`);
+  if (unmatchedObservedAddresses.length) parts.push(`適合外応答 ${formatAddresses(unmatchedObservedAddresses)}`);
+  if (!matchedExpectedAddresses.length && !unmatchedExpectedAddresses.length && expectedAddress) parts.push(`期待 ${expectedAddress}`);
+  return parts.join(" / ") || fallback || "";
 }
 
 function formatVehicleProfileLabel(profile, fallback = "") {
@@ -10460,6 +10481,8 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const applicabilityEvidenceLabel = formatVehicleApplicabilityEvidenceSummary(applicabilityEvidenceSummary, NO_DATA) || NO_DATA;
   const applicabilityFieldMatchSummary = core.vehicleApplicabilityFieldMatchSummary || core.vehicle_applicability_field_match_summary || analysisReadinessSummary?.vehicleApplicabilityFieldMatchSummary || analysisReadinessSummary?.vehicle_applicability_field_match_summary || applicabilityChecklist?.fieldMatchSummary || applicabilityChecklist?.field_match_summary || null;
   const applicabilityFieldMatchLabel = formatVehicleApplicabilityFieldMatchSummary(applicabilityFieldMatchSummary, NO_DATA) || NO_DATA;
+  const applicabilityEcuMatchSummary = core.vehicleApplicabilityEcuMatchSummary || core.vehicle_applicability_ecu_match_summary || analysisReadinessSummary?.vehicleApplicabilityEcuMatchSummary || analysisReadinessSummary?.vehicle_applicability_ecu_match_summary || applicabilityChecklist?.ecuMatchSummary || applicabilityChecklist?.ecu_match_summary || null;
+  const applicabilityEcuMatchLabel = formatVehicleApplicabilityEcuMatchSummary(applicabilityEcuMatchSummary, NO_DATA) || NO_DATA;
   const applicabilityTone = flow.vehicleApplicabilityBlocking === true || applicabilityChecklist?.blocking === true
     ? "blocked"
     : flow.vehicleApplicabilityReviewRequired === true || applicabilityChecklist?.state === "review" ? "pending" : "";
@@ -10521,6 +10544,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "解析前確認", checklistLabel, checklistSummary?.blockingCount ? "blocked" : checklistSummary?.pendingCount ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "候補照合", applicabilityFieldMatchLabel, applicabilityFieldMatchSummary?.reviewRequired === true || applicabilityFieldMatchSummary?.review_required === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "ECU適合", applicabilityEcuMatchLabel, applicabilityEcuMatchSummary?.status === "matched" ? "ready" : applicabilityEcuMatchSummary?.status === "mismatch" ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "適合差分", vehicleApplicabilityChangedRowLabel, vehicleApplicabilityChangedRowSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
@@ -10726,13 +10750,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleApplicabilityFieldMatchSummary = coreSessionStatus?.vehicleApplicabilityFieldMatchSummary || coreSessionStatus?.vehicle_applicability_field_match_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityFieldMatchSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_field_match_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.fieldMatchSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.field_match_summary || null;
   const vehicleApplicabilityFieldMatchLabel = formatVehicleApplicabilityFieldMatchSummary(vehicleApplicabilityFieldMatchSummary, NO_DATA) || NO_DATA;
   const vehicleApplicabilityEcuMatchSummary = coreSessionStatus?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.ecuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.ecu_match_summary || null;
-  const expectedApplicabilityEcu = vehicleApplicabilityEcuMatchSummary?.expectedAddress || vehicleApplicabilityEcuMatchSummary?.expected_address || null;
-  const observedApplicabilityEcus = vehicleApplicabilityEcuMatchSummary?.observedAddresses || vehicleApplicabilityEcuMatchSummary?.observed_addresses || [];
-  const vehicleApplicabilityEcuMatchLabel = vehicleApplicabilityEcuMatchSummary?.status === "matched"
-    ? `一致: ${expectedApplicabilityEcu}`
-    : vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
-      ? `要確認: 適合 ${expectedApplicabilityEcu || NO_DATA} / 応答 ${Array.isArray(observedApplicabilityEcus) ? observedApplicabilityEcus.join(" / ") || NO_DATA : NO_DATA}`
-      : NO_DATA;
+  const vehicleApplicabilityEcuMatchLabel = formatVehicleApplicabilityEcuMatchSummary(vehicleApplicabilityEcuMatchSummary, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, getSessionNextReadoutCandidates(session, 2), NO_DATA);
   const nextReadoutReasonLabel = formatNextReadoutReasonSummary(session?.nextReadoutReasonSummary || session?.next_readout_reason_summary || coreSessionStatus?.nextReadoutReasonSummary || coreSessionStatus?.next_readout_reason_summary || session?.diagnosticFlowSummary?.nextReadoutReasonSummary || session?.diagnosticFlowSummary?.next_readout_reason_summary || session?.diagnostic_flow_summary?.nextReadoutReasonSummary || session?.diagnostic_flow_summary?.next_readout_reason_summary, NO_DATA);
   const nextReadoutGuardLabel = formatNextReadoutGuardSummary(session?.nextReadoutGuardSummary || session?.next_readout_guard_summary || coreSessionStatus?.nextReadoutGuardSummary || coreSessionStatus?.next_readout_guard_summary || session?.diagnosticFlowSummary?.nextReadoutGuardSummary || session?.diagnosticFlowSummary?.next_readout_guard_summary || session?.diagnostic_flow_summary?.nextReadoutGuardSummary || session?.diagnostic_flow_summary?.next_readout_guard_summary, NO_DATA);
