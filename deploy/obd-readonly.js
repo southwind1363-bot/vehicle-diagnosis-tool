@@ -9223,7 +9223,32 @@
       ecuResponseSummary,
       supportedPidMatrix
     });
-    const expectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
+    const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
+    const supportedExpectedAddressDescriptors = (applicability.supportedEcus || [])
+      .map((item) => item?.diagnosticAddress || item?.diagnostic_address || null)
+      .filter(Boolean);
+    const expectedAddressDescriptors = primaryExpectedAddress
+      ? [primaryExpectedAddress]
+      : [...new Set(supportedExpectedAddressDescriptors.map((value) => String(value).toUpperCase().replace(/0X/g, "")))];
+    const expectedAddressRanges = expectedAddressDescriptors.map((descriptor) => {
+      const [startInput, endInput = startInput] = String(descriptor).split("-");
+      const startAddress = normalizeComparableCanEcuAddress(startInput);
+      const endAddress = normalizeComparableCanEcuAddress(endInput);
+      if (!startAddress || !endAddress || startAddress.length !== endAddress.length) return null;
+      const startValue = Number.parseInt(startAddress, 16);
+      const endValue = Number.parseInt(endAddress, 16);
+      if (!Number.isFinite(startValue) || !Number.isFinite(endValue) || startValue > endValue) return null;
+      return { descriptor: startAddress === endAddress ? startAddress : `${startAddress}-${endAddress}`, startAddress, endAddress, startValue, endValue };
+    }).filter(Boolean);
+    const expectedAddresses = expectedAddressRanges.map((item) => item.descriptor);
+    const expectedAddress = expectedAddresses[0] || null;
+    const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;
+    const isExpectedAddressMatch = (observedAddress) => expectedAddressRanges.some((range) => {
+      if (!observedAddress || observedAddress.length !== range.startAddress.length) return false;
+      if (range.startAddress === range.endAddress) return isComparableCanEcuAddressMatch(range.startAddress, observedAddress);
+      const observedValue = Number.parseInt(observedAddress, 16);
+      return Number.isFinite(observedValue) && observedValue >= range.startValue && observedValue <= range.endValue;
+    });
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
       .filter(isObservableEcuResponse);
     const respondedEcuAddresses = [...new Set(respondedEcuRows
@@ -9238,21 +9263,20 @@
       ...respondedEcuAddresses
     ];
     const observedAddresses = [...new Set(observedAddressInputs.map(normalizeComparableCanEcuAddress).filter(Boolean))].sort();
-    const comparableObservedAddresses = expectedAddress
-      ? observedAddresses.filter((address) => address.length === expectedAddress.length)
+    const comparableObservedAddresses = expectedAddressRanges.length
+      ? observedAddresses.filter((address) => expectedAddressRanges.some((range) => address.length === range.startAddress.length))
       : [];
-    const status = !expectedAddress
+    const status = !expectedAddressRanges.length
       ? "not_configured"
       : !observedAddresses.length
         ? "not_observed"
         : !comparableObservedAddresses.length
           ? "not_comparable"
-          : comparableObservedAddresses.some((address) => isComparableCanEcuAddressMatch(expectedAddress, address))
+          : comparableObservedAddresses.some(isExpectedAddressMatch)
             ? "matched"
             : "mismatch";
-    const matchedResponseRows = expectedAddress
-      ? respondedEcuRows.filter((item) => isComparableCanEcuAddressMatch(
-        expectedAddress,
+    const matchedResponseRows = expectedAddressRanges.length
+      ? respondedEcuRows.filter((item) => isExpectedAddressMatch(
         normalizeComparableCanEcuAddress(item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
       ))
       : [];
@@ -9295,6 +9319,10 @@
       status,
       expectedAddress,
       expected_address: expectedAddress,
+      expectedAddresses,
+      expected_addresses: expectedAddresses,
+      expectedAddressSource,
+      expected_address_source: expectedAddressSource,
       observedAddresses,
       observed_addresses: observedAddresses,
       respondedEcuAddresses,
