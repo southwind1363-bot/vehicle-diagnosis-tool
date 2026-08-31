@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.378では車両適合statusと明示された根拠フラグの矛盾を拒否します。matchedとcatalog不一致はunlisted、年式・エンジン・型式不一致はpartial、同一フラグのcamel/snake alias競合やunlistedとcatalog一致の競合はmanual確認へfail-closed化しました。追加のmatchEvidenceProvidedで入力時の根拠有無だけを保持し、status単独の旧JSON/CSVは再取込後も互換動作します。解析ブロックを維持し、車両通信・送信・実行は無効のままです。
+
 3.13.377では外部JSON/CSV・bridge/sessionから取り込む車両適合statusを既知語彙へ正規化しました。大小文字・空白・ハイフンと明確な同義語を吸収し、未知の明示値はmanual確認へfail-closed化します。明示unknownも手動確認ブロックを保持し、JSON再取込後も適合済みとして解析を進めません。診断session・CSV/JSONスキーマは変更せず、車両通信・送信・実行は無効のままです。
 
 3.13.376では取得済みJ2534 UDS request準備証拠の厳格な往復検証をworkstationへ追加しました。`type 証拠.json | inspect-workstation-j2534.cmd --validate-uds-preparation-stdin --no-pause`で、32KB上限、schema、ECU対、DID、prepared/blocked整合、全安全フラグを検証します。改ざん・過大入力は固定エラーだけを返し、入力やprivate文字列を端末へ反射しません。既存の診断session・CSV/JSON形式は変更せず、実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を95%へ更新しました。

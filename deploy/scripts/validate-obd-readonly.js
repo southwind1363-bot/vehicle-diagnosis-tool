@@ -830,6 +830,7 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('const candidateRangeCount = Math.max(toCount(source.candidateRangeCount, source.candidate_range_count, candidateRanges.length), candidateRanges.length, normalizedCandidateRanges.length);') && functionBody.includes('supportedEngineCodesTruncated: supportedEngineCodeCount > normalizedSupportedEngineCodes.length,'), "normalizeVehicleApplicabilitySnapshot should retain counts that cannot understate retained ranges or engine codes");
     check(functionBody.includes('} else if (!catalogMatched) {') && functionBody.includes('status = "unlisted";') && functionBody.includes('status = "matched";') && functionBody.includes('status = "partial";'), "normalizeVehicleApplicabilitySnapshot should infer unlisted, matched, and partial status when explicit status is absent");
     check(functionBody.includes('const normalizedProvidedStatus = String(rawProvidedStatus || "")') && functionBody.includes('providedStatusAliases[normalizedProvidedStatus] || "manual"'), "normalizeVehicleApplicabilitySnapshot should normalize known status aliases and fail closed on unknown explicit values");
+    check(functionBody.includes('const readExplicitBooleanEvidence = (keys, evidenceKey) => {') && functionBody.includes('const metadataProvided = providedMatchEvidence') && functionBody.includes('matchEvidence.some((evidence) => evidence.conflict)') && functionBody.includes('status === "matched" && catalogMatchEvidence.provided && catalogMatchEvidence.value === false'), "normalizeVehicleApplicabilitySnapshot should reject contradictory explicit match evidence without treating generated default flags as explicit");
     check(functionBody.includes('source.displayLabel') && functionBody.includes('source.display_label') && functionBody.includes('source.summary'), "normalizeVehicleApplicabilitySnapshot should normalize summary label aliases");
     check(functionBody.includes('schema_version: "vehicle_applicability_v2"'), "normalizeVehicleApplicabilitySnapshot should expose snake_case schema version");
     check(functionBody.includes('model_code: modelCode,') && functionBody.includes('engine_code: engineCode,'), "normalizeVehicleApplicabilitySnapshot should expose snake_case vehicle identity aliases");
@@ -3839,7 +3840,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('車両適合statusのfail-closed正規化を追加'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('車両適合statusと根拠フラグの矛盾拒否を追加'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4450,7 +4451,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "車両適合statusのfail-closed正規化を追加"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "車両適合statusと根拠フラグの矛盾拒否を追加"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4787,7 +4788,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "車両適合statusのfail-closed正規化を追加"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "車両適合statusと根拠フラグの矛盾拒否を追加"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -11797,7 +11798,7 @@ const normalizedVehicleApplicabilityStatuses = [
   ["manual-review", "manual"],
   ["not evaluated", "unknown"],
   ["unsupported imported value", "manual"]
-].map(([status, expected]) => ({ expected, actual: obd.normalizeVehicleApplicabilitySnapshot({ ...vehicleApplicabilitySample, status }).status }));
+].map(([status, expected]) => ({ expected, actual: obd.normalizeVehicleApplicabilitySnapshot({ status }).status }));
 check(normalizedVehicleApplicabilityStatuses.every((item) => item.actual === item.expected), "Vehicle applicability status aliases were not normalized or an unknown explicit status failed open");
 const unknownExplicitApplicabilitySession = obd.buildDiagnosticScanSession({
   vehicle_applicability: { ...vehicleApplicabilitySample, status: "unknown" }
@@ -11818,6 +11819,33 @@ check(invalidExplicitApplicabilitySession.vehicleApplicability?.status === "manu
   && invalidExplicitApplicabilityRoundTrip?.vehicleApplicability?.status === "manual"
   && invalidExplicitApplicabilityRoundTrip?.vehicleCommandEnabled === false,
 "Unknown vehicle applicability status did not fail closed through read-only JSON roundtrip");
+const statusOnlyMatchedApplicabilitySession = obd.buildDiagnosticScanSession({ vehicle_applicability: { status: "matched" } });
+const statusOnlyMatchedApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(statusOnlyMatchedApplicabilitySession)
+));
+const contradictedCatalogApplicability = obd.normalizeVehicleApplicabilitySnapshot({ ...vehicleApplicabilitySample, status: "matched", catalogMatched: false, catalog_matched: false, catalogMatch: false, catalog_match: false });
+const contradictedDetailApplicability = obd.normalizeVehicleApplicabilitySnapshot({ ...vehicleApplicabilitySample, status: "matched", yearMatched: false, year_matched: false });
+const conflictingAliasApplicabilitySession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: { ...vehicleApplicabilitySample, status: "matched", catalogMatched: true, catalog_matched: false }
+});
+const conflictingAliasApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
+  obd.buildBridgeSessionExportPayload(conflictingAliasApplicabilitySession)
+));
+const contradictedUnlistedApplicability = obd.normalizeVehicleApplicabilitySnapshot({ ...vehicleApplicabilitySample, status: "unlisted", catalogMatched: true, catalog_matched: true });
+check(statusOnlyMatchedApplicabilitySession.vehicleApplicability?.status === "matched"
+  && statusOnlyMatchedApplicabilityRoundTrip?.vehicleApplicability?.status === "matched"
+  && statusOnlyMatchedApplicabilityRoundTrip?.vehicleCommandEnabled === false,
+"Status-only matched vehicle applicability should remain compatible through read-only JSON roundtrip when evidence flags are omitted");
+check(contradictedCatalogApplicability.status === "unlisted", "Matched vehicle applicability did not reject explicit catalog mismatch evidence");
+check(contradictedDetailApplicability.status === "partial", "Matched vehicle applicability did not downgrade explicit detail mismatch evidence");
+check(contradictedUnlistedApplicability.status === "manual", "Unlisted vehicle applicability with positive catalog evidence did not require manual review");
+check(conflictingAliasApplicabilitySession.vehicleApplicability?.status === "manual"
+  && conflictingAliasApplicabilitySession.warnings.includes("vehicle_profile_manual")
+  && conflictingAliasApplicabilitySession.coreSessionStatus?.blockingWarningIds?.includes("vehicle_profile_manual"),
+"Conflicting vehicle applicability aliases did not block analysis for manual review");
+check(conflictingAliasApplicabilityRoundTrip?.vehicleApplicability?.status === "manual"
+  && conflictingAliasApplicabilityRoundTrip?.vehicleCommandEnabled === false,
+"Conflicting vehicle applicability evidence did not remain fail closed through read-only JSON roundtrip");
 const nestedVehicleApplicabilitySession = obd.buildDiagnosticScanSession({
   vehicle_applicability: { data: vehicleApplicabilitySample }
 });

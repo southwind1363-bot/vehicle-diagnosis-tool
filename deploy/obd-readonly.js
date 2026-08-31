@@ -8425,6 +8425,23 @@
     const evidenceId = source.evidenceId || source.evidence_id || source.referenceId || source.reference_id || source.catalogId || source.catalog_id || null;
     const confidence = source.confidence ?? source.confidenceScore ?? source.confidence_score ?? source.matchConfidence ?? source.match_confidence ?? null;
     const sourceVerified = source.sourceVerified === true || source.source_verified === true || source.catalogVerified === true || source.catalog_verified === true || source.verified === true;
+    const providedMatchEvidence = source.matchEvidenceProvided && typeof source.matchEvidenceProvided === "object" ? source.matchEvidenceProvided : source.match_evidence_provided && typeof source.match_evidence_provided === "object" ? source.match_evidence_provided : null;
+    const readExplicitBooleanEvidence = (keys, evidenceKey) => {
+      const values = keys
+        .filter((key) => Object.prototype.hasOwnProperty.call(source, key) && typeof source[key] === "boolean")
+        .map((key) => source[key]);
+      const metadataProvided = providedMatchEvidence && typeof providedMatchEvidence[evidenceKey] === "boolean" ? providedMatchEvidence[evidenceKey] : null;
+      const provided = metadataProvided ?? values.length > 0;
+      return {
+        provided,
+        value: provided && values.length > 0 && values.every((value) => value === values[0]) ? values[0] : null,
+        conflict: values.some((value) => value !== values[0])
+      };
+    };
+    const catalogMatchEvidence = readExplicitBooleanEvidence(["catalogMatched", "catalog_matched", "catalogMatch", "catalog_match", "matched"], "catalog");
+    const yearMatchEvidence = readExplicitBooleanEvidence(["yearMatched", "year_matched", "yearMatch", "year_match"], "year");
+    const engineMatchEvidence = readExplicitBooleanEvidence(["engineMatched", "engine_matched", "engineMatch", "engine_match"], "engine");
+    const modelCodeMatchEvidence = readExplicitBooleanEvidence(["modelCodeMatched", "model_code_matched", "modelCodeMatch", "model_code_match"], "modelCode");
     const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
@@ -8460,6 +8477,16 @@
       } else {
         status = "partial";
       }
+    }
+    const matchEvidence = [catalogMatchEvidence, yearMatchEvidence, engineMatchEvidence, modelCodeMatchEvidence];
+    if (matchEvidence.some((evidence) => evidence.conflict)) {
+      status = "manual";
+    } else if (status === "matched" && catalogMatchEvidence.provided && catalogMatchEvidence.value === false) {
+      status = "unlisted";
+    } else if (status === "matched" && [yearMatchEvidence, engineMatchEvidence, modelCodeMatchEvidence].some((evidence) => evidence.provided && evidence.value === false)) {
+      status = "partial";
+    } else if (status === "unlisted" && catalogMatchEvidence.provided && catalogMatchEvidence.value === true) {
+      status = "manual";
     }
     return {
       schemaVersion: "vehicle_applicability_v2",
@@ -8509,6 +8536,8 @@
       engine_matched: engineMatched,
       modelCodeMatched,
       model_code_matched: modelCodeMatched,
+      matchEvidenceProvided: { catalog: catalogMatchEvidence.provided, year: yearMatchEvidence.provided, engine: engineMatchEvidence.provided, modelCode: modelCodeMatchEvidence.provided },
+      match_evidence_provided: { catalog: catalogMatchEvidence.provided, year: yearMatchEvidence.provided, engine: engineMatchEvidence.provided, modelCode: modelCodeMatchEvidence.provided },
       candidateRangeCount,
       candidate_range_count: candidateRangeCount,
       applicableRangeCount,
