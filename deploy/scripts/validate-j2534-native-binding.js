@@ -16,6 +16,7 @@ import {
 } from "./j2534-native-fixture-supervisor.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { createJ2534UdsReadoutAttemptController } from "./j2534-uds-readout-attempt-controller.js";
+import { createJ2534UdsTransportAdapterRequestBoundary } from "./j2534-uds-transport-adapter-request.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
@@ -558,6 +559,88 @@ async function main() {
         expected_response_ecu: scenario === "positive-29bit" ? "18DAF110" : "7E8",
         requested_data_identifier: "F189"
       });
+      const boundaryDeviceId = `j2534-${createHash("sha256").update(`boundary-${platform.name}`).digest("hex").slice(0, 16)}`;
+      const verifiedOperations = new WeakSet();
+      const issueVerifiedOperation = () => {
+        const operation = Object.freeze({});
+        verifiedOperations.add(operation);
+        return operation;
+      };
+      let identityPreflightCalls = 0;
+      const adapterBoundary = createJ2534UdsTransportAdapterRequestBoundary({
+        run_identity_preflight: async operation => {
+          identityPreflightCalls += 1;
+          if (!verifiedOperations.has(operation)) return {
+            preflight_operation_status: "rejected", selected_device_id: null,
+            native_preflight_verified_in_operation: false
+          };
+          verifiedOperations.delete(operation);
+          return {
+            preflight_operation_status: "completed", selected_device_id: boundaryDeviceId,
+            native_preflight_verified_in_operation: true, package_integrity_verified_in_operation: true,
+            authenticode_verified_in_operation: true, identity_probe_execution_enabled: false,
+            dll_load_attempted: false, pass_thru_open_allowed: false, vehicle_communication_started: false,
+            vehicle_command_enabled: false, private_library_path: "C:/private/must-not-leak.dll",
+            operation_nonce: "must-not-leak"
+          };
+        },
+        transport_supervisor: udsTransportSupervisor
+      });
+      const adapterPreparationRequest = {
+        mode: "prepare_uds_transport_adapter", target_ecu: "7E0",
+        expected_response_ecu: "7E8", requested_data_identifier: "F189"
+      };
+      const preparedAdapter = await adapterBoundary.prepare(issueVerifiedOperation(), adapterPreparationRequest);
+      assert.equal(preparedAdapter.preparation_status, "prepared_non_executable");
+      assert.equal(preparedAdapter.blockers.length, 0);
+      assert.equal(preparedAdapter.adapter_request?.selected_device_id, boundaryDeviceId);
+      assert.equal(preparedAdapter.adapter_request?.identity_preflight_status, "verified_non_executable");
+      assert.equal(preparedAdapter.adapter_request?.dispatch_enabled, false);
+      assert.equal(preparedAdapter.adapter_request?.dll_load_attempted, false);
+      assert.equal(preparedAdapter.adapter_request?.vehicle_connection_attempted, false);
+      assert.equal(preparedAdapter.adapter_request?.vehicle_communication_started, false);
+      assert.equal(preparedAdapter.adapter_request?.vehicle_command_enabled, false);
+      assert.equal(Object.isFrozen(preparedAdapter), true);
+      assert.equal(Object.isFrozen(preparedAdapter.adapter_request), true);
+      assert.ok(!/private_library_path|operation_nonce|readout_attempt_id|sha256|must-not-leak/i.test(JSON.stringify(preparedAdapter)));
+      total += 12;
+      const scopedAttemptController = adapterBoundary.createAttemptController(preparedAdapter.adapter_request);
+      assert.ok(scopedAttemptController);
+      assert.equal(adapterBoundary.createAttemptController(preparedAdapter.adapter_request), null);
+      assert.equal(adapterBoundary.createAttemptController(structuredClone(preparedAdapter.adapter_request)), null);
+      const scopedAttempt = await scopedAttemptController.run(attemptRequest("positive"));
+      assert.equal(scopedAttempt.attempt_status, "response_received");
+      assert.equal(scopedAttempt.selected_device_id, boundaryDeviceId);
+      assert.equal(scopedAttempt.vehicle_command_enabled, false);
+      const scopeMismatch = await scopedAttemptController.run({
+        ...attemptRequest("positive"), target_ecu: "7E1", expected_response_ecu: "7E9"
+      });
+      assert.equal(scopeMismatch.attempt_status, "blocked");
+      assert.deepEqual(scopeMismatch.blockers, ["j2534_uds_attempt_scope_mismatch"]);
+      assert.equal(scopeMismatch.worker_started, false);
+      total += 9;
+      const retryOperation = issueVerifiedOperation();
+      const invalidPreparation = await adapterBoundary.prepare(retryOperation, { ...adapterPreparationRequest, selected_device_id: boundaryDeviceId });
+      const retryPreparation = await adapterBoundary.prepare(retryOperation, adapterPreparationRequest);
+      assert.equal(invalidPreparation.preparation_status, "blocked");
+      assert.equal(retryPreparation.preparation_status, "prepared_non_executable");
+      assert.equal(identityPreflightCalls, 2);
+      total += 3;
+      const forgedPreparation = await adapterBoundary.prepare(Object.freeze({}), adapterPreparationRequest);
+      assert.equal(forgedPreparation.preparation_status, "blocked");
+      assert.deepEqual(forgedPreparation.blockers, ["j2534_identity_preflight_not_verified"]);
+      const hostileRequest = new Proxy({}, { getPrototypeOf() { throw new Error("hostile request"); } });
+      const hostilePreparation = await adapterBoundary.prepare(issueVerifiedOperation(), hostileRequest);
+      assert.equal(hostilePreparation.preparation_status, "blocked");
+      assert.equal(hostilePreparation.adapter_request, null);
+      const throwingBoundary = createJ2534UdsTransportAdapterRequestBoundary({
+        run_identity_preflight: async () => { throw new Error("preflight failed"); },
+        transport_supervisor: udsTransportSupervisor
+      });
+      const thrownPreparation = await throwingBoundary.prepare(Object.freeze({}), adapterPreparationRequest);
+      assert.deepEqual(thrownPreparation.blockers, ["j2534_identity_preflight_failed"]);
+      total += 6;
+
       const expectedCompletionStatuses = {
         positive: "response_received", "positive-29bit": "response_received", negative: "negative_response",
         pending: "pending", timeout: "timeout", "transport-error": "transport_error", cancelled: "cancelled"

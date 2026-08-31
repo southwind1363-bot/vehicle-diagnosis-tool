@@ -197,9 +197,9 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q3 見込み"
   }),
   uds_canfd: Object.freeze({
-    progressPercent: 88,
-    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、DID要求マニフェスト、bridge ECU範囲一致、transport resultからcompletion manifestへのfail-closed変換、J2534隔離worker出力、x86/x64 native transport fixtureの7状態とbounded supervisor監督、selected device・attempt ID・ECU・DID・operation nonceを束縛するreadout attempt controllerまで実装済み。実transportアダプターは未実装。",
-    nextBuild: "verified identity preflightのselected deviceをreadout attempt controllerへ引き継ぎ、DLLをロードしないtransport adapter request境界を固定する。",
+    progressPercent: 90,
+    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、DID要求マニフェスト、bridge ECU範囲一致、transport resultからcompletion manifestへのfail-closed変換、J2534隔離worker出力、x86/x64 native transport fixtureの7状態とbounded supervisor監督、全識別子を束縛するreadout attempt controller、検証済みpreflightをopaque・one-shotで引き継ぐfixture-only transport adapter request境界まで実装済み。実transportアダプターは未実装。",
+    nextBuild: "production identity operationをtransport adapter request境界へ内部配線し、公開snapshotの偽造ではcontrollerを発行できないことをworkstation契約で固定する。",
     etaTarget: "2026-Q4 見込み"
   }),
   doip: Object.freeze({
@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 7256件",
   bridgeValidationCheckLabel: "bridge検証 382件",
-  recentMilestone: "J2534 UDS読取試行の全識別子をcompletionまで束縛",
+  recentMilestone: "検証済みJ2534 identityをfixture-only UDS requestへopaque引継ぎ",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.371";
+const APP_VERSION = "3.13.372";
 const APP_LAST_UPDATED = "2026-08-31";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

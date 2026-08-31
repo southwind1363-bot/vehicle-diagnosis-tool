@@ -258,6 +258,7 @@ export function createJ2534UdsTransportFixtureSupervisor(descriptor) {
     parseOutput(output, context) { return parseJ2534UdsTransportFixtureOutput(output, context); }
   });
   return Object.freeze({
+    fixture_only: true,
     async run(options = {}) {
       const base = {
         schema_version: "j2534-uds-transport-fixture-supervision-v1", fixture_only: true,

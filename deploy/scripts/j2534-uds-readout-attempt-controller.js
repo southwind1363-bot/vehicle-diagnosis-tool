@@ -40,9 +40,15 @@ function blocked(reason, selectedDeviceId = null) {
 }
 
 export function createJ2534UdsReadoutAttemptController(options = {}) {
-  if (!exactKeys(options, ["selected_device_id", "transport_supervisor"])
+  const hasRequestScope = options && typeof options === "object" && Object.hasOwn(options, "request_scope");
+  const requestScope = hasRequestScope ? options.request_scope : null;
+  if (!exactKeys(options, ["selected_device_id", "transport_supervisor", ...(hasRequestScope ? ["request_scope"] : [])])
     || !SAFE_DEVICE_ID.test(options.selected_device_id)
-    || typeof options.transport_supervisor?.run !== "function")
+    || typeof options.transport_supervisor?.run !== "function"
+    || (hasRequestScope && (!exactKeys(requestScope, ["target_ecu", "expected_response_ecu", "requested_data_identifier"])
+      || !SAFE_ECU_ADDRESS.test(requestScope.target_ecu) || !SAFE_ECU_ADDRESS.test(requestScope.expected_response_ecu)
+      || !isRequestResponseEcuMatch(requestScope.target_ecu, requestScope.expected_response_ecu)
+      || !SAFE_DID.test(requestScope.requested_data_identifier))))
     throw new Error("j2534_uds_attempt_controller_invalid");
   const selectedDeviceId = options.selected_device_id;
   const transportSupervisor = options.transport_supervisor;
@@ -66,6 +72,9 @@ export function createJ2534UdsReadoutAttemptController(options = {}) {
         || !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 10000
         || (request.signal != null && !(request.signal instanceof AbortSignal)))
         return blocked("j2534_uds_attempt_request_invalid", selectedDeviceId);
+      if (requestScope && (targetEcu !== requestScope.target_ecu || expectedResponseEcu !== requestScope.expected_response_ecu
+        || requestedDataIdentifier !== requestScope.requested_data_identifier))
+        return blocked("j2534_uds_attempt_scope_mismatch", selectedDeviceId);
       if (active) return blocked("j2534_uds_attempt_busy", selectedDeviceId);
 
       active = true;
