@@ -8419,10 +8419,14 @@
     const targetSystem = source.targetSystem || source.target_system || source.system || source.systemName || source.system_name || source.diagnosticSystem || source.diagnostic_system || null;
     const targetEcu = source.targetEcu || source.target_ecu || source.ecu || source.ecuName || source.ecu_name || source.module || source.moduleName || source.module_name || null;
     const ecuAddress = source.ecuAddress || source.ecu_address || source.diagnosticAddress || source.diagnostic_address || source.physicalAddress || source.physical_address || source.address || source.canId || source.can_id || source.responseCanId || source.response_can_id || source.rxId || source.rx_id || source.responseId || source.response_id || null;
-    const sourceName = source.sourceName || source.source_name || source.source || source.dataSource || source.data_source || source.catalogSource || source.catalog_source || source.referenceSource || source.reference_source || null;
-    const sourceUrl = source.sourceUrl || source.source_url || source.referenceUrl || source.reference_url || source.catalogUrl || source.catalog_url || null;
-    const sourceDate = source.sourceDate || source.source_date || source.referenceDate || source.reference_date || source.catalogDate || source.catalog_date || null;
-    const evidenceId = source.evidenceId || source.evidence_id || source.referenceId || source.reference_id || source.catalogId || source.catalog_id || null;
+    const normalizeEvidenceText = (value, limit, allowNumber = false) => {
+      const text = typeof value === "string" ? value : allowNumber && Number.isFinite(value) ? String(value) : "";
+      return text.trim().slice(0, limit) || null;
+    };
+    const sourceName = normalizeEvidenceText(source.sourceName || source.source_name || source.source || source.dataSource || source.data_source || source.catalogSource || source.catalog_source || source.referenceSource || source.reference_source, 160);
+    const sourceUrl = normalizeSourceUrl(source.sourceUrl || source.source_url || source.referenceUrl || source.reference_url || source.catalogUrl || source.catalog_url);
+    const sourceDate = normalizeEvidenceText(source.sourceDate || source.source_date || source.referenceDate || source.reference_date || source.catalogDate || source.catalog_date, 20);
+    const evidenceId = normalizeEvidenceText(source.evidenceId ?? source.evidence_id ?? source.referenceId ?? source.reference_id ?? source.catalogId ?? source.catalog_id, 80, true);
     const confidence = source.confidence ?? source.confidenceScore ?? source.confidence_score ?? source.matchConfidence ?? source.match_confidence ?? null;
     const providedMatchEvidence = source.matchEvidenceProvided && typeof source.matchEvidenceProvided === "object" ? source.matchEvidenceProvided : source.match_evidence_provided && typeof source.match_evidence_provided === "object" ? source.match_evidence_provided : null;
     const readExplicitBooleanEvidence = (keys, evidenceKey) => {
