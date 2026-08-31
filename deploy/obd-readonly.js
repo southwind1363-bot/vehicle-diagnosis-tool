@@ -9425,6 +9425,8 @@
       : Array.isArray(ecuInfoSnapshot?.ecu_info_ecu_snapshots)
         ? ecuInfoSnapshot.ecu_info_ecu_snapshots
         : [];
+    const udsReadAdapterCompletionManifest = normalizeUdsReadAdapterCompletionManifest(ecuInfoSnapshot?.udsReadAdapterCompletionManifest || ecuInfoSnapshot?.uds_read_adapter_completion_manifest || null);
+    const udsReadAdapterCompletionManifestInvalid = ecuInfoSnapshot?.udsReadAdapterCompletionManifestInvalid === true || ecuInfoSnapshot?.uds_read_adapter_completion_manifest_invalid === true;
     const ecuInfoNegativeOutcomes = ecuInfoEcuSnapshots.filter((snapshot) => {
       const status = String(snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status || "").trim().toLowerCase();
       const service = String(snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || "").trim().toUpperCase();
@@ -9463,11 +9465,26 @@
         const sourceAddress = snapshot?.sourceEcu || snapshot?.source_ecu || null;
         const targetAddress = snapshot?.targetEcu || snapshot?.target_ecu || null;
         const responseCount = Number(snapshot?.responseCount ?? snapshot?.response_count);
-        return sourceAddress && targetAddress
+        const responseWaitMs = normalizeUdsReadRequestTimingMs(snapshot?.responseWaitMs ?? snapshot?.response_wait_ms);
+        const readoutAttemptId = normalizeUdsReadoutAttemptId(snapshot?.readoutAttemptId || snapshot?.readout_attempt_id || null);
+        const negativeService = String(snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service || "").trim().toUpperCase();
+        const negativeCode = String(snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code || "").trim().toUpperCase();
+        const expectedManifestStatus = negativeCode === "78" ? "pending" : "negative_response";
+        const manifestMatches = !udsReadAdapterCompletionManifest
+          || (udsReadAdapterCompletionManifest.status === expectedManifestStatus
+            && udsReadAdapterCompletionManifest.readoutAttemptId === readoutAttemptId
+            && udsReadAdapterCompletionManifest.targetEcu === targetAddress
+            && udsReadAdapterCompletionManifest.sourceEcu === sourceAddress
+            && udsReadAdapterCompletionManifest.expectedResponseEcu === sourceAddress
+            && udsReadAdapterCompletionManifest.negativeRequestedService === negativeService
+            && udsReadAdapterCompletionManifest.negativeResponseCode === negativeCode
+            && udsReadAdapterCompletionManifest.responseCount === responseCount
+            && udsReadAdapterCompletionManifest.responseWaitMs === responseWaitMs);
+        return !udsReadAdapterCompletionManifestInvalid && manifestMatches && sourceAddress && targetAddress
           && isUdsRequestResponseEcuMatch(targetAddress, sourceAddress)
           && Number.isSafeInteger(responseCount)
           && responseCount > 0
-          && normalizeUdsReadRequestTimingMs(snapshot?.responseWaitMs ?? snapshot?.response_wait_ms) !== null;
+          && responseWaitMs !== null;
       });
       const matchedResponseAttempt = ecuInfoResponseOutcomes.length === 1 && matchedResponseAttemptRows.length === 1
         ? matchedResponseAttemptRows[0]
@@ -9476,11 +9493,16 @@
       const matchedResponseWaitMs = matchedResponseAttempt
         ? normalizeUdsReadRequestTimingMs(matchedResponseAttempt.responseWaitMs ?? matchedResponseAttempt.response_wait_ms)
         : null;
+      const matchedReadoutAttemptId = matchedResponseAttempt
+        ? normalizeUdsReadoutAttemptId(matchedResponseAttempt.readoutAttemptId || matchedResponseAttempt.readout_attempt_id || null)
+        : null;
       const udsReadResponseAttemptEvidence = matchedResponseAttempt ? {
         evidencePresent: true,
         evidence_present: true,
         status: ecuInfoOutcomeIsPending ? "pending" : "negative_response",
         attempted: true,
+        readoutAttemptId: matchedReadoutAttemptId,
+        readout_attempt_id: matchedReadoutAttemptId,
         responseCount: Number(matchedResponseAttempt.responseCount ?? matchedResponseAttempt.response_count),
         response_count: Number(matchedResponseAttempt.responseCount ?? matchedResponseAttempt.response_count),
         responseWaitMs: matchedResponseWaitMs,
@@ -9512,6 +9534,8 @@
         pending_response_codes: ecuInfoOutcomeIsPending ? responseCodes : [],
         targetEcu: matchedTargetEcu,
         target_ecu: matchedTargetEcu,
+        readoutAttemptId: matchedReadoutAttemptId,
+        readout_attempt_id: matchedReadoutAttemptId,
         responseWaitMs: matchedResponseWaitMs,
         response_wait_ms: matchedResponseWaitMs,
         udsReadResponseAttemptEvidence,
@@ -9526,8 +9550,6 @@
         network_protocol: ecuInfoSnapshot?.network_protocol || ecuInfoSnapshot?.networkProtocol || null
       });
     }
-    const udsReadAdapterCompletionManifest = normalizeUdsReadAdapterCompletionManifest(ecuInfoSnapshot?.udsReadAdapterCompletionManifest || ecuInfoSnapshot?.uds_read_adapter_completion_manifest || null);
-    const udsReadAdapterCompletionManifestInvalid = ecuInfoSnapshot?.udsReadAdapterCompletionManifestInvalid === true || ecuInfoSnapshot?.uds_read_adapter_completion_manifest_invalid === true;
     const ecuInfoAdapterAttemptOutcomes = ecuInfoEcuSnapshots.filter((snapshot) =>
       Boolean(normalizeUdsReadAttemptStatus(snapshot?.udsReadAttemptStatus || snapshot?.uds_read_attempt_status || null))
     );
@@ -9789,17 +9811,38 @@
   function normalizeUdsReadAdapterCompletionManifest(input = null) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
     const readoutAttemptId = normalizeUdsReadoutAttemptId(pickDefined(input.readoutAttemptId, input.readout_attempt_id));
-    const status = normalizeUdsReadAttemptStatus(pickDefined(input.status, input.udsReadAttemptStatus, input.uds_read_attempt_status));
+    const completionStatus = String(pickDefined(input.status, input.udsReadAttemptStatus, input.uds_read_attempt_status) || "").trim().toLowerCase();
+    const status = ["response_received", "negative_response", "pending", "timeout", "transport_error", "cancelled"].includes(completionStatus) ? completionStatus : null;
     const targetEcu = normalizeUdsCanEndpointAddress(pickDefined(input.targetEcu, input.target_ecu));
     const expectedResponseEcu = normalizeUdsCanEndpointAddress(pickDefined(input.expectedResponseEcu, input.expected_response_ecu));
+    const sourceEcu = normalizeUdsCanEndpointAddress(pickDefined(input.sourceEcu, input.source_ecu));
     const responseCount = Number(pickDefined(input.responseCount, input.response_count));
     const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(input.responseWaitMs, input.response_wait_ms));
+    const requestedDataIdentifier = normalizeUdsDataIdentifier(pickDefined(input.requestedDataIdentifier, input.requested_data_identifier));
+    const responseDataIdentifier = normalizeUdsDataIdentifier(pickDefined(input.responseDataIdentifier, input.response_data_identifier));
+    const payloadByteCountInput = pickDefined(input.payloadByteCount, input.payload_byte_count);
+    const payloadByteCount = payloadByteCountInput === null || payloadByteCountInput === undefined || payloadByteCountInput === "" ? null : Number(payloadByteCountInput);
+    const normalizeByte = (value) => {
+      const text = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+      return /^[0-9A-F]{2}$/.test(text) ? text : null;
+    };
+    const negativeRequestedService = normalizeByte(pickDefined(input.negativeRequestedService, input.negative_requested_service));
+    const negativeResponseCode = normalizeByte(pickDefined(input.negativeResponseCode, input.negative_response_code));
+    const responseReceived = status === "response_received";
+    const negativeResponse = status === "negative_response";
+    const pending = status === "pending";
+    const hasResponse = responseReceived || negativeResponse || pending;
     const forbiddenKeys = new Set(["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "command", "commands"]);
     const retainsForbiddenData = (value) => value && typeof value === "object" && Object.entries(value).some(([key, child]) => forbiddenKeys.has(key.toLowerCase()) || retainsForbiddenData(child));
     if (input.schema_version !== "uds_read_adapter_completion_manifest_v1"
       || input.record_type !== "uds_read_adapter_completion" || input.bridge_intent !== "read_ecu_info"
       || !readoutAttemptId || !status || !targetEcu || !expectedResponseEcu || !isUdsRequestResponseEcuMatch(targetEcu, expectedResponseEcu)
-      || responseCount !== 0 || responseWaitMs === null || responseWaitMs < 50 || responseWaitMs > 120000
+      || (hasResponse ? (!sourceEcu || sourceEcu !== expectedResponseEcu || !Number.isSafeInteger(responseCount) || responseCount < 1 || responseCount > 4096) : responseCount !== 0)
+      || (responseReceived && (!requestedDataIdentifier || requestedDataIdentifier !== responseDataIdentifier || !Number.isSafeInteger(payloadByteCount) || payloadByteCount < 1 || payloadByteCount > 65535))
+      || ((negativeResponse || pending) && (negativeRequestedService !== "22" || !negativeResponseCode || (pending ? negativeResponseCode !== "78" : negativeResponseCode === "78")))
+      || (!responseReceived && (requestedDataIdentifier || responseDataIdentifier || payloadByteCount !== null))
+      || (!(negativeResponse || pending) && (negativeRequestedService || negativeResponseCode))
+      || responseWaitMs === null || responseWaitMs < 50 || responseWaitMs > 120000
       || retainsForbiddenData(input)
       || input.read_only !== true || input.execution_enabled !== false || input.would_transmit !== false || input.vehicle_command_enabled !== false) return null;
     return {
@@ -9816,11 +9859,23 @@
       target_ecu: targetEcu,
       expectedResponseEcu,
       expected_response_ecu: expectedResponseEcu,
-      responseCount: 0,
-      response_count: 0,
+      sourceEcu,
+      source_ecu: sourceEcu,
+      responseCount,
+      response_count: responseCount,
       responseWaitMs,
       response_wait_ms: responseWaitMs,
-      terminal: true,
+      requestedDataIdentifier,
+      requested_data_identifier: requestedDataIdentifier,
+      responseDataIdentifier,
+      response_data_identifier: responseDataIdentifier,
+      payloadByteCount: responseReceived ? payloadByteCount : null,
+      payload_byte_count: responseReceived ? payloadByteCount : null,
+      negativeRequestedService,
+      negative_requested_service: negativeRequestedService,
+      negativeResponseCode,
+      negative_response_code: negativeResponseCode,
+      terminal: status !== "pending",
       retainedRawFrames: false,
       retained_raw_frames: false,
       retainedRawResponse: false,
@@ -31876,6 +31931,7 @@
       && childUdsResponseRows[0].udsDidResponseEvidence?.boundaryStatus === "single_did"
       ? {
         ...childUdsResponseRows[0],
+        ...(udsReadAdapterCompletionManifest ? { udsReadAdapterCompletionManifest } : {}),
         diagnosticProtocol: childUdsResponseRows[0].diagnosticProtocol || protocolProvenance.diagnosticProtocol,
         ecuInfoResponseFormat: childUdsResponseRows[0].ecuInfoResponseFormat || sourceInput.ecuInfoResponseFormat || sourceInput.ecu_info_response_format || null
       }
@@ -31883,7 +31939,8 @@
         ? {
           ...sourceInput,
           sourceEcu: resolvedSourceEcu,
-          udsDidResponseEvidence
+          udsDidResponseEvidence,
+          ...(udsReadAdapterCompletionManifest ? { udsReadAdapterCompletionManifest } : {})
         }
         : null;
     const matchedUdsPositiveResponseLifecycle = positiveUdsResponseSource
@@ -33386,6 +33443,20 @@
       : null;
     const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(input.responseWaitMs, input.response_wait_ms));
     const readoutStatus = String(input.ecuInfoReadoutStatus || input.ecu_info_readout_status || input.readoutStatus || input.readout_status || "").trim().toLowerCase();
+    const readoutAttemptId = normalizeUdsReadoutAttemptId(input.readoutAttemptId || input.readout_attempt_id || null);
+    const manifestInput = input.udsReadAdapterCompletionManifest || input.uds_read_adapter_completion_manifest || null;
+    const completionManifest = normalizeUdsReadAdapterCompletionManifest(manifestInput);
+    const manifestMatched = !manifestInput || Boolean(completionManifest
+      && completionManifest.status === "response_received"
+      && completionManifest.readoutAttemptId === readoutAttemptId
+      && completionManifest.targetEcu === targetEcu
+      && completionManifest.sourceEcu === sourceEcu
+      && completionManifest.expectedResponseEcu === sourceEcu
+      && completionManifest.requestedDataIdentifier === requestedDataIdentifiers[0]
+      && completionManifest.responseDataIdentifier === responseDataIdentifier
+      && completionManifest.payloadByteCount === evidence?.payloadByteCount
+      && completionManifest.responseCount === responseCount
+      && completionManifest.responseWaitMs === responseWaitMs);
     const responseFormat = normalizeEcuInfoResponseFormat(input.ecuInfoResponseFormat || input.ecu_info_response_format || input.responseFormat || input.response_format || null);
     const protocolEvidence = [input.protocol, input.obd_protocol, input.diagnosticProtocol, input.diagnostic_protocol].filter(Boolean).join(" ");
     const udsContextConfirmed = responseFormat === "uds_read_data_by_identifier" || /\buds\b/i.test(protocolEvidence);
@@ -33399,7 +33470,8 @@
       && sourceEcu
       && isUdsRequestResponseEcuMatch(targetEcu, sourceEcu)
       && responseCount !== null
-      && responseWaitMs !== null;
+      && responseWaitMs !== null
+      && manifestMatched;
     if (!matched) return null;
     const matchEvidence = {
       schemaVersion: "uds_did_positive_response_match_evidence_v1",
@@ -33420,16 +33492,23 @@
       response_count: responseCount,
       responseWaitMs,
       response_wait_ms: responseWaitMs,
+      readoutAttemptId,
+      readout_attempt_id: readoutAttemptId,
       retainedRawPayload: false,
       retained_raw_payload: false
     };
-    const responseAttemptEvidence = buildUdsReadResponseAttemptEvidence({
+    const normalizedResponseAttemptEvidence = buildUdsReadResponseAttemptEvidence({
       evidencePresent: true,
       status: "response_received",
       attempted: true,
       responseCount,
       responseWaitMs
     }, { responseWaitMs });
+    const responseAttemptEvidence = normalizedResponseAttemptEvidence ? {
+      ...normalizedResponseAttemptEvidence,
+      readoutAttemptId,
+      readout_attempt_id: readoutAttemptId
+    } : null;
     const responseLifecycle = buildUdsReadTransportResponseLifecycle(responseAttemptEvidence, {
       adapterImplemented: false
     });

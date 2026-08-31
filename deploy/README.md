@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.366では`uds_read_adapter_completion_manifest_v1`をpositive応答、negative応答、NRC 78 pendingへ拡張しました。positiveは要求/応答DID、payload長、target/source ECU、応答回数、待機時間、attempt ID、negative/pendingはservice 22、NRC、ECU、応答回数、待機時間、attempt IDが単一結果と完全一致する場合だけ既存lifecycleへ接続します。不一致manifestは診断結果を変えず証跡だけ不採用とし、旧terminal manifest互換、raw非保持、dispatch無効、車両コマンド無効を維持してUDS/CAN FDソフト進捗を74%へ更新しました。
+
 3.13.365では実adapterのterminal完了結果を`uds_read_adapter_completion_manifest_v1`として`read_ecu_info` bridge契約へ接続し、readout attempt ID、target ECU、expected response ECU、応答回数0、待機時間を同一証跡として保持しました。11bit/29bit ECU対、不正ID、raw混入、送信要求、manifestとoutcomeの不一致は採用しません。無応答時のsource ECU非生成、旧ログ互換、JSON再取込、車両コマンド無効を維持し、UDS/CAN FDソフト進捗を70%へ更新しました。
 
 3.13.364ではbridge adapterのtimeout、transport error、cancelledを、target ECU、expected response ECU、応答回数0、待機時間が一致する単一証跡だけUDS lifecycleへ接続しました。無応答時にsource ECUを作らず、期待ECUを別フィールドで保持します。不一致ECU、非ゼロ応答数、複数outcomeは採用しません。診断判定は変更せず、raw非保持、adapter未実装、dispatch無効、車両コマンド無効を維持し、UDS/CAN FDソフト進捗を66%へ更新しました。

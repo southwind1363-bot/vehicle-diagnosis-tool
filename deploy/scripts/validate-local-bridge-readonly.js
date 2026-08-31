@@ -27,7 +27,31 @@ const udsTimeoutCompletionManifest = {
   would_transmit: false,
   vehicle_command_enabled: false
 };
-const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const udsPositiveCompletionManifest = {
+  ...udsTimeoutCompletionManifest,
+  readout_attempt_id: "uds-attempt-positive-001",
+  status: "response_received",
+  source_ecu: "7E8",
+  response_count: 1,
+  requested_data_identifier: "F189",
+  response_data_identifier: "F189",
+  payload_byte_count: 6
+};
+const udsNegativeCompletionManifest = {
+  ...udsTimeoutCompletionManifest,
+  readout_attempt_id: "uds-attempt-negative-001",
+  status: "negative_response",
+  source_ecu: "7E8",
+  response_count: 1,
+  negative_requested_service: "22",
+  negative_response_code: "31"
+};
+const udsPendingCompletionManifest = {
+  ...udsNegativeCompletionManifest,
+  readout_attempt_id: "uds-attempt-pending-001",
+  status: "pending",
+  negative_response_code: "78"
+};const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "package.json"), "utf8"));
 const localBridgeSource = fs.readFileSync(path.join(scriptDir, "..", "local-bridge-readonly.js"), "utf8");
 const j2534BridgeStarterSource = fs.readFileSync(path.join(scriptDir, "start-j2534-readonly-bridge.js"), "utf8");
@@ -61,6 +85,14 @@ check(localBridgeSource.includes('function normalizeUdsReadAttemptStatus(value)'
 check(localBridgeSource.includes("...(sourceEcu ? { source_ecu: sourceEcu } : {})") && localBridgeSource.includes("responseCount >= (udsReadAttemptStatus ? 0 : 1)") && localBridgeSource.includes("...(udsReadAttemptStatus ? { uds_read_attempt_status: udsReadAttemptStatus } : {})"), "No-response adapter outcomes must allow only a zero response count without fabricating a source ECU");
 check(normalizeUdsReadAdapterCompletionManifest(udsTimeoutCompletionManifest)?.readout_attempt_id === "uds-attempt-001" && normalizeUdsReadAdapterCompletionManifest(udsTimeoutCompletionManifest)?.terminal === true, "UDS adapter completion manifest must retain a bounded readout attempt and terminal read-only outcome");
 check(normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, expected_response_ecu: "7E9" }) === null && normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, raw_frames: ["reject"] }) === null && normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, vehicle_command_enabled: true }) === null, "UDS adapter completion manifest must reject mismatched ECU scope, raw frames, and vehicle commands");
+check(normalizeUdsReadAdapterCompletionManifest(udsPositiveCompletionManifest)?.payload_byte_count === 6 && normalizeUdsReadAdapterCompletionManifest(udsPositiveCompletionManifest)?.source_ecu === "7E8" && normalizeUdsReadAdapterCompletionManifest(udsNegativeCompletionManifest)?.negative_response_code === "31" && normalizeUdsReadAdapterCompletionManifest(udsPendingCompletionManifest)?.terminal === false, "UDS response completion manifests must retain matched positive, negative, and pending metadata");
+check([
+  { ...udsPositiveCompletionManifest, response_data_identifier: "F187" },
+  { ...udsPositiveCompletionManifest, source_ecu: "7E9" },
+  { ...udsNegativeCompletionManifest, negative_response_code: "78" },
+  { ...udsPendingCompletionManifest, negative_response_code: "31" },
+  { ...udsPendingCompletionManifest, raw_payload: "reject" }
+].every((manifest) => normalizeUdsReadAdapterCompletionManifest(manifest) === null), "UDS response completion manifests must reject DID, ECU, NRC, and raw-payload mismatches");
 check(packageManifest.scripts?.["review:j2534-host"] === "node scripts/review-j2534-host.js" && j2534HostReviewSource.includes('discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true })') && j2534HostReviewSource.includes('manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review")') && j2534HostReviewSource.includes('runJ2534WorkerReview(devices,') && j2534HostReviewSource.includes('timeout_ms: 5000'), "J2534 host review CLI must derive drivers from static discovery and require manual confirmation");
 const blockedJ2534WorkerReview = reviewJ2534PassThruOpenRequest({
   operation: "review_pass_thru_open",
@@ -361,7 +393,17 @@ try {
   } finally {
     await new Promise((resolve) => completionServer.close(resolve));
   }
-  const preflight = await fetch(`http://127.0.0.1:${port}/v1/bridge`, {
+  for (const [manifest, expectedStatus] of [[udsPositiveCompletionManifest, "response_received"], [udsNegativeCompletionManifest, "negative_response"], [udsPendingCompletionManifest, "pending"]]) {
+    const responseServer = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", udsReadAdapterCompletionManifest: manifest });
+    const responsePort = await new Promise((resolve) => responseServer.listen(0, "127.0.0.1", () => resolve(responseServer.address().port)));
+    try {
+      const responseReadout = await post(responsePort, "read_ecu_info");
+      const responseSnapshot = responseReadout.data.ecu_info_ecu_snapshots?.[0];
+      check(responseReadout.ok === false && responseReadout.would_transmit === false && responseReadout.data.readout_ecu_ids?.join(",") === "7E8" && responseSnapshot?.source_ecu === "7E8" && responseSnapshot?.readout_attempt_id === manifest.readout_attempt_id && responseReadout.data.uds_read_adapter_completion_manifest?.status === expectedStatus, `read_ecu_info must retain sanitized ${expectedStatus} completion evidence`);
+    } finally {
+      await new Promise((resolve) => responseServer.close(resolve));
+    }
+  }  const preflight = await fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "OPTIONS",
     headers: { Origin: "http://127.0.0.1:3001", "Access-Control-Request-Method": "POST" }
   });

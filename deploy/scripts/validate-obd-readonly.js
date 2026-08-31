@@ -3838,7 +3838,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('UDS adapter完了manifestとattempt IDをread_ecu_infoへ統合'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('UDS positive・negative・pending完了manifestをECU/DID/NRC/attempt IDで統合'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4449,7 +4449,7 @@ check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.point
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "UDS adapter完了manifestとattempt IDをread_ecu_infoへ統合"'), "OBD core progress should describe the latest completed UDS DID boundary milestone");
+check(appSource.includes('recentMilestone: "UDS positive・negative・pending完了manifestをECU/DID/NRC/attempt IDで統合"'), "OBD core progress should describe the latest completed UDS DID boundary milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4786,7 +4786,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "UDS adapter完了manifestとattempt IDをread_ecu_infoへ統合"'), "OBD core progress snapshot should show the latest completed UDS DID boundary milestone");
+check(appSource.includes('recentMilestone: "UDS positive・negative・pending完了manifestをECU/DID/NRC/attempt IDで統合"'), "OBD core progress snapshot should show the latest completed UDS DID boundary milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -6381,7 +6381,7 @@ check(interfaceRoadmap.length >= 6, "高度インターフェースの準備順�
 check(interfaceRoadmap[0].id === "web_serial_obd", "最初の段階がWeb Serialではありません");
 check(interfaceRoadmap.some((item) => item.id === "local_bridge" && item.requiresLocalBridge === true), "ローカルブリッジ段階がありません");
 check(interfaceRoadmap.some((item) => item.id === "j2534_passthru" && item.requiresLocalBridge === true), "J2534段階がありません");
-check(interfaceRoadmap.some((item) => item.id === "uds_canfd") && appSource.includes('uds_canfd: Object.freeze({') && appSource.includes('progressPercent: 70') && appSource.includes('terminal adapter completion manifest、attempt ID付き非実行ライフサイクルまで実装済み'), "UDS/CAN FD段階または実装根拠付き進捗が不足しています");
+check(interfaceRoadmap.some((item) => item.id === "uds_canfd") && appSource.includes('uds_canfd: Object.freeze({') && appSource.includes('progressPercent: 74') && appSource.includes('positive / negative / pending / terminal adapter completion manifest、attempt ID付き非実行ライフサイクルまで実装済み'), "UDS/CAN FD段階または実装根拠付き進捗が不足しています");
 check(interfaceRoadmap.some((item) => item.id === "doip"), "DoIP段階がありません");
 check(interfaceRoadmap.every((item) => item.vehicleCommandEnabled === false), "高度インターフェースで実車コマンドが有効です");
 const blockedJ2534 = obd.requestAdvancedInterface("j2534_passthru");
@@ -18822,6 +18822,50 @@ const udsTimeoutAdapterCompletionManifest = {
   would_transmit: false,
   vehicle_command_enabled: false
 };
+const udsPositiveAdapterCompletionManifest = {
+  ...udsTimeoutAdapterCompletionManifest,
+  readout_attempt_id: "uds-attempt-positive-001",
+  status: "response_received",
+  source_ecu: "7E8",
+  response_count: 1,
+  requested_data_identifier: "F189",
+  response_data_identifier: "F189",
+  payload_byte_count: 2
+};
+const udsNegativeAdapterCompletionManifest = {
+  ...udsTimeoutAdapterCompletionManifest,
+  readout_attempt_id: "uds-attempt-negative-001",
+  status: "negative_response",
+  source_ecu: "7E8",
+  response_count: 1,
+  negative_requested_service: "22",
+  negative_response_code: "31"
+};
+const udsPendingAdapterCompletionManifest = {
+  ...udsNegativeAdapterCompletionManifest,
+  readout_attempt_id: "uds-attempt-pending-001",
+  status: "pending",
+  negative_response_code: "78"
+};
+const manifestedBridgeUdsPositiveSession = buildBridgeUdsResponseAttemptSession([
+  { source_ecu: "7E8", target_ecu: "7E0", readout_attempt_id: "uds-attempt-positive-001", ecu_info_readout_status: "reported", response_count: 1, response_wait_ms: 1500, uds_did_response_evidence: { requested_data_identifiers: ["F189"], response_data_identifier: "F189", payload_byte_count: 2, boundary_status: "single_did" } }
+], udsPositiveAdapterCompletionManifest);
+const manifestedBridgeUdsPositiveRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(manifestedBridgeUdsPositiveSession)));
+const mismatchedDidManifestPositiveSession = buildBridgeUdsResponseAttemptSession([
+  { source_ecu: "7E8", target_ecu: "7E0", readout_attempt_id: "uds-attempt-positive-001", ecu_info_readout_status: "reported", response_count: 1, response_wait_ms: 1500, uds_did_response_evidence: { requested_data_identifiers: ["F187"], response_data_identifier: "F187", payload_byte_count: 2, boundary_status: "single_did" } }
+], udsPositiveAdapterCompletionManifest);
+const manifestedBridgeUdsNegativeSession = buildBridgeUdsResponseAttemptSession([
+  { source_ecu: "7E8", target_ecu: "7E0", readout_attempt_id: "uds-attempt-negative-001", ecu_info_readout_status: "unparsed", ecu_info_negative_response_service: "22", ecu_info_negative_response_code: "31", response_count: 1, response_wait_ms: 1500 }
+], udsNegativeAdapterCompletionManifest);
+const manifestedBridgeUdsNegativeCandidate = manifestedBridgeUdsNegativeSession.nextReadoutCandidates?.find((item) => item.id === "ecu_info_snapshot");
+const manifestedBridgeUdsPendingSession = buildBridgeUdsResponseAttemptSession([
+  { source_ecu: "7E8", target_ecu: "7E0", readout_attempt_id: "uds-attempt-pending-001", ecu_info_readout_status: "unparsed", ecu_info_negative_response_service: "22", ecu_info_negative_response_code: "78", response_count: 1, response_wait_ms: 1500 }
+], udsPendingAdapterCompletionManifest);
+const manifestedBridgeUdsPendingCandidate = manifestedBridgeUdsPendingSession.nextReadoutCandidates?.find((item) => item.id === "ecu_info_snapshot");
+const mismatchedNrcManifestSession = buildBridgeUdsResponseAttemptSession([
+  { source_ecu: "7E8", target_ecu: "7E0", readout_attempt_id: "uds-attempt-negative-001", ecu_info_readout_status: "unparsed", ecu_info_negative_response_service: "22", ecu_info_negative_response_code: "22", response_count: 1, response_wait_ms: 1500 }
+], udsNegativeAdapterCompletionManifest);
+const mismatchedNrcManifestCandidate = mismatchedNrcManifestSession.nextReadoutCandidates?.find((item) => item.id === "ecu_info_snapshot");
 const manifestedBridgeUdsTimeoutSession = buildBridgeUdsResponseAttemptSession([
   { expected_response_ecu: "7E8", target_ecu: "7E0", readout_attempt_id: "uds-attempt-001", ecu_info_readout_status: "unparsed", uds_read_attempt_status: "timeout", response_count: 0, response_wait_ms: 1500 }
 ], udsTimeoutAdapterCompletionManifest);
@@ -18890,6 +18934,10 @@ check(matchedBridgeUdsNegativeAttemptCandidate?.targetEcu === "18DAF110" && matc
 check(matchedBridgeUdsPendingAttemptCandidate?.targetEcu === "7E0" && matchedBridgeUdsPendingAttemptCandidate?.udsReadResponseAttemptEvidence?.status === "pending" && matchedBridgeUdsPendingLifecycleSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.state === "response_pending" && matchedBridgeUdsPendingLifecycleSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.terminal === false && matchedBridgeUdsPendingLifecycleSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.pending === true, "A single ECU-matched bridge UDS pending response must remain a non-terminal response lifecycle state");
 check(matchedBridgeUdsTimeoutAttemptSession.ecuInfoSnapshot?.ecuInfoEcuSnapshots?.[0]?.sourceEcu === null && matchedBridgeUdsTimeoutAttemptSession.ecuInfoSnapshot?.ecuInfoEcuSnapshots?.[0]?.expectedResponseEcu === "7E8" && matchedBridgeUdsTimeoutAttemptSession.ecuInfoSnapshot?.readoutEcuIds?.length === 0 && matchedBridgeUdsTimeoutAttemptCandidate?.expectedResponseEcu === "7E8" && matchedBridgeUdsTimeoutAttemptCandidate?.affectedEcuIds?.join(",") === "7E8", "A timeout must retain expected ECU scope without fabricating a responding source ECU");
 check(matchedBridgeUdsTimeoutAttemptCandidate?.udsReadResponseAttemptEvidence?.status === "timeout" && matchedBridgeUdsTimeoutAttemptCandidate?.udsReadResponseAttemptEvidence?.responseCount === 0 && matchedBridgeUdsTimeoutLifecycleSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.state === "timed_out" && matchedBridgeUdsTimeoutLifecycleRoundTrip.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.state === "timed_out" && matchedBridgeUdsTransportErrorLifecycleSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.state === "transport_failed" && matchedBridgeUdsCancelledLifecycleSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.state === "cancelled", "Matched bridge timeout, transport-error, and cancellation outcomes must retain distinct terminal UDS lifecycle states");
+check(manifestedBridgeUdsPositiveSession.ecuInfoSnapshot?.udsReadAdapterCompletionManifest?.status === "response_received" && manifestedBridgeUdsPositiveSession.ecuInfoSnapshot?.udsDidPositiveResponseMatchEvidence?.readoutAttemptId === "uds-attempt-positive-001" && manifestedBridgeUdsPositiveSession.ecuInfoSnapshot?.udsReadTransportResponseLifecycle?.state === "response_received" && manifestedBridgeUdsPositiveRoundTrip.ecuInfoSnapshot?.uds_read_transport_response_lifecycle?.readout_attempt_id === "uds-attempt-positive-001", "A positive UDS adapter completion manifest must bind matching DID, source ECU, and attempt identity through JSON roundtrip");
+check(mismatchedDidManifestPositiveSession.ecuInfoSnapshot?.ecuInfoReadoutStatus === "unknown" && mismatchedDidManifestPositiveSession.ecuInfoSnapshot?.udsReadTransportResponseLifecycle === null && mismatchedDidManifestPositiveSession.vehicleCommandEnabled === false, "A mismatched positive completion manifest must not alter the diagnostic result or attach lifecycle evidence");
+check(manifestedBridgeUdsNegativeCandidate?.udsReadResponseAttemptEvidence?.readoutAttemptId === "uds-attempt-negative-001" && manifestedBridgeUdsNegativeCandidate?.udsReadResponseAttemptEvidence?.status === "negative_response" && manifestedBridgeUdsPendingCandidate?.udsReadResponseAttemptEvidence?.readoutAttemptId === "uds-attempt-pending-001" && manifestedBridgeUdsPendingCandidate?.udsReadResponseAttemptEvidence?.status === "pending", "Negative and pending UDS manifests must bind matching service, NRC, ECU, and attempt identity");
+check(mismatchedNrcManifestCandidate?.statusReason === "ecu_scoped_negative_response" && mismatchedNrcManifestCandidate?.udsReadResponseAttemptEvidence === null && mismatchedNrcManifestCandidate?.readoutAttemptId === null, "A mismatched negative-response manifest must preserve the observed NRC result without attaching attempt evidence");
 check(manifestedBridgeUdsTimeoutSession.ecuInfoSnapshot?.udsReadAdapterCompletionManifest?.readoutAttemptId === "uds-attempt-001" && manifestedBridgeUdsTimeoutSession.ecuInfoSnapshot?.ecuInfoEcuSnapshots?.[0]?.readoutAttemptId === "uds-attempt-001" && manifestedBridgeUdsTimeoutCandidate?.readoutAttemptId === "uds-attempt-001" && manifestedBridgeUdsTimeoutCandidate?.udsReadResponseAttemptEvidence?.readoutAttemptId === "uds-attempt-001", "A valid UDS adapter completion manifest must bind one ECU outcome and candidate to the same readout attempt");
 check(manifestedBridgeUdsTimeoutLifecycleSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.readoutAttemptId === "uds-attempt-001", "UDS adapter completion attempt identity must enter the response lifecycle");
 check(manifestedBridgeUdsTimeoutLifecycleRoundTrip.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportResponseLifecycle?.readout_attempt_id === "uds-attempt-001", "UDS adapter completion attempt identity must survive lifecycle JSON roundtrip");

@@ -213,6 +213,18 @@ function normalizeUdsReadAttemptStatus(value) {
   const status = String(value || "").trim().toLowerCase();
   return ["timeout", "transport_error", "cancelled"].includes(status) ? status : null;
 }
+function normalizeUdsReadAdapterCompletionStatus(value) {
+  const status = String(value || "").trim().toLowerCase();
+  return ["response_received", "negative_response", "pending", "timeout", "transport_error", "cancelled"].includes(status) ? status : null;
+}
+function normalizeUdsHexByte(value) {
+  const text = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+  return /^[0-9A-F]{2}$/.test(text) ? text : null;
+}
+function normalizeUdsDataIdentifier(value) {
+  const text = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+  return /^[0-9A-F]{4}$/.test(text) ? text : null;
+}
 function isUdsRequestResponseEcuPair(targetEcu, responseEcu) {
   if (/^7E[0-7]$/.test(targetEcu) && /^7E[89A-F]$/.test(responseEcu)) return Number.parseInt(responseEcu, 16) === Number.parseInt(targetEcu, 16) + 8;
   return /^18DA[0-9A-F]{4}$/.test(targetEcu) && /^18DA[0-9A-F]{4}$/.test(responseEcu)
@@ -226,18 +238,33 @@ function normalizeReadoutAttemptId(value) {
 export function normalizeUdsReadAdapterCompletionManifest(input = null) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const readoutAttemptId = normalizeReadoutAttemptId(input.readout_attempt_id || input.readoutAttemptId);
-  const status = normalizeUdsReadAttemptStatus(input.status || input.uds_read_attempt_status || input.udsReadAttemptStatus);
+  const status = normalizeUdsReadAdapterCompletionStatus(input.status || input.uds_read_attempt_status || input.udsReadAttemptStatus);
   const targetEcu = normalizeUdsCanEndpointAddress(input.target_ecu || input.targetEcu);
   const expectedResponseEcu = normalizeUdsCanEndpointAddress(input.expected_response_ecu || input.expectedResponseEcu);
+  const sourceEcu = normalizeUdsCanEndpointAddress(input.source_ecu || input.sourceEcu);
   const responseCount = Number(input.response_count ?? input.responseCount);
   const responseWaitMs = Number(input.response_wait_ms ?? input.responseWaitMs);
+  const requestedDataIdentifier = normalizeUdsDataIdentifier(input.requested_data_identifier || input.requestedDataIdentifier);
+  const responseDataIdentifier = normalizeUdsDataIdentifier(input.response_data_identifier || input.responseDataIdentifier);
+  const payloadByteCount = Number(input.payload_byte_count ?? input.payloadByteCount);
+  const negativeRequestedService = normalizeUdsHexByte(input.negative_requested_service || input.negativeRequestedService);
+  const negativeResponseCode = normalizeUdsHexByte(input.negative_response_code || input.negativeResponseCode);
+  const responseReceived = status === "response_received";
+  const negativeResponse = status === "negative_response";
+  const pending = status === "pending";
+  const hasResponse = responseReceived || negativeResponse || pending;
   const forbiddenKeys = new Set(["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "command", "commands"]);
   const retainsForbiddenData = (value) => value && typeof value === "object" && Object.entries(value).some(([key, child]) => forbiddenKeys.has(key.toLowerCase()) || retainsForbiddenData(child));
   if (input.schema_version !== "uds_read_adapter_completion_manifest_v1"
     || input.record_type !== "uds_read_adapter_completion"
     || input.bridge_intent !== "read_ecu_info"
     || !readoutAttemptId || !status || !targetEcu || !expectedResponseEcu || !isUdsRequestResponseEcuPair(targetEcu, expectedResponseEcu)
-    || responseCount !== 0 || !Number.isSafeInteger(responseWaitMs) || responseWaitMs < 50 || responseWaitMs > 120000
+    || (hasResponse ? (!sourceEcu || sourceEcu !== expectedResponseEcu || !Number.isSafeInteger(responseCount) || responseCount < 1 || responseCount > 4096) : responseCount !== 0)
+    || (responseReceived && (!requestedDataIdentifier || requestedDataIdentifier !== responseDataIdentifier || !Number.isSafeInteger(payloadByteCount) || payloadByteCount < 1 || payloadByteCount > 65535))
+    || ((negativeResponse || pending) && (negativeRequestedService !== "22" || !negativeResponseCode || (pending ? negativeResponseCode !== "78" : negativeResponseCode === "78")))
+    || (!responseReceived && (requestedDataIdentifier || responseDataIdentifier || Number.isFinite(payloadByteCount)))
+    || (!(negativeResponse || pending) && (negativeRequestedService || negativeResponseCode))
+    || !Number.isSafeInteger(responseWaitMs) || responseWaitMs < 50 || responseWaitMs > 120000
     || retainsForbiddenData(input)
     || input.read_only !== true || input.execution_enabled !== false || input.would_transmit !== false || input.vehicle_command_enabled !== false) return null;
   return {
@@ -248,9 +275,12 @@ export function normalizeUdsReadAdapterCompletionManifest(input = null) {
     status,
     target_ecu: targetEcu,
     expected_response_ecu: expectedResponseEcu,
-    response_count: 0,
+    ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+    response_count: responseCount,
     response_wait_ms: responseWaitMs,
-    terminal: true,
+    ...(responseReceived ? { requested_data_identifier: requestedDataIdentifier, response_data_identifier: responseDataIdentifier, payload_byte_count: payloadByteCount } : {}),
+    ...(negativeResponse || pending ? { negative_requested_service: negativeRequestedService, negative_response_code: negativeResponseCode } : {}),
+    terminal: status !== "pending",
     retained_raw_frames: false,
     retained_raw_response: false,
     read_only: true,
@@ -261,14 +291,30 @@ export function normalizeUdsReadAdapterCompletionManifest(input = null) {
 }
 function buildUdsReadAdapterCompletionOutcome(manifest) {
   return manifest ? {
+    ...(manifest.source_ecu ? { source_ecu: manifest.source_ecu } : {}),
     expected_response_ecu: manifest.expected_response_ecu,
     target_ecu: manifest.target_ecu,
-    ecu_info_readout_status: "unparsed",
-    uds_read_attempt_status: manifest.status,
+    ...(["negative_response", "pending"].includes(manifest.status) ? {
+      ecu_info_readout_status: "unparsed",
+      ecu_info_negative_response_service: manifest.negative_requested_service,
+      ecu_info_negative_response_code: manifest.negative_response_code
+    } : {}),
+    ...(["timeout", "transport_error", "cancelled"].includes(manifest.status) ? {
+      ecu_info_readout_status: "unparsed",
+      uds_read_attempt_status: manifest.status,
+      error_codes: [`uds_adapter_${manifest.status}`]
+    } : {}),
+    ...(manifest.status === "response_received" ? { uds_did_response_evidence: {
+      requested_data_identifiers: [manifest.requested_data_identifier],
+      response_data_identifier: manifest.response_data_identifier,
+      payload_byte_count: manifest.payload_byte_count,
+      boundary_status: "single_did",
+      source_ecu: manifest.source_ecu,
+      retained_raw_payload: false
+    } } : {}),
     readout_attempt_id: manifest.readout_attempt_id,
     response_count: manifest.response_count,
-    response_wait_ms: manifest.response_wait_ms,
-    error_codes: [`uds_adapter_${manifest.status}`]
+    response_wait_ms: manifest.response_wait_ms
   } : null;
 }
 function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
@@ -322,6 +368,7 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
         ...(targetEcu ? { target_ecu: targetEcu } : {}),
         ...(udsReadAttemptStatus ? { uds_read_attempt_status: udsReadAttemptStatus } : {}),
         ...(readoutAttemptId ? { readout_attempt_id: readoutAttemptId } : {}),
+        ...(outcome?.uds_did_response_evidence ? { uds_did_response_evidence: outcome.uds_did_response_evidence } : {}),
         ...(responseCountValid ? { response_count: responseCount } : {}),
         ...(Number.isFinite(outcome?.response_wait_ms) && outcome.response_wait_ms >= 50 && outcome.response_wait_ms <= 120000 ? { response_wait_ms: Math.round(outcome.response_wait_ms) } : {}),
         ...(outcome?.error_codes?.length ? { error_codes: outcome.error_codes } : {}),
@@ -732,7 +779,7 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
       data: {
         protocol: "ISO15765-4-adapter-completion",
         values: [],
-        readout_ecu_ids: [],
+        readout_ecu_ids: ecuInfoEcuSnapshots.map((item) => item.source_ecu).filter(Boolean),
         ecu_info_ecu_snapshots: ecuInfoEcuSnapshots,
         uds_read_adapter_completion_manifest: udsReadAdapterCompletionManifest,
         vehicle_command_enabled: false
