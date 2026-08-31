@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { buildJ2534NativeFixture } from "./native/build-j2534-native-fixture.js";
 import {
   createJ2534NativeFixtureSupervisor,
+  createJ2534UdsTransportFixtureSupervisor,
   createJ2534VerifiedIdentityFixtureSupervisor,
   parseJ2534NativeFixtureOutput,
   parseJ2534UdsTransportFixtureOutput,
@@ -520,24 +521,37 @@ async function main() {
       assert.equal(rejectedUdsTransportWorker.stdout, "");
       assert.equal(rejectedUdsTransportWorker.stderr, "");
       total += 4;
+      const udsTransportDescriptor = {
+        temp_root: directory,
+        architecture: platform.name,
+        worker: {
+          path: udsTransportWorker,
+          sha256: createHash("sha256").update(fs.readFileSync(udsTransportWorker)).digest("hex")
+        }
+      };
+      const udsTransportSupervisor = createJ2534UdsTransportFixtureSupervisor(udsTransportDescriptor);
+      assert.throws(() => createJ2534UdsTransportFixtureSupervisor({ ...udsTransportDescriptor, temp_root: platformDirectory }),
+        /uds_transport_fixture_descriptor_invalid/);
+      total++;
       const expectedCompletionStatuses = {
         positive: "response_received", "positive-29bit": "response_received", negative: "negative_response",
         pending: "pending", timeout: "timeout", "transport-error": "transport_error", cancelled: "cancelled"
       };
       for (const [scenario, expectedStatus] of Object.entries(expectedCompletionStatuses)) {
-        const execution = await execute(udsTransportWorker, ["--fixture", scenario]);
-        const parsed = parseJ2534UdsTransportFixtureOutput(execution.stdout, scenario, platform.name);
-        const completion = buildUdsReadAdapterCompletionManifest(parsed?.transport_result);
-        assert.equal(execution.error, null);
-        assert.equal(execution.stderr, "");
-        assert.equal(parsed?.fixture_only, true);
-        assert.equal(parsed?.vendor_dll_executed, false);
-        assert.equal(parsed?.vehicle_communication_started, false);
-        assert.equal(parsed?.transport_result?.retained_raw_frames, false);
-        assert.equal(parsed?.transport_result?.would_transmit, false);
+        const supervised = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario });
+        const completion = buildUdsReadAdapterCompletionManifest(supervised.result?.transport_result);
+        assert.equal(supervised.execution_status, "worker_completed");
+        assert.equal(supervised.worker_started, true);
+        assert.equal(supervised.worker_exited, true);
+        assert.equal(supervised.fixture_cleanup_status, "confirmed");
+        assert.equal(supervised.result?.fixture_only, true);
+        assert.equal(supervised.vendor_dll_executed, false);
+        assert.equal(supervised.vehicle_communication_started, false);
+        assert.equal(supervised.result?.transport_result?.retained_raw_frames, false);
+        assert.equal(supervised.result?.transport_result?.would_transmit, false);
         assert.equal(completion?.status, expectedStatus);
         assert.equal(completion?.vehicle_command_enabled, false);
-        total += 10;
+        total += 11;
       }
       const positiveUdsFixture = await execute(udsTransportWorker, ["--fixture", "positive"]);
       for (const mutate of [
@@ -554,6 +568,52 @@ async function main() {
         assert.equal(parseJ2534UdsTransportFixtureOutput(JSON.stringify(invalid), "positive", platform.name), null);
         total++;
       }
+      for (const options of [{}, { mode: "uds_transport_fixture", scenario: "../driver.dll" },
+        { mode: "uds_transport_fixture", scenario: "positive", worker_path: "other.exe" }]) {
+        const blocked = await udsTransportSupervisor.run(options);
+        assert.equal(blocked.execution_status, "request_blocked");
+        assert.equal(blocked.worker_started, false);
+        total += 2;
+      }
+      for (const scenario of ["hang", "result-then-hang"]) {
+        const timedOut = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario, timeout_ms: 1000 });
+        assert.equal(timedOut.execution_status, "worker_timed_out");
+        assert.equal(timedOut.result, null);
+        assert.equal(timedOut.fixture_cleanup_status, "unconfirmed");
+        assert.equal(timedOut.errors[0], "worker_timeout");
+        total += 4;
+      }
+      for (const [scenario, error] of [["overflow", "worker_output_limit"], ["stderr", "worker_stderr"], ["crash", "worker_process_failed"]]) {
+        const failed = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario });
+        assert.equal(failed.execution_status, "worker_failed");
+        assert.equal(failed.result, null);
+        assert.equal(failed.errors[0], error);
+        total += 3;
+      }
+      const udsTransportController = new AbortController();
+      const udsTransportHanging = udsTransportSupervisor.run({
+        mode: "uds_transport_fixture", scenario: "hang", timeout_ms: 10000, signal: udsTransportController.signal
+      });
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const udsTransportBusy = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario: "positive" });
+      assert.equal(udsTransportBusy.execution_status, "worker_busy");
+      assert.equal(udsTransportBusy.worker_started, false);
+      udsTransportController.abort();
+      const udsTransportCancelled = await udsTransportHanging;
+      assert.equal(udsTransportCancelled.execution_status, "worker_cancelled");
+      assert.equal(udsTransportCancelled.worker_exited, true);
+      assert.equal(udsTransportCancelled.result, null);
+      total += 5;
+      const udsTransportOriginal = fs.readFileSync(udsTransportWorker);
+      const udsTransportChanged = Buffer.from(udsTransportOriginal);
+      udsTransportChanged[udsTransportChanged.length - 1] ^= 1;
+      fs.writeFileSync(udsTransportWorker, udsTransportChanged);
+      const udsTransportTampered = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario: "positive" });
+      assert.equal(udsTransportTampered.execution_status, "worker_failed");
+      assert.equal(udsTransportTampered.worker_started, false);
+      assert.deepEqual(udsTransportTampered.errors, ["worker_spawn_failed"]);
+      total += 3;
+      fs.writeFileSync(udsTransportWorker, udsTransportOriginal);
       const worker = path.join(platformDirectory, "j2534-native-fixture-worker.exe");
       createdFiles.push(worker);
       const workerCompile = await execute(platform.compiler, [

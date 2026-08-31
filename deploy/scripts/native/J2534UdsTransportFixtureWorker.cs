@@ -1,9 +1,11 @@
 using System;
+using System.Threading;
 
 internal static class J2534UdsTransportFixtureWorker
 {
     private static readonly string[] Scenarios = {
-        "positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"
+        "positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled",
+        "hang", "overflow", "stderr", "crash", "result-then-hang"
     };
 
     private static string Candidate(string scenario)
@@ -36,6 +38,16 @@ internal static class J2534UdsTransportFixtureWorker
     public static int Main(string[] args)
     {
         if (args.Length != 2 || args[0] != "--fixture" || Array.IndexOf(Scenarios, args[1]) < 0) return 2;
+        if (args[1] == "hang") { Thread.Sleep(Timeout.Infinite); return 0; }
+        if (args[1] == "overflow") { Console.Out.Write(new string('X', 5000)); return 0; }
+        if (args[1] == "stderr") { Console.Error.Write("reject"); return 0; }
+        if (args[1] == "crash") return 23;
+        if (args[1] == "result-then-hang") {
+            Console.Out.Write(Envelope("positive"));
+            Console.Out.Flush();
+            Thread.Sleep(Timeout.Infinite);
+            return 0;
+        }
         Console.Out.Write(Envelope(args[1]));
         return 0;
     }

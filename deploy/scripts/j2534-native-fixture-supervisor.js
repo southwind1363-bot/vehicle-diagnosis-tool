@@ -9,6 +9,8 @@ import { buildJ2534UdsTransportResult } from "./j2534-readonly-worker.js";
 const SCENARIOS = new Set(["success", "open-failure", "overrun", "hang", "crash", "result-then-hang"]);
 const VERIFIED_IDENTITY_SCENARIOS = new Set(["success", "hold"]);
 const UDS_TRANSPORT_SCENARIOS = new Set(["positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"]);
+const UDS_TRANSPORT_CONTROL_SCENARIOS = new Set(["hang", "overflow", "stderr", "crash", "result-then-hang"]);
+const UDS_TRANSPORT_WORKER_SCENARIOS = new Set([...UDS_TRANSPORT_SCENARIOS, ...UDS_TRANSPORT_CONTROL_SCENARIOS]);
 const keysMatch = (value, keys) => value && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const digest = file => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -197,6 +199,83 @@ export function createJ2534NativeFixtureSupervisor(descriptor, controls = {}) {
         const reason = base.result?.lifecycle?.status === "corrupted" ? "worker_corrupted" : "cleanup_unconfirmed";
         try { quarantineStore.mark(reason); } catch { /* A failed latch remains fail-closed on its next read. */ }
       }
+      return base;
+    }
+  });
+}
+// Development-only supervisor for the generated UDS transport-result fixture.
+export function createJ2534UdsTransportFixtureSupervisor(descriptor) {
+  if (!keysMatch(descriptor, ["temp_root", "architecture", "worker"])
+    || !["x86", "x64"].includes(descriptor.architecture)
+    || !keysMatch(descriptor.worker, ["path", "sha256"]) || !isHash(descriptor.worker.sha256))
+    throw new Error("uds_transport_fixture_descriptor_invalid");
+  const architecture = descriptor.architecture;
+  const tempRoot = fs.realpathSync(descriptor.temp_root);
+  const systemTemp = fs.realpathSync(os.tmpdir());
+  const workerPath = descriptor.worker.path;
+  if (path.dirname(tempRoot) !== systemTemp || !path.basename(tempRoot).startsWith("vehicle-j2534-native-")
+    || path.basename(workerPath) !== "j2534-uds-transport-fixture-worker.exe"
+    || path.dirname(workerPath) !== path.join(tempRoot, architecture))
+    throw new Error("uds_transport_fixture_descriptor_invalid");
+  const actualPath = fs.realpathSync(workerPath);
+  const identity = fs.lstatSync(actualPath);
+  if (actualPath !== path.resolve(workerPath) || identity.isSymbolicLink() || !identity.isFile()
+    || digest(actualPath) !== descriptor.worker.sha256) throw new Error("uds_transport_fixture_descriptor_invalid");
+  const pinnedIdentity = Object.freeze({ dev: identity.dev, ino: identity.ino, size: identity.size });
+  const verifyWorker = () => {
+    try {
+      const stat = fs.lstatSync(workerPath);
+      return stat.isFile() && !stat.isSymbolicLink() && stat.dev === pinnedIdentity.dev && stat.ino === pinnedIdentity.ino
+        && stat.size === pinnedIdentity.size && digest(workerPath) === descriptor.worker.sha256;
+    } catch { return false; }
+  };
+  const runWorker = createBoundedFixtureWorker({
+    outputLimit: 4096,
+    rejectStderr: true,
+    spawnWorker(scenario) {
+      if (!verifyWorker()) throw new Error("uds_transport_fixture_worker_changed");
+      const windows = process.env.SystemRoot || process.env.WINDIR || "C:\\Windows";
+      const env = { SystemRoot: windows, WINDIR: windows, TEMP: os.tmpdir(), TMP: os.tmpdir() };
+      return spawn(workerPath, ["--fixture", scenario], {
+        cwd: path.dirname(workerPath), env, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"]
+      });
+    },
+    parseOutput(output, scenario) { return parseJ2534UdsTransportFixtureOutput(output, scenario, architecture); }
+  });
+  return Object.freeze({
+    async run(options = {}) {
+      const base = {
+        schema_version: "j2534-uds-transport-fixture-supervision-v1", fixture_only: true,
+        native_fixture_execution_confirmed: false, vendor_dll_executed: false,
+        vehicle_connection_attempted: false, vehicle_communication_started: false,
+        execution_enabled: false, would_transmit: false, vehicle_command_enabled: false,
+        architecture, execution_status: "request_blocked", worker_started: false, worker_exited: false,
+        termination_requested: false, termination_signal_sent: false,
+        fixture_cleanup_status: "unconfirmed", result: null, errors: []
+      };
+      let scenario, timeout, signal;
+      try {
+        const expectedKeys = ["mode", "scenario", ...(Object.hasOwn(options, "timeout_ms") ? ["timeout_ms"] : []),
+          ...(Object.hasOwn(options, "signal") ? ["signal"] : [])];
+        if (!keysMatch(options, expectedKeys)) throw new Error();
+        scenario = options.scenario; timeout = options.timeout_ms ?? 5000; signal = options.signal;
+        if (options.mode !== "uds_transport_fixture" || !UDS_TRANSPORT_WORKER_SCENARIOS.has(scenario)
+          || !Number.isInteger(timeout) || timeout < 1000 || timeout > 10000
+          || (signal != null && !(signal instanceof AbortSignal))) throw new Error();
+      } catch {
+        base.errors = ["uds_transport_fixture_request_invalid"];
+        return base;
+      }
+      if (signal?.aborted) { base.execution_status = "worker_cancelled"; base.errors = ["worker_cancelled"]; return base; }
+      const supervised = await runWorker({ timeout, signal, context: scenario });
+      Object.assign(base, {
+        execution_status: supervised.execution_status, worker_started: supervised.worker_started,
+        worker_exited: supervised.worker_exited, termination_requested: supervised.termination_requested,
+        termination_signal_sent: supervised.termination_signal_sent, result: supervised.parsed_result,
+        errors: supervised.errors
+      });
+      base.native_fixture_execution_confirmed = base.result !== null;
+      if (base.result) base.fixture_cleanup_status = "confirmed";
       return base;
     }
   });
