@@ -599,7 +599,8 @@ const fixtureDeviceId = parsedJ2534Drivers[0].id;
   const [fixtureCompleted, fixtureParallel] = await Promise.all([
     fixtureController.run(fixtureIssued.operation), fixtureController.run(fixtureIssued.operation)
   ]);
-  check(fixtureRunnerCalls === 1 && fixtureCompleted.native_preflight_verified_in_operation === true
+  check(fixtureRunnerCalls === 1 && fixtureCompleted.preflight_operation_status === "verified_non_executable"
+    && fixtureCompleted.native_preflight_verified_in_operation === true
     && fixtureCompleted.package_integrity_verified_in_operation === true
     && fixtureCompleted.authenticode_verified_in_operation === true
     && fixtureCompleted.readiness_status === "blocked" && fixtureCompleted.blockers.includes("identity_probe_worker_not_implemented")

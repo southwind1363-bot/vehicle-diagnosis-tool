@@ -562,23 +562,24 @@ async function main() {
         requested_data_identifier: "F189"
       });
       const boundaryDeviceId = `j2534-${createHash("sha256").update(`boundary-${platform.name}`).digest("hex").slice(0, 16)}`;
-      const verifiedOperations = new WeakSet();
-      const issueVerifiedOperation = () => {
+      const verifiedOperations = new WeakMap();
+      const issueVerifiedOperation = (status = "verified_non_executable") => {
         const operation = Object.freeze({});
-        verifiedOperations.add(operation);
+        verifiedOperations.set(operation, status);
         return operation;
       };
       let identityPreflightCalls = 0;
       const adapterBoundary = createJ2534UdsTransportAdapterRequestBoundary({
         run_identity_preflight: async operation => {
           identityPreflightCalls += 1;
-          if (!verifiedOperations.has(operation)) return {
+          const operationStatus = verifiedOperations.get(operation);
+          if (!operationStatus) return {
             preflight_operation_status: "rejected", selected_device_id: null,
             native_preflight_verified_in_operation: false
           };
           verifiedOperations.delete(operation);
           return {
-            preflight_operation_status: "completed", selected_device_id: boundaryDeviceId,
+            preflight_operation_status: operationStatus, selected_device_id: boundaryDeviceId,
             native_preflight_verified_in_operation: true, package_integrity_verified_in_operation: true,
             authenticode_verified_in_operation: true, identity_probe_execution_enabled: false,
             dll_load_attempted: false, pass_thru_open_allowed: false, vehicle_communication_started: false,
@@ -628,6 +629,11 @@ async function main() {
       assert.equal(invalidPreparation.preparation_status, "blocked");
       assert.equal(retryPreparation.preparation_status, "prepared_non_executable");
       assert.equal(identityPreflightCalls, 2);
+      total += 3;
+      const legacyStatusPreparation = await adapterBoundary.prepare(issueVerifiedOperation("completed"), adapterPreparationRequest);
+      assert.equal(legacyStatusPreparation.preparation_status, "blocked");
+      assert.deepEqual(legacyStatusPreparation.blockers, ["j2534_identity_preflight_not_verified"]);
+      assert.equal(legacyStatusPreparation.adapter_request, null);
       total += 3;
       const forgedPreparation = await adapterBoundary.prepare(Object.freeze({}), adapterPreparationRequest);
       assert.equal(forgedPreparation.preparation_status, "blocked");

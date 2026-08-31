@@ -39,7 +39,7 @@ function blocked(reason) {
 function verifiedIdentity(snapshot) {
   try {
     return plainObject(snapshot)
-      && snapshot.preflight_operation_status === "completed"
+      && snapshot.preflight_operation_status === "verified_non_executable"
       && snapshot.native_preflight_verified_in_operation === true
       && snapshot.package_integrity_verified_in_operation === true
       && snapshot.authenticode_verified_in_operation === true
