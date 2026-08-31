@@ -8359,6 +8359,10 @@
         return null;
       }
     };
+    const normalizeEvidenceText = (value, limit, allowNumber = false) => {
+      const text = typeof value === "string" ? value : allowNumber && Number.isFinite(value) ? String(value) : "";
+      return text.trim().slice(0, limit) || null;
+    };
     const normalizeRangeDescriptor = (range) => {
       if (!range || typeof range !== "object" || Array.isArray(range)) return null;
       const modelCodes = normalizeCodeList([range.modelCodes || range.model_codes || range.modelCode || range.model_code].flat());
@@ -8367,11 +8371,13 @@
       const yearTo = normalizeYear(range.yearTo ?? range.year_to ?? range.end);
       const verifiedThroughYear = normalizeYear(range.verifiedThroughYear ?? range.verified_through_year);
       const sourceInput = range.source && typeof range.source === "object" && !Array.isArray(range.source) ? range.source : {};
-      const sourceName = String(sourceInput.name || sourceInput.source_name || range.sourceName || range.source_name || (typeof range.source === "string" ? range.source : "")).trim().slice(0, 160) || null;
+      const sourceName = normalizeEvidenceText(sourceInput.name || sourceInput.source_name || range.sourceName || range.source_name || (typeof range.source === "string" ? range.source : ""), 160);
       const sourceUrl = normalizeSourceUrl(sourceInput.url || sourceInput.source_url || range.sourceUrl || range.source_url);
-      const sourceDate = String(sourceInput.date || sourceInput.source_date || range.sourceDate || range.source_date || "").trim().slice(0, 20) || null;
-      const sourceEvidenceId = String(sourceInput.evidenceId || sourceInput.evidence_id || range.evidenceId || range.evidence_id || "").trim().slice(0, 80) || null;
-      const sourceVerified = sourceInput.verified === true || sourceInput.source_verified === true || range.sourceVerified === true || range.source_verified === true;
+      const sourceDate = normalizeEvidenceText(sourceInput.date || sourceInput.source_date || range.sourceDate || range.source_date, 20);
+      const sourceEvidenceId = normalizeEvidenceText(sourceInput.evidenceId ?? sourceInput.evidence_id ?? range.evidenceId ?? range.evidence_id, 80, true);
+      const sourceVerificationValues = [sourceInput.verified, sourceInput.source_verified, range.sourceVerified, range.source_verified].filter((value) => typeof value === "boolean");
+      const sourceVerificationConflict = sourceInput.verificationConflict === true || sourceInput.verification_conflict === true || range.sourceVerificationConflict === true || range.source_verification_conflict === true || sourceVerificationValues.some((value) => value !== sourceVerificationValues[0]);
+      const sourceVerified = !sourceVerificationConflict && sourceVerificationValues.length > 0 && sourceVerificationValues.every((value) => value === true);
       const detailConfirmationRequired = range.detailConfirmationRequired === true || range.detail_confirmation_required === true;
       if (!modelCodes.length && !engineCodes.length && !yearFrom && !yearTo && !verifiedThroughYear && !sourceName) return null;
       return {
@@ -8385,7 +8391,7 @@
         year_to: yearTo,
         verifiedThroughYear,
         verified_through_year: verifiedThroughYear,
-        source: { name: sourceName, url: sourceUrl, date: sourceDate, evidenceId: sourceEvidenceId, verified: sourceVerified },
+        source: { name: sourceName, url: sourceUrl, date: sourceDate, evidenceId: sourceEvidenceId, verified: sourceVerified, verificationConflict: sourceVerificationConflict, verification_conflict: sourceVerificationConflict },
         detailConfirmationRequired,
         detail_confirmation_required: detailConfirmationRequired
       };
@@ -8419,10 +8425,6 @@
     const targetSystem = source.targetSystem || source.target_system || source.system || source.systemName || source.system_name || source.diagnosticSystem || source.diagnostic_system || null;
     const targetEcu = source.targetEcu || source.target_ecu || source.ecu || source.ecuName || source.ecu_name || source.module || source.moduleName || source.module_name || null;
     const ecuAddress = source.ecuAddress || source.ecu_address || source.diagnosticAddress || source.diagnostic_address || source.physicalAddress || source.physical_address || source.address || source.canId || source.can_id || source.responseCanId || source.response_can_id || source.rxId || source.rx_id || source.responseId || source.response_id || null;
-    const normalizeEvidenceText = (value, limit, allowNumber = false) => {
-      const text = typeof value === "string" ? value : allowNumber && Number.isFinite(value) ? String(value) : "";
-      return text.trim().slice(0, limit) || null;
-    };
     const sourceName = normalizeEvidenceText(source.sourceName || source.source_name || source.source || source.dataSource || source.data_source || source.catalogSource || source.catalog_source || source.referenceSource || source.reference_source, 160);
     const sourceUrl = normalizeSourceUrl(source.sourceUrl || source.source_url || source.referenceUrl || source.reference_url || source.catalogUrl || source.catalog_url);
     const sourceDate = normalizeEvidenceText(source.sourceDate || source.source_date || source.referenceDate || source.reference_date || source.catalogDate || source.catalog_date, 20);
