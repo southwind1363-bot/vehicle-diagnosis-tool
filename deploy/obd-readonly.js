@@ -9525,6 +9525,94 @@
         network_protocol: ecuInfoSnapshot?.network_protocol || ecuInfoSnapshot?.networkProtocol || null
       });
     }
+    const ecuInfoAdapterAttemptOutcomes = ecuInfoEcuSnapshots.filter((snapshot) =>
+      Boolean(normalizeUdsReadAttemptStatus(snapshot?.udsReadAttemptStatus || snapshot?.uds_read_attempt_status || null))
+    );
+    if (ecuInfoAdapterAttemptOutcomes.length) {
+      const matchedAdapterAttemptRows = ecuInfoAdapterAttemptOutcomes.filter((snapshot) => {
+        const targetAddress = snapshot?.targetEcu || snapshot?.target_ecu || null;
+        const expectedResponseAddress = snapshot?.expectedResponseEcu || snapshot?.expected_response_ecu || null;
+        const responseCount = Number(snapshot?.responseCount ?? snapshot?.response_count);
+        return targetAddress && expectedResponseAddress
+          && isUdsRequestResponseEcuMatch(targetAddress, expectedResponseAddress)
+          && responseCount === 0
+          && normalizeUdsReadRequestTimingMs(snapshot?.responseWaitMs ?? snapshot?.response_wait_ms) !== null;
+      });
+      const matchedAdapterAttempt = ecuInfoEcuSnapshots.length === 1
+        && ecuInfoAdapterAttemptOutcomes.length === 1
+        && matchedAdapterAttemptRows.length === 1
+        ? matchedAdapterAttemptRows[0]
+        : null;
+      const attemptStatus = matchedAdapterAttempt
+        ? normalizeUdsReadAttemptStatus(matchedAdapterAttempt.udsReadAttemptStatus || matchedAdapterAttempt.uds_read_attempt_status)
+        : null;
+      const statusDetailById = {
+        timeout: {
+          statusReason: "ecu_scoped_transport_timeout",
+          priority: 91,
+          reason: "対象ECUのUDS DID読取が応答待機時間内に完了しなかったため再確認候補"
+        },
+        transport_error: {
+          statusReason: "ecu_scoped_transport_error",
+          priority: 93,
+          reason: "対象ECUのUDS DID読取でtransport errorが記録されたため再確認候補"
+        },
+        cancelled: {
+          statusReason: "ecu_scoped_transport_cancelled",
+          priority: 86,
+          reason: "対象ECUのUDS DID読取が取消されたため再確認候補"
+        }
+      };
+      const statusDetail = attemptStatus ? statusDetailById[attemptStatus] : null;
+      const matchedTargetEcu = matchedAdapterAttempt?.targetEcu || matchedAdapterAttempt?.target_ecu || null;
+      const matchedExpectedResponseEcu = matchedAdapterAttempt?.expectedResponseEcu || matchedAdapterAttempt?.expected_response_ecu || null;
+      const matchedResponseWaitMs = matchedAdapterAttempt
+        ? normalizeUdsReadRequestTimingMs(matchedAdapterAttempt.responseWaitMs ?? matchedAdapterAttempt.response_wait_ms)
+        : null;
+      const udsReadResponseAttemptEvidence = matchedAdapterAttempt && statusDetail ? {
+        evidencePresent: true,
+        evidence_present: true,
+        status: attemptStatus,
+        attempted: true,
+        responseCount: 0,
+        response_count: 0,
+        responseWaitMs: matchedResponseWaitMs,
+        response_wait_ms: matchedResponseWaitMs
+      } : null;
+      const existingEcuInfoCandidateIndex = candidates.findIndex((item) => item.id === "ecu_info_snapshot");
+      if (existingEcuInfoCandidateIndex >= 0) candidates.splice(existingEcuInfoCandidateIndex, 1);
+      candidates.push({
+        id: "ecu_info_snapshot",
+        label: "ECU情報",
+        status: "unparsed",
+        statusReason: statusDetail?.statusReason || "ecu_scoped_transport_outcome_unverified",
+        status_reason: statusDetail?.statusReason || "ecu_scoped_transport_outcome_unverified",
+        priority: statusDetail?.priority || 84,
+        reason: statusDetail?.reason || "UDS DID transport結果のECU範囲を確認する候補",
+        reasonId: statusDetail?.statusReason || "ecu_scoped_transport_outcome_unverified",
+        reason_id: statusDetail?.statusReason || "ecu_scoped_transport_outcome_unverified",
+        applicabilityStatus: applicability.status || null,
+        applicability_status: applicability.status || null,
+        affectedEcuIds: matchedExpectedResponseEcu ? [matchedExpectedResponseEcu] : [],
+        affected_ecu_ids: matchedExpectedResponseEcu ? [matchedExpectedResponseEcu] : [],
+        expectedResponseEcu: matchedExpectedResponseEcu,
+        expected_response_ecu: matchedExpectedResponseEcu,
+        targetEcu: matchedTargetEcu,
+        target_ecu: matchedTargetEcu,
+        responseWaitMs: matchedResponseWaitMs,
+        response_wait_ms: matchedResponseWaitMs,
+        udsReadResponseAttemptEvidence,
+        uds_read_response_attempt_evidence: udsReadResponseAttemptEvidence,
+        ecuInfoResponseFormat: ecuInfoSnapshot?.ecuInfoResponseFormat || ecuInfoSnapshot?.ecu_info_response_format || null,
+        ecu_info_response_format: ecuInfoSnapshot?.ecu_info_response_format || ecuInfoSnapshot?.ecuInfoResponseFormat || null,
+        diagnosticProtocol: ecuInfoSnapshot?.diagnosticProtocol || ecuInfoSnapshot?.diagnostic_protocol || null,
+        diagnostic_protocol: ecuInfoSnapshot?.diagnostic_protocol || ecuInfoSnapshot?.diagnosticProtocol || null,
+        transportProtocol: ecuInfoSnapshot?.transportProtocol || ecuInfoSnapshot?.transport_protocol || null,
+        transport_protocol: ecuInfoSnapshot?.transport_protocol || ecuInfoSnapshot?.transportProtocol || null,
+        networkProtocol: ecuInfoSnapshot?.networkProtocol || ecuInfoSnapshot?.network_protocol || null,
+        network_protocol: ecuInfoSnapshot?.network_protocol || ecuInfoSnapshot?.networkProtocol || null
+      });
+    }
     return candidates
       .sort((left, right) => {
         if ((applicability.status === "manual" || applicability.status === "unlisted") && left.id !== right.id) {
@@ -9672,6 +9760,10 @@
     return Number.isSafeInteger(numeric) && numeric >= 0 && numeric <= 600000 ? numeric : null;
   }
 
+  function normalizeUdsReadAttemptStatus(value) {
+    const status = String(value || "").trim().toLowerCase();
+    return ["timeout", "transport_error", "cancelled"].includes(status) ? status : null;
+  }
   function normalizeUdsReadTransportProtocol(value) {
     const text = String(value || "").trim().toUpperCase().replace(/[\s_-]+/g, "");
     return ["ISOTP", "ISO157652"].includes(text) ? "ISO-TP" : null;
@@ -31432,7 +31524,8 @@
     const ecuInfoEcuSnapshots = rawEcuInfoEcuSnapshots.map((snapshot) => {
       if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshot);
-      if (!snapshotSourceEcu) return null;
+      const expectedResponseEcu = normalizeUdsCanEndpointAddress(snapshot.expectedResponseEcu || snapshot.expected_response_ecu || null);
+      if (!snapshotSourceEcu && !expectedResponseEcu) return null;
       const snapshotItems = collectEcuInfoRows(snapshot);
       const snapshotStatus = String(snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || snapshot.readoutStatus || snapshot.readout_status || "unknown").trim().toLowerCase();
       const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshot);
@@ -31454,8 +31547,13 @@
       const negativeResponseService = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseService || snapshot.ecu_info_negative_response_service);
       const negativeResponseCode = normalizeNegativeResponseByte(snapshot.ecuInfoNegativeResponseCode || snapshot.ecu_info_negative_response_code);
       const targetEcu = normalizeUdsCanEndpointAddress(snapshot.targetEcu || snapshot.target_ecu || snapshot.requestEcu || snapshot.request_ecu || null);
+      const udsReadAttemptStatus = normalizeUdsReadAttemptStatus(snapshot.udsReadAttemptStatus || snapshot.uds_read_attempt_status || snapshot.attemptStatus || snapshot.attempt_status || null);
       const responseCountInput = Number(pickDefined(snapshot.responseCount, snapshot.response_count));
-      const responseCount = Number.isSafeInteger(responseCountInput) && responseCountInput > 0 && responseCountInput <= 4096 ? responseCountInput : null;
+      const responseCount = Number.isSafeInteger(responseCountInput)
+        && responseCountInput >= (udsReadAttemptStatus ? 0 : 1)
+        && responseCountInput <= 4096
+        ? responseCountInput
+        : null;
       const responseWaitMs = normalizeUdsReadRequestTimingMs(pickDefined(snapshot.responseWaitMs, snapshot.response_wait_ms));
       const udsDidResponseEvidence = normalizeUdsDidResponseEvidenceSnapshot(
         snapshot.udsDidResponseEvidence || snapshot.uds_did_response_evidence || null,
@@ -31464,6 +31562,8 @@
       return {
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
+        expectedResponseEcu,
+        expected_response_ecu: expectedResponseEcu,
         sourceEcuName: snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null,
         source_ecu_name: snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null,
         ecuInfoReadoutStatus: resolvedSnapshotStatus,
@@ -31482,6 +31582,8 @@
         response_count: responseCount,
         responseWaitMs,
         response_wait_ms: responseWaitMs,
+        udsReadAttemptStatus,
+        uds_read_attempt_status: udsReadAttemptStatus,
         udsDidResponseEvidence,
         uds_did_response_evidence: udsDidResponseEvidence,
         errorCodes: snapshotErrorCodes,
@@ -31510,7 +31612,7 @@
     const unreportedScopedItemCount = Math.max(0, scopedItemCount - reportedScopedItemCount);
     const ecuInfoEcuOutcomeGroups = new Map();
     ecuInfoEcuSnapshots.forEach((snapshot) => {
-      const sourceAddress = snapshot.sourceEcu || snapshot.source_ecu || null;
+      const sourceAddress = snapshot.sourceEcu || snapshot.source_ecu || snapshot.expectedResponseEcu || snapshot.expected_response_ecu || null;
       const comparableAddress = normalizeComparableCanEcuAddress(sourceAddress);
       const identity = comparableAddress?.startsWith("18DA")
         ? `18DA${[comparableAddress.slice(4, 6), comparableAddress.slice(6, 8)].sort().join("")}`

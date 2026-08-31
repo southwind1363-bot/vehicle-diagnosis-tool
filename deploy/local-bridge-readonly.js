@@ -209,6 +209,10 @@ function normalizeUdsCanEndpointAddress(value) {
   const text = String(value || "").trim().toUpperCase();
   return /^(?:7E[0-9A-F]|18DA[0-9A-F]{4})$/.test(text) ? text : null;
 }
+function normalizeUdsReadAttemptStatus(value) {
+  const status = String(value || "").trim().toLowerCase();
+  return ["timeout", "transport_error", "cancelled"].includes(status) ? status : null;
+}
 function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
   const rowsByEcu = new Map();
   (Array.isArray(values) ? values : []).forEach((item) => {
@@ -221,24 +225,35 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
   const outcomesByEcu = new Map();
   (Array.isArray(outcomes) ? outcomes : []).forEach((outcome) => {
     if (!outcome || typeof outcome !== "object" || Array.isArray(outcome)) return;
-    const sourceEcu = String(outcome.source_ecu || outcome.sourceEcu || outcome.ecu || outcome.address || "").trim().toUpperCase();
-    if (!sourceEcu) return;
-    const previous = outcomesByEcu.get(sourceEcu) || {};
-    outcomesByEcu.set(sourceEcu, {
+    const sourceEcu = normalizeUdsCanEndpointAddress(outcome.source_ecu || outcome.sourceEcu || outcome.ecu || outcome.address || null);
+    const expectedResponseEcu = normalizeUdsCanEndpointAddress(outcome.expected_response_ecu || outcome.expectedResponseEcu || null);
+    const scopeEcu = sourceEcu || expectedResponseEcu;
+    if (!scopeEcu) return;
+    const previous = outcomesByEcu.get(scopeEcu) || {};
+    outcomesByEcu.set(scopeEcu, {
       ...previous,
       ...outcome,
-      source_ecu: sourceEcu,
+      ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+      ...(expectedResponseEcu ? { expected_response_ecu: expectedResponseEcu } : {}),
       error_codes: [...new Set([...(previous.error_codes || []), ...(outcome.error_codes || [])])]
     });
   });
   return [...new Set([...rowsByEcu.keys(), ...outcomesByEcu.keys()])]
     .sort((left, right) => left.localeCompare(right))
-    .map((sourceEcu) => {
-      const items = rowsByEcu.get(sourceEcu) || [];
-      const outcome = outcomesByEcu.get(sourceEcu) || null;
+    .map((ecuScope) => {
+      const items = rowsByEcu.get(ecuScope) || [];
+      const outcome = outcomesByEcu.get(ecuScope) || null;
+      const sourceEcu = normalizeUdsCanEndpointAddress(outcome?.source_ecu || outcome?.sourceEcu || null) || (items.length ? normalizeUdsCanEndpointAddress(ecuScope) : null);
+      const expectedResponseEcu = normalizeUdsCanEndpointAddress(outcome?.expected_response_ecu || outcome?.expectedResponseEcu || null);
       const targetEcu = normalizeUdsCanEndpointAddress(outcome?.target_ecu || outcome?.targetEcu || null);
+      const udsReadAttemptStatus = normalizeUdsReadAttemptStatus(outcome?.uds_read_attempt_status || outcome?.udsReadAttemptStatus || outcome?.attempt_status || outcome?.attemptStatus || null);
+      const responseCount = Number(outcome?.response_count ?? outcome?.responseCount);
+      const responseCountValid = Number.isSafeInteger(responseCount)
+        && responseCount >= (udsReadAttemptStatus ? 0 : 1)
+        && responseCount <= 4096;
       return {
-        source_ecu: sourceEcu,
+        ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+        ...(expectedResponseEcu ? { expected_response_ecu: expectedResponseEcu } : {}),
         ecu_info_readout_status: outcome?.ecu_info_readout_status || (items.length ? "reported" : "unknown"),
         item_count: items.length,
         item_ids: [...new Set(items.map((item) => item.id).filter(Boolean))],
@@ -246,7 +261,8 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
         ...(outcome?.ecu_info_negative_response_service ? { ecu_info_negative_response_service: outcome.ecu_info_negative_response_service } : {}),
         ...(outcome?.ecu_info_negative_response_code ? { ecu_info_negative_response_code: outcome.ecu_info_negative_response_code } : {}),
         ...(targetEcu ? { target_ecu: targetEcu } : {}),
-        ...(Number.isSafeInteger(outcome?.response_count) && outcome.response_count > 0 && outcome.response_count <= 4096 ? { response_count: outcome.response_count } : {}),
+        ...(udsReadAttemptStatus ? { uds_read_attempt_status: udsReadAttemptStatus } : {}),
+        ...(responseCountValid ? { response_count: responseCount } : {}),
         ...(Number.isFinite(outcome?.response_wait_ms) && outcome.response_wait_ms >= 50 && outcome.response_wait_ms <= 120000 ? { response_wait_ms: Math.round(outcome.response_wait_ms) } : {}),
         ...(outcome?.error_codes?.length ? { error_codes: outcome.error_codes } : {}),
         read_only: true,
@@ -255,7 +271,6 @@ function buildEcuInfoEcuSnapshots(values = [], outcomes = []) {
       };
     });
 }
-
 function buildFreezeFrameEcuSnapshots(values = [], triggerEntries = [], outcomes = []) {
   const rowsByEcu = new Map();
   const ensureRow = (ecu) => {
