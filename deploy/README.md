@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.380では車両適合資料の検証済みフラグ競合を拒否します。sourceVerified / source_verified / catalogVerified / verifiedのtrue・falseが矛盾する入力は検証済み扱いを解除し、非ブロッキングのreviewへfail-closed化しました。競合状態を適合snapshotと証拠要約へ保存してJSON再取込後も保持し、正常な検証済み資料はcompleteのままです。適合status、汎用OBD解析、車両通信・送信・実行は変更していません。
+
 3.13.379では車両適合根拠の要確認判定を厳格化しました。日付だけの入力は根拠ありと扱わず、出典名・安全化済みURL・証拠IDのいずれかを必要とします。出典が未検証の場合も車両適合チェックリストをcompleteではなくreviewへ統一します。汎用OBD解析は停止しない非ブロッキング確認のまま、JSON再取込後も状態を保持し、車両通信・送信・実行は無効です。
 
 3.13.378では車両適合statusと明示された根拠フラグの矛盾を拒否します。matchedとcatalog不一致はunlisted、年式・エンジン・型式不一致はpartial、同一フラグのcamel/snake alias競合やunlistedとcatalog一致の競合はmanual確認へfail-closed化しました。追加のmatchEvidenceProvidedで入力時の根拠有無だけを保持し、status単独の旧JSON/CSVは再取込後も互換動作します。解析ブロックを維持し、車両通信・送信・実行は無効のままです。

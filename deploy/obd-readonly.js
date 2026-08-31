@@ -8424,7 +8424,6 @@
     const sourceDate = source.sourceDate || source.source_date || source.referenceDate || source.reference_date || source.catalogDate || source.catalog_date || null;
     const evidenceId = source.evidenceId || source.evidence_id || source.referenceId || source.reference_id || source.catalogId || source.catalog_id || null;
     const confidence = source.confidence ?? source.confidenceScore ?? source.confidence_score ?? source.matchConfidence ?? source.match_confidence ?? null;
-    const sourceVerified = source.sourceVerified === true || source.source_verified === true || source.catalogVerified === true || source.catalog_verified === true || source.verified === true;
     const providedMatchEvidence = source.matchEvidenceProvided && typeof source.matchEvidenceProvided === "object" ? source.matchEvidenceProvided : source.match_evidence_provided && typeof source.match_evidence_provided === "object" ? source.match_evidence_provided : null;
     const readExplicitBooleanEvidence = (keys, evidenceKey) => {
       const values = keys
@@ -8442,6 +8441,9 @@
     const yearMatchEvidence = readExplicitBooleanEvidence(["yearMatched", "year_matched", "yearMatch", "year_match"], "year");
     const engineMatchEvidence = readExplicitBooleanEvidence(["engineMatched", "engine_matched", "engineMatch", "engine_match"], "engine");
     const modelCodeMatchEvidence = readExplicitBooleanEvidence(["modelCodeMatched", "model_code_matched", "modelCodeMatch", "model_code_match"], "modelCode");
+    const sourceVerificationEvidence = readExplicitBooleanEvidence(["sourceVerified", "source_verified", "catalogVerified", "catalog_verified", "verified"], "sourceVerification");
+    const sourceVerificationConflict = source.sourceVerificationConflict === true || source.source_verification_conflict === true || sourceVerificationEvidence.conflict;
+    const sourceVerified = !sourceVerificationConflict && sourceVerificationEvidence.value === true;
     const catalogMatched = source.catalogMatched === true || source.catalog_matched === true || source.catalogMatch === true || source.catalog_match === true || source.matched === true;
     const yearMatched = source.yearMatched === true || source.year_matched === true || source.yearMatch === true || source.year_match === true;
     const engineMatched = source.engineMatched === true || source.engine_matched === true || source.engineMatch === true || source.engine_match === true;
@@ -8528,6 +8530,8 @@
       sourceVerified,
       source_verified: sourceVerified,
       verified: sourceVerified,
+      sourceVerificationConflict,
+      source_verification_conflict: sourceVerificationConflict,
       catalogMatched,
       catalog_matched: catalogMatched,
       yearMatched,
@@ -15255,7 +15259,8 @@
       || vehicleApplicabilityEcuMatchSummary.reviewRequired;
     const vehicleApplicabilityHasIdentity = Boolean(applicability.maker || applicability.model || applicability.modelCode || applicability.year || applicability.engineCode || applicability.targetSystem || applicability.targetEcu);
     const vehicleApplicabilityEvidencePresent = Boolean(applicability.sourceName || applicability.sourceUrl || applicability.evidenceId);
-    const vehicleApplicabilitySourceVerified = applicability.sourceVerified === true || applicability.source_verified === true || applicability.verified === true;
+    const vehicleApplicabilitySourceVerificationConflict = applicability.sourceVerificationConflict === true || applicability.source_verification_conflict === true;
+    const vehicleApplicabilitySourceVerified = !vehicleApplicabilitySourceVerificationConflict && (applicability.sourceVerified === true || applicability.source_verified === true || applicability.verified === true);
     const vehicleApplicabilityEvidenceReviewRequired = vehicleApplicabilityHasIdentity && (!vehicleApplicabilityEvidencePresent || !vehicleApplicabilitySourceVerified);
     const vehicleApplicabilityEvidenceSummary = {
       schemaVersion: "vehicle_applicability_evidence_summary_v1",
@@ -15264,6 +15269,8 @@
       evidence_present: vehicleApplicabilityEvidencePresent,
       sourceVerified: vehicleApplicabilitySourceVerified,
       source_verified: vehicleApplicabilitySourceVerified,
+      sourceVerificationConflict: vehicleApplicabilitySourceVerificationConflict,
+      source_verification_conflict: vehicleApplicabilitySourceVerificationConflict,
       reviewRequired: vehicleApplicabilityEvidenceReviewRequired,
       review_required: vehicleApplicabilityEvidenceReviewRequired,
       sourceName: applicability.sourceName || null,
