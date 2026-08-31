@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.375ではWindows workstation検査へproduction identity-bound UDS request準備の匿名化証拠を追加しました。`inspect-workstation-j2534.cmd --prepare-uds-request 番号 要求ECU 応答ECU DID --no-pause`で、登録ドライバーのopaque operationとECU/DID scopeを結合した非送信準備結果をJSON出力します。device ID、DLLパス、hash、nonceは含めず、PassThruOpen・vehicle communication・dispatch・executionは全てfalseです。既存の診断session・CSV/JSON形式は変更せず、実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を94%へ更新しました。
+
 3.13.374ではproduction J2534 identity operationの成功statusとUDS transport adapter request境界を`verified_non_executable`へ統一しました。従来の`completed`不一致により実ドライバー環境でもrequest発行が必ず拒否される問題を解消し、旧statusは互換受理せずfail-closedで拒否します。診断判定と保存形式は変更せず、vendor DLL・実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を93%へ更新しました。
 
 3.13.373ではproduction J2534 identity operation runnerをfixture-only UDS transport adapter request境界へ固定配線しました。caller指定runnerや公開preflight snapshotを認可に使わず、未登録driver環境、偽造snapshot、clone、reuse、ECU/DID scope逸脱をfail-closedで拒否します。completion manifest builderの依存注入により循環importを解消し、workstation packageへ必要な2モジュールを同梱しました。診断判定と保存形式は変更せず、vendor DLL・実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を92%へ更新しました。

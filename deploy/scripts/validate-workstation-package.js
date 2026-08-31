@@ -9,6 +9,7 @@ import { packageWorkstation } from "./package-workstation.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 import { buildJ2534NativePreflightEvidence, formatJ2534NativePreflightResult, formatJ2534WorkstationInspection, parseJ2534InspectionArguments, parseJ2534PreflightSelection, runJ2534WorkstationPreflight, validateJ2534NativePreflightEvidence } from "./inspect-workstation-j2534.js";
+import { parseJ2534UdsPreparationArguments, runJ2534UdsPreparationEvidence, validateJ2534UdsPreparationEvidence } from "./j2534-uds-preparation-evidence.js";
 
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
@@ -24,7 +25,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "script.js"), 'const APP_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
-  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
   fs.copyFileSync(new URL("./j2534-native-quarantine.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-native-quarantine.js"));
   fs.copyFileSync(new URL("./j2534-registered-driver-native-preflight.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-registered-driver-native-preflight.js"));
   for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534GlobalMutexLease.cs", "J2534RegisteredDriverPreflightWorker.cs"])
@@ -91,6 +92,64 @@ try {
     && parseJ2534InspectionArguments(["--preflight-index", "2", "--evidence-json"], 2).evidenceJson === true
     && parseJ2534InspectionArguments(["--evidence-json", "--evidence-json"], 2).status === "invalid",
   "J2534 evidence arguments did not preserve strict explicit selection");
+  const udsPreparationSelection = parseJ2534UdsPreparationArguments(["--prepare-uds-request", "2", "7e0", "7e8", "f189"], 2);
+  check(udsPreparationSelection.status === "selected" && udsPreparationSelection.index === 1
+    && udsPreparationSelection.request.target_ecu === "7E0" && udsPreparationSelection.request.expected_response_ecu === "7E8"
+    && udsPreparationSelection.request.requested_data_identifier === "F189", "J2534 UDS preparation arguments lost selected driver or normalized ECU/DID scope");
+  for (const args of [
+    ["--prepare-uds-request", "0", "7E0", "7E8", "F189"],
+    ["--prepare-uds-request", "1", "7E0", "7E9", "F189"],
+    ["--prepare-uds-request", "1", "18DA10F1", "18DAF111", "F189"],
+    ["--prepare-uds-request", "1", "7E0", "7E8", "F18Z"],
+    ["--prepare-uds-request", "1", "7E0", "7E8", "F189", "extra"]
+  ]) check(parseJ2534UdsPreparationArguments(args, 2).status === "invalid", `J2534 UDS preparation accepted invalid scope: ${args.join(" ")}`);
+  let udsIssuedDevice = null;
+  let udsBoundaryRuns = 0;
+  const privateOperation = Object.freeze({});
+  const udsPreparationEvidence = await runJ2534UdsPreparationEvidence([staticReady, { ...staticReady, id: "private-device-id" }], udsPreparationSelection, {
+    issue_identity_operation: ({ selected_device_id: selectedDeviceId }) => {
+      udsIssuedDevice = selectedDeviceId;
+      return Object.freeze({ status: "issued", operation: privateOperation });
+    },
+    create_identity_bound_boundary: supervisor => {
+      check(supervisor.fixture_only === true, "J2534 preparation evidence did not retain its non-executing supervisor boundary");
+      return Object.freeze({ prepare: async (operation, request) => {
+        udsBoundaryRuns += 1;
+        check(operation === privateOperation && request === udsPreparationSelection.request, "J2534 preparation evidence changed the opaque operation or ECU/DID scope");
+        const safety = { dll_load_attempted: false, pass_thru_open_attempted: false, vehicle_connection_attempted: false,
+          vehicle_communication_started: false, execution_enabled: false, dispatch_enabled: false, would_transmit: false, vehicle_command_enabled: false };
+        return Object.freeze({ preparation_status: "prepared_non_executable", blockers: Object.freeze([]), ...safety,
+          adapter_request: Object.freeze({ identity_preflight_status: "verified_non_executable", adapter_implemented: false, ...safety,
+            selected_device_id: "private-device-id", private_library_path: "C:/private/driver.dll", operation_nonce: "private-nonce", sha256: "private-hash" }) });
+      } });
+    }
+  }, { capturedAt: "2026-08-31T01:02:03.000Z" });
+  const udsPreparationJson = JSON.stringify(udsPreparationEvidence);
+  check(udsIssuedDevice === "private-device-id" && udsBoundaryRuns === 1
+    && udsPreparationEvidence.preparation_status === "prepared_non_executable" && udsPreparationEvidence.selected_driver_index === 2
+    && udsPreparationEvidence.target_ecu === "7E0" && udsPreparationEvidence.expected_response_ecu === "7E8"
+    && udsPreparationEvidence.requested_data_identifier === "F189" && validateJ2534UdsPreparationEvidence(udsPreparationEvidence) === true
+    && !/private-device|private\/driver|private-nonce|private-hash|sha256|operation_nonce/i.test(udsPreparationJson)
+    && udsPreparationEvidence.evidence_authorizes_execution === false && udsPreparationEvidence.pass_thru_open_attempted === false
+    && udsPreparationEvidence.vehicle_communication_started === false && udsPreparationEvidence.vehicle_command_enabled === false,
+  "J2534 UDS preparation evidence leaked private identity or overstated execution");
+  let rejectedBoundaryCreated = false;
+  const rejectedUdsPreparation = await runJ2534UdsPreparationEvidence([staticReady], parseJ2534UdsPreparationArguments(["--prepare-uds-request", "1", "7E0", "7E8", "F189"], 1), {
+    issue_identity_operation: () => Object.freeze({ status: "rejected", operation: null, readiness: Object.freeze({ blockers: Object.freeze(["no_registered_driver"]) }) }),
+    create_identity_bound_boundary: () => { rejectedBoundaryCreated = true; throw new Error("must-not-run"); }
+  }, { capturedAt: "2026-08-31T01:02:03.000Z" });
+  check(rejectedUdsPreparation.preparation_status === "blocked" && rejectedUdsPreparation.blockers.join(",") === "no_registered_driver"
+    && rejectedBoundaryCreated === false && validateJ2534UdsPreparationEvidence(rejectedUdsPreparation) === true,
+  "J2534 UDS preparation did not fail closed before boundary creation when identity issuance failed");
+  for (const mutate of [
+    value => { value.extra = true; }, value => { value.target_ecu = "7E1"; }, value => { value.blockers = ["forged"]; },
+    value => { value.identity_preflight_status = "completed"; }, value => { value.private_fields_included = true; },
+    value => { value.pass_thru_open_attempted = true; }, value => { value.dispatch_enabled = true; }, value => { value.vehicle_command_enabled = true; }
+  ]) {
+    const changed = JSON.parse(JSON.stringify(udsPreparationEvidence));
+    mutate(changed);
+    check(validateJ2534UdsPreparationEvidence(changed) === false, "J2534 UDS preparation evidence validator accepted a mutated safety contract");
+  }
   const evidenceTime = "2026-08-30T10:00:00.000Z";
   const noDriverEvidence = buildJ2534NativePreflightEvidence([], { capturedAt: evidenceTime, platform: "win32" });
   check(noDriverEvidence.schema_version === "j2534-native-preflight-evidence-v1"
@@ -213,8 +272,8 @@ try {
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
-  check(instructions.includes("inspect-workstation-j2534.cmd") && instructions.includes("--evidence-json") && instructions.includes("--validate-evidence-stdin") && instructions.includes("32KB上限") && instructions.includes("DLLパス、名称、device ID、nonceを含みません") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")), "Package omitted the standalone J2534 preparation check or sanitized evidence instructions");
-  check(["scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
+  check(instructions.includes("inspect-workstation-j2534.cmd") && instructions.includes("--evidence-json") && instructions.includes("--validate-evidence-stdin") && instructions.includes("--prepare-uds-request") && instructions.includes("32KB上限") && instructions.includes("DLLパス、名称、device ID、nonceを含みません") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")) && fs.existsSync(path.join(result.directory, "scripts/j2534-uds-preparation-evidence.js")), "Package omitted the standalone J2534 preparation check or sanitized evidence instructions");
+  check(["scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
   check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
     && packaged.scripts["workstation:dev"] === packaged.scripts.start && packaged.scripts["verify:package"] === "node scripts/verify-workstation-package.js"
     && Object.keys(packaged.scripts).length === 3, "Package retained unavailable development commands");
@@ -272,7 +331,7 @@ try {
   check(instructions.includes("verify-workstation.cmd") && instructions.includes("署名・真正性・実車適合の証明ではありません"), "Integrity instructions overclaim verification");
   const integrityPath = path.join(result.directory, "package-integrity.json");
   const originalManifest = fs.readFileSync(integrityPath);
-  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
+  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     const target = path.join(result.directory, relative);
     const original = fs.readFileSync(target);
     const changed = Buffer.from(original);
@@ -402,6 +461,7 @@ try {
       : entry === "inspect-validate" ? '""inspect-workstation-j2534.cmd" --validate-evidence-stdin --no-pause"'
       : entry === "inspect-validate-large" ? '""inspect-workstation-j2534.cmd" --validate-evidence-stdin --no-pause"'
       : entry === "inspect-invalid" ? '""inspect-workstation-j2534.cmd" --preflight-index 0 --no-pause"'
+      : entry === "inspect-uds-invalid" ? '""inspect-workstation-j2534.cmd" --prepare-uds-request 1 7E0 7E8 F189 --no-pause"'
       : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
       { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
@@ -443,8 +503,13 @@ try {
     const invalidInspection = await runEntry("inspect-invalid");
     check(invalidInspection.code === 2 && invalidInspection.output.includes("Package files match:")
       && invalidInspection.output.includes("検査番号を確認できません") && !invalidInspection.output.includes("DLLロード: 実施"), "Invalid packaged J2534 selection was not rejected after package verification");
+    const invalidUdsPreparation = await runEntry("inspect-uds-invalid");
+    check(invalidUdsPreparation.code === 2 && invalidUdsPreparation.output.includes("Package files match:")
+      && invalidUdsPreparation.output.includes("UDS準備引数を確認できません")
+      && !invalidUdsPreparation.output.includes('vehicle_command_enabled":true'),
+    "Invalid packaged J2534 UDS preparation did not fail closed after package verification");
   }
-  const guardedEntries = process.platform === "win32" ? [...entries, "inspect", "inspect-evidence", "inspect-validate"] : entries;
+  const guardedEntries = process.platform === "win32" ? [...entries, "inspect", "inspect-evidence", "inspect-validate", "inspect-uds-invalid"] : entries;
   for (const [relative, missing] of [["script.js", false], ["node_modules/express/index.js", false], ["package-integrity.json", true], ["package-info.json", true], ["scripts/verify-workstation-package.js", true], ["scripts/inspect-workstation-j2534.js", false]]) {
     const target = path.join(actual.directory, relative);
     const original = fs.readFileSync(target);
@@ -485,7 +550,7 @@ try {
     import {validatePackagedDependencies} from ${JSON.stringify(moduleUrl)};
     const root=process.argv[1];
     validatePackagedDependencies(root);
-    assert(fs.existsSync(path.join(root,"scripts/j2534-readonly-worker.js"))); assert(fs.existsSync(path.join(root,"scripts/j2534-uds-readout-attempt-controller.js"))); assert(fs.existsSync(path.join(root,"scripts/j2534-uds-transport-adapter-request.js")));
+    assert(fs.existsSync(path.join(root,"scripts/j2534-readonly-worker.js"))); assert(fs.existsSync(path.join(root,"scripts/j2534-uds-readout-attempt-controller.js"))); assert(fs.existsSync(path.join(root,"scripts/j2534-uds-transport-adapter-request.js"))); assert(fs.existsSync(path.join(root,"scripts/j2534-uds-preparation-evidence.js")));
     fs.writeFileSync(path.join(root,"saved-session.json"),"private-fixture");
     fs.writeFileSync(path.join(root,"data","saved-session.json"),"private-fixture");
     const {startLocalWorkstation}=await import(pathToFileURL(path.join(root,"scripts/start-local-workstation.js")));

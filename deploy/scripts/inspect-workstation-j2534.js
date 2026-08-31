@@ -2,7 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
-import { createJ2534RegisteredDriverDescriptor, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment, runJ2534RegisteredDriverNativePreflight } from "../local-bridge-readonly.js";
+import { createJ2534ProductionIdentityBoundUdsFixtureBoundary, createJ2534RegisteredDriverDescriptor, discoverJ2534RegistryDrivers, getJ2534DiscoveryEnvironment, issueJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight } from "../local-bridge-readonly.js";
+import { parseJ2534UdsPreparationArguments, runJ2534UdsPreparationEvidence } from "./j2534-uds-preparation-evidence.js";
 
 const READINESS = {
   no_registered_driver: "登録ドライバーを検出できません",
@@ -286,6 +287,20 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       catch { validation = validateJ2534NativePreflightEvidence(null); }
       console.log(JSON.stringify(validation));
       if (!validation.valid) process.exitCode = 1;
+    } else if (rawArgs[0] === "--prepare-uds-request") {
+      const devices = process.platform === "win32" ? discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true }) : [];
+      const selection = parseJ2534UdsPreparationArguments(rawArgs, devices.length);
+      if (selection.status !== "selected") {
+        console.error("UDS準備引数を確認できません。登録候補番号、要求ECU、応答ECU、4桁DIDを指定してください。車両通信・DLL実行は行っていません。");
+        process.exitCode = 2;
+      } else {
+        const evidence = await runJ2534UdsPreparationEvidence(devices, selection, {
+          issue_identity_operation: issueJ2534IdentityPreflightOperation,
+          create_identity_bound_boundary: createJ2534ProductionIdentityBoundUdsFixtureBoundary
+        });
+        console.log(JSON.stringify(evidence));
+        if (evidence.preparation_status !== "prepared_non_executable") process.exitCode = 1;
+      }
     } else {
       const devices = process.platform === "win32" ? discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true }) : [];
       const parsed = parseJ2534InspectionArguments(rawArgs, devices.length);

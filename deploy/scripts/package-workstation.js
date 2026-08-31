@@ -8,7 +8,7 @@ import { validateWorkstationAssets } from "./workstation-assets.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 
 const deployDirectory = fileURLToPath(new URL("../", import.meta.url));
-const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js"];
+const RUNTIME_FILES = ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"];
 
 function exists(entry) {
   try { fs.lstatSync(entry); return true; } catch (error) { if (error.code === "ENOENT") return false; throw error; }
@@ -168,7 +168,7 @@ export function packageWorkstation(options = {}) {
     validatePackagedDependencies(staging);
     fs.appendFileSync(path.join(staging, "README.txt"), "\n移行後はverify-workstation.cmdを開いてファイル内容を検査できます。追加の導入や通信はありません。\n不一致・欠落時は元のパッケージを一式移し直してください。自動修復はしません。\n同梱一覧との一致検査であり、署名・真正性・実車適合の証明ではありません。一覧外の追加ファイルは検査しません。\n");
     fs.appendFileSync(path.join(staging, "README.txt"), "通常のstart-workstation.cmd起動とnpm startでは、検査成功後にサーバーを起動します。\n検査一覧やpackage-info.jsonを削除せず、フォルダー一式を保管してください。\n");
-    fs.appendFileSync(path.join(staging, "README.txt"), "\nJ2534接続準備はinspect-workstation-j2534.cmdを開いて確認してください。登録ドライバーとDLLの静的検査結果を日本語で表示し、選択した番号は専用workerで非実行検査できます。\nVCI・車両を接続する必要はありません。DLLロード、PassThruOpen、実機通信、診断データ保存、外部送信は行いません。worker終了未確認時だけ再試行防止の隔離状態を端末内に保存し、自動解除しません。検査合格でも実車適合や接続成功の証明ではありません。匿名化JSONは inspect-workstation-j2534.cmd --evidence-json --no-pause で取得でき、DLLパス、名称、device ID、nonceを含みません。取得済みJSONは type 証拠.json | inspect-workstation-j2534.cmd --validate-evidence-stdin --no-pause で32KB上限と意味整合を検証できます。\n");
+    fs.appendFileSync(path.join(staging, "README.txt"), "\nJ2534接続準備はinspect-workstation-j2534.cmdを開いて確認してください。登録ドライバーとDLLの静的検査結果を日本語で表示し、選択した番号は専用workerで非実行検査できます。\nVCI・車両を接続する必要はありません。DLLロード、PassThruOpen、実機通信、診断データ保存、外部送信は行いません。worker終了未確認時だけ再試行防止の隔離状態を端末内に保存し、自動解除しません。検査合格でも実車適合や接続成功の証明ではありません。匿名化JSONは inspect-workstation-j2534.cmd --evidence-json --no-pause で取得でき、DLLパス、名称、device ID、nonceを含みません。取得済みJSONは type 証拠.json | inspect-workstation-j2534.cmd --validate-evidence-stdin --no-pause で32KB上限と意味整合を検証できます。production identityとECU/DID scopeの非送信request準備証拠は inspect-workstation-j2534.cmd --prepare-uds-request 番号 要求ECU 応答ECU DID --no-pause で取得できます。\n");
     const info = { appVersion: status.version, dependencyCount: dependencies.length, includesNode: false, fileCount: fileCount + 4 };
     fs.writeFileSync(path.join(staging, "package-info.json"), JSON.stringify(info, null, 2) + "\n", { flag: "wx" });
     for (const relative of ["package.json", "README.txt", "package-info.json"]) recordFile(relative);
