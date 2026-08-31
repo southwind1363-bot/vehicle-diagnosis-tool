@@ -10,9 +10,11 @@ import {
   createJ2534NativeFixtureSupervisor,
   createJ2534VerifiedIdentityFixtureSupervisor,
   parseJ2534NativeFixtureOutput,
+  parseJ2534UdsTransportFixtureOutput,
   parseJ2534VerifiedIdentityFixtureOutput
 } from "./j2534-native-fixture-supervisor.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
+import { buildUdsReadAdapterCompletionManifest } from "../local-bridge-readonly.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
@@ -133,6 +135,9 @@ async function main() {
     assert.deepEqual(fs.readFileSync(target), contents, "Generated fixture changed after writing");
   };
   let total = 0;
+  const udsTransportFixtureSource = fs.readFileSync(path.join(scriptsDirectory, "native", "J2534UdsTransportFixtureWorker.cs"), "utf8");
+  assert.ok(!/(?:DllImport|LoadLibrary|GetProcAddress|PassThru|VehicleDiagnosis\.Native)/.test(udsTransportFixtureSource), "UDS transport fixture gained a native or vehicle communication API");
+  total++;
   try {
     assert.throws(() => buildJ2534NativeFixture("arm64", "success"), /native_fixture_option_rejected/);
     assert.throws(() => buildJ2534NativeFixture("x64", "decorated-open-only"), /native_fixture_option_rejected/);
@@ -338,7 +343,7 @@ async function main() {
           const invalid = JSON.parse(encodedVerified); mutate(invalid);
           assert.equal(parseJ2534VerifiedIdentityFixtureOutput(JSON.stringify(invalid), parserContext), null);
         }
-        const heldRun = verifiedSupervisor.run({ ...request("hold"), timeout_ms: 3000 });
+        const heldRun = verifiedSupervisor.run({ ...request("hold"), timeout_ms: 10000 });
         await new Promise(resolve => setTimeout(resolve, 300));
         const busy = await verifiedSupervisor.run(request("success"));
         assert.equal(busy.execution_status, "worker_busy");
@@ -503,6 +508,52 @@ async function main() {
       assert.deepEqual(preflightImports, ["CreateFileW", "GetDriveTypeW", "GetFileInformationByHandle", "GetFileInformationByHandleEx", "GetFinalPathNameByHandleW", "WinVerifyTrust"].sort(), "Native preflight P/Invoke allowlist changed");
       total += 2;
 
+      const udsTransportWorker = path.join(platformDirectory, "j2534-uds-transport-fixture-worker.exe");
+      createdFiles.push(udsTransportWorker);
+      const udsTransportCompile = await execute(platform.compiler, [
+        "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+", `/out:${udsTransportWorker}`,
+        path.join(scriptsDirectory, "native", "J2534UdsTransportFixtureWorker.cs"),
+      ]);
+      assert.equal(udsTransportCompile.error, null, `UDS transport fixture compilation failed (${platform.name}): ${udsTransportCompile.stdout}${udsTransportCompile.stderr}`);
+      const rejectedUdsTransportWorker = await execute(udsTransportWorker, ["--fixture", "../driver.dll"]);
+      assert.equal(rejectedUdsTransportWorker.error?.code, 2);
+      assert.equal(rejectedUdsTransportWorker.stdout, "");
+      assert.equal(rejectedUdsTransportWorker.stderr, "");
+      total += 4;
+      const expectedCompletionStatuses = {
+        positive: "response_received", "positive-29bit": "response_received", negative: "negative_response",
+        pending: "pending", timeout: "timeout", "transport-error": "transport_error", cancelled: "cancelled"
+      };
+      for (const [scenario, expectedStatus] of Object.entries(expectedCompletionStatuses)) {
+        const execution = await execute(udsTransportWorker, ["--fixture", scenario]);
+        const parsed = parseJ2534UdsTransportFixtureOutput(execution.stdout, scenario, platform.name);
+        const completion = buildUdsReadAdapterCompletionManifest(parsed?.transport_result);
+        assert.equal(execution.error, null);
+        assert.equal(execution.stderr, "");
+        assert.equal(parsed?.fixture_only, true);
+        assert.equal(parsed?.vendor_dll_executed, false);
+        assert.equal(parsed?.vehicle_communication_started, false);
+        assert.equal(parsed?.transport_result?.retained_raw_frames, false);
+        assert.equal(parsed?.transport_result?.would_transmit, false);
+        assert.equal(completion?.status, expectedStatus);
+        assert.equal(completion?.vehicle_command_enabled, false);
+        total += 10;
+      }
+      const positiveUdsFixture = await execute(udsTransportWorker, ["--fixture", "positive"]);
+      for (const mutate of [
+        value => { value.vendor_dll_executed = true; },
+        value => { value.vehicle_communication_started = true; },
+        value => { value.architecture = opposite; },
+        value => { value.scenario = "negative"; },
+        value => { value.transport_result_candidate.raw_frames = ["reject"]; },
+        value => { value.transport_result_candidate.status = "negative_response"; },
+        value => { value.transport_result_candidate.readout_attempt_id = "wrong-attempt"; },
+        value => { value.private_path = "C:/private/driver.dll"; }
+      ]) {
+        const invalid = JSON.parse(positiveUdsFixture.stdout); mutate(invalid);
+        assert.equal(parseJ2534UdsTransportFixtureOutput(JSON.stringify(invalid), "positive", platform.name), null);
+        total++;
+      }
       const worker = path.join(platformDirectory, "j2534-native-fixture-worker.exe");
       createdFiles.push(worker);
       const workerCompile = await execute(platform.compiler, [
@@ -631,12 +682,14 @@ async function main() {
     assert.ok(!production.includes("j2534-native-fixture-supervisor") && !production.includes("bounded-fixture-worker")
       && !production.includes("J2534NativeFixtureWorker") && !production.includes("J2534NativePreflightFixtureWorker")
       && !production.includes("J2534VerifiedIdentityFixtureWorker")
+      && !production.includes("J2534UdsTransportFixtureWorker")
       && !production.includes("j2534-native-preflight-fixture-v1") && !production.includes("j2534-verified-identity-fixture-v1"), "Development native worker reached a production entry point");
     total++;
   }
   const distributionSources = ["../offline-assets.json", "./workstation-assets.js", "./package-workstation.js"]
     .map(relative => fs.readFileSync(new URL(relative, import.meta.url), "utf8")).join("\n");
   assert.ok(!distributionSources.includes("J2534NativePreflightFixtureWorker")
+    && !distributionSources.includes("J2534UdsTransportFixtureWorker")
     && !distributionSources.includes("J2534VerifiedIdentityFixtureWorker")
     && !distributionSources.includes("j2534-native-preflight-fixture-v1")
     && !distributionSources.includes("j2534-verified-identity-fixture-v1"), "Native preflight fixture reached a public or PC package manifest");

@@ -197,9 +197,9 @@ const OBD_INTERFACE_PROGRESS = Object.freeze({
     etaTarget: "2026-Q3 見込み"
   }),
   uds_canfd: Object.freeze({
-    progressPercent: 79,
-    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、DID要求マニフェスト、bridge ECU範囲一致、transport resultからcompletion manifestへのfail-closed変換、J2534隔離workerのsanitized transport result出力、attempt ID付き非実行ライフサイクルまで実装済み。実transportアダプターは未実装。",
-    nextBuild: "J2534 native transport fixtureでpositive / negative / pending / terminal受信結果を生成し、隔離worker出力と親プロセスの変換境界を検証する。",
+    progressPercent: 82,
+    currentBasis: "read-only DID / ECU情報、拡張DTC、NRC、ISO-TPログ取込、DID要求マニフェスト、bridge ECU範囲一致、transport resultからcompletion manifestへのfail-closed変換、J2534隔離worker出力、x86/x64 native transport fixtureの7状態検証、attempt ID付き非実行ライフサイクルまで実装済み。実transportアダプターは未実装。",
+    nextBuild: "native transport fixtureを専用bounded supervisorへ接続し、worker同一性、出力上限、timeout、改変検出を親プロセスで固定する。",
     etaTarget: "2026-Q4 見込み"
   }),
   doip: Object.freeze({
@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 7256件",
   bridgeValidationCheckLabel: "bridge検証 382件",
-  recentMilestone: "J2534隔離workerからsanitized UDS transport結果を出力",
+  recentMilestone: "x86/x64 J2534 native fixtureでUDS受信7状態を境界検証",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.368";
+const APP_VERSION = "3.13.369";
 const APP_LAST_UPDATED = "2026-08-31";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";

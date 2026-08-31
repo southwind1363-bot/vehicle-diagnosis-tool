@@ -179,6 +179,8 @@ the PC package build compiles the non-executing registered-driver preflight for
 x86 and x64, records both SHA-256 values in a strict worker manifest, and the
 runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
 
+`J2534UdsTransportFixtureWorker.cs` is a development-only x86/x64 child that emits seven fixed, bounded UDS transport-result candidates. It imports no native API, accepts no DLL or driver path, reports vendor DLL and vehicle communication as false, and feeds only the strict JavaScript sanitizer and completion-manifest validator. It does not perform PassThruOpen, PassThruConnect, PassThruReadMsgs, PassThruWriteMsgs, or vehicle I/O.
+
 ## Next Gates
 
 1. Cross-check the generated fixture with a compiler-built C reference when a

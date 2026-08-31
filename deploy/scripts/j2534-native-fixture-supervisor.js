@@ -4,9 +4,11 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createBoundedFixtureWorker } from "./bounded-fixture-worker.js";
+import { buildJ2534UdsTransportResult } from "./j2534-readonly-worker.js";
 
 const SCENARIOS = new Set(["success", "open-failure", "overrun", "hang", "crash", "result-then-hang"]);
 const VERIFIED_IDENTITY_SCENARIOS = new Set(["success", "hold"]);
+const UDS_TRANSPORT_SCENARIOS = new Set(["positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"]);
 const keysMatch = (value, keys) => value && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
 const digest = file => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
@@ -45,6 +47,37 @@ export function parseJ2534NativeFixtureOutput(output, scenario, architecture) {
   return structuredClone(envelope);
 }
 
+export function parseJ2534UdsTransportFixtureOutput(output, scenario, architecture) {
+  if (typeof output !== "string" || Buffer.byteLength(output) > 4096
+    || !UDS_TRANSPORT_SCENARIOS.has(scenario) || !["x86", "x64"].includes(architecture)) return null;
+  let envelope;
+  try { envelope = JSON.parse(output); } catch { return null; }
+  if (!keysMatch(envelope, ["schema_version", "fixture_only", "native_fixture_executed", "vendor_dll_executed",
+    "vehicle_connection_attempted", "vehicle_communication_started", "execution_enabled", "would_transmit",
+    "vehicle_command_enabled", "architecture", "pointer_bits", "scenario", "transport_result_candidate"])
+    || envelope.schema_version !== "j2534-uds-transport-fixture-v1" || envelope.fixture_only !== true
+    || envelope.native_fixture_executed !== true || envelope.vendor_dll_executed !== false
+    || envelope.vehicle_connection_attempted !== false || envelope.vehicle_communication_started !== false
+    || envelope.execution_enabled !== false || envelope.would_transmit !== false || envelope.vehicle_command_enabled !== false
+    || envelope.architecture !== architecture || envelope.pointer_bits !== (architecture === "x86" ? 32 : 64)
+    || envelope.scenario !== scenario) return null;
+  const transportResult = buildJ2534UdsTransportResult(envelope.transport_result_candidate);
+  if (!transportResult || transportResult.readout_attempt_id !== `native-fixture-${scenario}-001`) return null;
+  const terminalStatus = scenario === "transport-error" ? "transport_error"
+    : ["timeout", "cancelled"].includes(scenario) ? scenario : null;
+  if (terminalStatus) {
+    if (transportResult.transport_status !== terminalStatus || transportResult.response_count !== 0
+      || Object.hasOwn(transportResult, "source_ecu")) return null;
+  } else if (scenario === "negative" || scenario === "pending") {
+    if (transportResult.negative_requested_service !== "22"
+      || transportResult.negative_response_code !== (scenario === "pending" ? "78" : "31")) return null;
+  } else if (transportResult.requested_data_identifier !== "F189"
+    || transportResult.response_data_identifier !== "F189" || transportResult.payload_byte_count !== 6) return null;
+  const parsed = structuredClone(envelope);
+  delete parsed.transport_result_candidate;
+  parsed.transport_result = transportResult;
+  return parsed;
+}
 export function parseJ2534VerifiedIdentityFixtureOutput(output, context) {
   if (typeof output !== "string" || Buffer.byteLength(output) > 4096 || !keysMatch(context,
     ["architecture", "scenario", "request_nonce", "selected_device_id"])

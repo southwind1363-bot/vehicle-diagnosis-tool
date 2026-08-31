@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.369では実車とvendor DLLへ触れないx86/x64の`J2534UdsTransportFixtureWorker`を追加し、positive 11bit/29bit、negative、NRC 78 pending、timeout、transport error、cancelledの7状態をnative childからJ2534 sanitizer、completion manifestまで通しました。外側fixture証跡と内側transport候補を分離し、実通信フラグ、raw、状態、ECU/DID、attempt ID、改変をfail-closed検証します。実VCI互換性と車両通信は未確認・未実行のまま、UDS/CAN FDソフト進捗を82%へ更新しました。
+
 3.13.368ではJ2534隔離workerへ`buildJ2534UdsTransportResult()`を追加し、受信済みのbounded証跡を`uds_read_transport_result_v1`としてone-shot出力できるようにしました。11bit/29bitの要求・応答ECU、DID、NRC、attempt ID、応答数、待機時間を検証し、raw混入、DID/ECU不一致、positive/negative混在、terminal source ECU、送信要求を拒否して既存completion境界へ接続します。DLLロード、PassThruOpen/Connect/Read/Write、実車通信は追加せず無効のまま、UDS/CAN FDソフト進捗を79%へ更新しました。
 
 3.13.367ではsanitized済みの`uds_read_transport_result_v1`から`uds_read_adapter_completion_manifest_v1`を生成するfail-closed変換境界を追加しました。positive / negative / NRC 78 pending / timeout / transport error / cancelledを受信証跡から導出し、宣言状態の矛盾、raw混入、ECU不一致、positiveとnegativeの混在、terminalでのsource ECU混入、direct manifestとの二重入力を拒否します。診断判定と取得済み判定は変更せず、実transportとdispatchは未実装・無効のまま、UDS/CAN FDソフト進捗を77%へ更新しました。
