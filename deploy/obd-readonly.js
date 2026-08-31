@@ -15254,7 +15254,7 @@
       || applicability.status === "unlisted"
       || vehicleApplicabilityEcuMatchSummary.reviewRequired;
     const vehicleApplicabilityHasIdentity = Boolean(applicability.maker || applicability.model || applicability.modelCode || applicability.year || applicability.engineCode || applicability.targetSystem || applicability.targetEcu);
-    const vehicleApplicabilityEvidencePresent = Boolean(applicability.sourceName || applicability.sourceUrl || applicability.sourceDate || applicability.evidenceId);
+    const vehicleApplicabilityEvidencePresent = Boolean(applicability.sourceName || applicability.sourceUrl || applicability.evidenceId);
     const vehicleApplicabilitySourceVerified = applicability.sourceVerified === true || applicability.source_verified === true || applicability.verified === true;
     const vehicleApplicabilityEvidenceReviewRequired = vehicleApplicabilityHasIdentity && (!vehicleApplicabilityEvidencePresent || !vehicleApplicabilitySourceVerified);
     const vehicleApplicabilityEvidenceSummary = {
@@ -15674,8 +15674,8 @@
       {
         id: "vehicle_applicability",
         label: "Vehicle applicability",
-        state: vehicleApplicabilityBlocking ? "blocked" : vehicleApplicabilityNeedsReview ? "review" : "complete",
-        complete: !vehicleApplicabilityNeedsReview,
+        state: vehicleApplicabilityBlocking ? "blocked" : vehicleApplicabilityNeedsReview || vehicleApplicabilityEvidenceReviewRequired ? "review" : "complete",
+        complete: !vehicleApplicabilityNeedsReview && !vehicleApplicabilityEvidenceReviewRequired,
         blocking: vehicleApplicabilityBlocking,
         applicabilityStatus: applicability.status || "unknown",
         candidateRangeCount: applicability.candidateRangeCount || 0,

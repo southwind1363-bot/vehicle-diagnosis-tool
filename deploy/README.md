@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.379では車両適合根拠の要確認判定を厳格化しました。日付だけの入力は根拠ありと扱わず、出典名・安全化済みURL・証拠IDのいずれかを必要とします。出典が未検証の場合も車両適合チェックリストをcompleteではなくreviewへ統一します。汎用OBD解析は停止しない非ブロッキング確認のまま、JSON再取込後も状態を保持し、車両通信・送信・実行は無効です。
+
 3.13.378では車両適合statusと明示された根拠フラグの矛盾を拒否します。matchedとcatalog不一致はunlisted、年式・エンジン・型式不一致はpartial、同一フラグのcamel/snake alias競合やunlistedとcatalog一致の競合はmanual確認へfail-closed化しました。追加のmatchEvidenceProvidedで入力時の根拠有無だけを保持し、status単独の旧JSON/CSVは再取込後も互換動作します。解析ブロックを維持し、車両通信・送信・実行は無効のままです。
 
 3.13.377では外部JSON/CSV・bridge/sessionから取り込む車両適合statusを既知語彙へ正規化しました。大小文字・空白・ハイフンと明確な同義語を吸収し、未知の明示値はmanual確認へfail-closed化します。明示unknownも手動確認ブロックを保持し、JSON再取込後も適合済みとして解析を進めません。診断session・CSV/JSONスキーマは変更せず、車両通信・送信・実行は無効のままです。
