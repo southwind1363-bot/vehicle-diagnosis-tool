@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7299件",
+  validationCheckLabel: "OBD安全検証 7304件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "対応ECU名と実読取アドレスを結合",
+  recentMilestone: "対応ECU名別の観測内訳を画面表示",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.389";
+const APP_VERSION = "3.13.390";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1976,6 +1976,32 @@ function formatVehicleApplicabilityEcuMatchSummary(summary, fallback = "") {
   if (unmatchedObservedAddresses.length) parts.push(`適合外応答 ${formatAddresses(unmatchedObservedAddresses)}`);
   if (!matchedExpectedAddresses.length && !unmatchedExpectedAddresses.length && expectedAddress) parts.push(`期待 ${expectedAddress}`);
   return parts.join(" / ") || fallback || "";
+}
+
+function formatVehicleApplicabilityEcuObservationSummary(summary, fallback = "") {
+  if (!summary || typeof summary !== "object") return fallback || "";
+  const observations = Array.isArray(summary.expectedEcuObservations)
+    ? summary.expectedEcuObservations
+    : Array.isArray(summary.expected_ecu_observations) ? summary.expected_ecu_observations : [];
+  if (!observations.length) return fallback || "";
+  const reportedObservedCount = Number(summary.observedExpectedEcuCount ?? summary.observed_expected_ecu_count);
+  const observedCount = Number.isFinite(reportedObservedCount)
+    ? reportedObservedCount
+    : observations.filter((item) => item?.observed === true).length;
+  const items = observations.slice(0, 3).map((item) => {
+    const observedAddresses = Array.isArray(item?.observedAddresses)
+      ? item.observedAddresses
+      : Array.isArray(item?.observed_addresses) ? item.observed_addresses : [];
+    const address = item?.diagnosticAddress || item?.diagnostic_address || "";
+    const name = item?.ecuName || item?.ecu_name || item?.systemName || item?.system_name || "";
+    const identity = name && address && name !== address ? `${name} [${address}]` : name || address || "名称未登録";
+    const state = item?.observed === true
+      ? observedAddresses.length ? `観測 ${observedAddresses.slice(0, 2).join(", ")}` : "観測"
+      : "未観測";
+    return `${identity} ${state}`;
+  });
+  if (observations.length > items.length) items.push(`ほか${observations.length - items.length}件`);
+  return [`ECU内訳 ${observedCount}/${observations.length}観測`, ...items].join(" / ");
 }
 
 function formatVehicleProfileLabel(profile, fallback = "") {
@@ -10483,6 +10509,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const applicabilityFieldMatchLabel = formatVehicleApplicabilityFieldMatchSummary(applicabilityFieldMatchSummary, NO_DATA) || NO_DATA;
   const applicabilityEcuMatchSummary = core.vehicleApplicabilityEcuMatchSummary || core.vehicle_applicability_ecu_match_summary || analysisReadinessSummary?.vehicleApplicabilityEcuMatchSummary || analysisReadinessSummary?.vehicle_applicability_ecu_match_summary || applicabilityChecklist?.ecuMatchSummary || applicabilityChecklist?.ecu_match_summary || null;
   const applicabilityEcuMatchLabel = formatVehicleApplicabilityEcuMatchSummary(applicabilityEcuMatchSummary, NO_DATA) || NO_DATA;
+  const applicabilityEcuObservationLabel = formatVehicleApplicabilityEcuObservationSummary(applicabilityEcuMatchSummary, NO_DATA) || NO_DATA;
   const applicabilityTone = flow.vehicleApplicabilityBlocking === true || applicabilityChecklist?.blocking === true
     ? "blocked"
     : flow.vehicleApplicabilityReviewRequired === true || applicabilityChecklist?.state === "review" ? "pending" : "";
@@ -10545,6 +10572,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "適用確認", applicabilityLabel, applicabilityTone);
   addObdDiagnosticFlowMetric(grid, "候補照合", applicabilityFieldMatchLabel, applicabilityFieldMatchSummary?.reviewRequired === true || applicabilityFieldMatchSummary?.review_required === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "ECU適合", applicabilityEcuMatchLabel, applicabilityEcuMatchSummary?.status === "matched" ? "ready" : applicabilityEcuMatchSummary?.status === "mismatch" ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "ECU内訳", applicabilityEcuObservationLabel);
   addObdDiagnosticFlowMetric(grid, "適合差分", vehicleApplicabilityChangedRowLabel, vehicleApplicabilityChangedRowSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
@@ -10751,6 +10779,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const vehicleApplicabilityFieldMatchLabel = formatVehicleApplicabilityFieldMatchSummary(vehicleApplicabilityFieldMatchSummary, NO_DATA) || NO_DATA;
   const vehicleApplicabilityEcuMatchSummary = coreSessionStatus?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.vehicleApplicabilityEcuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.vehicle_applicability_ecu_match_summary || coreSessionStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.ecuMatchSummary || coreSessionStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.ecu_match_summary || null;
   const vehicleApplicabilityEcuMatchLabel = formatVehicleApplicabilityEcuMatchSummary(vehicleApplicabilityEcuMatchSummary, NO_DATA) || NO_DATA;
+  const vehicleApplicabilityEcuObservationLabel = formatVehicleApplicabilityEcuObservationSummary(vehicleApplicabilityEcuMatchSummary, NO_DATA) || NO_DATA;
   const nextReadoutLabel = formatCoreNextStepSummary(coreSessionStatus, getSessionNextReadoutCandidates(session, 2), NO_DATA);
   const nextReadoutReasonLabel = formatNextReadoutReasonSummary(session?.nextReadoutReasonSummary || session?.next_readout_reason_summary || coreSessionStatus?.nextReadoutReasonSummary || coreSessionStatus?.next_readout_reason_summary || session?.diagnosticFlowSummary?.nextReadoutReasonSummary || session?.diagnosticFlowSummary?.next_readout_reason_summary || session?.diagnostic_flow_summary?.nextReadoutReasonSummary || session?.diagnostic_flow_summary?.next_readout_reason_summary, NO_DATA);
   const nextReadoutGuardLabel = formatNextReadoutGuardSummary(session?.nextReadoutGuardSummary || session?.next_readout_guard_summary || coreSessionStatus?.nextReadoutGuardSummary || coreSessionStatus?.next_readout_guard_summary || session?.diagnosticFlowSummary?.nextReadoutGuardSummary || session?.diagnosticFlowSummary?.next_readout_guard_summary || session?.diagnostic_flow_summary?.nextReadoutGuardSummary || session?.diagnostic_flow_summary?.next_readout_guard_summary, NO_DATA);
@@ -10951,6 +10980,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(5, 0, ["適用範囲", vehicleApplicabilityLabel]);
   values.splice(6, 0, ["候補照合", vehicleApplicabilityFieldMatchLabel]);
   values.splice(6, 0, ["ECU適合", vehicleApplicabilityEcuMatchLabel]);
+  values.splice(6, 0, ["ECU内訳", vehicleApplicabilityEcuObservationLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
   values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ...(importedReadoutQualitySummary ? [["受信品質", importedReadoutQualityLabel]] : []), ["実機サンプル", manufacturerSampleReadinessLabel], ["実機応答比較", manufacturerSampleResponseComparisonLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel], ["読取理由", nextReadoutReasonLabel], ["計画安全", nextReadoutGuardLabel], ["計画差分", importedNextReadoutGuardComparisonLabel], ["次読取整合", nextReadoutChangeLabel], ["要求安全", nextReadoutRequestSafetyLabel], ["候補安全", nextReadoutCandidateSafetyLabel]);
