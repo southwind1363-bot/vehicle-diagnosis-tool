@@ -4,6 +4,8 @@
 
 ## 現在の完成版
 
+3.13.371ではJ2534 UDS readout attempt controllerを追加し、controller内部で発行したselected device、operation nonce、attempt ID、target/expected ECU、DIDをx86/x64 native fixtureへ渡し、completionまで完全一致する結果だけを採用するようにしました。別試行・別VCI・別ECU・別DIDの混入、caller指定nonce、ECU対不一致、同時実行、timeout/cancel後の結果をfail-closedで拒否します。診断判定と保存形式は変更せず、vendor DLL・実VCI・車両通信・送信は未実行/無効のまま、UDS/CAN FDソフト進捗を88%へ更新しました。
+
 3.13.370ではx86/x64のJ2534 UDS native fixtureを専用bounded supervisorへ接続しました。workerの固定path・SHA-256・ファイル同一性、4KiB出力上限、stderr拒否、timeout、結果出力後hang、異常終了、busy、cancel、実行前改変を親プロセスで検証し、異常時は結果を破棄します。正常7状態だけがsanitizerとcompletion manifestへ進み、vendor DLL・実VCI・車両通信は未実行のまま、UDS/CAN FDソフト進捗を85%へ更新しました。
 
 3.13.369では実車とvendor DLLへ触れないx86/x64の`J2534UdsTransportFixtureWorker`を追加し、positive 11bit/29bit、negative、NRC 78 pending、timeout、transport error、cancelledの7状態をnative childからJ2534 sanitizer、completion manifestまで通しました。外側fixture証跡と内側transport候補を分離し、実通信フラグ、raw、状態、ECU/DID、attempt ID、改変をfail-closed検証します。実VCI互換性と車両通信は未確認・未実行のまま、UDS/CAN FDソフト進捗を82%へ更新しました。

@@ -20,6 +20,11 @@ const isStep = value => keysMatch(value, ["attempted", "status_code"]) && typeof
   && (value.attempted || value.status_code === null);
 const isVersion = value => typeof value === "string" && /^[\x20-\x21\x23-\x5b\x5d-\x7e]{1,79}$/.test(value) && value.trim() === value;
 const isSafeToken = value => typeof value === "string" && /^[A-Za-z0-9_-]{8,64}$/.test(value);
+const isOperationNonce = value => typeof value === "string" && /^[a-f0-9]{32}$/.test(value);
+const isReadoutAttemptId = value => typeof value === "string" && /^j2534-uds-[a-f0-9]{32}$/.test(value);
+const isSafeDeviceId = value => typeof value === "string" && /^[A-Za-z0-9_.:-]{1,80}$/.test(value);
+const isEcuAddress = value => typeof value === "string" && /^(?:7E[0-9A-F]|18DA[0-9A-F]{4})$/.test(value);
+const isDataIdentifier = value => typeof value === "string" && /^[0-9A-F]{4}$/.test(value);
 
 export function parseJ2534NativeFixtureOutput(output, scenario, architecture) {
   if (typeof output !== "string" || Buffer.byteLength(output) > 4096 || !SCENARIOS.has(scenario) || !["x86", "x64"].includes(architecture)) return null;
@@ -49,38 +54,47 @@ export function parseJ2534NativeFixtureOutput(output, scenario, architecture) {
   return structuredClone(envelope);
 }
 
-export function parseJ2534UdsTransportFixtureOutput(output, scenario, architecture) {
+export function parseJ2534UdsTransportFixtureOutput(output, context) {
   if (typeof output !== "string" || Buffer.byteLength(output) > 4096
-    || !UDS_TRANSPORT_SCENARIOS.has(scenario) || !["x86", "x64"].includes(architecture)) return null;
+    || !keysMatch(context, ["architecture", "scenario", "operation_nonce", "selected_device_id", "readout_attempt_id",
+      "target_ecu", "expected_response_ecu", "requested_data_identifier"])
+    || !UDS_TRANSPORT_SCENARIOS.has(context.scenario) || !["x86", "x64"].includes(context.architecture)
+    || !isOperationNonce(context.operation_nonce) || !isSafeDeviceId(context.selected_device_id)
+    || !isReadoutAttemptId(context.readout_attempt_id) || !isEcuAddress(context.target_ecu)
+    || !isEcuAddress(context.expected_response_ecu) || !isDataIdentifier(context.requested_data_identifier)) return null;
   let envelope;
   try { envelope = JSON.parse(output); } catch { return null; }
   if (!keysMatch(envelope, ["schema_version", "fixture_only", "native_fixture_executed", "vendor_dll_executed",
     "vehicle_connection_attempted", "vehicle_communication_started", "execution_enabled", "would_transmit",
-    "vehicle_command_enabled", "architecture", "pointer_bits", "scenario", "transport_result_candidate"])
+    "vehicle_command_enabled", "architecture", "pointer_bits", "scenario", "operation_nonce", "selected_device_id",
+    "readout_attempt_id", "target_ecu", "expected_response_ecu", "requested_data_identifier", "transport_result_candidate"])
     || envelope.schema_version !== "j2534-uds-transport-fixture-v1" || envelope.fixture_only !== true
     || envelope.native_fixture_executed !== true || envelope.vendor_dll_executed !== false
     || envelope.vehicle_connection_attempted !== false || envelope.vehicle_communication_started !== false
     || envelope.execution_enabled !== false || envelope.would_transmit !== false || envelope.vehicle_command_enabled !== false
-    || envelope.architecture !== architecture || envelope.pointer_bits !== (architecture === "x86" ? 32 : 64)
-    || envelope.scenario !== scenario) return null;
+    || envelope.architecture !== context.architecture || envelope.pointer_bits !== (context.architecture === "x86" ? 32 : 64)
+    || envelope.scenario !== context.scenario || envelope.operation_nonce !== context.operation_nonce
+    || envelope.selected_device_id !== context.selected_device_id || envelope.readout_attempt_id !== context.readout_attempt_id
+    || envelope.target_ecu !== context.target_ecu || envelope.expected_response_ecu !== context.expected_response_ecu
+    || envelope.requested_data_identifier !== context.requested_data_identifier) return null;
   const transportResult = buildJ2534UdsTransportResult(envelope.transport_result_candidate);
-  if (!transportResult || transportResult.readout_attempt_id !== `native-fixture-${scenario}-001`) return null;
-  const terminalStatus = scenario === "transport-error" ? "transport_error"
-    : ["timeout", "cancelled"].includes(scenario) ? scenario : null;
+  if (!transportResult || transportResult.readout_attempt_id !== context.readout_attempt_id
+    || transportResult.target_ecu !== context.target_ecu || transportResult.expected_response_ecu !== context.expected_response_ecu) return null;
+  const terminalStatus = context.scenario === "transport-error" ? "transport_error"
+    : ["timeout", "cancelled"].includes(context.scenario) ? context.scenario : null;
   if (terminalStatus) {
     if (transportResult.transport_status !== terminalStatus || transportResult.response_count !== 0
       || Object.hasOwn(transportResult, "source_ecu")) return null;
-  } else if (scenario === "negative" || scenario === "pending") {
+  } else if (context.scenario === "negative" || context.scenario === "pending") {
     if (transportResult.negative_requested_service !== "22"
-      || transportResult.negative_response_code !== (scenario === "pending" ? "78" : "31")) return null;
-  } else if (transportResult.requested_data_identifier !== "F189"
-    || transportResult.response_data_identifier !== "F189" || transportResult.payload_byte_count !== 6) return null;
+      || transportResult.negative_response_code !== (context.scenario === "pending" ? "78" : "31")) return null;
+  } else if (transportResult.requested_data_identifier !== context.requested_data_identifier
+    || transportResult.response_data_identifier !== context.requested_data_identifier || transportResult.payload_byte_count !== 6) return null;
   const parsed = structuredClone(envelope);
   delete parsed.transport_result_candidate;
   parsed.transport_result = transportResult;
   return parsed;
-}
-export function parseJ2534VerifiedIdentityFixtureOutput(output, context) {
+}export function parseJ2534VerifiedIdentityFixtureOutput(output, context) {
   if (typeof output !== "string" || Buffer.byteLength(output) > 4096 || !keysMatch(context,
     ["architecture", "scenario", "request_nonce", "selected_device_id"])
     || !["x86", "x64"].includes(context.architecture) || !VERIFIED_IDENTITY_SCENARIOS.has(context.scenario)
@@ -232,15 +246,16 @@ export function createJ2534UdsTransportFixtureSupervisor(descriptor) {
   const runWorker = createBoundedFixtureWorker({
     outputLimit: 4096,
     rejectStderr: true,
-    spawnWorker(scenario) {
+    spawnWorker(context) {
       if (!verifyWorker()) throw new Error("uds_transport_fixture_worker_changed");
       const windows = process.env.SystemRoot || process.env.WINDIR || "C:\\Windows";
       const env = { SystemRoot: windows, WINDIR: windows, TEMP: os.tmpdir(), TMP: os.tmpdir() };
-      return spawn(workerPath, ["--fixture", scenario], {
+      return spawn(workerPath, ["--fixture", context.scenario, context.operation_nonce, context.selected_device_id,
+        context.readout_attempt_id, context.target_ecu, context.expected_response_ecu, context.requested_data_identifier], {
         cwd: path.dirname(workerPath), env, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"]
       });
     },
-    parseOutput(output, scenario) { return parseJ2534UdsTransportFixtureOutput(output, scenario, architecture); }
+    parseOutput(output, context) { return parseJ2534UdsTransportFixtureOutput(output, context); }
   });
   return Object.freeze({
     async run(options = {}) {
@@ -253,13 +268,22 @@ export function createJ2534UdsTransportFixtureSupervisor(descriptor) {
         termination_requested: false, termination_signal_sent: false,
         fixture_cleanup_status: "unconfirmed", result: null, errors: []
       };
-      let scenario, timeout, signal;
+      let context, timeout, signal;
       try {
-        const expectedKeys = ["mode", "scenario", ...(Object.hasOwn(options, "timeout_ms") ? ["timeout_ms"] : []),
+        const expectedKeys = ["mode", "scenario", "operation_nonce", "selected_device_id", "readout_attempt_id",
+          "target_ecu", "expected_response_ecu", "requested_data_identifier",
+          ...(Object.hasOwn(options, "timeout_ms") ? ["timeout_ms"] : []),
           ...(Object.hasOwn(options, "signal") ? ["signal"] : [])];
         if (!keysMatch(options, expectedKeys)) throw new Error();
-        scenario = options.scenario; timeout = options.timeout_ms ?? 5000; signal = options.signal;
-        if (options.mode !== "uds_transport_fixture" || !UDS_TRANSPORT_WORKER_SCENARIOS.has(scenario)
+        context = { architecture, scenario: options.scenario, operation_nonce: options.operation_nonce,
+          selected_device_id: options.selected_device_id, readout_attempt_id: options.readout_attempt_id,
+          target_ecu: options.target_ecu, expected_response_ecu: options.expected_response_ecu,
+          requested_data_identifier: options.requested_data_identifier };
+        timeout = options.timeout_ms ?? 5000; signal = options.signal;
+        if (options.mode !== "uds_transport_fixture" || !UDS_TRANSPORT_WORKER_SCENARIOS.has(context.scenario)
+          || !isOperationNonce(context.operation_nonce) || !isSafeDeviceId(context.selected_device_id)
+          || !isReadoutAttemptId(context.readout_attempt_id) || !isEcuAddress(context.target_ecu)
+          || !isEcuAddress(context.expected_response_ecu) || !isDataIdentifier(context.requested_data_identifier)
           || !Number.isInteger(timeout) || timeout < 1000 || timeout > 10000
           || (signal != null && !(signal instanceof AbortSignal))) throw new Error();
       } catch {
@@ -267,7 +291,7 @@ export function createJ2534UdsTransportFixtureSupervisor(descriptor) {
         return base;
       }
       if (signal?.aborted) { base.execution_status = "worker_cancelled"; base.errors = ["worker_cancelled"]; return base; }
-      const supervised = await runWorker({ timeout, signal, context: scenario });
+      const supervised = await runWorker({ timeout, signal, context });
       Object.assign(base, {
         execution_status: supervised.execution_status, worker_started: supervised.worker_started,
         worker_exited: supervised.worker_exited, termination_requested: supervised.termination_requested,
@@ -279,8 +303,7 @@ export function createJ2534UdsTransportFixtureSupervisor(descriptor) {
       return base;
     }
   });
-}
-// Development-only supervisor for the generated verified-handle/Global-mutex identity fixture.
+}// Development-only supervisor for the generated verified-handle/Global-mutex identity fixture.
 export function createJ2534VerifiedIdentityFixtureSupervisor(descriptor, controls = {}) {
   if (controls === null || typeof controls !== "object" || Array.isArray(controls))
     throw new Error("verified_identity_supervisor_controls_invalid");

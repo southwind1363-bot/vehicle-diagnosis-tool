@@ -15,7 +15,7 @@ import {
   parseJ2534VerifiedIdentityFixtureOutput
 } from "./j2534-native-fixture-supervisor.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
-import { buildUdsReadAdapterCompletionManifest } from "../local-bridge-readonly.js";
+import { createJ2534UdsReadoutAttemptController } from "./j2534-uds-readout-attempt-controller.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
 const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
@@ -532,51 +532,100 @@ async function main() {
       const udsTransportSupervisor = createJ2534UdsTransportFixtureSupervisor(udsTransportDescriptor);
       assert.throws(() => createJ2534UdsTransportFixtureSupervisor({ ...udsTransportDescriptor, temp_root: platformDirectory }),
         /uds_transport_fixture_descriptor_invalid/);
-      total++;
+      assert.throws(() => createJ2534UdsReadoutAttemptController({ selected_device_id: "invalid device", transport_supervisor: udsTransportSupervisor }),
+        /j2534_uds_attempt_controller_invalid/);
+      total += 2;
+      const fixtureContext = (scenario, overrides = {}) => {
+        const is29Bit = scenario === "positive-29bit";
+        return {
+          mode: "uds_transport_fixture", scenario,
+          operation_nonce: createHash("sha256").update(`nonce-${platform.name}-${scenario}`).digest("hex").slice(0, 32),
+          selected_device_id: `j2534-fixture-${platform.name}`,
+          readout_attempt_id: `j2534-uds-${createHash("sha256").update(`attempt-${platform.name}-${scenario}`).digest("hex").slice(0, 32)}`,
+          target_ecu: is29Bit ? "18DA10F1" : "7E0",
+          expected_response_ecu: is29Bit ? "18DAF110" : "7E8",
+          requested_data_identifier: "F189",
+          ...overrides
+        };
+      };
+      const attemptController = createJ2534UdsReadoutAttemptController({
+        selected_device_id: `j2534-fixture-${platform.name}`,
+        transport_supervisor: udsTransportSupervisor
+      });
+      const attemptRequest = scenario => ({
+        mode: "uds_readout_attempt", scenario,
+        target_ecu: scenario === "positive-29bit" ? "18DA10F1" : "7E0",
+        expected_response_ecu: scenario === "positive-29bit" ? "18DAF110" : "7E8",
+        requested_data_identifier: "F189"
+      });
       const expectedCompletionStatuses = {
         positive: "response_received", "positive-29bit": "response_received", negative: "negative_response",
         pending: "pending", timeout: "timeout", "transport-error": "transport_error", cancelled: "cancelled"
       };
+      const issuedAttemptIds = new Set();
+      const issuedNonces = new Set();
       for (const [scenario, expectedStatus] of Object.entries(expectedCompletionStatuses)) {
-        const supervised = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario });
-        const completion = buildUdsReadAdapterCompletionManifest(supervised.result?.transport_result);
-        assert.equal(supervised.execution_status, "worker_completed");
-        assert.equal(supervised.worker_started, true);
-        assert.equal(supervised.worker_exited, true);
-        assert.equal(supervised.fixture_cleanup_status, "confirmed");
-        assert.equal(supervised.result?.fixture_only, true);
-        assert.equal(supervised.vendor_dll_executed, false);
-        assert.equal(supervised.vehicle_communication_started, false);
-        assert.equal(supervised.result?.transport_result?.retained_raw_frames, false);
-        assert.equal(supervised.result?.transport_result?.would_transmit, false);
-        assert.equal(completion?.status, expectedStatus);
-        assert.equal(completion?.vehicle_command_enabled, false);
-        total += 11;
+        const attempt = await attemptController.run(attemptRequest(scenario));
+        assert.equal(attempt.attempt_status, expectedStatus);
+        assert.equal(attempt.blockers.length, 0);
+        assert.match(attempt.operation_nonce, /^[a-f0-9]{32}$/);
+        assert.match(attempt.readout_attempt_id, /^j2534-uds-[a-f0-9]{32}$/);
+        assert.equal(attempt.selected_device_id, `j2534-fixture-${platform.name}`);
+        assert.equal(attempt.target_ecu, attemptRequest(scenario).target_ecu);
+        assert.equal(attempt.expected_response_ecu, attemptRequest(scenario).expected_response_ecu);
+        assert.equal(attempt.requested_data_identifier, "F189");
+        assert.equal(attempt.completion_manifest?.status, expectedStatus);
+        assert.equal(attempt.completion_manifest?.readout_attempt_id, attempt.readout_attempt_id);
+        assert.equal(attempt.worker_started, true);
+        assert.equal(attempt.vehicle_connection_attempted, false);
+        assert.equal(attempt.vehicle_communication_started, false);
+        assert.equal(attempt.execution_enabled, false);
+        assert.equal(attempt.would_transmit, false);
+        assert.equal(attempt.vehicle_command_enabled, false);
+        issuedAttemptIds.add(attempt.readout_attempt_id);
+        issuedNonces.add(attempt.operation_nonce);
+        total += 16;
       }
-      const positiveUdsFixture = await execute(udsTransportWorker, ["--fixture", "positive"]);
+      assert.equal(issuedAttemptIds.size, 7);
+      assert.equal(issuedNonces.size, 7);
+      total += 2;
+
+      const positiveContext = fixtureContext("positive");
+      const positiveUdsFixture = await execute(udsTransportWorker, ["--fixture", positiveContext.scenario,
+        positiveContext.operation_nonce, positiveContext.selected_device_id, positiveContext.readout_attempt_id,
+        positiveContext.target_ecu, positiveContext.expected_response_ecu, positiveContext.requested_data_identifier]);
+      assert.equal(positiveUdsFixture.error, null);
       for (const mutate of [
         value => { value.vendor_dll_executed = true; },
         value => { value.vehicle_communication_started = true; },
         value => { value.architecture = opposite; },
         value => { value.scenario = "negative"; },
+        value => { value.operation_nonce = "f".repeat(32); },
+        value => { value.selected_device_id = "j2534-other-device"; },
+        value => { value.readout_attempt_id = `j2534-uds-${"f".repeat(32)}`; },
+        value => { value.target_ecu = "7E1"; },
+        value => { value.expected_response_ecu = "7E9"; },
+        value => { value.requested_data_identifier = "F187"; },
         value => { value.transport_result_candidate.raw_frames = ["reject"]; },
         value => { value.transport_result_candidate.status = "negative_response"; },
-        value => { value.transport_result_candidate.readout_attempt_id = "wrong-attempt"; },
+        value => { value.transport_result_candidate.readout_attempt_id = `j2534-uds-${"e".repeat(32)}`; },
         value => { value.private_path = "C:/private/driver.dll"; }
       ]) {
         const invalid = JSON.parse(positiveUdsFixture.stdout); mutate(invalid);
-        assert.equal(parseJ2534UdsTransportFixtureOutput(JSON.stringify(invalid), "positive", platform.name), null);
+        assert.equal(parseJ2534UdsTransportFixtureOutput(JSON.stringify(invalid), {
+          architecture: platform.name, ...Object.fromEntries(Object.entries(positiveContext).filter(([key]) => key !== "mode"))
+        }), null);
         total++;
       }
-      for (const options of [{}, { mode: "uds_transport_fixture", scenario: "../driver.dll" },
-        { mode: "uds_transport_fixture", scenario: "positive", worker_path: "other.exe" }]) {
+      for (const options of [{}, { ...fixtureContext("positive"), scenario: "../driver.dll" },
+        { ...fixtureContext("positive"), worker_path: "other.exe" }]) {
         const blocked = await udsTransportSupervisor.run(options);
         assert.equal(blocked.execution_status, "request_blocked");
         assert.equal(blocked.worker_started, false);
         total += 2;
       }
       for (const scenario of ["hang", "result-then-hang"]) {
-        const timedOut = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario, timeout_ms: 1000 });
+        const timedOut = await udsTransportSupervisor.run({ ...fixtureContext(scenario), timeout_ms: 1000 });
         assert.equal(timedOut.execution_status, "worker_timed_out");
         assert.equal(timedOut.result, null);
         assert.equal(timedOut.fixture_cleanup_status, "unconfirmed");
@@ -584,31 +633,78 @@ async function main() {
         total += 4;
       }
       for (const [scenario, error] of [["overflow", "worker_output_limit"], ["stderr", "worker_stderr"], ["crash", "worker_process_failed"]]) {
-        const failed = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario });
+        const failed = await udsTransportSupervisor.run(fixtureContext(scenario));
         assert.equal(failed.execution_status, "worker_failed");
         assert.equal(failed.result, null);
         assert.equal(failed.errors[0], error);
         total += 3;
       }
-      const udsTransportController = new AbortController();
+      const udsTransportAbortController = new AbortController();
       const udsTransportHanging = udsTransportSupervisor.run({
-        mode: "uds_transport_fixture", scenario: "hang", timeout_ms: 10000, signal: udsTransportController.signal
+        ...fixtureContext("hang"), timeout_ms: 10000, signal: udsTransportAbortController.signal
       });
       await new Promise(resolve => setTimeout(resolve, 100));
-      const udsTransportBusy = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario: "positive" });
+      const udsTransportBusy = await udsTransportSupervisor.run(fixtureContext("positive"));
       assert.equal(udsTransportBusy.execution_status, "worker_busy");
       assert.equal(udsTransportBusy.worker_started, false);
-      udsTransportController.abort();
+      udsTransportAbortController.abort();
       const udsTransportCancelled = await udsTransportHanging;
       assert.equal(udsTransportCancelled.execution_status, "worker_cancelled");
       assert.equal(udsTransportCancelled.worker_exited, true);
       assert.equal(udsTransportCancelled.result, null);
       total += 5;
+
+      for (const mutate of [
+        value => { value.operation_nonce = "f".repeat(32); },
+        value => { value.selected_device_id = "j2534-other-device"; },
+        value => { value.readout_attempt_id = `j2534-uds-${"f".repeat(32)}`; },
+        value => { value.target_ecu = "7E1"; },
+        value => { value.expected_response_ecu = "7E9"; },
+        value => { value.requested_data_identifier = "F187"; },
+        value => { value.transport_result.readout_attempt_id = `j2534-uds-${"e".repeat(32)}`; }
+      ]) {
+        const rejectingController = createJ2534UdsReadoutAttemptController({
+          selected_device_id: `j2534-fixture-${platform.name}`,
+          transport_supervisor: { run: async request => {
+            const supervised = await udsTransportSupervisor.run(request);
+            mutate(supervised.result);
+            return supervised;
+          } }
+        });
+        const rejected = await rejectingController.run(attemptRequest("positive"));
+        assert.equal(rejected.completion_manifest, null);
+        assert.deepEqual(rejected.blockers, ["j2534_uds_attempt_completion_rejected"]);
+        assert.equal(rejected.vehicle_command_enabled, false);
+        total += 3;
+      }
+      for (const invalidRequest of [null, [], { ...attemptRequest("positive"), operation_nonce: "caller-controlled" },
+        { ...attemptRequest("positive"), expected_response_ecu: "7E9" },
+        { ...attemptRequest("positive"), requested_data_identifier: "F18Z" }]) {
+        const invalidAttempt = await attemptController.run(invalidRequest);
+        assert.equal(invalidAttempt.attempt_status, "blocked");
+        assert.equal(invalidAttempt.operation_nonce, null);
+        assert.equal(invalidAttempt.worker_started, false);
+        total += 3;
+      }
+      let releaseDelayed;
+      const delayedController = createJ2534UdsReadoutAttemptController({
+        selected_device_id: `j2534-fixture-${platform.name}`,
+        transport_supervisor: { run: () => new Promise(resolve => { releaseDelayed = resolve; }) }
+      });
+      const delayedAttempt = delayedController.run(attemptRequest("positive"));
+      await new Promise(resolve => setTimeout(resolve, 20));
+      const busyAttempt = await delayedController.run(attemptRequest("positive"));
+      assert.equal(busyAttempt.attempt_status, "blocked");
+      assert.deepEqual(busyAttempt.blockers, ["j2534_uds_attempt_busy"]);
+      releaseDelayed({ execution_status: "worker_cancelled", worker_started: false, errors: ["worker_cancelled"], result: null });
+      await delayedAttempt;
+      total += 2;
+
       const udsTransportOriginal = fs.readFileSync(udsTransportWorker);
       const udsTransportChanged = Buffer.from(udsTransportOriginal);
       udsTransportChanged[udsTransportChanged.length - 1] ^= 1;
       fs.writeFileSync(udsTransportWorker, udsTransportChanged);
-      const udsTransportTampered = await udsTransportSupervisor.run({ mode: "uds_transport_fixture", scenario: "positive" });
+      const udsTransportTampered = await udsTransportSupervisor.run(fixtureContext("positive"));
       assert.equal(udsTransportTampered.execution_status, "worker_failed");
       assert.equal(udsTransportTampered.worker_started, false);
       assert.deepEqual(udsTransportTampered.errors, ["worker_spawn_failed"]);
