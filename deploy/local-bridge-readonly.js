@@ -94,6 +94,8 @@ const UDS_READ_TRANSPORT_ADAPTER_BOUNDARY = Object.freeze({
   adapter_implemented: false,
   dispatch_enabled: false,
   response_attempt_evidence_required: true,
+  transport_result_schema_version: "uds_read_transport_result_v1",
+  completion_manifest_schema_version: "uds_read_adapter_completion_manifest_v1",
   response_lifecycle_schema_version: "uds_read_transport_response_lifecycle_v1",
   retained_raw_frames: false,
   execution_enabled: false,
@@ -259,7 +261,7 @@ export function normalizeUdsReadAdapterCompletionManifest(input = null) {
     || input.record_type !== "uds_read_adapter_completion"
     || input.bridge_intent !== "read_ecu_info"
     || !readoutAttemptId || !status || !targetEcu || !expectedResponseEcu || !isUdsRequestResponseEcuPair(targetEcu, expectedResponseEcu)
-    || (hasResponse ? (!sourceEcu || sourceEcu !== expectedResponseEcu || !Number.isSafeInteger(responseCount) || responseCount < 1 || responseCount > 4096) : responseCount !== 0)
+    || (hasResponse ? (!sourceEcu || sourceEcu !== expectedResponseEcu || !Number.isSafeInteger(responseCount) || responseCount < 1 || responseCount > 4096) : (sourceEcu || responseCount !== 0))
     || (responseReceived && (!requestedDataIdentifier || requestedDataIdentifier !== responseDataIdentifier || !Number.isSafeInteger(payloadByteCount) || payloadByteCount < 1 || payloadByteCount > 65535))
     || ((negativeResponse || pending) && (negativeRequestedService !== "22" || !negativeResponseCode || (pending ? negativeResponseCode !== "78" : negativeResponseCode === "78")))
     || (!responseReceived && (requestedDataIdentifier || responseDataIdentifier || Number.isFinite(payloadByteCount)))
@@ -288,6 +290,54 @@ export function normalizeUdsReadAdapterCompletionManifest(input = null) {
     would_transmit: false,
     vehicle_command_enabled: false
   };
+}
+export function buildUdsReadAdapterCompletionManifest(input = null) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+  const forbiddenKeys = new Set(["raw", "raw_payload", "raw_frames", "frame", "frames", "payload", "response", "responses", "command", "commands"]);
+  const retainsForbiddenData = (value) => value && typeof value === "object" && Object.entries(value).some(([key, child]) => forbiddenKeys.has(key.toLowerCase()) || retainsForbiddenData(child));
+  if (input.schema_version !== "uds_read_transport_result_v1"
+    || input.record_type !== "uds_read_transport_result"
+    || input.bridge_intent !== "read_ecu_info"
+    || retainsForbiddenData(input)
+    || input.read_only !== true || input.execution_enabled !== false || input.would_transmit !== false || input.vehicle_command_enabled !== false) return null;
+  const terminalStatus = normalizeUdsReadAttemptStatus(input.transport_status || input.status);
+  const sourceEcu = normalizeUdsCanEndpointAddress(input.source_ecu || input.sourceEcu);
+  const requestedDataIdentifier = normalizeUdsDataIdentifier(input.requested_data_identifier || input.requestedDataIdentifier);
+  const responseDataIdentifier = normalizeUdsDataIdentifier(input.response_data_identifier || input.responseDataIdentifier);
+  const negativeRequestedService = normalizeUdsHexByte(input.negative_requested_service || input.negativeRequestedService);
+  const negativeResponseCode = normalizeUdsHexByte(input.negative_response_code || input.negativeResponseCode);
+  const hasPositiveEvidence = Boolean(sourceEcu && requestedDataIdentifier && responseDataIdentifier);
+  const hasNegativeEvidence = Boolean(sourceEcu && negativeRequestedService && negativeResponseCode);
+  if (hasPositiveEvidence === hasNegativeEvidence && !terminalStatus) return null;
+  if (terminalStatus && (hasPositiveEvidence || hasNegativeEvidence || sourceEcu)) return null;
+  const derivedStatus = terminalStatus || (hasNegativeEvidence ? (negativeResponseCode === "78" ? "pending" : "negative_response") : hasPositiveEvidence ? "response_received" : null);
+  const declaredStatusText = String(input.status || "").trim().toLowerCase();
+  if (!derivedStatus || (declaredStatusText && declaredStatusText !== derivedStatus)) return null;
+  return normalizeUdsReadAdapterCompletionManifest({
+    schema_version: "uds_read_adapter_completion_manifest_v1",
+    record_type: "uds_read_adapter_completion",
+    bridge_intent: "read_ecu_info",
+    readout_attempt_id: input.readout_attempt_id || input.readoutAttemptId,
+    status: derivedStatus,
+    target_ecu: input.target_ecu || input.targetEcu,
+    expected_response_ecu: input.expected_response_ecu || input.expectedResponseEcu,
+    ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
+    response_count: input.response_count ?? input.responseCount,
+    response_wait_ms: input.response_wait_ms ?? input.responseWaitMs,
+    ...(derivedStatus === "response_received" ? {
+      requested_data_identifier: requestedDataIdentifier,
+      response_data_identifier: responseDataIdentifier,
+      payload_byte_count: input.payload_byte_count ?? input.payloadByteCount
+    } : {}),
+    ...(derivedStatus === "negative_response" || derivedStatus === "pending" ? {
+      negative_requested_service: negativeRequestedService,
+      negative_response_code: negativeResponseCode
+    } : {}),
+    read_only: true,
+    execution_enabled: false,
+    would_transmit: false,
+    vehicle_command_enabled: false
+  });
 }
 function buildUdsReadAdapterCompletionOutcome(manifest) {
   return manifest ? {
@@ -561,7 +611,18 @@ export function createLocalBridgeApp(options = {}) {
   const pairingToken = String(options.pairingToken || process.env.LOCAL_BRIDGE_PAIRING_TOKEN || "");
   const bridgeVersion = options.bridgeVersion || "readonly-dev-0.1.0";
   const replaySnapshot = buildReplaySnapshot(options);
-  const udsReadAdapterCompletionManifest = normalizeUdsReadAdapterCompletionManifest(options.udsReadAdapterCompletionManifest || options.uds_read_adapter_completion_manifest || null);
+  const udsReadAdapterCompletionManifestInput = options.udsReadAdapterCompletionManifest || options.uds_read_adapter_completion_manifest || null;
+  const udsReadAdapterTransportResultInput = options.udsReadAdapterTransportResult || options.uds_read_adapter_transport_result || null;
+  const udsReadAdapterCompletionInputConflict = Boolean(udsReadAdapterCompletionManifestInput && udsReadAdapterTransportResultInput);
+  const derivedUdsReadAdapterCompletionManifest = buildUdsReadAdapterCompletionManifest(udsReadAdapterTransportResultInput);
+  const udsReadAdapterCompletionManifest = udsReadAdapterCompletionInputConflict
+    ? null
+    : normalizeUdsReadAdapterCompletionManifest(udsReadAdapterCompletionManifestInput) || derivedUdsReadAdapterCompletionManifest;
+  const udsReadAdapterTransportResultStatus = udsReadAdapterCompletionInputConflict
+    ? "conflicting_inputs"
+    : udsReadAdapterTransportResultInput
+      ? derivedUdsReadAdapterCompletionManifest ? "accepted" : "invalid"
+      : "not_provided";
   const replayMode = Boolean(replaySnapshot);
   const sampleReadoutsEnabled = options.enableSampleReadouts === true;
   const j2534DiscoveryRequested = typeof options.j2534RegistryText === "string"
@@ -594,6 +655,8 @@ export function createLocalBridgeApp(options = {}) {
         replay_mode: replayMode,
         j2534_discovery_requested: j2534DiscoveryRequested,
         vci_detected_count: discoveredVciDevices.length,
+        uds_read_adapter_transport_result_status: udsReadAdapterTransportResultStatus,
+        uds_read_adapter_completion_status: udsReadAdapterCompletionManifest?.status || null,
         uds_read_transport_adapter_boundary: {
           ...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY,
           planned_transport_protocols: [...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY.planned_transport_protocols],
@@ -619,7 +682,7 @@ export function createLocalBridgeApp(options = {}) {
       return;
     }
 
-    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment, sampleReadoutsEnabled, udsReadAdapterCompletionManifest));
+    sendJson(response, 200, buildReadOnlyResponse(body, bridgeVersion, replaySnapshot, discoveredVciDevices, j2534DiscoveryRequested, j2534DiscoveryEnvironment, sampleReadoutsEnabled, udsReadAdapterCompletionManifest, udsReadAdapterTransportResultStatus));
   });
 }
 
@@ -645,7 +708,7 @@ function isReadinessSnapshotRequest(request = {}) {
     || (request.intent === "read_live_pid_snapshot" && (readoutId === "readiness_snapshot" || requestedPid === "01"));
 }
 
-function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices), sampleReadoutsEnabled = false, udsReadAdapterCompletionManifest = null) {
+function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, discoveredVciDevices = [], j2534DiscoveryRequested = false, j2534DiscoveryEnvironment = getJ2534DiscoveryEnvironment(discoveredVciDevices), sampleReadoutsEnabled = false, udsReadAdapterCompletionManifest = null, udsReadAdapterTransportResultStatus = "not_provided") {
   const replayMode = Boolean(replaySnapshot);
   const discoveryMode = !replayMode && j2534DiscoveryRequested;
   const driverDetected = discoveryMode && discoveredVciDevices.length > 0;
@@ -694,6 +757,8 @@ function buildReadOnlyResponse(request, bridgeVersion, replaySnapshot = null, di
         replay_loaded: replayMode,
         j2534_discovery_requested: discoveryMode,
         vci_detected_count: discoveredVciDevices.length,
+        uds_read_adapter_transport_result_status: udsReadAdapterTransportResultStatus,
+        uds_read_adapter_completion_status: udsReadAdapterCompletionManifest?.status || null,
         uds_read_transport_adapter_boundary: {
           ...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY,
           planned_transport_protocols: [...UDS_READ_TRANSPORT_ADAPTER_BOUNDARY.planned_transport_protocols],

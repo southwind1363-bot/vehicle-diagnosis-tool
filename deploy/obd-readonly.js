@@ -9837,7 +9837,7 @@
     if (input.schema_version !== "uds_read_adapter_completion_manifest_v1"
       || input.record_type !== "uds_read_adapter_completion" || input.bridge_intent !== "read_ecu_info"
       || !readoutAttemptId || !status || !targetEcu || !expectedResponseEcu || !isUdsRequestResponseEcuMatch(targetEcu, expectedResponseEcu)
-      || (hasResponse ? (!sourceEcu || sourceEcu !== expectedResponseEcu || !Number.isSafeInteger(responseCount) || responseCount < 1 || responseCount > 4096) : responseCount !== 0)
+      || (hasResponse ? (!sourceEcu || sourceEcu !== expectedResponseEcu || !Number.isSafeInteger(responseCount) || responseCount < 1 || responseCount > 4096) : (sourceEcu || responseCount !== 0))
       || (responseReceived && (!requestedDataIdentifier || requestedDataIdentifier !== responseDataIdentifier || !Number.isSafeInteger(payloadByteCount) || payloadByteCount < 1 || payloadByteCount > 65535))
       || ((negativeResponse || pending) && (negativeRequestedService !== "22" || !negativeResponseCode || (pending ? negativeResponseCode !== "78" : negativeResponseCode === "78")))
       || (!responseReceived && (requestedDataIdentifier || responseDataIdentifier || payloadByteCount !== null))
@@ -9889,7 +9889,9 @@
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false
     };
-  }  function normalizeUdsReadTransportProtocol(value) {
+  }
+
+  function normalizeUdsReadTransportProtocol(value) {
     const text = String(value || "").trim().toUpperCase().replace(/[\s_-]+/g, "");
     return ["ISOTP", "ISO157652"].includes(text) ? "ISO-TP" : null;
   }

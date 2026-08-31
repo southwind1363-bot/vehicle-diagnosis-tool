@@ -1,4 +1,4 @@
-import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, normalizeUdsReadAdapterCompletionManifest, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
+import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, buildUdsReadAdapterCompletionManifest, normalizeUdsReadAdapterCompletionManifest, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { createJ2534IdentityPreflightOperationController } from "./j2534-identity-preflight-operation.js";
 import { J2534_WORKER_CONTRACT_VERSION, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
@@ -51,7 +51,45 @@ const udsPendingCompletionManifest = {
   readout_attempt_id: "uds-attempt-pending-001",
   status: "pending",
   negative_response_code: "78"
-};const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+};
+const udsPositiveTransportResult = {
+  schema_version: "uds_read_transport_result_v1",
+  record_type: "uds_read_transport_result",
+  bridge_intent: "read_ecu_info",
+  readout_attempt_id: "uds-attempt-positive-001",
+  target_ecu: "7E0",
+  expected_response_ecu: "7E8",
+  source_ecu: "7E8",
+  response_count: 1,
+  response_wait_ms: 1500,
+  requested_data_identifier: "F189",
+  response_data_identifier: "F189",
+  payload_byte_count: 6,
+  read_only: true,
+  execution_enabled: false,
+  would_transmit: false,
+  vehicle_command_enabled: false
+};
+const udsNegativeTransportResult = {
+  ...udsPositiveTransportResult,
+  readout_attempt_id: "uds-attempt-negative-001",
+  negative_requested_service: "22",
+  negative_response_code: "31"
+};
+delete udsNegativeTransportResult.requested_data_identifier;
+delete udsNegativeTransportResult.response_data_identifier;
+delete udsNegativeTransportResult.payload_byte_count;
+const udsTimeoutTransportResult = {
+  ...udsPositiveTransportResult,
+  readout_attempt_id: "uds-attempt-timeout-001",
+  transport_status: "timeout",
+  response_count: 0
+};
+delete udsTimeoutTransportResult.source_ecu;
+delete udsTimeoutTransportResult.requested_data_identifier;
+delete udsTimeoutTransportResult.response_data_identifier;
+delete udsTimeoutTransportResult.payload_byte_count;
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(scriptDir, "..", "package.json"), "utf8"));
 const localBridgeSource = fs.readFileSync(path.join(scriptDir, "..", "local-bridge-readonly.js"), "utf8");
 const j2534BridgeStarterSource = fs.readFileSync(path.join(scriptDir, "start-j2534-readonly-bridge.js"), "utf8");
@@ -93,6 +131,16 @@ check([
   { ...udsPendingCompletionManifest, negative_response_code: "31" },
   { ...udsPendingCompletionManifest, raw_payload: "reject" }
 ].every((manifest) => normalizeUdsReadAdapterCompletionManifest(manifest) === null), "UDS response completion manifests must reject DID, ECU, NRC, and raw-payload mismatches");
+check(buildUdsReadAdapterCompletionManifest(udsPositiveTransportResult)?.status === "response_received" && buildUdsReadAdapterCompletionManifest(udsPositiveTransportResult)?.requested_data_identifier === "F189" && buildUdsReadAdapterCompletionManifest(udsNegativeTransportResult)?.status === "negative_response" && buildUdsReadAdapterCompletionManifest({ ...udsNegativeTransportResult, negative_response_code: "78" })?.status === "pending", "Sanitized UDS transport results must derive positive, negative, and pending completion statuses");
+check(buildUdsReadAdapterCompletionManifest(udsTimeoutTransportResult)?.status === "timeout" && buildUdsReadAdapterCompletionManifest(udsTimeoutTransportResult)?.source_ecu === undefined, "A terminal transport result must derive a zero-response manifest without a source ECU");
+check([
+  { ...udsPositiveTransportResult, status: "negative_response" },
+  { ...udsPositiveTransportResult, raw_frames: ["reject"] },
+  { ...udsPositiveTransportResult, source_ecu: "7E9" },
+  { ...udsTimeoutTransportResult, source_ecu: "7E8" },
+  { ...udsNegativeTransportResult, requested_data_identifier: "F189", response_data_identifier: "F189", payload_byte_count: 6 }
+].every((result) => buildUdsReadAdapterCompletionManifest(result) === null), "Transport-result conversion must reject contradictory status, raw data, ECU mismatch, fabricated terminal source, and mixed response evidence");
+check(normalizeUdsReadAdapterCompletionManifest({ ...udsTimeoutCompletionManifest, source_ecu: "7E8" }) === null, "Terminal completion manifests must reject a fabricated responding source ECU");
 check(packageManifest.scripts?.["review:j2534-host"] === "node scripts/review-j2534-host.js" && j2534HostReviewSource.includes('discoverJ2534RegistryDrivers({ enabled: true, inspectLibraries: true })') && j2534HostReviewSource.includes('manual_connection_review_confirmed: process.argv.includes("--confirm-manual-review")') && j2534HostReviewSource.includes('runJ2534WorkerReview(devices,') && j2534HostReviewSource.includes('timeout_ms: 5000'), "J2534 host review CLI must derive drivers from static discovery and require manual confirmation");
 const blockedJ2534WorkerReview = reviewJ2534PassThruOpenRequest({
   operation: "review_pass_thru_open",
@@ -403,6 +451,23 @@ try {
     } finally {
       await new Promise((resolve) => responseServer.close(resolve));
     }
+  }  const transportResultServer = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", udsReadAdapterTransportResult: udsPositiveTransportResult });
+  const transportResultPort = await new Promise((resolve) => transportResultServer.listen(0, "127.0.0.1", () => resolve(transportResultServer.address().port)));
+  try {
+    const transportHealth = await fetch(`http://127.0.0.1:${transportResultPort}/health`).then((response) => response.json());
+    const transportReadout = await post(transportResultPort, "read_ecu_info");
+    check(transportHealth.uds_read_adapter_transport_result_status === "accepted" && transportHealth.uds_read_adapter_completion_status === "response_received" && transportReadout.data.uds_read_adapter_completion_manifest?.readout_attempt_id === "uds-attempt-positive-001" && transportReadout.data.ecu_info_ecu_snapshots?.[0]?.uds_did_response_evidence?.response_data_identifier === "F189" && transportReadout.would_transmit === false, "A sanitized transport result must enter read_ecu_info only through its derived completion manifest");
+  } finally {
+    await new Promise((resolve) => transportResultServer.close(resolve));
+  }
+  const conflictingCompletionServer = createLocalBridgeApp({ pairingToken: token, bridgeVersion: "test-bridge", udsReadAdapterTransportResult: udsPositiveTransportResult, udsReadAdapterCompletionManifest: udsPositiveCompletionManifest });
+  const conflictingCompletionPort = await new Promise((resolve) => conflictingCompletionServer.listen(0, "127.0.0.1", () => resolve(conflictingCompletionServer.address().port)));
+  try {
+    const conflictingHealth = await fetch(`http://127.0.0.1:${conflictingCompletionPort}/health`).then((response) => response.json());
+    const conflictingReadout = await post(conflictingCompletionPort, "read_ecu_info");
+    check(conflictingHealth.uds_read_adapter_transport_result_status === "conflicting_inputs" && conflictingHealth.uds_read_adapter_completion_status === null && conflictingReadout.data.uds_read_adapter_completion_manifest === undefined && conflictingReadout.would_transmit === false, "Direct and derived completion inputs must fail closed instead of selecting ambiguous adapter evidence");
+  } finally {
+    await new Promise((resolve) => conflictingCompletionServer.close(resolve));
   }  const preflight = await fetch(`http://127.0.0.1:${port}/v1/bridge`, {
     method: "OPTIONS",
     headers: { Origin: "http://127.0.0.1:3001", "Access-Control-Request-Method": "POST" }
