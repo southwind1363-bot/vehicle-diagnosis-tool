@@ -8433,7 +8433,21 @@
     const applicableRangeCount = Math.max(toCount(source.applicableRangeCount, source.applicable_range_count, applicableRanges.length), applicableRanges.length, normalizedApplicableRanges.length);
     const supportedEngineCodeCount = Math.max(toCount(source.supportedEngineCodeCount, source.supported_engine_code_count, supportedEngineCodes.length), supportedEngineCodes.length, normalizedSupportedEngineCodes.length);
     const supportedEcuCount = Math.max(toCount(source.supportedEcuCount, source.supported_ecu_count, supportedEcus.length), supportedEcus.length, normalizedSupportedEcus.length);
-    const providedStatus = typeof source.status === "string" ? source.status.trim() : typeof source.applicabilityStatus === "string" ? source.applicabilityStatus.trim() : typeof source.applicability_status === "string" ? source.applicability_status.trim() : "";
+    const rawProvidedStatus = typeof source.status === "string" ? source.status : typeof source.applicabilityStatus === "string" ? source.applicabilityStatus : typeof source.applicability_status === "string" ? source.applicability_status : "";
+    const normalizedProvidedStatus = String(rawProvidedStatus || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const providedStatusAliases = {
+      matched: "matched",
+      applicable: "matched",
+      partial: "partial",
+      partially_matched: "partial",
+      unlisted: "unlisted",
+      not_listed: "unlisted",
+      manual: "manual",
+      manual_review: "manual",
+      unknown: "unknown",
+      not_evaluated: "unknown"
+    };
+    const providedStatus = normalizedProvidedStatus ? providedStatusAliases[normalizedProvidedStatus] || "manual" : "";
     const summaryLabel = source.summaryLabel || source.summary_label || source.displayLabel || source.display_label || source.summary || source.label || null;
     let status = providedStatus;
     if (!status) {
@@ -8745,7 +8759,7 @@
       warnings.push("vehicle_applicability_partial");
     } else if (normalized.status === "unlisted") {
       warnings.push("vehicle_applicability_unlisted");
-    } else if (normalized.status === "manual") {
+    } else if (normalized.status === "manual" || normalized.status === "unknown") {
       warnings.push("vehicle_profile_manual");
     }
   }
