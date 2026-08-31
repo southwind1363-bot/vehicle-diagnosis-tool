@@ -9277,6 +9277,13 @@
       .filter((range) => !comparableObservedAddresses.some((address) => isExpectedRangeMatch(range, address)))
       .map((range) => range.descriptor);
     const partialExpectedAddressObservation = matchedExpectedAddresses.length > 0 && unmatchedExpectedAddresses.length > 0;
+    const normalizeExpectedEcuObservationKeyPart = (value, fallback) => String(value || fallback)
+      .normalize("NFKC")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[|:]/g, "_");
+    const expectedEcuObservationKeyCounts = new Map();
     const expectedEcuObservations = expectedAddressSource === "supported_ecus"
       ? (applicability.supportedEcus || []).map((item) => {
         const range = normalizeExpectedAddressRange(item?.diagnosticAddress || item?.diagnostic_address || null);
@@ -9284,7 +9291,21 @@
         const ecuObservedAddresses = comparableObservedAddresses.filter((address) => isExpectedRangeMatch(range, address));
         const systemName = item?.systemName || item?.system_name || null;
         const ecuName = item?.ecuName || item?.ecu_name || null;
+        const protocol = item?.protocol || null;
+        const observationKeyBase = [
+          `system:${normalizeExpectedEcuObservationKeyPart(systemName, "unknown")}`,
+          `ecu:${normalizeExpectedEcuObservationKeyPart(ecuName, "unknown")}`,
+          `address:${normalizeExpectedEcuObservationKeyPart(range.descriptor, "unknown")}`,
+          `protocol:${normalizeExpectedEcuObservationKeyPart(protocol, "unknown")}`
+        ].join("|");
+        const observationDuplicateIndex = (expectedEcuObservationKeyCounts.get(observationKeyBase) || 0) + 1;
+        expectedEcuObservationKeyCounts.set(observationKeyBase, observationDuplicateIndex);
+        const observationKey = observationDuplicateIndex > 1 ? `${observationKeyBase}|duplicate:${observationDuplicateIndex}` : observationKeyBase;
         return {
+          observationKey,
+          observation_key: observationKey,
+          observationDuplicateIndex,
+          observation_duplicate_index: observationDuplicateIndex,
           systemName,
           system_name: systemName,
           ecuName,
