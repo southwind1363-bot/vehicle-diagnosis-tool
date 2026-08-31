@@ -8431,16 +8431,22 @@
     const normalizedCandidateRanges = candidateRanges.map(normalizeRangeDescriptor).filter(Boolean).slice(0, 20);
     const normalizedApplicableRanges = applicableRanges.map(normalizeRangeDescriptor).filter(Boolean).slice(0, 20);
     const normalizedSupportedEngineCodes = normalizeCodeList(supportedEngineCodes);
+    const firstNormalizedDiagnosticAddress = (values) => {
+      for (const value of values) {
+        if (typeof value !== "string") continue;
+        const normalized = value.trim().slice(0, 24).toUpperCase();
+        if (/^(?:0X)?[0-9A-F]{1,8}(?:-(?:0X)?[0-9A-F]{1,8})?$/.test(normalized)) return normalized;
+      }
+      return null;
+    };
     const normalizeEcuDescriptor = (ecu) => {
       const sourceEcu = ecu && typeof ecu === "object" && !Array.isArray(ecu) ? ecu : { ecuName: ecu };
-      const value = (input, limit = 80) => String(input || "").trim().slice(0, limit) || null;
-      const diagnosticAddress = value(sourceEcu.diagnosticAddress || sourceEcu.diagnostic_address || sourceEcu.ecuAddress || sourceEcu.ecu_address || sourceEcu.canId || sourceEcu.can_id || sourceEcu.address, 16);
-      const normalizedAddress = diagnosticAddress && /^[0-9A-Fa-fxX-]+$/.test(diagnosticAddress) ? diagnosticAddress.toUpperCase() : null;
-      const systemName = value(sourceEcu.systemName || sourceEcu.system_name || sourceEcu.targetSystem || sourceEcu.target_system || sourceEcu.system, 80);
-      const ecuName = value(sourceEcu.ecuName || sourceEcu.ecu_name || sourceEcu.targetEcu || sourceEcu.target_ecu || sourceEcu.moduleName || sourceEcu.module_name || sourceEcu.name, 80);
-      const protocol = value(sourceEcu.protocol || sourceEcu.communicationProtocol || sourceEcu.communication_protocol, 40);
-      if (!systemName && !ecuName && !normalizedAddress && !protocol) return null;
-      return { systemName, system_name: systemName, ecuName, ecu_name: ecuName, diagnosticAddress: normalizedAddress, diagnostic_address: normalizedAddress, protocol };
+      const diagnosticAddress = firstNormalizedDiagnosticAddress([sourceEcu.diagnosticAddress, sourceEcu.diagnostic_address, sourceEcu.ecuAddress, sourceEcu.ecu_address, sourceEcu.canId, sourceEcu.can_id, sourceEcu.address]);
+      const systemName = firstNormalizedIdentityValue([sourceEcu.systemName, sourceEcu.system_name, sourceEcu.targetSystem, sourceEcu.target_system, sourceEcu.system], 80);
+      const ecuName = firstNormalizedIdentityValue([sourceEcu.ecuName, sourceEcu.ecu_name, sourceEcu.targetEcu, sourceEcu.target_ecu, sourceEcu.moduleName, sourceEcu.module_name, sourceEcu.name], 80);
+      const protocol = firstNormalizedIdentityValue([sourceEcu.protocol, sourceEcu.communicationProtocol, sourceEcu.communication_protocol], 40);
+      if (!systemName && !ecuName && !diagnosticAddress && !protocol) return null;
+      return { systemName, system_name: systemName, ecuName, ecu_name: ecuName, diagnosticAddress, diagnostic_address: diagnosticAddress, protocol };
     };
     const normalizedSupportedEcus = supportedEcus.map(normalizeEcuDescriptor).filter(Boolean).slice(0, 20);
     const maker = firstNormalizedIdentityValue([source.maker, source.make, source.manufacturer, source.brand, source.oem, source.vehicleMaker, source.vehicle_maker, source.vehicleMake, source.vehicle_make], 80);
