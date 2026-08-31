@@ -9243,12 +9243,13 @@
     const expectedAddresses = expectedAddressRanges.map((item) => item.descriptor);
     const expectedAddress = expectedAddresses[0] || null;
     const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;
-    const isExpectedAddressMatch = (observedAddress) => expectedAddressRanges.some((range) => {
-      if (!observedAddress || observedAddress.length !== range.startAddress.length) return false;
+    const isExpectedRangeMatch = (range, observedAddress) => {
+      if (!range || !observedAddress || observedAddress.length !== range.startAddress.length) return false;
       if (range.startAddress === range.endAddress) return isComparableCanEcuAddressMatch(range.startAddress, observedAddress);
       const observedValue = Number.parseInt(observedAddress, 16);
       return Number.isFinite(observedValue) && observedValue >= range.startValue && observedValue <= range.endValue;
-    });
+    };
+    const isExpectedAddressMatch = (observedAddress) => expectedAddressRanges.some((range) => isExpectedRangeMatch(range, observedAddress));
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
       .filter(isObservableEcuResponse);
     const respondedEcuAddresses = [...new Set(respondedEcuRows
@@ -9266,6 +9267,15 @@
     const comparableObservedAddresses = expectedAddressRanges.length
       ? observedAddresses.filter((address) => expectedAddressRanges.some((range) => address.length === range.startAddress.length))
       : [];
+    const matchedObservedAddresses = comparableObservedAddresses.filter(isExpectedAddressMatch);
+    const unmatchedComparableObservedAddresses = comparableObservedAddresses.filter((address) => !isExpectedAddressMatch(address));
+    const matchedExpectedAddresses = expectedAddressRanges
+      .filter((range) => comparableObservedAddresses.some((address) => isExpectedRangeMatch(range, address)))
+      .map((range) => range.descriptor);
+    const unmatchedExpectedAddresses = expectedAddressRanges
+      .filter((range) => !comparableObservedAddresses.some((address) => isExpectedRangeMatch(range, address)))
+      .map((range) => range.descriptor);
+    const partialExpectedAddressObservation = matchedExpectedAddresses.length > 0 && unmatchedExpectedAddresses.length > 0;
     const status = !expectedAddressRanges.length
       ? "not_configured"
       : !observedAddresses.length
@@ -9329,6 +9339,22 @@
       responded_ecu_addresses: respondedEcuAddresses,
       comparableObservedAddresses,
       comparable_observed_addresses: comparableObservedAddresses,
+      matchedObservedAddresses,
+      matched_observed_addresses: matchedObservedAddresses,
+      unmatchedComparableObservedAddresses,
+      unmatched_comparable_observed_addresses: unmatchedComparableObservedAddresses,
+      matchedExpectedAddresses,
+      matched_expected_addresses: matchedExpectedAddresses,
+      unmatchedExpectedAddresses,
+      unmatched_expected_addresses: unmatchedExpectedAddresses,
+      expectedAddressCount: expectedAddresses.length,
+      expected_address_count: expectedAddresses.length,
+      matchedExpectedAddressCount: matchedExpectedAddresses.length,
+      matched_expected_address_count: matchedExpectedAddresses.length,
+      unmatchedExpectedAddressCount: unmatchedExpectedAddresses.length,
+      unmatched_expected_address_count: unmatchedExpectedAddresses.length,
+      partialExpectedAddressObservation,
+      partial_expected_address_observation: partialExpectedAddressObservation,
       matchedResponseEvidence,
       matched_response_evidence: matchedResponseEvidence,
       matchedResponseStatuses,
