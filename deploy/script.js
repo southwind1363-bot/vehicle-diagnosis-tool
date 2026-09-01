@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7321件",
+  validationCheckLabel: "OBD安全検証 7322件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "かんたん画面からELM327基本読取を接続",
+  recentMilestone: "かんたん画面へ接続・読取状態を常時表示",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.397";
+const APP_VERSION = "3.13.398";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -333,6 +333,7 @@ const obdUseDiagnosisVehicleButton = document.querySelector("#obdUseDiagnosisVeh
 const obdPreviewSelectedButton = document.querySelector("#obdPreviewSelectedButton");
 const obdPrepareSelectedButton = document.querySelector("#obdPrepareSelectedButton");
 const obdSimpleDisconnectButton = document.querySelector("#obdSimpleDisconnectButton");
+const obdSimpleStatus = document.querySelector("#obdSimpleStatus");
 const obdConnectionGuide = document.querySelector("#obdConnectionGuide");
 const emptyState = document.querySelector("#emptyState");
 const resultContent = document.querySelector("#resultContent");
@@ -5236,6 +5237,13 @@ function renderObdProgressOverview() {
   });
 }
 
+function syncObdSimpleStatus() {
+  if (!obdSimpleStatus || !obdDevStatus) return;
+  const message = String(obdDevStatus.textContent || "").trim();
+  obdSimpleStatus.textContent = message || "車両とVCIを選択してください。";
+  obdSimpleStatus.classList.toggle("error", obdDevStatus.classList.contains("error"));
+}
+
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
   renderObdSessionExportControls();
   const unlocked = obdDevModeUnlocked === true;
@@ -5345,6 +5353,17 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   renderObdWorkflowGuide(capability);
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
   renderObdStageView(getObdAutoStage());
+  if (typeof syncObdSimpleStatus === "function") syncObdSimpleStatus();
+}
+
+if (typeof MutationObserver === "function" && obdDevStatus && obdSimpleStatus) {
+  new MutationObserver(syncObdSimpleStatus).observe(obdDevStatus, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["class"]
+  });
 }
 
 async function unlockObdAccess() {
