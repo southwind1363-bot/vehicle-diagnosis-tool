@@ -1898,7 +1898,7 @@ body.dark .flow-node-measure .flow-step {
   top: 70px;
   z-index: 40;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   padding: 8px 0;
   margin-bottom: 12px;
