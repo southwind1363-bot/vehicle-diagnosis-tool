@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7328件",
+  validationCheckLabel: "OBD安全検証 7329件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "対応PID・Mode06を基本読取結果へ統合",
+  recentMilestone: "DTC状態別件数を基本読取結果へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.404";
+const APP_VERSION = "3.13.405";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10846,6 +10846,9 @@ function renderObdSimpleResultSummary(session = null) {
   const countArray = (value) => Array.isArray(value) ? value.length : 0;
   const countValue = (primary, fallback) => Number.isFinite(Number(primary)) ? Math.max(0, Number(primary)) : fallback;
   const dtcCount = countArray(dtcSnapshot?.dtcs || dtcSnapshot?.codes);
+  const dtcStatusBreakdown = formatObdBridgeDtcStatusSummary(dtcSnapshot?.dtcs || dtcSnapshot?.codes || [])
+    .replace(/^ 内訳: /, "")
+    .replace(/。$/, "");
   const freezeFrameCount = countArray(freezeFrameSnapshot?.monitorValues || freezeFrameSnapshot?.monitor_values);
   const livePidCount = countArray(livePidSnapshot?.monitorValues || livePidSnapshot?.monitor_values);
   const readinessCount = countValue(
@@ -10872,7 +10875,7 @@ function renderObdSimpleResultSummary(session = null) {
     return { label: "状態未集計", tone: "unknown" };
   };
   const metrics = [
-    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot"), "obdDetectedCodes", "obdImportStatus"],
+    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot"), "obdDetectedCodes", "obdImportStatus", dtcStatusBreakdown],
     ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目"), resolveReadoutState("freeze_frame_snapshot"), "obdSessionDetailFreezeFrame", "obdReadoutDetails"],
     ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目"), resolveReadoutState("live_pid_snapshot"), "obdMonitorGrid", "obdMonitorStatus"],
     ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目"), resolveReadoutState("readiness_snapshot"), "obdSessionDetailReadiness", "obdReadoutDetails"],
@@ -10883,10 +10886,11 @@ function renderObdSimpleResultSummary(session = null) {
       ? { label: "読取中", tone: "reading" }
       : { label: capturedPercent === null ? "状態未集計" : capturedPercent === 100 ? "完了" : "未完了", tone: capturedPercent === 100 ? "captured" : "missing" }, "obdReadoutDetails", "obdReadoutDetails"]
   ];
-  metrics.forEach(([label, value, state, targetId, fallbackTargetId]) => {
+  metrics.forEach(([label, value, state, targetId, fallbackTargetId, detail = ""]) => {
     const item = document.createElement("button");
     const term = document.createElement("span");
     const description = document.createElement("strong");
+    const detailText = document.createElement("span");
     const status = document.createElement("span");
     const arrow = document.createElement("span");
     item.type = "button";
@@ -10898,12 +10902,15 @@ function renderObdSimpleResultSummary(session = null) {
     term.textContent = label;
     description.className = "obd-simple-result-value";
     description.textContent = value;
+    detailText.className = "obd-simple-result-detail";
+    detailText.textContent = detail;
+    detailText.hidden = !detail;
     status.className = "obd-simple-result-state is-" + state.tone;
     status.textContent = state.label;
     arrow.className = "obd-simple-result-arrow";
     arrow.setAttribute("aria-hidden", "true");
     arrow.textContent = "›";
-    item.append(term, description, status, arrow);
+    item.append(term, description, detailText, status, arrow);
     obdSimpleResultGrid.appendChild(item);
   });
 

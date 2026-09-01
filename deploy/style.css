@@ -1309,6 +1309,16 @@ body.dark .flow-node-measure .flow-step {
   font-weight: 900;
 }
 
+.obd-simple-result-detail {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  font-size: 0.7rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .obd-simple-result-arrow {
   position: absolute;
   top: 50%;
