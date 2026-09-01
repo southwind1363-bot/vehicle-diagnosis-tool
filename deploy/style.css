@@ -1267,32 +1267,57 @@ body.dark .flow-node-measure .flow-step {
 .obd-simple-result-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0;
+  gap: 8px;
   margin: 12px 0 0;
 }
 
-.obd-simple-result-grid > div {
+.obd-simple-result-item {
+  position: relative;
   min-width: 0;
-  border-left: 1px solid var(--line);
-  padding: 8px 12px;
+  min-height: 104px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-subtle);
+  color: var(--ink);
+  padding: 10px 34px 10px 12px;
+  text-align: left;
 }
 
-.obd-simple-result-grid > div:first-child {
-  border-left: 0;
+.obd-simple-result-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
-.obd-simple-result-grid dt {
+.obd-simple-result-item:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  outline-offset: 2px;
+}
+
+.obd-simple-result-label {
+  display: block;
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 800;
 }
 
-.obd-simple-result-grid dd {
-  margin: 4px 0 0;
+.obd-simple-result-value {
+  display: block;
+  margin-top: 4px;
   color: var(--ink);
   overflow-wrap: anywhere;
   font-size: 1rem;
   font-weight: 900;
+}
+
+.obd-simple-result-arrow {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  color: var(--accent-strong);
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1;
+  transform: translateY(-50%);
 }
 
 .obd-simple-result-state {

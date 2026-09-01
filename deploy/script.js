@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7325件",
+  validationCheckLabel: "OBD安全検証 7326件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "主要読取ごとの取得・空応答・未取得・実行中表示",
+  recentMilestone: "基本読取結果から項目別詳細へ直接移動",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.401";
+const APP_VERSION = "3.13.402";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9550,6 +9550,12 @@ function renderObdBridgeSessionDetails(session = null) {
     }
     const card = document.createElement("article");
     card.className = "obd-session-detail-card";
+    const detailId = {
+      "フリーズフレーム": "obdSessionDetailFreezeFrame",
+      "レディネス": "obdSessionDetailReadiness",
+      "ECU情報": "obdSessionDetailEcuInfo"
+    }[title];
+    if (detailId) card.id = detailId;
     const heading = document.createElement("strong");
     heading.textContent = title;
     const list = document.createElement("ul");
@@ -10860,25 +10866,36 @@ function renderObdSimpleResultSummary(session = null) {
     return { label: "状態未集計", tone: "unknown" };
   };
   const metrics = [
-    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot")],
-    ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目"), resolveReadoutState("freeze_frame_snapshot")],
-    ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目"), resolveReadoutState("live_pid_snapshot")],
-    ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目"), resolveReadoutState("readiness_snapshot")],
-    ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目"), resolveReadoutState("ecu_info_snapshot")],
+    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot"), "obdDetectedCodes", "obdImportStatus"],
+    ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目"), resolveReadoutState("freeze_frame_snapshot"), "obdSessionDetailFreezeFrame", "obdReadoutDetails"],
+    ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目"), resolveReadoutState("live_pid_snapshot"), "obdMonitorGrid", "obdMonitorStatus"],
+    ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目"), resolveReadoutState("readiness_snapshot"), "obdSessionDetailReadiness", "obdReadoutDetails"],
+    ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目"), resolveReadoutState("ecu_info_snapshot"), "obdSessionDetailEcuInfo", "obdReadoutDetails"],
     ["主要読取", capturedPercent === null ? "未集計" : String(capturedPercent) + "%", obdDevSession.coreScanInProgress
       ? { label: "読取中", tone: "reading" }
-      : { label: capturedPercent === null ? "状態未集計" : capturedPercent === 100 ? "完了" : "未完了", tone: capturedPercent === 100 ? "captured" : "missing" }]
+      : { label: capturedPercent === null ? "状態未集計" : capturedPercent === 100 ? "完了" : "未完了", tone: capturedPercent === 100 ? "captured" : "missing" }, "obdReadoutDetails", "obdReadoutDetails"]
   ];
-  metrics.forEach(([label, value, state]) => {
-    const item = document.createElement("div");
-    const term = document.createElement("dt");
-    const description = document.createElement("dd");
+  metrics.forEach(([label, value, state, targetId, fallbackTargetId]) => {
+    const item = document.createElement("button");
+    const term = document.createElement("span");
+    const description = document.createElement("strong");
     const status = document.createElement("span");
+    const arrow = document.createElement("span");
+    item.type = "button";
+    item.className = "obd-simple-result-item";
+    item.setAttribute("aria-label", label + "の詳細を開く");
+    item.title = label + "の詳細を開く";
+    item.addEventListener("click", () => scrollToObdSection(document.getElementById(targetId) ? targetId : fallbackTargetId));
+    term.className = "obd-simple-result-label";
     term.textContent = label;
+    description.className = "obd-simple-result-value";
     description.textContent = value;
     status.className = "obd-simple-result-state is-" + state.tone;
     status.textContent = state.label;
-    item.append(term, description, status);
+    arrow.className = "obd-simple-result-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "›";
+    item.append(term, description, status, arrow);
     obdSimpleResultGrid.appendChild(item);
   });
 
