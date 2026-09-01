@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7316件",
+  validationCheckLabel: "OBD安全検証 7319件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "ECU観測差分からread-only再確認計画を生成",
+  recentMilestone: "ECU再確認のELM327/J2534経路候補を安全分離",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.393";
+const APP_VERSION = "3.13.394";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9740,6 +9740,11 @@ function formatVehicleApplicabilityEcuObservationReviewPlan(plan, fallback = NO_
   if (addresses.length > 3) parts.push(`他${addresses.length - 3}`);
   if (applicabilityCount > 0) parts.push(`適合一覧確認 ${applicabilityCount}件`);
   if (plan.targetSelectionRequired === true || plan.target_selection_required === true) parts.push("対象選択待ち");
+  const transportPlan = plan.transportPlan || plan.transport_plan || null;
+  const transportCandidates = Array.isArray(transportPlan?.candidates) ? transportPlan.candidates : [];
+  const transportLabels = transportCandidates.slice(0, 2).map((candidate) => candidate?.label || candidate?.id).filter(Boolean);
+  if (transportLabels.length) parts.push(`経路候補 ${transportLabels.join(",")}`);
+  if (transportCandidates.length > transportLabels.length) parts.push(`他${transportCandidates.length - transportLabels.length}`);
   if (plan.transportResolutionRequired === true || plan.transport_resolution_required === true) parts.push("通信経路未確定");
   parts.push("読取専用");
   return parts.join(" / ");

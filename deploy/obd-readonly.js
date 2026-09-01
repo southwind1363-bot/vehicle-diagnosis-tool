@@ -23070,6 +23070,132 @@
       vehicle_command_enabled: false
     };
   }
+  function buildVehicleApplicabilityEcuObservationTransportPlan(readoutTargetRows = []) {
+    const rows = Array.isArray(readoutTargetRows) ? readoutTargetRows.filter((row) => row && typeof row === "object") : [];
+    if (!rows.length) return null;
+    const currentObservations = rows.map((row) => row.current || row.current_observation || {}).filter(Boolean);
+    const normalizeToken = (value) => String(value || "").normalize("NFKC").trim().toLowerCase();
+    const normalizeAddress = (value) => normalizeToken(value).replace(/^0x/, "").replace(/[^0-9a-f]/g, "");
+    const isStandardObdTarget = (observation) => {
+      const systemToken = `${normalizeToken(observation.systemName || observation.system_name)} ${normalizeToken(observation.ecuName || observation.ecu_name)}`;
+      const protocolToken = normalizeToken(observation.protocol);
+      const addressToken = normalizeAddress(observation.diagnosticAddress || observation.diagnostic_address);
+      const powertrainTarget = /(engine|ecm|pcm|powertrain|emission|エンジン|パワートレイン)/.test(systemToken);
+      const standardAddress = /^7e[8-f]$/.test(addressToken);
+      const standardProtocol = !protocolToken || /(obd|can|iso\s*15765)/.test(protocolToken);
+      return powertrainTarget && standardAddress && standardProtocol;
+    };
+    const protocols = [...new Set(currentObservations.map((observation) => observation.protocol).filter(Boolean).map(String))].sort();
+    const targetObservationKeys = [...new Set(rows.map((row) => row.observationKey || row.observation_key).filter(Boolean).map(String))].sort();
+    const requiredCapabilities = [
+      "targeted_ecu_information_readout",
+      protocols.some((protocol) => /uds|iso\s*14229/i.test(protocol)) ? "uds_readout" : null,
+      currentObservations.some((observation) => /^(?:0x)?18da/i.test(String(observation.diagnosticAddress || observation.diagnostic_address || ""))) ? "29bit_diagnostic_addressing" : null
+    ].filter(Boolean);
+    const makeCandidate = ({ id, label, interfaceId, platforms, scope, reason }) => {
+      const platformOptions = [...new Set((Array.isArray(platforms) ? platforms : []).filter(Boolean).map(String))];
+      const routeOptions = platformOptions.map((platform) => {
+        const evaluation = evaluateInterfaceReadoutRoute({ interfaceId, platform });
+        return {
+          platform,
+          route: evaluation.route,
+          currentAvailability: evaluation.currentAvailability,
+          current_availability: evaluation.currentAvailability,
+          requiredBeforeReadout: [...evaluation.requiredBeforeReadout],
+          required_before_readout: [...evaluation.requiredBeforeReadout],
+          directBrowserReadoutEnabled: false,
+          direct_browser_readout_enabled: false,
+          executionEnabled: false,
+          execution_enabled: false,
+          wouldTransmit: false,
+          would_transmit: false
+        };
+      });
+      const requiredBeforeReadout = [...new Set(routeOptions.flatMap((option) => option.requiredBeforeReadout))];
+      return {
+        id,
+        label,
+        interfaceId,
+        interface_id: interfaceId,
+        platform: platformOptions.length === 1 ? platformOptions[0] : null,
+        platforms: platformOptions,
+        route: routeOptions.length === 1 ? routeOptions[0].route : "platform_selection_required",
+        routeOptions,
+        route_options: routeOptions,
+        scope,
+        reason,
+        currentAvailability: routeOptions.length === 1 ? routeOptions[0].currentAvailability : "iPhoneネイティブ経路またはPC経路の選択と実機確認待ち",
+        current_availability: routeOptions.length === 1 ? routeOptions[0].currentAvailability : "iPhoneネイティブ経路またはPC経路の選択と実機確認待ち",
+        requiredBeforeReadout,
+        required_before_readout: requiredBeforeReadout,
+        targetObservationKeys,
+        target_observation_keys: targetObservationKeys,
+        candidateOnly: true,
+        candidate_only: true,
+        targetCompatibilityConfirmed: false,
+        target_compatibility_confirmed: false,
+        hardwareCompatibilityConfirmed: false,
+        hardware_compatibility_confirmed: false,
+        readOnly: true,
+        read_only: true,
+        executionEnabled: false,
+        execution_enabled: false,
+        wouldTransmit: false,
+        would_transmit: false,
+        vehicleCommandEnabled: false,
+        vehicle_command_enabled: false
+      };
+    };
+    const candidates = [];
+    if (currentObservations.length === rows.length && currentObservations.every(isStandardObdTarget)) {
+      candidates.push(makeCandidate({
+        id: "elm327_standard_obd",
+        label: "ELM327 / 標準OBD",
+        interfaceId: "user-vci-elm327",
+        platforms: ["ios", "desktop"],
+        scope: "standard_obd_powertrain_ecu",
+        reason: "標準OBDのエンジン系ECU候補。Mode 09等で確認できる範囲に限定し、他ECUには適用しない"
+      }));
+    }
+    candidates.push(makeCandidate({
+      id: "j2534_targeted_ecu",
+      label: "J2534 / 対象ECU",
+      interfaceId: "user-vci-techstream-j2534",
+      platforms: ["desktop"],
+      scope: "targeted_multi_ecu",
+      reason: "対象ECU・通信方式・診断アドレスを実機で確認してから使う多ECU読取候補"
+    }));
+    return {
+      schemaVersion: "vehicle_applicability_ecu_observation_transport_plan_v1",
+      schema_version: "vehicle_applicability_ecu_observation_transport_plan_v1",
+      candidates,
+      candidateCount: candidates.length,
+      candidate_count: candidates.length,
+      targetObservationKeys,
+      target_observation_keys: targetObservationKeys,
+      protocols,
+      requiredCapabilities,
+      required_capabilities: requiredCapabilities,
+      selectedRouteId: null,
+      selected_route_id: null,
+      automaticTransportSelectionEnabled: false,
+      automatic_transport_selection_enabled: false,
+      transportResolved: false,
+      transport_resolved: false,
+      targetCompatibilityConfirmed: false,
+      target_compatibility_confirmed: false,
+      hardwareCompatibilityConfirmed: false,
+      hardware_compatibility_confirmed: false,
+      readOnly: true,
+      read_only: true,
+      executionEnabled: false,
+      execution_enabled: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
   function buildVehicleApplicabilityEcuObservationReviewPlan(comparisonSummary = null) {
     if (!comparisonSummary || typeof comparisonSummary !== "object" || Array.isArray(comparisonSummary)) return null;
     const comparison = comparisonSummary.vehicleApplicabilityEcuObservationComparisonSummary
@@ -23092,6 +23218,7 @@
     const applicabilityReviewRows = changedRows.filter((row) => row?.added === true || row?.removed === true);
     const targetObservationKeys = [...new Set(readoutTargetRows.map((row) => row?.observationKey || row?.observation_key).filter(Boolean))].sort();
     const applicabilityReviewObservationKeys = [...new Set(applicabilityReviewRows.map((row) => row?.observationKey || row?.observation_key).filter(Boolean))].sort();
+    const transportPlan = buildVehicleApplicabilityEcuObservationTransportPlan(readoutTargetRows);
     const targetAddressDescriptors = [...new Set(readoutTargetRows
       .map((row) => row?.current?.diagnosticAddress || row?.current?.diagnostic_address || null)
       .filter(Boolean)
@@ -23176,6 +23303,8 @@
       next_readout_candidate: nextReadoutCandidate,
       nextReadoutRequest,
       next_readout_request: nextReadoutRequest,
+      transportPlan,
+      transport_plan: transportPlan,
       targetSelectionRequired: readoutTargetRows.length > 0,
       target_selection_required: readoutTargetRows.length > 0,
       targetSelectionConfirmed: false,
@@ -23183,7 +23312,10 @@
       transportResolutionRequired: readoutTargetRows.length > 0,
       transport_resolution_required: readoutTargetRows.length > 0,
       transportResolved: false,
-      transport_resolved: false,      automaticTargetSelectionEnabled: false,
+      transport_resolved: false,
+      automaticTransportSelectionEnabled: false,
+      automatic_transport_selection_enabled: false,
+      automaticTargetSelectionEnabled: false,
       automatic_target_selection_enabled: false,
       executionEnabled: false,
       execution_enabled: false,
@@ -42789,6 +42921,7 @@
     normalizeVehicleApplicabilitySnapshot,
     normalizeVehicleApplicabilityEcuObservationComparisonRows,
     buildVehicleApplicabilityEcuObservationComparisonSummary,
+    buildVehicleApplicabilityEcuObservationTransportPlan,
     buildVehicleApplicabilityEcuObservationReviewPlan,
     buildVehicleApplicabilityFieldMatchSummary,
     normalizeObservationContext,
