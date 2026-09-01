@@ -8,6 +8,7 @@
   const DIAGNOSTIC_SESSION_MAX_BYTES = 4000000;
   const SCANNER_JSON_MAX_BYTES = 500000;
   const SCANNER_TEXT_MAX_BYTES = 2000000;
+  const MAX_SUPPORTED_ECU_COUNT = 64;
 
   const fallbackMonitorDefinitions = Object.freeze([
     { id: "engine_speed", label: "エンジン回転数", unit: "rpm", category: "エンジン", aliases: ["engine rpm", "engine speed", "rpm", "エンジン回転数", "回転数"] },
@@ -8448,7 +8449,7 @@
       if (!systemName && !ecuName && !diagnosticAddress && !protocol) return null;
       return { systemName, system_name: systemName, ecuName, ecu_name: ecuName, diagnosticAddress, diagnostic_address: diagnosticAddress, protocol };
     };
-    const normalizedSupportedEcus = supportedEcus.map(normalizeEcuDescriptor).filter(Boolean).slice(0, 20);
+    const normalizedSupportedEcus = supportedEcus.map(normalizeEcuDescriptor).filter(Boolean).slice(0, MAX_SUPPORTED_ECU_COUNT);
     const supportedEcuEvidenceInput = source.supportedEcuEvidence && typeof source.supportedEcuEvidence === "object" && !Array.isArray(source.supportedEcuEvidence)
       ? source.supportedEcuEvidence
       : source.supported_ecu_evidence && typeof source.supported_ecu_evidence === "object" && !Array.isArray(source.supported_ecu_evidence)
@@ -28114,7 +28115,7 @@
     const importedReadoutRequestPlanGateComparisonSummary = summary.importedReadoutRequestPlanGateComparisonSummary || summary.imported_readout_request_plan_gate_comparison_summary || importedSessionComparisonSummary?.readoutRequestPlanGateComparison || importedSessionComparisonSummary?.readout_request_plan_gate_comparison || null;
     const importedNextReadoutGuardComparisonSummary = summary.importedNextReadoutGuardComparisonSummary || summary.imported_next_readout_guard_comparison_summary || importedSessionComparisonSummary?.nextReadoutGuardComparison || importedSessionComparisonSummary?.next_readout_guard_comparison || null;
     const importedCoreReadoutInventoryComparisonSummary = summary.importedCoreReadoutInventoryComparisonSummary || summary.imported_core_readout_inventory_comparison_summary || importedSessionComparisonSummary?.coreReadoutInventoryComparison || importedSessionComparisonSummary?.core_readout_inventory_comparison || null;
-    return sanitizeSensitiveIdentifiersForRetention({
+    const exportPayload = sanitizeSensitiveIdentifiersForRetention({
       schema_version: "bridge_session_export_v1",
       exported_at: parts.exportedAt || parts.exported_at || new Date().toISOString(),
       source: exportSource,
@@ -28216,6 +28217,12 @@
         store_raw_frames: false
       }
     });
+    if ((metadataFields.vehicle_applicability?.supported_ecus?.length || 0) > 20
+      && getUtf8ByteLength(JSON.stringify(exportPayload)) > DIAGNOSTIC_SESSION_MAX_BYTES) {
+      delete exportPayload.session.diagnostic_flow_summary;
+      delete exportPayload.session.analysis_readiness_summary;
+    }
+    return exportPayload;
   }
 
   function buildBridgeDiagnosticImport(parts = {}) {

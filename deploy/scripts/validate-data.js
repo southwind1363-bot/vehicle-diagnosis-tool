@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const dataDir = path.join(projectRoot, "data");
 const jsonFiles = fs.readdirSync(dataDir).filter((name) => name.endsWith(".json")).sort();
+const MAX_SUPPORTED_ECU_COUNT = 64;
 const errors = [];
 const warnings = [];
 const codeRows = [];
@@ -240,7 +241,7 @@ function validateVehicleEcuApplicabilityCatalogRows(rows, file = "vehicle-ecu-ap
     if (!Number.isInteger(entry?.year_from) || !Number.isInteger(entry?.year_to) || entry.year_from < 1900 || entry.year_to > 2100 || entry.year_from > entry.year_to) addError(`${label} year range is invalid`);
     if (!/^[A-Z]{2}$/.test(entry?.market || "")) addError(`${label} market must be a two-letter uppercase code`);
     if (!["complete", "partial"].includes(entry?.list_scope)) addError(`${label} list_scope is invalid`);
-    if (!Array.isArray(ecus) || ecus.length < 1 || ecus.length > 20) addError(`${label} supported_ecus must contain 1 to 20 rows`);
+    if (!Array.isArray(ecus) || ecus.length < 1 || ecus.length > MAX_SUPPORTED_ECU_COUNT) addError(`${label} supported_ecus must contain 1 to 64 rows`);
     if (entry?.read_only !== true || entry?.vehicle_command_enabled !== false) addError(`${label} read-only safety flags are invalid`);
     if (!isNonEmptyString(evidence?.evidence_id) || evidenceIds.has(evidence?.evidence_id)
       || !isNonEmptyString(evidence?.source_name) || !/^https:\/\/[^\s]+$/.test(evidence?.source_url || "")
@@ -294,7 +295,7 @@ const vehicleEcuCatalogFixtureEntry = {
 };
 const validVehicleEcuCatalogFixture = [{ record_type: "catalog_metadata", schema_version: "vehicle_ecu_applicability_catalog_v1", catalog_id: "domestic-ecu-applicability-v1", entry_count: 1, read_only: true, vehicle_command_enabled: false }, vehicleEcuCatalogFixtureEntry];
 const oversizedVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
-oversizedVehicleEcuCatalogFixture[1].supported_ecus = Array.from({ length: 21 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", protocol: "ISO 15765-4" }));
+oversizedVehicleEcuCatalogFixture[1].supported_ecus = Array.from({ length: 65 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", protocol: "ISO 15765-4" }));
 const overlappingVehicleEcuCatalogFixture = [...structuredClone(validVehicleEcuCatalogFixture), { ...structuredClone(vehicleEcuCatalogFixtureEntry), id: "fixture-overlap", evidence: { ...vehicleEcuCatalogFixtureEntry.evidence, evidence_id: "fixture-overlap-evidence" } }];
 overlappingVehicleEcuCatalogFixture[0].entry_count = 2;
 const conflictingVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
@@ -303,7 +304,7 @@ conflictingVehicleEcuCatalogFixture[1].evidence.verified = "false";
 const ambiguousAddressVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
 ambiguousAddressVehicleEcuCatalogFixture[1].supported_ecus[0].diagnosticAddress = "7E0";
 if (validateVehicleEcuApplicabilityCatalogRows(validVehicleEcuCatalogFixture, "fixture").length
-  || !validateVehicleEcuApplicabilityCatalogRows(oversizedVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("1 to 20"))
+  || !validateVehicleEcuApplicabilityCatalogRows(oversizedVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("1 to 64"))
   || !validateVehicleEcuApplicabilityCatalogRows(overlappingVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("overlapping"))
   || !validateVehicleEcuApplicabilityCatalogRows(conflictingVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("evidence"))
   || !validateVehicleEcuApplicabilityCatalogRows(ambiguousAddressVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("supported_ecus"))) {

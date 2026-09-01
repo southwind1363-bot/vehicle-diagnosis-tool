@@ -223,15 +223,16 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7363件",
+  validationCheckLabel: "OBD安全検証 7367件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "検証済みECU適用証跡ゲートを診断コアへ統合",
+  recentMilestone: "多ECU車の適合一覧を64 ECUまで切り捨てず保持",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.414";
-const APP_LAST_UPDATED = "2026-09-01";
+const APP_VERSION = "3.13.415";
+const APP_LAST_UPDATED = "2026-09-02";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
+const MAX_SUPPORTED_ECU_COUNT = 64;
 const NO_DATA = "登録データなし";
 const MANUAL_VEHICLE_VALUE = "__manual__";
 
@@ -1957,7 +1958,7 @@ function validateVehicleEcuApplicabilityCatalog(rows = []) {
       || entry.year_from < 1900 || entry.year_to > 2100 || entry.year_from > entry.year_to
       || !/^[A-Z]{2}$/.test(entry.market || "")
       || !["complete", "partial"].includes(entry.list_scope)
-      || !Array.isArray(ecus) || !ecus.length || ecus.length > 20
+      || !Array.isArray(ecus) || !ecus.length || ecus.length > MAX_SUPPORTED_ECU_COUNT
       || entry.read_only !== true || entry.vehicle_command_enabled !== false
       || !evidence || !evidence.evidence_id || evidenceIds.has(evidence.evidence_id)
       || !evidence.source_name || !/^https:\/\/[^\s]+$/.test(evidence.source_url || "")
