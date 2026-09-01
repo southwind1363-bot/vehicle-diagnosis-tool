@@ -1092,12 +1092,11 @@ body.dark .flow-node-measure .flow-step {
 }
 
 #obd-panel[data-obd-ui-mode="simple"] .obd-stage-tabs {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 #obd-panel[data-obd-ui-mode="simple"] .obd-safety-grid {
-  grid-template-columns: minmax(0, 1fr);
-  margin-block: 12px;
+  display: none;
 }
 
 .obd-stage-tab {
@@ -1118,6 +1117,77 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-stage-view[hidden] {
   display: none;
+}
+
+.obd-scan-context,
+.obd-simple-connect-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--line);
+}
+
+.obd-scan-context span,
+.obd-simple-connect-summary span {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  background: var(--panel);
+  padding: 12px 14px;
+}
+
+.obd-scan-context small,
+.obd-simple-connect-summary small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.obd-scan-context strong,
+.obd-simple-connect-summary strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.obd-simple-connect-panel {
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--accent);
+  border-radius: 7px;
+  background: var(--panel);
+  padding: 18px;
+}
+
+.obd-simple-connect-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.obd-simple-connect-instruction {
+  margin: 16px 0 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="results"] .obd-results-nav,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="results"] #obdDiagnosticFlowPanelResults,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="results"] #obdReadoutResultsHost,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="results"] #obdReadoutDetails {
+  display: none !important;
+}
+
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] #obdSimpleResultSummary,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] .obd-simple-result-actions,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] #obdSimpleResultStatus,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] .obd-results-file-actions,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] [data-obd-session-export-status] {
+  display: none !important;
 }
 
 .obd-operation-grid {
@@ -2277,6 +2347,15 @@ body.dark .flow-node-measure .flow-step {
   }
 
   .obd-stage-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  #obd-panel[data-obd-ui-mode="simple"] .obd-stage-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .obd-scan-context,
+  .obd-simple-connect-summary {
     grid-template-columns: 1fr;
   }
 

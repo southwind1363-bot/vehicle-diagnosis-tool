@@ -515,10 +515,17 @@
             <button class="obd-ui-mode-button is-active" type="button" data-obd-ui-mode="simple" aria-pressed="true">かんたん</button>
             <button class="obd-ui-mode-button" type="button" data-obd-ui-mode="details" aria-pressed="false">詳細</button>
           </div>
+          <div class="obd-scan-context obd-simple-only" aria-label="現在の診断対象">
+            <span><small>車両</small><strong id="obdScanVehicleValue">未選択</strong></span>
+            <span><small>VCI</small><strong id="obdScanInterfaceValue">自動判定</strong></span>
+            <span><small>接続</small><strong id="obdScanConnectionValue">未接続</strong></span>
+          </div>
           <div id="obdStageTabs" class="obd-stage-tabs" role="tablist" aria-label="OBD読取画面">
-            <button class="obd-stage-tab is-active" type="button" data-obd-stage="setup" aria-pressed="true">1. 車両・接続</button>
-            <button class="obd-stage-tab" type="button" data-obd-stage="results" aria-pressed="false">2. 診断結果</button>
-            <button class="obd-stage-tab obd-expert-only" type="button" data-obd-stage="details" aria-pressed="false">3. 開発・詳細</button>
+            <button class="obd-stage-tab is-active" type="button" data-obd-stage="setup" aria-pressed="true">1. 車両</button>
+            <button class="obd-stage-tab obd-simple-only" type="button" data-obd-stage="connect" aria-pressed="false">2. 接続</button>
+            <button class="obd-stage-tab" type="button" data-obd-stage="results" aria-pressed="false">3. 結果</button>
+            <button class="obd-stage-tab obd-simple-only" type="button" data-obd-stage="readout" aria-pressed="false">4. データ</button>
+            <button class="obd-stage-tab obd-expert-only" type="button" data-obd-stage="details" aria-pressed="false">開発・詳細</button>
           </div>
           <p id="obdStageStatus" class="data-status">車両選択と接続準備を先に進めます。</p>
         </section>
@@ -589,13 +596,13 @@
             <div class="button-row full-width">
               <button id="obdUseDiagnosisVehicleButton" class="secondary-button obd-expert-only" type="button">診断補助の車両情報をコピー</button>
               <button id="obdPreviewSelectedButton" class="secondary-button obd-expert-only" type="button">この設定で読取前プレビュー</button>
-              <button id="obdPrepareSelectedButton" class="primary-button" type="button">接続準備へ進む</button>
+              <button id="obdPrepareSelectedButton" class="primary-button" type="button">次へ: 接続確認</button>
               <button id="obdSimpleDisconnectButton" class="secondary-button obd-simple-only" type="button" hidden disabled>切断</button>
             </div>
             <p id="obdSimpleStatus" class="data-status obd-simple-only" role="status" aria-live="polite">車両とVCIを選択してください。</p>
             <p id="obdVehicleSelectionSummary" class="vehicle-summary">OBD車両情報: 未選択</p>
-            <p id="obdAvailableReadoutSummary" class="vehicle-note">選択中の方式で使える読取項目を表示します。</p>
-            <div id="obdConnectionGuide" class="obd-profile-strip"></div>
+            <p id="obdAvailableReadoutSummary" class="vehicle-note obd-expert-only">選択中の方式で使える読取項目を表示します。</p>
+            <div id="obdConnectionGuide" class="obd-profile-strip obd-expert-only"></div>
             <input id="obdVehicle" type="hidden">
           </fieldset>
         </section>
@@ -621,6 +628,29 @@
 
         <div id="obdAccessProtected" hidden>
         <div id="obdStageSetupView" class="obd-stage-view">
+
+        <section id="obdSimpleConnectPanel" class="obd-simple-connect-panel obd-simple-only" aria-labelledby="obdSimpleConnectTitle">
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">CONNECT VEHICLE</p>
+              <h3 id="obdSimpleConnectTitle">車両へ接続</h3>
+            </div>
+            <span class="confidence-badge">読取専用</span>
+          </div>
+          <div class="obd-simple-connect-summary">
+            <span><small>選択車両</small><strong id="obdSimpleConnectVehicle">未選択</strong></span>
+            <span><small>インターフェース</small><strong id="obdSimpleConnectInterface">自動判定</strong></span>
+            <span><small>読取経路</small><strong id="obdSimpleConnectRoute">確認中</strong></span>
+            <span><small>安全状態</small><strong>読取専用</strong></span>
+          </div>
+          <p class="obd-simple-connect-instruction">VCIを車両へ接続し、イグニッションをONにしてから開始してください。</p>
+          <div class="button-row full-width">
+            <button id="obdSimpleConnectBackButton" class="secondary-button" type="button">戻る</button>
+            <button id="obdSimpleConnectButton" class="primary-button" type="button">接続を開始</button>
+            <button id="obdSimpleConnectDisconnectButton" class="secondary-button" type="button" hidden disabled>切断</button>
+          </div>
+          <p id="obdSimpleConnectStatus" class="data-status" role="status" aria-live="polite">車両とVCIの選択内容を確認してください。</p>
+        </section>
 
         <section class="obd-operation-panel obd-expert-only" aria-labelledby="obdProgressTitle">
           <div class="obd-result-heading">
@@ -675,7 +705,7 @@
           </div>
         </section>
 
-        <div class="obd-connection-bar">
+        <div class="obd-connection-bar obd-expert-only">
           <div>
             <span class="obd-connection-label">診断機状態</span>
             <strong id="obdDevConnectionState">読取待機中</strong>
@@ -699,7 +729,7 @@
           <div id="obdPreviewGuide" class="obd-profile-strip"></div>
         </section>
 
-        <section id="obdNextReadoutPanel" class="result-block" hidden>
+        <section id="obdNextReadoutPanel" class="result-block obd-expert-only" hidden>
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">NEXT READOUT</p>
@@ -728,13 +758,13 @@
           <p id="obdSimpleResultNote" class="obd-simple-result-note"></p>
         </section>
 
-        <div class="button-row obd-simple-only">
+        <div class="button-row obd-simple-only obd-simple-result-actions">
           <button id="obdSimpleResultPrimaryButton" class="primary-button" type="button">接続準備へ進む</button>
           <button id="obdSimpleResultDisconnectButton" class="secondary-button" type="button" hidden disabled>切断</button>
         </div>
         <p id="obdSimpleResultStatus" class="data-status obd-simple-only" role="status" aria-live="polite">読取状態を確認しています。</p>
 
-        <div class="button-row">
+        <div class="button-row obd-results-file-actions">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
           <button id="obdSessionOpenButton" class="secondary-button" type="button">読取結果ファイルを開く</button>
           <button id="obdResultsSampleButton" class="secondary-button obd-expert-only" type="button">入力例（架空データ）</button>

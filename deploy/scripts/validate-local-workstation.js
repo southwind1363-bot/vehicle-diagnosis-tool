@@ -88,7 +88,7 @@ function validateReadoutNavigation() {
     scrollIntoView(options) { this.scrolled += 1; this.scrollOptions = options; }
   }
   const nodes = Object.fromEntries(["obd-panel", "diagnosis-panel", "data-panel", "obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost",
-    "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdDetectedCodes", "obdMonitorGrid", "obdMonitorStatus", "obdDevSessionSummary", "obdConnectionProfile", "obdReadoutDetails", "obdDevSessionDetails"]
+    "obdSetupPanel", "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdDetectedCodes", "obdMonitorGrid", "obdMonitorStatus", "obdDevSessionSummary", "obdConnectionProfile", "obdReadoutDetails", "obdDevSessionDetails"]
     .map((id) => [id, new Element(id)]));
   const attach = (parent, child) => nodes[parent].appendChild(nodes[child]);
   attach("diagnosis-panel", "obdReadoutHome"); attach("obdReadoutHome", "obdReadoutSurface");
@@ -107,7 +107,7 @@ function validateReadoutNavigation() {
   const context = vm.createContext({ document: { getElementById: (id) => nodes[id] }, window: { scrollY: 320, scrollTo: (options) => scrollCalls.push(options) },
     tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false,
     obdStagePanel: {}, obdStageBadge: {}, obdStageStatus: {}, obdStageTabs: [], activeObdStage: "setup", obdUiMode: "details", getObdAutoStage: () => "setup",
-    ...Object.fromEntries(["obdStageSetupView", "obdStageResultsView", "obdStageDetailsView"].map((id) => [id, nodes[id]])) });
+    ...Object.fromEntries(["obdSetupPanel", "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView"].map((id) => [id, nodes[id]])) });
   for (const name of ["syncObdReadoutSurface", "activateTab", "renderObdStageView", "scrollToObdSection"]) {
     vm.runInContext(appSource.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
   }
@@ -118,7 +118,7 @@ function validateReadoutNavigation() {
   check(nodes.obdReadoutSurface.parentElement === nodes.obdReadoutResultsHost && !nodes.obdStageResultsView.hidden, "OBD results still showed a disconnected placeholder");
   context.obdUiMode = "simple";
   context.renderObdStageView("details");
-  check(context.activeObdStage === "setup" && !nodes.obdStageSetupView.hidden, "Simple OBD mode exposed the development details stage");
+  check(context.activeObdStage === "setup" && !nodes.obdSetupPanel.hidden && nodes.obdStageSetupView.hidden, "Simple OBD mode exposed the development details stage or hid the vehicle screen");
   context.obdUiMode = "details";
   nodes.obdImportStatus.textContent = "0 DTC / acquired";
   nodes.obdMonitorGrid.values = [{ value: 0, unit: "km/h" }, { value: 88, unit: "C" }];
@@ -140,7 +140,12 @@ function validateReadoutNavigation() {
     check(nodes[target].scrollOptions.behavior === "instant", "Result navigation must not race the tab scroll animation");
     if (target === "obdReadoutDetails" || target === "obdDevSessionDetails") check(nodes.obdReadoutDetails.open, "Result shortcut did not open the enclosing disclosure");
   }
-  context.obdAccessUnlocked = false;
+  context.obdUiMode = "simple";
+  context.renderObdStageView("results");
+  const simpleReadoutScrolls = nodes.obdDetectedCodes.scrolled;
+  context.scrollToObdSection("obdDetectedCodes");
+  check(context.activeObdStage === "readout" && nodes.obdDetectedCodes.scrolled === simpleReadoutScrolls + 1, "Simple result shortcut did not open the individual-data screen");
+  context.obdUiMode = "details";  context.obdAccessUnlocked = false;
   context.renderObdStageView("setup");
   nodes.obdReadoutDetails.open = false;
   context.scrollToObdSection("obdReadoutDetails");
@@ -154,10 +159,11 @@ function validateReadoutNavigation() {
     nodes[target].children = [];
     nodes[status].textContent = "Readout unavailable; not an all-clear result";
     const previousScroll = nodes[status].scrolled;
+    const previousTargetScroll = nodes[target].scrolled;
     nodes[status].parentElement.open = false;
     context.scrollToObdSection(target);
     check(nodes[status].parentElement.open, "Empty results left their status disclosure closed");
-    check(nodes[status].scrolled === previousScroll + 1 && nodes[target].scrolled === 1, "Empty readout navigation must show status rather than an empty grid");
+    check(nodes[status].scrolled === previousScroll + 1 && nodes[target].scrolled === previousTargetScroll, "Empty readout navigation must show status rather than an empty grid");
     check(nodes[status].textContent === "Readout unavailable; not an all-clear result" && context.activeObdStage === "results", "Navigation changed readout status or selected the wrong stage");
   }
   const resultNavigation = indexSource.match(/<nav class="obd-results-nav"[\s\S]*?<\/nav>/)?.[0] || "";

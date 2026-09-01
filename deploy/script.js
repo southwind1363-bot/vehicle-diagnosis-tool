@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 7332件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "レディネス完了状態を基本結果へ統合",
+  recentMilestone: "通常診断画面を5段階フローへ分離",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.408";
+const APP_VERSION = "3.13.409";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -406,6 +406,16 @@ const obdUiModeButtons = document.querySelectorAll("[data-obd-ui-mode]");
 const obdStageSetupView = document.querySelector("#obdStageSetupView");
 const obdStageResultsView = document.querySelector("#obdStageResultsView");
 const obdStageDetailsView = document.querySelector("#obdStageDetailsView");
+const obdScanVehicleValue = document.querySelector("#obdScanVehicleValue");
+const obdScanInterfaceValue = document.querySelector("#obdScanInterfaceValue");
+const obdScanConnectionValue = document.querySelector("#obdScanConnectionValue");
+const obdSimpleConnectVehicle = document.querySelector("#obdSimpleConnectVehicle");
+const obdSimpleConnectInterface = document.querySelector("#obdSimpleConnectInterface");
+const obdSimpleConnectRoute = document.querySelector("#obdSimpleConnectRoute");
+const obdSimpleConnectBackButton = document.querySelector("#obdSimpleConnectBackButton");
+const obdSimpleConnectButton = document.querySelector("#obdSimpleConnectButton");
+const obdSimpleConnectDisconnectButton = document.querySelector("#obdSimpleConnectDisconnectButton");
+const obdSimpleConnectStatus = document.querySelector("#obdSimpleConnectStatus");
 const obdSimpleResultSummary = document.querySelector("#obdSimpleResultSummary");
 const obdSimpleResultBadge = document.querySelector("#obdSimpleResultBadge");
 const obdSimpleResultGrid = document.querySelector("#obdSimpleResultGrid");
@@ -751,6 +761,9 @@ obdLiveObservationCondition?.addEventListener("change", () => {
 obdUseDiagnosisVehicleButton?.addEventListener("click", applyDiagnosisVehicleToObdSetup);
 obdPreviewSelectedButton?.addEventListener("click", previewSelectedObdInterface);
 obdPrepareSelectedButton?.addEventListener("click", handleObdSetupPrimaryAction);
+obdSimpleConnectBackButton?.addEventListener("click", () => setObdStage("setup"));
+obdSimpleConnectButton?.addEventListener("click", handleObdPrimaryAction);
+obdSimpleConnectDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
 obdSimpleDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
 obdSimpleResultPrimaryButton?.addEventListener("click", handleObdPrimaryAction);
 obdSimpleResultDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
@@ -2383,24 +2396,33 @@ function renderObdSetupActionButtons(capability = window.ObdReadOnly?.getCapabil
     return;
   }
   const nativeConnectorRoute = readoutRoute?.route === "native_connector_required";
-  if (!obdAccessUnlocked) obdPrepareSelectedButton.textContent = "診断画面を開く";
-  else if (serialBusy) obdPrepareSelectedButton.textContent = obdDevSession.coreScanInProgress ? "基本読取中" : "接続処理中";
+  let primaryActionLabel = labels.prepare;
+  if (!obdAccessUnlocked) primaryActionLabel = "診断画面を開く";
+  else if (serialBusy) primaryActionLabel = obdDevSession.coreScanInProgress ? "基本読取中" : "接続処理中";
   else if (interfaceId === "user-vci-elm327" && readoutRoute?.route === "desktop_web_serial") {
-    obdPrepareSelectedButton.textContent = connected && obdDevSession.connectionState === "ready"
+    primaryActionLabel = connected && obdDevSession.connectionState === "ready"
       ? "基本読取を開始"
       : capability?.secureContext === true && capability?.webSerialSupported === true ? "ELM327へ接続" : "PCでELM327読取";
-  } else if (nativeConnectorRoute) obdPrepareSelectedButton.textContent = "iPhone接続準備を確認";
-  else obdPrepareSelectedButton.textContent = labels.prepare;
-  obdPrepareSelectedButton.disabled = serialBusy || (connected && obdDevSession.connectionState !== "ready");
+  } else if (nativeConnectorRoute) primaryActionLabel = "iPhone接続準備を確認";
+  obdPrepareSelectedButton.textContent = "次へ: 接続確認";
+  obdPrepareSelectedButton.disabled = serialBusy;
+  if (obdSimpleConnectButton) {
+    obdSimpleConnectButton.textContent = primaryActionLabel;
+    obdSimpleConnectButton.disabled = serialBusy || (connected && obdDevSession.connectionState !== "ready");
+  }
   if (typeof obdSimpleDisconnectButton !== "undefined" && obdSimpleDisconnectButton) {
-    obdSimpleDisconnectButton.hidden = !connected;
-    obdSimpleDisconnectButton.disabled = !connected || Boolean(obdSerialDisconnectOperation) || obdDevSession.readInProgress || obdDevSession.coreScanInProgress;
+    obdSimpleDisconnectButton.hidden = true;
+    obdSimpleDisconnectButton.disabled = true;
+  }
+  if (obdSimpleConnectDisconnectButton) {
+    obdSimpleConnectDisconnectButton.hidden = !connected;
+    obdSimpleConnectDisconnectButton.disabled = !connected || Boolean(obdSerialDisconnectOperation) || obdDevSession.readInProgress || obdDevSession.coreScanInProgress;
   }
   if (typeof obdSimpleResultPrimaryButton !== "undefined" && obdSimpleResultPrimaryButton) {
-    obdSimpleResultPrimaryButton.textContent = obdPrepareSelectedButton.textContent === "基本読取を開始" && obdDevSession.lastSession
+    obdSimpleResultPrimaryButton.textContent = primaryActionLabel === "基本読取を開始" && obdDevSession.lastSession
       ? "基本読取を再実行"
-      : obdPrepareSelectedButton.textContent;
-    obdSimpleResultPrimaryButton.disabled = obdPrepareSelectedButton.disabled;
+      : primaryActionLabel;
+    obdSimpleResultPrimaryButton.disabled = serialBusy || (connected && obdDevSession.connectionState !== "ready");
   }
   if (typeof obdSimpleResultDisconnectButton !== "undefined" && obdSimpleResultDisconnectButton) {
     obdSimpleResultDisconnectButton.hidden = !connected;
@@ -2516,7 +2538,10 @@ function scrollToObdSection(targetId) {
     // Cancel the tab-to-top animation before moving to a specific result.
     window.scrollTo({ top: window.scrollY, behavior: "instant" });
   }
-  const stage = target.closest("#obdReadoutSurface") || target.closest("#obdStageResultsView") ? "results"
+  const simpleIndividualReadout = typeof obdUiMode === "string" && obdUiMode === "simple"
+    && target.id !== "obdSimpleResultSummary" && !target.closest("#obdSimpleResultSummary");
+  const stage = target.closest("#obdReadoutSurface") || target.closest("#obdStageResultsView")
+    ? simpleIndividualReadout ? "readout" : "results"
     : target.closest("#obdStageDetailsView") ? "details" : "setup";
   renderObdStageView(stage);
   for (let disclosure = target.closest("details"); disclosure; disclosure = disclosure.parentElement?.closest("details")) {
@@ -2691,7 +2716,7 @@ function handleObdSetupPrimaryAction() {
     obdAccessPasswordInput?.focus();
     return;
   }
-  handleObdPrimaryAction();
+  renderObdStageView("connect");
 }
 function prepareSelectedObdInterface() {
   if (obdBridgeOperation) return;
@@ -4277,6 +4302,26 @@ function setObdUiMode(mode = "simple") {
   renderObdStageView(activeObdStage);
   if (disconnectSimpleSerial) void disconnectObdDeveloperVci({ reason: "operator_disconnect" });
 }
+function renderObdSimpleScannerContext() {
+  const selectedVehicle = obdVehicleInput?.value?.trim() || "未選択";
+  const interfaceLabel = getSelectedObdInterfaceLabel?.() || "自動判定";
+  const route = getObdInterfaceReadoutRoute(resolveObdInterfaceId());
+  const routeLabel = route?.route === "desktop_web_serial" ? "Web Serial"
+    : route?.route === "desktop_local_bridge" ? "ローカルブリッジ"
+      : route?.route === "native_connector_required" ? "iPhoneアプリ"
+        : "適合確認";
+  const connected = Boolean(obdDevSession.port) && !["disconnected", "disconnecting"].includes(obdDevSession.connectionState);
+  const connectionLabel = obdDevSession.coreScanInProgress ? "読取中"
+    : connected ? "接続済み"
+      : obdDevSession.initializing ? "接続中" : "未接続";
+  if (obdScanVehicleValue) obdScanVehicleValue.textContent = selectedVehicle;
+  if (obdScanInterfaceValue) obdScanInterfaceValue.textContent = interfaceLabel;
+  if (obdScanConnectionValue) obdScanConnectionValue.textContent = connectionLabel;
+  if (obdSimpleConnectVehicle) obdSimpleConnectVehicle.textContent = selectedVehicle;
+  if (obdSimpleConnectInterface) obdSimpleConnectInterface.textContent = interfaceLabel;
+  if (obdSimpleConnectRoute) obdSimpleConnectRoute.textContent = routeLabel;
+}
+
 function getObdAutoStage() {
   const lastSession = obdDevSession.lastSession || null;
   const dtcSnapshot = lastSession?.dtcSnapshot || lastSession?.dtc_snapshot || null;
@@ -4287,17 +4332,18 @@ function getObdAutoStage() {
   const onboardMonitorSnapshot = lastSession?.onboardMonitorSnapshot || lastSession?.onboard_monitor_snapshot || null;
   const nextReadoutCandidates = getSessionNextReadoutCandidates(lastSession, 1);
   const hasReadout = Boolean(
-    dtcSnapshot?.dtcs?.length
-    || livePidSnapshot?.monitorValues?.length
-    || hasObdFreezeFrameEvidence(freezeFrameSnapshot)
-    || ecuInfoSnapshot?.itemCount
-    || readinessSnapshot?.monitorCount
-    || onboardMonitorSnapshot?.testCount
+    dtcSnapshot
+    || livePidSnapshot
+    || freezeFrameSnapshot
+    || ecuInfoSnapshot
+    || readinessSnapshot
+    || onboardMonitorSnapshot
   );
   const hasPendingReadoutCandidates = Boolean(nextReadoutCandidates.length);
   if (hasPendingReadoutCandidates) return "results";
   if (obdDevModeUnlocked && obdUiMode === "details") return "details";
   if (hasReadout) return "results";
+  if (obdUiMode === "simple" && (obdDevSession.port || obdDevSession.initializing)) return "connect";
   return "setup";
 }
 
@@ -4307,36 +4353,49 @@ function renderObdStageView(preferredStage = activeObdStage) {
   const unlocked = obdAccessUnlocked === true;
   obdStagePanel.hidden = !unlocked;
   if (!unlocked) return;
-  const allowedStages = new Set(["setup", "results", "details"]);
+  const allowedStages = new Set(["setup", "connect", "results", "readout", "details"]);
   const requestedStage = allowedStages.has(preferredStage) ? preferredStage : getObdAutoStage();
-  const nextStage = obdUiMode === "simple" && requestedStage === "details" ? "setup" : requestedStage;
+  const simpleStage = requestedStage === "details" ? "setup" : requestedStage;
+  const detailedStage = ["connect", "readout"].includes(requestedStage) ? "setup" : requestedStage;
+  const nextStage = obdUiMode === "simple" ? simpleStage : detailedStage;
   activeObdStage = nextStage;
+  if (typeof obdPanel !== "undefined" && obdPanel) obdPanel.dataset.obdActiveStage = nextStage;
 
   const stageMeta = {
     setup: {
-      badge: "車両選択 / 接続",
-      status: obdUiMode === "simple" ? "車両を選び、接続準備へ進みます。" : "車両選択、接続準備、プレビュー確認を先に進めます。"
+      badge: "車両選択",
+      status: obdUiMode === "simple" ? "診断する車両と使用するVCIを選択します。" : "車両選択、接続準備、プレビュー確認を先に進めます。"
+    },
+    connect: {
+      badge: "接続",
+      status: "選択内容と車両状態を確認し、VCIへ接続します。"
     },
     results: {
-      badge: "読取結果",
-      status: "DTC、フリーズフレーム、ライブデータをまとめて確認する段階です。"
+      badge: "全体結果",
+      status: "全システム読取の取得状態と主要結果を確認します。"
+    },
+    readout: {
+      badge: "個別データ",
+      status: "DTC、ライブデータ、フリーズフレーム、レディネス、ECU情報を選択します。"
     },
     details: {
-      badge: "詳細",
+      badge: "開発・詳細",
       status: "個別読取、通信設定、開発・検証情報を確認します。"
     }
   };
   const meta = stageMeta[nextStage] || stageMeta.setup;
   obdStageBadge.textContent = meta.badge;
   obdStageStatus.textContent = meta.status;
+  if (typeof renderObdSimpleScannerContext === "function") renderObdSimpleScannerContext();
 
   obdStageTabs.forEach((button) => {
     const active = button.dataset.obdStage === nextStage;
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", active ? "true" : "false");
   });
-  if (obdStageSetupView) obdStageSetupView.hidden = nextStage !== "setup";
-  if (obdStageResultsView) obdStageResultsView.hidden = nextStage !== "results";
+  if (typeof obdSetupPanel !== "undefined" && obdSetupPanel) obdSetupPanel.hidden = nextStage !== "setup";
+  if (obdStageSetupView) obdStageSetupView.hidden = obdUiMode === "simple" ? nextStage !== "connect" : nextStage !== "setup";
+  if (obdStageResultsView) obdStageResultsView.hidden = !["results", "readout"].includes(nextStage);
   if (obdStageDetailsView) obdStageDetailsView.hidden = nextStage !== "details";
 }
 
@@ -5280,6 +5339,10 @@ function syncObdSimpleStatus() {
     obdSimpleStatus.textContent = message || "車両とVCIを選択してください。";
     obdSimpleStatus.classList.toggle("error", hasError);
   }
+  if (obdSimpleConnectStatus) {
+    obdSimpleConnectStatus.textContent = message || "車両とVCIの選択内容を確認してください。";
+    obdSimpleConnectStatus.classList.toggle("error", hasError);
+  }
   if (obdSimpleResultStatus) {
     obdSimpleResultStatus.textContent = message || "読取状態を確認しています。";
     obdSimpleResultStatus.classList.toggle("error", hasError);
@@ -5394,7 +5457,14 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   renderObdPreviewButtons();
   renderObdWorkflowGuide(capability);
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
-  renderObdStageView(getObdAutoStage());
+  const autoStage = getObdAutoStage();
+  const currentStage = typeof activeObdStage === "string" ? activeObdStage : "";
+  const preferredAutoStage = currentStage === "readout" && autoStage === "results"
+    ? "readout"
+    : currentStage === "connect" && autoStage === "setup"
+      ? "connect"
+      : autoStage;
+  renderObdStageView(preferredAutoStage);
   if (typeof syncObdSimpleStatus === "function") syncObdSimpleStatus();
 }
 
