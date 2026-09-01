@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 7333件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "応答ECU一覧を全体結果へ統合",
+  recentMilestone: "ECU実応答と適用候補を分離表示",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.410";
+const APP_VERSION = "3.13.411";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11064,7 +11064,37 @@ function renderObdSimpleSystemSummary(session = null) {
       readoutIds: entry?.readoutIds || entry?.readout_ids || []
     }))
     : [];
-  const rows = responseRows.length ? responseRows : observedRows;
+  const ecuMatchSummary = coreStatus?.vehicleApplicabilityEcuMatchSummary || coreStatus?.vehicle_applicability_ecu_match_summary
+    || coreStatus?.analysisReadinessSummary?.vehicleApplicabilityEcuMatchSummary || coreStatus?.analysisReadinessSummary?.vehicle_applicability_ecu_match_summary
+    || coreStatus?.analysisReadinessSummary?.checklistById?.vehicle_applicability?.ecuMatchSummary
+    || coreStatus?.analysisReadinessSummary?.checklist_by_id?.vehicle_applicability?.ecu_match_summary || null;
+  const expectedRows = Array.isArray(ecuMatchSummary?.expectedEcuObservations)
+    ? ecuMatchSummary.expectedEcuObservations
+    : Array.isArray(ecuMatchSummary?.expected_ecu_observations) ? ecuMatchSummary.expected_ecu_observations : [];
+  const evidenceRows = responseRows.length ? responseRows : observedRows;
+  const normalizeAddress = (value) => String(value || "").trim().toUpperCase().replace(/^0X/, "");
+  const expectedRowKey = (row, index) => String(row?.observationKey || row?.observation_key || `expected:${index}`);
+  const representedExpectedKeys = new Set();
+  const findExpectedRow = (address) => {
+    const normalizedAddress = normalizeAddress(address);
+    if (!normalizedAddress) return null;
+    return expectedRows.find((row) => {
+      const observedAddresses = Array.isArray(row?.observedAddresses)
+        ? row.observedAddresses
+        : Array.isArray(row?.observed_addresses) ? row.observed_addresses : [];
+      return observedAddresses.some((value) => normalizeAddress(value) === normalizedAddress)
+        || normalizeAddress(row?.diagnosticAddress || row?.diagnostic_address) === normalizedAddress;
+    }) || null;
+  };
+  const displayRows = evidenceRows.map((row) => {
+    const address = row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id || "";
+    const expectedRow = findExpectedRow(address);
+    if (expectedRow) representedExpectedKeys.add(expectedRowKey(expectedRow, expectedRows.indexOf(expectedRow)));
+    return { kind: "evidence", row, expectedRow };
+  });
+  expectedRows.forEach((row, index) => {
+    if (!representedExpectedKeys.has(expectedRowKey(row, index))) displayRows.push({ kind: "expected", row, expectedRow: row });
+  });
   const statusLabels = {
     success: "応答取得",
     available: "応答取得",
@@ -11078,49 +11108,66 @@ function renderObdSimpleSystemSummary(session = null) {
     observed: "読取元を観測",
     unknown: "状態未確認"
   };
-  rows.forEach((row) => {
+  displayRows.forEach(({ kind, row, expectedRow }) => {
+    const expectedOnly = kind === "expected";
     const statusKey = String(row?.status || "unknown").trim().toLowerCase().replace(/[\s-]+/g, "_");
     const dtcValue = row?.dtcCount ?? row?.dtc_count;
     const dtcCount = dtcValue != null && Number.isSafeInteger(Number(dtcValue)) && Number(dtcValue) >= 0 ? Number(dtcValue) : null;
-    const address = String(row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id || "ECU").trim() || "ECU";
-    const name = String(row?.name || row?.ecuName || row?.ecu_name || row?.moduleName || row?.module_name || "名称未記録").trim() || "名称未記録";
+    const address = String(row?.address || row?.diagnosticAddress || row?.diagnostic_address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id || "ECU").trim() || "ECU";
+    const name = String(row?.name || row?.ecuName || row?.ecu_name || row?.moduleName || row?.module_name || row?.systemName || row?.system_name || "名称未記録").trim() || "名称未記録";
     const services = row?.responseServices || row?.response_services || row?.services || row?.readoutIds || row?.readout_ids || [];
-    const item = document.createElement("button");
-    item.type = "button";
+    const item = document.createElement(expectedOnly ? "div" : "button");
+    if (!expectedOnly) item.type = "button";
     item.className = "obd-simple-system-item";
-    if (dtcCount > 0) item.classList.add("is-fault");
+    if (expectedOnly) item.classList.add("is-expected");
+    else if (dtcCount > 0) item.classList.add("is-fault");
     else if (statusKey === "no_response") item.classList.add("is-no-response");
     else item.classList.add("is-response");
-    item.setAttribute("aria-label", address + " " + name + " のECU応答詳細を開く");
+    if (!expectedOnly) item.setAttribute("aria-label", address + " " + name + " のECU応答詳細を開く");
     const head = document.createElement("span");
     head.className = "obd-simple-system-head";
     const id = document.createElement("strong");
     id.textContent = address;
     const state = document.createElement("span");
-    state.textContent = statusLabels[statusKey] || "状態未確認";
+    state.textContent = expectedOnly
+      ? row?.observed === true ? "適用候補・観測済み" : "適用候補・未観測"
+      : statusLabels[statusKey] || "状態未確認";
     head.append(id, state);
     const title = document.createElement("span");
     title.className = "obd-simple-system-name";
     title.textContent = name;
     const dtc = document.createElement("span");
     dtc.className = "obd-simple-system-dtc";
-    dtc.textContent = dtcCount === null ? "DTC件数未記録" : "DTC報告 " + dtcCount + "件";
+    dtc.textContent = expectedOnly ? "DTC未読取" : dtcCount === null ? "DTC件数未記録" : "DTC報告 " + dtcCount + "件";
     const detail = document.createElement("span");
     detail.className = "obd-simple-system-detail";
-    detail.textContent = Array.isArray(services) && services.length ? "取得: " + services.slice(0, 4).join(" / ") : "取得項目未記録";
-    const arrow = document.createElement("span");
-    arrow.className = "obd-simple-result-arrow";
-    arrow.setAttribute("aria-hidden", "true");
-    arrow.textContent = "›";
-    item.append(head, title, dtc, detail, arrow);
-    item.addEventListener("click", () => openObdSimpleEcuDetail(row));
+    const applicabilityLabel = expectedRow ? "適用表と一致" : "適用未確認";
+    const protocol = expectedOnly ? String(row?.protocol || "").trim() : "";
+    detail.textContent = expectedOnly
+      ? [applicabilityLabel, protocol ? "通信候補: " + protocol : "", "応答の有無は未判定"].filter(Boolean).join(" / ")
+      : [Array.isArray(services) && services.length ? "取得: " + services.slice(0, 4).join(" / ") : "取得項目未記録", applicabilityLabel].join(" / ");
+    item.append(head, title, dtc, detail);
+    if (!expectedOnly) {
+      const arrow = document.createElement("span");
+      arrow.className = "obd-simple-result-arrow";
+      arrow.setAttribute("aria-hidden", "true");
+      arrow.textContent = "›";
+      item.appendChild(arrow);
+      item.addEventListener("click", () => openObdSimpleEcuDetail(row));
+    }
     obdSimpleSystemGrid.appendChild(item);
   });
-  obdSimpleSystemBadge.className = "confidence-badge " + (rows.length ? "is-ready" : "is-empty");
-  obdSimpleSystemBadge.textContent = rows.length ? rows.length + " ECU" : "未取得";
-  obdSimpleSystemNote.textContent = rows.length
-    ? responseRows.length ? "車両から記録したECU応答を表示しています。ECUを選ぶと応答詳細へ移動します。" : "ECU読取元は観測済みですが、ECU別応答状態とDTC件数は未集計です。"
-    : "ECU別応答は未取得です。未取得を正常とは判定しません。";
+  const observedExpectedCount = expectedRows.filter((row) => row?.observed === true).length;
+  const badgeParts = [];
+  if (responseRows.length) badgeParts.push(responseRows.length + " ECU応答");
+  else if (observedRows.length) badgeParts.push(observedRows.length + " ECU観測");
+  if (expectedRows.length) badgeParts.push(`適用候補 ${observedExpectedCount}/${expectedRows.length}`);
+  const badgeTone = evidenceRows.length ? "is-ready" : expectedRows.length ? "is-partial" : "is-empty";
+  obdSimpleSystemBadge.className = "confidence-badge " + badgeTone;
+  obdSimpleSystemBadge.textContent = badgeParts.join(" / ") || "未取得";
+  obdSimpleSystemNote.textContent = displayRows.length
+    ? "実応答と車両適用表の候補を分けて表示しています。未観測は故障や無応答を意味しません。明示的な無応答だけを無応答として表示します。"
+    : "ECU別応答と適用候補は未取得です。未取得を正常とは判定しません。";
   obdSimpleSystemSummary.hidden = false;
 }
 

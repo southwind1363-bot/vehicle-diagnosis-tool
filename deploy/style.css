@@ -1460,9 +1460,20 @@ body.dark .flow-node-measure .flow-step {
   border-left-color: var(--muted);
 }
 
+.obd-simple-system-item.is-expected {
+  border-left-color: var(--manual);
+  background: var(--panel-subtle);
+  cursor: default;
+}
+
 .obd-simple-system-item:hover {
   border-color: var(--accent);
   background: var(--panel-subtle);
+}
+
+.obd-simple-system-item.is-expected:hover {
+  border-color: var(--line);
+  border-left-color: var(--manual);
 }
 
 .obd-simple-system-item:focus-visible {
@@ -1515,7 +1526,8 @@ body.dark .flow-node-measure .flow-step {
   color: var(--accent-strong);
 }
 
-.obd-simple-result-summary .confidence-badge.is-partial {
+.obd-simple-result-summary .confidence-badge.is-partial,
+.obd-simple-system-summary .confidence-badge.is-partial {
   border-color: var(--manual);
   background: var(--manual-bg);
   color: var(--manual);
