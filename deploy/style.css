@@ -1295,6 +1295,23 @@ body.dark .flow-node-measure .flow-step {
   font-weight: 900;
 }
 
+.obd-simple-result-state {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.obd-simple-result-state.is-reading,
+.obd-simple-result-state.is-captured {
+  color: var(--accent-strong);
+}
+
+.obd-simple-result-state.is-empty {
+  color: var(--manual);
+}
+
 .obd-simple-result-note {
   margin: 12px 0 0;
   color: var(--muted);

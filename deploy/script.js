@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7324件",
+  validationCheckLabel: "OBD安全検証 7325件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "結果画面から基本再読取・切断・状態確認",
+  recentMilestone: "主要読取ごとの取得・空応答・未取得・実行中表示",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.400";
+const APP_VERSION = "3.13.401";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -618,6 +618,7 @@ const obdDevSession = {
   initializing: false,
   coreScanInProgress: false,
   coreScanStopReason: null,
+  activeCoreReadoutId: null,
   readoutProfile: null,
   connectionState: "disconnected",
   lastDisconnectReason: null,
@@ -5523,6 +5524,7 @@ async function connectObdDeveloperVci() {
     obdDevSession.supportedPidReadoutResponses = [];
     obdDevSession.readoutAttempts = [];
     obdDevSession.coreScanStopReason = null;
+    obdDevSession.activeCoreReadoutId = null;
     obdDevSession.readoutProfile = null;
     obdDevSession.livePidTimeline = [];
     obdDevSession.freezeFrameReadoutResponses = [];
@@ -5594,6 +5596,7 @@ function resetWebSerialConnectionAttemptMetadata() {
   obdDevSession.adapterInitializationSummary = null;
   obdDevSession.readoutAttempts = [];
   obdDevSession.coreScanStopReason = null;
+  obdDevSession.activeCoreReadoutId = null;
   obdDevSession.readoutProfile = null;
 }
 
@@ -5666,6 +5669,7 @@ async function disconnectObdDeveloperVci(options = {}) {
   obdDevSession.initializing = false;
   obdDevSession.coreScanInProgress = false;
   obdDevSession.coreScanStopReason = null;
+  obdDevSession.activeCoreReadoutId = null;
 
   operation.promise = (async () => {
     // Defer completion until the coalesced cleanup promise has been assigned.
@@ -6072,17 +6076,19 @@ async function readObdDeveloperCoreScan() {
   obdDevSession.coreScanStopReason = null;
   renderObdDeveloperGate();
   const readSteps = [
-    { label: "DTC", read: readObdDeveloperDtc },
-    { label: "FF", read: readObdDeveloperFreezeFrame },
-    { label: "レディネス", read: readObdDeveloperReadiness },
-    { label: "ECU情報", read: readObdDeveloperEcuInfo },
-    { label: "Mode06", read: readObdDeveloperOnboardMonitor },
-    { label: "ライブデータ", read: readObdDeveloperLiveSnapshot }
+    { id: "dtc_snapshot", label: "DTC", read: readObdDeveloperDtc },
+    { id: "freeze_frame_snapshot", label: "FF", read: readObdDeveloperFreezeFrame },
+    { id: "readiness_snapshot", label: "レディネス", read: readObdDeveloperReadiness },
+    { id: "ecu_info_snapshot", label: "ECU情報", read: readObdDeveloperEcuInfo },
+    { id: "onboard_monitor_snapshot", label: "Mode06", read: readObdDeveloperOnboardMonitor },
+    { id: "live_pid_snapshot", label: "ライブデータ", read: readObdDeveloperLiveSnapshot }
   ];
   const incompleteLabels = [];
   try {
     for (const readStep of readSteps) {
       if (!obdDevSession.port) break;
+      obdDevSession.activeCoreReadoutId = readStep.id;
+      renderObdDeveloperGate();
       const readCompleted = await readStep.read();
       if (!continueObdSerialOperation(revision)) return;
       if (obdDevSession.port && readCompleted !== true) incompleteLabels.push(readStep.label);
@@ -6101,6 +6107,7 @@ async function readObdDeveloperCoreScan() {
     if (continueObdSerialOperation(revision)) {
       obdDevSession.coreScanInProgress = false;
       obdDevSession.coreScanStopReason = null;
+      obdDevSession.activeCoreReadoutId = null;
       renderObdDeveloperGate();
     }
   }
@@ -6129,6 +6136,7 @@ function beginWebSerialReadoutProfile(readoutProfile) {
   obdDevSession.freezeFrameReadoutResponses = [];
   obdDevSession.freezeFrameCapabilityResponse = null;
   obdDevSession.ecuInfoReadoutResponses = [];
+  obdDevSession.activeCoreReadoutId = null;
   obdDevSession.lastSession = null;
   handleObdReadoutSessionReplacement();
   obdDevSession.readoutProfile = readoutProfile;
@@ -6174,6 +6182,7 @@ async function readObdDeveloperQuickCondition() {
     if (continueObdSerialOperation(revision)) {
       obdDevSession.coreScanInProgress = false;
       obdDevSession.coreScanStopReason = null;
+      obdDevSession.activeCoreReadoutId = null;
       renderObdDeveloperGate();
     }
   }
@@ -10821,6 +10830,9 @@ function renderObdSimpleResultSummary(session = null) {
   const ecuInfoSnapshot = session.ecuInfoSnapshot || session.ecu_info_snapshot || null;
   const coreStatus = session.coreSessionStatus || session.core_session_status || {};
   const coverage = session.readoutCoverage || session.readout_coverage || {};
+  const coverageItems = Array.isArray(coverage.items) ? coverage.items : [];
+  const coverageItemById = coverage.itemById || coverage.item_by_id
+    || Object.fromEntries(coverageItems.filter((item) => item?.id).map((item) => [item.id, item]));
   const countArray = (value) => Array.isArray(value) ? value.length : 0;
   const countValue = (primary, fallback) => Number.isFinite(Number(primary)) ? Math.max(0, Number(primary)) : fallback;
   const dtcCount = countArray(dtcSnapshot?.dtcs || dtcSnapshot?.codes);
@@ -10839,28 +10851,41 @@ function renderObdSimpleResultSummary(session = null) {
       ? Math.max(0, Math.min(100, Math.round(Number(completionPercentValue))))
       : null;
   const formatCount = (snapshot, count, unit) => snapshot ? String(count) + unit : "未取得";
+  const resolveReadoutState = (readoutId) => {
+    if (obdDevSession.coreScanInProgress && obdDevSession.activeCoreReadoutId === readoutId) return { label: "読取中", tone: "reading" };
+    const coverageItem = coverageItemById?.[readoutId] || null;
+    if (coverageItem?.status === "captured") return { label: "取得済み", tone: "captured" };
+    if (coverageItem?.status === "empty") return { label: "応答0件", tone: "empty" };
+    if (coverageItem?.status === "missing") return { label: "未取得", tone: "missing" };
+    return { label: "状態未集計", tone: "unknown" };
+  };
   const metrics = [
-    ["DTC", formatCount(dtcSnapshot, dtcCount, "件")],
-    ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目")],
-    ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目")],
-    ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目")],
-    ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目")],
-    ["主要読取", capturedPercent === null ? "未集計" : String(capturedPercent) + "%"]
+    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot")],
+    ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目"), resolveReadoutState("freeze_frame_snapshot")],
+    ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目"), resolveReadoutState("live_pid_snapshot")],
+    ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目"), resolveReadoutState("readiness_snapshot")],
+    ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目"), resolveReadoutState("ecu_info_snapshot")],
+    ["主要読取", capturedPercent === null ? "未集計" : String(capturedPercent) + "%", obdDevSession.coreScanInProgress
+      ? { label: "読取中", tone: "reading" }
+      : { label: capturedPercent === null ? "状態未集計" : capturedPercent === 100 ? "完了" : "未完了", tone: capturedPercent === 100 ? "captured" : "missing" }]
   ];
-  metrics.forEach(([label, value]) => {
+  metrics.forEach(([label, value, state]) => {
     const item = document.createElement("div");
     const term = document.createElement("dt");
     const description = document.createElement("dd");
+    const status = document.createElement("span");
     term.textContent = label;
     description.textContent = value;
-    item.append(term, description);
+    status.className = "obd-simple-result-state is-" + state.tone;
+    status.textContent = state.label;
+    item.append(term, description, status);
     obdSimpleResultGrid.appendChild(item);
   });
 
   const coreReady = coreStatus.readyForAnalysis === true || coreStatus.ready_for_analysis === true;
   const hasReadout = [dtcSnapshot, freezeFrameSnapshot, livePidSnapshot, readinessSnapshot, ecuInfoSnapshot].some(Boolean);
-  obdSimpleResultBadge.className = "confidence-badge " + (coreReady ? "is-ready" : hasReadout ? "is-partial" : "is-empty");
-  obdSimpleResultBadge.textContent = coreReady ? "主要読取完了" : hasReadout ? "一部取得" : "応答未取得";
+  obdSimpleResultBadge.className = "confidence-badge " + (obdDevSession.coreScanInProgress ? "is-partial" : coreReady ? "is-ready" : hasReadout ? "is-partial" : "is-empty");
+  obdSimpleResultBadge.textContent = obdDevSession.coreScanInProgress ? "基本読取中" : coreReady ? "主要読取完了" : hasReadout ? "一部取得" : "応答未取得";
   const pendingIds = Array.isArray(coreStatus.pendingReadoutIds)
     ? coreStatus.pendingReadoutIds
     : Array.isArray(coreStatus.pending_readout_ids) ? coreStatus.pending_readout_ids : [];
