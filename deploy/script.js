@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7367件",
+  validationCheckLabel: "OBD安全検証 7384件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "多ECU車の適合一覧を64 ECUまで切り捨てず保持",
+  recentMilestone: "ECU要求IDと応答IDを分離し誤一致を拒否",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.415";
+const APP_VERSION = "3.13.416";
 const APP_LAST_UPDATED = "2026-09-02";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1971,9 +1971,15 @@ function validateVehicleEcuApplicabilityCatalog(rows = []) {
     const addressKeys = new Set();
     for (const ecu of ecus) {
       const address = String(ecu?.response_address || "").trim().toUpperCase().replace(/^0X/, "");
+      const addressValue = Number.parseInt(address, 16);
+      const addressFormatValid = ecu?.address_format === "can_11bit"
+        ? /^[0-9A-F]{1,3}$/.test(address) && addressValue <= 0x7FF
+        : ecu?.address_format === "can_29bit"
+          ? /^[0-9A-F]{8}$/.test(address) && addressValue <= 0x1FFFFFFF
+          : false;
       const ecuKey = `${normalizeVehicleEcuCatalogKey(ecu?.system_name)}::${normalizeVehicleEcuCatalogKey(ecu?.ecu_name)}`;
-      if (!ecu?.system_name || !ecu?.ecu_name || ecu?.address_role !== "response" || ecu?.diagnostic_address !== undefined || ecu?.diagnosticAddress !== undefined
-        || !/^[0-9A-F]{2,8}$/.test(address) || !ecu?.protocol
+      if (!ecu?.system_name || !ecu?.ecu_name || ecu?.address_role !== "response" || ecu?.responseAddress !== undefined || ecu?.addressRole !== undefined || ecu?.addressFormat !== undefined || ecu?.diagnostic_address !== undefined || ecu?.diagnosticAddress !== undefined
+        || !addressFormatValid || !ecu?.protocol
         || ecuKeys.has(ecuKey) || addressKeys.has(address)) return invalid("catalog_ecu_invalid");
       ecuKeys.add(ecuKey);
       addressKeys.add(address);
@@ -2076,7 +2082,7 @@ function buildSelectedObdVehicleApplicability(profile = null) {
     applicableRanges: applicableRangeDescriptors,
     supportedEngineCodes,
     supportedEngineCodeCount: supportedEngineCodes.length,
-    supportedEcus: ecuEntry ? ecuEntry.supported_ecus.map((ecu) => ({ system_name: ecu.system_name, ecu_name: ecu.ecu_name, diagnostic_address: ecu.response_address, protocol: ecu.protocol })) : [],
+    supportedEcus: ecuEntry ? ecuEntry.supported_ecus.map((ecu) => ({ system_name: ecu.system_name, ecu_name: ecu.ecu_name, response_address: ecu.response_address, address_role: ecu.address_role, address_format: ecu.address_format || (String(ecu.response_address || "").replace(/^0X/i, "").length === 8 ? "can_29bit" : "can_11bit"), diagnostic_address: ecu.response_address, protocol: ecu.protocol })) : [],
     supportedEcuCount: ecuEntry ? ecuEntry.supported_ecus.length : 0,
     supportedEcuEvidence: ecuEntry ? {
       sourceName: evidence.source_name,

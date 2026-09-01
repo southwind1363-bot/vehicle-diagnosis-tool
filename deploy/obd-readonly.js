@@ -8442,12 +8442,84 @@
     };
     const normalizeEcuDescriptor = (ecu) => {
       const sourceEcu = ecu && typeof ecu === "object" && !Array.isArray(ecu) ? ecu : { ecuName: ecu };
-      const diagnosticAddress = firstNormalizedDiagnosticAddress([sourceEcu.diagnosticAddress, sourceEcu.diagnostic_address, sourceEcu.ecuAddress, sourceEcu.ecu_address, sourceEcu.canId, sourceEcu.can_id, sourceEcu.address]);
+      const hasOwnEcuField = (key) => Object.prototype.hasOwnProperty.call(sourceEcu, key);
+      const hasInvalidEcuAlias = (keys, validator) => keys.some((key) => hasOwnEcuField(key) && sourceEcu[key] != null && !validator(sourceEcu[key]));
+      const responseAddressKeys = ["responseAddress", "response_address", "responseCanId", "response_can_id", "rxId", "rx_id"];
+      const legacyDiagnosticAddressKeys = ["diagnosticAddress", "diagnostic_address", "ecuAddress", "ecu_address", "canId", "can_id", "address"];
+      const addressRoleKeys = ["addressRole", "address_role"];
+      const addressFormatKeys = ["addressFormat", "address_format"];
+      const addressRoleProvidedKeys = ["addressRoleProvided", "address_role_provided"];
+      const addressFormatProvidedKeys = ["addressFormatProvided", "address_format_provided"];
+      const isNonEmptyString = (value) => typeof value === "string" && Boolean(value.trim());
+      const responseAddressInputs = responseAddressKeys.map((key) => sourceEcu[key])
+        .filter((value) => typeof value === "string" && value.trim());
+      const normalizedResponseAddressInputs = responseAddressInputs.map((value) => firstNormalizedDiagnosticAddress([value]));
+      const responseAddress = normalizedResponseAddressInputs.find(Boolean) || null;
+      const canonicalCanAddressDescriptor = (value) => String(value || "").split("-").map((part) => part.replace(/^0X/, "")).join("-");
+      const responseAddressConflict = responseAddressInputs.length > 0
+        && (normalizedResponseAddressInputs.some((value) => !value) || normalizedResponseAddressInputs.some((value) => canonicalCanAddressDescriptor(value) !== canonicalCanAddressDescriptor(normalizedResponseAddressInputs[0])));
+      const legacyDiagnosticAddressInputs = legacyDiagnosticAddressKeys.map((key) => sourceEcu[key])
+        .filter((value) => typeof value === "string" && value.trim());
+      const normalizedLegacyDiagnosticAddressInputs = legacyDiagnosticAddressInputs.map((value) => firstNormalizedDiagnosticAddress([value]));
+      const legacyDiagnosticAddress = normalizedLegacyDiagnosticAddressInputs.find(Boolean) || null;
+      const legacyDiagnosticAddressConflict = legacyDiagnosticAddressInputs.length > 0
+        && (normalizedLegacyDiagnosticAddressInputs.some((value) => !value) || normalizedLegacyDiagnosticAddressInputs.some((value) => canonicalCanAddressDescriptor(value) !== canonicalCanAddressDescriptor(normalizedLegacyDiagnosticAddressInputs[0])));
+      const diagnosticAddress = responseAddress || legacyDiagnosticAddress;
+      const addressRoleInputs = addressRoleKeys.map((key) => sourceEcu[key])
+        .filter((value) => typeof value === "string" && value.trim())
+        .map((value) => value.trim().toLowerCase());
+      const addressRoleProvidedFlags = addressRoleProvidedKeys.map((key) => sourceEcu[key]).filter((value) => typeof value === "boolean");
+      const addressRoleProvided = addressRoleProvidedFlags.includes(false) ? false : addressRoleInputs.length > 0;
+      const addressRole = addressRoleInputs[0] || (responseAddress ? "response" : null);
+      const addressRoleConflict = sourceEcu.addressRoleConflict === true || sourceEcu.address_role_conflict === true || responseAddressConflict || legacyDiagnosticAddressConflict
+        || hasInvalidEcuAlias(responseAddressKeys, isNonEmptyString)
+        || hasInvalidEcuAlias(legacyDiagnosticAddressKeys, isNonEmptyString)
+        || hasInvalidEcuAlias(addressRoleKeys, isNonEmptyString)
+        || hasInvalidEcuAlias(addressRoleProvidedKeys, (value) => typeof value === "boolean")
+        || addressRoleInputs.some((value) => !["response", "request"].includes(value))
+        || addressRoleInputs.some((value) => value !== addressRoleInputs[0])
+        || (responseAddress && addressRole && addressRole !== "response")
+        || Boolean(responseAddress && legacyDiagnosticAddress && canonicalCanAddressDescriptor(responseAddress) !== canonicalCanAddressDescriptor(legacyDiagnosticAddress));
+      const normalizedAddressToken = String(diagnosticAddress || "").replace(/^0X/, "").split("-")[0];
+      const derivedAddressFormat = normalizedAddressToken.length === 3 ? "can_11bit" : normalizedAddressToken.length === 8 ? "can_29bit" : null;
+      const addressFormatInputs = addressFormatKeys.map((key) => sourceEcu[key])
+        .filter((value) => typeof value === "string" && value.trim())
+        .map((value) => value.trim().toLowerCase());
+      const addressFormatProvidedFlags = addressFormatProvidedKeys.map((key) => sourceEcu[key]).filter((value) => typeof value === "boolean");
+      const addressFormatProvided = addressFormatProvidedFlags.includes(false) ? false : addressFormatInputs.length > 0;
+      const addressFormat = addressFormatInputs[0] || derivedAddressFormat;
+      const addressFormatConflict = sourceEcu.addressFormatConflict === true || sourceEcu.address_format_conflict === true
+        || hasInvalidEcuAlias(addressFormatKeys, isNonEmptyString)
+        || hasInvalidEcuAlias(addressFormatProvidedKeys, (value) => typeof value === "boolean")
+        || addressFormatInputs.some((value) => !["can_11bit", "can_29bit"].includes(value))
+        || addressFormatInputs.some((value) => value !== addressFormatInputs[0])
+        || Boolean(addressFormatInputs[0] && derivedAddressFormat && addressFormatInputs[0] !== derivedAddressFormat);
+      const responseAddressToken = String(responseAddress || "").replace(/^0X/, "");
+      const responseAddressValue = Number.parseInt(responseAddressToken, 16);
+      const responseAddressContractValid = addressRoleProvided && addressFormatProvided && addressRole === "response"
+        && !addressRoleConflict && !addressFormatConflict
+        && (addressFormat === "can_11bit"
+          ? /^[0-9A-F]{1,3}$/.test(responseAddressToken) && responseAddressValue <= 0x7FF
+          : addressFormat === "can_29bit"
+            ? /^[0-9A-F]{8}$/.test(responseAddressToken) && responseAddressValue <= 0x1FFFFFFF
+            : false);
       const systemName = firstNormalizedIdentityValue([sourceEcu.systemName, sourceEcu.system_name, sourceEcu.targetSystem, sourceEcu.target_system, sourceEcu.system], 80);
       const ecuName = firstNormalizedIdentityValue([sourceEcu.ecuName, sourceEcu.ecu_name, sourceEcu.targetEcu, sourceEcu.target_ecu, sourceEcu.moduleName, sourceEcu.module_name, sourceEcu.name], 80);
       const protocol = firstNormalizedIdentityValue([sourceEcu.protocol, sourceEcu.communicationProtocol, sourceEcu.communication_protocol], 40);
       if (!systemName && !ecuName && !diagnosticAddress && !protocol) return null;
-      return { systemName, system_name: systemName, ecuName, ecu_name: ecuName, diagnosticAddress, diagnostic_address: diagnosticAddress, protocol };
+      return {
+        systemName, system_name: systemName, ecuName, ecu_name: ecuName,
+        responseAddress, response_address: responseAddress,
+        diagnosticAddress, diagnostic_address: diagnosticAddress,
+        addressRole, address_role: addressRole,
+        addressRoleProvided, address_role_provided: addressRoleProvided,
+        addressRoleConflict, address_role_conflict: addressRoleConflict,
+        addressFormat, address_format: addressFormat,
+        addressFormatProvided, address_format_provided: addressFormatProvided,
+        addressFormatConflict, address_format_conflict: addressFormatConflict,
+        responseAddressContractValid, response_address_contract_valid: responseAddressContractValid,
+        protocol
+      };
     };
     const normalizedSupportedEcus = supportedEcus.map(normalizeEcuDescriptor).filter(Boolean).slice(0, MAX_SUPPORTED_ECU_COUNT);
     const supportedEcuEvidenceInput = source.supportedEcuEvidence && typeof source.supportedEcuEvidence === "object" && !Array.isArray(source.supportedEcuEvidence)
@@ -8527,7 +8599,43 @@
     const electrification = firstNormalizedIdentityValue([source.electrification, source.hybridSystem, source.hybrid_system, source.evSystem, source.ev_system], 80);
     const targetSystem = firstNormalizedIdentityValue([source.targetSystem, source.target_system, source.system, source.systemName, source.system_name, source.diagnosticSystem, source.diagnostic_system], 80);
     const targetEcu = firstNormalizedIdentityValue([source.targetEcu, source.target_ecu, source.ecu, source.ecuName, source.ecu_name, source.module, source.moduleName, source.module_name], 80);
-    const ecuAddress = firstNormalizedIdentityValue([source.ecuAddress, source.ecu_address, source.diagnosticAddress, source.diagnostic_address, source.physicalAddress, source.physical_address, source.address, source.canId, source.can_id, source.responseCanId, source.response_can_id, source.rxId, source.rx_id, source.responseId, source.response_id], 32, true);
+    const hasOwnApplicabilityField = (key) => Object.prototype.hasOwnProperty.call(source, key);
+    const hasInvalidApplicabilityAlias = (keys, validator) => keys.some((key) => hasOwnApplicabilityField(key) && source[key] != null && !validator(source[key]));
+    const isNonEmptyApplicabilityString = (value) => typeof value === "string" && Boolean(value.trim());
+    const ecuAddressKeys = ["ecuAddress", "ecu_address", "diagnosticAddress", "diagnostic_address", "physicalAddress", "physical_address", "address", "canId", "can_id", "responseAddress", "response_address", "responseCanId", "response_can_id", "rxId", "rx_id", "responseId", "response_id"];
+    const ecuAddressRoleKeys = ["ecuAddressRole", "ecu_address_role", "addressRole", "address_role"];
+    const ecuAddressFormatKeys = ["ecuAddressFormat", "ecu_address_format", "addressFormat", "address_format"];
+    const ecuAddressRoleProvidedKeys = ["ecuAddressRoleProvided", "ecu_address_role_provided", "addressRoleProvided", "address_role_provided"];
+    const ecuAddressFormatProvidedKeys = ["ecuAddressFormatProvided", "ecu_address_format_provided", "addressFormatProvided", "address_format_provided"];
+    const ecuAddressInputs = ecuAddressKeys.map((key) => source[key])
+      .filter((value) => typeof value === "string" && value.trim());
+    const normalizedEcuAddressInputs = ecuAddressInputs.map((value) => firstNormalizedDiagnosticAddress([value]));
+    const ecuAddress = normalizedEcuAddressInputs.find(Boolean) || null;
+    const canonicalTopLevelCanAddressDescriptor = (value) => String(value || "").split("-").map((part) => part.replace(/^0X/, "")).join("-");
+    const ecuAddressAliasConflict = ecuAddressInputs.length > 0
+      && (normalizedEcuAddressInputs.some((value) => !value) || normalizedEcuAddressInputs.some((value) => canonicalTopLevelCanAddressDescriptor(value) !== canonicalTopLevelCanAddressDescriptor(normalizedEcuAddressInputs[0])));
+    const ecuAddressRoleInputs = ecuAddressRoleKeys.map((key) => source[key])
+      .filter((value) => typeof value === "string" && value.trim())
+      .map((value) => value.trim().toLowerCase());
+    const ecuAddressFormatInputs = ecuAddressFormatKeys.map((key) => source[key])
+      .filter((value) => typeof value === "string" && value.trim())
+      .map((value) => value.trim().toLowerCase());
+    const ecuAddressRole = ecuAddressRoleInputs[0] || null;
+    const ecuAddressFormat = ecuAddressFormatInputs[0] || null;
+    const ecuAddressRoleProvidedFlags = ecuAddressRoleProvidedKeys.map((key) => source[key]).filter((value) => typeof value === "boolean");
+    const ecuAddressFormatProvidedFlags = ecuAddressFormatProvidedKeys.map((key) => source[key]).filter((value) => typeof value === "boolean");
+    const ecuAddressRoleProvided = ecuAddressRoleProvidedFlags.includes(false) ? false : ecuAddressRoleInputs.length > 0;
+    const ecuAddressFormatProvided = ecuAddressFormatProvidedFlags.includes(false) ? false : ecuAddressFormatInputs.length > 0;
+    const ecuAddressContractConflict = source.ecuAddressContractConflict === true || source.ecu_address_contract_conflict === true || ecuAddressAliasConflict
+      || hasInvalidApplicabilityAlias(ecuAddressKeys, isNonEmptyApplicabilityString)
+      || hasInvalidApplicabilityAlias(ecuAddressRoleKeys, isNonEmptyApplicabilityString)
+      || hasInvalidApplicabilityAlias(ecuAddressFormatKeys, isNonEmptyApplicabilityString)
+      || hasInvalidApplicabilityAlias(ecuAddressRoleProvidedKeys, (value) => typeof value === "boolean")
+      || hasInvalidApplicabilityAlias(ecuAddressFormatProvidedKeys, (value) => typeof value === "boolean")
+      || ecuAddressRoleInputs.some((value) => value !== ecuAddressRoleInputs[0] || value !== "response")
+      || ecuAddressFormatInputs.some((value) => value !== ecuAddressFormatInputs[0] || !["can_11bit", "can_29bit"].includes(value));
+    const ecuAddressContractValid = ecuAddressRoleProvided && ecuAddressFormatProvided && !ecuAddressContractConflict
+      && normalizeStrictCanAddress(ecuAddress, ecuAddressFormat) !== null;
     const sourceName = firstNormalizedEvidenceText([source.sourceName, source.source_name, source.source, source.dataSource, source.data_source, source.catalogSource, source.catalog_source, source.referenceSource, source.reference_source], 160);
     const sourceUrl = firstNormalizedSourceUrl([source.sourceUrl, source.source_url, source.referenceUrl, source.reference_url, source.catalogUrl, source.catalog_url]);
     const sourceDate = firstNormalizedEvidenceText([source.sourceDate, source.source_date, source.referenceDate, source.reference_date, source.catalogDate, source.catalog_date], 20);
@@ -8627,6 +8735,18 @@
       target_ecu: targetEcu,
       ecuAddress,
       ecu_address: ecuAddress,
+      ecuAddressRole,
+      ecu_address_role: ecuAddressRole,
+      ecuAddressRoleProvided,
+      ecu_address_role_provided: ecuAddressRoleProvided,
+      ecuAddressFormat,
+      ecu_address_format: ecuAddressFormat,
+      ecuAddressFormatProvided,
+      ecu_address_format_provided: ecuAddressFormatProvided,
+      ecuAddressContractConflict,
+      ecu_address_contract_conflict: ecuAddressContractConflict,
+      ecuAddressContractValid,
+      ecu_address_contract_valid: ecuAddressContractValid,
       sourceName,
       source_name: sourceName,
       sourceUrl,
@@ -9234,6 +9354,13 @@
     };
   }
 
+  function normalizeStrictCanAddress(value, addressFormat) {
+    const token = String(value || "").trim().toUpperCase().replace(/^0X/, "");
+    const numeric = Number.parseInt(token, 16);
+    if (addressFormat === "can_11bit") return /^[0-9A-F]{1,3}$/.test(token) && numeric <= 0x7FF ? token : null;
+    if (addressFormat === "can_29bit") return /^[0-9A-F]{8}$/.test(token) && numeric <= 0x1FFFFFFF ? token : null;
+    return null;
+  }
   function normalizeComparableCanEcuAddress(value) {
     const text = String(value || "").toUpperCase();
     const match = text.match(/(?:^|[^0-9A-F])((?:7E[89A-F])|(?:18DA[0-9A-F]{4}))(?![0-9A-F])/);
@@ -9290,7 +9417,7 @@
       ecuResponseSummary,
       supportedPidMatrix
     });
-    const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
+    const primaryExpectedAddress = applicability.ecuAddressContractValid === true ? normalizeStrictCanAddress(applicability.ecuAddress, applicability.ecuAddressFormat) : null;
     const supportedEcuEvidence = applicability.supportedEcuEvidence || applicability.supported_ecu_evidence || {};
     const supportedEcuIdentityComplete = Boolean(applicability.maker && applicability.model && applicability.modelCode && applicability.year && applicability.engineCode);
     const supportedEcuMatchEvidenceComplete = applicability.catalogMatched === true
@@ -9328,6 +9455,18 @@
       && supportedEcuEvidence.market
       && supportedEcuEvidence.scope
     );
+    const supportedEcuAddressContractConflict = (applicability.supportedEcus || []).some((item) => {
+      const addressRole = String(item?.addressRole || item?.address_role || "").trim().toLowerCase();
+      const addressFormat = String(item?.addressFormat || item?.address_format || "").trim().toLowerCase();
+      return item?.addressRoleConflict === true || item?.address_role_conflict === true
+        || item?.addressFormatConflict === true || item?.address_format_conflict === true
+        || addressRole !== "response"
+        || !["can_11bit", "can_29bit"].includes(addressFormat)
+        || item?.addressRoleProvided !== true
+        || item?.addressFormatProvided !== true
+        || item?.responseAddressContractValid !== true
+        || !(item?.responseAddress || item?.response_address);
+    });
     const supportedEcuEvidenceEligible = applicability.status === "matched"
       && applicability.sourceVerified === true
       && applicability.sourceVerificationConflict !== true
@@ -9338,7 +9477,8 @@
       && supportedEcuEvidenceComplete
       && supportedEcuEvidenceVehicleMatch
       && (applicability.supportedEcus || []).length > 0
-      && applicability.supportedEcusTruncated !== true;
+      && applicability.supportedEcusTruncated !== true
+      && !supportedEcuAddressContractConflict;
     const supportedEcuEvidenceReviewReasons = [
       applicability.status !== "matched" ? "vehicle_applicability_not_matched" : null,
       applicability.sourceVerified !== true ? "vehicle_applicability_source_unverified" : null,
@@ -9349,23 +9489,42 @@
       !supportedEcuMatchEvidenceComplete ? "vehicle_match_evidence_incomplete" : null,
       !supportedEcuEvidenceComplete ? "supported_ecu_evidence_incomplete" : null,
       supportedEcuEvidenceComplete && !supportedEcuEvidenceVehicleMatch ? "supported_ecu_vehicle_scope_mismatch" : null,
-      applicability.supportedEcusTruncated === true ? "supported_ecu_list_truncated" : null
+      applicability.supportedEcusTruncated === true ? "supported_ecu_list_truncated" : null,
+      supportedEcuAddressContractConflict ? "supported_ecu_address_contract_conflict" : null
     ].filter(Boolean);
+    const resolveExpectedResponseAddress = (item) => {
+      const addressRole = String(item?.addressRole || item?.address_role || "").trim().toLowerCase();
+      const addressFormat = String(item?.addressFormat || item?.address_format || "").trim().toLowerCase();
+      if (item?.addressRoleConflict === true || item?.address_role_conflict === true
+        || item?.addressFormatConflict === true || item?.address_format_conflict === true
+        || addressRole !== "response"
+        || !["can_11bit", "can_29bit"].includes(addressFormat)
+        || item?.addressRoleProvided !== true
+        || item?.addressFormatProvided !== true
+        || item?.responseAddressContractValid !== true) return null;
+      return item?.responseAddress || item?.response_address || null;
+    };
     const supportedExpectedAddressDescriptors = supportedEcuEvidenceEligible ? (applicability.supportedEcus || [])
-      .map((item) => item?.diagnosticAddress || item?.diagnostic_address || null)
+      .map(resolveExpectedResponseAddress)
       .filter(Boolean) : [];
+    const supportedExpectedAddressFormats = new Map((applicability.supportedEcus || []).map((item) => [
+      String(item?.responseAddress || item?.response_address || "").trim().toUpperCase().replace(/^0X/, ""),
+      String(item?.addressFormat || item?.address_format || "").trim().toLowerCase()
+    ]));
     const expectedAddressDescriptors = primaryExpectedAddress
       ? [primaryExpectedAddress]
       : [...new Set(supportedExpectedAddressDescriptors.map((value) => String(value).toUpperCase().replace(/0X/g, "")))];
     const normalizeExpectedAddressRange = (descriptor) => {
       const [startInput, endInput = startInput] = String(descriptor || "").split("-");
-      const startAddress = normalizeComparableCanEcuAddress(startInput);
-      const endAddress = normalizeComparableCanEcuAddress(endInput);
+      const descriptorToken = String(descriptor || "").trim().toUpperCase().replace(/0X/g, "");
+      const addressFormat = primaryExpectedAddress ? applicability.ecuAddressFormat : supportedExpectedAddressFormats.get(descriptorToken) || null;
+      const startAddress = addressFormat ? normalizeStrictCanAddress(startInput, addressFormat) : normalizeComparableCanEcuAddress(startInput);
+      const endAddress = addressFormat ? normalizeStrictCanAddress(endInput, addressFormat) : normalizeComparableCanEcuAddress(endInput);
       if (!startAddress || !endAddress || startAddress.length !== endAddress.length) return null;
       const startValue = Number.parseInt(startAddress, 16);
       const endValue = Number.parseInt(endAddress, 16);
       if (!Number.isFinite(startValue) || !Number.isFinite(endValue) || startValue > endValue) return null;
-      return { descriptor: startAddress === endAddress ? startAddress : `${startAddress}-${endAddress}`, startAddress, endAddress, startValue, endValue };
+      return { descriptor: startAddress === endAddress ? startAddress : `${startAddress}-${endAddress}`, startAddress, endAddress, startValue, endValue, addressFormat };
     };
     const expectedAddressRanges = expectedAddressDescriptors.map(normalizeExpectedAddressRange).filter(Boolean);
     const expectedAddresses = expectedAddressRanges.map((item) => item.descriptor);
@@ -9373,25 +9532,47 @@
     const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;
     const isExpectedRangeMatch = (range, observedAddress) => {
       if (!range || !observedAddress || observedAddress.length !== range.startAddress.length) return false;
-      if (range.startAddress === range.endAddress) return isComparableCanEcuAddressMatch(range.startAddress, observedAddress);
+      if (range.startAddress === range.endAddress) return range.addressFormat ? range.startAddress === observedAddress : isComparableCanEcuAddressMatch(range.startAddress, observedAddress);
       const observedValue = Number.parseInt(observedAddress, 16);
       return Number.isFinite(observedValue) && observedValue >= range.startValue && observedValue <= range.endValue;
     };
     const isExpectedAddressMatch = (observedAddress) => expectedAddressRanges.some((range) => isExpectedRangeMatch(range, observedAddress));
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
       .filter(isObservableEcuResponse);
+    const normalizeObservedAddressForExpectedRanges = (value) => {
+      for (const range of expectedAddressRanges) {
+        const normalized = range.addressFormat ? normalizeStrictCanAddress(value, range.addressFormat) : normalizeComparableCanEcuAddress(value);
+        if (normalized) return normalized;
+      }
+      return normalizeComparableCanEcuAddress(value);
+    };
+    const resolveObservedResponseAddress = (item) => {
+      const explicitResponseAddress = item?.diagnosticResponseId || item?.diagnostic_response_id || item?.responseAddress || item?.response_address || item?.responseCanId || item?.response_can_id || item?.rxId || item?.rx_id || null;
+      if (explicitResponseAddress) return explicitResponseAddress;
+      const explicitRequestAddress = item?.diagnosticRequestId || item?.diagnostic_request_id || item?.requestAddress || item?.request_address || item?.requestCanId || item?.request_can_id || item?.txId || item?.tx_id || null;
+      const genericAddress = item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null;
+      if (explicitRequestAddress && String(genericAddress || "").trim().toUpperCase() === String(explicitRequestAddress).trim().toUpperCase()) return null;
+      return genericAddress;
+    };
     const respondedEcuAddresses = [...new Set(respondedEcuRows
-      .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
-      .map(normalizeComparableCanEcuAddress)
+      .map(resolveObservedResponseAddress)
+      .map(normalizeObservedAddressForExpectedRanges)
       .filter(Boolean))].sort();
+    const requestOnlyObservedAddresses = new Set(respondedEcuRows
+      .filter((item) => (item?.diagnosticRequestId || item?.diagnostic_request_id)
+        && !(item?.diagnosticResponseId || item?.diagnostic_response_id || item?.responseAddress || item?.response_address || item?.responseCanId || item?.response_can_id || item?.rxId || item?.rx_id))
+      .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
+      .map(normalizeObservedAddressForExpectedRanges)
+      .filter(Boolean));
     const reachableReadoutStatuses = new Set(["reported", "negative_response", "pending_response"]);
     const observedAddressInputs = [
       ...(observedEcuSummary.ecus || [])
         .filter((item) => Object.values(item?.readoutStatusById || item?.readout_status_by_id || {}).some((status) => reachableReadoutStatuses.has(String(status || "").trim().toLowerCase())))
-        .map((item) => item?.id || null),
+        .map((item) => item?.id || null)
+        .filter((address) => !requestOnlyObservedAddresses.has(normalizeObservedAddressForExpectedRanges(address))),
       ...respondedEcuAddresses
     ];
-    const observedAddresses = [...new Set(observedAddressInputs.map(normalizeComparableCanEcuAddress).filter(Boolean))].sort();
+    const observedAddresses = [...new Set(observedAddressInputs.map(normalizeObservedAddressForExpectedRanges).filter(Boolean))].sort();
     const comparableObservedAddresses = expectedAddressRanges.length
       ? observedAddresses.filter((address) => expectedAddressRanges.some((range) => address.length === range.startAddress.length))
       : [];
@@ -9413,7 +9594,7 @@
     const expectedEcuObservationKeyCounts = new Map();
     const expectedEcuObservations = expectedAddressSource === "supported_ecus"
       ? (applicability.supportedEcus || []).map((item) => {
-        const range = normalizeExpectedAddressRange(item?.diagnosticAddress || item?.diagnostic_address || null);
+        const range = normalizeExpectedAddressRange(resolveExpectedResponseAddress(item));
         if (!range) return null;
         const ecuObservedAddresses = comparableObservedAddresses.filter((address) => isExpectedRangeMatch(range, address));
         const systemName = item?.systemName || item?.system_name || null;
@@ -9437,8 +9618,14 @@
           system_name: systemName,
           ecuName,
           ecu_name: ecuName,
+          responseAddress: range.descriptor,
+          response_address: range.descriptor,
           diagnosticAddress: range.descriptor,
           diagnostic_address: range.descriptor,
+          addressRole: "response",
+          address_role: "response",
+          addressFormat: range.addressFormat || item?.addressFormat || item?.address_format || null,
+          address_format: range.addressFormat || item?.addressFormat || item?.address_format || null,
           protocol: item?.protocol || null,
           sourceVerified: true,
           source_verified: true,
@@ -9465,7 +9652,7 @@
             : "mismatch";
     const matchedResponseRows = expectedAddressRanges.length
       ? respondedEcuRows.filter((item) => isExpectedAddressMatch(
-        normalizeComparableCanEcuAddress(item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
+        normalizeObservedAddressForExpectedRanges(resolveObservedResponseAddress(item))
       ))
       : [];
     const matchedResponseStatuses = [...new Set(matchedResponseRows
@@ -23104,12 +23291,16 @@
     return observations.map((item) => {
       const systemName = item?.systemName || item?.system_name || null;
       const ecuName = item?.ecuName || item?.ecu_name || null;
+      const responseAddress = item?.responseAddress || item?.response_address || null;
       const diagnosticAddress = item?.diagnosticAddress || item?.diagnostic_address || null;
+      const addressRole = item?.addressRole || item?.address_role || null;
+      const addressFormat = item?.addressFormat || item?.address_format || null;
+      const comparisonAddress = responseAddress || diagnosticAddress;
       const protocol = item?.protocol || null;
       const observationKeyBase = [
         `system:${normalizeKeyPart(systemName, "unknown")}`,
         `ecu:${normalizeKeyPart(ecuName, "unknown")}`,
-        `address:${normalizeKeyPart(diagnosticAddress, "unknown")}`,
+        `address:${normalizeKeyPart(comparisonAddress, "unknown")}`,
         `protocol:${normalizeKeyPart(protocol, "unknown")}`
       ].join("|");
       const duplicateIndex = (duplicateCounts.get(observationKeyBase) || 0) + 1;
@@ -23130,8 +23321,14 @@
         system_name: systemName,
         ecuName,
         ecu_name: ecuName,
+        responseAddress,
+        response_address: responseAddress,
         diagnosticAddress,
         diagnostic_address: diagnosticAddress,
+        addressRole,
+        address_role: addressRole,
+        addressFormat,
+        address_format: addressFormat,
         protocol,
         observed: item?.observed === true,
         observedAddresses,
@@ -23218,7 +23415,7 @@
     const isStandardObdTarget = (observation) => {
       const systemToken = `${normalizeToken(observation.systemName || observation.system_name)} ${normalizeToken(observation.ecuName || observation.ecu_name)}`;
       const protocolToken = normalizeToken(observation.protocol);
-      const addressToken = normalizeAddress(observation.diagnosticAddress || observation.diagnostic_address);
+      const addressToken = normalizeAddress(observation.responseAddress || observation.response_address || observation.diagnosticAddress || observation.diagnostic_address);
       const powertrainTarget = /(engine|ecm|pcm|powertrain|emission|エンジン|パワートレイン)/.test(systemToken);
       const standardAddress = /^7e[8-f]$/.test(addressToken);
       const standardProtocol = !protocolToken || /(obd|can|iso\s*15765)/.test(protocolToken);
@@ -23229,7 +23426,7 @@
     const requiredCapabilities = [
       "targeted_ecu_information_readout",
       protocols.some((protocol) => /uds|iso\s*14229/i.test(protocol)) ? "uds_readout" : null,
-      currentObservations.some((observation) => /^(?:0x)?18da/i.test(String(observation.diagnosticAddress || observation.diagnostic_address || ""))) ? "29bit_diagnostic_addressing" : null
+      currentObservations.some((observation) => /^(?:0x)?18da/i.test(String(observation.responseAddress || observation.response_address || observation.diagnosticAddress || observation.diagnostic_address || ""))) ? "29bit_diagnostic_addressing" : null
     ].filter(Boolean);
     const resolutionRequirementCatalog = Object.freeze({
       platform_selected: "使用端末を選択",
@@ -23446,7 +23643,7 @@
     const applicabilityReviewObservationKeys = [...new Set(applicabilityReviewRows.map((row) => row?.observationKey || row?.observation_key).filter(Boolean))].sort();
     const transportPlan = buildVehicleApplicabilityEcuObservationTransportPlan(readoutTargetRows);
     const targetAddressDescriptors = [...new Set(readoutTargetRows
-      .map((row) => row?.current?.diagnosticAddress || row?.current?.diagnostic_address || null)
+      .map((row) => row?.current?.responseAddress || row?.current?.response_address || row?.current?.diagnosticAddress || row?.current?.diagnostic_address || null)
       .filter(Boolean)
       .map(String))].sort();
     const reasonIds = [

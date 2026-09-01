@@ -100,7 +100,7 @@ const vehicleEcuFixtureEntry = {
   engine_code: "FIX-E",
   market: "JP",
   list_scope: "complete",
-  supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", protocol: "ISO 15765-4" }],
+  supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4" }],
   evidence: { evidence_id: "fixture-evidence", source_name: "Fixture source", source_url: "https://example.com/fixture", source_date: "2026-09-01", document_location: "Table 1", source_verified: true },
   read_only: true,
   vehicle_command_enabled: false
@@ -117,7 +117,13 @@ const ambiguousAddressCatalog = makeVehicleEcuCatalog([{ ...structuredClone(vehi
 check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(conflictingEvidenceCatalog).valid === false
   && vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(ambiguousAddressCatalog).valid === false,
 "Conflicting source evidence and ambiguous diagnostic-address aliases should invalidate the vehicle ECU catalog");
-const sixtyFourVehicleEcuEntry = { ...vehicleEcuFixtureEntry, supported_ecus: Array.from({ length: 64 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", protocol: "ISO 15765-4" })) };
+const invalidCanAddressCatalogs = [
+  makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), supported_ecus: [{ ...vehicleEcuFixtureEntry.supported_ecus[0], response_address: "800", address_format: "can_11bit" }] }]),
+  makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), supported_ecus: [{ ...vehicleEcuFixtureEntry.supported_ecus[0], response_address: "20000000", address_format: "can_29bit" }] }]),
+  makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), supported_ecus: [{ ...vehicleEcuFixtureEntry.supported_ecus[0], responseAddress: "7E9" }] }])
+];
+check(invalidCanAddressCatalogs.every((catalog) => vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(catalog).valid === false),
+"Vehicle ECU catalog should reject out-of-range 11/29-bit addresses and competing camel-case response aliases");const sixtyFourVehicleEcuEntry = { ...vehicleEcuFixtureEntry, supported_ecus: Array.from({ length: 64 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4" })) };
 check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([sixtyFourVehicleEcuEntry])).valid === true, "A complete 64-ECU response-address list should remain valid without truncation");
 const buildVehicleEcuApplicability = vehicleEcuCatalogSource
   ? new Function("MAX_SUPPORTED_ECU_COUNT", "dataStore", "findVehicleOption", "findVehicleYearRanges", "findApplicableVehicleYearRanges", "collectUnique", "buildVehicleApplicabilityRangeDescriptors", "formatVehicleProfileLabel", `${vehicleEcuCatalogSource}; return buildSelectedObdVehicleApplicability;`)(
@@ -133,6 +139,9 @@ const buildVehicleEcuApplicability = vehicleEcuCatalogSource
   : null;
 const builtVehicleEcuApplicability = buildVehicleEcuApplicability?.(vehicleEcuProfile);
 check(builtVehicleEcuApplicability?.supportedEcus?.[0]?.diagnostic_address === "7E8"
+  && builtVehicleEcuApplicability?.supportedEcus?.[0]?.response_address === "7E8"
+  && builtVehicleEcuApplicability?.supportedEcus?.[0]?.address_role === "response"
+  && builtVehicleEcuApplicability?.supportedEcus?.[0]?.address_format === "can_11bit"
   && builtVehicleEcuApplicability?.supportedEcuEvidence?.sourceVerified === true
   && builtVehicleEcuApplicability?.sourceVerificationConflict === false,
 "Exact fixed-catalog integration should map only a response address into verified supported ECU evidence");
@@ -141,7 +150,7 @@ check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehic
 check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, engineCode: "OTHER" }, validVehicleEcuCatalog).status === "not_configured", "Vehicle ECU catalog should reject a different engine code");
 check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, market: "US" }, validVehicleEcuCatalog).status === "not_configured", "Vehicle ECU catalog should reject a different destination market");
 check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog(vehicleEcuProfile, makeVehicleEcuCatalog([{ ...vehicleEcuFixtureEntry, list_scope: "partial" }])).status === "not_configured", "Partial ECU lists should never become expected ECUs");
-const oversizedVehicleEcuEntry = { ...vehicleEcuFixtureEntry, supported_ecus: Array.from({ length: 65 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", protocol: "ISO 15765-4" })) };
+const oversizedVehicleEcuEntry = { ...vehicleEcuFixtureEntry, supported_ecus: Array.from({ length: 65 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4" })) };
 check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([oversizedVehicleEcuEntry])).valid === false, "Vehicle ECU catalog should reject lists beyond the current non-truncating 64-ECU contract");
 const overlappingVehicleEcuEntry = { ...structuredClone(vehicleEcuFixtureEntry), id: "fixture-overlap", evidence: { ...vehicleEcuFixtureEntry.evidence, evidence_id: "fixture-overlap-evidence" } };
 check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([vehicleEcuFixtureEntry, overlappingVehicleEcuEntry])).valid === false, "Overlapping vehicle ECU catalog scopes should invalidate the catalog instead of creating an ambiguous match");
@@ -894,7 +903,7 @@ const vehicleApplicabilityFunctionChecks = () => {
     check(functionBody.includes('source.vehicle_year') && functionBody.includes('source.engine_type') && functionBody.includes('source.powertrain_code'), "normalizeVehicleApplicabilitySnapshot should normalize extended year and engine aliases");
     check(functionBody.includes('source.trimLevel') && functionBody.includes('source.vehicle_grade') && functionBody.includes('source.destination_market'), "normalizeVehicleApplicabilitySnapshot should normalize grade and market aliases");
     check(functionBody.includes('source.transmissionType') && functionBody.includes('source.driven_wheels') && functionBody.includes('source.powertrain_type') && functionBody.includes('source.hybrid_system'), "normalizeVehicleApplicabilitySnapshot should normalize transmission, drivetrain, fuel, and electrification aliases");
-    check(functionBody.includes('source.targetSystem') && functionBody.includes('source.ecuName') && functionBody.includes('source.can_id'), "normalizeVehicleApplicabilitySnapshot should normalize target system and ECU aliases");
+    check(functionBody.includes('source.targetSystem') && functionBody.includes('source.ecuName') && functionBody.includes('"can_id"') && functionBody.includes('"response_address"'), "normalizeVehicleApplicabilitySnapshot should normalize target system and ECU aliases");
     check(functionBody.includes('source.dataSource') && functionBody.includes('source.reference_source') && functionBody.includes('source.catalog_url'), "normalizeVehicleApplicabilitySnapshot should normalize applicability source aliases");
     check(functionBody.includes('const normalizeEvidenceText = (value, limit, allowNumber = false) => {') && functionBody.includes('const sourceUrl = firstNormalizedSourceUrl(') && functionBody.includes('sourceDate = firstNormalizedEvidenceText(') && functionBody.includes('evidenceId = firstNormalizedEvidenceText('), "normalizeVehicleApplicabilitySnapshot should sanitize top-level applicability provenance fields");
     check(functionBody.includes('const firstNormalizedIdentityValue = (values, limit = 80, allowNumber = false) => {') && functionBody.includes('const maker = firstNormalizedIdentityValue([') && functionBody.includes('const summaryLabel = firstNormalizedIdentityValue(['), "normalizeVehicleApplicabilitySnapshot should retain only bounded scalar vehicle identity fields");
@@ -3111,7 +3120,7 @@ const multiEcuEmptyReadoutSession = obd.buildDiagnosticScanSession({
   vehicle_applicability: {
     maker: "Toyota",
     model: "Prius",
-    ecu_address: "7E8",
+    ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit",
     catalog_matched: true,
     source_name: "verified catalog",
     source_verified: true
@@ -3150,7 +3159,7 @@ const nestedBridgeEmptyReadoutSession = obd.buildDiagnosticScanSession({
   vehicle_applicability: {
     maker: "Toyota",
     model: "Prius",
-    ecu_address: "7E8",
+    ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit",
     catalog_matched: true,
     source_name: "verified catalog",
     source_verified: true
@@ -3917,7 +3926,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('多ECU車の適合一覧を64 ECUまで切り捨てず保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('ECU要求IDと応答IDを分離し誤一致を拒否'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4526,7 +4535,7 @@ const chartRowsUnknownAdapter = buildLivePidTimelineChartRows?.({
 });
 check(chartRowsUnknownAdapter?.length === 1 && chartRowsUnknownAdapter[0]?.points?.length === 2 && chartRowsUnknownAdapter[0]?.delta === 100, "Missing adapter identity should preserve the existing live PID chart behavior");
 check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && source.includes('obd_reported_profile: obdReportedProfile,'), "Bridge export should preserve ECU-reported OBD profile separately from selected vehicle metadata");
-check(source.includes('const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);') && source.includes('const supportedEcuEvidenceEligible = applicability.status === "matched"') && source.includes('const supportedExpectedAddressDescriptors = supportedEcuEvidenceEligible ? (applicability.supportedEcus || [])') && source.includes('const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;') && source.includes('supported_ecu_evidence_eligible: supportedEcuEvidenceEligible,') && source.includes('expected_addresses: expectedAddresses,') && source.includes('matched_expected_addresses: matchedExpectedAddresses,') && source.includes('partial_expected_address_observation: partialExpectedAddressObservation,') && source.includes('expected_ecu_observations: expectedEcuObservations,') && source.includes('observation_key: observationKey,') && source.includes('observation_duplicate_index: observationDuplicateIndex,'), "Vehicle applicability ECU matching should use supported ECU addresses only when the primary ECU address is absent and retain factual per-ECU match evidence");
+check(source.includes('const primaryExpectedAddress = applicability.ecuAddressContractValid === true ? normalizeStrictCanAddress(applicability.ecuAddress, applicability.ecuAddressFormat) : null;') && source.includes('const supportedEcuEvidenceEligible = applicability.status === "matched"') && source.includes('const supportedExpectedAddressDescriptors = supportedEcuEvidenceEligible ? (applicability.supportedEcus || [])') && source.includes('const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;') && source.includes('supported_ecu_evidence_eligible: supportedEcuEvidenceEligible,') && source.includes('expected_addresses: expectedAddresses,') && source.includes('matched_expected_addresses: matchedExpectedAddresses,') && source.includes('partial_expected_address_observation: partialExpectedAddressObservation,') && source.includes('expected_ecu_observations: expectedEcuObservations,') && source.includes('observation_key: observationKey,') && source.includes('observation_duplicate_index: observationDuplicateIndex,'), "Vehicle applicability ECU matching should use supported ECU addresses only when the primary ECU address is absent and retain factual per-ECU match evidence");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
 check(indexSource.includes('id="obdSimpleStatus"') && indexSource.includes('id="obdSimpleConnectStatus"') && indexSource.includes('id="obdSimpleResultStatus"') && indexSource.includes('aria-live="polite"') && appSource.includes("function syncObdSimpleStatus()") && appSource.includes('const hasError = obdDevStatus.classList.contains("error");') && appSource.includes('obdSimpleStatus.classList.toggle("error", hasError);') && appSource.includes('obdSimpleConnectStatus.classList.toggle("error", hasError);') && appSource.includes('obdSimpleResultStatus.classList.toggle("error", hasError);') && appSource.includes('new MutationObserver(syncObdSimpleStatus).observe(obdDevStatus, {') && appSource.includes("syncObdSimpleStatus();"), "Simple OBD vehicle, connection, and result screens should mirror connection and readout status with live error semantics");
@@ -4546,7 +4555,7 @@ const getObdCssRuleForValidation = (selector) => {
   return start >= 0 && end > start ? styleSource.slice(start, end + 1) : "";
 };
 check(indexSource.includes('data-obd-scroll-target="obdSimpleResultSummary" aria-label="基本読取結果へ戻る"') && indexSource.includes('<span aria-hidden="true">↑</span> 結果') && getObdCssRuleForValidation(".obd-results-nav").includes("position: sticky;") && getObdCssRuleForValidation(".obd-results-nav").includes("grid-template-columns: repeat(5, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-safety-grid").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-operation-grid").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-profile-strip").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-interlock-summary").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-bridge-schema-grid").includes("grid-template-columns: repeat(5, minmax(0, 1fr));"), "The sticky result navigation should return from readout details without changing unrelated diagnostic grid columns");
-check(appSource.includes('recentMilestone: "多ECU車の適合一覧を64 ECUまで切り捨てず保持"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "ECU要求IDと応答IDを分離し誤一致を拒否"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4884,7 +4893,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "多ECU車の適合一覧を64 ECUまで切り捨てず保持"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "ECU要求IDと応答IDを分離し誤一致を拒否"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -7343,7 +7352,7 @@ check(ecuResponseSummaryDataAliases.ecus[0]?.dtcCount === 2 && ecuResponseSummar
 check(ecuResponseSummaryDataAliases.captured_at === "2026-07-07T01:00:00Z" && ecuResponseSummaryDataAliases.ecu_count === 1, "ECU response summary snake_case capture and ECU count aliases were not exposed");
 check(ecuResponseSummaryDataAliases.ecus[0]?.dtc_count === 2 && ecuResponseSummaryDataAliases.ecus[0]?.response_time_ms === 71 && ecuResponseSummaryDataAliases.total_response_count === 0, "ECU response summary snake_case data payload row aliases were not exposed");
 const genericSnakeEcuResponseAliasSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7E8" },
+  vehicle_applicability: { ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   ecu_response_summary: {
     schemaVersion: "ecu_response_summary_v1",
     ecu_snapshots: [
@@ -7355,12 +7364,12 @@ const genericSnakeEcuResponseAliasSession = obd.buildDiagnosticScanSession({
 const genericSnakeEcuResponseAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(genericSnakeEcuResponseAliasSession)));
 check([genericSnakeEcuResponseAliasSession, genericSnakeEcuResponseAliasRoundTrip].every((session) => session.ecuResponseSummary?.ecuCount === 2 && session.ecuResponseSummary?.ecus?.some((item) => item.address === "7E8" && item.name === "Engine ECU" && item.status === "reported" && item.responseServices?.includes("41")) && session.ecuResponseSummary?.ecus?.some((item) => item.address === "7E9" && item.status === "no_response") && session.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && session.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && session.vehicleCommandEnabled === false && session.wouldTransmit === false), "Generic snake-case ECU response aliases were not retained without promoting no-response rows");
 const genericCamelEcuResponseAliasSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7EA" },
+  vehicle_applicability: { ecu_address: "7EA", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   ecuResponseSummary: { ecuSnapshots: [{ sourceEcu: "7EA", sourceEcuName: "Hybrid ECU", readoutStatus: "reported", responseServices: ["62"], responseCount: 1 }] }
 });
 check(genericCamelEcuResponseAliasSession.ecuResponseSummary?.ecus?.[0]?.id === "7EA" && genericCamelEcuResponseAliasSession.ecuResponseSummary?.ecus?.[0]?.name === "Hybrid ECU" && genericCamelEcuResponseAliasSession.ecuResponseSummary?.ecus?.[0]?.response_services?.join(",") === "62" && genericCamelEcuResponseAliasSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && genericCamelEcuResponseAliasSession.vehicleCommandEnabled === false && genericCamelEcuResponseAliasSession.wouldTransmit === false, "Generic camel-case ECU response aliases did not reach positive applicability evidence safely");
 const contradictoryEcuResponseStatusSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7EB" },
+  vehicle_applicability: { ecu_address: "7EB", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   ecu_response_summary: {
     ecus: [
       { address: "7E8", status: "reported", response_services: ["41"], response_count: 1 },
@@ -7458,7 +7467,7 @@ const typedEmptyEcuScopedDtcSession = obd.buildDiagnosticScanSession({
   stored_dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ intent: "read_stored_dtc", ok: true, blocked: false, data: { dtcs: [], ecu_responses: [{ ecu: "7E8", ecu_name: "Engine Control Module", dtcs: [] }] } }),
   pending_dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ intent: "read_pending_dtc", ok: true, blocked: false, data: { dtcs: [], ecu_responses: [{ ecu: "7E9", ecu_name: "Transmission Control Module", dtcs: [] }] } }),
   permanent_dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ intent: "read_permanent_dtc", ok: true, blocked: false, data: { dtcs: [], ecu_responses: [{ ecu: "7EA", ecu_name: "Hybrid Control Module", dtcs: [] }] } }),
-  vehicle_applicability: { ecu_address: "7E9" }
+  vehicle_applicability: { ecu_address: "7E9", ecu_address_role: "response", ecu_address_format: "can_11bit" }
 });
 const typedEmptyEcuScopedDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(typedEmptyEcuScopedDtcSession)));
 check(typedEmptyEcuScopedDtcSession.dtcSnapshot?.dtcStatusSummary?.complete === true && typedEmptyEcuScopedDtcSession.dtcSnapshot?.ecuResponses?.map((item) => item.ecu).join(",") === "7E8,7E9,7EA" && typedEmptyEcuScopedDtcSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9,7EA" && typedEmptyEcuScopedDtcSession.coreSessionStatus?.observedEcuSummary?.sourceCoveragePercent === 100 && typedEmptyEcuScopedDtcSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && typedEmptyEcuScopedDtcRoundTrip?.dtcSnapshot?.ecu_responses?.map((item) => item.ecu).join(",") === "7E8,7E9,7EA" && typedEmptyEcuScopedDtcRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9,7EA" && typedEmptyEcuScopedDtcRoundTrip?.vehicleCommandEnabled === false && typedEmptyEcuScopedDtcRoundTrip?.wouldTransmit === false, "Typed empty DTC snapshots must retain explicit multi-ECU provenance through merged read-only sessions");
@@ -10110,7 +10119,7 @@ check(bridgeNamedSupportedPidSnapshot.sourceEcuName === "Engine Control Module" 
 const bridgeEcuOnlySupportedPidSession = obd.buildDiagnosticScanSession({ supportedPidResponse: { data: { supported_pid_ecu_snapshots: [{ source_ecu: "7E8", supported_pids: ["0C"] }] } } });
 check(bridgeEcuOnlySupportedPidSession?.supportedPidMatrix?.supportedPids?.join(",") === "0C" && bridgeEcuOnlySupportedPidSession?.readoutCoverage?.itemById?.supported_pid_matrix?.status === "captured" && bridgeEcuOnlySupportedPidSession?.vehicleCommandEnabled === false && bridgeEcuOnlySupportedPidSession?.wouldTransmit === false, "ECU-scoped supported PID evidence did not survive safe diagnostic-session import");
 const snakeOnlySupportedPidEcuSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   supported_pid_matrix: {
     schemaVersion: "supported_pid_matrix_v1",
     supported_pid_readout_status: "reported",
@@ -10471,7 +10480,7 @@ const partialCoreReportedResponse7E8 = partialCoreReadoutSession.ecuResponseSumm
 const partialCoreRoundTrip7E9 = partialCoreReadoutRoundTrip.coreSessionStatus?.observedEcuSummary?.ecus?.find((item) => item.id === "7E9");
 check(partialCoreReadoutIds.every((id) => partialCoreObservedEcu7E8?.readoutStatusById?.[id] === "reported") && partialCoreReadoutIds.every((id) => partialCoreObservedEcu7E9?.readoutStatusById?.[id] === "unparsed" && partialCoreObservedEcu7E9?.unparsedReadoutIds?.includes(id)) && !partialCoreReadoutSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.includes("7EA") && !partialCoreReadoutSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.includes("7EB") && ["01", "02", "06"].every((service) => partialCoreReportedResponse7E8?.services?.includes(service)) && !partialCoreReadoutSession.ecuResponseSummary?.ecus?.some((item) => item.address === "7E9" && item.status === "reported") && partialCoreReadoutIds.every((id) => partialCoreRoundTrip7E9?.readout_status_by_id?.[id] === "unparsed" && partialCoreRoundTrip7E9?.unparsed_readout_ids?.includes(id)) && partialCoreReadoutRoundTrip.vehicleCommandEnabled === false && partialCoreReadoutRoundTrip.wouldTransmit === false, "Partial core readouts lost explicit per-ECU status, fabricated blocked/statusless ECUs, or weakened through read-only export");
 const snakeOnlyReadinessEcuSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   readiness_snapshot: {
     schemaVersion: "readiness_snapshot_v1",
     readiness_readout_status: "reported",
@@ -10868,7 +10877,7 @@ const nestedBridgeEmptyLivePidScope = obd.normalizeBridgeLivePidSnapshot({
   data: { live_pid_readout_status: "reported", monitor_values: [] }
 });
 const nestedBridgeEmptyLivePidScopeSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   live_pid_snapshot: nestedBridgeEmptyLivePidScope
 });
 const nestedBridgeEmptyLivePidScopeReimport = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(nestedBridgeEmptyLivePidScopeSession)));
@@ -11479,32 +11488,32 @@ const bridgeEmptyMultiEcuDtcSnapshot = obd.normalizeBridgeDtcSnapshot({
     ]
   }
 });
-const bridgeEmptyMultiEcuDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeEmptyMultiEcuDtcSnapshot, vehicle_applicability: { ecu_address: "7E8" } });
+const bridgeEmptyMultiEcuDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeEmptyMultiEcuDtcSnapshot, vehicle_applicability: { ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" } });
 const bridgeEmptyMultiEcuDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(bridgeEmptyMultiEcuDtcSession)));
 check(bridgeEmptyMultiEcuDtcSnapshot.dtcReadoutStatus === "reported" && bridgeEmptyMultiEcuDtcSnapshot.dtcCount === 0 && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.observedEcuSummary?.capturedReadoutIds?.includes("dtc_snapshot") && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.observedEcuSummary?.sourceCoveragePercent === 100 && bridgeEmptyMultiEcuDtcSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && bridgeEmptyMultiEcuDtcRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8,7E9" && bridgeEmptyMultiEcuDtcRoundTrip?.vehicleCommandEnabled === false && bridgeEmptyMultiEcuDtcRoundTrip?.wouldTransmit === false, "Reported empty multi-ECU DTC readouts must retain explicit ECU response provenance through read-only export");
 const respondedEcuOnlySession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7E8" },
+  vehicle_applicability: { ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   ecu_response_summary: { ecus: [{ address: "7E8", name: "Engine Control Module", status: "responded" }, { address: "7E9", name: "Transmission Control Module", status: "no_response" }] }
 });
 const respondedEcuOnlyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(respondedEcuOnlySession)));
 const reportedPositiveEcuOnlySession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "18DAF110" },
-  ecu_response_summary: { ecus: [{ address: "18DA10F1", status: "reported", response_services: ["62"] }] }
+  vehicle_applicability: { ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit" },
+  ecu_response_summary: { ecus: [{ address: "18DAF110", status: "reported", response_services: ["62"] }] }
 });
 const reportedPositiveEcuOnlyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(reportedPositiveEcuOnlySession)));
 const reportedUnqualifiedEcuOnlySession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7E8" },
+  vehicle_applicability: { ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   ecu_response_summary: { ecus: [{ address: "7E8", status: "reported" }] }
 });
 const mismatchedRespondedEcuSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7E8" },
+  vehicle_applicability: { ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   ecu_response_summary: { ecus: [{ address: "7E9", status: "responded" }] }
 });
 const noResponseEcuOnlySession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7E8" },
+  vehicle_applicability: { ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   ecu_response_summary: { ecus: [{ address: "7E9", status: "no_response" }] }
 });
-check(respondedEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && respondedEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecus?.[0]?.readoutIds?.join(",") === "ecu_response_summary" && respondedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && respondedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.respondedEcuAddresses?.join(",") === "7E8" && respondedEcuOnlyRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && reportedPositiveEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "18DA10F1" && reportedPositiveEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecus?.[0]?.readoutStatusById?.ecu_response_summary === "reported" && reportedPositiveEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && reportedPositiveEcuOnlyRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecu_ids?.join(",") === "18DA10F1" && reportedPositiveEcuOnlyRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_evidence === "positive_response" && reportedUnqualifiedEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuCount === 0 && reportedUnqualifiedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_observed" && reportedUnqualifiedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === null && mismatchedRespondedEcuSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && mismatchedRespondedEcuSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && noResponseEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuCount === 0 && noResponseEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_observed" && [respondedEcuOnlySession, respondedEcuOnlyRoundTrip, reportedPositiveEcuOnlySession, reportedPositiveEcuOnlyRoundTrip, reportedUnqualifiedEcuOnlySession, mismatchedRespondedEcuSession, noResponseEcuOnlySession].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Only explicit positive ECU-summary rows must affect observed-ECU applicability matching and remain read-only through export/import");
+check(respondedEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "7E8" && respondedEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecus?.[0]?.readoutIds?.join(",") === "ecu_response_summary" && respondedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && respondedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.respondedEcuAddresses?.join(",") === "7E8" && respondedEcuOnlyRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && reportedPositiveEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuIds?.join(",") === "18DAF110" && reportedPositiveEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecus?.[0]?.readoutStatusById?.ecu_response_summary === "reported" && reportedPositiveEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && reportedPositiveEcuOnlyRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecu_ids?.join(",") === "18DAF110" && reportedPositiveEcuOnlyRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_evidence === "positive_response" && reportedUnqualifiedEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuCount === 0 && reportedUnqualifiedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_observed" && reportedUnqualifiedEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === null && mismatchedRespondedEcuSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && mismatchedRespondedEcuSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && noResponseEcuOnlySession.coreSessionStatus?.observedEcuSummary?.ecuCount === 0 && noResponseEcuOnlySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_observed" && [respondedEcuOnlySession, respondedEcuOnlyRoundTrip, reportedPositiveEcuOnlySession, reportedPositiveEcuOnlyRoundTrip, reportedUnqualifiedEcuOnlySession, mismatchedRespondedEcuSession, noResponseEcuOnlySession].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Only explicit positive ECU-summary rows must affect observed-ECU applicability matching and remain read-only through export/import");
 const bridgeDtcParentSourceRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ dtc_snapshot: bridgeDtcParentSourceSnapshot })) }));
 check(bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0171")?.ecu === "7E8" && bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0171")?.ecu_name === "Engine ECU" && bridgeDtcParentSourceRoundTrip?.dtcSnapshot?.dtcs?.find((item) => item.code === "P0300")?.ecu === "7E9" && bridgeDtcParentSourceRoundTrip?.vehicleCommandEnabled === false, "Bridge DTC parent ECU provenance was not retained through read-only export and JSON import");
 const bridgeDtcSourceAliasSnapshot = obd.normalizeBridgeDtcSnapshot({
@@ -12169,6 +12178,44 @@ check(normalizedSupportedEcuSafety.supportedEcuCount === 3
   && !JSON.stringify(normalizedSupportedEcuSafety.supportedEcus).includes("discard")
   && !JSON.stringify(normalizedSupportedEcuSafety.supportedEcus).includes("<script>"),
 "Supported ECU normalization did not reject structured values or retain safe scalar aliases and hexadecimal addresses");
+const normalizedResponseAddressContract = obd.normalizeVehicleApplicabilitySnapshot({
+  supported_ecus: [
+    { system_name: "Engine", ecu_name: "ECM", response_address: "7E8", diagnostic_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN" },
+    { system_name: "Gateway", ecu_name: "Gateway ECU", response_address: "18DAF100", address_role: "response", address_format: "can_29bit", protocol: "UDS" }
+  ]
+});
+check(normalizedResponseAddressContract.supportedEcus?.[0]?.responseAddress === "7E8"
+  && normalizedResponseAddressContract.supportedEcus?.[0]?.addressRole === "response"
+  && normalizedResponseAddressContract.supportedEcus?.[0]?.addressFormat === "can_11bit"
+  && normalizedResponseAddressContract.supportedEcus?.[0]?.addressRoleConflict === false
+  && normalizedResponseAddressContract.supportedEcus?.[0]?.addressFormatConflict === false
+  && normalizedResponseAddressContract.supportedEcus?.[1]?.responseAddress === "18DAF100"
+  && normalizedResponseAddressContract.supportedEcus?.[1]?.addressFormat === "can_29bit",
+"Supported ECU response-address role and CAN address format were not retained by the applicability normalizer");
+const normalizedConflictingAddressContract = obd.normalizeVehicleApplicabilitySnapshot({
+  supported_ecus: [{ ecu_name: "ECM", response_address: "7E8", diagnostic_address: "7E0", address_role: "response", address_format: "can_29bit" }]
+});
+check(normalizedConflictingAddressContract.supportedEcus?.[0]?.addressRoleConflict === true
+  && normalizedConflictingAddressContract.supportedEcus?.[0]?.addressFormatConflict === true,
+"Conflicting ECU response/legacy address or CAN format aliases did not fail closed");
+const normalizedEquivalentAddressNotationContract = obd.normalizeVehicleApplicabilitySnapshot({
+  ecu_address: "7E8", responseAddress: "0x7e8", ecu_address_role: "response", ecu_address_format: "can_11bit",
+  supported_ecus: [{ ecu_name: "ECM", response_address: "7E8", diagnostic_address: "0x7e8", address_role: "response", address_format: "can_11bit" }]
+});
+check(normalizedEquivalentAddressNotationContract.ecuAddressContractConflict === false
+  && normalizedEquivalentAddressNotationContract.ecuAddressContractValid === true
+  && normalizedEquivalentAddressNotationContract.supportedEcus?.[0]?.addressRoleConflict === false
+  && normalizedEquivalentAddressNotationContract.supportedEcus?.[0]?.responseAddressContractValid === true,
+"Equivalent 0x-prefixed CAN address aliases were incorrectly rejected as different ECU IDs");
+const noEcuAddressContractSession = obd.buildDiagnosticScanSession({ session_id: "shop-test-no-ecu-address-contract" });
+const noEcuAddressContractRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(noEcuAddressContractSession)));
+check(noEcuAddressContractSession.vehicleApplicability?.ecuAddressContractConflict === false
+  && noEcuAddressContractRoundTrip.vehicleApplicability?.ecuAddressContractConflict === false
+  && noEcuAddressContractRoundTrip.vehicleApplicability?.ecuAddressContractValid === false
+  && noEcuAddressContractRoundTrip.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedAddressSource === null
+  && noEcuAddressContractRoundTrip.vehicleCommandEnabled === false
+  && noEcuAddressContractRoundTrip.wouldTransmit === false,
+"An unset ECU address contract became conflicting after read-only export and JSON import");
 const normalizedSupportedEcuSafetyRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(
   obd.buildBridgeSessionExportPayload(obd.buildDiagnosticScanSession({ vehicleApplicability: normalizedSupportedEcuSafety }))
 ));
@@ -17274,15 +17321,15 @@ check(unsupportedNetworkUdsDidRequestPlanSession.nextReadoutRequest?.executionBl
 check(missingTimingUdsDidRequestPlanSession.nextReadoutRequest?.executionBlockReason === "uds_transport_timing_required" && missingTimingUdsDidRequestPlanSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportPlan?.transportProtocol === "ISO-TP" && missingTimingUdsDidRequestPlanSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportPlan?.networkProtocol === "CAN" && missingTimingUdsDidRequestPlanSession.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportPlan?.timingStatus === "missing" && [missingTransportUdsDidRequestPlanSession, unsupportedNetworkUdsDidRequestPlanSession, missingTimingUdsDidRequestPlanSession].every((session) => session.nextReadoutRequest?.executionEnabled === false && session.nextReadoutRequest?.wouldTransmit === false && session.nextReadoutRequest?.vehicleCommandEnabled === false && session.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportPlan?.adapterImplemented === false && session.nextReadoutRequest?.udsReadRequestManifest?.udsReadTransportPlan?.vehicleCommandEnabled === false), "Missing UDS timing and all blocked transport-plan paths must stay non-executable and non-transmitting");
 check(mismatchedUdsDidRequestPlanSession.nextReadoutRequest?.dataIdentifier === null && mismatchedUdsDidRequestPlanSession.nextReadoutRequest?.executionBlockReason === "uds_data_identifier_ecu_scope_mismatch" && mismatchedUdsDidRequestPlanSession.nextReadoutRequest?.udsReadRequestManifest?.selectionStatus === "ecu_scope_mismatch" && [verifiedUdsDidRequestPlanSession, verifiedUdsDidRequestPlanRoundTrip, unverifiedUdsDidRequestPlanSession, ambiguousUdsDidRequestPlanSession, mismatchedUdsDidRequestPlanSession].every((session) => session?.nextReadoutRequest?.executionEnabled === false && session?.nextReadoutRequest?.wouldTransmit === false && session?.nextReadoutRequest?.vehicleCommandEnabled === false && session?.nextReadoutRequest?.udsReadRequestManifest?.executionEnabled === false && session?.nextReadoutRequest?.udsReadRequestManifest?.wouldTransmit === false && session?.nextReadoutRequest?.udsReadRequestManifest?.vehicleCommandEnabled === false && session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "ECU-mismatched UDS DID candidates and every request-manifest path must remain non-executable and non-transmitting");
 const udsDidApplicabilityMatchSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
-  ecu_info_response: { raw: "62 F1 89 53 57", protocol: "UDS", source_ecu: "18DA10F1" }
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit", source_verified: true },
+  ecu_info_response: { raw: "62 F1 89 53 57", protocol: "UDS", source_ecu: "18DAF110" }
 });
 const udsDidApplicabilityMismatchSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
-  ecu_info_response: { raw: "62 F1 89 53 57", protocol: "UDS", source_ecu: "18DA10F2" }
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit", source_verified: true },
+  ecu_info_response: { raw: "62 F1 89 53 57", protocol: "UDS", source_ecu: "18DAF210" }
 });
 const udsDidPendingThenReportedPairedAddressSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit", source_verified: true },
   ecu_info_snapshot: {
     schema_version: "ecu_info_snapshot_v2",
     protocol: "UDS",
@@ -17310,7 +17357,7 @@ const udsPairedObservedEcuSession = obd.buildDiagnosticScanSession({
 });
 const udsPairedObservedEcuRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(udsPairedObservedEcuSession)));
 const mode01ApplicabilitySession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   live_pid_snapshot: {
     schema_version: "live_pid_snapshot_v2",
     source_ecu: "7E8",
@@ -17320,7 +17367,7 @@ const mode01ApplicabilitySession = obd.buildDiagnosticScanSession({
 });
 const mode01ApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(mode01ApplicabilitySession)));
 const multiEcuFreezeFrameApplicabilitySession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   freeze_frame_snapshot: {
     schema_version: "freeze_frame_snapshot_v2",
     freeze_frame_readout_status: "reported",
@@ -17332,7 +17379,7 @@ const multiEcuFreezeFrameApplicabilitySession = obd.buildDiagnosticScanSession({
 });
 const multiEcuFreezeFrameApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(multiEcuFreezeFrameApplicabilitySession)));
 const mixedEcuFreezeFrameOutcomeSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   freeze_frame_snapshot: {
     schema_version: "freeze_frame_snapshot_v2",
     freeze_frame_readout_status: "reported",
@@ -17344,7 +17391,7 @@ const mixedEcuFreezeFrameOutcomeSession = obd.buildDiagnosticScanSession({
 });
 const mixedEcuFreezeFrameOutcomeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(mixedEcuFreezeFrameOutcomeSession)));
 const mixedEcuReadinessOutcomeSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   readiness_snapshot: {
     schema_version: "readiness_snapshot_v1",
     readiness_readout_status: "reported",
@@ -17355,7 +17402,7 @@ const mixedEcuReadinessOutcomeSession = obd.buildDiagnosticScanSession({
   }
 });
 const mixedEcuReadinessOutcomeRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(mixedEcuReadinessOutcomeSession)));
-check(udsDidApplicabilityMatchSession.ecuResponseSummary?.ecus?.some((item) => item.id === "18DA10F1" && item.responseServices?.includes("62")) && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseServices?.join(",") === "62" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.length === 1 && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.[0]?.status === "reported" && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.[0]?.pendingNegativeResponseCount === 1 && udsDidPendingThenReportedPairedAddressSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && udsDidPendingThenReportedPairedAddressSession.coreSessionStatus?.observedEcuSummary?.ecuCount === 1 && udsDidPendingThenReportedPairedAddressSession.coreSessionStatus?.observedEcuSummary?.ecus?.[0]?.readoutStatusValuesById?.ecu_info_snapshot?.join(",") === "reported,unparsed" && !udsDidPendingThenReportedPairedAddressSession.nextReadoutCandidates?.some((item) => item.id === "ecu_info_snapshot" && item.statusReason === "ecu_scoped_pending_response") && udsDidPendingThenReportedPairedAddressRoundTrip?.ecuResponseSummary?.ecus?.length === 1 && udsDidPendingThenReportedPairedAddressRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecu_count === 1 && udsDidPendingThenReportedPairedAddressRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_evidence === "positive_response" && udsDidPendingThenReportedPairedAddressRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_services?.join(",") === "62" && !udsDidPendingThenReportedPairedAddressRoundTrip?.nextReadoutCandidates?.some((item) => item.id === "ecu_info_snapshot" && item.status_reason === "ecu_scoped_pending_response") && udsPairedObservedEcuSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.slice().sort().join(",") === "18DAF110,18DAF210" && udsPairedObservedEcuSession.coreSessionStatus?.observedEcuSummary?.ecus?.find((item) => item.id === "18DAF110")?.readoutStatusValuesById?.ecu_info_snapshot?.join(",") === "reported,unparsed" && udsPairedObservedEcuRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecu_ids?.slice().sort().join(",") === "18DAF110,18DAF210" && [udsDidApplicabilityMatchSession, udsDidApplicabilityMismatchSession, udsDidPendingThenReportedPairedAddressSession, udsDidPendingThenReportedPairedAddressRoundTrip, udsPairedObservedEcuSession, udsPairedObservedEcuRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Raw UDS DID ECU addresses must use paired 29-bit matching without hiding a different-node review");
+check(udsDidApplicabilityMatchSession.ecuResponseSummary?.ecus?.some((item) => item.id === "18DAF110" && item.responseServices?.includes("62")) && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseServices?.join(",") === "62" && udsDidApplicabilityMatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && udsDidApplicabilityMismatchSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.length === 1 && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.[0]?.status === "reported" && udsDidPendingThenReportedPairedAddressSession.ecuResponseSummary?.ecus?.[0]?.pendingNegativeResponseCount === 1 && udsDidPendingThenReportedPairedAddressSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && udsDidPendingThenReportedPairedAddressSession.coreSessionStatus?.observedEcuSummary?.ecuCount === 1 && udsDidPendingThenReportedPairedAddressSession.coreSessionStatus?.observedEcuSummary?.ecus?.[0]?.readoutStatusValuesById?.ecu_info_snapshot?.join(",") === "reported,unparsed" && !udsDidPendingThenReportedPairedAddressSession.nextReadoutCandidates?.some((item) => item.id === "ecu_info_snapshot" && item.statusReason === "ecu_scoped_pending_response") && udsDidPendingThenReportedPairedAddressRoundTrip?.ecuResponseSummary?.ecus?.length === 1 && udsDidPendingThenReportedPairedAddressRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecu_count === 1 && udsDidPendingThenReportedPairedAddressRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_evidence === "positive_response" && udsDidPendingThenReportedPairedAddressRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_services?.join(",") === "62" && !udsDidPendingThenReportedPairedAddressRoundTrip?.nextReadoutCandidates?.some((item) => item.id === "ecu_info_snapshot" && item.status_reason === "ecu_scoped_pending_response") && udsPairedObservedEcuSession.coreSessionStatus?.observedEcuSummary?.ecuIds?.slice().sort().join(",") === "18DAF110,18DAF210" && udsPairedObservedEcuSession.coreSessionStatus?.observedEcuSummary?.ecus?.find((item) => item.id === "18DAF110")?.readoutStatusValuesById?.ecu_info_snapshot?.join(",") === "reported,unparsed" && udsPairedObservedEcuRoundTrip?.coreSessionStatus?.observedEcuSummary?.ecu_ids?.slice().sort().join(",") === "18DAF110,18DAF210" && [udsDidApplicabilityMatchSession, udsDidApplicabilityMismatchSession, udsDidPendingThenReportedPairedAddressSession, udsDidPendingThenReportedPairedAddressRoundTrip, udsPairedObservedEcuSession, udsPairedObservedEcuRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Raw UDS DID ECU addresses must use paired 29-bit matching without hiding a different-node review");
 check(mode01ApplicabilitySession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.status === "reported" && item.services?.includes("01") && item.responseServices?.includes("41")) && mode01ApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && mode01ApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response" && mode01ApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseServices?.join(",") === "41" && mode01ApplicabilityRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.status === "reported" && item.response_services?.includes("41")) && mode01ApplicabilityRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_services?.join(",") === "41" && [mode01ApplicabilitySession, mode01ApplicabilityRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Mode 01 live PID ECU responses must retain explicit positive response evidence through read-only export and import");
 check(multiEcuFreezeFrameApplicabilitySession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.status === "reported" && item.responseServices?.includes("42")) && multiEcuFreezeFrameApplicabilitySession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.status === "reported" && item.responseServices?.includes("42")) && multiEcuFreezeFrameApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && multiEcuFreezeFrameApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseServices?.join(",") === "42" && multiEcuFreezeFrameApplicabilityRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.response_services?.includes("42")) && multiEcuFreezeFrameApplicabilityRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_services?.join(",") === "42" && [multiEcuFreezeFrameApplicabilitySession, multiEcuFreezeFrameApplicabilityRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Multi-ECU freeze-frame responses must retain positive ECU evidence through read-only export and import");
 check(mixedEcuFreezeFrameOutcomeSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.responseServices?.includes("42")) && !mixedEcuFreezeFrameOutcomeSession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.responseServices?.includes("42")) && !mixedEcuFreezeFrameOutcomeRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E9" && item.response_services?.includes("42")) && [mixedEcuFreezeFrameOutcomeSession, mixedEcuFreezeFrameOutcomeRoundTrip].every((session) => session?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && session?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedAddresses?.join(",") === "7E8" && session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Unparsed ECU-scoped freeze-frame results must not inherit a positive response or applicability match from the parent readout");
@@ -18945,12 +18992,12 @@ const mixedEcuIncompleteStoredDtcSession = obd.buildScanSessionFromObdText([
 ].join("\n"), { session_id: "compact-mixed-stored-dtc-incomplete", protocol: "ISO15765-4" });
 check(mixedEcuIncompleteStoredDtcSession.dtcSnapshot?.dtcReadoutStatus === "unparsed" && mixedEcuIncompleteStoredDtcSession.dtcSnapshot?.dtcStatusSummary?.reportedStatuses?.length === 0 && mixedEcuIncompleteStoredDtcSession.dtcSnapshot?.dtcStatusSummary?.unreportedStatuses?.includes("stored") && mixedEcuIncompleteStoredDtcSession.dtcSnapshot?.dtcEcuAggregateSummary?.allReported === false && mixedEcuIncompleteStoredDtcSession.dtcSnapshot?.ecuResponses?.some((item) => item.ecu === "7E8" && item.intent === "read_stored_dtc" && item.status === "reported") && mixedEcuIncompleteStoredDtcSession.dtcSnapshot?.ecuResponses?.some((item) => item.ecu === "7E9" && item.intent === "read_stored_dtc" && item.status === "unparsed") && mixedEcuIncompleteStoredDtcSession.dtcSnapshot?.dtcs?.some((item) => item.code === "P0171" && item.ecu === "7E8") && mixedEcuIncompleteStoredDtcSession.vehicleCommandEnabled === false && mixedEcuIncompleteStoredDtcSession.wouldTransmit === false, "A partially decoded multi-ECU stored DTC response was incorrectly marked complete or lost valid ECU evidence");
 const rawDtcSourceSnapshot = obd.decodeObdDtcResponse({ raw: "43 01 71", source_ecu: "7E8" });
-const rawDtcApplicabilitySession = obd.buildDiagnosticScanSession({ vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true }, dtc_snapshot: rawDtcSourceSnapshot });
+const rawDtcApplicabilitySession = obd.buildDiagnosticScanSession({ vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true }, dtc_snapshot: rawDtcSourceSnapshot });
 const rawDtcApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(rawDtcApplicabilitySession)));
 check(rawDtcSourceSnapshot.dtcs.some((item) => item.code === "P0171" && item.ecu === "7E8") && rawDtcSourceSnapshot.dtcResponseFormat === "obd_mode03", "Raw OBD DTC response did not retain its source ECU and response format");
 check(rawDtcApplicabilitySession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.status === "reported" && item.services?.includes("03") && item.responseServices?.includes("43")) && rawDtcApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && rawDtcApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseServices?.join(",") === "43" && rawDtcApplicabilityRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.response_services?.includes("43")) && rawDtcApplicabilityRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_services?.join(",") === "43" && [rawDtcApplicabilitySession, rawDtcApplicabilityRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Mode 03 DTC results must retain explicit positive ECU response evidence through read-only export and import");
 const mixedDtcEcuOutcomeSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   dtc_snapshot: {
     dtc_readout_status: "reported",
     dtc_response_format: "obd_mode03",
@@ -18965,11 +19012,11 @@ check(mixedDtcEcuOutcomeSession.ecuResponseSummary?.ecus?.some((item) => item.id
 const rawUdsDtcResponse = obd.decodeObdDtcResponse({ raw: "59 02 FF 01 23 45 8A", protocol: "UDS", source_ecu: "7E0" });
 const rawUdsDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: rawUdsDtcResponse });
 const rawUdsDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(rawUdsDtcSession)));
-const rawUdsDtcApplicabilitySnapshot = obd.decodeObdDtcResponse({ raw: "59 02 FF 01 23 45 8A", protocol: "UDS", source_ecu: "18DA10F1" });
-const rawUdsDtcApplicabilitySession = obd.buildDiagnosticScanSession({ vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true }, dtc_snapshot: rawUdsDtcApplicabilitySnapshot });
+const rawUdsDtcApplicabilitySnapshot = obd.decodeObdDtcResponse({ raw: "59 02 FF 01 23 45 8A", protocol: "UDS", source_ecu: "18DAF110" });
+const rawUdsDtcApplicabilitySession = obd.buildDiagnosticScanSession({ vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit", source_verified: true }, dtc_snapshot: rawUdsDtcApplicabilitySnapshot });
 const rawUdsDtcApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(rawUdsDtcApplicabilitySession)));
 check(rawUdsDtcResponse.dtcReadoutStatus === "reported" && rawUdsDtcResponse.dtcResponseFormat === "uds_read_dtc_information" && rawUdsDtcResponse.dtcResponseSubfunction === "02" && rawUdsDtcResponse.dtcStatusAvailabilityMask === "FF" && rawUdsDtcResponse.dtcs?.[0]?.code === "012345" && rawUdsDtcResponse.dtcs?.[0]?.codeFormat === "uds_3byte" && rawUdsDtcResponse.dtcs?.[0]?.statusByte === "8A" && rawUdsDtcResponse.dtcs?.[0]?.ecu === "7E0" && rawUdsDtcResponse.dtcs?.[0]?.manufacturerSpecific !== true && rawUdsDtcResponse.retainedRawText === false && rawUdsDtcSession.dtcSnapshot?.dtcResponseSubfunction === "02" && rawUdsDtcSession.readoutCoverage?.itemById?.dtc_snapshot?.status === "captured" && rawUdsDtcRoundTrip?.dtcSnapshot?.dtcResponseFormat === "uds_read_dtc_information" && rawUdsDtcRoundTrip?.dtcSnapshot?.dtcResponseSubfunction === "02" && rawUdsDtcRoundTrip?.dtcSnapshot?.dtcs?.[0]?.code_format === "uds_3byte" && rawUdsDtcRoundTrip?.vehicleCommandEnabled === false && rawUdsDtcRoundTrip?.wouldTransmit === false && obd.decodeObdDtcResponse({ raw: "59 02 FF 01 23 45", protocol: "UDS", source_ecu: "7E0" }).dtcReadoutStatus === "unparsed" && obd.decodeObdDtcResponse({ raw: "59 02 FF 01 23 45 8A", protocol: "UDS" }).dtcReadoutStatus === "unparsed", "Raw UDS DTC records must retain only complete ECU-scoped three-byte code evidence");
-check(rawUdsDtcApplicabilitySession.ecuResponseSummary?.ecus?.some((item) => item.id === "18DA10F1" && item.status === "reported" && item.services?.includes("19") && item.responseServices?.includes("59")) && rawUdsDtcApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && rawUdsDtcApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseServices?.join(",") === "59" && rawUdsDtcApplicabilityRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "18DA10F1" && item.response_services?.includes("59")) && rawUdsDtcApplicabilityRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_services?.join(",") === "59" && [rawUdsDtcApplicabilitySession, rawUdsDtcApplicabilityRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "UDS Service 19 DTC results must retain explicit positive ECU response evidence through read-only export and import");
+check(rawUdsDtcApplicabilitySession.ecuResponseSummary?.ecus?.some((item) => item.id === "18DAF110" && item.status === "reported" && item.services?.includes("19") && item.responseServices?.includes("59")) && rawUdsDtcApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && rawUdsDtcApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseServices?.join(",") === "59" && rawUdsDtcApplicabilityRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.id === "18DAF110" && item.response_services?.includes("59")) && rawUdsDtcApplicabilityRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matched_response_services?.join(",") === "59" && [rawUdsDtcApplicabilitySession, rawUdsDtcApplicabilityRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "UDS Service 19 DTC results must retain explicit positive ECU response evidence through read-only export and import");
 const rawUdsEmptyDtcResponse = obd.decodeObdDtcResponse({ raw: "59 02 FF", protocol: "UDS", source_ecu: "7E0" });
 const rawUdsEmptyDtcSession = obd.buildDiagnosticScanSession({ dtc_snapshot: rawUdsEmptyDtcResponse });
 const rawUdsEmptyDtcRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(rawUdsEmptyDtcSession)));
@@ -19113,13 +19160,13 @@ const scannerRawNonUdsNegativeEcuInfoSession = obd.buildScanSessionFromObdText("
 const scannerProvenanceUdsNegativeEcuInfoSession = obd.buildScanSessionFromObdText("7E0 03 7F 22 31", { communication_protocol: "CAN_11BIT_500K", diagnostic_protocol: "UDS", protocol_provenance: { diagnostic_protocol: "UDS", transport_protocol: "ISO-TP", network_protocol: "CAN" }, session_id: "provenance-uds-negative-ecu-info-text" });
 const scannerMixedProvenanceUdsEcuInfoSession = obd.buildScanSessionFromObdText(["7E0 06 62 F1 89 41 42 43", "7E1 03 7F 22 31"].join("\n"), { communication_protocol: "CAN_11BIT_500K", diagnostic_protocol: "UDS", protocol_provenance: { diagnostic_protocol: "UDS", transport_protocol: "ISO-TP", network_protocol: "CAN" }, session_id: "mixed-provenance-uds-ecu-info-text" });
 const scannerMixedProvenanceUdsEcuInfoRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scannerMixedProvenanceUdsEcuInfoSession)));
-const scannerSameEcuMixedUdsDidSession = obd.buildScanSessionFromObdText(["7E8 06 62 F1 89 41 42 43", "7E8 03 7F 22 31"].join("\n"), { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8" }, session_id: "same-ecu-mixed-uds-did-text" });
+const scannerSameEcuMixedUdsDidSession = obd.buildScanSessionFromObdText(["7E8 06 62 F1 89 41 42 43", "7E8 03 7F 22 31"].join("\n"), { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" }, session_id: "same-ecu-mixed-uds-did-text" });
 const scannerSameEcuMixedUdsDidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scannerSameEcuMixedUdsDidSession)));
-const scannerNegativeEcuApplicabilitySession = obd.buildScanSessionFromObdText("7E8 03 7F 22 31", { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8" }, session_id: "negative-ecu-applicability-text" });
+const scannerNegativeEcuApplicabilitySession = obd.buildScanSessionFromObdText("7E8 03 7F 22 31", { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" }, session_id: "negative-ecu-applicability-text" });
 const scannerNegativeEcuApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scannerNegativeEcuApplicabilitySession)));
-const scannerPendingEcuApplicabilitySession = obd.buildScanSessionFromObdText("7E8 03 7F 22 78", { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8" }, session_id: "pending-ecu-applicability-text" });
+const scannerPendingEcuApplicabilitySession = obd.buildScanSessionFromObdText("7E8 03 7F 22 78", { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" }, session_id: "pending-ecu-applicability-text" });
 const scannerPendingEcuApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scannerPendingEcuApplicabilitySession)));
-const scannerPendingThenReportedUdsDidSession = obd.buildScanSessionFromObdText(["7E8 03 7F 22 78", "7E8 06 62 F1 89 41 42 43"].join("\n"), { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8" }, session_id: "pending-then-reported-uds-did-text" });
+const scannerPendingThenReportedUdsDidSession = obd.buildScanSessionFromObdText(["7E8 03 7F 22 78", "7E8 06 62 F1 89 41 42 43"].join("\n"), { protocol: "UDS", vehicle_applicability: { status: "matched", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" }, session_id: "pending-then-reported-uds-did-text" });
 const scannerPendingThenReportedUdsDidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(scannerPendingThenReportedUdsDidSession)));
 const bridgeEcuScopedUdsDidOutcomeSession = obd.buildDiagnosticScanSession({
   ecu_info_snapshot: {
@@ -19503,7 +19550,7 @@ check(partialEcuFreezeFrameComparisonSession.importedCoreReadoutInventoryCompari
 check(changedPartialEcuFreezeFrameUdsComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordComparisonScope === "reported_ecus" && changedPartialEcuFreezeFrameUdsComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordAddedKeys?.length === 1 && changedPartialEcuFreezeFrameUdsComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordAddedKeys?.[0]?.includes("|2|0|ECM") && changedPartialEcuFreezeFrameUdsComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordRemovedKeys?.length === 1 && changedPartialEcuFreezeFrameUdsComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordRemovedKeys?.[0]?.includes("|1|0|ECM") && changedPartialEcuFreezeFrameUdsComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordRemovedKeys?.some((key) => key.includes("TCM")) === false, "Partial UDS freeze-frame changes were not isolated to mutually reported ECUs");
 check(partialEcuFreezeFrameComparisonRoundTrip?.importedCoreReadoutInventoryComparisonSummary?.freeze_frame_uds_record_comparison_scope === "reported_ecus" && partialEcuFreezeFrameComparisonRoundTrip?.importedCoreReadoutInventoryComparisonSummary?.freeze_frame_uds_record_comparable_ecu_ids?.join(",") === "ECM" && blockedPartialEcuFreezeFrameComparisonSession.coreReadoutInventorySummary?.freezeFrameUdsRecordReportedEcuEvidenceRecorded === false && blockedPartialEcuFreezeFrameComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordComparisonAvailable === false && blockedPartialEcuFreezeFrameComparisonSession.importedCoreReadoutInventoryComparisonSummary?.freezeFrameUdsRecordComparisonScope === "unavailable" && [changedPartialEcuFreezeFrameUdsComparisonSession, partialEcuFreezeFrameComparisonRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Partial UDS freeze-frame scope was not retained through read-only roundtrip or blocked-state handling");
 const triggerOnlyFreezeFrameProvenanceSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   freeze_frame_snapshot: {
     freeze_frame_readout_status: "reported",
     trigger_dtc_entries: [
@@ -20382,9 +20429,157 @@ const buildVerifiedSupportedEcuApplicability = (supportedEcus, overrides = {}) =
     scope: "complete",
     source_verified: true
   },
-  supported_ecus: supportedEcus,
+  supported_ecus: supportedEcus.map((item) => {
+    const role = item?.address_role || item?.addressRole || null;
+    if (role) return item;
+    const legacyAddress = item?.diagnostic_address || item?.diagnosticAddress || item?.can_id || item?.canId || null;
+    if (!legacyAddress) return item;
+    const addressToken = String(legacyAddress).replace(/^0X/i, "");
+    return {
+      ...item,
+      response_address: legacyAddress,
+      address_role: "response",
+      address_format: addressToken.length === 8 ? "can_29bit" : "can_11bit"
+    };
+  }),
   ...overrides
 });
+const legacyRoleUnknownSupportedEcu = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-legacy-role-unknown",
+  vehicle_applicability: {
+    ...buildVerifiedSupportedEcuApplicability([]),
+    supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }]
+  },
+  ecu_response_summary: { ecus: [{ address: "7E8", status: "reported", response_services: ["41"] }] }
+});
+check(legacyRoleUnknownSupportedEcu.vehicleApplicability?.supportedEcus?.[0]?.diagnosticAddress === "7E8"
+  && legacyRoleUnknownSupportedEcu.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && legacyRoleUnknownSupportedEcu.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0
+  && legacyRoleUnknownSupportedEcu.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceReviewReasons?.includes("supported_ecu_address_contract_conflict"),
+"Legacy role-unknown ECU address was not retained for review or was incorrectly promoted to expected ECU evidence");
+const supportedEcuRequestRoleRejected = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-request-role",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E0", address_role: "request", address_format: "can_11bit", protocol: "CAN" }]),
+  ecu_response_summary: { ecus: [{ address: "7E8", status: "reported", response_services: ["41"] }] }
+});
+check(supportedEcuRequestRoleRejected.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && supportedEcuRequestRoleRejected.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0
+  && supportedEcuRequestRoleRejected.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceReviewReasons?.includes("supported_ecu_address_contract_conflict"),
+"Request-role ECU address was incorrectly promoted to an expected response ECU");
+const supportedEcu29BitRequestRejected = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-29bit-request",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "18DAF100", address_role: "response", address_format: "can_29bit", protocol: "UDS" }]),
+  ecu_response_summary: { ecus: [{ address: "18DA00F1", status: "reported", response_services: ["62"] }] }
+});
+check(supportedEcu29BitRequestRejected.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
+  && supportedEcu29BitRequestRejected.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedExpectedAddressCount === 0
+  && supportedEcu29BitRequestRejected.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unmatchedExpectedAddresses?.join(",") === "18DAF100",
+"29-bit request CAN ID was incorrectly accepted as the catalog's expected ECU response ID");
+const supportedEcu29BitResponseMatched = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-29bit-response",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "18DAF100", address_role: "response", address_format: "can_29bit", protocol: "UDS" }]),
+  ecu_response_summary: { ecus: [{ address: "18DAF100", status: "reported", response_services: ["62"] }] }
+});
+check(supportedEcu29BitResponseMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched"
+  && supportedEcu29BitResponseMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.responseAddress === "18DAF100"
+  && supportedEcu29BitResponseMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.addressRole === "response"
+  && supportedEcu29BitResponseMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.addressFormat === "can_29bit",
+"29-bit ECU response ID and its role metadata did not reach the factual expected-ECU observation");
+const missingExplicitSupportedEcuContract = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-missing-role-format",
+  vehicle_applicability: {
+    ...buildVerifiedSupportedEcuApplicability([]),
+    supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", protocol: "CAN" }]
+  },
+  ecu_response_summary: { ecus: [{ address: "7E8", status: "reported", response_services: ["41"] }] }
+});
+check(missingExplicitSupportedEcuContract.vehicleApplicability?.supportedEcus?.[0]?.addressRole === "response"
+  && missingExplicitSupportedEcuContract.vehicleApplicability?.supportedEcus?.[0]?.addressRoleProvided === false
+  && missingExplicitSupportedEcuContract.vehicleApplicability?.supportedEcus?.[0]?.addressFormatProvided === false
+  && missingExplicitSupportedEcuContract.vehicleApplicability?.supportedEcus?.[0]?.responseAddressContractValid === false
+  && missingExplicitSupportedEcuContract.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0,
+"Derived display role/format were incorrectly treated as explicitly verified ECU response metadata");
+const invalidDirectSupportedEcuContracts = [
+  { response_address: "800", address_role: "response", address_format: "can_11bit" },
+  { response_address: "20000000", address_role: "response", address_format: "can_29bit" },
+  { response_address: "7E8-7EF", address_role: "response", address_format: "can_11bit" }
+].map((ecu, index) => obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-invalid-address-" + index,
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", protocol: "CAN", ...ecu }]),
+  ecu_response_summary: { ecus: [{ address: "7E8", status: "reported", response_services: ["41"] }] }
+}));
+check(invalidDirectSupportedEcuContracts.every((session) =>
+  session.vehicleApplicability?.supportedEcus?.[0]?.responseAddressContractValid === false
+  && session.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0),
+"Direct session input bypassed single CAN ID bounds or range rejection");
+const conflictingLegacyAliasSupportedEcu = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-legacy-alias-conflict",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{
+    system_name: "Engine", ecu_name: "ECM", response_address: "7E8",
+    diagnosticAddress: "7E8", diagnostic_address: "7E0",
+    address_role: "response", address_format: "can_11bit", protocol: "CAN"
+  }])
+});
+check(conflictingLegacyAliasSupportedEcu.vehicleApplicability?.supportedEcus?.[0]?.addressRoleConflict === true
+  && conflictingLegacyAliasSupportedEcu.vehicleApplicability?.supportedEcus?.[0]?.responseAddressContractValid === false
+  && conflictingLegacyAliasSupportedEcu.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0,
+"Conflicting legacy ECU address aliases were not rejected as one failed response-address contract");
+const typedInvalidSupportedEcuAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-typed-invalid-aliases",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{
+    system_name: "Engine", ecu_name: "ECM", response_address: "6F1", responseAddress: 1778,
+    address_role: "response", addressRole: 42, address_format: "can_11bit", addressFormatProvided: "true", protocol: "CAN"
+  }]),
+  ecu_response_summary: { ecus: [{ diagnostic_response_id: "6F1", status: "reported", response_services: ["41"] }] }
+});
+check(typedInvalidSupportedEcuAliases.vehicleApplicability?.supportedEcus?.[0]?.addressRoleConflict === true
+  && typedInvalidSupportedEcuAliases.vehicleApplicability?.supportedEcus?.[0]?.addressFormatConflict === true
+  && typedInvalidSupportedEcuAliases.vehicleApplicability?.supportedEcus?.[0]?.responseAddressContractValid === false
+  && typedInvalidSupportedEcuAliases.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && typedInvalidSupportedEcuAliases.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0,
+"Typed-invalid supported ECU aliases were ignored instead of failing the response-address contract closed");
+const typedInvalidTopLevelEcuAliases = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-top-level-ecu-typed-invalid-aliases",
+  vehicle_applicability: {
+    status: "matched", ecu_address: "6F1", responseAddress: "6F1",
+    ecu_address_role: "response", addressRoleProvided: "true", ecu_address_format: "can_11bit"
+  },
+  ecu_response_summary: { ecus: [{ diagnostic_response_id: "6F1", status: "reported", response_services: ["41"] }] }
+});
+check(typedInvalidTopLevelEcuAliases.vehicleApplicability?.ecuAddressContractConflict === true
+  && typedInvalidTopLevelEcuAliases.vehicleApplicability?.ecuAddressContractValid === false
+  && typedInvalidTopLevelEcuAliases.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedAddressSource === null
+  && typedInvalidTopLevelEcuAliases.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0,
+"Typed-invalid top-level ECU aliases were ignored instead of preventing expected-address promotion");
+const topLevelRoleUnknown29Bit = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-top-level-ecu-role-unknown",
+  vehicle_applicability: { status: "matched", ecu_address: "18DA00F1" },
+  ecu_response_summary: { ecus: [{ address: "18DAF100", status: "reported", response_services: ["62"] }] }
+});
+const topLevelExplicit29Bit = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-top-level-ecu-explicit-response",
+  vehicle_applicability: { status: "matched", ecu_address: "18DAF100", ecu_address_role: "response", ecu_address_format: "can_29bit" },
+  ecu_response_summary: { ecus: [{ address: "18DA00F1", status: "reported", response_services: ["62"] }] }
+});
+check(topLevelRoleUnknown29Bit.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedAddressSource === null
+  && topLevelRoleUnknown29Bit.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_configured"
+  && topLevelExplicit29Bit.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedAddressSource === "ecu_address"
+  && topLevelExplicit29Bit.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch",
+"Top-level role-unknown ECU address retained request/response symmetry or explicit response matching was not strict");
+const observedRequestOnlyExcluded = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-observed-request-only-excluded",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN" }]),
+  ecu_response_summary: { ecus: [{ address: "7E8", diagnostic_request_id: "7E8", status: "reported", response_services: ["41"] }] }
+});
+const observedExplicitResponsePreferred = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-observed-explicit-response-preferred",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN" }]),
+  ecu_response_summary: { ecus: [{ address: "7E0", diagnostic_request_id: "7E0", diagnostic_response_id: "7E8", status: "reported", response_services: ["41"] }] }
+});
+check(observedRequestOnlyExcluded.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedExpectedEcuCount === 0
+  && observedExplicitResponsePreferred.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedExpectedEcuCount === 1
+  && observedExplicitResponsePreferred.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedExpectedAddresses?.join(",") === "7E8",
+"Observed ECU matching did not exclude request-only rows or prefer an explicit response ID");
 const scanSessionSupportedEcuMatched = obd.buildDiagnosticScanSession({
   session_id: "shop-test-supported-ecu-matched",
   vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }, { system_name: "Brake", ecu_name: "ABS", diagnostic_address: "7EA", protocol: "ISO 15765-4" }]),
@@ -20405,6 +20600,10 @@ check(scanSessionSupportedEcu64.vehicleApplicability?.supportedEcus?.length === 
   && scanSessionSupportedEcu64.vehicleApplicability?.retainedSupportedEcuCount === 64
   && scanSessionSupportedEcu64.vehicleApplicability?.supportedEcuCount === 64
   && scanSessionSupportedEcu64.vehicleApplicability?.supportedEcusTruncated === false
+  && scanSessionSupportedEcu64.vehicleApplicability?.supportedEcus?.[0]?.responseAddress === "18DAF100"
+  && scanSessionSupportedEcu64.vehicleApplicability?.supportedEcus?.[0]?.addressRole === "response"
+  && scanSessionSupportedEcu64.vehicleApplicability?.supportedEcus?.[0]?.addressFormat === "can_29bit"
+  && scanSessionSupportedEcu64.vehicleApplicability?.supportedEcus?.[63]?.responseAddress === "18DAF13F"
   && scanSessionSupportedEcu64.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 64
   && scanSessionSupportedEcu64.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedExpectedEcuCount === 1
   && scanSessionSupportedEcu64.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unobservedExpectedEcuCount === 63
@@ -20445,6 +20644,10 @@ check(Buffer.byteLength(scanSessionSupportedEcu64ExportJson, "utf8") <= obd.diag
   && scanSessionSupportedEcu64RoundTrip?.vehicleApplicability?.supportedEcus?.length === 64
   && scanSessionSupportedEcu64RoundTrip.vehicleApplicability?.supportedEcuCount === 64
   && scanSessionSupportedEcu64RoundTrip.vehicleApplicability?.supportedEcusTruncated === false
+  && scanSessionSupportedEcu64RoundTrip.vehicleApplicability?.supportedEcus?.[0]?.responseAddress === "18DAF100"
+  && scanSessionSupportedEcu64RoundTrip.vehicleApplicability?.supportedEcus?.[0]?.addressRole === "response"
+  && scanSessionSupportedEcu64RoundTrip.vehicleApplicability?.supportedEcus?.[0]?.addressFormat === "can_29bit"
+  && scanSessionSupportedEcu64RoundTrip.vehicleApplicability?.supportedEcus?.[63]?.responseAddress === "18DAF13F"
   && scanSessionSupportedEcu64RoundTrip.vehicleApplicability?.supportedEcuEvidence?.sourceVerified === false
   && scanSessionSupportedEcu64RoundTrip.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0
   && scanSessionSupportedEcu64RoundTrip.coreSessionStatus?.readoutCompletionSummary?.requiredCount === scanSessionSupportedEcu64.coreSessionStatus?.readoutCompletionSummary?.requiredCount
@@ -20738,6 +20941,31 @@ check(normalizedDuplicateLegacyEcuObservationRows[0]?.observationKey === "system
   && normalizedDuplicateLegacyEcuObservationRows[1]?.observationKey === "system:engine|ecu:ecm|address:7e8|protocol:can|duplicate:2"
   && new Set(normalizedDuplicateLegacyEcuObservationRows.map((row) => row.observationKey)).size === 2,
 "Legacy duplicate ECU observation rows did not receive deterministic comparison keys");
+const responseContractObservationSummary = (observed) => ({
+  vehicle_applicability_ecu_match_summary: {
+    expected_ecu_observations: [{
+      system_name: "Engine", ecu_name: "ECM", response_address: "7E8", diagnostic_address: "7E0",
+      address_role: "response", address_format: "can_11bit", protocol: "CAN", observed,
+      observed_addresses: observed ? ["7E8"] : []
+    }]
+  }
+});
+const responseContractEcuObservationComparison = obd.buildVehicleApplicabilityEcuObservationComparisonSummary(
+  responseContractObservationSummary(true),
+  responseContractObservationSummary(false)
+);
+const responseContractEcuObservationComparisonRoundTrip = JSON.parse(JSON.stringify(responseContractEcuObservationComparison));
+const responseContractEcuObservationReviewPlan = obd.buildVehicleApplicabilityEcuObservationReviewPlan(responseContractEcuObservationComparisonRoundTrip);
+check(responseContractEcuObservationComparison.currentRows?.[0]?.observationKey === "system:engine|ecu:ecm|address:7e8|protocol:can"
+  && responseContractEcuObservationComparison.currentRows?.[0]?.responseAddress === "7E8"
+  && responseContractEcuObservationComparison.currentRows?.[0]?.diagnosticAddress === "7E0"
+  && responseContractEcuObservationComparison.currentRows?.[0]?.addressRole === "response"
+  && responseContractEcuObservationComparison.currentRows?.[0]?.addressFormat === "can_11bit"
+  && responseContractEcuObservationReviewPlan?.targetAddressDescriptors?.join(",") === "7E8"
+  && responseContractEcuObservationReviewPlan?.transportPlan?.candidates?.map((candidate) => candidate.id).join(",") === "elm327_standard_obd,j2534_targeted_ecu"
+  && responseContractEcuObservationReviewPlan?.transportPlan?.vehicleCommandEnabled === false
+  && responseContractEcuObservationReviewPlan?.nextReadoutRequest?.wouldTransmit === false,
+"ECU comparison JSON round-trip lost the response-address contract or selected transport from the request CAN ID");
 const changedSupportedEcuObservationSession = obd.buildDiagnosticScanSession({
   session_id: "shop-test-supported-ecu-observation-comparison",
   vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }, { system_name: "Brake", ecu_name: "ABS", diagnostic_address: "7EA", protocol: "ISO 15765-4" }]),
@@ -20800,19 +21028,15 @@ const scanSessionSupportedEcuRangeMatched = obd.buildDiagnosticScanSession({
   vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Powertrain", diagnostic_address: "0x7e8-0x7ef" }]),
   ecu_response_summary: { ecus: [{ address: "7EC", status: "reported", response_services: ["41"] }] }
 });
-check(scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched"
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expected_address === "7E8-7EF"
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedExpectedAddresses?.[0] === "7E8-7EF"
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedObservedAddresses?.[0] === "7EC"
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unmatchedExpectedAddressCount === 0
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.partialExpectedAddressObservation === false
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.systemName === "Powertrain"
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.observedAddresses?.[0] === "7EC"
-  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedResponseEvidence === "positive_response",
-"Supported ECU hexadecimal range did not match a comparable observed response address");
+check(scanSessionSupportedEcuRangeMatched.vehicleApplicability?.supportedEcus?.[0]?.diagnosticAddress === "0X7E8-0X7EF"
+  && scanSessionSupportedEcuRangeMatched.vehicleApplicability?.supportedEcus?.[0]?.responseAddressContractValid === false
+  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0
+  && scanSessionSupportedEcuRangeMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceReviewReasons?.includes("supported_ecu_address_contract_conflict"),
+"Supported ECU hexadecimal range was not retained for review or was incorrectly promoted as one response ECU");
 const scanSessionPrimaryEcuPrecedence = obd.buildDiagnosticScanSession({
   session_id: "shop-test-primary-ecu-precedence",
-  vehicle_applicability: { status: "matched", source_verified: true, ecu_address: "7E8", supported_ecus: [{ ecu_name: "ABS", diagnostic_address: "7EA" }] },
+  vehicle_applicability: { status: "matched", source_verified: true, ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", supported_ecus: [{ ecu_name: "ABS", diagnostic_address: "7EA" }] },
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "C1201", status: "stored", ecu: "7EA" }] }
 });
 check(scanSessionPrimaryEcuPrecedence.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
@@ -20830,14 +21054,14 @@ check(supportedEcuMatchRoundTrip?.vehicleApplicability?.supported_ecus?.[0]?.dia
 "Imported supported ECU range evidence was not retained and safely downgraded for revalidation");
 const scanSessionApplicabilityEcuMatched = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-ecu-matched",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] }
 });
 check(scanSessionApplicabilityEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityEcuMatched.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false, "Matching canonical applicability and response ECUs should remain non-review");
 check(scanSessionApplicabilityEcuMatched.diagnosticFlowSummary?.vehicle_applicability_ecu_match_summary?.expected_address === "7E8", "Diagnostic flow summary did not retain a matched applicability ECU summary");
 const scanSessionApplicabilityEcuMismatch = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-ecu-mismatch",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] }
 });
 check(scanSessionApplicabilityEcuMismatch.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && scanSessionApplicabilityEcuMismatch.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true, "Different canonical applicability and response ECUs should require review");
@@ -20846,7 +21070,7 @@ check(scanSessionApplicabilityEcuMismatch.nextReadoutCandidates?.[0]?.id === "ec
 const applicabilityEcuMismatchRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionApplicabilityEcuMismatch) }));
 check(applicabilityEcuMismatchRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && applicabilityEcuMismatchRoundTrip?.diagnosticFlowSummary?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && applicabilityEcuMismatchRoundTrip?.nextReadoutCandidates?.[0]?.id === "ecu_info_snapshot" && applicabilityEcuMismatchRoundTrip?.nextReadoutCandidates?.[0]?.reason === "応答ECUと適合ECUの不一致確認のため再確認候補" && applicabilityEcuMismatchRoundTrip?.nextReadoutCandidates?.[0]?.reason_id === "applicability_ecu_mismatch" && applicabilityEcuMismatchRoundTrip?.vehicleCommandEnabled === false, "Applicability ECU review state and read-only recheck were not retained through bridge export and JSON import");
 const refreshedApplicabilityCandidateSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { status: "matched", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] },
   next_readout_candidates: [
     { ...scanSessionApplicabilityEcuMismatch.nextReadoutCandidates[0], reasonId: null, reason_id: null },
@@ -20856,44 +21080,44 @@ const refreshedApplicabilityCandidateSession = obd.buildDiagnosticScanSession({
 const refreshedApplicabilityCandidateRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(refreshedApplicabilityCandidateSession)));
 check([refreshedApplicabilityCandidateSession, refreshedApplicabilityCandidateRoundTrip].every((session) => session.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && !session.nextReadoutCandidates?.some((item) => item.reasonId === "applicability_ecu_mismatch" || item.reason_id === "applicability_ecu_mismatch" || item.reason === "応答ECUと適合ECUの不一致確認のため再確認候補") && session.nextReadoutCandidates?.some((item) => item.id === "readiness_snapshot" && item.reason === "現場指定の再読取") && session.vehicleCommandEnabled === false && session.wouldTransmit === false), "A stale applicability ECU mismatch candidate must be removed after a matching reread without deleting custom readout candidates");
 const bridgeSummaryApplicabilityEcuMismatch = obd.buildBridgeSessionSummary({
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E9", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] }
 });
 check(bridgeSummaryApplicabilityEcuMismatch.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && bridgeSummaryApplicabilityEcuMismatch.nextReadoutCandidates?.[0]?.id === "ecu_info_snapshot" && bridgeSummaryApplicabilityEcuMismatch.nextReadoutCandidates?.[0]?.reason === "応答ECUと適合ECUの不一致確認のため再確認候補" && bridgeSummaryApplicabilityEcuMismatch.vehicleCommandEnabled === false && bridgeSummaryApplicabilityEcuMismatch.vehicle_command_enabled === false && bridgeSummaryApplicabilityEcuMismatch.wouldTransmit === false, "Bridge summary should preserve an ECU mismatch as a read-only ECU information recheck");
 const scanSessionApplicabilityEcuIncomparable = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-ecu-incomparable",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit", source_verified: true },
   dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] }
 });
 check(scanSessionApplicabilityEcuIncomparable.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_comparable" && scanSessionApplicabilityEcuIncomparable.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false, "Different CAN address formats must not be classified as an applicability ECU mismatch");
 const scanSessionApplicabilityUdsResponsePair = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-uds-response-pair",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
-  dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "18DA10F1" }] }
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit", source_verified: true },
+  dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "18DAF110" }] }
 });
 const scanSessionApplicabilityUdsResponsePairRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionApplicabilityUdsResponsePair) }));
 const scanSessionApplicabilityUdsDifferentNode = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-uds-different-node",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", source_verified: true },
-  dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "18DA10F2" }] }
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "18DAF110", ecu_address_role: "response", ecu_address_format: "can_29bit", source_verified: true },
+  dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "18DAF210" }] }
 });
-check(scanSessionApplicabilityUdsResponsePair.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityUdsResponsePair.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && scanSessionApplicabilityUdsResponsePairRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityUdsDifferentNode.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && scanSessionApplicabilityUdsDifferentNode.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && [scanSessionApplicabilityUdsResponsePair, scanSessionApplicabilityUdsResponsePairRoundTrip, scanSessionApplicabilityUdsDifferentNode].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "UDS request and response CAN ID pairs must match one ECU without hiding different-node review");
+check(scanSessionApplicabilityUdsResponsePair.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityUdsResponsePair.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === false && scanSessionApplicabilityUdsResponsePairRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityUdsDifferentNode.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch" && scanSessionApplicabilityUdsDifferentNode.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.reviewRequired === true && [scanSessionApplicabilityUdsResponsePair, scanSessionApplicabilityUdsResponsePairRoundTrip, scanSessionApplicabilityUdsDifferentNode].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false), "Explicit UDS response CAN IDs must match only the same ECU without hiding a different-node review");
 const scanSessionApplicabilityMode06SourceEcu = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-mode06-source-ecu",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   onboard_monitor_snapshot: { onboard_monitor_readout_status: "reported", source_ecu: "7E8", tests: [] }
 });
 check(scanSessionApplicabilityMode06SourceEcu.onboardMonitorSnapshot?.sourceEcu === "7E8" && scanSessionApplicabilityMode06SourceEcu.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && scanSessionApplicabilityMode06SourceEcu.vehicleCommandEnabled === false, "Reported Mode 06 parent ECU should participate in read-only applicability matching when no test rows are returned");
 const scanSessionApplicabilityDiagnosticAddressAlias = obd.buildDiagnosticScanSession({
   session_id: "shop-test-applicability-diagnostic-address-alias",
-  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", diagnostic_address: "0x7E8", source_verified: true },
+  vehicle_applicability: { status: "matched", maker: "Toyota", model: "Aqua", diagnostic_address: "0x7E8", ecu_address_role: "response", ecu_address_format: "can_11bit", source_verified: true },
   dtc_snapshot: { dtc_readout_status: "reported", captured_at: "2026-07-19T00:00:00.000Z", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] }
 });
-check(scanSessionApplicabilityDiagnosticAddressAlias.vehicleApplicability?.ecuAddress === "0x7E8" && scanSessionApplicabilityDiagnosticAddressAlias.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched", "Diagnostic address applicability aliases should normalize into a matched ECU review summary");
+check(scanSessionApplicabilityDiagnosticAddressAlias.vehicleApplicability?.ecuAddress === "0X7E8" && scanSessionApplicabilityDiagnosticAddressAlias.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched", "Diagnostic address applicability aliases should normalize into a matched ECU review summary");
 const applicabilityDiagnosticAddressAliasRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify({ bridge_export_payload: obd.buildBridgeSessionExportPayload(scanSessionApplicabilityDiagnosticAddressAlias) }));
-check(applicabilityDiagnosticAddressAliasRoundTrip?.vehicleApplicability?.ecu_address === "0x7E8" && applicabilityDiagnosticAddressAliasRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && applicabilityDiagnosticAddressAliasRoundTrip?.vehicleCommandEnabled === false, "Diagnostic address applicability aliases were not retained through read-only bridge export and JSON import");
+check(applicabilityDiagnosticAddressAliasRoundTrip?.vehicleApplicability?.ecu_address === "0X7E8" && applicabilityDiagnosticAddressAliasRoundTrip?.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched" && applicabilityDiagnosticAddressAliasRoundTrip?.vehicleCommandEnabled === false, "Diagnostic address applicability aliases were not retained through read-only bridge export and JSON import");
 const blockedApplicabilityReadoutSession = obd.buildDiagnosticScanSession({
-  vehicle_applicability: { ecu_address: "7E8" },
+  vehicle_applicability: { ecu_address: "7E8", ecu_address_role: "response", ecu_address_format: "can_11bit" },
   dtc_snapshot: obd.normalizeBridgeDtcSnapshot({ blocked: true, data: { source_ecu: "7E8", dtcs: [{ code: "P0300" }] } }),
   live_pid_snapshot: obd.normalizeBridgeLivePidSnapshot({ blocked: true, data: { source_ecu: "7E8", values: [{ pid: "0C", value: 800 }] } }),
   freeze_frame_snapshot: obd.normalizeBridgeFreezeFrameSnapshot({ blocked: true, data: { source_ecu: "7E8", values: [{ pid: "0C", value: 800 }] } }),

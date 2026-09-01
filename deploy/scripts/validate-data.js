@@ -254,9 +254,15 @@ function validateVehicleEcuApplicabilityCatalogRows(rows, file = "vehicle-ecu-ap
     const addresses = new Set();
     for (const [ecuIndex, ecu] of (ecus || []).entries()) {
       const address = String(ecu?.response_address || "").trim().toUpperCase().replace(/^0X/, "");
+      const addressValue = Number.parseInt(address, 16);
+      const addressFormatValid = ecu?.address_format === "can_11bit"
+        ? /^[0-9A-F]{1,3}$/.test(address) && addressValue <= 0x7FF
+        : ecu?.address_format === "can_29bit"
+          ? /^[0-9A-F]{8}$/.test(address) && addressValue <= 0x1FFFFFFF
+          : false;
       const ecuKey = `${String(ecu?.system_name || "").trim().toLowerCase()}::${String(ecu?.ecu_name || "").trim().toLowerCase()}`;
-      if (!isNonEmptyString(ecu?.system_name) || !isNonEmptyString(ecu?.ecu_name) || ecu?.address_role !== "response" || ecu?.diagnostic_address !== undefined || ecu?.diagnosticAddress !== undefined
-        || !/^[0-9A-F]{2,8}$/.test(address)
+      if (!isNonEmptyString(ecu?.system_name) || !isNonEmptyString(ecu?.ecu_name) || ecu?.address_role !== "response" || ecu?.responseAddress !== undefined || ecu?.addressRole !== undefined || ecu?.addressFormat !== undefined || ecu?.diagnostic_address !== undefined || ecu?.diagnosticAddress !== undefined
+        || !addressFormatValid
         || !isNonEmptyString(ecu?.protocol) || ecuKeys.has(ecuKey) || addresses.has(address)) addError(`${label} supported_ecus[${ecuIndex}] is invalid or duplicated`);
       ecuKeys.add(ecuKey);
       addresses.add(address);
@@ -288,14 +294,14 @@ const vehicleEcuCatalogFixtureEntry = {
   engine_code: "FIX-E",
   market: "JP",
   list_scope: "complete",
-  supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", protocol: "ISO 15765-4" }],
+  supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4" }],
   evidence: { evidence_id: "fixture-evidence", source_name: "Fixture source", source_url: "https://example.com/fixture", source_date: "2026-09-01", document_location: "Table 1", source_verified: true },
   read_only: true,
   vehicle_command_enabled: false
 };
 const validVehicleEcuCatalogFixture = [{ record_type: "catalog_metadata", schema_version: "vehicle_ecu_applicability_catalog_v1", catalog_id: "domestic-ecu-applicability-v1", entry_count: 1, read_only: true, vehicle_command_enabled: false }, vehicleEcuCatalogFixtureEntry];
 const oversizedVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
-oversizedVehicleEcuCatalogFixture[1].supported_ecus = Array.from({ length: 65 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", protocol: "ISO 15765-4" }));
+oversizedVehicleEcuCatalogFixture[1].supported_ecus = Array.from({ length: 65 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4" }));
 const overlappingVehicleEcuCatalogFixture = [...structuredClone(validVehicleEcuCatalogFixture), { ...structuredClone(vehicleEcuCatalogFixtureEntry), id: "fixture-overlap", evidence: { ...vehicleEcuCatalogFixtureEntry.evidence, evidence_id: "fixture-overlap-evidence" } }];
 overlappingVehicleEcuCatalogFixture[0].entry_count = 2;
 const conflictingVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
