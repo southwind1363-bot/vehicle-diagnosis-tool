@@ -23070,6 +23070,131 @@
       vehicle_command_enabled: false
     };
   }
+  function buildVehicleApplicabilityEcuObservationReviewPlan(comparisonSummary = null) {
+    if (!comparisonSummary || typeof comparisonSummary !== "object" || Array.isArray(comparisonSummary)) return null;
+    const comparison = comparisonSummary.vehicleApplicabilityEcuObservationComparisonSummary
+      || comparisonSummary.vehicle_applicability_ecu_observation_comparison_summary
+      || comparisonSummary;
+    const changedRows = Array.isArray(comparison.changedRows)
+      ? comparison.changedRows
+      : Array.isArray(comparison.changed_rows)
+        ? comparison.changed_rows
+        : [];
+    const readoutTargetRows = changedRows.filter((row) => {
+      const current = row?.current || null;
+      if (!current) return false;
+      const becameUnobserved = row?.observationStateChanged === true
+        || row?.observation_state_changed === true;
+      const responseAddressChanged = row?.observedAddressesChanged === true
+        || row?.observed_addresses_changed === true;
+      return (becameUnobserved && current.observed !== true) || responseAddressChanged;
+    });
+    const applicabilityReviewRows = changedRows.filter((row) => row?.added === true || row?.removed === true);
+    const targetObservationKeys = [...new Set(readoutTargetRows.map((row) => row?.observationKey || row?.observation_key).filter(Boolean))].sort();
+    const applicabilityReviewObservationKeys = [...new Set(applicabilityReviewRows.map((row) => row?.observationKey || row?.observation_key).filter(Boolean))].sort();
+    const targetAddressDescriptors = [...new Set(readoutTargetRows
+      .map((row) => row?.current?.diagnosticAddress || row?.current?.diagnostic_address || null)
+      .filter(Boolean)
+      .map(String))].sort();
+    const reasonIds = [
+      readoutTargetRows.some((row) => (row?.observationStateChanged === true || row?.observation_state_changed === true) && row?.current?.observed !== true)
+        ? "expected_ecu_became_unobserved"
+        : null,
+      readoutTargetRows.some((row) => row?.observedAddressesChanged === true || row?.observed_addresses_changed === true)
+        ? "ecu_response_address_changed"
+        : null,
+      applicabilityReviewRows.length > 0 ? "expected_ecu_applicability_list_changed" : null
+    ].filter(Boolean);
+    const nextReadoutCandidate = readoutTargetRows.length > 0 ? {
+      id: "ecu_info_snapshot",
+      label: "ECU情報",
+      status: "review",
+      statusReason: reasonIds[0] || "ecu_observation_changed",
+      status_reason: reasonIds[0] || "ecu_observation_changed",
+      priority: 104,
+      reason: "前回からECU観測が変化したため対象ECUを読取専用で再確認",
+      reasonId: "ecu_observation_changed",
+      reason_id: "ecu_observation_changed",
+      candidateOnly: true,
+      candidate_only: true,
+      targetSelectionRequired: true,
+      target_selection_required: true,
+      targetSelectionConfirmed: false,
+      transportResolutionRequired: true,
+      transport_resolution_required: true,
+      transportResolved: false,
+      transport_resolved: false,
+      target_selection_confirmed: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false
+    } : null;
+    const baseNextReadoutRequest = nextReadoutCandidate ? buildReadOnlyNextReadoutRequest(nextReadoutCandidate) : null;
+    const nextReadoutRequest = baseNextReadoutRequest ? {
+      ...baseNextReadoutRequest,
+      serviceMode: null,
+      service_mode: null,
+      transportResolutionRequired: true,
+      transport_resolution_required: true,
+      transportResolved: false,
+      transport_resolved: false,
+      executionBlockReason: "ecu_transport_resolution_required",
+      execution_block_reason: "ecu_transport_resolution_required"
+    } : null;
+    const reviewRequired = readoutTargetRows.length > 0 || applicabilityReviewRows.length > 0;
+    return {
+      schemaVersion: "vehicle_applicability_ecu_observation_review_plan_v1",
+      schema_version: "vehicle_applicability_ecu_observation_review_plan_v1",
+      reviewRequired,
+      review_required: reviewRequired,
+      readoutReviewRequired: readoutTargetRows.length > 0,
+      readout_review_required: readoutTargetRows.length > 0,
+      applicabilityReviewRequired: applicabilityReviewRows.length > 0,
+      applicability_review_required: applicabilityReviewRows.length > 0,
+      reasonIds,
+      reason_ids: reasonIds,
+      targetObservationKeys,
+      target_observation_keys: targetObservationKeys,
+      targetObservationCount: targetObservationKeys.length,
+      target_observation_count: targetObservationKeys.length,
+      targetAddressDescriptors,
+      target_address_descriptors: targetAddressDescriptors,
+      applicabilityReviewObservationKeys,
+      applicability_review_observation_keys: applicabilityReviewObservationKeys,
+      applicabilityReviewObservationCount: applicabilityReviewObservationKeys.length,
+      applicability_review_observation_count: applicabilityReviewObservationKeys.length,
+      readoutTargetRows,
+      readout_target_rows: readoutTargetRows,
+      applicabilityReviewRows,
+      applicability_review_rows: applicabilityReviewRows,
+      nextReadoutCandidate,
+      next_readout_candidate: nextReadoutCandidate,
+      nextReadoutRequest,
+      next_readout_request: nextReadoutRequest,
+      targetSelectionRequired: readoutTargetRows.length > 0,
+      target_selection_required: readoutTargetRows.length > 0,
+      targetSelectionConfirmed: false,
+      target_selection_confirmed: false,
+      transportResolutionRequired: readoutTargetRows.length > 0,
+      transport_resolution_required: readoutTargetRows.length > 0,
+      transportResolved: false,
+      transport_resolved: false,      automaticTargetSelectionEnabled: false,
+      automatic_target_selection_enabled: false,
+      executionEnabled: false,
+      execution_enabled: false,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
   function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
     if (!importedAnalysisReadinessSummary || typeof importedAnalysisReadinessSummary !== "object") return null;
     const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
@@ -25841,12 +25966,15 @@
     const vehicleApplicabilityEcuObservationComparisonSummary = analysisReadinessComparison?.vehicleApplicabilityEcuObservationComparisonSummary
       || analysisReadinessComparison?.vehicle_applicability_ecu_observation_comparison_summary
       || null;
+    const vehicleApplicabilityEcuObservationReviewPlan = buildVehicleApplicabilityEcuObservationReviewPlan(vehicleApplicabilityEcuObservationComparisonSummary);
     const nextReadoutGuardReviewRequestPlanSummary = nextReadoutGuardComparison?.reviewRequestPlanSummary
       || nextReadoutGuardComparison?.review_request_plan_summary
       || null;
     return {
       schemaVersion: "imported_session_comparison_v1",
       schema_version: "imported_session_comparison_v1",
+      vehicleApplicabilityEcuObservationReviewPlan,
+      vehicle_applicability_ecu_observation_review_plan: vehicleApplicabilityEcuObservationReviewPlan,
       vehicleApplicabilityEcuObservationComparisonSummary,
       vehicle_applicability_ecu_observation_comparison_summary: vehicleApplicabilityEcuObservationComparisonSummary,
       vehicleApplicabilityEcuObservationsChanged: vehicleApplicabilityEcuObservationComparisonSummary?.changed === true,
@@ -42661,6 +42789,7 @@
     normalizeVehicleApplicabilitySnapshot,
     normalizeVehicleApplicabilityEcuObservationComparisonRows,
     buildVehicleApplicabilityEcuObservationComparisonSummary,
+    buildVehicleApplicabilityEcuObservationReviewPlan,
     buildVehicleApplicabilityFieldMatchSummary,
     normalizeObservationContext,
     normalizeCauseCandidateLog,
