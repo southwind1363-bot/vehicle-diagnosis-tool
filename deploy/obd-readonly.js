@@ -22941,6 +22941,135 @@
     );
   }
 
+  function normalizeVehicleApplicabilityEcuObservationComparisonRows(summary = {}) {
+    if (!summary || typeof summary !== "object" || Array.isArray(summary)) return [];
+    const checklistById = summary.checklistById || summary.checklist_by_id || {};
+    const vehicleApplicabilityChecklist = checklistById.vehicle_applicability || checklistById.vehicleApplicability || {};
+    const ecuMatchSummary = summary.vehicleApplicabilityEcuMatchSummary
+      || summary.vehicle_applicability_ecu_match_summary
+      || vehicleApplicabilityChecklist.ecuMatchSummary
+      || vehicleApplicabilityChecklist.ecu_match_summary
+      || summary;
+    const observations = Array.isArray(ecuMatchSummary?.expectedEcuObservations)
+      ? ecuMatchSummary.expectedEcuObservations
+      : Array.isArray(ecuMatchSummary?.expected_ecu_observations)
+        ? ecuMatchSummary.expected_ecu_observations
+        : [];
+    const normalizeKeyPart = (value, fallback) => String(value || fallback)
+      .normalize("NFKC")
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[|:]/g, "_");
+    const duplicateCounts = new Map();
+    return observations.map((item) => {
+      const systemName = item?.systemName || item?.system_name || null;
+      const ecuName = item?.ecuName || item?.ecu_name || null;
+      const diagnosticAddress = item?.diagnosticAddress || item?.diagnostic_address || null;
+      const protocol = item?.protocol || null;
+      const observationKeyBase = [
+        `system:${normalizeKeyPart(systemName, "unknown")}`,
+        `ecu:${normalizeKeyPart(ecuName, "unknown")}`,
+        `address:${normalizeKeyPart(diagnosticAddress, "unknown")}`,
+        `protocol:${normalizeKeyPart(protocol, "unknown")}`
+      ].join("|");
+      const duplicateIndex = (duplicateCounts.get(observationKeyBase) || 0) + 1;
+      duplicateCounts.set(observationKeyBase, duplicateIndex);
+      const reconstructedKey = duplicateIndex > 1 ? `${observationKeyBase}|duplicate:${duplicateIndex}` : observationKeyBase;
+      const observationKey = String(item?.observationKey || item?.observation_key || reconstructedKey);
+      const observedAddresses = [...new Set((Array.isArray(item?.observedAddresses)
+        ? item.observedAddresses
+        : Array.isArray(item?.observed_addresses)
+          ? item.observed_addresses
+          : [])
+        .filter(Boolean)
+        .map((value) => String(value).trim().toUpperCase()))].sort();
+      return {
+        observationKey,
+        observation_key: observationKey,
+        systemName,
+        system_name: systemName,
+        ecuName,
+        ecu_name: ecuName,
+        diagnosticAddress,
+        diagnostic_address: diagnosticAddress,
+        protocol,
+        observed: item?.observed === true,
+        observedAddresses,
+        observed_addresses: observedAddresses
+      };
+    }).sort((left, right) => left.observationKey.localeCompare(right.observationKey));
+  }
+
+  function buildVehicleApplicabilityEcuObservationComparisonSummary(importedSummary = {}, currentSummary = {}) {
+    const importedRows = normalizeVehicleApplicabilityEcuObservationComparisonRows(importedSummary);
+    const currentRows = normalizeVehicleApplicabilityEcuObservationComparisonRows(currentSummary);
+    const importedRowByKey = Object.fromEntries(importedRows.map((row) => [row.observationKey, row]));
+    const currentRowByKey = Object.fromEntries(currentRows.map((row) => [row.observationKey, row]));
+    const importedKeys = importedRows.map((row) => row.observationKey);
+    const currentKeys = currentRows.map((row) => row.observationKey);
+    const addedKeys = currentKeys.filter((key) => !importedRowByKey[key]);
+    const removedKeys = importedKeys.filter((key) => !currentRowByKey[key]);
+    const sharedKeys = currentKeys.filter((key) => importedRowByKey[key]);
+    const observationStateChangedKeys = sharedKeys.filter((key) => importedRowByKey[key].observed !== currentRowByKey[key].observed);
+    const observedAddressChangedKeys = sharedKeys.filter((key) => importedRowByKey[key].observedAddresses.join("|") !== currentRowByKey[key].observedAddresses.join("|"));
+    const changedKeys = [...new Set([...addedKeys, ...removedKeys, ...observationStateChangedKeys, ...observedAddressChangedKeys])].sort();
+    const changedRows = changedKeys.map((observationKey) => ({
+      observationKey,
+      observation_key: observationKey,
+      imported: importedRowByKey[observationKey] || null,
+      current: currentRowByKey[observationKey] || null,
+      added: addedKeys.includes(observationKey),
+      removed: removedKeys.includes(observationKey),
+      observationStateChanged: observationStateChangedKeys.includes(observationKey),
+      observation_state_changed: observationStateChangedKeys.includes(observationKey),
+      observedAddressesChanged: observedAddressChangedKeys.includes(observationKey),
+      observed_addresses_changed: observedAddressChangedKeys.includes(observationKey)
+    }));
+    return {
+      schemaVersion: "vehicle_applicability_ecu_observation_comparison_v1",
+      schema_version: "vehicle_applicability_ecu_observation_comparison_v1",
+      changed: changedKeys.length > 0,
+      importedCount: importedRows.length,
+      imported_count: importedRows.length,
+      currentCount: currentRows.length,
+      current_count: currentRows.length,
+      countDelta: currentRows.length - importedRows.length,
+      count_delta: currentRows.length - importedRows.length,
+      importedRows,
+      imported_rows: importedRows,
+      currentRows,
+      current_rows: currentRows,
+      addedKeys,
+      added_keys: addedKeys,
+      addedCount: addedKeys.length,
+      added_count: addedKeys.length,
+      removedKeys,
+      removed_keys: removedKeys,
+      removedCount: removedKeys.length,
+      removed_count: removedKeys.length,
+      observationStateChangedKeys,
+      observation_state_changed_keys: observationStateChangedKeys,
+      observationStateChangedCount: observationStateChangedKeys.length,
+      observation_state_changed_count: observationStateChangedKeys.length,
+      observedAddressChangedKeys,
+      observed_address_changed_keys: observedAddressChangedKeys,
+      observedAddressChangedCount: observedAddressChangedKeys.length,
+      observed_address_changed_count: observedAddressChangedKeys.length,
+      changedKeys,
+      changed_keys: changedKeys,
+      changedCount: changedKeys.length,
+      changed_count: changedKeys.length,
+      changedRows,
+      changed_rows: changedRows,
+      readOnly: true,
+      read_only: true,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
+  }
   function buildImportedAnalysisReadinessComparisonSummary(importedAnalysisReadinessSummary = null, currentAnalysisReadinessSummary = {}) {
     if (!importedAnalysisReadinessSummary || typeof importedAnalysisReadinessSummary !== "object") return null;
     const currentSummary = currentAnalysisReadinessSummary && typeof currentAnalysisReadinessSummary === "object"
@@ -22990,6 +23119,7 @@
     const currentVehicleApplicabilitySourceVerified = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "sourceVerified") === true;
     const importedVehicleApplicabilityEvidenceReviewRequired = readAliasValue(importedVehicleApplicabilityEvidenceSummary, "reviewRequired") === true;
     const currentVehicleApplicabilityEvidenceReviewRequired = readAliasValue(currentVehicleApplicabilityEvidenceSummary, "reviewRequired") === true;
+    const vehicleApplicabilityEcuObservationComparisonSummary = buildVehicleApplicabilityEcuObservationComparisonSummary(importedAnalysisReadinessSummary, currentSummary);
     const importedReady = readAliasValue(importedAnalysisReadinessSummary, "ready") === true;
     const currentReady = readAliasValue(currentSummary, "ready") === true;
     const importedStatus = readAliasValue(importedAnalysisReadinessSummary, "status") || null;
@@ -23102,6 +23232,18 @@
       vehicle_applicability_evidence_changed: importedVehicleApplicabilityEvidencePresent !== currentVehicleApplicabilityEvidencePresent
         || importedVehicleApplicabilitySourceVerified !== currentVehicleApplicabilitySourceVerified
         || importedVehicleApplicabilityEvidenceReviewRequired !== currentVehicleApplicabilityEvidenceReviewRequired,
+      vehicleApplicabilityEcuObservationComparisonSummary,
+      vehicle_applicability_ecu_observation_comparison_summary: vehicleApplicabilityEcuObservationComparisonSummary,
+      vehicleApplicabilityEcuObservationsChanged: vehicleApplicabilityEcuObservationComparisonSummary.changed,
+      vehicle_applicability_ecu_observations_changed: vehicleApplicabilityEcuObservationComparisonSummary.changed,
+      vehicleApplicabilityEcuObservationAddedKeys: [...vehicleApplicabilityEcuObservationComparisonSummary.addedKeys],
+      vehicle_applicability_ecu_observation_added_keys: [...vehicleApplicabilityEcuObservationComparisonSummary.addedKeys],
+      vehicleApplicabilityEcuObservationRemovedKeys: [...vehicleApplicabilityEcuObservationComparisonSummary.removedKeys],
+      vehicle_applicability_ecu_observation_removed_keys: [...vehicleApplicabilityEcuObservationComparisonSummary.removedKeys],
+      vehicleApplicabilityEcuObservationStateChangedKeys: [...vehicleApplicabilityEcuObservationComparisonSummary.observationStateChangedKeys],
+      vehicle_applicability_ecu_observation_state_changed_keys: [...vehicleApplicabilityEcuObservationComparisonSummary.observationStateChangedKeys],
+      vehicleApplicabilityEcuObservationAddressChangedKeys: [...vehicleApplicabilityEcuObservationComparisonSummary.observedAddressChangedKeys],
+      vehicle_applicability_ecu_observation_address_changed_keys: [...vehicleApplicabilityEcuObservationComparisonSummary.observedAddressChangedKeys],
       importedNextReadoutId,
       imported_next_readout_id: importedNextReadoutId,
       currentNextReadoutId,
@@ -24672,6 +24814,7 @@
       || comparison.checklistReviewIdsChanged === true
       || comparison.vehicleApplicabilityChecklistChanged === true
       || comparison.vehicleApplicabilityEvidenceChanged === true
+      || comparison.vehicleApplicabilityEcuObservationsChanged === true
       || comparison.reportedDtcStateCountsChanged === true
       || comparison.observedEcuKeysChanged === true
       || comparison.dtcIdentityKeysChanged === true
@@ -24718,6 +24861,7 @@
       comparison.nextBlockedReasonChanged === true || comparison.blockedReasonIdsChanged === true || Number(comparison.blockedReasonCountDelta || 0) !== 0 ? "blocked_reasons" : null,
       comparison.actionRequiredChanged === true || comparison.nextActionChanged === true || comparison.actionIdsChanged === true || comparison.actionReasonIdsChanged === true || comparison.actionReadoutIdsChanged === true || Number(comparison.actionQueueCountDelta || comparison.actionSummaryCountDelta || comparison.actionSummaryReasonCountDelta || comparison.actionSummaryReadoutCountDelta || 0) !== 0 ? "request_plan_actions" : null,
       comparison.checklistBlockedIdsChanged === true || comparison.checklistReviewIdsChanged === true || comparison.vehicleApplicabilityChecklistChanged === true || comparison.vehicleApplicabilityEvidenceChanged === true ? "analysis_checklist" : null,
+      comparison.vehicleApplicabilityEcuObservationsChanged === true ? "analysis_checklist" : null,
       comparison.reportedDtcStateCountsChanged === true ? "dtc_reported_states" : null,
       comparison.observedEcuKeysChanged === true ? "observed_ecu_responses" : null,
       comparison.dtcIdentityKeysChanged === true ? "dtc_identities" : null,
@@ -24758,7 +24902,8 @@
     const readChangedIds = (comparison = {}, fields = []) => [...new Set(fields.flatMap((field) => Array.isArray(comparison[field]) ? comparison[field] : []).filter(Boolean))];
     const readApplicabilityStateChangedIds = (comparison = {}) => [
       comparison.vehicleApplicabilityChecklistChanged === true ? "vehicle_applicability_checklist" : null,
-      comparison.vehicleApplicabilityEvidenceChanged === true ? "vehicle_applicability_evidence" : null
+      comparison.vehicleApplicabilityEvidenceChanged === true ? "vehicle_applicability_evidence" : null,
+      comparison.vehicleApplicabilityEcuObservationsChanged === true ? "vehicle_applicability_ecu_observations" : null
     ].filter(Boolean);
     const readAddedIds = (comparison = {}) => [...new Set([
       ...readChangedIds(comparison, [
@@ -24815,7 +24960,8 @@
           analysisChecklistChanged: item.comparison.checklistBlockedIdsChanged === true
             || item.comparison.checklistReviewIdsChanged === true
             || item.comparison.vehicleApplicabilityChecklistChanged === true
-            || item.comparison.vehicleApplicabilityEvidenceChanged === true,
+            || item.comparison.vehicleApplicabilityEvidenceChanged === true
+            || item.comparison.vehicleApplicabilityEcuObservationsChanged === true,
           vehicleApplicabilityChecklistChanged: item.comparison.vehicleApplicabilityChecklistChanged === true,
           vehicle_applicability_checklist_changed: item.comparison.vehicleApplicabilityChecklistChanged === true,
           vehicleApplicabilityEvidenceChanged: item.comparison.vehicleApplicabilityEvidenceChanged === true,
@@ -25692,12 +25838,19 @@
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false
     };
+    const vehicleApplicabilityEcuObservationComparisonSummary = analysisReadinessComparison?.vehicleApplicabilityEcuObservationComparisonSummary
+      || analysisReadinessComparison?.vehicle_applicability_ecu_observation_comparison_summary
+      || null;
     const nextReadoutGuardReviewRequestPlanSummary = nextReadoutGuardComparison?.reviewRequestPlanSummary
       || nextReadoutGuardComparison?.review_request_plan_summary
       || null;
     return {
       schemaVersion: "imported_session_comparison_v1",
       schema_version: "imported_session_comparison_v1",
+      vehicleApplicabilityEcuObservationComparisonSummary,
+      vehicle_applicability_ecu_observation_comparison_summary: vehicleApplicabilityEcuObservationComparisonSummary,
+      vehicleApplicabilityEcuObservationsChanged: vehicleApplicabilityEcuObservationComparisonSummary?.changed === true,
+      vehicle_applicability_ecu_observations_changed: vehicleApplicabilityEcuObservationComparisonSummary?.changed === true,
       hasImportedSessionState: true,
       has_imported_session_state: true,
       comparedSectionCount: comparisons.length,
@@ -25897,8 +26050,8 @@
       request_plan_summary_changed: comparisons.some((item) => item.requestPlanStateChanged === true || item.requestPlanNextRequestChanged === true || item.requestPlanNextBridgeIntentChanged === true),
       primaryBlockerChanged: comparisons.some((item) => item.primaryBlockingChanged === true || item.primaryBlockingReasonChanged === true || item.primaryBlockingReadoutChanged === true || item.primaryBlockingBridgeIntentChanged === true),
       primary_blocker_changed: comparisons.some((item) => item.primaryBlockingChanged === true || item.primaryBlockingReasonChanged === true || item.primaryBlockingReadoutChanged === true || item.primaryBlockingBridgeIntentChanged === true),
-      analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true || item.vehicleApplicabilityEvidenceChanged === true),
-      analysis_checklist_changed: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true || item.vehicleApplicabilityEvidenceChanged === true),
+      analysisChecklistChanged: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true || item.vehicleApplicabilityEvidenceChanged === true) || comparisons.some((item) => item.vehicleApplicabilityEcuObservationsChanged === true),
+      analysis_checklist_changed: comparisons.some((item) => item.checklistBlockedIdsChanged === true || item.checklistReviewIdsChanged === true || item.vehicleApplicabilityChecklistChanged === true || item.vehicleApplicabilityEvidenceChanged === true) || comparisons.some((item) => item.vehicleApplicabilityEcuObservationsChanged === true),
       vehicleApplicabilityChecklistChanged: comparisons.some((item) => item.vehicleApplicabilityChecklistChanged === true),
       vehicle_applicability_checklist_changed: comparisons.some((item) => item.vehicleApplicabilityChecklistChanged === true),
       vehicleApplicabilityEvidenceChanged: comparisons.some((item) => item.vehicleApplicabilityEvidenceChanged === true),
@@ -42506,6 +42659,8 @@
     buildReadoutCoverageSnapshot,
     normalizeReadoutCoverageSnapshot,
     normalizeVehicleApplicabilitySnapshot,
+    normalizeVehicleApplicabilityEcuObservationComparisonRows,
+    buildVehicleApplicabilityEcuObservationComparisonSummary,
     buildVehicleApplicabilityFieldMatchSummary,
     normalizeObservationContext,
     normalizeCauseCandidateLog,

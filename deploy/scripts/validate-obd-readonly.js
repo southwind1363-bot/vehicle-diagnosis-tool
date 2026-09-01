@@ -3846,7 +3846,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('対応ECU観測の安定識別キーを追加'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('前回セッションとのECU観測差分を保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4458,7 +4458,7 @@ check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && 
 check(source.includes('const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);') && source.includes('const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;') && source.includes('expected_addresses: expectedAddresses,') && source.includes('matched_expected_addresses: matchedExpectedAddresses,') && source.includes('partial_expected_address_observation: partialExpectedAddressObservation,') && source.includes('expected_ecu_observations: expectedEcuObservations,') && source.includes('observation_key: observationKey,') && source.includes('observation_duplicate_index: observationDuplicateIndex,'), "Vehicle applicability ECU matching should use supported ECU addresses only when the primary ECU address is absent and retain factual per-ECU match evidence");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "対応ECU観測の安定識別キーを追加"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "前回セッションとのECU観測差分を保持"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4796,7 +4796,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "対応ECU観測の安定識別キーを追加"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "前回セッションとのECU観測差分を保持"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -20319,6 +20319,82 @@ check(duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicab
   && new Set(duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.map((item) => item.observationKey)).size === 2
   && duplicateSupportedEcuObservationSession.vehicleCommandEnabled === false,
 "Duplicate supported ECU rows did not receive deterministic unique observation keys in read-only mode");
+const legacyEcuObservationSummary = {
+  vehicle_applicability_ecu_match_summary: {
+    expected_ecu_observations: [
+      { system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN", observed: false, observed_addresses: [] },
+      { system_name: "Brake", ecu_name: "ABS", diagnostic_address: "7EA", protocol: "ISO 15765-4", observed: true, observed_addresses: ["7ea"] }
+    ]
+  }
+};
+const reorderedEcuObservationSummary = {
+  vehicleApplicabilityEcuMatchSummary: {
+    expectedEcuObservations: [
+      { systemName: "Brake", ecuName: "ABS", diagnosticAddress: "7EA", protocol: "ISO 15765-4", observed: true, observedAddresses: ["7EA"] },
+      { systemName: "Engine", ecuName: "ECM", diagnosticAddress: "7E8", protocol: "CAN", observed: false, observedAddresses: [] }
+    ]
+  }
+};
+const unchangedLegacyEcuObservationComparison = obd.buildVehicleApplicabilityEcuObservationComparisonSummary(legacyEcuObservationSummary, reorderedEcuObservationSummary);
+check(unchangedLegacyEcuObservationComparison.changed === false
+  && unchangedLegacyEcuObservationComparison.importedCount === 2
+  && unchangedLegacyEcuObservationComparison.currentCount === 2
+  && unchangedLegacyEcuObservationComparison.changedKeys.length === 0
+  && unchangedLegacyEcuObservationComparison.vehicleCommandEnabled === false
+  && unchangedLegacyEcuObservationComparison.wouldTransmit === false,
+"Legacy ECU observation rows without keys were not reconstructed for order-independent read-only comparison");
+const changedEcuObservationComparison = obd.buildVehicleApplicabilityEcuObservationComparisonSummary(legacyEcuObservationSummary, {
+  vehicleApplicabilityEcuMatchSummary: {
+    expectedEcuObservations: [
+      { systemName: "Brake", ecuName: "ABS", diagnosticAddress: "7EA", protocol: "ISO 15765-4", observed: false, observedAddresses: [] },
+      { systemName: "Body", ecuName: "BCM", diagnosticAddress: "7EB", protocol: "CAN", observed: true, observedAddresses: ["7EB"] }
+    ]
+  }
+});
+check(changedEcuObservationComparison.changed === true
+  && changedEcuObservationComparison.addedCount === 1
+  && changedEcuObservationComparison.removedCount === 1
+  && changedEcuObservationComparison.observationStateChangedCount === 1
+  && changedEcuObservationComparison.observedAddressChangedCount === 1
+  && changedEcuObservationComparison.changedRows.length === 3
+  && changedEcuObservationComparison.readOnly === true
+  && changedEcuObservationComparison.vehicleCommandEnabled === false,
+"ECU observation comparison did not retain added, removed, state-changed, and response-address evidence");
+const normalizedDuplicateLegacyEcuObservationRows = obd.normalizeVehicleApplicabilityEcuObservationComparisonRows({ expected_ecu_observations: [
+  { system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN", observed: true, observed_addresses: ["7E8"] },
+  { system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN", observed: true, observed_addresses: ["7E8"] }
+] });
+check(normalizedDuplicateLegacyEcuObservationRows[0]?.observationKey === "system:engine|ecu:ecm|address:7e8|protocol:can"
+  && normalizedDuplicateLegacyEcuObservationRows[1]?.observationKey === "system:engine|ecu:ecm|address:7e8|protocol:can|duplicate:2"
+  && new Set(normalizedDuplicateLegacyEcuObservationRows.map((row) => row.observationKey)).size === 2,
+"Legacy duplicate ECU observation rows did not receive deterministic comparison keys");
+const changedSupportedEcuObservationSession = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-observation-comparison",
+  vehicle_applicability: { status: "matched", source_verified: true, supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }, { system_name: "Brake", ecu_name: "ABS", diagnostic_address: "7EA", protocol: "ISO 15765-4" }] },
+  dtc_snapshot: { dtc_readout_status: "reported", dtcs: [{ code: "P0171", status: "stored", ecu: "7E8" }] },
+  imported_analysis_readiness_summary: scanSessionSupportedEcuMatched.coreSessionStatus.analysisReadinessSummary
+});
+const integratedEcuObservationComparison = changedSupportedEcuObservationSession.importedAnalysisReadinessComparisonSummary?.vehicleApplicabilityEcuObservationComparisonSummary;
+check(integratedEcuObservationComparison?.changed === true
+  && integratedEcuObservationComparison?.observationStateChangedCount === 2
+  && integratedEcuObservationComparison?.observedAddressChangedCount === 2
+  && changedSupportedEcuObservationSession.importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationsChanged === true
+  && changedSupportedEcuObservationSession.importedSessionComparisonSummary?.vehicleApplicabilityChangedIds?.includes("vehicle_applicability_ecu_observations")
+  && changedSupportedEcuObservationSession.importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary?.rowById?.vehicle_applicability_ecu_observations?.direction === "mixed"
+  && changedSupportedEcuObservationSession.vehicleCommandEnabled === false
+  && changedSupportedEcuObservationSession.wouldTransmit === false,
+"Session comparison did not promote factual ECU observation changes into the read-only applicability review summary");
+const changedSupportedEcuObservationRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(changedSupportedEcuObservationSession)));
+check(changedSupportedEcuObservationRoundTrip.importedAnalysisReadinessComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary?.changed === true
+  && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicle_applicability_ecu_observations_changed === true
+  && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary?.changed_count === 2
+  && changedSupportedEcuObservationRoundTrip.vehicleCommandEnabled === false
+  && changedSupportedEcuObservationRoundTrip.wouldTransmit === false,
+"ECU observation comparison evidence was lost or became write-enabled through bridge export and JSON import");
+check(appSource.includes('function formatVehicleApplicabilityEcuObservationComparisonSummary(summary, fallback = NO_DATA)')
+  && appSource.includes('"ECU観測差分"')
+  && appSource.includes('notes.push(`ECU観測差分 ${vehicleApplicabilityEcuObservationComparisonNote}`)'),
+"ECU observation comparison is not exposed in the diagnostic flow, detailed session, and comparison notes");
 const scanSessionSupportedEcuRangeMatched = obd.buildDiagnosticScanSession({
   session_id: "shop-test-supported-ecu-range-matched",
   vehicle_applicability: { status: "matched", source_verified: true, supported_ecus: [{ system_name: "Powertrain", diagnostic_address: "0x7e8-0x7ef" }] },

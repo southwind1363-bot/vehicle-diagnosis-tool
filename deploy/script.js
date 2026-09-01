@@ -222,12 +222,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7305件",
+  validationCheckLabel: "OBD安全検証 7311件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "対応ECU観測の安定識別キーを追加",
+  recentMilestone: "前回セッションとのECU観測差分を保持",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.391";
+const APP_VERSION = "3.13.392";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9701,6 +9701,31 @@ function formatVehicleApplicabilityChangedRowSummary(summary, fallback = NO_DATA
   return parts.length ? parts.join(" / ") : fallback;
 }
 
+function formatVehicleApplicabilityEcuObservationComparisonSummary(summary, fallback = NO_DATA) {
+  if (!summary || typeof summary !== "object") return fallback;
+  const comparison = summary.vehicleApplicabilityEcuObservationComparisonSummary || summary.vehicle_applicability_ecu_observation_comparison_summary || summary;
+  if (!comparison || typeof comparison !== "object") return fallback;
+  const importedCount = Number(comparison.importedCount ?? comparison.imported_count ?? 0);
+  const currentCount = Number(comparison.currentCount ?? comparison.current_count ?? 0);
+  if (comparison.changed !== true) return importedCount > 0 || currentCount > 0 ? `変更なし / ${currentCount} ECU` : fallback;
+  const addedCount = Number(comparison.addedCount ?? comparison.added_count ?? 0);
+  const removedCount = Number(comparison.removedCount ?? comparison.removed_count ?? 0);
+  const stateChangedCount = Number(comparison.observationStateChangedCount ?? comparison.observation_state_changed_count ?? 0);
+  const addressChangedCount = Number(comparison.observedAddressChangedCount ?? comparison.observed_address_changed_count ?? 0);
+  const parts = [`前回${importedCount} -> 今回${currentCount}`];
+  if (addedCount > 0) parts.push(`追加${addedCount}`);
+  if (removedCount > 0) parts.push(`消失${removedCount}`);
+  if (stateChangedCount > 0) parts.push(`観測変化${stateChangedCount}`);
+  if (addressChangedCount > 0) parts.push(`応答先変化${addressChangedCount}`);
+  const changedRows = Array.isArray(comparison.changedRows) ? comparison.changedRows : Array.isArray(comparison.changed_rows) ? comparison.changed_rows : [];
+  const labels = changedRows.slice(0, 3).map((row) => {
+    const observation = row.current || row.imported || {};
+    return observation.systemName || observation.system_name || observation.ecuName || observation.ecu_name || observation.diagnosticAddress || observation.diagnostic_address || null;
+  }).filter(Boolean);
+  if (labels.length) parts.push(labels.join(","));
+  if (changedRows.length > labels.length) parts.push(`他${changedRows.length - labels.length}`);
+  return parts.join(" / ");
+}
 function formatChangedIdReviewTargetIds(ids = []) {
   const labels = ids
     .slice(0, 3)
@@ -10476,6 +10501,14 @@ function renderObdDiagnosticFlowPanel(session = null) {
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
   const vehicleApplicabilityChangedRowSummary = session.importedVehicleApplicabilityChangedRowSummary || session.imported_vehicle_applicability_changed_row_summary || changedIdDisplaySummary?.vehicleApplicabilityChangedRowSummary || changedIdDisplaySummary?.vehicle_applicability_changed_row_summary || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary || null;
   const vehicleApplicabilityChangedRowLabel = formatVehicleApplicabilityChangedRowSummary(vehicleApplicabilityChangedRowSummary, NO_DATA);
+  const vehicleApplicabilityEcuObservationComparisonSummary = session?.importedAnalysisReadinessComparisonSummary?.vehicleApplicabilityEcuObservationComparisonSummary
+    || session?.importedAnalysisReadinessComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary
+    || session?.imported_analysis_readiness_comparison_summary?.vehicleApplicabilityEcuObservationComparisonSummary
+    || session?.imported_analysis_readiness_comparison_summary?.vehicle_applicability_ecu_observation_comparison_summary
+    || importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationComparisonSummary
+    || importedSessionComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary
+    || null;
+  const vehicleApplicabilityEcuObservationComparisonLabel = formatVehicleApplicabilityEcuObservationComparisonSummary(vehicleApplicabilityEcuObservationComparisonSummary, NO_DATA);
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventorySummary = session.coreReadoutInventorySummary || session.core_readout_inventory_summary || null;
   const coreReadoutInventoryComparisonSummary = session.importedCoreReadoutInventoryComparisonSummary || session.imported_core_readout_inventory_comparison_summary || null;
@@ -10574,6 +10607,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
   addObdDiagnosticFlowMetric(grid, "ECU適合", applicabilityEcuMatchLabel, applicabilityEcuMatchSummary?.status === "matched" ? "ready" : applicabilityEcuMatchSummary?.status === "mismatch" ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "ECU内訳", applicabilityEcuObservationLabel);
   addObdDiagnosticFlowMetric(grid, "適合差分", vehicleApplicabilityChangedRowLabel, vehicleApplicabilityChangedRowSummary?.changed === true ? "pending" : "");
+  addObdDiagnosticFlowMetric(grid, "ECU観測差分", vehicleApplicabilityEcuObservationComparisonLabel, vehicleApplicabilityEcuObservationComparisonSummary?.changed === true ? "pending" : "");
   addObdDiagnosticFlowMetric(grid, "未完了", `${pendingCount}項目`);
   addObdDiagnosticFlowMetric(grid, "送信状態", "read-only維持");
 
@@ -10799,6 +10833,14 @@ function renderObdDeveloperSessionSummary(session = null) {
   const changedIdDisplayLabel = formatChangedIdDisplaySummary(changedIdDisplaySummary, NO_DATA);
   const vehicleApplicabilityChangedRowSummary = session?.importedVehicleApplicabilityChangedRowSummary || session?.imported_vehicle_applicability_changed_row_summary || changedIdDisplaySummary?.vehicleApplicabilityChangedRowSummary || changedIdDisplaySummary?.vehicle_applicability_changed_row_summary || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary || null;
   const vehicleApplicabilityChangedRowLabel = formatVehicleApplicabilityChangedRowSummary(vehicleApplicabilityChangedRowSummary, NO_DATA);
+  const vehicleApplicabilityEcuObservationComparisonSummary = session?.importedAnalysisReadinessComparisonSummary?.vehicleApplicabilityEcuObservationComparisonSummary
+    || session?.importedAnalysisReadinessComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary
+    || session?.imported_analysis_readiness_comparison_summary?.vehicleApplicabilityEcuObservationComparisonSummary
+    || session?.imported_analysis_readiness_comparison_summary?.vehicle_applicability_ecu_observation_comparison_summary
+    || importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationComparisonSummary
+    || importedSessionComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary
+    || null;
+  const vehicleApplicabilityEcuObservationComparisonLabel = formatVehicleApplicabilityEcuObservationComparisonSummary(vehicleApplicabilityEcuObservationComparisonSummary, NO_DATA);
   const changedIdReviewTargetActionLabel = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, NO_DATA);
   const coreReadoutInventoryLabel = formatCoreReadoutInventorySummary(session?.coreReadoutInventorySummary || session?.core_readout_inventory_summary, NO_DATA);
   const coreReadoutInventoryComparisonLabel = formatCoreReadoutInventoryComparisonSummary(session?.importedCoreReadoutInventoryComparisonSummary || session?.imported_core_readout_inventory_comparison_summary, NO_DATA);
@@ -10982,6 +11024,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   values.splice(6, 0, ["ECU適合", vehicleApplicabilityEcuMatchLabel]);
   values.splice(6, 0, ["ECU内訳", vehicleApplicabilityEcuObservationLabel]);
   values.splice(6, 0, ["適合差分", vehicleApplicabilityChangedRowLabel]);
+  values.splice(6, 0, ["ECU観測差分", vehicleApplicabilityEcuObservationComparisonLabel]);
   values.splice(values.length - 1, 0, ["識別情報", sensitiveLabel]);
   values.splice(6, 0, ["コア進捗", coreSessionStatusLabel], ["読取内訳", coreReadoutInventoryLabel], ["在庫比較", coreReadoutInventoryComparisonLabel], ["読取品質", readoutQualityLabel], ...(importedReadoutQualitySummary ? [["受信品質", importedReadoutQualityLabel]] : []), ["実機サンプル", manufacturerSampleReadinessLabel], ["実機応答比較", manufacturerSampleResponseComparisonLabel], ["空応答", emptyReadoutLabel], ["保留要因", blockingSummaryLabel], ["主保留比較", primaryBlockerComparisonLabel], ["読取差分", changedIdDisplayLabel], ["差分確認", changedIdReviewTargetActionLabel], ["次操作", nextReadoutLabel], ["読取理由", nextReadoutReasonLabel], ["計画安全", nextReadoutGuardLabel], ["計画差分", importedNextReadoutGuardComparisonLabel], ["次読取整合", nextReadoutChangeLabel], ["要求安全", nextReadoutRequestSafetyLabel], ["候補安全", nextReadoutCandidateSafetyLabel]);
   values.splice(10, 0, ["品質比較", readoutQualityComparisonLabel]);
@@ -11758,6 +11801,18 @@ function analyzeObdScannerImport(options = {}) {
   const vehicleApplicabilityChangedRowNote = formatVehicleApplicabilityChangedRowSummary(summarySource.importedVehicleApplicabilityChangedRowSummary || summarySource.imported_vehicle_applicability_changed_row_summary || changedIdDisplaySummary?.vehicleApplicabilityChangedRowSummary || changedIdDisplaySummary?.vehicle_applicability_changed_row_summary || importedSessionComparisonSummary?.vehicleApplicabilityChangedRowSummary || importedSessionComparisonSummary?.vehicle_applicability_changed_row_summary, "");
   if (vehicleApplicabilityChangedRowNote) {
     notes.push(`適合差分 ${vehicleApplicabilityChangedRowNote}`);
+  }
+  const vehicleApplicabilityEcuObservationComparisonNote = formatVehicleApplicabilityEcuObservationComparisonSummary(
+    summarySource.importedAnalysisReadinessComparisonSummary?.vehicleApplicabilityEcuObservationComparisonSummary
+      || summarySource.importedAnalysisReadinessComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary
+      || summarySource.imported_analysis_readiness_comparison_summary?.vehicleApplicabilityEcuObservationComparisonSummary
+      || summarySource.imported_analysis_readiness_comparison_summary?.vehicle_applicability_ecu_observation_comparison_summary
+      || importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationComparisonSummary
+      || importedSessionComparisonSummary?.vehicle_applicability_ecu_observation_comparison_summary,
+    ""
+  );
+  if (vehicleApplicabilityEcuObservationComparisonNote) {
+    notes.push(`ECU観測差分 ${vehicleApplicabilityEcuObservationComparisonNote}`);
   }
   const changedIdReviewTargetActionNote = formatChangedIdReviewTargetActionSummary(changedIdDisplaySummary, "");
   if (changedIdReviewTargetActionNote) {
