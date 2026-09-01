@@ -9178,7 +9178,7 @@
         const ecuId = redactSensitiveText(String(candidate.ecuId || candidate.ecu_id || candidate.id || candidate.ecu || candidate.address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
         const ecuName = redactSensitiveText(String(candidate.ecuName || candidate.ecu_name || candidate.name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
         const readoutStatus = normalizeObservedReadoutStatus(candidate.readoutStatus || candidate.readout_status || candidate.status || null);
-        if (ecuId) rows.push({ ecuId, ecuName, readoutId, readoutStatus });
+        if (ecuId) rows.push({ ecuId, ecuName, readoutId, readoutStatus, preserveDirectionalIdentity: candidate.preserveDirectionalIdentity === true });
       });
     };
     add("dtc_snapshot", [
@@ -9191,11 +9191,17 @@
     ]);
     add("ecu_response_summary", (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
       .filter(isObservableEcuResponse)
-      .map((item) => ({
-        ecuId: item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null,
-        ecuName: item?.name || item?.ecuName || item?.ecu_name || item?.label || item?.displayName || item?.display_name || null,
-        readoutStatus: item?.status || item?.responseStatus || item?.response_status || null
-      })));
+      .map((item) => {
+        const addressEvidence = resolveEcuResponseAddressEvidence(item);
+        if (addressEvidence.kind === "request_only" || addressEvidence.kind === "conflict") return null;
+        return {
+          ecuId: addressEvidence.responseAddress,
+          ecuName: item?.name || item?.ecuName || item?.ecu_name || item?.label || item?.displayName || item?.display_name || null,
+          readoutStatus: item?.status || item?.responseStatus || item?.response_status || null,
+          preserveDirectionalIdentity: addressEvidence.kind === "response"
+        };
+      })
+      .filter(Boolean));
     add("live_pid_snapshot", [
       ...(matchesScopedObservedEcu(livePidScopedEcuIdentities, livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu) ? [] : [{ ecuId: livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu, ecuName: livePidSnapshot?.sourceEcuName || livePidSnapshot?.source_ecu_name }]),
       ...(livePidSnapshot?.monitorValues || []).map((item) => ({ ecuId: item?.sourceEcu || item?.source_ecu, ecuName: item?.sourceEcuName || item?.source_ecu_name })),
@@ -9253,11 +9259,13 @@
       ...collectScopedObservedRows(sourceSupportedPidMatrix, ["supportedPidEcuSnapshots", "supported_pid_ecu_snapshots", "ecuSnapshots", "ecu_snapshots"], ["supportedPidReadoutStatus", "supported_pid_readout_status", "readoutStatus", "readout_status"])
     ]);
     const byId = new Map();
-    rows.forEach(({ ecuId, ecuName, readoutId, readoutStatus }) => {
+    rows.forEach(({ ecuId, ecuName, readoutId, readoutStatus, preserveDirectionalIdentity }) => {
       const comparableAddress = normalizeComparableCanEcuAddress(ecuId);
-      const ecuKey = comparableAddress?.startsWith("18DA")
-        ? `18DA${[comparableAddress.slice(4, 6), comparableAddress.slice(6, 8)].sort().join("")}`
-        : comparableAddress || ecuId;
+      const ecuKey = preserveDirectionalIdentity
+        ? comparableAddress || ecuId
+        : comparableAddress?.startsWith("18DA")
+          ? `18DA${[comparableAddress.slice(4, 6), comparableAddress.slice(6, 8)].sort().join("")}`
+          : comparableAddress || ecuId;
       if (!byId.has(ecuKey) && byId.size >= 32) return;
       const entry = byId.get(ecuKey) || { id: ecuId, readoutIds: [], ecuNames: [], readoutStatusValuesById: {} };
       if (!entry.readoutIds.includes(readoutId)) entry.readoutIds.push(readoutId);
@@ -9357,7 +9365,7 @@
   function normalizeStrictCanAddress(value, addressFormat) {
     const token = String(value || "").trim().toUpperCase().replace(/^0X/, "");
     const numeric = Number.parseInt(token, 16);
-    if (addressFormat === "can_11bit") return /^[0-9A-F]{1,3}$/.test(token) && numeric <= 0x7FF ? token : null;
+    if (addressFormat === "can_11bit") return /^[0-9A-F]{1,3}$/.test(token) && numeric <= 0x7FF ? numeric.toString(16).toUpperCase().padStart(3, "0") : null;
     if (addressFormat === "can_29bit") return /^[0-9A-F]{8}$/.test(token) && numeric <= 0x1FFFFFFF ? token : null;
     return null;
   }
@@ -9365,6 +9373,62 @@
     const text = String(value || "").toUpperCase();
     const match = text.match(/(?:^|[^0-9A-F])((?:7E[89A-F])|(?:18DA[0-9A-F]{4}))(?![0-9A-F])/);
     return match ? match[1] : null;
+  }
+
+  function normalizeDirectionalCanEcuAddress(value) {
+    if (typeof value !== "string") return null;
+    const token = value.trim().replace(/^0x/i, "").toUpperCase();
+    if (/^[0-9A-F]{1,3}$/.test(token)) {
+      const numeric = Number.parseInt(token, 16);
+      return numeric <= 0x7FF ? numeric.toString(16).toUpperCase().padStart(3, "0") : null;
+    }
+    if (/^[0-9A-F]{8}$/.test(token)) {
+      const numeric = Number.parseInt(token, 16);
+      return numeric <= 0x1FFFFFFF ? token : null;
+    }
+    return null;
+  }
+
+  function resolveEcuResponseAddressEvidence(item = {}) {
+
+    const collectAliases = (keys) => keys
+      .map((key) => item?.[key])
+      .filter((value) => value !== undefined && value !== null && String(value).trim() !== "");
+    const resolveAliases = (keys) => {
+      const rawValues = collectAliases(keys);
+      const normalizedValues = rawValues.map(normalizeDirectionalCanEcuAddress);
+      const validValues = [...new Set(normalizedValues.filter(Boolean))];
+      return {
+        provided: rawValues.length > 0,
+        value: validValues.length === 1 ? validValues[0] : null,
+        conflict: validValues.length > 1 || normalizedValues.some((value) => !value)
+      };
+    };
+    const request = resolveAliases(["diagnosticRequestId", "diagnostic_request_id", "requestAddress", "request_address", "requestCanId", "request_can_id", "txId", "tx_id"]);
+    const response = resolveAliases(["diagnosticResponseId", "diagnostic_response_id", "responseAddress", "response_address", "responseCanId", "response_can_id", "rxId", "rx_id"]);
+    const genericAliasValues = collectAliases(["address", "ecu", "source_ecu", "sourceEcu", "ecu_id", "ecuId", "module_id", "moduleId", "controller_id", "controllerId"]);
+    const genericRaw = genericAliasValues[0] ?? item?.id ?? null;
+    const genericNormalizedValues = genericAliasValues.map(normalizeDirectionalCanEcuAddress);
+    const genericValidValues = [...new Set(genericNormalizedValues.filter(Boolean))];
+    const genericAddress = genericValidValues.length === 1
+      ? genericValidValues[0]
+      : genericAliasValues.length === 0
+        ? normalizeDirectionalCanEcuAddress(item?.id)
+        : null;
+    const genericTypeInvalid = genericAliasValues.some((value) => typeof value !== "string");
+    const genericAliasConflict = genericValidValues.length > 1 || genericNormalizedValues.some((value) => !value) && genericValidValues.length > 0;
+    let conflict = item?.ecuResponseConflict === true || item?.ecu_response_conflict === true || item?.applicabilityEvidenceEligible === false || item?.applicability_evidence_eligible === false || request.conflict || response.conflict || genericTypeInvalid || genericAliasConflict;
+    if ((request.provided || response.provided) && genericRaw && !genericAddress) conflict = true;
+    if (response.value && genericAddress && genericAddress !== response.value && genericAddress !== request.value) conflict = true;
+    if (request.value && !response.value && genericAddress && genericAddress !== request.value) conflict = true;
+    if (request.value?.startsWith("18DA") && response.value?.startsWith("18DA")) {
+      const paired = request.value !== response.value && request.value.slice(4, 6) === response.value.slice(6, 8) && request.value.slice(6, 8) === response.value.slice(4, 6);
+      if (!paired) conflict = true;
+    }
+    if (conflict) return { kind: "conflict", requestAddress: request.value, responseAddress: response.value, genericAddress, conflict: true };
+    if (response.value) return { kind: "response", requestAddress: request.value, responseAddress: response.value, genericAddress, conflict: false };
+    if (request.value) return { kind: "request_only", requestAddress: request.value, responseAddress: null, genericAddress, conflict: false };
+    return { kind: genericRaw ? "legacy_response" : "missing", requestAddress: null, responseAddress: genericAddress || genericRaw, genericAddress, conflict: false };
   }
 
   function isComparableCanEcuAddressMatch(expectedAddress, observedAddress) {
@@ -9538,6 +9602,7 @@
     };
     const isExpectedAddressMatch = (observedAddress) => expectedAddressRanges.some((range) => isExpectedRangeMatch(range, observedAddress));
     const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
+      .filter((item) => item?.ecuResponseConflict !== true && item?.ecu_response_conflict !== true && item?.applicabilityEvidenceEligible !== false && item?.applicability_evidence_eligible !== false)
       .filter(isObservableEcuResponse);
     const normalizeObservedAddressForExpectedRanges = (value) => {
       for (const range of expectedAddressRanges) {
@@ -9547,21 +9612,16 @@
       return normalizeComparableCanEcuAddress(value);
     };
     const resolveObservedResponseAddress = (item) => {
-      const explicitResponseAddress = item?.diagnosticResponseId || item?.diagnostic_response_id || item?.responseAddress || item?.response_address || item?.responseCanId || item?.response_can_id || item?.rxId || item?.rx_id || null;
-      if (explicitResponseAddress) return explicitResponseAddress;
-      const explicitRequestAddress = item?.diagnosticRequestId || item?.diagnostic_request_id || item?.requestAddress || item?.request_address || item?.requestCanId || item?.request_can_id || item?.txId || item?.tx_id || null;
-      const genericAddress = item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null;
-      if (explicitRequestAddress && String(genericAddress || "").trim().toUpperCase() === String(explicitRequestAddress).trim().toUpperCase()) return null;
-      return genericAddress;
+      const addressEvidence = resolveEcuResponseAddressEvidence(item);
+      return ["response", "legacy_response"].includes(addressEvidence.kind) ? addressEvidence.responseAddress : null;
     };
     const respondedEcuAddresses = [...new Set(respondedEcuRows
       .map(resolveObservedResponseAddress)
       .map(normalizeObservedAddressForExpectedRanges)
       .filter(Boolean))].sort();
     const requestOnlyObservedAddresses = new Set(respondedEcuRows
-      .filter((item) => (item?.diagnosticRequestId || item?.diagnostic_request_id)
-        && !(item?.diagnosticResponseId || item?.diagnostic_response_id || item?.responseAddress || item?.response_address || item?.responseCanId || item?.response_can_id || item?.rxId || item?.rx_id))
-      .map((item) => item?.address || item?.ecu || item?.ecu_id || item?.ecuId || item?.id || null)
+      .filter((item) => resolveEcuResponseAddressEvidence(item).kind === "request_only")
+      .map((item) => resolveEcuResponseAddressEvidence(item).requestAddress)
       .map(normalizeObservedAddressForExpectedRanges)
       .filter(Boolean));
     const reachableReadoutStatuses = new Set(["reported", "negative_response", "pending_response"]);
@@ -30333,6 +30393,7 @@
             ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
             ...(diagnosticRequestId ? { diagnosticRequestId, diagnostic_request_id: diagnosticRequestId } : {}),
             ...(diagnosticResponseId ? { diagnosticResponseId, diagnostic_response_id: diagnosticResponseId } : {}),
+        ...(ecuResponseConflict ? { ecuResponseConflict: true, ecu_response_conflict: true, applicabilityEvidenceEligible: false, applicability_evidence_eligible: false } : {}),
             ...(addressingType ? { addressingType, addressing_type: addressingType } : {}),
             ...(sourceLogicalAddress ? { sourceLogicalAddress, source_logical_address: sourceLogicalAddress } : {}),
             ...(targetLogicalAddress ? { targetLogicalAddress, target_logical_address: targetLogicalAddress } : {}),
@@ -30635,6 +30696,7 @@
         ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
         ...(diagnosticRequestId ? { diagnosticRequestId, diagnostic_request_id: diagnosticRequestId } : {}),
         ...(diagnosticResponseId ? { diagnosticResponseId, diagnostic_response_id: diagnosticResponseId } : {}),
+        ...(ecuResponseConflict ? { ecuResponseConflict: true, ecu_response_conflict: true, applicabilityEvidenceEligible: false, applicability_evidence_eligible: false } : {}),
         ...(addressingType ? { addressingType, addressing_type: addressingType } : {}),
         ...(sourceLogicalAddress ? { sourceLogicalAddress, source_logical_address: sourceLogicalAddress } : {}),
         ...(targetLogicalAddress ? { targetLogicalAddress, target_logical_address: targetLogicalAddress } : {}),
@@ -32238,8 +32300,10 @@
       const networkBus = redactSensitiveText(String(row?.networkBus || row?.network_bus || row?.busName || row?.bus_name || row?.communicationBus || row?.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const networkChannel = redactSensitiveText(String(row?.networkChannel || row?.network_channel || row?.channelId || row?.channel_id || row?.channelName || row?.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const gatewayRoute = redactSensitiveText(String(row?.gatewayRoute || row?.gateway_route || row?.gatewayPath || row?.gateway_path || row?.routingPath || row?.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
-      const diagnosticRequestId = redactSensitiveText(String(row?.diagnosticRequestId || row?.diagnostic_request_id || row?.requestCanId || row?.request_can_id || row?.txId || row?.tx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
-      const diagnosticResponseId = redactSensitiveText(String(row?.diagnosticResponseId || row?.diagnostic_response_id || row?.responseCanId || row?.response_can_id || row?.rxId || row?.rx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
+      const ecuResponseAddressEvidence = resolveEcuResponseAddressEvidence({ ...row, address });
+      const diagnosticRequestId = ecuResponseAddressEvidence.requestAddress;
+      const diagnosticResponseId = ecuResponseAddressEvidence.kind === "response" || ecuResponseAddressEvidence.kind === "conflict" ? ecuResponseAddressEvidence.responseAddress || null : null;
+      const ecuResponseConflict = ecuResponseAddressEvidence.conflict === true;
       const addressingType = redactSensitiveText(String(row?.addressingType || row?.addressing_type || row?.diagnosticAddressing || row?.diagnostic_addressing || row?.addressingMode || row?.addressing_mode || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const sourceLogicalAddress = redactSensitiveText(String(row?.sourceLogicalAddress || row?.source_logical_address || row?.testerLogicalAddress || row?.tester_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
       const targetLogicalAddress = redactSensitiveText(String(row?.targetLogicalAddress || row?.target_logical_address || row?.ecuLogicalAddress || row?.ecu_logical_address || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
@@ -32346,6 +32410,7 @@
         ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
         ...(diagnosticRequestId ? { diagnosticRequestId, diagnostic_request_id: diagnosticRequestId } : {}),
         ...(diagnosticResponseId ? { diagnosticResponseId, diagnostic_response_id: diagnosticResponseId } : {}),
+        ...(ecuResponseConflict ? { ecuResponseConflict: true, ecu_response_conflict: true, applicabilityEvidenceEligible: false, applicability_evidence_eligible: false } : {}),
         ...(addressingType ? { addressingType, addressing_type: addressingType } : {}),
         ...(sourceLogicalAddress ? { sourceLogicalAddress, source_logical_address: sourceLogicalAddress } : {}),
         ...(targetLogicalAddress ? { targetLogicalAddress, target_logical_address: targetLogicalAddress } : {}),
@@ -32397,13 +32462,10 @@
     });
     const normalizeEcuSummaryIdentity = (value) => {
       const sourceEcu = String(value || "").trim();
-      const compactCanAddress = sourceEcu.replace(/^0x/i, "");
-      if (/^18DA[0-9A-F]{4}$/i.test(compactCanAddress)) {
-        return `18DA${[compactCanAddress.slice(4, 6), compactCanAddress.slice(6, 8)].sort().join("")}`;
-      }
-      return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
+      return normalizeDirectionalCanEcuAddress(sourceEcu) || sourceEcu;
     };
-    const ecus = [...new Map(rawEcus.map((row) => {
+    const ecuRowsByIdentity = new Map();
+    rawEcus.forEach((row) => {
       const signature = JSON.stringify({
         name: row.name,
         status: row.status,
@@ -32500,8 +32562,23 @@
         dtcRecoveryThreshold: row.dtcRecoveryThreshold || null,
         dtcAgingCycleCount: row.dtcAgingCycleCount || null
       });
-      return [`${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`, row];
-    })).values()];
+      const identity = `${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`;
+      const existing = ecuRowsByIdentity.get(identity);
+      const hasConflict = existing?.ecuResponseConflict === true || existing?.ecu_response_conflict === true || row.ecuResponseConflict === true || row.ecu_response_conflict === true;
+      ecuRowsByIdentity.set(identity, hasConflict ? {
+        ...existing,
+        ...row,
+        diagnosticRequestId: row.diagnosticRequestId || existing?.diagnosticRequestId || null,
+        diagnostic_request_id: row.diagnostic_request_id || existing?.diagnostic_request_id || null,
+        diagnosticResponseId: row.diagnosticResponseId || existing?.diagnosticResponseId || null,
+        diagnostic_response_id: row.diagnostic_response_id || existing?.diagnostic_response_id || null,
+        ecuResponseConflict: true,
+        ecu_response_conflict: true,
+        applicabilityEvidenceEligible: false,
+        applicability_evidence_eligible: false
+      } : row);
+    });
+    const ecus = [...ecuRowsByIdentity.values()];
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
     const totalDtcCount = ecus.reduce((total, ecu) => total + (Number.isInteger(ecu.dtcCount) ? ecu.dtcCount : 0), 0);
