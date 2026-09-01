@@ -1057,6 +1057,45 @@ body.dark .flow-node-measure .flow-step {
   margin-top: 12px;
 }
 
+.obd-ui-mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel-subtle);
+  padding: 4px;
+}
+
+.obd-ui-mode-button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.obd-ui-mode-button.is-active {
+  background: var(--panel);
+  color: var(--ink);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+#obd-panel[data-obd-ui-mode="simple"] .obd-expert-only {
+  display: none !important;
+}
+
+#obd-panel[data-obd-ui-mode="simple"] .obd-stage-tabs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#obd-panel[data-obd-ui-mode="simple"] .obd-safety-grid {
+  grid-template-columns: minmax(0, 1fr);
+  margin-block: 12px;
+}
+
 .obd-stage-tab {
   min-height: 44px;
   border: 1px solid var(--line);
@@ -2118,6 +2157,10 @@ body.dark .flow-node-measure .flow-step {
 
   .obd-stage-tabs {
     grid-template-columns: 1fr;
+  }
+
+  .obd-ui-mode-switch {
+    width: 100%;
   }
 
   .obd-code-list,

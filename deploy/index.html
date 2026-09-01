@@ -472,13 +472,13 @@
       </section>
     </section>
 
-    <section id="obd-panel" class="tab-panel" data-tab-panel hidden>
+    <section id="obd-panel" class="tab-panel" data-obd-ui-mode="simple" data-tab-panel hidden>
       <section class="panel case-panel" aria-labelledby="obdReadTitle">
         <div class="section-head">
           <div>
-            <p class="eyebrow obd-eyebrow">READ-ONLY DIAGNOSTICS</p>
-            <h2 id="obdReadTitle">OBD2車両読取・ライブデータモニター</h2>
-            <p class="case-note">車両読取後のDTC・フリーズフレーム・ライブデータを表示する専用画面です。</p>
+            <p class="eyebrow obd-eyebrow">VEHICLE DIAGNOSIS</p>
+            <h2 id="obdReadTitle">車両診断</h2>
+            <p class="case-note">車両を選び、接続して、読取結果を順番に確認します。</p>
           </div>
           <span id="obdCapabilityBadge" class="confidence-badge">対応状況を確認中</span>
         </div>
@@ -488,21 +488,21 @@
             <strong>読取専用</strong>
             <span>安全検証中はDTCと計測データの取得準備を優先します。</span>
           </article>
-          <article>
+          <article class="obd-expert-only">
             <strong>消去は準備中</strong>
             <span>DTC消去や学習値初期化は、確認手順が揃うまで画面に出しません。</span>
           </article>
-          <article>
+          <article class="obd-expert-only">
             <strong>作動系は分離</strong>
             <span>アクティブテストや書込み系は、読取系とは別の確認フローで段階的に扱います。</span>
           </article>
-          <article>
+          <article class="obd-expert-only">
             <strong>端末内処理</strong>
             <span>貼付データは保存・外部送信しません。</span>
           </article>
         </div>
 
-        <p id="obdCapabilityText" class="data-status">車両読取機能の対応状況を確認しています。</p>
+        <p id="obdCapabilityText" class="data-status obd-expert-only">車両読取機能の対応状況を確認しています。</p>
         <section id="obdStagePanel" class="obd-operation-panel" aria-labelledby="obdStageTitle" hidden>
           <div class="obd-result-heading">
             <div>
@@ -511,10 +511,14 @@
             </div>
             <span id="obdStageBadge" class="confidence-badge">車両選択 / 接続</span>
           </div>
+          <div id="obdUiModeSwitch" class="obd-ui-mode-switch" role="group" aria-label="画面表示">
+            <button class="obd-ui-mode-button is-active" type="button" data-obd-ui-mode="simple" aria-pressed="true">かんたん</button>
+            <button class="obd-ui-mode-button" type="button" data-obd-ui-mode="details" aria-pressed="false">詳細</button>
+          </div>
           <div id="obdStageTabs" class="obd-stage-tabs" role="tablist" aria-label="OBD読取画面">
-            <button class="obd-stage-tab is-active" type="button" data-obd-stage="setup" aria-pressed="true">1. 車両選択 / 接続</button>
-            <button class="obd-stage-tab" type="button" data-obd-stage="results" aria-pressed="false">2. 読取結果</button>
-            <button class="obd-stage-tab" type="button" data-obd-stage="details" aria-pressed="false">3. 詳細</button>
+            <button class="obd-stage-tab is-active" type="button" data-obd-stage="setup" aria-pressed="true">1. 車両・接続</button>
+            <button class="obd-stage-tab" type="button" data-obd-stage="results" aria-pressed="false">2. 診断結果</button>
+            <button class="obd-stage-tab obd-expert-only" type="button" data-obd-stage="details" aria-pressed="false">3. 開発・詳細</button>
           </div>
           <p id="obdStageStatus" class="data-status">車両選択と接続準備を先に進めます。</p>
         </section>
@@ -583,9 +587,9 @@
               </label>
             </div>
             <div class="button-row full-width">
-              <button id="obdUseDiagnosisVehicleButton" class="secondary-button" type="button">診断補助の車両情報をコピー</button>
-              <button id="obdPreviewSelectedButton" class="secondary-button" type="button">この設定で読取前プレビュー</button>
-              <button id="obdPrepareSelectedButton" class="secondary-button" type="button">この設定で読取準備</button>
+              <button id="obdUseDiagnosisVehicleButton" class="secondary-button obd-expert-only" type="button">診断補助の車両情報をコピー</button>
+              <button id="obdPreviewSelectedButton" class="secondary-button obd-expert-only" type="button">この設定で読取前プレビュー</button>
+              <button id="obdPrepareSelectedButton" class="primary-button" type="button">接続準備へ進む</button>
             </div>
             <p id="obdVehicleSelectionSummary" class="vehicle-summary">OBD車両情報: 未選択</p>
             <p id="obdAvailableReadoutSummary" class="vehicle-note">選択中の方式で使える読取項目を表示します。</p>
@@ -594,7 +598,7 @@
           </fieldset>
         </section>
 
-        <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdAccessGateTitle">
+        <section id="obdAccessGatePanel" class="obd-operation-panel obd-dev-panel" aria-labelledby="obdAccessGateTitle">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">ACCESS CONTROL</p>
@@ -616,7 +620,7 @@
         <div id="obdAccessProtected" hidden>
         <div id="obdStageSetupView" class="obd-stage-view">
 
-        <section class="obd-operation-panel" aria-labelledby="obdProgressTitle">
+        <section class="obd-operation-panel obd-expert-only" aria-labelledby="obdProgressTitle">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">CURRENT PROGRESS</p>
@@ -653,7 +657,7 @@
           </div>
         </section>
 
-        <section class="obd-operation-panel" aria-labelledby="obdWorkflowTitle">
+        <section class="obd-operation-panel obd-expert-only" aria-labelledby="obdWorkflowTitle">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">SCAN FLOW</p>
@@ -677,7 +681,7 @@
           <button id="obdDevConnectButton" class="primary-button" type="button" disabled>読取確認を開始</button>
         </div>
 
-        <section class="obd-operation-panel" aria-labelledby="obdPreviewTitle">
+        <section class="obd-operation-panel obd-expert-only" aria-labelledby="obdPreviewTitle">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">PRE-READOUT PREVIEW</p>
@@ -713,7 +717,7 @@
         <div class="button-row">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
           <button id="obdSessionOpenButton" class="secondary-button" type="button">読取結果ファイルを開く</button>
-          <button id="obdResultsSampleButton" class="secondary-button" type="button">入力例（架空データ）</button>
+          <button id="obdResultsSampleButton" class="secondary-button obd-expert-only" type="button">入力例（架空データ）</button>
         </div>
         <p class="data-status" data-obd-session-export-status role="status"></p>
 

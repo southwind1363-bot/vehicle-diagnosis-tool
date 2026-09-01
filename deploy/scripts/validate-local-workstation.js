@@ -106,7 +106,7 @@ function validateReadoutNavigation() {
   const scrollCalls = [];
   const context = vm.createContext({ document: { getElementById: (id) => nodes[id] }, window: { scrollY: 320, scrollTo: (options) => scrollCalls.push(options) },
     tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false,
-    obdStagePanel: {}, obdStageBadge: {}, obdStageStatus: {}, obdStageTabs: [], activeObdStage: "setup", getObdAutoStage: () => "setup",
+    obdStagePanel: {}, obdStageBadge: {}, obdStageStatus: {}, obdStageTabs: [], activeObdStage: "setup", obdUiMode: "details", getObdAutoStage: () => "setup",
     ...Object.fromEntries(["obdStageSetupView", "obdStageResultsView", "obdStageDetailsView"].map((id) => [id, nodes[id]])) });
   for (const name of ["syncObdReadoutSurface", "activateTab", "renderObdStageView", "scrollToObdSection"]) {
     vm.runInContext(appSource.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
@@ -116,6 +116,10 @@ function validateReadoutNavigation() {
   context.obdAccessUnlocked = true;
   context.renderObdStageView("results");
   check(nodes.obdReadoutSurface.parentElement === nodes.obdReadoutResultsHost && !nodes.obdStageResultsView.hidden, "OBD results still showed a disconnected placeholder");
+  context.obdUiMode = "simple";
+  context.renderObdStageView("details");
+  check(context.activeObdStage === "setup" && !nodes.obdStageSetupView.hidden, "Simple OBD mode exposed the development details stage");
+  context.obdUiMode = "details";
   nodes.obdImportStatus.textContent = "0 DTC / acquired";
   nodes.obdMonitorGrid.values = [{ value: 0, unit: "km/h" }, { value: 88, unit: "C" }];
   const values = nodes.obdMonitorGrid.values;

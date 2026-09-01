@@ -2,6 +2,7 @@ const THEME_KEY = "vehicle-diagnosis-theme";
 const CASES_KEY = "vehicle-diagnosis-cases-v1";
 const NOTICE_KEY = "vehicle-diagnosis-notice-accepted-v1";
 const OBD_ACCESS_MODE_KEY = "vehicle-diagnosis-obd-access-v1";
+const OBD_UI_MODE_KEY = "vehicle-diagnosis-obd-ui-mode-v1";
 const OBD_ACCESS_PASSWORD_HASH = "ff61c820434cfe58f495f0688990b3c02c12120bb1bd4d167d92f88b3de0d7e0";
 const OBD_DEV_MODE_KEY = "vehicle-diagnosis-obd-dev-mode-v1";
 const OBD_DEV_TOKEN_KEY = "vehicle-diagnosis-obd-dev-token-v1";
@@ -222,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7319件",
+  validationCheckLabel: "OBD安全検証 7320件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "ECU再確認の通信経路確認条件を可視化",
+  recentMilestone: "診断画面のかんたんモードを追加",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.395";
+const APP_VERSION = "3.13.396";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -392,17 +393,20 @@ const seedDummyButton = document.querySelector("#seedDummyButton");
 const runSelfTestButton = document.querySelector("#runSelfTestButton");
 const clearStorageButton = document.querySelector("#clearStorageButton");
 const opsResultList = document.querySelector("#opsResultList");
+const obdPanel = document.querySelector("#obd-panel");
 const obdCapabilityBadge = document.querySelector("#obdCapabilityBadge");
 const obdCapabilityText = document.querySelector("#obdCapabilityText");
 const obdStagePanel = document.querySelector("#obdStagePanel");
 const obdStageBadge = document.querySelector("#obdStageBadge");
 const obdStageStatus = document.querySelector("#obdStageStatus");
 const obdStageTabs = document.querySelectorAll("[data-obd-stage]");
+const obdUiModeButtons = document.querySelectorAll("[data-obd-ui-mode]");
 const obdStageSetupView = document.querySelector("#obdStageSetupView");
 const obdStageResultsView = document.querySelector("#obdStageResultsView");
 const obdStageDetailsView = document.querySelector("#obdStageDetailsView");
 const obdSetupPanel = document.querySelector("#obdSetupPanel");
 const obdAccessProtected = document.querySelector("#obdAccessProtected");
+const obdAccessGatePanel = document.querySelector("#obdAccessGatePanel");
 const obdAccessPasswordInput = document.querySelector("#obdAccessPasswordInput");
 const obdAccessUnlockButton = document.querySelector("#obdAccessUnlockButton");
 const obdAccessLockButton = document.querySelector("#obdAccessLockButton");
@@ -571,6 +575,7 @@ let savedCases = loadCases();
 let copyToastTimer = null;
 let activeResultView = "flow";
 let obdAccessUnlocked = readOptionalBrowserSetting(OBD_ACCESS_MODE_KEY, true) === "enabled";
+let obdUiMode = readOptionalBrowserSetting(OBD_UI_MODE_KEY) === "details" ? "details" : "simple";
 let obdDevModeUnlocked = readOptionalBrowserSetting(OBD_DEV_MODE_KEY, true) === "enabled";
 let obdBridgePairingToken = "";
 let obdBridgeOperation = null;
@@ -637,6 +642,7 @@ const obdDevSession = {
 appVersion.textContent = APP_VERSION;
 lastUpdated.textContent = APP_LAST_UPDATED;
 applyTheme(readOptionalBrowserSetting(THEME_KEY) || "light");
+renderObdUiMode();
 setDefaultCaseDate();
 loadData();
 renderCases();
@@ -657,6 +663,10 @@ resultViewButtons.forEach((button) => {
 
 obdStageTabs.forEach((button) => {
   button.addEventListener("click", () => setObdStage(button.dataset.obdStage || "setup"));
+});
+
+obdUiModeButtons.forEach((button) => {
+  button.addEventListener("click", () => setObdUiMode(button.dataset.obdUiMode || "simple"));
 });
 
 aiButton.addEventListener("click", sendToExternalGpt);
@@ -4181,6 +4191,24 @@ function initializeObdReadOnlyPanel() {
   renderObdStageView();
 }
 
+function renderObdUiMode() {
+  const detailed = obdUiMode === "details";
+  if (obdPanel) obdPanel.dataset.obdUiMode = detailed ? "details" : "simple";
+  obdUiModeButtons.forEach((button) => {
+    const active = button.dataset.obdUiMode === obdUiMode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", active ? "true" : "false");
+  });
+  if (obdAccessGatePanel) obdAccessGatePanel.hidden = obdAccessUnlocked && !detailed;
+}
+
+function setObdUiMode(mode = "simple") {
+  obdUiMode = mode === "details" ? "details" : "simple";
+  writeOptionalBrowserSetting(OBD_UI_MODE_KEY, obdUiMode);
+  if (obdUiMode === "simple" && activeObdStage === "details") activeObdStage = "setup";
+  renderObdUiMode();
+  renderObdStageView(activeObdStage);
+}
 function getObdAutoStage() {
   const lastSession = obdDevSession.lastSession || null;
   const dtcSnapshot = lastSession?.dtcSnapshot || lastSession?.dtc_snapshot || null;
@@ -4200,7 +4228,7 @@ function getObdAutoStage() {
   );
   const hasPendingReadoutCandidates = Boolean(nextReadoutCandidates.length);
   if (hasPendingReadoutCandidates) return "results";
-  if (obdDevModeUnlocked) return "details";
+  if (obdDevModeUnlocked && obdUiMode === "details") return "details";
   if (hasReadout) return "results";
   return "setup";
 }
@@ -4212,13 +4240,14 @@ function renderObdStageView(preferredStage = activeObdStage) {
   obdStagePanel.hidden = !unlocked;
   if (!unlocked) return;
   const allowedStages = new Set(["setup", "results", "details"]);
-  const nextStage = allowedStages.has(preferredStage) ? preferredStage : getObdAutoStage();
+  const requestedStage = allowedStages.has(preferredStage) ? preferredStage : getObdAutoStage();
+  const nextStage = obdUiMode === "simple" && requestedStage === "details" ? "setup" : requestedStage;
   activeObdStage = nextStage;
 
   const stageMeta = {
     setup: {
       badge: "車両選択 / 接続",
-      status: "車両選択、接続準備、プレビュー確認を先に進めます。"
+      status: obdUiMode === "simple" ? "車両を選び、接続準備へ進みます。" : "車両選択、接続準備、プレビュー確認を先に進めます。"
     },
     results: {
       badge: "読取結果",
@@ -4226,7 +4255,7 @@ function renderObdStageView(preferredStage = activeObdStage) {
     },
     details: {
       badge: "詳細",
-      status: "ブリッジ契約、詳細読取、検証情報を確認する段階です。"
+      status: "個別読取、通信設定、開発・検証情報を確認します。"
     }
   };
   const meta = stageMeta[nextStage] || stageMeta.setup;
@@ -4262,6 +4291,7 @@ function renderObdAccessGate(capability = window.ObdReadOnly?.getCapability?.())
   obdAccessLockButton.disabled = !unlocked;
   if (obdSetupPanel) obdSetupPanel.hidden = !unlocked;
   obdAccessProtected.hidden = !unlocked;
+  if (obdAccessGatePanel) obdAccessGatePanel.hidden = unlocked && obdUiMode === "simple";
 
   if (!unlocked) {
     obdAccessStatus.textContent = getObdAccessStatusMessage(false, capability);
@@ -13721,7 +13751,7 @@ function clearAllLocalStorage() {
   savedCases = [];
   caseStorageReadError = "";
   let preferencesCleared = true;
-  for (const key of [THEME_KEY, NOTICE_KEY]) {
+  for (const key of [THEME_KEY, NOTICE_KEY, OBD_UI_MODE_KEY]) {
     try {
       localStorage.removeItem(key);
     } catch (error) {
