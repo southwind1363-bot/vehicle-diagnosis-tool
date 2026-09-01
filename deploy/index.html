@@ -716,6 +716,18 @@
 
         <dl id="obdReadoutVehicle" class="obd-readout-vehicle" aria-label="読取結果の車両情報" hidden></dl>
 
+        <section id="obdSimpleResultSummary" class="obd-simple-result-summary obd-simple-only" aria-labelledby="obdSimpleResultTitle" aria-live="polite" hidden>
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">CORE READOUT</p>
+              <h3 id="obdSimpleResultTitle">基本読取結果</h3>
+            </div>
+            <span id="obdSimpleResultBadge" class="confidence-badge">未読取</span>
+          </div>
+          <dl id="obdSimpleResultGrid" class="obd-simple-result-grid"></dl>
+          <p id="obdSimpleResultNote" class="obd-simple-result-note"></p>
+        </section>
+
         <div class="button-row">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
           <button id="obdSessionOpenButton" class="secondary-button" type="button">読取結果ファイルを開く</button>

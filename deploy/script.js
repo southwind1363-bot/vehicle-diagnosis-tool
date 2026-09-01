@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7322件",
+  validationCheckLabel: "OBD安全検証 7323件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "かんたん画面へ接続・読取状態を常時表示",
+  recentMilestone: "かんたん画面へ主要読取結果を6項目表示",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.398";
+const APP_VERSION = "3.13.399";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -406,6 +406,10 @@ const obdUiModeButtons = document.querySelectorAll("[data-obd-ui-mode]");
 const obdStageSetupView = document.querySelector("#obdStageSetupView");
 const obdStageResultsView = document.querySelector("#obdStageResultsView");
 const obdStageDetailsView = document.querySelector("#obdStageDetailsView");
+const obdSimpleResultSummary = document.querySelector("#obdSimpleResultSummary");
+const obdSimpleResultBadge = document.querySelector("#obdSimpleResultBadge");
+const obdSimpleResultGrid = document.querySelector("#obdSimpleResultGrid");
+const obdSimpleResultNote = document.querySelector("#obdSimpleResultNote");
 const obdSetupPanel = document.querySelector("#obdSetupPanel");
 const obdAccessProtected = document.querySelector("#obdAccessProtected");
 const obdAccessGatePanel = document.querySelector("#obdAccessGatePanel");
@@ -10779,8 +10783,78 @@ function renderObdDiagnosticFlowPanel(session = null) {
   obdDiagnosticFlowPanels.forEach(renderPanel);
 }
 
+function renderObdSimpleResultSummary(session = null) {
+  if (!obdSimpleResultSummary || !obdSimpleResultBadge || !obdSimpleResultGrid || !obdSimpleResultNote) return;
+  obdSimpleResultGrid.innerHTML = "";
+  if (!session || typeof session !== "object") {
+    obdSimpleResultSummary.hidden = true;
+    return;
+  }
+
+  const dtcSnapshot = session.dtcSnapshot || session.dtc_snapshot || null;
+  const freezeFrameSnapshot = session.freezeFrameSnapshot || session.freeze_frame_snapshot || null;
+  const livePidSnapshot = session.livePidSnapshot || session.live_pid_snapshot || null;
+  const readinessSnapshot = session.readinessSnapshot || session.readiness_snapshot || null;
+  const ecuInfoSnapshot = session.ecuInfoSnapshot || session.ecu_info_snapshot || null;
+  const coreStatus = session.coreSessionStatus || session.core_session_status || {};
+  const coverage = session.readoutCoverage || session.readout_coverage || {};
+  const countArray = (value) => Array.isArray(value) ? value.length : 0;
+  const countValue = (primary, fallback) => Number.isFinite(Number(primary)) ? Math.max(0, Number(primary)) : fallback;
+  const dtcCount = countArray(dtcSnapshot?.dtcs || dtcSnapshot?.codes);
+  const freezeFrameCount = countArray(freezeFrameSnapshot?.monitorValues || freezeFrameSnapshot?.monitor_values);
+  const livePidCount = countArray(livePidSnapshot?.monitorValues || livePidSnapshot?.monitor_values);
+  const readinessCount = countValue(
+    readinessSnapshot?.monitorCount ?? readinessSnapshot?.monitor_count ?? readinessSnapshot?.knownMonitorCount ?? readinessSnapshot?.known_monitor_count,
+    countArray(readinessSnapshot?.monitors)
+  );
+  const ecuInfoCount = countValue(ecuInfoSnapshot?.itemCount ?? ecuInfoSnapshot?.item_count, countArray(ecuInfoSnapshot?.items));
+  const capturedPercentValue = coverage.capturedPercent ?? coverage.captured_percent;
+  const completionPercentValue = coreStatus.completionPercent ?? coreStatus.completion_percent;
+  const capturedPercent = Number.isFinite(Number(capturedPercentValue))
+    ? Math.max(0, Math.min(100, Math.round(Number(capturedPercentValue))))
+    : Number.isFinite(Number(completionPercentValue))
+      ? Math.max(0, Math.min(100, Math.round(Number(completionPercentValue))))
+      : null;
+  const formatCount = (snapshot, count, unit) => snapshot ? String(count) + unit : "未取得";
+  const metrics = [
+    ["DTC", formatCount(dtcSnapshot, dtcCount, "件")],
+    ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目")],
+    ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目")],
+    ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目")],
+    ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目")],
+    ["主要読取", capturedPercent === null ? "未集計" : String(capturedPercent) + "%"]
+  ];
+  metrics.forEach(([label, value]) => {
+    const item = document.createElement("div");
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+    term.textContent = label;
+    description.textContent = value;
+    item.append(term, description);
+    obdSimpleResultGrid.appendChild(item);
+  });
+
+  const coreReady = coreStatus.readyForAnalysis === true || coreStatus.ready_for_analysis === true;
+  const hasReadout = [dtcSnapshot, freezeFrameSnapshot, livePidSnapshot, readinessSnapshot, ecuInfoSnapshot].some(Boolean);
+  obdSimpleResultBadge.className = "confidence-badge " + (coreReady ? "is-ready" : hasReadout ? "is-partial" : "is-empty");
+  obdSimpleResultBadge.textContent = coreReady ? "主要読取完了" : hasReadout ? "一部取得" : "応答未取得";
+  const pendingIds = Array.isArray(coreStatus.pendingReadoutIds)
+    ? coreStatus.pendingReadoutIds
+    : Array.isArray(coreStatus.pending_readout_ids) ? coreStatus.pending_readout_ids : [];
+  const dtcNote = !dtcSnapshot
+    ? "DTC読取は未取得です。"
+    : dtcCount
+      ? "DTCを" + dtcCount + "件取得しました。消去前にJSON保存してください。"
+      : "DTC読取の応答ではコード0件です。";
+  obdSimpleResultNote.textContent = dtcNote
+    + (pendingIds.length ? " 未完了の主要読取は" + pendingIds.length + "項目です。" : "")
+    + " 消去・作動系は実行しません。";
+  obdSimpleResultSummary.hidden = false;
+}
+
 function renderObdDeveloperSessionSummary(session = null) {
   renderObdSessionExportControls();
+  if (typeof renderObdSimpleResultSummary === "function") renderObdSimpleResultSummary(session);
   renderObdDiagnosticFlowPanel(session);
   obdDevSessionSummary.innerHTML = "";
   const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;

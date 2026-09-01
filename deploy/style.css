@@ -1258,6 +1258,71 @@ body.dark .flow-node-measure .flow-step {
   background: var(--accent-strong);
 }
 
+.obd-simple-result-summary {
+  margin: 14px 0;
+  border-block: 1px solid var(--line-strong);
+  padding: 14px 0;
+}
+
+.obd-simple-result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0;
+  margin: 12px 0 0;
+}
+
+.obd-simple-result-grid > div {
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding: 8px 12px;
+}
+
+.obd-simple-result-grid > div:first-child {
+  border-left: 0;
+}
+
+.obd-simple-result-grid dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.obd-simple-result-grid dd {
+  margin: 4px 0 0;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.obd-simple-result-note {
+  margin: 12px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.obd-simple-result-summary .confidence-badge.is-ready {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.obd-simple-result-summary .confidence-badge.is-partial {
+  border-color: var(--manual);
+  background: var(--manual-bg);
+  color: var(--manual);
+}
+
+.obd-simple-result-summary .confidence-badge.is-empty {
+  border-color: var(--line-strong);
+  background: var(--panel-subtle);
+  color: var(--muted);
+}
+
+#obd-panel[data-obd-ui-mode="simple"] #obdDiagnosticFlowPanelResults {
+  display: none !important;
+}
+
 .obd-diagnostic-flow-panel {
   display: grid;
   gap: 12px;
