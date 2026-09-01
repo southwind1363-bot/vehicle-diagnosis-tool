@@ -3846,7 +3846,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('ECU再確認のELM327/J2534経路候補を安全分離'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('ECU再確認の通信経路確認条件を可視化'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4458,7 +4458,7 @@ check(source.includes('const obdReportedProfile = buildObdReportedProfile(') && 
 check(source.includes('const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);') && source.includes('const expectedAddressSource = primaryExpectedAddress ? "ecu_address" : expectedAddresses.length ? "supported_ecus" : null;') && source.includes('expected_addresses: expectedAddresses,') && source.includes('matched_expected_addresses: matchedExpectedAddresses,') && source.includes('partial_expected_address_observation: partialExpectedAddressObservation,') && source.includes('expected_ecu_observations: expectedEcuObservations,') && source.includes('observation_key: observationKey,') && source.includes('observation_duplicate_index: observationDuplicateIndex,'), "Vehicle applicability ECU matching should use supported ECU addresses only when the primary ECU address is absent and retain factual per-ECU match evidence");
 check(appSource.includes('adapterIdentity.adapterProtocolHint || adapterIdentity.adapter_protocol_hint || NO_DATA') && appSource.includes('adapterIdentity.adapterProtocolNumber || adapterIdentity.adapter_protocol_number || NO_DATA') && appSource.includes('通信ヒント:') && appSource.includes('通信番号:'), "OBD session details should display adapter protocol metadata without treating it as confirmed session protocol");
 check(appSource.includes('function formatJ2534DriverReadiness') && appSource.includes('runtime_architecture_mismatch: "DLLとブリッジの32/64bit不一致"') && appSource.includes('function formatJ2534NextCheck') && appSource.includes('J2534次確認'), "J2534 static readiness and next-check status should be visible without enabling vehicle commands");
-check(appSource.includes('recentMilestone: "ECU再確認のELM327/J2534経路候補を安全分離"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "ECU再確認の通信経路確認条件を可視化"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4796,7 +4796,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "ECU再確認のELM327/J2534経路候補を安全分離"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "ECU再確認の通信経路確認条件を可視化"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -20399,12 +20399,28 @@ check(standardObdEcuTransportPlan?.candidates?.map((candidate) => candidate.id).
   && standardObdEcuTransportPlan.candidates[0]?.platforms?.join(",") === "ios,desktop"
   && standardObdEcuTransportPlan.candidates[0]?.route === "platform_selection_required"
   && standardObdEcuTransportPlan.candidates[0]?.routeOptions?.map((option) => option.route).join(",") === "native_connector_required,desktop_web_serial"
+  && standardObdEcuTransportPlan.candidates[0]?.resolutionCheckCount === 9
+  && standardObdEcuTransportPlan.candidates[0]?.resolvedCheckCount === 0
+  && standardObdEcuTransportPlan.candidates[0]?.pendingResolutionIds?.includes("platform_selected")
+  && standardObdEcuTransportPlan.candidates[0]?.routeOptions?.[0]?.requiredResolutionIds?.join(",") === "platform_selected,native_host_available,adapter_transport_confirmed"
+  && standardObdEcuTransportPlan.candidates[0]?.routeOptions?.[0]?.resolutionChecklist?.every((item) => item.status === "pending" && item.confirmed === false)
+  && standardObdEcuTransportPlan.candidates[0]?.routeOptions?.[1]?.requiredResolutionIds?.join(",") === "platform_selected,serial_port_available,adapter_transport_confirmed"
+  && standardObdEcuTransportPlan.candidates[0]?.routeOptions?.[1]?.resolutionCheckCount === 3
+  && standardObdEcuTransportPlan.candidates[0]?.resolutionReady === false
   && standardObdEcuTransportPlan.selectedRouteId === null
   && standardObdEcuTransportPlan.automaticTransportSelectionEnabled === false
-  && standardObdEcuTransportPlan.transportResolved === false,
+  && standardObdEcuTransportPlan.transportResolved === false
+  && standardObdEcuTransportPlan.candidateResolutionReadyCount === 0
+  && standardObdEcuTransportPlan.candidateResolutionPendingCount === 2
+  && standardObdEcuTransportPlan.transportSelectionRequired === true,
 "Standard OBD ECU review did not expose unconfirmed ELM327 and J2534 route candidates with execution disabled");
 check(changedEcuObservationReviewPlan.transportPlan?.candidates?.map((candidate) => candidate.id).join(",") === "j2534_targeted_ecu"
   && changedEcuObservationReviewPlan.transportPlan.candidates[0]?.scope === "targeted_multi_ecu"
+  && changedEcuObservationReviewPlan.transportPlan.candidates[0]?.resolutionCheckCount === 9
+  && changedEcuObservationReviewPlan.transportPlan.candidates[0]?.pendingResolutionIds?.includes("j2534_driver_identity_confirmed")
+  && changedEcuObservationReviewPlan.transportPlan.candidates[0]?.pendingResolutionIds?.includes("j2534_dll_architecture_confirmed")
+  && changedEcuObservationReviewPlan.transportPlan.candidates[0]?.pendingResolutionIds?.includes("target_ecu_selected")
+  && changedEcuObservationReviewPlan.transportPlan.candidates[0]?.resolutionReady === false
   && changedEcuObservationReviewPlan.transportPlan.targetCompatibilityConfirmed === false
   && changedEcuObservationReviewPlan.transportPlan.hardwareCompatibilityConfirmed === false
   && changedEcuObservationReviewPlan.transportPlan.executionEnabled === false,
@@ -20416,6 +20432,8 @@ const udsEcuTransportPlan = obd.buildVehicleApplicabilityEcuObservationTransport
 check(udsEcuTransportPlan?.candidates?.map((candidate) => candidate.id).join(",") === "j2534_targeted_ecu"
   && udsEcuTransportPlan.requiredCapabilities?.includes("uds_readout")
   && udsEcuTransportPlan.requiredCapabilities?.includes("29bit_diagnostic_addressing")
+  && udsEcuTransportPlan.candidates[0]?.resolutionChecklistById?.protocol_confirmed?.status === "pending"
+  && udsEcuTransportPlan.candidates[0]?.resolutionChecklistById?.diagnostic_address_confirmed?.confirmed === false
   && udsEcuTransportPlan.selectedRouteId === null
   && udsEcuTransportPlan.transportResolved === false
   && udsEcuTransportPlan.vehicleCommandEnabled === false
@@ -20466,6 +20484,9 @@ check(changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.
   && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationReviewPlan?.automatic_target_selection_enabled === false
   && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationReviewPlan?.transport_plan?.candidates?.[0]?.id === "j2534_targeted_ecu"
   && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationReviewPlan?.transport_plan?.automatic_transport_selection_enabled === false
+  && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationReviewPlan?.transport_plan?.candidates?.[0]?.resolution_check_count === 9
+  && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationReviewPlan?.transport_plan?.candidates?.[0]?.pending_resolution_ids?.includes("read_only_boundary_confirmed")
+  && changedSupportedEcuObservationRoundTrip.importedSessionComparisonSummary?.vehicleApplicabilityEcuObservationReviewPlan?.transport_plan?.candidate_resolution_ready_count === 0
   && changedSupportedEcuObservationRoundTrip.vehicleCommandEnabled === false,
 "ECU observation review plan was lost or became executable through bridge export and JSON import");
 check(appSource.includes('function formatVehicleApplicabilityEcuObservationComparisonSummary(summary, fallback = NO_DATA)')
@@ -20478,6 +20499,7 @@ check(appSource.includes('function formatVehicleApplicabilityEcuObservationRevie
   && appSource.includes('"対象選択待ち"')
   && appSource.includes('"通信経路未確定"')
   && appSource.includes('`経路候補 ${transportLabels.join(",")}`')
+  && appSource.includes('`経路確認 ${transportReadyCount}/${transportCandidates.length}`')
   && appSource.includes('"読取専用"'),
 "ECU observation review plan is not shown as a target-selection-gated read-only action");
 const scanSessionSupportedEcuRangeMatched = obd.buildDiagnosticScanSession({

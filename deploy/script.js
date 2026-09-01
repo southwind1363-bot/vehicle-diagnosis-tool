@@ -224,10 +224,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 7319件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "ECU再確認のELM327/J2534経路候補を安全分離",
+  recentMilestone: "ECU再確認の通信経路確認条件を可視化",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.394";
+const APP_VERSION = "3.13.395";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9744,6 +9744,8 @@ function formatVehicleApplicabilityEcuObservationReviewPlan(plan, fallback = NO_
   const transportCandidates = Array.isArray(transportPlan?.candidates) ? transportPlan.candidates : [];
   const transportLabels = transportCandidates.slice(0, 2).map((candidate) => candidate?.label || candidate?.id).filter(Boolean);
   if (transportLabels.length) parts.push(`経路候補 ${transportLabels.join(",")}`);
+  const transportReadyCount = Number(transportPlan?.candidateResolutionReadyCount ?? transportPlan?.candidate_resolution_ready_count ?? 0);
+  if (transportCandidates.length) parts.push(`経路確認 ${transportReadyCount}/${transportCandidates.length}`);
   if (transportCandidates.length > transportLabels.length) parts.push(`他${transportCandidates.length - transportLabels.length}`);
   if (plan.transportResolutionRequired === true || plan.transport_resolution_required === true) parts.push("通信経路未確定");
   parts.push("読取専用");

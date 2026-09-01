@@ -23092,6 +23092,29 @@
       protocols.some((protocol) => /uds|iso\s*14229/i.test(protocol)) ? "uds_readout" : null,
       currentObservations.some((observation) => /^(?:0x)?18da/i.test(String(observation.diagnosticAddress || observation.diagnostic_address || ""))) ? "29bit_diagnostic_addressing" : null
     ].filter(Boolean);
+    const resolutionRequirementCatalog = Object.freeze({
+      platform_selected: "使用端末を選択",
+      interface_identity_confirmed: "VCI機種と識別情報を確認",
+      hardware_compatibility_confirmed: "VCI実機適合を確認",
+      vehicle_applicability_confirmed: "車両・年式・ECU適合を確認",
+      target_ecu_selected: "再確認する対象ECUを選択",
+      diagnostic_address_confirmed: "対象ECUの診断アドレスを確認",
+      protocol_confirmed: "対象ECUの通信方式を確認",
+      read_only_boundary_confirmed: "読取専用境界と変更系遮断を確認",
+      adapter_transport_confirmed: "ELM327のBluetoothまたはシリアル方式を確認",
+      native_host_available: "iPhoneネイティブホストの配布と起動を確認",
+      serial_port_available: "PCでWeb SerialまたはCOMポートを確認",
+      j2534_driver_identity_confirmed: "J2534 DLLとVCI識別を確認",
+      j2534_dll_architecture_confirmed: "J2534 DLLとホストの32/64bit適合を確認"
+    });
+    const buildResolutionChecklist = (requirementIds = []) => [...new Set(requirementIds)].map((id) => ({
+      id,
+      label: resolutionRequirementCatalog[id] || id,
+      status: "pending",
+      confirmed: false,
+      evidenceSource: null,
+      evidence_source: null
+    }));
     const makeCandidate = ({ id, label, interfaceId, platforms, scope, reason }) => {
       const platformOptions = [...new Set((Array.isArray(platforms) ? platforms : []).filter(Boolean).map(String))];
       const routeOptions = platformOptions.map((platform) => {
@@ -23112,6 +23135,52 @@
         };
       });
       const requiredBeforeReadout = [...new Set(routeOptions.flatMap((option) => option.requiredBeforeReadout))];
+      const interfaceRequirementIds = interfaceId === "user-vci-elm327"
+        ? ["adapter_transport_confirmed"]
+        : interfaceId === "user-vci-techstream-j2534"
+          ? ["j2534_driver_identity_confirmed", "j2534_dll_architecture_confirmed"]
+          : [];
+      const commonRequirementIds = [
+        ...(platformOptions.length > 1 ? ["platform_selected"] : []),
+        "interface_identity_confirmed",
+        "hardware_compatibility_confirmed",
+        "vehicle_applicability_confirmed",
+        "target_ecu_selected",
+        "diagnostic_address_confirmed",
+        "protocol_confirmed",
+        "read_only_boundary_confirmed",
+        ...interfaceRequirementIds
+      ];
+      const routeOptionsWithResolution = routeOptions.map((option) => {
+        const routeRequirementIds = option.route === "native_connector_required"
+          ? ["native_host_available", "adapter_transport_confirmed"]
+          : option.route === "desktop_web_serial"
+            ? ["serial_port_available", "adapter_transport_confirmed"]
+            : option.route === "desktop_local_bridge" && interfaceId === "user-vci-techstream-j2534"
+              ? ["j2534_driver_identity_confirmed", "j2534_dll_architecture_confirmed"]
+              : [];
+        const requiredResolutionIds = [...new Set([
+          ...(platformOptions.length > 1 ? ["platform_selected"] : []),
+          ...routeRequirementIds
+        ])];
+        const routeResolutionChecklist = buildResolutionChecklist(requiredResolutionIds);
+        return {
+          ...option,
+          requiredResolutionIds,
+          required_resolution_ids: requiredResolutionIds,
+          resolutionChecklist: routeResolutionChecklist,
+          resolution_checklist: routeResolutionChecklist,
+          resolutionCheckCount: routeResolutionChecklist.length,
+          resolution_check_count: routeResolutionChecklist.length,
+          resolvedCheckCount: 0,
+          resolved_check_count: 0,
+          resolutionReady: false,
+          resolution_ready: false
+        };
+      });
+      const resolutionChecklist = buildResolutionChecklist(commonRequirementIds);
+      const resolutionChecklistById = Object.fromEntries(resolutionChecklist.map((item) => [item.id, item]));
+      const pendingResolutionIds = resolutionChecklist.map((item) => item.id);
       return {
         id,
         label,
@@ -23120,8 +23189,20 @@
         platform: platformOptions.length === 1 ? platformOptions[0] : null,
         platforms: platformOptions,
         route: routeOptions.length === 1 ? routeOptions[0].route : "platform_selection_required",
-        routeOptions,
-        route_options: routeOptions,
+        routeOptions: routeOptionsWithResolution,
+        route_options: routeOptionsWithResolution,
+        resolutionChecklist,
+        resolution_checklist: resolutionChecklist,
+        resolutionChecklistById,
+        resolution_checklist_by_id: resolutionChecklistById,
+        resolutionCheckCount: resolutionChecklist.length,
+        resolution_check_count: resolutionChecklist.length,
+        resolvedCheckCount: 0,
+        resolved_check_count: 0,
+        pendingResolutionIds,
+        pending_resolution_ids: pendingResolutionIds,
+        resolutionReady: false,
+        resolution_ready: false,
         scope,
         reason,
         currentAvailability: routeOptions.length === 1 ? routeOptions[0].currentAvailability : "iPhoneネイティブ経路またはPC経路の選択と実機確認待ち",
@@ -23171,6 +23252,12 @@
       candidates,
       candidateCount: candidates.length,
       candidate_count: candidates.length,
+      candidateResolutionReadyCount: 0,
+      candidate_resolution_ready_count: 0,
+      candidateResolutionPendingCount: candidates.length,
+      candidate_resolution_pending_count: candidates.length,
+      transportSelectionRequired: true,
+      transport_selection_required: true,
       targetObservationKeys,
       target_observation_keys: targetObservationKeys,
       protocols,
