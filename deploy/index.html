@@ -590,6 +590,7 @@
               <button id="obdUseDiagnosisVehicleButton" class="secondary-button obd-expert-only" type="button">診断補助の車両情報をコピー</button>
               <button id="obdPreviewSelectedButton" class="secondary-button obd-expert-only" type="button">この設定で読取前プレビュー</button>
               <button id="obdPrepareSelectedButton" class="primary-button" type="button">接続準備へ進む</button>
+              <button id="obdSimpleDisconnectButton" class="secondary-button obd-simple-only" type="button" hidden disabled>切断</button>
             </div>
             <p id="obdVehicleSelectionSummary" class="vehicle-summary">OBD車両情報: 未選択</p>
             <p id="obdAvailableReadoutSummary" class="vehicle-note">選択中の方式で使える読取項目を表示します。</p>
@@ -678,7 +679,7 @@
             <span class="obd-connection-label">診断機状態</span>
             <strong id="obdDevConnectionState">読取待機中</strong>
           </div>
-          <button id="obdDevConnectButton" class="primary-button" type="button" disabled>読取確認を開始</button>
+          <button id="obdDevConnectButton" class="primary-button obd-expert-only" type="button" disabled>読取確認を開始</button>
         </div>
 
         <section class="obd-operation-panel obd-expert-only" aria-labelledby="obdPreviewTitle">

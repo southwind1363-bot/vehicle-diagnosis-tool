@@ -52,6 +52,21 @@ function load(context, names) {
   }
 }
 
+{
+  const { context: blocked, calls } = client();
+  blocked.obdDevModeUnlocked = false;
+  blocked.obdUiMode = "details";
+  await blocked.connectObdDeveloperVci();
+  check(calls.select === 0 && blocked.obdDevSession.connectionState === "disconnected", "Details mode bypassed the developer token for Web Serial");
+}
+{
+  const { context: simple, calls } = client();
+  simple.obdDevModeUnlocked = false;
+  simple.obdUiMode = "simple";
+  await simple.connectObdDeveloperVci();
+  check(calls.select === 1 && simple.obdDevSession.connectionState === "ready", `Unlocked simple mode could not start the allowlisted read-only Web Serial route (${calls.select}/${simple.obdDevSession.connectionState})`);
+  await simple.disconnectObdDeveloperVci();
+}
 for (const lock of ["lockObdAccess", "lockObdDeveloperMode"]) {
   const c = client();
   const selected = deferred();

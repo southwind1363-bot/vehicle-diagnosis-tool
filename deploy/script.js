@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7320件",
+  validationCheckLabel: "OBD安全検証 7321件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "診断画面のかんたんモードを追加",
+  recentMilestone: "かんたん画面からELM327基本読取を接続",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.396";
+const APP_VERSION = "3.13.397";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -332,6 +332,7 @@ const obdInterfaceSelect = document.querySelector("#obdInterfaceSelect");
 const obdUseDiagnosisVehicleButton = document.querySelector("#obdUseDiagnosisVehicleButton");
 const obdPreviewSelectedButton = document.querySelector("#obdPreviewSelectedButton");
 const obdPrepareSelectedButton = document.querySelector("#obdPrepareSelectedButton");
+const obdSimpleDisconnectButton = document.querySelector("#obdSimpleDisconnectButton");
 const obdConnectionGuide = document.querySelector("#obdConnectionGuide");
 const emptyState = document.querySelector("#emptyState");
 const resultContent = document.querySelector("#resultContent");
@@ -740,7 +741,8 @@ obdLiveObservationCondition?.addEventListener("change", () => {
 });
 obdUseDiagnosisVehicleButton?.addEventListener("click", applyDiagnosisVehicleToObdSetup);
 obdPreviewSelectedButton?.addEventListener("click", previewSelectedObdInterface);
-obdPrepareSelectedButton?.addEventListener("click", prepareSelectedObdInterface);
+obdPrepareSelectedButton?.addEventListener("click", handleObdSetupPrimaryAction);
+obdSimpleDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
 
 caseForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2286,7 +2288,8 @@ function getObdAvailableReadoutNote(interfaceId) {
 }
 
 function getObdPrimaryActionLabel(interfaceId, state = {}) {
-  if (state.connected) return "読取中";
+  if (state.reading) return "基本読取中";
+  if (state.connected) return state.simpleMode ? "基本読取を開始" : "読取中";
   const nativeConnectorRoute = state.nativeConnectorRoute === true || getObdInterfaceReadoutRoute(interfaceId)?.route === "native_connector_required";
   if (nativeConnectorRoute) return state.unlocked ? "iPhone接続準備を確認" : "iPhone接続確認を有効化";
   if (!state.unlocked) {
@@ -2331,9 +2334,14 @@ function getObdAccessStatusMessage(unlocked, capability = window.ObdReadOnly?.ge
   return "このセッションでは OBD2 読取画面を開いています。";
 }
 
-function renderObdSetupActionButtons() {
+function renderObdSetupActionButtons(capability = window.ObdReadOnly?.getCapability?.()) {
   if (!obdPreviewSelectedButton || !obdPrepareSelectedButton) return;
-  const interfaceId = resolveObdInterfaceId();
+  const interfaceId = resolveObdInterfaceId(capability);
+  const readoutRoute = getObdInterfaceReadoutRoute(interfaceId);
+  const connected = Boolean(obdDevSession.port) && !["disconnected", "disconnecting"].includes(obdDevSession.connectionState);
+  const serialBusy = Boolean(obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation
+    || obdDevSession.initializing || obdDevSession.readInProgress || obdDevSession.coreScanInProgress);
+  const simpleMode = typeof obdUiMode === "string" && obdUiMode === "simple";
   const labels = {
     "user-vci-elm327": {
       preview: "ELM327で読取前プレビュー",
@@ -2353,10 +2361,29 @@ function renderObdSetupActionButtons() {
     }
   }[interfaceId] || {
     preview: "この設定で読取前プレビュー",
-      prepare: "この設定で読取準備"
+    prepare: "この設定で読取準備"
   };
   obdPreviewSelectedButton.textContent = labels.preview;
-  obdPrepareSelectedButton.textContent = labels.prepare;
+  if (!simpleMode) {
+    obdPrepareSelectedButton.textContent = labels.prepare;
+    obdPrepareSelectedButton.disabled = Boolean(obdBridgeOperation);
+    if (typeof obdSimpleDisconnectButton !== "undefined" && obdSimpleDisconnectButton) obdSimpleDisconnectButton.hidden = true;
+    return;
+  }
+  const nativeConnectorRoute = readoutRoute?.route === "native_connector_required";
+  if (!obdAccessUnlocked) obdPrepareSelectedButton.textContent = "診断画面を開く";
+  else if (serialBusy) obdPrepareSelectedButton.textContent = obdDevSession.coreScanInProgress ? "基本読取中" : "接続処理中";
+  else if (interfaceId === "user-vci-elm327" && readoutRoute?.route === "desktop_web_serial") {
+    obdPrepareSelectedButton.textContent = connected && obdDevSession.connectionState === "ready"
+      ? "基本読取を開始"
+      : capability?.secureContext === true && capability?.webSerialSupported === true ? "ELM327へ接続" : "PCでELM327読取";
+  } else if (nativeConnectorRoute) obdPrepareSelectedButton.textContent = "iPhone接続準備を確認";
+  else obdPrepareSelectedButton.textContent = labels.prepare;
+  obdPrepareSelectedButton.disabled = serialBusy || (connected && obdDevSession.connectionState !== "ready");
+  if (typeof obdSimpleDisconnectButton !== "undefined" && obdSimpleDisconnectButton) {
+    obdSimpleDisconnectButton.hidden = !connected;
+    obdSimpleDisconnectButton.disabled = !connected || Boolean(obdSerialDisconnectOperation) || obdDevSession.readInProgress || obdDevSession.coreScanInProgress;
+  }
 }
 
 function renderObdConnectionGuide() {
@@ -2442,7 +2469,7 @@ function renderObdConnectionGuide() {
     obdConnectionGuide.appendChild(profileItem);
   }
   renderObdAccessGate();
-  renderObdSetupActionButtons();
+  if (typeof renderObdSetupActionButtons === "function") renderObdSetupActionButtons();
   if (obdAvailableReadoutSummary) {
     obdAvailableReadoutSummary.textContent = `${getSelectedObdInterfaceLabel()}: ${getObdAvailableReadoutNote(interfaceId)}`;
   }
@@ -2478,7 +2505,7 @@ function scrollToObdSection(targetId) {
 
 function renderObdPreviewButtons() {
   if (obdPreviewSelectedButton) obdPreviewSelectedButton.disabled = Boolean(obdBridgeOperation);
-  if (obdPrepareSelectedButton) obdPrepareSelectedButton.disabled = Boolean(obdBridgeOperation);
+  if (obdPrepareSelectedButton && (typeof obdUiMode !== "string" || obdUiMode !== "simple")) obdPrepareSelectedButton.disabled = Boolean(obdBridgeOperation);
   const selectedInterfaceId = resolveObdInterfaceId();
   const previewInterfaceId = obdDevSession.previewMode || "";
   [
@@ -2494,6 +2521,7 @@ function renderObdPreviewButtons() {
     button.classList.toggle("is-active", active);
     button.setAttribute("aria-pressed", String(active));
   });
+  if (typeof renderObdSetupActionButtons === "function") renderObdSetupActionButtons();
 }
 
 function renderObdWorkflowGuide(capability = window.ObdReadOnly?.getCapability?.()) {
@@ -2629,6 +2657,20 @@ function previewSelectedObdInterface() {
   }
 }
 
+function handleObdSetupPrimaryAction() {
+  if (obdUiMode !== "simple") {
+    prepareSelectedObdInterface();
+    return;
+  }
+  if (!ensureObdVehicleSelection()) return;
+  if (!obdAccessUnlocked) {
+    obdAccessStatus.textContent = "パスワードを入力して診断画面を開いてください。";
+    obdAccessGatePanel?.scrollIntoView({ behavior: "instant", block: "start" });
+    obdAccessPasswordInput?.focus();
+    return;
+  }
+  handleObdPrimaryAction();
+}
 function prepareSelectedObdInterface() {
   if (obdBridgeOperation) return;
   if (!ensureObdVehicleSelection()) return;
@@ -4203,11 +4245,15 @@ function renderObdUiMode() {
 }
 
 function setObdUiMode(mode = "simple") {
-  obdUiMode = mode === "details" ? "details" : "simple";
+  const nextMode = mode === "details" ? "details" : "simple";
+  const disconnectSimpleSerial = obdUiMode === "simple" && nextMode === "details"
+    && Boolean(obdDevSession.port) && !obdDevModeUnlocked;
+  obdUiMode = nextMode;
   writeOptionalBrowserSetting(OBD_UI_MODE_KEY, obdUiMode);
   if (obdUiMode === "simple" && activeObdStage === "details") activeObdStage = "setup";
   renderObdUiMode();
   renderObdStageView(activeObdStage);
+  if (disconnectSimpleSerial) void disconnectObdDeveloperVci({ reason: "operator_disconnect" });
 }
 function getObdAutoStage() {
   const lastSession = obdDevSession.lastSession || null;
@@ -5201,6 +5247,8 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   const selectedInterfaceId = resolveObdInterfaceId(capability);
   const selectedReadoutRoute = getObdInterfaceReadoutRoute(selectedInterfaceId);
   const nativeConnectorRoute = selectedReadoutRoute?.route === "native_connector_required";
+  const simpleReadoutAccess = typeof obdUiMode === "string" && obdUiMode === "simple" && obdAccessUnlocked;
+  const primaryUnlocked = unlocked || simpleReadoutAccess;
   const primaryActionNeedsSerial = selectedInterfaceId === "user-vci-elm327" && selectedReadoutRoute?.route === "desktop_web_serial";
   const readBusy = obdDevSession.readInProgress === true;
   const serialBusy = readBusy || obdDevSession.initializing === true || obdDevSession.coreScanInProgress === true;
@@ -5213,8 +5261,8 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevControls.hidden = !unlocked;
   renderObdBridgePairingControls();
   obdDevLockButton.disabled = !unlocked;
-  obdDevConnectButton.disabled = !unlocked || Boolean(obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation) || connected || (primaryActionNeedsSerial && !serialReady);
-  obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked, connected, serialReady, nativeConnectorRoute });
+  obdDevConnectButton.disabled = !primaryUnlocked || Boolean(obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation) || connected || (primaryActionNeedsSerial && !serialReady);
+  obdDevConnectButton.textContent = getObdPrimaryActionLabel(selectedInterfaceId, { unlocked: primaryUnlocked, connected, reading: serialBusy, serialReady, nativeConnectorRoute, simpleMode: simpleReadoutAccess });
   obdDevIdentifyButton.disabled = !unlocked || !connected || serialBusy;
   obdDevCoreScanButton.disabled = !unlocked || !connected || serialBusy;
   obdDevQuickConditionButton.disabled = !unlocked || !connected || serialBusy;
@@ -5236,6 +5284,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   obdDevBridgeReadinessButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
   obdDevBridgeLiveButton.disabled = bridgeUnavailable || !obdDevSession.bridgeEndpoint;
   obdDevDisconnectButton.disabled = !connected;
+  if (typeof renderObdSetupActionButtons === "function") renderObdSetupActionButtons(capability);
   obdDevConnectionState.textContent = connected
     ? selectedInterfaceId === "user-vci-elm327"
       ? "Web Serial読取中"
@@ -5263,7 +5312,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
       : obdSerialDisconnectOperation.writePending
         ? "VCIへの未完了送信と終了処理を確認中です。再接続はできません。車両側の停止は未確認です。"
         : "VCIの終了処理を待っています。再接続はできません。車両側の停止は未確認です。";
-  } else if (!unlocked) {
+  } else if (!primaryUnlocked) {
     obdDevStatus.textContent = "この端末に詳細トークンを設定した場合だけ詳細読取メニューを有効化できます。送信は読取専用のみです。";
   } else if (primaryActionNeedsSerial && !serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
@@ -5365,6 +5414,10 @@ function lockObdDeveloperMode() {
 function handleObdPrimaryAction() {
   const interfaceId = resolveObdInterfaceId();
   if (interfaceId === "user-vci-elm327" && getObdInterfaceReadoutRoute(interfaceId)?.route === "desktop_web_serial") {
+    if (obdDevSession.port && obdDevSession.connectionState === "ready") {
+      void readObdDeveloperCoreScan();
+      return;
+    }
     void connectObdDeveloperVci();
     return;
   }
@@ -5372,7 +5425,8 @@ function handleObdPrimaryAction() {
 }
 
 async function connectObdDeveloperVci() {
-  if (!obdAccessUnlocked || !obdDevModeUnlocked) return;
+  const simpleReadoutAccess = obdAccessUnlocked && typeof obdUiMode === "string" && obdUiMode === "simple";
+  if (!obdAccessUnlocked || (!obdDevModeUnlocked && !simpleReadoutAccess)) return;
   if (obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation) return;
   if (!["disconnected"].includes(obdDevSession.connectionState)) return;
   if (!("serial" in navigator)) {
@@ -5475,6 +5529,7 @@ if (!continueObdSerialOperation(revision)) return;
     }
     obdSerialConnectPending = false;
     renderObdSessionExportControls();
+    renderObdDeveloperGate();
   }
 }
 
@@ -5610,7 +5665,8 @@ async function disconnectObdDeveloperVci(options = {}) {
 }
 
 function isCurrentObdSerialOperation(revision) {
-  return revision === obdSerialRevision && obdAccessUnlocked && obdDevModeUnlocked;
+  const simpleReadoutAccess = obdAccessUnlocked && typeof obdUiMode === "string" && obdUiMode === "simple";
+  return revision === obdSerialRevision && obdAccessUnlocked && (obdDevModeUnlocked || simpleReadoutAccess);
 }
 
 function continueObdSerialOperation(revision) {

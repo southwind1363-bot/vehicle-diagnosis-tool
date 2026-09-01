@@ -1087,6 +1087,10 @@ body.dark .flow-node-measure .flow-step {
   display: none !important;
 }
 
+#obd-panel[data-obd-ui-mode="details"] .obd-simple-only {
+  display: none !important;
+}
+
 #obd-panel[data-obd-ui-mode="simple"] .obd-stage-tabs {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
