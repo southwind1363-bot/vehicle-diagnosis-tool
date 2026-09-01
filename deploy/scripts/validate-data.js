@@ -251,7 +251,8 @@ function validateVehicleEcuApplicabilityCatalogRows(rows, file = "vehicle-ecu-ap
       addError(`${label} evidence is incomplete or unverified`);
     }
     const ecuKeys = new Set();
-    const addresses = new Set();
+    const scopesByAddress = new Map();
+    const normalizeScopePart = (value) => String(value || "").normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
     for (const [ecuIndex, ecu] of (ecus || []).entries()) {
       const address = String(ecu?.response_address || "").trim().toUpperCase().replace(/^0X/, "");
       const addressValue = Number.parseInt(address, 16);
@@ -261,11 +262,19 @@ function validateVehicleEcuApplicabilityCatalogRows(rows, file = "vehicle-ecu-ap
           ? /^[0-9A-F]{8}$/.test(address) && addressValue <= 0x1FFFFFFF
           : false;
       const ecuKey = `${String(ecu?.system_name || "").trim().toLowerCase()}::${String(ecu?.ecu_name || "").trim().toLowerCase()}`;
+      const scopeValues = [ecu?.network_bus, ecu?.network_channel, ecu?.gateway_route];
+      const scopeTypesValid = scopeValues.every((value, index) => value === undefined || isNonEmptyString(value) && value.normalize("NFKC").replace(/\s+/g, " ").trim().length <= [120, 120, 160][index]);
+      const forbiddenScopeAliasPresent = ["networkBus", "networkChannel", "gatewayRoute", "busName", "bus_name", "communicationBus", "communication_bus", "channelId", "channel_id", "channelName", "channel_name", "gatewayPath", "gateway_path", "routingPath", "routing_path"]
+        .some((key) => Object.prototype.hasOwnProperty.call(ecu || {}, key));
+      const scope = scopeValues.map(normalizeScopePart);
+      const scopeOverlap = (scopesByAddress.get(address) || []).some((existing) => scope.every((value, index) => !value || !existing[index] || value === existing[index]));
       if (!isNonEmptyString(ecu?.system_name) || !isNonEmptyString(ecu?.ecu_name) || ecu?.address_role !== "response" || ecu?.responseAddress !== undefined || ecu?.addressRole !== undefined || ecu?.addressFormat !== undefined || ecu?.diagnostic_address !== undefined || ecu?.diagnosticAddress !== undefined
-        || !addressFormatValid
-        || !isNonEmptyString(ecu?.protocol) || ecuKeys.has(ecuKey) || addresses.has(address)) addError(`${label} supported_ecus[${ecuIndex}] is invalid or duplicated`);
+        || !addressFormatValid || !scopeTypesValid || forbiddenScopeAliasPresent
+        || !isNonEmptyString(ecu?.protocol) || ecuKeys.has(ecuKey) || scopeOverlap) addError(`${label} supported_ecus[${ecuIndex}] is invalid or duplicated`);
       ecuKeys.add(ecuKey);
-      addresses.add(address);
+      const addressScopes = scopesByAddress.get(address) || [];
+      addressScopes.push(scope);
+      scopesByAddress.set(address, addressScopes);
     }
     ids.add(entry?.id);
     evidenceIds.add(evidence?.evidence_id);
@@ -307,13 +316,26 @@ overlappingVehicleEcuCatalogFixture[0].entry_count = 2;
 const conflictingVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
 conflictingVehicleEcuCatalogFixture[1].evidence.sourceVerificationConflict = "true";
 conflictingVehicleEcuCatalogFixture[1].evidence.verified = "false";
+const scopedSharedAddressVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
+scopedSharedAddressVehicleEcuCatalogFixture[1].supported_ecus = [
+  { system_name: "Powertrain", ecu_name: "ECM/PT", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4", network_bus: "CAN-PT", network_channel: "CH1" },
+  { system_name: "Body", ecu_name: "ECM/Body", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4", network_bus: "CAN-BODY", network_channel: "CH2" }
+];
+const overlappingScopedAddressVehicleEcuCatalogFixture = structuredClone(scopedSharedAddressVehicleEcuCatalogFixture);
+overlappingScopedAddressVehicleEcuCatalogFixture[1].supported_ecus[1].network_bus = "CAN-PT";
+overlappingScopedAddressVehicleEcuCatalogFixture[1].supported_ecus[1].network_channel = "CH1";
+const oversizedNetworkScopeVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
+oversizedNetworkScopeVehicleEcuCatalogFixture[1].supported_ecus[0].network_bus = "A".repeat(121);
 const ambiguousAddressVehicleEcuCatalogFixture = structuredClone(validVehicleEcuCatalogFixture);
 ambiguousAddressVehicleEcuCatalogFixture[1].supported_ecus[0].diagnosticAddress = "7E0";
 if (validateVehicleEcuApplicabilityCatalogRows(validVehicleEcuCatalogFixture, "fixture").length
+  || validateVehicleEcuApplicabilityCatalogRows(scopedSharedAddressVehicleEcuCatalogFixture, "fixture").length
   || !validateVehicleEcuApplicabilityCatalogRows(oversizedVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("1 to 64"))
   || !validateVehicleEcuApplicabilityCatalogRows(overlappingVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("overlapping"))
   || !validateVehicleEcuApplicabilityCatalogRows(conflictingVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("evidence"))
-  || !validateVehicleEcuApplicabilityCatalogRows(ambiguousAddressVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("supported_ecus"))) {
+  || !validateVehicleEcuApplicabilityCatalogRows(ambiguousAddressVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("supported_ecus"))
+  || !validateVehicleEcuApplicabilityCatalogRows(overlappingScopedAddressVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("supported_ecus"))
+  || !validateVehicleEcuApplicabilityCatalogRows(oversizedNetworkScopeVehicleEcuCatalogFixture, "fixture").some((message) => message.includes("supported_ecus"))) {
   reportError("Vehicle ECU applicability catalog validation must enforce capacity and unique scope");
 }
 function validateDtcStandardsReferenceRows(rows, file) {

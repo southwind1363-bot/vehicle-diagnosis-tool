@@ -1,3 +1,4 @@
+3.13.418では、車種別の期待ECUと実ECU応答へnetwork bus・channel・gateway routeを追加し、同じCAN応答IDでも別ネットワーク経路なら別ECUとして照合します。期待scopeがある場合、scope欠落は比較不能、明示不一致は不一致として扱い、別経路のpositive/negative/pending応答を適合証拠へ混入させません。scope未指定の旧形式は従来のaddress-only照合と観測キーを維持し、alias競合・型不正・重複scopeはfail-closed、保存JSON比較と車両送信無効も維持します。
 3.13.417では、29bit CANの要求方向IDと応答方向IDをECU応答要約で別行として保持し、同一サービス・同一件数でも相互に重複排除しないよう修正しました。観測ECUと車両適合の証拠には明示された応答IDを優先し、要求IDだけの行は応答済みとして扱いません。11bitの表記揺れ重複排除、一般的な要求・応答相関、保存JSON往復、車両送信無効は維持します。
 3.13.416では、車種別の期待ECUで要求CAN IDと応答CAN IDを混同しないよう、response_address・address_role・address_formatを診断セッションと保存JSONへ保持しました。適合照合は11bit/29bitの明示されたECU応答IDだけを厳格一致させ、29bitの要求IDを応答済みと誤認しません。役割不明の旧形式、request指定、形式不一致、alias競合、範囲外IDは保持またはレビュー対象に留め、完全な期待ECU一覧へ昇格しません。既存の要求・応答相関処理、未観測の扱い、証跡信頼降格、車両送信無効は維持します。
 

@@ -8450,6 +8450,9 @@
       const addressFormatKeys = ["addressFormat", "address_format"];
       const addressRoleProvidedKeys = ["addressRoleProvided", "address_role_provided"];
       const addressFormatProvidedKeys = ["addressFormatProvided", "address_format_provided"];
+      const networkBusKeys = ["networkBus", "network_bus", "busName", "bus_name", "communicationBus", "communication_bus"];
+      const networkChannelKeys = ["networkChannel", "network_channel", "channelId", "channel_id", "channelName", "channel_name"];
+      const gatewayRouteKeys = ["gatewayRoute", "gateway_route", "gatewayPath", "gateway_path", "routingPath", "routing_path"];
       const isNonEmptyString = (value) => typeof value === "string" && Boolean(value.trim());
       const responseAddressInputs = responseAddressKeys.map((key) => sourceEcu[key])
         .filter((value) => typeof value === "string" && value.trim());
@@ -8503,6 +8506,37 @@
           : addressFormat === "can_29bit"
             ? /^[0-9A-F]{8}$/.test(responseAddressToken) && responseAddressValue <= 0x1FFFFFFF
             : false);
+      const normalizeScopeAliases = (keys, providedKeys, conflictKeys, maxLength) => {
+        const presentValues = keys.filter(hasOwnEcuField).map((key) => sourceEcu[key]);
+        const normalizedValues = presentValues.filter((value) => typeof value === "string" && value.trim())
+          .map((value) => value.normalize("NFKC").replace(/\s+/g, " ").trim());
+        const values = normalizedValues.filter((value) => value.length <= maxLength);
+        const canonicalValues = values.map((value) => value.toLowerCase());
+        const providedFlags = providedKeys.filter(hasOwnEcuField).map((key) => sourceEcu[key]);
+        const conflictFlags = conflictKeys.filter(hasOwnEcuField).map((key) => sourceEcu[key]);
+        const provided = values.length > 0;
+        const conflict = presentValues.some((value) => value != null && (typeof value !== "string" || !value.trim()))
+          || normalizedValues.some((value) => value.length > maxLength)
+          || canonicalValues.some((value) => value !== canonicalValues[0])
+          || providedFlags.some((value) => typeof value !== "boolean")
+          || conflictFlags.some((value) => typeof value !== "boolean")
+          || providedFlags.some((value) => value !== provided)
+          || conflictFlags.includes(true);
+        return { value: values[0] || null, provided, conflict };
+      };
+      const networkBusScope = normalizeScopeAliases(networkBusKeys, ["networkBusProvided", "network_bus_provided"], ["networkBusConflict", "network_bus_conflict"], 120);
+      const networkChannelScope = normalizeScopeAliases(networkChannelKeys, ["networkChannelProvided", "network_channel_provided"], ["networkChannelConflict", "network_channel_conflict"], 120);
+      const gatewayRouteScope = normalizeScopeAliases(gatewayRouteKeys, ["gatewayRouteProvided", "gateway_route_provided"], ["gatewayRouteConflict", "gateway_route_conflict"], 160);
+      const networkScopeProvided = networkBusScope.provided || networkChannelScope.provided || gatewayRouteScope.provided;
+      const aggregateProvidedFlags = ["networkScopeProvided", "network_scope_provided"].filter(hasOwnEcuField).map((key) => sourceEcu[key]);
+      const aggregateConflictFlags = ["networkScopeConflict", "network_scope_conflict"].filter(hasOwnEcuField).map((key) => sourceEcu[key]);
+      const aggregateEligibleFlags = ["networkScopeEvidenceEligible", "network_scope_evidence_eligible"].filter(hasOwnEcuField).map((key) => sourceEcu[key]);
+      const networkScopeConflict = networkBusScope.conflict || networkChannelScope.conflict || gatewayRouteScope.conflict
+        || aggregateProvidedFlags.some((value) => typeof value !== "boolean" || value !== networkScopeProvided)
+        || aggregateConflictFlags.some((value) => typeof value !== "boolean" || value === true)
+        || aggregateEligibleFlags.some((value) => typeof value !== "boolean" || value === false)
+        || aggregateEligibleFlags.some((value) => value !== aggregateEligibleFlags[0]);
+      const networkScopeEvidenceEligible = !networkScopeConflict;
       const systemName = firstNormalizedIdentityValue([sourceEcu.systemName, sourceEcu.system_name, sourceEcu.targetSystem, sourceEcu.target_system, sourceEcu.system], 80);
       const ecuName = firstNormalizedIdentityValue([sourceEcu.ecuName, sourceEcu.ecu_name, sourceEcu.targetEcu, sourceEcu.target_ecu, sourceEcu.moduleName, sourceEcu.module_name, sourceEcu.name], 80);
       const protocol = firstNormalizedIdentityValue([sourceEcu.protocol, sourceEcu.communicationProtocol, sourceEcu.communication_protocol], 40);
@@ -8518,6 +8552,20 @@
         addressFormatProvided, address_format_provided: addressFormatProvided,
         addressFormatConflict, address_format_conflict: addressFormatConflict,
         responseAddressContractValid, response_address_contract_valid: responseAddressContractValid,
+        ...(networkScopeProvided || networkScopeConflict ? {
+          networkBus: networkBusScope.value, network_bus: networkBusScope.value,
+          networkBusProvided: networkBusScope.provided, network_bus_provided: networkBusScope.provided,
+          networkBusConflict: networkBusScope.conflict, network_bus_conflict: networkBusScope.conflict,
+          networkChannel: networkChannelScope.value, network_channel: networkChannelScope.value,
+          networkChannelProvided: networkChannelScope.provided, network_channel_provided: networkChannelScope.provided,
+          networkChannelConflict: networkChannelScope.conflict, network_channel_conflict: networkChannelScope.conflict,
+          gatewayRoute: gatewayRouteScope.value, gateway_route: gatewayRouteScope.value,
+          gatewayRouteProvided: gatewayRouteScope.provided, gateway_route_provided: gatewayRouteScope.provided,
+          gatewayRouteConflict: gatewayRouteScope.conflict, gateway_route_conflict: gatewayRouteScope.conflict,
+          networkScopeProvided, network_scope_provided: networkScopeProvided,
+          networkScopeConflict, network_scope_conflict: networkScopeConflict,
+          networkScopeEvidenceEligible, network_scope_evidence_eligible: networkScopeEvidenceEligible
+        } : {}),
         protocol
       };
     };
@@ -9524,6 +9572,8 @@
       const addressFormat = String(item?.addressFormat || item?.address_format || "").trim().toLowerCase();
       return item?.addressRoleConflict === true || item?.address_role_conflict === true
         || item?.addressFormatConflict === true || item?.address_format_conflict === true
+        || item?.networkScopeConflict === true || item?.network_scope_conflict === true
+        || item?.networkScopeEvidenceEligible === false || item?.network_scope_evidence_eligible === false
         || addressRole !== "response"
         || !["can_11bit", "can_29bit"].includes(addressFormat)
         || item?.addressRoleProvided !== true
@@ -9531,6 +9581,15 @@
         || item?.responseAddressContractValid !== true
         || !(item?.responseAddress || item?.response_address);
     });
+    const normalizeSupportedEcuScopePart = (value) => String(value || "").normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+    const supportedEcuScopeOverlapConflict = (applicability.supportedEcus || []).some((left, leftIndex, rows) => rows.slice(leftIndex + 1).some((right) => {
+      const leftAddress = normalizeStrictCanAddress(left?.responseAddress || left?.response_address, left?.addressFormat || left?.address_format);
+      const rightAddress = normalizeStrictCanAddress(right?.responseAddress || right?.response_address, right?.addressFormat || right?.address_format);
+      if (!leftAddress || leftAddress !== rightAddress) return false;
+      const leftScope = [left?.networkBus || left?.network_bus, left?.networkChannel || left?.network_channel, left?.gatewayRoute || left?.gateway_route].map(normalizeSupportedEcuScopePart);
+      const rightScope = [right?.networkBus || right?.network_bus, right?.networkChannel || right?.network_channel, right?.gatewayRoute || right?.gateway_route].map(normalizeSupportedEcuScopePart);
+      return leftScope.every((value, index) => !value || !rightScope[index] || value === rightScope[index]);
+    }));
     const supportedEcuEvidenceEligible = applicability.status === "matched"
       && applicability.sourceVerified === true
       && applicability.sourceVerificationConflict !== true
@@ -9542,7 +9601,8 @@
       && supportedEcuEvidenceVehicleMatch
       && (applicability.supportedEcus || []).length > 0
       && applicability.supportedEcusTruncated !== true
-      && !supportedEcuAddressContractConflict;
+      && !supportedEcuAddressContractConflict
+      && !supportedEcuScopeOverlapConflict;
     const supportedEcuEvidenceReviewReasons = [
       applicability.status !== "matched" ? "vehicle_applicability_not_matched" : null,
       applicability.sourceVerified !== true ? "vehicle_applicability_source_unverified" : null,
@@ -9554,7 +9614,8 @@
       !supportedEcuEvidenceComplete ? "supported_ecu_evidence_incomplete" : null,
       supportedEcuEvidenceComplete && !supportedEcuEvidenceVehicleMatch ? "supported_ecu_vehicle_scope_mismatch" : null,
       applicability.supportedEcusTruncated === true ? "supported_ecu_list_truncated" : null,
-      supportedEcuAddressContractConflict ? "supported_ecu_address_contract_conflict" : null
+      supportedEcuAddressContractConflict ? "supported_ecu_address_contract_conflict" : null,
+      supportedEcuScopeOverlapConflict ? "supported_ecu_scope_contract_conflict" : null
     ].filter(Boolean);
     const resolveExpectedResponseAddress = (item) => {
       const addressRole = String(item?.addressRole || item?.address_role || "").trim().toLowerCase();
@@ -9601,8 +9662,13 @@
       return Number.isFinite(observedValue) && observedValue >= range.startValue && observedValue <= range.endValue;
     };
     const isExpectedAddressMatch = (observedAddress) => expectedAddressRanges.some((range) => isExpectedRangeMatch(range, observedAddress));
-    const respondedEcuRows = (Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [])
+    const allEcuResponseRows = Array.isArray(ecuResponseSummary?.ecus) ? ecuResponseSummary.ecus : [];
+    const respondedEcuRows = allEcuResponseRows
+      .filter((item) => item?.ecuResponseConflict !== true && item?.ecu_response_conflict !== true && item?.applicabilityEvidenceEligible !== false && item?.applicability_evidence_eligible !== false && item?.networkScopeEvidenceEligible !== false && item?.network_scope_evidence_eligible !== false)
+      .filter(isObservableEcuResponse);
+    const scopeRejectedEcuRows = allEcuResponseRows
       .filter((item) => item?.ecuResponseConflict !== true && item?.ecu_response_conflict !== true && item?.applicabilityEvidenceEligible !== false && item?.applicability_evidence_eligible !== false)
+      .filter((item) => item?.networkScopeConflict === true || item?.network_scope_conflict === true || item?.networkScopeEvidenceEligible === false || item?.network_scope_evidence_eligible === false)
       .filter(isObservableEcuResponse);
     const normalizeObservedAddressForExpectedRanges = (value) => {
       for (const range of expectedAddressRanges) {
@@ -9615,6 +9681,9 @@
       const addressEvidence = resolveEcuResponseAddressEvidence(item);
       return ["response", "legacy_response"].includes(addressEvidence.kind) ? addressEvidence.responseAddress : null;
     };
+    const scopeRejectedExpectedAddressMatch = scopeRejectedEcuRows.some((item) => isExpectedAddressMatch(
+      normalizeObservedAddressForExpectedRanges(resolveObservedResponseAddress(item))
+    ));
     const respondedEcuAddresses = [...new Set(respondedEcuRows
       .map(resolveObservedResponseAddress)
       .map(normalizeObservedAddressForExpectedRanges)
@@ -9636,27 +9705,66 @@
     const comparableObservedAddresses = expectedAddressRanges.length
       ? observedAddresses.filter((address) => expectedAddressRanges.some((range) => address.length === range.startAddress.length))
       : [];
-    const matchedObservedAddresses = comparableObservedAddresses.filter(isExpectedAddressMatch);
-    const unmatchedComparableObservedAddresses = comparableObservedAddresses.filter((address) => !isExpectedAddressMatch(address));
-    const matchedExpectedAddresses = expectedAddressRanges
+    const addressOnlyMatchedObservedAddresses = comparableObservedAddresses.filter(isExpectedAddressMatch);
+    const addressOnlyUnmatchedComparableObservedAddresses = comparableObservedAddresses.filter((address) => !isExpectedAddressMatch(address));
+    const addressOnlyMatchedExpectedAddresses = expectedAddressRanges
       .filter((range) => comparableObservedAddresses.some((address) => isExpectedRangeMatch(range, address)))
       .map((range) => range.descriptor);
-    const unmatchedExpectedAddresses = expectedAddressRanges
+    const addressOnlyUnmatchedExpectedAddresses = expectedAddressRanges
       .filter((range) => !comparableObservedAddresses.some((address) => isExpectedRangeMatch(range, address)))
       .map((range) => range.descriptor);
-    const partialExpectedAddressObservation = matchedExpectedAddresses.length > 0 && unmatchedExpectedAddresses.length > 0;
+    const addressOnlyPartialExpectedAddressObservation = addressOnlyMatchedExpectedAddresses.length > 0 && addressOnlyUnmatchedExpectedAddresses.length > 0;
     const normalizeExpectedEcuObservationKeyPart = (value, fallback) => String(value || fallback)
       .normalize("NFKC")
       .trim()
       .toLowerCase()
       .replace(/\s+/g, "_")
       .replace(/[|:]/g, "_");
+    const normalizeNetworkScopeMatchPart = (value) => String(value || "").normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
+    const expectedNetworkScope = (item) => ({
+      networkBus: item?.networkBus || item?.network_bus || null,
+      networkChannel: item?.networkChannel || item?.network_channel || null,
+      gatewayRoute: item?.gatewayRoute || item?.gateway_route || null
+    });
+    const observedNetworkScope = (item) => ({
+      networkBus: item?.networkBus || item?.network_bus || null,
+      networkChannel: item?.networkChannel || item?.network_channel || null,
+      gatewayRoute: item?.gatewayRoute || item?.gateway_route || null
+    });
+    const matchesExpectedEcuScope = (expected, observed) => {
+      const expectedScope = expectedNetworkScope(expected);
+      const observedScope = observedNetworkScope(observed);
+      return ["networkBus", "networkChannel", "gatewayRoute"].every((key) => !expectedScope[key]
+        || Boolean(observedScope[key]) && normalizeNetworkScopeMatchPart(observedScope[key]) === normalizeNetworkScopeMatchPart(expectedScope[key]));
+    };
+    const matchesExpectedEcuRow = (expected, range, observed) => isExpectedRangeMatch(
+      range,
+      normalizeObservedAddressForExpectedRanges(resolveObservedResponseAddress(observed))
+    ) && matchesExpectedEcuScope(expected, observed);
     const expectedEcuObservationKeyCounts = new Map();
     const expectedEcuObservations = expectedAddressSource === "supported_ecus"
       ? (applicability.supportedEcus || []).map((item) => {
         const range = normalizeExpectedAddressRange(resolveExpectedResponseAddress(item));
         if (!range) return null;
-        const ecuObservedAddresses = comparableObservedAddresses.filter((address) => isExpectedRangeMatch(range, address));
+        const scope = expectedNetworkScope(item);
+        const scopeProvided = Boolean(scope.networkBus || scope.networkChannel || scope.gatewayRoute);
+        const addressMatchedResponseRows = respondedEcuRows.filter((row) => isExpectedRangeMatch(
+          range,
+          normalizeObservedAddressForExpectedRanges(resolveObservedResponseAddress(row))
+        ));
+        const scopedMatchedResponseRows = addressMatchedResponseRows.filter((row) => matchesExpectedEcuScope(item, row));
+        const ecuObservedAddresses = scopeProvided
+          ? [...new Set(scopedMatchedResponseRows.map(resolveObservedResponseAddress).map(normalizeObservedAddressForExpectedRanges).filter(Boolean))]
+          : comparableObservedAddresses.filter((address) => isExpectedRangeMatch(range, address));
+        const missingRequiredScope = scopeProvided && scopedMatchedResponseRows.length === 0 && addressMatchedResponseRows.some((row) => {
+          const observedScope = observedNetworkScope(row);
+          return ["networkBus", "networkChannel", "gatewayRoute"].some((key) => scope[key] && !observedScope[key]);
+        });
+        const explicitScopeMismatch = scopeProvided && scopedMatchedResponseRows.length === 0 && addressMatchedResponseRows.some((row) => {
+          const observedScope = observedNetworkScope(row);
+          return ["networkBus", "networkChannel", "gatewayRoute"].some((key) => scope[key] && observedScope[key]
+            && normalizeNetworkScopeMatchPart(scope[key]) !== normalizeNetworkScopeMatchPart(observedScope[key]));
+        });
         const systemName = item?.systemName || item?.system_name || null;
         const ecuName = item?.ecuName || item?.ecu_name || null;
         const protocol = item?.protocol || null;
@@ -9664,56 +9772,86 @@
           `system:${normalizeExpectedEcuObservationKeyPart(systemName, "unknown")}`,
           `ecu:${normalizeExpectedEcuObservationKeyPart(ecuName, "unknown")}`,
           `address:${normalizeExpectedEcuObservationKeyPart(range.descriptor, "unknown")}`,
-          `protocol:${normalizeExpectedEcuObservationKeyPart(protocol, "unknown")}`
+          `protocol:${normalizeExpectedEcuObservationKeyPart(protocol, "unknown")}`,
+          ...(scopeProvided ? [
+            `bus:${normalizeExpectedEcuObservationKeyPart(scope.networkBus, "unspecified")}`,
+            `channel:${normalizeExpectedEcuObservationKeyPart(scope.networkChannel, "unspecified")}`,
+            `gateway:${normalizeExpectedEcuObservationKeyPart(scope.gatewayRoute, "unspecified")}`
+          ] : [])
         ].join("|");
         const observationDuplicateIndex = (expectedEcuObservationKeyCounts.get(observationKeyBase) || 0) + 1;
         expectedEcuObservationKeyCounts.set(observationKeyBase, observationDuplicateIndex);
         const observationKey = observationDuplicateIndex > 1 ? `${observationKeyBase}|duplicate:${observationDuplicateIndex}` : observationKeyBase;
         return {
-          observationKey,
-          observation_key: observationKey,
-          observationDuplicateIndex,
-          observation_duplicate_index: observationDuplicateIndex,
-          systemName,
-          system_name: systemName,
-          ecuName,
-          ecu_name: ecuName,
-          responseAddress: range.descriptor,
-          response_address: range.descriptor,
-          diagnosticAddress: range.descriptor,
-          diagnostic_address: range.descriptor,
-          addressRole: "response",
-          address_role: "response",
+          observationKey, observation_key: observationKey,
+          observationDuplicateIndex, observation_duplicate_index: observationDuplicateIndex,
+          systemName, system_name: systemName, ecuName, ecu_name: ecuName,
+          responseAddress: range.descriptor, response_address: range.descriptor,
+          diagnosticAddress: range.descriptor, diagnostic_address: range.descriptor,
+          addressRole: "response", address_role: "response",
           addressFormat: range.addressFormat || item?.addressFormat || item?.address_format || null,
           address_format: range.addressFormat || item?.addressFormat || item?.address_format || null,
-          protocol: item?.protocol || null,
-          sourceVerified: true,
-          source_verified: true,
-          sourceVerificationConflict: false,
-          source_verification_conflict: false,
+          protocol,
+          ...(scopeProvided ? {
+            networkBus: scope.networkBus, network_bus: scope.networkBus,
+            networkChannel: scope.networkChannel, network_channel: scope.networkChannel,
+            gatewayRoute: scope.gatewayRoute, gateway_route: scope.gatewayRoute,
+            networkScopeProvided: true, network_scope_provided: true,
+            missingRequiredScope, missing_required_scope: missingRequiredScope,
+            explicitScopeMismatch, explicit_scope_mismatch: explicitScopeMismatch
+          } : {}),
+          sourceVerified: true, source_verified: true,
+          sourceVerificationConflict: false, source_verification_conflict: false,
           evidenceId: supportedEcuEvidence.evidenceId || null,
           evidence_id: supportedEcuEvidence.evidenceId || null,
-          observedAddresses: ecuObservedAddresses,
-          observed_addresses: ecuObservedAddresses,
+          observedAddresses: ecuObservedAddresses, observed_addresses: ecuObservedAddresses,
           observed: ecuObservedAddresses.length > 0
         };
       }).filter(Boolean)
       : [];
+    const scopeAwareExpectedObservation = expectedAddressSource === "supported_ecus" && expectedEcuObservations.length > 0;
+    const matchedObservedAddresses = scopeAwareExpectedObservation
+      ? [...new Set(expectedEcuObservations.filter((item) => item.observed).flatMap((item) => item.observedAddresses || item.observed_addresses || []))].sort()
+      : addressOnlyMatchedObservedAddresses;
+    const unmatchedComparableObservedAddresses = scopeAwareExpectedObservation
+      ? comparableObservedAddresses.filter((address) => !matchedObservedAddresses.includes(address))
+      : addressOnlyUnmatchedComparableObservedAddresses;
+    const matchedExpectedAddresses = scopeAwareExpectedObservation
+      ? [...new Set(expectedEcuObservations.filter((item) => item.observed).map((item) => item.responseAddress || item.response_address).filter(Boolean))]
+      : addressOnlyMatchedExpectedAddresses;
+    const unmatchedExpectedAddresses = scopeAwareExpectedObservation
+      ? [...new Set(expectedEcuObservations.filter((item) => !item.observed).map((item) => item.responseAddress || item.response_address).filter(Boolean))]
+      : addressOnlyUnmatchedExpectedAddresses;
     const observedExpectedEcuCount = expectedEcuObservations.filter((item) => item.observed).length;
     const unobservedExpectedEcuCount = expectedEcuObservations.length - observedExpectedEcuCount;
+    const scopedExpectedObservations = expectedEcuObservations.filter((item) => item.networkScopeProvided === true);
+    const partialExpectedAddressObservation = expectedAddressSource === "supported_ecus"
+      ? observedExpectedEcuCount > 0 && unobservedExpectedEcuCount > 0
+      : addressOnlyPartialExpectedAddressObservation;
     const status = !expectedAddressRanges.length
       ? "not_configured"
-      : !observedAddresses.length
-        ? "not_observed"
-        : !comparableObservedAddresses.length
-          ? "not_comparable"
-          : comparableObservedAddresses.some(isExpectedAddressMatch)
-            ? "matched"
-            : "mismatch";
+      : expectedAddressSource === "supported_ecus" && expectedEcuObservations.length > 0
+        ? observedExpectedEcuCount > 0
+          ? "matched"
+          : scopedExpectedObservations.some((item) => item.explicitScopeMismatch)
+            ? "mismatch"
+            : scopedExpectedObservations.some((item) => item.missingRequiredScope) || scopeRejectedExpectedAddressMatch
+              ? "not_comparable"
+              : !observedAddresses.length
+                ? "not_observed"
+                : !comparableObservedAddresses.length ? "not_comparable" : "mismatch"
+        : !observedAddresses.length
+          ? "not_observed"
+          : !comparableObservedAddresses.length
+            ? "not_comparable"
+            : comparableObservedAddresses.some(isExpectedAddressMatch) ? "matched" : "mismatch";
     const matchedResponseRows = expectedAddressRanges.length
-      ? respondedEcuRows.filter((item) => isExpectedAddressMatch(
-        normalizeObservedAddressForExpectedRanges(resolveObservedResponseAddress(item))
-      ))
+      ? respondedEcuRows.filter((item) => expectedAddressSource === "supported_ecus"
+        ? (applicability.supportedEcus || []).some((expected) => {
+          const range = normalizeExpectedAddressRange(resolveExpectedResponseAddress(expected));
+          return range && matchesExpectedEcuRow(expected, range, item);
+        })
+        : isExpectedAddressMatch(normalizeObservedAddressForExpectedRanges(resolveObservedResponseAddress(item))))
       : [];
     const matchedResponseStatuses = [...new Set(matchedResponseRows
       .map((item) => String(item?.status || item?.responseStatus || item?.response_status || "")
@@ -23357,11 +23495,20 @@
       const addressFormat = item?.addressFormat || item?.address_format || null;
       const comparisonAddress = responseAddress || diagnosticAddress;
       const protocol = item?.protocol || null;
+      const networkBus = item?.networkBus || item?.network_bus || null;
+      const networkChannel = item?.networkChannel || item?.network_channel || null;
+      const gatewayRoute = item?.gatewayRoute || item?.gateway_route || null;
+      const networkScopeProvided = item?.networkScopeProvided === true || item?.network_scope_provided === true || Boolean(networkBus || networkChannel || gatewayRoute);
       const observationKeyBase = [
         `system:${normalizeKeyPart(systemName, "unknown")}`,
         `ecu:${normalizeKeyPart(ecuName, "unknown")}`,
         `address:${normalizeKeyPart(comparisonAddress, "unknown")}`,
-        `protocol:${normalizeKeyPart(protocol, "unknown")}`
+        `protocol:${normalizeKeyPart(protocol, "unknown")}`,
+        ...(networkScopeProvided ? [
+          `bus:${normalizeKeyPart(networkBus, "unspecified")}`,
+          `channel:${normalizeKeyPart(networkChannel, "unspecified")}`,
+          `gateway:${normalizeKeyPart(gatewayRoute, "unspecified")}`
+        ] : [])
       ].join("|");
       const duplicateIndex = (duplicateCounts.get(observationKeyBase) || 0) + 1;
       duplicateCounts.set(observationKeyBase, duplicateIndex);
@@ -23390,6 +23537,16 @@
         addressFormat,
         address_format: addressFormat,
         protocol,
+        ...(networkScopeProvided ? {
+          networkBus, network_bus: networkBus,
+          networkChannel, network_channel: networkChannel,
+          gatewayRoute, gateway_route: gatewayRoute,
+          networkScopeProvided: true, network_scope_provided: true,
+          missingRequiredScope: item?.missingRequiredScope === true || item?.missing_required_scope === true,
+          missing_required_scope: item?.missingRequiredScope === true || item?.missing_required_scope === true,
+          explicitScopeMismatch: item?.explicitScopeMismatch === true || item?.explicit_scope_mismatch === true,
+          explicit_scope_mismatch: item?.explicitScopeMismatch === true || item?.explicit_scope_mismatch === true
+        } : {}),
         observed: item?.observed === true,
         observedAddresses,
         observed_addresses: observedAddresses
@@ -32240,7 +32397,7 @@
         || rowCandidates.find(Array.isArray)
         || [];
     const rawEcus = rows.map((row, index) => {
-      const id = String(row?.id || row?.ecu || row?.address || row?.source_ecu || row?.sourceEcu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
+      const id = String(row?.id || row?.diagnosticResponseId || row?.diagnostic_response_id || row?.responseCanId || row?.response_can_id || row?.rxId || row?.rx_id || row?.ecu || row?.address || row?.source_ecu || row?.sourceEcu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || `ecu_${index + 1}`).slice(0, 40);
       const name = row?.name ? String(row.name).slice(0, 120) : row?.label ? String(row.label).slice(0, 120) : row?.display_name ? String(row.display_name).slice(0, 120) : row?.displayName ? String(row.displayName).slice(0, 120) : row?.source_ecu_name ? String(row.source_ecu_name).slice(0, 120) : row?.sourceEcuName ? String(row.sourceEcuName).slice(0, 120) : row?.ecu_name ? String(row.ecu_name).slice(0, 120) : row?.ecuName ? String(row.ecuName).slice(0, 120) : row?.module_name ? String(row.module_name).slice(0, 120) : row?.moduleName ? String(row.moduleName).slice(0, 120) : null;
       const address = row?.address || row?.ecu || row?.source_ecu || row?.sourceEcu || row?.ecu_id || row?.ecuId || row?.module_id || row?.moduleId || row?.controller_id || row?.controllerId || null;
       const reportedStatus = row?.status || row?.response_status || row?.responseStatus || row?.readout_status || row?.readoutStatus || "unknown";
@@ -32297,9 +32454,42 @@
       const ecuHardwareId = redactSensitiveText(String(row?.ecuHardwareId || row?.ecu_hardware_id || row?.hardwareId || row?.hardware_id || row?.hardwareVersion || row?.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
       const ecuDatasetId = redactSensitiveText(String(row?.ecuDatasetId || row?.ecu_dataset_id || row?.datasetId || row?.dataset_id || row?.dataSetId || row?.data_set_id || row?.calibrationDatasetId || row?.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
       const diagnosticSoftwareVersion = redactSensitiveText(String(row?.diagnosticSoftwareVersion || row?.diagnostic_software_version || row?.scannerSoftwareVersion || row?.scanner_software_version || row?.toolVersion || row?.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-      const networkBus = redactSensitiveText(String(row?.networkBus || row?.network_bus || row?.busName || row?.bus_name || row?.communicationBus || row?.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-      const networkChannel = redactSensitiveText(String(row?.networkChannel || row?.network_channel || row?.channelId || row?.channel_id || row?.channelName || row?.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-      const gatewayRoute = redactSensitiveText(String(row?.gatewayRoute || row?.gateway_route || row?.gatewayPath || row?.gateway_path || row?.routingPath || row?.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+      const hasOwnResponseField = (key) => Object.prototype.hasOwnProperty.call(row || {}, key);
+      const normalizeResponseScopeAliases = (keys, providedKeys, conflictKeys, maxLength) => {
+        const presentValues = keys.filter(hasOwnResponseField).map((key) => row[key]);
+        const normalizedValues = presentValues.filter((value) => typeof value === "string" && value.trim())
+          .map((value) => value.normalize("NFKC").replace(/\s+/g, " ").trim());
+        const values = normalizedValues.filter((value) => value.length <= maxLength)
+          .map((value) => redactSensitiveText(value));
+        const canonicalValues = values.map((value) => value.toLowerCase());
+        const providedFlags = providedKeys.filter(hasOwnResponseField).map((key) => row[key]);
+        const conflictFlags = conflictKeys.filter(hasOwnResponseField).map((key) => row[key]);
+        const provided = values.length > 0;
+        const conflict = presentValues.some((value) => value != null && (typeof value !== "string" || !value.trim()))
+          || normalizedValues.some((value) => value.length > maxLength)
+          || canonicalValues.some((value) => value !== canonicalValues[0])
+          || providedFlags.some((value) => typeof value !== "boolean")
+          || conflictFlags.some((value) => typeof value !== "boolean")
+          || providedFlags.some((value) => value !== provided)
+          || conflictFlags.includes(true);
+        return { value: values[0] || null, provided, conflict };
+      };
+      const networkBusScope = normalizeResponseScopeAliases(["networkBus", "network_bus", "busName", "bus_name", "communicationBus", "communication_bus"], ["networkBusProvided", "network_bus_provided"], ["networkBusConflict", "network_bus_conflict"], 120);
+      const networkChannelScope = normalizeResponseScopeAliases(["networkChannel", "network_channel", "channelId", "channel_id", "channelName", "channel_name"], ["networkChannelProvided", "network_channel_provided"], ["networkChannelConflict", "network_channel_conflict"], 120);
+      const gatewayRouteScope = normalizeResponseScopeAliases(["gatewayRoute", "gateway_route", "gatewayPath", "gateway_path", "routingPath", "routing_path"], ["gatewayRouteProvided", "gateway_route_provided"], ["gatewayRouteConflict", "gateway_route_conflict"], 160);
+      const networkBus = networkBusScope.value;
+      const networkChannel = networkChannelScope.value;
+      const gatewayRoute = gatewayRouteScope.value;
+      const networkScopeProvided = networkBusScope.provided || networkChannelScope.provided || gatewayRouteScope.provided;
+      const aggregateProvidedFlags = ["networkScopeProvided", "network_scope_provided"].filter(hasOwnResponseField).map((key) => row[key]);
+      const aggregateConflictFlags = ["networkScopeConflict", "network_scope_conflict"].filter(hasOwnResponseField).map((key) => row[key]);
+      const aggregateEligibleFlags = ["networkScopeEvidenceEligible", "network_scope_evidence_eligible"].filter(hasOwnResponseField).map((key) => row[key]);
+      const networkScopeConflict = networkBusScope.conflict || networkChannelScope.conflict || gatewayRouteScope.conflict
+        || aggregateProvidedFlags.some((value) => typeof value !== "boolean" || value !== networkScopeProvided)
+        || aggregateConflictFlags.some((value) => typeof value !== "boolean" || value === true)
+        || aggregateEligibleFlags.some((value) => typeof value !== "boolean" || value === false)
+        || aggregateEligibleFlags.some((value) => value !== aggregateEligibleFlags[0]);
+      const networkScopeEvidenceEligible = !networkScopeConflict;
       const ecuResponseAddressEvidence = resolveEcuResponseAddressEvidence({ ...row, address });
       const diagnosticRequestId = ecuResponseAddressEvidence.requestAddress;
       const diagnosticResponseId = ecuResponseAddressEvidence.kind === "response" || ecuResponseAddressEvidence.kind === "conflict" ? ecuResponseAddressEvidence.responseAddress || null : null;
@@ -32408,6 +32598,11 @@
         ...(networkBus ? { networkBus, network_bus: networkBus } : {}),
         ...(networkChannel ? { networkChannel, network_channel: networkChannel } : {}),
         ...(gatewayRoute ? { gatewayRoute, gateway_route: gatewayRoute } : {}),
+        ...(networkScopeProvided || networkScopeConflict ? {
+          networkScopeProvided, network_scope_provided: networkScopeProvided,
+          networkScopeConflict, network_scope_conflict: networkScopeConflict,
+          networkScopeEvidenceEligible, network_scope_evidence_eligible: networkScopeEvidenceEligible
+        } : {}),
         ...(diagnosticRequestId ? { diagnosticRequestId, diagnostic_request_id: diagnosticRequestId } : {}),
         ...(diagnosticResponseId ? { diagnosticResponseId, diagnostic_response_id: diagnosticResponseId } : {}),
         ...(ecuResponseConflict ? { ecuResponseConflict: true, ecu_response_conflict: true, applicabilityEvidenceEligible: false, applicability_evidence_eligible: false } : {}),
@@ -32565,17 +32760,31 @@
       const identity = `${normalizeEcuSummaryIdentity(row.address || row.id)}::${signature}`;
       const existing = ecuRowsByIdentity.get(identity);
       const hasConflict = existing?.ecuResponseConflict === true || existing?.ecu_response_conflict === true || row.ecuResponseConflict === true || row.ecu_response_conflict === true;
-      ecuRowsByIdentity.set(identity, hasConflict ? {
+      const hasNetworkScopeConflict = existing?.networkScopeConflict === true || existing?.network_scope_conflict === true
+        || existing?.networkScopeEvidenceEligible === false || existing?.network_scope_evidence_eligible === false
+        || row.networkScopeConflict === true || row.network_scope_conflict === true
+        || row.networkScopeEvidenceEligible === false || row.network_scope_evidence_eligible === false;
+      ecuRowsByIdentity.set(identity, hasConflict || hasNetworkScopeConflict ? {
         ...existing,
         ...row,
         diagnosticRequestId: row.diagnosticRequestId || existing?.diagnosticRequestId || null,
         diagnostic_request_id: row.diagnostic_request_id || existing?.diagnostic_request_id || null,
         diagnosticResponseId: row.diagnosticResponseId || existing?.diagnosticResponseId || null,
         diagnostic_response_id: row.diagnostic_response_id || existing?.diagnostic_response_id || null,
-        ecuResponseConflict: true,
-        ecu_response_conflict: true,
-        applicabilityEvidenceEligible: false,
-        applicability_evidence_eligible: false
+        ...(hasConflict ? {
+          ecuResponseConflict: true,
+          ecu_response_conflict: true,
+          applicabilityEvidenceEligible: false,
+          applicability_evidence_eligible: false
+        } : {}),
+        ...(hasNetworkScopeConflict ? {
+          networkScopeProvided: row.networkScopeProvided === true || existing?.networkScopeProvided === true,
+          network_scope_provided: row.network_scope_provided === true || existing?.network_scope_provided === true,
+          networkScopeConflict: true,
+          network_scope_conflict: true,
+          networkScopeEvidenceEligible: false,
+          network_scope_evidence_eligible: false
+        } : {})
       } : row);
     });
     const ecus = [...ecuRowsByIdentity.values()];

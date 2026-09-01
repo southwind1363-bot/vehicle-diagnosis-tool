@@ -114,8 +114,20 @@ check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(install
 check(exactVehicleEcuMatch?.status === "matched" && exactVehicleEcuMatch.entry?.supported_ecus?.length === 1, "Vehicle ECU catalog should supply a complete verified list only for one exact identity match");check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, market: null }, validVehicleEcuCatalog).status === "incomplete", "Vehicle ECU catalog should require an explicitly captured destination market");
 const conflictingEvidenceCatalog = makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), evidence: { ...vehicleEcuFixtureEntry.evidence, sourceVerificationConflict: "true", verified: "false" } }]);
 const ambiguousAddressCatalog = makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), supported_ecus: [{ ...vehicleEcuFixtureEntry.supported_ecus[0], diagnosticAddress: "7E0" }] }]);
+const scopedSharedAddressEntry = { ...structuredClone(vehicleEcuFixtureEntry), supported_ecus: [
+  { system_name: "Powertrain", ecu_name: "ECM/PT", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4", network_bus: "CAN-PT", network_channel: "CH1" },
+  { system_name: "Body", ecu_name: "ECM/Body", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "ISO 15765-4", network_bus: "CAN-BODY", network_channel: "CH2" }
+] };
+const overlappingScopedAddressEntry = structuredClone(scopedSharedAddressEntry);
+overlappingScopedAddressEntry.supported_ecus[1].network_bus = "CAN-PT";
+overlappingScopedAddressEntry.supported_ecus[1].network_channel = "CH1";
+const oversizedNetworkScopeEntry = structuredClone(vehicleEcuFixtureEntry);
+oversizedNetworkScopeEntry.supported_ecus[0].network_bus = "A".repeat(121);
 check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(conflictingEvidenceCatalog).valid === false
-  && vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(ambiguousAddressCatalog).valid === false,
+  && vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(ambiguousAddressCatalog).valid === false
+  && vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([scopedSharedAddressEntry])).valid === true
+  && vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([overlappingScopedAddressEntry])).valid === false
+  && vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([oversizedNetworkScopeEntry])).valid === false,
 "Conflicting source evidence and ambiguous diagnostic-address aliases should invalidate the vehicle ECU catalog");
 const invalidCanAddressCatalogs = [
   makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), supported_ecus: [{ ...vehicleEcuFixtureEntry.supported_ecus[0], response_address: "800", address_format: "can_11bit" }] }]),
@@ -3926,7 +3938,7 @@ if (nextStepFunctionSource) {
 check(indexHtml.includes("読取状況を計算中です。"), "OBD progress headline placeholder in index.html is out of date");
 check(indexHtml.includes("診断機能・データ網羅・読取準備・適合状況を読み込み後に集計します。"), "OBD progress breakdown placeholder in index.html is out of date");
 check(appSource.includes("function hasBridgeDiagnosticScanSessionSupport()") && appSource.includes('return typeof window.ObdReadOnly?.buildDiagnosticScanSession === "function";'), "OBD app should guard diagnostic scan session support behind a defined helper");
-check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('29bit ECU要求・応答行を方向別に保持'), "OBD progress overview should expose the diagnostic core validation snapshot");
+check(appSource.includes("const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze") && /validationCheckLabel: "OBD安全検証 \d+件"/.test(appSource) && /bridgeValidationCheckLabel: "bridge検証 \d+件"/.test(appSource) && appSource.includes('同一CAN IDをネットワーク経路別に適合照合'), "OBD progress overview should expose the diagnostic core validation snapshot");
 check(appSource.includes("function buildDiagnosticCoreProgressSnapshot()") && appSource.includes('id: "request_gate_actions"') && appSource.includes('id: "saved_next_readout_request"') && appSource.includes('id: "saved_request_reimport"') && appSource.includes('id: "readout_request_safety_note"') && appSource.includes('id: "scan_session_request_safety_summary"'), "OBD progress overview should count saved readout request work as diagnostic core progress");
 check(appSource.includes('trackingId: "diagnostic_core_progress"') && appSource.includes("coreSnapshot.validationCheckLabel") && appSource.includes("coreSnapshot.recentDoneLabels"), "OBD progress overview should render diagnostic core progress separately from roadmap percentages");
 check(indexHtml.includes('id="obdDiagnosticFlowPanel"') && indexHtml.includes('id="obdDiagnosticFlowPanelResults"'), "OBD diagnostic flow panel containers are missing from index.html");
@@ -4555,7 +4567,7 @@ const getObdCssRuleForValidation = (selector) => {
   return start >= 0 && end > start ? styleSource.slice(start, end + 1) : "";
 };
 check(indexSource.includes('data-obd-scroll-target="obdSimpleResultSummary" aria-label="基本読取結果へ戻る"') && indexSource.includes('<span aria-hidden="true">↑</span> 結果') && getObdCssRuleForValidation(".obd-results-nav").includes("position: sticky;") && getObdCssRuleForValidation(".obd-results-nav").includes("grid-template-columns: repeat(5, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-safety-grid").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-operation-grid").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-profile-strip").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-interlock-summary").includes("grid-template-columns: repeat(4, minmax(0, 1fr));") && getObdCssRuleForValidation(".obd-bridge-schema-grid").includes("grid-template-columns: repeat(5, minmax(0, 1fr));"), "The sticky result navigation should return from readout details without changing unrelated diagnostic grid columns");
-check(appSource.includes('recentMilestone: "29bit ECU要求・応答行を方向別に保持"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "同一CAN IDをネットワーク経路別に適合照合"'), "OBD core progress should describe the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const registration = await navigator.serviceWorker.register(`service-worker.js?version=${encodeURIComponent(APP_VERSION)}`);') && appSource.includes('await registration.update();'), "Offline cache registration should force a current service worker update without blocking diagnosis");
 check(appSource.includes('measured.textContent = item.source_date ? `集計日: ${item.source_date}` : "集計日: 未登録";') && appSource.includes('card.append(head, current, target, next, remaining, eta, measured, button);') && appSource.includes('card.append(head, status, progressDetail, missing, next, eta, measured, button);'), "Capability and coverage cards must show their underlying measurement date");
 check(nativeReadCommandTestSource.includes('func testInitialDiagnosticPlanCoversEveryCoreReadoutCategory()') && nativeReadCommandTestSource.includes('"adapter_identity"') && nativeReadCommandTestSource.includes('"stored_dtc_snapshot"') && nativeReadCommandTestSource.includes('"pending_dtc_snapshot"') && nativeReadCommandTestSource.includes('"permanent_dtc_snapshot"') && nativeReadCommandTestSource.includes('"onboard_monitor_snapshot"') && nativeReadCommandTestSource.includes('"freeze_frame_snapshot"') && nativeReadCommandTestSource.includes('"ecu_info_snapshot"') && nativeReadCommandTestSource.includes('"supported_pid_matrix"') && nativeReadCommandTestSource.includes('"readiness_snapshot"') && nativeReadCommandTestSource.includes('"live_pid_snapshot"'), "iPhone initial diagnostic plan must retain all core readout categories");
@@ -4893,7 +4905,7 @@ check(appSource.includes('const importedNextReadoutGuardReviewRequestPlanForNote
 check(appSource.includes('const analysisNextReadoutCandidateSafetyNote = formatNextReadoutCandidateSafetySummary(summarySource.nextReadoutCandidateSafetySummary || summarySource.next_readout_candidate_safety_summary') && appSource.includes('notes.push(`候補安全 ${analysisNextReadoutCandidateSafetyNote}`);'), "OBD analysis notes should show top-level next readout candidate safety summaries");
 check(appSource.includes('const nextReadoutCandidateSafetySummary = session.nextReadoutCandidateSafetySummary || session.next_readout_candidate_safety_summary || core.nextReadoutCandidateSafetySummary || core.next_readout_candidate_safety_summary || flow.nextReadoutCandidateSafetySummary || flow.next_readout_candidate_safety_summary || null;') && appSource.includes('addObdDiagnosticFlowMetric(grid, "候補安全", nextReadoutCandidateSafetyLabel'), "OBD diagnostic flow panel should show top-level next readout candidate safety summaries");
 check(appSource.includes('session?.nextReadoutCandidateSafetySummary || session?.next_readout_candidate_safety_summary || coreSessionStatus?.nextReadoutCandidateSafetySummary') && appSource.includes('["候補安全", nextReadoutCandidateSafetyLabel]'), "OBD session summary should show top-level next readout candidate safety summaries");
-check(appSource.includes('recentMilestone: "29bit ECU要求・応答行を方向別に保持"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
+check(appSource.includes('recentMilestone: "同一CAN IDをネットワーク経路別に適合照合"'), "OBD core progress snapshot should show the latest completed vehicle applicability safety milestone");
 check(appSource.includes('const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");') && appSource.includes('function renderObdDiagnosticFlowPanel(session = null)') && appSource.includes('obdDiagnosticFlowPanels.forEach(renderPanel);'), "OBD diagnostic flow panel renderer should update result and detail panels");
 check(appSource.includes('canStartAnalysis') && appSource.includes('read-only維持') && appSource.includes('該当読取ボタンへ移動'), "OBD diagnostic flow panel should show analysis gating, read-only status, and next-readout navigation");
 check(appSource.includes('flow.can_start_analysis === true') && appSource.includes('core.ready_for_analysis === true'), "OBD diagnostic flow panel should accept snake_case analysis-ready state");
@@ -20639,6 +20651,118 @@ check(observedRequestOnlyExcluded.coreSessionStatus?.vehicleApplicabilityEcuMatc
   && observedExplicitResponsePreferred.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedExpectedEcuCount === 1
   && observedExplicitResponsePreferred.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedExpectedAddresses?.join(",") === "7E8",
 "Observed ECU matching did not exclude request-only rows or prefer an explicit response ID");
+const scopedSupportedEcus = [
+  { system_name: "Powertrain", ecu_name: "ECM/PT", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" },
+  { system_name: "Body", ecu_name: "ECM/Body", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN", network_bus: "CAN-BODY", network_channel: "CH2", gateway_route: "GW-B/ECM" }
+];
+const scopedSupportedEcuPartialMatch = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-network-scope-partial",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability(scopedSupportedEcus),
+  ecu_response_summary: { ecus: [
+    { diagnostic_response_id: "7E8", status: "reported", response_services: ["41"], network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" },
+    { diagnostic_response_id: "7E8", status: "negative_response", negative_response_count: 1, network_bus: "CAN-OTHER", network_channel: "CH9", gateway_route: "GW-X/ECM" }
+  ] }
+});
+const scopedPartialSummary = scopedSupportedEcuPartialMatch.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary;
+check(scopedPartialSummary?.status === "matched"
+  && scopedPartialSummary?.expectedEcuObservationCount === 2
+  && scopedPartialSummary?.observedExpectedEcuCount === 1
+  && scopedPartialSummary?.unobservedExpectedEcuCount === 1
+  && scopedPartialSummary?.partialExpectedAddressObservation === true
+  && scopedPartialSummary?.expectedEcuObservations?.[0]?.observationKey.includes("|bus:can-pt|channel:ch1|gateway:gw-a/ecm")
+  && scopedPartialSummary?.expectedEcuObservations?.[1]?.observed === false
+  && scopedPartialSummary?.matchedResponseEvidence === "positive_response"
+  && scopedPartialSummary?.matchedNegativeResponseCount === 0
+  && scopedSupportedEcuPartialMatch.vehicleCommandEnabled === false
+  && scopedSupportedEcuPartialMatch.wouldTransmit === false,
+"Same response ID on separate buses was not retained as distinct expected ECUs or wrong-scope response evidence leaked into the match");
+const scopedSupportedEcuMissingScope = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-network-scope-missing",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([scopedSupportedEcus[0]]),
+  ecu_response_summary: { ecus: [{ diagnostic_response_id: "7E8", status: "reported", response_services: ["41"] }] }
+});
+const scopedSupportedEcuWrongScope = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-network-scope-wrong",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([scopedSupportedEcus[0]]),
+  ecu_response_summary: { ecus: [{ diagnostic_response_id: "7E8", status: "reported", response_services: ["41"], network_bus: "CAN-BODY", network_channel: "CH2", gateway_route: "GW-B/ECM" }] }
+});
+check(scopedSupportedEcuMissingScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_comparable"
+  && scopedSupportedEcuMissingScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.missingRequiredScope === true
+  && scopedSupportedEcuMissingScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedExpectedAddresses?.length === 0
+  && scopedSupportedEcuMissingScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedObservedAddresses?.length === 0
+  && scopedSupportedEcuMissingScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unmatchedExpectedAddresses?.join(",") === "7E8"
+  && scopedSupportedEcuWrongScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "mismatch"
+  && scopedSupportedEcuWrongScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.explicitScopeMismatch === true
+  && scopedSupportedEcuWrongScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedExpectedAddresses?.length === 0
+  && scopedSupportedEcuWrongScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.matchedObservedAddresses?.length === 0
+  && scopedSupportedEcuWrongScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unmatchedExpectedAddresses?.join(",") === "7E8",
+"Missing expected ECU scope and explicit wrong scope were not separated into not-comparable and mismatch states");
+const supportedEcuScopeAliasConflict = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-network-scope-alias-conflict",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ ...scopedSupportedEcus[0], networkBus: "CAN-BODY" }]),
+  ecu_response_summary: { ecus: [{ diagnostic_response_id: "7E8", status: "reported", network_bus: "CAN-PT" }] }
+});
+const observedEcuScopeAliasConflict = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-observed-ecu-network-scope-alias-conflict",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([scopedSupportedEcus[0]]),
+  ecu_response_summary: { ecus: [{ diagnostic_response_id: "7E8", status: "reported", network_bus: "CAN-PT", networkBus: "CAN-BODY", network_channel: "CH1", gateway_route: "GW-A/ECM" }] }
+});
+const buildMergedScopeConflictSession = (rows) => obd.buildDiagnosticScanSession({
+  session_id: "shop-test-observed-ecu-network-scope-merge-order",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN", network_bus: "CAN-PT" }]),
+  ecu_response_summary: { ecus: rows }
+});
+const conflictingScopeResponseRow = { address: "7E8", status: "reported", response_services: ["41"], networkBus: "CAN-PT", network_bus: "CAN-BODY" };
+const validScopeResponseRow = { address: "7E8", status: "reported", response_services: ["41"], network_bus: "CAN-PT" };
+const mergedScopeConflictFirst = buildMergedScopeConflictSession([conflictingScopeResponseRow, validScopeResponseRow]);
+const mergedScopeConflictLast = buildMergedScopeConflictSession([validScopeResponseRow, conflictingScopeResponseRow]);
+const mergedScopeConflictRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(mergedScopeConflictFirst)));
+const missingExpectedScopeProvenance = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-missing-scope-provenance",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN", network_scope_provided: true }])
+});
+const ineligibleObservedScopeProvenance = buildMergedScopeConflictSession([{ address: "7E8", status: "reported", response_services: ["41"], network_scope_evidence_eligible: false }]);
+const oversizedExpectedScope = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-oversized-scope",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN", network_bus: "A".repeat(121) }])
+});
+const oversizedObservedScope = buildMergedScopeConflictSession([{ address: "7E8", status: "reported", response_services: ["41"], network_bus: "A".repeat(120) + "B" }]);check(supportedEcuScopeAliasConflict.vehicleApplicability?.supportedEcus?.[0]?.networkScopeConflict === true
+  && supportedEcuScopeAliasConflict.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && supportedEcuScopeAliasConflict.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0
+  && observedEcuScopeAliasConflict.ecuResponseSummary?.ecus?.[0]?.networkScopeEvidenceEligible === false
+  && observedEcuScopeAliasConflict.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedExpectedEcuCount === 0
+  && [mergedScopeConflictFirst, mergedScopeConflictLast].every((session) => session.ecuResponseSummary?.ecus?.length === 1
+    && session.ecuResponseSummary.ecus[0]?.networkScopeConflict === true
+    && session.ecuResponseSummary.ecus[0]?.networkScopeEvidenceEligible === false
+    && session.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_comparable")
+  && mergedScopeConflictRoundTrip?.ecuResponseSummary?.ecus?.[0]?.network_scope_conflict === true
+  && mergedScopeConflictRoundTrip?.ecuResponseSummary?.ecus?.[0]?.network_scope_evidence_eligible === false
+  && missingExpectedScopeProvenance.vehicleApplicability?.supportedEcus?.[0]?.networkScopeConflict === true
+  && missingExpectedScopeProvenance.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && ineligibleObservedScopeProvenance.ecuResponseSummary?.ecus?.[0]?.networkScopeEvidenceEligible === false
+  && ineligibleObservedScopeProvenance.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_comparable"
+  && oversizedExpectedScope.vehicleApplicability?.supportedEcus?.[0]?.networkScopeConflict === true
+  && oversizedExpectedScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && oversizedObservedScope.ecuResponseSummary?.ecus?.[0]?.networkScopeEvidenceEligible === false
+  && oversizedObservedScope.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "not_comparable",
+"Expected or observed ECU scope alias conflicts were not retained and rejected fail-closed");
+const unscopedSupportedEcuCompatibility = obd.buildDiagnosticScanSession({
+  session_id: "shop-test-supported-ecu-unscoped-backward-compatibility",
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN" }]),
+  ecu_response_summary: { ecus: [{ diagnostic_response_id: "7E8", status: "reported", response_services: ["41"], network_bus: "ANY-BUS" }] }
+});
+check(unscopedSupportedEcuCompatibility.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched"
+  && unscopedSupportedEcuCompatibility.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.observationKey === "system:engine|ecu:ecm|address:7e8|protocol:can"
+  && unscopedSupportedEcuCompatibility.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.networkScopeProvided !== true,
+"Unscoped legacy supported ECU evidence lost address-only matching or changed its observation key");
+const scopedObservationRows = obd.normalizeVehicleApplicabilityEcuObservationComparisonRows(scopedPartialSummary);
+const scopedObservationRowsRoundTrip = JSON.parse(JSON.stringify(scopedObservationRows));
+const scopedPowertrainObservationRoundTrip = scopedObservationRowsRoundTrip.find((row) => row.network_bus === "CAN-PT");
+check(scopedPowertrainObservationRoundTrip?.network_channel === "CH1"
+  && scopedPowertrainObservationRoundTrip?.gateway_route === "GW-A/ECM"
+  && scopedPowertrainObservationRoundTrip?.observation_key.includes("|bus:can-pt|channel:ch1|gateway:gw-a/ecm")
+  && scopedObservationRowsRoundTrip.every((row) => row.observationKey === row.observation_key),
+"ECU network scope or scoped observation keys were lost through JSON comparison-row roundtrip");
 const scanSessionSupportedEcuMatched = obd.buildDiagnosticScanSession({
   session_id: "shop-test-supported-ecu-matched",
   vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }, { system_name: "Brake", ecu_name: "ABS", diagnostic_address: "7EA", protocol: "ISO 15765-4" }]),
@@ -20866,12 +20990,11 @@ const duplicateSupportedEcuObservationSession = obd.buildDiagnosticScanSession({
   vehicle_applicability: buildVerifiedSupportedEcuApplicability([{ system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }, { system_name: "Engine", ecu_name: "ECM", diagnostic_address: "7E8", protocol: "CAN" }]),
   ecu_response_summary: { ecus: [{ address: "7E8", status: "reported", response_services: ["41"] }] }
 });
-check(duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[0]?.observationKey === "system:engine|ecu:ecm|address:7e8|protocol:can"
-  && duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[1]?.observationKey === "system:engine|ecu:ecm|address:7e8|protocol:can|duplicate:2"
-  && duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.[1]?.observationDuplicateIndex === 2
-  && new Set(duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservations?.map((item) => item.observationKey)).size === 2
+check(duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceEligible === false
+  && duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.expectedEcuObservationCount === 0
+  && duplicateSupportedEcuObservationSession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.supportedEcuEvidenceReviewReasons?.includes("supported_ecu_scope_contract_conflict")
   && duplicateSupportedEcuObservationSession.vehicleCommandEnabled === false,
-"Duplicate supported ECU rows did not receive deterministic unique observation keys in read-only mode");
+"Overlapping duplicate supported ECU scope was promoted instead of rejected fail-closed");
 const legacyEcuObservationSummary = {
   vehicle_applicability_ecu_match_summary: {
     expected_ecu_observations: [

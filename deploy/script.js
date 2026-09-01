@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7388件",
+  validationCheckLabel: "OBD安全検証 7393件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "29bit ECU要求・応答行を方向別に保持",
+  recentMilestone: "同一CAN IDをネットワーク経路別に適合照合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.417";
+const APP_VERSION = "3.13.418";
 const APP_LAST_UPDATED = "2026-09-02";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1968,7 +1968,8 @@ function validateVehicleEcuApplicabilityCatalog(rows = []) {
       return invalid("catalog_entry_invalid");
     }
     const ecuKeys = new Set();
-    const addressKeys = new Set();
+    const scopesByAddress = new Map();
+    const normalizeScopePart = (value) => String(value || "").normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
     for (const ecu of ecus) {
       const address = String(ecu?.response_address || "").trim().toUpperCase().replace(/^0X/, "");
       const addressValue = Number.parseInt(address, 16);
@@ -1978,11 +1979,19 @@ function validateVehicleEcuApplicabilityCatalog(rows = []) {
           ? /^[0-9A-F]{8}$/.test(address) && addressValue <= 0x1FFFFFFF
           : false;
       const ecuKey = `${normalizeVehicleEcuCatalogKey(ecu?.system_name)}::${normalizeVehicleEcuCatalogKey(ecu?.ecu_name)}`;
+      const scopeValues = [ecu?.network_bus, ecu?.network_channel, ecu?.gateway_route];
+      const scopeTypesValid = scopeValues.every((value, index) => value === undefined || typeof value === "string" && Boolean(value.trim()) && value.normalize("NFKC").replace(/\s+/g, " ").trim().length <= [120, 120, 160][index]);
+      const forbiddenScopeAliasPresent = ["networkBus", "networkChannel", "gatewayRoute", "busName", "bus_name", "communicationBus", "communication_bus", "channelId", "channel_id", "channelName", "channel_name", "gatewayPath", "gateway_path", "routingPath", "routing_path"]
+        .some((key) => Object.prototype.hasOwnProperty.call(ecu || {}, key));
+      const scope = scopeValues.map(normalizeScopePart);
+      const scopeOverlap = (scopesByAddress.get(address) || []).some((existing) => scope.every((value, index) => !value || !existing[index] || value === existing[index]));
       if (!ecu?.system_name || !ecu?.ecu_name || ecu?.address_role !== "response" || ecu?.responseAddress !== undefined || ecu?.addressRole !== undefined || ecu?.addressFormat !== undefined || ecu?.diagnostic_address !== undefined || ecu?.diagnosticAddress !== undefined
-        || !addressFormatValid || !ecu?.protocol
-        || ecuKeys.has(ecuKey) || addressKeys.has(address)) return invalid("catalog_ecu_invalid");
+        || !addressFormatValid || !scopeTypesValid || forbiddenScopeAliasPresent || !ecu?.protocol
+        || ecuKeys.has(ecuKey) || scopeOverlap) return invalid("catalog_ecu_invalid");
       ecuKeys.add(ecuKey);
-      addressKeys.add(address);
+      const addressScopes = scopesByAddress.get(address) || [];
+      addressScopes.push(scope);
+      scopesByAddress.set(address, addressScopes);
     }
     ids.add(entry.id);
     evidenceIds.add(evidence.evidence_id);
@@ -2082,7 +2091,7 @@ function buildSelectedObdVehicleApplicability(profile = null) {
     applicableRanges: applicableRangeDescriptors,
     supportedEngineCodes,
     supportedEngineCodeCount: supportedEngineCodes.length,
-    supportedEcus: ecuEntry ? ecuEntry.supported_ecus.map((ecu) => ({ system_name: ecu.system_name, ecu_name: ecu.ecu_name, response_address: ecu.response_address, address_role: ecu.address_role, address_format: ecu.address_format || (String(ecu.response_address || "").replace(/^0X/i, "").length === 8 ? "can_29bit" : "can_11bit"), diagnostic_address: ecu.response_address, protocol: ecu.protocol })) : [],
+    supportedEcus: ecuEntry ? ecuEntry.supported_ecus.map((ecu) => ({ system_name: ecu.system_name, ecu_name: ecu.ecu_name, response_address: ecu.response_address, address_role: ecu.address_role, address_format: ecu.address_format || (String(ecu.response_address || "").replace(/^0X/i, "").length === 8 ? "can_29bit" : "can_11bit"), diagnostic_address: ecu.response_address, protocol: ecu.protocol, ...(ecu.network_bus ? { network_bus: ecu.network_bus } : {}), ...(ecu.network_channel ? { network_channel: ecu.network_channel } : {}), ...(ecu.gateway_route ? { gateway_route: ecu.gateway_route } : {}) })) : [],
     supportedEcuCount: ecuEntry ? ecuEntry.supported_ecus.length : 0,
     supportedEcuEvidence: ecuEntry ? {
       sourceName: evidence.source_name,
