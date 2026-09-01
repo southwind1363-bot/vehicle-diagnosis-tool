@@ -1430,6 +1430,46 @@ body.dark .flow-node-measure .flow-step {
   padding: 14px 0;
 }
 
+.obd-simple-system-filters {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.obd-simple-system-filters button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--muted);
+  padding: 7px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.obd-simple-system-filters button strong {
+  min-width: 1.5em;
+  color: inherit;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.obd-simple-system-filters button.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.obd-simple-system-filters button:disabled {
+  opacity: 0.46;
+}
+
 .obd-simple-system-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2451,6 +2491,18 @@ body.dark .flow-node-measure .flow-step {
 
   #obd-panel[data-obd-ui-mode="simple"] .obd-stage-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .obd-simple-system-filters {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+  }
+
+  .obd-simple-system-filters button {
+    flex: 0 0 auto;
+    min-width: 108px;
   }
 
   .obd-scan-context,

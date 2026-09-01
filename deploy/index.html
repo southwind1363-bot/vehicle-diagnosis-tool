@@ -766,6 +766,13 @@
             </div>
             <span id="obdSimpleSystemBadge" class="confidence-badge">未読取</span>
           </div>
+          <div id="obdSimpleSystemFilters" class="obd-simple-system-filters" role="group" aria-label="ECUスキャン状態で絞り込む">
+            <button type="button" class="is-active" data-obd-system-filter="all" aria-pressed="true"><span>すべて</span><strong data-obd-system-filter-count="all">0</strong></button>
+            <button type="button" data-obd-system-filter="response" aria-pressed="false"><span>応答・観測</span><strong data-obd-system-filter-count="response">0</strong></button>
+            <button type="button" data-obd-system-filter="no-response" aria-pressed="false"><span>明示的無応答</span><strong data-obd-system-filter-count="no-response">0</strong></button>
+            <button type="button" data-obd-system-filter="expected" aria-pressed="false"><span>未観測候補</span><strong data-obd-system-filter-count="expected">0</strong></button>
+            <button type="button" data-obd-system-filter="unconfirmed" aria-pressed="false"><span>適用未確認</span><strong data-obd-system-filter-count="unconfirmed">0</strong></button>
+          </div>
           <div id="obdSimpleSystemGrid" class="obd-simple-system-grid" aria-label="ECU応答と適用候補一覧"></div>
           <p id="obdSimpleSystemNote" class="obd-simple-result-note"></p>
         </section>

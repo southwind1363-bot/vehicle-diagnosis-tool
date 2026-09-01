@@ -225,10 +225,10 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   validationCheckLabel: "OBD安全検証 7333件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "ECU実応答と適用候補を分離表示",
+  recentMilestone: "ECUスキャン状態別確認を通常診断へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.411";
+const APP_VERSION = "3.13.412";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -425,6 +425,8 @@ const obdSimpleResultDisconnectButton = document.querySelector("#obdSimpleResult
 const obdSimpleResultStatus = document.querySelector("#obdSimpleResultStatus");
 const obdSimpleSystemSummary = document.querySelector("#obdSimpleSystemSummary");
 const obdSimpleSystemBadge = document.querySelector("#obdSimpleSystemBadge");
+const obdSimpleSystemFilters = document.querySelector("#obdSimpleSystemFilters");
+const obdSimpleSystemFilterButtons = document.querySelectorAll("[data-obd-system-filter]");
 const obdSimpleSystemGrid = document.querySelector("#obdSimpleSystemGrid");
 const obdSimpleSystemNote = document.querySelector("#obdSimpleSystemNote");
 const obdSetupPanel = document.querySelector("#obdSetupPanel");
@@ -608,6 +610,7 @@ let obdSerialConnectPending = false;
 let obdSerialDisconnectOperation = null;
 let obdScannerImportOperation = null;
 let activeObdStage = "setup";
+let activeObdSimpleSystemFilter = "all";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"]);
 const WEB_SERIAL_DEFAULT_FREEZE_FRAME_PID_COMMANDS = Object.freeze(["020C", "0205", "020F", "020D", "020E", "0204", "0203", "020A", "020B", "0223", "0259", "0210", "0211", "0206", "0207", "021F", "0242"]);
@@ -771,6 +774,10 @@ obdSimpleConnectDisconnectButton?.addEventListener("click", disconnectObdDevelop
 obdSimpleDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
 obdSimpleResultPrimaryButton?.addEventListener("click", handleObdPrimaryAction);
 obdSimpleResultDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
+obdSimpleSystemFilters?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-obd-system-filter]");
+  if (button) applyObdSimpleSystemFilter(button.dataset.obdSystemFilter);
+});
 
 caseForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -11043,6 +11050,20 @@ function openObdSimpleEcuDetail(row = {}) {
   card?.scrollIntoView({ behavior: "instant", block: "start" });
 }
 
+function applyObdSimpleSystemFilter(filterId = "all") {
+  const allowedFilters = new Set(["all", "response", "no-response", "expected", "unconfirmed"]);
+  activeObdSimpleSystemFilter = allowedFilters.has(filterId) ? filterId : "all";
+  obdSimpleSystemFilterButtons.forEach((button) => {
+    const active = button.dataset.obdSystemFilter === activeObdSimpleSystemFilter;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  obdSimpleSystemGrid?.querySelectorAll("[data-obd-system-filters]").forEach((item) => {
+    const filters = String(item.dataset.obdSystemFilters || "").split(" ").filter(Boolean);
+    item.hidden = activeObdSimpleSystemFilter !== "all" && !filters.includes(activeObdSimpleSystemFilter);
+  });
+}
+
 function renderObdSimpleSystemSummary(session = null) {
   if (!obdSimpleSystemSummary || !obdSimpleSystemBadge || !obdSimpleSystemGrid || !obdSimpleSystemNote) return;
   obdSimpleSystemGrid.innerHTML = "";
@@ -11095,6 +11116,7 @@ function renderObdSimpleSystemSummary(session = null) {
   expectedRows.forEach((row, index) => {
     if (!representedExpectedKeys.has(expectedRowKey(row, index))) displayRows.push({ kind: "expected", row, expectedRow: row });
   });
+  const filterCounts = { all: displayRows.length, response: 0, "no-response": 0, expected: 0, unconfirmed: 0 };
   const statusLabels = {
     success: "応答取得",
     available: "応答取得",
@@ -11116,7 +11138,14 @@ function renderObdSimpleSystemSummary(session = null) {
     const address = String(row?.address || row?.diagnosticAddress || row?.diagnostic_address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id || "ECU").trim() || "ECU";
     const name = String(row?.name || row?.ecuName || row?.ecu_name || row?.moduleName || row?.module_name || row?.systemName || row?.system_name || "名称未記録").trim() || "名称未記録";
     const services = row?.responseServices || row?.response_services || row?.services || row?.readoutIds || row?.readout_ids || [];
+    const filterTags = expectedOnly
+      ? row?.observed === true ? ["response"] : ["expected"]
+      : [statusKey === "no_response" ? "no-response" : "response", expectedRow ? "matched" : "unconfirmed"];
+    filterTags.forEach((filterId) => {
+      if (Object.prototype.hasOwnProperty.call(filterCounts, filterId)) filterCounts[filterId] += 1;
+    });
     const item = document.createElement(expectedOnly ? "div" : "button");
+    item.dataset.obdSystemFilters = filterTags.join(" ");
     if (!expectedOnly) item.type = "button";
     item.className = "obd-simple-system-item";
     if (expectedOnly) item.classList.add("is-expected");
@@ -11157,6 +11186,15 @@ function renderObdSimpleSystemSummary(session = null) {
     }
     obdSimpleSystemGrid.appendChild(item);
   });
+  if (!filterCounts[activeObdSimpleSystemFilter]) activeObdSimpleSystemFilter = "all";
+  obdSimpleSystemFilterButtons.forEach((button) => {
+    const count = filterCounts[button.dataset.obdSystemFilter] ?? 0;
+    const countNode = button.querySelector("[data-obd-system-filter-count]");
+    if (countNode) countNode.textContent = String(count);
+    button.disabled = count === 0;
+  });
+  if (obdSimpleSystemFilters) obdSimpleSystemFilters.hidden = displayRows.length === 0;
+  applyObdSimpleSystemFilter(activeObdSimpleSystemFilter);
   const observedExpectedCount = expectedRows.filter((row) => row?.observed === true).length;
   const badgeParts = [];
   if (responseRows.length) badgeParts.push(responseRows.length + " ECU応答");
