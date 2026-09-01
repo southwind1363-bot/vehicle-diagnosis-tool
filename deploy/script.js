@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7333件",
+  validationCheckLabel: "OBD安全検証 7346件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "ECUスキャン状態別確認を通常診断へ統合",
+  recentMilestone: "検証済みECU適用証跡ゲートを診断コアへ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.412";
+const APP_VERSION = "3.13.413";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -11158,8 +11158,9 @@ function renderObdSimpleSystemSummary(session = null) {
     const id = document.createElement("strong");
     id.textContent = address;
     const state = document.createElement("span");
+    const expectedSourceVerified = expectedRow?.sourceVerified === true || expectedRow?.source_verified === true;
     state.textContent = expectedOnly
-      ? row?.observed === true ? "適用候補・観測済み" : "適用候補・未観測"
+      ? row?.observed === true ? "出典確認済み候補・観測済み" : "出典確認済み候補・未観測"
       : statusLabels[statusKey] || "状態未確認";
     head.append(id, state);
     const title = document.createElement("span");
@@ -11170,10 +11171,13 @@ function renderObdSimpleSystemSummary(session = null) {
     dtc.textContent = expectedOnly ? "DTC未読取" : dtcCount === null ? "DTC件数未記録" : "DTC報告 " + dtcCount + "件";
     const detail = document.createElement("span");
     detail.className = "obd-simple-system-detail";
-    const applicabilityLabel = expectedRow ? "適用表と一致" : "適用未確認";
+    const applicabilityLabel = expectedRow
+      ? expectedSourceVerified ? "確認済みECU適用表と一致" : "ECU適用候補と一致・出典未確認"
+      : "適用未確認";
     const protocol = expectedOnly ? String(row?.protocol || "").trim() : "";
+    const evidenceId = expectedOnly ? String(row?.evidenceId || row?.evidence_id || "").trim() : "";
     detail.textContent = expectedOnly
-      ? [applicabilityLabel, protocol ? "通信候補: " + protocol : "", "応答の有無は未判定"].filter(Boolean).join(" / ")
+      ? [applicabilityLabel, protocol ? "通信候補: " + protocol : "", evidenceId ? "証跡: " + evidenceId : "", "応答の有無は未判定"].filter(Boolean).join(" / ")
       : [Array.isArray(services) && services.length ? "取得: " + services.slice(0, 4).join(" / ") : "取得項目未記録", applicabilityLabel].join(" / ");
     item.append(head, title, dtc, detail);
     if (!expectedOnly) {
@@ -11204,7 +11208,7 @@ function renderObdSimpleSystemSummary(session = null) {
   obdSimpleSystemBadge.className = "confidence-badge " + badgeTone;
   obdSimpleSystemBadge.textContent = badgeParts.join(" / ") || "未取得";
   obdSimpleSystemNote.textContent = displayRows.length
-    ? "実応答と車両適用表の候補を分けて表示しています。未観測は故障や無応答を意味しません。明示的な無応答だけを無応答として表示します。"
+    ? "実応答と出典確認済みのECU適用候補を分けて表示しています。未観測は故障や無応答を意味しません。明示的な無応答だけを無応答として表示します。"
     : "ECU別応答と適用候補は未取得です。未取得を正常とは判定しません。";
   obdSimpleSystemSummary.hidden = false;
 }

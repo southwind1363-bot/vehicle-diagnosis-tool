@@ -8449,6 +8449,70 @@
       return { systemName, system_name: systemName, ecuName, ecu_name: ecuName, diagnosticAddress, diagnostic_address: diagnosticAddress, protocol };
     };
     const normalizedSupportedEcus = supportedEcus.map(normalizeEcuDescriptor).filter(Boolean).slice(0, 20);
+    const supportedEcuEvidenceInput = source.supportedEcuEvidence && typeof source.supportedEcuEvidence === "object" && !Array.isArray(source.supportedEcuEvidence)
+      ? source.supportedEcuEvidence
+      : source.supported_ecu_evidence && typeof source.supported_ecu_evidence === "object" && !Array.isArray(source.supported_ecu_evidence)
+        ? source.supported_ecu_evidence
+        : {};
+    const supportedEcuEvidenceVerificationValues = [
+      supportedEcuEvidenceInput.sourceVerified,
+      supportedEcuEvidenceInput.source_verified,
+      supportedEcuEvidenceInput.verified
+    ].filter((value) => typeof value === "boolean");
+    const supportedEcuEvidenceVerificationConflict = supportedEcuEvidenceInput.sourceVerificationConflict === true
+      || supportedEcuEvidenceInput.source_verification_conflict === true
+      || supportedEcuEvidenceInput.verificationConflict === true
+      || supportedEcuEvidenceInput.verification_conflict === true
+      || supportedEcuEvidenceVerificationValues.some((value) => value !== supportedEcuEvidenceVerificationValues[0]);
+    const supportedEcuEvidenceSourceVerified = !supportedEcuEvidenceVerificationConflict
+      && supportedEcuEvidenceVerificationValues.length > 0
+      && supportedEcuEvidenceVerificationValues.every((value) => value === true);
+    const supportedEcuEvidenceSourceName = firstNormalizedEvidenceText([supportedEcuEvidenceInput.sourceName, supportedEcuEvidenceInput.source_name, supportedEcuEvidenceInput.name], 160);
+    const supportedEcuEvidenceSourceUrl = firstNormalizedSourceUrl([supportedEcuEvidenceInput.sourceUrl, supportedEcuEvidenceInput.source_url, supportedEcuEvidenceInput.url]);
+    const supportedEcuEvidenceSourceDate = firstNormalizedEvidenceText([supportedEcuEvidenceInput.sourceDate, supportedEcuEvidenceInput.source_date, supportedEcuEvidenceInput.date], 20);
+    const supportedEcuEvidenceId = firstNormalizedEvidenceText([supportedEcuEvidenceInput.evidenceId, supportedEcuEvidenceInput.evidence_id], 80, true);
+    const supportedEcuEvidenceDocumentLocation = firstNormalizedEvidenceText([supportedEcuEvidenceInput.documentLocation, supportedEcuEvidenceInput.document_location, supportedEcuEvidenceInput.location], 160);
+    const supportedEcuEvidenceMaker = firstNormalizedIdentityValue([supportedEcuEvidenceInput.maker, supportedEcuEvidenceInput.make, supportedEcuEvidenceInput.manufacturer], 80);
+    const supportedEcuEvidenceModel = firstNormalizedIdentityValue([supportedEcuEvidenceInput.model, supportedEcuEvidenceInput.modelName, supportedEcuEvidenceInput.model_name], 120);
+    const supportedEcuEvidenceModelCode = firstNormalizedIdentityValue([supportedEcuEvidenceInput.modelCode, supportedEcuEvidenceInput.model_code], 48);
+    const supportedEcuEvidenceYearFrom = normalizeYear(supportedEcuEvidenceInput.yearFrom ?? supportedEcuEvidenceInput.year_from ?? supportedEcuEvidenceInput.year);
+    const supportedEcuEvidenceYearTo = normalizeYear(supportedEcuEvidenceInput.yearTo ?? supportedEcuEvidenceInput.year_to ?? supportedEcuEvidenceInput.year);
+    const supportedEcuEvidenceEngineCode = firstNormalizedIdentityValue([supportedEcuEvidenceInput.engineCode, supportedEcuEvidenceInput.engine_code], 48);
+    const supportedEcuEvidenceMarket = firstNormalizedIdentityValue([supportedEcuEvidenceInput.market, supportedEcuEvidenceInput.region], 80);
+    const supportedEcuEvidenceScopeInput = firstNormalizedIdentityValue([supportedEcuEvidenceInput.scope, supportedEcuEvidenceInput.listScope, supportedEcuEvidenceInput.list_scope], 24);
+    const supportedEcuEvidenceScope = ["complete", "partial"].includes(String(supportedEcuEvidenceScopeInput || "").toLowerCase())
+      ? String(supportedEcuEvidenceScopeInput).toLowerCase()
+      : null;
+    const normalizedSupportedEcuEvidence = {
+      sourceName: supportedEcuEvidenceSourceName,
+      source_name: supportedEcuEvidenceSourceName,
+      sourceUrl: supportedEcuEvidenceSourceUrl,
+      source_url: supportedEcuEvidenceSourceUrl,
+      sourceDate: supportedEcuEvidenceSourceDate,
+      source_date: supportedEcuEvidenceSourceDate,
+      evidenceId: supportedEcuEvidenceId,
+      evidence_id: supportedEcuEvidenceId,
+      documentLocation: supportedEcuEvidenceDocumentLocation,
+      document_location: supportedEcuEvidenceDocumentLocation,
+      maker: supportedEcuEvidenceMaker,
+      model: supportedEcuEvidenceModel,
+      modelCode: supportedEcuEvidenceModelCode,
+      model_code: supportedEcuEvidenceModelCode,
+      yearFrom: supportedEcuEvidenceYearFrom,
+      year_from: supportedEcuEvidenceYearFrom,
+      yearTo: supportedEcuEvidenceYearTo,
+      year_to: supportedEcuEvidenceYearTo,
+      engineCode: supportedEcuEvidenceEngineCode,
+      engine_code: supportedEcuEvidenceEngineCode,
+      market: supportedEcuEvidenceMarket,
+      region: supportedEcuEvidenceMarket,
+      scope: supportedEcuEvidenceScope,
+      sourceVerified: supportedEcuEvidenceSourceVerified,
+      source_verified: supportedEcuEvidenceSourceVerified,
+      verified: supportedEcuEvidenceSourceVerified,
+      sourceVerificationConflict: supportedEcuEvidenceVerificationConflict,
+      source_verification_conflict: supportedEcuEvidenceVerificationConflict
+    };
     const maker = firstNormalizedIdentityValue([source.maker, source.make, source.manufacturer, source.brand, source.oem, source.vehicleMaker, source.vehicle_maker, source.vehicleMake, source.vehicle_make], 80);
     const model = firstNormalizedIdentityValue([source.model, source.modelName, source.model_name, source.vehicleModel, source.vehicle_model, source.carModel, source.car_model], 120);
     const modelCode = firstNormalizedIdentityValue([source.modelCode, source.model_code, source.chassisCode, source.chassis_code, source.frameCode, source.frame_code, source.vehicleModelCode, source.vehicle_model_code, source.bodyCode, source.body_code], 48);
@@ -8618,6 +8682,8 @@
       retained_supported_ecu_count: normalizedSupportedEcus.length,
       supportedEcusTruncated: supportedEcuCount > normalizedSupportedEcus.length,
       supported_ecus_truncated: supportedEcuCount > normalizedSupportedEcus.length,
+      supportedEcuEvidence: normalizedSupportedEcuEvidence,
+      supported_ecu_evidence: normalizedSupportedEcuEvidence,
       status,
       summaryLabel,
       summary_label: summaryLabel
@@ -9224,9 +9290,69 @@
       supportedPidMatrix
     });
     const primaryExpectedAddress = normalizeComparableCanEcuAddress(applicability.ecuAddress);
-    const supportedExpectedAddressDescriptors = (applicability.supportedEcus || [])
+    const supportedEcuEvidence = applicability.supportedEcuEvidence || applicability.supported_ecu_evidence || {};
+    const supportedEcuIdentityComplete = Boolean(applicability.maker && applicability.model && applicability.modelCode && applicability.year && applicability.engineCode);
+    const supportedEcuMatchEvidenceComplete = applicability.catalogMatched === true
+      && applicability.yearMatched === true
+      && applicability.engineMatched === true
+      && applicability.modelCodeMatched === true
+      && applicability.matchEvidenceProvided?.catalog === true
+      && applicability.matchEvidenceProvided?.year === true
+      && applicability.matchEvidenceProvided?.engine === true
+      && applicability.matchEvidenceProvided?.modelCode === true;
+    const normalizeApplicabilityKey = (value) => String(value || "").normalize("NFKC").trim().toLowerCase();
+    const applicabilityYear = Number(applicability.year);
+    const supportedEcuEvidenceVehicleMatch = normalizeApplicabilityKey(supportedEcuEvidence.maker) === normalizeApplicabilityKey(applicability.maker)
+      && normalizeApplicabilityKey(supportedEcuEvidence.model) === normalizeApplicabilityKey(applicability.model)
+      && normalizeApplicabilityKey(supportedEcuEvidence.modelCode) === normalizeApplicabilityKey(applicability.modelCode)
+      && normalizeApplicabilityKey(supportedEcuEvidence.engineCode) === normalizeApplicabilityKey(applicability.engineCode)
+      && normalizeApplicabilityKey(supportedEcuEvidence.market) === normalizeApplicabilityKey(applicability.market)
+      && Number.isFinite(applicabilityYear)
+      && Number.isFinite(Number(supportedEcuEvidence.yearFrom))
+      && Number.isFinite(Number(supportedEcuEvidence.yearTo))
+      && applicabilityYear >= Number(supportedEcuEvidence.yearFrom)
+      && applicabilityYear <= Number(supportedEcuEvidence.yearTo);
+    const supportedEcuEvidenceComplete = Boolean(
+      supportedEcuEvidence.sourceName
+      && supportedEcuEvidence.sourceUrl
+      && supportedEcuEvidence.sourceDate
+      && supportedEcuEvidence.evidenceId
+      && supportedEcuEvidence.documentLocation
+      && supportedEcuEvidence.maker
+      && supportedEcuEvidence.model
+      && supportedEcuEvidence.modelCode
+      && supportedEcuEvidence.yearFrom
+      && supportedEcuEvidence.yearTo
+      && supportedEcuEvidence.engineCode
+      && supportedEcuEvidence.market
+      && supportedEcuEvidence.scope
+    );
+    const supportedEcuEvidenceEligible = applicability.status === "matched"
+      && applicability.sourceVerified === true
+      && applicability.sourceVerificationConflict !== true
+      && supportedEcuEvidence.sourceVerified === true
+      && supportedEcuEvidence.sourceVerificationConflict !== true
+      && supportedEcuIdentityComplete
+      && supportedEcuMatchEvidenceComplete
+      && supportedEcuEvidenceComplete
+      && supportedEcuEvidenceVehicleMatch
+      && (applicability.supportedEcus || []).length > 0
+      && applicability.supportedEcusTruncated !== true;
+    const supportedEcuEvidenceReviewReasons = [
+      applicability.status !== "matched" ? "vehicle_applicability_not_matched" : null,
+      applicability.sourceVerified !== true ? "vehicle_applicability_source_unverified" : null,
+      applicability.sourceVerificationConflict === true ? "vehicle_applicability_source_conflict" : null,
+      supportedEcuEvidence.sourceVerified !== true ? "supported_ecu_source_unverified" : null,
+      supportedEcuEvidence.sourceVerificationConflict === true ? "supported_ecu_source_conflict" : null,
+      !supportedEcuIdentityComplete ? "vehicle_identity_incomplete" : null,
+      !supportedEcuMatchEvidenceComplete ? "vehicle_match_evidence_incomplete" : null,
+      !supportedEcuEvidenceComplete ? "supported_ecu_evidence_incomplete" : null,
+      supportedEcuEvidenceComplete && !supportedEcuEvidenceVehicleMatch ? "supported_ecu_vehicle_scope_mismatch" : null,
+      applicability.supportedEcusTruncated === true ? "supported_ecu_list_truncated" : null
+    ].filter(Boolean);
+    const supportedExpectedAddressDescriptors = supportedEcuEvidenceEligible ? (applicability.supportedEcus || [])
       .map((item) => item?.diagnosticAddress || item?.diagnostic_address || null)
-      .filter(Boolean);
+      .filter(Boolean) : [];
     const expectedAddressDescriptors = primaryExpectedAddress
       ? [primaryExpectedAddress]
       : [...new Set(supportedExpectedAddressDescriptors.map((value) => String(value).toUpperCase().replace(/0X/g, "")))];
@@ -9313,6 +9439,12 @@
           diagnosticAddress: range.descriptor,
           diagnostic_address: range.descriptor,
           protocol: item?.protocol || null,
+          sourceVerified: true,
+          source_verified: true,
+          sourceVerificationConflict: false,
+          source_verification_conflict: false,
+          evidenceId: supportedEcuEvidence.evidenceId || null,
+          evidence_id: supportedEcuEvidence.evidenceId || null,
           observedAddresses: ecuObservedAddresses,
           observed_addresses: ecuObservedAddresses,
           observed: ecuObservedAddresses.length > 0
@@ -9378,6 +9510,12 @@
       expected_addresses: expectedAddresses,
       expectedAddressSource,
       expected_address_source: expectedAddressSource,
+      supportedEcuEvidenceEligible,
+      supported_ecu_evidence_eligible: supportedEcuEvidenceEligible,
+      supportedEcuEvidenceReviewReasons,
+      supported_ecu_evidence_review_reasons: supportedEcuEvidenceReviewReasons,
+      supportedEcuEvidence,
+      supported_ecu_evidence: supportedEcuEvidence,
       observedAddresses,
       observed_addresses: observedAddresses,
       respondedEcuAddresses,
@@ -35918,7 +36056,15 @@
       : null;
     const scannerJsonVehicleApplicability = hasScannerJsonApplicabilityContent
       ? isTrustedBridgeSessionExport
-        ? scannerJsonVehicle
+        ? normalizeVehicleApplicabilitySnapshot({
+          ...scannerJsonVehicle,
+          supportedEcuEvidence: {
+            ...(scannerJsonVehicle.supportedEcuEvidence || {}),
+            sourceVerified: false,
+            source_verified: false,
+            verified: false
+          }
+        })
         : normalizeVehicleApplicabilitySnapshot({
           maker: scannerJsonVehicle.maker,
           model: scannerJsonVehicle.model,
