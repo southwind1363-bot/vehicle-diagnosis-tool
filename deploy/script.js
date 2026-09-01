@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7329件",
+  validationCheckLabel: "OBD安全検証 7330件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "DTC状態別件数を基本読取結果へ統合",
+  recentMilestone: "DTC状態別件数と読取範囲を基本結果へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.405";
+const APP_VERSION = "3.13.406";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10849,6 +10849,11 @@ function renderObdSimpleResultSummary(session = null) {
   const dtcStatusBreakdown = formatObdBridgeDtcStatusSummary(dtcSnapshot?.dtcs || dtcSnapshot?.codes || [])
     .replace(/^ 内訳: /, "")
     .replace(/。$/, "");
+  const dtcReadoutStatusSummary = formatObdDtcReadoutStatusSummary(
+    dtcSnapshot?.dtcStatusSummary || dtcSnapshot?.dtc_status_summary || coreStatus?.dtcStatusSummary || coreStatus?.dtc_status_summary,
+    ""
+  );
+  const dtcResultDetail = [dtcStatusBreakdown, dtcReadoutStatusSummary].filter(Boolean).join(" / ");
   const freezeFrameCount = countArray(freezeFrameSnapshot?.monitorValues || freezeFrameSnapshot?.monitor_values);
   const livePidCount = countArray(livePidSnapshot?.monitorValues || livePidSnapshot?.monitor_values);
   const readinessCount = countValue(
@@ -10875,7 +10880,7 @@ function renderObdSimpleResultSummary(session = null) {
     return { label: "状態未集計", tone: "unknown" };
   };
   const metrics = [
-    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot"), "obdDetectedCodes", "obdImportStatus", dtcStatusBreakdown],
+    ["DTC", formatCount(dtcSnapshot, dtcCount, "件"), resolveReadoutState("dtc_snapshot"), "obdDetectedCodes", "obdImportStatus", dtcResultDetail],
     ["フリーズフレーム", formatCount(freezeFrameSnapshot, freezeFrameCount, "項目"), resolveReadoutState("freeze_frame_snapshot"), "obdSessionDetailFreezeFrame", "obdReadoutDetails"],
     ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目"), resolveReadoutState("live_pid_snapshot"), "obdMonitorGrid", "obdMonitorStatus"],
     ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目"), resolveReadoutState("readiness_snapshot"), "obdSessionDetailReadiness", "obdReadoutDetails"],
