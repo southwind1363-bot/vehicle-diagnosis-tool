@@ -728,6 +728,12 @@
           <p id="obdSimpleResultNote" class="obd-simple-result-note"></p>
         </section>
 
+        <div class="button-row obd-simple-only">
+          <button id="obdSimpleResultPrimaryButton" class="primary-button" type="button">接続準備へ進む</button>
+          <button id="obdSimpleResultDisconnectButton" class="secondary-button" type="button" hidden disabled>切断</button>
+        </div>
+        <p id="obdSimpleResultStatus" class="data-status obd-simple-only" role="status" aria-live="polite">読取状態を確認しています。</p>
+
         <div class="button-row">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
           <button id="obdSessionOpenButton" class="secondary-button" type="button">読取結果ファイルを開く</button>

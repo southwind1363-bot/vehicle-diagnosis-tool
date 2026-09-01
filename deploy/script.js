@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7323件",
+  validationCheckLabel: "OBD安全検証 7324件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "かんたん画面へ主要読取結果を6項目表示",
+  recentMilestone: "結果画面から基本再読取・切断・状態確認",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.399";
+const APP_VERSION = "3.13.400";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -410,6 +410,9 @@ const obdSimpleResultSummary = document.querySelector("#obdSimpleResultSummary")
 const obdSimpleResultBadge = document.querySelector("#obdSimpleResultBadge");
 const obdSimpleResultGrid = document.querySelector("#obdSimpleResultGrid");
 const obdSimpleResultNote = document.querySelector("#obdSimpleResultNote");
+const obdSimpleResultPrimaryButton = document.querySelector("#obdSimpleResultPrimaryButton");
+const obdSimpleResultDisconnectButton = document.querySelector("#obdSimpleResultDisconnectButton");
+const obdSimpleResultStatus = document.querySelector("#obdSimpleResultStatus");
 const obdSetupPanel = document.querySelector("#obdSetupPanel");
 const obdAccessProtected = document.querySelector("#obdAccessProtected");
 const obdAccessGatePanel = document.querySelector("#obdAccessGatePanel");
@@ -748,6 +751,8 @@ obdUseDiagnosisVehicleButton?.addEventListener("click", applyDiagnosisVehicleToO
 obdPreviewSelectedButton?.addEventListener("click", previewSelectedObdInterface);
 obdPrepareSelectedButton?.addEventListener("click", handleObdSetupPrimaryAction);
 obdSimpleDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
+obdSimpleResultPrimaryButton?.addEventListener("click", handleObdPrimaryAction);
+obdSimpleResultDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);
 
 caseForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2373,6 +2378,7 @@ function renderObdSetupActionButtons(capability = window.ObdReadOnly?.getCapabil
     obdPrepareSelectedButton.textContent = labels.prepare;
     obdPrepareSelectedButton.disabled = Boolean(obdBridgeOperation);
     if (typeof obdSimpleDisconnectButton !== "undefined" && obdSimpleDisconnectButton) obdSimpleDisconnectButton.hidden = true;
+    if (typeof obdSimpleResultDisconnectButton !== "undefined" && obdSimpleResultDisconnectButton) obdSimpleResultDisconnectButton.hidden = true;
     return;
   }
   const nativeConnectorRoute = readoutRoute?.route === "native_connector_required";
@@ -2388,6 +2394,16 @@ function renderObdSetupActionButtons(capability = window.ObdReadOnly?.getCapabil
   if (typeof obdSimpleDisconnectButton !== "undefined" && obdSimpleDisconnectButton) {
     obdSimpleDisconnectButton.hidden = !connected;
     obdSimpleDisconnectButton.disabled = !connected || Boolean(obdSerialDisconnectOperation) || obdDevSession.readInProgress || obdDevSession.coreScanInProgress;
+  }
+  if (typeof obdSimpleResultPrimaryButton !== "undefined" && obdSimpleResultPrimaryButton) {
+    obdSimpleResultPrimaryButton.textContent = obdPrepareSelectedButton.textContent === "基本読取を開始" && obdDevSession.lastSession
+      ? "基本読取を再実行"
+      : obdPrepareSelectedButton.textContent;
+    obdSimpleResultPrimaryButton.disabled = obdPrepareSelectedButton.disabled;
+  }
+  if (typeof obdSimpleResultDisconnectButton !== "undefined" && obdSimpleResultDisconnectButton) {
+    obdSimpleResultDisconnectButton.hidden = !connected;
+    obdSimpleResultDisconnectButton.disabled = !connected || Boolean(obdSerialDisconnectOperation) || obdDevSession.readInProgress || obdDevSession.coreScanInProgress;
   }
 }
 
@@ -5242,10 +5258,17 @@ function renderObdProgressOverview() {
 }
 
 function syncObdSimpleStatus() {
-  if (!obdSimpleStatus || !obdDevStatus) return;
+  if (!obdDevStatus) return;
   const message = String(obdDevStatus.textContent || "").trim();
-  obdSimpleStatus.textContent = message || "車両とVCIを選択してください。";
-  obdSimpleStatus.classList.toggle("error", obdDevStatus.classList.contains("error"));
+  const hasError = obdDevStatus.classList.contains("error");
+  if (obdSimpleStatus) {
+    obdSimpleStatus.textContent = message || "車両とVCIを選択してください。";
+    obdSimpleStatus.classList.toggle("error", hasError);
+  }
+  if (obdSimpleResultStatus) {
+    obdSimpleResultStatus.textContent = message || "読取状態を確認しています。";
+    obdSimpleResultStatus.classList.toggle("error", hasError);
+  }
 }
 
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
@@ -5360,7 +5383,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   if (typeof syncObdSimpleStatus === "function") syncObdSimpleStatus();
 }
 
-if (typeof MutationObserver === "function" && obdDevStatus && obdSimpleStatus) {
+if (typeof MutationObserver === "function" && obdDevStatus && (obdSimpleStatus || obdSimpleResultStatus)) {
   new MutationObserver(syncObdSimpleStatus).observe(obdDevStatus, {
     childList: true,
     characterData: true,
