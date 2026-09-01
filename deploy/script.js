@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7332件",
+  validationCheckLabel: "OBD安全検証 7333件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "通常診断画面を5段階フローへ分離",
+  recentMilestone: "応答ECU一覧を全体結果へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.409";
+const APP_VERSION = "3.13.410";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -423,6 +423,10 @@ const obdSimpleResultNote = document.querySelector("#obdSimpleResultNote");
 const obdSimpleResultPrimaryButton = document.querySelector("#obdSimpleResultPrimaryButton");
 const obdSimpleResultDisconnectButton = document.querySelector("#obdSimpleResultDisconnectButton");
 const obdSimpleResultStatus = document.querySelector("#obdSimpleResultStatus");
+const obdSimpleSystemSummary = document.querySelector("#obdSimpleSystemSummary");
+const obdSimpleSystemBadge = document.querySelector("#obdSimpleSystemBadge");
+const obdSimpleSystemGrid = document.querySelector("#obdSimpleSystemGrid");
+const obdSimpleSystemNote = document.querySelector("#obdSimpleSystemNote");
 const obdSetupPanel = document.querySelector("#obdSetupPanel");
 const obdAccessProtected = document.querySelector("#obdAccessProtected");
 const obdAccessGatePanel = document.querySelector("#obdAccessGatePanel");
@@ -8346,6 +8350,7 @@ function buildObdEcuResponseDisplayLines(summary = null, indexOffset = 0) {
 function createObdEcuResponseCard(summary = null) {
   const card = document.createElement("article");
   card.className = "obd-session-detail-card obd-ecu-response-card";
+  card.id = "obdSessionDetailEcuResponses";
   const heading = document.createElement("strong");
   heading.textContent = "ECU応答";
   const toolbar = document.createElement("div");
@@ -11024,9 +11029,105 @@ function renderObdSimpleResultSummary(session = null) {
   obdSimpleResultSummary.hidden = false;
 }
 
+function openObdSimpleEcuDetail(row = {}) {
+  renderObdStageView("readout");
+  const disclosure = document.getElementById("obdReadoutDetails");
+  if (disclosure) disclosure.open = true;
+  const card = document.getElementById("obdSessionDetailEcuResponses") || disclosure;
+  const search = document.getElementById("obdEcuResponseSearch");
+  const searchValue = String(row.address || row.ecu || row.ecu_id || row.ecuId || row.id || row.name || "").trim();
+  if (search && searchValue) {
+    search.value = searchValue;
+    search.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  card?.scrollIntoView({ behavior: "instant", block: "start" });
+}
+
+function renderObdSimpleSystemSummary(session = null) {
+  if (!obdSimpleSystemSummary || !obdSimpleSystemBadge || !obdSimpleSystemGrid || !obdSimpleSystemNote) return;
+  obdSimpleSystemGrid.innerHTML = "";
+  if (!session || typeof session !== "object") {
+    obdSimpleSystemSummary.hidden = true;
+    return;
+  }
+  const responseSummary = session.ecuResponseSummary || session.ecu_response_summary || null;
+  const responseRows = Array.isArray(responseSummary?.ecus) ? responseSummary.ecus : [];
+  const coreStatus = session.coreSessionStatus || session.core_session_status || null;
+  const observedSummary = coreStatus?.observedEcuSummary || coreStatus?.observed_ecu_summary
+    || session.diagnosticFlowSummary?.observedEcuSummary || session.diagnosticFlowSummary?.observed_ecu_summary || null;
+  const observedRows = Array.isArray(observedSummary?.ecus)
+    ? observedSummary.ecus.map((entry) => ({
+      id: entry?.id,
+      address: entry?.id,
+      name: entry?.name || entry?.ecuName || entry?.ecu_name,
+      status: "observed",
+      readoutIds: entry?.readoutIds || entry?.readout_ids || []
+    }))
+    : [];
+  const rows = responseRows.length ? responseRows : observedRows;
+  const statusLabels = {
+    success: "応答取得",
+    available: "応答取得",
+    positive: "肯定応答",
+    positive_response: "肯定応答",
+    negative_response: "負応答",
+    pending_response: "応答保留",
+    no_response: "無応答",
+    unparsed: "応答未解析",
+    blocked: "読取拒否",
+    observed: "読取元を観測",
+    unknown: "状態未確認"
+  };
+  rows.forEach((row) => {
+    const statusKey = String(row?.status || "unknown").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const dtcValue = row?.dtcCount ?? row?.dtc_count;
+    const dtcCount = dtcValue != null && Number.isSafeInteger(Number(dtcValue)) && Number(dtcValue) >= 0 ? Number(dtcValue) : null;
+    const address = String(row?.address || row?.ecu || row?.ecu_id || row?.ecuId || row?.id || "ECU").trim() || "ECU";
+    const name = String(row?.name || row?.ecuName || row?.ecu_name || row?.moduleName || row?.module_name || "名称未記録").trim() || "名称未記録";
+    const services = row?.responseServices || row?.response_services || row?.services || row?.readoutIds || row?.readout_ids || [];
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "obd-simple-system-item";
+    if (dtcCount > 0) item.classList.add("is-fault");
+    else if (statusKey === "no_response") item.classList.add("is-no-response");
+    else item.classList.add("is-response");
+    item.setAttribute("aria-label", address + " " + name + " のECU応答詳細を開く");
+    const head = document.createElement("span");
+    head.className = "obd-simple-system-head";
+    const id = document.createElement("strong");
+    id.textContent = address;
+    const state = document.createElement("span");
+    state.textContent = statusLabels[statusKey] || "状態未確認";
+    head.append(id, state);
+    const title = document.createElement("span");
+    title.className = "obd-simple-system-name";
+    title.textContent = name;
+    const dtc = document.createElement("span");
+    dtc.className = "obd-simple-system-dtc";
+    dtc.textContent = dtcCount === null ? "DTC件数未記録" : "DTC報告 " + dtcCount + "件";
+    const detail = document.createElement("span");
+    detail.className = "obd-simple-system-detail";
+    detail.textContent = Array.isArray(services) && services.length ? "取得: " + services.slice(0, 4).join(" / ") : "取得項目未記録";
+    const arrow = document.createElement("span");
+    arrow.className = "obd-simple-result-arrow";
+    arrow.setAttribute("aria-hidden", "true");
+    arrow.textContent = "›";
+    item.append(head, title, dtc, detail, arrow);
+    item.addEventListener("click", () => openObdSimpleEcuDetail(row));
+    obdSimpleSystemGrid.appendChild(item);
+  });
+  obdSimpleSystemBadge.className = "confidence-badge " + (rows.length ? "is-ready" : "is-empty");
+  obdSimpleSystemBadge.textContent = rows.length ? rows.length + " ECU" : "未取得";
+  obdSimpleSystemNote.textContent = rows.length
+    ? responseRows.length ? "車両から記録したECU応答を表示しています。ECUを選ぶと応答詳細へ移動します。" : "ECU読取元は観測済みですが、ECU別応答状態とDTC件数は未集計です。"
+    : "ECU別応答は未取得です。未取得を正常とは判定しません。";
+  obdSimpleSystemSummary.hidden = false;
+}
+
 function renderObdDeveloperSessionSummary(session = null) {
   renderObdSessionExportControls();
   if (typeof renderObdSimpleResultSummary === "function") renderObdSimpleResultSummary(session);
+  if (typeof renderObdSimpleSystemSummary === "function") renderObdSimpleSystemSummary(session);
   renderObdDiagnosticFlowPanel(session);
   obdDevSessionSummary.innerHTML = "";
   const coreSessionStatus = session?.coreSessionStatus || session?.core_session_status || null;

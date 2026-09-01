@@ -758,6 +758,18 @@
           <p id="obdSimpleResultNote" class="obd-simple-result-note"></p>
         </section>
 
+        <section id="obdSimpleSystemSummary" class="obd-simple-system-summary obd-simple-only" aria-labelledby="obdSimpleSystemTitle" hidden>
+          <div class="obd-result-heading">
+            <div>
+              <p class="eyebrow obd-eyebrow">SYSTEM SCAN</p>
+              <h3 id="obdSimpleSystemTitle">応答ECU</h3>
+            </div>
+            <span id="obdSimpleSystemBadge" class="confidence-badge">未読取</span>
+          </div>
+          <div id="obdSimpleSystemGrid" class="obd-simple-system-grid" aria-label="応答ECU一覧"></div>
+          <p id="obdSimpleSystemNote" class="obd-simple-result-note"></p>
+        </section>
+
         <div class="button-row obd-simple-only obd-simple-result-actions">
           <button id="obdSimpleResultPrimaryButton" class="primary-button" type="button">接続準備へ進む</button>
           <button id="obdSimpleResultDisconnectButton" class="secondary-button" type="button" hidden disabled>切断</button>
