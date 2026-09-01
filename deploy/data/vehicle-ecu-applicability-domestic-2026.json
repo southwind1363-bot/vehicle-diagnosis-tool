@@ -1,0 +1,10 @@
+[
+  {
+    "record_type": "catalog_metadata",
+    "schema_version": "vehicle_ecu_applicability_catalog_v1",
+    "catalog_id": "domestic-ecu-applicability-v1",
+    "entry_count": 0,
+    "read_only": true,
+    "vehicle_command_enabled": false
+  }
+]

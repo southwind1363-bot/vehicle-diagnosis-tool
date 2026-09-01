@@ -1,7 +1,7 @@
 {
-  "version": "3.13.413",
+  "version": "3.13.414",
   "generated_at": "2026-09-01",
-  "asset_count": 210,
+  "asset_count": 211,
   "assets": [
     "./",
     "index.html",
@@ -206,6 +206,7 @@
     "data/recalls-tsb-notes.json",
     "data/service-notes.json",
     "data/symptom-flows.json",
+    "data/vehicle-ecu-applicability-domestic-2026.json",
     "data/vehicle-input-options.json",
     "data/vehicle-interface-catalog-2026.json",
     "data/vehicle-model-catalog-domestic-2004-2026.json",

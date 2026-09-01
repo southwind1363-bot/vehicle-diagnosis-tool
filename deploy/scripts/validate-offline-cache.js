@@ -272,7 +272,7 @@ await statusWorker.lifecycle("install");
 const active = { state: "activated", scriptURL: `${base}service-worker.js?version=previous`, postMessage: (data, ports) => statusWorker.listeners.message({ data, ports }) };
 const statusClient = createStatusClient(statusWorker, { active, update: async () => {}, addEventListener: () => {} });
 await statusClient.refreshOfflineCacheStatus(active);
-check(statusClient.offlineCacheStatus.textContent.includes("210/210"), "Current activated cache did not show complete readiness");
+check(statusClient.offlineCacheStatus.textContent.includes(`${manifest.asset_count}/${manifest.asset_count}`), "Current activated cache did not show complete readiness");
 const oldWorker = { ...active, postMessage: (data, ports) => ports[0].postMessage({ version: "previous", cacheName: "vehicle-diagnosis-tool-previous" }) };
 statusClient.setOfflineCacheStatus("PENDING");
 await statusClient.refreshOfflineCacheStatus(oldWorker);
@@ -383,7 +383,7 @@ for (const [scenario, expected] of [
   fixture.options.failMatch = false;
   client.window.caches = fixture.caches;
   await client.refreshOfflineCacheStatus(active);
-  check(client.offlineCacheStatus.textContent.includes("210/210") && !client.offlineCacheStatus.isError, `${scenario}: recovered readiness retained an error`);
+  check(client.offlineCacheStatus.textContent.includes(`${manifest.asset_count}/${manifest.asset_count}`) && !client.offlineCacheStatus.isError, `${scenario}: recovered readiness retained an error`);
 }
 
 const obsoleteClient = createStatusClient(statusWorker, {});
@@ -403,7 +403,7 @@ identityPorts[0].postMessage(null);
 await earlier;
 identityPorts[1].postMessage({ version: manifest.version, cacheName });
 await newer;
-check(statusClient.offlineCacheStatus.textContent.includes("210/210"), "Older identity failure suppressed a newer successful readiness check");
+check(statusClient.offlineCacheStatus.textContent.includes(`${manifest.asset_count}/${manifest.asset_count}`), "Older identity failure suppressed a newer successful readiness check");
 const oldClient = createStatusClient(statusWorker, { active: oldWorker, update: async () => {}, addEventListener: () => {} });
 await oldClient.registerOfflineCache();
 await oldClient.refreshOfflineCacheStatus(oldWorker);
@@ -422,7 +422,7 @@ activating.state = "activated";
 stateChanged();
 const deadline = Date.now() + 2000;
 while (!activatingClient.offlineCacheStatus.textContent.includes("準備済み") && Date.now() < deadline) await new Promise((done) => setTimeout(done, 10));
-check(activatingClient.offlineCacheStatus.textContent.includes("210/210"), "Observed activation did not refresh offline readiness");
+check(activatingClient.offlineCacheStatus.textContent.includes(`${manifest.asset_count}/${manifest.asset_count}`), "Observed activation did not refresh offline readiness");
 for (const scenario of ["same-code-old-url", "different-code", "changed-active", "unavailable"]) {
   let registrations = 0;
   let updates = 0;

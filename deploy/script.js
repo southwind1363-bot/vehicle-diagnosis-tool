@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7346件",
+  validationCheckLabel: "OBD安全検証 7363件",
   bridgeValidationCheckLabel: "bridge検証 384件",
   recentMilestone: "検証済みECU適用証跡ゲートを診断コアへ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.413";
+const APP_VERSION = "3.13.414";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -281,6 +281,7 @@ const fallbackData = {
   vehicleModelCatalogDomestic2004To2026: [],
   vehicleModelCatalogDomestic2026: [],
   vehicleYearRangesDomestic2026: [],
+  vehicleEcuApplicabilityDomestic2026: [],
   recallsTsbNotes: [],
   japanObdInspectionNotes: [],
   realWorldCases: [],
@@ -322,6 +323,7 @@ const obdVehicleMakerSelect = document.querySelector("#obdVehicleMaker");
 const obdVehicleModelSelect = document.querySelector("#obdVehicleModel");
 const obdVehicleModelCodeSelect = document.querySelector("#obdVehicleModelCode");
 const obdVehicleEngineCodeSelect = document.querySelector("#obdVehicleEngineCode");
+const obdVehicleMarketSelect = document.querySelector("#obdVehicleMarket");
 const obdVehicleYearSelect = document.querySelector("#obdVehicleYear");
 const obdVehicleYearManualInput = document.querySelector("#obdVehicleYearManual");
 const obdVehicleProductionDateInput = document.querySelector("#obdVehicleProductionDate");
@@ -738,7 +740,7 @@ obdVehicleYearSelect?.addEventListener("change", () => {
   updateObdVehicleYearManualVisibility();
   renderObdVehicleEngineOptions();
 });
-[obdVehicleEngineCodeSelect, obdVehicleProductionDateInput, obdVehicleManualInput, obdInterfaceSelect].forEach((element) => {
+[obdVehicleEngineCodeSelect, obdVehicleMarketSelect, obdVehicleProductionDateInput, obdVehicleManualInput, obdInterfaceSelect].forEach((element) => {
   element?.addEventListener("change", syncObdVehicleInput);
   element?.addEventListener("input", syncObdVehicleInput);
 });
@@ -753,6 +755,7 @@ obdVehicleYearManualInput?.addEventListener("input", () => {
   obdVehicleYearSelect,
   obdVehicleYearManualInput,
   obdVehicleEngineCodeSelect,
+  obdVehicleMarketSelect,
   obdVehicleProductionDateInput,
   obdVehicleManualInput
 ].forEach((element) => {
@@ -1053,6 +1056,7 @@ async function loadData() {
       vehicleModelCatalogDomestic2004To2026,
       vehicleModelCatalogDomestic2026,
       vehicleYearRangesDomestic2026,
+      vehicleEcuApplicabilityDomestic2026,
       recallsTsbNotes,
       officialReferenceNotes2026,
       japanObdInspectionNotes,
@@ -1253,6 +1257,7 @@ async function loadData() {
       fetchJson("data/vehicle-model-catalog-domestic-2004-2026.json"),
       fetchJson("data/vehicle-model-catalog-domestic-2026.json"),
       fetchJson("data/vehicle-year-ranges-domestic-2026.json"),
+      fetchJson("data/vehicle-ecu-applicability-domestic-2026.json"),
       fetchJson("data/recalls-tsb-notes.json"),
       fetchJson("data/official-reference-notes-2026.json"),
       fetchJson("data/japan-obd-inspection-notes.json"),
@@ -1312,6 +1317,7 @@ async function loadData() {
       vehicleModelCatalogDomestic2004To2026,
       vehicleModelCatalogDomestic2026,
       vehicleYearRangesDomestic2026,
+      vehicleEcuApplicabilityDomestic2026,
       recallsTsbNotes: [...recallsTsbNotes, ...officialReferenceNotes2026],
       japanObdInspectionNotes: [...japanObdInspectionNotes, ...japanObdInspectionNotes2026],
       realWorldCases,
@@ -1870,6 +1876,7 @@ function buildSelectedObdVehicleProfile() {
   const modelCode = selectedVehicleValue(obdVehicleModelCodeSelect);
   const year = selectedVehicleValue(obdVehicleYearSelect) || obdVehicleYearManualInput.value.trim();
   const productionDate = obdVehicleProductionDateInput.value || null;
+  const market = obdVehicleMarketSelect.value || null;
   const engineCode = selectedVehicleValue(obdVehicleEngineCodeSelect);
   const freeText = obdVehicleManualInput.value.trim();
   if (!maker && !model && !modelCode && !year && !productionDate && !engineCode && !freeText) return null;
@@ -1880,6 +1887,7 @@ function buildSelectedObdVehicleProfile() {
     year: year || null,
     productionDate,
     engineCode: engineCode || null,
+    market,
     label: obdVehicleInput.value.trim() || freeText || null,
     notes: freeText || null
   };
@@ -1910,6 +1918,107 @@ function buildVehicleApplicabilityRangeDescriptors(ranges = []) {
     .filter((range) => range.modelCodes.length || range.engineCodes.length || range.yearFrom || range.yearTo || range.verifiedThroughYear || range.sourceName);
 }
 
+function normalizeVehicleEcuCatalogKey(value) {
+  return String(value || "").normalize("NFKC").trim().toLowerCase();
+}
+
+function validateVehicleEcuApplicabilityCatalog(rows = []) {
+  const invalid = (reason) => ({ valid: false, reason, entries: [] });
+  if (!Array.isArray(rows) || !rows.length) return invalid("catalog_missing");
+  const metadataRows = rows.filter((row) => row?.record_type === "catalog_metadata");
+  const metadata = metadataRows[0];
+  if (metadataRows.length !== 1 || rows[0] !== metadata
+    || metadata.schema_version !== "vehicle_ecu_applicability_catalog_v1"
+    || metadata.catalog_id !== "domestic-ecu-applicability-v1"
+    || !Number.isInteger(metadata.entry_count)
+    || metadata.read_only !== true
+    || metadata.vehicle_command_enabled !== false) return invalid("catalog_metadata_invalid");
+  const entries = rows.slice(1);
+  if (metadata.entry_count !== entries.length) return invalid("catalog_entry_count_mismatch");
+  const ids = new Set();
+  const evidenceIds = new Set();
+  const normalizedEntries = [];
+  const isDate = (value) => {
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+  };
+  for (const entry of entries) {
+    const evidence = entry?.evidence;
+    const ecus = entry?.supported_ecus;
+    const verificationValues = ["source_verified", "sourceVerified", "verified"].filter((key) => Object.prototype.hasOwnProperty.call(evidence || {}, key)).map((key) => evidence[key]);
+    const verificationConflictValues = ["source_verification_conflict", "sourceVerificationConflict", "verification_conflict", "verificationConflict"].filter((key) => Object.prototype.hasOwnProperty.call(evidence || {}, key)).map((key) => evidence[key]);
+    if (!entry || entry.record_type !== "vehicle_ecu_applicability"
+      || entry.schema_version !== "vehicle_ecu_applicability_entry_v1"
+      || !entry.id || ids.has(entry.id)
+      || !entry.maker || !entry.model || !entry.model_code || !entry.engine_code
+      || !Number.isInteger(entry.year_from) || !Number.isInteger(entry.year_to)
+      || entry.year_from < 1900 || entry.year_to > 2100 || entry.year_from > entry.year_to
+      || !/^[A-Z]{2}$/.test(entry.market || "")
+      || !["complete", "partial"].includes(entry.list_scope)
+      || !Array.isArray(ecus) || !ecus.length || ecus.length > 20
+      || entry.read_only !== true || entry.vehicle_command_enabled !== false
+      || !evidence || !evidence.evidence_id || evidenceIds.has(evidence.evidence_id)
+      || !evidence.source_name || !/^https:\/\/[^\s]+$/.test(evidence.source_url || "")
+      || !isDate(evidence.source_date) || !evidence.document_location
+      || verificationValues.length === 0 || verificationValues.some((value) => value !== true)
+      || verificationConflictValues.some((value) => value !== false)) {
+      return invalid("catalog_entry_invalid");
+    }
+    const ecuKeys = new Set();
+    const addressKeys = new Set();
+    for (const ecu of ecus) {
+      const address = String(ecu?.response_address || "").trim().toUpperCase().replace(/^0X/, "");
+      const ecuKey = `${normalizeVehicleEcuCatalogKey(ecu?.system_name)}::${normalizeVehicleEcuCatalogKey(ecu?.ecu_name)}`;
+      if (!ecu?.system_name || !ecu?.ecu_name || ecu?.address_role !== "response" || ecu?.diagnostic_address !== undefined || ecu?.diagnosticAddress !== undefined
+        || !/^[0-9A-F]{2,8}$/.test(address) || !ecu?.protocol
+        || ecuKeys.has(ecuKey) || addressKeys.has(address)) return invalid("catalog_ecu_invalid");
+      ecuKeys.add(ecuKey);
+      addressKeys.add(address);
+    }
+    ids.add(entry.id);
+    evidenceIds.add(evidence.evidence_id);
+    normalizedEntries.push(entry);
+  }
+  for (let leftIndex = 0; leftIndex < normalizedEntries.length; leftIndex += 1) {
+    const left = normalizedEntries[leftIndex];
+    for (let rightIndex = leftIndex + 1; rightIndex < normalizedEntries.length; rightIndex += 1) {
+      const right = normalizedEntries[rightIndex];
+      const sameVehicle = ["maker", "model", "model_code", "engine_code", "market"]
+        .every((key) => normalizeVehicleEcuCatalogKey(left[key]) === normalizeVehicleEcuCatalogKey(right[key]));
+      if (sameVehicle && left.year_from <= right.year_to && right.year_from <= left.year_to) return invalid("catalog_scope_overlap");
+    }
+  }
+  return { valid: true, reason: null, entries: normalizedEntries };
+}
+
+function matchVehicleEcuApplicabilityCatalog(profile = null, rows = []) {
+  const catalog = validateVehicleEcuApplicabilityCatalog(rows);
+  if (!catalog.valid) return { status: "invalid", entry: null };
+  const identity = {
+    maker: profile?.maker,
+    model: profile?.model,
+    model_code: profile?.modelCode,
+    year: Number(profile?.year),
+    engine_code: profile?.engineCode,
+    market: profile?.market
+  };
+  if (!identity.maker || !identity.model || !identity.model_code || !Number.isInteger(identity.year) || !identity.engine_code || !identity.market) {
+    return { status: "incomplete", entry: null };
+  }
+  const matches = catalog.entries.filter((entry) => entry.list_scope === "complete"
+    && normalizeVehicleEcuCatalogKey(entry.maker) === normalizeVehicleEcuCatalogKey(identity.maker)
+    && normalizeVehicleEcuCatalogKey(entry.model) === normalizeVehicleEcuCatalogKey(identity.model)
+    && normalizeVehicleEcuCatalogKey(entry.model_code) === normalizeVehicleEcuCatalogKey(identity.model_code)
+    && normalizeVehicleEcuCatalogKey(entry.engine_code) === normalizeVehicleEcuCatalogKey(identity.engine_code)
+    && normalizeVehicleEcuCatalogKey(entry.market) === normalizeVehicleEcuCatalogKey(identity.market)
+    && identity.year >= entry.year_from && identity.year <= entry.year_to);
+  return matches.length === 1
+    ? { status: "matched", entry: matches[0] }
+    : { status: matches.length > 1 ? "ambiguous" : "not_configured", entry: null };
+}
+
 function buildSelectedObdVehicleApplicability(profile = null) {
   const selectedProfile = profile || buildSelectedObdVehicleProfile();
   if (!selectedProfile) return null;
@@ -1919,6 +2028,7 @@ function buildSelectedObdVehicleApplicability(profile = null) {
   const year = selectedProfile.year || null;
   const engineCode = selectedProfile.engineCode || null;
   const hasCatalogSelection = Boolean(maker && model);
+  const market = selectedProfile.market || null;
   const vehicleOption = hasCatalogSelection ? findVehicleOption(maker, model) : null;
   const candidateRanges = hasCatalogSelection ? findVehicleYearRanges(maker, model, modelCode || "") : [];
   const applicableRanges = hasCatalogSelection ? findApplicableVehicleYearRanges(maker, model, modelCode || "", year || "") : [];
@@ -1939,6 +2049,9 @@ function buildSelectedObdVehicleApplicability(profile = null) {
       status = "partial";
     }
   }
+  const ecuCatalogMatch = matchVehicleEcuApplicabilityCatalog({ maker, model, modelCode, year, engineCode, market }, dataStore.vehicleEcuApplicabilityDomestic2026);
+  const ecuEntry = ecuCatalogMatch.entry;
+  const evidence = ecuEntry?.evidence;
   const summaryParts = [
     selectedProfile.label || formatVehicleProfileLabel(selectedProfile, ""),
     status === "matched" ? "適合候補あり" : status === "partial" ? "候補要確認" : status === "unlisted" ? "未登録" : "手入力"
@@ -1950,21 +2063,47 @@ function buildSelectedObdVehicleApplicability(profile = null) {
     modelCode,
     year,
     engineCode,
+    market,
     catalogMatched,
     yearMatched,
     engineMatched,
     modelCodeMatched,
+    matchEvidenceProvided: { catalog: hasCatalogSelection, year: Boolean(year), engine: Boolean(engineCode), modelCode: Boolean(modelCode) },
     candidateRangeCount: candidateRanges.length,
     applicableRangeCount: applicableRanges.length,
     candidateRanges: candidateRangeDescriptors,
     applicableRanges: applicableRangeDescriptors,
     supportedEngineCodes,
     supportedEngineCodeCount: supportedEngineCodes.length,
+    supportedEcus: ecuEntry ? ecuEntry.supported_ecus.map((ecu) => ({ system_name: ecu.system_name, ecu_name: ecu.ecu_name, diagnostic_address: ecu.response_address, protocol: ecu.protocol })) : [],
+    supportedEcuCount: ecuEntry ? ecuEntry.supported_ecus.length : 0,
+    supportedEcuEvidence: ecuEntry ? {
+      sourceName: evidence.source_name,
+      sourceUrl: evidence.source_url,
+      sourceDate: evidence.source_date,
+      evidenceId: evidence.evidence_id,
+      documentLocation: evidence.document_location,
+      maker: ecuEntry.maker,
+      model: ecuEntry.model,
+      modelCode: ecuEntry.model_code,
+      yearFrom: ecuEntry.year_from,
+      yearTo: ecuEntry.year_to,
+      engineCode: ecuEntry.engine_code,
+      market: ecuEntry.market,
+      scope: ecuEntry.list_scope,
+      sourceVerified: true,
+      sourceVerificationConflict: false
+    } : null,
+    sourceName: evidence?.source_name || null,
+    sourceUrl: evidence?.source_url || null,
+    sourceDate: evidence?.source_date || null,
+    evidenceId: evidence?.evidence_id || null,
+    sourceVerified: Boolean(ecuEntry),
+    sourceVerificationConflict: false,
     status,
     summaryLabel: summaryParts.join(" / ")
   };
 }
-
 function formatVehicleApplicabilitySummary(applicability, fallback = "") {
   if (!applicability || typeof applicability !== "object") return fallback || "";
   const statusLabel = {
@@ -2170,6 +2309,7 @@ function syncObdVehicleInput() {
     selectedObdVehicleYear(),
     obdVehicleProductionDateInput.value ? `生産 ${obdVehicleProductionDateInput.value}` : "",
     selectedVehicleValue(obdVehicleEngineCodeSelect),
+    obdVehicleMarketSelect.value ? `仕向地 ${obdVehicleMarketSelect.selectedOptions[0]?.textContent || obdVehicleMarketSelect.value}` : "",
     obdVehicleManualInput.value.trim()
   ];
   syncVehicleSelectionSummary(obdVehicleInput, obdVehicleSelectionSummary, values, "OBD車両情報");
@@ -2187,6 +2327,7 @@ function resetObdVehicleSelector() {
   replaceSelectOptions(obdVehicleEngineCodeSelect, "先に車種を選択", []);
   obdVehicleYearManualInput.hidden = true;
   obdVehicleProductionDateInput.value = "";
+  obdVehicleMarketSelect.value = "";
   syncObdVehicleInput();
 }
 

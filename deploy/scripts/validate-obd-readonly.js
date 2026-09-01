@@ -21,6 +21,7 @@ const styleSource = fs.readFileSync(new URL("../style.css", import.meta.url), "u
 const serviceWorkerSource = fs.readFileSync(new URL("../service-worker.js", import.meta.url), "utf8");
 check(indexSource.includes('id="obd-panel" class="tab-panel" data-obd-ui-mode="simple"') && indexSource.includes('data-obd-stage="setup"') && indexSource.includes('data-obd-stage="connect"') && indexSource.includes('data-obd-stage="results"') && indexSource.includes('data-obd-stage="readout"') && indexSource.includes('class="obd-stage-tab obd-expert-only"') && indexSource.includes('開発・詳細') && appSource.includes('const allowedStages = new Set(["setup", "connect", "results", "readout", "details"]);') && appSource.includes('obdPanel.dataset.obdActiveStage = nextStage;') && appSource.includes('obdSetupPanel.hidden = nextStage !== "setup";') && appSource.includes('["results", "readout"].includes(nextStage)') && styleSource.includes('#obd-panel[data-obd-ui-mode="simple"] .obd-expert-only') && styleSource.includes('#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="results"] #obdReadoutResultsHost') && styleSource.includes('#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] #obdSimpleResultSummary'), "Simple diagnostic UI must enforce vehicle, connection, result, and individual-data screens while preserving expert controls in details mode");
 check(indexSource.includes('id="obdSimpleConnectPanel"') && indexSource.includes('id="obdSimpleConnectButton"') && indexSource.includes('id="obdSimpleConnectDisconnectButton"') && indexSource.includes('id="obdDevConnectButton" class="primary-button obd-expert-only"') && appSource.includes('obdSimpleConnectButton?.addEventListener("click", handleObdPrimaryAction);') && appSource.includes('obdSimpleConnectDisconnectButton?.addEventListener("click", disconnectObdDeveloperVci);') && appSource.includes('renderObdStageView("connect");') && appSource.includes('void readObdDeveloperCoreScan();') && appSource.includes('const simpleReadoutAccess = obdAccessUnlocked && typeof obdUiMode === "string" && obdUiMode === "simple";') && appSource.includes('if (!obdAccessUnlocked || (!obdDevModeUnlocked && !simpleReadoutAccess)) return;') && appSource.includes('if (disconnectSimpleSerial) void disconnectObdDeveloperVci({ reason: "operator_disconnect" });') && styleSource.includes('.obd-simple-connect-panel'), "Simple ELM flow must isolate guarded connection, core scan, and disconnect controls on the connection screen");
+check(indexSource.includes('id="obdVehicleMarket"') && indexSource.includes('<option value="JP">日本国内</option>') && appSource.includes('const obdVehicleMarketSelect = document.querySelector("#obdVehicleMarket");') && appSource.includes('const market = obdVehicleMarketSelect.value || null;') && appSource.includes('market,'), "Vehicle ECU applicability should require an explicit destination-market selection in the normal vehicle profile flow");
 const interfacePreviewSource = appSource.match(/function getObdInterfacePreviewConfig\(interfaceId\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
 check(interfacePreviewSource.includes('source: "interface_preview"') && interfacePreviewSource.includes("preview_mode: true") && interfacePreviewSource.includes("sample_mode: true") && interfacePreviewSource.includes('warnings: ["preview_not_vehicle_readout"]') && !interfacePreviewSource.includes('code: "P0171"') && !interfacePreviewSource.includes('monitorValues: sharedMonitorValues') && appSource.includes("DTC・ライブデータは実車未読取です。"), "Interface preview must not put sample DTC or PID values into a vehicle diagnostic session");
 const offlineAssets = JSON.parse(fs.readFileSync(new URL("../offline-assets.json", import.meta.url), "utf8"));
@@ -79,6 +80,72 @@ const appBootstrapSource = appSource.slice(0, appSource.indexOf("form.addEventLi
 const loadDataSource = appSource.slice(appSource.indexOf("async function loadData()"), appSource.indexOf("async function fetchJson(path)"));
 const offlineAssetPaths = Array.isArray(offlineAssets.assets) ? offlineAssets.assets : [];
 const offlineAssetPathSet = new Set(offlineAssetPaths);
+const vehicleEcuCatalogSource = appSource.slice(
+  appSource.indexOf("function normalizeVehicleEcuCatalogKey"),
+  appSource.indexOf("function formatVehicleApplicabilitySummary")
+);
+const vehicleEcuCatalogFunctions = vehicleEcuCatalogSource
+  ? new Function(`${vehicleEcuCatalogSource}; return { validateVehicleEcuApplicabilityCatalog, matchVehicleEcuApplicabilityCatalog };`)()
+  : null;
+const installedVehicleEcuCatalog = JSON.parse(fs.readFileSync(new URL("../data/vehicle-ecu-applicability-domestic-2026.json", import.meta.url), "utf8"));
+const vehicleEcuFixtureEntry = {
+  record_type: "vehicle_ecu_applicability",
+  schema_version: "vehicle_ecu_applicability_entry_v1",
+  id: "fixture-vehicle-ecu-list",
+  maker: "Fixture Maker",
+  model: "Fixture Model",
+  model_code: "FIX100",
+  year_from: 2024,
+  year_to: 2026,
+  engine_code: "FIX-E",
+  market: "JP",
+  list_scope: "complete",
+  supported_ecus: [{ system_name: "Engine", ecu_name: "ECM", response_address: "7E8", address_role: "response", protocol: "ISO 15765-4" }],
+  evidence: { evidence_id: "fixture-evidence", source_name: "Fixture source", source_url: "https://example.com/fixture", source_date: "2026-09-01", document_location: "Table 1", source_verified: true },
+  read_only: true,
+  vehicle_command_enabled: false
+};
+const makeVehicleEcuCatalog = (entries = []) => [{ record_type: "catalog_metadata", schema_version: "vehicle_ecu_applicability_catalog_v1", catalog_id: "domestic-ecu-applicability-v1", entry_count: entries.length, read_only: true, vehicle_command_enabled: false }, ...entries];
+const validVehicleEcuCatalog = makeVehicleEcuCatalog([vehicleEcuFixtureEntry]);
+const vehicleEcuProfile = { maker: "Fixture Maker", model: "Fixture Model", modelCode: "FIX100", year: 2025, engineCode: "FIX-E", market: "JP" };
+const exactVehicleEcuMatch = vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog(vehicleEcuProfile, validVehicleEcuCatalog);
+check(Boolean(vehicleEcuCatalogFunctions), "Vehicle ECU applicability catalog functions should remain executable as isolated read-only helpers");
+check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(installedVehicleEcuCatalog).valid === true && installedVehicleEcuCatalog[0]?.entry_count === 0, "Installed vehicle ECU catalog should start as valid metadata without guessed ECU rows");
+check(exactVehicleEcuMatch?.status === "matched" && exactVehicleEcuMatch.entry?.supported_ecus?.length === 1, "Vehicle ECU catalog should supply a complete verified list only for one exact identity match");check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, market: null }, validVehicleEcuCatalog).status === "incomplete", "Vehicle ECU catalog should require an explicitly captured destination market");
+const conflictingEvidenceCatalog = makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), evidence: { ...vehicleEcuFixtureEntry.evidence, sourceVerificationConflict: "true", verified: "false" } }]);
+const ambiguousAddressCatalog = makeVehicleEcuCatalog([{ ...structuredClone(vehicleEcuFixtureEntry), supported_ecus: [{ ...vehicleEcuFixtureEntry.supported_ecus[0], diagnosticAddress: "7E0" }] }]);
+check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(conflictingEvidenceCatalog).valid === false
+  && vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(ambiguousAddressCatalog).valid === false,
+"Conflicting source evidence and ambiguous diagnostic-address aliases should invalidate the vehicle ECU catalog");
+const twentyVehicleEcuEntry = { ...vehicleEcuFixtureEntry, supported_ecus: Array.from({ length: 20 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", protocol: "ISO 15765-4" })) };
+check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([twentyVehicleEcuEntry])).valid === true, "A complete 20-ECU response-address list should remain valid without truncation");
+const buildVehicleEcuApplicability = vehicleEcuCatalogSource
+  ? new Function("dataStore", "findVehicleOption", "findVehicleYearRanges", "findApplicableVehicleYearRanges", "collectUnique", "buildVehicleApplicabilityRangeDescriptors", "formatVehicleProfileLabel", `${vehicleEcuCatalogSource}; return buildSelectedObdVehicleApplicability;`)(
+    { vehicleEcuApplicabilityDomestic2026: validVehicleEcuCatalog },
+    () => ({}),
+    () => [{ model_codes: ["FIX100"], engine_codes: ["FIX-E"] }],
+    () => [{ model_codes: ["FIX100"], engine_codes: ["FIX-E"] }],
+    (values) => [...new Set(values)],
+    () => [],
+    () => "Fixture vehicle"
+  )
+  : null;
+const builtVehicleEcuApplicability = buildVehicleEcuApplicability?.(vehicleEcuProfile);
+check(builtVehicleEcuApplicability?.supportedEcus?.[0]?.diagnostic_address === "7E8"
+  && builtVehicleEcuApplicability?.supportedEcuEvidence?.sourceVerified === true
+  && builtVehicleEcuApplicability?.sourceVerificationConflict === false,
+"Exact fixed-catalog integration should map only a response address into verified supported ECU evidence");
+check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, modelCode: "OTHER" }, validVehicleEcuCatalog).status === "not_configured", "Vehicle ECU catalog should reject a different model code");
+check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, year: 2027 }, validVehicleEcuCatalog).status === "not_configured", "Vehicle ECU catalog should reject a year outside the verified range");
+check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, engineCode: "OTHER" }, validVehicleEcuCatalog).status === "not_configured", "Vehicle ECU catalog should reject a different engine code");
+check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog({ ...vehicleEcuProfile, market: "US" }, validVehicleEcuCatalog).status === "not_configured", "Vehicle ECU catalog should reject a different destination market");
+check(vehicleEcuCatalogFunctions?.matchVehicleEcuApplicabilityCatalog(vehicleEcuProfile, makeVehicleEcuCatalog([{ ...vehicleEcuFixtureEntry, list_scope: "partial" }])).status === "not_configured", "Partial ECU lists should never become expected ECUs");
+const oversizedVehicleEcuEntry = { ...vehicleEcuFixtureEntry, supported_ecus: Array.from({ length: 21 }, (_, index) => ({ system_name: `System ${index}`, ecu_name: `ECU ${index}`, response_address: (0x700 + index).toString(16).toUpperCase(), address_role: "response", protocol: "ISO 15765-4" })) };
+check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([oversizedVehicleEcuEntry])).valid === false, "Vehicle ECU catalog should reject lists beyond the current non-truncating 20-ECU contract");
+const overlappingVehicleEcuEntry = { ...structuredClone(vehicleEcuFixtureEntry), id: "fixture-overlap", evidence: { ...vehicleEcuFixtureEntry.evidence, evidence_id: "fixture-overlap-evidence" } };
+check(vehicleEcuCatalogFunctions?.validateVehicleEcuApplicabilityCatalog(makeVehicleEcuCatalog([vehicleEcuFixtureEntry, overlappingVehicleEcuEntry])).valid === false, "Overlapping vehicle ECU catalog scopes should invalidate the catalog instead of creating an ambiguous match");
+check(installedVehicleEcuCatalog.every((row) => row.read_only === true && row.vehicle_command_enabled === false), "Vehicle ECU applicability catalog must retain read-only transmission-disabled safety flags");
+check(offlineAssetPathSet.has("data/vehicle-ecu-applicability-domestic-2026.json"), "Vehicle ECU applicability catalog must be included in the offline package");
 const diagnosticDataPaths = fs.readdirSync(new URL("../data/", import.meta.url), { withFileTypes: true })
   .filter((entry) => entry.isFile() && entry.name.endsWith(".json"))
   .map((entry) => `data/${entry.name}`)

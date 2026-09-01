@@ -1224,7 +1224,7 @@ function addScannerImportHarness(client, format = "json") {
   client.selectedObdVehicleYear = () => "";
   client.syncVehicleSelectionSummary = () => {};
   client.renderObdConnectionGuide = () => {};
-  for (const name of ["obdVehicleMakerSelect", "obdVehicleModelSelect", "obdVehicleModelCodeSelect", "obdVehicleProductionDateInput", "obdVehicleEngineCodeSelect", "obdVehicleManualInput", "obdVehicleInput", "obdVehicleSelectionSummary"]) client[name] = { value: "" };
+  for (const name of ["obdVehicleMakerSelect", "obdVehicleModelSelect", "obdVehicleModelCodeSelect", "obdVehicleProductionDateInput", "obdVehicleEngineCodeSelect", "obdVehicleMarketSelect", "obdVehicleManualInput", "obdVehicleInput", "obdVehicleSelectionSummary"]) client[name] = { value: "" };
   for (const name of ["obdDetectedCodes", "obdMonitorGrid", "obdMonitorInsightList", "obdImportStatus", "obdMonitorStatus", "obdMonitorCount"]) client[name] = {};
   const analysis = { source: "imported", codes: [], monitorValues: [], monitorInsights: [] };
   client.window = { confirm: () => true, ObdReadOnly: {
