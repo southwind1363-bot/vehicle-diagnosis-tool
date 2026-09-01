@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7327件",
+  validationCheckLabel: "OBD安全検証 7328件",
   bridgeValidationCheckLabel: "bridge検証 384件",
-  recentMilestone: "固定結果ナビから基本読取結果へ復帰",
+  recentMilestone: "対応PID・Mode06を基本読取結果へ統合",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.403";
+const APP_VERSION = "3.13.404";
 const APP_LAST_UPDATED = "2026-09-01";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9553,7 +9553,9 @@ function renderObdBridgeSessionDetails(session = null) {
     const detailId = {
       "フリーズフレーム": "obdSessionDetailFreezeFrame",
       "レディネス": "obdSessionDetailReadiness",
-      "ECU情報": "obdSessionDetailEcuInfo"
+      "ECU情報": "obdSessionDetailEcuInfo",
+      "対応PID": "obdSessionDetailSupportedPid",
+      "Mode06": "obdSessionDetailMode06"
     }[title];
     if (detailId) card.id = detailId;
     const heading = document.createElement("strong");
@@ -10834,6 +10836,8 @@ function renderObdSimpleResultSummary(session = null) {
   const livePidSnapshot = session.livePidSnapshot || session.live_pid_snapshot || null;
   const readinessSnapshot = session.readinessSnapshot || session.readiness_snapshot || null;
   const ecuInfoSnapshot = session.ecuInfoSnapshot || session.ecu_info_snapshot || null;
+  const onboardMonitorSnapshot = session.onboardMonitorSnapshot || session.onboard_monitor_snapshot || null;
+  const supportedPidMatrix = session.supportedPidMatrix || session.supported_pid_matrix || null;
   const coreStatus = session.coreSessionStatus || session.core_session_status || {};
   const coverage = session.readoutCoverage || session.readout_coverage || {};
   const coverageItems = Array.isArray(coverage.items) ? coverage.items : [];
@@ -10849,6 +10853,8 @@ function renderObdSimpleResultSummary(session = null) {
     countArray(readinessSnapshot?.monitors)
   );
   const ecuInfoCount = countValue(ecuInfoSnapshot?.itemCount ?? ecuInfoSnapshot?.item_count, countArray(ecuInfoSnapshot?.items));
+  const onboardMonitorCount = countValue(onboardMonitorSnapshot?.testCount ?? onboardMonitorSnapshot?.test_count, countArray(onboardMonitorSnapshot?.tests));
+  const supportedPidCount = countValue(supportedPidMatrix?.supportedPidCount ?? supportedPidMatrix?.supported_pid_count, countArray(supportedPidMatrix?.supportedPids || supportedPidMatrix?.supported_pids));
   const capturedPercentValue = coverage.capturedPercent ?? coverage.captured_percent;
   const completionPercentValue = coreStatus.completionPercent ?? coreStatus.completion_percent;
   const capturedPercent = Number.isFinite(Number(capturedPercentValue))
@@ -10871,6 +10877,8 @@ function renderObdSimpleResultSummary(session = null) {
     ["ライブデータ", formatCount(livePidSnapshot, livePidCount, "項目"), resolveReadoutState("live_pid_snapshot"), "obdMonitorGrid", "obdMonitorStatus"],
     ["レディネス", formatCount(readinessSnapshot, readinessCount, "項目"), resolveReadoutState("readiness_snapshot"), "obdSessionDetailReadiness", "obdReadoutDetails"],
     ["ECU情報", formatCount(ecuInfoSnapshot, ecuInfoCount, "項目"), resolveReadoutState("ecu_info_snapshot"), "obdSessionDetailEcuInfo", "obdReadoutDetails"],
+    ["対応PID", formatCount(supportedPidMatrix, supportedPidCount, "件"), resolveReadoutState("supported_pid_matrix"), "obdSessionDetailSupportedPid", "obdReadoutDetails"],
+    ["Mode06", formatCount(onboardMonitorSnapshot, onboardMonitorCount, "件"), resolveReadoutState("onboard_monitor_snapshot"), "obdSessionDetailMode06", "obdReadoutDetails"],
     ["主要読取", capturedPercent === null ? "未集計" : String(capturedPercent) + "%", obdDevSession.coreScanInProgress
       ? { label: "読取中", tone: "reading" }
       : { label: capturedPercent === null ? "状態未集計" : capturedPercent === 100 ? "完了" : "未完了", tone: capturedPercent === 100 ? "captured" : "missing" }, "obdReadoutDetails", "obdReadoutDetails"]
@@ -10900,7 +10908,7 @@ function renderObdSimpleResultSummary(session = null) {
   });
 
   const coreReady = coreStatus.readyForAnalysis === true || coreStatus.ready_for_analysis === true;
-  const hasReadout = [dtcSnapshot, freezeFrameSnapshot, livePidSnapshot, readinessSnapshot, ecuInfoSnapshot].some(Boolean);
+  const hasReadout = [dtcSnapshot, freezeFrameSnapshot, livePidSnapshot, readinessSnapshot, ecuInfoSnapshot, supportedPidMatrix, onboardMonitorSnapshot].some(Boolean);
   obdSimpleResultBadge.className = "confidence-badge " + (obdDevSession.coreScanInProgress ? "is-partial" : coreReady ? "is-ready" : hasReadout ? "is-partial" : "is-empty");
   obdSimpleResultBadge.textContent = obdDevSession.coreScanInProgress ? "基本読取中" : coreReady ? "主要読取完了" : hasReadout ? "一部取得" : "応答未取得";
   const pendingIds = Array.isArray(coreStatus.pendingReadoutIds)
