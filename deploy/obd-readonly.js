@@ -4579,6 +4579,106 @@
     };
   }
 
+  const READOUT_NETWORK_SCOPE_FIELDS = [
+    { name: "networkBus", snake: "network_bus", aliases: ["networkBus", "network_bus", "busName", "bus_name", "communicationBus", "communication_bus"], provided: ["networkBusProvided", "network_bus_provided"], conflict: ["networkBusConflict", "network_bus_conflict"], maxLength: 120 },
+    { name: "networkChannel", snake: "network_channel", aliases: ["networkChannel", "network_channel", "channelId", "channel_id", "channelName", "channel_name"], provided: ["networkChannelProvided", "network_channel_provided"], conflict: ["networkChannelConflict", "network_channel_conflict"], maxLength: 120 },
+    { name: "gatewayRoute", snake: "gateway_route", aliases: ["gatewayRoute", "gateway_route", "gatewayPath", "gateway_path", "routingPath", "routing_path"], provided: ["gatewayRouteProvided", "gateway_route_provided"], conflict: ["gatewayRouteConflict", "gateway_route_conflict"], maxLength: 160 }
+  ];
+
+  function normalizeReadoutNetworkScope(input = {}) {
+    const source = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const hasOwn = (key) => Object.prototype.hasOwnProperty.call(source, key);
+    const fieldResults = READOUT_NETWORK_SCOPE_FIELDS.map((field) => {
+      const inputs = field.aliases.filter(hasOwn).map((key) => source[key]);
+      const validValues = inputs
+        .filter((value) => typeof value === "string" && value.trim() && value.trim().length <= field.maxLength)
+        .map((value) => redactSensitiveText(value).replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      const normalizedValues = [...new Set(validValues.map((value) => value.normalize("NFKC").toLowerCase()))];
+      const providedFlags = field.provided.filter(hasOwn).map((key) => source[key]);
+      const conflictFlags = field.conflict.filter(hasOwn).map((key) => source[key]);
+      const provided = inputs.length > 0 || providedFlags.some((value) => value === true);
+      const conflict = inputs.some((value) => typeof value !== "string" || !value.trim() || value.trim().length > field.maxLength)
+        || normalizedValues.length > 1
+        || providedFlags.some((value) => typeof value !== "boolean" || value !== provided)
+        || conflictFlags.some((value) => typeof value !== "boolean" || value === true);
+      return { ...field, value: validValues[0] || null, provided, conflict };
+    });
+    const provided = fieldResults.some((field) => field.provided);
+    const aggregateProvidedFlags = ["networkScopeProvided", "network_scope_provided"].filter(hasOwn).map((key) => source[key]);
+    const aggregateConflictFlags = ["networkScopeConflict", "network_scope_conflict"].filter(hasOwn).map((key) => source[key]);
+    const aggregateEligibleFlags = ["networkScopeEvidenceEligible", "network_scope_evidence_eligible"].filter(hasOwn).map((key) => source[key]);
+    const conflict = fieldResults.some((field) => field.conflict)
+      || aggregateProvidedFlags.some((value) => typeof value !== "boolean" || value !== provided)
+      || aggregateConflictFlags.some((value) => typeof value !== "boolean" || value === true)
+      || aggregateEligibleFlags.some((value) => typeof value !== "boolean" || value !== true)
+      || (provided && fieldResults.every((field) => !field.value));
+    const values = Object.fromEntries(fieldResults.map((field) => [field.name, field.value]));
+    const provenance = fieldResults.reduce((result, field) => {
+      result[field.name + "Provided"] = field.provided;
+      result[field.name + "Conflict"] = field.conflict;
+      return result;
+    }, {});
+    return { ...values, ...provenance, provided, conflict, eligible: provided && !conflict };
+  }
+
+  function readoutNetworkScopeFields(input = {}) {
+    const scope = input && Object.prototype.hasOwnProperty.call(input, "eligible") ? input : normalizeReadoutNetworkScope(input);
+    if (!scope.provided && !scope.conflict) return {};
+    return {
+      networkBus: scope.networkBus, network_bus: scope.networkBus,
+      networkBusProvided: scope.networkBusProvided, network_bus_provided: scope.networkBusProvided,
+      networkBusConflict: scope.networkBusConflict, network_bus_conflict: scope.networkBusConflict,
+      networkChannel: scope.networkChannel, network_channel: scope.networkChannel,
+      networkChannelProvided: scope.networkChannelProvided, network_channel_provided: scope.networkChannelProvided,
+      networkChannelConflict: scope.networkChannelConflict, network_channel_conflict: scope.networkChannelConflict,
+      gatewayRoute: scope.gatewayRoute, gateway_route: scope.gatewayRoute,
+      gatewayRouteProvided: scope.gatewayRouteProvided, gateway_route_provided: scope.gatewayRouteProvided,
+      gatewayRouteConflict: scope.gatewayRouteConflict, gateway_route_conflict: scope.gatewayRouteConflict,
+      networkScopeProvided: scope.provided, network_scope_provided: scope.provided,
+      networkScopeConflict: scope.conflict, network_scope_conflict: scope.conflict,
+      networkScopeEvidenceEligible: scope.eligible, network_scope_evidence_eligible: scope.eligible
+    };
+  }
+
+  function inheritReadoutNetworkScope(row = {}, parent = null) {
+    const childScope = normalizeReadoutNetworkScope(row);
+    const parentScope = normalizeReadoutNetworkScope(parent);
+    const mergedFields = READOUT_NETWORK_SCOPE_FIELDS.reduce((result, field) => {
+      const providedKey = field.name + "Provided";
+      const conflictKey = field.name + "Conflict";
+      const childProvided = childScope[providedKey] === true;
+      const parentProvided = parentScope[providedKey] === true;
+      const valuesDiffer = childProvided && parentProvided
+        && String(childScope[field.name] || "").normalize("NFKC").toLowerCase() !== String(parentScope[field.name] || "").normalize("NFKC").toLowerCase();
+      result[field.name] = childProvided ? childScope[field.name] : parentScope[field.name];
+      result[providedKey] = childProvided || parentProvided;
+      result[conflictKey] = childScope[conflictKey] === true || parentScope[conflictKey] === true || valuesDiffer;
+      return result;
+    }, {});
+    const provided = READOUT_NETWORK_SCOPE_FIELDS.some((field) => mergedFields[field.name + "Provided"]);
+    const conflict = childScope.conflict || parentScope.conflict
+      || READOUT_NETWORK_SCOPE_FIELDS.some((field) => mergedFields[field.name + "Conflict"]);
+    const scope = { ...mergedFields, provided, conflict, eligible: provided && !conflict };
+    return { ...row, ...readoutNetworkScopeFields(scope) };
+  }
+
+  function getReadoutNetworkScopeKey(input = {}) {
+    const scope = normalizeReadoutNetworkScope(input);
+    if (scope.conflict) return null;
+    if (!scope.provided) return "";
+    return [scope.networkBus, scope.networkChannel, scope.gatewayRoute]
+      .map((value) => String(value || "-").normalize("NFKC").trim().toLowerCase().replace(/\|/g, " "))
+      .join("|");
+  }
+
+  function readoutNetworkScopeMatches(expected = {}, observed = {}) {
+    const expectedScope = normalizeReadoutNetworkScope(expected);
+    const observedScope = normalizeReadoutNetworkScope(observed);
+    if (expectedScope.conflict || observedScope.conflict) return false;
+    if (!expectedScope.provided) return true;
+    return observedScope.provided && getReadoutNetworkScopeKey(expected) === getReadoutNetworkScopeKey(observed);
+  }
   function normalizeLivePidObservationCondition(value) {
     const normalized = String(value ?? "").trim().slice(0, 80).toLowerCase().replace(/[\s-]+/g, "_");
     if (["cold", "cold_start", "coldstart", "冷間", "冷間時"].includes(normalized)) return "cold";
@@ -4611,7 +4711,7 @@
     const data = response && typeof response === "object"
       ? nestedData
         ? {
-          ...nestedData,
+          ...inheritReadoutNetworkScope(nestedData, response),
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           readout_ecu_ids: nestedData.readoutEcuIds || nestedData.readout_ecu_ids || response.readoutEcuIds || response.readout_ecu_ids || [],
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
@@ -4667,6 +4767,8 @@
     ].some((key) => data[key] !== undefined && data[key] !== null && !Array.isArray(data[key]));
     const bridgeSafety = readBridgeSnapshotSafety(response, shouldDecodeRawLivePid || hasRawEcuLivePidResponse || hasBridgeValueList || hasBridgeValueSummary);
     const sourceErrorCodes = readBridgeResponseErrorCodes(response);
+    const dataNetworkScope = normalizeReadoutNetworkScope(data);
+    if (dataNetworkScope.conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.unshift("network_scope_conflict");
     const resolvedBridgeSafety = malformedLivePidAlias
       ? { ...bridgeSafety, ok: false, blocked: true, unparsed: true }
       : sourceErrorCodes.length && bridgeSafety.ok && bridgeSafety.blocked === false
@@ -4685,18 +4787,16 @@
       data.items
     )
       .map((row) => {
-        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
         const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
         const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
         const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
-        return !shouldInheritEcu && !shouldInheritEcuName
-          ? row
-          : {
-            ...row,
-            ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
-            ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
-          };
+        return inheritReadoutNetworkScope({
+          ...row,
+          ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+          ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+        }, data);
       });
     const structuredMonitorValues = values
       .map((row, index) => normalizeBridgePidValue(row, index, () => {
@@ -4705,10 +4805,11 @@
       .filter(Boolean);
     const decodedRawEcuLivePidSnapshots = new Map();
     const rawEcuLivePidMonitorValues = livePidEcuSnapshots.flatMap((ecuRow) => {
-      const raw = getEcuRawLivePidResponse(ecuRow);
-      if (raw === null || getEcuLivePidValues(ecuRow).length > 0) return [];
-      const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
-      const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.module_name || ecuRow?.moduleName || ecuRow?.name || ecuRow?.label || null;
+      const scopedEcuRow = inheritReadoutNetworkScope(ecuRow, data);
+      const raw = getEcuRawLivePidResponse(scopedEcuRow);
+      if (raw === null || getEcuLivePidValues(scopedEcuRow).length > 0) return [];
+      const ecu = scopedEcuRow?.source_ecu || scopedEcuRow?.sourceEcu || scopedEcuRow?.ecu || scopedEcuRow?.ecu_id || scopedEcuRow?.ecuId || scopedEcuRow?.address || scopedEcuRow?.module || scopedEcuRow?.module_id || scopedEcuRow?.moduleId || null;
+      const ecuName = scopedEcuRow?.source_ecu_name || scopedEcuRow?.sourceEcuName || scopedEcuRow?.ecu_name || scopedEcuRow?.ecuName || scopedEcuRow?.module_name || scopedEcuRow?.moduleName || scopedEcuRow?.name || scopedEcuRow?.label || null;
       const decoded = decodeLivePidResponse({
         raw,
         source: "local_bridge",
@@ -4721,11 +4822,14 @@
       return Array.isArray(decoded.monitorValues) ? decoded.monitorValues : [];
     });
     const normalizedLivePidEcuSnapshots = livePidEcuSnapshots.map((ecuRow) => {
+      const scopedEcuRow = inheritReadoutNetworkScope(ecuRow, data);
       const decoded = decodedRawEcuLivePidSnapshots.get(ecuRow);
       const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
       if (!ecu) return null;
       const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.module_name || ecuRow?.moduleName || ecuRow?.name || ecuRow?.label || null;
       const scopedErrorCodes = readBridgeResponseErrorCodes(ecuRow);
+      const scopedNetworkScope = normalizeReadoutNetworkScope(scopedEcuRow);
+      if (scopedNetworkScope.conflict && !scopedErrorCodes.includes("network_scope_conflict")) scopedErrorCodes.unshift("network_scope_conflict");
       const failedPids = [...new Set((Array.isArray(ecuRow?.failedPids) ? ecuRow.failedPids : Array.isArray(ecuRow?.failed_pids) ? ecuRow.failed_pids : [])
         .map(normalizeSupportedPidCode)
         .filter(Boolean))];
@@ -4733,9 +4837,14 @@
         const decodedStatus = String(ecuRow?.livePidReadoutStatus || ecuRow?.live_pid_readout_status || ecuRow?.readoutStatus || ecuRow?.readout_status || decoded.livePidReadoutStatus || decoded.live_pid_readout_status || "unknown").trim().toLowerCase();
         const scopedReadoutStatus = decodedStatus === "blocked" || decoded.blocked
           ? "blocked"
-          : scopedErrorCodes.length > 0 ? "unparsed" : decodedStatus;
+          : scopedErrorCodes.length > 0 || scopedNetworkScope.conflict ? "unparsed" : decodedStatus;
+        const decodedMonitorValues = (decoded.monitorValues || decoded.monitor_values || [])
+          .map((row) => inheritReadoutNetworkScope(row, scopedEcuRow));
         return {
           ...decoded,
+          ...readoutNetworkScopeFields(scopedNetworkScope),
+          monitorValues: decodedMonitorValues,
+          monitor_values: decodedMonitorValues,
           sourceEcu: ecu,
           source_ecu: ecu,
           sourceEcuName: ecuName,
@@ -4748,16 +4857,16 @@
           live_pid_readout_status: scopedReadoutStatus
         };
       }
-      const scopedMonitorValues = getEcuLivePidValues(ecuRow)
-        .map((row, index) => normalizeBridgePidValue({
+      const scopedMonitorValues = getEcuLivePidValues(scopedEcuRow)
+        .map((row, index) => normalizeBridgePidValue(inheritReadoutNetworkScope({
           ...row,
           source_ecu: row?.source_ecu || row?.sourceEcu || ecu,
           source_ecu_name: row?.source_ecu_name || row?.sourceEcuName || ecuName
-        }, index, () => {
+        }, scopedEcuRow), index, () => {
           if (!scopedErrorCodes.includes("invalid_pid_numeric_value")) scopedErrorCodes.unshift("invalid_pid_numeric_value");
         }))
         .filter(Boolean);
-      const scopedSafety = readBridgeSnapshotSafety(ecuRow, scopedMonitorValues.length > 0);
+      const scopedSafety = readBridgeSnapshotSafety(scopedEcuRow, scopedMonitorValues.length > 0);
       const explicitScopedStatus = String(ecuRow?.livePidReadoutStatus || ecuRow?.live_pid_readout_status || ecuRow?.readoutStatus || ecuRow?.readout_status || "").trim().toLowerCase();
       const explicitScopedBlock = explicitScopedStatus === "blocked" || isExplicitTrueFlag(ecuRow?.blocked) || isExplicitTrueFlag(ecuRow?.wouldTransmit) || isExplicitTrueFlag(ecuRow?.would_transmit);
       const scopedReadoutStatus = explicitScopedBlock
@@ -4775,6 +4884,7 @@
         source_ecu: ecu,
         sourceEcuName: ecuName,
         source_ecu_name: ecuName,
+        ...readoutNetworkScopeFields(scopedNetworkScope),
         capturedAt: ecuRow?.captured_at || ecuRow?.capturedAt || null,
         captured_at: ecuRow?.captured_at || ecuRow?.capturedAt || null,
         protocol: readBridgeProtocol(ecuRow) || null,
@@ -4799,25 +4909,45 @@
     }).filter(Boolean);
     const reportedLivePidEcuSnapshots = normalizedLivePidEcuSnapshots.filter((snapshot) =>
       (snapshot.livePidReadoutStatus || snapshot.live_pid_readout_status) === "reported"
+      && normalizeReadoutNetworkScope(snapshot).conflict === false
     );
+    const structuredMonitorValuesWithScope = structuredMonitorValues.map((item) => {
+      const itemScope = normalizeReadoutNetworkScope(item);
+      if (itemScope.provided || itemScope.conflict) return item;
+      const itemSource = String(item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || "").trim().toUpperCase();
+      if (!itemSource) return item;
+      const itemAddress = normalizeComparableCanEcuAddress(itemSource);
+      const candidates = normalizedLivePidEcuSnapshots.filter((snapshot) => {
+        const snapshotSource = String(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || "").trim().toUpperCase();
+        if (snapshotSource === itemSource) return true;
+        const snapshotAddress = normalizeComparableCanEcuAddress(snapshotSource);
+        return snapshotAddress && itemAddress && isComparableCanEcuAddressMatch(snapshotAddress, itemAddress);
+      });
+      const candidateScopes = new Map(candidates
+        .map((snapshot) => [getReadoutNetworkScopeKey(snapshot), snapshot])
+        .filter(([scopeKey]) => scopeKey !== null));
+      return candidateScopes.size === 1 ? inheritReadoutNetworkScope(item, [...candidateScopes.values()][0]) : item;
+    });
     const reportedScopedMonitorValues = reportedLivePidEcuSnapshots.flatMap((snapshot) => snapshot.monitorValues || snapshot.monitor_values || []);
     const reportedStructuredMonitorValues = normalizedLivePidEcuSnapshots.length > 0
-      ? structuredMonitorValues.filter((item) => {
+      ? structuredMonitorValuesWithScope.filter((item) => {
         const itemSource = String(item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || "").trim().toUpperCase();
-        if (!itemSource) return reportedLivePidEcuSnapshots.length === normalizedLivePidEcuSnapshots.length;
+        if (!itemSource) return reportedLivePidEcuSnapshots.length === normalizedLivePidEcuSnapshots.length
+          && normalizeReadoutNetworkScope(item).conflict === false;
         const itemAddress = normalizeComparableCanEcuAddress(itemSource);
         return reportedLivePidEcuSnapshots.some((snapshot) => {
           const reportedSource = String(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.address || "").trim().toUpperCase();
-          if (reportedSource === itemSource) return true;
           const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
-          return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, itemAddress);
+          const addressMatches = reportedSource === itemSource
+            || Boolean(reportedAddress && itemAddress && isComparableCanEcuAddressMatch(reportedAddress, itemAddress));
+          return addressMatches && readoutNetworkScopeMatches(snapshot, item);
         });
       })
-      : structuredMonitorValues;
+      : structuredMonitorValuesWithScope.filter((item) => normalizeReadoutNetworkScope(item).conflict === false);
     const monitorValues = normalizedLivePidEcuSnapshots.length > 0
       ? (reportedStructuredMonitorValues.length > 0 ? reportedStructuredMonitorValues : reportedScopedMonitorValues)
       : structuredMonitorValues.length > 0
-        ? structuredMonitorValues
+        ? structuredMonitorValuesWithScope.filter((item) => normalizeReadoutNetworkScope(item).conflict === false)
         : rawEcuLivePidMonitorValues;
     const observedSourceEcus = [...new Set(monitorValues.map((item) => item.sourceEcu || item.source_ecu || null).filter(Boolean))];
     const resolvedSourceEcu = sourceEcu || (observedSourceEcus.length === 1 ? observedSourceEcus[0] : null);
@@ -4902,8 +5032,13 @@
         captured_at: capturedAt,
         protocol
       });
+      const decodedMonitorValues = (decoded.monitorValues || decoded.monitor_values || [])
+        .map((row) => inheritReadoutNetworkScope(row, data));
       return {
         ...decoded,
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(data)),
+        monitorValues: decodedMonitorValues,
+        monitor_values: decodedMonitorValues,
         ok: effectiveBridgeSafety.ok,
         blocked: effectiveBridgeSafety.blocked,
         wouldTransmit: effectiveBridgeSafety.wouldTransmit,
@@ -4952,6 +5087,7 @@
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
       source_ecu_name: resolvedSourceEcuName,
+      ...readoutNetworkScopeFields(dataNetworkScope),
       livePidScope,
       live_pid_scope: livePidScope,
       readoutEcuIds,
@@ -5039,6 +5175,7 @@
               source_ecu: row.source_ecu || row.sourceEcu || null,
               sourceEcuName: row.sourceEcuName || row.source_ecu_name || null,
               source_ecu_name: row.source_ecu_name || row.sourceEcuName || null,
+              ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(row)),
               decoded: row.decoded !== false,
               note: row.note ? String(row.note).slice(0, 160) : null
             };
@@ -5154,15 +5291,28 @@
       const compactCanAddress = sourceEcu.replace(/^0x/i, "");
       return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
     };
-    const monitorComparisonKey = (item) => `${item?.id || ""}::${monitorComparisonEcu(item)}`;
+    const monitorComparisonBaseKey = (item) => (item?.id || "") + "::" + monitorComparisonEcu(item);
+    const monitorComparisonKey = (item) => {
+      const scopeKey = getReadoutNetworkScopeKey(item);
+      if (scopeKey === null) return null;
+      return monitorComparisonBaseKey(item) + (scopeKey ? "::" + scopeKey : "");
+    };
     const monitorComparisonUnit = (item) => String(item?.unit || "").trim().toLocaleLowerCase("en-US");
     const previousValuesByKey = new Map(
       (previousSample?.monitorValues || [])
-        .filter((item) => item?.id && Number.isFinite(item?.value))
+        .filter((item) => item?.id && Number.isFinite(item?.value) && monitorComparisonKey(item) !== null)
         .map((item) => [monitorComparisonKey(item), item])
     );
-    const comparisonCandidates = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
-      .filter((item) => item?.id && Number.isFinite(item?.value) && previousValuesByKey.has(monitorComparisonKey(item)));
+    const previousBaseKeys = new Set((previousSample?.monitorValues || [])
+      .filter((item) => item?.id && Number.isFinite(item?.value) && normalizeReadoutNetworkScope(item).conflict === false)
+      .map(monitorComparisonBaseKey));
+    const latestComparableInputs = (comparisonAvailable ? latestSample?.monitorValues || [] : [])
+      .filter((item) => item?.id && Number.isFinite(item?.value) && monitorComparisonKey(item) !== null);
+    const networkScopeMismatchValueCount = latestComparableInputs
+      .filter((item) => previousBaseKeys.has(monitorComparisonBaseKey(item)) && !previousValuesByKey.has(monitorComparisonKey(item)))
+      .length;
+    const comparisonCandidates = latestComparableInputs
+      .filter((item) => previousValuesByKey.has(monitorComparisonKey(item)));
     const unitMismatchValueCount = comparisonCandidates
       .filter((item) => monitorComparisonUnit(item) !== monitorComparisonUnit(previousValuesByKey.get(monitorComparisonKey(item))))
       .length;
@@ -5179,6 +5329,7 @@
           unit: item.unit || previous.unit || "",
           sourceEcu,
           source_ecu: sourceEcu,
+          ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(item)),
           previousValue: previous.value,
           previous_value: previous.value,
           latestValue: item.value,
@@ -5229,6 +5380,10 @@
       compared_value_count: comparableValues.length,
       unitMismatchValueCount,
       unit_mismatch_value_count: unitMismatchValueCount,
+      networkScopeMismatchValueCount,
+      network_scope_mismatch_value_count: networkScopeMismatchValueCount,
+      comparisonBlockedByNetworkScope: networkScopeMismatchValueCount > 0 && comparableValues.length === 0,
+      comparison_blocked_by_network_scope: networkScopeMismatchValueCount > 0 && comparableValues.length === 0,
       changedValueCount: changes.length,
       changed_value_count: changes.length,
       changes,
@@ -5536,18 +5691,16 @@
       data.pidValues
     )
       .map((row) => {
-        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
         const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
         const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
         const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
-        return !shouldInheritEcu && !shouldInheritEcuName
-          ? row
-          : {
-            ...row,
-            ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
-            ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
-          };
+        return inheritReadoutNetworkScope({
+          ...row,
+          ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+          ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+        }, data);
       });
     const hasFreezeFrameEcuSnapshotEvidence = freezeFrameEcuSnapshotRows.some((snapshot) => snapshot
       && typeof snapshot === "object"
@@ -6245,18 +6398,16 @@
       data.onboardMonitorTests
     )
       .map((row) => {
-        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
         const rowSourceEcu = row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || null;
         const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
         const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
         const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
-        return !shouldInheritEcu && !shouldInheritEcuName
-          ? row
-          : {
-            ...row,
-            ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
-            ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
-          };
+        return inheritReadoutNetworkScope({
+          ...row,
+          ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
+          ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
+        }, data);
       });
     const sourceErrorCodes = readBridgeResponseErrorCodes(response);
     const scopedOnboardMonitorErrorCodes = [...new Set(onboardMonitorEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
@@ -6438,6 +6589,7 @@
       source_ecu: redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null,
       sourceEcuName: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
       source_ecu_name: redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null,
+      ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(row)),
       supportNote: definition?.supportNote || "ローカルブリッジ応答を既存データモニター表示へ整形",
       freezeFrameNumber,
       freeze_frame_number: freezeFrameNumber,
@@ -7539,11 +7691,19 @@
       const unit = String(value?.unit || "").trim().toLowerCase().replace(/\|/g, " ").slice(0, 48);
       if (!id || !Number.isFinite(numericValue) || !unit) return null;
       const sourceEcu = String(value?.sourceEcu || value?.source_ecu || livePidSnapshot?.sourceEcu || livePidSnapshot?.source_ecu || "").trim().toUpperCase().replace(/\|/g, " ").slice(0, 64) || "-";
-      return [id, sourceEcu, unit, String(numericValue)].join("|");
+      const networkScopeKey = getReadoutNetworkScopeKey(value);
+      if (networkScopeKey === null) return null;
+      return [id, sourceEcu, unit, String(numericValue), ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
     }).filter(Boolean))].sort();
     const recordedLivePidValueKeys = livePidValueEvidenceRecorded ? livePidValueKeys : [];
     const normalizeLivePidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readLivePidEcuId = (snapshot = {}) => normalizeLivePidEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
+    const readLivePidEcuScopeKey = (snapshot = {}) => {
+      const ecuId = readLivePidEcuId(snapshot);
+      const networkScopeKey = getReadoutNetworkScopeKey(snapshot);
+      if (!ecuId || networkScopeKey === null) return null;
+      return [ecuId, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+    };
     const reportedLivePidEcuIds = [...new Set(livePidEcuSnapshots
       .filter((snapshot) => String(snapshot?.livePidReadoutStatus || snapshot?.live_pid_readout_status || "").trim().toLowerCase() === "reported")
       .map(readLivePidEcuId)
@@ -7552,12 +7712,26 @@
       .filter((snapshot) => String(snapshot?.livePidReadoutStatus || snapshot?.live_pid_readout_status || "").trim().toLowerCase() !== "reported")
       .map(readLivePidEcuId)
       .filter(Boolean))].sort();
+    const reportedLivePidEcuScopeKeys = [...new Set(livePidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.livePidReadoutStatus || snapshot?.live_pid_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readLivePidEcuScopeKey)
+      .filter(Boolean))].sort();
+    const unresolvedLivePidEcuScopeKeys = [...new Set(livePidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.livePidReadoutStatus || snapshot?.live_pid_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readLivePidEcuScopeKey)
+      .filter(Boolean))].sort();
     const livePidValueReportedEcuEvidenceRecorded = livePidValueEvidenceRecorded
       || (livePidSnapshot?.blocked !== true && livePidSnapshot?.isBlocked !== true && livePidSnapshot?.is_blocked !== true
         && String(livePidSnapshot?.livePidReadoutStatus || livePidSnapshot?.live_pid_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedLivePidEcuIds.length > 0);
     const livePidValueReportedEcuKeys = livePidValueReportedEcuEvidenceRecorded
-      ? livePidValueKeys.filter((key) => livePidValueEvidenceRecorded || reportedLivePidEcuIds.includes(normalizeLivePidEcuId(String(key || "").split("|")[1])))
+      ? livePidValueKeys.filter((key) => {
+        if (livePidValueEvidenceRecorded) return true;
+        const parts = String(key || "").split("|");
+        const ecuId = normalizeLivePidEcuId(parts[1]);
+        const valueScopeKey = parts.length === 7 ? [ecuId, parts[4], parts[5], parts[6]].join("|") : ecuId;
+        return reportedLivePidEcuScopeKeys.includes(valueScopeKey);
+      })
       : [];
     const freezeFrameResponseUnavailable = isInventoryResponseUnavailable(freezeFrameSnapshot, freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status);
     const recordedFreezeFrameTriggerCount = freezeFrameResponseUnavailable ? 0 : freezeFrameTriggerCount;
@@ -7890,8 +8064,12 @@
       live_pid_value_reported_ecu_evidence_recorded: livePidValueReportedEcuEvidenceRecorded,
       livePidValueReportedEcuIds: reportedLivePidEcuIds,
       live_pid_value_reported_ecu_ids: [...reportedLivePidEcuIds],
+      livePidValueReportedEcuScopeKeys: reportedLivePidEcuScopeKeys,
+      live_pid_value_reported_ecu_scope_keys: [...reportedLivePidEcuScopeKeys],
       livePidValueUnresolvedEcuIds: unresolvedLivePidEcuIds,
       live_pid_value_unresolved_ecu_ids: [...unresolvedLivePidEcuIds],
+      livePidValueUnresolvedEcuScopeKeys: unresolvedLivePidEcuScopeKeys,
+      live_pid_value_unresolved_ecu_scope_keys: [...unresolvedLivePidEcuScopeKeys],
       livePidValueReportedEcuKeys: livePidValueReportedEcuKeys,
       live_pid_value_reported_ecu_keys: [...livePidValueReportedEcuKeys],
       livePidObservationCondition,
@@ -12169,10 +12347,20 @@
       return /^[0-9A-F]{3}(?:[0-9A-F]{5})?$/i.test(compactCanAddress) ? compactCanAddress.toUpperCase() : sourceEcu;
     };
     const sourceEcusByIdentity = new Map();
-    const rememberEcu = (value, name = null) => {
-      const identity = normalizeEcuIdentity(value);
+    const readEcuResponseScopeIdentity = (value, scopeSource = {}) => {
+      const ecuIdentity = normalizeEcuIdentity(value);
+      const networkScopeKey = getReadoutNetworkScopeKey(scopeSource);
+      if (!ecuIdentity || networkScopeKey === null) return null;
+      return ecuIdentity + (networkScopeKey ? "::" + networkScopeKey : "");
+    };
+    const rememberEcu = (value, name = null, scopeSource = {}) => {
+      const identity = readEcuResponseScopeIdentity(value, scopeSource);
       if (!identity) return;
-      const current = sourceEcusByIdentity.get(identity) || { address: value, ecu_name: name || null };
+      const current = sourceEcusByIdentity.get(identity) || {
+        address: value,
+        ecu_name: name || null,
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(scopeSource))
+      };
       if (!current.ecu_name && name) current.ecu_name = name;
       sourceEcusByIdentity.set(identity, current);
     };
@@ -12224,26 +12412,27 @@
         snapshot.ecuInfoEcuSnapshots,
         snapshot.ecu_info_ecu_snapshots
       ].filter(Array.isArray).flat();
-      const sourceEcu = snapshot.sourceEcu || snapshot.source_ecu || snapshot.ecu || snapshot.address || null;
-      const sourceIdentity = normalizeEcuIdentity(sourceEcu);
-      const sourceComparableAddress = normalizeComparableCanEcuAddress(sourceEcu);
-      const sourceHasScopedOutcome = !scoped && sourceIdentity && scopedSnapshots.some((item) => {
-        const itemEcu = item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || null;
-        if (normalizeEcuIdentity(itemEcu) === sourceIdentity) return true;
-        const itemComparableAddress = normalizeComparableCanEcuAddress(itemEcu);
-        return sourceComparableAddress && itemComparableAddress && isComparableCanEcuAddressMatch(sourceComparableAddress, itemComparableAddress);
-      });
-      if (!sourceHasScopedOutcome) rememberEcu(sourceEcu, snapshot.sourceEcuName || snapshot.source_ecu_name || snapshot.ecuName || snapshot.ecu_name || null);
-      [
+      const directReadoutRows = [
         snapshot.monitorValues,
         snapshot.monitor_values,
         snapshot.values,
         snapshot.items,
         snapshot.tests,
         snapshot.monitors
-      ].filter(Array.isArray).flat().forEach((row) => {
+      ].filter(Array.isArray).flat();
+      const sourceEcu = snapshot.sourceEcu || snapshot.source_ecu || snapshot.ecu || snapshot.address || null;
+      const sourceIdentity = normalizeEcuIdentity(sourceEcu);
+      const sourceComparableAddress = normalizeComparableCanEcuAddress(sourceEcu);
+      const sourceHasScopedOutcome = !scoped && sourceIdentity && [...scopedSnapshots, ...directReadoutRows].some((item) => {
+        const itemEcu = item?.sourceEcu || item?.source_ecu || item?.ecu || item?.address || item?.ecu_id || item?.ecuId || null;
+        if (normalizeEcuIdentity(itemEcu) === sourceIdentity) return true;
+        const itemComparableAddress = normalizeComparableCanEcuAddress(itemEcu);
+        return sourceComparableAddress && itemComparableAddress && isComparableCanEcuAddressMatch(sourceComparableAddress, itemComparableAddress);
+      });
+      if (!sourceHasScopedOutcome) rememberEcu(sourceEcu, snapshot.sourceEcuName || snapshot.source_ecu_name || snapshot.ecuName || snapshot.ecu_name || null, snapshot);
+      directReadoutRows.forEach((row) => {
         if (!row || typeof row !== "object") return;
-        rememberEcu(row.sourceEcu || row.source_ecu || row.ecu || row.address || row.ecu_id || row.ecuId, row.sourceEcuName || row.source_ecu_name || row.ecuName || row.ecu_name || null);
+        rememberEcu(row.sourceEcu || row.source_ecu || row.ecu || row.address || row.ecu_id || row.ecuId, row.sourceEcuName || row.source_ecu_name || row.ecuName || row.ecu_name || null, row);
       });
       scopedSnapshots.forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, seenSnapshots, true));
     };
@@ -12269,7 +12458,7 @@
         ].filter(Array.isArray).flat().forEach((scopedSnapshot) => collectSnapshotSourceEcus(scopedSnapshot, new WeakSet(), true));
       }
       sourceEcusByIdentity.forEach((ecu, identity) => {
-        const existing = ecuResponses.filter((row) => normalizeEcuIdentity(row.address || row.ecu || row.id) === identity);
+        const existing = ecuResponses.filter((row) => readEcuResponseScopeIdentity(row.address || row.ecu || row.id, row) === identity);
         if (existing.length) {
           existing.forEach((row) => {
             row.services = [...new Set([...(row.services || []), service])];
@@ -12278,7 +12467,7 @@
           });
           return;
         }
-        ecuResponses.push({ address: ecu.address, ecu_name: ecu.ecu_name, status: "reported", services: [service], response_services: responseService ? [responseService] : [] });
+        ecuResponses.push({ ...ecu, status: "reported", services: [service], response_services: responseService ? [responseService] : [] });
       });
     };
     const addEcuInfoOutcomes = (snapshot, service, responseService = null) => {
@@ -12299,14 +12488,25 @@
         const isPendingResponse = isNegativeResponse && negativeCode === "78";
         if (!identity || (!isReported && !isNegativeResponse)) return;
         const name = outcome.sourceEcuName || outcome.source_ecu_name || outcome.ecuName || outcome.ecu_name || null;
+        const scopeIdentity = readEcuResponseScopeIdentity(address, outcome);
+        if (!scopeIdentity) return;
+        const outcomeScopeKey = getReadoutNetworkScopeKey(outcome);
         const comparableAddress = normalizeComparableCanEcuAddress(address);
         const matchingRows = ecuResponses.filter((row) => {
           const rowAddress = row.address || row.ecu || row.id;
+          const rowScopeKey = getReadoutNetworkScopeKey(row);
+          if (outcomeScopeKey === null || rowScopeKey === null || outcomeScopeKey !== rowScopeKey) return false;
           if (normalizeEcuIdentity(rowAddress) === identity) return true;
           const comparableRowAddress = normalizeComparableCanEcuAddress(rowAddress);
           return comparableAddress && comparableRowAddress && isComparableCanEcuAddressMatch(comparableRowAddress, comparableAddress);
         });
-        const response = matchingRows[0] || { address, ecu_name: name || null, status: isReported ? "reported" : isPendingResponse ? "pending_response" : "negative_response", services: [] };
+        const response = matchingRows[0] || {
+          address,
+          ecu_name: name || null,
+          ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(outcome)),
+          status: isReported ? "reported" : isPendingResponse ? "pending_response" : "negative_response",
+          services: []
+        };
         if (!matchingRows.length) ecuResponses.push(response);
         if (!response.ecu_name && name) response.ecu_name = name;
         response.services = [...new Set([...(response.services || []), isNegativeResponse ? negativeService : service])];
@@ -14782,8 +14982,10 @@
           currentMeasurements: rawLivePidValueDeltaRows
         });
         const thresholdApplied = Boolean(reference);
-        const previousRow = Array.isArray(previousLivePidValueDeltaRows) ? previousLivePidValueDeltaRows.find((candidate) =>
-          candidate && String(candidate.id || "").trim() === String(row.id).trim()
+        const rowNetworkScopeKey = getReadoutNetworkScopeKey(row);
+        const previousRow = rowNetworkScopeKey !== null && Array.isArray(previousLivePidValueDeltaRows) ? previousLivePidValueDeltaRows.find((candidate) =>
+          candidate && getReadoutNetworkScopeKey(candidate) === rowNetworkScopeKey
+          && String(candidate.id || "").trim() === String(row.id).trim()
           && String(candidate.sourceEcu || candidate.source_ecu || "-").trim() === String(row.sourceEcu || row.source_ecu || "-").trim()
           && String(candidate.unit || "").trim().toLowerCase() === String(row.unit || "").trim().toLowerCase()
           && Number(candidate.importedValue ?? candidate.imported_value) === importedValue
@@ -14804,6 +15006,7 @@
           id: String(row.id).trim().slice(0, 96),
           sourceEcu: String(row.sourceEcu || row.source_ecu || "-").trim().slice(0, 64),
           source_ecu: String(row.sourceEcu || row.source_ecu || "-").trim().slice(0, 64),
+          ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(row)),
           unit: String(row.unit || "").trim().slice(0, 48),
           importedValue,
           imported_value: importedValue,
@@ -21082,7 +21285,9 @@
       livePidValueEvidenceRecorded: ["live_pid_value_evidence_recorded"],
       livePidValueReportedEcuEvidenceRecorded: ["live_pid_value_reported_ecu_evidence_recorded"],
       livePidValueReportedEcuIds: ["live_pid_value_reported_ecu_ids"],
+      livePidValueReportedEcuScopeKeys: ["live_pid_value_reported_ecu_scope_keys"],
       livePidValueUnresolvedEcuIds: ["live_pid_value_unresolved_ecu_ids"],
+      livePidValueUnresolvedEcuScopeKeys: ["live_pid_value_unresolved_ecu_scope_keys"],
       livePidValueReportedEcuKeys: ["live_pid_value_reported_ecu_keys"],
       livePidObservationCondition: ["live_pid_observation_condition"],
       livePidDiagnosticProtocol: ["live_pid_diagnostic_protocol"],
@@ -21202,13 +21407,36 @@
       const value = readField(summary, field);
       return value === true || ["true", "1", "yes"].includes(String(value || "").trim().toLowerCase());
     };
+    const parseLivePidValueKey = (key) => {
+      const parts = String(key || "").trim().split("|");
+      if (![4, 7].includes(parts.length)) return null;
+      const [id, sourceEcu, unit, value, networkBus = null, networkChannel = null, gatewayRoute = null] = parts;
+      const numericValue = Number(value);
+      if (!id || !sourceEcu || !unit || !Number.isFinite(numericValue)) return null;
+      const hasNetworkScope = parts.length === 7;
+      if (hasNetworkScope && (!networkBus || !networkChannel || !gatewayRoute
+        || networkBus.length > 120 || networkChannel.length > 120 || gatewayRoute.length > 160)) return null;
+      const normalizedId = id.slice(0, 96);
+      const normalizedSourceEcu = sourceEcu.slice(0, 64);
+      const normalizedUnit = unit.slice(0, 48);
+      const scopeParts = hasNetworkScope ? [networkBus, networkChannel, gatewayRoute] : [];
+      return {
+        id: normalizedId,
+        sourceEcu: normalizedSourceEcu,
+        unit: normalizedUnit,
+        value: numericValue,
+        networkBus,
+        networkChannel,
+        gatewayRoute,
+        hasNetworkScope,
+        sourceScopeKey: [normalizedSourceEcu, ...scopeParts].join("|"),
+        measurementKey: [normalizedId, normalizedSourceEcu, ...scopeParts].join("|"),
+        measurementUnitKey: [normalizedId, normalizedSourceEcu, ...scopeParts, normalizedUnit].join("|"),
+        canonicalKey: [normalizedId, normalizedSourceEcu, normalizedUnit, String(numericValue), ...scopeParts].join("|")
+      };
+    };
     const readLivePidValueKeys = (summary) => Array.isArray(readField(summary, "livePidValueKeys"))
-      ? [...new Set(readField(summary, "livePidValueKeys").map((key) => {
-        const [id, sourceEcu, unit, value, ...extra] = String(key || "").trim().split("|");
-        const numericValue = Number(value);
-        if (extra.length > 0 || !id || !sourceEcu || !unit || !Number.isFinite(numericValue)) return null;
-        return [id.slice(0, 96), sourceEcu.slice(0, 64), unit.slice(0, 48), String(numericValue)].join("|");
-      }).filter(Boolean))].sort()
+      ? [...new Set(readField(summary, "livePidValueKeys").map((key) => parseLivePidValueKey(key)?.canonicalKey || null).filter(Boolean))].sort()
       : [];
     const importedLivePidValueEvidenceRecorded = readBoolean(importedInventory, "livePidValueEvidenceRecorded");
     const currentLivePidValueEvidenceRecorded = readBoolean(currentSummary, "livePidValueEvidenceRecorded");
@@ -21216,19 +21444,33 @@
     const currentLivePidObservationCondition = normalizeLivePidObservationCondition(readField(currentSummary, "livePidObservationCondition"));
     const importedLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(importedInventory, "livePidDiagnosticProtocol"));
     const currentLivePidDiagnosticProtocol = normalizeProtocolProvenanceValue(readField(currentSummary, "livePidDiagnosticProtocol"));
+    const normalizeLivePidEcuScopeKey = (value) => {
+      const parts = String(value || "").trim().split("|");
+      if (![1, 4].includes(parts.length)) return null;
+      const ecu = normalizeComparableCanEcuAddress(parts[0]) || parts[0].trim().toUpperCase();
+      if (!ecu) return null;
+      if (parts.length === 1) return ecu;
+      const [networkBus, networkChannel, gatewayRoute] = parts.slice(1);
+      if (!networkBus || !networkChannel || !gatewayRoute
+        || networkBus.length > 120 || networkChannel.length > 120 || gatewayRoute.length > 160) return null;
+      return [ecu, networkBus, networkChannel, gatewayRoute].join("|");
+    };
     const readLivePidValueReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
-        || String(value || "").trim().toUpperCase()
-        || null;
-      const explicitIds = readIds(summary, "livePidValueReportedEcuIds").map(normalizeScopeId).filter(Boolean);
-      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
-        ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[1])).filter(Boolean))].sort();
+      const explicitIds = readIds(summary, "livePidValueReportedEcuIds")
+        .map((value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase())
+        .filter(Boolean);
+      const explicitScopeKeys = readIds(summary, "livePidValueReportedEcuScopeKeys").map(normalizeLivePidEcuScopeKey).filter(Boolean);
+      const derivedScopeKeys = allKeys.map((key) => parseLivePidValueKey(key)?.sourceScopeKey || null).filter(Boolean);
+      const reportedEcuScopeKeys = explicitScopeKeys.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : explicitIds)].sort()
+        : [...new Set(derivedScopeKeys)].sort();
+      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
       const explicitKeys = readIds(summary, "livePidValueReportedEcuKeys");
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       return {
         evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "livePidValueReportedEcuEvidenceRecorded"),
         reportedEcuIds,
+        reportedEcuScopeKeys,
         reportedEcuKeys
       };
     };
@@ -21236,17 +21478,33 @@
     const currentAllLivePidValueKeys = readLivePidValueKeys(currentSummary);
     const importedLivePidValueReportedEcuScope = readLivePidValueReportedEcuScope(importedInventory, importedLivePidValueEvidenceRecorded, importedAllLivePidValueKeys);
     const currentLivePidValueReportedEcuScope = readLivePidValueReportedEcuScope(currentSummary, currentLivePidValueEvidenceRecorded, currentAllLivePidValueKeys);
+    const readLivePidNetworkScopeKeyMode = (keys = []) => {
+      const modes = [...new Set(keys.map((key) => parseLivePidValueKey(key)?.hasNetworkScope === true ? "scoped" : "unscoped"))];
+      return modes.length === 0 ? "none" : modes.length === 1 ? modes[0] : "mixed";
+    };
+    const importedLivePidNetworkScopeKeyMode = readLivePidNetworkScopeKeyMode(
+      importedLivePidValueEvidenceRecorded ? importedAllLivePidValueKeys : importedLivePidValueReportedEcuScope.reportedEcuKeys
+    );
+    const currentLivePidNetworkScopeKeyMode = readLivePidNetworkScopeKeyMode(
+      currentLivePidValueEvidenceRecorded ? currentAllLivePidValueKeys : currentLivePidValueReportedEcuScope.reportedEcuKeys
+    );
+    const livePidNetworkScopeKeyModesCompatible = importedLivePidNetworkScopeKeyMode === currentLivePidNetworkScopeKeyMode
+      && importedLivePidNetworkScopeKeyMode !== "mixed";
+    const livePidValueComparisonBlockedByScopeVersion = importedLivePidValueReportedEcuScope.evidenceRecorded
+      && currentLivePidValueReportedEcuScope.evidenceRecorded
+      && !livePidNetworkScopeKeyModesCompatible;
     const completeLivePidValueComparisonEvidenceRecorded = importedLivePidValueEvidenceRecorded && currentLivePidValueEvidenceRecorded;
-    const comparableLivePidValueEcuIds = completeLivePidValueComparisonEvidenceRecorded
+    const comparableLivePidValueEcuScopeKeys = completeLivePidValueComparisonEvidenceRecorded
       ? []
       : importedLivePidValueReportedEcuScope.evidenceRecorded && currentLivePidValueReportedEcuScope.evidenceRecorded
-        ? importedLivePidValueReportedEcuScope.reportedEcuIds.filter((id) => currentLivePidValueReportedEcuScope.reportedEcuIds.includes(id))
+        ? importedLivePidValueReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentLivePidValueReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
-    const reportedEcuLivePidValueComparisonEvidenceRecorded = !completeLivePidValueComparisonEvidenceRecorded && comparableLivePidValueEcuIds.length > 0;
+    const comparableLivePidValueEcuIds = [...new Set(comparableLivePidValueEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
+    const reportedEcuLivePidValueComparisonEvidenceRecorded = !completeLivePidValueComparisonEvidenceRecorded && comparableLivePidValueEcuScopeKeys.length > 0;
     const livePidValueComparisonEvidenceRecorded = completeLivePidValueComparisonEvidenceRecorded || reportedEcuLivePidValueComparisonEvidenceRecorded;
     const filterLivePidValueKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[1]) || String(key || "").split("|")[1]?.trim().toUpperCase();
-      return comparableLivePidValueEcuIds.includes(ecu);
+      const parsed = parseLivePidValueKey(key);
+      return parsed && comparableLivePidValueEcuScopeKeys.includes(parsed.sourceScopeKey);
     });
     const importedLivePidValueKeys = completeLivePidValueComparisonEvidenceRecorded
       ? importedAllLivePidValueKeys
@@ -21255,9 +21513,9 @@
       ? currentAllLivePidValueKeys
       : reportedEcuLivePidValueComparisonEvidenceRecorded ? filterLivePidValueKeysByScope(currentLivePidValueReportedEcuScope) : [];
     const readLivePidUnitsByMeasurement = (keys = []) => new Map(keys.map((key) => {
-      const [id, sourceEcu, unit] = key.split("|");
-      return [`${id}|${sourceEcu}`, unit];
-    }));
+      const parsed = parseLivePidValueKey(key);
+      return parsed ? [parsed.measurementKey, parsed.unit] : null;
+    }).filter(Boolean));
     const importedLivePidUnitsByMeasurement = readLivePidUnitsByMeasurement(importedLivePidValueKeys);
     const currentLivePidUnitsByMeasurement = readLivePidUnitsByMeasurement(currentLivePidValueKeys);
     const livePidUnitMismatchKeys = [...new Set([...importedLivePidUnitsByMeasurement.keys(), ...currentLivePidUnitsByMeasurement.keys()])]
@@ -21269,6 +21527,7 @@
       && importedLivePidObservationCondition === currentLivePidObservationCondition
       && Boolean(importedLivePidDiagnosticProtocol)
       && importedLivePidDiagnosticProtocol === currentLivePidDiagnosticProtocol
+      && livePidNetworkScopeKeyModesCompatible
       && livePidUnitMismatchKeys.length === 0;
     const livePidValueAddedKeys = livePidValueComparisonAvailable ? diffIds(currentLivePidValueKeys, importedLivePidValueKeys) : [];
     const livePidValueRemovedKeys = livePidValueComparisonAvailable ? diffIds(importedLivePidValueKeys, currentLivePidValueKeys) : [];
@@ -21276,9 +21535,10 @@
       const values = new Map();
       const ambiguousKeys = new Set();
       keys.forEach((key) => {
-        const [id, sourceEcu, unit, value] = String(key || "").split("|");
-        const measurementKey = `${id}|${sourceEcu}|${unit}`;
-        const numericValue = Number(value);
+        const parsed = parseLivePidValueKey(key);
+        if (!parsed) return;
+        const measurementKey = parsed.measurementUnitKey;
+        const numericValue = parsed.value;
         if (values.has(measurementKey) && values.get(measurementKey) !== numericValue) ambiguousKeys.add(measurementKey);
         values.set(measurementKey, numericValue);
       });
@@ -21299,7 +21559,11 @@
         .sort()
         .slice(0, 64)
         .map((key, index) => {
-          const [id, sourceEcu, unit] = key.split("|");
+          const parts = key.split("|");
+          const id = parts.shift();
+          const sourceEcu = parts.shift();
+          const unit = parts.pop();
+          const [networkBus = null, networkChannel = null, gatewayRoute = null] = parts;
           const importedValue = importedLivePidNumericValues.get(key);
           const currentValue = currentLivePidNumericValues.get(key);
           const delta = Number((currentValue - importedValue).toPrecision(12));
@@ -21307,6 +21571,14 @@
             id,
             sourceEcu,
             source_ecu: sourceEcu,
+            ...(networkBus ? {
+              networkBus, network_bus: networkBus,
+              networkChannel, network_channel: networkChannel,
+              gatewayRoute, gateway_route: gatewayRoute,
+              networkScopeProvided: true, network_scope_provided: true,
+              networkScopeConflict: false, network_scope_conflict: false,
+              networkScopeEvidenceEligible: true, network_scope_evidence_eligible: true
+            } : {}),
             unit,
             importedValue,
             imported_value: importedValue,
@@ -22007,10 +22279,18 @@
       live_pid_unit_mismatch_keys: [...livePidUnitMismatchKeys],
       livePidValueComparisonAvailable,
       live_pid_value_comparison_available: livePidValueComparisonAvailable,
+      importedLivePidNetworkScopeKeyMode,
+      imported_live_pid_network_scope_key_mode: importedLivePidNetworkScopeKeyMode,
+      currentLivePidNetworkScopeKeyMode,
+      current_live_pid_network_scope_key_mode: currentLivePidNetworkScopeKeyMode,
+      livePidValueComparisonBlockedByScopeVersion,
+      live_pid_value_comparison_blocked_by_scope_version: livePidValueComparisonBlockedByScopeVersion,
       livePidValueComparisonScope: livePidValueComparisonAvailable && completeLivePidValueComparisonEvidenceRecorded ? "complete" : livePidValueComparisonAvailable && reportedEcuLivePidValueComparisonEvidenceRecorded ? "reported_ecus" : "unavailable",
       live_pid_value_comparison_scope: livePidValueComparisonAvailable && completeLivePidValueComparisonEvidenceRecorded ? "complete" : livePidValueComparisonAvailable && reportedEcuLivePidValueComparisonEvidenceRecorded ? "reported_ecus" : "unavailable",
       livePidValueComparableEcuIds: comparableLivePidValueEcuIds,
       live_pid_value_comparable_ecu_ids: [...comparableLivePidValueEcuIds],
+      livePidValueComparableEcuScopeKeys: comparableLivePidValueEcuScopeKeys,
+      live_pid_value_comparable_ecu_scope_keys: [...comparableLivePidValueEcuScopeKeys],
       importedLivePidValueKeys,
       imported_live_pid_value_keys: importedLivePidValueKeys,
       currentLivePidValueKeys,
@@ -22313,8 +22593,12 @@
       livePidValueReportedEcuEvidenceRecorded: pickDefined(summary.livePidValueReportedEcuEvidenceRecorded, summary.live_pid_value_reported_ecu_evidence_recorded, summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
       live_pid_value_reported_ecu_evidence_recorded: pickDefined(summary.livePidValueReportedEcuEvidenceRecorded, summary.live_pid_value_reported_ecu_evidence_recorded, summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true,
       livePidValueReportedEcuIds: normalizeIds(summary.livePidValueReportedEcuIds || summary.live_pid_value_reported_ecu_ids),
+      livePidValueReportedEcuScopeKeys: normalizeIds(summary.livePidValueReportedEcuScopeKeys || summary.live_pid_value_reported_ecu_scope_keys),
+      live_pid_value_reported_ecu_scope_keys: normalizeIds(summary.livePidValueReportedEcuScopeKeys || summary.live_pid_value_reported_ecu_scope_keys),
       live_pid_value_reported_ecu_ids: normalizeIds(summary.livePidValueReportedEcuIds || summary.live_pid_value_reported_ecu_ids),
       livePidValueUnresolvedEcuIds: normalizeIds(summary.livePidValueUnresolvedEcuIds || summary.live_pid_value_unresolved_ecu_ids),
+      livePidValueUnresolvedEcuScopeKeys: normalizeIds(summary.livePidValueUnresolvedEcuScopeKeys || summary.live_pid_value_unresolved_ecu_scope_keys),
+      live_pid_value_unresolved_ecu_scope_keys: normalizeIds(summary.livePidValueUnresolvedEcuScopeKeys || summary.live_pid_value_unresolved_ecu_scope_keys),
       live_pid_value_unresolved_ecu_ids: normalizeIds(summary.livePidValueUnresolvedEcuIds || summary.live_pid_value_unresolved_ecu_ids),
       livePidValueReportedEcuKeys: normalizeIds(summary.livePidValueReportedEcuKeys || summary.live_pid_value_reported_ecu_keys || (pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true ? summary.livePidValueKeys || summary.live_pid_value_keys : [])),
       live_pid_value_reported_ecu_keys: normalizeIds(summary.livePidValueReportedEcuKeys || summary.live_pid_value_reported_ecu_keys || (pickDefined(summary.livePidValueEvidenceRecorded, summary.live_pid_value_evidence_recorded, false) === true ? summary.livePidValueKeys || summary.live_pid_value_keys : [])),
@@ -31411,15 +31695,17 @@
       sourceInput.items
     )
       .map((row) => {
-        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
-        const rowSourceEcu = readObdResponseSourceEcu(row);
-        const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+        const scopedRow = inheritReadoutNetworkScope(row, sourceInput);
+        if (!sourceEcu && !sourceEcuName) return scopedRow;
+        const rowSourceEcu = readObdResponseSourceEcu(scopedRow);
+        const rowSourceEcuName = scopedRow.source_ecu_name || scopedRow.sourceEcuName || scopedRow.ecu_name || scopedRow.ecuName || scopedRow.module_name || scopedRow.moduleName || null;
         const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
         const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
         return !shouldInheritEcu && !shouldInheritEcuName
-          ? row
+          ? scopedRow
           : {
-            ...row,
+            ...scopedRow,
             ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
             ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
           };
@@ -32930,12 +33216,14 @@
         target_ecu: input.data.targetEcu || input.data.target_ecu || input.data.requestEcu || input.data.request_ecu || input.targetEcu || input.target_ecu || input.requestEcu || input.request_ecu || null,
         response_count: pickDefined(input.data.responseCount, input.data.response_count, input.responseCount, input.response_count),
         response_wait_ms: pickDefined(input.data.responseWaitMs, input.data.response_wait_ms, input.responseWaitMs, input.response_wait_ms),
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(inheritReadoutNetworkScope(input.data, input))),
         had_sensitive_identifier: input.data.hadSensitiveIdentifier === true || input.data.had_sensitive_identifier === true || input.hadSensitiveIdentifier === true || input.had_sensitive_identifier === true
       }
       : input && typeof input === "object" ? input : {};
     const udsReadAdapterCompletionManifestInputProvided = Object.prototype.hasOwnProperty.call(sourceInput, "udsReadAdapterCompletionManifest") || Object.prototype.hasOwnProperty.call(sourceInput, "uds_read_adapter_completion_manifest");
     const udsReadAdapterCompletionManifest = normalizeUdsReadAdapterCompletionManifest(sourceInput.udsReadAdapterCompletionManifest || sourceInput.uds_read_adapter_completion_manifest || null);
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceNetworkScope = normalizeReadoutNetworkScope(sourceInput);
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const protocol = sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null;
@@ -32970,27 +33258,30 @@
       if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return [];
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshot);
       const snapshotSourceEcuName = snapshot.source_ecu_name || snapshot.sourceEcuName || snapshot.ecu_name || snapshot.ecuName || snapshot.module_name || snapshot.moduleName || null;
+      const scopedSnapshot = inheritReadoutNetworkScope(snapshot, sourceInput);
       return collectEcuInfoRows(snapshot).map((row) => {
         if (!row || typeof row !== "object" || Array.isArray(row)) return row;
-        return {
+        return inheritReadoutNetworkScope({
           ...row,
           ...(readObdResponseSourceEcu(row) || !snapshotSourceEcu ? {} : { source_ecu: snapshotSourceEcu }),
           ...((row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName) || !snapshotSourceEcuName ? {} : { source_ecu_name: snapshotSourceEcuName })
-        };
+        }, scopedSnapshot);
       });
     });
     const rows = directRows.length > 0 ? directRows : childRows;
     const normalizedItems = rows
       .map((row) => {
-        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
-        const rowSourceEcu = readObdResponseSourceEcu(row);
-        const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+        const scopedRow = inheritReadoutNetworkScope(row, sourceInput);
+        if (!sourceEcu && !sourceEcuName) return scopedRow;
+        const rowSourceEcu = readObdResponseSourceEcu(scopedRow);
+        const rowSourceEcuName = scopedRow.source_ecu_name || scopedRow.sourceEcuName || scopedRow.ecu_name || scopedRow.ecuName || scopedRow.module_name || scopedRow.moduleName || null;
         const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
         const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
         return !shouldInheritEcu && !shouldInheritEcuName
-          ? row
+          ? scopedRow
           : {
-            ...row,
+            ...scopedRow,
             ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
             ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
           };
@@ -33008,11 +33299,13 @@
     const ecuInfoEcuSnapshots = rawEcuInfoEcuSnapshots.map((snapshot) => {
       if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
       const snapshotSourceEcu = readObdResponseSourceEcu(snapshot);
+      const snapshotNetworkScope = normalizeReadoutNetworkScope(inheritReadoutNetworkScope(snapshot, sourceInput));
       const expectedResponseEcu = normalizeUdsCanEndpointAddress(snapshot.expectedResponseEcu || snapshot.expected_response_ecu || null);
       if (!snapshotSourceEcu && !expectedResponseEcu) return null;
       const snapshotItems = collectEcuInfoRows(snapshot);
       const snapshotStatus = String(snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || snapshot.readoutStatus || snapshot.readout_status || "unknown").trim().toLowerCase();
       const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshot);
+      if (snapshotNetworkScope.conflict && !snapshotErrorCodes.includes("network_scope_conflict")) snapshotErrorCodes.unshift("network_scope_conflict");
       const normalizedSnapshotStatus = ["reported", "unparsed", "blocked", "unknown"].includes(snapshotStatus) ? snapshotStatus : "unknown";
       const resolvedSnapshotStatus = snapshotErrorCodes.length > 0 && normalizedSnapshotStatus !== "blocked"
         ? "unparsed"
@@ -33045,6 +33338,7 @@
         snapshotSourceEcu
       );
       return {
+        ...readoutNetworkScopeFields(snapshotNetworkScope),
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
         expectedResponseEcu,
@@ -33081,33 +33375,40 @@
       (snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status) === "reported"
     );
     const matchesReportedEcuInfoEcu = (row) => {
+      const rowNetworkScope = normalizeReadoutNetworkScope(row);
+      if (rowNetworkScope.conflict) return false;
       if (ecuInfoEcuSnapshots.length === 0) return true;
       const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
       if (!rowSource) return reportedEcuInfoEcuSnapshots.length === ecuInfoEcuSnapshots.length;
       const rowAddress = normalizeComparableCanEcuAddress(rowSource);
       return reportedEcuInfoEcuSnapshots.some((snapshot) => {
         const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
-        if (reportedSource === rowSource) return true;
         const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
-        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+        const addressMatches = reportedSource === rowSource || Boolean(reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress));
+        return addressMatches && readoutNetworkScopeMatches(snapshot, row);
       });
     };
     const items = normalizedItems.filter(matchesReportedEcuInfoEcu);
+    const hasNetworkScopeConflict = sourceNetworkScope.conflict
+      || normalizedItems.some((item) => normalizeReadoutNetworkScope(item).conflict)
+      || ecuInfoEcuSnapshots.some((snapshot) => normalizeReadoutNetworkScope(snapshot).conflict);
     const scopedItemCount = ecuInfoEcuSnapshots.reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
     const reportedScopedItemCount = reportedEcuInfoEcuSnapshots
       .reduce((total, snapshot) => total + (Number(snapshot.itemCount) || 0), 0);
     const unreportedScopedItemCount = Math.max(0, scopedItemCount - reportedScopedItemCount);
     const ecuInfoEcuOutcomeGroups = new Map();
-    ecuInfoEcuSnapshots.forEach((snapshot) => {
+    ecuInfoEcuSnapshots.forEach((snapshot, snapshotIndex) => {
       const sourceAddress = snapshot.sourceEcu || snapshot.source_ecu || snapshot.expectedResponseEcu || snapshot.expected_response_ecu || null;
       const comparableAddress = normalizeComparableCanEcuAddress(sourceAddress);
       const identity = comparableAddress?.startsWith("18DA")
         ? `18DA${[comparableAddress.slice(4, 6), comparableAddress.slice(6, 8)].sort().join("")}`
         : comparableAddress || String(sourceAddress || "").trim().toUpperCase();
       if (!identity) return;
-      const group = ecuInfoEcuOutcomeGroups.get(identity) || [];
+      const scopeKey = getReadoutNetworkScopeKey(snapshot);
+      const scopedIdentity = identity + "|" + (scopeKey === null ? "conflict_" + snapshotIndex : scopeKey || "unscoped");
+      const group = ecuInfoEcuOutcomeGroups.get(scopedIdentity) || [];
       group.push(snapshot);
-      ecuInfoEcuOutcomeGroups.set(identity, group);
+      ecuInfoEcuOutcomeGroups.set(scopedIdentity, group);
     });
     const ecuInfoEcuStatuses = [...ecuInfoEcuOutcomeGroups.values()].map((outcomes) => {
       const statuses = outcomes.map((snapshot) => snapshot.ecuInfoReadoutStatus || snapshot.ecu_info_readout_status || "unknown");
@@ -33202,7 +33503,9 @@
     const combinedReadoutStatuses = [baseReadoutStatus, ...ecuInfoEcuStatuses];
     const normalizedReadoutStatus = combinedReadoutStatuses.includes("blocked")
       ? "blocked"
-      : combinedReadoutStatuses.includes("unparsed")
+      : hasNetworkScopeConflict
+        ? "unparsed"
+        : combinedReadoutStatuses.includes("unparsed")
         ? "unparsed"
         : combinedReadoutStatuses.includes("unknown")
           ? "unknown"
@@ -33254,7 +33557,7 @@
       missingLabels: missingKeyItems.map((item) => item.label),
       missing_labels: missingKeyItems.map((item) => item.label)
     };
-    const errorCodes = mergeUniqueStrings(sourceInput.errorCodes, sourceInput.error_codes, scopedErrorCodes);
+    const errorCodes = mergeUniqueStrings(sourceInput.errorCodes, sourceInput.error_codes, scopedErrorCodes, hasNetworkScopeConflict ? ["network_scope_conflict"] : []);
     const rawUdsDidResponseEvidence = sourceInput.udsDidResponseEvidence || sourceInput.uds_did_response_evidence || null;
     const udsDidResponseEvidence = normalizeUdsDidResponseEvidenceSnapshot(rawUdsDidResponseEvidence, resolvedSourceEcu);
     const childUdsResponseRows = ecuInfoEcuSnapshots.filter((snapshot) => Boolean(snapshot?.udsDidResponseEvidence));
@@ -33286,6 +33589,7 @@
     return {
       schemaVersion: "ecu_info_snapshot_v2",
       schema_version: "ecu_info_snapshot_v2",
+      ...readoutNetworkScopeFields(sourceNetworkScope),
       source,
       intent: sourceInput.intent || null,
       capturedAt: sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null,
@@ -33465,15 +33769,17 @@
       ? directRows
       : reportedOnboardMonitorEcuSnapshots.flatMap((snapshot) => snapshot.tests || []))
       .map((row) => {
-        if ((!sourceEcu && !sourceEcuName) || !row || typeof row !== "object" || Array.isArray(row)) return row;
-        const rowSourceEcu = readObdResponseSourceEcu(row);
-        const rowSourceEcuName = row.source_ecu_name || row.sourceEcuName || row.ecu_name || row.ecuName || row.module_name || row.moduleName || null;
+        if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+        const scopedRow = inheritReadoutNetworkScope(row, sourceInput);
+        if (!sourceEcu && !sourceEcuName) return scopedRow;
+        const rowSourceEcu = readObdResponseSourceEcu(scopedRow);
+        const rowSourceEcuName = scopedRow.source_ecu_name || scopedRow.sourceEcuName || scopedRow.ecu_name || scopedRow.ecuName || scopedRow.module_name || scopedRow.moduleName || null;
         const shouldInheritEcu = Boolean(sourceEcu && !rowSourceEcu);
         const shouldInheritEcuName = Boolean(sourceEcuName && !rowSourceEcuName && (!rowSourceEcu || !sourceEcu || rowSourceEcu === sourceEcu));
         return !shouldInheritEcu && !shouldInheritEcuName
-          ? row
+          ? scopedRow
           : {
-            ...row,
+            ...scopedRow,
             ...(shouldInheritEcu ? { source_ecu: sourceEcu } : {}),
             ...(shouldInheritEcuName ? { source_ecu_name: sourceEcuName } : {})
           };
@@ -33691,6 +33997,7 @@
     if (!sensitiveByIdentity && (value === null || value === "")) return null;
     if (sensitiveByIdentity && !detected) return null;
     return {
+      ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(row)),
       id,
       label: catalogItem?.label || row.label || row.displayLabel || row.display_label || id,
       service: catalogItem?.service || row.service || row.service_mode || row.serviceMode || (dataIdentifier ? "22" : "09"),

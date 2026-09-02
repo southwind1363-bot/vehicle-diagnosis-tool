@@ -507,6 +507,54 @@ const rejectedTamperedPidThresholdSemanticEvidence = obd.buildPostRepairReassess
   importedSessionComparisonSummary: pidPostRepairComparison,
   previousPostRepairReassessmentSummary: tamperedPidThresholdSemanticSummary
 });
+const scopedHistoricalPidPostRepairSummary = JSON.parse(JSON.stringify(pidPostRepairReassessment));
+Object.assign(scopedHistoricalPidPostRepairSummary.livePidValueDeltaRows[0], {
+  networkBus: "CAN-PT",
+  network_bus: "CAN-PT",
+  networkChannel: "CH1",
+  network_channel: "CH1",
+  gatewayRoute: "GW-A/ECM",
+  gateway_route: "GW-A/ECM",
+  networkScopeProvided: true,
+  network_scope_provided: true,
+  networkScopeConflict: false,
+  network_scope_conflict: false,
+  networkScopeEvidenceEligible: true,
+  network_scope_evidence_eligible: true
+});
+const crossRouteHistoricalPidPostRepairReassessment = obd.buildPostRepairReassessmentSummary({
+  observationContext: { ...exactPidReferenceObservationContext, sameVehicleConfirmed: true },
+  vehicleProfile: { maker: "Test Maker", model: "Test Model", engineCode: "TEST-ENG", year: "2026" },
+  importedSessionComparisonSummary: {
+    comparedSectionCount: 1,
+    coreReadoutInventoryComparison: {
+      livePidValueComparisonAvailable: true,
+      currentLivePidObservationCondition: "post_repair",
+      currentLivePidDiagnosticProtocol: "ISO15765-4",
+      livePidValueDeltaRows: [{
+        id: "engine_speed",
+        sourceEcu: "7E8",
+        unit: "rpm",
+        importedValue: 800,
+        currentValue: 1200,
+        networkBus: "CAN-BODY",
+        networkChannel: "CH2",
+        gatewayRoute: "GW-B/ECM"
+      }]
+    }
+  },
+  previousPostRepairReassessmentSummary: scopedHistoricalPidPostRepairSummary
+});
+check(crossRouteHistoricalPidPostRepairReassessment.livePidValueDeltaRows?.[0]?.networkBus === "CAN-BODY"
+  && crossRouteHistoricalPidPostRepairReassessment.livePidValueDeltaRows?.[0]?.networkChannel === "CH2"
+  && crossRouteHistoricalPidPostRepairReassessment.livePidValueDeltaRows?.[0]?.gatewayRoute === "GW-B/ECM"
+  && crossRouteHistoricalPidPostRepairReassessment.livePidValueDeltaRows?.[0]?.historicalThresholdEvidenceRetained === false
+  && crossRouteHistoricalPidPostRepairReassessment.livePidValueDeltaRows?.[0]?.thresholdEvidence === null
+  && crossRouteHistoricalPidPostRepairReassessment.livePidHistoricalThresholdEvidenceRowCount === 0
+  && crossRouteHistoricalPidPostRepairReassessment.vehicleCommandEnabled === false
+  && crossRouteHistoricalPidPostRepairReassessment.wouldTransmit === false,
+"Post-repair PID reassessment reused historical threshold evidence across network routes");
+
 const postRepairReassessmentSession = obd.buildDiagnosticScanSession({
   observation_context: { conditions: ["post_repair"], same_vehicle_confirmed: true },
   imported_session_comparison_summary: { schema_version: "imported_session_comparison_v1", compared_section_count: 2, has_changes: true, changed_section_ids: ["readiness_snapshot"] }
@@ -17083,6 +17131,161 @@ const mixedUnitTimeline = obd.normalizeLivePidTimeline({
 });
 const mixedUnitSummary = obd.buildLivePidTimelineSummary(mixedUnitTimeline);
 check(mixedUnitSummary.comparisonAvailable === true && mixedUnitSummary.comparedValueCount === 0 && mixedUnitSummary.unitMismatchValueCount === 1 && mixedUnitSummary.changedValueCount === 0 && mixedUnitSummary.vehicle_command_enabled === false, "Live PID comparison must exclude a same-PID value when its reported unit changes");
+const networkScopedBridgeLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  vehicle_command_enabled: false,
+  would_transmit: false,
+  live_pid_ecu_snapshots: [
+    {
+      source_ecu: "7E8",
+      network_bus: "CAN-PT",
+      network_channel: "CH1",
+      gateway_route: "GW-A/ECM",
+      live_pid_readout_status: "reported",
+      monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }]
+    },
+    {
+      source_ecu: "7E8",
+      network_bus: "CAN-BODY",
+      network_channel: "CH2",
+      gateway_route: "GW-B/ECM",
+      live_pid_readout_status: "unparsed",
+      monitor_values: [{ id: "engine_speed", value: 1600, unit: "rpm" }]
+    }
+  ]
+});
+const networkScopedBridgeLivePidSession = obd.buildDiagnosticScanSession({ live_pid_snapshot: networkScopedBridgeLivePidSnapshot });
+const networkScopedBridgeLivePidRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(networkScopedBridgeLivePidSession)));
+check(networkScopedBridgeLivePidSnapshot.livePidReadoutStatus === "unparsed"
+  && networkScopedBridgeLivePidSnapshot.monitorValues?.length === 1
+  && networkScopedBridgeLivePidSnapshot.monitorValues?.[0]?.value === 800
+  && networkScopedBridgeLivePidSnapshot.monitorValues?.[0]?.networkBus === "CAN-PT"
+  && networkScopedBridgeLivePidSnapshot.monitorValues?.[0]?.networkBusProvided === true
+  && networkScopedBridgeLivePidSnapshot.livePidEcuSnapshots?.some((item) => item.networkBus === "CAN-BODY" && item.livePidReadoutStatus === "unparsed")
+  && networkScopedBridgeLivePidRoundTrip?.livePidSnapshot?.monitorValues?.[0]?.network_bus === "CAN-PT"
+  && networkScopedBridgeLivePidRoundTrip?.livePidSnapshot?.monitorValues?.[0]?.network_scope_evidence_eligible === true
+  && [networkScopedBridgeLivePidSession, networkScopedBridgeLivePidRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false),
+"Same-address live PID evidence crossed ECU network routes or lost read-only scope provenance");
+const nestedOuterNetworkScopeLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  network_bus: "CAN-PT",
+  network_channel: "CH1",
+  gateway_route: "GW-A/ECM",
+  data: { monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm", source_ecu: "7E8" }] }
+});
+const conflictingNestedOuterNetworkScopeLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  network_bus: "CAN-PT",
+  network_channel: "CH1",
+  gateway_route: "GW-A/ECM",
+  data: {
+    network_bus: "CAN-BODY",
+    network_channel: "CH2",
+    gateway_route: "GW-B/ECM",
+    monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm", source_ecu: "7E8" }]
+  }
+});
+check(nestedOuterNetworkScopeLivePidSnapshot.monitorValues?.[0]?.networkBus === "CAN-PT"
+  && nestedOuterNetworkScopeLivePidSnapshot.monitorValues?.[0]?.networkChannel === "CH1"
+  && nestedOuterNetworkScopeLivePidSnapshot.monitorValues?.[0]?.gatewayRoute === "GW-A/ECM"
+  && nestedOuterNetworkScopeLivePidSnapshot.monitorValues?.[0]?.networkScopeEvidenceEligible === true
+  && conflictingNestedOuterNetworkScopeLivePidSnapshot.livePidReadoutStatus === "unparsed"
+  && conflictingNestedOuterNetworkScopeLivePidSnapshot.monitorValues?.length === 0
+  && conflictingNestedOuterNetworkScopeLivePidSnapshot.networkScopeConflict === true
+  && conflictingNestedOuterNetworkScopeLivePidSnapshot.vehicleCommandEnabled === false
+  && conflictingNestedOuterNetworkScopeLivePidSnapshot.wouldTransmit === false,
+"Nested bridge live PID payload lost or overrode outer network scope");
+
+
+const inheritedEcuChildNetworkScopeLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  network_bus: "CAN-PT",
+  network_channel: "CH1",
+  gateway_route: "GW-A/ECM",
+  live_pid_ecu_snapshots: [{ source_ecu: "7E8", live_pid_readout_status: "reported", monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }] }]
+});
+const conflictingEcuChildNetworkScopeLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  would_transmit: false,
+  network_bus: "CAN-PT",
+  network_channel: "CH1",
+  gateway_route: "GW-A/ECM",
+  live_pid_ecu_snapshots: [{ source_ecu: "7E8", network_bus: "CAN-BODY", live_pid_readout_status: "reported", monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }] }]
+});
+check(inheritedEcuChildNetworkScopeLivePidSnapshot.livePidEcuSnapshots?.[0]?.networkBus === "CAN-PT"
+  && inheritedEcuChildNetworkScopeLivePidSnapshot.livePidEcuSnapshots?.[0]?.livePidReadoutStatus === "reported"
+  && inheritedEcuChildNetworkScopeLivePidSnapshot.monitorValues?.[0]?.networkBus === "CAN-PT"
+  && conflictingEcuChildNetworkScopeLivePidSnapshot.livePidEcuSnapshots?.[0]?.networkScopeConflict === true
+  && conflictingEcuChildNetworkScopeLivePidSnapshot.livePidEcuSnapshots?.[0]?.livePidReadoutStatus === "unparsed"
+  && conflictingEcuChildNetworkScopeLivePidSnapshot.livePidEcuSnapshots?.[0]?.errorCodes?.includes("network_scope_conflict")
+  && conflictingEcuChildNetworkScopeLivePidSnapshot.monitorValues?.length === 0
+  && [inheritedEcuChildNetworkScopeLivePidSnapshot, conflictingEcuChildNetworkScopeLivePidSnapshot].every((snapshot) => snapshot.vehicleCommandEnabled === false && snapshot.wouldTransmit === false),
+"Parent live PID network scope was lost or conflicting ECU child scope was accepted");
+const ambiguousNetworkScopedLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  vehicle_command_enabled: false,
+  would_transmit: false,
+  values: [{ id: "engine_speed", value: 999, unit: "rpm", source_ecu: "7E8" }],
+  live_pid_ecu_snapshots: [
+    { source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM", live_pid_readout_status: "reported", monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }] },
+    { source_ecu: "7E8", network_bus: "CAN-BODY", network_channel: "CH2", gateway_route: "GW-B/ECM", live_pid_readout_status: "reported", monitor_values: [{ id: "engine_speed", value: 1600, unit: "rpm" }] }
+  ]
+});
+const conflictingNetworkScopedLivePidSnapshot = obd.normalizeBridgeLivePidSnapshot({
+  ok: true,
+  blocked: false,
+  vehicle_command_enabled: false,
+  would_transmit: false,
+  live_pid_ecu_snapshots: [
+    { source_ecu: "7E8", network_bus: "CAN-PT", networkBus: "CAN-BODY", network_channel: "CH1", gateway_route: "GW-A/ECM", live_pid_readout_status: "reported", monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm" }] }
+  ]
+});
+check(ambiguousNetworkScopedLivePidSnapshot.monitorValues?.length === 2
+  && ambiguousNetworkScopedLivePidSnapshot.monitorValues?.every((item) => item.value !== 999 && item.networkScopeEvidenceEligible === true)
+  && conflictingNetworkScopedLivePidSnapshot.livePidReadoutStatus === "unparsed"
+  && conflictingNetworkScopedLivePidSnapshot.monitorValues?.length === 0
+  && conflictingNetworkScopedLivePidSnapshot.livePidEcuSnapshots?.[0]?.networkScopeConflict === true
+  && conflictingNetworkScopedLivePidSnapshot.livePidEcuSnapshots?.[0]?.networkScopeEvidenceEligible === false
+  && conflictingNetworkScopedLivePidSnapshot.livePidEcuSnapshots?.[0]?.errorCodes?.includes("network_scope_conflict")
+  && conflictingNetworkScopedLivePidSnapshot.vehicleCommandEnabled === false
+  && conflictingNetworkScopedLivePidSnapshot.wouldTransmit === false,
+"Ambiguous or conflicting live PID network scope was accepted as diagnostic evidence");
+
+const differentNetworkScopeTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-09-02T00:00:00Z", observation_condition: "warm", live_pid_snapshot: { monitor_values: [{ ...engineSpeedMonitor, source_ecu: "7E8", value: 800, network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }], live_pid_readout_status: "reported", blocked: false, would_transmit: false } },
+    { captured_at: "2026-09-02T00:00:05Z", observation_condition: "warm", live_pid_snapshot: { monitor_values: [{ ...engineSpeedMonitor, source_ecu: "7E8", value: 900, network_bus: "CAN-BODY", network_channel: "CH2", gateway_route: "GW-B/ECM" }], live_pid_readout_status: "reported", blocked: false, would_transmit: false } }
+  ]
+});
+const sameNetworkScopeTimeline = obd.normalizeLivePidTimeline({
+  samples: [
+    { captured_at: "2026-09-02T00:00:00Z", observation_condition: "warm", live_pid_snapshot: { monitor_values: [{ ...engineSpeedMonitor, source_ecu: "7E8", value: 800, network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }], live_pid_readout_status: "reported", blocked: false, would_transmit: false } },
+    { captured_at: "2026-09-02T00:00:05Z", observation_condition: "warm", live_pid_snapshot: { monitor_values: [{ ...engineSpeedMonitor, source_ecu: "7E8", value: 900, network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }], live_pid_readout_status: "reported", blocked: false, would_transmit: false } }
+  ]
+});
+const differentNetworkScopeTimelineSummary = obd.buildLivePidTimelineSummary(differentNetworkScopeTimeline);
+const sameNetworkScopeTimelineSummary = obd.buildLivePidTimelineSummary(sameNetworkScopeTimeline);
+check(differentNetworkScopeTimelineSummary.comparisonAvailable === true
+  && differentNetworkScopeTimelineSummary.comparedValueCount === 0
+  && differentNetworkScopeTimelineSummary.networkScopeMismatchValueCount === 1
+  && differentNetworkScopeTimelineSummary.comparisonBlockedByNetworkScope === true
+  && differentNetworkScopeTimelineSummary.changedValueCount === 0
+  && sameNetworkScopeTimelineSummary.comparedValueCount === 1
+  && sameNetworkScopeTimelineSummary.changedValueCount === 1
+  && sameNetworkScopeTimelineSummary.changes?.[0]?.delta === 100
+  && sameNetworkScopeTimelineSummary.changes?.[0]?.networkBus === "CAN-PT"
+  && [differentNetworkScopeTimelineSummary, sameNetworkScopeTimelineSummary].every((summary) => summary?.vehicleCommandEnabled === false && summary?.wouldTransmit === false),
+"Live PID timeline compared the same ECU address across network routes or lost scoped deltas");
+
 check(decodedLivePids.monitorValues.find((item) => item.id === "o2_b1s1_voltage")?.value === 0.64, "O2 sensor voltage PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "o2_b1s1_stft")?.value === 12.5, "O2 sensor short trim PID was not decoded");
 check(decodedLivePids.monitorValues.find((item) => item.id === "wide_o2_b1s1_ratio")?.value === 1, "Wide O2 voltage-style equivalence ratio PID was not decoded");
@@ -22299,6 +22502,188 @@ const legacyLivePidValueComparisonSession = obd.buildDiagnosticScanSession({
   core_readout_inventory_summary: { schema_version: "core_readout_inventory_v1", supported_pid_count: 1 }
 });
 check(legacyLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonAvailable === false && legacyLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueKeysChanged === false && legacyLivePidValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("live_pid_values") === false && legacyLivePidValueComparisonSession.vehicleCommandEnabled === false, "Legacy PID totals were treated as numeric live PID changes");
+const differentNetworkScopeLivePidValueComparisonSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    live_pid_readout_status: "reported",
+    observation_condition: "warm",
+    protocol: "ISO15765-4",
+    monitor_values: [{ id: "engine_speed", value: 1200, unit: "rpm", source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    live_pid_value_evidence_recorded: true,
+    live_pid_observation_condition: "warm",
+    live_pid_diagnostic_protocol: "ISO15765-4",
+    live_pid_value_keys: ["engine_speed|7E8|rpm|800|can-body|ch2|gw-b/ecm"]
+  }
+});
+const sameNetworkScopeLivePidValueComparisonSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    live_pid_readout_status: "reported",
+    observation_condition: "warm",
+    protocol: "ISO15765-4",
+    monitor_values: [{ id: "engine_speed", value: 1200, unit: "rpm", source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    live_pid_value_evidence_recorded: true,
+    live_pid_observation_condition: "warm",
+    live_pid_diagnostic_protocol: "ISO15765-4",
+    live_pid_value_keys: ["engine_speed|7E8|rpm|800|can-pt|ch1|gw-a/ecm"]
+  }
+});
+const sameNetworkScopeLivePidValueRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(sameNetworkScopeLivePidValueComparisonSession)));
+check(differentNetworkScopeLivePidValueComparisonSession.coreReadoutInventorySummary?.livePidValueKeys?.join(",") === "engine_speed|7E8|rpm|1200|can-pt|ch1|gw-a/ecm"
+  && differentNetworkScopeLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonAvailable === true
+  && differentNetworkScopeLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueDeltaRowCount === 0
+  && sameNetworkScopeLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueDeltaRowCount === 1
+  && sameNetworkScopeLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueDeltaRows?.[0]?.delta === 400
+  && sameNetworkScopeLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueDeltaRows?.[0]?.networkBus === "can-pt"
+  && sameNetworkScopeLivePidValueRoundTrip?.coreReadoutInventorySummary?.live_pid_value_keys?.includes("engine_speed|7E8|rpm|1200|can-pt|ch1|gw-a/ecm")
+  && [differentNetworkScopeLivePidValueComparisonSession, sameNetworkScopeLivePidValueComparisonSession, sameNetworkScopeLivePidValueRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false),
+"Saved live PID values were compared across ECU network routes or lost through read-only JSON");
+
+const networkScopedLivePidApplicabilitySession = obd.buildDiagnosticScanSession({
+  vehicle_applicability: buildVerifiedSupportedEcuApplicability([
+    { system_name: "Powertrain", ecu_name: "ECM/PT", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" },
+    { system_name: "Body", ecu_name: "ECM/Body", response_address: "7E8", address_role: "response", address_format: "can_11bit", protocol: "CAN", network_bus: "CAN-BODY", network_channel: "CH2", gateway_route: "GW-B/ECM" }
+  ]),
+  live_pid_snapshot: {
+    live_pid_readout_status: "reported",
+    monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm", source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }]
+  }
+});
+const networkScopedLivePidApplicabilityRoundTrip = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(networkScopedLivePidApplicabilitySession)));
+check(networkScopedLivePidApplicabilitySession.ecuResponseSummary?.ecus?.some((item) => item.id === "7E8" && item.networkBus === "CAN-PT" && item.networkChannel === "CH1" && item.gatewayRoute === "GW-A/ECM" && item.status === "reported")
+  && networkScopedLivePidApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.status === "matched"
+  && networkScopedLivePidApplicabilitySession.ecuResponseSummary?.ecuCount === 1
+  && networkScopedLivePidApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.observedExpectedEcuCount === 1
+  && networkScopedLivePidApplicabilitySession.coreSessionStatus?.vehicleApplicabilityEcuMatchSummary?.unobservedExpectedEcuCount === 1
+  && networkScopedLivePidApplicabilityRoundTrip?.ecuResponseSummary?.ecus?.some((item) => item.network_bus === "CAN-PT" && item.network_channel === "CH1" && item.gateway_route === "GW-A/ECM")
+  && [networkScopedLivePidApplicabilitySession, networkScopedLivePidApplicabilityRoundTrip].every((session) => session?.vehicleCommandEnabled === false && session?.wouldTransmit === false),
+"Live PID synthesized ECU response crossed vehicle applicability network routes");
+const crossRouteLivePidEcuInfoSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    live_pid_readout_status: "reported",
+    monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm", source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }]
+  },
+  ecu_info_snapshot: {
+    ecu_info_response_format: "uds_read_data_by_identifier",
+    ecu_info_readout_status: "unparsed",
+    ecu_info_ecu_snapshots: [{
+      source_ecu: "7E8",
+      network_bus: "CAN-BODY",
+      network_channel: "CH2",
+      gateway_route: "GW-B/ECM",
+      ecu_info_readout_status: "unparsed",
+      ecu_info_negative_response_service: "22",
+      ecu_info_negative_response_code: "31"
+    }]
+  }
+});
+const crossRouteLivePidResponse = crossRouteLivePidEcuInfoSession.ecuResponseSummary?.ecus?.find((item) => item.networkBus === "CAN-PT");
+const crossRouteEcuInfoResponse = crossRouteLivePidEcuInfoSession.ecuResponseSummary?.ecus?.find((item) => item.networkBus === "CAN-BODY");
+check(crossRouteLivePidEcuInfoSession.ecuResponseSummary?.ecuCount === 2
+  && crossRouteLivePidResponse?.services?.join(",") === "01"
+  && crossRouteLivePidResponse?.negativeResponseCount === 0
+  && crossRouteEcuInfoResponse?.services?.includes("22")
+  && crossRouteEcuInfoResponse?.negativeResponseCount === 1
+  && crossRouteEcuInfoResponse?.negativeResponseLabels?.includes("UDS NRC 31")
+  && crossRouteLivePidEcuInfoSession.vehicleCommandEnabled === false
+  && crossRouteLivePidEcuInfoSession.wouldTransmit === false,
+"ECU info outcome merged into a live PID response on another network route");
+
+const scopedEcuInfoItemSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    live_pid_readout_status: "reported",
+    monitor_values: [{ id: "engine_speed", value: 800, unit: "rpm", source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }]
+  },
+  ecu_info_snapshot: {
+    ecu_info_response_format: "uds_read_data_by_identifier",
+    ecu_info_readout_status: "reported",
+    ecu_info_ecu_snapshots: [{
+      source_ecu: "7E8",
+      network_bus: "CAN-BODY",
+      network_channel: "CH2",
+      gateway_route: "GW-B/ECM",
+      ecu_info_readout_status: "reported",
+      items: [{ id: "ecu_name", value: "BODY ECM", service: "22" }]
+    }]
+  }
+});
+const scopedEcuInfoItemResponses = scopedEcuInfoItemSession.ecuResponseSummary?.ecus || [];
+check(scopedEcuInfoItemResponses.length === 2
+  && !scopedEcuInfoItemResponses.some((item) => item.networkScopeProvided === false || item.network_scope_provided === false)
+  && scopedEcuInfoItemResponses.some((item) => item.networkBus === "CAN-PT" && item.services?.join(",") === "01")
+  && scopedEcuInfoItemResponses.some((item) => item.networkBus === "CAN-BODY" && item.services?.includes("22"))
+  && scopedEcuInfoItemSession.vehicleCommandEnabled === false
+  && scopedEcuInfoItemSession.wouldTransmit === false,
+"Scoped ECU-info child item created a duplicate unscoped ECU response");
+const sameAddressRoutedEcuInfoSnapshot = obd.normalizeEcuInfoSnapshot({
+  ecu_info_readout_status: "unparsed",
+  ecu_info_ecu_snapshots: [
+    { source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM", ecu_info_readout_status: "unparsed", items: [{ id: "ecu_name", value: "STALE PT ECM", service: "22" }] },
+    { source_ecu: "7E8", network_bus: "CAN-BODY", network_channel: "CH2", gateway_route: "GW-B/ECM", ecu_info_readout_status: "reported", items: [{ id: "ecu_name", value: "BODY ECM", service: "22" }] }
+  ]
+});
+check(sameAddressRoutedEcuInfoSnapshot.items?.length === 1
+  && sameAddressRoutedEcuInfoSnapshot.items?.[0]?.value === "BODY ECM"
+  && sameAddressRoutedEcuInfoSnapshot.items?.[0]?.networkBus === "CAN-BODY"
+  && sameAddressRoutedEcuInfoSnapshot.ecuInfoEcuAggregateSummary?.ecuCount === 2
+  && sameAddressRoutedEcuInfoSnapshot.ecuInfoEcuAggregateSummary?.reportedEcuCount === 1
+  && sameAddressRoutedEcuInfoSnapshot.ecuInfoEcuAggregateSummary?.unparsedEcuCount === 1
+  && sameAddressRoutedEcuInfoSnapshot.vehicleCommandEnabled === false
+  && sameAddressRoutedEcuInfoSnapshot.wouldTransmit === false,
+"Same-address ECU-info item crossed reported and unparsed network routes");
+const conflictingChildEcuInfoSnapshot = obd.normalizeEcuInfoSnapshot({
+  network_bus: "CAN-PT",
+  network_channel: "CH1",
+  gateway_route: "GW-A/ECM",
+  ecu_info_readout_status: "reported",
+  ecu_info_ecu_snapshots: [{ source_ecu: "7E8", network_bus: "CAN-BODY", ecu_info_readout_status: "reported", items: [{ id: "ecu_name", value: "CONFLICT ECM", service: "22" }] }]
+});
+const conflictingDirectEcuInfoSnapshot = obd.normalizeEcuInfoSnapshot({
+  source_ecu: "7E8",
+  network_bus: "CAN-PT",
+  ecu_info_readout_status: "reported",
+  items: [{ id: "ecu_name", value: "CONFLICT ECM", service: "22", source_ecu: "7E8", network_bus: "CAN-BODY" }]
+});
+check([conflictingChildEcuInfoSnapshot, conflictingDirectEcuInfoSnapshot].every((snapshot) => snapshot.ecuInfoReadoutStatus === "unparsed"
+  && snapshot.items?.length === 0
+  && snapshot.errorCodes?.includes("network_scope_conflict")
+  && snapshot.vehicleCommandEnabled === false
+  && snapshot.wouldTransmit === false)
+  && conflictingChildEcuInfoSnapshot.ecuInfoEcuSnapshots?.[0]?.networkScopeConflict === true
+  && conflictingChildEcuInfoSnapshot.ecuInfoEcuSnapshots?.[0]?.errorCodes?.includes("network_scope_conflict"),
+"Conflicting ECU-info network scope remained reported diagnostic evidence");
+const legacyToScopedLivePidValueComparisonSession = obd.buildDiagnosticScanSession({
+  live_pid_snapshot: {
+    live_pid_readout_status: "reported",
+    observation_condition: "warm",
+    protocol: "ISO15765-4",
+    monitor_values: [{ id: "engine_speed", value: 1200, unit: "rpm", source_ecu: "7E8", network_bus: "CAN-PT", network_channel: "CH1", gateway_route: "GW-A/ECM" }]
+  },
+  core_readout_inventory_summary: {
+    schema_version: "core_readout_inventory_v1",
+    live_pid_value_evidence_recorded: true,
+    live_pid_observation_condition: "warm",
+    live_pid_diagnostic_protocol: "ISO15765-4",
+    live_pid_value_keys: ["engine_speed|7E8|rpm|1200"]
+  }
+});
+check(legacyToScopedLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.importedLivePidNetworkScopeKeyMode === "unscoped"
+  && legacyToScopedLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.currentLivePidNetworkScopeKeyMode === "scoped"
+  && legacyToScopedLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonBlockedByScopeVersion === true
+  && legacyToScopedLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueComparisonAvailable === false
+  && legacyToScopedLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueKeysChanged === false
+  && legacyToScopedLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueAddedKeys?.length === 0
+  && legacyToScopedLivePidValueComparisonSession.importedCoreReadoutInventoryComparisonSummary?.livePidValueRemovedKeys?.length === 0
+  && legacyToScopedLivePidValueComparisonSession.importedSessionComparisonSummary?.changedReasonIds?.includes("live_pid_values") === false
+  && legacyToScopedLivePidValueComparisonSession.vehicleCommandEnabled === false
+  && legacyToScopedLivePidValueComparisonSession.wouldTransmit === false,
+"Legacy unscoped live PID inventory produced a false change against scoped values");
+
+
 check(source.includes("const mode09SupportedTypeEvidenceRecorded = ecuInfoItemEvidenceRecorded") && appSource.includes("Mode09対応詳細比較不可"), "Mode09 supported type comparison should require explicit read-only evidence and expose unavailable states");
 const completeMode09SupportedTypeComparisonBaseline = obd.buildDiagnosticScanSession({
   ecu_info_response: {
