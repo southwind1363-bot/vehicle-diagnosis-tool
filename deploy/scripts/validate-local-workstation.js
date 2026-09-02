@@ -76,15 +76,16 @@ function validateReadoutNavigation() {
   class Element {
     constructor(id) {
       this.id = id; this.hidden = false; this.parentElement = null; this.children = []; this.dataset = {}; this.scrolled = 0;
-      this.classes = new Set();
+      this.classes = new Set(); this.attributes = {};
       this.classList = { contains: (name) => this.classes.has(name), toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name) };
     }
     appendChild(child) {
       if (child.parentElement) child.parentElement.children = child.parentElement.children.filter((item) => item !== child);
       this.children.push(child); child.parentElement = this; return child;
     }
-    closest(selector) { return selector === `#${this.id}` || (selector === "details" && this.tagName === "DETAILS") ? this : this.parentElement?.closest(selector) || null; }
-    setAttribute() {}
+    closest(selector) { return selector === `#${this.id}` || (selector.startsWith(".") && this.classes.has(selector.slice(1))) || (selector === "details" && this.tagName === "DETAILS") ? this : this.parentElement?.closest(selector) || null; }
+    setAttribute(name, value) { this.attributes[name] = value; }
+    removeAttribute(name) { delete this.attributes[name]; }
     scrollIntoView(options) { this.scrolled += 1; this.scrollOptions = options; }
   }
   const nodes = Object.fromEntries(["obd-panel", "diagnosis-panel", "data-panel", "obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost",
@@ -104,8 +105,16 @@ function validateReadoutNavigation() {
   nodes.obdReadoutDetails.tagName = "DETAILS";
   attach("obdStageDetailsView", "obdDevSessionSummary"); attach("obdStageDetailsView", "obdConnectionProfile");
   const scrollCalls = [];
+  const navigation = new Element("readout-navigation");
+  navigation.classes.add("obd-results-nav");
+  const navigationButtons = ["obdSimpleResultSummary", "obdDetectedCodes", "obdMonitorGrid", "obdReadoutDetails", "obdImportStatus"].map((id) => {
+    const button = new Element(`nav-${id}`);
+    button.dataset.obdScrollTarget = id;
+    navigation.appendChild(button);
+    return button;
+  });
   const context = vm.createContext({ document: { getElementById: (id) => nodes[id] }, window: { scrollY: 320, scrollTo: (options) => scrollCalls.push(options) },
-    tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false,
+    tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false, obdPanel: nodes["obd-panel"], obdScrollTargetButtons: navigationButtons,
     obdStagePanel: {}, obdStageBadge: {}, obdStageStatus: {}, obdStageTabs: [], activeObdStage: "setup", obdUiMode: "details", getObdAutoStage: () => "setup",
     ...Object.fromEntries(["obdSetupPanel", "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView"].map((id) => [id, nodes[id]])) });
   for (const name of ["syncObdReadoutSurface", "activateTab", "renderObdStageView", "scrollToObdSection"]) {
@@ -145,13 +154,32 @@ function validateReadoutNavigation() {
   const simpleReadoutScrolls = nodes.obdDetectedCodes.scrolled;
   context.scrollToObdSection("obdDetectedCodes");
   check(context.activeObdStage === "readout" && nodes.obdDetectedCodes.scrolled === simpleReadoutScrolls + 1, "Simple result shortcut did not open the individual-data screen");
+  for (const [target, view] of [["obdDetectedCodes", "dtc"], ["obdMonitorGrid", "live"], ["obdDevSessionDetails", "details"], ["obdImportStatus", "dtc"]]) {
+    context.scrollToObdSection(target);
+    check(nodes["obd-panel"].dataset.obdReadoutView === view && context.activeObdStage === "readout", "Simple data navigation selected the wrong readout category");
+    check(navigationButtons.filter((button) => button.attributes["aria-pressed"] === "true").length === 1, "Simple navigation did not expose exactly one selected category");
+    check(nodes.obdMonitorGrid.values === values && nodes.obdImportStatus.textContent === "0 DTC / acquired", "Data category navigation changed diagnostic values");
+  }
+  for (const [target, status, view] of [["obdDetectedCodes", "obdImportStatus", "dtc"], ["obdMonitorGrid", "obdMonitorStatus", "live"]]) {
+    const children = nodes[target].children;
+    nodes[target].children = [];
+    const previousScroll = nodes[status].scrolled;
+    context.scrollToObdSection(target);
+    check(nodes["obd-panel"].dataset.obdReadoutView === view && nodes[status].scrolled === previousScroll + 1, "Empty data category hid its own readout status");
+    nodes[target].children = children;
+  }
+  delete nodes["obd-panel"].dataset.obdReadoutView;
+  context.renderObdStageView("readout");
+  check(nodes["obd-panel"].dataset.obdReadoutView === "dtc", "Direct data-tab navigation did not select a single default category");
+  const statusScrollsBeforeLock = nodes.obdImportStatus.scrolled;
   context.obdUiMode = "details";  context.obdAccessUnlocked = false;
   context.renderObdStageView("setup");
   nodes.obdReadoutDetails.open = false;
   context.scrollToObdSection("obdReadoutDetails");
   check(!nodes.obdReadoutDetails.open, "Locked navigation opened protected readout details");
   context.scrollToObdSection("obdImportStatus");
-  check(context.obdStagePanel.hidden && nodes.obdReadoutSurface.parentElement === nodes.obdReadoutHome && nodes.obdImportStatus.scrolled === 1, "Lock did not restore the readout surface or blocked navigation");
+  check(context.obdStagePanel.hidden && nodes.obdReadoutSurface.parentElement === nodes.obdReadoutHome && nodes.obdImportStatus.scrolled === statusScrollsBeforeLock, "Lock did not restore the readout surface or blocked navigation");
+  check(nodes["obd-panel"].dataset.obdReadoutView === "dtc", "Locked navigation changed the readout category");
   context.scrollToObdSection("missing");
   check(nodes.obdReadoutHome.children.length === 1 && nodes.obdReadoutResultsHost.children.length === 0, "Navigation duplicated readout elements");
   context.obdAccessUnlocked = true;
@@ -172,6 +200,7 @@ function validateReadoutNavigation() {
   }
   context.activateTab("diagnosis-panel");
   context.scrollToObdSection("obdReadoutDetails");
+  check(navigationButtons.every((button) => !("aria-pressed" in button.attributes)), "Detailed navigation retained simple-mode toggle semantics");
   check(scrollCalls.at(-1).behavior === "instant" && scrollCalls.at(-1).top === 320, "Cross-tab result navigation must cancel the tab animation");
   check(nodes["obd-panel"].classList.contains("is-active") && nodes.obdReadoutDetails.open, "Cross-tab shortcut failed to open the readout result");
   for (const id of ["obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost", "obdImportStatus", "obdMonitorGrid", "obdReadoutDetails", "obdDevSessionDetails"]) {

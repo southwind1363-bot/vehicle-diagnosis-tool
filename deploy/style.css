@@ -1191,6 +1191,19 @@ body.dark .flow-node-measure .flow-step {
   display: none !important;
 }
 
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"][data-obd-readout-view="dtc"] .obd-monitor-result,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"][data-obd-readout-view="dtc"] #obdReadoutDetails,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"][data-obd-readout-view="live"] .obd-import-result,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"][data-obd-readout-view="live"] #obdReadoutDetails,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"][data-obd-readout-view="details"] #obdReadoutResultsHost {
+  display: none !important;
+}
+
+.obd-results-nav .is-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
 .obd-operation-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
