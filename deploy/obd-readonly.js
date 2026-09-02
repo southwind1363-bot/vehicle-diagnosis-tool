@@ -3576,7 +3576,7 @@
     const data = response && typeof response === "object"
       ? nestedData
         ? {
-          ...nestedData,
+          ...inheritReadoutNetworkScope(nestedData, response),
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           dtc_readout_status: nestedData.dtcReadoutStatus || nestedData.dtc_readout_status || response.dtcReadoutStatus || response.dtc_readout_status || nestedData.readoutStatus || nestedData.readout_status || response.readoutStatus || response.readout_status || null,
@@ -3593,6 +3593,7 @@
         }
         : response
       : {};
+    const dataNetworkScope = normalizeReadoutNetworkScope(data);
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const malformedDtcAlias = [
@@ -3617,10 +3618,29 @@
       data.pending_dtcs, data.pendingDtcs, data.pending_dtc_codes, data.pendingDtcCodes, data.pending_codes, data.pendingCodes,
       data.permanent_dtcs, data.permanentDtcs, data.permanent_dtc_codes, data.permanentDtcCodes, data.permanent_codes, data.permanentCodes
     ].some(Array.isArray);
-    const sourceErrorCodes = readBridgeResponseErrorCodes(response);
+    const hasDtcRowNetworkScopeConflict = (row, parent) => {
+      if (!row || typeof row !== "object" || Array.isArray(row)) return false;
+      const rowSource = row.value && typeof row.value === "object" ? inheritReadoutNetworkScope(row.value, row) : row;
+      return normalizeReadoutNetworkScope(inheritReadoutNetworkScope(rowSource, parent)).conflict;
+    };
+    const hasTopLevelDtcNetworkScopeConflict = [dtcRows, ...typedDtcRowGroups.map((group) => group.rows)]
+      .flat()
+      .some((row) => hasDtcRowNetworkScopeConflict(row, data));
+    const sourceErrorCodes = [...new Set([
+      ...readBridgeResponseErrorCodes(response),
+      ...((dataNetworkScope.conflict || hasTopLevelDtcNetworkScopeConflict) ? ["network_scope_conflict"] : [])
+    ])].slice(0, 12);
     const rawDtcResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
-    const ecuRows = firstDtcArray(data.ecu_responses, data.ecuResponses, data.ecu_snapshots, data.ecuSnapshots);
-    const scopedDtcErrorCodes = [...new Set(ecuRows.flatMap((row) => readBridgeResponseErrorCodes(row)))].slice(0, 12);
+    const ecuRows = firstDtcArray(data.ecu_responses, data.ecuResponses, data.ecu_snapshots, data.ecuSnapshots)
+      .map((row) => inheritReadoutNetworkScope(row, data));
+    const scopedDtcErrorCodes = [...new Set(ecuRows.flatMap((row) => {
+      const childRows = firstDtcArray(row?.dtcs, row?.codes, row?.dtc_codes, row?.dtcCodes);
+      const hasChildNetworkScopeConflict = childRows.some((child) => hasDtcRowNetworkScopeConflict(child, row));
+      return [
+        ...readBridgeResponseErrorCodes(row),
+        ...((normalizeReadoutNetworkScope(row).conflict || hasChildNetworkScopeConflict) ? ["network_scope_conflict"] : [])
+      ];
+    }))].slice(0, 12);
     const errorCodes = [...new Set([...sourceErrorCodes, ...scopedDtcErrorCodes])].slice(0, 12);
     const getEcuRawDtcResponse = (row) => row?.raw ?? row?.response ?? (Array.isArray(row?.bytes) ? row.bytes : null);
     const hasRawEcuDtcResponse = ecuRows.some((row) => getEcuRawDtcResponse(row) !== null);
@@ -3661,6 +3681,7 @@
       const decoded = decodeObdDtcResponse({
         raw: rawDtcResponse,
         source: "local_bridge",
+        ...readoutNetworkScopeFields(dataNetworkScope),
         source_ecu: sourceEcu,
         source_ecu_name: sourceEcuName,
         captured_at: data.captured_at || data.capturedAt || data.timestamp || response.captured_at || response.capturedAt || response.timestamp || null,
@@ -3685,8 +3706,11 @@
         error_codes: Array.from(errorCodes)
       };
     }
-    const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null, fallbackCapturedAt = null, fallbackProtocol = null) => rows.flatMap((row) => {
+    const normalizeDtcRows = (rows, fallbackStatus, fallbackEcu = null, fallbackEcuName = null, fallbackCapturedAt = null, fallbackProtocol = null, fallbackNetworkScope = data) => rows.flatMap((row) => {
+      const fallbackScope = normalizeReadoutNetworkScope(fallbackNetworkScope);
+      if (fallbackScope.conflict) return [];
       if (typeof row === "string") return extractDtcReferences(row).map(({ code, subcode, oemDetailCode }) => ({
+        ...readoutNetworkScopeFields(fallbackScope),
         code,
         subcode,
         ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}),
@@ -3698,7 +3722,10 @@
         ...(normalizeDtcEvidenceProtocol(null, fallbackProtocol) ? { protocol: normalizeDtcEvidenceProtocol(null, fallbackProtocol) } : {})
       }));
       if (!row || typeof row !== "object") return [];
-      const rowValue = row.value && typeof row.value === "object" ? row.value : row;
+      const rowSource = row.value && typeof row.value === "object" ? inheritReadoutNetworkScope(row.value, row) : row;
+      const rowValue = inheritReadoutNetworkScope(rowSource, fallbackNetworkScope);
+      const rowNetworkScope = normalizeReadoutNetworkScope(rowValue);
+      if (rowNetworkScope.conflict) return [];
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.dtc_code || rowValue.dtcCode || "";
       const genericCodeReferences = extractDtcReferences(codeValue);
       const udsThreeByteCodeReference = isExplicitUdsThreeByteDtcRow(rowValue)
@@ -3726,6 +3753,7 @@
       const severityAvailabilityMask = readDtcSeverityAvailabilityMaskAlias(rowValue);
       const freezeFrameAvailable = [rowValue.freeze_frame_available, rowValue.freezeFrameAvailable, rowValue.freezeFrame, rowValue.freeze_frame].some(isExplicitTrueFlag);
       return codeReferences.map(({ code, subcode, oemDetailCode = null, codeFormat = null }) => ({
+        ...readoutNetworkScopeFields(rowNetworkScope),
         code,
         subcode: readDtcSubcodeAlias(rowValue, subcode),
         ...(readDtcOemDetailCodeAlias(rowValue, oemDetailCode) ? {
@@ -3779,7 +3807,7 @@
       const ecu = ecuRow?.source_ecu || ecuRow?.sourceEcu || ecuRow?.ecu || ecuRow?.ecu_id || ecuRow?.ecuId || ecuRow?.address || ecuRow?.module || ecuRow?.module_id || ecuRow?.moduleId || null;
       const ecuName = ecuRow?.source_ecu_name || ecuRow?.sourceEcuName || ecuRow?.ecu_name || ecuRow?.ecuName || ecuRow?.name || ecuRow?.label || ecuRow?.display_name || ecuRow?.displayName || null;
       const status = readEcuDtcCategory(ecuRow);
-      return normalizeDtcRows(rows, status, ecu, ecuName, ecuRow?.captured_at || ecuRow?.capturedAt || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(ecuRow) || readBridgeProtocol(data) || readBridgeProtocol(response));
+      return normalizeDtcRows(rows, status, ecu, ecuName, ecuRow?.captured_at || ecuRow?.capturedAt || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(ecuRow) || readBridgeProtocol(data) || readBridgeProtocol(response), ecuRow);
     });
     const decodedRawEcuDtcSnapshots = new Map();
     const rawEcuDtcRows = ecuRows.flatMap((ecuRow) => {
@@ -3790,6 +3818,7 @@
       const decoded = decodeObdDtcResponse({
         raw,
         source: "local_bridge",
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(ecuRow)),
         source_ecu: ecu,
         source_ecu_name: ecuName,
         captured_at: ecuRow?.captured_at || ecuRow?.capturedAt || data.captured_at || data.capturedAt || data.timestamp || response.captured_at || response.capturedAt || response.timestamp || null,
@@ -3808,15 +3837,17 @@
       ...rawEcuDtcRows
     ];
     const normalizeDtcEntryCodeFormat = (entry) => String(entry?.codeFormat || entry?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const eligibleEntries = entries.filter((entry) => !normalizeReadoutNetworkScope(entry).conflict);
+    const getDtcEntryResolutionKey = (entry) => `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}::${getReadoutNetworkScopeKey(entry) || ""}`;
     const scopedEntriesByKey = new Map();
-    entries.filter((entry) => entry.ecu).forEach((entry) => {
-      const key = `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`;
+    eligibleEntries.filter((entry) => entry.ecu).forEach((entry) => {
+      const key = getDtcEntryResolutionKey(entry);
       if (!scopedEntriesByKey.has(key)) scopedEntriesByKey.set(key, entry);
     });
-    const resolvedEntries = entries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(`${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.status}`) || entry);
+    const resolvedEntries = eligibleEntries.map((entry) => entry.ecu ? entry : scopedEntriesByKey.get(getDtcEntryResolutionKey(entry)) || entry);
     const seen = new Set();
     const dtcs = resolvedEntries.filter((entry) => {
-      const key = `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.ecu || ""}::${entry.status}`;
+      const key = `${entry.code}::${entry.subcode || ""}::${entry.oemDetailCode || entry.oem_detail_code || ""}::${normalizeDtcEntryCodeFormat(entry)}::${entry.ecu || ""}::${entry.status}::${getReadoutNetworkScopeKey(entry) || ""}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -3843,7 +3874,7 @@
       const rawRowStatus = row?.status || row?.response_status || row?.responseStatus || row?.readout_status || row?.readoutStatus || row?.dtc_readout_status || row?.dtcReadoutStatus || decodedRawSnapshot?.dtcReadoutStatus || (hasStructuredRowDtcEvidence ? "reported" : bridgeDtcReadoutStatus);
       const rowStatus = String(rawRowStatus || "unknown").trim().toLowerCase() === "blocked" ? "blocked" : rowErrorCodes.length > 0 ? "unparsed" : rawRowStatus;
       const childDtcs = [...new Map([
-        ...normalizeDtcRows(rowInputs, rowDtcStatus, rowEcu, rowEcuName, row?.captured_at || row?.capturedAt || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(row) || readBridgeProtocol(data) || readBridgeProtocol(response)),
+        ...normalizeDtcRows(rowInputs, rowDtcStatus, rowEcu, rowEcuName, row?.captured_at || row?.capturedAt || data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, readBridgeProtocol(row) || readBridgeProtocol(data) || readBridgeProtocol(response), row),
         ...(Array.isArray(decodedRawSnapshot?.dtcs) ? decodedRawSnapshot.dtcs.map((item) => inheritDtcEcuName(item, rowEcu, rowEcuName)) : [])
       ].map((item) => [`${item.code}::${item.subcode || ""}::${normalizeDtcEntryCodeFormat(item)}::${item.status}`, { ...item, source: "local_bridge" }])).values()];
       const explicitCodeCount = Number.isInteger(row?.dtc_count) ? row.dtc_count : Number.isInteger(row?.dtcCount) ? row.dtcCount : Number.isInteger(row?.code_count) ? row.code_count : Number.isInteger(row?.codeCount) ? row.codeCount : null;
@@ -3860,6 +3891,7 @@
       const negativeResponseCount = Number.isInteger(row?.negative_response_count) ? row.negative_response_count : Number.isInteger(row?.negativeResponseCount) ? row.negativeResponseCount : 0;
       const pendingNegativeResponseCount = Number.isInteger(row?.pending_negative_response_count) ? row.pending_negative_response_count : Number.isInteger(row?.pendingNegativeResponseCount) ? row.pendingNegativeResponseCount : 0;
       return {
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(row)),
         ecu: rowEcu,
         ecuName: rowEcuName,
         ecu_name: rowEcuName,
@@ -3896,6 +3928,7 @@
       const rowAddress = normalizeComparableCanEcuAddress(rowSource);
       return reportedDtcEcuResponses.some((responseRow) => {
         const reportedSource = String(responseRow.ecu || "").trim().toUpperCase();
+        if (!readoutNetworkScopeMatches(row, responseRow)) return false;
         if (reportedSource === rowSource) return true;
         const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
         return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
@@ -3975,6 +4008,7 @@
       schemaVersion: "dtc_snapshot_v1",
       schema_version: "dtc_snapshot_v1",
       source: "local_bridge",
+      ...readoutNetworkScopeFields(dataNetworkScope),
       intent,
       ok: resolvedBridgeSafety.ok,
       blocked: resolvedBridgeSafety.blocked,
@@ -4625,22 +4659,25 @@
   function readoutNetworkScopeFields(input = {}) {
     const scope = input && Object.prototype.hasOwnProperty.call(input, "eligible") ? input : normalizeReadoutNetworkScope(input);
     if (!scope.provided && !scope.conflict) return {};
+    const fieldValues = READOUT_NETWORK_SCOPE_FIELDS.reduce((result, field) => {
+      const providedKey = field.name + "Provided";
+      const conflictKey = field.name + "Conflict";
+      if (scope[providedKey] !== true && scope[conflictKey] !== true) return result;
+      result[field.name] = scope[field.name];
+      result[field.snake] = scope[field.name];
+      result[providedKey] = scope[providedKey];
+      result[field.provided[1]] = scope[providedKey];
+      result[conflictKey] = scope[conflictKey];
+      result[field.conflict[1]] = scope[conflictKey];
+      return result;
+    }, {});
     return {
-      networkBus: scope.networkBus, network_bus: scope.networkBus,
-      networkBusProvided: scope.networkBusProvided, network_bus_provided: scope.networkBusProvided,
-      networkBusConflict: scope.networkBusConflict, network_bus_conflict: scope.networkBusConflict,
-      networkChannel: scope.networkChannel, network_channel: scope.networkChannel,
-      networkChannelProvided: scope.networkChannelProvided, network_channel_provided: scope.networkChannelProvided,
-      networkChannelConflict: scope.networkChannelConflict, network_channel_conflict: scope.networkChannelConflict,
-      gatewayRoute: scope.gatewayRoute, gateway_route: scope.gatewayRoute,
-      gatewayRouteProvided: scope.gatewayRouteProvided, gateway_route_provided: scope.gatewayRouteProvided,
-      gatewayRouteConflict: scope.gatewayRouteConflict, gateway_route_conflict: scope.gatewayRouteConflict,
+      ...fieldValues,
       networkScopeProvided: scope.provided, network_scope_provided: scope.provided,
       networkScopeConflict: scope.conflict, network_scope_conflict: scope.conflict,
       networkScopeEvidenceEligible: scope.eligible, network_scope_evidence_eligible: scope.eligible
     };
   }
-
   function inheritReadoutNetworkScope(row = {}, parent = null) {
     const childScope = normalizeReadoutNetworkScope(row);
     const parentScope = normalizeReadoutNetworkScope(parent);
@@ -5651,13 +5688,14 @@
     const data = response && typeof response === "object"
       ? nestedData
         ? {
-          ...nestedData,
+          ...inheritReadoutNetworkScope(nestedData, response),
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
           ...outerFreezeFrameFallback
         }
         : response
       : {};
+    const dataNetworkScope = normalizeReadoutNetworkScope(data);
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const firstFreezeFrameArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
@@ -5668,7 +5706,7 @@
       data.freeze_frame_ecu_snapshots,
       data.ecuSnapshots,
       data.ecu_snapshots
-    );
+    ).map((snapshot) => inheritReadoutNetworkScope(snapshot, data));
     const malformedFreezeFrameAlias = [
       "freezeFrameEcuSnapshots", "freeze_frame_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "values", "freeze_frame", "freezeFrame",
@@ -5712,8 +5750,11 @@
         snapshot.uds_dtc_snapshot_records, snapshot.udsDtcSnapshotRecords,
         snapshot.uds_dtc_stored_data_records, snapshot.udsDtcStoredDataRecords
       ].some((value) => Array.isArray(value) && value.length > 0));
-    const scopedFreezeFrameErrorCodes = [...new Set(freezeFrameEcuSnapshotRows.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))];
-    const errorCodes = [...new Set([...readBridgeResponseErrorCodes(response), ...scopedFreezeFrameErrorCodes])].slice(0, 12);
+    const scopedFreezeFrameErrorCodes = [...new Set(freezeFrameEcuSnapshotRows.flatMap((snapshot) => [
+      ...readBridgeResponseErrorCodes(snapshot),
+      ...(normalizeReadoutNetworkScope(snapshot).conflict ? ["network_scope_conflict"] : [])
+    ]))];
+    const errorCodes = [...new Set([...readBridgeResponseErrorCodes(response), ...(dataNetworkScope.conflict ? ["network_scope_conflict"] : []), ...scopedFreezeFrameErrorCodes])].slice(0, 12);
     const rawFreezeFrameResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const bridgeSafety = malformedFreezeFrameAlias
       ? { ...readBridgeSnapshotSafety(response, false), ok: false, blocked: true, unparsed: true }
@@ -5731,7 +5772,7 @@
       ...mergeProtocolProvenance(data, response)
     };
     if (rawFreezeFrameResponse !== null) {
-      const decoded = decodeFreezeFrameResponse({ raw: rawFreezeFrameResponse, source: "local_bridge", source_ecu: sourceEcu, captured_at: data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, protocol });
+      const decoded = decodeFreezeFrameResponse({ ...readoutNetworkScopeFields(dataNetworkScope), raw: rawFreezeFrameResponse, source: "local_bridge", source_ecu: sourceEcu, captured_at: data.captured_at || data.capturedAt || response.captured_at || response.capturedAt || null, protocol });
       return {
         ...decoded,
         protocolProvenance,
@@ -5749,6 +5790,7 @@
     }
     const snapshot = normalizeFreezeFrameSnapshot({
       source: "local_bridge",
+      ...readoutNetworkScopeFields(dataNetworkScope),
       captured_at: data.captured_at || data.capturedAt || data.timestamp || data.capturedTimestamp || data.captured_timestamp || response.captured_at || response.capturedAt || response.timestamp || response.capturedTimestamp || response.captured_timestamp || null,
       protocol,
       freeze_frame_readout_status: getBridgeReadoutStatus(resolvedBridgeSafety),
@@ -5814,7 +5856,7 @@
     const data = response && typeof response === "object"
       ? nestedData
         ? {
-          ...nestedData,
+          ...inheritReadoutNetworkScope(nestedData, response),
           source_ecu: nestedData.source_ecu || nestedData.sourceEcu || nestedData.ecu || nestedData.address || response.source_ecu || response.sourceEcu || response.ecu || response.address,
           readout_ecu_ids: nestedData.readoutEcuIds || nestedData.readout_ecu_ids || response.readoutEcuIds || response.readout_ecu_ids || [],
           source_ecu_name: nestedData.source_ecu_name || nestedData.sourceEcuName || nestedData.ecu_name || nestedData.ecuName || nestedData.module_name || nestedData.moduleName || response.source_ecu_name || response.sourceEcuName || response.ecu_name || response.ecuName || response.module_name || response.moduleName,
@@ -5823,6 +5865,7 @@
         }
         : response
       : {};
+    const dataNetworkScope = normalizeReadoutNetworkScope(data);
     const sourceEcu = data.source_ecu || data.sourceEcu || data.ecu || data.address || null;
     const sourceEcuName = data.source_ecu_name || data.sourceEcuName || data.ecu_name || data.ecuName || data.module_name || data.moduleName || null;
     const firstReadinessArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
@@ -5834,7 +5877,7 @@
       data.readiness_ecu_snapshots,
       data.ecuSnapshots,
       data.ecu_snapshots
-    );
+    ).map((snapshot) => inheritReadoutNetworkScope(snapshot, data));
     const malformedReadinessAlias = [
       "readinessEcuSnapshots", "readiness_ecu_snapshots", "ecuSnapshots", "ecu_snapshots",
       "monitors",
@@ -5879,7 +5922,7 @@
       data.readinessRows,
       response.monitorValues
     );
-    const readinessValueRows = rows.length > 0 ? rows : [
+    const readinessValueRows = (rows.length > 0 ? rows : [
             data.mil_on !== undefined ? { id: "mil_status", value: data.mil_on } : null,
             data.milStatus !== undefined ? { id: "mil_status", value: data.milStatus } : null,
             data.mil !== undefined ? { id: "mil_status", value: data.mil } : null,
@@ -5899,9 +5942,17 @@
             data.statusByteB !== undefined ? { id: "readiness_status_byte_b", value: data.statusByteB } : null,
             data.statusByteC !== undefined ? { id: "readiness_status_byte_c", value: data.statusByteC } : null,
             data.statusByteD !== undefined ? { id: "readiness_status_byte_d", value: data.statusByteD } : null
-          ].filter(Boolean);
-    const scopedReadinessErrorCodes = [...new Set(readinessEcuSnapshotRows.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))];
-    const errorCodes = [...new Set([...readBridgeResponseErrorCodes(response), ...scopedReadinessErrorCodes])].slice(0, 12);
+          ].filter(Boolean)).map((row) => inheritReadoutNetworkScope(row, data));
+    const scopedReadinessErrorCodes = [...new Set(readinessEcuSnapshotRows.flatMap((snapshot) => [
+      ...readBridgeResponseErrorCodes(snapshot),
+      ...(normalizeReadoutNetworkScope(snapshot).conflict ? ["network_scope_conflict"] : [])
+    ]))];
+    const hasReadinessValueScopeConflict = readinessValueRows.some((row) => normalizeReadoutNetworkScope(row).conflict);
+    const errorCodes = [...new Set([
+      ...readBridgeResponseErrorCodes(response),
+      ...((dataNetworkScope.conflict || hasReadinessValueScopeConflict) ? ["network_scope_conflict"] : []),
+      ...scopedReadinessErrorCodes
+    ])].slice(0, 12);
     const rawReadinessResponse = data.raw ?? data.response ?? (Array.isArray(data.bytes) ? data.bytes : null);
     const explicitReadoutStatus = String(data.readiness_readout_status || data.readinessReadoutStatus || data.readout_status || data.readoutStatus || "").trim().toLowerCase();
     const hasExplicitReadoutStatus = ["reported", "unknown", "unparsed", "blocked"].includes(explicitReadoutStatus);
@@ -5946,6 +5997,7 @@
     });
     if (rawReadinessResponse !== null) {
       return withBridgeMetadata(decodeReadinessResponse({
+        ...readoutNetworkScopeFields(dataNetworkScope),
         raw: rawReadinessResponse,
         source: "local_bridge",
         source_ecu: sourceEcu,
@@ -5997,6 +6049,7 @@
       const readinessEcuSnapshots = readinessEcuSnapshotRows.map((row) => {
         if (!row || typeof row !== "object" || Array.isArray(row)) return null;
         const childErrorCodes = readBridgeResponseErrorCodes(row);
+        if (normalizeReadoutNetworkScope(row).conflict && !childErrorCodes.includes("network_scope_conflict")) childErrorCodes.unshift("network_scope_conflict");
         const childReadoutStatus = String(row.readinessReadoutStatus || row.readiness_readout_status || row.readoutStatus || row.readout_status || "").trim().toLowerCase();
         const childBlocked = childReadoutStatus === "blocked" || isExplicitTrueFlag(row.blocked);
         return normalizeBridgeReadinessSnapshot({
@@ -6610,8 +6663,10 @@
       || keys.map((key) => input?.[key]).find(Array.isArray) || [];
     const readScope = (input) => readObdResponseSourceEcu({ ...input, source_ecu: input?.source_ecu || input?.sourceEcu || input?.ecu || input?.ecu_id || input?.ecuId || input?.address || input?.module || input?.module_id || input?.moduleId });
     const scopedView = (row, parent) => {
+      if (!row || typeof row !== "object") return row;
       const source = readScope(row) || readScope(parent);
-      return source && row && typeof row === "object" ? { ...row, sourceEcu: source, source_ecu: source } : row;
+      const scopedRow = inheritReadoutNetworkScope(row, parent || {});
+      return source ? { ...scopedRow, sourceEcu: source, source_ecu: source } : scopedRow;
     };
     const rowCache = new Map();
     const snapshotCache = new Map();
@@ -6658,7 +6713,7 @@
       const rows = cleanRows(originalRows);
       const working = { ...input, ...replacements, monitorValues: rows, monitor_values: rows,
         [childKeys[0]]: children, [childKeys[1]]: children, monitorValueSummary: null, monitor_value_summary: null };
-      const scopedChildren = children.map((child) => scopedView(child, null));
+      const scopedChildren = children.map((child) => scopedView(child, input));
       const derivationInput = { ...scopedView(working, null), [childKeys[0]]: scopedChildren, [childKeys[1]]: scopedChildren };
       const derived = isFreezeFrame ? normalizeFreezeFrameSnapshot(derivationInput) : normalizeBridgeLivePidSnapshot(derivationInput);
       const childStatus = (child) => {
@@ -6674,15 +6729,17 @@
       };
       const childStatuses = new Map(children.map((child) => [child, childStatus(child)]));
       const normalizedChildren = children.filter((child) => child && typeof child === "object" && readScope(child))
-        .map((child) => ({ ...scopedView(child, null), [statusKeys[0]]: childStatuses.get(child) }));
+        .map((child) => ({ ...scopedView(child, input), [statusKeys[0]]: childStatuses.get(child) }));
       const reportedChildren = normalizedChildren.filter((child) => child[statusKeys[0]] === "reported");
       const matchesReportedEcu = (row, inheritedSource = readScope(input)) => {
+        if (normalizeReadoutNetworkScope(scopedView(row, input)).conflict) return false;
         if (!normalizedChildren.length) return true;
         const source = String(readScope(row) || inheritedSource || "").trim().toUpperCase();
         if (!source) return reportedChildren.length === normalizedChildren.length;
         return reportedChildren.some((child) => {
           const candidate = String(readScope(child) || "").trim().toUpperCase();
-          return source === candidate || isComparableCanEcuAddressMatch(normalizeComparableCanEcuAddress(source), normalizeComparableCanEcuAddress(candidate));
+          const addressMatches = source === candidate || isComparableCanEcuAddressMatch(normalizeComparableCanEcuAddress(source), normalizeComparableCanEcuAddress(candidate));
+          return addressMatches && readoutNetworkScopeMatches(child, scopedView(row, input));
         });
       };
       const eligibleChildren = children.filter((child) => childStatuses.get(child) === "reported" && matchesReportedEcu(child));
@@ -7571,14 +7628,19 @@
       : freezeFrameSnapshot?.triggerDtc || freezeFrameSnapshot?.trigger_dtc
         ? 1
         : 0;
-    const freezeFrameTriggerKeys = [...new Set(freezeFrameTriggerEntries.map((entry) => [
-      String(entry?.code || entry?.dtc || "").trim().toUpperCase(),
-      String(entry?.subcode || entry?.sub_code || "").trim().toUpperCase() || "-",
-      String(entry?.codeFormat || entry?.code_format || "generic_obd").trim().toLowerCase().replace(/[\s-]+/g, "_") || "generic_obd",
-      normalizeDtcReportedStatus(entry?.reportedStatus || entry?.reported_status) || "unreported",
-      Number.isInteger(entry?.frameNumber) ? String(entry.frameNumber) : Number.isInteger(entry?.frame_number) ? String(entry.frame_number) : "-",
-      String(entry?.sourceEcu || entry?.source_ecu || "").trim().toUpperCase() || "-"
-    ].join("|")).filter((key) => !key.startsWith("|")))].sort();
+    const freezeFrameTriggerKeys = [...new Set(freezeFrameTriggerEntries.map((entry) => {
+      const networkScopeKey = getReadoutNetworkScopeKey(entry);
+      if (networkScopeKey === null) return null;
+      return [
+        String(entry?.code || entry?.dtc || "").trim().toUpperCase(),
+        String(entry?.subcode || entry?.sub_code || "").trim().toUpperCase() || "-",
+        String(entry?.codeFormat || entry?.code_format || "generic_obd").trim().toLowerCase().replace(/[\s-]+/g, "_") || "generic_obd",
+        normalizeDtcReportedStatus(entry?.reportedStatus || entry?.reported_status) || "unreported",
+        Number.isInteger(entry?.frameNumber) ? String(entry.frameNumber) : Number.isInteger(entry?.frame_number) ? String(entry.frame_number) : "-",
+        String(entry?.sourceEcu || entry?.source_ecu || "").trim().toUpperCase() || "-",
+        ...(networkScopeKey ? networkScopeKey.split("|") : [])
+      ].join("|");
+    }).filter((key) => key && !key.startsWith("|")))].sort();
     const freezeFrameUdsSnapshotRecords = firstPopulatedInventoryArray(freezeFrameSnapshot?.udsDtcSnapshotRecords, freezeFrameSnapshot?.uds_dtc_snapshot_records);
     const freezeFrameUdsStoredDataRecords = firstPopulatedInventoryArray(freezeFrameSnapshot?.udsDtcStoredDataRecords, freezeFrameSnapshot?.uds_dtc_stored_data_records);
     const definitions = [
@@ -7755,12 +7817,20 @@
       const sourceEcu = String(value?.sourceEcu || value?.source_ecu || freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
       const unit = String(value?.unit || "").trim().toLowerCase().replace(/\|/g, " ") || "-";
       const reportedValue = String(rawValue).trim().replace(/\|/g, " ").slice(0, 96);
-      return [id, frameNumber, sourceEcu, unit, reportedValue].join("|");
+      const networkScopeKey = getReadoutNetworkScopeKey(value);
+      if (networkScopeKey === null) return null;
+      return [id, frameNumber, sourceEcu, unit, reportedValue, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
     }).filter(Boolean))].sort();
     const recordedFreezeFrameValueKeys = freezeFrameValueEvidenceRecorded ? freezeFrameValueKeys : [];
     const freezeFrameEcuSnapshots = firstPopulatedInventoryArray(freezeFrameSnapshot?.freezeFrameEcuSnapshots, freezeFrameSnapshot?.freeze_frame_ecu_snapshots);
     const normalizeFreezeFrameEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
     const readFreezeFrameEcuId = (snapshot = {}) => normalizeFreezeFrameEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || null);
+    const readFreezeFrameEcuScopeKey = (snapshot = {}) => {
+      const ecuId = readFreezeFrameEcuId(snapshot);
+      const networkScopeKey = getReadoutNetworkScopeKey(snapshot);
+      if (!ecuId || networkScopeKey === null) return null;
+      return [ecuId, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+    };
     const reportedFreezeFrameEcuIds = [...new Set(freezeFrameEcuSnapshots
       .filter((snapshot) => String(snapshot?.freezeFrameReadoutStatus || snapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported")
       .map(readFreezeFrameEcuId)
@@ -7769,19 +7839,27 @@
       .filter((snapshot) => String(snapshot?.freezeFrameReadoutStatus || snapshot?.freeze_frame_readout_status || "").trim().toLowerCase() !== "reported")
       .map(readFreezeFrameEcuId)
       .filter(Boolean))].sort();
+    const reportedFreezeFrameEcuScopeKeys = [...new Set(freezeFrameEcuSnapshots
+      .filter((snapshot) => String(snapshot?.freezeFrameReadoutStatus || snapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readFreezeFrameEcuScopeKey)
+      .filter(Boolean))].sort();
+    const unresolvedFreezeFrameEcuScopeKeys = [...new Set(freezeFrameEcuSnapshots
+      .filter((snapshot) => String(snapshot?.freezeFrameReadoutStatus || snapshot?.freeze_frame_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readFreezeFrameEcuScopeKey)
+      .filter(Boolean))].sort();
     const freezeFrameValueReportedEcuEvidenceRecorded = freezeFrameValueEvidenceRecorded
       || (freezeFrameSnapshot?.blocked !== true && freezeFrameSnapshot?.isBlocked !== true && freezeFrameSnapshot?.is_blocked !== true
         && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedFreezeFrameEcuIds.length > 0);
     const freezeFrameValueReportedEcuKeys = freezeFrameValueReportedEcuEvidenceRecorded
-      ? freezeFrameValueKeys.filter((key) => freezeFrameValueEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[2])))
+      ? freezeFrameValueKeys.filter((key) => freezeFrameValueEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes([normalizeFreezeFrameEcuId(String(key || "").split("|")[2]), ...String(key || "").split("|").slice(5, 8)].filter(Boolean).join("|")))
       : [];
     const freezeFrameTriggerReportedEcuEvidenceRecorded = freezeFrameTriggerEvidenceRecorded
       || (freezeFrameSnapshot?.blocked !== true && freezeFrameSnapshot?.isBlocked !== true && freezeFrameSnapshot?.is_blocked !== true
         && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedFreezeFrameEcuIds.length > 0);
     const freezeFrameTriggerReportedEcuKeys = freezeFrameTriggerReportedEcuEvidenceRecorded
-      ? freezeFrameTriggerKeys.filter((key) => freezeFrameTriggerEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[5])))
+      ? freezeFrameTriggerKeys.filter((key) => freezeFrameTriggerEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes([normalizeFreezeFrameEcuId(String(key || "").split("|")[5]), ...String(key || "").split("|").slice(6, 9)].filter(Boolean).join("|")))
       : [];
     const freezeFrameUdsRecordEvidenceRecorded = !freezeFrameResponseUnavailable
       && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "reported";
@@ -7795,13 +7873,16 @@
         const statusByte = String(record?.statusByte || record?.status_byte || "").trim().toUpperCase() || "-";
         const memory = String(record?.dtcMemorySelection || record?.dtc_memory_selection || "").trim().toUpperCase() || "-";
         const identifierCount = Number(record?.snapshotRecordIdentifierCount ?? record?.snapshot_record_identifier_count);
-        return ["snapshot", code, type, statusByte, memory, String(recordNumber), Number.isInteger(identifierCount) ? String(identifierCount) : "-", sourceEcu].join("|");
+        const networkScopeKey = getReadoutNetworkScopeKey(record);
+        if (networkScopeKey === null) return null;
+        return ["snapshot", code, type, statusByte, memory, String(recordNumber), Number.isInteger(identifierCount) ? String(identifierCount) : "-", sourceEcu, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
       }),
       ...freezeFrameUdsStoredDataRecords.map((record) => {
         const recordNumber = Number(record?.storedDataRecordNumber ?? record?.stored_data_record_number);
         const sourceEcu = String(record?.sourceEcu || record?.source_ecu || freezeFrameSnapshot?.sourceEcu || freezeFrameSnapshot?.source_ecu || "").trim().toUpperCase() || "-";
-        return Number.isInteger(recordNumber) && recordNumber >= 0 && recordNumber <= 255
-          ? ["stored", "-", "-", "-", "-", String(recordNumber), "-", sourceEcu].join("|")
+        const networkScopeKey = getReadoutNetworkScopeKey(record);
+        return Number.isInteger(recordNumber) && recordNumber >= 0 && recordNumber <= 255 && networkScopeKey !== null
+          ? ["stored", "-", "-", "-", "-", String(recordNumber), "-", sourceEcu, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|")
           : null;
       })
     ].filter(Boolean))].sort();
@@ -7811,7 +7892,7 @@
         && String(freezeFrameSnapshot?.freezeFrameReadoutStatus || freezeFrameSnapshot?.freeze_frame_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedFreezeFrameEcuIds.length > 0);
     const freezeFrameUdsRecordReportedEcuKeys = freezeFrameUdsRecordReportedEcuEvidenceRecorded
-      ? freezeFrameUdsRecordKeys.filter((key) => freezeFrameUdsRecordEvidenceRecorded || reportedFreezeFrameEcuIds.includes(normalizeFreezeFrameEcuId(String(key || "").split("|")[7])))
+      ? freezeFrameUdsRecordKeys.filter((key) => freezeFrameUdsRecordEvidenceRecorded || reportedFreezeFrameEcuScopeKeys.includes([normalizeFreezeFrameEcuId(String(key || "").split("|")[7]), ...String(key || "").split("|").slice(8, 11)].filter(Boolean).join("|")))
       : [];
     const readinessEcuSnapshots = firstPopulatedInventoryArray(readinessSnapshot?.readinessEcuSnapshots, readinessSnapshot?.readiness_ecu_snapshots);
     const readinessResponseUnavailable = isInventoryResponseUnavailable(readinessSnapshot, readinessSnapshot?.readinessReadoutStatus || readinessSnapshot?.readiness_readout_status);
@@ -8087,8 +8168,12 @@
       freeze_frame_value_reported_ecu_evidence_recorded: freezeFrameValueReportedEcuEvidenceRecorded,
       freezeFrameValueReportedEcuIds: reportedFreezeFrameEcuIds,
       freeze_frame_value_reported_ecu_ids: [...reportedFreezeFrameEcuIds],
+      freezeFrameValueReportedEcuScopeKeys: reportedFreezeFrameEcuScopeKeys,
+      freeze_frame_value_reported_ecu_scope_keys: [...reportedFreezeFrameEcuScopeKeys],
       freezeFrameValueUnresolvedEcuIds: unresolvedFreezeFrameEcuIds,
       freeze_frame_value_unresolved_ecu_ids: [...unresolvedFreezeFrameEcuIds],
+      freezeFrameValueUnresolvedEcuScopeKeys: unresolvedFreezeFrameEcuScopeKeys,
+      freeze_frame_value_unresolved_ecu_scope_keys: [...unresolvedFreezeFrameEcuScopeKeys],
       freezeFrameValueReportedEcuKeys: freezeFrameValueReportedEcuKeys,
       freeze_frame_value_reported_ecu_keys: [...freezeFrameValueReportedEcuKeys],
       freezeFrameUdsRecordCount: recordedFreezeFrameUdsRecordKeys.length,
@@ -8101,6 +8186,10 @@
       freeze_frame_uds_record_reported_ecu_evidence_recorded: freezeFrameUdsRecordReportedEcuEvidenceRecorded,
       freezeFrameUdsRecordReportedEcuIds: reportedFreezeFrameEcuIds,
       freeze_frame_uds_record_reported_ecu_ids: [...reportedFreezeFrameEcuIds],
+      freezeFrameUdsRecordReportedEcuScopeKeys: reportedFreezeFrameEcuScopeKeys,
+      freeze_frame_uds_record_reported_ecu_scope_keys: [...reportedFreezeFrameEcuScopeKeys],
+      freezeFrameUdsRecordUnresolvedEcuScopeKeys: unresolvedFreezeFrameEcuScopeKeys,
+      freeze_frame_uds_record_unresolved_ecu_scope_keys: [...unresolvedFreezeFrameEcuScopeKeys],
       freezeFrameUdsRecordReportedEcuKeys: freezeFrameUdsRecordReportedEcuKeys,
       freeze_frame_uds_record_reported_ecu_keys: [...freezeFrameUdsRecordReportedEcuKeys],
       freezeFrameTriggerCount: recordedFreezeFrameTriggerCount,
@@ -8113,6 +8202,10 @@
       freeze_frame_trigger_reported_ecu_evidence_recorded: freezeFrameTriggerReportedEcuEvidenceRecorded,
       freezeFrameTriggerReportedEcuIds: reportedFreezeFrameEcuIds,
       freeze_frame_trigger_reported_ecu_ids: [...reportedFreezeFrameEcuIds],
+      freezeFrameTriggerReportedEcuScopeKeys: reportedFreezeFrameEcuScopeKeys,
+      freeze_frame_trigger_reported_ecu_scope_keys: [...reportedFreezeFrameEcuScopeKeys],
+      freezeFrameTriggerUnresolvedEcuScopeKeys: unresolvedFreezeFrameEcuScopeKeys,
+      freeze_frame_trigger_unresolved_ecu_scope_keys: [...unresolvedFreezeFrameEcuScopeKeys],
       freezeFrameTriggerReportedEcuKeys: freezeFrameTriggerReportedEcuKeys,
       freeze_frame_trigger_reported_ecu_keys: [...freezeFrameTriggerReportedEcuKeys],
       hasFreezeFrameTriggerEvidence: recordedFreezeFrameTriggerCount > 0,
@@ -12418,7 +12511,13 @@
         snapshot.values,
         snapshot.items,
         snapshot.tests,
-        snapshot.monitors
+        snapshot.monitors,
+        snapshot.triggerDtcEntries,
+        snapshot.trigger_dtc_entries,
+        snapshot.udsDtcSnapshotRecords,
+        snapshot.uds_dtc_snapshot_records,
+        snapshot.udsDtcStoredDataRecords,
+        snapshot.uds_dtc_stored_data_records
       ].filter(Array.isArray).flat();
       const sourceEcu = snapshot.sourceEcu || snapshot.source_ecu || snapshot.ecu || snapshot.address || null;
       const sourceIdentity = normalizeEcuIdentity(sourceEcu);
@@ -21330,18 +21429,24 @@
       freezeFrameValueReportedEcuEvidenceRecorded: ["freeze_frame_value_reported_ecu_evidence_recorded"],
       freezeFrameValueReportedEcuIds: ["freeze_frame_value_reported_ecu_ids"],
       freezeFrameValueUnresolvedEcuIds: ["freeze_frame_value_unresolved_ecu_ids"],
+      freezeFrameValueReportedEcuScopeKeys: ["freeze_frame_value_reported_ecu_scope_keys"],
+      freezeFrameValueUnresolvedEcuScopeKeys: ["freeze_frame_value_unresolved_ecu_scope_keys"],
       freezeFrameValueReportedEcuKeys: ["freeze_frame_value_reported_ecu_keys"],
       freezeFrameUdsRecordCount: ["freeze_frame_uds_record_count"],
       freezeFrameUdsRecordKeys: ["freeze_frame_uds_record_keys"],
       freezeFrameUdsRecordEvidenceRecorded: ["freeze_frame_uds_record_evidence_recorded"],
       freezeFrameUdsRecordReportedEcuEvidenceRecorded: ["freeze_frame_uds_record_reported_ecu_evidence_recorded"],
       freezeFrameUdsRecordReportedEcuIds: ["freeze_frame_uds_record_reported_ecu_ids"],
+      freezeFrameUdsRecordReportedEcuScopeKeys: ["freeze_frame_uds_record_reported_ecu_scope_keys"],
+      freezeFrameUdsRecordUnresolvedEcuScopeKeys: ["freeze_frame_uds_record_unresolved_ecu_scope_keys"],
       freezeFrameUdsRecordReportedEcuKeys: ["freeze_frame_uds_record_reported_ecu_keys"],
       freezeFrameTriggerCount: ["freeze_frame_trigger_count"],
       freezeFrameTriggerKeys: ["freeze_frame_trigger_keys"],
       freezeFrameTriggerEvidenceRecorded: ["freeze_frame_trigger_evidence_recorded"],
       freezeFrameTriggerReportedEcuEvidenceRecorded: ["freeze_frame_trigger_reported_ecu_evidence_recorded"],
       freezeFrameTriggerReportedEcuIds: ["freeze_frame_trigger_reported_ecu_ids"],
+      freezeFrameTriggerReportedEcuScopeKeys: ["freeze_frame_trigger_reported_ecu_scope_keys"],
+      freezeFrameTriggerUnresolvedEcuScopeKeys: ["freeze_frame_trigger_unresolved_ecu_scope_keys"],
       freezeFrameTriggerReportedEcuKeys: ["freeze_frame_trigger_reported_ecu_keys"],
       totalValueCount: ["total_value_count"]
     };
@@ -21605,7 +21710,26 @@
       ...readIds(currentSummary, "livePidValueUnresolvedEcuIds")
     ].length > 0;
     const restrictLivePidComparisonToScopedEvidence = !completeLivePidValueComparisonEvidenceRecorded && hasLivePidValueEcuScopeEvidence;
-    const readTriggerKeys = (summary) => Array.isArray(readField(summary, "freezeFrameTriggerKeys"))
+    const readFreezeFrameNetworkScopeKeyMode = (keys, legacyLength, scopedLength) => {
+      const lengths = [...new Set(keys.map((key) => String(key || "").split("|").length))];
+      if (lengths.length === 0) return "none";
+      if (lengths.every((length) => length === legacyLength)) return "unscoped";
+      if (lengths.every((length) => length === scopedLength)) return "scoped";
+      return "mixed";
+    };
+    const freezeFrameKeyModesCompatible = (importedKeys, currentKeys, legacyLength, scopedLength) => {
+      const importedMode = readFreezeFrameNetworkScopeKeyMode(importedKeys, legacyLength, scopedLength);
+      const currentMode = readFreezeFrameNetworkScopeKeyMode(currentKeys, legacyLength, scopedLength);
+      return importedMode === "none" || currentMode === "none" || importedMode === currentMode;
+    };
+    const normalizeFreezeFrameInventoryEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+    const readFreezeFrameInventoryEcuScopeKey = (key, ecuIndex, scopeStart, scopedLength) => {
+      const parts = String(key || "").split("|");
+      const ecuId = normalizeFreezeFrameInventoryEcuId(parts[ecuIndex]);
+      if (!ecuId) return null;
+      return parts.length === scopedLength ? [ecuId, ...parts.slice(scopeStart, scopeStart + 3)].join("|") : ecuId;
+    };
+    const intersectFreezeFrameEcuScopeKeys = (left, right) => left.filter((key) => right.includes(key));    const readTriggerKeys = (summary) => Array.isArray(readField(summary, "freezeFrameTriggerKeys"))
       ? [...new Set(readField(summary, "freezeFrameTriggerKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
     const importedFreezeFrameTriggerEvidenceRecorded = readBoolean(importedInventory, "freezeFrameTriggerEvidenceRecorded");
@@ -21613,35 +21737,28 @@
     const importedAllFreezeFrameTriggerKeys = readTriggerKeys(importedInventory);
     const currentAllFreezeFrameTriggerKeys = readTriggerKeys(currentSummary);
     const readFreezeFrameTriggerReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
-        || String(value || "").trim().toUpperCase()
-        || null;
-      const explicitIds = readIds(summary, "freezeFrameTriggerReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const explicitIds = readIds(summary, "freezeFrameTriggerReportedEcuIds").map(normalizeFreezeFrameInventoryEcuId).filter(Boolean);
       const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[5])).filter(Boolean))].sort();
+        : [...new Set(allKeys.map((key) => normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[5])).filter(Boolean))].sort();
       const explicitKeys = readIds(summary, "freezeFrameTriggerReportedEcuKeys");
-      return {
-        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameTriggerReportedEcuEvidenceRecorded"),
-        reportedEcuIds,
-        reportedEcuKeys: explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys]
-      };
-    };
-    const importedFreezeFrameTriggerReportedEcuScope = readFreezeFrameTriggerReportedEcuScope(importedInventory, importedFreezeFrameTriggerEvidenceRecorded, importedAllFreezeFrameTriggerKeys);
+      const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
+      const explicitScopeKeys = readIds(summary, "freezeFrameTriggerReportedEcuScopeKeys");
+      const reportedEcuScopeKeys = explicitScopeKeys.length > 0
+        ? explicitScopeKeys
+        : [...new Set(reportedEcuKeys.map((key) => readFreezeFrameInventoryEcuScopeKey(key, 5, 6, 9)).filter(Boolean))].sort();
+      return { evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameTriggerReportedEcuEvidenceRecorded"), reportedEcuIds, reportedEcuScopeKeys, reportedEcuKeys };
+    };    const importedFreezeFrameTriggerReportedEcuScope = readFreezeFrameTriggerReportedEcuScope(importedInventory, importedFreezeFrameTriggerEvidenceRecorded, importedAllFreezeFrameTriggerKeys);
     const currentFreezeFrameTriggerReportedEcuScope = readFreezeFrameTriggerReportedEcuScope(currentSummary, currentFreezeFrameTriggerEvidenceRecorded, currentAllFreezeFrameTriggerKeys);
     const completeFreezeFrameTriggerComparisonAvailable = importedFreezeFrameTriggerEvidenceRecorded && currentFreezeFrameTriggerEvidenceRecorded;
-    const comparableFreezeFrameTriggerEcuIds = completeFreezeFrameTriggerComparisonAvailable
-      ? []
+    const comparableFreezeFrameTriggerEcuScopeKeys = completeFreezeFrameTriggerComparisonAvailable ? []
       : importedFreezeFrameTriggerReportedEcuScope.evidenceRecorded && currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded
-        ? importedFreezeFrameTriggerReportedEcuScope.reportedEcuIds.filter((id) => currentFreezeFrameTriggerReportedEcuScope.reportedEcuIds.includes(id))
-        : [];
-    const reportedEcuFreezeFrameTriggerComparisonAvailable = !completeFreezeFrameTriggerComparisonAvailable && comparableFreezeFrameTriggerEcuIds.length > 0;
-    const freezeFrameTriggerComparisonAvailable = completeFreezeFrameTriggerComparisonAvailable || reportedEcuFreezeFrameTriggerComparisonAvailable;
-    const filterFreezeFrameTriggerKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[5]) || String(key || "").split("|")[5]?.trim().toUpperCase();
-      return comparableFreezeFrameTriggerEcuIds.includes(ecu);
-    });
-    const importedFreezeFrameTriggerKeys = completeFreezeFrameTriggerComparisonAvailable
+        ? intersectFreezeFrameEcuScopeKeys(importedFreezeFrameTriggerReportedEcuScope.reportedEcuScopeKeys, currentFreezeFrameTriggerReportedEcuScope.reportedEcuScopeKeys) : [];
+    const comparableFreezeFrameTriggerEcuIds = [...new Set(comparableFreezeFrameTriggerEcuScopeKeys.map((key) => key.split("|")[0]).filter(Boolean))].sort();
+    const reportedEcuFreezeFrameTriggerComparisonAvailable = !completeFreezeFrameTriggerComparisonAvailable && comparableFreezeFrameTriggerEcuScopeKeys.length > 0;
+    const freezeFrameTriggerNetworkScopeKeyModesCompatible = freezeFrameKeyModesCompatible(importedAllFreezeFrameTriggerKeys, currentAllFreezeFrameTriggerKeys, 6, 9);
+    const freezeFrameTriggerComparisonAvailable = (completeFreezeFrameTriggerComparisonAvailable || reportedEcuFreezeFrameTriggerComparisonAvailable) && freezeFrameTriggerNetworkScopeKeyModesCompatible;
+    const filterFreezeFrameTriggerKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => comparableFreezeFrameTriggerEcuScopeKeys.includes(readFreezeFrameInventoryEcuScopeKey(key, 5, 6, 9)));    const importedFreezeFrameTriggerKeys = completeFreezeFrameTriggerComparisonAvailable
       ? importedAllFreezeFrameTriggerKeys
       : reportedEcuFreezeFrameTriggerComparisonAvailable ? filterFreezeFrameTriggerKeysByScope(importedFreezeFrameTriggerReportedEcuScope) : [];
     const currentFreezeFrameTriggerKeys = completeFreezeFrameTriggerComparisonAvailable
@@ -21655,38 +21772,30 @@
     const importedFreezeFrameValueEvidenceRecorded = readBoolean(importedInventory, "freezeFrameValueEvidenceRecorded");
     const currentFreezeFrameValueEvidenceRecorded = readBoolean(currentSummary, "freezeFrameValueEvidenceRecorded");
     const readFreezeFrameReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
-        || String(value || "").trim().toUpperCase()
-        || null;
-      const explicitIds = readIds(summary, "freezeFrameValueReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const explicitIds = readIds(summary, "freezeFrameValueReportedEcuIds").map(normalizeFreezeFrameInventoryEcuId).filter(Boolean);
       const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[2])).filter(Boolean))].sort();
+        : [...new Set(allKeys.map((key) => normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[2])).filter(Boolean))].sort();
       const explicitKeys = readIds(summary, "freezeFrameValueReportedEcuKeys");
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
-      return {
-        evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameValueReportedEcuEvidenceRecorded"),
-        reportedEcuIds,
-        reportedEcuKeys
-      };
-    };
-    const importedAllFreezeFrameValueKeys = readFreezeFrameValueKeys(importedInventory);
+      const explicitScopeKeys = readIds(summary, "freezeFrameValueReportedEcuScopeKeys");
+      const reportedEcuScopeKeys = explicitScopeKeys.length > 0
+        ? explicitScopeKeys
+        : [...new Set(reportedEcuKeys.map((key) => readFreezeFrameInventoryEcuScopeKey(key, 2, 5, 8)).filter(Boolean))].sort();
+      return { evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameValueReportedEcuEvidenceRecorded"), reportedEcuIds, reportedEcuScopeKeys, reportedEcuKeys };
+    };    const importedAllFreezeFrameValueKeys = readFreezeFrameValueKeys(importedInventory);
     const currentAllFreezeFrameValueKeys = readFreezeFrameValueKeys(currentSummary);
     const importedFreezeFrameReportedEcuScope = readFreezeFrameReportedEcuScope(importedInventory, importedFreezeFrameValueEvidenceRecorded, importedAllFreezeFrameValueKeys);
     const currentFreezeFrameReportedEcuScope = readFreezeFrameReportedEcuScope(currentSummary, currentFreezeFrameValueEvidenceRecorded, currentAllFreezeFrameValueKeys);
     const completeFreezeFrameValueComparisonAvailable = importedFreezeFrameValueEvidenceRecorded && currentFreezeFrameValueEvidenceRecorded;
-    const comparableFreezeFrameEcuIds = completeFreezeFrameValueComparisonAvailable
-      ? []
+    const comparableFreezeFrameEcuScopeKeys = completeFreezeFrameValueComparisonAvailable ? []
       : importedFreezeFrameReportedEcuScope.evidenceRecorded && currentFreezeFrameReportedEcuScope.evidenceRecorded
-        ? importedFreezeFrameReportedEcuScope.reportedEcuIds.filter((id) => currentFreezeFrameReportedEcuScope.reportedEcuIds.includes(id))
-        : [];
-    const reportedEcuFreezeFrameValueComparisonAvailable = !completeFreezeFrameValueComparisonAvailable && comparableFreezeFrameEcuIds.length > 0;
-    const freezeFrameValueComparisonAvailable = completeFreezeFrameValueComparisonAvailable || reportedEcuFreezeFrameValueComparisonAvailable;
-    const filterFreezeFrameValueKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[2]) || String(key || "").split("|")[2]?.trim().toUpperCase();
-      return comparableFreezeFrameEcuIds.includes(ecu);
-    });
-    const importedFreezeFrameValueKeys = completeFreezeFrameValueComparisonAvailable
+        ? intersectFreezeFrameEcuScopeKeys(importedFreezeFrameReportedEcuScope.reportedEcuScopeKeys, currentFreezeFrameReportedEcuScope.reportedEcuScopeKeys) : [];
+    const comparableFreezeFrameEcuIds = [...new Set(comparableFreezeFrameEcuScopeKeys.map((key) => key.split("|")[0]).filter(Boolean))].sort();
+    const reportedEcuFreezeFrameValueComparisonAvailable = !completeFreezeFrameValueComparisonAvailable && comparableFreezeFrameEcuScopeKeys.length > 0;
+    const freezeFrameValueNetworkScopeKeyModesCompatible = freezeFrameKeyModesCompatible(importedAllFreezeFrameValueKeys, currentAllFreezeFrameValueKeys, 5, 8);
+    const freezeFrameValueComparisonAvailable = (completeFreezeFrameValueComparisonAvailable || reportedEcuFreezeFrameValueComparisonAvailable) && freezeFrameValueNetworkScopeKeyModesCompatible;
+    const filterFreezeFrameValueKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => comparableFreezeFrameEcuScopeKeys.includes(readFreezeFrameInventoryEcuScopeKey(key, 2, 5, 8)));    const importedFreezeFrameValueKeys = completeFreezeFrameValueComparisonAvailable
       ? importedAllFreezeFrameValueKeys
       : reportedEcuFreezeFrameValueComparisonAvailable ? filterFreezeFrameValueKeysByScope(importedFreezeFrameReportedEcuScope) : [];
     const currentFreezeFrameValueKeys = completeFreezeFrameValueComparisonAvailable
@@ -21703,27 +21812,28 @@
     const importedAllFreezeFrameUdsRecordKeys = readFreezeFrameUdsRecordKeys(importedInventory);
     const currentAllFreezeFrameUdsRecordKeys = readFreezeFrameUdsRecordKeys(currentSummary);
     const readFreezeFrameUdsRecordReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
-      const explicitIds = readIds(summary, "freezeFrameUdsRecordReportedEcuIds").map(normalizeScopeId).filter(Boolean);
+      const explicitIds = readIds(summary, "freezeFrameUdsRecordReportedEcuIds").map(normalizeFreezeFrameInventoryEcuId).filter(Boolean);
       const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
         ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[7])).filter(Boolean))].sort();
+        : [...new Set(allKeys.map((key) => normalizeFreezeFrameInventoryEcuId(String(key || "").split("|")[7])).filter(Boolean))].sort();
       const explicitKeys = readIds(summary, "freezeFrameUdsRecordReportedEcuKeys");
-      return { evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameUdsRecordReportedEcuEvidenceRecorded"), reportedEcuIds, reportedEcuKeys: explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys] };
-    };
-    const importedFreezeFrameUdsRecordReportedEcuScope = readFreezeFrameUdsRecordReportedEcuScope(importedInventory, importedFreezeFrameUdsRecordEvidenceRecorded, importedAllFreezeFrameUdsRecordKeys);
+      const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
+      const explicitScopeKeys = readIds(summary, "freezeFrameUdsRecordReportedEcuScopeKeys");
+      const reportedEcuScopeKeys = explicitScopeKeys.length > 0
+        ? explicitScopeKeys
+        : [...new Set(reportedEcuKeys.map((key) => readFreezeFrameInventoryEcuScopeKey(key, 7, 8, 11)).filter(Boolean))].sort();
+      return { evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "freezeFrameUdsRecordReportedEcuEvidenceRecorded"), reportedEcuIds, reportedEcuScopeKeys, reportedEcuKeys };
+    };    const importedFreezeFrameUdsRecordReportedEcuScope = readFreezeFrameUdsRecordReportedEcuScope(importedInventory, importedFreezeFrameUdsRecordEvidenceRecorded, importedAllFreezeFrameUdsRecordKeys);
     const currentFreezeFrameUdsRecordReportedEcuScope = readFreezeFrameUdsRecordReportedEcuScope(currentSummary, currentFreezeFrameUdsRecordEvidenceRecorded, currentAllFreezeFrameUdsRecordKeys);
     const completeFreezeFrameUdsRecordComparisonAvailable = importedFreezeFrameUdsRecordEvidenceRecorded && currentFreezeFrameUdsRecordEvidenceRecorded;
-    const comparableFreezeFrameUdsRecordEcuIds = completeFreezeFrameUdsRecordComparisonAvailable ? []
+    const comparableFreezeFrameUdsRecordEcuScopeKeys = completeFreezeFrameUdsRecordComparisonAvailable ? []
       : importedFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded && currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded
-        ? importedFreezeFrameUdsRecordReportedEcuScope.reportedEcuIds.filter((id) => currentFreezeFrameUdsRecordReportedEcuScope.reportedEcuIds.includes(id)) : [];
-    const reportedEcuFreezeFrameUdsRecordComparisonAvailable = !completeFreezeFrameUdsRecordComparisonAvailable && comparableFreezeFrameUdsRecordEcuIds.length > 0;
-    const freezeFrameUdsRecordComparisonAvailable = completeFreezeFrameUdsRecordComparisonAvailable || reportedEcuFreezeFrameUdsRecordComparisonAvailable;
-    const filterFreezeFrameUdsRecordKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[7]) || String(key || "").split("|")[7]?.trim().toUpperCase();
-      return comparableFreezeFrameUdsRecordEcuIds.includes(ecu);
-    });
-    const importedFreezeFrameUdsRecordKeys = completeFreezeFrameUdsRecordComparisonAvailable ? importedAllFreezeFrameUdsRecordKeys
+        ? intersectFreezeFrameEcuScopeKeys(importedFreezeFrameUdsRecordReportedEcuScope.reportedEcuScopeKeys, currentFreezeFrameUdsRecordReportedEcuScope.reportedEcuScopeKeys) : [];
+    const comparableFreezeFrameUdsRecordEcuIds = [...new Set(comparableFreezeFrameUdsRecordEcuScopeKeys.map((key) => key.split("|")[0]).filter(Boolean))].sort();
+    const reportedEcuFreezeFrameUdsRecordComparisonAvailable = !completeFreezeFrameUdsRecordComparisonAvailable && comparableFreezeFrameUdsRecordEcuScopeKeys.length > 0;
+    const freezeFrameUdsRecordNetworkScopeKeyModesCompatible = freezeFrameKeyModesCompatible(importedAllFreezeFrameUdsRecordKeys, currentAllFreezeFrameUdsRecordKeys, 8, 11);
+    const freezeFrameUdsRecordComparisonAvailable = (completeFreezeFrameUdsRecordComparisonAvailable || reportedEcuFreezeFrameUdsRecordComparisonAvailable) && freezeFrameUdsRecordNetworkScopeKeyModesCompatible;
+    const filterFreezeFrameUdsRecordKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => comparableFreezeFrameUdsRecordEcuScopeKeys.includes(readFreezeFrameInventoryEcuScopeKey(key, 7, 8, 11)));    const importedFreezeFrameUdsRecordKeys = completeFreezeFrameUdsRecordComparisonAvailable ? importedAllFreezeFrameUdsRecordKeys
       : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? filterFreezeFrameUdsRecordKeysByScope(importedFreezeFrameUdsRecordReportedEcuScope) : [];
     const currentFreezeFrameUdsRecordKeys = completeFreezeFrameUdsRecordComparisonAvailable ? currentAllFreezeFrameUdsRecordKeys
       : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? filterFreezeFrameUdsRecordKeysByScope(currentFreezeFrameUdsRecordReportedEcuScope) : [];
@@ -22209,10 +22319,14 @@
       current_freeze_frame_value_reported_ecu_evidence_recorded: currentFreezeFrameReportedEcuScope.evidenceRecorded,
       freezeFrameValueComparisonAvailable,
       freeze_frame_value_comparison_available: freezeFrameValueComparisonAvailable,
+      freezeFrameValueNetworkScopeKeyModesCompatible,
+      freeze_frame_value_network_scope_key_modes_compatible: freezeFrameValueNetworkScopeKeyModesCompatible,
       freezeFrameValueComparisonScope: completeFreezeFrameValueComparisonAvailable ? "complete" : reportedEcuFreezeFrameValueComparisonAvailable ? "reported_ecus" : "unavailable",
       freeze_frame_value_comparison_scope: completeFreezeFrameValueComparisonAvailable ? "complete" : reportedEcuFreezeFrameValueComparisonAvailable ? "reported_ecus" : "unavailable",
       freezeFrameValueComparableEcuIds: comparableFreezeFrameEcuIds,
       freeze_frame_value_comparable_ecu_ids: [...comparableFreezeFrameEcuIds],
+      freezeFrameValueComparableEcuScopeKeys: comparableFreezeFrameEcuScopeKeys,
+      freeze_frame_value_comparable_ecu_scope_keys: [...comparableFreezeFrameEcuScopeKeys],
       importedFreezeFrameValueKeys,
       imported_freeze_frame_value_keys: importedFreezeFrameValueKeys,
       currentFreezeFrameValueKeys,
@@ -22239,10 +22353,14 @@
       current_freeze_frame_uds_record_reported_ecu_evidence_recorded: currentFreezeFrameUdsRecordReportedEcuScope.evidenceRecorded,
       freezeFrameUdsRecordComparisonAvailable,
       freeze_frame_uds_record_comparison_available: freezeFrameUdsRecordComparisonAvailable,
+      freezeFrameUdsRecordNetworkScopeKeyModesCompatible,
+      freeze_frame_uds_record_network_scope_key_modes_compatible: freezeFrameUdsRecordNetworkScopeKeyModesCompatible,
       freezeFrameUdsRecordComparisonScope: completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable",
       freeze_frame_uds_record_comparison_scope: completeFreezeFrameUdsRecordComparisonAvailable ? "complete" : reportedEcuFreezeFrameUdsRecordComparisonAvailable ? "reported_ecus" : "unavailable",
       freezeFrameUdsRecordComparableEcuIds: comparableFreezeFrameUdsRecordEcuIds,
       freeze_frame_uds_record_comparable_ecu_ids: [...comparableFreezeFrameUdsRecordEcuIds],
+      freezeFrameUdsRecordComparableEcuScopeKeys: comparableFreezeFrameUdsRecordEcuScopeKeys,
+      freeze_frame_uds_record_comparable_ecu_scope_keys: [...comparableFreezeFrameUdsRecordEcuScopeKeys],
       importedFreezeFrameUdsRecordKeys,
       imported_freeze_frame_uds_record_keys: importedFreezeFrameUdsRecordKeys,
       currentFreezeFrameUdsRecordKeys,
@@ -22323,10 +22441,14 @@
       current_freeze_frame_trigger_reported_ecu_evidence_recorded: currentFreezeFrameTriggerReportedEcuScope.evidenceRecorded,
       freezeFrameTriggerComparisonAvailable,
       freeze_frame_trigger_comparison_available: freezeFrameTriggerComparisonAvailable,
+      freezeFrameTriggerNetworkScopeKeyModesCompatible,
+      freeze_frame_trigger_network_scope_key_modes_compatible: freezeFrameTriggerNetworkScopeKeyModesCompatible,
       freezeFrameTriggerComparisonScope: completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable",
       freeze_frame_trigger_comparison_scope: completeFreezeFrameTriggerComparisonAvailable ? "complete" : reportedEcuFreezeFrameTriggerComparisonAvailable ? "reported_ecus" : "unavailable",
       freezeFrameTriggerComparableEcuIds: comparableFreezeFrameTriggerEcuIds,
       freeze_frame_trigger_comparable_ecu_ids: [...comparableFreezeFrameTriggerEcuIds],
+      freezeFrameTriggerComparableEcuScopeKeys: comparableFreezeFrameTriggerEcuScopeKeys,
+      freeze_frame_trigger_comparable_ecu_scope_keys: [...comparableFreezeFrameTriggerEcuScopeKeys],
       importedFreezeFrameTriggerKeys,
       imported_freeze_frame_trigger_keys: importedFreezeFrameTriggerKeys,
       currentFreezeFrameTriggerKeys,
@@ -22618,6 +22740,10 @@
       freeze_frame_value_reported_ecu_ids: normalizeIds(summary.freezeFrameValueReportedEcuIds || summary.freeze_frame_value_reported_ecu_ids),
       freezeFrameValueUnresolvedEcuIds: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
       freeze_frame_value_unresolved_ecu_ids: normalizeIds(summary.freezeFrameValueUnresolvedEcuIds || summary.freeze_frame_value_unresolved_ecu_ids),
+      freezeFrameValueReportedEcuScopeKeys: normalizeIds(summary.freezeFrameValueReportedEcuScopeKeys || summary.freeze_frame_value_reported_ecu_scope_keys),
+      freeze_frame_value_reported_ecu_scope_keys: normalizeIds(summary.freezeFrameValueReportedEcuScopeKeys || summary.freeze_frame_value_reported_ecu_scope_keys),
+      freezeFrameValueUnresolvedEcuScopeKeys: normalizeIds(summary.freezeFrameValueUnresolvedEcuScopeKeys || summary.freeze_frame_value_unresolved_ecu_scope_keys),
+      freeze_frame_value_unresolved_ecu_scope_keys: normalizeIds(summary.freezeFrameValueUnresolvedEcuScopeKeys || summary.freeze_frame_value_unresolved_ecu_scope_keys),
       freezeFrameValueReportedEcuKeys: normalizeIds(summary.freezeFrameValueReportedEcuKeys || summary.freeze_frame_value_reported_ecu_keys || (pickDefined(summary.freezeFrameValueEvidenceRecorded, summary.freeze_frame_value_evidence_recorded, false) === true ? summary.freezeFrameValueKeys || summary.freeze_frame_value_keys : [])),
       freeze_frame_value_reported_ecu_keys: normalizeIds(summary.freezeFrameValueReportedEcuKeys || summary.freeze_frame_value_reported_ecu_keys || (pickDefined(summary.freezeFrameValueEvidenceRecorded, summary.freeze_frame_value_evidence_recorded, false) === true ? summary.freezeFrameValueKeys || summary.freeze_frame_value_keys : [])),
       freezeFrameUdsRecordCount: toCount("freezeFrameUdsRecordCount", "freeze_frame_uds_record_count", 0),
@@ -22630,6 +22756,10 @@
       freeze_frame_uds_record_reported_ecu_evidence_recorded: pickDefined(summary.freezeFrameUdsRecordReportedEcuEvidenceRecorded, summary.freeze_frame_uds_record_reported_ecu_evidence_recorded, summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true,
       freezeFrameUdsRecordReportedEcuIds: normalizeIds(summary.freezeFrameUdsRecordReportedEcuIds || summary.freeze_frame_uds_record_reported_ecu_ids),
       freeze_frame_uds_record_reported_ecu_ids: normalizeIds(summary.freezeFrameUdsRecordReportedEcuIds || summary.freeze_frame_uds_record_reported_ecu_ids),
+      freezeFrameUdsRecordReportedEcuScopeKeys: normalizeIds(summary.freezeFrameUdsRecordReportedEcuScopeKeys || summary.freeze_frame_uds_record_reported_ecu_scope_keys),
+      freeze_frame_uds_record_reported_ecu_scope_keys: normalizeIds(summary.freezeFrameUdsRecordReportedEcuScopeKeys || summary.freeze_frame_uds_record_reported_ecu_scope_keys),
+      freezeFrameUdsRecordUnresolvedEcuScopeKeys: normalizeIds(summary.freezeFrameUdsRecordUnresolvedEcuScopeKeys || summary.freeze_frame_uds_record_unresolved_ecu_scope_keys),
+      freeze_frame_uds_record_unresolved_ecu_scope_keys: normalizeIds(summary.freezeFrameUdsRecordUnresolvedEcuScopeKeys || summary.freeze_frame_uds_record_unresolved_ecu_scope_keys),
       freezeFrameUdsRecordReportedEcuKeys: normalizeIds(summary.freezeFrameUdsRecordReportedEcuKeys || summary.freeze_frame_uds_record_reported_ecu_keys || (pickDefined(summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true ? summary.freezeFrameUdsRecordKeys || summary.freeze_frame_uds_record_keys : [])),
       freeze_frame_uds_record_reported_ecu_keys: normalizeIds(summary.freezeFrameUdsRecordReportedEcuKeys || summary.freeze_frame_uds_record_reported_ecu_keys || (pickDefined(summary.freezeFrameUdsRecordEvidenceRecorded, summary.freeze_frame_uds_record_evidence_recorded, false) === true ? summary.freezeFrameUdsRecordKeys || summary.freeze_frame_uds_record_keys : [])),
       freezeFrameTriggerCount: toCount("freezeFrameTriggerCount", "freeze_frame_trigger_count", 0),
@@ -22642,6 +22772,10 @@
       freeze_frame_trigger_reported_ecu_evidence_recorded: pickDefined(summary.freezeFrameTriggerReportedEcuEvidenceRecorded, summary.freeze_frame_trigger_reported_ecu_evidence_recorded, summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true,
       freezeFrameTriggerReportedEcuIds: normalizeIds(summary.freezeFrameTriggerReportedEcuIds || summary.freeze_frame_trigger_reported_ecu_ids),
       freeze_frame_trigger_reported_ecu_ids: normalizeIds(summary.freezeFrameTriggerReportedEcuIds || summary.freeze_frame_trigger_reported_ecu_ids),
+      freezeFrameTriggerReportedEcuScopeKeys: normalizeIds(summary.freezeFrameTriggerReportedEcuScopeKeys || summary.freeze_frame_trigger_reported_ecu_scope_keys),
+      freeze_frame_trigger_reported_ecu_scope_keys: normalizeIds(summary.freezeFrameTriggerReportedEcuScopeKeys || summary.freeze_frame_trigger_reported_ecu_scope_keys),
+      freezeFrameTriggerUnresolvedEcuScopeKeys: normalizeIds(summary.freezeFrameTriggerUnresolvedEcuScopeKeys || summary.freeze_frame_trigger_unresolved_ecu_scope_keys),
+      freeze_frame_trigger_unresolved_ecu_scope_keys: normalizeIds(summary.freezeFrameTriggerUnresolvedEcuScopeKeys || summary.freeze_frame_trigger_unresolved_ecu_scope_keys),
       freezeFrameTriggerReportedEcuKeys: normalizeIds(summary.freezeFrameTriggerReportedEcuKeys || summary.freeze_frame_trigger_reported_ecu_keys || (pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true ? summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys : [])),
       freeze_frame_trigger_reported_ecu_keys: normalizeIds(summary.freezeFrameTriggerReportedEcuKeys || summary.freeze_frame_trigger_reported_ecu_keys || (pickDefined(summary.freezeFrameTriggerEvidenceRecorded, summary.freeze_frame_trigger_evidence_recorded, false) === true ? summary.freezeFrameTriggerKeys || summary.freeze_frame_trigger_keys : [])),
       readinessMonitorCount: toCount("readinessMonitorCount", "readiness_monitor_count", toCount("readinessIncompleteCount", "readiness_incomplete_count", 0)),
@@ -30610,7 +30744,7 @@
   function normalizeDtcSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
-        ...input.data,
+        ...inheritReadoutNetworkScope(input.data, input),
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
@@ -30634,6 +30768,7 @@
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
+    if (normalizeReadoutNetworkScope(sourceInput).conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.unshift("network_scope_conflict");
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const normalizeDtcResponseEcu = (value) => {
@@ -30659,10 +30794,13 @@
         .filter(Array.isArray)
         .flat()
         .filter((row) => row && typeof row === "object" && !Array.isArray(row))
-        .map((row) => {
+        .map((row, rowIndex) => {
+          const scopedEcuResponseRow = inheritReadoutNetworkScope(row, sourceInput);
+          const rowNetworkScope = normalizeReadoutNetworkScope(scopedEcuResponseRow);
           const ecu = redactSensitiveText(String(row.source_ecu || row.sourceEcu || row.ecu || row.ecu_id || row.ecuId || row.address || row.module || row.module_id || row.moduleId || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const ecuName = redactSensitiveText(String(row.source_ecu_name || row.sourceEcuName || row.ecuName || row.ecu_name || row.name || row.label || row.displayName || row.display_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-          const rowErrorCodes = readBridgeResponseErrorCodes(row);
+          const rowErrorCodes = readBridgeResponseErrorCodes(scopedEcuResponseRow);
+          if (rowNetworkScope.conflict && !rowErrorCodes.includes("network_scope_conflict")) rowErrorCodes.unshift("network_scope_conflict");
           const rawStatus = redactSensitiveText(String(row.status || row.response_status || row.responseStatus || row.readout_status || row.readoutStatus || row.dtc_readout_status || row.dtcReadoutStatus || "unknown")).replace(/\s+/g, " ").trim().slice(0, 80) || "unknown";
           const status = String(rawStatus).trim().toLowerCase() === "blocked" ? "blocked" : rowErrorCodes.length > 0 ? "unparsed" : rawStatus;
           const rowIntent = row.intent || row.read_intent || row.readIntent;
@@ -30681,7 +30819,7 @@
           const responseServices = normalizeDtcEcuServiceList(row.responseServices, row.response_services);
           const negativeRequestedServices = normalizeDtcEcuServiceList(row.negativeRequestedServices, row.negative_requested_services, row.negativeServices, row.negative_services);
           const negativeResponseLabels = normalizeDtcEcuLabels(row.negativeResponseLabels, row.negative_response_labels);
-          const ecuResponseConflict = row.ecuResponseConflict === true || row.ecu_response_conflict === true;
+          const ecuResponseConflict = row.ecuResponseConflict === true || row.ecu_response_conflict === true || rowNetworkScope.conflict;
           const applicabilityEvidenceEligible = !ecuResponseConflict && row.applicabilityEvidenceEligible !== false && row.applicability_evidence_eligible !== false;
           const dtcEvidenceStatus = redactSensitiveText(String(row.dtcEvidenceStatus || row.dtc_evidence_status || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const readoutSection = redactSensitiveText(String(row.readoutSection || row.readout_section || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
@@ -30713,9 +30851,9 @@
           const ecuHardwareId = redactSensitiveText(String(row.ecuHardwareId || row.ecu_hardware_id || row.hardwareId || row.hardware_id || row.hardwareVersion || row.hardware_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
           const ecuDatasetId = redactSensitiveText(String(row.ecuDatasetId || row.ecu_dataset_id || row.datasetId || row.dataset_id || row.dataSetId || row.data_set_id || row.calibrationDatasetId || row.calibration_dataset_id || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
           const diagnosticSoftwareVersion = redactSensitiveText(String(row.diagnosticSoftwareVersion || row.diagnostic_software_version || row.scannerSoftwareVersion || row.scanner_software_version || row.toolVersion || row.tool_version || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-          const networkBus = redactSensitiveText(String(row.networkBus || row.network_bus || row.busName || row.bus_name || row.communicationBus || row.communication_bus || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-          const networkChannel = redactSensitiveText(String(row.networkChannel || row.network_channel || row.channelId || row.channel_id || row.channelName || row.channel_name || "")).replace(/\s+/g, " ").trim().slice(0, 120) || null;
-          const gatewayRoute = redactSensitiveText(String(row.gatewayRoute || row.gateway_route || row.gatewayPath || row.gateway_path || row.routingPath || row.routing_path || "")).replace(/\s+/g, " ").trim().slice(0, 160) || null;
+          const networkBus = rowNetworkScope.networkBus;
+          const networkChannel = rowNetworkScope.networkChannel;
+          const gatewayRoute = rowNetworkScope.gatewayRoute;
           const diagnosticRequestId = redactSensitiveText(String(row.diagnosticRequestId || row.diagnostic_request_id || row.requestCanId || row.request_can_id || row.txId || row.tx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const diagnosticResponseId = redactSensitiveText(String(row.diagnosticResponseId || row.diagnostic_response_id || row.responseCanId || row.response_can_id || row.rxId || row.rx_id || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
           const addressingType = redactSensitiveText(String(row.addressingType || row.addressing_type || row.diagnosticAddressing || row.diagnostic_addressing || row.addressingMode || row.addressing_mode || "")).replace(/\s+/g, " ").trim().slice(0, 80) || null;
@@ -30767,6 +30905,7 @@
           const dtcAgingCycleCount = normalizeDtcLifecycleMeasurementValue(row.dtcAgingCycleCount ?? row.dtc_aging_cycle_count ?? row.agingCycleCount ?? row.aging_cycle_count ?? row.agingCycles ?? row.aging_cycles);
           const childDtcInputs = Array.isArray(row.dtcs) ? row.dtcs : Array.isArray(row.codes) ? row.codes : Array.isArray(row.dtc_codes) ? row.dtc_codes : Array.isArray(row.dtcCodes) ? row.dtcCodes : [];
           const childDtcSnapshot = childDtcInputs.length > 0 ? normalizeDtcSnapshot({
+            ...readoutNetworkScopeFields(rowNetworkScope),
             source: sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core",
             source_ecu: ecu,
             source_ecu_name: ecuName,
@@ -30777,7 +30916,10 @@
             ecu_responses: []
           }) : null;
           const childDtcs = Array.isArray(childDtcSnapshot?.dtcs) ? childDtcSnapshot.dtcs : [];
-          return ecu ? [`${normalizeDtcResponseEcu(ecu)}::${intent || status}`, {
+          const networkScopeKey = getReadoutNetworkScopeKey(scopedEcuResponseRow);
+          const responseIdentityKey = `${normalizeDtcResponseEcu(ecu)}::${intent || status}::${networkScopeKey === null ? `conflict-${rowIndex}` : networkScopeKey}`;
+          return ecu ? [responseIdentityKey, {
+            ...readoutNetworkScopeFields(rowNetworkScope),
             ecu,
             ecuName,
             ecu_name: ecuName,
@@ -30937,12 +31079,15 @@
           ecu: sourceEcu,
           ecuName: sourceEcuName,
           ecu_name: sourceEcuName,
+          ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(sourceInput)),
           ...(rowCapturedAt ? { capturedAt: rowCapturedAt, captured_at: rowCapturedAt } : {}),
           ...(rowProtocol ? { protocol: rowProtocol } : {})
         }));
       }
       if (!row || typeof row !== "object") return [];
-      const rowValue = row.value && typeof row.value === "object" ? row.value : row;
+      const rowValueInput = row.value && typeof row.value === "object" ? row.value : row;
+      const rowValue = inheritReadoutNetworkScope(inheritReadoutNetworkScope(rowValueInput, row), sourceInput);
+      if (normalizeReadoutNetworkScope(rowValue).conflict) return [];
       const rowStatus = row.status || row.kind || row.state || row.type || row.dtc_status || row.dtcStatus || rowValue.status || rowValue.kind || rowValue.state || rowValue.type || rowValue.dtc_status || rowValue.dtcStatus || sourceInput.status || "unknown";
       const codeValue = rowValue.code || rowValue.dtc || rowValue.id || rowValue.value || rowValue.dtc_code || rowValue.dtcCode || "";
       const genericCodeReferences = extractDtcReferences(codeValue);
@@ -31214,21 +31359,23 @@
       }));
     });
     const normalizeDtcIdentityFormat = (row) => String(row?.codeFormat || row?.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const dtcTypedIdentity = (row) => `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${row.ecu || ""}::${getReadoutNetworkScopeKey(row) ?? "conflict"}`;
     const typedDtcFormatsByCode = new Map();
     rows
       .filter((row) => ["stored", "pending", "permanent"].includes(String(row.status || "").trim().toLowerCase()))
       .forEach((row) => {
-        const key = `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}`;
+        const key = dtcTypedIdentity(row);
         if (!typedDtcFormatsByCode.has(key)) typedDtcFormatsByCode.set(key, new Set());
         typedDtcFormatsByCode.get(key).add(normalizeDtcIdentityFormat(row));
       });
     const deduplicatedRows = rows.filter((row) => {
       if (!["", "unknown"].includes(String(row.status || "").trim().toLowerCase())) return true;
-      const typedFormats = typedDtcFormatsByCode.get(`${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}`);
+      const typedFormats = typedDtcFormatsByCode.get(dtcTypedIdentity(row));
       const codeFormat = normalizeDtcIdentityFormat(row);
       return !(typedFormats?.size && (!codeFormat || typedFormats.has(codeFormat)));
     });
-    const reportedStatusIdentity = (row) => `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}`;
+    const dtcNetworkScopeIdentity = (row) => getReadoutNetworkScopeKey(row) ?? "conflict";
+    const reportedStatusIdentity = (row) => `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}::${dtcNetworkScopeIdentity(row)}`;
     const explicitReportedStatusIdentities = new Set(deduplicatedRows
       .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim())
       .map(reportedStatusIdentity));
@@ -31237,7 +31384,7 @@
       .filter((row) => String(row.reportedStatus ?? row.reported_status ?? "").trim() || !explicitReportedStatusIdentities.has(reportedStatusIdentity(row)))
       .forEach((row) => {
       const reportedStatus = String(row.reportedStatus ?? row.reported_status ?? "").replace(/\s+/g, " ").trim().toLowerCase();
-      const key = `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}::${reportedStatus}`;
+      const key = `${row.code}::${row.subcode || ""}::${row.oemDetailCode || row.oem_detail_code || ""}::${normalizeDtcIdentityFormat(row)}::${row.ecu || ""}::${row.status || "unknown"}::${reportedStatus}::${dtcNetworkScopeIdentity(row)}`;
       if (!byCode.has(key)) byCode.set(key, { ...row, source });
       });
 
@@ -31252,6 +31399,7 @@
       const rowAddress = normalizeComparableCanEcuAddress(rowSource);
       return reportedDtcEcuResponses.some((responseRow) => {
         const reportedSource = String(responseRow.ecu || "").trim().toUpperCase();
+        if (!readoutNetworkScopeMatches(row, responseRow)) return false;
         if (reportedSource === rowSource) return true;
         const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
         return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
@@ -31535,7 +31683,7 @@
   function normalizeFreezeFrameSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
-        ...input.data,
+        ...inheritReadoutNetworkScope(input.data, input),
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
@@ -31548,11 +31696,15 @@
         associated_dtc: input.data.associated_dtc || input.data.associatedDtc || input.associated_dtc || input.associatedDtc || null,
         associated_dtc_entries: input.data.associated_dtc_entries || input.data.associatedDtcEntries || input.associated_dtc_entries || input.associatedDtcEntries || [],
         uds_dtc_snapshot_records: input.data.udsDtcSnapshotRecords || input.data.uds_dtc_snapshot_records || input.data.dtcSnapshotRecords || input.data.dtc_snapshot_records || input.udsDtcSnapshotRecords || input.uds_dtc_snapshot_records || input.dtcSnapshotRecords || input.dtc_snapshot_records || [],
-        uds_dtc_stored_data_records: input.data.udsDtcStoredDataRecords || input.data.uds_dtc_stored_data_records || input.data.dtcStoredDataRecords || input.data.dtc_stored_data_records || input.udsDtcStoredDataRecords || input.uds_dtc_stored_data_records || input.dtcStoredDataRecords || input.dtc_stored_data_records || []
+        uds_dtc_stored_data_records: input.data.udsDtcStoredDataRecords || input.data.uds_dtc_stored_data_records || input.data.dtcStoredDataRecords || input.data.dtc_stored_data_records || input.udsDtcStoredDataRecords || input.uds_dtc_stored_data_records || input.dtcStoredDataRecords || input.dtc_stored_data_records || [],
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(inheritReadoutNetworkScope(input.data, input)))
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceNetworkScope = normalizeReadoutNetworkScope(sourceInput);
     const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
+    if (normalizeReadoutNetworkScope(sourceInput).conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.unshift("network_scope_conflict");
+    if (sourceNetworkScope.conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.unshift("network_scope_conflict");
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const firstFreezeFrameArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
@@ -31566,13 +31718,16 @@
     );
     const freezeFrameEcuSnapshots = freezeFrameEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
-      const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
+      const scopedSnapshotInput = inheritReadoutNetworkScope(snapshotInput, sourceInput);
+      const snapshotSourceEcu = readObdResponseSourceEcu(scopedSnapshotInput);
       if (!snapshotSourceEcu) return null;
-      const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshotInput);
-      const snapshotStatusInput = String(snapshotInput.freezeFrameReadoutStatus || snapshotInput.freeze_frame_readout_status || snapshotInput.readoutStatus || snapshotInput.readout_status || "").trim().toLowerCase();
+      const snapshotNetworkScope = normalizeReadoutNetworkScope(scopedSnapshotInput);
+      const snapshotErrorCodes = readBridgeResponseErrorCodes(scopedSnapshotInput);
+      if (snapshotNetworkScope.conflict && !snapshotErrorCodes.includes("network_scope_conflict")) snapshotErrorCodes.unshift("network_scope_conflict");
+      const snapshotStatusInput = String(scopedSnapshotInput.freezeFrameReadoutStatus || scopedSnapshotInput.freeze_frame_readout_status || scopedSnapshotInput.readoutStatus || scopedSnapshotInput.readout_status || "").trim().toLowerCase();
       const resolvedSnapshotStatus = snapshotStatusInput === "blocked" ? "blocked" : snapshotErrorCodes.length > 0 ? "unparsed" : snapshotStatusInput;
       const normalizedSnapshot = normalizeFreezeFrameSnapshot({
-        ...snapshotInput,
+        ...scopedSnapshotInput,
         ...(resolvedSnapshotStatus ? { freezeFrameReadoutStatus: resolvedSnapshotStatus, freeze_frame_readout_status: resolvedSnapshotStatus } : {}),
         freezeFrameEcuSnapshots: [],
         freeze_frame_ecu_snapshots: [],
@@ -31594,15 +31749,16 @@
       String(snapshot.freezeFrameReadoutStatus || snapshot.freeze_frame_readout_status || "unknown").trim().toLowerCase() === "reported"
     );
     const matchesReportedFreezeFrameEcu = (row) => {
+      if (normalizeReadoutNetworkScope(row).conflict) return false;
       if (freezeFrameEcuSnapshots.length === 0) return true;
       const rowSource = String(readObdResponseSourceEcu(row) || "").trim().toUpperCase();
       if (!rowSource) return reportedFreezeFrameEcuSnapshots.length === freezeFrameEcuSnapshots.length;
       const rowAddress = normalizeComparableCanEcuAddress(rowSource);
       return reportedFreezeFrameEcuSnapshots.some((snapshot) => {
         const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
-        if (reportedSource === rowSource) return true;
         const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
-        return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
+        const addressMatches = reportedSource === rowSource || Boolean(reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress));
+        return addressMatches && readoutNetworkScopeMatches(snapshot, row);
       });
     };
     const udsDtcSnapshotRecordInputs = Array.isArray(sourceInput.udsDtcSnapshotRecords)
@@ -31629,6 +31785,7 @@
       const hasDataRecordShape = Boolean(statusByte) && Number.isInteger(identifierCountValue) && identifierCountValue >= 0 && identifierCountValue <= 255;
       if (!codeReference || !Number.isInteger(recordNumberValue) || recordNumberValue < 0 || recordNumberValue > 255 || !recordEcu || (recordType === "data" && !hasDataRecordShape)) return null;
       return {
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(inheritReadoutNetworkScope(row, sourceInput))),
         code: codeReference.code,
         codeFormat: "uds_3byte",
         code_format: "uds_3byte",
@@ -31664,6 +31821,7 @@
       const recordEcu = readObdResponseSourceEcu(row) || sourceEcu;
       if (!Number.isInteger(recordNumber) || recordNumber < 0 || recordNumber > 255 || !recordEcu) return null;
       return {
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(inheritReadoutNetworkScope(row, sourceInput))),
         storedDataRecordNumber: recordNumber,
         stored_data_record_number: recordNumber,
         rawData,
@@ -31850,6 +32008,7 @@
       const rowCapturedAt = normalizeDtcEvidenceCapturedAt(row, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null);
       const rowProtocol = normalizeDtcEvidenceProtocol(row, sourceInput.protocol || sourceInput.obd_protocol || sourceInput.communicationProtocol || sourceInput.communication_protocol || null);
       return {
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(inheritReadoutNetworkScope(row, sourceInput))),
         code,
         subcode,
         ...(oemDetailCode ? { oemDetailCode, oem_detail_code: oemDetailCode } : {}),
@@ -31877,7 +32036,7 @@
     const explicitTriggerDtcEntries = [...new Map([
       ...triggerEntryRows.map(normalizeTriggerEntry).filter(Boolean).filter(matchesReportedFreezeFrameEcu),
       ...reportedFreezeFrameEcuSnapshots.flatMap((snapshot) => snapshot.triggerDtcEntries || snapshot.trigger_dtc_entries || [])
-    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${item.oemDetailCode || item.oem_detail_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}`, item])).values()];
+    ].map((item) => [`${item.code}::${item.subcode || item.sub_code || ""}::${item.oemDetailCode || item.oem_detail_code || ""}::${String(item.codeFormat || item.code_format || "").trim().toLowerCase().replace(/[\s-]+/g, "_")}::${normalizeDtcReportedStatus(item.reportedStatus || item.reported_status) || ""}::${item.frameNumber ?? ""}::${item.sourceEcu || item.source_ecu || ""}::${getReadoutNetworkScopeKey(item) ?? "conflict"}`, item])).values()];
     const readoutEcuIds = [...new Set([
       ...(Array.isArray(sourceInput.readoutEcuIds) ? sourceInput.readoutEcuIds : []),
       ...(Array.isArray(sourceInput.readout_ecu_ids) ? sourceInput.readout_ecu_ids : []),
@@ -31935,6 +32094,7 @@
         frame_number: inferredTriggerFrameNumber,
         sourceEcu: resolvedSourceEcu,
         source_ecu: resolvedSourceEcu,
+        ...readoutNetworkScopeFields(sourceNetworkScope),
         sourceEcuName: resolvedSourceEcuName,
         source_ecu_name: resolvedSourceEcuName,
         ...(normalizeDtcEvidenceCapturedAt(null, sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null) ? {
@@ -32008,6 +32168,7 @@
     return {
       schemaVersion: "freeze_frame_snapshot_v1",
       schema_version: "freeze_frame_snapshot_v1",
+      ...readoutNetworkScopeFields(sourceNetworkScope),
       source,
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
@@ -32123,16 +32284,18 @@
       .replace(/\s+/g, " ")
       .trim()
       .slice(0, 80) || null;
-    const groupKey = (frameNumber, sourceEcu) => `${frameNumber}::${String(sourceEcu || "").toUpperCase()}`;
+    const groupKey = (frameNumber, sourceEcu, scopeSource) => `${frameNumber}::${String(sourceEcu || "").toUpperCase()}::${getReadoutNetworkScopeKey(scopeSource) ?? "conflict"}`;
     const groupsByKey = new Map();
-    const ensureGroup = (frameNumber, sourceEcu) => {
-      const key = groupKey(frameNumber, sourceEcu);
+    const ensureGroup = (frameNumber, sourceEcu, scopeSource) => {
+      const networkScope = normalizeReadoutNetworkScope(scopeSource);
+      const key = groupKey(frameNumber, sourceEcu, scopeSource);
       if (!groupsByKey.has(key)) {
         groupsByKey.set(key, {
           frameNumber,
           frame_number: frameNumber,
           sourceEcu,
           source_ecu: sourceEcu,
+          ...readoutNetworkScopeFields(networkScope),
           triggerCodes: [],
           triggerIdentityKeys: [],
           valueIds: []
@@ -32148,7 +32311,7 @@
         unnumberedTriggerCount += 1;
         return;
       }
-      const group = ensureGroup(frameNumber, readSourceEcu(item));
+      const group = ensureGroup(frameNumber, readSourceEcu(item), item);
       const code = String(item?.code || item?.dtc || "").trim().toUpperCase();
       if (code && !group.triggerCodes.includes(code)) group.triggerCodes.push(code);
       const subcode = String(item?.subcode || item?.sub_code || "").trim().toUpperCase();
@@ -32163,7 +32326,7 @@
         unnumberedValueCount += 1;
         return;
       }
-      const group = ensureGroup(frameNumber, readSourceEcu(item));
+      const group = ensureGroup(frameNumber, readSourceEcu(item), item);
       const id = String(item?.id || item?.monitorId || item?.monitor_id || item?.pid || "").trim();
       if (id && !group.valueIds.includes(id)) group.valueIds.push(id);
     });
@@ -32194,15 +32357,15 @@
           association_state: associationState
         };
       })
-      .sort((left, right) => left.frameNumber - right.frameNumber || String(left.sourceEcu || "").localeCompare(String(right.sourceEcu || "")));
+      .sort((left, right) => left.frameNumber - right.frameNumber || String(left.sourceEcu || "").localeCompare(String(right.sourceEcu || "")) || String(getReadoutNetworkScopeKey(left) || "").localeCompare(String(getReadoutNetworkScopeKey(right) || "")));
     const matchedGroupCount = groups.filter((group) => group.associationState === "matched").length;
     const ambiguousGroupCount = groups.filter((group) => group.associationState === "ambiguous_trigger").length;
     const unmatchedGroupCount = groups.filter((group) => ["trigger_only", "values_only"].includes(group.associationState)).length;
     const reviewRequired = ambiguousGroupCount > 0 || unmatchedGroupCount > 0 || unnumberedTriggerCount > 0 || unnumberedValueCount > 0;
     const associationComplete = groups.length > 0 && matchedGroupCount === groups.length && !reviewRequired;
     return {
-      schemaVersion: "freeze_frame_association_summary_v2",
-      schema_version: "freeze_frame_association_summary_v2",
+      schemaVersion: "freeze_frame_association_summary_v3",
+      schema_version: "freeze_frame_association_summary_v3",
       groups,
       groupCount: groups.length,
       group_count: groups.length,
@@ -32226,7 +32389,7 @@
   function normalizeReadinessSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
-        ...input.data,
+        ...inheritReadoutNetworkScope(input.data, input),
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
@@ -32238,6 +32401,7 @@
       : input && typeof input === "object" && !Array.isArray(input) ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
+    if (normalizeReadoutNetworkScope(sourceInput).conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.unshift("network_scope_conflict");
     const declaredSourceEcu = readObdResponseSourceEcu(sourceInput);
     const declaredSourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const firstReadinessArray = (...values) => values.find((value) => Array.isArray(value) && value.length > 0)
@@ -32251,26 +32415,30 @@
     );
     const readinessEcuSnapshots = readinessEcuSnapshotInputs.map((snapshotInput) => {
       if (!snapshotInput || typeof snapshotInput !== "object" || Array.isArray(snapshotInput)) return null;
-      const snapshotSourceEcu = readObdResponseSourceEcu(snapshotInput);
+      const scopedSnapshotInput = inheritReadoutNetworkScope(snapshotInput, sourceInput);
+      const snapshotSourceEcu = readObdResponseSourceEcu(scopedSnapshotInput);
       if (!snapshotSourceEcu) return null;
-      const snapshotErrorCodes = readBridgeResponseErrorCodes(snapshotInput);
-      const snapshotStatusInput = String(snapshotInput.readinessReadoutStatus || snapshotInput.readiness_readout_status || snapshotInput.readoutStatus || snapshotInput.readout_status || "").trim().toLowerCase();
+      const snapshotNetworkScope = normalizeReadoutNetworkScope(scopedSnapshotInput);
+      const snapshotErrorCodes = readBridgeResponseErrorCodes(scopedSnapshotInput);
+      if (snapshotNetworkScope.conflict && !snapshotErrorCodes.includes("network_scope_conflict")) snapshotErrorCodes.unshift("network_scope_conflict");
+      const snapshotStatusInput = String(scopedSnapshotInput.readinessReadoutStatus || scopedSnapshotInput.readiness_readout_status || scopedSnapshotInput.readoutStatus || scopedSnapshotInput.readout_status || "").trim().toLowerCase();
       const resolvedSnapshotStatus = snapshotStatusInput === "blocked" ? "blocked" : snapshotErrorCodes.length > 0 ? "unparsed" : snapshotStatusInput;
       const normalizedSnapshot = normalizeReadinessSnapshot({
-        ...snapshotInput,
+        ...scopedSnapshotInput,
         ...(resolvedSnapshotStatus ? { readinessReadoutStatus: resolvedSnapshotStatus, readiness_readout_status: resolvedSnapshotStatus } : {}),
         readinessEcuSnapshots: [],
         readiness_ecu_snapshots: [],
         ecuSnapshots: [],
         ecu_snapshots: []
       });
-      const scopedMonitors = (normalizedSnapshot.monitors || []).map((monitor) => ({
+      const scopedMonitors = snapshotNetworkScope.conflict ? [] : (normalizedSnapshot.monitors || []).map((monitor) => inheritReadoutNetworkScope({
         ...monitor,
         sourceEcu: monitor.sourceEcu || monitor.source_ecu || snapshotSourceEcu,
         source_ecu: monitor.source_ecu || monitor.sourceEcu || snapshotSourceEcu
-      }));
+      }, scopedSnapshotInput)).filter((monitor) => !normalizeReadoutNetworkScope(monitor).conflict);
       return {
         ...normalizedSnapshot,
+        ...readoutNetworkScopeFields(snapshotNetworkScope),
         sourceEcu: snapshotSourceEcu,
         source_ecu: snapshotSourceEcu,
         monitors: scopedMonitors,
@@ -32290,6 +32458,7 @@
       const rowAddress = normalizeComparableCanEcuAddress(rowSource);
       return reportedReadinessEcuSnapshots.some((snapshot) => {
         const reportedSource = String(readObdResponseSourceEcu(snapshot) || "").trim().toUpperCase();
+        if (!readoutNetworkScopeMatches(row, snapshot)) return false;
         if (reportedSource === rowSource) return true;
         const reportedAddress = normalizeComparableCanEcuAddress(reportedSource);
         return reportedAddress && isComparableCanEcuAddressMatch(reportedAddress, rowAddress);
@@ -32329,8 +32498,15 @@
       if (["false", "0", "no", "off", "incomplete", "not_complete", "not supported", "not_supported", "unsupported"].includes(normalized)) return false;
       return null;
     };
+    let monitorNetworkScopeConflict = false;
     const normalized = monitors.map((monitor, index) => {
-      const id = String(monitor?.id || monitor?.monitorId || monitor?.monitor_id || monitor?.name || `monitor_${index + 1}`).slice(0, 80);
+      const scopedMonitor = inheritReadoutNetworkScope(monitor, sourceInput);
+      const monitorNetworkScope = normalizeReadoutNetworkScope(scopedMonitor);
+      if (monitorNetworkScope.conflict) {
+        monitorNetworkScopeConflict = true;
+        return null;
+      }
+      const id = String(scopedMonitor?.id || monitor?.monitorId || monitor?.monitor_id || monitor?.name || `monitor_${index + 1}`).slice(0, 80);
       const catalogItem = readinessMonitorCatalog.find((entry) => entry.id === id);
       const statusAlias = pickDefined(monitor?.status, monitor?.readinessStatus, monitor?.readiness_status, null);
       const statusText = typeof statusAlias === "string" ? statusAlias.trim().toLowerCase() : "";
@@ -32360,9 +32536,10 @@
             ? null
             : false)
         : readOptionalBooleanAlias(completeAlias);
-      const monitorSourceEcu = readObdResponseSourceEcu(monitor) || declaredSourceEcu;
+      const monitorSourceEcu = readObdResponseSourceEcu(scopedMonitor) || declaredSourceEcu;
       const monitorSourceEcuName = monitor?.source_ecu_name || monitor?.sourceEcuName || monitor?.ecu_name || monitor?.ecuName || monitor?.module_name || monitor?.moduleName || declaredSourceEcuName;
       return {
+        ...readoutNetworkScopeFields(monitorNetworkScope),
         id,
         label: String(monitor?.label || monitor?.displayLabel || monitor?.display_label || catalogItem?.label || monitor?.name || `Monitor ${index + 1}`).slice(0, 120),
         category: catalogItem?.category || monitor?.category || "状態",
@@ -32376,7 +32553,7 @@
         diagnosticUse: catalogItem?.diagnosticUse || "",
         notCompleteNote: catalogItem?.notCompleteNote || ""
       };
-    }).filter(matchesReportedReadinessEcu);
+    }).filter(Boolean).filter(matchesReportedReadinessEcu);
     const observedMonitorEcus = [...new Set(normalized.map((monitor) => monitor.sourceEcu || monitor.source_ecu || null).filter(Boolean))];
     const sourceEcu = declaredSourceEcu || (observedMonitorEcus.length === 1 ? observedMonitorEcus[0] : null);
     const observedMonitorEcuNames = [...new Set(normalized.map((monitor) => monitor.sourceEcuName || monitor.source_ecu_name || null).filter(Boolean))];
@@ -32434,7 +32611,7 @@
       );
     const readinessEcuStatuses = readinessEcuSnapshots.map((snapshot) => snapshot.readinessReadoutStatus || snapshot.readiness_readout_status || "unknown");
     const scopedErrorCodes = [...new Set(readinessEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
-    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes])].slice(0, 12);
+    const errorCodes = [...new Set([...sourceErrorCodes, ...scopedErrorCodes, ...(monitorNetworkScopeConflict ? ["network_scope_conflict"] : [])])].slice(0, 12);
     const reportedEcuCount = readinessEcuStatuses.filter((status) => status === "reported").length;
     const blockedEcuCount = readinessEcuStatuses.filter((status) => status === "blocked").length;
     const unparsedEcuCount = readinessEcuStatuses.filter((status) => status === "unparsed").length;
@@ -32527,6 +32704,7 @@
       schemaVersion: "readiness_snapshot_v1",
       schema_version: "readiness_snapshot_v1",
       source,
+      ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(sourceInput)),
       sourceEcu,
       source_ecu: sourceEcu,
       sourceEcuName,
@@ -32658,7 +32836,7 @@
   function normalizeEcuResponseSummary(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
-        ...input.data,
+        ...inheritReadoutNetworkScope(input.data, input),
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         captured_at: input.data.captured_at || input.data.capturedAt || input.data.timestamp || input.captured_at || input.capturedAt || input.timestamp,
         protocol: input.data.protocol || input.data.obd_protocol || input.data.communicationProtocol || input.data.communication_protocol || input.protocol || input.obd_protocol || input.communicationProtocol || input.communication_protocol
@@ -33200,7 +33378,7 @@
   function normalizeEcuInfoSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
-        ...input.data,
+        ...inheritReadoutNetworkScope(input.data, input),
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
@@ -33680,7 +33858,7 @@
   function normalizeOnboardMonitorSnapshot(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
-        ...input.data,
+        ...inheritReadoutNetworkScope(input.data, input),
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         readout_ecu_ids: input.data.readoutEcuIds || input.data.readout_ecu_ids || input.readoutEcuIds || input.readout_ecu_ids || [],
@@ -33692,6 +33870,7 @@
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
     const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
+    if (normalizeReadoutNetworkScope(sourceInput).conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.unshift("network_scope_conflict");
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const onboardMonitorEcuSnapshotInputs = firstOnboardMonitorArray(
@@ -34392,6 +34571,7 @@
   function decodeUdsDtcSnapshotResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
+    const networkScopeFields = readoutNetworkScopeFields(normalizeReadoutNetworkScope(input));
     const responseIndex = bytes.indexOf(0x59);
     const isSnapshotIdentificationResponse = responseIndex >= 0
       && bytes[responseIndex + 1] === 0x03
@@ -34409,6 +34589,7 @@
     if (!isSnapshotIdentificationResponse && !isSnapshotRecordResponse) {
       return normalizeFreezeFrameSnapshot({
         source: input.source || "obd_response_decoder",
+      ...networkScopeFields,
         ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
         captured_at: input.captured_at || input.capturedAt || null,
         protocol: input.protocol || input.obd_protocol || null,
@@ -34446,6 +34627,7 @@
       }];
     return normalizeFreezeFrameSnapshot({
       source: input.source || "obd_response_decoder",
+      ...networkScopeFields,
       source_ecu: sourceEcu,
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
@@ -34458,11 +34640,13 @@
   function decodeUdsDtcStoredDataResponse(input = {}) {
     const bytes = parseObdHexBytes(input.bytes || input.raw || input.response || input);
     const sourceEcu = readObdResponseSourceEcu(input);
+    const networkScopeFields = readoutNetworkScopeFields(normalizeReadoutNetworkScope(input));
     const responseIndex = bytes.indexOf(0x59);
     const isStoredDataResponse = responseIndex >= 0 && bytes[responseIndex + 1] === 0x05 && responseIndex + 2 < bytes.length && Boolean(sourceEcu);
-    if (!isStoredDataResponse) return normalizeFreezeFrameSnapshot({ source: input.source || "obd_response_decoder", ...(sourceEcu ? { source_ecu: sourceEcu } : {}), captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, freeze_frame_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown" });
+    if (!isStoredDataResponse) return normalizeFreezeFrameSnapshot({ source: input.source || "obd_response_decoder", ...networkScopeFields, ...(sourceEcu ? { source_ecu: sourceEcu } : {}), captured_at: input.captured_at || input.capturedAt || null, protocol: input.protocol || input.obd_protocol || null, freeze_frame_readout_status: hasObdResponseInput(input) ? "unparsed" : "unknown" });
     return normalizeFreezeFrameSnapshot({
       source: input.source || "obd_response_decoder",
+      ...networkScopeFields,
       source_ecu: sourceEcu,
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
@@ -35323,6 +35507,7 @@
 
     return normalizeFreezeFrameSnapshot({
       source: input.source || "obd_response_decoder",
+      ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(input)),
       ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
       protocol: input.protocol || input.obd_protocol || null,
@@ -35513,6 +35698,7 @@
     const serviceIndex = bytes.findIndex((byte, index) => byte === 0x41 && bytes[index + 1] === 0x01);
     if (serviceIndex < 0 || serviceIndex + 5 >= bytes.length) {
       return normalizeReadinessSnapshot({
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(input)),
         source: input.source || "obd_response_decoder",
         ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
         captured_at: input.captured_at || input.capturedAt || null,
@@ -35557,6 +35743,7 @@
     });
 
     return normalizeReadinessSnapshot({
+      ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(input)),
       source: input.source || "obd_response_decoder",
       ...(sourceEcu ? { source_ecu: sourceEcu } : {}),
       captured_at: input.captured_at || input.capturedAt || null,
@@ -40819,6 +41006,8 @@
 
     const normalizeLinkPart = (value) => String(value ?? "").trim().replace(/^0x/i, "").toUpperCase();
     const normalizeLinkCodeFormat = (value) => String(value ?? "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+    const linkScopeKey = (value) => getReadoutNetworkScopeKey(value);
+    const linkEcuMatches = (left, right) => left === right || isComparableCanEcuAddressMatch(normalizeComparableCanEcuAddress(left), normalizeComparableCanEcuAddress(right));
     const triggerEntries = (Array.isArray(freezeFrameSnapshot?.triggerDtcEntries)
       ? freezeFrameSnapshot.triggerDtcEntries
       : Array.isArray(freezeFrameSnapshot?.trigger_dtc_entries) ? freezeFrameSnapshot.trigger_dtc_entries : [])
@@ -40832,6 +41021,7 @@
           reportedStatus: normalizeDtcReportedStatus(entry?.reportedStatus || entry?.reported_status),
           sourceEcu: normalizeLinkPart(entry?.sourceEcu || entry?.source_ecu),
           sourceEcuName: entry?.sourceEcuName || entry?.source_ecu_name || null,
+          ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(entry)),
           frameNumber: frameInput !== undefined && frameInput !== null && frameInput !== "" && Number.isInteger(frameNumber) ? frameNumber : null
         };
       })
@@ -40839,12 +41029,12 @@
     if (!triggerEntries.length) return cleanSnapshot;
 
     const uniqueTriggerEntries = [...new Map(triggerEntries.map((entry) => [
-      `${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`,
+      `${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}::${linkScopeKey(entry) ?? "conflict"}`,
       entry
     ])).values()];
     const freezeFrameAssociationSummary = freezeFrameSnapshot?.freezeFrameAssociationSummary || freezeFrameSnapshot?.freeze_frame_association_summary || null;
     const associationSummaryVersion = freezeFrameAssociationSummary?.schemaVersion || freezeFrameAssociationSummary?.schema_version || null;
-    const associationGroups = associationSummaryVersion === "freeze_frame_association_summary_v2" && Array.isArray(freezeFrameAssociationSummary?.groups)
+    const associationGroups = ["freeze_frame_association_summary_v2", "freeze_frame_association_summary_v3"].includes(associationSummaryVersion) && Array.isArray(freezeFrameAssociationSummary?.groups)
       ? freezeFrameAssociationSummary.groups
       : [];
     const freezeFrameMonitorValues = Array.isArray(freezeFrameSnapshot?.monitorValues)
@@ -40862,7 +41052,8 @@
         return groupState === "matched"
           && Number.isInteger(groupFrameNumber)
           && groupFrameNumber === entry.frameNumber
-          && groupSourceEcu === entry.sourceEcu
+          && linkEcuMatches(groupSourceEcu, entry.sourceEcu)
+          && (associationSummaryVersion === "freeze_frame_association_summary_v2" ? !normalizeReadoutNetworkScope(entry).provided : readoutNetworkScopeMatches(entry, group))
           && triggerIdentityKeys.includes(identityKey);
       }) || null;
     };
@@ -40876,6 +41067,7 @@
           code: normalizeLinkPart(record?.code || record?.dtc),
           codeFormat: normalizeLinkCodeFormat(record?.codeFormat || record?.code_format),
           sourceEcu: normalizeLinkPart(record?.sourceEcu || record?.source_ecu),
+          ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(record)),
           frameNumber: frameInput !== undefined && frameInput !== null && frameInput !== "" && Number.isInteger(frameNumber) ? frameNumber : null,
           snapshotRecordType: record?.snapshotRecordType || record?.snapshot_record_type || null,
           statusByte: normalizeDtcStatusByte(record?.statusByte || record?.status_byte || record?.statusOfDtc || record?.status_of_dtc)
@@ -40889,11 +41081,11 @@
       const codeFormat = normalizeLinkCodeFormat(row?.codeFormat || row?.code_format);
       const reportedStatus = normalizeDtcReportedStatus(row?.reportedStatus || row?.reported_status);
       const ecu = normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu);
-      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && entry.sourceEcu === ecu && (!entry.codeFormat || !codeFormat || entry.codeFormat === codeFormat) && (!entry.reportedStatus || entry.reportedStatus === reportedStatus));
-      matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}`));
+      const matches = uniqueTriggerEntries.filter((entry) => entry.code === code && entry.subcode === subcode && linkEcuMatches(entry.sourceEcu, ecu) && readoutNetworkScopeMatches(row, entry) && (!entry.codeFormat || !codeFormat || entry.codeFormat === codeFormat) && (!entry.reportedStatus || entry.reportedStatus === reportedStatus));
+      matches.forEach((entry) => matchedTriggerKeys.add(`${entry.code}::${entry.subcode}::${entry.codeFormat}::${entry.reportedStatus || ""}::${entry.sourceEcu}::${entry.frameNumber ?? ""}::${linkScopeKey(entry) ?? "conflict"}`));
       if (!matches.length) return row;
       const freezeFrameMatches = matches.map((entry) => {
-        const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && record.sourceEcu === entry.sourceEcu && record.frameNumber === entry.frameNumber && (!entry.codeFormat || !record.codeFormat || entry.codeFormat === record.codeFormat));
+        const matchingUdsRecords = udsSnapshotRecords.filter((record) => record.code === entry.code && linkEcuMatches(record.sourceEcu, entry.sourceEcu) && record.frameNumber === entry.frameNumber && readoutNetworkScopeMatches(entry, record) && (!entry.codeFormat || !record.codeFormat || entry.codeFormat === record.codeFormat));
         const udsRecord = matchingUdsRecords.length === 1 ? matchingUdsRecords[0] : null;
         const verifiedValueGroup = findVerifiedValueGroup(entry);
         const freezeFrameValueIds = verifiedValueGroup
@@ -40906,7 +41098,8 @@
             const itemId = String(item?.id || item?.monitorId || item?.monitor_id || item?.pid || "").trim();
             return Number.isInteger(itemFrameNumber)
               && itemFrameNumber === entry.frameNumber
-              && itemSourceEcu === entry.sourceEcu
+              && linkEcuMatches(itemSourceEcu, entry.sourceEcu)
+              && readoutNetworkScopeMatches(entry, item)
               && freezeFrameValueIds.includes(itemId);
           })
           .map((item) => {
@@ -40924,7 +41117,8 @@
               frameNumber: entry.frameNumber,
               frame_number: entry.frameNumber,
               sourceEcu: entry.sourceEcu || null,
-              source_ecu: entry.sourceEcu || null
+              source_ecu: entry.sourceEcu || null,
+              ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(entry))
             };
             return [`${id}::${String(value)}::${unit}::${decoded}`, valueRef];
           })).values()].slice(0, 64) : [];
@@ -40935,6 +41129,7 @@
           source_ecu: entry.sourceEcu || null,
           sourceEcuName: entry.sourceEcuName,
           source_ecu_name: entry.sourceEcuName,
+          ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(entry)),
           ...(entry.reportedStatus ? { reportedStatus: entry.reportedStatus, reported_status: entry.reportedStatus } : {}),
           ...(verifiedValueGroup ? {
             freezeFrameValueIds: [...freezeFrameValueIds],
@@ -40965,14 +41160,15 @@
       normalizeLinkPart(row?.code || row?.dtc),
       normalizeLinkPart(row?.subcode || row?.sub_code),
       normalizeLinkCodeFormat(row?.codeFormat || row?.code_format),
-      normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu)
+      normalizeLinkPart(row?.ecu || row?.sourceEcu || row?.source_ecu),
+      linkScopeKey(row) ?? "conflict"
     ].join("::"))).size;
     const matchedDtcRowCount = linkedDtcRows.length;
     const freezeFrameLinkSummary = {
-      schemaVersion: "dtc_freeze_frame_link_summary_v1",
-      schema_version: "dtc_freeze_frame_link_summary_v1",
-      matchPolicy: "exact_code_subcode_ecu_reported_state_when_available",
-      match_policy: "exact_code_subcode_ecu_reported_state_when_available",
+      schemaVersion: "dtc_freeze_frame_link_summary_v2",
+      schema_version: "dtc_freeze_frame_link_summary_v2",
+      matchPolicy: "exact_code_subcode_ecu_network_route_reported_state_when_available",
+      match_policy: "exact_code_subcode_ecu_network_route_reported_state_when_available",
       triggerEntryCount: uniqueTriggerEntries.length,
       trigger_entry_count: uniqueTriggerEntries.length,
       matchedDtcCount,

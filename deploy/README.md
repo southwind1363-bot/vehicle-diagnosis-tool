@@ -1,3 +1,5 @@
+3.13.420では、フリーズフレームの起点DTC・PID値・UDSスナップショット/保存記録・合成ECU応答・DTC照合・保存在庫比較に加え、DTC ECU応答とreadiness証拠をnetwork bus・channel・gateway route別に分離しました。同じECUアドレスでも別経路の証拠を統合せず、親子scope競合は未解析として遮断し、旧scope未指定キーとの比較も停止します。部分読取の報告済み/未解決ECU経路をread-only JSON往復で保持し、車両送信無効を維持します。
+
 3.13.419では、ライブPID値・ECU別スナップショット・時系列比較・保存セッション比較・合成ECU応答をnetwork bus・channel・gateway route別に分離しました。同じECUアドレスでも別経路の値を混在・差分化・車両適用一致させず、子値は一意な親経路だけを継承します。scope競合・型不正・不適格な由来は未解析として遮断し、旧scope未指定形式、read-only JSON往復、車両送信無効を維持します。
 3.13.418では、車種別の期待ECUと実ECU応答へnetwork bus・channel・gateway routeを追加し、同じCAN応答IDでも別ネットワーク経路なら別ECUとして照合します。期待scopeがある場合、scope欠落は比較不能、明示不一致は不一致として扱い、別経路のpositive/negative/pending応答を適合証拠へ混入させません。scope未指定の旧形式は従来のaddress-only照合と観測キーを維持し、alias競合・型不正・重複scopeはfail-closed、保存JSON比較と車両送信無効も維持します。
 3.13.417では、29bit CANの要求方向IDと応答方向IDをECU応答要約で別行として保持し、同一サービス・同一件数でも相互に重複排除しないよう修正しました。観測ECUと車両適合の証拠には明示された応答IDを優先し、要求IDだけの行は応答済みとして扱いません。11bitの表記揺れ重複排除、一般的な要求・応答相関、保存JSON往復、車両送信無効は維持します。
