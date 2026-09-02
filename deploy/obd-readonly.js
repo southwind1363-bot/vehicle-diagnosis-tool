@@ -3477,6 +3477,21 @@
 
   function preserveSupportedPidReadoutStatus(snapshot = {}, input = {}) {
     const statusKeys = ["supportedPidReadoutStatus", "supported_pid_readout_status"];
+    const normalizedStatus = String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase();
+    const normalizedErrorCodes = readBridgeResponseErrorCodes(snapshot);
+    if (normalizedStatus === "unparsed" && normalizedErrorCodes.includes("network_scope_conflict")) {
+      return {
+        ...snapshot,
+        supportedPidReadoutStatus: "unparsed",
+        supported_pid_readout_status: "unparsed",
+        ok: false,
+        blocked: false,
+        isBlocked: false,
+        is_blocked: false,
+        wouldTransmit: false,
+        would_transmit: false
+      };
+    }
     const preserved = preserveExplicitStoredReadoutStatus(
       preserveExplicitReadoutFailure(snapshot, input, statusKeys), input, statusKeys
     );
@@ -5618,6 +5633,7 @@
       });
       return {
         ...decoded,
+        ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(data)),
         intent: "read_supported_pids",
         ok: resolvedBridgeSafety.ok,
         blocked: resolvedBridgeSafety.blocked,
@@ -5634,8 +5650,8 @@
       primary_protocol: normalizeProtocolProvenanceValue(protocol),
       ...mergeProtocolProvenance(data, response)
     };
-    return {
-      ...buildSupportedPidMatrix({
+    const normalizedMatrix = buildSupportedPidMatrix({
+      ...readoutNetworkScopeFields(normalizeReadoutNetworkScope(data)),
       source: "local_bridge",
       captured_at: capturedAt,
       protocol,
@@ -5645,7 +5661,10 @@
       supported_pid_page_bases: supportedPidPageBases,
       supported_pids: supportedPids,
       supported_pid_ecu_snapshots: normalizedSupportedPidEcuSnapshots
-      }),
+    });
+    const normalizedErrorCodes = [...new Set([...errorCodes, ...readBridgeResponseErrorCodes(normalizedMatrix)])].slice(0, 12);
+    return {
+      ...normalizedMatrix,
       protocolProvenance,
       protocol_provenance: protocolProvenance,
       diagnosticProtocol: protocolProvenance.diagnosticProtocol,
@@ -5661,8 +5680,8 @@
       would_transmit: resolvedBridgeSafety.wouldTransmit,
       vehicleCommandEnabled: false,
       vehicle_command_enabled: false,
-      errorCodes,
-      error_codes: [...errorCodes]
+      errorCodes: normalizedErrorCodes,
+      error_codes: [...normalizedErrorCodes]
     };
   }
 
@@ -8034,17 +8053,25 @@
       && (supportedPidEcuSnapshots.length === 0 || supportedPidEcuSnapshots.every((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported"));
     const supportedPidEntries = supportedPidEcuSnapshots.length > 0
       ? supportedPidEcuSnapshots.flatMap((snapshot) => firstPopulatedInventoryArray(snapshot?.supportedPids, snapshot?.supported_pids, snapshot?.pids)
-        .map((pid) => ({ pid, sourceEcu: snapshot?.sourceEcu || snapshot?.source_ecu || null })))
+        .map((pid) => inheritReadoutNetworkScope({ pid, sourceEcu: snapshot?.sourceEcu || snapshot?.source_ecu || null }, snapshot)))
       : firstPopulatedInventoryArray(supportedPidMatrix?.supportedPids, supportedPidMatrix?.supported_pids, supportedPidMatrix?.pids)
-        .map((pid) => ({ pid, sourceEcu: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu || null }));
+        .map((pid) => inheritReadoutNetworkScope({ pid, sourceEcu: supportedPidMatrix?.sourceEcu || supportedPidMatrix?.source_ecu || null }, supportedPidMatrix));
     const supportedPidKeys = [...new Set(supportedPidEntries.map((entry) => {
       const pid = normalizeSupportedPidCode(entry?.pid);
-      const sourceEcu = String(entry?.sourceEcu || entry?.source_ecu || "").trim().toUpperCase() || "-";
-      return pid ? pid + "|" + sourceEcu : null;
+      const sourceEcu = String(entry?.sourceEcu || entry?.source_ecu || "").replace(/\|/g, " ").trim().toUpperCase() || "-";
+      const networkScopeKey = getReadoutNetworkScopeKey(entry);
+      if (!pid || networkScopeKey === null) return null;
+      return [pid, sourceEcu, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
     }).filter(Boolean))].sort();
     const recordedSupportedPidKeys = supportedPidEvidenceRecorded ? supportedPidKeys : [];
-    const normalizeSupportedPidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase() || null;
+    const normalizeSupportedPidEcuId = (value) => normalizeComparableCanEcuAddress(value) || String(value || "").replace(/\|/g, " ").trim().toUpperCase() || null;
     const readSupportedPidEcuId = (snapshot = {}) => normalizeSupportedPidEcuId(snapshot?.sourceEcu || snapshot?.source_ecu || snapshot?.ecu || snapshot?.ecuId || snapshot?.ecu_id || snapshot?.address || null);
+    const readSupportedPidEcuScopeKey = (snapshot = {}) => {
+      const ecuId = readSupportedPidEcuId(snapshot);
+      const networkScopeKey = getReadoutNetworkScopeKey(snapshot);
+      if (!ecuId || networkScopeKey === null) return null;
+      return [ecuId, ...(networkScopeKey ? networkScopeKey.split("|") : [])].join("|");
+    };
     const reportedSupportedPidEcuIds = [...new Set(supportedPidEcuSnapshots
       .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported")
       .map(readSupportedPidEcuId)
@@ -8053,12 +8080,26 @@
       .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() !== "reported")
       .map(readSupportedPidEcuId)
       .filter(Boolean))].sort();
+    const reportedSupportedPidEcuScopeKeys = [...new Set(supportedPidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() === "reported")
+      .map(readSupportedPidEcuScopeKey)
+      .filter(Boolean))].sort();
+    const unresolvedSupportedPidEcuScopeKeys = [...new Set(supportedPidEcuSnapshots
+      .filter((snapshot) => String(snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status || "").trim().toLowerCase() !== "reported")
+      .map(readSupportedPidEcuScopeKey)
+      .filter(Boolean))].sort();
     const supportedPidReportedEcuEvidenceRecorded = supportedPidEvidenceRecorded
       || (supportedPidMatrix?.blocked !== true && supportedPidMatrix?.isBlocked !== true && supportedPidMatrix?.is_blocked !== true
         && String(supportedPidMatrix?.supportedPidReadoutStatus || supportedPidMatrix?.supported_pid_readout_status || "").trim().toLowerCase() === "unparsed"
         && reportedSupportedPidEcuIds.length > 0);
     const supportedPidReportedEcuKeys = supportedPidReportedEcuEvidenceRecorded
-      ? supportedPidKeys.filter((key) => supportedPidEvidenceRecorded || reportedSupportedPidEcuIds.includes(normalizeSupportedPidEcuId(String(key || "").split("|")[1])))
+      ? supportedPidKeys.filter((key) => {
+        if (supportedPidEvidenceRecorded) return true;
+        const parts = String(key || "").split("|");
+        const ecuId = normalizeSupportedPidEcuId(parts[1]);
+        const pidScopeKey = parts.length === 5 ? [ecuId, ...parts.slice(2, 5)].join("|") : ecuId;
+        return reportedSupportedPidEcuScopeKeys.includes(pidScopeKey);
+      })
       : [];
     const onboardMonitorEcuSnapshots = firstPopulatedInventoryArray(
       onboardMonitorSnapshot?.onboardMonitorEcuSnapshots,
@@ -8309,6 +8350,10 @@
       supported_pid_reported_ecu_ids: [...reportedSupportedPidEcuIds],
       supportedPidUnresolvedEcuIds: unresolvedSupportedPidEcuIds,
       supported_pid_unresolved_ecu_ids: [...unresolvedSupportedPidEcuIds],
+      supportedPidReportedEcuScopeKeys: reportedSupportedPidEcuScopeKeys,
+      supported_pid_reported_ecu_scope_keys: [...reportedSupportedPidEcuScopeKeys],
+      supportedPidUnresolvedEcuScopeKeys: unresolvedSupportedPidEcuScopeKeys,
+      supported_pid_unresolved_ecu_scope_keys: [...unresolvedSupportedPidEcuScopeKeys],
       supportedPidReportedEcuKeys: supportedPidReportedEcuKeys,
       supported_pid_reported_ecu_keys: [...supportedPidReportedEcuKeys],
       onboardMonitorTestCount: Math.max(numericCount(onboardMonitorSnapshot?.testCount, onboardMonitorSnapshot?.test_count), countItems(onboardMonitorTestEntries)),
@@ -21457,6 +21502,8 @@
       supportedPidReportedEcuEvidenceRecorded: ["supported_pid_reported_ecu_evidence_recorded"],
       supportedPidReportedEcuIds: ["supported_pid_reported_ecu_ids"],
       supportedPidUnresolvedEcuIds: ["supported_pid_unresolved_ecu_ids"],
+      supportedPidReportedEcuScopeKeys: ["supported_pid_reported_ecu_scope_keys"],
+      supportedPidUnresolvedEcuScopeKeys: ["supported_pid_unresolved_ecu_scope_keys"],
       supportedPidReportedEcuKeys: ["supported_pid_reported_ecu_keys"],
       freezeFrameValueCount: ["freeze_frame_value_count"],
       freezeFrameValueKeys: ["freeze_frame_value_keys"],
@@ -22126,42 +22173,105 @@
       : reportedEcuMode09SupportedTypeComparisonAvailable ? filterMode09SupportedTypeKeysByScope(currentMode09SupportedTypeReportedEcuScope) : [];
     const mode09SupportedTypeAddedKeys = mode09SupportedTypeComparisonAvailable ? diffIds(currentMode09SupportedTypeKeys, importedMode09SupportedTypeKeys) : [];
     const mode09SupportedTypeRemovedKeys = mode09SupportedTypeComparisonAvailable ? diffIds(importedMode09SupportedTypeKeys, currentMode09SupportedTypeKeys) : [];
-    const readSupportedPidKeys = (summary) => Array.isArray(readField(summary, "supportedPidKeys"))
-      ? [...new Set(readField(summary, "supportedPidKeys").map((key) => String(key || "").trim()).filter(Boolean))].sort()
+    const parseSupportedPidKey = (value) => {
+      const parts = String(value || "").trim().split("|");
+      if (![2, 5].includes(parts.length)) return null;
+      const pid = normalizeSupportedPidCode(parts[0]);
+      const sourceEcu = normalizeComparableCanEcuAddress(parts[1])
+        || String(parts[1] || "").normalize("NFKC").trim().toUpperCase();
+      if (!pid || !sourceEcu || sourceEcu.length > 120) return null;
+      if (parts.length === 2) {
+        return {
+          key: [pid, sourceEcu].join("|"),
+          pid,
+          sourceEcu,
+          sourceScopeKey: sourceEcu,
+          hasNetworkScope: false
+        };
+      }
+      const [networkBus, networkChannel, gatewayRoute] = parts.slice(2).map((part) => String(part || "").normalize("NFKC").trim().toLowerCase());
+      if (!networkBus || !networkChannel || !gatewayRoute
+        || networkBus.length > 120 || networkChannel.length > 120 || gatewayRoute.length > 160) return null;
+      return {
+        key: [pid, sourceEcu, networkBus, networkChannel, gatewayRoute].join("|"),
+        pid,
+        sourceEcu,
+        sourceScopeKey: [sourceEcu, networkBus, networkChannel, gatewayRoute].join("|"),
+        hasNetworkScope: true
+      };
+    };
+    const readRawSupportedPidKeys = (summary, field = "supportedPidKeys") => Array.isArray(readField(summary, field))
+      ? [...new Set(readField(summary, field).map((key) => String(key || "").trim()).filter(Boolean))].sort()
       : [];
+    const readSupportedPidKeys = (summary) => [...new Set(readRawSupportedPidKeys(summary).map(parseSupportedPidKey).filter(Boolean).map((item) => item.key))].sort();
+    const normalizeSupportedPidEcuScopeKey = (value) => {
+      const parts = String(value || "").trim().split("|");
+      if (![1, 4].includes(parts.length)) return null;
+      const ecu = normalizeComparableCanEcuAddress(parts[0]) || parts[0].normalize("NFKC").trim().toUpperCase();
+      if (!ecu || ecu.length > 120) return null;
+      if (parts.length === 1) return ecu;
+      const [networkBus, networkChannel, gatewayRoute] = parts.slice(1).map((part) => String(part || "").normalize("NFKC").trim().toLowerCase());
+      if (!networkBus || !networkChannel || !gatewayRoute
+        || networkBus.length > 120 || networkChannel.length > 120 || gatewayRoute.length > 160) return null;
+      return [ecu, networkBus, networkChannel, gatewayRoute].join("|");
+    };
     const importedSupportedPidEvidenceRecorded = readBoolean(importedInventory, "supportedPidEvidenceRecorded");
     const currentSupportedPidEvidenceRecorded = readBoolean(currentSummary, "supportedPidEvidenceRecorded");
     const readSupportedPidReportedEcuScope = (summary, completeEvidenceRecorded, allKeys) => {
-      const normalizeScopeId = (value) => normalizeComparableCanEcuAddress(value)
-        || String(value || "").trim().toUpperCase()
-        || null;
-      const explicitIds = readIds(summary, "supportedPidReportedEcuIds").map(normalizeScopeId).filter(Boolean);
-      const reportedEcuIds = explicitIds.length > 0 || !completeEvidenceRecorded
-        ? [...new Set(explicitIds)].sort()
-        : [...new Set(allKeys.map((key) => normalizeScopeId(String(key || "").split("|")[1])).filter(Boolean))].sort();
+      const explicitIds = readIds(summary, "supportedPidReportedEcuIds")
+        .map((value) => normalizeComparableCanEcuAddress(value) || String(value || "").trim().toUpperCase())
+        .filter(Boolean);
+      const explicitScopeKeys = readIds(summary, "supportedPidReportedEcuScopeKeys").map(normalizeSupportedPidEcuScopeKey).filter(Boolean);
+      const derivedScopeKeys = allKeys.map((key) => parseSupportedPidKey(key)?.sourceScopeKey || null).filter(Boolean);
+      const reportedEcuScopeKeys = explicitScopeKeys.length > 0 || !completeEvidenceRecorded
+        ? [...new Set(explicitScopeKeys.length > 0 ? explicitScopeKeys : explicitIds)].sort()
+        : [...new Set(derivedScopeKeys)].sort();
+      const reportedEcuIds = [...new Set(reportedEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
       const explicitKeys = readIds(summary, "supportedPidReportedEcuKeys");
       const reportedEcuKeys = explicitKeys.length > 0 || !completeEvidenceRecorded ? explicitKeys : [...allKeys];
       return {
         evidenceRecorded: completeEvidenceRecorded || readBoolean(summary, "supportedPidReportedEcuEvidenceRecorded"),
         reportedEcuIds,
+        reportedEcuScopeKeys,
         reportedEcuKeys
       };
     };
+    const importedRawSupportedPidKeys = readRawSupportedPidKeys(importedInventory);
+    const currentRawSupportedPidKeys = readRawSupportedPidKeys(currentSummary);
     const importedAllSupportedPidKeys = readSupportedPidKeys(importedInventory);
     const currentAllSupportedPidKeys = readSupportedPidKeys(currentSummary);
     const importedSupportedPidReportedEcuScope = readSupportedPidReportedEcuScope(importedInventory, importedSupportedPidEvidenceRecorded, importedAllSupportedPidKeys);
     const currentSupportedPidReportedEcuScope = readSupportedPidReportedEcuScope(currentSummary, currentSupportedPidEvidenceRecorded, currentAllSupportedPidKeys);
+    const readSupportedPidNetworkScopeKeyMode = (keys = []) => {
+      const parsedKeys = keys.map(parseSupportedPidKey);
+      if (parsedKeys.some((key) => key === null)) return "invalid";
+      const modes = [...new Set(parsedKeys.map((key) => key.hasNetworkScope ? "scoped" : "unscoped"))];
+      return modes.length === 0 ? "none" : modes.length === 1 ? modes[0] : "mixed";
+    };
+    const importedSupportedPidNetworkScopeKeyMode = readSupportedPidNetworkScopeKeyMode(
+      importedSupportedPidEvidenceRecorded ? importedRawSupportedPidKeys : importedSupportedPidReportedEcuScope.reportedEcuKeys
+    );
+    const currentSupportedPidNetworkScopeKeyMode = readSupportedPidNetworkScopeKeyMode(
+      currentSupportedPidEvidenceRecorded ? currentRawSupportedPidKeys : currentSupportedPidReportedEcuScope.reportedEcuKeys
+    );
+    const supportedPidNetworkScopeKeyModesCompatible = importedSupportedPidNetworkScopeKeyMode === currentSupportedPidNetworkScopeKeyMode
+      && !["mixed", "invalid"].includes(importedSupportedPidNetworkScopeKeyMode);
+    const supportedPidComparisonBlockedByScopeVersion = importedSupportedPidReportedEcuScope.evidenceRecorded
+      && currentSupportedPidReportedEcuScope.evidenceRecorded
+      && !supportedPidNetworkScopeKeyModesCompatible;
     const completeSupportedPidComparisonAvailable = importedSupportedPidEvidenceRecorded && currentSupportedPidEvidenceRecorded;
-    const comparableSupportedPidEcuIds = completeSupportedPidComparisonAvailable
+    const comparableSupportedPidEcuScopeKeys = completeSupportedPidComparisonAvailable
       ? []
       : importedSupportedPidReportedEcuScope.evidenceRecorded && currentSupportedPidReportedEcuScope.evidenceRecorded
-        ? importedSupportedPidReportedEcuScope.reportedEcuIds.filter((id) => currentSupportedPidReportedEcuScope.reportedEcuIds.includes(id))
+        ? importedSupportedPidReportedEcuScope.reportedEcuScopeKeys.filter((key) => currentSupportedPidReportedEcuScope.reportedEcuScopeKeys.includes(key))
         : [];
-    const reportedEcuSupportedPidComparisonAvailable = !completeSupportedPidComparisonAvailable && comparableSupportedPidEcuIds.length > 0;
-    const supportedPidComparisonAvailable = completeSupportedPidComparisonAvailable || reportedEcuSupportedPidComparisonAvailable;
+    const comparableSupportedPidEcuIds = [...new Set(comparableSupportedPidEcuScopeKeys.map((key) => key.split("|")[0]))].sort();
+    const reportedEcuSupportedPidComparisonAvailable = !completeSupportedPidComparisonAvailable && comparableSupportedPidEcuScopeKeys.length > 0;
+    const supportedPidComparisonAvailable = (completeSupportedPidComparisonAvailable || reportedEcuSupportedPidComparisonAvailable)
+      && supportedPidNetworkScopeKeyModesCompatible;
     const filterSupportedPidKeysByScope = (scope) => scope.reportedEcuKeys.filter((key) => {
-      const ecu = normalizeComparableCanEcuAddress(String(key || "").split("|")[1]) || String(key || "").split("|")[1]?.trim().toUpperCase();
-      return comparableSupportedPidEcuIds.includes(ecu);
+      const parsed = parseSupportedPidKey(key);
+      return parsed && comparableSupportedPidEcuScopeKeys.includes(parsed.sourceScopeKey);
     });
     const importedSupportedPidKeys = completeSupportedPidComparisonAvailable
       ? importedAllSupportedPidKeys
@@ -22172,12 +22282,15 @@
     const supportedPidAddedKeys = supportedPidComparisonAvailable ? diffIds(currentSupportedPidKeys, importedSupportedPidKeys) : [];
     const supportedPidRemovedKeys = supportedPidComparisonAvailable ? diffIds(importedSupportedPidKeys, currentSupportedPidKeys) : [];
     const hasSupportedPidEcuScopeEvidence = [
-      ...importedSupportedPidReportedEcuScope.reportedEcuIds,
-      ...currentSupportedPidReportedEcuScope.reportedEcuIds,
+      ...importedSupportedPidReportedEcuScope.reportedEcuScopeKeys,
+      ...currentSupportedPidReportedEcuScope.reportedEcuScopeKeys,
+      ...readIds(importedInventory, "supportedPidUnresolvedEcuScopeKeys"),
+      ...readIds(currentSummary, "supportedPidUnresolvedEcuScopeKeys"),
       ...readIds(importedInventory, "supportedPidUnresolvedEcuIds"),
       ...readIds(currentSummary, "supportedPidUnresolvedEcuIds")
     ].length > 0;
-    const restrictSupportedPidComparisonToScopedEvidence = !completeSupportedPidComparisonAvailable && hasSupportedPidEcuScopeEvidence;
+    const restrictSupportedPidComparisonToScopedEvidence = supportedPidComparisonBlockedByScopeVersion
+      || (!completeSupportedPidComparisonAvailable && hasSupportedPidEcuScopeEvidence);
     const nonComparableValueCountIds = new Set([
       restrictLivePidComparisonToScopedEvidence ? "live_pid_snapshot" : null,
       !completeFreezeFrameValueComparisonAvailable ? "freeze_frame_snapshot" : null,
@@ -22697,10 +22810,20 @@
       current_supported_pid_reported_ecu_evidence_recorded: currentSupportedPidReportedEcuScope.evidenceRecorded,
       supportedPidComparisonAvailable,
       supported_pid_comparison_available: supportedPidComparisonAvailable,
-      supportedPidComparisonScope: completeSupportedPidComparisonAvailable ? "complete" : reportedEcuSupportedPidComparisonAvailable ? "reported_ecus" : "unavailable",
-      supported_pid_comparison_scope: completeSupportedPidComparisonAvailable ? "complete" : reportedEcuSupportedPidComparisonAvailable ? "reported_ecus" : "unavailable",
+      importedSupportedPidNetworkScopeKeyMode,
+      imported_supported_pid_network_scope_key_mode: importedSupportedPidNetworkScopeKeyMode,
+      currentSupportedPidNetworkScopeKeyMode,
+      current_supported_pid_network_scope_key_mode: currentSupportedPidNetworkScopeKeyMode,
+      supportedPidNetworkScopeKeyModesCompatible,
+      supported_pid_network_scope_key_modes_compatible: supportedPidNetworkScopeKeyModesCompatible,
+      supportedPidComparisonBlockedByScopeVersion,
+      supported_pid_comparison_blocked_by_scope_version: supportedPidComparisonBlockedByScopeVersion,
+      supportedPidComparisonScope: supportedPidComparisonAvailable && completeSupportedPidComparisonAvailable ? "complete" : supportedPidComparisonAvailable && reportedEcuSupportedPidComparisonAvailable ? "reported_ecus" : "unavailable",
+      supported_pid_comparison_scope: supportedPidComparisonAvailable && completeSupportedPidComparisonAvailable ? "complete" : supportedPidComparisonAvailable && reportedEcuSupportedPidComparisonAvailable ? "reported_ecus" : "unavailable",
       supportedPidComparableEcuIds: comparableSupportedPidEcuIds,
       supported_pid_comparable_ecu_ids: [...comparableSupportedPidEcuIds],
+      supportedPidComparableEcuScopeKeys: comparableSupportedPidEcuScopeKeys,
+      supported_pid_comparable_ecu_scope_keys: [...comparableSupportedPidEcuScopeKeys],
       importedSupportedPidKeys,
       imported_supported_pid_keys: importedSupportedPidKeys,
       currentSupportedPidKeys,
@@ -22958,6 +23081,10 @@
       supported_pid_reported_ecu_ids: normalizeIds(summary.supportedPidReportedEcuIds || summary.supported_pid_reported_ecu_ids),
       supportedPidUnresolvedEcuIds: normalizeIds(summary.supportedPidUnresolvedEcuIds || summary.supported_pid_unresolved_ecu_ids),
       supported_pid_unresolved_ecu_ids: normalizeIds(summary.supportedPidUnresolvedEcuIds || summary.supported_pid_unresolved_ecu_ids),
+      supportedPidReportedEcuScopeKeys: normalizeIds(summary.supportedPidReportedEcuScopeKeys || summary.supported_pid_reported_ecu_scope_keys),
+      supported_pid_reported_ecu_scope_keys: normalizeIds(summary.supportedPidReportedEcuScopeKeys || summary.supported_pid_reported_ecu_scope_keys),
+      supportedPidUnresolvedEcuScopeKeys: normalizeIds(summary.supportedPidUnresolvedEcuScopeKeys || summary.supported_pid_unresolved_ecu_scope_keys),
+      supported_pid_unresolved_ecu_scope_keys: normalizeIds(summary.supportedPidUnresolvedEcuScopeKeys || summary.supported_pid_unresolved_ecu_scope_keys),
       supportedPidReportedEcuKeys: normalizeIds(summary.supportedPidReportedEcuKeys || summary.supported_pid_reported_ecu_keys || (pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true ? summary.supportedPidKeys || summary.supported_pid_keys : [])),
       supported_pid_reported_ecu_keys: normalizeIds(summary.supportedPidReportedEcuKeys || summary.supported_pid_reported_ecu_keys || (pickDefined(summary.supportedPidEvidenceRecorded, summary.supported_pid_evidence_recorded, false) === true ? summary.supportedPidKeys || summary.supported_pid_keys : [])),
       onboardMonitorTestCount: toCount("onboardMonitorTestCount", "onboard_monitor_test_count", 0),
@@ -40084,7 +40211,7 @@
   function buildSupportedPidMatrix(input = {}) {
     const sourceInput = input && typeof input === "object" && !Array.isArray(input) && input.data && typeof input.data === "object"
       ? {
-        ...input.data,
+        ...inheritReadoutNetworkScope(input.data, input),
         source: input.data.source || input.data.source_type || input.data.sourceType || input.source || input.source_type || input.sourceType,
         source_ecu: input.data.source_ecu || input.data.sourceEcu || input.data.ecu || input.data.address || input.source_ecu || input.sourceEcu || input.ecu || input.address,
         source_ecu_name: input.data.source_ecu_name || input.data.sourceEcuName || input.data.ecu_name || input.data.ecuName || input.data.module_name || input.data.moduleName || input.source_ecu_name || input.sourceEcuName || input.ecu_name || input.ecuName || input.module_name || input.moduleName,
@@ -40093,6 +40220,9 @@
       }
       : input && typeof input === "object" ? input : {};
     const source = sourceInput.source || sourceInput.source_type || sourceInput.sourceType || "diagnostic_core";
+    const sourceNetworkScope = normalizeReadoutNetworkScope(sourceInput);
+    const sourceErrorCodes = readBridgeResponseErrorCodes(sourceInput);
+    if (sourceNetworkScope.conflict && !sourceErrorCodes.includes("network_scope_conflict")) sourceErrorCodes.unshift("network_scope_conflict");
     const sourceEcu = readObdResponseSourceEcu(sourceInput);
     const sourceEcuName = sourceInput.source_ecu_name || sourceInput.sourceEcuName || sourceInput.ecu_name || sourceInput.ecuName || sourceInput.module_name || sourceInput.moduleName || null;
     const supportedArrayRows = firstSupportedPidArray(
@@ -40118,6 +40248,7 @@
                 ? sourceInput.supportedPidsText.split(/[\s,;|/]+/)
                 : supportedArrayRows;
     const supported = new Set(supportedRows.map(normalizeSupportedPidCode).filter(Boolean));
+    if (sourceNetworkScope.conflict) supported.clear();
     const capturedAt = sourceInput.captured_at || sourceInput.capturedAt || sourceInput.timestamp || null;
     const supportedPidPageBasesInput = sourceInput.supportedPidPageBases
       || sourceInput.supported_pid_page_bases
@@ -40134,7 +40265,7 @@
       sourceInput.supported_pid_ecu_snapshots,
       sourceInput.ecuSnapshots,
       sourceInput.ecu_snapshots
-    );
+    ).map((row) => inheritReadoutNetworkScope(row, sourceInput));
     const normalizeEcuSnapshot = (row) => {
       if (!row || typeof row !== "object" || Array.isArray(row)) return null;
       const ecu = readObdResponseSourceEcu(row);
@@ -40157,13 +40288,20 @@
         .map(normalizeSupportedPidCode)
         .filter((value) => value && isSupportedPidBase(parseInt(value, 16)))
       )].sort((left, right) => parseInt(left, 16) - parseInt(right, 16));
+      const rowNetworkScope = normalizeReadoutNetworkScope(row);
       const rowErrorCodes = readBridgeResponseErrorCodes(row);
+      if (rowNetworkScope.conflict && !rowErrorCodes.includes("network_scope_conflict")) rowErrorCodes.unshift("network_scope_conflict");
+      if (rowNetworkScope.conflict) {
+        pids.length = 0;
+        pageBases.length = 0;
+      }
       const requestedStatus = String(row.supportedPidReadoutStatus || row.supported_pid_readout_status || row.readoutStatus || row.readout_status || "").trim().toLowerCase();
       const inferredStatus = ["reported", "unparsed", "blocked", "unknown"].includes(requestedStatus)
         ? requestedStatus
         : pids.length || pageBases.length ? "reported" : "unknown";
       const status = inferredStatus === "blocked" ? "blocked" : rowErrorCodes.length ? "unparsed" : inferredStatus;
       return {
+        ...readoutNetworkScopeFields(rowNetworkScope),
         sourceEcu: ecu,
         source_ecu: ecu,
         sourceEcuName: ecuName,
@@ -40241,6 +40379,7 @@
         : baseReadoutStatus;
     if (!supportedPidEcuSnapshots.length && sourceEcu) {
       supportedPidEcuSnapshots.push({
+        ...readoutNetworkScopeFields(sourceNetworkScope),
         sourceEcu,
         source_ecu: sourceEcu,
         sourceEcuName,
@@ -40258,7 +40397,7 @@
     const supportedPidEcuIds = [...new Set(supportedPidEcuSnapshots.map((snapshot) => snapshot.sourceEcu || snapshot.source_ecu).filter(Boolean))];
     const reportedEcuResponseCount = supportedPidEcuSnapshots.filter((snapshot) => String(snapshot.supportedPidReadoutStatus || snapshot.supported_pid_readout_status || "unknown").trim().toLowerCase() === "reported").length;
     const errorResponseCount = supportedPidEcuSnapshots.filter((snapshot) => readBridgeResponseErrorCodes(snapshot).length > 0).length;
-    const scopedErrorCodes = [...new Set(supportedPidEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot)))].slice(0, 12);
+    const scopedErrorCodes = [...new Set([...sourceErrorCodes, ...supportedPidEcuSnapshots.flatMap((snapshot) => readBridgeResponseErrorCodes(snapshot))])].slice(0, 12);
     const supportedPidEcuAggregateSummary = supportedPidEcuSnapshots.length ? {
       schemaVersion: "supported_pid_ecu_aggregate_summary_v1",
       schema_version: "supported_pid_ecu_aggregate_summary_v1",
@@ -40298,6 +40437,7 @@
       schemaVersion: "supported_pid_matrix_v1",
       schema_version: "supported_pid_matrix_v1",
       source,
+      ...readoutNetworkScopeFields(sourceNetworkScope),
       sourceEcu: resolvedSourceEcu,
       source_ecu: resolvedSourceEcu,
       sourceEcuName: resolvedSourceEcuName,
