@@ -23,6 +23,7 @@ import "./validate-ecu-info-display.js";
 import "./validate-supported-pid-display.js";
 import "./validate-ecu-response-display.js";
 import "./validate-ecu-response-filter.js";
+import "./validate-readout-detail-navigation.js";
 
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };

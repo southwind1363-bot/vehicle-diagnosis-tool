@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.423";
+const APP_VERSION = "3.13.424";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2689,9 +2689,14 @@ function renderObdConnectionGuide() {
   renderObdWorkflowGuide();
 }
 
-function scrollToObdSection(targetId) {
+function scrollToObdSection(targetId, fallbackTargetId = "") {
   if (!targetId) return;
+  const simpleMode = typeof obdUiMode === "string" && obdUiMode === "simple";
+  const detailMenu = document.getElementById("obdReadoutDetailMenu");
+  const detailButton = simpleMode ? Array.from(detailMenu?.querySelectorAll("[data-obd-detail-target]") || [])
+    .find((button) => button.dataset.obdDetailTarget === targetId) : null;
   let target = document.getElementById(targetId);
+  if (!target) target = document.getElementById(fallbackTargetId || (detailButton ? "obdReadoutDetails" : ""));
   if (!target) return;
   if (!obdAccessUnlocked) return;
   const emptyReadoutStatus = { obdDetectedCodes: "obdImportStatus", obdMonitorGrid: "obdMonitorStatus" }[targetId];
@@ -2717,12 +2722,35 @@ function scrollToObdSection(targetId) {
       || ["obdMonitorGrid", "obdMonitorStatus", "obdMonitorFilter"].includes(target.id) ? "live"
       : target.closest(".obd-import-result")
         || ["obdDetectedCodes", "obdImportStatus", "obdDtcFilter"].includes(target.id) ? "dtc" : "details";
+    if (panel) panel.dataset.obdReadoutDetail = detailButton ? targetId : "all";
   }
   renderObdStageView(stage);
   for (let disclosure = target.closest("details"); disclosure; disclosure = disclosure.parentElement?.closest("details")) {
     disclosure.open = true;
   }
   target.scrollIntoView({ behavior: "instant", block: "start" });
+}
+
+function renderObdReadoutDetailSelection() {
+  const panel = document.getElementById("obd-panel");
+  const menu = document.getElementById("obdReadoutDetailMenu");
+  const details = document.getElementById("obdDevSessionDetails");
+  const empty = document.getElementById("obdReadoutDetailEmpty");
+  if (!panel || !menu || !details || !empty) return;
+  const buttons = Array.from(menu.querySelectorAll("[data-obd-detail-target]"));
+  const selected = buttons.find((button) => button.dataset.obdDetailTarget === panel.dataset.obdReadoutDetail)
+    || buttons.find((button) => button.dataset.obdDetailTarget === "all");
+  const selectedId = selected?.dataset.obdDetailTarget || "all";
+  panel.dataset.obdReadoutDetail = selectedId;
+  buttons.forEach((button) => {
+    const active = button.dataset.obdDetailTarget === selectedId;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  const cards = Array.from(details.children);
+  cards.forEach((card) => card.classList.toggle("obd-detail-excluded", selectedId !== "all" && card.id !== selectedId));
+  empty.hidden = selectedId === "all" || cards.some((card) => card.id === selectedId);
+  empty.textContent = empty.hidden ? "" : `${selected.textContent.trim()}の詳細データはありません。`;
 }
 
 function renderObdPreviewButtons() {
@@ -4584,6 +4612,7 @@ function renderObdStageView(preferredStage = activeObdStage) {
   if (obdStageSetupView) obdStageSetupView.hidden = obdUiMode === "simple" ? nextStage !== "connect" : nextStage !== "setup";
   if (obdStageResultsView) obdStageResultsView.hidden = !["results", "readout"].includes(nextStage);
   if (obdStageDetailsView) obdStageDetailsView.hidden = nextStage !== "details";
+  if (typeof renderObdReadoutDetailSelection === "function") renderObdReadoutDetailSelection();
 }
 
 function setObdStage(stage = "setup") {
@@ -9563,6 +9592,7 @@ function getRecoveredDiagnosticReadoutRoute(connectionStatus = null, vciDevices 
 function renderObdBridgeSessionDetails(session = null) {
   if (!obdDevSessionDetails) return;
   obdDevSessionDetails.innerHTML = "";
+  if (typeof renderObdReadoutDetailSelection === "function") renderObdReadoutDetailSelection();
 
   const sections = [];
   const sessionConnectionStatus = session?.connectionStatus || session?.connection_status || null;
@@ -9874,6 +9904,7 @@ function renderObdBridgeSessionDetails(session = null) {
     obdDevSessionDetails.appendChild(card);
   }
   obdDevSessionDetails.hidden = false;
+  if (typeof renderObdReadoutDetailSelection === "function") renderObdReadoutDetailSelection();
 }
 
 function buildLivePidTimelineChartRows(timeline = null) {
@@ -11177,7 +11208,7 @@ function renderObdSimpleResultSummary(session = null) {
     item.className = "obd-simple-result-item";
     item.setAttribute("aria-label", label + "の詳細を開く");
     item.title = label + "の詳細を開く";
-    item.addEventListener("click", () => scrollToObdSection(document.getElementById(targetId) ? targetId : fallbackTargetId));
+    item.addEventListener("click", () => scrollToObdSection(targetId, fallbackTargetId));
     term.className = "obd-simple-result-label";
     term.textContent = label;
     description.className = "obd-simple-result-value";
@@ -11213,17 +11244,14 @@ function renderObdSimpleResultSummary(session = null) {
 }
 
 function openObdSimpleEcuDetail(row = {}) {
-  renderObdStageView("readout");
-  const disclosure = document.getElementById("obdReadoutDetails");
-  if (disclosure) disclosure.open = true;
-  const card = document.getElementById("obdSessionDetailEcuResponses") || disclosure;
+  if (!obdAccessUnlocked) return;
   const search = document.getElementById("obdEcuResponseSearch");
   const searchValue = String(row.address || row.ecu || row.ecu_id || row.ecuId || row.id || row.name || "").trim();
   if (search && searchValue) {
     search.value = searchValue;
     search.dispatchEvent(new Event("input", { bubbles: true }));
   }
-  card?.scrollIntoView({ behavior: "instant", block: "start" });
+  scrollToObdSection("obdSessionDetailEcuResponses", "obdReadoutDetails");
 }
 
 function applyObdSimpleSystemFilter(filterId = "all") {

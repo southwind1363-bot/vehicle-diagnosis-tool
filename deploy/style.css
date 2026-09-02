@@ -1199,9 +1199,22 @@ body.dark .flow-node-measure .flow-step {
   display: none !important;
 }
 
-.obd-results-nav .is-active {
+.obd-results-nav .is-active,
+.obd-readout-detail-menu .is-active {
   border-color: var(--accent);
   box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+.obd-readout-detail-menu {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 16px 0;
+}
+
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] .obd-detail-excluded,
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"]:not([data-obd-readout-detail="all"]) .obd-readout-details-empty {
+  display: none !important;
 }
 
 .obd-operation-grid {

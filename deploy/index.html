@@ -810,6 +810,16 @@
 
         <details id="obdReadoutDetails" class="obd-readout-details">
           <summary>フリーズフレーム・レディネス・ECU情報・取得状態</summary>
+          <nav id="obdReadoutDetailMenu" class="obd-readout-detail-menu obd-simple-only" aria-label="追加データの項目">
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdReadoutDetails" data-obd-detail-target="all" aria-pressed="true">全読取情報</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdSessionDetailFreezeFrame" data-obd-detail-target="obdSessionDetailFreezeFrame" aria-pressed="false">フリーズフレーム</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdSessionDetailReadiness" data-obd-detail-target="obdSessionDetailReadiness" aria-pressed="false">レディネス</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdSessionDetailEcuInfo" data-obd-detail-target="obdSessionDetailEcuInfo" aria-pressed="false">ECU情報</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdSessionDetailSupportedPid" data-obd-detail-target="obdSessionDetailSupportedPid" aria-pressed="false">対応PID</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdSessionDetailMode06" data-obd-detail-target="obdSessionDetailMode06" aria-pressed="false">Mode06</button>
+            <button class="secondary-button" type="button" data-obd-scroll-target="obdSessionDetailEcuResponses" data-obd-detail-target="obdSessionDetailEcuResponses" aria-pressed="false">ECU応答</button>
+          </nav>
+          <p id="obdReadoutDetailEmpty" class="empty-state obd-simple-only" role="status" hidden></p>
           <div id="obdDevSessionDetails" class="obd-session-details" hidden></div>
           <p class="empty-state obd-readout-details-empty">追加の読取データはありません。</p>
         </details>
