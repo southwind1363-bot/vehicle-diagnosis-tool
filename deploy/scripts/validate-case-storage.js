@@ -23,7 +23,7 @@ function client(options = {}) {
   let reader;
   const context = vm.createContext({
     savedCases: original, caseStorageReadError: "", CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
-    THEME_KEY: "theme", NOTICE_KEY: "notice", applyTheme: () => {},
+    THEME_KEY: "theme", NOTICE_KEY: "notice", OBD_UI_MODE_KEY: "ui-mode", applyTheme: () => {},
     caseStorageWarning: { hidden: true }, caseStorageWarningText: {},
     noticeModal: { showModal: () => { calls.noticeShown = true; }, close: () => { calls.noticeClosed = true; } },
     sessionStorage: { getItem: () => { if (options.failRead) throw new Error("SecurityError"); return null; } },
@@ -190,7 +190,7 @@ for (const stored of [null, "[]"]) {
   check(c.context.savedCases.length === 0 && !c.context.caseStorageReadError && c.calls.writes.length === 0, "Absent or genuinely empty storage was rejected or rewritten");
 }
 
-for (const failRemoveKey of [key, "theme", "notice", null]) {
+for (const failRemoveKey of [key, "theme", "notice", "ui-mode", null]) {
   const c = client({ failRemoveKey });
   c.context.caseStorageReadError = "unresolved";
   c.context.clearAllLocalStorage();
@@ -219,6 +219,7 @@ for (const deniedProperty of [false, true]) {
   Object.assign(c.context, {
     APP_LAST_UPDATED: "test", appVersion: {}, lastUpdated: {},
     applyTheme: (value) => { theme = value; }, loadData: () => { loaded = true; },
+    renderObdUiMode: () => {}, initializeLaunchView: () => {},
     registerOfflineCache: () => { offlineRegistered = true; }, updateAiButtonLabel: () => {},
     renderCases: () => c.context.renderCaseStorageWarning()
   });
