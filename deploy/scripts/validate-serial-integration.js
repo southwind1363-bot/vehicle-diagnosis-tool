@@ -44,6 +44,7 @@ const webSerialFunctions = [
   "updateWebSerialEcuInfoReadoutResponses", "mergeWebSerialEcuInfoReadoutResponses", "isWebSerialEcuInfoCommand",
   "mergeObdObservationContexts",
   "buildWebSerialConnectionStatus", "buildWebSerialAdapterInitializationSummary", "getWebSerialAdapterInitializationStopReason",
+  "getWebSerialDisplayBaudRate",
   "formatWebSerialConnectionFailure", "formatWebSerialAdapterInitializationFailure", "formatWebSerialAdapterInitializationSummary",
   "formatWebSerialStopReason", "appendObdDeveloperLog", "sendElmDeveloperCommand", "readElmDeveloperLoop", "readElmDeveloperResponse",
   "isAllowedObdDeveloperCommand", "isCurrentWebSerialReadLoop", "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse"
@@ -196,6 +197,16 @@ const successfulResponses = {
   "0101": "41 01 00 07 00 00", "0900": "49 00 14 00 00 00", "0904": "49 04 01 31 32 33", "0906": "49 06 01 12 34 56 78",
   "06": "46 01 01 00 10 00 00 00 20", "0100": "41 00 00 10 00 00", "010C": "41 0C 1A F8"
 };
+
+{
+  const { context } = createClient(successfulResponses);
+  check(context.formatWebSerialAdapterInitializationSummary({ initializationStatus: "completed", completedSetupStepCount: 6, attemptedSetupStepCount: 6, baudRate: 38400 }) === "完了 (6/6 / 38400 bps)", "Valid numeric Web Serial baud rate was not displayed");
+  check(context.formatWebSerialAdapterInitializationSummary({ initialization_status: "failed", failed_setup_step: "disable_echo", baud_rate: "115200" }) === "停止: エコー停止 / 115200 bps", "Valid decimal-string Web Serial baud rate alias was not displayed");
+  for (const baudRate of [null, "", " ", false, 0, 1, -1, 38400.5, 1000001, "38400bps", [], {}]) {
+    const label = context.formatWebSerialAdapterInitializationSummary({ initializationStatus: "completed", completedSetupStepCount: 0, attemptedSetupStepCount: 0, baudRate });
+    check(label === "完了 (0/0)", `Missing or invalid Web Serial baud rate was presented as measured (${JSON.stringify(baudRate)} => ${label})`);
+  }
+}
 
 async function connect(client) {
   await client.context.connectObdDeveloperVci();

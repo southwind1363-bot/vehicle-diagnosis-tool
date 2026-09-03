@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.433";
+const APP_VERSION = "3.13.434";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7814,10 +7814,19 @@ function getWebSerialAdapterInitializationStopReason(error) {
   return "initialization_error";
 }
 
+function getWebSerialDisplayBaudRate(value) {
+  const baudRate = typeof value === "number"
+    ? value
+    : typeof value === "string" && /^\d+$/.test(value.trim())
+      ? Number(value.trim())
+      : null;
+  return Number.isSafeInteger(baudRate) && baudRate >= 1200 && baudRate <= 1000000 ? baudRate : null;
+}
+
 function formatWebSerialAdapterInitializationSummary(summary = null) {
   const status = summary?.initializationStatus || summary?.initialization_status;
-  const baudRate = summary?.baudRate || summary?.baud_rate || null;
-  const baudRateLabel = Number.isInteger(Number(baudRate)) ? ` / ${Number(baudRate)} bps` : "";
+  const baudRate = getWebSerialDisplayBaudRate(summary?.baudRate ?? summary?.baud_rate);
+  const baudRateLabel = baudRate === null ? "" : ` / ${baudRate} bps`;
   if (status === "completed") return `完了 (${summary.completedSetupStepCount ?? summary.completed_setup_step_count ?? 0}/${summary.attemptedSetupStepCount ?? summary.attempted_setup_step_count ?? 0}${baudRateLabel})`;
   if (status === "in_progress") return "実行中";
   if (status === "failed") {
