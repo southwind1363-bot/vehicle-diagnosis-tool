@@ -13,6 +13,7 @@
     "validate:offline": "node scripts/validate-offline-cache.js",
     "validate:case-storage": "node scripts/validate-case-storage.js",
     "validate:serial": "node scripts/validate-serial-lifecycle.js",
+    "validate:serial-integration": "node scripts/validate-serial-integration.js",
     "validate:session-export": "node scripts/validate-session-export.js",
     "bridge:dev": "node local-bridge-readonly.js",
     "bridge:j2534:dev": "node scripts/start-j2534-readonly-bridge.js",

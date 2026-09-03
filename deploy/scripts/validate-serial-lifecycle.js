@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import "./validate-serial-response-lines.js";
+import "./validate-serial-integration.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["connectObdDeveloperVci", "disconnectObdDeveloperVci", "lockObdDeveloperMode", "lockObdAccess", "setObdDeveloperConnectionState", "resetWebSerialConnectionAttemptMetadata", "isWebSerialPortSelectionCancelled", "getWebSerialConnectionFailureReason", "isCurrentObdSerialOperation", "continueObdSerialOperation", "throwIfObdSerialOperationCancelled", "beginObdBridgeOperation", "isObdBridgeOperationBlocked"];

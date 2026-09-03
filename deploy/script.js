@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.424";
+const APP_VERSION = "3.13.425";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -4453,12 +4453,12 @@ function initializeObdReadOnlyPanel() {
     ? "このブラウザはUSBシリアルと、OSがCOMポートとして公開したBluetooth Classic SPPの読取基盤に対応しています。BLE/Wi-Fiは対象外です。"
     : "このブラウザはWeb Serial非対応です。実機読取にはデスクトップ版Chrome系ブラウザが必要です。";
   const secureStatus = capability.secureContext
-    ? "HTTPS読取環境は正常です。"
-    : "HTTPSではないため実機読取機能は使用できません。";
+    ? "安全な接続環境を確認しました。"
+    : "安全な接続環境ではないためWeb Serial読取は使用できません。";
   const catalogStatus = `読取辞書 ${capability.monitorDefinitionCount}項目を準備しています。`;
 
-  obdCapabilityBadge.textContent = "実機読取準備中";
-  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} VCI読取、DTC読取、ライブデータ、ECU情報は機能単位で準備し、安全検証が終わるまで車両への送信は無効にしています。`;
+  obdCapabilityBadge.textContent = "接続方式別の対応状況";
+  obdCapabilityText.textContent = `${secureStatus} ${serialStatus} ${catalogStatus} PC用ELM327の接続・読取は実装済みで、実機適合は未確認です。iPhone用BLEアプリは署名・導入・実機確認待ち、J2534の車両通信と消去・作動系の実行通信は未実装です。`;
   renderObdAccessGate();
   renderObdProgressOverview(capability);
   renderObdPreviewButtons();
@@ -8084,7 +8084,7 @@ function hasCompletedElmDeveloperResponse(buffer) {
 }
 
 function takeCompletedElmDeveloperResponse(buffer) {
-  return String(buffer || "").replace(/>\s*$/, "").replace(/\r/g, "").trim();
+  return String(buffer || "").replace(/>\s*$/, "").replace(/\r\n?/g, "\n").trim();
 }
 
 async function readElmDeveloperResponse(timeoutMs) {
@@ -11821,6 +11821,19 @@ function renderObdDeveloperSessionSummary(session = null) {
   renderObdBridgeSessionDetails(session);
 }
 
+function getObdOperationImplementationStatus(item) {
+  if (item.commandClass === "state-changing") {
+    const contract = window.ObdReadOnly?.getServiceExperimentContract?.();
+    return contract?.executionTransportImplemented === false
+      ? "実行通信未実装"
+      : "実行未開放";
+  }
+  if (["connect_vehicle", "read_dtc", "live_monitor"].includes(item.id)) {
+    return "PC ELM327実装済み・実機確認待ち";
+  }
+  return "準備状況未確認";
+}
+
 function renderObdOperationPlan(items) {
   obdOperationGrid.innerHTML = "";
   if (!items.length) {
@@ -11841,7 +11854,8 @@ function renderObdOperationPlan(items) {
     title.textContent = item.label;
     const badge = document.createElement("span");
     badge.className = "obd-operation-state";
-    badge.textContent = item.currentAvailability;
+    const implementationStatus = getObdOperationImplementationStatus(item);
+    badge.textContent = implementationStatus;
     head.append(title, badge);
 
     const goal = document.createElement("p");
@@ -11867,7 +11881,7 @@ function renderObdOperationPlan(items) {
     button.type = "button";
     button.className = item.commandClass === "state-changing" ? "small-danger-button" : "secondary-button";
     button.disabled = true;
-    button.textContent = item.commandClass === "state-changing" ? "安全検証完了まで無効" : "準備中";
+    button.textContent = implementationStatus;
 
     card.append(head, goal, readinessLine, list, button);
     obdOperationGrid.appendChild(card);
