@@ -111,6 +111,46 @@ for (const lock of ["lockObdAccess", "lockObdDeveloperMode"]) {
   }
 }
 
+for (const cancellation of ["disconnectObdDeveloperVci", "lockObdAccess", "lockObdDeveloperMode"]) {
+  const { context: c, port, calls } = client();
+  const opening = deferred();
+  const closing = deferred();
+  const saved = c.obdDevSession.lastSession;
+  const savedJson = JSON.stringify(saved);
+  let readerAcquisitions = 0;
+  let writerAcquisitions = 0;
+  port.readable.getReader = () => { readerAcquisitions += 1; throw new Error("unexpected_reader"); };
+  port.writable.getWriter = () => { writerAcquisitions += 1; throw new Error("unexpected_writer"); };
+  port.open = async () => { calls.open += 1; await opening.promise; };
+  port.close = async () => { calls.close += 1; await closing.promise; };
+  const pending = c.connectObdDeveloperVci();
+  await settle();
+  check(c.obdDevSession.connectionState === "opening", `${cancellation}: late-close fixture did not reach open`);
+  await c[cancellation]();
+  await c.disconnectObdDeveloperVci();
+  c.obdAccessUnlocked = c.obdDevModeUnlocked = true;
+  opening.resolve();
+  await settle();
+  await c.connectObdDeveloperVci();
+  check(c.obdSerialConnectPending && calls.close === 1 && calls.select === 1 && c.beginObdBridgeOperation() === null,
+    `${cancellation}: late port close did not block new ownership while pending`);
+  const reason = c.obdDevSession.lastDisconnectReason;
+  closing.reject(new Error("late_port_close_failed"));
+  await pending;
+  loadDeveloperGate(c);
+  c.renderObdDeveloperGate();
+  await c.disconnectObdDeveloperVci();
+  await c.connectObdDeveloperVci();
+  check(c.obdDevSession.connectionState === "disconnecting" && c.obdSerialDisconnectOperation?.cleanupFailed
+    && !c.obdSerialConnectPending && c.obdDevSession.disconnectedAt === null
+    && c.obdDevConnectButton.disabled && c.obdDevConnectionState.textContent === "終了未確認",
+    `${cancellation}: late port close failure was reported as disconnected`);
+  check(calls.select === 1 && calls.open === 1 && calls.close === 1 && calls.initialize === 0
+    && readerAcquisitions === 0 && writerAcquisitions === 0 && c.obdDevSession.lastDisconnectReason === reason
+    && c.beginObdBridgeOperation() === null && c.obdDevSession.lastSession === saved && JSON.stringify(saved) === savedJson,
+    `${cancellation}: late close failure retried acquisition, initialized, or lost saved results`);
+}
+
 for (const stage of ["select", "open", "initialize", "identify"]) {
   const { context: c, port, calls } = client();
   const fail = async () => { throw new Error("ordinary failure"); };
@@ -142,6 +182,7 @@ for (const stage of ["initialize", "identify"]) {
 for (const failure of ["cancel", "reader", "writer", "close", "none"]) {
   const { context: c, port } = client();
   await c.connectObdDeveloperVci();
+  loadDeveloperGate(c);
   const released = [];
   const action = (name) => { released.push(name); if (name === failure) throw new Error(name); };
   c.obdDevSession.reader = { cancel: async () => action("cancel"), releaseLock: () => action("reader") };
@@ -154,7 +195,25 @@ for (const failure of ["cancel", "reader", "writer", "close", "none"]) {
   await first;
   await second;
   check(released.join(",") === "cancel,reader,writer,close", `${failure}: cleanup must attempt each resource exactly once`);
-  check(c.obdDevSession.connectionState === "disconnected" && c.obdSerialDisconnectOperation === null && c.obdDevSession.lastSession === saved, `${failure}: repeated disconnect/lock left a stuck or lost session`);
+  check(c.obdDevSession.lastSession === saved, `${failure}: repeated disconnect/lock lost the saved session`);
+  if (failure === "none") {
+    check(c.obdDevSession.connectionState === "disconnected" && c.obdSerialDisconnectOperation === null,
+      "none: confirmed cleanup did not finish as disconnected");
+    c.obdAccessUnlocked = true;
+    await c.connectObdDeveloperVci();
+    check(c.obdDevSession.port && c.beginObdBridgeOperation() === null,
+      "none: reconnect was unavailable or bridge started while serial remained connected");
+    await c.disconnectObdDeveloperVci();
+  } else {
+    c.obdAccessUnlocked = true;
+    c.renderObdDeveloperGate();
+    await c.disconnectObdDeveloperVci();
+    await c.connectObdDeveloperVci();
+    check(c.obdDevSession.connectionState === "disconnecting" && c.obdSerialDisconnectOperation?.cleanupFailed
+      && c.obdDevConnectButton.disabled && c.obdDevConnectionState.textContent === "終了未確認"
+      && c.beginObdBridgeOperation() === null,
+    `${failure}: cleanup failure was treated as disconnected or allowed reconnect/bridge`);
+  }
 }
 
 async function readClient() {

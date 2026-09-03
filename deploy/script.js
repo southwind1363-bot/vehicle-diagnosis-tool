@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.425";
+const APP_VERSION = "3.13.426";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5873,7 +5873,12 @@ if (!continueObdSerialOperation(revision)) return;
     }
   } finally {
     if (opened && !installed) {
-      try { await port.close(); } catch (_error) { /* Only this attempt's opened port is owned here. */ }
+      try { await port.close(); } catch (_error) {
+        // Keep the uninstalled port quarantined before releasing acquisition ownership.
+        obdSerialDisconnectOperation = { cleanupFailed: true, promise: Promise.resolve() };
+        obdDevSession.disconnectedAt = null;
+        setObdDeveloperConnectionState("disconnecting");
+      }
     }
     obdSerialConnectPending = false;
     renderObdSessionExportControls();
@@ -5976,10 +5981,10 @@ async function disconnectObdDeveloperVci(options = {}) {
     await Promise.resolve();
     if (reader) {
       try { await reader.cancel(); } catch (_error) {
-        if (waitForWrite) operation.cleanupFailed = true;
+        operation.cleanupFailed = true;
       }
       try { reader.releaseLock(); } catch (_error) {
-        if (waitForWrite) operation.cleanupFailed = true;
+        operation.cleanupFailed = true;
       }
     }
     if (waitForWrite) {
@@ -5988,12 +5993,12 @@ async function disconnectObdDeveloperVci(options = {}) {
     }
     if (writer) {
       try { writer.releaseLock(); } catch (_error) {
-        if (waitForWrite) operation.cleanupFailed = true;
+        operation.cleanupFailed = true;
       }
     }
     if (port) {
       try { await port.close(); } catch (_error) {
-        if (waitForWrite) operation.cleanupFailed = true;
+        operation.cleanupFailed = true;
       }
     }
     if (obdSerialDisconnectOperation !== operation) return;

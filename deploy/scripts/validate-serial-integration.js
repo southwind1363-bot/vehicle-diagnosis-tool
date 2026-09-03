@@ -58,23 +58,43 @@ class MockElmPort {
   constructor(responses = {}, options = {}) {
     this.responses = { ...responses };
     this.options = options;
-    this.calls = { open: 0, close: 0, cancel: 0, releaseReader: 0, releaseWriter: 0, writes: [], responseChunks: [] };
+    this.calls = { select: 0, open: 0, close: 0, cancel: 0, releaseReader: 0, releaseWriter: 0, writes: [], responseChunks: [] };
     this.queue = [];
     this.waiting = null;
     this.closed = false;
-    this.readable = { getReader: () => ({
-      read: () => this.read(),
-      cancel: async () => { this.calls.cancel += 1; this.finish(); },
-      releaseLock: () => { this.calls.releaseReader += 1; }
-    }) };
-    this.writable = { getWriter: () => ({
-      write: (value) => this.write(value),
-      releaseLock: () => { this.calls.releaseWriter += 1; }
-    }) };
+    this.readerLocked = false;
+    this.writerLocked = false;
+    this.cleanupFailure = null;
+    this.readable = { getReader: () => {
+      assert.equal(this.readerLocked, false, "Reader is already locked");
+      this.readerLocked = true;
+      return {
+        read: () => this.read(),
+        cancel: async () => { this.calls.cancel += 1; this.finish(); },
+        releaseLock: () => {
+          this.calls.releaseReader += 1;
+          if (this.cleanupFailure === "reader") throw new Error("reader_release_failed");
+          this.readerLocked = false;
+        }
+      };
+    } };
+    this.writable = { getWriter: () => {
+      assert.equal(this.writerLocked, false, "Writer is already locked");
+      this.writerLocked = true;
+      return {
+        write: (value) => this.write(value),
+        releaseLock: () => { this.calls.releaseWriter += 1; this.writerLocked = false; }
+      };
+    } };
   }
 
   async open() { this.calls.open += 1; }
-  async close() { this.calls.close += 1; this.closed = true; this.finish(); }
+  async close() {
+    this.calls.close += 1;
+    if (this.cleanupFailure === "close" || this.readerLocked || this.writerLocked) throw new Error("port_close_failed");
+    this.closed = true;
+    this.finish();
+  }
   finish() {
     if (this.waiting) { this.waiting({ done: true }); this.waiting = null; }
   }
@@ -115,7 +135,7 @@ function createClient(responses, options = {}) {
   const uiNode = { value: "", textContent: "", innerHTML: "", hidden: false };
   const context = vm.createContext({
     TextDecoder, TextEncoder, setTimeout, clearTimeout, performance, Date, console,
-    navigator: { serial: { requestPort: async () => port } },
+    navigator: { serial: { requestPort: async () => { port.calls.select += 1; return port; } } },
     sessionStorage: { removeItem: () => {}, setItem: () => {} },
     obdAccessUnlocked: true, obdDevModeUnlocked: false, obdUiMode: "simple",
     obdBridgeOperation: null, obdSerialRevision: 0, obdSerialResultOwner: null,
@@ -207,6 +227,32 @@ for (const eol of ["\r\n", "\r", "\n"]) {
   await client.context.disconnectObdDeveloperVci();
   await delay(5);
   check(client.port.calls.cancel === 1 && client.port.calls.close === 1 && client.port.calls.releaseReader === 1 && client.port.calls.releaseWriter === 1, "Disconnect did not cancel, release, and close every Web Serial resource once");
+  check(client.port.closed && !client.port.readerLocked && !client.port.writerLocked, "Successful disconnect left a mock resource open or locked");
+}
+
+for (const failure of ["reader", "close"]) {
+  const client = createClient(successfulResponses);
+  await connect(client);
+  await client.context.runObdDeveloperRead("cleanup", ["03"]);
+  const saved = client.context.obdDevSession.lastSession;
+  const savedJson = JSON.stringify(saved);
+  const writes = client.port.calls.writes.length;
+  check(saved?.dtcSnapshot?.codes?.includes("P0133") && !client.context.obdDevSession.pendingWriteOperation,
+    `${failure}: cleanup fixture needs a retained readout without a pending write`);
+  client.port.cleanupFailure = failure;
+  await client.context.disconnectObdDeveloperVci();
+  check(!client.port.closed && client.port.readerLocked === (failure === "reader") && !client.port.writerLocked,
+    `${failure}: mock did not retain the failed-close or unreleased-reader condition`);
+  check(client.context.obdDevSession.connectionState === "disconnecting" && client.context.obdSerialDisconnectOperation?.cleanupFailed,
+    `${failure}: failed cleanup incorrectly reported a completed disconnect`);
+  await client.context.disconnectObdDeveloperVci();
+  await client.context.connectObdDeveloperVci();
+  check(client.port.calls.select === 1 && client.port.calls.open === 1 && client.port.calls.writes.length === writes,
+    `${failure}: unresolved cleanup allowed a new picker, port open, or write`);
+  check(client.port.calls.cancel === 1 && client.port.calls.releaseReader === 1 && client.port.calls.releaseWriter === 1 && client.port.calls.close === 1,
+    `${failure}: repeated disconnect retried or skipped resource cleanup`);
+  check(client.context.obdDevSession.lastSession === saved && JSON.stringify(saved) === savedJson,
+    `${failure}: cleanup failure replaced or mutated the acquired scan`);
 }
 
 {
