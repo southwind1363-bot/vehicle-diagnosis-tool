@@ -233,7 +233,7 @@ for (const eol of ["\r\n", "\r", "\n"]) {
 for (const failure of ["reader", "close"]) {
   const client = createClient(successfulResponses);
   await connect(client);
-  await client.context.runObdDeveloperRead("cleanup", ["03"]);
+  await client.context.readObdDeveloperDtc();
   const saved = client.context.obdDevSession.lastSession;
   const savedJson = JSON.stringify(saved);
   const writes = client.port.calls.writes.length;
@@ -253,6 +253,94 @@ for (const failure of ["reader", "close"]) {
     `${failure}: repeated disconnect retried or skipped resource cleanup`);
   check(client.context.obdDevSession.lastSession === saved && JSON.stringify(saved) === savedJson,
     `${failure}: cleanup failure replaced or mutated the acquired scan`);
+  const downloads = [];
+  const exportStatus = {};
+  let clicks = 0;
+  Object.assign(client.context, {
+    Blob,
+    URL: { createObjectURL: (blob) => { downloads.push(blob); return "blob:rescue"; }, revokeObjectURL: () => {} },
+    document: {
+      querySelectorAll: () => [exportStatus],
+      createElement: () => ({ click: () => { clicks += 1; }, remove: () => {} }),
+      body: { appendChild: () => {} }
+    }
+  });
+  load(client.context, ["getObdSessionExportBlockReason", "setObdSessionExportStatus", "downloadObdSessionJson"]);
+  check(client.context.downloadObdSessionJson() === true && clicks === 1 && downloads.length === 1,
+    `${failure}: real readout could not be exported after cleanup settled`);
+  const archive = await downloads[0].text();
+  const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(archive);
+  check(JSON.stringify(restored?.dtcSnapshot?.codes) === JSON.stringify(["P0133", "P0420"])
+    && restored?.vehicleCommandEnabled === false, `${failure}: rescue archive lost DTCs or allowed vehicle commands (${JSON.stringify({ codes: restored?.dtcSnapshot?.codes, enabled: restored?.vehicleCommandEnabled, error: restored?.error, accepted: restored?.accepted })})`);
+  check(exportStatus.textContent.includes("終了未確認") && client.context.obdSerialDisconnectOperation?.cleanupFailed
+    && client.port.calls.writes.length === writes && client.port.calls.select === 1
+    && client.context.obdDevSession.lastSession === saved && JSON.stringify(saved) === savedJson,
+    `${failure}: rescue download changed the source, quarantine, or transport state`);
+}
+
+for (const [command, service, status, label] of [["03", "43", "stored", "保存DTC読取"], ["07", "47", "pending", "保留・永久DTC読取"], ["0A", "4A", "permanent", "保留・永久DTC読取"]]) {
+  const eol = command === "03" ? "\r\n" : command === "07" ? "\r" : "\n";
+  const client = createClient({ ...successfulResponses,
+    [command]: `7E8 05 ${service} 01 33 00 00${eol}7E9 05 ${service} 04 20 00 00`
+  });
+  await connect(client);
+  await client.context.runObdDeveloperRead(label, [command]);
+  const session = client.context.obdDevSession.lastSession;
+  const expected = [["P0133", "7E8", status], ["P0420", "7E9", status]];
+  const rows = (snapshot) => (snapshot?.dtcs || []).map((dtc) => [dtc.code, dtc.ecu || dtc.sourceEcu || dtc.source_ecu, dtc.status]).sort();
+  check(JSON.stringify(rows(session.dtcSnapshot)) === JSON.stringify(expected), `${command}: individual readout fabricated DTCs or lost ECU/status (${JSON.stringify(rows(session.dtcSnapshot))})`);
+  const archive = client.context.ObdReadOnly.buildBridgeSessionExportPayload(session);
+  const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
+  check(JSON.stringify(rows(restored?.dtcSnapshot)) === JSON.stringify(expected), `${command}: individual readout archive changed ECU-scoped DTCs`);
+  await client.context.disconnectObdDeveloperVci();
+}
+
+{
+  const { context: c } = createClient(successfulResponses);
+  const decode = (response) => c.buildWebSerialDtcResponseOverrides([{ command: "03", response }], ["03"]).storedDtcResponse;
+  const rows = decode("18DAF110 05 43 01 33 00 00\r18DAF118 05 43 04 20 00 00");
+  check(JSON.stringify(rows.dtcs.map((dtc) => [dtc.code, dtc.ecu]).sort()) === JSON.stringify([["P0133", "18DAF110"], ["P0420", "18DAF118"]]), "29-bit response IDs were lost while normalizing DTC overrides");
+  const padded = decode("7E8 03 43 01 33 AA AA AA AA");
+  check(JSON.stringify(padded.codes) === JSON.stringify(["P0133"]), "DTC override decoded bytes beyond the frame length");
+  for (const raw of ["7E8 03 43 00 00", "NO DATA"]) {
+    const empty = decode(raw);
+    check(empty.codes?.length === 0 || empty.dtcs?.length === 0, "Empty DTC response fabricated a code");
+    check(empty.dtcReadoutStatus === "reported" && empty.reportedStatuses.join() === "stored", "Reported empty DTC state was lost");
+  }
+  for (const raw of ["7E8 10 0B 43 01 33 04 20 00", "7E8 03 47 01 33", "BUS ERROR\rNO DATA"]) {
+    const unknown = decode(raw);
+    check(unknown.dtcs.length === 0 && unknown.dtcReadoutStatus === "unparsed", "Incomplete, wrong-service or error response was decoded as stored DTC evidence");
+  }
+  const negative = decode("7E8 03 7F 03 11");
+  check(negative.dtcs.length === 0 && negative.dtcReadoutStatus === "unparsed" && negative.dtcNegativeResponseCode === "11",
+    "DTC normalization lost matching negative-response evidence");
+  for (const raw of ["430171", "NO DATA\r430171", "430171\r430420"]) {
+    const compact = decode(raw);
+    check(JSON.stringify(compact.codes) === JSON.stringify(raw.includes("430420") ? ["P0171", "P0420"] : ["P0171"]),
+      `Compact headerless DTC response was lost or merged across lines (${raw})`);
+    check(compact.dtcs.every((dtc) => !dtc.ecu) && compact.dtcReadoutStatus === "reported", "Compact headerless reply invented an ECU or lost readout status");
+  }
+  const compactNegative = decode("7F0311");
+  check(compactNegative.dtcs.length === 0 && compactNegative.dtcNegativeResponseCode === "11", "Compact negative DTC response lost its NRC");
+  for (const [command, response, key] of [["07", "470171", "pendingDtcResponse"], ["0A", "4A0171", "permanentDtcResponse"]]) {
+    const compact = c.buildWebSerialDtcResponseOverrides([{ command, response }], [command])[key];
+    check(compact.codes.join() === "P0171" && compact.dtcs[0].status === (command === "07" ? "pending" : "permanent"), "Compact DTC normalization changed the requested status");
+  }
+  check(!Object.hasOwn(rows, "raw") && !Object.hasOwn(rows, "bytes") && rows.vehicleCommandEnabled === false && rows.vehicle_command_enabled === false,
+    "DTC override retained raw response bytes or unsafe flags");
+}
+
+{
+  const client = createClient({ ...successfulResponses, ATDP: new Error("protocol_query_failed") });
+  await connect(client);
+  await client.context.readObdDeveloperDtc();
+  const session = client.context.obdDevSession.lastSession;
+  check(client.context.obdDevSession.connectionState === "disconnected" && !client.port.calls.writes.includes("07"),
+    "Protocol-query failure did not stop the real DTC flow before the next readout");
+  check(JSON.stringify(session?.dtcSnapshot?.codes) === JSON.stringify(["P0133", "P0420"]),
+    `Protocol-query failure retained phantom DTCs (${JSON.stringify(session?.dtcSnapshot?.codes)})`);
+  const restored = client.context.ObdReadOnly.buildDiagnosticScanSessionFromJson(JSON.stringify(client.context.ObdReadOnly.buildBridgeSessionExportPayload(session)));
+  check(JSON.stringify(restored?.dtcSnapshot?.codes) === JSON.stringify(["P0133", "P0420"]), "Interrupted DTC readout archive changed the acquired codes");
 }
 
 {

@@ -159,6 +159,48 @@ check(/^diagnostic-session-[0-9TZ-]+\.json$/.test(calls.filename) && !calls.file
 check(statuses.every((status) => status.textContent.includes("開始")) && calls.removed === 1, "Browser handoff must be reported accurately and its link removed");
 calls.timers.forEach((callback) => callback());
 check(calls.revoked.join() === "blob:test", "Successful export leaked its object URL");
+{
+  const test = client(sample);
+  const operation = { cleanupFailed: true, cleanupSettled: true, promise: Promise.resolve() };
+  test.c.obdSerialDisconnectOperation = operation;
+  test.c.obdDevSession.connectionState = "disconnecting";
+  test.c.renderObdSessionExportControls();
+  check(test.buttons.every((button) => !button.disabled), "Settled cleanup failure must allow rescue of retained results");
+  check(test.c.downloadObdSessionJson() === true && test.calls.clicks === 1, "Quarantined result could not start JSON export");
+  const rescueText = await test.calls.blobs[0].text();
+  const rescuePayload = JSON.parse(rescueText);
+  assert.deepEqual({ ...rescuePayload, exported_at: null }, { ...payload, exported_at: null },
+    "Rescue export changed the existing archive contract or contents");
+  checks += 1;
+  check(test.c.obdSerialDisconnectOperation === operation && test.c.obdDevSession.connectionState === "disconnecting"
+    && test.c.obdDevSession.lastSession === sample && JSON.stringify(sample) === before, "Rescue export released quarantine or mutated the result");
+  check(test.statuses.every((status) => status.textContent.includes("終了未確認")) && test.calls.listeners.size === 1,
+    "Rescue export hid the cleanup uncertainty or removed exit protection");
+  test.calls.timers.forEach((callback) => callback());
+  check(test.calls.revoked.length === 1, "Rescue export leaked its object URL");
+}
+for (const busy of ["unsettled", "not-failed", "settled-string", "failed-string", "bridge", "import", "connect", "read", "initialize", "scan", "port", "reader", "writer", "write", "command", "opening"]) {
+  const test = client(sample);
+  test.c.obdSerialDisconnectOperation = { cleanupFailed: true, cleanupSettled: true };
+  test.c.obdDevSession.connectionState = "disconnecting";
+  if (busy === "unsettled") test.c.obdSerialDisconnectOperation.cleanupSettled = false;
+  if (busy === "not-failed") test.c.obdSerialDisconnectOperation.cleanupFailed = false;
+  if (busy === "settled-string") test.c.obdSerialDisconnectOperation.cleanupSettled = "true";
+  if (busy === "failed-string") test.c.obdSerialDisconnectOperation.cleanupFailed = "true";
+  if (busy === "bridge") test.c.obdBridgeOperation = {};
+  if (busy === "import") test.c.obdScannerImportOperation = {};
+  if (busy === "connect") test.c.obdSerialConnectPending = true;
+  if (busy === "read") test.c.obdDevSession.readInProgress = true;
+  if (busy === "initialize") test.c.obdDevSession.initializing = true;
+  if (busy === "scan") test.c.obdDevSession.coreScanInProgress = true;
+  if (["port", "reader", "writer"].includes(busy)) test.c.obdDevSession[busy] = {};
+  if (busy === "write") test.c.obdDevSession.pendingWriteOperation = {};
+  if (busy === "command") test.c.obdDevSession.pendingCommandOperation = {};
+  if (busy === "opening") test.c.obdDevSession.connectionState = "opening";
+  test.c.renderObdSessionExportControls();
+  check(test.buttons.every((button) => button.disabled) && test.c.downloadObdSessionJson() === false
+    && test.calls.blobs.length === 0 && test.calls.clicks === 0, `${busy}: rescue export bypassed an active or unconfirmed cleanup operation`);
+}
 for (const [profileKey, applicabilityKey] of [["vehicleProfile", "vehicleApplicability"], ["vehicle_profile", "vehicle_applicability"]]) {
   for (const mode of ["profile", "separate", "applicability", "vin-only"]) {
     const profile = mode === "applicability" ? null : mode === "vin-only" ? { vin: "JTDBR32E720123456" }

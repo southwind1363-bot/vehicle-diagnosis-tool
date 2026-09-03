@@ -141,7 +141,7 @@ for (const cancellation of ["disconnectObdDeveloperVci", "lockObdAccess", "lockO
   c.renderObdDeveloperGate();
   await c.disconnectObdDeveloperVci();
   await c.connectObdDeveloperVci();
-  check(c.obdDevSession.connectionState === "disconnecting" && c.obdSerialDisconnectOperation?.cleanupFailed
+  check(c.obdDevSession.connectionState === "disconnecting" && c.obdSerialDisconnectOperation?.cleanupFailed && c.obdSerialDisconnectOperation.cleanupSettled === true
     && !c.obdSerialConnectPending && c.obdDevSession.disconnectedAt === null
     && c.obdDevConnectButton.disabled && c.obdDevConnectionState.textContent === "終了未確認",
     `${cancellation}: late port close failure was reported as disconnected`);
@@ -209,11 +209,33 @@ for (const failure of ["cancel", "reader", "writer", "close", "none"]) {
     c.renderObdDeveloperGate();
     await c.disconnectObdDeveloperVci();
     await c.connectObdDeveloperVci();
-    check(c.obdDevSession.connectionState === "disconnecting" && c.obdSerialDisconnectOperation?.cleanupFailed
+    check(c.obdDevSession.connectionState === "disconnecting" && c.obdSerialDisconnectOperation?.cleanupFailed && c.obdSerialDisconnectOperation.cleanupSettled === true
       && c.obdDevConnectButton.disabled && c.obdDevConnectionState.textContent === "終了未確認"
       && c.beginObdBridgeOperation() === null,
     `${failure}: cleanup failure was treated as disconnected or allowed reconnect/bridge`);
   }
+}
+
+for (const rejectClose of [false, true]) {
+  const { context: c, port } = client();
+  await c.connectObdDeveloperVci();
+  const closing = deferred();
+  c.obdDevSession.lastSession = { source: "web_serial", marker: "retained" };
+  c.obdDevSession.reader.cancel = async () => { throw new Error("cancel_failed"); };
+  port.close = () => closing.promise;
+  c.obdScannerImportOperation = null;
+  c.window = { ObdReadOnly: { buildBridgeSessionExportPayload: () => ({}) } };
+  load(c, ["getObdSessionExportBlockReason"]);
+  const cleanup = c.disconnectObdDeveloperVci();
+  await settle();
+  check(c.obdSerialDisconnectOperation?.cleanupFailed && c.obdSerialDisconnectOperation.cleanupSettled !== true
+    && Boolean(c.getObdSessionExportBlockReason()), `${rejectClose}: early cleanup failure allowed export before close settled`);
+  if (rejectClose) closing.reject(new Error("close_failed"));
+  else closing.resolve();
+  await cleanup;
+  check(c.obdSerialDisconnectOperation?.cleanupSettled === true && c.getObdSessionExportBlockReason() === ""
+    && c.obdDevSession.connectionState === "disconnecting" && c.beginObdBridgeOperation() === null,
+    `${rejectClose}: settled cleanup did not allow snapshot rescue without releasing quarantine`);
 }
 
 async function readClient() {
@@ -600,7 +622,7 @@ for (const failWrite of [false, true]) {
     const cleanupPromise = c.disconnectObdDeveloperVci();
     await settle();
     await c.connectObdDeveloperVci();
-    check(c.obdSerialDisconnectOperation && c.obdDevSession.connectionState === "disconnecting" && !c.obdDevSession.port
+    check(c.obdSerialDisconnectOperation && c.obdSerialDisconnectOperation.cleanupSettled !== true && c.obdDevSession.connectionState === "disconnecting" && !c.obdDevSession.port
       && !actions.includes("writer-release") && !actions.includes("close") && calls.select === 1 && polls === 0,
       `${failWrite}/${cleanup}: unfinished write was released or reused`);
     c.lockObdDeveloperMode();
@@ -615,7 +637,7 @@ for (const failWrite of [false, true]) {
     check(result.error && !result.value && polls === 0 && c.obdDevSession.pendingWriteOperation === null,
       `${failWrite}/${cleanup}: late write outcome started response polling or retained pending ownership`);
     if (cleanup === "slow-close") {
-      check(c.obdSerialDisconnectOperation && c.beginObdBridgeOperation() === null, "Slow close released the cleanup barrier early");
+      check(c.obdSerialDisconnectOperation && c.obdSerialDisconnectOperation.cleanupSettled !== true && c.beginObdBridgeOperation() === null, "Slow close released the cleanup barrier early");
       closing.resolve();
     }
     await cleanupPromise;

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.426";
+const APP_VERSION = "3.13.427";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5875,7 +5875,7 @@ if (!continueObdSerialOperation(revision)) return;
     if (opened && !installed) {
       try { await port.close(); } catch (_error) {
         // Keep the uninstalled port quarantined before releasing acquisition ownership.
-        obdSerialDisconnectOperation = { cleanupFailed: true, promise: Promise.resolve() };
+        obdSerialDisconnectOperation = { cleanupFailed: true, cleanupSettled: true, promise: Promise.resolve() };
         obdDevSession.disconnectedAt = null;
         setObdDeveloperConnectionState("disconnecting");
       }
@@ -6003,6 +6003,7 @@ async function disconnectObdDeveloperVci(options = {}) {
     }
     if (obdSerialDisconnectOperation !== operation) return;
     if (operation.cleanupFailed) {
+      operation.cleanupSettled = true;
       renderObdDeveloperGate();
       return;
     }
@@ -7050,9 +7051,27 @@ function isWebSerialExpectedEmptyResponse(command, response) {
 
 function buildWebSerialDtcResponseOverrides(commandResponses = [], attemptedCommands = []) {
   const dtcCommandMetadata = {
-    "03": { key: "storedDtcResponse", status: "stored", intent: "read_stored_dtc" },
-    "07": { key: "pendingDtcResponse", status: "pending", intent: "read_pending_dtc" },
-    "0A": { key: "permanentDtcResponse", status: "permanent", intent: "read_permanent_dtc" }
+    "03": { key: "storedDtcResponse", status: "stored", intent: "read_stored_dtc", bucket: "storedDtcResponses" },
+    "07": { key: "pendingDtcResponse", status: "pending", intent: "read_pending_dtc", bucket: "pendingDtcResponses" },
+    "0A": { key: "permanentDtcResponse", status: "permanent", intent: "read_permanent_dtc", bucket: "permanentDtcResponses" }
+  };
+  const toReadOnlyOverride = (snapshot, metadata) => {
+    const reportedStatuses = Array.isArray(snapshot?.reportedStatuses)
+      ? snapshot.reportedStatuses
+      : snapshot?.dtcReadoutStatus === "reported" ? [metadata.status] : [];
+    return {
+      ...snapshot,
+      source: "web_serial",
+      intent: metadata.intent,
+      protocol: "ELM327",
+      reportedStatuses,
+      retainedRawText: false,
+      retained_raw_text: false,
+      wouldTransmit: false,
+      would_transmit: false,
+      vehicleCommandEnabled: false,
+      vehicle_command_enabled: false
+    };
   };
   const attemptedOverrides = (Array.isArray(attemptedCommands) ? attemptedCommands : []).reduce((overrides, value) => {
     const command = String(value || "").trim().toUpperCase();
@@ -7060,16 +7079,13 @@ function buildWebSerialDtcResponseOverrides(commandResponses = [], attemptedComm
     if (!metadata) return overrides;
     return {
       ...overrides,
-      [metadata.key]: {
+      [metadata.key]: toReadOnlyOverride({
         source: "web_serial",
         intent: metadata.intent,
         dtcs: [],
         reportedStatuses: [],
-        dtcReadoutStatus: "unknown",
-        retainedRawText: false,
-        wouldTransmit: false,
-        vehicleCommandEnabled: false
-      }
+        dtcReadoutStatus: "unknown"
+      }, metadata)
     };
   }, {});
   return (Array.isArray(commandResponses) ? commandResponses : []).reduce((overrides, item) => {
@@ -7080,25 +7096,52 @@ function buildWebSerialDtcResponseOverrides(commandResponses = [], attemptedComm
     return {
       ...overrides,
       [metadata.key]: isWebSerialExpectedEmptyResponse(command, response)
-        ? {
+        ? toReadOnlyOverride({
           source: "web_serial",
           intent: metadata.intent,
           dtcs: [],
           reportedStatuses: [metadata.status],
-          dtcReadoutStatus: "reported",
-          retainedRawText: false,
-          wouldTransmit: false,
-          vehicleCommandEnabled: false
-        }
-        : {
-          source: "web_serial",
-          intent: metadata.intent,
-          protocol: "ELM327",
-          raw: response,
-          retainedRawText: false,
-          wouldTransmit: false,
-          vehicleCommandEnabled: false
-        }
+          dtcReadoutStatus: "reported"
+        }, metadata)
+        : (() => {
+          const normalizedResponse = response.replace(/\r\n?/g, "\n").split("\n").map((line) => {
+            const compact = line.trim();
+            if (!/^(?:43|47|4A|7F)(?:[0-9A-F]{2})+$/i.test(compact)) return line;
+            return window.ObdReadOnly.parseObdHexBytes(compact.match(/[0-9A-F]{2}/gi).join(" "))
+              .map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+          }).join("\n");
+          const classified = window.ObdReadOnly.classifyObdResponseLines(normalizedResponse);
+          const responseBuckets = classified.responseBuckets || {};
+          const packets = [
+            ...(responseBuckets[metadata.bucket] || []),
+            ...(responseBuckets.negativeResponses || []).filter((packet) => packet?.negativeResponse?.requestedService === command)
+          ];
+          const snapshots = packets.map((packet) => {
+            const bytes = Array.isArray(packet?.bytes) ? packet.bytes : [];
+            const frameLength = Number(packet?.frameLength);
+            const normalizedBytes = Number.isInteger(frameLength) && frameLength >= 0 && bytes.length > frameLength && bytes[0] === frameLength
+              ? bytes.slice(1, frameLength + 1)
+              : bytes;
+            return window.ObdReadOnly.decodeObdDtcResponse({
+              bytes: normalizedBytes,
+              source: "web_serial",
+              intent: metadata.intent,
+              protocol: "ELM327",
+              source_ecu: packet?.ecu || packet?.address || undefined
+            });
+          });
+          const snapshot = snapshots.length
+            ? window.ObdReadOnly.mergeDtcSnapshots(...snapshots)
+            : window.ObdReadOnly.normalizeDtcSnapshot({
+              source: "web_serial",
+              intent: metadata.intent,
+              protocol: "ELM327",
+              dtcs: [],
+              reportedStatuses: [],
+              dtcReadoutStatus: "unparsed"
+            });
+          return toReadOnlyOverride(snapshot, metadata);
+        })()
     };
   }, attemptedOverrides);
 }
@@ -13272,9 +13315,19 @@ function getObdSessionExportBlockReason() {
   const session = obdDevSession.lastSession;
   if (typeof session !== "object" || Array.isArray(session) || !Object.keys(session).length
     || session.accepted === false || session.ok === false || session.blocked === true) return "この読取結果は保存できません。";
-  if (obdBridgeOperation || obdScannerImportOperation || obdSerialConnectPending || obdSerialDisconnectOperation
+  const operation = obdSerialDisconnectOperation;
+  const quarantinedSnapshotOnly = operation?.cleanupFailed === true
+    && operation.cleanupSettled === true
+    && obdDevSession.connectionState === "disconnecting"
+    && !obdDevSession.port
+    && !obdDevSession.reader
+    && !obdDevSession.writer
+    && !obdDevSession.pendingWriteOperation
+    && !obdDevSession.pendingCommandOperation;
+  if (obdBridgeOperation || obdScannerImportOperation || obdSerialConnectPending || (obdSerialDisconnectOperation && !quarantinedSnapshotOnly)
     || obdDevSession.readInProgress || obdDevSession.initializing || obdDevSession.coreScanInProgress
-    || ["selecting", "opening", "initializing", "reading", "disconnecting"].includes(obdDevSession.connectionState)) {
+    || ["selecting", "opening", "initializing", "reading"].includes(obdDevSession.connectionState)
+    || (obdDevSession.connectionState === "disconnecting" && !quarantinedSnapshotOnly)) {
     return "読取・取込処理の完了または停止後に保存してください。";
   }
   if (session.previewMode || session.preview_mode || session.source === "interface_preview" || session.source_type === "interface_preview") {
@@ -13362,7 +13415,18 @@ function downloadObdSessionJson() {
     link.hidden = true;
     document.body.appendChild(link);
     link.click();
-    setObdSessionExportStatus("読取結果のJSON保存を開始しました。");
+    const operation = obdSerialDisconnectOperation;
+    const quarantinedSnapshotOnly = operation?.cleanupFailed === true
+      && operation.cleanupSettled === true
+      && obdDevSession.connectionState === "disconnecting"
+      && !obdDevSession.port
+      && !obdDevSession.reader
+      && !obdDevSession.writer
+      && !obdDevSession.pendingWriteOperation
+      && !obdDevSession.pendingCommandOperation;
+    setObdSessionExportStatus(quarantinedSnapshotOnly
+      ? "読取結果のJSON保存を開始しました。VCIは終了未確認で、再接続はできません。"
+      : "読取結果のJSON保存を開始しました。");
     return true;
   } catch (_error) {
     setObdSessionExportStatus("JSON保存を開始できませんでした。読取結果は変更していません。");
