@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.431";
+const APP_VERSION = "3.13.432";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5479,8 +5479,11 @@ function formatObdFreezeFrameTriggerEntry(entry = null) {
   if (!code) return "起点DTC未記録";
   const reportedStatus = String(entry?.reportedStatus ?? entry?.reported_status ?? "").trim();
   const frameNumber = entry?.frameNumber ?? entry?.frame_number ?? null;
+  const frame = typeof frameNumber === "number" ? frameNumber
+    : typeof frameNumber === "string" && /^\d+$/.test(frameNumber.trim()) ? Number(frameNumber.trim()) : null;
+  const frameLabel = Number.isInteger(frame) && frame >= 0 && frame <= 255 ? `#${frame}` : "FF番号未記録";
   const ecu = String(entry?.sourceEcu ?? entry?.source_ecu ?? "").trim();
-  return `${code}${reportedStatus ? ` / ${reportedStatus}` : ""}${Number.isInteger(Number(frameNumber)) ? ` / #${Number(frameNumber)}` : ""}${ecu ? ` / ${ecu}` : ""}`;
+  return `${code}${reportedStatus ? ` / ${reportedStatus}` : ""} / ${frameLabel}${ecu ? ` / ${ecu}` : ""}`;
 }
 
 function renderObdProgressOverview() {
