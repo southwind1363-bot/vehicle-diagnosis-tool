@@ -5082,6 +5082,13 @@ if (vehicleApplicabilityEcuObservationFormatterSource) {
   check(formatEcuObservations({ observedExpectedEcuCount: 1, expectedEcuObservations: [{ ecuName: "ECM", diagnosticAddress: "7E8", observedAddresses: [], observed: false }, { systemName: "ABS", diagnosticAddress: "7EA", observedAddresses: ["7EA"], observed: true }] }) === "ECU内訳 1/2観測 / ECM [7E8] 未観測 / ABS [7EA] 観測 7EA", "ECU observation formatter did not show camel-case identity and observation evidence");
   const snakeEcuObservationLabel = formatEcuObservations({ expected_ecu_observations: [{ ecu_name: "ECM", diagnostic_address: "7E8", observed_addresses: ["7E8"], observed: true }, { system_name: "ABS", diagnostic_address: "7EA", observed: false }, { ecu_name: "SRS", diagnostic_address: "7EB", observed: false }, { ecu_name: "EPB", diagnostic_address: "7EC", observed: false }] });
   check(snakeEcuObservationLabel === "ECU内訳 1/4観測 / ECM [7E8] 観測 7E8 / ABS [7EA] 未観測 / SRS [7EB] 未観測 / ほか1件" && !snakeEcuObservationLabel.includes("EPB"), "ECU observation formatter did not preserve snake-case aliases or the three-item display limit");
+  const observationEvidence = [{ ecuName: "ECM", observed: true }, { ecuName: "ABS", observed: false }];
+  for (const observedExpectedEcuCount of [null, "", " ", false, 0, 2, -1, 3, 1.5, "1.5", [], {}]) {
+    const label = formatEcuObservations({ observedExpectedEcuCount, expectedEcuObservations: observationEvidence });
+    check(label.startsWith("ECU内訳 1/2観測"), `Missing, invalid, or conflicting reported ECU observation count replaced factual per-ECU evidence (${JSON.stringify(observedExpectedEcuCount)} => ${label})`);
+  }
+  check(formatEcuObservations({ observed_expected_ecu_count: "1", expected_ecu_observations: observationEvidence }).startsWith("ECU内訳 1/2観測"), "Valid consistent decimal-string ECU observation count alias was not preserved");
+  check(formatEcuObservations({ observed_expected_ecu_count: "0", expected_ecu_observations: observationEvidence.map((item) => ({ ...item, observed: false })) }).startsWith("ECU内訳 0/2観測"), "Valid consistent zero ECU observation count alias was not preserved");
   check(formatEcuObservations({}, "登録データなし") === "登録データなし" && formatEcuObservations(null, "登録データなし") === "登録データなし", "ECU observation formatter did not preserve missing states");
 }
 check(appSource.includes('function formatVehicleApplicabilityEvidenceSummary(summary, fallback = "")') && appSource.includes('summary.reviewRequired === true || summary.review_required === true'), "OBD app should format vehicle applicability evidence summaries");

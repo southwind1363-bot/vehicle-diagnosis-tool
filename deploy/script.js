@@ -223,13 +223,13 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7428件",
+  validationCheckLabel: "OBD安全検証 7442件",
   bridgeValidationCheckLabel: "bridge検証 384件",
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.434";
-const APP_LAST_UPDATED = "2026-09-03";
+const APP_VERSION = "3.13.435";
+const APP_LAST_UPDATED = "2026-09-04";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const MAX_SUPPORTED_ECU_COUNT = 64;
@@ -2212,10 +2212,16 @@ function formatVehicleApplicabilityEcuObservationSummary(summary, fallback = "")
     ? summary.expectedEcuObservations
     : Array.isArray(summary.expected_ecu_observations) ? summary.expected_ecu_observations : [];
   if (!observations.length) return fallback || "";
-  const reportedObservedCount = Number(summary.observedExpectedEcuCount ?? summary.observed_expected_ecu_count);
-  const observedCount = Number.isFinite(reportedObservedCount)
+  const reportedObservedCountValue = summary.observedExpectedEcuCount ?? summary.observed_expected_ecu_count;
+  const reportedObservedCount = typeof reportedObservedCountValue === "number"
+    ? reportedObservedCountValue
+    : typeof reportedObservedCountValue === "string" && /^\d+$/.test(reportedObservedCountValue.trim())
+      ? Number(reportedObservedCountValue.trim())
+      : null;
+  const evidenceObservedCount = observations.filter((item) => item?.observed === true).length;
+  const observedCount = Number.isSafeInteger(reportedObservedCount) && reportedObservedCount >= 0 && reportedObservedCount <= observations.length && reportedObservedCount === evidenceObservedCount
     ? reportedObservedCount
-    : observations.filter((item) => item?.observed === true).length;
+    : evidenceObservedCount;
   const items = observations.slice(0, 3).map((item) => {
     const observedAddresses = Array.isArray(item?.observedAddresses)
       ? item.observedAddresses
