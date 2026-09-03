@@ -45,4 +45,58 @@ context.window.ObdReadOnly = undefined;
 check(context.getObdOperationImplementationStatus(changing) === "実行未開放", "Missing module implied operation availability");
 check(context.getObdOperationImplementationStatus({ id: "future", commandClass: "read" }) === "準備状況未確認", "Unknown operation inherited ELM support");
 check(!source.includes("安全検証が終わるまで車両への送信は無効にしています。"), "Blanket transmission claim contradicts existing Web Serial readout");
+const display = vm.createContext({
+  obdDevSession: {}, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
+  obdVehicleInput: { value: "Test vehicle" }, getSelectedObdInterfaceLabel: () => "Test VCI",
+  resolveObdInterfaceId: () => "user-vci-elm327", getObdInterfaceReadoutRoute: () => ({ route: "native_connector_required" }),
+  obdScanVehicleValue: {}, obdScanInterfaceValue: {}, obdScanConnectionValue: {},
+  obdSimpleConnectVehicle: {}, obdSimpleConnectInterface: {}, obdSimpleConnectRoute: {}, obdSimpleConnectInstruction: {},
+  obdBridgeOperation: null, ensureObdVehicleSelection: () => true,
+  window: { ObdReadOnly: { getVehicleInterfaceCatalog: () => [] } },
+  obdDevStatus: {}, clearRequestedInterfaceSelection: () => {}, renderObdDeveloperGate: () => {}
+});
+for (const name of ["getObdSimpleConnectionLabel", "renderObdSimpleScannerContext", "getObdNativeConnectionPreparationNote", "prepareSelectedObdInterface"]) {
+  vm.runInContext(source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], display);
+}
+for (const [session, pending, ending, label] of [
+  [{ connectionState: "disconnected" }, false, null, "未接続"],
+  [{ connectionState: "selecting" }, true, null, "機器選択中"],
+  [{ connectionState: "opening" }, true, null, "接続中"],
+  [{ connectionState: "initializing", port: {}, initializing: true }, true, null, "初期化中"],
+  [{ connectionState: "ready", port: {} }, false, null, "接続済み"],
+  [{ connectionState: "reading", port: {} }, false, null, "読取中"],
+  [{ connectionState: "ready", port: {}, coreScanInProgress: true }, false, null, "読取中"],
+  [{ connectionState: "ready", port: {}, readInProgress: true }, false, null, "読取中"],
+  [{ connectionState: "disconnecting", port: {}, coreScanInProgress: true }, false, {}, "終了処理中"],
+  [{ connectionState: "disconnecting" }, false, null, "終了処理中"],
+  [{ connectionState: "disconnecting" }, false, { cleanupFailed: true }, "終了未確認"],
+  [{ connectionState: "initializing", port: {}, initializing: true }, true, { cleanupFailed: true }, "終了未確認"],
+  [{ connectionState: "unknown", port: {} }, false, null, "接続状態未確認"],
+  [{ connectionState: "ready" }, false, null, "未接続"]
+]) {
+  display.obdDevSession = { ...session, lastSession: { dtcSnapshot: { codes: ["P0300"] } } };
+  display.obdSerialConnectPending = pending;
+  display.obdSerialDisconnectOperation = ending;
+  const before = JSON.stringify([display.obdDevSession, ending]);
+  display.renderObdSimpleScannerContext();
+  check(display.obdScanConnectionValue.textContent === label, `Connection display should be ${label}`);
+  check(JSON.stringify([display.obdDevSession, ending]) === before, "Connection rendering changed transport/session state");
+}
+for (const id of ["user-vci-elm327", "user-vci-thinkcar-bluetooth", "future-interface"]) {
+  display.resolveObdInterfaceId = () => id;
+  const note = display.getObdNativeConnectionPreparationNote(id);
+  check(note.includes("検証済み") === (id === "user-vci-elm327"), "Unimplemented native connector inherited ELM validation");
+  if (id === "user-vci-thinkcar-bluetooth") check(note.includes("THINKCAR用iPhoneコネクタは未実装") && note.includes("直接通信は開始しません"), "THINKCAR notice hid implementation/transmission limits");
+  display.prepareSelectedObdInterface();
+  check(display.obdDevStatus.textContent.includes(note), "Preparation action omitted the selected adapter's native status");
+  display.renderObdSimpleScannerContext();
+  check(display.obdSimpleConnectInstruction.textContent === note, "Connect screen did not show native limitations before action");
+}
+for (const [route, expected] of [["desktop_web_serial", "COMポート"], ["desktop_local_bridge", "車両通信を開始するものではありません"], ["unconfirmed", "未確認"]]) {
+  display.getObdInterfaceReadoutRoute = () => ({ route });
+  display.renderObdSimpleScannerContext();
+  check(display.obdSimpleConnectInstruction.textContent.includes(expected), "Connection instruction described the wrong route");
+}
+const gate = source.match(/function renderObdDeveloperGate\([^\n]*\) \{[\s\S]*?\r?\n\}/)[0];
+check(gate.split("getObdNativeConnectionPreparationNote(selectedInterfaceId)").length === 3, "Ready/idle gate messages must use adapter-specific native status");
 console.log(`Operation availability checks: ${checks} / Errors: 0`);

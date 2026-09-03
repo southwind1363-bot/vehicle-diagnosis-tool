@@ -672,7 +672,7 @@ function createClient(webUrl, token, fetchRequest = fetch) {
   for (const name of ["unlockObdDeveloperMode", "lockObdDeveloperMode", "lockObdAccess"]) {
     vm.runInContext(appSource.match(new RegExp(`function ${name}\\(\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
   }
-  for (const name of ["startInterfaceCandidateCheck", "startGeneralBridgeCheck", "previewSelectedObdInterface", "prepareSelectedObdInterface", "loadObdInterfacePreviewSample", "connectObdDeveloperVci"]) {
+  for (const name of ["startInterfaceCandidateCheck", "startGeneralBridgeCheck", "previewSelectedObdInterface", "getObdNativeConnectionPreparationNote", "prepareSelectedObdInterface", "loadObdInterfacePreviewSample", "connectObdDeveloperVci"]) {
     vm.runInContext(appSource.match(new RegExp(`(?:async )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
   }
   return context;
