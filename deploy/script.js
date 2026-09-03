@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.428";
+const APP_VERSION = "3.13.429";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -307,6 +307,7 @@ const resetButton = document.querySelector("#resetButton");
 const themeButton = document.querySelector("#themeButton");
 const dataStatus = document.querySelector("#dataStatus");
 const offlineCacheStatus = document.querySelector("#offlineCacheStatus");
+const offlineUpdateStatus = document.querySelector("#offlineUpdateStatus");
 let offlineCacheStatusRevision = 0;
 const symptomSelect = document.querySelector("#symptomSelect");
 const vehicleInput = document.querySelector("#vehicle");
@@ -1442,9 +1443,26 @@ function getOfflineWorkerIdentity(worker) {
 
 function setOfflineCacheStatus(message, isError = false) {
   offlineCacheStatusRevision += 1;
+  renderOfflineUpdateNotice(null);
   if (!offlineCacheStatus) return;
   offlineCacheStatus.textContent = message;
   offlineCacheStatus.classList.toggle("error", isError);
+}
+
+function renderOfflineUpdateNotice(identity) {
+  if (!offlineUpdateStatus) return;
+  offlineUpdateStatus.hidden = true;
+  offlineUpdateStatus.textContent = "";
+  const version = identity?.version;
+  const versionPattern = /^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$/;
+  if (typeof version !== "string" || !versionPattern.test(version) || !versionPattern.test(APP_VERSION)
+    || identity.cacheName !== `vehicle-diagnosis-tool-${version}`) return;
+  const candidate = version.split(".").map(Number);
+  const current = APP_VERSION.split(".").map(Number);
+  const difference = candidate.findIndex((value, index) => value !== current[index]);
+  if (difference < 0 || candidate[difference] < current[difference]) return;
+  offlineUpdateStatus.textContent = `更新版 ${version} を検出しました（表示中 ${APP_VERSION}）。読取・接続を終了し、必要なデータを保存してから再読み込みしてください。`;
+  offlineUpdateStatus.hidden = false;
 }
 
 async function refreshOfflineCacheStatus(worker, isStillCurrent = () => true) {
@@ -1462,7 +1480,9 @@ async function refreshOfflineCacheStatus(worker, isStillCurrent = () => true) {
     if (!isCurrent()) return;
     if (identity?.version !== APP_VERSION || identity?.cacheName !== cacheName) {
       failureMessage = "画面とオフライン基盤の版を照合できません。この版のオフライン利用は未確認です。";
-      throw new Error("offline_worker_unverified");
+      setOfflineCacheStatus(failureMessage, true);
+      renderOfflineUpdateNotice(identity);
+      return;
     }
     if (!(await caches.has(cacheName))) {
       failureMessage = "この版の端末内オフライン診断データは保存されていません。";

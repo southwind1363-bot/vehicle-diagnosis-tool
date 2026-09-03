@@ -10,6 +10,9 @@ const base = "https://offline.example.test/tool/";
 const cacheName = `vehicle-diagnosis-tool-${manifest.version}`;
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
+const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+check(indexSource.slice(indexSource.indexOf('<header class="app-header">'), indexSource.indexOf("</header>"))
+  .includes('id="offlineUpdateStatus" class="header-note" role="status" hidden'), "Update notice is not hidden initially in the shared header");
 
 function createWorker(options = {}) {
   const stores = new Map();
@@ -255,6 +258,8 @@ function createStatusClient(worker, registration) {
   const context = vm.createContext({
     APP_VERSION: manifest.version, OFFLINE_ASSET_MANIFEST: "offline-assets.json", offlineCacheStatusRevision: 0,
     offlineCacheStatus: status,
+    offlineUpdateStatus: { hidden: true, textContent: "" },
+    serviceWorkerEvents: events,
     window: { caches: worker.caches, isSecureContext: true }, caches: worker.caches,
     URL, Request: worker.context.Request, MessageChannel, setTimeout, clearTimeout,
     navigator: { serviceWorker: {
@@ -280,6 +285,44 @@ check(!statusClient.offlineCacheStatus.textContent.includes("準備済み"), "Ol
 check(statusClient.offlineCacheStatus.textContent.includes("版を照合できません") && statusClient.offlineCacheStatus.isError, "Unverified worker identity did not report version verification failure");
 
 const manifestUrl = new URL("offline-assets.json", base).href;
+const nextVersion = `${Number(manifest.version.split(".")[0]) + 1}.0.0`;
+const newerWorker = { ...active, postMessage: (data, ports) => ports[0].postMessage({ version: nextVersion, cacheName: `vehicle-diagnosis-tool-${nextVersion}` }) };
+await statusClient.refreshOfflineCacheStatus(newerWorker);
+check(!statusClient.offlineUpdateStatus.hidden && statusClient.offlineUpdateStatus.textContent.includes(nextVersion)
+  && statusClient.offlineUpdateStatus.textContent.includes(manifest.version), "New release notice omitted installed/displayed versions");
+check(statusClient.offlineUpdateStatus.textContent.includes("保存してから") && statusClient.offlineUpdateStatus.textContent.includes("読取・接続を終了"), "Update notice omitted data/connection precautions");
+check(statusClient.offlineCacheStatus.isError && !statusClient.offlineCacheStatus.textContent.includes("準備済み"), "New worker falsely certified the displayed release as offline-ready");
+for (const version of [manifest.version, "0.0.1", "previous", "99.0.0<script>", "9999999.0.0", "01.0.0", null, 123]) {
+  statusClient.renderOfflineUpdateNotice({ version, cacheName: `vehicle-diagnosis-tool-${version}` });
+  check(statusClient.offlineUpdateStatus.hidden && !statusClient.offlineUpdateStatus.textContent, "Invalid, same, or older identity displayed an update notice");
+}
+statusClient.renderOfflineUpdateNotice({ version: nextVersion, cacheName: "unrelated" });
+check(statusClient.offlineUpdateStatus.hidden, "Inconsistent cache identity displayed an update notice");
+await statusClient.refreshOfflineCacheStatus(newerWorker);
+statusClient.setOfflineCacheStatus("PENDING");
+check(statusClient.offlineUpdateStatus.hidden, "New install attempt retained stale update notice");
+await statusClient.refreshOfflineCacheStatus(newerWorker);
+await statusClient.refreshOfflineCacheStatus(active);
+check(statusClient.offlineUpdateStatus.hidden && statusClient.offlineCacheStatus.textContent.includes("準備済み"), "Current release readiness retained a stale update notice");
+const versionClient = createStatusClient(statusWorker, {});
+versionClient.APP_VERSION = "3.9.99";
+for (const [version, visible] of [["3.10.0", true], ["3.9.100", true], ["4.0.0", true], ["3.9.98", false], ["2.99.999", false]]) {
+  versionClient.renderOfflineUpdateNotice({ version, cacheName: `vehicle-diagnosis-tool-${version}` });
+  check(versionClient.offlineUpdateStatus.hidden === !visible, "Version comparison used text ordering instead of numeric components");
+}
+for (const reason of ["new-status", "replaced-worker", "redundant-worker"]) {
+  const client = createStatusClient(statusWorker, {});
+  let currentOwner = true;
+  let reply;
+  const candidate = { ...active, postMessage: (data, ports) => { reply = ports[0]; } };
+  const completion = client.refreshOfflineCacheStatus(candidate, () => currentOwner);
+  if (reason === "new-status") client.setOfflineCacheStatus("INSTALL_FAILED", true);
+  if (reason === "replaced-worker") currentOwner = false;
+  if (reason === "redundant-worker") candidate.state = "redundant";
+  reply.postMessage({ version: nextVersion, cacheName: `vehicle-diagnosis-tool-${nextVersion}` });
+  await completion;
+  check(client.offlineUpdateStatus.hidden, `${reason}: stale identity produced an update notice`);
+}
 async function waitForStatusProbe(predicate) {
   const deadline = Date.now() + 2000;
   while (!predicate() && Date.now() < deadline) await new Promise((done) => setTimeout(done, 1));
@@ -405,6 +448,14 @@ identityPorts[1].postMessage({ version: manifest.version, cacheName });
 await newer;
 check(statusClient.offlineCacheStatus.textContent.includes(`${manifest.asset_count}/${manifest.asset_count}`), "Older identity failure suppressed a newer successful readiness check");
 const oldClient = createStatusClient(statusWorker, { active: oldWorker, update: async () => {}, addEventListener: () => {} });
+const updateRegistration = { active, update: async () => {}, addEventListener: () => {} };
+const updateClient = createStatusClient(statusWorker, updateRegistration);
+await updateClient.registerOfflineCache();
+await waitForStatusProbe(() => updateClient.offlineCacheStatus.textContent.includes("準備済み"));
+updateRegistration.active = newerWorker;
+updateClient.serviceWorkerEvents.controllerchange();
+await waitForStatusProbe(() => !updateClient.offlineUpdateStatus.hidden);
+check(updateClient.offlineUpdateStatus.textContent.includes(nextVersion), "Controller replacement did not publish the new release notice");
 await oldClient.registerOfflineCache();
 await oldClient.refreshOfflineCacheStatus(oldWorker);
 check(!oldClient.offlineCacheStatus.textContent.includes("準備済み"), "An already-resolved ready promise hid the version mismatch");
