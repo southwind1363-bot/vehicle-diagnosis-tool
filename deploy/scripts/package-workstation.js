@@ -164,6 +164,7 @@ export function packageWorkstation(options = {}) {
     fs.writeFileSync(path.join(staging, "package.json"), JSON.stringify({ name: pkg.name, version: pkg.version, type: "module", private: true,
       scripts: { start: checkedStart, "workstation:dev": checkedStart, "verify:package": "node scripts/verify-workstation-package.js" }, dependencies: pkg.dependencies }, null, 2) + "\n", { flag: "wx" });
     fs.writeFileSync(path.join(staging, "README.txt"), `自動車整備ツール ${status.version}\n\nNode.js 22以降とnpmを事前に導入し、フォルダー全体を移してください。Node.js 24 LTSを推奨します。\nstart-workstation.cmdを開き、表示された診断画面URLへアクセスしてください。\n依存ライブラリは同梱済みです。起動時のnpm installやインターネット接続は不要です。\n終了は起動画面でqを入力してEnter。接続キーは外部共有しないでください。\nNode本体・VCIドライバー・個人の保存データは同梱していません。\n車両送信の権限や実車適合は元の版から変更していません。\n`, { flag: "wx" });
+    fs.appendFileSync(path.join(staging, "README.txt"), "\n起動時は車両診断画面を開きます。自動で開かない場合は起動画面のURLを開いてください。利用前の注意を確認し、診断機画面のパスワードを入力して進みます。自動接続・自動読取は行いません。\n別のPCやブラウザーへ移しても保存データは自動移行されません。起動済みの場合は二重起動せず既存の画面を使ってください。\n");
     validateWorkstationAssets(staging);
     validatePackagedDependencies(staging);
     fs.appendFileSync(path.join(staging, "README.txt"), "\n移行後はverify-workstation.cmdを開いてファイル内容を検査できます。追加の導入や通信はありません。\n不一致・欠落時は元のパッケージを一式移し直してください。自動修復はしません。\n同梱一覧との一致検査であり、署名・真正性・実車適合の証明ではありません。一覧外の追加ファイルは検査しません。\n");

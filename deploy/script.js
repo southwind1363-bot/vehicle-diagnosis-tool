@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.427";
+const APP_VERSION = "3.13.428";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -673,6 +673,7 @@ appVersion.textContent = APP_VERSION;
 lastUpdated.textContent = APP_LAST_UPDATED;
 applyTheme(readOptionalBrowserSetting(THEME_KEY) || "light");
 renderObdUiMode();
+initializeLaunchView();
 setDefaultCaseDate();
 loadData();
 renderCases();
@@ -1508,6 +1509,10 @@ async function refreshOfflineCacheStatus(worker, isStillCurrent = () => true) {
   } catch (_) {
     if (revision === offlineCacheStatusRevision && worker.state === "activated" && isStillCurrent()) setOfflineCacheStatus(failureMessage, true);
   }
+}
+
+function initializeLaunchView() {
+  if (window.location.hash === "#obd-panel") activateTab("obd-panel");
 }
 
 function activateTab(targetId) {

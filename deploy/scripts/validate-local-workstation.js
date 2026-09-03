@@ -32,6 +32,17 @@ const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-tok
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 
+const launchViewSource = appSource.match(/function initializeLaunchView\(\) \{[\s\S]*?\r?\n\}/)?.[0];
+check(Boolean(launchViewSource), "Launch view entry point is missing");
+check(appSource.includes("renderObdUiMode();\ninitializeLaunchView();") || appSource.includes("renderObdUiMode();\r\ninitializeLaunchView();"), "Launch view must run after the OBD UI is initialized");
+for (const hash of ["#obd-panel", "", "#diagnosis-panel", "#obd-panel?unlock=true", "#obd-panel/", "#OBD-PANEL", "#unknown"]) {
+  const selected = [];
+  const context = vm.createContext({ window: { location: { hash } }, activateTab: (target) => selected.push(target) });
+  vm.runInContext(launchViewSource, context);
+  context.initializeLaunchView();
+  check(JSON.stringify(selected) === JSON.stringify(hash === "#obd-panel" ? ["obd-panel"] : []), "Launch fragment selected an unexpected view");
+}
+
 async function validateWorkstationRuntime() {
   const launcher = fs.readFileSync(new URL("../start-workstation.cmd", import.meta.url), "utf8");
   const command = launcher.match(/node -e "([^"]*process\.exit[^"]*)"/)?.[1];
@@ -217,7 +228,7 @@ async function validateBrowserLaunch() {
   check(await openWorkstationBrowser(url, { platform: "win32", execFile: launch }), "Browser launch request was not accepted");
   const [file, args, options] = calls[0];
   check(path.win32.isAbsolute(file) && path.win32.basename(file) === "rundll32.exe"
-    && JSON.stringify(args) === JSON.stringify(["url.dll,FileProtocolHandler", url])
+    && JSON.stringify(args) === JSON.stringify(["url.dll,FileProtocolHandler", `${url}/#obd-panel`])
     && options.windowsHide === true && options.timeout === 5000 && !options.shell, "Browser launch used a shell or leaked extra arguments");
   for (const invalid of ["https://127.0.0.1:3001", "http://localhost:3001", "http://127.0.0.1:0", "http://127.0.0.1:65536",
     "http://127.0.0.1:3001/?token=private", "http://127.0.0.1:3001#private", "http://user:private@127.0.0.1:3001", "http://example.com:3001", "file:///C:/private", null]) {
@@ -263,6 +274,7 @@ async function validateBrowserLaunch() {
     if (kind === "startup-error") ready.reject(new Error("startup failed"));
     else ready.resolve({ webUrl: url, bridgeUrl: "http://127.0.0.1:8765", pairingToken: "private-key", close: async () => { closes += 1; } });
     await startup;
+    if (kind !== "startup-error") check(messages.includes(`診断画面: ${url}/#obd-panel`), "Manual startup URL did not target the diagnostic screen");
     const expectedLaunch = ["success", "failed", "pending"].includes(kind);
     check(launchCalls.length === Number(expectedLaunch), `${kind}: browser launch opt-in or readiness gate failed`);
     if (expectedLaunch) check(launchCalls[0].value === url, "Browser URL included pairing data or a bridge endpoint");

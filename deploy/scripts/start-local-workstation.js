@@ -17,7 +17,7 @@ export function openWorkstationBrowser(webUrl, options = {}) {
   return new Promise((resolve) => {
     try {
       (options.execFile ?? execFile)(path.win32.join(process.env.SystemRoot || "C:\\Windows", "System32", "rundll32.exe"),
-        ["url.dll,FileProtocolHandler", webUrl], { windowsHide: true, timeout: 5000, signal: options.signal },
+        ["url.dll,FileProtocolHandler", `${webUrl}/#obd-panel`], { windowsHide: true, timeout: 5000, signal: options.signal },
         (error) => resolve(!error));
     } catch { resolve(false); }
   });
@@ -128,7 +128,7 @@ export async function startLocalWorkstation(options = {}) {
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const workstation = await startLocalWorkstation();
-    console.log(`診断画面: ${workstation.webUrl}`);
+    console.log(`診断画面: ${workstation.webUrl}/#obd-panel`);
     console.log(`J2534静的確認ブリッジ: ${workstation.bridgeUrl}`);
     console.log(`ペアリング値（外部共有しないでください）: ${workstation.pairingToken}`);
     console.log("DLLロード・車両接続・車両送信は無効です。終了: q + Enter または Ctrl+C");
