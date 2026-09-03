@@ -35,7 +35,7 @@ const context = vm.createContext({
   formatDtcReference: (code, subcode) => `${code}:${subcode}`, activateTab: () => {},
   getInput: () => ({ retainedMarker: "input" }), buildDiagnosis: (input) => { diagnosisInput = input; return {}; }, renderDiagnosis: () => {}
 });
-vm.runInContext(["initializeObdReadoutFilter", "initializeObdDtcFilter", "formatObdBridgeDtcStatusLabel", "buildObdDtcDisplayKey", "createObdDtcCard", "handleDetectedDtcClick", "scrollToObdSection"].map(extract).join("\n"), context);
+vm.runInContext(["initializeObdReadoutFilter", "initializeObdDtcFilter", "formatObdBridgeDtcStatusLabel", "getObdDisplayByteNumber", "buildObdDtcDisplayKey", "createObdDtcCard", "handleDetectedDtcClick", "scrollToObdSection"].map(extract).join("\n"), context);
 context.initializeObdDtcFilter();
 check(nodes.obdDtcFilter.hidden && subscriptions.length === 1, "DTC filter must wait for cards");
 const cards = dtcs.map((dtc) => context.createObdDtcCard(dtc, dtcs, vehicle));
@@ -111,5 +111,35 @@ for (const [query, index] of [["保存", 0], ["保留", 1], ["永久", 2], ["P03
   nodes.obdDtcSearch.value = query;
   nodes.obdDtcSearch.handlers.input();
   check(stateCards.filter((card) => !card.hidden).length === 1 && !stateCards[index].hidden && nodes.obdDtcFilterCount.textContent === "絞込中: 1 / 3件", "State search selected the wrong DTC instance");
+}
+for (const [matches, expected] of [
+  [[{}], "FF番号未記録"],
+  [[{ frameNumber: null }], "FF番号未記録"],
+  [[{ frameNumber: 0 }], "#0"],
+  [[{ frame_number: "255" }], "#255"],
+  [[{ frameNumber: 2 }, { frame_number: "2" }], "#2"],
+  [[{ frameNumber: 1 }, {}], "#1, FF番号未記録"],
+  [[{ frameNumber: false, frame_number: 2 }], "FF番号未記録"],
+  [[{ frameNumber: [] }, { frameNumber: -1 }, { frameNumber: 256 }, { frameNumber: " " }], "FF番号未記録"]
+]) {
+  const dtc = { code: "P0300", ecu: "7E8", freezeFrameMatchCount: matches.length, freezeFrameMatches: matches };
+  const before = JSON.stringify(dtc);
+  const previousDiagnosisInput = diagnosisInput;
+  const card = context.createObdDtcCard(dtc, [dtc], vehicle);
+  const line = card.children.find((child) => child.textContent.startsWith("フリーズフレーム:"));
+  check(line?.textContent === `フリーズフレーム: DTC / サブコード / ECU 一致確認済み (${expected})`, "Matched FF display fabricated a frame or concealed missing frame metadata");
+  check(JSON.stringify(dtc) === before && diagnosisInput === previousDiagnosisInput, "FF label changed match evidence or triggered diagnosis");
+}
+const summarySource = extract("renderObdDeveloperSessionSummary");
+const extendedCountLine = summarySource.split(/\r?\n/).find((line) => line.trim().startsWith("const udsDtcExtendedDataRecordCount ="));
+check(Boolean(extendedCountLine), "Missing extended-record display count");
+for (const field of ["extendedDataRecordNumber", "extended_data_record_number"]) {
+  for (const [value, expected] of [[null, 0], [undefined, 0], ["", 0], [" ", 0], [false, 0], [true, 0], [[], 0], [[0], 0], [256, 0], [-1, 0], [1.5, 0], ["0x01", 0], [0, 1], ["0", 1], [255, 1], [" 2 ", 1]]) {
+    const dtcs = [{ code: "P0300", [field]: value }];
+    const before = JSON.stringify(dtcs);
+    context.dtcSnapshot = { dtcs };
+    const count = vm.runInContext(`(() => { ${extendedCountLine}\nreturn udsDtcExtendedDataRecordCount; })()`, context);
+    check(count === expected && JSON.stringify(dtcs) === before, "Extended-record count invented an observation or changed DTC input");
+  }
 }
 console.log(`DTC filter checks: ${checks} / Errors: 0`);

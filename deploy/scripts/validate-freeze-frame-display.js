@@ -12,7 +12,7 @@ const context = vm.createContext({
   NO_DATA: "未記録", obdMonitorStatus: {},
   renderObdMonitorValues: (values, insights) => { displayed = values; displayedInsights = insights; context.obdMonitorStatus.textContent = "LIVE_STATUS"; }
 });
-vm.runInContext(["renderObdBridgeMeasurementValues", "formatObdFreezeFrameValueLine", "formatObdFreezeFrameTriggerEntry", "formatObdBridgeReadoutValue", "formatObdBridgeCompositeValue"].map(extract).join("\n"), context);
+vm.runInContext(["renderObdBridgeMeasurementValues", "formatObdFreezeFrameValueLine", "getObdDisplayByteNumber", "formatObdFreezeFrameTriggerEntry", "formatObdBridgeReadoutValue", "formatObdBridgeCompositeValue"].map(extract).join("\n"), context);
 const live = { monitorValues: [{ id: "rpm", value: 780 }], monitorInsights: [{ title: "live" }] };
 const freeze = { monitorValues: [{ id: "rpm", value: 2500 }], monitorInsights: [{ title: "FF" }] };
 const original = JSON.stringify({ live, freeze });

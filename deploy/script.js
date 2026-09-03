@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.432";
+const APP_VERSION = "3.13.433";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5474,14 +5474,19 @@ function formatObdSimpleFreezeFrameTriggerSummary(snapshot = null) {
     + (codes.length > visibleCodes.length ? " 他" + (codes.length - visibleCodes.length) + "件" : "");
 }
 
+function getObdDisplayByteNumber(value) {
+  const number = typeof value === "number" ? value
+    : typeof value === "string" && /^\d+$/.test(value.trim()) ? Number(value.trim()) : null;
+  return Number.isInteger(number) && number >= 0 && number <= 255 ? number : null;
+}
+
 function formatObdFreezeFrameTriggerEntry(entry = null) {
   const code = String(entry?.code || entry?.dtc || "").trim().toUpperCase();
   if (!code) return "起点DTC未記録";
   const reportedStatus = String(entry?.reportedStatus ?? entry?.reported_status ?? "").trim();
   const frameNumber = entry?.frameNumber ?? entry?.frame_number ?? null;
-  const frame = typeof frameNumber === "number" ? frameNumber
-    : typeof frameNumber === "string" && /^\d+$/.test(frameNumber.trim()) ? Number(frameNumber.trim()) : null;
-  const frameLabel = Number.isInteger(frame) && frame >= 0 && frame <= 255 ? `#${frame}` : "FF番号未記録";
+  const frame = getObdDisplayByteNumber(frameNumber);
+  const frameLabel = frame !== null ? `#${frame}` : "FF番号未記録";
   const ecu = String(entry?.sourceEcu ?? entry?.source_ecu ?? "").trim();
   return `${code}${reportedStatus ? ` / ${reportedStatus}` : ""} / ${frameLabel}${ecu ? ` / ${ecu}` : ""}`;
 }
@@ -11631,7 +11636,7 @@ function renderObdDeveloperSessionSummary(session = null) {
   const dtcFormatIdentifier = dtcSnapshot?.dtcFormatIdentifier || dtcSnapshot?.dtc_format_identifier || null;
   const dtcMemorySelection = dtcSnapshot?.dtcMemorySelection || dtcSnapshot?.dtc_memory_selection || null;
   const dtcReadinessGroupIdentifier = dtcSnapshot?.dtcReadinessGroupIdentifier || dtcSnapshot?.dtc_readiness_group_identifier || null;
-  const udsDtcExtendedDataRecordCount = (dtcSnapshot?.dtcs || []).filter((item) => Number.isInteger(Number(item?.extendedDataRecordNumber ?? item?.extended_data_record_number))).length;
+  const udsDtcExtendedDataRecordCount = (dtcSnapshot?.dtcs || []).filter((item) => getObdDisplayByteNumber(item?.extendedDataRecordNumber ?? item?.extended_data_record_number) !== null).length;
   const udsDtcExtendedDataRecordResponseCount = Array.isArray(dtcSnapshot?.udsDtcExtendedDataRecordResponses || dtcSnapshot?.uds_dtc_extended_data_record_responses)
     ? (dtcSnapshot.udsDtcExtendedDataRecordResponses || dtcSnapshot.uds_dtc_extended_data_record_responses).length
     : 0;
@@ -13139,10 +13144,9 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
     : Array.isArray(dtc.freeze_frame_matches) ? dtc.freeze_frame_matches : [];
   const freezeFrameMatchCount = Number(dtc.freezeFrameMatchCount ?? dtc.freeze_frame_match_count ?? freezeFrameMatches.length);
   if (freezeFrameMatchCount > 0 && freezeFrameMatches.length) {
-    const frames = [...new Set(freezeFrameMatches
-      .map((item) => item?.frameNumber ?? item?.frame_number ?? null)
-      .filter((item) => Number.isInteger(Number(item)))
-      .map((item) => `#${Number(item)}`))];
+    const frameNumbers = freezeFrameMatches.map((item) => getObdDisplayByteNumber(item?.frameNumber ?? item?.frame_number));
+    const frames = [...new Set(frameNumbers.filter((number) => number !== null).map((number) => `#${number}`))];
+    if (frameNumbers.includes(null)) frames.push("FF番号未記録");
     const freezeFrameReportedStatuses = [...new Set(freezeFrameMatches
       .map((item) => item?.reportedStatus ?? item?.reported_status ?? null)
       .filter(Boolean))];
