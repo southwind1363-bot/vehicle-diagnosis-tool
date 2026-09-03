@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.430";
+const APP_VERSION = "3.13.431";
 const APP_LAST_UPDATED = "2026-09-03";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2945,7 +2945,7 @@ function handleObdSetupPrimaryAction() {
     obdAccessPasswordInput?.focus();
     return;
   }
-  renderObdStageView("connect");
+  setObdStage("connect");
 }
 function getObdNativeConnectionPreparationNote(interfaceId) {
   if (interfaceId === "user-vci-elm327") {
@@ -4670,7 +4670,20 @@ function renderObdStageView(preferredStage = activeObdStage) {
 }
 
 function setObdStage(stage = "setup") {
+  if (!obdAccessUnlocked) return;
   renderObdStageView(stage);
+  const viewId = {
+    setup: "obdSetupPanel", connect: "obdStageSetupView", results: "obdStageResultsView",
+    readout: "obdReadoutSurface", details: "obdStageDetailsView"
+  }[activeObdStage];
+  const view = document.getElementById(viewId);
+  if (!view || !view.getClientRects().length) return;
+  const target = Array.from(view.querySelectorAll("h3, h4"))
+    .find((heading) => heading.getClientRects().length) || view;
+  target.classList.add("obd-stage-focus-target");
+  target.setAttribute("tabindex", "-1");
+  target.focus({ preventScroll: true });
+  target.scrollIntoView({ behavior: "instant", block: "start" });
 }
 
 async function hashObdAccessPassword(value) {

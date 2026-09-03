@@ -2159,6 +2159,7 @@ body.dark .flow-node-measure .flow-step {
   overflow-wrap: anywhere;
 }
 
+.obd-stage-focus-target,
 #obdDetectedCodes,
 #obdDtcFilter,
 #obdMonitorGrid,

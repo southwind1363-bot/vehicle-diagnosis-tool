@@ -90,7 +90,7 @@ function validateReadoutNavigation() {
     constructor(id) {
       this.id = id; this.hidden = false; this.parentElement = null; this.children = []; this.dataset = {}; this.scrolled = 0;
       this.classes = new Set(); this.attributes = {};
-      this.classList = { contains: (name) => this.classes.has(name), toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name) };
+      this.classList = { add: (name) => this.classes.add(name), contains: (name) => this.classes.has(name), toggle: (name, on) => on ? this.classes.add(name) : this.classes.delete(name) };
     }
     appendChild(child) {
       if (child.parentElement) child.parentElement.children = child.parentElement.children.filter((item) => item !== child);
@@ -100,6 +100,9 @@ function validateReadoutNavigation() {
     setAttribute(name, value) { this.attributes[name] = value; }
     removeAttribute(name) { delete this.attributes[name]; }
     scrollIntoView(options) { this.scrolled += 1; this.scrollOptions = options; }
+    getClientRects() { return this.hidden || (this.parentElement && !this.parentElement.getClientRects().length) ? [] : [{}]; }
+    querySelectorAll() { return this.children.filter((child) => ["H3", "H4"].includes(child.tagName)); }
+    focus(options) { this.focused = (this.focused || 0) + 1; this.focusOptions = options; }
   }
   const nodes = Object.fromEntries(["obd-panel", "diagnosis-panel", "data-panel", "obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost",
     "obdSetupPanel", "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView", "obdImportStatus", "obdDetectedCodes", "obdMonitorGrid", "obdMonitorStatus", "obdDevSessionSummary", "obdConnectionProfile", "obdReadoutDetails", "obdDevSessionDetails"]
@@ -130,7 +133,7 @@ function validateReadoutNavigation() {
     tabPanels: [nodes["diagnosis-panel"], nodes["obd-panel"], nodes["data-panel"]], tabButtons: [], obdAccessUnlocked: false, obdPanel: nodes["obd-panel"], obdScrollTargetButtons: navigationButtons,
     obdStagePanel: {}, obdStageBadge: {}, obdStageStatus: {}, obdStageTabs: [], activeObdStage: "setup", obdUiMode: "details", getObdAutoStage: () => "setup",
     ...Object.fromEntries(["obdSetupPanel", "obdStageSetupView", "obdStageResultsView", "obdStageDetailsView"].map((id) => [id, nodes[id]])) });
-  for (const name of ["syncObdReadoutSurface", "activateTab", "renderObdStageView", "scrollToObdSection"]) {
+  for (const name of ["syncObdReadoutSurface", "activateTab", "renderObdStageView", "setObdStage", "scrollToObdSection"]) {
     vm.runInContext(appSource.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
   }
   context.activateTab("obd-panel");
@@ -219,6 +222,41 @@ function validateReadoutNavigation() {
   for (const id of ["obdReadoutHome", "obdReadoutSurface", "obdReadoutResultsHost", "obdImportStatus", "obdMonitorGrid", "obdReadoutDetails", "obdDevSessionDetails"]) {
     check(indexSource.split(`id="${id}"`).length === 2, `Readout ID ${id} is missing or duplicated`);
   }
+  context.obdUiMode = "simple";
+  for (const [stage, id] of [["setup", "obdSetupPanel"], ["connect", "obdStageSetupView"], ["results", "obdStageResultsView"], ["readout", "obdReadoutSurface"]]) {
+    const view = nodes[id];
+    const hiddenHeading = new Element(`${stage}-hidden-heading`);
+    hiddenHeading.tagName = "H3"; hiddenHeading.hidden = true;
+    const heading = new Element(`${stage}-heading`); heading.tagName = "H4";
+    view.appendChild(hiddenHeading); view.appendChild(heading);
+    context.setObdStage(stage);
+    check(heading.focused === 1 && !hiddenHeading.focused, "Stage navigation did not focus the visible heading");
+    check(heading.attributes.tabindex === "-1" && heading.focusOptions.preventScroll === true, "Stage heading focus altered the tab sequence or scroll policy");
+    check(heading.classList.contains("obd-stage-focus-target"), "Stage heading omitted the sticky-header scroll margin");
+    check(heading.scrolled === 1 && heading.scrollOptions.behavior === "instant", "Stage navigation did not scroll to its focused heading");
+    context.renderObdStageView(stage);
+    check(heading.focused === 1 && heading.scrolled === 1, "Automatic stage rendering stole focus or scrolled the page");
+    context.obdAccessUnlocked = false;
+    context.setObdStage("setup");
+    check(context.activeObdStage === stage && heading.focused === 1, "Locked stage navigation changed the screen or focus");
+    context.obdAccessUnlocked = true;
+    hiddenHeading.parentElement = null; heading.parentElement = null;
+    view.children = view.children.filter((child) => child !== heading && child !== hiddenHeading);
+  }
+  context.obdUiMode = "details";
+  context.setObdStage("details");
+  check(nodes.obdStageDetailsView.focused === 1, "Stage without a heading did not focus its visible container");
+  context.setObdStage("readout");
+  check(context.activeObdStage === "setup" && nodes.obdSetupPanel.focused === 1, "Mode fallback focused the requested hidden screen instead of the rendered screen");
+  context.obdUiMode = "simple";
+  nodes.obdReadoutSurface.hidden = true;
+  context.setObdStage("readout");
+  check(!nodes.obdReadoutSurface.focused, "Hidden readout surface received focus");
+  nodes.obdReadoutSurface.hidden = false;
+  check(indexSource.includes('id="obdStageTabs" class="obd-stage-tabs" role="group"'), "Stage buttons advertise unsupported tab-list keyboard behavior");
+  const setupAction = appSource.match(/function handleObdSetupPrimaryAction\(\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
+  check(setupAction.includes('setObdStage("connect")'), "Setup action did not use explicit stage navigation");
+  check(nodes.obdMonitorGrid.values === values && nodes.obdImportStatus.textContent === "Readout unavailable; not an all-clear result", "Stage focus handling changed diagnostic values");
 }
 
 async function validateBrowserLaunch() {
