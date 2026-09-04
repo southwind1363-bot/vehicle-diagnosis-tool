@@ -24,7 +24,12 @@ class Observer {
   constructor(callback) { this.callback = callback; }
   observe(target, options) { subscriptions.push({ observer: this, target, options }); }
 }
-const context = vm.createContext({ document: { querySelectorAll: () => details }, MutationObserver: Observer });
+const printListeners = { beforeprint: [], afterprint: [] };
+const firePrintEvent = (event) => printListeners[event].forEach((handler) => handler());
+const context = vm.createContext({
+  document: { querySelectorAll: () => details }, MutationObserver: Observer,
+  window: { addEventListener: (event, handler) => printListeners[event].push(handler) }
+});
 vm.runInContext(code, context);
 context.initializeObdStatusDisclosures();
 check(details.every((item) => item.open), "Status disclosures must start open");
@@ -47,6 +52,23 @@ for (const disclosure of details) {
   callback();
   check(disclosure.body.scrollTop === 0, "Visibility change did not reset scroll");
 }
+details[0].open = false;
+details[1].open = true;
+details[1].body.scrollTop = 60;
+firePrintEvent("afterprint");
+check(!details[0].open, "Unpaired afterprint changed disclosure state");
+firePrintEvent("beforeprint");
+firePrintEvent("beforeprint");
+check(details.every((item) => item.open), "Collapsed warnings were omitted from print");
+details[1].body.scrollTop = 0;
+firePrintEvent("afterprint");
+check(!details[0].open && details[1].open, "Print did not restore original disclosure states");
+check(details[1].body.scrollTop === 60, "Print did not restore reading position");
+firePrintEvent("beforeprint");
+contents[0].textContent = "Warning received during print";
+subscriptions[0].observer.callback();
+firePrintEvent("afterprint");
+check(details[0].open, "Print restoration hid a new warning");
 for (const id of ["obdDtcStatusBody", "obdLiveStatusBody"]) {
   check(html.includes(`aria-controls="${id}"`) && html.includes(`id="${id}" class="obd-status-body" role="region"`), "Missing labelled status expansion region");
   check(html.match(new RegExp(`id="${id}"[^>]*tabindex="0"`)), "Status region cannot be reached with the keyboard");
