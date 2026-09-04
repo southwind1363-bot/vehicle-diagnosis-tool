@@ -35,6 +35,17 @@ for (const disclosure of details) {
   subscriptions.find(({ target }) => disclosure.targets.includes(target)).observer.callback();
   check(disclosure.open, "Updated results stayed hidden after a manual collapse");
   check(disclosure.body.scrollTop === 0, "New status was left below the current scroll position");
+  disclosure.body.scrollTop = 80;
+  const callback = subscriptions.find(({ target }) => disclosure.targets.includes(target)).observer.callback;
+  callback();
+  check(disclosure.body.scrollTop === 80, "Identical rendering interrupted reading");
+  disclosure.targets[0].textContent = "Updated warning";
+  callback();
+  check(disclosure.body.scrollTop === 0, "Changed warning did not reset scroll");
+  disclosure.body.scrollTop = 80;
+  disclosure.targets[0].hidden = true;
+  callback();
+  check(disclosure.body.scrollTop === 0, "Visibility change did not reset scroll");
 }
 for (const id of ["obdDtcStatusBody", "obdLiveStatusBody"]) {
   check(html.includes(`aria-controls="${id}"`) && html.includes(`id="${id}" class="obd-status-body" role="region"`), "Missing labelled status expansion region");

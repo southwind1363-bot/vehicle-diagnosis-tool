@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.440";
+const APP_VERSION = "3.13.441";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -577,8 +577,16 @@ function initializeObdStatusDisclosures() {
       details.querySelector("summary")?.addEventListener("click", (event) => event.preventDefault());
       return;
     }
-    // New results and errors must be visible even after a manual collapse.
+    const statusSnapshot = () => JSON.stringify(Array.from(
+      details.querySelectorAll("p, .obd-import-hints"),
+      (content) => [content.textContent, content.hidden]
+    ));
+    let previousStatus = statusSnapshot();
+    // Repeated rendering must not interrupt reading; changed warnings still reopen.
     const observer = new MutationObserver(() => {
+      const currentStatus = statusSnapshot();
+      if (currentStatus === previousStatus && details.open) return;
+      previousStatus = currentStatus;
       details.open = true;
       const body = details.querySelector(".obd-status-body");
       if (body) body.scrollTop = 0;
