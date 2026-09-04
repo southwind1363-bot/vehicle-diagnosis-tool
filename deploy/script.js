@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.442";
+const APP_VERSION = "3.13.443";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -568,6 +568,23 @@ function initializeObdReadoutFilter(grid, prefix, searchKey, unit) {
   // Observe replacements only; changing card visibility must not trigger another refresh.
   new MutationObserver(refresh).observe(grid, { childList: true });
   refresh();
+}
+
+function appendObdTechnicalNotes(status, notes) {
+  if (!notes.length) return;
+  const group = document.createElement("span");
+  group.className = "obd-technical-notes";
+  const label = document.createElement("label");
+  const toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  const content = document.createElement("span");
+  content.id = `${status.id}-technical-notes`;
+  content.className = "obd-technical-notes-body";
+  content.textContent = notes.join(" / ");
+  toggle.setAttribute("aria-controls", content.id);
+  label.append(toggle, "内部検証情報");
+  group.append(label, content);
+  status.append(group);
 }
 
 function initializeObdStatusDisclosures() {
@@ -12689,6 +12706,7 @@ function analyzeObdScannerImport(options = {}) {
   }
 
   const notes = [];
+  const technicalNotes = [];
   if (Array.isArray(summaryToolHints) && summaryToolHints.length > 0) {
     notes.push(`入力元 ${summaryToolHints.join(" / ")}`);
     if (summaryToolHints.some((hint) => OEM_SCANNER_TOOL_HINTS.has(hint))) {
@@ -12740,7 +12758,7 @@ function analyzeObdScannerImport(options = {}) {
   }
   const coreReadoutInventoryComparisonNote = formatCoreReadoutInventoryComparisonSummary(summarySource.importedCoreReadoutInventoryComparisonSummary || summarySource.imported_core_readout_inventory_comparison_summary, "");
   if (coreReadoutInventoryComparisonNote) {
-    notes.push(`在庫比較 ${coreReadoutInventoryComparisonNote}`);
+    technicalNotes.push(`在庫比較 ${coreReadoutInventoryComparisonNote}`);
   }
   const readoutQualityNote = formatReadoutQualitySummary(summaryCoreSessionStatus?.readoutQualitySummary || summaryCoreSessionStatus?.readout_quality_summary || summarySource.diagnosticFlowSummary?.readoutQualitySummary || summarySource.diagnosticFlowSummary?.readout_quality_summary, "");
   if (readoutQualityNote) {
@@ -12752,11 +12770,11 @@ function analyzeObdScannerImport(options = {}) {
   }
   const manufacturerSampleReadinessNote = formatManufacturerSampleReadinessSummary(summarySource.manufacturerSampleReadinessSummary || summarySource.manufacturer_sample_readiness_summary, "");
   if (manufacturerSampleReadinessNote) {
-    notes.push(`実機サンプル ${manufacturerSampleReadinessNote}`);
+    technicalNotes.push(`実機サンプル ${manufacturerSampleReadinessNote}`);
   }
   const manufacturerSampleResponseComparisonNote = formatManufacturerSampleResponseComparisonSummary(summarySource.manufacturerSampleResponseComparisonSummary || summarySource.manufacturer_sample_response_comparison_summary, "");
   if (manufacturerSampleResponseComparisonNote) {
-    notes.push(`実機応答比較 ${manufacturerSampleResponseComparisonNote}`);
+    technicalNotes.push(`実機応答比較 ${manufacturerSampleResponseComparisonNote}`);
   }
   const readoutQualityComparisonNote = formatReadoutQualityComparisonSummary(summarySource.importedReadoutQualityComparisonSummary || summarySource.imported_readout_quality_comparison_summary, "");
   if (readoutQualityComparisonNote) {
@@ -12784,10 +12802,10 @@ function analyzeObdScannerImport(options = {}) {
     notes.push(`計画安全 ${analysisNextReadoutGuardNote}`);
   }
   if (importedNextReadoutGuardComparisonNote) {
-    notes.push(`計画差分 ${importedNextReadoutGuardComparisonNote}`);
+    technicalNotes.push(`計画差分 ${importedNextReadoutGuardComparisonNote}`);
   }
   if (nextReadoutChangeNote) {
-    notes.push(`次読取整合 ${nextReadoutChangeNote}`);
+    technicalNotes.push(`次読取整合 ${nextReadoutChangeNote}`);
   }
   if (analysisNextReadoutRequestSafetyNote) {
     notes.push(`読取要求 ${analysisNextReadoutRequestSafetyNote}`);
@@ -12953,6 +12971,7 @@ function analyzeObdScannerImport(options = {}) {
     });
   }
 
+  appendObdTechnicalNotes(obdImportStatus, technicalNotes);
   renderObdMonitorValues(
     mergedMonitorValues,
     summarySource?.livePidSnapshot?.monitorInsights || summarySource?.monitorInsights || analysis.monitorInsights

@@ -1281,7 +1281,7 @@ function addScannerImportHarness(client, format = "json") {
   // Stub parser results and display helpers; exercise the complete handler's session ownership and bridge lifecycle.
   for (const name of new Set([...source.matchAll(/\b(format\w+)\(/g)].map((match) => match[1]))) client[name] = () => "";
   for (const name of ["getSessionNextReadoutCandidates", "getObdFreezeFrameTriggerEntries", "getNonBlockingWarningLabels", "readCoreSessionAliasArray"]) client[name] = () => [];
-  for (const name of ["renderObdImportToolHints", "renderObdMonitorValues", "renderObdWorkflowGuide", "renderObdDeveloperSessionSummary", "appendObdAnalysisReadoutSummary"]) client[name] = () => {};
+  for (const name of ["renderObdImportToolHints", "renderObdMonitorValues", "renderObdWorkflowGuide", "renderObdDeveloperSessionSummary", "appendObdAnalysisReadoutSummary", "appendObdTechnicalNotes"]) client[name] = () => {};
   client.renderObdBridgeSessionDetails = (session) => { client.detailRenderedSession = session; };
   client.renderObdDeveloperSessionSummary = (session) => {
     client.summaryRenderedSession = session;

@@ -10,6 +10,27 @@ const code = source.match(/function initializeObdStatusDisclosures\(\) \{[\s\S]*
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 
+const technicalCode = source.match(/function appendObdTechnicalNotes\(status, notes\) \{[\s\S]*?\r?\n\}/)?.[0];
+check(technicalCode, "Missing technical note renderer");
+const element = () => ({ children: [], append(...items) { this.children.push(...items); }, setAttribute(key, value) { this[key] = value; } });
+const technicalContext = vm.createContext({ document: { createElement: element } });
+vm.runInContext(technicalCode, technicalContext);
+const status = { ...element(), id: "obdImportStatus" };
+technicalContext.appendObdTechnicalNotes(status, []);
+check(status.children.length === 0, "Empty technical notes created a control");
+technicalContext.appendObdTechnicalNotes(status, ["<untrusted>", "Second note"]);
+const [label, technicalBody] = status.children[0].children;
+check(label.children[0].type === "checkbox" && label.children[0]["aria-controls"] === technicalBody.id, "Technical disclosure has no linked checkbox");
+check(technicalBody.textContent === "<untrusted> / Second note", "Technical notes were lost or interpreted as HTML");
+check(!technicalCode.includes("innerHTML"), "Technical renderer may interpret imported markup");
+check(css.includes(".obd-technical-notes:has(input:checked) .obd-technical-notes-body { display: block; }"), "Technical expansion style missing");
+for (const label of ["在庫比較", "実機サンプル", "実機応答比較", "計画差分", "次読取整合"]) {
+  check(source.includes('technicalNotes.push(`' + label + ' '), "Internal note was not separated: " + label);
+}
+for (const label of ["保留要因", "空応答", "適用", "読取品質", "計画安全", "候補安全"]) {
+  check(source.includes('notes.push(`' + label + ' '), "Operational warning left normal display: " + label);
+}
+
 const contents = [{ id: "dtc-status" }, { id: "dtc-hints" }, { id: "live-status" }];
 const details = [
   { open: false, targets: contents.slice(0, 2), querySelectorAll: () => contents.slice(0, 2), querySelector: () => null },
