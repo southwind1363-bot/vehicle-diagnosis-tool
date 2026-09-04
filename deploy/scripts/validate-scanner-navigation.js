@@ -46,7 +46,9 @@ for (const [current, automatic, mode, expected] of [
   ["readout", "results", "simple", "readout"],
   ["connect", "setup", "simple", "connect"],
   ["connect", "results", "simple", "results"],
-  ["setup", "connect", "simple", "connect"],
+  ["setup", "connect", "simple", "setup"],
+  ["setup", "results", "simple", "setup"],
+  ["setup", "setup", "simple", "setup"],
   ["home", "details", "details", "details"]
 ]) {
   const stage = context.getObdRefreshStage(current, automatic, mode);
@@ -57,6 +59,32 @@ for (const [current, automatic, mode, expected] of [
   assert.equal(context.obdDevSession.lastSession, session);
 }
 context.obdUiMode = "simple";
+let cancelled = 0, invalidated = 0, summaries = 0;
+Object.assign(context, {
+  cancelObdBridgeOperation: () => { cancelled += 1; },
+  invalidateObdScannerImport: () => { invalidated += 1; },
+  selectedVehicleValue: (select) => select.value,
+  selectedObdVehicleYear: () => "2020",
+  syncVehicleSelectionSummary: () => { summaries += 1; },
+  renderObdConnectionGuide: () => context.renderObdStageView(context.getObdRefreshStage(context.activeObdStage, "results", "simple"))
+});
+for (const name of ["obdVehicleMakerSelect", "obdVehicleModelSelect", "obdVehicleModelCodeSelect", "obdVehicleEngineCodeSelect", "obdVehicleProductionDateInput", "obdVehicleMarketSelect", "obdVehicleManualInput", "obdVehicleInput", "obdVehicleSelectionSummary"]) context[name] = { value: "" };
+vm.runInContext(source.match(/function syncObdVehicleInput\(\) \{[\s\S]*?\r?\n\}/)[0], context);
+context.renderObdStageView("setup");
+context.obdVehicleMakerSelect.value = "Toyota";
+context.syncObdVehicleInput();
+assert.equal(context.activeObdStage, "setup", "Vehicle sync navigated away from setup");
+assert.equal(cancelled, 1, "Vehicle changes must retain bridge cancellation");
+assert.equal(invalidated, 1, "Vehicle changes must invalidate pending imports");
+assert.equal(summaries, 1, "Vehicle summary must still update");
+for (const field of ["maker", "model", "modelCode", "year", "engine", "market", "manual"]) {
+  context.renderObdStageView(context.getObdRefreshStage(context.activeObdStage, "results", "simple"));
+  assert.equal(context.activeObdStage, "setup", `Vehicle field ${field} interrupted selection`);
+  assert.equal(context.obdSetupPanel.hidden, false);
+  assert.equal(context.obdDevSession.lastSession, session);
+}
+context.setObdStage("connect");
+assert.equal(context.activeObdStage, "connect", "Explicit connection navigation must still work");
 let filePickerOpens = 0;
 let shownImportStatus = "";
 context.scrollToObdSection = (target) => { shownImportStatus = target; };
