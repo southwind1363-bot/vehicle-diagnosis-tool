@@ -2156,6 +2156,41 @@ body.dark .flow-node-measure .flow-step {
 .obd-readout-vehicle dt { color: var(--muted); font-size: 0.82rem; margin-bottom: 5px; }
 .obd-readout-vehicle dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
 
+.obd-status-body {
+  max-height: 12rem;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+  padding: 0 8px;
+  scrollbar-gutter: stable;
+}
+
+.obd-status-expand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.obd-status-expand input {
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.obd-status-details:has(.obd-status-expand input:checked) .obd-status-body {
+  max-height: none;
+}
+
+.obd-status-body:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media print {
+  .obd-status-body { max-height: none; overflow: visible; }
+  .obd-status-expand { display: none; }
+}
+
 .obd-status-details {
   margin: 8px 0 16px;
   border-bottom: 1px solid var(--line);

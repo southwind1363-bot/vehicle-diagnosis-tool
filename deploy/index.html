@@ -152,8 +152,11 @@
               <h3>DTC結果</h3>
               <details id="obdDtcStatusDetails" class="obd-status-details" open>
                 <summary>取得状況・注意事項</summary>
+                <label class="obd-status-expand"><input type="checkbox" aria-controls="obdDtcStatusBody">全文を展開</label>
+                <div id="obdDtcStatusBody" class="obd-status-body" role="region" aria-label="DTCの取得状況・注意事項" tabindex="0">
                 <p id="obdImportStatus" class="empty-state">読取後にDTCを表示します。</p>
                 <div id="obdImportToolHints" class="obd-import-hints" hidden></div>
+                </div>
               </details>
               <div id="obdDtcFilter" class="obd-monitor-filter" hidden>
                 <label for="obdDtcSearch">DTC検索</label>
@@ -177,7 +180,10 @@
               </div>
               <details id="obdLiveStatusDetails" class="obd-status-details" open>
                 <summary>取得状況・注意事項</summary>
+                <label class="obd-status-expand"><input type="checkbox" aria-controls="obdLiveStatusBody">全文を展開</label>
+                <div id="obdLiveStatusBody" class="obd-status-body" role="region" aria-label="ライブデータの取得状況・注意事項" tabindex="0">
                 <p id="obdMonitorStatus" class="empty-state">読取後にライブデータを表示します。</p>
+                </div>
               </details>
               <div id="obdMonitorFilter" class="obd-monitor-filter" hidden>
                 <label for="obdMonitorSearch">ライブ値検索</label>
