@@ -1050,6 +1050,28 @@ body.dark .flow-node-measure .flow-step {
   margin: 18px 0;
 }
 
+.obd-home-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.obd-home-actions button {
+  min-height: 88px;
+  border-radius: 8px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#obdStageBackButton {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  margin-top: 12px;
+  font-size: 24px;
+}
+
 .obd-stage-tabs {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1087,12 +1109,21 @@ body.dark .flow-node-measure .flow-step {
   display: none !important;
 }
 
+#obd-panel[data-obd-ui-mode="simple"] .obd-eyebrow {
+  display: none;
+}
+
+#obd-panel[data-obd-ui-mode="simple"] .obd-scan-context strong {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 #obd-panel[data-obd-ui-mode="details"] .obd-simple-only {
   display: none !important;
 }
 
 #obd-panel[data-obd-ui-mode="simple"] .obd-stage-tabs {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 #obd-panel[data-obd-ui-mode="simple"] .obd-safety-grid {

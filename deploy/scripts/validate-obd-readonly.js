@@ -13,6 +13,7 @@ import "./validate-manufacturer-evidence-export.js";
 import "./validate-manufacturer-history-export.js";
 import "./validate-quality-history-roundtrip.js";
 import "./validate-pid-numeric-input.js";
+import "./validate-scanner-navigation.js";
 
 const failures = [];
 let checks = 0;

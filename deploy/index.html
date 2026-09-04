@@ -479,7 +479,7 @@
           <div>
             <p class="eyebrow obd-eyebrow">VEHICLE DIAGNOSIS</p>
             <h2 id="obdReadTitle">車両診断</h2>
-            <p class="case-note">車両を選び、接続して、読取結果を順番に確認します。</p>
+            <p class="case-note obd-expert-only">車両を選び、接続して、読取結果を順番に確認します。</p>
           </div>
           <span id="obdCapabilityBadge" class="confidence-badge">対応状況を確認中</span>
         </div>
@@ -508,20 +508,21 @@
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">SCAN NAVIGATION</p>
-              <h3 id="obdStageTitle">診断機画面</h3>
+              <h3 id="obdStageTitle" class="obd-expert-only">診断機画面</h3>
             </div>
             <span id="obdStageBadge" class="confidence-badge">車両選択 / 接続</span>
           </div>
-          <div id="obdUiModeSwitch" class="obd-ui-mode-switch" role="group" aria-label="画面表示">
-            <button class="obd-ui-mode-button is-active" type="button" data-obd-ui-mode="simple" aria-pressed="true">かんたん</button>
-            <button class="obd-ui-mode-button" type="button" data-obd-ui-mode="details" aria-pressed="false">詳細</button>
+          <div id="obdUiModeSwitch" class="obd-expert-only" role="group" aria-label="診断画面へ戻る">
+            <button class="secondary-button" type="button" data-obd-ui-mode="simple">診断ホームへ戻る</button>
           </div>
+          <button id="obdStageBackButton" class="secondary-button obd-simple-only" type="button" aria-label="前の診断画面へ戻る" title="前の診断画面へ戻る">&#8592;</button>
           <div class="obd-scan-context obd-simple-only" aria-label="現在の診断対象">
             <span><small>車両</small><strong id="obdScanVehicleValue">未選択</strong></span>
             <span><small>VCI</small><strong id="obdScanInterfaceValue">自動判定</strong></span>
             <span><small>接続</small><strong id="obdScanConnectionValue">未接続</strong></span>
           </div>
           <div id="obdStageTabs" class="obd-stage-tabs" role="group" aria-label="OBD読取画面">
+            <button class="obd-stage-tab obd-simple-only" type="button" data-obd-stage="home" aria-pressed="false">ホーム</button>
             <button class="obd-stage-tab is-active" type="button" data-obd-stage="setup" aria-pressed="true">1. 車両</button>
             <button class="obd-stage-tab obd-simple-only" type="button" data-obd-stage="connect" aria-pressed="false">2. 接続</button>
             <button class="obd-stage-tab" type="button" data-obd-stage="results" aria-pressed="false">3. 結果</button>
@@ -529,6 +530,16 @@
             <button class="obd-stage-tab obd-expert-only" type="button" data-obd-stage="details" aria-pressed="false">開発・詳細</button>
           </div>
           <p id="obdStageStatus" class="data-status">車両選択と接続準備を先に進めます。</p>
+        </section>
+        <section id="obdHomeView" class="obd-simple-only" aria-labelledby="obdHomeTitle" hidden>
+          <h3 id="obdHomeTitle">診断メニュー</h3>
+          <div class="obd-home-actions">
+            <button class="secondary-button" type="button" data-obd-stage="setup">車両・VCIを選択</button>
+            <button class="secondary-button" type="button" data-obd-stage="connect">接続を確認</button>
+            <button class="secondary-button" type="button" data-obd-stage="results">読取結果を開く</button>
+            <button class="secondary-button" type="button" data-obd-stage="readout">DTC・データを開く</button>
+          </div>
+          <button class="secondary-button" type="button" data-obd-ui-mode="details">開発・通信設定を開く</button>
         </section>
         <section id="obdSetupPanel" class="obd-operation-panel" aria-labelledby="obdSetupTitle" hidden>
           <div class="obd-result-heading">
@@ -538,8 +549,8 @@
             </div>
           </div>
           <fieldset class="vehicle-selector full-width">
-            <legend>OBD読取の車両情報</legend>
-            <p class="vehicle-note">読取前に、車種と読取方法をここで選びます。読取、保存、確認はまずOBD側で進めます。</p>
+            <legend>車両・接続方式</legend>
+            <p class="vehicle-note obd-expert-only">読取前に、車種と読取方法をここで選びます。読取、保存、確認はまずOBD側で進めます。</p>
             <div class="vehicle-selector-grid">
               <label>
                 メーカー

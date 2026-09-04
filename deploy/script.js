@@ -406,7 +406,7 @@ const obdStagePanel = document.querySelector("#obdStagePanel");
 const obdStageBadge = document.querySelector("#obdStageBadge");
 const obdStageStatus = document.querySelector("#obdStageStatus");
 const obdStageTabs = document.querySelectorAll("[data-obd-stage]");
-const obdUiModeButtons = document.querySelectorAll("[data-obd-ui-mode]");
+const obdUiModeButtons = document.querySelectorAll("button[data-obd-ui-mode]");
 const obdStageSetupView = document.querySelector("#obdStageSetupView");
 const obdStageResultsView = document.querySelector("#obdStageResultsView");
 const obdStageDetailsView = document.querySelector("#obdStageDetailsView");
@@ -696,6 +696,9 @@ resultViewButtons.forEach((button) => {
 
 obdStageTabs.forEach((button) => {
   button.addEventListener("click", () => setObdStage(button.dataset.obdStage || "setup"));
+});
+document.getElementById("obdStageBackButton")?.addEventListener("click", () => {
+  setObdStage(getObdParentStage(activeObdStage));
 });
 
 obdUiModeButtons.forEach((button) => {
@@ -4542,7 +4545,7 @@ function setObdUiMode(mode = "simple") {
     && Boolean(obdDevSession.port) && !obdDevModeUnlocked;
   obdUiMode = nextMode;
   writeOptionalBrowserSetting(OBD_UI_MODE_KEY, obdUiMode);
-  if (obdUiMode === "simple" && activeObdStage === "details") activeObdStage = "setup";
+  if (obdUiMode === "simple") activeObdStage = "home";
   renderObdUiMode();
   renderObdStageView(activeObdStage);
   if (disconnectSimpleSerial) void disconnectObdDeveloperVci({ reason: "operator_disconnect" });
@@ -4610,17 +4613,33 @@ function getObdAutoStage() {
   return "setup";
 }
 
+function getObdParentStage(stage) {
+  return { connect: "setup", readout: "results" }[stage] || "home";
+}
+
+function getObdRefreshStage(currentStage, autoStage, mode) {
+  if (mode === "simple" && currentStage === "home") return "home";
+  if (currentStage === "readout" && autoStage === "results") return "readout";
+  if (currentStage === "connect" && autoStage === "setup") return "connect";
+  return autoStage;
+}
+
 function renderObdStageView(preferredStage = activeObdStage) {
   syncObdReadoutSurface();
+  const homeView = document.getElementById("obdHomeView");
+  if (homeView) homeView.hidden = true;
   if (!obdStagePanel) return;
   const unlocked = obdAccessUnlocked === true;
   obdStagePanel.hidden = !unlocked;
   if (!unlocked) return;
   const allowedStages = new Set(["setup", "connect", "results", "readout", "details"]);
+  allowedStages.add("home");
   const requestedStage = allowedStages.has(preferredStage) ? preferredStage : getObdAutoStage();
   const simpleStage = requestedStage === "details" ? "setup" : requestedStage;
-  const detailedStage = ["connect", "readout"].includes(requestedStage) ? "setup" : requestedStage;
+  const detailedStage = ["home", "connect", "readout"].includes(requestedStage) ? "setup" : requestedStage;
   const nextStage = obdUiMode === "simple" ? simpleStage : detailedStage;
+  const backButton = document.getElementById("obdStageBackButton");
+  if (backButton) backButton.disabled = nextStage === "home";
   activeObdStage = nextStage;
   if (typeof obdPanel !== "undefined" && obdPanel) obdPanel.dataset.obdActiveStage = nextStage;
   const panel = document.getElementById("obd-panel");
@@ -4637,6 +4656,10 @@ function renderObdStageView(preferredStage = activeObdStage) {
   });
 
   const stageMeta = {
+    home: {
+      badge: "ホーム",
+      status: ""
+    },
     setup: {
       badge: "車両選択",
       status: obdUiMode === "simple" ? "診断する車両と使用するVCIを選択します。" : "車両選択、接続準備、プレビュー確認を先に進めます。"
@@ -4661,6 +4684,8 @@ function renderObdStageView(preferredStage = activeObdStage) {
   const meta = stageMeta[nextStage] || stageMeta.setup;
   obdStageBadge.textContent = meta.badge;
   obdStageStatus.textContent = meta.status;
+  obdStageStatus.hidden = obdUiMode === "simple";
+  if (homeView) homeView.hidden = nextStage !== "home";
   if (typeof renderObdSimpleScannerContext === "function") renderObdSimpleScannerContext();
 
   obdStageTabs.forEach((button) => {
@@ -4679,6 +4704,7 @@ function setObdStage(stage = "setup") {
   if (!obdAccessUnlocked) return;
   renderObdStageView(stage);
   const viewId = {
+    home: "obdHomeView",
     setup: "obdSetupPanel", connect: "obdStageSetupView", results: "obdStageResultsView",
     readout: "obdReadoutSurface", details: "obdStageDetailsView"
   }[activeObdStage];
@@ -5756,11 +5782,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
   const autoStage = getObdAutoStage();
   const currentStage = typeof activeObdStage === "string" ? activeObdStage : "";
-  const preferredAutoStage = currentStage === "readout" && autoStage === "results"
-    ? "readout"
-    : currentStage === "connect" && autoStage === "setup"
-      ? "connect"
-      : autoStage;
+  const preferredAutoStage = getObdRefreshStage(currentStage, autoStage, obdUiMode);
   renderObdStageView(preferredAutoStage);
   if (typeof syncObdSimpleStatus === "function") syncObdSimpleStatus();
 }
