@@ -28,6 +28,13 @@ const context = vm.createContext({
 });
 vm.runInContext(source.slice(source.indexOf("function getObdParentStage("), source.indexOf("function setObdStage(")), context);
 vm.runInContext(source.slice(source.indexOf("function setObdStage("), source.indexOf("async function hashObdAccessPassword(")), context);
+for (const [automatic, mode, expected] of [
+  ["setup", "simple", "home"], ["results", "simple", "results"],
+  ["connect", "simple", "connect"], ["setup", "details", "setup"],
+  ["details", "details", "details"]
+]) {
+  assert.equal(context.getObdEntryStage(automatic, mode), expected);
+}
 for (const [current, automatic, mode, expected] of [
   ["home", "setup", "simple", "home"],
   ["home", "connect", "simple", "home"],
@@ -91,6 +98,25 @@ assert.equal(context.activeObdStage, "setup", "Locked navigation must not change
 context.renderObdStageView("home");
 assert.equal(home.hidden, true);
 assert.equal(context.obdStagePanel.hidden, true);
+Object.assign(context, {
+  obdAccessModeBadge: element(), obdAccessUnlockButton: element(), obdAccessLockButton: element(),
+  obdAccessProtected: element(), obdAccessGatePanel: element(), obdAccessStatus: element(),
+  getObdAccessStatusMessage: () => "test status"
+});
+vm.runInContext(source.slice(source.indexOf("function renderObdAccessGate("), source.indexOf("function normalizeProgressPercent(")), context);
+context.obdUiMode = "simple";
+context.obdAccessUnlocked = true;
+context.renderObdAccessGate({});
+assert.equal(context.activeObdStage, "home");
+assert.equal(home.hidden, false);
+context.getObdAutoStage = () => "results";
+context.renderObdAccessGate({});
+assert.equal(context.activeObdStage, "results");
+assert.equal(context.obdDevSession.lastSession, session);
+context.obdAccessUnlocked = false;
+context.renderObdAccessGate({});
+assert.equal(home.hidden, true);
+assert.equal(context.obdAccessProtected.hidden, true);
 assert.match(html, /id="obdHomeView"[^>]*hidden/);
 for (const stage of ["setup", "connect", "results", "readout"]) {
   assert.ok(html.slice(html.indexOf('id="obdHomeView"'), html.indexOf('id="obdSetupPanel"')).includes(`data-obd-stage="${stage}"`));
