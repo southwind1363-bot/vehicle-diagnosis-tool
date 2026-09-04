@@ -30,7 +30,7 @@ const context = vm.createContext({
   obdStageResultsView: element(), obdStageDetailsView: element(),
   obdDevSession: { lastSession: session }
 });
-vm.runInContext(source.slice(source.indexOf("function getObdParentStage("), source.indexOf("function setObdStage(")), context);
+vm.runInContext(source.slice(source.indexOf("function openObdSavedReadout("), source.indexOf("function setObdStage(")), context);
 vm.runInContext(source.slice(source.indexOf("function setObdStage("), source.indexOf("async function hashObdAccessPassword(")), context);
 for (const [automatic, mode, expected] of [
   ["setup", "simple", "home"], ["results", "simple", "results"],
@@ -57,6 +57,23 @@ for (const [current, automatic, mode, expected] of [
   assert.equal(context.obdDevSession.lastSession, session);
 }
 context.obdUiMode = "simple";
+let filePickerOpens = 0;
+let shownImportStatus = "";
+context.scrollToObdSection = (target) => { shownImportStatus = target; };
+context.obdImportFileInput = { click: () => { filePickerOpens += 1; } };
+context.openObdSavedReadout();
+assert.equal(filePickerOpens, 1);
+assert.equal(shownImportStatus, "obdImportStatus", "Import failures must be visible when opening from home");
+assert.equal(context.activeObdStage, "results");
+assert.equal(context.obdDevSession.lastSession, session, "Opening or cancelling the picker must not replace the current readout");
+context.obdAccessUnlocked = false;
+context.openObdSavedReadout();
+assert.equal(filePickerOpens, 1, "Locked access must not open the picker");
+context.obdAccessUnlocked = true;
+context.obdImportFileInput = null;
+context.openObdSavedReadout();
+assert.equal(filePickerOpens, 1);
+assert.ok(html.includes('id="obdHomeOpenSessionButton"'));
 for (const stage of ["home", "setup", "connect", "results", "readout", "home"]) {
   context.renderObdStageView(stage);
   assert.equal(context.activeObdStage, stage);
