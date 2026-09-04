@@ -4933,6 +4933,22 @@ check(appSource.includes('const livePidReadoutStatusLabel = formatObdReadoutStat
 check(appSource.includes('["ライブ値読取状態", livePidReadoutStatusLabel]') && appSource.includes('["ECU情報状態", ecuInfoReadoutStatusLabel]') && appSource.includes('["FF読取状態", freezeFrameReadoutStatusLabel]') && appSource.includes('["レディネス読取状態", readinessReadoutStatusLabel]') && appSource.includes('["Mode06読取状態", onboardMonitorReadoutStatusLabel]') && appSource.includes('["対応PID読取状態", supportedPidReadoutStatusLabel]'), "OBD session summary should show all completed core readout statuses");
 check(appSource.includes('const supportedPidPageBases = supportedPidMatrix?.supportedPidPageBases || supportedPidMatrix?.supported_pid_page_bases') && appSource.includes('対応PIDページ'), "OBD session summary should show reported supported-PID page coverage");
 check(appSource.includes('function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA)') && appSource.includes('safe ${safeCount}/${totalCount}') && appSource.includes('execution off'), "OBD UI should format next readout candidate safety summaries");
+const nextReadoutCandidateSafetyFormatterSource = appSource.match(/function formatNextReadoutCandidateSafetySummary\(summary = null, fallback = NO_DATA\) \{[\s\S]*?\r?\n\}/)?.[0] || "";
+if (nextReadoutCandidateSafetyFormatterSource) {
+  const formatterContext = { NO_DATA: "登録データなし" };
+  vm.createContext(formatterContext);
+  vm.runInContext(`${nextReadoutCandidateSafetyFormatterSource}\nthis.formatNextReadoutCandidateSafetySummary = formatNextReadoutCandidateSafetySummary;`, formatterContext);
+  const formatCandidateSafety = formatterContext.formatNextReadoutCandidateSafetySummary;
+  check(formatCandidateSafety({ totalCount: 2, safeCount: 2, unsafeCount: 0, transmittingCount: 0, executableCount: 0, allReadOnly: true, allNonTransmitting: true, allExecutionDisabled: true }, "登録データなし") === "safe 2/2 / read-only / non-transmit / execution off", "Valid next readout candidate safety counts were not displayed");
+  check(formatCandidateSafety({ total_count: "0", safe_count: "0", unsafe_count: "0", transmitting_count: "0", executable_count: "0", all_read_only: true, all_non_transmitting: true, all_execution_disabled: true }, "登録データなし") === "safe 0/0 / read-only / non-transmit / execution off", "Valid zero snake-case candidate safety counts were not preserved");
+  check([null, "", " ", false, -1, 1.5, "1.5", [], {}].every((totalCount) => formatCandidateSafety({ totalCount, safeCount: 0, unsafeCount: 0, transmittingCount: 0, executableCount: 0 }, "登録データなし") === "登録データなし"), "Missing or invalid candidate total was presented as a verified safety summary");
+  check([
+    { totalCount: 1, safeCount: null, unsafeCount: 1, transmittingCount: 0, executableCount: 0 },
+    { totalCount: 1, safeCount: 1, unsafeCount: 1, transmittingCount: 0, executableCount: 0 },
+    { totalCount: 1, safeCount: 1, unsafeCount: 0, transmittingCount: 2, executableCount: 0 },
+    { totalCount: 1, safeCount: 1, unsafeCount: 0, transmittingCount: 0, executableCount: 2 }
+  ].every((summary) => formatCandidateSafety(summary, "登録データなし") === "登録データなし"), "Incomplete or inconsistent candidate safety counts were presented as verified");
+}
 check(appSource.includes('function formatNextReadoutRequestSafetySummary(request = null, plan = null, fallback = NO_DATA)') && appSource.includes('vehicle command off') && appSource.includes('execution off'), "OBD UI should format next readout request safety summaries");
 check(appSource.includes('function formatNextReadoutReasonSummary(summary = null, fallback = NO_DATA)') && appSource.includes('const statusReason = summary.statusReason || summary.status_reason || summary.readoutStatusReason || summary.readout_status_reason || "";') && appSource.includes('transport_error: "通信エラー"') && appSource.includes('const reasonId = summary.reasonId || summary.reason_id || summary.reason || "";') && appSource.includes('parts.push(`queue ${Number(queuePositionValue)}`);'), "OBD UI should format next readout reason summaries");
 check(appSource.includes('function formatNextReadoutGuardSummary(summary = null, fallback = NO_DATA)') && appSource.includes('planning ready') && appSource.includes('vehicle command off'), "OBD UI should format next readout guard summaries");

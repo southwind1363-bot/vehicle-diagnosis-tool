@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7442件",
+  validationCheckLabel: "OBD安全検証 7446件",
   bridgeValidationCheckLabel: "bridge検証 384件",
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.435";
+const APP_VERSION = "3.13.436";
 const APP_LAST_UPDATED = "2026-09-04";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9173,17 +9173,28 @@ function formatCoreNextStepSummary(coreSessionStatus, nextReadoutCandidates, fal
 
 function formatNextReadoutCandidateSafetySummary(summary = null, fallback = NO_DATA) {
   if (!summary || typeof summary !== "object") return fallback;
+  const readCount = (value) => {
+    const number = typeof value === "number"
+      ? value
+      : typeof value === "string" && /^\d+$/.test(value.trim())
+        ? Number(value.trim())
+        : null;
+    return Number.isSafeInteger(number) && number >= 0 ? number : null;
+  };
   const totalValue = summary.totalCount ?? summary.total_count;
   const safeValue = summary.safeCount ?? summary.safe_count;
   const unsafeValue = summary.unsafeCount ?? summary.unsafe_count;
   const executableValue = summary.executableCount ?? summary.executable_count;
   const transmittingValue = summary.transmittingCount ?? summary.transmitting_count;
-  const totalCount = Number.isFinite(Number(totalValue)) ? Number(totalValue) : null;
-  const safeCount = Number.isFinite(Number(safeValue)) ? Number(safeValue) : 0;
-  const unsafeCount = Number.isFinite(Number(unsafeValue)) ? Number(unsafeValue) : 0;
-  const executableCount = Number.isFinite(Number(executableValue)) ? Number(executableValue) : 0;
-  const transmittingCount = Number.isFinite(Number(transmittingValue)) ? Number(transmittingValue) : 0;
-  if (totalCount === null) return fallback;
+  const totalCount = readCount(totalValue);
+  const safeCount = readCount(safeValue);
+  const unsafeCount = readCount(unsafeValue);
+  const executableCount = readCount(executableValue);
+  const transmittingCount = readCount(transmittingValue);
+  if ([totalCount, safeCount, unsafeCount, executableCount, transmittingCount].includes(null)
+    || safeCount + unsafeCount !== totalCount
+    || executableCount > totalCount
+    || transmittingCount > totalCount) return fallback;
   const parts = [`safe ${safeCount}/${totalCount}`];
   if (unsafeCount > 0) parts.push(`unsafe ${unsafeCount}`);
   parts.push((summary.allReadOnly ?? summary.all_read_only) === true ? "read-only" : "read-only未確認");
