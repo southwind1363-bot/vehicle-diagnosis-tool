@@ -506,6 +506,7 @@
         <p id="obdCapabilityText" class="data-status obd-expert-only">車両読取機能の対応状況を確認しています。</p>
         <section id="obdStagePanel" class="obd-operation-panel" aria-labelledby="obdStageTitle" hidden>
           <div class="obd-result-heading">
+            <button id="obdStageBackButton" class="secondary-button obd-simple-only" type="button" aria-label="前の診断画面へ戻る" title="前の診断画面へ戻る">&#8592;</button>
             <div>
               <p class="eyebrow obd-eyebrow">SCAN NAVIGATION</p>
               <h3 id="obdStageTitle" class="obd-expert-only">診断機画面</h3>
@@ -515,7 +516,6 @@
           <div id="obdUiModeSwitch" class="obd-expert-only" role="group" aria-label="診断画面へ戻る">
             <button class="secondary-button" type="button" data-obd-ui-mode="simple">診断ホームへ戻る</button>
           </div>
-          <button id="obdStageBackButton" class="secondary-button obd-simple-only" type="button" aria-label="前の診断画面へ戻る" title="前の診断画面へ戻る">&#8592;</button>
           <div class="obd-scan-context obd-simple-only" aria-label="現在の診断対象">
             <span><small>車両</small><strong id="obdScanVehicleValue">未選択</strong></span>
             <span><small>VCI</small><strong id="obdScanInterfaceValue">自動判定</strong></span>

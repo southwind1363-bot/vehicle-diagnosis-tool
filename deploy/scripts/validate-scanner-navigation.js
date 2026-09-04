@@ -8,6 +8,10 @@ const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
 assert.ok(html.includes('id="obdStageTitle" class="obd-expert-only"'));
 assert.ok(css.includes('#obd-panel[data-obd-ui-mode="simple"] .obd-eyebrow'));
 assert.ok(css.includes('#obd-panel[data-obd-ui-mode="simple"] .obd-scan-context strong'));
+assert.ok(css.includes('#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="home"] #obdStageTabs'));
+const header = html.slice(html.indexOf('id="obdStagePanel"'), html.indexOf('id="obdUiModeSwitch"'));
+assert.ok(header.includes('id="obdStageBackButton"') && header.includes('id="obdStageBadge"'), "Back and location must share the stage header");
+assert.equal((html.match(/id="obdStageBackButton"/g) || []).length, 1);
 for (const id of ["obdSimpleStatus", "obdSimpleResultStatus"]) {
   const tag = html.match(new RegExp(`<p[^>]*id="${id}"[^>]*>`))?.[0];
   assert.ok(tag && !tag.includes("obd-expert-only") && tag.includes('role="status"'), "Operational status must remain in normal mode");
