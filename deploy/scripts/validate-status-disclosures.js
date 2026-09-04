@@ -31,6 +31,31 @@ for (const label of ["保留要因", "空応答", "適用", "読取品質", "計
   check(source.includes('notes.push(`' + label + ' '), "Operational warning left normal display: " + label);
 }
 
+const summaryCode = source.match(/function appendObdAnalysisReadoutSummary\(parts, analysis, options = \{\}\) \{[\s\S]*?\r?\n\}/)[0];
+const summaryContext = vm.createContext({
+  NO_DATA: "missing", getSessionNextReadoutCandidates: () => [],
+  getReadoutCoverageDisplay: () => ({ totalCategories: 7, missingCategories: 6, emptyCategories: 1 }),
+  formatVehicleApplicabilitySummary: () => "unconfirmed",
+  formatCoreNextStepSummary: () => "next", formatCoreSessionStatusSummary: () => "internal-progress",
+  formatCoreEmptyReadoutSummary: () => "empty", formatCoreBlockingWarningSummary: () => "blocked",
+  formatObdBridgeReadinessSummary: (_snapshot, options) => options.includeObservedCount ? "counted" : "readiness",
+  getNonBlockingWarningLabels: () => ["save-before-clear"]
+});
+vm.runInContext(summaryCode, summaryContext);
+for (const includeReadinessCount of [false, true]) {
+  const normal = [], technical = [], legacy = [];
+  const input = Object.freeze({});
+  summaryContext.appendObdAnalysisReadoutSummary(normal, input, { includeReadinessCount, technicalNotes: technical });
+  summaryContext.appendObdAnalysisReadoutSummary(legacy, input, { includeReadinessCount });
+  check(technical.length === 1 && technical[0] === "コア進捗 internal-progress", "Live internal progress was not separated");
+  check(JSON.stringify([...technical, ...normal]) === JSON.stringify(legacy), "Live split changed or dropped summary content");
+  for (const expected of ["空応答 empty", "保留 blocked", "次操作 next", "適用 unconfirmed", "save-before-clear", "未取得6件", "空応答1件"]) {
+    check(normal.some((note) => note.includes(expected)), "Live operational warning missing: " + expected);
+  }
+  check(normal.includes(includeReadinessCount ? "レディネスcounted" : "レディネスreadiness"), "Readiness count option changed");
+}
+check(source.split("appendObdTechnicalNotes(obdMonitorStatus, liveTechnicalNotes);").length === 3, "Live value and zero-value branches must both render technical notes");
+
 const contents = [{ id: "dtc-status" }, { id: "dtc-hints" }, { id: "live-status" }];
 const details = [
   { open: false, targets: contents.slice(0, 2), querySelectorAll: () => contents.slice(0, 2), querySelector: () => null },

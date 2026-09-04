@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.443";
+const APP_VERSION = "3.13.444";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -9461,7 +9461,7 @@ function buildCoreSessionStatusLines(coreSessionStatus) {
 }
 
 function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
-  const { includeReadinessCount = false } = options;
+  const { includeReadinessCount = false, technicalNotes = parts } = options;
   const analysisCoreSessionStatus = analysis.coreSessionStatus || analysis.core_session_status || null;
   const analysisNextReadoutCandidates = getSessionNextReadoutCandidates(analysis, 2);
   const coverage = getReadoutCoverageDisplay(analysis.readoutCoverage || analysis.readout_coverage);
@@ -9471,7 +9471,7 @@ function appendObdAnalysisReadoutSummary(parts, analysis, options = {}) {
   const emptyReadoutSummary = formatCoreEmptyReadoutSummary(analysisCoreSessionStatus, 2, "");
   const blockingSummary = formatCoreBlockingWarningSummary(analysisCoreSessionStatus, 2, "");
   if (coreSessionSummary) {
-    parts.push(`コア進捗 ${coreSessionSummary}`);
+    technicalNotes.push(`コア進捗 ${coreSessionSummary}`);
   }
   if (emptyReadoutSummary) {
     parts.push(`空応答 ${emptyReadoutSummary}`);
@@ -12996,8 +12996,10 @@ function analyzeObdScannerImport(options = {}) {
     } else if (summaryAdapterIdentity?.adapterFamily || summaryAdapterIdentity?.adapterName) {
       summary.push(`Adapter ${summaryAdapterIdentity.adapterFamily || summaryAdapterIdentity.adapterName}`);
     }
-    appendObdAnalysisReadoutSummary(summary, summarySource);
+    const liveTechnicalNotes = [];
+    appendObdAnalysisReadoutSummary(summary, summarySource, { technicalNotes: liveTechnicalNotes });
     obdMonitorStatus.textContent = `${coreReadinessHeadline}${summary.join(" / ")}。`;
+    appendObdTechnicalNotes(obdMonitorStatus, liveTechnicalNotes);
   } else if (bridgeImport && !mergedMonitorValues.length) {
     const summary = [summarySourceType === "local_bridge"
       ? "ローカルブリッジ読取の計測値は0項目です。"
@@ -13014,8 +13016,10 @@ function analyzeObdScannerImport(options = {}) {
     } else if (summaryAdapterIdentity?.adapterFamily || summaryAdapterIdentity?.adapterName) {
       summary.push(`Adapter ${summaryAdapterIdentity.adapterFamily || summaryAdapterIdentity.adapterName}`);
     }
-    appendObdAnalysisReadoutSummary(summary, summarySource, { includeReadinessCount: true });
+    const liveTechnicalNotes = [];
+    appendObdAnalysisReadoutSummary(summary, summarySource, { includeReadinessCount: true, technicalNotes: liveTechnicalNotes });
     obdMonitorStatus.textContent = `${coreReadinessHeadline}${summary.join(" / ")}。`;
+    appendObdTechnicalNotes(obdMonitorStatus, liveTechnicalNotes);
   }
   if (bridgeImport && obdDevSession.lastSession) {
     renderObdWorkflowGuide();
