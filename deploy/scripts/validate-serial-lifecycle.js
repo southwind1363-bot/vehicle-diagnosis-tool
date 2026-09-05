@@ -44,6 +44,7 @@ function client() {
     formatWebSerialConnectionFailure: () => "connection failed", retainWebSerialConnectionAttempt: () => { calls.failure += 1; }
   });
   load(context, functions);
+  load(context, ["renderObdPendingConnection"]);
   return { context, calls, port };
 }
 function load(context, names) {

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.484";
+const APP_VERSION = "3.13.485";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5892,6 +5892,10 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
     obdDevStatus.textContent = "詳細画面はロック中です。詳細用パスワードで解除できます。通常の読取は診断ホームから利用できます。";
   } else if (primaryActionNeedsSerial && !serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
+  } else if (primaryActionNeedsSerial && obdDevSession.connectionState === "selecting") {
+    obdDevStatus.textContent = "VCIを選択してください。";
+  } else if (primaryActionNeedsSerial && obdDevSession.connectionState === "opening") {
+    obdDevStatus.textContent = "VCIポートを開いています。";
   } else if (primaryActionNeedsSerial && obdDevSession.connectionState === "disconnected"
     && ["port_selection_cancelled", "port_selection_failed", "port_open_failed"].includes(obdDevSession.lastDisconnectReason)) {
     obdDevStatus.textContent = obdDevSession.lastDisconnectReason === "port_selection_cancelled"
@@ -6019,6 +6023,13 @@ function handleObdPrimaryAction() {
   prepareSelectedObdInterface();
 }
 
+function renderObdPendingConnection(message) {
+  obdDevStatus.textContent = message;
+  if (typeof obdDevConnectButton !== "undefined" && obdDevConnectButton) obdDevConnectButton.disabled = true;
+  if (typeof renderObdSetupActionButtons === "function") renderObdSetupActionButtons();
+  if (typeof syncObdSimpleStatus === "function") syncObdSimpleStatus();
+}
+
 async function connectObdDeveloperVci() {
   const simpleReadoutAccess = obdAccessUnlocked && typeof obdUiMode === "string" && obdUiMode === "simple";
   if (!obdAccessUnlocked || (!obdDevModeUnlocked && !simpleReadoutAccess)) return;
@@ -6041,10 +6052,11 @@ async function connectObdDeveloperVci() {
     obdDevSession.previewMode = null;
     clearRequestedInterfaceSelection();
     const baudRate = Number(obdDevBaudRate.value) || 38400;
-    obdDevStatus.textContent = "VCIを選択してください。";
+    renderObdPendingConnection("VCIを選択してください。");
     port = await navigator.serial.requestPort();
     throwIfObdSerialOperationCancelled(revision);
     setObdDeveloperConnectionState("opening");
+    renderObdPendingConnection("VCIポートを開いています。");
     await port.open({ baudRate });
     opened = true;
     throwIfObdSerialOperationCancelled(revision);

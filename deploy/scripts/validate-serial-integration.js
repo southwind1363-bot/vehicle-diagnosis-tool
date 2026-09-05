@@ -17,6 +17,7 @@ function load(context, names) {
 }
 
 const webSerialFunctions = [
+  "renderObdPendingConnection",
   "connectObdDeveloperVci", "disconnectObdDeveloperVci", "resetWebSerialConnectionAttemptMetadata",
   "retainWebSerialConnectionAttempt", "hasBridgeDiagnosticScanSessionSupport",
   "setObdDeveloperConnectionState", "isWebSerialPortSelectionCancelled", "getWebSerialConnectionFailureReason",

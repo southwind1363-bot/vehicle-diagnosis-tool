@@ -593,9 +593,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         requestPort: async () => {
           const fixture = window.__serialFailureFixture;
           fixture.selections += 1;
-          if (fixture.mode === 'cancel') throw new DOMException('Synthetic picker cancellation', 'NotFoundError');
+          if (fixture.mode === 'cancel') return new Promise((_, reject) => {
+            fixture.finish = () => { delete fixture.finish; reject(new DOMException('Synthetic picker cancellation', 'NotFoundError')); };
+          });
           return {
-            open: async () => { fixture.opens += 1; throw new DOMException('Synthetic port unavailable', 'NetworkError'); },
+            open: async () => {
+              fixture.opens += 1;
+              return new Promise((_, reject) => {
+                fixture.finish = () => { delete fixture.finish; reject(new DOMException('Synthetic port unavailable', 'NetworkError')); };
+              });
+            },
             writable: { getWriter: () => ({ write: () => { fixture.writes += 1; throw new Error('Unexpected write'); } }) }
           };
         }
@@ -607,6 +614,15 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     for (const [mode, expectedReason] of [['cancel', 'port_selection_cancelled'], ['open-error', 'port_open_failed'], ['cancel', 'port_selection_cancelled']]) {
       await page.evaluate(mode => { window.__serialFailureFixture.mode = mode; }, mode);
       await connect.click();
+      await page.waitForFunction(mode => typeof window.__serialFailureFixture.finish === 'function'
+        && obdDevSession.connectionState === (mode === 'cancel' ? 'selecting' : 'opening'), mode);
+      assert.equal(await connect.isEnabled(), false, 'Pending acquisition must disable repeat connection');
+      assert.match(await page.locator('#obdSimpleConnectStatus').innerText(), mode === 'cancel' ? /VCI.*選択/ : /ポート.*開いて/);
+      const pendingCounts = await page.evaluate(() => ({ selections: window.__serialFailureFixture.selections, opens: window.__serialFailureFixture.opens }));
+      await connect.evaluate(node => node.click());
+      assert.deepEqual(await page.evaluate(() => ({ selections: window.__serialFailureFixture.selections, opens: window.__serialFailureFixture.opens })), pendingCounts, 'Disabled connection must not acquire another port');
+      await page.locator('#obdSimpleConnectPanel').screenshot({ path: path.join(output, `connection-pending-${mode}.png`) });
+      await page.evaluate(() => window.__serialFailureFixture.finish());
       await page.waitForFunction(reason => !obdSerialConnectPending && obdDevSession.connectionState === 'disconnected' && obdDevSession.lastDisconnectReason === reason, expectedReason);
       assert.equal(await connect.isEnabled(), true, 'Connection failure must allow another attempt');
       assert.equal(await page.locator('#obdSimpleConnectStatus').isVisible(), true, 'Normal connection screen must expose the outcome');
