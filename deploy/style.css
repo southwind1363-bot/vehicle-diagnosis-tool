@@ -1510,6 +1510,19 @@ body.dark .flow-node-measure .flow-step {
   margin: 12px 0 0;
 }
 
+.obd-results-empty {
+  margin: 14px 0;
+  padding: 24px 0;
+  border-block: 1px solid var(--line-strong);
+  color: var(--muted);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+#obdSimpleResultSummary:not([hidden]) + #obdResultsEmptyState {
+  display: none;
+}
+
 .obd-simple-result-item {
   position: relative;
   min-width: 0;

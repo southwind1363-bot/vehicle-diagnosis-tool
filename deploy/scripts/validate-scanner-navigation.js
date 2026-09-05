@@ -276,6 +276,8 @@ context.obdImportFileInput = null;
 context.openObdSavedReadout();
 assert.equal(filePickerOpens, 1);
 assert.ok(html.includes('id="obdHomeOpenSessionButton"'));
+assert.match(html, /id="obdSimpleResultNote"[^>]*><\/p>\s*<\/section>\s*<p id="obdResultsEmptyState" class="obd-results-empty obd-simple-only" role="status">/);
+assert.ok(css.includes('#obdSimpleResultSummary:not([hidden]) + #obdResultsEmptyState'), "Acquired results, including zero DTCs, must hide the no-session notice");
 for (const stage of ["home", "setup", "connect", "results", "readout", "home"]) {
   context.renderObdStageView(stage);
   assert.equal(context.activeObdStage, stage);
