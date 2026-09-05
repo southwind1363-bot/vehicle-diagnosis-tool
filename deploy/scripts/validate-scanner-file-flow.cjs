@@ -357,6 +357,29 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await toggle.click();
       const rows = records.locator('li');
       assert.equal(await rows.count(), expectedPoints);
+      const assertSelectedRecord = async () => {
+        await page.waitForFunction(() => {
+          const list = document.querySelector('#obdSessionDetailLiveTimeline .obd-timeline-records ol');
+          const current = list.querySelector('[aria-current="true"]');
+          if (!current) return false;
+          const bounds = current.getBoundingClientRect();
+          const frame = list.getBoundingClientRect();
+          return bounds.top >= frame.top - 1 && bounds.bottom <= frame.top + list.clientHeight + 1;
+        });
+        assert.equal(await rows.locator('[aria-current]').count(), 0);
+        assert.equal(await records.locator('li[aria-current="true"]').count(), 1);
+        assert.equal(await rows.nth(Number(await slider.inputValue())).getAttribute('aria-current'), 'true');
+      };
+      await assertSelectedRecord();
+      const pageScroll = await page.evaluate(() => window.scrollY);
+      for (const edge of ['min', 'max']) {
+        await slider.evaluate((node, edge) => {
+          node.value = node[edge];
+          node.dispatchEvent(new Event('input', { bubbles: true }));
+        }, edge);
+        await assertSelectedRecord();
+        assert.equal(await page.evaluate(() => window.scrollY), pageScroll, 'Record reveal must scroll only the list');
+      }
       assert.match(await rows.first().innerText(), /:00\.000.*800 rpm/s);
       assert.match(await rows.last().innerText(), /1000 rpm/);
       const viewport = page.viewportSize();
@@ -372,6 +395,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             await previous.click();
             assert.equal(await slider.inputValue(), String(clickedIndex));
           }
+          await assertSelectedRecord();
           assert.equal(await chart.locator('.obd-timeline-step').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().width >= 48 && node.getBoundingClientRect().height >= 48)), true);
           const index = Number(await slider.inputValue());
           const fragments = (await rows.nth(index).innerText()).split('\n');

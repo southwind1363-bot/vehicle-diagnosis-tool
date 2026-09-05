@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.481";
+const APP_VERSION = "3.13.482";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10258,6 +10258,17 @@ function renderObdBridgeSessionDetails(session = null) {
       slider.setAttribute("aria-label", `${row.label}${sourceEcu}の記録位置`);
       const selected = document.createElement("span");
       selected.className = "obd-timeline-selected-value";
+      const revealSelectedRecord = () => {
+        if (!records.open || !pointList.clientHeight) return;
+        const item = pointList.children[Number(slider.value)];
+        if (!item) return;
+        const viewport = pointList.getBoundingClientRect();
+        const bounds = item.getBoundingClientRect();
+        const top = viewport.top + pointList.clientTop;
+        if (bounds.top < top) pointList.scrollTop += bounds.top - top;
+        else if (bounds.bottom > top + pointList.clientHeight) pointList.scrollTop += bounds.bottom - top - pointList.clientHeight;
+      };
+      records.addEventListener("toggle", revealSelectedRecord);
       const steps = [-1, 1].map(direction => {
         const button = document.createElement("button");
         button.type = "button";
@@ -10283,6 +10294,11 @@ function renderObdBridgeSessionDetails(session = null) {
         steps[0].setAttribute("aria-disabled", String(index === 0));
         steps[1].setAttribute("aria-disabled", String(index === row.points.length - 1));
         Array.from(bars.children).forEach((bar, i) => bar.classList.toggle("is-selected", i === index));
+        Array.from(pointList.children).forEach((item, i) => {
+          if (i === index) item.setAttribute("aria-current", "true");
+          else item.removeAttribute("aria-current");
+        });
+        revealSelectedRecord();
       };
       slider.addEventListener("input", showPosition);
       showPosition();
