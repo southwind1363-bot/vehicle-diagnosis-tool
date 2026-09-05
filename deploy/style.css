@@ -444,6 +444,16 @@ button:focus-visible,
   color: var(--accent-strong);
 }
 
+#obd-panel button:disabled {
+  background: var(--panel-subtle);
+  color: var(--muted);
+  border-color: var(--line-strong);
+  border-style: dashed;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .obd-preview-button.is-selected {
   border-color: color-mix(in srgb, var(--accent) 52%, var(--line-strong));
   background: color-mix(in srgb, var(--panel) 82%, var(--accent-soft));

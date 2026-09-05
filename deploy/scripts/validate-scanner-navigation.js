@@ -5,6 +5,11 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+const disabledStyle = css.match(/#obd-panel button:disabled\s*\{([^}]+)\}/)?.[1] || "";
+for (const rule of ["background: var(--panel-subtle)", "color: var(--muted)", "border-style: dashed", "box-shadow: none", "cursor: not-allowed"]) {
+  assert.ok(disabledStyle.includes(rule), "Disabled OBD controls must remain visually distinct: " + rule);
+}
+assert.ok(!disabledStyle.includes("pointer-events"), "Disabled controls should retain hover explanations");
 assert.ok(html.includes('id="obdStageTitle" class="obd-expert-only"'));
 assert.ok(css.includes('#obd-panel[data-obd-ui-mode="simple"] .obd-eyebrow'));
 assert.ok(css.includes('#obd-panel[data-obd-ui-mode="simple"] .obd-scan-context strong'));
