@@ -7,11 +7,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const html = fs.readFileSync(path.join(__dirname, '../index.html'), 'utf8');
   const css = fs.readFileSync(path.join(__dirname, '../style.css'), 'utf8');
+  const source = fs.readFileSync(path.join(__dirname, '../script.js'), 'utf8');
+  const start = source.indexOf('function renderObdMeasurementConditionSummary(');
+  const end = source.indexOf('function handleObdUnlockKeydown(', start);
+  assert.ok(start >= 0 && end > start, 'Measurement summary renderer must be available');
+  const renderer = source.slice(start, end);
+  const fields = ['obdLiveObservationCondition', 'obdLiveThermalState', 'obdVehicleMotionState', 'obdTransmissionPosition', 'obdAccessoryLoadState', 'obdSameVehicleConfirmed'];
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-layout-'));
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   let checks = 0;
   try {
-    for (const width of [390, 768, 1366]) {
+    for (const width of [320, 390, 768, 1366]) {
       const page = await browser.newPage({ viewport: { width, height: 1000 } });
       await page.route('**/*', route => route.abort());
       await page.setContent('<!doctype html><html lang="ja"><body><main><section id="obd-panel"></section></main></body></html>');
@@ -25,8 +31,28 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         section.querySelectorAll('details').forEach(item => { item.open = true; });
       }, html);
       await page.addStyleTag({ content: css });
+      // Execute only the read-only presentation function, not application startup.
+      await page.addScriptTag({ content: fields.map(id => `const ${id} = document.getElementById('${id}');`).join('\n') + '\n' + renderer + '\ndocument.getElementById("obdMeasurementConditions").addEventListener("change", renderObdMeasurementConditionSummary);' });
       for (const theme of ['light', 'dark']) {
         await page.evaluate(value => document.body.classList.toggle('dark', value === 'dark'), theme);
+        const conditionToggle = page.locator('#obdMeasurementConditions > summary');
+        const sameVehicle = page.locator('#obdSameVehicleConfirmed');
+        await page.locator('#obdLiveObservationCondition').selectOption('post_repair');
+        await page.locator('#obdLiveThermalState').selectOption('warmed_up');
+        await page.locator('#obdVehicleMotionState').selectOption('stationary');
+        await page.locator('#obdAccessoryLoadState').selectOption('on');
+        await page.locator('#obdTransmissionPosition').selectOption('park');
+        await sameVehicle.setChecked(false);
+        await page.locator('label:has(#obdSameVehicleConfirmed)').click();
+        assert.equal(await sameVehicle.isChecked(), true, 'Checkbox label must toggle the control');
+        await conditionToggle.click();
+        assert.equal(await page.locator('#obdTransmissionPosition').isVisible(), false);
+        assert.equal(await page.locator('#obdMeasurementConditionSummary').innerText(), '修理後 / 暖機後 / 停車中 / P / A/C等ON / 同一車両確認済み');
+        assert.equal(await page.locator('#obdMeasurementConditionSummary').isVisible(), true);
+        await conditionToggle.click();
+        assert.equal(await page.locator('#obdTransmissionPosition').inputValue(), 'park', 'Collapsing must retain selected conditions');
+        assert.equal(await sameVehicle.isChecked(), true, 'Collapsing must retain confirmation');
+        assert.equal(await page.locator('#obdDevReadDtcButton').isDisabled(), true, 'Presentation interactions must not enable readout');
         const problems = await page.evaluate(() => {
           const root = document.querySelector('#obdDevControls');
           const issues = [];
