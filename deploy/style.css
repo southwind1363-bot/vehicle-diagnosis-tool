@@ -1610,16 +1610,28 @@ body.dark .flow-node-measure .flow-step {
 }
 
 .obd-timeline-records li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(70px, 0.5fr);
-  gap: 10px;
-  padding: 10px 0;
   border-top: 1px solid var(--line);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
-.obd-timeline-records li > :last-child {
+.obd-timeline-record-select {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(70px, 0.5fr);
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.obd-timeline-record-select > :last-child {
   text-align: right;
 }
 
@@ -1629,9 +1641,9 @@ body.dark .flow-node-measure .flow-step {
   font-weight: 700;
 }
 
-.obd-timeline-records :is(summary, ol):focus-visible {
+.obd-timeline-records :is(summary, ol, button):focus-visible {
   outline: 2px solid var(--accent-strong);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 @media (max-width: 600px) {

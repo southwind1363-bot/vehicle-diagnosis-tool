@@ -371,6 +371,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(await rows.nth(Number(await slider.inputValue())).getAttribute('aria-current'), 'true');
       };
       await assertSelectedRecord();
+      await rows.first().getByRole('button').click();
+      assert.equal(await slider.inputValue(), '0', 'Selecting a record must move to that exact point');
+      await rows.last().getByRole('button').press('Enter');
+      assert.equal(await slider.inputValue(), String(expectedPoints - 1), 'Record selection must support keyboard activation');
+      await assertSelectedRecord();
       const pageScroll = await page.evaluate(() => window.scrollY);
       for (const edge of ['min', 'max']) {
         await slider.evaluate((node, edge) => {
@@ -396,6 +401,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             assert.equal(await slider.inputValue(), String(clickedIndex));
           }
           await assertSelectedRecord();
+          assert.equal(await rows.locator('button').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height >= 48 && node.scrollWidth <= node.clientWidth + 1)), true, 'Record selection must fit touch viewports');
           assert.equal(await chart.locator('.obd-timeline-step').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().width >= 48 && node.getBoundingClientRect().height >= 48)), true);
           const index = Number(await slider.inputValue());
           const fragments = (await rows.nth(index).innerText()).split('\n');
@@ -428,6 +434,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const pausedPosition = await slider.inputValue();
       await page.waitForTimeout(150);
       assert.equal(await slider.inputValue(), pausedPosition);
+      await slider.press('End');
+      await playback.click();
+      await rows.last().getByRole('button').click();
+      assert.equal(await slider.inputValue(), String(expectedPoints - 1));
+      assert.match(await playback.getAttribute('aria-label'), /記録を再生$/);
       await slider.press('Home');
       await playback.click();
       await next.click();
