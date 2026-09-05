@@ -893,38 +893,78 @@
           <div id="obdDevControls" hidden>
             <details class="obd-dev-task" name="obd-readout-task" open>
             <summary>接続・アダプター確認</summary>
+            <div class="obd-dev-routes">
+            <fieldset class="obd-dev-route">
+              <legend>PC直接接続 / ELM327</legend>
             <div class="obd-dev-controls">
-            <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>接続確認(ローカルブリッジ)</button>
-            <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>アダプター確認(Web Serial)</button>
-            <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧(ローカルブリッジ)</button>
+              <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>アダプター確認</button>
+            </div>
+            </fieldset>
+            <fieldset class="obd-dev-route">
+              <legend>ローカルブリッジ</legend>
+            <div class="obd-dev-controls">
+              <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>接続確認</button>
+              <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧</button>
+            </div>
+            </fieldset>
             </div>
             </details>
             <details class="obd-dev-task" name="obd-readout-task">
             <summary>車両情報・基本読取</summary>
+            <div class="obd-dev-routes">
+            <fieldset class="obd-dev-route">
+              <legend>PC直接接続 / ELM327</legend>
             <div class="obd-dev-controls">
-            <button id="obdDevReadEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(Web Serial)</button>
-            <button id="obdDevBridgeEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(ローカルブリッジ)</button>
-            <button id="obdDevBridgeSupportedPidButton" class="secondary-button" type="button" disabled>対応PID(ローカルブリッジ)</button>
-            <button id="obdDevCoreScanButton" class="secondary-button" type="button" disabled>基本読取(Web Serial)</button>
-            <button id="obdDevQuickConditionButton" class="secondary-button" type="button" disabled>クイック状態確認(Web Serial)</button>
+              <button id="obdDevReadEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報</button>
+              <button id="obdDevCoreScanButton" class="secondary-button" type="button" disabled>基本読取</button>
+              <button id="obdDevQuickConditionButton" class="secondary-button" type="button" disabled>クイック状態確認</button>
+            </div>
+            </fieldset>
+            <fieldset class="obd-dev-route">
+              <legend>ローカルブリッジ</legend>
+            <div class="obd-dev-controls">
+              <button id="obdDevBridgeEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報</button>
+              <button id="obdDevBridgeSupportedPidButton" class="secondary-button" type="button" disabled>対応PID</button>
+            </div>
+            </fieldset>
             </div>
             </details>
             <details class="obd-dev-task" name="obd-readout-task">
             <summary>故障コードを読む</summary>
+            <div class="obd-dev-routes">
+            <fieldset class="obd-dev-route">
+              <legend>PC直接接続 / ELM327</legend>
             <div class="obd-dev-controls">
-            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>故障コード(Web Serial)</button>
-            <button id="obdDevBridgeDtcButton" class="secondary-button" type="button" disabled>故障コード(ローカルブリッジ)</button>
-            <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>保留DTC(ローカルブリッジ)</button>
-            <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC(ローカルブリッジ)</button>
+              <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>故障コード</button>
+            </div>
+            </fieldset>
+            <fieldset class="obd-dev-route">
+              <legend>ローカルブリッジ</legend>
+            <div class="obd-dev-controls">
+              <button id="obdDevBridgeDtcButton" class="secondary-button" type="button" disabled>故障コード</button>
+              <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>保留DTC</button>
+              <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC</button>
+            </div>
+            </fieldset>
             </div>
             </details>
             <details class="obd-dev-task" name="obd-readout-task">
             <summary>計測データ・発生時の記録を読む</summary>
+            <div class="obd-dev-routes">
+            <fieldset class="obd-dev-route">
+              <legend>PC直接接続 / ELM327</legend>
             <div class="obd-dev-controls">
-            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>現在値を取得(Web Serial)</button>
-            <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ(ローカルブリッジ)</button>
-            <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(ローカルブリッジ)</button>
-            <button id="obdDevReadFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(Web Serial)</button>
+              <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>現在値を取得</button>
+              <button id="obdDevReadFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
+            </div>
+            </fieldset>
+            <fieldset class="obd-dev-route">
+              <legend>ローカルブリッジ</legend>
+            <div class="obd-dev-controls">
+              <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ</button>
+              <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
+            </div>
+            </fieldset>
             </div>
             <details class="obd-dev-task" id="obdMeasurementConditions">
             <summary>比較用の測定条件<span id="obdMeasurementConditionSummary" class="obd-condition-summary">未指定</span></summary>
@@ -968,11 +1008,21 @@
             </details>
             <details class="obd-dev-task" name="obd-readout-task">
             <summary>排ガス監視の実施状況・テスト結果</summary>
+            <div class="obd-dev-routes">
+            <fieldset class="obd-dev-route">
+              <legend>PC直接接続 / ELM327</legend>
             <div class="obd-dev-controls">
-            <button id="obdDevReadReadinessButton" class="secondary-button" type="button" disabled>レディネス(Web Serial)</button>
-            <button id="obdDevReadOnboardMonitorButton" class="secondary-button" type="button" disabled>Mode06(Web Serial)</button>
-            <button id="obdDevBridgeReadinessButton" class="secondary-button" type="button" disabled>レディネス(ローカルブリッジ)</button>
-            <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果(ローカルブリッジ)</button>
+              <button id="obdDevReadReadinessButton" class="secondary-button" type="button" disabled>レディネス</button>
+              <button id="obdDevReadOnboardMonitorButton" class="secondary-button" type="button" disabled>Mode06</button>
+            </div>
+            </fieldset>
+            <fieldset class="obd-dev-route">
+              <legend>ローカルブリッジ</legend>
+            <div class="obd-dev-controls">
+              <button id="obdDevBridgeReadinessButton" class="secondary-button" type="button" disabled>レディネス</button>
+              <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果</button>
+            </div>
+            </fieldset>
             </div>
             </details>
             <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>

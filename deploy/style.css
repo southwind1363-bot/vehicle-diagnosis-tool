@@ -1040,9 +1040,33 @@ body.dark .flow-node-measure .flow-step {
   flex-wrap: wrap;
 }
 
-#obdDevControls > .obd-dev-task > .obd-dev-controls {
+#obdDevControls .obd-dev-routes {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  align-items: stretch;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.obd-dev-route {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.obd-dev-route > legend {
+  max-width: 100%;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.obd-dev-route > .obd-dev-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   align-items: stretch;
 }
 

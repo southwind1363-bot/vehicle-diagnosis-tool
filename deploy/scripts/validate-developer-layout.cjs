@@ -93,6 +93,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         for (let i = 0; i < 5; i += 1) {
           if (!(await groups.nth(i).evaluate(node => node.open))) await groups.nth(i).locator(':scope > summary').click();
           assert.equal(await page.locator('#obdDevControls > details[name="obd-readout-task"][open]').count(), 1);
+          const routes = groups.nth(i).locator(':scope > .obd-dev-routes > fieldset');
+          assert.equal(await routes.count(), 2);
+          assert.deepEqual(await routes.locator('legend').allTextContents(), ['PC直接接続 / ELM327', 'ローカルブリッジ']);
+          for (let route = 0; route < 2; route += 1) {
+            const buttons = await routes.nth(route).locator('button').evaluateAll(nodes => nodes.map(node => ({ id: node.id, disabled: node.disabled })));
+            assert.ok(buttons.length > 0);
+            assert.ok(buttons.every(button => button.id.includes('Bridge') === (route === 1) && button.disabled), 'Transport grouping must preserve disabled controls and ownership');
+          }
           const overflow = await groups.nth(i).evaluate(group => [...group.querySelectorAll('button, input, select, label, summary')].filter(node => {
             const box = node.getBoundingClientRect();
             if (!box.width || !box.height) return false;

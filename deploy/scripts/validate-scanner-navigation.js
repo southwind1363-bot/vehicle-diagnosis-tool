@@ -40,7 +40,8 @@ readoutTarget.closest = () => ({ querySelector: () => navigationTarget("group") 
 navigationContext.navigateToObdReadoutControl(readoutTarget);
 assert.equal(focusedControl, "group", "Disabled controls should focus their visible group heading");
 assert.ok(source.includes("navigateToObdReadoutControl(targetButton);"));
-assert.match(css, /#obdDevControls > \.obd-dev-task > \.obd-dev-controls\s*\{\s*display: grid;\s*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\);/);
+assert.match(css, /#obdDevControls \.obd-dev-routes\s*\{\s*display: grid;\s*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\);/);
+assert.equal((html.match(/<fieldset class="obd-dev-route">/g) || []).length, 10);
 const developerButtonStyle = css.match(/#obdDevControls \.obd-dev-controls > button\s*\{([^}]+)\}/)?.[1] || "";
 for (const rule of ["min-width: 0", "min-height: 48px", "white-space: normal", "overflow-wrap: anywhere"]) {
   assert.ok(developerButtonStyle.includes(rule), "Developer touch controls must fit narrow screens: " + rule);
@@ -94,8 +95,9 @@ for (const [id, route] of Object.entries({
   obdDevSnapshotButton: "Web Serial", obdDevBridgeFreezeFrameButton: "ローカルブリッジ",
   obdDevBridgeMonitorButton: "ローカルブリッジ"
 })) {
-  const label = html.match(new RegExp(`<button[^>]+id="${id}"[^>]*>([^<]+)</button>`))?.[1];
-  assert.ok(label?.includes(`(${route})`), "Readout button must identify its actual transport: " + id);
+  const group = [...html.matchAll(/<fieldset class="obd-dev-route">([\s\S]*?)<\/fieldset>/g)].find(match => match[1].includes(`id="${id}"`))?.[1];
+  const legend = route === "Web Serial" ? "PC直接接続 / ELM327" : route;
+  assert.ok(group?.includes(`<legend>${legend}</legend>`), "Readout button must belong to its actual transport: " + id);
 }
 const accessMarkup = html.slice(html.indexOf('<section id="obdAccessGatePanel"'), html.indexOf('<div id="obdAccessProtected"'));
 assert.ok(accessMarkup.indexOf('id="obdAccessLockButton"') < accessMarkup.indexOf('class="obd-dev-gate"'), "Lock must remain outside collapsed password entry");
