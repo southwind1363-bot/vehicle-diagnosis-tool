@@ -860,6 +860,12 @@
               詳細用パスワード
               <input id="obdDevPasswordInput" type="password" autocomplete="off" minlength="12" placeholder="12文字以上で新規設定">
             </label>
+            <button id="obdDevUnlockButton" class="secondary-button" type="button">設定して開く</button>
+            <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
+          </div>
+          <details class="obd-dev-task" id="obdSerialSettings">
+            <summary>通信設定（ELM327 / Web Serial）</summary>
+            <div class="obd-dev-gate">
             <label>
               通信速度
               <select id="obdDevBaudRate">
@@ -868,9 +874,8 @@
                 <option value="9600">9600</option>
               </select>
             </label>
-            <button id="obdDevUnlockButton" class="secondary-button" type="button">設定して開く</button>
-            <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
-          </div>
+            </div>
+          </details>
           <div id="obdBridgePairingControls" hidden>
             <div class="obd-dev-gate">
               <label>

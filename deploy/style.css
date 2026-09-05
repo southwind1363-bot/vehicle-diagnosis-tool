@@ -1059,7 +1059,8 @@ body.dark .flow-node-measure .flow-step {
 .obd-dev-gate label {
   display: grid;
   gap: 5px;
-  min-width: 180px;
+  min-width: min(180px, 100%);
+  max-width: 100%;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 700;
@@ -1067,6 +1068,8 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-dev-gate input,
 .obd-dev-gate select {
+  min-width: 0;
+  max-width: 100%;
   min-height: 42px;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -1079,6 +1082,29 @@ body.dark .flow-node-measure .flow-step {
 .obd-dev-controls button,
 .obd-dev-gate button {
   min-height: 42px;
+}
+
+#obdMeasurementConditions > .obd-dev-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+#obdMeasurementConditions .obd-dev-group-label {
+  margin: 0;
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+#obdMeasurementConditions select {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+}
+
+#obdMeasurementConditions label:has(input[type="checkbox"]) {
+  grid-column: 1 / -1;
 }
 
 .obd-operation-panel {
