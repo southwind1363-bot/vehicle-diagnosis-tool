@@ -1,16 +1,39 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
+const http = require('node:http');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 (async () => {
   const root = path.resolve(__dirname, '..');
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-'));
-  const browser = await chromium.launch({ channel: 'chrome', headless: true });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: 'block', acceptDownloads: true });
+  const offline = process.argv.includes('--offline');
+  let browser, context, server;
+  let origin = 'http://127.0.0.1';
+  const asset = pathname => {
+    const file = path.resolve(root, '.' + decodeURIComponent(pathname === '/' ? '/index.html' : pathname));
+    const relative = path.relative(root, file);
+    if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return null;
+    const type = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream';
+    return { file, type };
+  };
   const errors = [], blocked = [];
   try {
+    if (offline) {
+      server = http.createServer((request, response) => {
+        try {
+          const entry = request.method === 'GET' ? asset(new URL(request.url, origin).pathname) : null;
+          if (!entry) { response.writeHead(404).end(); return; }
+          response.writeHead(200, { 'Content-Type': entry.type });
+          response.end(fs.readFileSync(entry.file));
+        } catch (_) { response.writeHead(400).end(); }
+      });
+      await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
+      origin += ':' + server.address().port;
+    }
+    browser = await chromium.launch({ channel: 'chrome', headless: true });
+    context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: offline ? 'allow' : 'block', acceptDownloads: true });
     // Fresh, pre-unlocked fixture only; no user profile, password, or vehicle access.
     await context.addInitScript(() => {
       localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
@@ -20,20 +43,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     });
     await context.route('**/*', async route => {
       const url = new URL(route.request().url());
-      const file = path.resolve(root, '.' + decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname));
-      const relative = path.relative(root, file);
-      if (url.origin !== 'http://127.0.0.1' || route.request().method() !== 'GET' || relative.startsWith('..') || path.isAbsolute(relative)) {
+      if (url.origin !== origin || route.request().method() !== 'GET') {
         blocked.push(route.request().url());
         return route.abort();
       }
-      if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return route.fulfill({ status: 404, body: '' });
-      const type = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.svg': 'image/svg+xml' }[path.extname(file)] || 'application/octet-stream';
-      await route.fulfill({ contentType: type, body: fs.readFileSync(file) });
+      if (offline) return route.continue();
+      const entry = asset(url.pathname);
+      if (!entry) return route.fulfill({ status: 404, body: '' });
+      await route.fulfill({ contentType: entry.type, body: fs.readFileSync(entry.file) });
     });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     page.setDefaultTimeout(20000);
-    await page.goto('http://127.0.0.1/');
+    await page.goto(origin + '/');
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
     await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
     const openFile = async (button, file) => {
@@ -53,9 +75,32 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await download.saveAs(exported);
     const json = JSON.parse(fs.readFileSync(exported, 'utf8'));
     assert.ok(JSON.stringify(json).includes('P0300') && JSON.stringify(json).includes('P0420'));
+    if (offline) {
+      const manifest = JSON.parse(fs.readFileSync(path.join(root, 'offline-assets.json'), 'utf8'));
+      await page.waitForFunction(async manifest => {
+        if (!navigator.serviceWorker.controller) return false;
+        const name = 'vehicle-diagnosis-tool-' + manifest.version;
+        if (!(await caches.has(name))) return false;
+        const cache = await caches.open(name);
+        const keys = new Set((await cache.keys()).map(request => request.url));
+        return ['/', '/index.html', '/offline-assets.json', ...manifest.assets].every(url => keys.has(new URL(url, location.href).href));
+      }, manifest, { timeout: 60000 });
+      await context.setOffline(true);
+      await new Promise(resolve => server.close(resolve));
+      server = null;
+      console.log('Offline phase: cache ready, browser network disabled, fixture server stopped');
+    }
     // Reload first so stale result nodes cannot make a failed reimport pass.
-    await page.reload();
+    const reloaded = await page.reload();
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    if (offline) {
+      assert.equal(reloaded.fromServiceWorker(), true, 'Reload must be served by the offline worker');
+      const networkAvailable = await page.evaluate(async () => {
+        try { await fetch('/uncached-offline-probe', { signal: AbortSignal.timeout(2000) }); return true; }
+        catch (_) { return false; }
+      });
+      assert.equal(networkAvailable, false, 'Uncached network input must be unavailable');
+    }
     await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
     await page.getByRole('button', { name: '読取結果を開く', exact: true }).click();
     assert.equal(await page.locator('#obdResultsEmptyState').isVisible(), true);
@@ -78,9 +123,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow: import, export, reimport, invalid-file retention and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${offline ? 'offline' : 'isolated'}): import, export, reimport, invalid-file retention and back passed / Artifacts: ${output}`);
   } finally {
-    await context.close();
-    await browser.close();
+    await context?.close();
+    await browser?.close();
+    if (server) await new Promise(resolve => server.close(resolve));
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });
