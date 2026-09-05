@@ -1,8 +1,9 @@
 const CACHE_PREFIX = "vehicle-diagnosis-tool";
-const CACHE_VERSION = "3.13.467";
+const CACHE_VERSION = "3.13.468";
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 const OFFLINE_MANIFEST_URL = "offline-assets.json";
 const OFFLINE_DOWNLOAD_TIMEOUT_MS = 15000;
+const DIAGNOSTIC_DATA_TIMEOUT_MS = 15000;
 const CORE_ASSETS = [
   "./",
   "index.html",
@@ -29,6 +30,30 @@ async function fetchOfflineDownload(url) {
     throw error;
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function fetchDiagnosticData(request) {
+  const controller = new AbortController();
+  const started = performance.now();
+  const abortRequest = () => controller.abort();
+  const timer = setTimeout(() => controller.abort(), DIAGNOSTIC_DATA_TIMEOUT_MS);
+  if (request.signal?.aborted) controller.abort();
+  else request.signal?.addEventListener("abort", abortRequest, { once: true });
+  try {
+    const response = await fetch(request, { signal: controller.signal });
+    // Callers reject HTTP errors by status without consuming their body.
+    if (!response.ok) return response;
+    // Bound successful JSON bodies, including delayed timer callbacks.
+    await response.clone().arrayBuffer();
+    if (controller.signal.aborted || performance.now() - started >= DIAGNOSTIC_DATA_TIMEOUT_MS) throw new Error("diagnostic_data_timeout");
+    return response;
+  } catch (error) {
+    controller.abort();
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    request.signal?.removeEventListener("abort", abortRequest);
   }
 }
 
@@ -156,22 +181,23 @@ self.addEventListener("fetch", (event) => {
       let cache;
       try { cache = await caches.open(CACHE_NAME); } catch (_) { /* Network reads can still work without storage. */ }
       if (isDiagnosticDataRequest) {
+        let response;
         try {
-          const response = await fetch(request);
-          if (response.ok) {
-            if (!/\bno-store\b/i.test(response.headers.get("Cache-Control") || "")) {
-              try { await cache?.put(request, response.clone()); } catch (_) { /* Keep the successful network response. */ }
-            }
-            return response;
-          }
-          const cached = await matchOfflineCache(cache, request);
-          if (cached) return cached;
-          return response;
+          response = await fetchDiagnosticData(request);
         } catch (error) {
           const cached = await matchOfflineCache(cache, request);
           if (cached) return cached;
           throw error;
         }
+        if (!response.ok) {
+          const cached = await matchOfflineCache(cache, request);
+          if (cached) return cached;
+          return response;
+        }
+        if (!/\bno-store\b/i.test(response.headers.get("Cache-Control") || "")) {
+          try { await cache?.put(request, response.clone()); } catch (_) { /* Keep the successful network response. */ }
+        }
+        return response;
       }
 
       const cached = await matchOfflineCache(cache, request);

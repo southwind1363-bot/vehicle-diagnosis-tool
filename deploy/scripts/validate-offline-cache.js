@@ -17,7 +17,7 @@ check(indexSource.slice(indexSource.indexOf('<header class="app-header">'), inde
 function createWorker(options = {}) {
   const stores = new Map();
   const listeners = {};
-  const stats = { waiting: 0, claimed: 0, active: 0, peak: 0, fetched: [], aborted: 0, pendingWrites: 0 };
+  const stats = { waiting: 0, claimed: 0, active: 0, peak: 0, fetched: [], aborted: 0, preAbortedFetches: 0, pendingWrites: 0 };
   let monotonicTime = 0;
   const resolve = (input) => new URL(typeof input === "string" ? input : input.url, base).href;
   class BrowserRequest extends Request {
@@ -59,7 +59,7 @@ function createWorker(options = {}) {
   const context = vm.createContext({
     URL, Request: BrowserRequest, Response, AbortController, caches, console,
     performance: { now: () => options.downloadElapsedMs === undefined ? performance.now() : (monotonicTime += options.downloadElapsedMs) },
-    setTimeout: (callback, delay) => setTimeout(callback, delay === 15000 ? options.downloadTimeoutMs ?? delay : delay),
+    setTimeout: (callback, delay) => setTimeout(callback, delay === 15000 ? options.timeoutMs ?? options.downloadTimeoutMs ?? delay : delay),
     clearTimeout, MessageChannel,
     self: {
       location: { origin: new URL(base).origin, href: `${base}service-worker.js` },
@@ -75,6 +75,7 @@ function createWorker(options = {}) {
       stats.peak = Math.max(stats.peak, stats.active);
       try {
         const signal = init.signal || request.signal;
+        if (signal?.aborted) stats.preAbortedFetches += 1;
         signal?.addEventListener("abort", () => { stats.aborted += 1; }, { once: true });
         if (options.stallFetch && url.endsWith(options.stallFetch)) {
           return await new Promise((resolve, reject) => {
@@ -116,9 +117,9 @@ function createWorker(options = {}) {
       listeners[type]({ waitUntil: (promise) => { completion = promise; } });
       return completion;
     },
-    request: (path, { method = "GET", mode = "same-origin", cache = "default" } = {}) => {
+    request: (path, { method = "GET", mode = "same-origin", cache = "default", signal } = {}) => {
       let result;
-      listeners.fetch({ request: { url: new URL(path, base).href, method, mode, cache }, respondWith: (promise) => { result = promise; } });
+      listeners.fetch({ request: { url: new URL(path, base).href, method, mode, cache, signal }, respondWith: (promise) => { result = promise; } });
       return result;
     },
     listeners
@@ -245,11 +246,78 @@ check((await worker.request("data/new.json")).ok, "Runtime quota failure hid a s
 delete worker.options.failPut;
 worker.options.noStore = true;
 check((await worker.request("data/no-store.json")).ok && !(await current.match("data/no-store.json")), "Runtime no-store response was cached");
+delete worker.options.noStore;
+check(worker.request("style.css", { cache: "no-store" }) === undefined, "No-store static request was unexpectedly intercepted");
+check(worker.request("data/request-no-store.json", { cache: "no-store" }) === undefined, "No-store diagnostic request was unexpectedly intercepted");
+check((await worker.request("style.css")).ok && worker.stats.fetched.at(-1) !== new URL("style.css", base).href, "Non-diagnostic cache behavior changed");
 worker.options.failOpen = true;
 check((await worker.request("data/no-storage.json")).ok, "Unavailable CacheStorage blocked a network read");
 delete worker.options.failOpen;
 worker.options.failMatch = true;
 check((await worker.request("style.css")).ok, "Cache lookup failure blocked a successful static network response");
+
+const diagnosticHeaders = createWorker({ timeoutMs: 25, stallFetch: "data/header-cache.json" });
+await diagnosticHeaders.lifecycle("install");
+const headerCache = await diagnosticHeaders.caches.open(cacheName);
+await headerCache.put("data/header-cache.json", new Response("cached headers"));
+check(await (await diagnosticHeaders.request("data/header-cache.json")).text() === "cached headers" && diagnosticHeaders.stats.aborted === 1,
+  "Stalled diagnostic headers did not abort and fall back to the current cache");
+diagnosticHeaders.options.stallFetch = "data/header-empty.json";
+await assert.rejects(diagnosticHeaders.request("data/header-empty.json"));
+check(diagnosticHeaders.stats.aborted === 2 && !(await headerCache.match("data/header-empty.json")), "Stalled diagnostic headers without cache did not reject cleanly");
+const abortedRequest = new AbortController();
+abortedRequest.abort();
+diagnosticHeaders.options.stallFetch = "data/request-aborted.json";
+await assert.rejects(diagnosticHeaders.request("data/request-aborted.json", { signal: abortedRequest.signal }));
+check(diagnosticHeaders.stats.preAbortedFetches === 1, "Pre-aborted diagnostic request did not reach the bounded fetch signal");
+
+const diagnosticTimeout = createWorker({ timeoutMs: 25, stallBody: "data/timeout-cache.json" });
+await diagnosticTimeout.lifecycle("install");
+const diagnosticCache = await diagnosticTimeout.caches.open(cacheName);
+await diagnosticCache.put("data/timeout-cache.json", new Response("cached timeout"));
+check(await (await diagnosticTimeout.request("data/timeout-cache.json")).text() === "cached timeout"
+  && diagnosticTimeout.stats.aborted === 1 && diagnosticTimeout.stats.pendingWrites === 0, "Stalled diagnostic body did not abort and fall back to the current cache");
+diagnosticTimeout.options.stallBody = "data/timeout-empty.json";
+await assert.rejects(diagnosticTimeout.request("data/timeout-empty.json"));
+check(diagnosticTimeout.stats.aborted === 2 && !(await diagnosticCache.match("data/timeout-empty.json")), "Stalled diagnostic body without cache did not reject cleanly");
+
+for (const elapsed of [14999, 15000]) {
+  const delayedTimer = createWorker();
+  await delayedTimer.lifecycle("install");
+  const delayedCache = await delayedTimer.caches.open(cacheName);
+  await delayedCache.put("data/late.json", new Response("cached deadline"));
+  delayedTimer.options.downloadElapsedMs = elapsed;
+  const body = await (await delayedTimer.request("data/late.json")).text();
+  check(elapsed < 15000 ? body.includes("data/late.json") : body === "cached deadline",
+    `Diagnostic monotonic deadline failed at ${elapsed} ms`);
+}
+
+const fastDiagnostic = createWorker({ timeoutMs: 25, delayPut: true });
+await fastDiagnostic.lifecycle("install");
+const fastRequestController = new AbortController();
+const fastResponse = await fastDiagnostic.request("data/fast.json", { signal: fastRequestController.signal });
+await new Promise((done) => setTimeout(done, 50));
+fastRequestController.abort();
+check((await fastResponse.text()).includes("data/fast.json") && fastDiagnostic.stats.aborted === 0
+  && (await (await fastDiagnostic.caches.open(cacheName)).match("data/fast.json")), "Fast diagnostic response was not cached or retained a late abort listener");
+
+const noStoreDiagnostic = createWorker({ timeoutMs: 25 });
+await noStoreDiagnostic.lifecycle("install");
+const noStoreCache = await noStoreDiagnostic.caches.open(cacheName);
+noStoreDiagnostic.options.noStore = true;
+check((await noStoreDiagnostic.request("data/no-store-fast.json")).ok && !(await noStoreCache.match("data/no-store-fast.json")), "Fast no-store diagnostic response was cached");
+noStoreDiagnostic.options.stallBody = "data/no-store-stalled.json";
+await assert.rejects(noStoreDiagnostic.request("data/no-store-stalled.json"));
+check(noStoreDiagnostic.stats.aborted === 1 && !(await noStoreCache.match("data/no-store-stalled.json")), "Stalled no-store diagnostic response wrote cache data");
+
+const statusDiagnostic = createWorker({ timeoutMs: 25, httpFailure: "data/status-cache.json" });
+await statusDiagnostic.lifecycle("install");
+const statusCache = await statusDiagnostic.caches.open(cacheName);
+await statusCache.put("data/status-cache.json", new Response("cached status"));
+check(await (await statusDiagnostic.request("data/status-cache.json")).text() === "cached status", "Diagnostic 503 did not prefer the current cache");
+statusDiagnostic.options.httpFailure = "data/status-empty.json";
+const statusResponse = await statusDiagnostic.request("data/status-empty.json");
+check(statusResponse.status === 503 && (await statusResponse.text()) === "unavailable", "Diagnostic 503 without cache did not preserve the HTTP response");
 
 function createStatusClient(worker, registration) {
   const events = {};

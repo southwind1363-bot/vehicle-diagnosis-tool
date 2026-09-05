@@ -8,7 +8,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 (async () => {
   const root = path.resolve(__dirname, '..');
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-'));
-  const offline = process.argv.includes('--offline');
+  const restart = process.argv.includes('--restart');
+  const serverStopOnly = process.argv.includes('--server-stop-only');
+  const offline = restart || process.argv.includes('--offline');
+  const profile = path.join(output, 'browser-profile');
+  const contextOptions = { viewport: { width: 1280, height: 900 }, serviceWorkers: offline ? 'allow' : 'block', acceptDownloads: true };
   let browser, context, server;
   let origin = 'http://127.0.0.1';
   const asset = pathname => {
@@ -19,6 +23,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     return { file, type };
   };
   const errors = [], blocked = [];
+  const pendingRequests = new Map();
   try {
     if (offline) {
       server = http.createServer((request, response) => {
@@ -32,27 +37,36 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
       origin += ':' + server.address().port;
     }
-    browser = await chromium.launch({ channel: 'chrome', headless: true });
-    context = await browser.newContext({ viewport: { width: 1280, height: 900 }, serviceWorkers: offline ? 'allow' : 'block', acceptDownloads: true });
-    // Fresh, pre-unlocked fixture only; no user profile, password, or vehicle access.
-    await context.addInitScript(() => {
-      localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
-      sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
-      Object.defineProperty(navigator, 'serial', { value: undefined });
-      Object.defineProperty(navigator, 'bluetooth', { value: undefined });
-    });
-    await context.route('**/*', async route => {
-      const url = new URL(route.request().url());
-      if (url.origin !== origin || route.request().method() !== 'GET') {
-        blocked.push(route.request().url());
-        return route.abort();
-      }
-      if (offline) return route.continue();
-      const entry = asset(url.pathname);
-      if (!entry) return route.fulfill({ status: 404, body: '' });
-      await route.fulfill({ contentType: entry.type, body: fs.readFileSync(entry.file) });
-    });
-    const page = await context.newPage();
+    if (restart) context = await chromium.launchPersistentContext(profile, { ...contextOptions, channel: 'chrome', headless: true });
+    else {
+      browser = await chromium.launch({ channel: 'chrome', headless: true });
+      context = await browser.newContext(contextOptions);
+    }
+    const configureContext = async () => {
+      context.on('request', request => pendingRequests.set(request, request.url()));
+      context.on('requestfinished', request => pendingRequests.delete(request));
+      context.on('requestfailed', request => pendingRequests.delete(request));
+      // Fresh, pre-unlocked fixture only; no user profile, password, or vehicle access.
+      await context.addInitScript(() => {
+        localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
+        sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
+        Object.defineProperty(navigator, 'serial', { value: undefined });
+        Object.defineProperty(navigator, 'bluetooth', { value: undefined });
+      });
+      await context.route(offline ? url => url.origin !== origin : '**/*', async route => {
+        const url = new URL(route.request().url());
+        if (url.origin !== origin || route.request().method() !== 'GET') {
+          blocked.push(route.request().url());
+          return route.abort();
+        }
+        if (offline) return route.continue();
+        const entry = asset(url.pathname);
+        if (!entry) return route.fulfill({ status: 404, body: '' });
+        await route.fulfill({ contentType: entry.type, body: fs.readFileSync(entry.file) });
+      });
+    };
+    await configureContext();
+    let page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     page.setDefaultTimeout(20000);
     await page.goto(origin + '/');
@@ -85,14 +99,27 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         const keys = new Set((await cache.keys()).map(request => request.url));
         return ['/', '/index.html', '/offline-assets.json', ...manifest.assets].every(url => keys.has(new URL(url, location.href).href));
       }, manifest, { timeout: 60000 });
-      await context.setOffline(true);
+      if (!serverStopOnly) await context.setOffline(true);
       await new Promise(resolve => server.close(resolve));
       server = null;
-      console.log('Offline phase: cache ready, browser network disabled, fixture server stopped');
+      console.log(`Offline phase: cache ready, network emulation ${serverStopOnly ? 'unchanged' : 'disabled'}, fixture server stopped`);
     }
-    // Reload first so stale result nodes cannot make a failed reimport pass.
-    const reloaded = await page.reload();
-    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    // Start from an empty document so stale result nodes cannot mask failed import.
+    if (restart) {
+      await context.close();
+      assert.equal(page.isClosed(), true);
+      context = await chromium.launchPersistentContext(profile, { ...contextOptions, channel: 'chrome', headless: true });
+      if (!serverStopOnly) await context.setOffline(true);
+      await configureContext();
+      page = await context.newPage();
+      page.on('pageerror', error => errors.push(error.message));
+      page.setDefaultTimeout(20000);
+      console.log('Restart phase: persistent browser closed and relaunched, fixture server remains stopped');
+    }
+    const startupTime = Date.now();
+    const reloaded = restart ? await page.goto(origin + '/') : await page.reload();
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor({ timeout: 45000 });
+    console.log(`Reload data ready: ${Date.now() - startupTime} ms`);
     if (offline) {
       assert.equal(reloaded.fromServiceWorker(), true, 'Reload must be served by the offline worker');
       const networkAvailable = await page.evaluate(async () => {
@@ -123,7 +150,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow (${offline ? 'offline' : 'isolated'}): import, export, reimport, invalid-file retention and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, invalid-file retention and back passed / Artifacts: ${output}`);
+  } catch (error) {
+    const failedPage = context?.pages().at(-1);
+    if (failedPage && !failedPage.isClosed()) {
+      console.error('Browser errors:', errors);
+      console.error('Pending requests:', [...pendingRequests.values()].slice(0, 12));
+      console.error((await failedPage.locator('body').innerText()).slice(0, 2500));
+      await failedPage.screenshot({ path: path.join(output, 'failure.png') });
+      console.error('Failure screenshot:', path.join(output, 'failure.png'));
+    }
+    throw error;
   } finally {
     await context?.close();
     await browser?.close();
