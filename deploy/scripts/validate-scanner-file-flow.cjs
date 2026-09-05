@@ -267,9 +267,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     };
     await page.locator('.obd-results-nav').getByRole('button', { name: 'ライブ値', exact: true }).click();
     assert.match(await page.locator('#obdMonitorGrid').innerText(), /1000/);
+    const compact = page.locator('#obdMonitorCompact');
+    const readings = page.locator('#obdMonitorGrid > article');
+    const originalReadings = await readings.allTextContents();
+    assert.equal(await compact.isChecked(), false);
+    for (const width of [320, 390, 768, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      for (const dark of [false, true]) {
+        await page.evaluate(value => document.body.classList.toggle('dark', value), dark);
+        await compact.check();
+        assert.deepEqual(await readings.allTextContents(), originalReadings, 'List view must preserve values, ECU labels and notes');
+        assert.equal(await readings.evaluateAll(nodes => nodes.every(node => getComputedStyle(node).borderRadius === '0px' && node.scrollWidth <= node.clientWidth + 1)), true);
+        assert.equal(await readings.locator('.obd-monitor-note:visible').count(), 2);
+        await page.locator('#obdMonitorGrid').screenshot({ path: path.join(output, `live-list-${width}-${dark ? 'dark' : 'light'}.png`) });
+        await compact.press('Space');
+        assert.equal(await compact.isChecked(), false);
+        assert.deepEqual(await readings.allTextContents(), originalReadings);
+      }
+    }
+    await page.evaluate(() => document.body.classList.remove('dark'));
+    await page.setViewportSize({ width: 390, height: 900 });
+    await compact.check();
     await page.locator('#obdMonitorSearch').fill('rpm');
     assert.equal(await page.locator('#obdMonitorGrid > :visible').count(), 1);
     await showTimeline();
+    await page.locator('.obd-results-nav').getByRole('button', { name: 'ライブ値', exact: true }).click();
+    assert.equal(await compact.isChecked(), true, 'Returning must retain list view');
+    assert.equal(await page.locator('#obdMonitorSearch').inputValue(), 'rpm');
+    assert.equal(await page.locator('#obdMonitorGrid > :visible').count(), 1);
+    await page.locator('#obdMonitorSearchClear').click();
+    assert.equal(await page.locator('#obdMonitorGrid > :visible').count(), 2);
+    await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
+    await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
     await page.screenshot({ path: path.join(output, 'live-timeline-mobile.png') });
     await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
     const liveDownload = page.waitForEvent('download');

@@ -2235,6 +2235,44 @@ body.dark .flow-node-measure .flow-step {
   background: color-mix(in srgb, var(--panel-subtle) 88%, #f59e0b 12%);
 }
 
+.obd-monitor-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  width: fit-content;
+  cursor: pointer;
+}
+
+.obd-monitor-result:has(#obdMonitorCompact:checked) #obdMonitorGrid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+
+.obd-monitor-result:has(#obdMonitorCompact:checked) #obdMonitorGrid > .obd-monitor-card {
+  grid-template-columns: minmax(0, 1fr) minmax(80px, 0.6fr);
+  gap: 4px 12px;
+  min-height: 0;
+  border-radius: 0;
+  padding: 10px;
+  overflow-wrap: anywhere;
+}
+
+.obd-monitor-result:has(#obdMonitorCompact:checked) .obd-monitor-category {
+  grid-column: 1 / -1;
+}
+
+.obd-monitor-result:has(#obdMonitorCompact:checked) .obd-monitor-reading {
+  margin: 0;
+  text-align: right;
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.obd-monitor-result:has(#obdMonitorCompact:checked) .obd-monitor-note {
+  grid-column: 1 / -1;
+}
+
 .obd-monitor-filter {
   max-width: 540px;
   margin-top: 14px;
