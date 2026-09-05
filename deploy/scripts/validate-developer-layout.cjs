@@ -49,24 +49,30 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(await page.locator('#obdTransmissionPosition').isVisible(), false);
         assert.equal(await page.locator('#obdMeasurementConditionSummary').innerText(), '修理後 / 暖機後 / 停車中 / P / A/C等ON / 同一車両確認済み');
         assert.equal(await page.locator('#obdMeasurementConditionSummary').isVisible(), true);
-        await conditionToggle.click();
+        await conditionToggle.press('Enter');
+        assert.equal(await page.locator('#obdTransmissionPosition').isVisible(), true, 'Keyboard must reopen conditions');
         assert.equal(await page.locator('#obdTransmissionPosition').inputValue(), 'park', 'Collapsing must retain selected conditions');
         assert.equal(await sameVehicle.isChecked(), true, 'Collapsing must retain confirmation');
         assert.equal(await page.locator('#obdDevReadDtcButton').isDisabled(), true, 'Presentation interactions must not enable readout');
+        await page.evaluate(() => {
+          const status = document.querySelector('#obdDevStatus');
+          status.classList.add('error');
+          status.textContent = '接続を確認できませんでした。 ' + 'test-connection-status-'.repeat(12);
+        });
         const problems = await page.evaluate(() => {
-          const root = document.querySelector('#obdDevControls');
+          const root = document.querySelector('#obdStageDetailsView > .obd-dev-panel');
           const issues = [];
-          for (const node of root.querySelectorAll('button, input, select, label, summary')) {
+          for (const node of root.querySelectorAll('button, input, select, label, summary, #obdDevStatus')) {
             const box = node.getBoundingClientRect();
             if (!box.width || !box.height) continue;
             if (box.left < -1 || box.right > innerWidth + 1 || node.scrollWidth > node.clientWidth + 1) issues.push(node.id || node.textContent.trim());
-            if (node.tagName === 'BUTTON' && box.height < 48) issues.push('small: ' + node.id);
+            if (node.tagName === 'BUTTON' && box.height < (node.closest('#obdDevControls') ? 48 : 42)) issues.push('small: ' + node.id);
           }
           return issues;
         });
         assert.deepEqual(problems, [], `${width}px ${theme}: overflowing or undersized controls`);
         checks += 1;
-        await page.locator('#obdDevControls').screenshot({ path: path.join(output, `${width}-${theme}.png`) });
+        await page.locator('#obdStageDetailsView > .obd-dev-panel').screenshot({ path: path.join(output, `${width}-${theme}.png`) });
       }
       await page.close();
     }
