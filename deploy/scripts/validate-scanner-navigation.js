@@ -5,6 +5,15 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+for (const [id, route] of Object.entries({
+  obdDevBridgeStatusButton: "ローカルブリッジ", obdDevIdentifyButton: "Web Serial",
+  obdDevBridgeVciButton: "ローカルブリッジ", obdDevReadDtcButton: "Web Serial",
+  obdDevSnapshotButton: "Web Serial", obdDevBridgeFreezeFrameButton: "ローカルブリッジ",
+  obdDevBridgeMonitorButton: "ローカルブリッジ"
+})) {
+  const label = html.match(new RegExp(`<button[^>]+id="${id}"[^>]*>([^<]+)</button>`))?.[1];
+  assert.ok(label?.includes(`(${route})`), "Readout button must identify its actual transport: " + id);
+}
 const accessMarkup = html.slice(html.indexOf('<section id="obdAccessGatePanel"'), html.indexOf('<div id="obdAccessProtected"'));
 assert.ok(accessMarkup.indexOf('id="obdAccessLockButton"') < accessMarkup.indexOf('class="obd-dev-gate"'), "Lock must remain outside collapsed password entry");
 assert.equal((html.match(/id="obdAccessLockButton"/g) || []).length, 1);

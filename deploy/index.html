@@ -891,9 +891,9 @@
             <details class="obd-dev-task" open>
             <summary>接続・アダプター確認</summary>
             <div class="obd-dev-controls">
-            <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>読取基盤確認</button>
-            <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>アダプター確認</button>
-            <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧</button>
+            <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>接続確認(ローカルブリッジ)</button>
+            <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>アダプター確認(Web Serial)</button>
+            <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧(ローカルブリッジ)</button>
             </div>
             </details>
             <details class="obd-dev-task">
@@ -909,7 +909,7 @@
             <details class="obd-dev-task">
             <summary>故障コードを読む</summary>
             <div class="obd-dev-controls">
-            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>DTC読取</button>
+            <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>故障コード(Web Serial)</button>
             <button id="obdDevBridgeDtcButton" class="secondary-button" type="button" disabled>故障コード(ローカルブリッジ)</button>
             <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>保留DTC(ローカルブリッジ)</button>
             <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC(ローカルブリッジ)</button>
@@ -918,9 +918,9 @@
             <details class="obd-dev-task">
             <summary>計測データ・発生時の記録を読む</summary>
             <div class="obd-dev-controls">
-            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>ライブデータ</button>
+            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>現在値を取得(Web Serial)</button>
             <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ(ローカルブリッジ)</button>
-            <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
+            <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(ローカルブリッジ)</button>
             <button id="obdDevReadFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(Web Serial)</button>
             </div>
             <details class="obd-dev-task" id="obdMeasurementConditions">
@@ -969,7 +969,7 @@
             <button id="obdDevReadReadinessButton" class="secondary-button" type="button" disabled>レディネス(Web Serial)</button>
             <button id="obdDevReadOnboardMonitorButton" class="secondary-button" type="button" disabled>Mode06(Web Serial)</button>
             <button id="obdDevBridgeReadinessButton" class="secondary-button" type="button" disabled>レディネス(ローカルブリッジ)</button>
-            <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果</button>
+            <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果(ローカルブリッジ)</button>
             </div>
             </details>
             <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>
