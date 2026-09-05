@@ -300,7 +300,10 @@ context.writeOptionalBrowserSetting = () => {};
 context.OBD_UI_MODE_KEY = "test-mode";
 context.renderObdUiMode = () => {};
 let refreshedMode = "";
-context.renderObdDeveloperGate = () => { refreshedMode = context.obdUiMode; };
+context.renderObdDeveloperGate = () => {
+  refreshedMode = context.obdUiMode;
+  context.renderObdStageView("setup");
+};
 vm.runInContext(source.slice(source.indexOf("function setObdUiMode("), source.indexOf("function getObdSimpleConnectionLabel(")), context);
 context.obdUiMode = "details";
 context.setObdUiMode("simple");
