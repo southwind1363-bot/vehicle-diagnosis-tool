@@ -736,7 +736,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       { name: 'stream-failure', failCommand: '0101' },
       { name: 'after-stream-failure', rpm: 900, reply: '41 0C 0E 10' },
       { name: 'zero-dtc', rpm: 900, reply: '41 0C 0E 10', codes: [] },
-      { name: 'no-dtc-response', rpm: 900, reply: '41 0C 0E 10', codes: [], noDtcResponse: true }
+      { name: 'no-dtc-response', rpm: 900, reply: '41 0C 0E 10', codes: [], noDtcResponse: true },
+      { name: 'after-dtc-no-data', rpm: 1000, reply: '41 0C 0F A0' }
     ];
     for (const [caseIndex, readoutCase] of (restart ? [] : readoutCases).entries()) {
       const noLiveResponse = readoutCase.rpm === null;
@@ -845,6 +846,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       }));
       assert.deepEqual(scan, { codes: expectedCodes, rpm: readoutCase.rpm, noData: noLiveResponse || readoutCase.noDtcResponse ? 1 : 0, incomplete: noLiveResponse || readoutCase.noDtcResponse ? 1 : 0, readiness: 'reported', ecu: 'reported' });
       const checkZeroDtc = async () => {
+        if (readoutCase.name === 'after-dtc-no-data') {
+          const coverage = await page.evaluate(() => obdDevSession.lastSession.dtcSnapshot.dtcStatusSummary);
+          assert.equal(coverage.complete, true, 'DTC recovery must clear the prior unreported state');
+          assert.deepEqual([...coverage.reportedStatuses].sort(), ['pending', 'permanent', 'stored']);
+          assert.match(await page.locator('#obdSimpleResultNote').innerText(), /^DTCを2件取得しました。/);
+          assert.equal(await page.locator('#obdSimpleResultGrid > button').first().locator('.obd-simple-result-state').innerText(), '取得済み');
+        }
         if (expectedCodes.length) return;
         const dtcResult = page.locator('#obdSimpleResultGrid > button').first();
         if (readoutCase.noDtcResponse) {
