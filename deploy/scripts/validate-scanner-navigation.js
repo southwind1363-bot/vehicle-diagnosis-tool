@@ -5,6 +5,23 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+const unlockKeys = vm.createContext({});
+vm.runInContext(source.slice(source.indexOf("function handleObdUnlockKeydown("), source.indexOf("function renderObdDeveloperPasswordState(")), unlockKeys);
+for (const [properties, disabled, expectedClicks, expectedPrevented] of [
+  [{ key: "Enter" }, false, 1, 1], [{ key: "Enter" }, true, 0, 1],
+  [{ key: "Enter", repeat: true }, false, 0, 1],
+  [{ key: "Enter", isComposing: true }, false, 0, 0],
+  [{ key: "Enter", keyCode: 229 }, false, 0, 0], [{ key: "a" }, false, 0, 0]
+]) {
+  let clicks = 0;
+  let prevented = 0;
+  unlockKeys.handleObdUnlockKeydown({ ...properties, preventDefault() { prevented += 1; } }, { disabled, click() { clicks += 1; } });
+  assert.equal(clicks, expectedClicks);
+  assert.equal(prevented, expectedPrevented);
+}
+for (const kind of ["Access", "Dev"]) {
+  assert.ok(source.replaceAll("\r\n", "\n").includes(`obd${kind}PasswordInput.addEventListener("keydown", (event) => {\n  handleObdUnlockKeydown(event, obd${kind}UnlockButton);`), "Both password fields must use guarded button dispatch");
+}
 for (const [id, route] of Object.entries({
   obdDevBridgeStatusButton: "ローカルブリッジ", obdDevIdentifyButton: "Web Serial",
   obdDevBridgeVciButton: "ローカルブリッジ", obdDevReadDtcButton: "Web Serial",

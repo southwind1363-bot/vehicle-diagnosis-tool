@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.456";
+const APP_VERSION = "3.13.457";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -870,11 +870,12 @@ obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
 obdAccessUnlockButton.addEventListener("click", unlockObdAccess);
 obdAccessLockButton.addEventListener("click", lockObdAccess);
 obdAccessPasswordInput.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
-  void unlockObdAccess();
+  handleObdUnlockKeydown(event, obdAccessUnlockButton);
 });
 obdDevUnlockButton.addEventListener("click", unlockObdDeveloperMode);
+obdDevPasswordInput.addEventListener("keydown", (event) => {
+  handleObdUnlockKeydown(event, obdDevUnlockButton);
+});
 obdDevLockButton.addEventListener("click", lockObdDeveloperMode);
 obdBridgePairingApplyButton.addEventListener("click", applyObdBridgePairingToken);
 obdBridgePairingClearButton.addEventListener("click", clearObdBridgePairingToken);
@@ -5732,6 +5733,13 @@ function syncObdSimpleStatus() {
     obdSimpleResultStatus.textContent = message || "読取状態を確認しています。";
     obdSimpleResultStatus.classList.toggle("error", hasError);
   }
+}
+
+function handleObdUnlockKeydown(event, button) {
+  if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
+  event.preventDefault();
+  if (event.repeat || button.disabled) return;
+  button.click();
 }
 
 function renderObdDeveloperPasswordState() {
