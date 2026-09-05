@@ -5,6 +5,9 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+assert.equal((html.match(/id="obdDevStatus"/g) || []).length, 1, "Keep one authoritative developer status region");
+assert.ok(html.indexOf('id="obdDevStatus"') < html.indexOf('id="obdDevPasswordInput"'), "Status must appear before password entry and readout controls");
+assert.match(html, /<p id="obdDevStatus" class="data-status" role="status" aria-atomic="true">/);
 const conditionSummary = { textContent: "" };
 const conditionControl = (value = "unspecified", textContent = "未指定") => ({ value, selectedOptions: [{ textContent }] });
 const conditionsContext = vm.createContext({
