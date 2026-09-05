@@ -11,6 +11,7 @@
     "validate:package": "node scripts/validate-workstation-package.js",
     "validate:workstation": "node scripts/validate-local-workstation.js",
     "validate:offline": "node scripts/validate-offline-cache.js",
+    "validate:scanner-browser": "node scripts/validate-scanner-file-flow.cjs --offline --dense-live",
     "validate:case-storage": "node scripts/validate-case-storage.js",
     "validate:serial": "node scripts/validate-serial-lifecycle.js",
     "validate:serial-integration": "node scripts/validate-serial-integration.js",

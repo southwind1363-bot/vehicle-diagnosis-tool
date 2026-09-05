@@ -51,3 +51,38 @@ jobs:
 
       - name: Report DTC coverage
         run: node scripts/report-dtc-coverage.js
+
+  scanner-browser:
+    name: Validate offline scanner workflow in Chromium
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install isolated browser test runtime
+        run: |
+          npm install --prefix "$RUNNER_TEMP/scanner-browser" --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          node "$RUNNER_TEMP/scanner-browser/node_modules/playwright/cli.js" install --with-deps chromium
+
+      - name: Validate offline import, replay, recovery and export
+        run: npm run validate:scanner-browser
+        env:
+          PLAYWRIGHT_MODULE: ${{ runner.temp }}/scanner-browser/node_modules/playwright
+          PLAYWRIGHT_CHANNEL: chromium
+          TMPDIR: ${{ runner.temp }}
+
+      - name: Preserve synthetic test screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-workflow-screenshots
+          path: ${{ runner.temp }}/obd-file-flow-*/*.png
+          if-no-files-found: warn
+          retention-days: 7
