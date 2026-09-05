@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.471";
+const APP_VERSION = "3.13.472";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10177,14 +10177,30 @@ function renderObdBridgeSessionDetails(session = null) {
       label.textContent = `${row.label}${sourceEcu}${unit} / 最小 ${row.minimum}${unit} / 最大 ${row.maximum}${unit} / 最新 ${row.latest}${unit}${delta}`;
       const bars = document.createElement("div");
       bars.className = "obd-timeline-chart-bars";
+      const records = document.createElement("details");
+      records.className = "obd-timeline-records";
+      const summary = document.createElement("summary");
+      summary.textContent = `時刻と値（${row.points.length}点）`;
+      const pointList = document.createElement("ol");
+      pointList.tabIndex = 0;
+      pointList.setAttribute("aria-label", `${row.label}${sourceEcu}の記録`);
       row.points.forEach((point) => {
         const bar = document.createElement("span");
         bar.className = "obd-timeline-chart-bar";
         bar.style.setProperty("--obd-timeline-height", `${point.heightPercent}%`);
-        bar.title = `${formatDateTime(point.capturedAt)}: ${point.value}${row.unit ? ` ${row.unit}` : ""}`;
+        const timestamp = formatObdTimelineTimestamp(point.capturedAt);
+        bar.title = `${timestamp}: ${point.value}${unit}`;
         bars.appendChild(bar);
+        const item = document.createElement("li");
+        const time = document.createElement("span");
+        time.textContent = timestamp;
+        const value = document.createElement("span");
+        value.textContent = `${point.value}${unit}`;
+        item.append(time, value);
+        pointList.appendChild(item);
       });
-      chartRow.append(label, bars);
+      records.append(summary, pointList);
+      chartRow.append(label, bars, records);
       chart.appendChild(chartRow);
     });
     card.append(heading, chart);
@@ -10192,6 +10208,17 @@ function renderObdBridgeSessionDetails(session = null) {
   }
   obdDevSessionDetails.hidden = false;
   if (typeof renderObdReadoutDetailSelection === "function") renderObdReadoutDetailSelection();
+}
+
+function formatObdTimelineTimestamp(value) {
+  if (!value) return NO_DATA;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    fractionalSecondDigits: 3, hourCycle: "h23", timeZoneName: "short"
+  }).format(date);
 }
 
 function buildLivePidTimelineChartRows(timeline = null) {

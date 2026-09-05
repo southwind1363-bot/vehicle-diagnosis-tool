@@ -10,7 +10,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const root = path.resolve(__dirname, '..');
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-'));
   const restart = process.argv.includes('--restart');
-  const live = process.argv.includes('--live');
+  const denseLive = process.argv.includes('--dense-live');
+  const live = denseLive || process.argv.includes('--live');
   const serverStopOnly = process.argv.includes('--server-stop-only');
   const offline = restart || process.argv.includes('--offline');
   const profile = path.join(output, 'browser-profile');
@@ -197,28 +198,56 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         { captured_at: '2026-07-17T00:00:05Z', monitor_values: [{ pid: '0C', value: 1000, unit: 'rpm' }] }
       ]
     };
+    if (denseLive) measured.live_pid_samples = Array.from({ length: 60 }, (_, index) => ({
+      captured_at: new Date(Date.parse('2026-07-17T00:00:00Z') + index * 1000).toISOString(),
+      monitor_values: [{ pid: '0C', value: Math.round(800 + index * 200 / 59), unit: 'rpm' }]
+    }));
+    const expectedPoints = measured.live_pid_samples.length;
     const core = vm.createContext({ window: {} });
     vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), core);
     const model = core.window.ObdReadOnly;
     const measuredSession = model.buildDiagnosticScanSessionFromJson(JSON.stringify(measured));
-    assert.equal(measuredSession.livePidTimeline.sampleCount, 2);
+    assert.equal(measuredSession.livePidTimeline.sampleCount, expectedPoints);
     assert.equal(measuredSession.livePidSnapshot.monitorValues.length, 2);
     const measuredExport = model.buildBridgeSessionExportPayload(measuredSession);
-    const replacementDialog = page.waitForEvent('dialog');
-    const replacing = openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), { name: 'synthetic-live.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(measuredExport)) });
-    const confirmation = await replacementDialog;
-    assert.equal(confirmation.type(), 'confirm');
-    assert.match(confirmation.message(), /^現在の読取結果を新しい入力で置き換えますか？/);
-    await confirmation.accept();
-    await replacing;
+    const openReplacement = async file => {
+      const replacementDialog = page.waitForEvent('dialog');
+      const replacing = openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), file);
+      const confirmation = await replacementDialog;
+      assert.equal(confirmation.type(), 'confirm');
+      assert.match(confirmation.message(), /^現在の読取結果を新しい入力で置き換えますか？/);
+      await confirmation.accept();
+      await replacing;
+    };
+    await openReplacement({ name: 'synthetic-live.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(measuredExport)) });
     const showTimeline = async () => {
       await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
       await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
       const chart = page.locator('#obdSessionDetailLiveTimeline');
       assert.equal(await chart.isVisible(), true);
-      assert.equal(await chart.locator('.obd-timeline-chart-bar').count(), 2);
+      assert.equal(await chart.locator('.obd-timeline-chart-bar').count(), expectedPoints);
       assert.match(await chart.innerText(), /最小 800 rpm.*最大 1000 rpm.*最新 1000 rpm/);
       assert.equal(await chart.locator('.obd-timeline-chart-bar').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height > 0)), true);
+      const records = chart.locator('.obd-timeline-records');
+      const toggle = records.locator('summary');
+      assert.equal(await records.locator('ol').isVisible(), false);
+      await toggle.click();
+      const rows = records.locator('li');
+      assert.equal(await rows.count(), expectedPoints);
+      assert.match(await rows.first().innerText(), /:00\.000.*800 rpm/s);
+      assert.match(await rows.last().innerText(), /1000 rpm/);
+      assert.equal(await records.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+      assert.equal(await chart.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+      await toggle.press('Enter');
+      assert.equal(await records.locator('ol').isVisible(), false);
+      await toggle.press('Enter');
+      assert.equal(await records.locator('ol').isVisible(), true);
+      if (denseLive) {
+        await records.locator('ol').focus();
+        await records.locator('ol').press('End');
+        await page.waitForFunction(() => document.querySelector('.obd-timeline-records ol').scrollTop > 0);
+        await records.locator('ol').press('Home');
+      }
     };
     await page.locator('.obd-results-nav').getByRole('button', { name: 'ライブ値', exact: true }).click();
     assert.match(await page.locator('#obdMonitorGrid').innerText(), /1000/);
@@ -231,7 +260,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('#obdStageResultsView [data-obd-session-export]').click();
     const liveExport = path.join(output, 'live-roundtrip.json');
     await (await liveDownload).saveAs(liveExport);
-    await openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), liveExport);
+    await openReplacement(liveExport);
     await showTimeline();
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.screenshot({ path: path.join(output, 'live-timeline-desktop.png') });
