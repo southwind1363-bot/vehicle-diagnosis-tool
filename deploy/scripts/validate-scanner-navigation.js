@@ -5,6 +5,40 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+const revealContext = vm.createContext({});
+vm.runInContext(source.slice(source.indexOf("function revealObdControlGroup("), source.indexOf("function triggerObdNextReadoutCandidate(")), revealContext);
+const lockedContainer = { tagName: "DIV", hidden: true, parentElement: null };
+const outerGroup = { tagName: "DETAILS", open: false, parentElement: lockedContainer };
+const innerGroup = { tagName: "DETAILS", open: false, parentElement: outerGroup };
+const disabledControl = { disabled: true, parentElement: innerGroup, click() { assert.fail("Revealing a group must not execute a command"); } };
+revealContext.revealObdControlGroup(disabledControl);
+assert.equal(innerGroup.open, true);
+assert.equal(outerGroup.open, true);
+assert.equal(lockedContainer.hidden, true, "Revealing a group must not bypass access visibility");
+assert.equal(disabledControl.disabled, true);
+assert.doesNotThrow(() => revealContext.revealObdControlGroup(null));
+assert.doesNotThrow(() => revealContext.revealObdControlGroup(disabledControl));
+assert.match(source, /revealObdControlGroup\(targetButton\);\s*targetButton\.scrollIntoView/);
+assert.match(source, /revealObdControlGroup\(target\);\s*target\?\.scrollIntoView/);
+let readoutClicks = 0;
+const candidateControl = {
+  disabled: true, parentElement: innerGroup,
+  scrollIntoView() { assert.equal(innerGroup.open, true, "Open the target group before scrolling"); },
+  focus() {}, click() { readoutClicks += 1; }
+};
+Object.assign(revealContext, {
+  OBD_NEXT_READOUT_ACTIONS: { test: { button: () => candidateControl, label: "test" } },
+  obdDevStatus: {}, renderObdStageView() {}
+});
+vm.runInContext(source.slice(source.indexOf("function triggerObdNextReadoutCandidate("), source.indexOf("function formatObdNextReadoutCandidateReason(")), revealContext);
+innerGroup.open = false;
+revealContext.triggerObdNextReadoutCandidate({ id: "test" });
+assert.equal(readoutClicks, 0, "Disabled readout remains blocked after revealing its group");
+candidateControl.disabled = false;
+revealContext.triggerObdNextReadoutCandidate({ id: "test", savedFromRequest: true, executionEnabled: false });
+assert.equal(readoutClicks, 0, "Saved non-executable requests remain blocked");
+revealContext.triggerObdNextReadoutCandidate({ id: "test" });
+assert.equal(readoutClicks, 1, "Existing enabled readout dispatch remains unchanged");
 const measurements = html.slice(html.indexOf("<summary>計測データ・発生時の記録を読む</summary>"), html.indexOf("<summary>排ガス監視の実施状況・テスト結果</summary>"));
 for (const id of ["obdDevSnapshotButton", "obdDevBridgeLiveButton", "obdDevBridgeFreezeFrameButton", "obdDevReadFreezeFrameButton"]) {
   assert.ok(measurements.indexOf(`id="${id}"`) >= 0 && measurements.indexOf(`id="${id}"`) < measurements.indexOf('id="obdMeasurementConditions"'), "Readout commands must precede optional comparison conditions");
