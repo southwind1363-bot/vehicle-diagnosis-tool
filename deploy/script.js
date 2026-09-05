@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.494";
+const APP_VERSION = "3.13.495";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -12415,13 +12415,60 @@ function renderObdOperationPlan(items) {
       list.appendChild(li);
     });
 
+    let preparationDetails = null;
+    if (item.id === "clear_dtc") {
+      preparationDetails = document.createElement("details");
+      preparationDetails.className = "obd-readout-request-note obd-dtc-clear-preparation";
+      const summary = document.createElement("summary");
+      summary.textContent = "消去準備モデルの初期状態（接続中車両の評価ではありません）";
+      preparationDetails.appendChild(summary);
+
+      let workflow = null;
+      try {
+        workflow = window.ObdReadOnly?.buildGenericObdDtcClearWorkflow?.() || null;
+      } catch {
+        workflow = null;
+      }
+      if (!workflow) {
+        const unavailable = document.createElement("p");
+        unavailable.textContent = "消去準備モデルAPIを取得できません。";
+        preparationDetails.appendChild(unavailable);
+      } else {
+        [
+          ["対象", workflow.target === null ? "未設定" : "取得済み"],
+          ["消去前の保存セッション参照", workflow.preOperationSessionId === null ? "なし" : "取得済み"],
+          ["送信状態", workflow.wouldTransmit === false && workflow.executionEnabled === false && workflow.vehicleCommandEnabled === false
+            ? "車両送信なし（実行無効）"
+            : "状態を確認できません"]
+        ].forEach(([label, value]) => {
+          const line = document.createElement("p");
+          line.textContent = `${label}: ${value}`;
+          preparationDetails.appendChild(line);
+        });
+
+        const missingChecks = Array.isArray(workflow.readiness?.checks)
+          ? workflow.readiness.checks.filter((check) => check?.complete !== true)
+          : [];
+        const missingTitle = document.createElement("p");
+        missingTitle.textContent = "未完了の準備条件";
+        preparationDetails.appendChild(missingTitle);
+        const missingList = document.createElement("ul");
+        missingChecks.forEach((check) => {
+          const missing = document.createElement("li");
+          missing.textContent = check.label;
+          missingList.appendChild(missing);
+        });
+        preparationDetails.appendChild(missingList);
+      }
+    }
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = item.commandClass === "state-changing" ? "small-danger-button" : "secondary-button";
     button.disabled = true;
     button.textContent = implementationStatus;
 
-    card.append(head, goal, readinessLine, list, button);
+    card.append(head, goal, readinessLine, list, ...(preparationDetails ? [preparationDetails] : []), button);
     obdOperationGrid.appendChild(card);
   });
 }

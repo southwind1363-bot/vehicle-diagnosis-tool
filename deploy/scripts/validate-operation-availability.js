@@ -8,7 +8,7 @@ const context = vm.createContext({ window: {}, navigator: {} });
 vm.runInContext(coreSource, context);
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
-const element = () => ({ children: [], append(...items) { this.children.push(...items); }, appendChild(item) { this.children.push(item); } });
+const element = (tagName = "") => ({ tagName, children: [], append(...items) { this.children.push(...items); }, appendChild(item) { this.children.push(item); } });
 context.document = { createElement: element };
 context.obdOperationGrid = element();
 for (const name of ["getObdOperationImplementationStatus", "renderObdOperationPlan"]) {
@@ -21,6 +21,20 @@ const items = api.getVehicleOperationPlan();
 const before = JSON.stringify(items);
 context.renderObdOperationPlan(items);
 check(context.obdOperationGrid.children.length === 7, "Operation list lost a supported operation");
+const clearDtcItem = items.find((item) => item.id === "clear_dtc");
+const clearDtcCard = context.obdOperationGrid.children[items.indexOf(clearDtcItem)];
+const clearDtcDetails = clearDtcCard.children.at(-2);
+check(clearDtcDetails.tagName === "details" && clearDtcDetails.className.includes("obd-dtc-clear-preparation") && clearDtcDetails.open === undefined, "DTC clear preparation details were missing or expanded by default");
+check(clearDtcDetails.children[0].tagName === "summary" && clearDtcDetails.children[0].textContent.includes("接続中車両の評価ではありません"), "DTC clear details overstated connected-vehicle assessment");
+const initialClearWorkflow = api.buildGenericObdDtcClearWorkflow();
+const missingLabels = initialClearWorkflow.readiness.checks.filter((item) => item.complete === false).map((item) => item.label);
+const clearDtcMissingLabels = clearDtcDetails.children.at(-1).children.map((item) => item.textContent);
+check(missingLabels.every((label) => clearDtcMissingLabels.includes(label)), "DTC clear details omitted an initial missing readiness check");
+check(clearDtcDetails.children.some((item) => item.textContent === "対象: 未設定") && clearDtcDetails.children.some((item) => item.textContent === "消去前の保存セッション参照: なし") && clearDtcDetails.children.some((item) => item.textContent === "送信状態: 車両送信なし（実行無効）"), "DTC clear details misstated initial preparation state");
+check(clearDtcCard.children.at(-1).disabled === true, "DTC clear details moved or enabled the disabled action");
+for (const [index, item] of items.entries()) {
+  if (item.id !== "clear_dtc") check(!context.obdOperationGrid.children[index].children.some((child) => child.tagName === "details"), `${item.id}: preparation details leaked beyond DTC clear`);
+}
 for (const [index, item] of items.entries()) {
   const card = context.obdOperationGrid.children[index];
   const badge = card.children[0].children[1];
@@ -36,6 +50,19 @@ for (const [index, item] of items.entries()) {
   }
 }
 check(JSON.stringify(items) === before, "Rendering changed the operation contract");
+let transitionInvoked = false;
+context.window.ObdReadOnly = {
+  buildGenericObdDtcClearWorkflow: () => initialClearWorkflow,
+  transitionGenericObdDtcClearWorkflow: () => { transitionInvoked = true; }
+};
+context.obdOperationGrid = element();
+context.renderObdOperationPlan(items);
+check(transitionInvoked === false, "Rendering advanced the DTC clear preparation model");
+context.window.ObdReadOnly = {};
+context.obdOperationGrid = element();
+context.renderObdOperationPlan(items);
+const unavailableClearDtcCard = context.obdOperationGrid.children[items.indexOf(clearDtcItem)];
+check(unavailableClearDtcCard.children.at(-2).children[1].textContent === "消去準備モデルAPIを取得できません。", "Missing DTC clear model API lacked a graceful fallback");
 const changing = items.find((item) => item.commandClass === "state-changing");
 for (const value of [true, undefined, "false"]) {
   context.window.ObdReadOnly = { getServiceExperimentContract: () => ({ executionTransportImplemented: value }) };
