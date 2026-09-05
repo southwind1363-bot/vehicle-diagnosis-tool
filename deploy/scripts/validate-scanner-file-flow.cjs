@@ -479,6 +479,18 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           return box.width >= 16 && box.width <= 24 && box.height >= 16 && box.height <= 24 && node.closest('label').getBoundingClientRect().height >= 48;
         }));
         assert.equal(selectionLayout, true, 'Checkbox dimensions must not inherit full-width text-field styles');
+        const toolbarLayout = await page.locator('.obd-monitor-options').evaluate(node => {
+          const controls = [...node.querySelectorAll('label, button, [role="status"]')];
+          const box = node.getBoundingClientRect();
+          const rects = controls.map(control => control.getBoundingClientRect());
+          return box.height <= 104 && node.scrollWidth <= node.clientWidth + 1
+            && controls.every(control => control.scrollWidth <= control.clientWidth + 1)
+            && rects.every(rect => rect.left >= box.left - 1 && rect.right <= box.right + 1)
+            && rects.every((rect, i) => rects.slice(i + 1).every(other =>
+              rect.right <= other.left + 1 || other.right <= rect.left + 1 || rect.bottom <= other.top + 1 || other.bottom <= rect.top + 1));
+        });
+        assert.equal(toolbarLayout, true, 'Display controls must fit two touch-sized rows without overlap');
+        await page.locator('#obdMonitorFilter').screenshot({ path: path.join(output, `live-toolbar-${width}-${dark ? 'dark' : 'light'}.png`) });
         assert.equal(await readings.locator('.obd-monitor-pick > strong').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().width >= 60)), true, 'Item names must not collapse into a vertical column');
         await page.locator('#obdMonitorGrid').screenshot({ path: path.join(output, `live-list-${width}-${dark ? 'dark' : 'light'}.png`) });
         await compact.press('Space');

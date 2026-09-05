@@ -2339,6 +2339,26 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-monitor-selection > button { min-height: 48px; }
 
+.obd-monitor-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 4px 12px;
+}
+
+.obd-monitor-options > .obd-monitor-selection:not([hidden]) { display: contents; }
+.obd-monitor-options .obd-monitor-view-toggle { width: 100%; }
+.obd-monitor-options > .obd-monitor-selection > button { padding: 8px; }
+#obdMonitorSelectionCount { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
+#obdMonitorFilterCount {
+  margin: 6px 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .obd-monitor-pick {
   display: flex;
   align-items: center;
