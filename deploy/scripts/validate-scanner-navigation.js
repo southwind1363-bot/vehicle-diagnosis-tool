@@ -5,6 +5,26 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+const conditionSummary = { textContent: "" };
+const conditionControl = (value = "unspecified", textContent = "未指定") => ({ value, selectedOptions: [{ textContent }] });
+const conditionsContext = vm.createContext({
+  document: { querySelector: () => conditionSummary },
+  obdLiveObservationCondition: conditionControl(), obdLiveThermalState: conditionControl(),
+  obdVehicleMotionState: conditionControl(), obdTransmissionPosition: conditionControl(),
+  obdAccessoryLoadState: conditionControl(), obdSameVehicleConfirmed: { checked: false }
+});
+vm.runInContext(source.slice(source.indexOf("function renderObdMeasurementConditionSummary("), source.indexOf("function handleObdUnlockKeydown(")), conditionsContext);
+conditionsContext.renderObdMeasurementConditionSummary();
+assert.equal(conditionSummary.textContent, "未指定");
+conditionsContext.obdLiveThermalState = conditionControl("warmed_up", "暖機後");
+conditionsContext.obdTransmissionPosition = conditionControl("park", "P");
+conditionsContext.obdSameVehicleConfirmed.checked = true;
+conditionsContext.renderObdMeasurementConditionSummary();
+assert.equal(conditionSummary.textContent, "暖機後 / P / 同一車両確認済み");
+assert.equal(conditionsContext.obdLiveThermalState.value, "warmed_up", "Summary rendering must not change comparison inputs");
+conditionsContext.obdSameVehicleConfirmed.checked = false;
+conditionsContext.renderObdMeasurementConditionSummary();
+assert.equal(conditionSummary.textContent, "暖機後 / P");
 const unlockKeys = vm.createContext({});
 vm.runInContext(source.slice(source.indexOf("function handleObdUnlockKeydown("), source.indexOf("function renderObdDeveloperPasswordState(")), unlockKeys);
 for (const [properties, disabled, expectedClicks, expectedPrevented] of [

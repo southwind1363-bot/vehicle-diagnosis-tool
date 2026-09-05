@@ -1111,6 +1111,15 @@ body.dark .flow-node-measure .flow-step {
   min-height: 44px;
 }
 
+.obd-condition-summary {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
 #obdMeasurementConditions label:has(input[type="checkbox"]) {
   grid-column: 1 / -1;
 }

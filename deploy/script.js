@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.457";
+const APP_VERSION = "3.13.458";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -814,6 +814,7 @@ obdVehicleYearManualInput?.addEventListener("input", () => {
 ].forEach((element) => {
   const clearSameVehicleConfirmation = () => {
     if (obdSameVehicleConfirmed) obdSameVehicleConfirmed.checked = false;
+    renderObdMeasurementConditionSummary();
   };
   element?.addEventListener("change", clearSameVehicleConfirmation);
   element?.addEventListener("input", clearSameVehicleConfirmation);
@@ -821,6 +822,7 @@ obdVehicleYearManualInput?.addEventListener("input", () => {
 obdLiveObservationCondition?.addEventListener("change", () => {
   if (obdLiveObservationCondition.value !== "post_repair" && obdSameVehicleConfirmed) obdSameVehicleConfirmed.checked = false;
 });
+document.querySelector("#obdMeasurementConditions")?.addEventListener("change", renderObdMeasurementConditionSummary);
 obdUseDiagnosisVehicleButton?.addEventListener("click", applyDiagnosisVehicleToObdSetup);
 obdPreviewSelectedButton?.addEventListener("click", previewSelectedObdInterface);
 obdPrepareSelectedButton?.addEventListener("click", handleObdSetupPrimaryAction);
@@ -5735,6 +5737,17 @@ function syncObdSimpleStatus() {
   }
 }
 
+function renderObdMeasurementConditionSummary() {
+  const summary = document.querySelector("#obdMeasurementConditionSummary");
+  if (!summary) return;
+  const labels = [obdLiveObservationCondition, obdLiveThermalState, obdVehicleMotionState, obdTransmissionPosition, obdAccessoryLoadState]
+    .filter((control) => control?.value && control.value !== "unspecified")
+    .map((control) => control.selectedOptions?.[0]?.textContent?.trim())
+    .filter(Boolean);
+  if (obdSameVehicleConfirmed?.checked === true) labels.push("同一車両確認済み");
+  summary.textContent = labels.length ? labels.join(" / ") : "未指定";
+}
+
 function handleObdUnlockKeydown(event, button) {
   if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
   event.preventDefault();
@@ -5753,6 +5766,7 @@ function renderObdDeveloperPasswordState() {
 }
 
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
+  renderObdMeasurementConditionSummary();
   renderObdDeveloperPasswordState();
   renderObdSessionExportControls();
   const unlocked = obdDevModeUnlocked === true;
