@@ -193,10 +193,40 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.getByRole('button', { name: '前の診断画面へ戻る', exact: true }).click();
       assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
     }
-    await openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), { name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{') });
+    const retainedState = await page.evaluate(() => JSON.stringify({ session: obdDevSession.lastSession, text: obdScannerText.value }));
+    const retainedDtcText = await page.locator('#obdDetectedCodes').textContent();
+    const assertRetained = async () => {
+      assert.equal(await page.locator('#obdDetectedCodes').textContent(), retainedDtcText, 'Rejected import must retain all DTC rows');
+      assert.equal(await page.evaluate(() => JSON.stringify({ session: obdDevSession.lastSession, text: obdScannerText.value })), retainedState, 'Rejected import must retain the full session and input');
+      assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true, 'Rejected import must release the save control');
+    };
+    // An empty selection exercises the change handler; native OS picker dismissal is not automated here.
+    await page.locator('#obdImportFileInput').setInputFiles([]);
+    await page.locator('#obdImportFileInput').dispatchEvent('change');
+    await assertRetained();
+    const cancelledDialog = page.waitForEvent('dialog');
+    const cancelledImport = openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), exported);
+    const confirmation = await cancelledDialog;
+    assert.equal(confirmation.type(), 'confirm');
+    assert.match(confirmation.message(), /^現在の読取結果を新しい入力で置き換えますか？/);
+    await confirmation.dismiss();
+    await cancelledImport;
+    await page.locator('#obdImportStatus').filter({ hasText: '読取結果の置換を中止しました' }).waitFor();
+    await assertRetained();
+    for (const [file, message] of [
+      [{ name: 'empty.json', mimeType: 'application/json', buffer: Buffer.alloc(0) }, '選択したファイルに診断結果がありません'],
+      [{ name: 'unsupported.bin', mimeType: 'application/octet-stream', buffer: Buffer.from('P0999') }, 'JSON、CSV、TSV、テキスト、またはHTML形式'],
+      [{ name: 'oversized.txt', mimeType: 'text/plain', buffer: Buffer.alloc(2000001, 32) }, '2 MB以下']
+    ]) {
+      await page.locator('#obdImportFileInput').setInputFiles(file);
+      await page.locator('#obdImportStatus').filter({ hasText: message }).waitFor();
+      await assertRetained();
+    }
+    await page.locator('#obdImportFileInput').setInputFiles({ name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{') });
     await page.locator('#obdImportStatus').filter({ hasText: 'JSONの構文を読み取れません' }).waitFor();
     assert.equal(await page.locator('#obdImportStatus').isVisible(), true);
     assert.equal(await page.locator('#obdDetectedCodes').innerText(), before);
+    await assertRetained();
     await page.screenshot({ path: path.join(output, 'invalid-file-retained.png'), fullPage: false });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator('#obdImportStatus').scrollIntoViewIfNeeded();
@@ -204,6 +234,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.screenshot({ path: path.join(output, 'invalid-file-mobile.png'), fullPage: false });
     await page.getByRole('button', { name: '前の診断画面へ戻る', exact: true }).click();
     assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
+    // A rejected import must not leave the next real import stuck or suppress its confirmation.
+    const recoveryDialog = page.waitForEvent('dialog');
+    const recoveryImport = openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), exported);
+    const recoveryConfirmation = await recoveryDialog;
+    assert.equal(recoveryConfirmation.type(), 'confirm');
+    await recoveryConfirmation.accept();
+    await recoveryImport;
+    await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().waitFor();
+    assert.equal(await page.locator('#obdDetectedCodes').innerText(), before);
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
     assert.deepEqual(errors, []);
     if (live) {
     // Synthetic values using the existing combined-readout import contract.
@@ -445,7 +485,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}invalid-file retention and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}replacement cancellation, empty/unsupported/oversized/broken-file retention, recovery and back passed / Artifacts: ${output}`);
   } catch (error) {
     const failedPage = context?.pages().at(-1);
     if (failedPage && !failedPage.isClosed()) {
