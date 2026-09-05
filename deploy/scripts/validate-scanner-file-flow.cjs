@@ -696,12 +696,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const readoutCases = [
       { name: 'readout', rpm: 1726, reply: '41 0C 1A F8' },
       { name: 'no-live', rpm: null, reply: 'NO DATA' },
-      { name: 'recovered', rpm: 800, reply: '41 0C 0C 80' }
+      { name: 'recovered', rpm: 800, reply: '41 0C 0C 80' },
+      { name: 'stream-failure', failCommand: '0101' }
     ];
     for (const [caseIndex, readoutCase] of (restart ? [] : readoutCases).entries()) {
       const noLiveResponse = readoutCase.rpm === null;
       const responses = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/synthetic-elm-core-responses.json'), 'utf8'));
-      responses['010C'] = readoutCase.reply;
+      if (readoutCase.reply) responses['010C'] = readoutCase.reply;
+      if (readoutCase.failCommand) responses[readoutCase.failCommand] = null;
       if (caseIndex > 0) {
         await page.locator('.obd-stage-tab[data-obd-stage="connect"]').click();
       }
@@ -714,6 +716,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             const command = new TextDecoder().decode(bytes).trim();
             calls.commands.push(command);
             if (!Object.hasOwn(responses, command)) throw new Error(`Unexpected synthetic VCI command: ${command}`);
+            if (responses[command] === null) {
+              receiver.error(new Error('Synthetic read stream failure'));
+              return;
+            }
             const reply = new TextEncoder().encode(responses[command] + '\r\n>');
             for (let i = 0; i < reply.length; i += 5) receiver.enqueue(reply.slice(i, i + 5));
           } }),
@@ -729,6 +735,32 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.waitForFunction(() => !obdSerialConnectPending && obdDevSession.connectionState === 'ready');
       assert.equal(await connect.innerText(), '基本読取を開始');
       await connect.click();
+      if (readoutCase.failCommand) {
+        // Known recovery limitation: cancel rejects on an errored stream even when close succeeds.
+        // This records current quarantine, not the desired confirmed-close recovery contract.
+        await page.waitForFunction(() => window.__serialReadoutFixture.commands.includes('0101')
+          && obdDevSession.connectionState === 'disconnecting' && obdSerialDisconnectOperation?.cleanupSettled
+          && !obdDevSession.coreScanInProgress && !obdDevSession.readInProgress, null, { timeout: 45000 });
+        const failedScan = await page.evaluate(() => ({
+          codes: obdDevSession.lastSession?.dtcSnapshot?.codes,
+          live: obdDevSession.lastSession?.livePidSnapshot?.monitorValues || [],
+          port: Boolean(obdDevSession.port), reader: Boolean(obdDevSession.reader), writer: Boolean(obdDevSession.writer),
+          calls: window.__serialReadoutFixture
+        }));
+        assert.deepEqual(failedScan.codes, ['P0133', 'P0420'], 'Transport loss must retain DTCs acquired before failure');
+        assert.deepEqual(failedScan.live, [], 'Interrupted scan must not retain earlier live values');
+        assert.equal(failedScan.port || failedScan.reader || failedScan.writer, false);
+        assert.deepEqual(failedScan.calls.commands, ['ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH1', 'ATSP0', 'ATI', 'AT@1', '03', 'ATDP', 'ATDPN', '07', '0A', '0202', '0101'], 'Transport loss must stop subsequent requests');
+        assert.equal(failedScan.calls.opens, 1);
+        assert.equal(failedScan.calls.closes, 1);
+        assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
+        assert.equal(await page.locator('#obdSimpleResultPrimaryButton').isDisabled(), true, 'Unconfirmed cleanup must block reconnect');
+        assert.match(await page.locator('#obdSimpleResultStatus').innerText(), /再接続を禁止/);
+        assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true, 'Settled cleanup must permit saving acquired evidence');
+        await page.screenshot({ path: path.join(output, 'synthetic-stream-failure.png') });
+        console.log('Synthetic VCI stream failure: requests stopped, DTCs retained, unconfirmed cleanup blocks reconnect and allows evidence save; no real hardware');
+        continue;
+      }
       await page.waitForFunction(() => !obdDevSession.coreScanInProgress && obdDevSession.lastSession?.dtcSnapshot?.codes?.includes('P0133'), null, { timeout: 45000 });
       assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true, 'Completed scan must open the result screen');
       const scan = await page.evaluate(() => ({
