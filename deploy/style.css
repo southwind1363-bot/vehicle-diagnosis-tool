@@ -1031,7 +1031,12 @@ body.dark .flow-node-measure .flow-step {
   display: none;
 }
 
-#obdAccessGatePanel .obd-result-heading {
+#obdDeveloperGatePanel:has(#obdDevLockButton:enabled) .obd-dev-gate:has(> #obdDevUnlockButton:disabled) {
+  display: none;
+}
+
+#obdAccessGatePanel .obd-result-heading,
+#obdDeveloperGatePanel .obd-result-heading {
   flex-wrap: wrap;
 }
 

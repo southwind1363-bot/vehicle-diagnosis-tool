@@ -37,6 +37,9 @@ for (const rule of ["min-width: 0", "min-height: 48px", "white-space: normal", "
   assert.ok(developerButtonStyle.includes(rule), "Developer touch controls must fit narrow screens: " + rule);
 }
 assert.equal((html.match(/id="obdDevStatus"/g) || []).length, 1, "Keep one authoritative developer status region");
+assert.equal((html.match(/id="obdDevLockButton"/g) || []).length, 1);
+assert.ok(html.indexOf('id="obdDevLockButton"') < html.indexOf('id="obdDevPasswordInput"'), "Developer lock must remain outside password entry");
+assert.match(css, /#obdDeveloperGatePanel:has\(#obdDevLockButton:enabled\) \.obd-dev-gate:has\(> #obdDevUnlockButton:disabled\)\s*\{\s*display: none;/);
 assert.ok(html.indexOf('id="obdDevStatus"') < html.indexOf('id="obdDevPasswordInput"'), "Status must appear before password entry and readout controls");
 assert.match(html, /<p id="obdDevStatus" class="data-status" role="status" aria-atomic="true">/);
 const conditionSummary = { textContent: "" };

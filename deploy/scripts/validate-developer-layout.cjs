@@ -49,6 +49,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       ` });
       for (const theme of ['light', 'dark']) {
         await page.evaluate(value => document.body.classList.toggle('dark', value === 'dark'), theme);
+        for (const [unlockDisabled, lockDisabled, visible] of [[false, true, true], [true, true, true], [true, false, false], [false, true, true]]) {
+          await page.evaluate(([unlockDisabled, lockDisabled]) => {
+            document.getElementById('obdDevUnlockButton').disabled = unlockDisabled;
+            document.getElementById('obdDevLockButton').disabled = lockDisabled;
+          }, [unlockDisabled, lockDisabled]);
+          assert.equal(await page.locator('#obdDevPasswordInput').isVisible(), visible, 'Only fully unlocked entry should collapse');
+          assert.equal(await page.locator('#obdDevLockButton').isVisible(), true);
+          assert.equal(await page.locator('#obdDevStatus').isVisible(), true);
+          if (!lockDisabled) {
+            await page.locator('#obdDevLockButton').focus();
+            assert.equal(await page.locator('#obdDevLockButton').evaluate(node => document.activeElement === node), true);
+          }
+        }
         const focusResults = await page.evaluate(() => {
           const button = document.getElementById('obdDevReadDtcButton');
           const group = button.closest('details');
@@ -134,6 +147,15 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.deepEqual(problems, [], `${width}px ${theme}: overflowing or undersized controls`);
         checks += 1;
         await page.locator('#obdStageDetailsView > .obd-dev-panel').screenshot({ path: path.join(output, `${width}-${theme}.png`) });
+        if (theme === 'light' && [390, 768].includes(width)) {
+          await page.evaluate(() => {
+            document.getElementById('obdDevUnlockButton').disabled = true;
+            document.getElementById('obdDevLockButton').disabled = false;
+            document.getElementById('obdDevModeBadge').textContent = '詳細有効';
+          });
+          await page.locator('#obdDeveloperGatePanel').screenshot({ path: path.join(output, `${width}-unlocked.png`) });
+          await page.evaluate(() => { document.getElementById('obdDevModeBadge').textContent = 'ロック中'; });
+        }
       }
       await page.close();
     }

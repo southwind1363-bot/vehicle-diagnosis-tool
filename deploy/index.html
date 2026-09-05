@@ -848,13 +848,14 @@
 
         <div id="obdStageDetailsView" class="obd-stage-view" hidden>
 
-        <section class="obd-operation-panel obd-dev-panel" aria-labelledby="obdDevGateTitle">
+        <section id="obdDeveloperGatePanel" class="obd-operation-panel obd-dev-panel" aria-labelledby="obdDevGateTitle">
           <div class="obd-result-heading">
             <div>
               <p class="eyebrow obd-eyebrow">ADVANCED READOUT</p>
               <h3 id="obdDevGateTitle">詳細読取メニュー</h3>
             </div>
             <span id="obdDevModeBadge" class="confidence-badge">ロック中</span>
+            <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
           </div>
           <p id="obdDevStatus" class="data-status" role="status" aria-atomic="true">詳細画面はロック中です。</p>
           <div class="obd-dev-gate">
@@ -863,7 +864,6 @@
               <input id="obdDevPasswordInput" type="password" autocomplete="off" minlength="12" placeholder="12文字以上で新規設定">
             </label>
             <button id="obdDevUnlockButton" class="secondary-button" type="button">設定して開く</button>
-            <button id="obdDevLockButton" class="secondary-button" type="button" disabled>ロック</button>
           </div>
           <details class="obd-dev-task" id="obdSerialSettings">
             <summary>通信設定（ELM327 / Web Serial）</summary>
