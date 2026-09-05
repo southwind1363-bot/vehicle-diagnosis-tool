@@ -45,7 +45,8 @@ for (const [current, automatic, mode, expected] of [
   ["home", "results", "simple", "home"],
   ["readout", "results", "simple", "readout"],
   ["connect", "setup", "simple", "connect"],
-  ["connect", "results", "simple", "results"],
+  ["connect", "results", "simple", "connect"],
+  ["connect", "connect", "simple", "connect"],
   ["setup", "connect", "simple", "setup"],
   ["setup", "results", "simple", "setup"],
   ["setup", "setup", "simple", "setup"],
@@ -85,6 +86,20 @@ for (const field of ["maker", "model", "modelCode", "year", "engine", "market", 
 }
 context.setObdStage("connect");
 assert.equal(context.activeObdStage, "connect", "Explicit connection navigation must still work");
+context.syncObdVehicleInput();
+assert.equal(context.activeObdStage, "connect", "Interface refresh navigated to a retained result");
+assert.equal(context.obdDevSession.lastSession, session);
+// A completed readout must still move forward, independently of refresh policy.
+Object.assign(context, {
+  renderObdImportToolHints() {}, analyzeObdScannerImport() {}, renderObdMonitorValues() {},
+  renderObdDeveloperSessionSummary() {}, obdScannerText: {}, obdDetectedCodes: {}, obdImportStatus: {}
+});
+vm.runInContext(source.match(/function renderObdDeveloperReadout\(session\) \{[\s\S]*?\r?\n\}/)[0], context);
+context.renderObdDeveloperReadout({ dtcSnapshot: { dtcReadoutStatus: "reported", dtcs: [] } });
+assert.equal(context.activeObdStage, "results", "Completed serial readout did not open results");
+assert.equal(context.obdImportStatus.textContent, "車両DTCを読取りました。DTCは0件です。");
+const bridgeRenderer = source.match(/function renderObdBridgeReadout\(parts = \{\}\) \{[\s\S]*?\r?\n\}/)[0];
+assert.ok(bridgeRenderer.includes('renderObdStageView("results");'), "Bridge completion must explicitly show results");
 let filePickerOpens = 0;
 let shownImportStatus = "";
 context.scrollToObdSection = (target) => { shownImportStatus = target; };
@@ -162,8 +177,35 @@ context.getObdAutoStage = () => "results";
 context.renderObdAccessGate({});
 assert.equal(context.activeObdStage, "results");
 assert.equal(context.obdDevSession.lastSession, session);
+const connectionGuide = source.slice(source.indexOf("function renderObdConnectionGuide("), source.indexOf("function scrollToObdSection("));
+context.document.createElement = () => ({ append() {} });
+context.document.createTextNode = (text) => text;
+Object.assign(context, {
+  window: { ObdReadOnly: { getCapability: () => ({}) } },
+  obdConnectionGuide: { appendChild() {} }, obdAvailableReadoutSummary: {},
+  resolveObdInterfaceId: () => "user-vci-elm327",
+  getObdInterfaceReadoutRoute: () => ({ platform: "windows", route: "unconfirmed" }),
+  getObdInterfaceStrategyNote: () => "", getSelectedObdInterfaceLabel: () => "ELM327",
+  getObdInterfaceSelectionNote: () => "", getObdDevelopmentOperationNote: () => "",
+  getObdAvailableReadoutNote: () => "", renderObdSetupActionButtons() {},
+  renderObdPreviewButtons() {}, renderObdWorkflowGuide() {}
+});
+vm.runInContext(connectionGuide, context);
+for (const mode of ["simple", "details"]) {
+  context.obdUiMode = mode;
+  for (const automatic of ["setup", "results", "connect"]) {
+    context.getObdAutoStage = () => automatic;
+    context.renderObdStageView("setup");
+    context.syncObdVehicleInput();
+    assert.equal(context.activeObdStage, "setup", "Vehicle sync through access gate left setup");
+    assert.equal(context.obdSetupPanel.hidden, false);
+    assert.equal(context.obdDevSession.lastSession, session);
+  }
+}
+assert.ok(connectionGuide.includes("renderObdAccessGate(undefined, { preserveStage: true });"), "Connection guide must not run entry navigation on selection changes");
+context.obdUiMode = "simple";
 context.obdAccessUnlocked = false;
-context.renderObdAccessGate({});
+context.renderObdAccessGate({}, { preserveStage: true });
 assert.equal(home.hidden, true);
 assert.equal(context.obdAccessProtected.hidden, true);
 assert.match(html, /id="obdHomeView"[^>]*hidden/);

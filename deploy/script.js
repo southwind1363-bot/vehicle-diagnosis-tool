@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.445";
+const APP_VERSION = "3.13.446";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -2762,7 +2762,7 @@ function renderObdConnectionGuide() {
     profileItem.append(profileLabel, document.createTextNode(`${profile.adapterTransport} / ${profile.compatibilityStatus} / ${profile.connectorStatus}`));
     obdConnectionGuide.appendChild(profileItem);
   }
-  renderObdAccessGate();
+  renderObdAccessGate(undefined, { preserveStage: true });
   if (typeof renderObdSetupActionButtons === "function") renderObdSetupActionButtons();
   if (obdAvailableReadoutSummary) {
     obdAvailableReadoutSummary.textContent = `${getSelectedObdInterfaceLabel()}: ${getObdAvailableReadoutNote(interfaceId)}`;
@@ -4679,6 +4679,7 @@ function getObdRefreshStage(currentStage, autoStage, mode) {
   if (mode === "simple" && currentStage === "home") return "home";
   // Editing vehicle fields must not navigate to a retained result or connection.
   if (mode === "simple" && currentStage === "setup") return "setup";
+  if (mode === "simple" && currentStage === "connect") return "connect";
   if (currentStage === "readout" && autoStage === "results") return "readout";
   if (currentStage === "connect" && autoStage === "setup") return "connect";
   return autoStage;
@@ -4785,7 +4786,7 @@ async function hashObdAccessPassword(value) {
   return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-function renderObdAccessGate(capability = window.ObdReadOnly?.getCapability?.()) {
+function renderObdAccessGate(capability = window.ObdReadOnly?.getCapability?.(), { preserveStage = false } = {}) {
   const unlocked = obdAccessUnlocked === true;
 
   obdAccessModeBadge.textContent = unlocked ? "解除済み" : "ロック中";
@@ -4802,7 +4803,7 @@ function renderObdAccessGate(capability = window.ObdReadOnly?.getCapability?.())
   }
 
   obdAccessStatus.textContent = getObdAccessStatusMessage(true, capability);
-  renderObdStageView(getObdEntryStage(getObdAutoStage(), obdUiMode));
+  renderObdStageView(preserveStage ? activeObdStage : getObdEntryStage(getObdAutoStage(), obdUiMode));
 }
 
 function normalizeProgressPercent(value) {
