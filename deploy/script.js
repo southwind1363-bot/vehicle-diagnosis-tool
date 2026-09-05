@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.480";
+const APP_VERSION = "3.13.481";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10258,6 +10258,21 @@ function renderObdBridgeSessionDetails(session = null) {
       slider.setAttribute("aria-label", `${row.label}${sourceEcu}の記録位置`);
       const selected = document.createElement("span");
       selected.className = "obd-timeline-selected-value";
+      const steps = [-1, 1].map(direction => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "secondary-button obd-timeline-step";
+        button.textContent = direction < 0 ? "\u2190" : "\u2192";
+        button.title = direction < 0 ? "前の記録" : "次の記録";
+        button.setAttribute("aria-label", `${row.label}${sourceEcu}の${button.title}`);
+        button.addEventListener("click", () => {
+          const next = Number(slider.value) + direction;
+          if (next < 0 || next >= row.points.length) return;
+          slider.value = String(next);
+          slider.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+        return button;
+      });
       const showPosition = () => {
         const index = Number(slider.value);
         const point = row.points[index];
@@ -10265,13 +10280,18 @@ function renderObdBridgeSessionDetails(session = null) {
         const text = `${index + 1} / ${row.points.length}点 / ${formatObdTimelineTimestamp(point.capturedAt)} / ${point.value}${unit}`;
         selected.textContent = text;
         slider.setAttribute("aria-valuetext", text);
+        steps[0].setAttribute("aria-disabled", String(index === 0));
+        steps[1].setAttribute("aria-disabled", String(index === row.points.length - 1));
         Array.from(bars.children).forEach((bar, i) => bar.classList.toggle("is-selected", i === index));
       };
       slider.addEventListener("input", showPosition);
       showPosition();
       position.append(positionLabel, slider, selected);
       const playback = createObdTimelinePlaybackButton(row.points, slider, showPosition, `${row.label}${sourceEcu}`);
-      chartRow.append(label, bars, position, playback, records);
+      const controls = document.createElement("div");
+      controls.className = "obd-timeline-controls";
+      controls.append(steps[0], steps[1], playback);
+      chartRow.append(label, bars, position, controls, records);
       chart.appendChild(chartRow);
     });
     card.append(heading, chart);
