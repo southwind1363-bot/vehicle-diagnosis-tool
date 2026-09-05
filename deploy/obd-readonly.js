@@ -1434,7 +1434,7 @@
     const keys = ["schemaVersion", "operationId", "state", "revision", "target", "preOperationSessionId", "readiness", "confirmation", "dispatch", "executionEnabled", "vehicleCommandEnabled", "wouldTransmit", "canExecute"];
     if (!isDtcClearWorkflowRecord(workflow) || !hasExactDtcClearWorkflowKeys(workflow, keys)
       || workflow.schemaVersion !== DTC_CLEAR_WORKFLOW_SCHEMA_VERSION || workflow.operationId !== "clear_dtc"
-      || !["pre_save_required", "confirmation_required", "confirmation_recorded", "dispatch_blocked"].includes(workflow.state)
+      || !["pre_save_required", "confirmation_required", "confirmation_recorded", "dispatch_blocked", "cancelled"].includes(workflow.state)
       || !Number.isSafeInteger(workflow.revision) || workflow.revision < 0 || workflow.revision >= Number.MAX_SAFE_INTEGER
       || workflow.executionEnabled !== false || workflow.vehicleCommandEnabled !== false || workflow.wouldTransmit !== false || workflow.canExecute !== false
       || (workflow.target !== null && normalizeDtcClearWorkflowTarget(workflow.target) === null)
@@ -1471,7 +1471,8 @@
         || workflow.confirmation.revision !== workflow.revision || !sameDtcClearWorkflowTarget(workflow.confirmation.target, workflow.target) || workflow.confirmation.preOperationSessionId !== workflow.preOperationSessionId))
       || (!confirmed && (workflow.confirmation.revision !== null || workflow.confirmation.target !== null || workflow.confirmation.preOperationSessionId !== null))
       || ((workflow.state === "pre_save_required" || workflow.state === "confirmation_required") && workflow.state !== expectedState)
-      || ((workflow.state === "confirmation_recorded" || workflow.state === "dispatch_blocked") && !confirmed)) {
+      || ((workflow.state === "confirmation_recorded" || workflow.state === "dispatch_blocked") && !confirmed)
+      || (workflow.state === "cancelled" && confirmed)) {
       throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_state");
     }
     return evidence;
@@ -1485,6 +1486,11 @@
     const evidence = assertDtcClearWorkflow(workflow);
     if (!isDtcClearWorkflowRecord(event) || typeof event.type !== "string" || event.revision !== workflow.revision) {
       throw createDtcClearWorkflowError(event?.revision !== workflow.revision ? "stale_dtc_clear_workflow_revision" : "invalid_dtc_clear_workflow_event");
+    }
+    if (workflow.state === "cancelled") throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_transition");
+    if (event.type === "cancel") {
+      assertDtcClearWorkflowEvent(event, ["type", "revision"]);
+      return buildDtcClearWorkflow(workflow.target, workflow.preOperationSessionId, evidence, workflow.revision, false, "cancelled");
     }
     if (event.type === "update_input") {
       const allowed = ["type", "revision", "target", "preOperationSessionId", "evidence"];

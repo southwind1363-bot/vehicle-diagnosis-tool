@@ -17,6 +17,11 @@ const keys = requirements.map((item) => item.evidenceKey).filter((key) => key !=
 const evidence = Object.fromEntries(keys.map((key) => [key, true]));
 const safe = (workflow, message) => check(
   workflow.executionEnabled === false && workflow.vehicleCommandEnabled === false && workflow.wouldTransmit === false && workflow.canExecute === false
+    && workflow.readiness.publicExecutionEnabled === false && workflow.readiness.public_execution_enabled === false
+    && workflow.readiness.executionEnabled === false && workflow.readiness.execution_enabled === false
+    && workflow.readiness.vehicleCommandEnabled === false && workflow.readiness.vehicle_command_enabled === false
+    && workflow.readiness.wouldTransmit === false && workflow.readiness.would_transmit === false
+    && workflow.readiness.canExecute === false && workflow.readiness.can_execute === false
     && workflow.dispatch.attempted === false && workflow.dispatch.outcome === "not_attempted" && workflow.dispatch.retryAllowed === false && workflow.dispatch.wouldTransmit === false,
   message
 );
@@ -89,4 +94,55 @@ const blocked = api.transitionGenericObdDtcClearWorkflow(confirmed, { type: "req
 check(blocked.state === "dispatch_blocked", "Dispatch did not remain blocked");
 safe(blocked, "Blocked dispatch changed safety flags");
 error(() => api.transitionGenericObdDtcClearWorkflow(blocked, { type: "request_dispatch", revision: 0 }), "invalid_dtc_clear_workflow_transition");
+const cancellationSources = [empty, ready, confirmed, blocked];
+for (const sourceWorkflow of cancellationSources) {
+  const cancelEvent = { type: "cancel", revision: sourceWorkflow.revision };
+  const cancelled = api.transitionGenericObdDtcClearWorkflow(sourceWorkflow, cancelEvent);
+  check(sourceWorkflow.state !== "cancelled" && sourceWorkflow.revision === cancelEvent.revision && cancelEvent.type === "cancel", "Cancellation changed its input or event");
+  check(cancelled.state === "cancelled" && cancelled.revision === sourceWorkflow.revision
+    && (sourceWorkflow.target === null ? cancelled.target === null : cancelled.target !== sourceWorkflow.target)
+    && cancelled.preOperationSessionId === sourceWorkflow.preOperationSessionId
+    && cancelled.readiness !== sourceWorkflow.readiness, "Cancellation did not retain independent target, session, evidence, and revision snapshots");
+  check(sourceWorkflow.target === null || (cancelled.target.vehicleId === sourceWorkflow.target.vehicleId
+    && cancelled.target.ecuId === sourceWorkflow.target.ecuId && cancelled.target.transportId === sourceWorkflow.target.transportId), "Cancellation did not retain all target values");
+  check(keys.every((key) => cancelled.readiness.checks.find((check) => check.evidenceKey === key).complete === sourceWorkflow.readiness.checks.find((check) => check.evidenceKey === key).complete)
+    && cancelled.confirmation.recorded === false && cancelled.confirmation.revision === null && cancelled.confirmation.target === null && cancelled.confirmation.preOperationSessionId === null
+    && cancelled.readiness.checks.find((check) => check.evidenceKey === "impactAcknowledged").complete === false, "Cancellation did not retain evidence while removing confirmation");
+  safe(cancelled, "Cancellation changed safety flags");
+  check(Object.isFrozen(cancelled) && Object.isFrozen(cancelled.target) && Object.isFrozen(cancelled.readiness) && Object.isFrozen(cancelled.confirmation) && Object.isFrozen(cancelled.dispatch), "Cancellation output is mutable");
+}
+error(() => api.transitionGenericObdDtcClearWorkflow(ready, { type: "cancel", revision: 1 }), "stale_dtc_clear_workflow_revision");
+error(() => api.transitionGenericObdDtcClearWorkflow(ready, { type: "cancel" }), "stale_dtc_clear_workflow_revision");
+error(() => api.transitionGenericObdDtcClearWorkflow(ready, { type: "cancel", revision: "0" }), "stale_dtc_clear_workflow_revision");
+error(() => api.transitionGenericObdDtcClearWorkflow(ready, { revision: 0 }), "invalid_dtc_clear_workflow_event");
+error(() => api.transitionGenericObdDtcClearWorkflow(ready, null), "stale_dtc_clear_workflow_revision");
+error(() => api.transitionGenericObdDtcClearWorkflow(ready, { type: "cancel", revision: 0, extra: true }), "invalid_dtc_clear_workflow_event");
+error(() => api.transitionGenericObdDtcClearWorkflow(ready, { type: "cancel", revision: 0, target }), "invalid_dtc_clear_workflow_event");
+const mutableWorkflow = JSON.parse(JSON.stringify(confirmed));
+const mutableCancelEvent = JSON.parse(JSON.stringify({ type: "cancel", revision: 0 }));
+const mutableWorkflowBefore = JSON.stringify(mutableWorkflow);
+const mutableCancelEventBefore = JSON.stringify(mutableCancelEvent);
+const cancelledFromMutableInput = api.transitionGenericObdDtcClearWorkflow(mutableWorkflow, mutableCancelEvent);
+check(JSON.stringify(mutableWorkflow) === mutableWorkflowBefore && JSON.stringify(mutableCancelEvent) === mutableCancelEventBefore, "Cancellation changed JSON-cloned workflow input or event");
+mutableWorkflow.target.vehicleId = "caller-mutated";
+check(cancelledFromMutableInput.target.vehicleId === target.vehicleId && cancelledFromMutableInput.target !== mutableWorkflow.target, "Cancellation retained a caller-owned target reference");
+const cancelled = api.transitionGenericObdDtcClearWorkflow(confirmed, { type: "cancel", revision: 0 });
+for (const event of [
+  { type: "cancel", revision: 0 },
+  { type: "update_input", revision: 0, evidence },
+  { type: "record_confirmation", revision: 0, target, preOperationSessionId: session, impactAcknowledged: true },
+  { type: "request_dispatch", revision: 0 },
+  { type: "unknown", revision: 0 }
+]) {
+  error(() => api.transitionGenericObdDtcClearWorkflow(cancelled, event), "invalid_dtc_clear_workflow_transition");
+}
+error(() => api.transitionGenericObdDtcClearWorkflow(cancelled, { type: "cancel", revision: 1 }), "stale_dtc_clear_workflow_revision");
+error(() => api.transitionGenericObdDtcClearWorkflow(cancelled, { type: "cancel", revision: 0, extra: true }), "invalid_dtc_clear_workflow_transition");
+error(() => api.transitionGenericObdDtcClearWorkflow({ ...cancelled, confirmation: { ...cancelled.confirmation, recorded: true } }, { type: "cancel", revision: 0 }), "invalid_dtc_clear_workflow_state");
+error(() => api.transitionGenericObdDtcClearWorkflow({ ...cancelled, readiness: { ...cancelled.readiness, checks: cancelled.readiness.checks.map((check) => ({ ...check, complete: check.evidenceKey === "recoveryPlan" ? false : check.complete })) } }, { type: "cancel", revision: 0 }), "invalid_dtc_clear_workflow_state");
+error(() => api.transitionGenericObdDtcClearWorkflow({ ...cancelled, executionEnabled: true }, { type: "cancel", revision: 0 }), "invalid_dtc_clear_workflow_state");
+error(() => api.transitionGenericObdDtcClearWorkflow({ ...cancelled, dispatch: { ...cancelled.dispatch, attempted: true } }, { type: "cancel", revision: 0 }), "invalid_dtc_clear_workflow_state");
+const nearLimitCancelled = api.transitionGenericObdDtcClearWorkflow(nearLimit, { type: "cancel", revision: Number.MAX_SAFE_INTEGER - 1 });
+check(nearLimitCancelled.state === "cancelled" && nearLimitCancelled.revision === Number.MAX_SAFE_INTEGER - 1, "Cancellation did not retain the maximum valid revision");
+error(() => api.transitionGenericObdDtcClearWorkflow(nearLimitCancelled, { type: "cancel", revision: Number.MAX_SAFE_INTEGER - 1 }), "invalid_dtc_clear_workflow_transition");
 console.log(`DTC clear workflow checks: ${checks} / Errors: 0`);
