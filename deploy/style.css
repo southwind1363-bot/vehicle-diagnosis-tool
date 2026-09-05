@@ -1035,6 +1035,21 @@ body.dark .flow-node-measure .flow-step {
   flex-wrap: wrap;
 }
 
+#obdDevControls > .obd-dev-task > .obd-dev-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  align-items: stretch;
+}
+
+#obdDevControls .obd-dev-controls > button {
+  min-width: 0;
+  min-height: 48px;
+  height: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
 .obd-dev-group-label {
   flex-basis: 100%;
   margin-top: 6px;

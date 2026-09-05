@@ -5,6 +5,11 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+assert.match(css, /#obdDevControls > \.obd-dev-task > \.obd-dev-controls\s*\{\s*display: grid;\s*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\);/);
+const developerButtonStyle = css.match(/#obdDevControls \.obd-dev-controls > button\s*\{([^}]+)\}/)?.[1] || "";
+for (const rule of ["min-width: 0", "min-height: 48px", "white-space: normal", "overflow-wrap: anywhere"]) {
+  assert.ok(developerButtonStyle.includes(rule), "Developer touch controls must fit narrow screens: " + rule);
+}
 assert.equal((html.match(/id="obdDevStatus"/g) || []).length, 1, "Keep one authoritative developer status region");
 assert.ok(html.indexOf('id="obdDevStatus"') < html.indexOf('id="obdDevPasswordInput"'), "Status must appear before password entry and readout controls");
 assert.match(html, /<p id="obdDevStatus" class="data-status" role="status" aria-atomic="true">/);
