@@ -622,7 +622,7 @@ async function validatePortableNpmScripts() {
     "validate:j2534-lifecycle": "node scripts/validate-j2534-identity-lifecycle.js",
     "validate:j2534-supervisor": "node scripts/validate-j2534-identity-supervisor.js",
     "validate:j2534-native": "node scripts/validate-j2534-native-binding.js",
-    "validate:release": "npm run validate:r1 && npm run validate:obd && npm run validate:bridge && npm run validate:j2534-lifecycle && npm run validate:j2534-supervisor && npm run validate:workstation && npm run validate:package && npm run validate:data",
+    "validate:release": "npm run validate:obd && npm run validate:bridge && npm run validate:j2534-lifecycle && npm run validate:j2534-supervisor && npm run validate:workstation && npm run validate:package && npm run validate:offline && npm run validate:data",
     "report:coverage": "node scripts/report-dtc-coverage.js",
     "import:dtc:sample": 'node scripts/import-verified-dtc-csv.js --input scripts/fixtures/verified-dtc-sample.csv --source "検証用サンプル" --source-url "https://example.invalid/verified-dtc-sample" --source-date "2026-05-31"'
   });
