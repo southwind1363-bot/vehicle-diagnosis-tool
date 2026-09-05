@@ -5,6 +5,11 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+for (const label of ["接続・アダプター確認", "車両情報・基本読取", "故障コードを読む", "計測データ・発生時の記録を読む", "読取セッションの技術情報", "開発資料・対応予定・通信仕様"]) {
+  assert.ok(html.includes(`<summary>${label}</summary>`), "Developer tools must be grouped by task: " + label);
+}
+assert.match(html, /<details class="obd-dev-task" id="obdDevelopmentReference">/, "Development reference must start collapsed");
+assert.match(html, /<\/details>\s*<button id="obdDevDisconnectButton"/, "Disconnect must remain outside collapsed readout groups");
 assert.match(css, /#obdSetupPanel label:has\(> #obdVehicleYearManual\[hidden\]\)\s*\{\s*display: none;/, "Hidden manual year input must not leave an empty labelled row");
 const disabledStyle = css.match(/#obd-panel button:disabled\s*\{([^}]+)\}/)?.[1] || "";
 for (const rule of ["background: var(--panel-subtle)", "color: var(--muted)", "border-style: dashed", "box-shadow: none", "cursor: not-allowed"]) {

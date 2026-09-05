@@ -882,21 +882,36 @@
             </div>
             <p id="obdBridgePairingStatus" class="data-status" role="status">詳細トークンと共通</p>
           </div>
-          <div id="obdDevControls" class="obd-dev-controls" hidden>
-            <span class="obd-dev-group-label">読取確認</span>
+          <div id="obdDevControls" hidden>
+            <details class="obd-dev-task" open>
+            <summary>接続・アダプター確認</summary>
+            <div class="obd-dev-controls">
             <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>読取基盤確認</button>
             <button id="obdDevIdentifyButton" class="secondary-button" type="button" disabled>アダプター確認</button>
             <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧</button>
+            </div>
+            </details>
+            <details class="obd-dev-task">
+            <summary>車両情報・基本読取</summary>
+            <div class="obd-dev-controls">
             <button id="obdDevBridgeEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(ローカルブリッジ)</button>
             <button id="obdDevBridgeSupportedPidButton" class="secondary-button" type="button" disabled>対応PID(ローカルブリッジ)</button>
             <button id="obdDevCoreScanButton" class="secondary-button" type="button" disabled>基本読取(Web Serial)</button>
             <button id="obdDevQuickConditionButton" class="secondary-button" type="button" disabled>クイック状態確認(Web Serial)</button>
-            <span class="obd-dev-group-label">故障コード</span>
+            </div>
+            </details>
+            <details class="obd-dev-task">
+            <summary>故障コードを読む</summary>
+            <div class="obd-dev-controls">
             <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>DTC読取</button>
             <button id="obdDevBridgeDtcButton" class="secondary-button" type="button" disabled>故障コード(ローカルブリッジ)</button>
             <button id="obdDevBridgePendingDtcButton" class="secondary-button" type="button" disabled>保留DTC(ローカルブリッジ)</button>
             <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC(ローカルブリッジ)</button>
-            <span class="obd-dev-group-label">ライブデータ</span>
+            </div>
+            </details>
+            <details class="obd-dev-task">
+            <summary>計測データ・発生時の記録を読む</summary>
+            <div class="obd-dev-controls">
             <label class="obd-dev-group-label" for="obdLiveObservationCondition">観察目的</label>
             <select id="obdLiveObservationCondition">
               <option value="unspecified">未指定</option>
@@ -940,13 +955,20 @@
             <button id="obdDevBridgeReadinessButton" class="secondary-button" type="button" disabled>レディネス(ローカルブリッジ)</button>
             <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ(ローカルブリッジ)</button>
             <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果</button>
+            </div>
+            </details>
             <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>
           </div>
           <p id="obdDevStatus" class="data-status">詳細トークンを設定した端末だけ詳細読取メニューを使えます。送信は読取専用のみです。</p>
           <div id="obdDiagnosticFlowPanel" class="obd-diagnostic-flow-panel" data-obd-diagnostic-flow-panel hidden></div>
-          <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
+          <details class="obd-dev-task">
+            <summary>読取セッションの技術情報</summary>
+            <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
+          </details>
         </section>
 
+        <details class="obd-dev-task" id="obdDevelopmentReference">
+          <summary>開発資料・対応予定・通信仕様</summary>
         <section class="obd-operation-panel" aria-labelledby="obdOperationTitle">
           <div class="obd-result-heading">
             <div>
@@ -1010,6 +1032,7 @@
           </div>
           <div id="obdInterlockSummary" class="obd-interlock-summary"></div>
           <ul id="obdInterlockChecklist" class="obd-interlock-checklist"></ul>
+        </details>
         </details>
 
         <section class="result-block obd-import-result">
