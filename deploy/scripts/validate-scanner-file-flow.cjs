@@ -757,7 +757,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.doesNotMatch(await page.locator('#obdSimpleResultStatus').innerText(), /再接続を禁止/);
         assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true, 'Settled cleanup must permit saving acquired evidence');
         await page.screenshot({ path: path.join(output, 'synthetic-stream-failure.png') });
-        console.log('Synthetic VCI stream failure: requests stopped, DTCs retained, confirmed close allows reconnect and evidence save; no real hardware');
+        const readFailureFacts = () => page.evaluate(() => ({
+          codes: obdDevSession.lastSession.dtcSnapshot.codes,
+          live: obdDevSession.lastSession.livePidSnapshot?.monitorValues || [],
+          summary: obdDevSession.lastSession.webSerialReadoutSummary
+        }));
+        const failureFacts = await readFailureFacts();
+        assert.equal(failureFacts.summary.failedCount, 1, 'Interrupted readout must retain one failed attempt');
+        assert.equal(failureFacts.summary.transportErrorCount, 1, 'Interrupted readout must retain transport failure');
+        assert.equal(await page.locator('#obdSimpleResultBadge').innerText(), '一部取得');
+        const failureDownload = page.waitForEvent('download');
+        await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+        const failureFile = path.join(output, 'synthetic-stream-failure.json');
+        await (await failureDownload).saveAs(failureFile);
+        assert.deepEqual(await readFailureFacts(), failureFacts, 'Saving must not change failure evidence');
+        const interruptedPage = page;
+        page = await context.newPage();
+        page.on('pageerror', error => errors.push(error.message));
+        page.setDefaultTimeout(20000);
+        await page.goto(origin + '/');
+        await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+        await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+        assert.equal(await page.locator('#obdDetectedCodes').textContent(), '');
+        await openFile(page.getByRole('button', { name: '保存した読取結果を開く', exact: true }), failureFile);
+        await page.locator('#obdDetectedCodes').getByText('P0133', { exact: false }).first().waitFor();
+        assert.deepEqual(await readFailureFacts(), failureFacts, 'Offline restoration must preserve the full failure summary and acquired facts');
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+        assert.equal(await page.locator('#obdSimpleResultBadge').innerText(), '一部取得', 'Restored interrupted scan must not appear complete');
+        await page.screenshot({ path: path.join(output, 'synthetic-stream-failure-restored.png') });
+        await page.close();
+        page = interruptedPage;
+        assert.deepEqual(await readFailureFacts(), failureFacts, 'Inspecting the saved file must not change the original interrupted scan');
+        console.log('Synthetic VCI stream failure: requests stopped, DTCs and failure summary saved/restored offline; original page retained for reconnect; no real hardware');
         continue;
       }
       await page.waitForFunction(() => !obdDevSession.coreScanInProgress && obdDevSession.lastSession?.dtcSnapshot?.codes?.includes('P0133'), null, { timeout: 45000 });
