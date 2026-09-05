@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.450";
+const APP_VERSION = "3.13.451";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5734,7 +5734,18 @@ function syncObdSimpleStatus() {
   }
 }
 
+function renderObdDeveloperPasswordState() {
+  let configured = false;
+  try { configured = (localStorage.getItem(OBD_DEV_TOKEN_KEY) || "").length >= 12; } catch (_error) { return; }
+  const unlocked = obdDevModeUnlocked === true;
+  obdDevUnlockButton.textContent = unlocked ? "解除済み" : configured ? "詳細画面を開く" : "設定して開く";
+  obdDevUnlockButton.disabled = unlocked;
+  obdDevPasswordInput.disabled = unlocked;
+  obdDevPasswordInput.placeholder = unlocked ? "解除済み" : configured ? "この端末で設定したパスワード" : "12文字以上で新規設定";
+}
+
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
+  renderObdDeveloperPasswordState();
   renderObdSessionExportControls();
   const unlocked = obdDevModeUnlocked === true;
   const connected = Boolean(obdDevSession.port) && !["disconnected", "disconnecting"].includes(obdDevSession.connectionState);
@@ -5811,7 +5822,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
         ? "VCIへの未完了送信と終了処理を確認中です。再接続はできません。車両側の停止は未確認です。"
         : "VCIの終了処理を待っています。再接続はできません。車両側の停止は未確認です。";
   } else if (!primaryUnlocked) {
-    obdDevStatus.textContent = "この端末に詳細トークンを設定した場合だけ詳細読取メニューを有効化できます。送信は読取専用のみです。";
+    obdDevStatus.textContent = "詳細画面はロック中です。詳細用パスワードで解除できます。通常の読取は診断ホームから利用できます。";
   } else if (primaryActionNeedsSerial && !serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
   } else if (!connected) {
@@ -5893,7 +5904,7 @@ function unlockObdDeveloperMode() {
   if (configuredToken.length < 12) {
     const initialToken = obdDevPasswordInput.value.trim();
     if (initialToken.length < 12) {
-      obdDevStatus.textContent = "初回の詳細トークンは12文字以上で設定してください。";
+      obdDevStatus.textContent = "初回の詳細用パスワードは12文字以上で設定してください。";
       return;
     }
     localStorage.setItem(OBD_DEV_TOKEN_KEY, initialToken);
@@ -5901,7 +5912,7 @@ function unlockObdDeveloperMode() {
   }
 
   if (obdDevPasswordInput.value !== configuredToken) {
-    obdDevStatus.textContent = "詳細トークンが違います。";
+    obdDevStatus.textContent = "詳細用パスワードが違います。";
     return;
   }
   obdDevModeUnlocked = true;

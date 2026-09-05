@@ -5,6 +5,22 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+const passwordState = vm.createContext({
+  OBD_DEV_TOKEN_KEY: "test", obdDevModeUnlocked: false,
+  localStorage: { getItem: () => "" },
+  obdDevUnlockButton: {}, obdDevPasswordInput: {}
+});
+vm.runInContext(source.slice(source.indexOf("function renderObdDeveloperPasswordState("), source.indexOf("function renderObdDeveloperGate(")), passwordState);
+for (const [token, unlocked, label] of [["", false, "設定して開く"], ["short", false, "設定して開く"], ["configured-test-token", false, "詳細画面を開く"], ["configured-test-token", true, "解除済み"], ["configured-test-token", false, "詳細画面を開く"]]) {
+  passwordState.localStorage.getItem = () => token;
+  passwordState.obdDevModeUnlocked = unlocked;
+  passwordState.renderObdDeveloperPasswordState();
+  assert.equal(passwordState.obdDevUnlockButton.textContent, label);
+  assert.equal(passwordState.obdDevUnlockButton.disabled, unlocked);
+  assert.equal(passwordState.obdDevPasswordInput.disabled, unlocked);
+}
+passwordState.localStorage.getItem = () => { throw new Error("Storage unavailable"); };
+assert.doesNotThrow(() => passwordState.renderObdDeveloperPasswordState());
 for (const label of ["接続・アダプター確認", "車両情報・基本読取", "故障コードを読む", "計測データ・発生時の記録を読む", "読取セッションの技術情報", "開発資料・対応予定・通信仕様"]) {
   assert.ok(html.includes(`<summary>${label}</summary>`), "Developer tools must be grouped by task: " + label);
 }
