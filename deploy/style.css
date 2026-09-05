@@ -444,6 +444,10 @@ button:focus-visible,
   color: var(--accent-strong);
 }
 
+#obdSetupPanel label:has(> #obdVehicleYearManual[hidden]) {
+  display: none;
+}
+
 #obd-panel button:disabled {
   background: var(--panel-subtle);
   color: var(--muted);

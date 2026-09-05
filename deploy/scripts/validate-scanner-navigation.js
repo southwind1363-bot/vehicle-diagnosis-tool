@@ -5,6 +5,7 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+assert.match(css, /#obdSetupPanel label:has\(> #obdVehicleYearManual\[hidden\]\)\s*\{\s*display: none;/, "Hidden manual year input must not leave an empty labelled row");
 const disabledStyle = css.match(/#obd-panel button:disabled\s*\{([^}]+)\}/)?.[1] || "";
 for (const rule of ["background: var(--panel-subtle)", "color: var(--muted)", "border-style: dashed", "box-shadow: none", "cursor: not-allowed"]) {
   assert.ok(disabledStyle.includes(rule), "Disabled OBD controls must remain visually distinct: " + rule);
@@ -266,10 +267,20 @@ for (const mode of ["simple", "details"]) {
     }
     assert.ok(context.obdVehicleModelSelect.options.includes(vehicleRow.model));
     assert.ok(context.obdVehicleModelCodeSelect.options.includes("TEST-1"));
+    assert.equal(context.obdVehicleYearManualInput.hidden, true, "Listed year must hide manual year field");
+    context.obdVehicleYearSelect.value = "manual";
+    context.obdVehicleYearSelect.handlers.change();
+    assert.equal(context.obdVehicleYearManualInput.hidden, false, "Manual year choice must reveal its field");
     context.obdVehicleYearManualInput.value = "20x20";
     context.obdVehicleYearManualInput.handlers.input();
     assert.equal(context.obdVehicleYearManualInput.value, "2020");
     assert.equal(context.activeObdStage, "setup", "Manual year input left the vehicle screen");
+    context.obdVehicleYearSelect.disabled = true;
+    context.updateObdVehicleYearManualVisibility();
+    assert.equal(context.obdVehicleYearManualInput.hidden, false, "Unlisted years must allow manual entry");
+    context.obdVehicleModelSelect.value = "";
+    context.updateObdVehicleYearManualVisibility();
+    assert.equal(context.obdVehicleYearManualInput.hidden, true, "Cleared vehicle must hide manual entry");
   }
 }
 context.obdUiMode = "simple";
