@@ -369,10 +369,59 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await showTimeline();
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.screenshot({ path: path.join(output, 'live-timeline-desktop.png') });
+    const multiEcu = {
+      pid_values: ['7E8', '7E9'].map((source_ecu, i) => ({ pid: '0C', value: 1000 + i * 1000, unit: 'rpm', source_ecu })),
+      live_pid_samples: [0, 1].map(step => ({
+        captured_at: `2026-07-17T00:00:0${step * 5}Z`,
+        monitor_values: ['7E8', '7E9'].map((source_ecu, i) => ({ pid: '0C', value: 800 + step * 200 + i * 1000, unit: 'rpm', source_ecu }))
+      }))
+    };
+    const multiSession = model.buildDiagnosticScanSessionFromJson(JSON.stringify(multiEcu));
+    assert.equal(multiSession.livePidSnapshot.monitorValues.length, 2);
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    await openReplacement({ name: 'synthetic-multi-ecu.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(multiSession))) });
+    const verifyEcuRows = async () => {
+      await page.locator('.obd-results-nav').getByRole('button', { name: 'ライブ値', exact: true }).click();
+      for (const [ecu, value] of [['7E8', '1000 rpm'], ['7E9', '2000 rpm']]) {
+        const card = readings.filter({ has: page.locator('.obd-monitor-category', { hasText: `ECU ${ecu}` }) });
+        assert.equal(await card.count(), 1);
+        assert.equal(await card.locator('.obd-monitor-reading').innerText(), value);
+        assert.equal(await card.locator('[data-monitor-select]').isChecked(), false);
+      }
+      await page.getByRole('checkbox', { name: 'エンジン回転数 / ECU 7E9を選択', exact: true }).check();
+      await selectedOnly.check();
+      assert.equal(await page.locator('#obdMonitorGrid > :visible').count(), 1);
+      assert.match(await page.locator('#obdMonitorGrid > :visible').innerText(), /ECU 7E9/);
+      assert.match(await page.locator('#obdMonitorGrid > :visible').innerText(), /2000 rpm/);
+      await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
+      await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
+      const charts = page.locator('#obdSessionDetailLiveTimeline .obd-timeline-chart-row');
+      assert.equal(await charts.count(), 2);
+      const first = charts.filter({ has: page.locator('.obd-timeline-chart-label', { hasText: '[7E8]' }) });
+      const second = charts.filter({ has: page.locator('.obd-timeline-chart-label', { hasText: '[7E9]' }) });
+      assert.match(await first.locator('.obd-timeline-selected-value').innerText(), /1000 rpm/);
+      assert.match(await second.locator('.obd-timeline-selected-value').innerText(), /2000 rpm/);
+      await first.locator('input[type="range"]').press('Home');
+      assert.match(await first.locator('.obd-timeline-selected-value').innerText(), /800 rpm/);
+      assert.match(await second.locator('.obd-timeline-selected-value').innerText(), /2000 rpm/);
+      await second.locator('input[type="range"]').press('Home');
+      assert.match(await second.locator('.obd-timeline-selected-value').innerText(), /1800 rpm/);
+      assert.match(await first.locator('.obd-timeline-selected-value').innerText(), /800 rpm/);
+    };
+    await page.setViewportSize({ width: 390, height: 900 });
+    await verifyEcuRows();
+    await page.locator('#obdSessionDetailLiveTimeline').screenshot({ path: path.join(output, 'multi-ecu-timeline.png') });
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    const multiDownload = page.waitForEvent('download');
+    await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+    const multiFile = path.join(output, 'multi-ecu-roundtrip.json');
+    await (await multiDownload).saveAs(multiFile);
+    await openReplacement(multiFile);
+    await verifyEcuRows();
     }
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline roundtrip, ' : ''}invalid-file retention and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}invalid-file retention and back passed / Artifacts: ${output}`);
   } catch (error) {
     const failedPage = context?.pages().at(-1);
     if (failedPage && !failedPage.isClosed()) {
