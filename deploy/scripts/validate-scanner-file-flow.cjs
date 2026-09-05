@@ -222,6 +222,43 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.locator('#obdImportStatus').filter({ hasText: message }).waitFor();
       await assertRetained();
     }
+    // Fault injection is confined to this fresh browser context and restored before real-file recovery.
+    for (const failure of ['error', 'abort', 'throw']) {
+      await page.evaluate(failure => {
+        window.__fileReadFault = { original: window.FileReader, reader: null };
+        window.FileReader = class {
+          constructor() { window.__fileReadFault.reader = this; }
+          readAsText() {
+            if (failure === 'throw') throw new Error('Synthetic read failure');
+          }
+        };
+      }, failure);
+      try {
+        await page.locator('#obdImportFileInput').setInputFiles({ name: 'read-failure.json', mimeType: 'application/json', buffer: Buffer.from('{}') });
+        if (failure !== 'throw') {
+          assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), false, 'Pending read must suspend export');
+          await page.evaluate(failure => window.__fileReadFault.reader[`on${failure}`](), failure);
+        }
+        await page.locator('#obdImportStatus').filter({ hasText: '診断結果ファイルを読めませんでした' }).waitFor();
+        assert.equal(await page.locator('#obdImportFileInput').inputValue(), '', 'Failure must clear file selection for retry');
+        await assertRetained();
+        const failureStatus = await page.locator('#obdImportStatus').textContent();
+        await page.evaluate(() => {
+          const reader = window.__fileReadFault.reader;
+          reader.result = '{"dtcs":["P0999"]}';
+          reader.onload();
+          reader.onerror();
+          reader.onabort();
+        });
+        await assertRetained();
+        assert.equal(await page.locator('#obdImportStatus').textContent(), failureStatus, 'Late callbacks must not overwrite the failure status');
+      } finally {
+        await page.evaluate(() => {
+          window.FileReader = window.__fileReadFault.original;
+          delete window.__fileReadFault;
+        });
+      }
+    }
     await page.locator('#obdImportFileInput').setInputFiles({ name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{') });
     await page.locator('#obdImportStatus').filter({ hasText: 'JSONの構文を読み取れません' }).waitFor();
     assert.equal(await page.locator('#obdImportStatus').isVisible(), true);
@@ -485,7 +522,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}replacement cancellation, empty/unsupported/oversized/broken-file retention, recovery and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}replacement cancellation, empty/unsupported/oversized/broken-file retention, read error/abort/throw and late callbacks, recovery and back passed / Artifacts: ${output}`);
   } catch (error) {
     const failedPage = context?.pages().at(-1);
     if (failedPage && !failedPage.isClosed()) {
