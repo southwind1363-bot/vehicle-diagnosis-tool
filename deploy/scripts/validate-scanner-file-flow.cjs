@@ -137,6 +137,41 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const before = await page.locator('#obdDetectedCodes').innerText();
     assert.match(before, /P0420/);
     await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const resultNav = page.locator('.obd-results-nav');
+      await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
+      assert.equal(await page.locator('#obdMonitorStatus').isVisible(), true);
+      assert.equal(await page.locator('#obdMonitorGrid').locator(':scope > *').count(), 0, 'DTC-only archive must not invent live values');
+      await resultNav.getByRole('button', { name: '追加データ', exact: true }).click();
+      const detailButtons = page.locator('#obdReadoutDetailMenu [data-obd-detail-target]');
+      for (let index = 1; index < await detailButtons.count(); index += 1) {
+        const button = detailButtons.nth(index);
+        const target = await button.getAttribute('data-obd-detail-target');
+        await button.click();
+        assert.equal(await button.getAttribute('aria-pressed'), 'true');
+        const selection = await page.locator('#obdDevSessionDetails').evaluate((node, target) => {
+          const visible = [...node.children].filter(child => child.getBoundingClientRect().height > 0).map(child => child.id);
+          return { exists: [...node.children].some(child => child.id === target), visible };
+        }, target);
+        assert.deepEqual(selection.visible, selection.exists ? [target] : [], 'Only selected additional data may be visible');
+        assert.equal(await page.locator('#obdReadoutDetailEmpty').isVisible(), !selection.exists);
+      }
+      await page.screenshot({ path: path.join(output, `additional-data-${width}.png`) });
+      await resultNav.getByRole('button', { name: 'DTC一覧', exact: true }).click();
+      assert.equal(await page.locator('#obdDetectedCodes').innerText(), before, 'Detail navigation must retain the DTC result');
+      await page.locator('#obdDtcSearch').fill('P0420');
+      assert.equal(await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().isVisible(), false);
+      await resultNav.getByRole('button', { name: 'ライブ値', exact: true }).click();
+      await resultNav.getByRole('button', { name: 'DTC一覧', exact: true }).click();
+      assert.equal(await page.locator('#obdDtcSearch').inputValue(), 'P0420');
+      assert.equal(await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().isVisible(), false);
+      assert.equal(await page.locator('#obdDetectedCodes').getByText('P0420', { exact: false }).first().isVisible(), true);
+      await page.getByRole('button', { name: 'DTC検索を解除', exact: true }).click();
+      assert.equal(await page.locator('#obdDetectedCodes').innerText(), before);
+      await page.getByRole('button', { name: '前の診断画面へ戻る', exact: true }).click();
+      assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
+    }
     await openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), { name: 'broken.json', mimeType: 'application/json', buffer: Buffer.from('{') });
     await page.locator('#obdImportStatus').filter({ hasText: 'JSONの構文を読み取れません' }).waitFor();
     assert.equal(await page.locator('#obdImportStatus').isVisible(), true);
@@ -150,7 +185,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow (${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, invalid-file retention and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, invalid-file retention and back passed / Artifacts: ${output}`);
   } catch (error) {
     const failedPage = context?.pages().at(-1);
     if (failedPage && !failedPage.isClosed()) {
