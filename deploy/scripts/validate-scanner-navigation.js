@@ -5,6 +5,29 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+let navigatedMode = "";
+let focusedControl = "";
+const navigationTarget = name => ({ focus() { focusedControl = name; }, scrollIntoView() {}, click() { assert.fail("Navigation must not execute a readout"); } });
+const navigationContext = vm.createContext({
+  setObdUiMode(mode) { navigatedMode = mode; }, revealObdControlGroup() {},
+  obdAccessUnlocked: false, obdDevModeUnlocked: false,
+  obdAccessPasswordInput: navigationTarget("access"), obdDevPasswordInput: navigationTarget("developer"),
+  obdDevControls: navigationTarget("controls"), obdDevSessionSummary: null
+});
+vm.runInContext(source.slice(source.indexOf("function navigateToObdReadoutControl("), source.indexOf("function revealObdControlGroup(")), navigationContext);
+const readoutTarget = navigationTarget("readout");
+for (const [access, developer, expected] of [[false, false, "access"], [true, false, "developer"], [true, true, "readout"]]) {
+  navigationContext.obdAccessUnlocked = access;
+  navigationContext.obdDevModeUnlocked = developer;
+  navigationContext.navigateToObdReadoutControl(readoutTarget);
+  assert.equal(navigatedMode, "details");
+  assert.equal(focusedControl, expected);
+}
+readoutTarget.disabled = true;
+readoutTarget.closest = () => ({ querySelector: () => navigationTarget("group") });
+navigationContext.navigateToObdReadoutControl(readoutTarget);
+assert.equal(focusedControl, "group", "Disabled controls should focus their visible group heading");
+assert.ok(source.includes("navigateToObdReadoutControl(targetButton);"));
 assert.match(css, /#obdDevControls > \.obd-dev-task > \.obd-dev-controls\s*\{\s*display: grid;\s*grid-template-columns: repeat\(auto-fit, minmax\(min\(100%, 240px\), 1fr\)\);/);
 const developerButtonStyle = css.match(/#obdDevControls \.obd-dev-controls > button\s*\{([^}]+)\}/)?.[1] || "";
 for (const rule of ["min-width: 0", "min-height: 48px", "white-space: normal", "overflow-wrap: anywhere"]) {
