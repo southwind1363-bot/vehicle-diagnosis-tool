@@ -636,10 +636,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.deepEqual(await page.evaluate(() => window.__serialFailureFixture), { mode: 'cancel', selections: 3, opens: 1, writes: 0 });
     await page.screenshot({ path: path.join(output, 'connection-retry.png') });
     // The known persistent-browser second-download issue is covered separately, not by this normal-context flow.
-    for (const noLiveResponse of (restart ? [] : [false, true])) {
+    const readoutCases = [
+      { name: 'readout', rpm: 1726, reply: '41 0C 1A F8' },
+      { name: 'no-live', rpm: null, reply: 'NO DATA' },
+      { name: 'recovered', rpm: 800, reply: '41 0C 0C 80' }
+    ];
+    for (const [caseIndex, readoutCase] of (restart ? [] : readoutCases).entries()) {
+      const noLiveResponse = readoutCase.rpm === null;
       const responses = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/synthetic-elm-core-responses.json'), 'utf8'));
-      if (noLiveResponse) {
-        responses['010C'] = 'NO DATA';
+      responses['010C'] = readoutCase.reply;
+      if (caseIndex > 0) {
         await page.locator('.obd-stage-tab[data-obd-stage="connect"]').click();
       }
       await page.evaluate(responses => {
@@ -676,7 +682,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         readiness: obdDevSession.lastSession.readinessSnapshot.readinessReadoutStatus,
         ecu: obdDevSession.lastSession.ecuInfoSnapshot.ecuInfoReadoutStatus
       }));
-      assert.deepEqual(scan, { codes: ['P0133', 'P0420'], rpm: noLiveResponse ? null : 1726, noData: noLiveResponse ? 1 : 0, incomplete: noLiveResponse ? 1 : 0, readiness: 'reported', ecu: 'reported' });
+      assert.deepEqual(scan, { codes: ['P0133', 'P0420'], rpm: readoutCase.rpm, noData: noLiveResponse ? 1 : 0, incomplete: noLiveResponse ? 1 : 0, readiness: 'reported', ecu: 'reported' });
       const checkLiveDisplay = async () => {
         await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
         assert.equal(await page.locator('#obdMonitorGrid > article').count(), noLiveResponse ? 0 : 1, 'Live display must reflect only this scan');
@@ -687,17 +693,25 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           assert.match(emptyStatus, /計測値は0項目です|この読取結果には表示できるライブ値がありません。/);
           assert.doesNotMatch(emptyStatus, /形式を確認|項目名: 数値/, 'NO DATA must not be described as an input formatting mistake');
           await page.screenshot({ path: path.join(output, 'synthetic-live-no-data.png') });
-        } else assert.match(await page.locator('#obdMonitorGrid').innerText(), /1726/);
+        } else {
+          const liveText = await page.locator('#obdMonitorGrid').innerText();
+          assert.ok(liveText.includes(String(readoutCase.rpm)));
+          if (caseIndex > 0) {
+            assert.equal(liveText.includes('1726'), false, 'Recovery must show the new RPM, not the first scan');
+            assert.doesNotMatch(await page.locator('#obdMonitorStatus').innerText(), /計測値は0項目です|表示できるライブ値がありません/);
+            await page.screenshot({ path: path.join(output, 'synthetic-live-recovered.png') });
+          }
+        }
         await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
       };
       await checkLiveDisplay();
       const scanDownload = page.waitForEvent('download');
       await page.locator('#obdStageResultsView [data-obd-session-export]').click();
-      const scanFile = path.join(output, `synthetic-serial-${noLiveResponse ? 'no-live' : 'readout'}.json`);
+      const scanFile = path.join(output, `synthetic-serial-${readoutCase.name}.json`);
       await (await scanDownload).saveAs(scanFile);
       const saved = fs.readFileSync(scanFile, 'utf8');
       assert.ok(saved.includes('P0133') && saved.includes('P0420'));
-      if (!noLiveResponse) assert.ok(saved.includes('1726'));
+      if (!noLiveResponse) assert.ok(saved.includes(String(readoutCase.rpm)));
       await page.locator('#obdSimpleResultDisconnectButton').click();
       await page.waitForFunction(() => obdDevSession.connectionState === 'disconnected' && !obdSerialDisconnectOperation);
       assert.equal(await page.locator('#obdSimpleResultDisconnectButton').isVisible(), false);
@@ -708,7 +722,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(calls.closes, 1);
       assert.equal(calls.cancels, 1);
       assert.equal(calls.baudRate, 38400);
-      await page.screenshot({ path: path.join(output, `synthetic-${noLiveResponse ? 'no-live' : 'readout'}-disconnected.png`) });
+      await page.screenshot({ path: path.join(output, `synthetic-${readoutCase.name}-disconnected.png`) });
       await page.reload();
       await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
       await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
@@ -725,7 +739,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       })), scan, 'Fresh offline import must recover the measured facts');
       await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
       await checkLiveDisplay();
-      console.log(`Synthetic VCI (${noLiveResponse ? 'live NO DATA after prior RPM' : 'normal'}): connect, core readout, JSON download, disconnect and fresh offline restoration passed; no real hardware`);
+      console.log(`Synthetic VCI (${readoutCase.name}): connect, core readout, JSON download, disconnect and fresh offline restoration passed; no real hardware`);
     }
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
