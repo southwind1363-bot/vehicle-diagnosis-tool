@@ -5,6 +5,18 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+const measurements = html.slice(html.indexOf("<summary>計測データ・発生時の記録を読む</summary>"), html.indexOf("<summary>排ガス監視の実施状況・テスト結果</summary>"));
+for (const id of ["obdDevSnapshotButton", "obdDevBridgeLiveButton", "obdDevBridgeFreezeFrameButton", "obdDevReadFreezeFrameButton"]) {
+  assert.ok(measurements.indexOf(`id="${id}"`) >= 0 && measurements.indexOf(`id="${id}"`) < measurements.indexOf('id="obdMeasurementConditions"'), "Readout commands must precede optional comparison conditions");
+}
+assert.match(measurements, /<details class="obd-dev-task" id="obdMeasurementConditions">/);
+for (const id of ["obdLiveObservationCondition", "obdLiveThermalState", "obdVehicleMotionState", "obdTransmissionPosition", "obdAccessoryLoadState", "obdSameVehicleConfirmed"]) {
+  assert.equal((html.match(new RegExp(`id="${id}"`, "g")) || []).length, 1);
+  assert.ok(measurements.indexOf(`id="${id}"`) > measurements.indexOf('id="obdMeasurementConditions"'), "Comparison fields must remain in the measurement group");
+}
+const basicReadout = html.slice(html.indexOf("<summary>車両情報・基本読取</summary>"), html.indexOf("<summary>故障コードを読む</summary>"));
+assert.ok(basicReadout.includes('id="obdDevReadEcuInfoButton"'));
+assert.ok(basicReadout.includes('id="obdDevBridgeEcuInfoButton"'));
 const passwordState = vm.createContext({
   OBD_DEV_TOKEN_KEY: "test", obdDevModeUnlocked: false,
   localStorage: { getItem: () => "" },

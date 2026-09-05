@@ -894,6 +894,7 @@
             <details class="obd-dev-task">
             <summary>車両情報・基本読取</summary>
             <div class="obd-dev-controls">
+            <button id="obdDevReadEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(Web Serial)</button>
             <button id="obdDevBridgeEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(ローカルブリッジ)</button>
             <button id="obdDevBridgeSupportedPidButton" class="secondary-button" type="button" disabled>対応PID(ローカルブリッジ)</button>
             <button id="obdDevCoreScanButton" class="secondary-button" type="button" disabled>基本読取(Web Serial)</button>
@@ -911,6 +912,14 @@
             </details>
             <details class="obd-dev-task">
             <summary>計測データ・発生時の記録を読む</summary>
+            <div class="obd-dev-controls">
+            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>ライブデータ</button>
+            <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ(ローカルブリッジ)</button>
+            <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
+            <button id="obdDevReadFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(Web Serial)</button>
+            </div>
+            <details class="obd-dev-task" id="obdMeasurementConditions">
+            <summary>比較用の測定条件</summary>
             <div class="obd-dev-controls">
             <label class="obd-dev-group-label" for="obdLiveObservationCondition">観察目的</label>
             <select id="obdLiveObservationCondition">
@@ -946,20 +955,21 @@
               <option value="on">A/C等ON</option>
             </select>
             <label class="obd-dev-group-label"><input id="obdSameVehicleConfirmed" type="checkbox"> 前回保存セッションと同一車両</label>
-            <button id="obdDevBridgeFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム</button>
-            <button id="obdDevReadFreezeFrameButton" class="secondary-button" type="button" disabled>フリーズフレーム(Web Serial)</button>
+            </div>
+            </details>
+            </details>
+            <details class="obd-dev-task">
+            <summary>排ガス監視の実施状況・テスト結果</summary>
+            <div class="obd-dev-controls">
             <button id="obdDevReadReadinessButton" class="secondary-button" type="button" disabled>レディネス(Web Serial)</button>
-            <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>ライブデータ</button>
-            <button id="obdDevReadEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(Web Serial)</button>
             <button id="obdDevReadOnboardMonitorButton" class="secondary-button" type="button" disabled>Mode06(Web Serial)</button>
             <button id="obdDevBridgeReadinessButton" class="secondary-button" type="button" disabled>レディネス(ローカルブリッジ)</button>
-            <button id="obdDevBridgeLiveButton" class="secondary-button" type="button" disabled>ライブデータ(ローカルブリッジ)</button>
             <button id="obdDevBridgeMonitorButton" class="secondary-button" type="button" disabled>Mode06/監視結果</button>
             </div>
             </details>
             <button id="obdDevDisconnectButton" class="secondary-button" type="button" disabled>切断</button>
           </div>
-          <p id="obdDevStatus" class="data-status">詳細トークンを設定した端末だけ詳細読取メニューを使えます。送信は読取専用のみです。</p>
+          <p id="obdDevStatus" class="data-status">詳細画面はロック中です。</p>
           <div id="obdDiagnosticFlowPanel" class="obd-diagnostic-flow-panel" data-obd-diagnostic-flow-panel hidden></div>
           <details class="obd-dev-task">
             <summary>読取セッションの技術情報</summary>
