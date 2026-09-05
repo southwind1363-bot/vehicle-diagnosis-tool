@@ -493,6 +493,13 @@ button:focus-visible,
   color: var(--danger);
 }
 
+[data-obd-session-export-status]:empty {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
 .offline-cache-status {
   margin: -0.35rem 0 1rem;
   color: var(--muted);

@@ -103,11 +103,30 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().waitFor();
     assert.match(await page.locator('#obdDetectedCodes').innerText(), /P0420/);
     await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    const exportStatus = page.locator('#obdStageResultsView [data-obd-session-export-status]');
+    assert.equal(await exportStatus.textContent(), '');
+    assert.equal(await exportStatus.evaluate(node => node.getBoundingClientRect().height), 0, 'Empty export notification must not leave a blank band');
+    const beforeSaveFailure = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await page.evaluate(() => {
+      window.__originalCreateObjectURL = URL.createObjectURL;
+      URL.createObjectURL = () => { throw new Error('Synthetic export URL failure'); };
+    });
+    try {
+      await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+      assert.equal(await exportStatus.isVisible(), true);
+      assert.equal(await exportStatus.innerText(), 'JSON保存を開始できませんでした。読取結果は変更していません。');
+      assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), beforeSaveFailure);
+    } finally {
+      await page.evaluate(() => { URL.createObjectURL = window.__originalCreateObjectURL; delete window.__originalCreateObjectURL; });
+    }
     const pendingDownload = page.waitForEvent('download');
     await page.locator('#obdStageResultsView [data-obd-session-export]').click();
     const download = await pendingDownload;
     const exported = path.join(output, 'roundtrip.json');
     await download.saveAs(exported);
+    assert.equal(await exportStatus.isVisible(), true);
+    assert.equal(await exportStatus.innerText(), '読取結果のJSON保存を開始しました。');
+    await exportStatus.screenshot({ path: path.join(output, 'export-notification.png') });
     const json = JSON.parse(fs.readFileSync(exported, 'utf8'));
     assert.ok(JSON.stringify(json).includes('P0300') && JSON.stringify(json).includes('P0420'));
     if (offline) {
