@@ -153,6 +153,26 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           return issues;
         });
         assert.deepEqual(problems, [], `${width}px ${theme}: overflowing or undersized controls`);
+        const reference = page.locator('#obdDevelopmentReference');
+        const topics = reference.locator(':scope > details[name="obd-reference-topic"]');
+        assert.equal(await topics.count(), 6);
+        await topics.evaluateAll(nodes => nodes.forEach(node => { node.open = false; }));
+        if (!(await reference.evaluate(node => node.open))) await reference.locator(':scope > summary').click();
+        for (let i = 0; i < 6; i += 1) {
+          const topic = topics.nth(i);
+          await topic.locator(':scope > summary').press('Enter');
+          assert.equal(await reference.locator('details[open]').count(), 1);
+          const visibleContent = await topic.evaluate(node => [...node.children].slice(1).every(child => child.getClientRects().length > 0));
+          assert.equal(visibleContent, true, 'Reference render targets must be revealed');
+          assert.equal(await groups.nth(3).evaluate(node => node.open), true, 'Reference selection must not collapse readout controls');
+          const box = await topic.boundingBox();
+          assert.ok(box && box.x >= 0 && box.x + box.width <= width + 1);
+        }
+        await reference.locator(':scope > summary').click();
+        assert.equal(await topics.nth(5).locator(':scope > summary').isVisible(), false);
+        await reference.locator(':scope > summary').press('Enter');
+        assert.equal(await topics.nth(5).evaluate(node => node.open), true, 'Returning to reference must retain selected topic');
+        await reference.screenshot({ path: path.join(output, `${width}-${theme}-reference.png`) });
         checks += 1;
         await page.locator('#obdStageDetailsView > .obd-dev-panel').screenshot({ path: path.join(output, `${width}-${theme}.png`) });
         if (theme === 'light' && [390, 768].includes(width)) {

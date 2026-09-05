@@ -1036,70 +1036,34 @@
 
         <details class="obd-dev-task" id="obdDevelopmentReference">
           <summary>開発資料・対応予定・通信仕様</summary>
-        <section class="obd-operation-panel" aria-labelledby="obdOperationTitle">
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">CAPABILITY ROADMAP</p>
-              <h3 id="obdOperationTitle">拡張機能</h3>
-            </div>
-          </div>
-          <div id="obdOperationGrid" class="obd-operation-grid"></div>
-        </section>
-
-        <section class="obd-operation-panel" aria-labelledby="obdPreparedRequestTitle">
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">COMMUNICATION PREP</p>
-              <h3 id="obdPreparedRequestTitle">読取準備</h3>
-            </div>
-          </div>
-          <div id="obdConnectionProfile" class="obd-profile-strip"></div>
-          <div id="obdPreparedRequestGrid" class="obd-request-grid"></div>
-        </section>
-
-        <section class="obd-operation-panel" aria-labelledby="obdInterfaceRoadmapTitle">
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">INTERFACE ROADMAP</p>
-              <h3 id="obdInterfaceRoadmapTitle">対応インターフェース</h3>
-            </div>
-          </div>
-          <div id="obdInterfaceRoadmapGrid" class="obd-interface-grid"></div>
-        </section>
-
-        <section class="obd-operation-panel" aria-labelledby="obdCoverageRoadmapTitle">
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">COVERAGE ROADMAP</p>
-              <h3 id="obdCoverageRoadmapTitle">診断データ網羅</h3>
-            </div>
-          </div>
-          <div id="obdCapabilityStatusGrid" class="obd-interface-grid"></div>
-          <div id="obdCoverageRoadmapGrid" class="obd-interface-grid"></div>
-        </section>
-
-        <section class="obd-operation-panel" aria-labelledby="obdBridgeContractTitle">
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">LOCAL BRIDGE</p>
-              <h3 id="obdBridgeContractTitle">ローカルブリッジ</h3>
-            </div>
-          </div>
-          <div id="obdBridgeContractGrid" class="obd-bridge-grid"></div>
-          <div id="obdBridgeSchemaGrid" class="obd-bridge-schema-grid"></div>
-        </section>
-
-        <details class="obd-operation-panel obd-interlock-panel">
-          <summary class="obd-interlock-summary-title">読取保護メモ</summary>
-          <div class="obd-result-heading">
-            <div>
-              <p class="eyebrow obd-eyebrow">TECHNICAL GUARD</p>
-              <h3 id="obdInterlockTitle">読取保護の内部条件</h3>
-            </div>
-          </div>
-          <div id="obdInterlockSummary" class="obd-interlock-summary"></div>
-          <ul id="obdInterlockChecklist" class="obd-interlock-checklist"></ul>
-        </details>
+          <details class="obd-dev-task" name="obd-reference-topic">
+            <summary id="obdOperationTitle">機能の開発予定</summary>
+            <div id="obdOperationGrid" class="obd-operation-grid"></div>
+          </details>
+          <details class="obd-dev-task" name="obd-reference-topic">
+            <summary id="obdPreparedRequestTitle">読取要求と通信条件</summary>
+            <div id="obdConnectionProfile" class="obd-profile-strip"></div>
+            <div id="obdPreparedRequestGrid" class="obd-request-grid"></div>
+          </details>
+          <details class="obd-dev-task" name="obd-reference-topic">
+            <summary id="obdInterfaceRoadmapTitle">対応機器と接続方式</summary>
+            <div id="obdInterfaceRoadmapGrid" class="obd-interface-grid"></div>
+          </details>
+          <details class="obd-dev-task" name="obd-reference-topic">
+            <summary id="obdCoverageRoadmapTitle">診断データの対応範囲</summary>
+            <div id="obdCapabilityStatusGrid" class="obd-interface-grid"></div>
+            <div id="obdCoverageRoadmapGrid" class="obd-interface-grid"></div>
+          </details>
+          <details class="obd-dev-task" name="obd-reference-topic">
+            <summary id="obdBridgeContractTitle">ローカルブリッジの通信仕様</summary>
+            <div id="obdBridgeContractGrid" class="obd-bridge-grid"></div>
+            <div id="obdBridgeSchemaGrid" class="obd-bridge-schema-grid"></div>
+          </details>
+          <details class="obd-dev-task" name="obd-reference-topic">
+            <summary id="obdInterlockTitle">読取保護の内部条件</summary>
+            <div id="obdInterlockSummary" class="obd-interlock-summary"></div>
+            <ul id="obdInterlockChecklist" class="obd-interlock-checklist"></ul>
+          </details>
         </details>
 
         <section class="result-block obd-import-result">

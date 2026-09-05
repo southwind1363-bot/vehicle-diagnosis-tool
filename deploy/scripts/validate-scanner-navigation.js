@@ -174,6 +174,11 @@ for (const label of ["接続・アダプター確認", "車両情報・基本読
   assert.ok(html.includes(`<summary>${label}</summary>`), "Developer tools must be grouped by task: " + label);
 }
 assert.match(html, /<details class="obd-dev-task" id="obdDevelopmentReference">/, "Development reference must start collapsed");
+assert.equal((html.match(/name="obd-reference-topic"/g) || []).length, 6, "Reference topics must use their own exclusive group");
+assert.doesNotMatch(html, /name="obd-reference-topic" open/, "Reference content must not all expand initially");
+for (const id of ['obdOperationGrid', 'obdConnectionProfile', 'obdPreparedRequestGrid', 'obdInterfaceRoadmapGrid', 'obdCapabilityStatusGrid', 'obdCoverageRoadmapGrid', 'obdBridgeContractGrid', 'obdBridgeSchemaGrid', 'obdInterlockSummary', 'obdInterlockChecklist']) {
+  assert.equal(html.split(`id="${id}"`).length - 1, 1, 'Keep each reference rendering target exactly once: ' + id);
+}
 assert.match(html, /<\/details>\s*<button id="obdDevDisconnectButton"/, "Disconnect must remain outside collapsed readout groups");
 assert.match(css, /#obdSetupPanel label:has\(> #obdVehicleYearManual\[hidden\]\)\s*\{\s*display: none;/, "Hidden manual year input must not leave an empty labelled row");
 const disabledStyle = css.match(/#obd-panel button:disabled\s*\{([^}]+)\}/)?.[1] || "";

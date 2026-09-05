@@ -77,6 +77,22 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.goto(origin + '/');
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
     await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    await page.locator('#obdHomeView [data-obd-ui-mode="details"]').click();
+    const reference = page.locator('#obdDevelopmentReference');
+    assert.equal(await reference.evaluate(node => node.open), false);
+    await reference.locator(':scope > summary').click();
+    const referenceTopics = reference.locator(':scope > details');
+    assert.equal(await referenceTopics.count(), 6);
+    for (let i = 0; i < 6; i += 1) {
+      const topic = referenceTopics.nth(i);
+      await topic.locator(':scope > summary').click();
+      assert.equal(await reference.locator('details[open]').count(), 1);
+      const content = await topic.evaluate(node => [...node.children].slice(1).map(child => child.textContent.trim()));
+      assert.ok(content.length && content.every(text => text.length > 0), 'Application must populate each reference target');
+    }
+    await reference.screenshot({ path: path.join(output, 'development-reference.png') });
+    await page.locator('#obdUiModeSwitch [data-obd-ui-mode="simple"]').click();
+    assert.equal(await reference.isVisible(), false, 'Development reference must not leak into normal diagnosis');
     const openFile = async (button, file) => {
       const picker = page.waitForEvent('filechooser');
       await button.click();
