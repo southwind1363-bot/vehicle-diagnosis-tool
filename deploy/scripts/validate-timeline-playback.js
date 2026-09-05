@@ -35,6 +35,17 @@ const create = (times = [0, 1000, 4000]) => {
 const paused = item => item.button.attributes['aria-label'].endsWith('記録を再生');
 const clean = () => frames.size === 0 && [...document.listeners.values(), ...window.listeners.values()].every(set => !set.size) && context.activeObdTimelinePlaybackStop === null;
 const first = create();
+check(first.button.textContent === '\u25b6', 'Valid playback must keep the compact play icon');
+for (const [times, reason] of [
+  [[], '記録点が不足しています'], [[0], '記録点が不足しています'],
+  [[null, 1000], '取得時刻が不明です'], [[0, 0], '取得時刻の順序が不整合です'],
+  [[1000, 0], '取得時刻の順序が不整合です'], [[0, 1800001], '記録が30分を超えています']
+]) {
+  const item = create(times);
+  check(item.button.disabled && item.button.textContent.includes(reason)
+    && item.button.attributes['aria-label'].includes(reason), 'Disabled reason must be visible and accessible');
+}
+check(!create([0, 1800000]).button.disabled, 'Exactly 30 minutes must remain eligible');
 first.button.emit('click');
 check(first.slider.value === '0' && frames.size === 1, 'End position must restart from first point');
 advance(400); first.button.emit('click');

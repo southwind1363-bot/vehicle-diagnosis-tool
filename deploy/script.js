@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.479";
+const APP_VERSION = "3.13.480";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10289,15 +10289,19 @@ function createObdTimelinePlaybackButton(points, slider, onPosition, label) {
   const duration = times.at(-1) - times[0];
   const valid = times.length > 1 && duration <= 30 * 60 * 1000 && times.every((time, i) => Number.isFinite(time) && (!i || time > times[i - 1]));
   button.disabled = !valid;
+  const disabledReason = valid ? "" : times.length < 2 ? "記録点が不足しています"
+    : times.some(time => !Number.isFinite(time)) ? "取得時刻が不明です"
+    : times.some((time, i) => i > 0 && time <= times[i - 1]) ? "取得時刻の順序が不整合です"
+    : "記録が30分を超えています";
   let running = false;
   let frame = null;
   let offset = valid ? times[Number(slider.value)] - times[0] : 0;
   let started = 0;
   const updateButton = () => {
-    button.textContent = running ? "\u23f8" : "\u25b6";
+    button.textContent = valid ? (running ? "\u23f8" : "\u25b6") : `再生不可：${disabledReason}`;
     const action = running ? "記録を一時停止" : "記録を再生";
-    button.setAttribute("aria-label", `${label}の${action}`);
-    button.title = valid ? action : "再生には順序が正しい取得時刻と30分以内の記録が必要です";
+    button.setAttribute("aria-label", valid ? `${label}の${action}` : `${label}の再生不可：${disabledReason}`);
+    button.title = valid ? action : disabledReason;
   };
   const stop = () => {
     if (running) offset = Math.min(duration, offset + performance.now() - started);
