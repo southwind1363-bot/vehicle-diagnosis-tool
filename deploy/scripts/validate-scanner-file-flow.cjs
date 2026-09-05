@@ -46,6 +46,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     else {
       browser = await chromium.launch({ channel, headless: true });
       context = await browser.newContext(contextOptions);
+      await require('./validate-scanner-access.cjs')(browser, root, output);
     }
     const configureContext = async (preUnlocked = true) => {
       context.on('request', request => pendingRequests.set(request, request.url()));
