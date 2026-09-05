@@ -100,6 +100,21 @@ unsupported.context.renderObdMonitorValues(values, insights);
 check(unsupported.nodes.obdMonitorFilter.hidden && unsupported.context.obdMonitorGrid.children.every((card) => !card.hidden), "Unsupported observation must leave all readouts visible");
 check(unsupported.nodes.obdMonitorSelection.hidden && !unsupported.context.obdMonitorGrid.children[0].querySelector(), "Unsupported observer must not expose inert selection");
 check(JSON.stringify(values) === original && context.retainedInsights === insights, "Selection must not mutate source readout or safety insights");
+for (const [index, query, expected] of [[0, '', 1], [2, '', 1], [0, 'rpm 7e8', 'search']]) {
+  const h = harness();
+  h.context.renderObdMonitorValues(values, insights);
+  h.subscriptions[0].callback();
+  const boxes = h.context.obdMonitorGrid.children.map(card => card.querySelector());
+  boxes.forEach(box => { box.checked = true; });
+  h.nodes.obdMonitorSelectedOnly.checked = true;
+  h.nodes.obdMonitorSearch.value = query;
+  h.nodes.obdMonitorSearch.handlers.input();
+  h.context.document.activeElement = boxes[index];
+  boxes[index].checked = false;
+  h.context.obdMonitorGrid.handlers.change({ target: boxes[index] });
+  check((expected === 'search' ? h.nodes.obdMonitorSearch : boxes[expected]).focused, 'Hidden selection must transfer focus to next/previous visible row or search');
+  check(h.context.obdMonitorGrid.children[index].hidden && h.nodes.obdMonitorSelectionCount.textContent === '選択 2項目', 'Focus recovery must not change selection or search criteria');
+}
 check(source.includes("initializeObdMonitorFilter();") && html.includes('type="search" maxlength="100"') && html.includes('aria-controls="obdMonitorGrid"')
   && html.includes('aria-label="検索を解除"'), "Search controls or initializer missing");
 check(css.includes('.obd-monitor-card[hidden] { display: none; }'), "Grid card styling overrides hidden rows");

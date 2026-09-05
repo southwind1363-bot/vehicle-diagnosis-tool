@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.477";
+const APP_VERSION = "3.13.478";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -583,7 +583,17 @@ function initializeObdReadoutFilter(grid, prefix, searchKey, unit, options = {})
   clear.addEventListener("click", () => { input.value = ""; refresh(); input.focus(); });
   if (selection) {
     grid.addEventListener("change", (event) => {
-      if (event.target?.dataset.monitorSelect !== undefined) refresh();
+      const target = event.target;
+      if (target?.dataset?.monitorSelect === undefined) return;
+      const focused = document.activeElement === target;
+      const cards = Array.from(grid.children);
+      const index = cards.findIndex(card => card.querySelector("[data-monitor-select]") === target);
+      refresh();
+      if (focused && index >= 0 && cards[index].hidden) {
+        const remaining = [...cards.slice(index + 1), ...cards.slice(0, index).reverse()];
+        const next = remaining.find(card => !card.hidden)?.querySelector("[data-monitor-select]");
+        (next || input).focus();
+      }
     });
     selection.only.addEventListener("change", refresh);
     selection.clear.addEventListener("click", () => {
