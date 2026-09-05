@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.478";
+const APP_VERSION = "3.13.479";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -701,6 +701,7 @@ let obdSerialConnectPending = false;
 let obdSerialDisconnectOperation = null;
 let obdScannerImportOperation = null;
 let activeObdStage = "setup";
+let activeObdTimelinePlaybackStop = null;
 let activeObdSimpleSystemFilter = "all";
 const ELM327_CONNECTION_STATES = Object.freeze(["disconnected", "selecting", "opening", "initializing", "ready", "reading", "disconnecting"]);
 const WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS = Object.freeze(["010C", "0105", "010F", "010D", "010E", "0104", "0103", "010B", "0123", "0159", "0110", "0111", "0106", "0107", "0108", "0109", "0121", "012F", "0130", "0131", "0133", "0142", "011C", "011F", "0146", "014D", "0151", "015B", "015C"]);
@@ -1630,6 +1631,7 @@ function initializeLaunchView() {
 }
 
 function activateTab(targetId) {
+  if (typeof activeObdTimelinePlaybackStop === "function") activeObdTimelinePlaybackStop();
   if (!targetId) return;
 
   tabPanels.forEach((panel) => {
@@ -2857,6 +2859,7 @@ function scrollToObdSection(targetId, fallbackTargetId = "") {
 }
 
 function renderObdReadoutDetailSelection() {
+  if (typeof activeObdTimelinePlaybackStop === "function") activeObdTimelinePlaybackStop();
   const panel = document.getElementById("obd-panel");
   const menu = document.getElementById("obdReadoutDetailMenu");
   const details = document.getElementById("obdDevSessionDetails");
@@ -4731,6 +4734,7 @@ function getObdRefreshStage(currentStage, autoStage, mode) {
 }
 
 function renderObdStageView(preferredStage = activeObdStage) {
+  if (typeof activeObdTimelinePlaybackStop === "function") activeObdTimelinePlaybackStop();
   syncObdReadoutSurface();
   const homeView = document.getElementById("obdHomeView");
   if (homeView) homeView.hidden = true;
@@ -9916,6 +9920,7 @@ function getRecoveredDiagnosticReadoutRoute(connectionStatus = null, vciDevices 
 }
 
 function renderObdBridgeSessionDetails(session = null) {
+  if (typeof activeObdTimelinePlaybackStop === "function") activeObdTimelinePlaybackStop();
   if (!obdDevSessionDetails) return;
   obdDevSessionDetails.innerHTML = "";
   if (typeof renderObdReadoutDetailSelection === "function") renderObdReadoutDetailSelection();
@@ -10265,7 +10270,8 @@ function renderObdBridgeSessionDetails(session = null) {
       slider.addEventListener("input", showPosition);
       showPosition();
       position.append(positionLabel, slider, selected);
-      chartRow.append(label, bars, position, records);
+      const playback = createObdTimelinePlaybackButton(row.points, slider, showPosition, `${row.label}${sourceEcu}`);
+      chartRow.append(label, bars, position, playback, records);
       chart.appendChild(chartRow);
     });
     card.append(heading, chart);
@@ -10273,6 +10279,82 @@ function renderObdBridgeSessionDetails(session = null) {
   }
   obdDevSessionDetails.hidden = false;
   if (typeof renderObdReadoutDetailSelection === "function") renderObdReadoutDetailSelection();
+}
+
+function createObdTimelinePlaybackButton(points, slider, onPosition, label) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "secondary-button obd-timeline-playback";
+  const times = points.map(point => typeof point.capturedAt === "string" && point.capturedAt.trim() ? Date.parse(point.capturedAt) : NaN);
+  const duration = times.at(-1) - times[0];
+  const valid = times.length > 1 && duration <= 30 * 60 * 1000 && times.every((time, i) => Number.isFinite(time) && (!i || time > times[i - 1]));
+  button.disabled = !valid;
+  let running = false;
+  let frame = null;
+  let offset = valid ? times[Number(slider.value)] - times[0] : 0;
+  let started = 0;
+  const updateButton = () => {
+    button.textContent = running ? "\u23f8" : "\u25b6";
+    const action = running ? "記録を一時停止" : "記録を再生";
+    button.setAttribute("aria-label", `${label}の${action}`);
+    button.title = valid ? action : "再生には順序が正しい取得時刻と30分以内の記録が必要です";
+  };
+  const stop = () => {
+    if (running) offset = Math.min(duration, offset + performance.now() - started);
+    running = false;
+    if (frame !== null) cancelAnimationFrame(frame);
+    frame = null;
+    document.removeEventListener("visibilitychange", visibility);
+    document.removeEventListener("toggle", disclosure, true);
+    document.removeEventListener("click", disclosureClick, true);
+    window.removeEventListener("pagehide", stop);
+    if (activeObdTimelinePlaybackStop === stop) activeObdTimelinePlaybackStop = null;
+    updateButton();
+  };
+  const visibility = () => { if (document.hidden) stop(); };
+  const disclosure = (event) => {
+    if (event.target?.tagName === "DETAILS" && !event.target.open && event.target.contains(button)) stop();
+  };
+  const disclosureClick = (event) => {
+    if (event.target?.closest?.("summary")?.parentElement?.contains(button)) stop();
+  };
+  const tick = () => {
+    frame = null;
+    if (!button.isConnected || !button.getClientRects().length || document.hidden) { stop(); return; }
+    const elapsed = offset + performance.now() - started;
+    let index = 0;
+    while (index + 1 < times.length && times[index + 1] - times[0] <= elapsed) index += 1;
+    if (Number(slider.value) !== index) { slider.value = String(index); onPosition(); }
+    if (index === times.length - 1) { stop(); return; }
+    frame = requestAnimationFrame(tick);
+  };
+  button.addEventListener("click", () => {
+    if (!valid) return;
+    if (running) { stop(); return; }
+    if (!button.isConnected || !button.getClientRects().length || document.hidden) return;
+    if (typeof activeObdTimelinePlaybackStop === "function") activeObdTimelinePlaybackStop();
+    if (Number(slider.value) === times.length - 1 || offset >= times.at(-1) - times[0]) {
+      offset = 0;
+      slider.value = "0";
+      onPosition();
+    }
+    running = true;
+    started = performance.now();
+    activeObdTimelinePlaybackStop = stop;
+    document.addEventListener("visibilitychange", visibility);
+    document.addEventListener("toggle", disclosure, true);
+    document.addEventListener("click", disclosureClick, true);
+    window.addEventListener("pagehide", stop);
+    updateButton();
+    frame = requestAnimationFrame(tick);
+  });
+  slider.addEventListener("input", () => {
+    if (typeof activeObdTimelinePlaybackStop === "function") activeObdTimelinePlaybackStop();
+    stop();
+    if (valid) offset = times[Number(slider.value)] - times[0];
+  });
+  updateButton();
+  return button;
 }
 
 function formatObdTimelineTimestamp(value) {

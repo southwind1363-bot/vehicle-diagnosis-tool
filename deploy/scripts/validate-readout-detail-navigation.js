@@ -42,7 +42,7 @@ for (const match of menuHtml.matchAll(/data-obd-scroll-target="([^"]+)" data-obd
   button.dataset = { obdScrollTarget: match[1], obdDetailTarget: match[2] }; button.textContent = match[3]; menu.appendChild(button);
   if (match[2] !== "all") node(match[2], "obdDevSessionDetails");
 }
-check(menu.children.length === 7, "Detail menu is missing a supported readout category");
+assert.deepEqual(menu.children.map(button => button.dataset.obdDetailTarget), ['all', 'obdSessionDetailFreezeFrame', 'obdSessionDetailReadiness', 'obdSessionDetailEcuInfo', 'obdSessionDetailSupportedPid', 'obdSessionDetailMode06', 'obdSessionDetailLiveTimeline', 'obdSessionDetailEcuResponses']);
 const context = vm.createContext({ document: { getElementById: (id) => nodes[id] || null }, obdUiMode: "simple", obdAccessUnlocked: true, Event: class { constructor(type) { this.type = type; } } });
 vm.runInContext(["scrollToObdSection", "renderObdReadoutDetailSelection", "openObdSimpleEcuDetail"].map(extract).join("\n"), context);
 context.renderObdStageView = (stage) => { panel.dataset.obdActiveStage = stage; context.renderObdReadoutDetailSelection(); };
