@@ -23,7 +23,7 @@ function client() {
     writable: { getWriter: () => ({ releaseLock: () => {}, write: async () => {} }) }
   };
   const context = vm.createContext({
-    obdAccessUnlocked: true, obdDevModeUnlocked: true, obdBridgeOperation: null,
+    obdAccessUnlocked: true, obdDevModeUnlocked: true, obdBridgeOperation: null, obdUiMode: "details",
     obdSerialRevision: 0, obdSerialResultOwner: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
     obdDevSession: { connectionState: "disconnected", port: null, lastSession: { marker: "saved" } },
     obdDevStatus: {}, obdDevBaudRate: { value: "38400" }, obdDevPasswordInput: { value: "" }, obdAccessPasswordInput: { value: "" },
@@ -581,7 +581,11 @@ function loadDeveloperGate(c) {
   for (const [, name] of gate.matchAll(/\b(obd[A-Z]\w*)\.(?:textContent|disabled|hidden|value)/g)) {
     if (!(name in c)) c[name] = { textContent: "", value: "" };
   }
-  c.document = { querySelectorAll: () => [] };
+  c.document = { querySelectorAll: () => [], querySelector: () => null };
+  c.localStorage = { getItem: () => null };
+  c.OBD_DEV_TOKEN_KEY = "test-dev-token";
+  c.obdDevUnlockButton = { disabled: false, textContent: "" };
+  load(c, ["renderObdMeasurementConditionSummary", "renderObdDeveloperPasswordState", "getObdRefreshStage"]);
   c.window = { ObdReadOnly: { getCapability: () => ({ secureContext: true, webSerialSupported: true }) } };
   c.getSelectedObdInterfaceLabel = () => "ELM327";
   c.resolveObdInterfaceId = () => "user-vci-elm327";
