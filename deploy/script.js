@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.488";
+const APP_VERSION = "3.13.489";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -699,6 +699,7 @@ let obdSerialRevision = 0;
 let obdSerialResultOwner = null;
 let obdSerialConnectPending = false;
 let obdSerialDisconnectOperation = null;
+const obdSerialReadErrors = new WeakMap();
 let obdScannerImportOperation = null;
 let activeObdStage = "setup";
 let activeObdTimelinePlaybackStop = null;
@@ -6201,6 +6202,8 @@ async function disconnectObdDeveloperVci(options = {}) {
   const operation = {};
   obdSerialDisconnectOperation = operation;
   const { reader, writer, port } = obdDevSession;
+  const observedReadError = reader && obdSerialReadErrors.get(reader);
+  if (reader) obdSerialReadErrors.delete(reader);
   const pendingWrite = obdDevSession.pendingWriteOperation;
   const waitForWrite = Boolean(pendingWrite && pendingWrite.writer === writer && pendingWrite.port === port);
   operation.writePending = waitForWrite;
@@ -6240,8 +6243,11 @@ async function disconnectObdDeveloperVci(options = {}) {
     // Defer completion until the coalesced cleanup promise has been assigned.
     await Promise.resolve();
     if (reader) {
-      try { await reader.cancel(); } catch (_error) {
-        operation.cleanupFailed = true;
+      try { await reader.cancel(); } catch (error) {
+        // An errored stream rejects cancel with its original read error; closing still must succeed.
+        if (!observedReadError || observedReadError.port !== port || !Object.is(error, observedReadError.error)) {
+          operation.cleanupFailed = true;
+        }
       }
       try { reader.releaseLock(); } catch (_error) {
         operation.cleanupFailed = true;
@@ -8370,7 +8376,13 @@ async function readElmDeveloperLoop(reader = obdDevSession.reader, port = obdDev
   let transportLossReason = null;
   while (isCurrentWebSerialReadLoop(reader, port)) {
     try {
-      const result = await reader.read();
+      let result;
+      try {
+        result = await reader.read();
+      } catch (error) {
+        if (isCurrentWebSerialReadLoop(reader, port)) obdSerialReadErrors.set(reader, { port, error });
+        throw error;
+      }
       if (!isCurrentWebSerialReadLoop(reader, port)) break;
       if (result.done) {
         transportLossReason = "serial_stream_closed";

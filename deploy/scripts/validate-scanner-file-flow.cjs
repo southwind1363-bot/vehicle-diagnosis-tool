@@ -697,7 +697,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       { name: 'readout', rpm: 1726, reply: '41 0C 1A F8' },
       { name: 'no-live', rpm: null, reply: 'NO DATA' },
       { name: 'recovered', rpm: 800, reply: '41 0C 0C 80' },
-      { name: 'stream-failure', failCommand: '0101' }
+      { name: 'stream-failure', failCommand: '0101' },
+      { name: 'after-stream-failure', rpm: 900, reply: '41 0C 0E 10' }
     ];
     for (const [caseIndex, readoutCase] of (restart ? [] : readoutCases).entries()) {
       const noLiveResponse = readoutCase.rpm === null;
@@ -736,10 +737,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await connect.innerText(), '基本読取を開始');
       await connect.click();
       if (readoutCase.failCommand) {
-        // Known recovery limitation: cancel rejects on an errored stream even when close succeeds.
-        // This records current quarantine, not the desired confirmed-close recovery contract.
         await page.waitForFunction(() => window.__serialReadoutFixture.commands.includes('0101')
-          && obdDevSession.connectionState === 'disconnecting' && obdSerialDisconnectOperation?.cleanupSettled
+          && obdDevSession.connectionState === 'disconnected' && !obdSerialDisconnectOperation
           && !obdDevSession.coreScanInProgress && !obdDevSession.readInProgress, null, { timeout: 45000 });
         const failedScan = await page.evaluate(() => ({
           codes: obdDevSession.lastSession?.dtcSnapshot?.codes,
@@ -754,11 +753,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(failedScan.calls.opens, 1);
         assert.equal(failedScan.calls.closes, 1);
         assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
-        assert.equal(await page.locator('#obdSimpleResultPrimaryButton').isDisabled(), true, 'Unconfirmed cleanup must block reconnect');
-        assert.match(await page.locator('#obdSimpleResultStatus').innerText(), /再接続を禁止/);
+        assert.equal(await page.locator('#obdSimpleResultPrimaryButton').isEnabled(), true, 'Confirmed close must allow a new connection');
+        assert.doesNotMatch(await page.locator('#obdSimpleResultStatus').innerText(), /再接続を禁止/);
         assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true, 'Settled cleanup must permit saving acquired evidence');
         await page.screenshot({ path: path.join(output, 'synthetic-stream-failure.png') });
-        console.log('Synthetic VCI stream failure: requests stopped, DTCs retained, unconfirmed cleanup blocks reconnect and allows evidence save; no real hardware');
+        console.log('Synthetic VCI stream failure: requests stopped, DTCs retained, confirmed close allows reconnect and evidence save; no real hardware');
         continue;
       }
       await page.waitForFunction(() => !obdDevSession.coreScanInProgress && obdDevSession.lastSession?.dtcSnapshot?.codes?.includes('P0133'), null, { timeout: 45000 });

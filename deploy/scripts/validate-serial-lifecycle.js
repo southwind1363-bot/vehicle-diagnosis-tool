@@ -25,6 +25,7 @@ function client() {
   const context = vm.createContext({
     obdAccessUnlocked: true, obdDevModeUnlocked: true, obdBridgeOperation: null, obdUiMode: "details",
     obdSerialRevision: 0, obdSerialResultOwner: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
+    obdSerialReadErrors: new WeakMap(),
     obdDevSession: { connectionState: "disconnected", port: null, lastSession: { marker: "saved" } },
     obdDevStatus: {}, obdDevBaudRate: { value: "38400" }, obdDevPasswordInput: { value: "" }, obdAccessPasswordInput: { value: "" },
     OBD_DEV_MODE_KEY: "dev", OBD_ACCESS_MODE_KEY: "access",
@@ -178,6 +179,49 @@ for (const stage of ["initialize", "identify"]) {
   waiting.resolve();
   await pending;
   check(c.obdDevSession.connectionState === "disconnected" && calls.failure === 0 && calls.identify === 0, `${stage}: locked initialization continued or revived connection`);
+}
+
+for (const failure of ["none", "cancel", "reader", "writer", "close"]) {
+  const { context: c, port } = client();
+  await c.connectObdDeveloperVci();
+  load(c, ["isCurrentWebSerialReadLoop", "readElmDeveloperLoop"]);
+  let controller;
+  const readable = new ReadableStream({ start(value) { controller = value; } });
+  const reader = readable.getReader();
+  const writer = new WritableStream().getWriter();
+  const readError = new Error("observed read failure");
+  const cancel = reader.cancel.bind(reader);
+  reader.cancel = () => failure === "cancel" ? Promise.reject(new Error("different cancel failure")) : cancel();
+  const releaseReader = reader.releaseLock.bind(reader);
+  reader.releaseLock = () => { releaseReader(); if (failure === "reader") throw new Error("reader release failure"); };
+  const releaseWriter = writer.releaseLock.bind(writer);
+  writer.releaseLock = () => { releaseWriter(); if (failure === "writer") throw new Error("writer release failure"); };
+  const closing = deferred();
+  let closes = 0;
+  port.close = async () => { closes += 1; await closing.promise; };
+  Object.assign(c.obdDevSession, { reader, writer, readLoopActive: true });
+  const saved = c.obdDevSession.lastSession;
+  const loop = c.readElmDeveloperLoop(reader, port);
+  controller.error(readError);
+  await loop;
+  await settle();
+  const operation = c.obdSerialDisconnectOperation;
+  check(operation && c.obdDevSession.connectionState === "disconnecting" && !operation.cleanupSettled,
+    `${failure}: errored stream must wait for port close`);
+  check(c.beginObdBridgeOperation() === null && closes === 1, `${failure}: close barrier must prevent bridge acquisition`);
+  check(c.obdSerialReadErrors.has(reader) === false, `${failure}: consumed read evidence must not remain reusable`);
+  if (failure === "close") closing.reject(new Error("close failed"));
+  else closing.resolve();
+  await operation.promise;
+  check(c.obdDevSession.lastSession === saved && c.obdDevSession.lastDisconnectReason === "serial_read_failed",
+    `${failure}: cleanup must retain read failure and saved facts`);
+  if (failure === "none") {
+    check(c.obdDevSession.connectionState === "disconnected" && c.obdSerialDisconnectOperation === null,
+      "Observed read error plus confirmed close must release quarantine");
+  } else {
+    check(c.obdDevSession.connectionState === "disconnecting" && operation.cleanupFailed && operation.cleanupSettled
+      && c.beginObdBridgeOperation() === null, `${failure}: unconfirmed cleanup must remain quarantined`);
+  }
 }
 
 for (const failure of ["cancel", "reader", "writer", "close", "none"]) {

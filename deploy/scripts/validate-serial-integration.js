@@ -51,6 +51,7 @@ const webSerialFunctions = [
   "isAllowedObdDeveloperCommand", "isCurrentWebSerialReadLoop", "hasCompletedElmDeveloperResponse", "takeCompletedElmDeveloperResponse"
 ];
 const webSerialConstants = [
+  "obdSerialReadErrors",
   "ELM327_CONNECTION_STATES", "WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS", "WEB_SERIAL_DEFAULT_FREEZE_FRAME_PID_COMMANDS",
   "WEB_SERIAL_READ_ONLY_COMMANDS", "WEB_SERIAL_ADAPTER_ERROR_LINES", "WEB_SERIAL_VEHICLE_LINK_ERROR_LINES",
   "WEB_SERIAL_IGNORED_RESPONSE_LINES", "WEB_SERIAL_ADAPTER_INITIALIZATION_STEPS"
