@@ -604,12 +604,15 @@ async function validatePortableNpmScripts() {
     "validate:package": "node scripts/validate-workstation-package.js",
     "validate:workstation": "node scripts/validate-local-workstation.js",
     "validate:offline": "node scripts/validate-offline-cache.js",
+    "validate:scanner-browser": "node scripts/validate-scanner-file-flow.cjs --offline --dense-live",
     "validate:case-storage": "node scripts/validate-case-storage.js",
     "validate:serial": "node scripts/validate-serial-lifecycle.js",
     "validate:serial-integration": "node scripts/validate-serial-integration.js",
     "validate:session-export": "node scripts/validate-session-export.js",
-    "validate:navigation": "node scripts/validate-scanner-navigation.js",
-    "validate:r1": "npm run validate:navigation && npm run validate:serial && npm run validate:case-storage && npm run validate:session-export && npm run validate:offline",
+    "validate:navigation": "node scripts/validate-scanner-navigation.js && node scripts/validate-readout-detail-navigation.js",
+    "validate:timeline-playback": "node scripts/validate-timeline-playback.js",
+    "validate:readout-filters": "node scripts/validate-monitor-filter.js && node scripts/validate-dtc-filter.js",
+    "validate:r1": "npm run validate:navigation && npm run validate:readout-filters && npm run validate:timeline-playback && npm run validate:serial && npm run validate:case-storage && npm run validate:session-export && npm run validate:offline",
     "bridge:dev": "node local-bridge-readonly.js",
     "bridge:j2534:dev": "node scripts/start-j2534-readonly-bridge.js",
     "inspect:j2534": "node scripts/inspect-j2534-drivers.js",
@@ -629,9 +632,11 @@ async function validatePortableNpmScripts() {
   check(true, "Portable npm scripts retained their entries, arguments, and release order");
   for (const [name, command] of Object.entries(manifest.scripts)) {
     if (name === "validate:release" || name === "validate:r1") continue;
-    const entry = command.match(/^node ([a-z0-9/-]+\.js)(?: |$)/i)?.[1];
-    check(Boolean(entry) && fs.existsSync(new URL(`../${entry}`, import.meta.url)),
-      `${name}: npm command requires a machine-specific runtime or has no script entry`);
+    for (const step of command.split(" && ")) {
+      const entry = step.match(/^node ([a-z0-9/-]+\.(?:cjs|js))(?: |$)/i)?.[1];
+      check(Boolean(entry) && fs.existsSync(new URL(`../${entry}`, import.meta.url)),
+        `${name}: npm command requires a machine-specific runtime or has no script entry: ${step}`);
+    }
   }
   if (process.platform !== "win32") return;
   const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle npm & test-"));
