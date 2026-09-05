@@ -75,6 +75,20 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
           return { focused, clicks, revealed };
         });
         assert.deepEqual(focusResults, { focused: ['obdAccessPasswordInput', 'obdDevPasswordInput', 'group', 'obdDevReadDtcButton', 'first-group'], clicks: 0, revealed: true });
+        const groups = page.locator('#obdDevControls > details[name="obd-readout-task"]');
+        assert.equal(await groups.count(), 5);
+        for (let i = 0; i < 5; i += 1) {
+          if (!(await groups.nth(i).evaluate(node => node.open))) await groups.nth(i).locator(':scope > summary').click();
+          assert.equal(await page.locator('#obdDevControls > details[name="obd-readout-task"][open]').count(), 1);
+          const overflow = await groups.nth(i).evaluate(group => [...group.querySelectorAll('button, input, select, label, summary')].filter(node => {
+            const box = node.getBoundingClientRect();
+            if (!box.width || !box.height) return false;
+            return box.left < -1 || box.right > innerWidth + 1 || node.scrollWidth > node.clientWidth + 1
+              || (node.tagName === 'BUTTON' && box.height < 48);
+          }).map(node => node.id || node.textContent.trim()));
+          assert.deepEqual(overflow, [], `${width}px ${theme}: task ${i} controls must fit`);
+        }
+        await groups.nth(3).locator(':scope > summary').click();
         const conditionToggle = page.locator('#obdMeasurementConditions > summary');
         const sameVehicle = page.locator('#obdSameVehicleConfirmed');
         await page.locator('#obdLiveObservationCondition').selectOption('post_repair');
@@ -93,6 +107,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(await page.locator('#obdTransmissionPosition').isVisible(), true, 'Keyboard must reopen conditions');
         assert.equal(await page.locator('#obdTransmissionPosition').inputValue(), 'park', 'Collapsing must retain selected conditions');
         assert.equal(await sameVehicle.isChecked(), true, 'Collapsing must retain confirmation');
+        await groups.nth(2).locator(':scope > summary').click();
+        assert.equal(await page.locator('#obdTransmissionPosition').isVisible(), false);
+        await groups.nth(3).locator(':scope > summary').press('Enter');
+        assert.equal(await page.locator('#obdTransmissionPosition').inputValue(), 'park', 'Switching tasks must retain conditions');
+        assert.equal(await sameVehicle.isChecked(), true, 'Switching tasks must retain same-vehicle confirmation');
+        assert.equal(await page.locator('#obdDevStatus').isVisible(), true);
+        assert.equal(await page.locator('#obdDevDisconnectButton').isVisible(), true);
         assert.equal(await page.locator('#obdDevReadDtcButton').isDisabled(), true, 'Presentation interactions must not enable readout');
         await page.evaluate(() => {
           const status = document.querySelector('#obdDevStatus');

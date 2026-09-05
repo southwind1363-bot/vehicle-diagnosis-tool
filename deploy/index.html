@@ -890,7 +890,7 @@
             <p id="obdBridgePairingStatus" class="data-status" role="status">詳細トークンと共通</p>
           </div>
           <div id="obdDevControls" hidden>
-            <details class="obd-dev-task" open>
+            <details class="obd-dev-task" name="obd-readout-task" open>
             <summary>接続・アダプター確認</summary>
             <div class="obd-dev-controls">
             <button id="obdDevBridgeStatusButton" class="secondary-button" type="button" disabled>接続確認(ローカルブリッジ)</button>
@@ -898,7 +898,7 @@
             <button id="obdDevBridgeVciButton" class="secondary-button" type="button" disabled>VCI一覧(ローカルブリッジ)</button>
             </div>
             </details>
-            <details class="obd-dev-task">
+            <details class="obd-dev-task" name="obd-readout-task">
             <summary>車両情報・基本読取</summary>
             <div class="obd-dev-controls">
             <button id="obdDevReadEcuInfoButton" class="secondary-button" type="button" disabled>ECU情報(Web Serial)</button>
@@ -908,7 +908,7 @@
             <button id="obdDevQuickConditionButton" class="secondary-button" type="button" disabled>クイック状態確認(Web Serial)</button>
             </div>
             </details>
-            <details class="obd-dev-task">
+            <details class="obd-dev-task" name="obd-readout-task">
             <summary>故障コードを読む</summary>
             <div class="obd-dev-controls">
             <button id="obdDevReadDtcButton" class="secondary-button" type="button" disabled>故障コード(Web Serial)</button>
@@ -917,7 +917,7 @@
             <button id="obdDevBridgePermanentDtcButton" class="secondary-button" type="button" disabled>永久DTC(ローカルブリッジ)</button>
             </div>
             </details>
-            <details class="obd-dev-task">
+            <details class="obd-dev-task" name="obd-readout-task">
             <summary>計測データ・発生時の記録を読む</summary>
             <div class="obd-dev-controls">
             <button id="obdDevSnapshotButton" class="secondary-button" type="button" disabled>現在値を取得(Web Serial)</button>
@@ -965,7 +965,7 @@
             </div>
             </details>
             </details>
-            <details class="obd-dev-task">
+            <details class="obd-dev-task" name="obd-readout-task">
             <summary>排ガス監視の実施状況・テスト結果</summary>
             <div class="obd-dev-controls">
             <button id="obdDevReadReadinessButton" class="secondary-button" type="button" disabled>レディネス(Web Serial)</button>
