@@ -5,6 +5,8 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const css = fs.readFileSync(new URL("../style.css", import.meta.url), "utf8");
+assert.match(html, /data-obd-detail-target="obdSessionDetailLiveTimeline"/);
+assert.ok(source.includes('card.id = "obdSessionDetailLiveTimeline";'), "Existing timeline chart must be individually addressable");
 assert.equal((html.match(/name="obd-readout-task"/g) || []).length, 5, "Only the five readout groups share exclusive expansion");
 assert.match(html, /<details class="obd-dev-task" name="obd-readout-task" open>\s*<summary>接続・アダプター確認<\/summary>/);
 assert.match(html, /<details class="obd-dev-task" id="obdMeasurementConditions">/, "Nested measurement conditions must remain independent");

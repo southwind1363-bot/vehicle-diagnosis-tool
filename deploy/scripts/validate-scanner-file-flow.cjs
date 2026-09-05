@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const http = require('node:http');
+const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
@@ -9,9 +10,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const root = path.resolve(__dirname, '..');
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-'));
   const restart = process.argv.includes('--restart');
+  const live = process.argv.includes('--live');
   const serverStopOnly = process.argv.includes('--server-stop-only');
   const offline = restart || process.argv.includes('--offline');
   const profile = path.join(output, 'browser-profile');
+  const channel = process.env.PLAYWRIGHT_CHANNEL || 'chrome';
+  const persistentOptions = { channel, headless: true, downloadsPath: path.join(output, 'downloads') };
   const contextOptions = { viewport: { width: 1280, height: 900 }, serviceWorkers: offline ? 'allow' : 'block', acceptDownloads: true };
   let browser, context, server;
   let origin = 'http://127.0.0.1';
@@ -37,9 +41,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
       origin += ':' + server.address().port;
     }
-    if (restart) context = await chromium.launchPersistentContext(profile, { ...contextOptions, channel: 'chrome', headless: true });
+    if (restart) context = await chromium.launchPersistentContext(profile, { ...contextOptions, ...persistentOptions });
     else {
-      browser = await chromium.launch({ channel: 'chrome', headless: true });
+      browser = await chromium.launch({ channel, headless: true });
       context = await browser.newContext(contextOptions);
     }
     const configureContext = async () => {
@@ -108,7 +112,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     if (restart) {
       await context.close();
       assert.equal(page.isClosed(), true);
-      context = await chromium.launchPersistentContext(profile, { ...contextOptions, channel: 'chrome', headless: true });
+      context = await chromium.launchPersistentContext(profile, { ...contextOptions, ...persistentOptions });
       if (!serverStopOnly) await context.setOffline(true);
       await configureContext();
       page = await context.newPage();
@@ -184,8 +188,57 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByRole('button', { name: '前の診断画面へ戻る', exact: true }).click();
     assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
     assert.deepEqual(errors, []);
+    if (live) {
+    // Synthetic values using the existing combined-readout import contract.
+    const measured = {
+      pid_values: [{ pid: '0C', value: 1000, unit: 'rpm' }, { pid: '05', value: 85, unit: 'C' }],
+      live_pid_samples: [
+        { captured_at: '2026-07-17T00:00:00Z', monitor_values: [{ pid: '0C', value: 800, unit: 'rpm' }] },
+        { captured_at: '2026-07-17T00:00:05Z', monitor_values: [{ pid: '0C', value: 1000, unit: 'rpm' }] }
+      ]
+    };
+    const core = vm.createContext({ window: {} });
+    vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), core);
+    const model = core.window.ObdReadOnly;
+    const measuredSession = model.buildDiagnosticScanSessionFromJson(JSON.stringify(measured));
+    assert.equal(measuredSession.livePidTimeline.sampleCount, 2);
+    assert.equal(measuredSession.livePidSnapshot.monitorValues.length, 2);
+    const measuredExport = model.buildBridgeSessionExportPayload(measuredSession);
+    const replacementDialog = page.waitForEvent('dialog');
+    const replacing = openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), { name: 'synthetic-live.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(measuredExport)) });
+    const confirmation = await replacementDialog;
+    assert.equal(confirmation.type(), 'confirm');
+    assert.match(confirmation.message(), /^現在の読取結果を新しい入力で置き換えますか？/);
+    await confirmation.accept();
+    await replacing;
+    const showTimeline = async () => {
+      await page.locator('.obd-results-nav').getByRole('button', { name: '追加データ', exact: true }).click();
+      await page.locator('#obdReadoutDetailMenu').getByRole('button', { name: 'ライブ推移', exact: true }).click();
+      const chart = page.locator('#obdSessionDetailLiveTimeline');
+      assert.equal(await chart.isVisible(), true);
+      assert.equal(await chart.locator('.obd-timeline-chart-bar').count(), 2);
+      assert.match(await chart.innerText(), /最小 800 rpm.*最大 1000 rpm.*最新 1000 rpm/);
+      assert.equal(await chart.locator('.obd-timeline-chart-bar').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height > 0)), true);
+    };
+    await page.locator('.obd-results-nav').getByRole('button', { name: 'ライブ値', exact: true }).click();
+    assert.match(await page.locator('#obdMonitorGrid').innerText(), /1000/);
+    await page.locator('#obdMonitorSearch').fill('rpm');
+    assert.equal(await page.locator('#obdMonitorGrid > :visible').count(), 1);
+    await showTimeline();
+    await page.screenshot({ path: path.join(output, 'live-timeline-mobile.png') });
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    const liveDownload = page.waitForEvent('download');
+    await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+    const liveExport = path.join(output, 'live-roundtrip.json');
+    await (await liveDownload).saveAs(liveExport);
+    await openFile(page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }), liveExport);
+    await showTimeline();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.screenshot({ path: path.join(output, 'live-timeline-desktop.png') });
+    }
+    assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow (${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, invalid-file retention and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline roundtrip, ' : ''}invalid-file retention and back passed / Artifacts: ${output}`);
   } catch (error) {
     const failedPage = context?.pages().at(-1);
     if (failedPage && !failedPage.isClosed()) {
