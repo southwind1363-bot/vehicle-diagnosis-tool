@@ -158,6 +158,35 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const before = await page.locator('#obdDetectedCodes').innerText();
     assert.match(before, /P0420/);
     await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    const originalSession = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    for (const width of [1280, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.locator('.obd-stage-tab[data-obd-stage="setup"]').click();
+      const selected = new Map();
+      for (const id of ['obdVehicleMaker', 'obdVehicleModel', 'obdVehicleModelCode', 'obdVehicleYear', 'obdVehicleEngineCode']) {
+        const field = page.locator(`#${id}`);
+        if (await field.isDisabled()) continue;
+        const value = await field.locator('option').evaluateAll(options => options.find(option => option.value && option.value !== 'manual')?.value);
+        if (!value) continue;
+        await field.selectOption(value);
+        selected.set(id, value);
+        assert.equal(await page.locator('#obdSetupPanel').isVisible(), true, `${id} must not leave vehicle setup`);
+        assert.equal(await page.locator('.obd-stage-tab[data-obd-stage="setup"]').getAttribute('aria-pressed'), 'true');
+        for (const [selectedId, selectedValue] of selected) {
+          assert.equal(await page.locator(`#${selectedId}`).inputValue(), selectedValue, 'Dependent options must retain earlier selections');
+        }
+        assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), originalSession, 'Vehicle setup must not rewrite imported readout facts');
+      }
+      assert.ok(selected.has('obdVehicleMaker') && selected.has('obdVehicleModel') && selected.has('obdVehicleModelCode'), 'Vehicle setup must exercise maker, model and model code');
+      await page.locator('#obdSetupPanel').screenshot({ path: path.join(output, `vehicle-selection-${width}.png`) });
+      await page.locator('#obdVehicleMaker').selectOption('');
+      for (const id of ['obdVehicleModel', 'obdVehicleModelCode', 'obdVehicleYear', 'obdVehicleEngineCode']) {
+        assert.equal(await page.locator(`#${id}`).inputValue(), '', 'Clearing maker must clear dependent choices');
+      }
+      assert.equal(await page.locator('#obdSetupPanel').isVisible(), true);
+      await page.locator('.obd-stage-tab[data-obd-stage="results"]').click();
+      assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
+    }
     for (const width of [1280, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       const resultNav = page.locator('.obd-results-nav');
