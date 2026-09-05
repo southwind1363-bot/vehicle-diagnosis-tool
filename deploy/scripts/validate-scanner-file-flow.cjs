@@ -47,17 +47,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       browser = await chromium.launch({ channel, headless: true });
       context = await browser.newContext(contextOptions);
     }
-    const configureContext = async () => {
+    const configureContext = async (preUnlocked = true) => {
       context.on('request', request => pendingRequests.set(request, request.url()));
       context.on('requestfinished', request => pendingRequests.delete(request));
       context.on('requestfailed', request => pendingRequests.delete(request));
-      // Fresh, pre-unlocked fixture only; no user profile, password, or vehicle access.
-      await context.addInitScript(() => {
+      // Isolated fixture only; no user profile, password, or vehicle access.
+      await context.addInitScript(preUnlocked => {
         localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
-        sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
+        if (preUnlocked) sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
         Object.defineProperty(navigator, 'serial', { value: undefined, configurable: true });
         Object.defineProperty(navigator, 'bluetooth', { value: undefined });
-      });
+      }, preUnlocked);
       await context.route(offline ? url => url.origin !== origin : '**/*', async route => {
         const url = new URL(route.request().url());
         if (url.origin !== origin || route.request().method() !== 'GET') {
@@ -70,11 +70,36 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         await route.fulfill({ contentType: entry.type, body: fs.readFileSync(entry.file) });
       });
     };
-    await configureContext();
+    await configureContext(false);
     let page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     page.setDefaultTimeout(20000);
     await page.goto(origin + '/');
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    const checkLocked = async () => {
+      assert.equal(await page.locator('#obdAccessGatePanel').isVisible(), true);
+      assert.equal(await page.locator('#obdAccessProtected').isVisible(), false);
+      assert.equal(await page.locator('#obdSetupPanel').isVisible(), false);
+      assert.equal(await page.locator('#obdAccessModeBadge').innerText(), 'ロック中');
+      assert.equal(await page.evaluate(() => sessionStorage.getItem('vehicle-diagnosis-obd-access-v1')), null);
+    };
+    await checkLocked();
+    await page.locator('#obdAccessPasswordInput').fill('synthetic-invalid-password-not-a-user-secret');
+    await page.locator('#obdAccessUnlockButton').click();
+    await page.waitForFunction(() => document.getElementById('obdAccessStatus').textContent === 'パスワードが違います。');
+    await checkLocked();
+    assert.equal(await page.locator('#obdAccessUnlockButton').isEnabled(), true);
+    await page.screenshot({ path: path.join(output, 'access-invalid-password.png') });
+    await page.reload();
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    await checkLocked();
+    assert.equal(await page.locator('#obdAccessPasswordInput').inputValue(), '');
+    console.log('Access gate: initial lock, wrong password and reload remain locked; no real password tested');
+    // Remaining scenarios use the existing pre-unlocked fixture, not a successful password test.
+    await context.addInitScript(() => sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled'));
+    await page.reload();
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
     await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
     await page.locator('#obdHomeView [data-obd-ui-mode="details"]').click();
