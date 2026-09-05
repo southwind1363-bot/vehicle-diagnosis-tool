@@ -315,11 +315,11 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
   check(JSON.stringify(rows.dtcs.map((dtc) => [dtc.code, dtc.ecu]).sort()) === JSON.stringify([["P0133", "18DAF110"], ["P0420", "18DAF118"]]), "29-bit response IDs were lost while normalizing DTC overrides");
   const padded = decode("7E8 03 43 01 33 AA AA AA AA");
   check(JSON.stringify(padded.codes) === JSON.stringify(["P0133"]), "DTC override decoded bytes beyond the frame length");
-  for (const raw of ["7E8 03 43 00 00", "NO DATA"]) {
-    const empty = decode(raw);
-    check(empty.codes?.length === 0 || empty.dtcs?.length === 0, "Empty DTC response fabricated a code");
-    check(empty.dtcReadoutStatus === "reported" && empty.reportedStatuses.join() === "stored", "Reported empty DTC state was lost");
-  }
+  const empty = decode("7E8 03 43 00 00");
+  check(empty.codes?.length === 0 || empty.dtcs?.length === 0, "Empty DTC response fabricated a code");
+  check(empty.dtcReadoutStatus === "reported" && empty.reportedStatuses.join() === "stored", "Reported empty DTC state was lost");
+  const noData = decode("NO DATA");
+  check(noData.dtcs.length === 0 && noData.dtcReadoutStatus === "unparsed" && noData.reportedStatuses.length === 0, "Mode 03 NO DATA was incorrectly treated as a reported zero-code result");
   for (const raw of ["7E8 10 0B 43 01 33 04 20 00", "7E8 03 47 01 33", "BUS ERROR\rNO DATA"]) {
     const unknown = decode(raw);
     check(unknown.dtcs.length === 0 && unknown.dtcReadoutStatus === "unparsed", "Incomplete, wrong-service or error response was decoded as stored DTC evidence");
@@ -341,6 +341,21 @@ for (const [command, service, status, label] of [["03", "43", "stored", "保存D
   }
   check(!Object.hasOwn(rows, "raw") && !Object.hasOwn(rows, "bytes") && rows.vehicleCommandEnabled === false && rows.vehicle_command_enabled === false,
     "DTC override retained raw response bytes or unsafe flags");
+}
+
+{
+  const client = createClient({ ...successfulResponses, "03": "NO DATA" });
+  await connect(client);
+  const completed = await client.context.readObdDeveloperDtc();
+  const session = client.context.obdDevSession.lastSession;
+  const summary = session?.webSerialReadoutSummary;
+  check(completed === false && summary?.noDataCount === 1 && summary?.incompleteCount === 1,
+    "Mode 03 NO DATA did not remain an incomplete stored-DTC readout");
+  check(client.port.calls.writes.at(-1) === "03" && !client.port.calls.writes.some((command) => ["ATDP", "ATDPN", "07", "0A"].includes(command)),
+    "Mode 03 NO DATA did not stop protocol and follow-up DTC requests");
+  check(session?.dtcSnapshot?.dtcStatusSummary?.reportedStatuses?.length === 0 && session?.dtcSnapshot?.dtcStatusSummary?.unreportedStatuses?.join(",") === "stored,pending,permanent",
+    "Mode 03 NO DATA incorrectly supplied DTC status coverage");
+  await client.context.disconnectObdDeveloperVci();
 }
 
 {

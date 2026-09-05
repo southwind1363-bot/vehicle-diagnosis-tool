@@ -223,12 +223,12 @@ const OBD_INTERFACE_PROGRESS_BY_CATALOG_ID = Object.freeze({
   "user-vci-rcmall-mks-canable-v2-pro": "uds_canfd"
 });
 const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
-  validationCheckLabel: "OBD安全検証 7446件",
+  validationCheckLabel: "OBD安全検証 7447件",
   bridgeValidationCheckLabel: "bridge検証 384件",
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.492";
+const APP_VERSION = "3.13.493";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -7309,7 +7309,7 @@ function classifyWebSerialCommandResponse(command, response) {
 
 function isWebSerialExpectedEmptyResponse(command, response) {
   const normalizedCommand = String(command || "").trim().toUpperCase();
-  if (!["03", "07", "0A", "0202", "06", "0900"].includes(normalizedCommand)) return false;
+  if (!["07", "0A", "0202", "06", "0900"].includes(normalizedCommand)) return false;
   const lines = getWebSerialResponseLines(normalizedCommand, response);
   const hasBusInit = lines.some((line) => line.startsWith("BUS INIT:"));
   return lines.includes("NO DATA") && lines.every((line) => line === "NO DATA" || line.startsWith("SEARCHING") || isWebSerialInformationalResponseLine(line) || (hasBusInit && line === "OK"));
@@ -11772,7 +11772,9 @@ function renderObdSimpleResultSummary(session = null) {
     ? "DTC読取は未取得です。"
     : dtcCount
       ? "DTCを" + dtcCount + "件取得しました。消去前にJSON保存してください。"
-      : "DTC読取の応答ではコード0件です。";
+      : coverageItemById.dtc_snapshot?.status === "empty"
+        ? "DTC読取の応答ではコード0件です。"
+        : "DTC読取は未取得です。";
   obdSimpleResultNote.textContent = dtcNote
     + (pendingIds.length ? " 未完了の主要読取は" + pendingIds.length + "項目です。" : "")
     + " 消去・作動系は実行しません。";

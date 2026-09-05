@@ -735,7 +735,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       { name: 'recovered', rpm: 800, reply: '41 0C 0C 80' },
       { name: 'stream-failure', failCommand: '0101' },
       { name: 'after-stream-failure', rpm: 900, reply: '41 0C 0E 10' },
-      { name: 'zero-dtc', rpm: 900, reply: '41 0C 0E 10', codes: [] }
+      { name: 'zero-dtc', rpm: 900, reply: '41 0C 0E 10', codes: [] },
+      { name: 'no-dtc-response', rpm: 900, reply: '41 0C 0E 10', codes: [], noDtcResponse: true }
     ];
     for (const [caseIndex, readoutCase] of (restart ? [] : readoutCases).entries()) {
       const noLiveResponse = readoutCase.rpm === null;
@@ -743,6 +744,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const responses = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/synthetic-elm-core-responses.json'), 'utf8'));
       if (readoutCase.reply) responses['010C'] = readoutCase.reply;
       if (!expectedCodes.length) responses['03'] = '7E8 03 43 00 00';
+      if (readoutCase.noDtcResponse) responses['03'] = 'NO DATA';
       if (readoutCase.failCommand) responses[readoutCase.failCommand] = null;
       if (caseIndex > 0) {
         await page.locator('.obd-stage-tab[data-obd-stage="connect"]').click();
@@ -841,14 +843,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         readiness: obdDevSession.lastSession.readinessSnapshot.readinessReadoutStatus,
         ecu: obdDevSession.lastSession.ecuInfoSnapshot.ecuInfoReadoutStatus
       }));
-      assert.deepEqual(scan, { codes: expectedCodes, rpm: readoutCase.rpm, noData: noLiveResponse ? 1 : 0, incomplete: noLiveResponse ? 1 : 0, readiness: 'reported', ecu: 'reported' });
+      assert.deepEqual(scan, { codes: expectedCodes, rpm: readoutCase.rpm, noData: noLiveResponse || readoutCase.noDtcResponse ? 1 : 0, incomplete: noLiveResponse || readoutCase.noDtcResponse ? 1 : 0, readiness: 'reported', ecu: 'reported' });
       const checkZeroDtc = async () => {
         if (expectedCodes.length) return;
         const dtcResult = page.locator('#obdSimpleResultGrid > button').first();
-        assert.equal(await dtcResult.locator('.obd-simple-result-value').innerText(), '0件');
-        assert.equal(await dtcResult.locator('.obd-simple-result-state').innerText(), 'コード0件');
+        if (readoutCase.noDtcResponse) {
+          assert.equal(await dtcResult.locator('.obd-simple-result-state').innerText(), '未取得', 'NO DATA is not a zero-code report');
+          assert.match(await page.locator('#obdSimpleResultNote').innerText(), /^DTC読取は未取得です。/);
+          assert.doesNotMatch(await page.locator('#obdSimpleResultNote').innerText(), /コード0件/);
+          const reported = await page.evaluate(() => obdDevSession.lastSession.dtcSnapshot?.dtcStatusSummary?.reportedStatuses || []);
+          assert.deepEqual(reported, [], 'NO DATA must not mark DTC status groups acquired');
+        } else {
+          assert.equal(await dtcResult.locator('.obd-simple-result-value').innerText(), '0件');
+          assert.equal(await dtcResult.locator('.obd-simple-result-state').innerText(), 'コード0件');
+          assert.match(await page.locator('#obdSimpleResultNote').innerText(), /^DTC読取の応答ではコード0件です。/);
+        }
         assert.doesNotMatch(await page.locator('#obdDetectedCodes').textContent(), /P0133|P0420/, 'Zero-code response must replace earlier codes');
-        await page.screenshot({ path: path.join(output, 'synthetic-zero-dtc.png') });
+        await page.screenshot({ path: path.join(output, `synthetic-${readoutCase.name}.png`) });
       };
       await checkZeroDtc();
       const checkLiveDisplay = async () => {
@@ -885,7 +896,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.locator('#obdSimpleResultDisconnectButton').isVisible(), false);
       assert.deepEqual(await page.evaluate(() => obdDevSession.lastSession.dtcSnapshot.codes), scan.codes, 'Disconnect must retain acquired codes');
       const calls = await page.evaluate(() => window.__serialReadoutFixture);
-      assert.deepEqual(calls.commands, ['ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH1', 'ATSP0', 'ATI', 'AT@1', '03', 'ATDP', 'ATDPN', '07', '0A', '0202', '0101', '0900', '0904', '0906', '06', '0100', '010C']);
+      const expectedCommands = ['ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH1', 'ATSP0', 'ATI', 'AT@1', '03', 'ATDP', 'ATDPN', '07', '0A', '0202', '0101', '0900', '0904', '0906', '06', '0100', '010C'];
+      assert.deepEqual(calls.commands, readoutCase.noDtcResponse ? expectedCommands.filter(command => !['ATDP', 'ATDPN', '07', '0A'].includes(command)) : expectedCommands);
       assert.equal(calls.opens, 1);
       assert.equal(calls.closes, 1);
       assert.equal(calls.cancels, 1);
