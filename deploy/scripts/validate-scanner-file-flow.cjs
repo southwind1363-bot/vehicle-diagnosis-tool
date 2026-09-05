@@ -635,6 +635,73 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     assert.deepEqual(await page.evaluate(() => window.__serialFailureFixture), { mode: 'cancel', selections: 3, opens: 1, writes: 0 });
     await page.screenshot({ path: path.join(output, 'connection-retry.png') });
+    // The known persistent-browser second-download issue is covered separately, not by this normal-context flow.
+    if (!restart) {
+      const responses = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/synthetic-elm-core-responses.json'), 'utf8'));
+      await page.evaluate(responses => {
+        const calls = window.__serialReadoutFixture = { opens: 0, closes: 0, cancels: 0, commands: [] };
+        let receiver;
+        const port = {
+          readable: new ReadableStream({ start(controller) { receiver = controller; }, cancel() { calls.cancels += 1; } }),
+          writable: new WritableStream({ write(bytes) {
+            const command = new TextDecoder().decode(bytes).trim();
+            calls.commands.push(command);
+            if (!Object.hasOwn(responses, command)) throw new Error(`Unexpected synthetic VCI command: ${command}`);
+            const reply = new TextEncoder().encode(responses[command] + '\r\n>');
+            for (let i = 0; i < reply.length; i += 5) receiver.enqueue(reply.slice(i, i + 5));
+          } }),
+          async open(options) { calls.opens += 1; calls.baudRate = options.baudRate; },
+          async close() {
+            if (this.readable.locked || this.writable.locked) throw new Error('Synthetic port closed with locked streams');
+            calls.closes += 1;
+          }
+        };
+        Object.defineProperty(navigator, 'serial', { configurable: true, value: { requestPort: async () => port } });
+      }, responses);
+      await connect.click();
+      await page.waitForFunction(() => !obdSerialConnectPending && obdDevSession.connectionState === 'ready');
+      assert.equal(await connect.innerText(), '基本読取を開始');
+      await connect.click();
+      await page.waitForFunction(() => !obdDevSession.coreScanInProgress && obdDevSession.lastSession?.dtcSnapshot?.codes?.includes('P0133'), null, { timeout: 45000 });
+      assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true, 'Completed scan must open the result screen');
+      const scan = await page.evaluate(() => ({
+        codes: obdDevSession.lastSession.dtcSnapshot.codes,
+        rpm: obdDevSession.lastSession.livePidSnapshot.monitorValues.find(value => value.id === 'engine_speed')?.value,
+        readiness: obdDevSession.lastSession.readinessSnapshot.readinessReadoutStatus,
+        ecu: obdDevSession.lastSession.ecuInfoSnapshot.ecuInfoReadoutStatus
+      }));
+      assert.deepEqual(scan, { codes: ['P0133', 'P0420'], rpm: 1726, readiness: 'reported', ecu: 'reported' });
+      const scanDownload = page.waitForEvent('download');
+      await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+      const scanFile = path.join(output, 'synthetic-serial-readout.json');
+      await (await scanDownload).saveAs(scanFile);
+      const saved = fs.readFileSync(scanFile, 'utf8');
+      assert.ok(saved.includes('P0133') && saved.includes('P0420') && saved.includes('1726'));
+      await page.locator('#obdSimpleResultDisconnectButton').click();
+      await page.waitForFunction(() => obdDevSession.connectionState === 'disconnected' && !obdSerialDisconnectOperation);
+      assert.equal(await page.locator('#obdSimpleResultDisconnectButton').isVisible(), false);
+      assert.deepEqual(await page.evaluate(() => obdDevSession.lastSession.dtcSnapshot.codes), scan.codes, 'Disconnect must retain acquired codes');
+      const calls = await page.evaluate(() => window.__serialReadoutFixture);
+      assert.deepEqual(calls.commands, ['ATZ', 'ATE0', 'ATL0', 'ATS0', 'ATH1', 'ATSP0', 'ATI', 'AT@1', '03', 'ATDP', 'ATDPN', '07', '0A', '0202', '0101', '0900', '0904', '0906', '06', '0100', '010C']);
+      assert.equal(calls.opens, 1);
+      assert.equal(calls.closes, 1);
+      assert.equal(calls.cancels, 1);
+      assert.equal(calls.baudRate, 38400);
+      await page.screenshot({ path: path.join(output, 'synthetic-readout-disconnected.png') });
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      assert.equal(await page.locator('#obdDetectedCodes').textContent(), '', 'Restoration must start without retained result nodes');
+      await openFile(page.getByRole('button', { name: '保存した読取結果を開く', exact: true }), scanFile);
+      await page.locator('#obdDetectedCodes').getByText('P0133', { exact: false }).first().waitFor();
+      assert.deepEqual(await page.evaluate(() => ({
+        codes: obdDevSession.lastSession.dtcSnapshot.codes,
+        rpm: obdDevSession.lastSession.livePidSnapshot.monitorValues.find(value => value.id === 'engine_speed')?.value,
+        readiness: obdDevSession.lastSession.readinessSnapshot.readinessReadoutStatus,
+        ecu: obdDevSession.lastSession.ecuInfoSnapshot.ecuInfoReadoutStatus
+      })), scan, 'Fresh offline import must recover the measured facts');
+      console.log('Synthetic VCI: normal UI connect, core readout, JSON download, disconnect and fresh offline restoration passed; no real hardware');
+    }
     assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
     console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}replacement cancellation, empty/unsupported/oversized/broken-file retention, read error/abort/throw and late callbacks, connection cancellation/open failure/retry (zero writes), recovery and back passed / Artifacts: ${output}`);
