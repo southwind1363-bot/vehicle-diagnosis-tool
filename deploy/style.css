@@ -1027,6 +1027,14 @@ body.dark .flow-node-measure .flow-step {
   margin-top: 12px;
 }
 
+#obdAccessGatePanel:has(#obdAccessLockButton:enabled) .obd-dev-gate:has(> #obdAccessUnlockButton:disabled) {
+  display: none;
+}
+
+#obdAccessGatePanel .obd-result-heading {
+  flex-wrap: wrap;
+}
+
 .obd-dev-group-label {
   flex-basis: 100%;
   margin-top: 6px;
