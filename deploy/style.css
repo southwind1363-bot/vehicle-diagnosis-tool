@@ -1531,6 +1531,35 @@ body.dark .flow-node-measure .flow-step {
   min-width: 0;
 }
 
+.obd-timeline-position {
+  grid-column: 1 / -1;
+  min-width: 0;
+  gap: 4px;
+}
+
+.obd-timeline-position > input[type="range"] {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent-strong);
+}
+
+.obd-timeline-selected-value {
+  min-height: 3em;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.obd-timeline-chart-bar.is-selected {
+  background: var(--ink);
+  outline: 2px solid var(--ink);
+  outline-offset: 1px;
+}
+
 .obd-timeline-records > summary {
   padding: 12px 0;
   min-height: 48px;

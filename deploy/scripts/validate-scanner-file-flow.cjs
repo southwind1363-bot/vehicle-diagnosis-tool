@@ -244,6 +244,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await chart.locator('.obd-timeline-chart-bar').count(), expectedPoints);
       assert.match(await chart.innerText(), /最小 800 rpm.*最大 1000 rpm.*最新 1000 rpm/);
       assert.equal(await chart.locator('.obd-timeline-chart-bar').evaluateAll(nodes => nodes.every(node => node.getBoundingClientRect().height > 0)), true);
+      const slider = chart.locator('input[type="range"]');
+      const chosen = chart.locator('.obd-timeline-selected-value');
+      assert.equal(await slider.inputValue(), String(expectedPoints - 1));
+      assert.match(await chosen.innerText(), /1000 rpm/);
+      await slider.press('Home');
+      assert.equal(await slider.inputValue(), '0');
+      assert.match(await chosen.innerText(), /1 \/ .*:00\.000.*800 rpm/);
+      assert.equal(await chart.locator('.obd-timeline-chart-bar.is-selected').count(), 1);
+      assert.equal(await chart.locator('.obd-timeline-chart-bar').first().evaluate(node => node.classList.contains('is-selected')), true);
+      await slider.press('ArrowRight');
+      assert.equal(await slider.inputValue(), '1');
+      assert.equal(await slider.getAttribute('aria-valuetext'), await chosen.innerText());
+      await slider.press('End');
+      assert.equal(await slider.inputValue(), String(expectedPoints - 1));
+      assert.match(await chosen.innerText(), /1000 rpm/);
+      assert.equal(await chart.locator('.obd-timeline-chart-bar').last().evaluate(node => node.classList.contains('is-selected')), true);
+      assert.equal(await slider.evaluate(node => node.getBoundingClientRect().height >= 48 && node.scrollWidth <= node.clientWidth + 1), true);
       const records = chart.locator('.obd-timeline-records');
       const toggle = records.locator('summary');
       assert.equal(await records.locator('ol').isVisible(), false);
@@ -252,6 +269,22 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await rows.count(), expectedPoints);
       assert.match(await rows.first().innerText(), /:00\.000.*800 rpm/s);
       assert.match(await rows.last().innerText(), /1000 rpm/);
+      const viewport = page.viewportSize();
+      for (const width of [320, 768]) {
+        await page.setViewportSize({ width, height: 900 });
+        for (const dark of [false, true]) {
+          await page.evaluate(value => document.body.classList.toggle('dark', value), dark);
+          await slider.click();
+          const index = Number(await slider.inputValue());
+          const fragments = (await rows.nth(index).innerText()).split('\n');
+          const selectedText = await chosen.innerText();
+          assert.ok(fragments.every(fragment => selectedText.includes(fragment)), 'Pointer selection must match the recorded time and value');
+          assert.equal(await chosen.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
+          await chart.screenshot({ path: path.join(output, `timeline-position-${width}-${dark ? 'dark' : 'light'}.png`) });
+        }
+      }
+      await page.evaluate(() => document.body.classList.remove('dark'));
+      await page.setViewportSize(viewport);
       assert.equal(await records.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
       assert.equal(await chart.evaluate(node => node.scrollWidth <= node.clientWidth + 1), true);
       await toggle.press('Enter');

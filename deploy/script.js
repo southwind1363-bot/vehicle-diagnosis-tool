@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.476";
+const APP_VERSION = "3.13.477";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10230,7 +10230,32 @@ function renderObdBridgeSessionDetails(session = null) {
         pointList.appendChild(item);
       });
       records.append(summary, pointList);
-      chartRow.append(label, bars, records);
+      const position = document.createElement("label");
+      position.className = "obd-timeline-position";
+      const positionLabel = document.createElement("span");
+      positionLabel.textContent = "記録位置";
+      const slider = document.createElement("input");
+      slider.type = "range";
+      slider.min = "0";
+      slider.max = String(row.points.length - 1);
+      slider.step = "1";
+      slider.value = slider.max;
+      slider.setAttribute("aria-label", `${row.label}${sourceEcu}の記録位置`);
+      const selected = document.createElement("span");
+      selected.className = "obd-timeline-selected-value";
+      const showPosition = () => {
+        const index = Number(slider.value);
+        const point = row.points[index];
+        if (!point) return;
+        const text = `${index + 1} / ${row.points.length}点 / ${formatObdTimelineTimestamp(point.capturedAt)} / ${point.value}${unit}`;
+        selected.textContent = text;
+        slider.setAttribute("aria-valuetext", text);
+        Array.from(bars.children).forEach((bar, i) => bar.classList.toggle("is-selected", i === index));
+      };
+      slider.addEventListener("input", showPosition);
+      showPosition();
+      position.append(positionLabel, slider, selected);
+      chartRow.append(label, bars, position, records);
       chart.appendChild(chartRow);
     });
     card.append(heading, chart);
