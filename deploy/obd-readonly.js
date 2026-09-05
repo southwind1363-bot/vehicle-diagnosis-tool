@@ -1329,6 +1329,189 @@
     };
   }
 
+  const DTC_CLEAR_WORKFLOW_SCHEMA_VERSION = "generic_obd_dtc_clear_workflow_v1";
+  const DTC_CLEAR_WORKFLOW_TARGET_KEYS = Object.freeze(["vehicleId", "ecuId", "transportId"]);
+  const DTC_CLEAR_WORKFLOW_EVIDENCE_KEYS = Object.freeze(serviceOperationReadinessRequirements.clear_dtc
+    .map((item) => item.evidenceKey)
+    .filter((key) => key !== "impactAcknowledged"));
+
+  function isDtcClearWorkflowRecord(value) {
+    return value !== null && typeof value === "object" && !Array.isArray(value) && Object.prototype.toString.call(value) === "[object Object]";
+  }
+
+  function hasExactDtcClearWorkflowKeys(value, keys) {
+    const actual = Object.keys(value).sort();
+    const expected = [...keys].sort();
+    return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
+  }
+
+  function isDtcClearWorkflowReference(value) {
+    return typeof value === "string" && value.length > 0 && value.length <= 128 && value.trim() === value && !/[\u0000-\u001F\u007F]/.test(value);
+  }
+
+  function createDtcClearWorkflowError(code) {
+    const error = new TypeError(code);
+    error.code = code;
+    return error;
+  }
+
+  function normalizeDtcClearWorkflowTarget(value) {
+    if (value === undefined || value === null) return null;
+    if (!isDtcClearWorkflowRecord(value) || !hasExactDtcClearWorkflowKeys(value, DTC_CLEAR_WORKFLOW_TARGET_KEYS)
+      || !DTC_CLEAR_WORKFLOW_TARGET_KEYS.every((key) => isDtcClearWorkflowReference(value[key]))) {
+      throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_target");
+    }
+    return Object.freeze(Object.fromEntries(DTC_CLEAR_WORKFLOW_TARGET_KEYS.map((key) => [key, value[key]])));
+  }
+
+  function sameDtcClearWorkflowTarget(left, right) {
+    return left === right || (left !== null && right !== null && DTC_CLEAR_WORKFLOW_TARGET_KEYS.every((key) => left[key] === right[key]));
+  }
+
+  function normalizeDtcClearWorkflowEvidence(value) {
+    if (value === undefined) return Object.fromEntries(DTC_CLEAR_WORKFLOW_EVIDENCE_KEYS.map((key) => [key, false]));
+    if (!isDtcClearWorkflowRecord(value) || !Object.keys(value).every((key) => DTC_CLEAR_WORKFLOW_EVIDENCE_KEYS.includes(key))) {
+      throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_evidence");
+    }
+    return Object.fromEntries(DTC_CLEAR_WORKFLOW_EVIDENCE_KEYS.map((key) => {
+      if (value[key] !== undefined && typeof value[key] !== "boolean") throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_evidence");
+      return [key, value[key] === true];
+    }));
+  }
+
+  function getDtcClearWorkflowEvidence(readiness) {
+    if (!isDtcClearWorkflowRecord(readiness) || !Array.isArray(readiness.checks)) return null;
+    const checksByKey = new Map(readiness.checks.map((check) => [check?.evidenceKey, check]));
+    if (readiness.checks.length !== serviceOperationReadinessRequirements.clear_dtc.length || checksByKey.size !== serviceOperationReadinessRequirements.clear_dtc.length) return null;
+    const evidence = {};
+    for (const requirement of serviceOperationReadinessRequirements.clear_dtc) {
+      const check = checksByKey.get(requirement.evidenceKey);
+      if (!isDtcClearWorkflowRecord(check) || check.id !== requirement.id || check.evidenceKey !== requirement.evidenceKey || (check.complete !== true && check.complete !== false)) return null;
+      evidence[requirement.evidenceKey] = check.complete;
+    }
+    return evidence;
+  }
+
+  function buildDtcClearWorkflow(target, preOperationSessionId, evidence, revision, confirmed, stateOverride = null) {
+    const targetSnapshot = normalizeDtcClearWorkflowTarget(target);
+    const readiness = buildServiceOperationReadiness("clear_dtc", { ...evidence, impactAcknowledged: confirmed });
+    const preconditionsComplete = readiness.checks.filter((check) => check.evidenceKey !== "impactAcknowledged").every((check) => check.complete);
+    const state = stateOverride || (confirmed ? "confirmation_recorded" : (preconditionsComplete && targetSnapshot && preOperationSessionId ? "confirmation_required" : "pre_save_required"));
+    const workflow = {
+      schemaVersion: DTC_CLEAR_WORKFLOW_SCHEMA_VERSION,
+      operationId: "clear_dtc",
+      state,
+      revision,
+      target: targetSnapshot,
+      preOperationSessionId,
+      readiness,
+      confirmation: Object.freeze({ recorded: confirmed, revision: confirmed ? revision : null, target: confirmed ? normalizeDtcClearWorkflowTarget(targetSnapshot) : null, preOperationSessionId: confirmed ? preOperationSessionId : null }),
+      dispatch: Object.freeze({ attempted: false, outcome: "not_attempted", retryAllowed: false, wouldTransmit: false }),
+      executionEnabled: false,
+      vehicleCommandEnabled: false,
+      wouldTransmit: false,
+      canExecute: false
+    };
+    readiness.checks.forEach(Object.freeze);
+    Object.freeze(readiness.checks);
+    Object.freeze(readiness.missingRequirementIds);
+    Object.freeze(readiness.missing_requirement_ids);
+    Object.freeze(readiness);
+    return Object.freeze(workflow);
+  }
+
+  function buildGenericObdDtcClearWorkflow(input = {}) {
+    if (!isDtcClearWorkflowRecord(input) || !Object.keys(input).every((key) => ["target", "preOperationSessionId", "evidence"].includes(key))) {
+      throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_input");
+    }
+    const target = normalizeDtcClearWorkflowTarget(input.target);
+    const preOperationSessionId = input.preOperationSessionId === undefined || input.preOperationSessionId === null ? null : input.preOperationSessionId;
+    if (preOperationSessionId !== null && !isDtcClearWorkflowReference(preOperationSessionId)) throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_session");
+    return buildDtcClearWorkflow(target, preOperationSessionId, normalizeDtcClearWorkflowEvidence(input.evidence), 0, false);
+  }
+
+  function assertDtcClearWorkflow(workflow) {
+    const keys = ["schemaVersion", "operationId", "state", "revision", "target", "preOperationSessionId", "readiness", "confirmation", "dispatch", "executionEnabled", "vehicleCommandEnabled", "wouldTransmit", "canExecute"];
+    if (!isDtcClearWorkflowRecord(workflow) || !hasExactDtcClearWorkflowKeys(workflow, keys)
+      || workflow.schemaVersion !== DTC_CLEAR_WORKFLOW_SCHEMA_VERSION || workflow.operationId !== "clear_dtc"
+      || !["pre_save_required", "confirmation_required", "confirmation_recorded", "dispatch_blocked"].includes(workflow.state)
+      || !Number.isSafeInteger(workflow.revision) || workflow.revision < 0 || workflow.revision >= Number.MAX_SAFE_INTEGER
+      || workflow.executionEnabled !== false || workflow.vehicleCommandEnabled !== false || workflow.wouldTransmit !== false || workflow.canExecute !== false
+      || (workflow.target !== null && normalizeDtcClearWorkflowTarget(workflow.target) === null)
+      || (workflow.preOperationSessionId !== null && !isDtcClearWorkflowReference(workflow.preOperationSessionId))
+      || !isDtcClearWorkflowRecord(workflow.readiness) || workflow.readiness.operationId !== "clear_dtc"
+      || workflow.readiness.publicExecutionEnabled !== false || workflow.readiness.public_execution_enabled !== false
+      || workflow.readiness.executionEnabled !== false || workflow.readiness.execution_enabled !== false
+      || workflow.readiness.vehicleCommandEnabled !== false || workflow.readiness.vehicle_command_enabled !== false
+      || workflow.readiness.wouldTransmit !== false || workflow.readiness.would_transmit !== false
+      || workflow.readiness.canExecute !== false || workflow.readiness.can_execute !== false
+      || !isDtcClearWorkflowRecord(workflow.dispatch) || !hasExactDtcClearWorkflowKeys(workflow.dispatch, ["attempted", "outcome", "retryAllowed", "wouldTransmit"])
+      || workflow.dispatch.attempted !== false || workflow.dispatch.outcome !== "not_attempted" || workflow.dispatch.retryAllowed !== false || workflow.dispatch.wouldTransmit !== false
+      || !isDtcClearWorkflowRecord(workflow.confirmation) || !hasExactDtcClearWorkflowKeys(workflow.confirmation, ["recorded", "revision", "target", "preOperationSessionId"])) {
+      throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_state");
+    }
+    const evidence = getDtcClearWorkflowEvidence(workflow.readiness);
+    const confirmed = workflow.confirmation.recorded === true;
+    const preconditionsComplete = evidence && DTC_CLEAR_WORKFLOW_EVIDENCE_KEYS.every((key) => evidence[key] === true);
+    const expectedState = confirmed ? "confirmation_recorded" : (preconditionsComplete && workflow.target && workflow.preOperationSessionId ? "confirmation_required" : "pre_save_required");
+    const expectedReadiness = evidence ? buildServiceOperationReadiness("clear_dtc", { ...evidence, impactAcknowledged: confirmed }) : null;
+    const readinessAggregatesMatch = expectedReadiness !== null
+      && workflow.readiness.completedCount === expectedReadiness.completedCount
+      && workflow.readiness.completed_count === expectedReadiness.completed_count
+      && workflow.readiness.totalCount === expectedReadiness.totalCount
+      && workflow.readiness.total_count === expectedReadiness.total_count
+      && Array.isArray(workflow.readiness.missingRequirementIds)
+      && Array.isArray(workflow.readiness.missing_requirement_ids)
+      && workflow.readiness.missingRequirementIds.length === expectedReadiness.missingRequirementIds.length
+      && workflow.readiness.missing_requirement_ids.length === expectedReadiness.missing_requirement_ids.length
+      && workflow.readiness.missingRequirementIds.every((id, index) => id === expectedReadiness.missingRequirementIds[index])
+      && workflow.readiness.missing_requirement_ids.every((id, index) => id === expectedReadiness.missing_requirement_ids[index]);
+    if (!evidence || !readinessAggregatesMatch || (workflow.confirmation.recorded !== true && workflow.confirmation.recorded !== false) || evidence.impactAcknowledged !== confirmed
+      || (confirmed && (!preconditionsComplete || workflow.target === null || workflow.preOperationSessionId === null
+        || workflow.confirmation.revision !== workflow.revision || !sameDtcClearWorkflowTarget(workflow.confirmation.target, workflow.target) || workflow.confirmation.preOperationSessionId !== workflow.preOperationSessionId))
+      || (!confirmed && (workflow.confirmation.revision !== null || workflow.confirmation.target !== null || workflow.confirmation.preOperationSessionId !== null))
+      || ((workflow.state === "pre_save_required" || workflow.state === "confirmation_required") && workflow.state !== expectedState)
+      || ((workflow.state === "confirmation_recorded" || workflow.state === "dispatch_blocked") && !confirmed)) {
+      throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_state");
+    }
+    return evidence;
+  }
+
+  function assertDtcClearWorkflowEvent(event, keys) {
+    if (!isDtcClearWorkflowRecord(event) || !hasExactDtcClearWorkflowKeys(event, keys)) throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_event");
+  }
+
+  function transitionGenericObdDtcClearWorkflow(workflow, event) {
+    const evidence = assertDtcClearWorkflow(workflow);
+    if (!isDtcClearWorkflowRecord(event) || typeof event.type !== "string" || event.revision !== workflow.revision) {
+      throw createDtcClearWorkflowError(event?.revision !== workflow.revision ? "stale_dtc_clear_workflow_revision" : "invalid_dtc_clear_workflow_event");
+    }
+    if (event.type === "update_input") {
+      const allowed = ["type", "revision", "target", "preOperationSessionId", "evidence"];
+      if (!Object.keys(event).every((key) => allowed.includes(key)) || Object.keys(event).length < 3) throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_event");
+      if (workflow.revision >= Number.MAX_SAFE_INTEGER - 1) throw createDtcClearWorkflowError("dtc_clear_workflow_revision_overflow");
+      const target = Object.hasOwn(event, "target") ? normalizeDtcClearWorkflowTarget(event.target) : workflow.target;
+      const preOperationSessionId = Object.hasOwn(event, "preOperationSessionId") ? event.preOperationSessionId : workflow.preOperationSessionId;
+      if (preOperationSessionId !== null && !isDtcClearWorkflowReference(preOperationSessionId)) throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_session");
+      const nextEvidence = Object.hasOwn(event, "evidence") ? normalizeDtcClearWorkflowEvidence(event.evidence) : Object.fromEntries(DTC_CLEAR_WORKFLOW_EVIDENCE_KEYS.map((key) => [key, evidence[key]]));
+      return buildDtcClearWorkflow(target, preOperationSessionId, nextEvidence, workflow.revision + 1, false);
+    }
+    if (event.type === "record_confirmation") {
+      assertDtcClearWorkflowEvent(event, ["type", "revision", "target", "preOperationSessionId", "impactAcknowledged"]);
+      const target = normalizeDtcClearWorkflowTarget(event.target);
+      if (workflow.state !== "confirmation_required" || event.impactAcknowledged !== true || !sameDtcClearWorkflowTarget(target, workflow.target) || event.preOperationSessionId !== workflow.preOperationSessionId) {
+        throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_confirmation");
+      }
+      return buildDtcClearWorkflow(workflow.target, workflow.preOperationSessionId, evidence, workflow.revision, true);
+    }
+    if (event.type === "request_dispatch") {
+      assertDtcClearWorkflowEvent(event, ["type", "revision"]);
+      if (workflow.state !== "confirmation_recorded") throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_transition");
+      return buildDtcClearWorkflow(workflow.target, workflow.preOperationSessionId, evidence, workflow.revision, true, "dispatch_blocked");
+    }
+    throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_event");
+  }
+
   function buildServiceOperationReadinessPlan(evidenceByOperation = {}) {
     const operationReadiness = vehicleOperationPlan
       .filter((operation) => operation.commandClass === "state-changing")
@@ -44365,6 +44548,8 @@
     buildServiceOperationReadinessPlan,
     getElmTransportProfile,
     buildServiceOperationReadiness,
+    buildGenericObdDtcClearWorkflow,
+    transitionGenericObdDtcClearWorkflow,
     getMobileReadoutTransportPlan,
     evaluateMobileReadoutTransport,
     getInterfaceReadoutRoutePlan,

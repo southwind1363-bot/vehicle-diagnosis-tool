@@ -24,6 +24,12 @@ transport/protocolの適合表、実要求・応答の判定、実車試験、�
 
 ## 最小コード単位
 
+### 3.13.494 実装API
+
+`buildGenericObdDtcClearWorkflow({ target, preOperationSessionId, evidence })` で開始する。`target` は `vehicleId` / `ecuId` / `transportId` の3参照、`evidence` は既存の事前11条件の真偽値のみ。`impactAcknowledged` を初期入力から受け付けない。参照は非空・最大128文字とし、未知フィールドや不正型はTypeErrorのcodeで拒否する。
+
+遷移イベントは `update_input`（revisionと変更するtarget/session/evidence）、`record_confirmation`（revision、target、preOperationSessionId、impactAcknowledged:true）、`request_dispatch`（revision）の3種。更新はrevisionを進めて確認を失効させる。`request_dispatch` は常に非送信の `dispatch_blocked` まで。画面・保存セッションには未接続である。
+
 `obd-readonly.js` に、外部I/Oを持たない `buildGenericObdDtcClearWorkflow(input)` と `transitionGenericObdDtcClearWorkflow(workflow, event)` を追加する。既存の `buildServiceOperationReadiness("clear_dtc", evidence)` を唯一の準備条件判定に使い、入力オブジェクトを変更しない。この単位は `dispatch_blocked` までとし、dispatch結果を入力するAPIは作らない。
 
 返却値は当面セッションへ保存せず、次の最小フィールドに限定する。
