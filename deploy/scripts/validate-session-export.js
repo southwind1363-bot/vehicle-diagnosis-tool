@@ -54,16 +54,26 @@ const openBinding = source.split(/\r?\n/).find((line) => line.startsWith('docume
 check(Boolean(openBinding), "Results file-open command must be bound");
 let chooseFile = null;
 let filePickerCalls = 0;
-vm.runInNewContext(openBinding, {
+const fileOpenActions = [];
+const fileOpenContext = vm.createContext({
   document: { querySelector: (selector) => {
     check(selector === "#obdSessionOpenButton", "File-open binding targets the wrong command");
     return { addEventListener: (event, handler) => { check(event === "click", "File picker must require a click"); chooseFile = handler; } };
   } },
-  obdImportFileInput: { click: () => { filePickerCalls += 1; } }
+  obdAccessUnlocked: true,
+  setObdStage: stage => fileOpenActions.push(stage),
+  scrollToObdSection: target => fileOpenActions.push(target),
+  obdImportFileInput: { click: () => { filePickerCalls += 1; fileOpenActions.push("picker"); } }
 });
+vm.runInContext(source.match(/function openObdSavedReadout\(\) \{[\s\S]*?\r?\n\}/)[0], fileOpenContext);
+vm.runInContext(openBinding, fileOpenContext);
 check(filePickerCalls === 0, "Initializing results must not open a file picker");
 chooseFile();
-check(filePickerCalls === 1, "Results file-open command must reuse the original file input");
+check(filePickerCalls === 1 && fileOpenActions.join(",") === "results,obdImportStatus,picker", "Results file-open command must reveal import errors before reusing the original file input");
+fileOpenContext.obdAccessUnlocked = false;
+chooseFile();
+assert.equal(filePickerCalls, 1, "Locked results must not open the file picker");
+assert.equal(fileOpenActions.length, 3, "Locked file opening must not navigate");
 const resultsHtml = html.split('id="obdStageResultsView"')[1].split('id="obdStageDetailsView"')[0];
 check(resultsHtml.includes('id="obdSessionOpenButton"') && html.split('id="obdSessionOpenButton"').length === 2, "File-open command must occur once inside results");
 check(html.split('id="obdImportFileInput"').length === 2 && source.includes('obdImportFileInput?.addEventListener("change", importObdScannerFile)'), "File-open command must retain the single existing import path");
