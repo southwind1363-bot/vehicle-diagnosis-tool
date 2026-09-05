@@ -12,6 +12,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const end = source.indexOf('function handleObdUnlockKeydown(', start);
   assert.ok(start >= 0 && end > start, 'Measurement summary renderer must be available');
   const renderer = source.slice(start, end);
+  const navigationStart = source.indexOf('function navigateToObdReadoutControl(');
+  const navigationEnd = source.indexOf('function triggerObdNextReadoutCandidate(', navigationStart);
+  assert.ok(navigationStart >= 0 && navigationEnd > navigationStart, 'Navigation helpers must be available');
+  const navigation = source.slice(navigationStart, navigationEnd);
   const fields = ['obdLiveObservationCondition', 'obdLiveThermalState', 'obdVehicleMotionState', 'obdTransmissionPosition', 'obdAccessoryLoadState', 'obdSameVehicleConfirmed'];
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-layout-'));
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -25,6 +29,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.evaluate(markup => {
         const source = new DOMParser().parseFromString(markup, 'text/html');
         const section = source.querySelector('#obdStageDetailsView');
+        document.querySelector('#obd-panel').append(source.querySelector('#obdAccessGatePanel'));
         document.querySelector('#obd-panel').append(section);
         section.hidden = false;
         section.querySelector('#obdDevControls').hidden = false;
@@ -33,8 +38,43 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.addStyleTag({ content: css });
       // Execute only the read-only presentation function, not application startup.
       await page.addScriptTag({ content: fields.map(id => `const ${id} = document.getElementById('${id}');`).join('\n') + '\n' + renderer + '\ndocument.getElementById("obdMeasurementConditions").addEventListener("change", renderObdMeasurementConditionSummary);' });
+      await page.addScriptTag({ content: `
+        let obdAccessUnlocked = false, obdDevModeUnlocked = false;
+        const obdAccessPasswordInput = document.getElementById('obdAccessPasswordInput');
+        const obdDevPasswordInput = document.getElementById('obdDevPasswordInput');
+        const obdDevControls = document.getElementById('obdDevControls');
+        const obdDevSessionSummary = document.getElementById('obdDevSessionSummary');
+        function setObdUiMode(mode) { document.getElementById('obd-panel').dataset.obdUiMode = mode; }
+        ${navigation}
+      ` });
       for (const theme of ['light', 'dark']) {
         await page.evaluate(value => document.body.classList.toggle('dark', value === 'dark'), theme);
+        const focusResults = await page.evaluate(() => {
+          const button = document.getElementById('obdDevReadDtcButton');
+          const group = button.closest('details');
+          let clicks = 0;
+          const record = () => { clicks += 1; };
+          button.addEventListener('click', record);
+          const focused = [];
+          for (const [access, developer] of [[false, false], [true, false], [true, true]]) {
+            obdAccessUnlocked = access;
+            obdDevModeUnlocked = developer;
+            group.open = false;
+            navigateToObdReadoutControl(button);
+            focused.push(document.activeElement === group.querySelector('summary') ? 'group' : document.activeElement.id);
+          }
+          const revealed = group.open;
+          // Enabled only in this inert fixture; no readout handlers are loaded.
+          button.disabled = false;
+          navigateToObdReadoutControl(button);
+          focused.push(document.activeElement.id);
+          button.disabled = true;
+          navigateToObdReadoutControl(null);
+          focused.push(document.activeElement === obdDevControls.querySelector('summary') ? 'first-group' : 'missing-focus');
+          button.removeEventListener('click', record);
+          return { focused, clicks, revealed };
+        });
+        assert.deepEqual(focusResults, { focused: ['obdAccessPasswordInput', 'obdDevPasswordInput', 'group', 'obdDevReadDtcButton', 'first-group'], clicks: 0, revealed: true });
         const conditionToggle = page.locator('#obdMeasurementConditions > summary');
         const sameVehicle = page.locator('#obdSameVehicleConfirmed');
         await page.locator('#obdLiveObservationCondition').selectOption('post_repair');
