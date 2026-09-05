@@ -203,6 +203,53 @@ for (const mode of ["simple", "details"]) {
   }
 }
 assert.ok(connectionGuide.includes("renderObdAccessGate(undefined, { preserveStage: true });"), "Connection guide must not run entry navigation on selection changes");
+// Use real change handlers and option-rendering chain with synthetic vehicle data.
+const vehicleRow = { maker: "Test maker", model: "Test model", model_codes: ["TEST-1"], engine_codes: ["TEST-E"] };
+Object.assign(context, {
+  dataStore: { vehicleInputOptions: [vehicleRow] }, MANUAL_VEHICLE_VALUE: "manual",
+  collectUnique: (items) => [...new Set(items)],
+  findVehicleOption: (_maker, model) => model === vehicleRow.model ? vehicleRow : null,
+  findVehicleYearRanges: () => [{}], toYearOptions: () => ["2020"],
+  findApplicableVehicleYearRanges: () => [{ engine_codes: vehicleRow.engine_codes }],
+  replaceSelectOptions: (select, _placeholder, items) => { select.value = ""; select.options = [...items]; },
+  appendSelectOption: (select, value) => select.options.push(value)
+});
+const fields = ["obdVehicleMakerSelect", "obdVehicleModelSelect", "obdVehicleModelCodeSelect", "obdVehicleYearSelect", "obdVehicleYearManualInput", "obdVehicleEngineCodeSelect", "obdVehicleMarketSelect", "obdVehicleProductionDateInput", "obdVehicleManualInput", "obdInterfaceSelect"];
+for (const name of fields) {
+  context[name] = { value: "", options: [], handlers: {}, addEventListener(event, handler) { this.handlers[event] = handler; } };
+}
+for (const name of ["renderObdVehicleModelOptions", "renderObdVehicleDetailOptions", "renderObdVehicleYearOptions", "updateObdVehicleYearManualVisibility", "renderObdVehicleEngineOptions"]) {
+  vm.runInContext(source.match(new RegExp(`function ${name}\\(\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0], context);
+}
+const bindingsStart = source.indexOf('obdVehicleMakerSelect?.addEventListener("change"');
+const bindingsEnd = source.slice(bindingsStart).search(/\r?\n\[\r?\n  obdVehicleMakerSelect/);
+assert.ok(bindingsStart >= 0 && bindingsEnd > 0, "Vehicle change bindings were not found");
+vm.runInContext(source.slice(bindingsStart, bindingsStart + bindingsEnd), context);
+for (const mode of ["simple", "details"]) {
+  context.obdUiMode = mode;
+  for (const automatic of ["setup", "results"]) {
+    context.getObdAutoStage = () => automatic;
+    context.renderObdStageView("setup");
+    for (const [field, value] of [
+      ["obdVehicleMakerSelect", vehicleRow.maker], ["obdVehicleModelSelect", vehicleRow.model],
+      ["obdVehicleModelCodeSelect", "TEST-1"], ["obdVehicleYearSelect", "2020"],
+      ["obdVehicleEngineCodeSelect", "TEST-E"]
+    ]) {
+      context[field].value = value;
+      context[field].handlers.change();
+      assert.equal(context.activeObdStage, "setup", `${mode}/${automatic}/${field} left the vehicle screen`);
+      assert.equal(context[field].value, value, "Selected vehicle field was reset");
+      assert.equal(context.obdSetupPanel.hidden, false);
+      assert.equal(context.obdDevSession.lastSession, session);
+    }
+    assert.ok(context.obdVehicleModelSelect.options.includes(vehicleRow.model));
+    assert.ok(context.obdVehicleModelCodeSelect.options.includes("TEST-1"));
+    context.obdVehicleYearManualInput.value = "20x20";
+    context.obdVehicleYearManualInput.handlers.input();
+    assert.equal(context.obdVehicleYearManualInput.value, "2020");
+    assert.equal(context.activeObdStage, "setup", "Manual year input left the vehicle screen");
+  }
+}
 context.obdUiMode = "simple";
 context.obdAccessUnlocked = false;
 context.renderObdAccessGate({}, { preserveStage: true });
