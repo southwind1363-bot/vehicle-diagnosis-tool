@@ -158,7 +158,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const before = await page.locator('#obdDetectedCodes').innerText();
     assert.match(before, /P0420/);
     await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
-    for (const width of [1280, 390]) {
+    for (const width of [1280, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
       const resultNav = page.locator('.obd-results-nav');
       await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
@@ -181,6 +181,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.screenshot({ path: path.join(output, `additional-data-${width}.png`) });
       await resultNav.getByRole('button', { name: 'DTC一覧', exact: true }).click();
       assert.equal(await page.locator('#obdDetectedCodes').innerText(), before, 'Detail navigation must retain the DTC result');
+      for (const dark of [false, true]) {
+        await page.evaluate(value => document.body.classList.toggle('dark', value), dark);
+        const searchLayout = await page.locator('#obdDtcFilter .obd-monitor-search-row').evaluate(node => {
+          const input = node.querySelector('input').getBoundingClientRect();
+          const button = node.querySelector('button').getBoundingClientRect();
+          return node.scrollWidth <= node.clientWidth + 1 && input.right <= button.left
+            && button.width >= 48 && button.height >= 48 && input.width >= 100;
+        });
+        assert.equal(searchLayout, true, 'DTC search and touch-sized clear must fit without overlap');
+        await page.locator('#obdDtcFilter').screenshot({ path: path.join(output, `dtc-search-${width}-${dark ? 'dark' : 'light'}.png`) });
+      }
+      await page.evaluate(() => document.body.classList.remove('dark'));
+      const unfilteredCount = await page.locator('#obdDtcFilterCount').innerText();
       await page.locator('#obdDtcSearch').fill('P0420');
       assert.equal(await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().isVisible(), false);
       await resultNav.getByRole('button', { name: 'ライブ値', exact: true }).click();
@@ -190,6 +203,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.locator('#obdDetectedCodes').getByText('P0420', { exact: false }).first().isVisible(), true);
       await page.getByRole('button', { name: 'DTC検索を解除', exact: true }).click();
       assert.equal(await page.locator('#obdDetectedCodes').innerText(), before);
+      assert.equal(await page.locator('#obdDtcFilterCount').innerText(), unfilteredCount);
+      assert.equal(await page.locator('#obdDtcSearch').evaluate(node => node === document.activeElement), true, 'Clearing must return focus to DTC search');
       await page.getByRole('button', { name: '前の診断画面へ戻る', exact: true }).click();
       assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true);
     }

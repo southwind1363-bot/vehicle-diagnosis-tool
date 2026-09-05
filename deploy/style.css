@@ -2350,7 +2350,8 @@ body.dark .flow-node-measure .flow-step {
 .obd-monitor-options .obd-monitor-view-toggle { width: 100%; }
 .obd-monitor-options > .obd-monitor-selection > button { padding: 8px; }
 #obdMonitorSelectionCount { color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
-#obdMonitorFilterCount {
+#obdMonitorFilterCount,
+#obdDtcFilterCount {
   margin: 6px 0;
   padding: 0;
   border: 0;
@@ -2418,14 +2419,14 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-monitor-search-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) 48px;
   gap: 8px;
   margin-top: 6px;
 }
 
 .obd-monitor-search-row input { min-width: 0; }
 .obd-monitor-search-row input::-webkit-search-cancel-button { -webkit-appearance: none; }
-.obd-monitor-search-row button { padding: 0; min-height: 44px; font-size: 1.5rem; }
+.obd-monitor-search-row button { padding: 0; min-height: 48px; font-size: 1.5rem; }
 .obd-monitor-filter[hidden],
 .obd-dtc-card[hidden],
 .obd-monitor-card[hidden] { display: none; }
