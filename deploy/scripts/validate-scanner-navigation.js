@@ -151,7 +151,24 @@ context.obdDevModeUnlocked = false;
 context.disconnectObdDeveloperVci = () => { disconnected += 1; };
 context.setObdUiMode("details");
 assert.equal(disconnected, 1, "Existing serial shutdown protection must remain in place");
+assert.equal(context.activeObdStage, "details", "Developer entry must open details directly");
+assert.equal(context.obdStageDetailsView.hidden, false);
 assert.equal(context.obdDevSession.lastSession, session);
+for (const origin of ["home", "setup", "connect", "results", "readout"]) {
+  context.obdUiMode = "simple";
+  context.obdDevSession.port = null;
+  context.renderObdStageView(origin);
+  context.setObdUiMode("details");
+  assert.equal(context.activeObdStage, "details", `Developer entry from ${origin} opened the wrong screen`);
+  assert.equal(context.obdDevModeUnlocked, false, "Navigation must not unlock developer controls");
+  assert.equal(context.obdDevSession.lastSession, session);
+}
+context.obdAccessUnlocked = false;
+context.setObdUiMode("simple");
+context.setObdUiMode("details");
+assert.equal(context.obdAccessUnlocked, false);
+assert.equal(context.obdStagePanel.hidden, true, "Locked navigation exposed protected controls");
+context.obdAccessUnlocked = true;
 context.obdUiMode = "details";
 context.renderObdStageView("home");
 assert.equal(context.activeObdStage, "setup");
