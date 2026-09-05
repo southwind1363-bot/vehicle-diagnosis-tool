@@ -1667,9 +1667,17 @@ body.dark .flow-node-measure .flow-step {
 
 .obd-simple-result-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   margin: 12px 0 0;
+}
+
+@media (max-width: 900px) {
+  .obd-simple-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 359px) {
+  .obd-simple-result-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .obd-results-empty {
@@ -1710,7 +1718,7 @@ body.dark .flow-node-measure .flow-step {
 .obd-simple-result-label {
   display: block;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.85rem;
   font-weight: 800;
 }
 
@@ -1719,7 +1727,7 @@ body.dark .flow-node-measure .flow-step {
   margin-top: 4px;
   color: var(--ink);
   overflow-wrap: anywhere;
-  font-size: 1rem;
+  font-size: 1.125rem;
   font-weight: 900;
 }
 
@@ -1728,7 +1736,7 @@ body.dark .flow-node-measure .flow-step {
   margin-top: 4px;
   color: var(--muted);
   overflow-wrap: anywhere;
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   font-weight: 800;
   line-height: 1.35;
 }
@@ -1748,7 +1756,7 @@ body.dark .flow-node-measure .flow-step {
   display: block;
   margin-top: 5px;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 900;
 }
 

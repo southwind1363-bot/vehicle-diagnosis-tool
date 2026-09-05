@@ -209,6 +209,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     for (const width of [1280, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
+      const resultItems = page.locator('#obdSimpleResultGrid > button');
+      const resultText = await resultItems.allTextContents();
+      assert.equal(resultText.length, 8, 'All basic readout categories must remain available');
+      for (const dark of [false, true]) {
+        await page.evaluate(value => document.body.classList.toggle('dark', value), dark);
+        const layout = await page.locator('#obdSimpleResultGrid').evaluate(node => ({
+          columns: getComputedStyle(node).gridTemplateColumns.split(' ').length,
+          fits: node.scrollWidth <= node.clientWidth + 1 && [...node.children].every(item =>
+            item.scrollWidth <= item.clientWidth + 1 && item.scrollHeight <= item.clientHeight + 1
+            && item.getBoundingClientRect().height >= 48)
+        }));
+        assert.equal(layout.columns, width < 360 ? 1 : width <= 900 ? 2 : 4);
+        assert.equal(layout.fits, true, 'Readout categories must fit without clipping');
+        assert.deepEqual(await resultItems.allTextContents(), resultText, 'Layout must not remove readout details');
+        await page.locator('#obdSimpleResultSummary').screenshot({ path: path.join(output, `result-overview-${width}-${dark ? 'dark' : 'light'}.png`) });
+      }
+      await page.evaluate(() => document.body.classList.remove('dark'));
       const resultNav = page.locator('.obd-results-nav');
       await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
       assert.equal(await page.locator('#obdMonitorStatus').isVisible(), true);
