@@ -734,12 +734,15 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       { name: 'no-live', rpm: null, reply: 'NO DATA' },
       { name: 'recovered', rpm: 800, reply: '41 0C 0C 80' },
       { name: 'stream-failure', failCommand: '0101' },
-      { name: 'after-stream-failure', rpm: 900, reply: '41 0C 0E 10' }
+      { name: 'after-stream-failure', rpm: 900, reply: '41 0C 0E 10' },
+      { name: 'zero-dtc', rpm: 900, reply: '41 0C 0E 10', codes: [] }
     ];
     for (const [caseIndex, readoutCase] of (restart ? [] : readoutCases).entries()) {
       const noLiveResponse = readoutCase.rpm === null;
+      const expectedCodes = readoutCase.codes || ['P0133', 'P0420'];
       const responses = JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures/synthetic-elm-core-responses.json'), 'utf8'));
       if (readoutCase.reply) responses['010C'] = readoutCase.reply;
+      if (!expectedCodes.length) responses['03'] = '7E8 03 43 00 00';
       if (readoutCase.failCommand) responses[readoutCase.failCommand] = null;
       if (caseIndex > 0) {
         await page.locator('.obd-stage-tab[data-obd-stage="connect"]').click();
@@ -827,7 +830,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         console.log('Synthetic VCI stream failure: requests stopped, DTCs and failure summary saved/restored offline; original page retained for reconnect; no real hardware');
         continue;
       }
-      await page.waitForFunction(() => !obdDevSession.coreScanInProgress && obdDevSession.lastSession?.dtcSnapshot?.codes?.includes('P0133'), null, { timeout: 45000 });
+      await page.waitForFunction(codes => !obdDevSession.coreScanInProgress
+        && JSON.stringify(obdDevSession.lastSession?.dtcSnapshot?.codes) === JSON.stringify(codes), expectedCodes, { timeout: 45000 });
       assert.equal(await page.locator('#obdSimpleResultSummary').isVisible(), true, 'Completed scan must open the result screen');
       const scan = await page.evaluate(() => ({
         codes: obdDevSession.lastSession.dtcSnapshot.codes,
@@ -837,7 +841,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         readiness: obdDevSession.lastSession.readinessSnapshot.readinessReadoutStatus,
         ecu: obdDevSession.lastSession.ecuInfoSnapshot.ecuInfoReadoutStatus
       }));
-      assert.deepEqual(scan, { codes: ['P0133', 'P0420'], rpm: readoutCase.rpm, noData: noLiveResponse ? 1 : 0, incomplete: noLiveResponse ? 1 : 0, readiness: 'reported', ecu: 'reported' });
+      assert.deepEqual(scan, { codes: expectedCodes, rpm: readoutCase.rpm, noData: noLiveResponse ? 1 : 0, incomplete: noLiveResponse ? 1 : 0, readiness: 'reported', ecu: 'reported' });
+      const checkZeroDtc = async () => {
+        if (expectedCodes.length) return;
+        const dtcResult = page.locator('#obdSimpleResultGrid > button').first();
+        assert.equal(await dtcResult.locator('.obd-simple-result-value').innerText(), '0件');
+        assert.equal(await dtcResult.locator('.obd-simple-result-state').innerText(), 'コード0件');
+        assert.doesNotMatch(await page.locator('#obdDetectedCodes').textContent(), /P0133|P0420/, 'Zero-code response must replace earlier codes');
+        await page.screenshot({ path: path.join(output, 'synthetic-zero-dtc.png') });
+      };
+      await checkZeroDtc();
       const checkLiveDisplay = async () => {
         await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
         assert.equal(await page.locator('#obdMonitorGrid > article').count(), noLiveResponse ? 0 : 1, 'Live display must reflect only this scan');
@@ -865,7 +878,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const scanFile = path.join(output, `synthetic-serial-${readoutCase.name}.json`);
       await (await scanDownload).saveAs(scanFile);
       const saved = fs.readFileSync(scanFile, 'utf8');
-      assert.ok(saved.includes('P0133') && saved.includes('P0420'));
+      for (const code of expectedCodes) assert.ok(saved.includes(code));
       if (!noLiveResponse) assert.ok(saved.includes(String(readoutCase.rpm)));
       await page.locator('#obdSimpleResultDisconnectButton').click();
       await page.waitForFunction(() => obdDevSession.connectionState === 'disconnected' && !obdSerialDisconnectOperation);
@@ -883,7 +896,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
       assert.equal(await page.locator('#obdDetectedCodes').textContent(), '', 'Restoration must start without retained result nodes');
       await openFile(page.getByRole('button', { name: '保存した読取結果を開く', exact: true }), scanFile);
-      await page.locator('#obdDetectedCodes').getByText('P0133', { exact: false }).first().waitFor();
+      await page.waitForFunction(codes => JSON.stringify(obdDevSession.lastSession?.dtcSnapshot?.codes) === JSON.stringify(codes), expectedCodes);
       assert.deepEqual(await page.evaluate(() => ({
         codes: obdDevSession.lastSession.dtcSnapshot.codes,
         rpm: obdDevSession.lastSession.livePidSnapshot?.monitorValues?.find(value => value.id === 'engine_speed')?.value ?? null,
@@ -893,6 +906,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         ecu: obdDevSession.lastSession.ecuInfoSnapshot.ecuInfoReadoutStatus
       })), scan, 'Fresh offline import must recover the measured facts');
       await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      await checkZeroDtc();
       await checkLiveDisplay();
       console.log(`Synthetic VCI (${readoutCase.name}): connect, core readout, JSON download, disconnect and fresh offline restoration passed; no real hardware`);
     }
