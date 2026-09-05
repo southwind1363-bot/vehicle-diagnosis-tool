@@ -55,7 +55,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await context.addInitScript(() => {
         localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
         sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
-        Object.defineProperty(navigator, 'serial', { value: undefined });
+        Object.defineProperty(navigator, 'serial', { value: undefined, configurable: true });
         Object.defineProperty(navigator, 'bluetooth', { value: undefined });
       });
       await context.route(offline ? url => url.origin !== origin : '**/*', async route => {
@@ -584,8 +584,44 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await verifyEcuRows();
     }
     assert.deepEqual(errors, []);
+    // Start empty: connection attempts have their own session, separate from archive playback.
+    await page.reload();
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    await page.evaluate(() => {
+      window.__serialFailureFixture = { mode: 'cancel', selections: 0, opens: 0, writes: 0 };
+      Object.defineProperty(navigator, 'serial', { configurable: true, value: {
+        requestPort: async () => {
+          const fixture = window.__serialFailureFixture;
+          fixture.selections += 1;
+          if (fixture.mode === 'cancel') throw new DOMException('Synthetic picker cancellation', 'NotFoundError');
+          return {
+            open: async () => { fixture.opens += 1; throw new DOMException('Synthetic port unavailable', 'NetworkError'); },
+            writable: { getWriter: () => ({ write: () => { fixture.writes += 1; throw new Error('Unexpected write'); } }) }
+          };
+        }
+      } });
+    });
+    await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    await page.getByRole('button', { name: '接続を確認', exact: true }).click();
+    const connect = page.locator('#obdSimpleConnectButton');
+    for (const [mode, expectedReason] of [['cancel', 'port_selection_cancelled'], ['open-error', 'port_open_failed'], ['cancel', 'port_selection_cancelled']]) {
+      await page.evaluate(mode => { window.__serialFailureFixture.mode = mode; }, mode);
+      await connect.click();
+      await page.waitForFunction(reason => !obdSerialConnectPending && obdDevSession.connectionState === 'disconnected' && obdDevSession.lastDisconnectReason === reason, expectedReason);
+      assert.equal(await connect.isEnabled(), true, 'Connection failure must allow another attempt');
+      assert.equal(await page.locator('#obdSimpleConnectStatus').isVisible(), true, 'Normal connection screen must expose the outcome');
+      assert.match(await page.locator('#obdSimpleConnectStatus').innerText(), mode === 'cancel' ? /キャンセル/ : /開け|使用中|接続.*失敗/);
+      assert.equal(await page.locator('#obdSimpleConnectDisconnectButton').isVisible(), false, 'Failed connection must not look connected');
+      await page.locator('#obdSimpleConnectPanel').screenshot({ path: path.join(output, `connection-${mode}.png`) });
+      await page.locator('#obdSimpleConnectBackButton').click();
+      assert.equal(await page.locator('#obdSetupPanel').isVisible(), true, 'Back must return to vehicle setup');
+      await page.locator('.obd-stage-tab[data-obd-stage="connect"]').click();
+    }
+    assert.deepEqual(await page.evaluate(() => window.__serialFailureFixture), { mode: 'cancel', selections: 3, opens: 1, writes: 0 });
+    await page.screenshot({ path: path.join(output, 'connection-retry.png') });
+    assert.deepEqual(errors, []);
     assert.deepEqual(blocked, [], 'Unexpected external or non-read-only network request');
-    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}replacement cancellation, empty/unsupported/oversized/broken-file retention, read error/abort/throw and late callbacks, recovery and back passed / Artifacts: ${output}`);
+    console.log(`Scanner file flow (${channel}, ${restart ? 'offline browser restart' : offline ? 'offline' : 'isolated'}): import, export, reimport, detail navigation, search retention, ${live ? 'live timeline and multi-ECU roundtrip, ' : ''}replacement cancellation, empty/unsupported/oversized/broken-file retention, read error/abort/throw and late callbacks, connection cancellation/open failure/retry (zero writes), recovery and back passed / Artifacts: ${output}`);
   } catch (error) {
     const failedPage = context?.pages().at(-1);
     if (failedPage && !failedPage.isClosed()) {

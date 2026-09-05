@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.483";
+const APP_VERSION = "3.13.484";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -5892,6 +5892,11 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
     obdDevStatus.textContent = "詳細画面はロック中です。詳細用パスワードで解除できます。通常の読取は診断ホームから利用できます。";
   } else if (primaryActionNeedsSerial && !serialReady) {
     obdDevStatus.textContent = "Web Serial対応のデスクトップ版Chrome系ブラウザとHTTPS環境が必要です。";
+  } else if (primaryActionNeedsSerial && obdDevSession.connectionState === "disconnected"
+    && ["port_selection_cancelled", "port_selection_failed", "port_open_failed"].includes(obdDevSession.lastDisconnectReason)) {
+    obdDevStatus.textContent = obdDevSession.lastDisconnectReason === "port_selection_cancelled"
+      ? "VCI選択をキャンセルしました。車両への送信は行っていません。"
+      : formatWebSerialConnectionFailure(obdDevSession.lastDisconnectReason, obdDevSession.adapterInitializationSummary);
   } else if (!connected) {
     const requestedStatus = obdDevSession.bridgeEndpoint
       ? getRequestedInterfaceReadyStatus()
