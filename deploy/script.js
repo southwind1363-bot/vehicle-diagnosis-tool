@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.475";
+const APP_VERSION = "3.13.476";
 const APP_LAST_UPDATED = "2026-09-05";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -532,39 +532,69 @@ initializeObdMonitorFilter();
 initializeObdDtcFilter();
 
 function initializeObdMonitorFilter() {
-  initializeObdReadoutFilter(obdMonitorGrid, "obdMonitor", "monitorSearch", "項目");
+  const selection = {
+    group: document.querySelector("#obdMonitorSelection"),
+    only: document.querySelector("#obdMonitorSelectedOnly"),
+    count: document.querySelector("#obdMonitorSelectionCount"),
+    clear: document.querySelector("#obdMonitorSelectionClear")
+  };
+  initializeObdReadoutFilter(obdMonitorGrid, "obdMonitor", "monitorSearch", "項目", { selection });
 }
 
 function initializeObdDtcFilter() {
   initializeObdReadoutFilter(obdDetectedCodes, "obdDtc", "dtcSearch", "件");
 }
 
-function initializeObdReadoutFilter(grid, prefix, searchKey, unit) {
+function initializeObdReadoutFilter(grid, prefix, searchKey, unit, options = {}) {
   const toolbar = document.querySelector(`#${prefix}Filter`);
   const input = document.querySelector(`#${prefix}Search`);
   const clear = document.querySelector(`#${prefix}SearchClear`);
   const count = document.querySelector(`#${prefix}FilterCount`);
   const empty = document.querySelector(`#${prefix}FilterEmpty`);
   if (!toolbar || !input || !clear || !count || !empty || typeof MutationObserver === "undefined") return;
+  const selection = options.selection && Object.values(options.selection).every(Boolean) ? options.selection : null;
+  if (selection) selection.group.hidden = false;
   const normalize = (text) => String(text || "").normalize("NFKC").toLowerCase();
   const refresh = () => {
     const cards = Array.from(grid.children);
     if (!cards.length) input.value = "";
     const terms = normalize(input.value).trim().split(/\s+/).filter(Boolean);
+    const isSelected = (card) => card.querySelector("[data-monitor-select]")?.checked === true;
+    const selectedCount = selection ? cards.filter(isSelected).length : 0;
+    if (selection) {
+      if (!selectedCount) selection.only.checked = false;
+      selection.only.disabled = selectedCount === 0;
+      selection.clear.disabled = selectedCount === 0;
+      selection.count.textContent = `選択 ${selectedCount}${unit}`;
+    }
     let visible = 0;
     for (const card of cards) {
       const searchText = normalize(card.dataset[searchKey]);
-      const matches = terms.every((term) => searchText.includes(term));
+      const matches = terms.every((term) => searchText.includes(term)) && (!selection?.only.checked || isSelected(card));
       card.hidden = !matches;
       if (matches) visible += 1;
     }
     toolbar.hidden = cards.length === 0;
     clear.disabled = input.value.length === 0;
-    count.textContent = terms.length ? `絞込中: ${visible} / ${cards.length}${unit}` : `全${cards.length}${unit}を表示`;
+    count.textContent = terms.length || selection?.only.checked ? `絞込中: ${visible} / ${cards.length}${unit}` : `全${cards.length}${unit}を表示`;
     empty.hidden = !cards.length || visible > 0;
   };
   input.addEventListener("input", refresh);
   clear.addEventListener("click", () => { input.value = ""; refresh(); input.focus(); });
+  if (selection) {
+    grid.addEventListener("change", (event) => {
+      if (event.target?.dataset.monitorSelect !== undefined) refresh();
+    });
+    selection.only.addEventListener("change", refresh);
+    selection.clear.addEventListener("click", () => {
+      for (const card of grid.children) {
+        const checkbox = card.querySelector("[data-monitor-select]");
+        if (checkbox) checkbox.checked = false;
+      }
+      refresh();
+      input.focus();
+    });
+  }
   // Observe replacements only; changing card visibility must not trigger another refresh.
   new MutationObserver(refresh).observe(grid, { childList: true });
   refresh();
@@ -13404,6 +13434,14 @@ function createObdDtcCard(codeOrDtc, observedDtcs = null, vehicleProfileOverride
 }
 
 function renderObdMonitorValues(values, insights = []) {
+  // A newly rendered readout must not inherit selections from another scan/ECU.
+  const selection = document.querySelector("#obdMonitorSelection");
+  const selectedOnly = document.querySelector("#obdMonitorSelectedOnly");
+  const selectionCount = document.querySelector("#obdMonitorSelectionCount");
+  const selectionClear = document.querySelector("#obdMonitorSelectionClear");
+  if (selectedOnly) { selectedOnly.checked = false; selectedOnly.disabled = true; }
+  if (selectionCount) selectionCount.textContent = "選択 0項目";
+  if (selectionClear) selectionClear.disabled = true;
   obdMonitorGrid.innerHTML = "";
   obdMonitorInsightList.innerHTML = "";
   obdMonitorInsightList.hidden = true;
@@ -13432,6 +13470,16 @@ function renderObdMonitorValues(values, insights = []) {
 
     const label = document.createElement("strong");
     label.textContent = item.label;
+    let displayLabel = label;
+    if (selection && !selection.hidden) {
+      displayLabel = document.createElement("label");
+      displayLabel.className = "obd-monitor-pick";
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.dataset.monitorSelect = "";
+      checkbox.ariaLabel = `${item.label || item.id || "計測項目"}${sourceEcu ? ` / ECU ${sourceEcu}` : ""}を選択`;
+      displayLabel.append(checkbox, label);
+    }
 
     const reading = document.createElement("p");
     reading.className = "obd-monitor-reading";
@@ -13441,7 +13489,7 @@ function renderObdMonitorValues(values, insights = []) {
     note.className = "obd-monitor-note";
     note.textContent = item.supportNote || "メーカー整備書の基準値と比較してください。";
 
-    card.append(category, label, reading, note);
+    card.append(category, displayLabel, reading, note);
     obdMonitorGrid.appendChild(card);
   });
 

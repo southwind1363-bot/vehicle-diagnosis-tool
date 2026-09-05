@@ -193,8 +193,13 @@
                 </div>
                 <p id="obdMonitorFilterCount" class="data-status" role="status"></p>
                 <label class="obd-monitor-view-toggle"><input id="obdMonitorCompact" type="checkbox" aria-controls="obdMonitorGrid">一覧表示</label>
+                <div class="obd-monitor-selection" id="obdMonitorSelection" hidden>
+                  <label class="obd-monitor-view-toggle"><input id="obdMonitorSelectedOnly" type="checkbox" aria-controls="obdMonitorGrid">選択した項目のみ</label>
+                  <span id="obdMonitorSelectionCount" role="status">選択 0項目</span>
+                  <button id="obdMonitorSelectionClear" class="secondary-button" type="button" disabled>選択解除</button>
+                </div>
               </div>
-              <p id="obdMonitorFilterEmpty" class="empty-state" hidden>検索に一致する計測項目はありません。</p>
+              <p id="obdMonitorFilterEmpty" class="empty-state" hidden>表示条件に一致する計測項目はありません。</p>
               <div id="obdMonitorGrid" class="obd-monitor-grid"></div>
               <div id="obdMonitorInsightList" class="obd-monitor-insights" hidden></div>
               <p class="obd-monitor-caution">表示値だけで正常・異常を断定しません。測定条件とメーカー整備書の基準値を確認してください。</p>

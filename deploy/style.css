@@ -2241,8 +2241,44 @@ body.dark .flow-node-measure .flow-step {
   gap: 8px;
   min-height: 48px;
   width: fit-content;
+  max-width: 100%;
+  margin: 0;
   cursor: pointer;
 }
+
+.obd-monitor-selection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.obd-monitor-selection[hidden] { display: none; }
+
+.obd-monitor-selection > button { min-height: 48px; }
+
+.obd-monitor-pick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 48px;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.obd-monitor-pick > input,
+.obd-monitor-view-toggle > input {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0;
+}
+
+.obd-monitor-pick > strong { min-width: 0; }
 
 .obd-monitor-result:has(#obdMonitorCompact:checked) #obdMonitorGrid {
   grid-template-columns: minmax(0, 1fr);

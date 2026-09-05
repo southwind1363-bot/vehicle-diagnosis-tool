@@ -14,13 +14,15 @@ function element() {
     classList: { add() {} }, append(...children) { this.children.push(...children); },
     appendChild(child) { this.children.push(child); },
     set innerHTML(value) { assert.equal(value, ""); this.children = []; },
-    addEventListener(name, handler) { this.handlers[name] = handler; }, focus() { this.focused = true; }
+    addEventListener(name, handler) { this.handlers[name] = handler; }, focus() { this.focused = true; },
+    querySelector() { return this.children.find(child => child.dataset.monitorSelect !== undefined) || this.children.map(child => child.querySelector()).find(Boolean); }
   };
 }
-const ids = ["obdMonitorFilter", "obdMonitorSearch", "obdMonitorSearchClear", "obdMonitorFilterCount", "obdMonitorFilterEmpty"];
+const ids = ["obdMonitorFilter", "obdMonitorSearch", "obdMonitorSearchClear", "obdMonitorFilterCount", "obdMonitorFilterEmpty", "obdMonitorSelection", "obdMonitorSelectedOnly", "obdMonitorSelectionCount", "obdMonitorSelectionClear"];
 function harness(observable = true) {
   const nodes = Object.fromEntries(ids.map((id) => [id, element()]));
   nodes.obdMonitorFilter.hidden = true;
+  nodes.obdMonitorSelection.hidden = true;
   const subscriptions = [];
   const context = vm.createContext({
     document: { querySelector: (id) => nodes[id.slice(1)], createElement: element },
@@ -57,20 +59,47 @@ for (const [query, expected] of [["回転", 2], ["rpm 7e8", 1], ["０ｃ　７�
 }
 check(JSON.stringify(values) === original && context.retainedInsights === insights && context.obdMonitorCount.textContent === "3項目",
   "Search changed readout data, safety insights or acquired count");
+const pick = (index, checked) => {
+  const target = context.obdMonitorGrid.children[index].querySelector();
+  target.checked = checked;
+  context.obdMonitorGrid.handlers.change({ target });
+};
+pick(0, true);
+pick(1, true);
+check(nodes.obdMonitorSelectionCount.textContent === "選択 2項目" && !nodes.obdMonitorSelectedOnly.disabled, "Multi-selection count incorrect");
+nodes.obdMonitorSelectedOnly.checked = true;
+nodes.obdMonitorSelectedOnly.handlers.change();
+check(search("rpm").length === 1 && search("7e9").length === 0 && search("").length === 2, "Selection and search must intersect, preserving ECU-distinct rows");
+check(context.obdMonitorGrid.children[2].querySelector().ariaLabel.includes("7E9"), "Duplicate PID accessible names must distinguish ECU");
+pick(0, false);
+pick(1, false);
+check(!nodes.obdMonitorSelectedOnly.checked && nodes.obdMonitorSelectedOnly.disabled && search("").length === 3, "Last deselection must restore all items");
+pick(2, true);
+nodes.obdMonitorSelectedOnly.checked = true;
+nodes.obdMonitorSelectionClear.handlers.click();
+check(!nodes.obdMonitorSelectedOnly.checked && nodes.obdMonitorSelectionCount.textContent === "選択 0項目" && nodes.obdMonitorSearch.focused, "Clear must restore selection state and focus");
+pick(2, true);
+nodes.obdMonitorSelectedOnly.checked = true;
 search("7e9");
 context.renderObdMonitorValues([values[0]], insights);
+check(!nodes.obdMonitorSelectedOnly.checked && nodes.obdMonitorSelectionCount.textContent === "選択 0項目" && nodes.obdMonitorSelectionClear.disabled, "Readout replacement must reset selection synchronously");
 subscriptions[0].callback();
 check(nodes.obdMonitorFilterCount.textContent === "絞込中: 0 / 1項目" && !nodes.obdMonitorFilterEmpty.hidden, "New readout ignored current filter or hid its no-match state");
 nodes.obdMonitorSearchClear.handlers.click();
 check(nodes.obdMonitorSearch.value === "" && nodes.obdMonitorSearch.focused && nodes.obdMonitorSearchClear.disabled && !context.obdMonitorGrid.children[0].hidden,
   "Clear did not restore all rows and return keyboard focus");
 search("rpm");
+pick(0, true);
+nodes.obdMonitorSelectedOnly.checked = true;
 context.renderObdMonitorValues([], []);
+check(!nodes.obdMonitorSelectedOnly.checked && nodes.obdMonitorSelectionCount.textContent === "選択 0項目", "Empty readout must reset selection synchronously");
 subscriptions[0].callback();
 check(nodes.obdMonitorFilter.hidden && nodes.obdMonitorFilterEmpty.hidden && nodes.obdMonitorSearch.value === "", "Empty/reset readout retained stale filtering");
 const unsupported = harness(false);
 unsupported.context.renderObdMonitorValues(values, insights);
 check(unsupported.nodes.obdMonitorFilter.hidden && unsupported.context.obdMonitorGrid.children.every((card) => !card.hidden), "Unsupported observation must leave all readouts visible");
+check(unsupported.nodes.obdMonitorSelection.hidden && !unsupported.context.obdMonitorGrid.children[0].querySelector(), "Unsupported observer must not expose inert selection");
+check(JSON.stringify(values) === original && context.retainedInsights === insights, "Selection must not mutate source readout or safety insights");
 check(source.includes("initializeObdMonitorFilter();") && html.includes('type="search" maxlength="100"') && html.includes('aria-controls="obdMonitorGrid"')
   && html.includes('aria-label="検索を解除"'), "Search controls or initializer missing");
 check(css.includes('.obd-monitor-card[hidden] { display: none; }'), "Grid card styling overrides hidden rows");
