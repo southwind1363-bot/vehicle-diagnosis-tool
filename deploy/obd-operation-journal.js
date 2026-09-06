@@ -7,6 +7,8 @@
   const EXPORT_TYPE = "bridge_session_export_v1";
   const MAX_BYTES = 4000000;
   const TIMEOUT_MS = 5000;
+  const JOURNAL_RECORD_LOCK_PREFIX = "vehicle-diagnosis-operation-journal-v1/preOperationRecords/";
+  const LOCK_ACQUIRE_TIMEOUT_MS = 5000;
   const RECORD_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
   const SAFETY_FLAG_KEYS = [
     "connection_enabled", "vehicle_command_enabled", "retained_raw_frames", "retained_raw_text",
@@ -21,6 +23,19 @@
 
   function result(status, reason, recordId) {
     return Object.freeze({ status, reason, recordId: recordId || null, execution: execution() });
+  }
+
+  function reservationResult(status, reason, recordId, lease) {
+    return Object.freeze({ status, reason, recordId: recordId || null, lease: lease || null, execution: execution() });
+  }
+
+  function recordLockName(recordId) {
+    return `${JOURNAL_RECORD_LOCK_PREFIX}${recordId}`;
+  }
+
+  function webLocksRequest() {
+    const request = globalThis.navigator?.locks?.request;
+    return typeof request === "function" ? request.bind(globalThis.navigator.locks) : null;
   }
 
   function validRecordId(value) {
@@ -560,30 +575,122 @@
     });
   }
 
-  function removePreOperationRecord(input) {
+  function reservePreOperationRecord(input) {
     const snapshot = snapshotRemoveInput(input);
-    if (snapshot.error) return Promise.resolve(result("rejected", snapshot.error, snapshot.recordId));
+    if (snapshot.error) return Promise.resolve(reservationResult("rejected", snapshot.error, snapshot.recordId, null));
     const validated = validateSession(snapshot.recordId, snapshot.sessionJson);
-    if (validated.error) return Promise.resolve(result("rejected", validated.error, validated.recordId));
+    if (validated.error) return Promise.resolve(reservationResult("rejected", validated.error, validated.recordId, null));
 
     return new Promise((resolve) => {
       let settled = false;
       let db = null;
       let activeTransaction = null;
       let timer = null;
+      let finishVerification = null;
+      let lockRequestPromise = null;
+      let leaseState = null;
+      const cleanup = () => {
+        if (activeTransaction) {
+          try { activeTransaction.abort(); } catch {}
+          activeTransaction = null;
+        }
+        if (db) {
+          try { db.close(); } catch {}
+          db = null;
+        }
+      };
       const finish = (status, reason) => {
         if (settled) return;
         settled = true;
         if (timer !== null) clearTimeout(timer);
-        if (activeTransaction) {
-          try { activeTransaction.abort(); } catch {}
-        }
-        if (db) {
-          try { db.close(); } catch {}
-        }
-        resolve(result(status, reason, snapshot.recordId));
+        cleanup();
+        finishVerification?.();
+        resolve(reservationResult(status, reason, snapshot.recordId, null));
       };
       timer = setTimeout(() => finish("indeterminate", "operation_timeout"), TIMEOUT_MS);
+      const publishLease = (releaseGateResolve) => {
+        let held = true;
+        let releasePromise = null;
+        const deactivate = () => {
+          held = false;
+          if (!releasePromise) {
+            releaseGateResolve();
+            releasePromise = Promise.resolve().then(() => lockRequestPromise).then(() => undefined, () => undefined);
+          }
+          return releasePromise;
+        };
+        const lease = Object.freeze({
+          recordId: snapshot.recordId,
+          isHeld: () => held,
+          release: deactivate
+        });
+        leaseState = { deactivate };
+        settled = true;
+        if (timer !== null) clearTimeout(timer);
+        resolve(reservationResult("reserved", "record_reserved", snapshot.recordId, lease));
+      };
+      const readMatchingRecord = () => new Promise((complete) => {
+        let completed = false;
+        const finishRead = (outcome) => {
+          if (completed) return;
+          completed = true;
+          finishVerification = null;
+          if (db) {
+            try { db.close(); } catch {}
+            db = null;
+          }
+          complete(outcome);
+        };
+        finishVerification = () => finishRead({ cancelled: true });
+        let openRequest;
+        try {
+          if (!globalThis.indexedDB?.open) return finishRead({ error: "storage_unavailable" });
+          openRequest = globalThis.indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+        } catch {
+          return finishRead({ error: "storage_open_failed" });
+        }
+        openRequest.onblocked = () => finishRead({ error: "storage_blocked" });
+        openRequest.onerror = () => finishRead({ error: "storage_open_failed" });
+        openRequest.onupgradeneeded = () => {
+          try { openRequest.transaction?.abort(); } catch {}
+          try { openRequest.result?.close(); } catch {}
+          finishRead({ error: "storage_not_initialized" });
+        };
+        openRequest.onsuccess = () => {
+          const opened = openRequest.result;
+          if (settled || completed) {
+            try { opened.close(); } catch {}
+            return;
+          }
+          db = opened;
+          db.onversionchange = () => finishRead({ error: "storage_version_changed" });
+          if (!db.objectStoreNames.contains(STORE_NAME)) return finishRead({ error: "storage_schema_invalid" });
+          let stored;
+          let tx;
+          try {
+            tx = db.transaction(STORE_NAME, "readonly");
+            activeTransaction = tx;
+          } catch {
+            return finishRead({ error: "storage_transaction_failed" });
+          }
+          tx.onerror = () => {};
+          tx.onabort = () => finishRead({ error: "storage_read_failed" });
+          tx.oncomplete = () => {
+            activeTransaction = null;
+            finishRead({ stored });
+          };
+          let getRequest;
+          try {
+            const store = tx.objectStore(STORE_NAME);
+            if (store.keyPath !== "recordId" || store.autoIncrement !== false) return finishRead({ error: "storage_schema_invalid" });
+            getRequest = store.get(snapshot.recordId);
+          } catch {
+            return finishRead({ error: "storage_read_failed" });
+          }
+          getRequest.onerror = () => finishRead({ error: "storage_read_failed" });
+          getRequest.onsuccess = () => { stored = getRequest.result; };
+        };
+      });
 
       (async () => {
         let digest;
@@ -595,7 +702,87 @@
         }
         if (settled) return;
         if (!isArrayBuffer(digest) || digest.byteLength !== 32) return finish("rejected", "digest_failed");
+        const request = webLocksRequest();
+        if (!request) return finish("unavailable", "web_locks_unavailable");
+        clearTimeout(timer);
+        timer = setTimeout(() => finish("indeterminate", "lock_acquire_timeout"), LOCK_ACQUIRE_TIMEOUT_MS);
+        try {
+          lockRequestPromise = request(recordLockName(snapshot.recordId), { mode: "exclusive", ifAvailable: true }, async (lock) => {
+            if (settled) return;
+            if (!lock) return finish("busy", "record_busy");
+            const read = await readMatchingRecord();
+            if (settled || read.cancelled) return;
+            if (read.error) return finish("indeterminate", read.error);
+            if (read.stored === undefined) return finish("conflict", "record_not_found");
+            if (!storedRecordMatches(read.stored, snapshot.recordId, validated.bytes.buffer, validated.bytes.byteLength, digest, snapshot.createdAt)) {
+              return finish("conflict", "record_mismatch");
+            }
+            let releaseGateResolve;
+            const releaseGate = new Promise((release) => { releaseGateResolve = release; });
+            publishLease(releaseGateResolve);
+            await releaseGate;
+          });
+          Promise.resolve(lockRequestPromise).then(
+            () => { leaseState?.deactivate(); },
+            () => {
+              if (leaseState) leaseState.deactivate();
+              else if (!settled) finish("indeterminate", "lock_request_failed");
+            }
+          );
+        } catch {
+          finish("indeterminate", "lock_request_failed");
+        }
+      })();
+    });
+  }
 
+  function removePreOperationRecord(input) {
+    const snapshot = snapshotRemoveInput(input);
+    if (snapshot.error) return Promise.resolve(result("rejected", snapshot.error, snapshot.recordId));
+    const validated = validateSession(snapshot.recordId, snapshot.sessionJson);
+    if (validated.error) return Promise.resolve(result("rejected", validated.error, validated.recordId));
+
+    return new Promise((resolve) => {
+      let storageSettled = false;
+      let publicSettled = false;
+      let db = null;
+      let activeTransaction = null;
+      let timer = null;
+      let callbackCompletion = null;
+      let lockRequestPromise = null;
+      let deadlinePhase = "operation";
+      const resolvePublic = (status, reason) => {
+        if (publicSettled) return;
+        publicSettled = true;
+        if (timer !== null) clearTimeout(timer);
+        resolve(result(status, reason, snapshot.recordId));
+      };
+      const finish = (status, reason) => {
+        if (storageSettled) return;
+        storageSettled = true;
+        if (activeTransaction) {
+          try { activeTransaction.abort(); } catch {}
+        }
+        if (db) {
+          try { db.close(); } catch {}
+        }
+        const publicResult = () => resolvePublic(status, reason);
+        if (callbackCompletion) {
+          const complete = callbackCompletion;
+          callbackCompletion = null;
+          complete();
+          return Promise.resolve().then(() => lockRequestPromise).then(publicResult, publicResult);
+        }
+        publicResult();
+      };
+      timer = setTimeout(() => {
+        if (publicSettled) return;
+        const timeoutReason = deadlinePhase === "lock" ? "lock_acquire_timeout" : "operation_timeout";
+        if (!storageSettled) finish("indeterminate", timeoutReason);
+        if (!publicSettled) resolvePublic("indeterminate", timeoutReason);
+      }, TIMEOUT_MS);
+
+      function startStorage(digest) {
         let openRequest;
         try {
           if (!globalThis.indexedDB?.open) return finish("indeterminate", "storage_unavailable");
@@ -612,7 +799,7 @@
         };
         openRequest.onsuccess = () => {
           const opened = openRequest.result;
-          if (settled) {
+          if (storageSettled) {
             try { opened.close(); } catch {}
             return;
           }
@@ -639,7 +826,7 @@
           tx.onerror = () => {};
           tx.onabort = () => finish("indeterminate", deleteIssued ? "storage_delete_failed" : "storage_read_failed");
           tx.oncomplete = () => {
-            if (settled) return;
+            if (storageSettled) return;
             activeTransaction = null;
             if (!deleteIssued) return finish("indeterminate", "storage_delete_failed");
             confirmAbsence();
@@ -655,7 +842,7 @@
           }
           getRequest.onerror = () => finish("indeterminate", "storage_read_failed");
           getRequest.onsuccess = () => {
-            if (settled) return;
+            if (storageSettled) return;
             if (getRequest.result === undefined) return finish("conflict", "record_not_found");
             if (!storedRecordMatches(getRequest.result, snapshot.recordId, validated.bytes.buffer, validated.bytes.byteLength, expectedDigest, snapshot.createdAt)) {
               return finish("conflict", "record_mismatch");
@@ -678,7 +865,7 @@
           tx.onerror = () => {};
           tx.onabort = () => finish("indeterminate", "storage_read_failed");
           tx.oncomplete = () => {
-            if (settled) return;
+            if (storageSettled) return;
             activeTransaction = null;
             if (!checked) return finish("indeterminate", "storage_read_failed");
             finish(absent ? "confirmed" : "indeterminate", absent ? "record_removed" : "record_still_present");
@@ -697,6 +884,37 @@
             absent = getRequest.result === undefined;
           };
         }
+      }
+
+      (async () => {
+        let digest;
+        try {
+          if (!globalThis.crypto?.subtle?.digest) return finish("rejected", "digest_unavailable");
+          digest = await globalThis.crypto.subtle.digest("SHA-256", validated.bytes);
+        } catch {
+          return finish("rejected", "digest_failed");
+        }
+        if (storageSettled) return;
+        if (!isArrayBuffer(digest) || digest.byteLength !== 32) return finish("rejected", "digest_failed");
+        const request = webLocksRequest();
+        if (!request) return finish("unavailable", "web_locks_unavailable");
+        deadlinePhase = "lock";
+        try {
+          lockRequestPromise = request(recordLockName(snapshot.recordId), { mode: "exclusive", ifAvailable: true }, (lock) => {
+            if (storageSettled) return;
+            if (!lock) return finish("busy", "record_busy");
+            deadlinePhase = "operation";
+            return new Promise((complete) => {
+              callbackCompletion = complete;
+              startStorage(digest);
+            });
+          });
+          Promise.resolve(lockRequestPromise).catch(() => {
+            if (!storageSettled) finish("indeterminate", "lock_request_failed");
+          });
+        } catch {
+          finish("indeterminate", "lock_request_failed");
+        }
       })();
     });
   }
@@ -706,5 +924,6 @@
   const loadPreOperation = Object.freeze(async function loadPreOperation(input) { return loadPreOperationRecord(input); });
   const listPreOperationIdsApi = Object.freeze(async function listPreOperationIdsApi(input) { return listPreOperationIds(input); });
   const removePreOperation = Object.freeze(async function removePreOperation(input) { return removePreOperationRecord(input); });
-  window.ObdOperationJournal = Object.freeze({ savePreOperation, verifyPreOperation, loadPreOperation, listPreOperationIds: listPreOperationIdsApi, removePreOperation });
+  const reservePreOperation = Object.freeze(async function reservePreOperation(input) { return reservePreOperationRecord(input); });
+  window.ObdOperationJournal = Object.freeze({ savePreOperation, verifyPreOperation, loadPreOperation, listPreOperationIds: listPreOperationIdsApi, removePreOperation, reservePreOperation });
 })();

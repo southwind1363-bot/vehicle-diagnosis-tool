@@ -115,6 +115,7 @@ function asset(pathname) {
       window.__comparisonSessionJson = JSON.stringify(session);
       return JSON.stringify(payload);
     });
+    const comparisonSessionJson = await page.evaluate(() => window.__comparisonSessionJson);
     await page.evaluate(async (json) => {
       const journal = window.ObdOperationJournal;
       for (let index = 0; index < 21; index += 1) {
@@ -702,8 +703,199 @@ function asset(pathname) {
     await page.locator('#obdOperationJournalViewer').screenshot({ path: path.join(output, 'operation-journal-removal-1280.png') });
     await page.setViewportSize({ width: 390, height: 900 });
     await page.locator('#obdOperationJournalViewer').screenshot({ path: path.join(output, 'operation-journal-removal-390.png') });
+    const reservationPage = await context.newPage();
+    reservationPage.on('pageerror', error => errors.push(error.message));
+    reservationPage.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+    reservationPage.setDefaultTimeout(20000);
+    const reservationId = 'zz-reservation-ui-fixture';
+    async function prepareReservationFixture({ save = false } = {}) {
+      await reservationPage.goto(origin + '/');
+      await reservationPage.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await reservationPage.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await reservationPage.evaluate(() => setObdStage('details'));
+      const reservationViewer = reservationPage.locator('#obdOperationJournalViewer');
+      if (!(await reservationViewer.evaluate(node => node.open))) await reservationViewer.locator(':scope > summary').click();
+      await reservationPage.evaluate(async ({ recordId, canonical, comparisonSessionJson, save }) => {
+        if (save) {
+          const saved = await window.ObdOperationJournal.savePreOperation({ recordId, sessionJson: canonical });
+          if (saved.status !== 'confirmed') throw new Error(`reservation fixture save failed: ${JSON.stringify(saved)}`);
+        }
+        obdDevSession.lastSession = JSON.parse(comparisonSessionJson);
+      }, { recordId: reservationId, canonical, comparisonSessionJson, save });
+      const found = await reservationPage.evaluate(async recordId => {
+        for (let pageIndex = 0; pageIndex < 20; pageIndex += 1) {
+          await listObdOperationJournalRecords({ reset: pageIndex === 0, pageIndex });
+          if (obdOperationJournalState.recordIds.includes(recordId)) {
+            await loadObdOperationJournalRecord(recordId);
+            return true;
+          }
+          if (obdOperationJournalState.pages[pageIndex]?.hasMore !== true) return false;
+        }
+        return false;
+      }, reservationId);
+      assert.equal(found, true, 'Reservation fixture must be found through the bounded journal pages');
+      await reservationPage.waitForFunction(recordId => obdOperationJournalState.selectedRecord?.recordId === recordId, reservationId);
+    }
+    async function installSyntheticReservation(mode) {
+      await reservationPage.evaluate(mode => {
+        window.__reservationBaseJournal = window.ObdOperationJournal;
+        window.__reservationCalls = 0;
+        window.__reservationReleaseCalls = 0;
+        const makeReserved = recordId => {
+          let held = true;
+          let releasePromise = null;
+          const lease = Object.freeze({
+            recordId,
+            isHeld: () => held,
+            release: () => {
+              if (!releasePromise) {
+                held = false;
+                window.__reservationReleaseCalls += 1;
+                releasePromise = mode === 'release-delayed'
+                  ? new Promise(resolve => { window.__resolveLeaseRelease = resolve; })
+                  : Promise.resolve();
+              }
+              return releasePromise;
+            }
+          });
+          return Object.freeze({
+            status: 'reserved',
+            reason: 'record_reserved',
+            recordId,
+            lease,
+            execution: Object.freeze({ wouldTransmit: false, canExecute: false, retryAllowed: false })
+          });
+        };
+        window.ObdOperationJournal = Object.freeze({
+          ...window.__reservationBaseJournal,
+          reservePreOperation: input => {
+            window.__reservationCalls += 1;
+            if (mode === 'busy') return Promise.resolve(Object.freeze({
+              status: 'busy', reason: 'record_busy', recordId: input.recordId, lease: null,
+              execution: Object.freeze({ wouldTransmit: false, canExecute: false, retryAllowed: false })
+            }));
+            if (mode === 'delayed') return new Promise(resolve => { window.__resolveReservation = () => resolve(makeReserved(input.recordId)); });
+            return Promise.resolve(makeReserved(input.recordId));
+          }
+        });
+      }, mode);
+    }
+    await prepareReservationFixture({ save: true });
+    await installSyntheticReservation('delayed');
+    await reservationPage.evaluate(() => {
+      void compareCurrentObdReadoutToOperationJournalRecord();
+      void compareCurrentObdReadoutToOperationJournalRecord();
+    });
+    await reservationPage.waitForFunction(() => typeof window.__resolveReservation === 'function');
+    assert.equal(await reservationPage.evaluate(() => window.__reservationCalls), 1, 'Pending comparison calls must share one reservation operation');
+    await reservationPage.evaluate(() => clearObdOperationJournalComparison());
+    await reservationPage.evaluate(() => window.__resolveReservation());
+    await reservationPage.waitForFunction(() => window.__reservationReleaseCalls === 1 && !obdOperationJournalComparisonState.promise && !obdOperationJournalComparisonState.releasePromise);
+    assert.equal(await reservationPage.evaluate(() => obdOperationJournalComparisonState.association), null, 'A cleared pending comparison must release its late lease without restoring an association');
+
+    await prepareReservationFixture();
+    await installSyntheticReservation('delayed');
+    await reservationPage.evaluate(() => { void compareCurrentObdReadoutToOperationJournalRecord(); });
+    await reservationPage.waitForFunction(() => typeof window.__resolveReservation === 'function');
+    await reservationPage.locator('#obdOperationJournalViewer').locator(':scope > summary').click();
+    await reservationPage.evaluate(() => window.__resolveReservation());
+    await reservationPage.waitForFunction(() => window.__reservationReleaseCalls === 1 && !obdOperationJournalComparisonState.promise);
+    assert.equal(await reservationPage.evaluate(() => obdOperationJournalComparisonState.association), null, 'Closing the viewer must release a late reservation without association resurrection');
+
+    await prepareReservationFixture();
+    await installSyntheticReservation('reserved');
+    await reservationPage.evaluate(() => compareCurrentObdReadoutToOperationJournalRecord());
+    await reservationPage.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    const associationReentry = await reservationPage.evaluate(async () => {
+      const association = obdOperationJournalComparisonState.association;
+      const status = obdOperationJournalComparisonState.status;
+      const calls = window.__reservationCalls;
+      const result = await compareCurrentObdReadoutToOperationJournalRecord();
+      return { result, calls, status, associationCurrent: obdOperationJournalComparisonState.association === association, statusCurrent: obdOperationJournalComparisonState.status === status };
+    });
+    assert.deepEqual(associationReentry, { result: false, calls: 1, status: associationReentry.status, associationCurrent: true, statusCurrent: true }, 'Direct reentry while associated must not reserve or overwrite state');
+    await reservationPage.evaluate(() => lockObdDeveloperMode());
+    await reservationPage.waitForFunction(() => window.__reservationReleaseCalls === 1 && obdOperationJournalComparisonState.association === null);
+    assert.equal(await reservationPage.locator('#obdOperationJournalViewer').isHidden(), true, 'Developer lock must clear the protected comparison candidate');
+
+    await reservationPage.evaluate(() => sessionStorage.setItem('vehicle-diagnosis-obd-dev-mode-v1', 'enabled'));
+    await prepareReservationFixture();
+    await installSyntheticReservation('reserved');
+    await reservationPage.evaluate(() => compareCurrentObdReadoutToOperationJournalRecord());
+    await reservationPage.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    await reservationPage.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    assert.notEqual(await reservationPage.evaluate(() => obdOperationJournalComparisonState.association), null, 'Visibility changes alone must retain a protected candidate');
+    await reservationPage.evaluate(() => window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true })));
+    await reservationPage.waitForFunction(() => window.__reservationReleaseCalls === 1 && obdOperationJournalComparisonState.association === null);
+
+    await prepareReservationFixture();
+    await installSyntheticReservation('release-delayed');
+    await reservationPage.evaluate(() => compareCurrentObdReadoutToOperationJournalRecord());
+    await reservationPage.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    const releaseReentry = await reservationPage.evaluate(async () => {
+      const calls = window.__reservationCalls;
+      const status = obdOperationJournalComparisonState.status;
+      clearObdOperationJournalComparison();
+      const result = await compareCurrentObdReadoutToOperationJournalRecord();
+      return { result, calls, status, association: obdOperationJournalComparisonState.association, releasePending: Boolean(obdOperationJournalComparisonState.releasePromise), statusCurrent: obdOperationJournalComparisonState.status === '' };
+    });
+    assert.deepEqual(releaseReentry, { result: false, calls: 1, status: releaseReentry.status, association: null, releasePending: true, statusCurrent: true }, 'Direct reentry during release must not reserve or restore state');
+    await reservationPage.evaluate(() => window.__resolveLeaseRelease());
+    await reservationPage.waitForFunction(() => !obdOperationJournalComparisonState.releasePromise);
+
+    await prepareReservationFixture();
+    await installSyntheticReservation('reserved');
+    await reservationPage.evaluate(() => compareCurrentObdReadoutToOperationJournalRecord());
+    await reservationPage.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    await reservationPage.evaluate(() => {
+      obdDevSession.lastSession.dtcSnapshot.dtcs[0].code = 'P0420';
+      renderObdOperationJournalViewer();
+    });
+    await reservationPage.waitForFunction(() => window.__reservationReleaseCalls === 1 && obdOperationJournalComparisonState.association === null);
+    assert.equal(await reservationPage.locator('#obdOperationJournalRecord .obd-operation-journal-clear-preparation').count(), 0, 'In-place session mutation must release and remove the candidate');
+
+    await prepareReservationFixture();
+    await installSyntheticReservation('busy');
+    await reservationPage.evaluate(() => compareCurrentObdReadoutToOperationJournalRecord());
+    await reservationPage.waitForFunction(() => document.getElementById('obdOperationJournalStatus').textContent.includes('別の同一サイト画面で使用中'));
+    assert.equal(await reservationPage.evaluate(() => obdOperationJournalComparisonState.association), null, 'A second-tab busy result must not associate the record');
+    await installSyntheticReservation('reserved');
+    await reservationPage.evaluate(() => {
+      window.__busyRemoveCalls = 0;
+      window.confirm = () => true;
+      window.ObdOperationJournal = Object.freeze({ ...window.ObdOperationJournal, removePreOperation: async input => {
+        window.__busyRemoveCalls += 1;
+        return { status: 'busy', reason: 'record_busy', recordId: input.recordId };
+      } });
+      void removeSelectedObdOperationJournalRecord();
+    });
+    await reservationPage.waitForFunction(() => obdOperationJournalRemovalState.phase === 'busy');
+    assert.equal(await reservationPage.evaluate(() => window.__busyRemoveCalls), 1, 'Busy deletion must classify the actual remove result without a preflight reservation');
+    assert.equal(await reservationPage.evaluate(() => obdOperationJournalState.selectedRecord?.recordId), reservationId, 'Busy deletion must retain the selected record for a fresh manual attempt');
+
+    await reservationPage.evaluate(() => {
+      const { reservePreOperation, ...unreservedJournal } = window.__reservationBaseJournal;
+      window.ObdOperationJournal = Object.freeze(unreservedJournal);
+      resetObdOperationJournalRemovalOutcome();
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await reservationPage.locator('#obdOperationJournalCompareCurrent').isDisabled(), true, 'Missing Web Locks reservation support must disable comparison only');
+    assert.equal(await reservationPage.locator('#obdOperationJournalRecord .obd-operation-journal-remove').isDisabled(), true, 'Missing Web Locks reservation support must disable deletion only');
+    assert.equal(await reservationPage.locator('#obdOperationJournalRecord .obd-operation-journal-remove').getAttribute('title'), 'このブラウザでは比較中の記録を保護できないため削除できません。');
+    assert.equal(await reservationPage.locator('#obdOperationJournalSaveCurrent').isEnabled(), true, 'Missing reservation support must retain save');
+    assert.equal(await reservationPage.locator('#obdOperationJournalDownload').isEnabled(), true, 'Missing reservation support must retain JSON export');
+    assert.equal(await reservationPage.locator('#obdOperationJournalRefresh').isEnabled(), true, 'Missing reservation support must retain listing');
+    await reservationPage.evaluate(() => {
+      Object.defineProperty(navigator, 'locks', { value: undefined, configurable: true });
+      window.ObdOperationJournal = window.__reservationBaseJournal;
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await reservationPage.locator('#obdOperationJournalCompareCurrent').isDisabled(), true, 'Web Locks absence with a present API must disable comparison');
+    assert.equal(await reservationPage.locator('#obdOperationJournalCompareCurrent').getAttribute('title'), 'このブラウザでは保存記録の比較保護を利用できません。');
+    assert.equal(await reservationPage.locator('#obdOperationJournalRecord .obd-operation-journal-remove').getAttribute('title'), 'このブラウザでは比較中の記録を保護できないため削除できません。');
+    await reservationPage.close();
     assert.deepEqual(errors, [], 'No page or console errors');
-    console.log(`Operation journal viewer checks: empty, load, pagination, download guards, stale guards, layout / Errors: 0`);
+    console.log(`Operation journal viewer checks: empty, load, pagination, download guards, stale guards, reservation lifecycle, layout / Errors: 0`);
     console.log(`Screenshots: ${output}`);
     await context.close();
   } finally {

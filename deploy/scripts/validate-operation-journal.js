@@ -171,6 +171,55 @@ function createFakeIdb(options = {}) {
   };
 }
 
+function createFakeWebLocks(options = {}) {
+  const held = new Set();
+  const calls = { requests: [] };
+  const locks = {
+    request(name, requestOptions, callback) {
+      calls.requests.push({ name, options: { ...requestOptions } });
+      if (options.lockRequestThrows) throw new Error("lock request");
+      if (options.lockRequestRejects) return Promise.reject(new Error("lock request"));
+      return new Promise((resolve, reject) => {
+        const invoke = () => {
+          if (options.lockCallbackNever) return;
+          if (held.has(name) || options.lockUnavailable) {
+            Promise.resolve().then(() => callback(null)).then(resolve, reject);
+            return;
+          }
+          held.add(name);
+          let callbackResult;
+          try {
+            callbackResult = callback({ name, mode: "exclusive" });
+          } catch (error) {
+            held.delete(name);
+            reject(error);
+            return;
+          }
+          if (options.lockRequestRejectsAfterCallback) {
+            const rejectAfterCallback = () => {
+              held.delete(name);
+              reject(new Error("lock request after callback"));
+            };
+            if (options.lockRequestRejectsAfterCallbackDelay) setTimeout(rejectAfterCallback, options.lockRequestRejectsAfterCallbackDelay);
+            else later(rejectAfterCallback);
+          }
+          if (options.lockRequestHangsAfterCallback) {
+            Promise.resolve(callbackResult).then(() => {}, () => {});
+            return;
+          }
+          Promise.resolve(callbackResult).then(
+            (value) => { held.delete(name); resolve(value); },
+            (error) => { held.delete(name); reject(error); }
+          );
+        };
+        if (options.lockCallbackDelay) setTimeout(invoke, options.lockCallbackDelay);
+        else later(invoke);
+      });
+    }
+  };
+  return { locks, calls, held };
+}
+
 function payload(extra = {}) {
   return JSON.stringify({ schema_version: "bridge_session_export_v1", session: { readout: "complete", wouldTransmit: false, canExecute: false, retryAllowed: false, vehicleCommandEnabled: false }, connection_enabled: false, vehicle_command_enabled: false, retained_raw_frames: false, retained_raw_text: false, wouldTransmit: false, canExecute: false, retryAllowed: false, vehicleCommandEnabled: false, ...extra });
 }
@@ -187,16 +236,20 @@ function payloadWithExactUtf8Bytes(byteLength, character = "x") {
 
 function client(options = {}) {
   const fake = createFakeIdb(options);
+  const webLocks = options.webLocks || createFakeWebLocks(options);
   const crypto = options.digestFailure ? { subtle: { digest: async () => { throw new Error("digest"); } } }
     : options.digestPending ? { subtle: { digest: async () => new Promise(() => {}) } }
     : options.delayedDigest ? { subtle: { digest: (...args) => new Promise((resolve, reject) => setTimeout(() => webcrypto.subtle.digest(...args).then(resolve, reject), options.delayedDigest)) } }
     : options.shortDigest ? { subtle: { digest: async () => new ArrayBuffer(31) } } : webcrypto;
-  const operationTimer = options.timeoutDelay === undefined ? setTimeout : (callback) => setTimeout(callback, options.timeoutDelay);
-  const context = vm.createContext({ window: {}, indexedDB: fake, IDBKeyRange: { lowerBound: (lower, open) => ({ lower, open }) }, crypto, TextEncoder, TextDecoder, setTimeout: operationTimer, clearTimeout, queueMicrotask, Date });
+  const operationTimer = (callback, delay) => {
+    options.operationTimers?.push(delay);
+    return setTimeout(callback, options.timeoutDelay === undefined ? delay : options.timeoutDelay);
+  };
+  const context = vm.createContext({ window: {}, indexedDB: fake, navigator: options.noWebLocks ? {} : { locks: webLocks.locks }, IDBKeyRange: { lowerBound: (lower, open) => ({ lower, open }) }, crypto, TextEncoder, TextDecoder, setTimeout: operationTimer, clearTimeout, queueMicrotask, Date });
   context.window = context;
   context.ObdReadOnly = { getDiagnosticSessionJsonPolicy: options.policy || (() => ({ accepted: true, kind: "session" })) };
   vm.runInContext(source, context, { filename: "obd-operation-journal.js" });
-  return { api: context.ObdOperationJournal, fake, context };
+  return { api: context.ObdOperationJournal, fake, webLocks, context };
 }
 
 const good = { recordId: "preop_01", sessionJson: payload() };
@@ -505,11 +558,35 @@ async function seededRemoveClient(options = {}) {
   const expected = { recordId: good.recordId, sessionJson: good.sessionJson, createdAt: first.fake.records.get(good.recordId).createdAt };
   return { ...client({ initialized: true, records: first.fake.records, ...options }), expected };
 }
+function isSafeReservation(outcome, status, reason) {
+  return Object.isFrozen(outcome) && Object.isFrozen(outcome.execution) && outcome.status === status && outcome.reason === reason
+    && outcome.execution.wouldTransmit === false && outcome.execution.canExecute === false && outcome.execution.retryAllowed === false;
+}
+async function seededReservationClient(options = {}) {
+  const first = client();
+  const saved = await first.api.savePreOperation(good);
+  assert.equal(saved.status, "confirmed", "Reservation fixture failed to save");
+  const expected = { recordId: good.recordId, sessionJson: good.sessionJson, createdAt: first.fake.records.get(good.recordId).createdAt };
+  return { ...client({ initialized: true, records: first.fake.records, ...options }), expected };
+}
 {
   const { api, fake, expected } = await seededRemoveClient();
   const removed = await api.removePreOperation(expected);
   check(isSafeRemove(removed, "confirmed", "record_removed") && fake.calls.deletes === 1 && !fake.records.has(expected.recordId)
     && fake.calls.strict === 1 && fake.calls.modes.join(",") === "readwrite,readonly", "Remove did not use strict CAS deletion followed by readonly absence confirmation");
+}
+{
+  const { api, expected, webLocks } = await seededRemoveClient();
+  const removed = await api.removePreOperation(expected);
+  const reacquired = await api.reservePreOperation(expected);
+  check(isSafeRemove(removed, "confirmed", "record_removed") && isSafeReservation(reacquired, "conflict", "record_not_found")
+    && webLocks.held.size === 0, "Remove resolved before its native lock request settled and allowed immediate reacquire");
+}
+{
+  const operationTimers = [];
+  const { api, expected } = await seededRemoveClient({ operationTimers });
+  const removed = await api.removePreOperation(expected);
+  check(isSafeRemove(removed, "confirmed", "record_removed") && operationTimers.length === 1 && operationTimers[0] === 5000, "Remove reset its original five-second operation deadline after digest or lock grant");
 }
 {
   const { api, fake } = client({ initialized: true });
@@ -583,9 +660,112 @@ for (const [options, reason, remains] of [
   check(isSafeRemove(timedOut, "indeterminate", "operation_timeout") && fake.records.has(expected.recordId) && fake.calls.deletes === 1 && fake.calls.aborts >= 1, "Late delete callback ran after timeout");
 }
 {
+  const { api, fake, expected } = await seededRemoveClient({ lockRequestHangsAfterCallback: true, timeoutDelay: 5 });
+  const timedOut = await api.removePreOperation(expected);
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  check(isSafeRemove(timedOut, "indeterminate", "operation_timeout") && fake.calls.reads === 2 && fake.calls.deletes === 1, "Hung native lock request did not force a bounded result after callback completion");
+}
+{
   const { api, fake, expected } = await seededRemoveClient({ lateOpen: 15, timeoutDelay: 5 });
   const timedOut = await api.removePreOperation(expected);
   await new Promise((resolve) => setTimeout(resolve, 25));
   check(isSafeRemove(timedOut, "indeterminate", "operation_timeout") && fake.calls.deletes === 0 && fake.records.has(expected.recordId), "Late open started deletion after timeout");
+}
+{
+  const { api, fake, webLocks, expected } = await seededReservationClient();
+  const reserved = await api.reservePreOperation(expected);
+  check(isSafeReservation(reserved, "reserved", "record_reserved") && Object.isFrozen(reserved.lease)
+    && Reflect.ownKeys(reserved).join(",") === "status,reason,recordId,lease,execution"
+    && Reflect.ownKeys(reserved.lease).join(",") === "recordId,isHeld,release" && reserved.lease.isHeld()
+    && fake.calls.reads === 1 && fake.calls.deletes === 0 && webLocks.calls.requests.length === 1
+    && webLocks.held.has("vehicle-diagnosis-operation-journal-v1/preOperationRecords/preop_01")
+    && webLocks.calls.requests[0].name === "vehicle-diagnosis-operation-journal-v1/preOperationRecords/preop_01"
+    && JSON.stringify(webLocks.calls.requests[0].options) === JSON.stringify({ mode: "exclusive", ifAvailable: true }), "Reserve did not publish the exact frozen lease after locked verification");
+  const firstRelease = reserved.lease.release();
+  const secondRelease = reserved.lease.release();
+  check(firstRelease === secondRelease && !reserved.lease.isHeld(), "Lease release was not idempotent and synchronously visible");
+  await firstRelease;
+  const removed = await api.removePreOperation(expected);
+  check(isSafeRemove(removed, "confirmed", "record_removed") && fake.calls.deletes === 1, "Explicit delete after release did not complete");
+}
+{
+  const first = await seededReservationClient();
+  const held = await first.api.reservePreOperation(first.expected);
+  const contender = client({ initialized: true, records: first.fake.records, webLocks: first.webLocks });
+  const reserveBusy = await contender.api.reservePreOperation(first.expected);
+  const removeBusy = await contender.api.removePreOperation(first.expected);
+  check(isSafeReservation(reserveBusy, "busy", "record_busy") && reserveBusy.lease === null && isSafeRemove(removeBusy, "busy", "record_busy")
+    && contender.fake.calls.opens === 0 && contender.fake.calls.deletes === 0, "Held record allowed reserve or delete to reach IndexedDB");
+  await held.lease.release();
+}
+{
+  const first = client();
+  const second = { recordId: "preop_02", sessionJson: payload() };
+  await first.api.savePreOperation(good);
+  await first.api.savePreOperation(second);
+  const one = { recordId: good.recordId, sessionJson: good.sessionJson, createdAt: first.fake.records.get(good.recordId).createdAt };
+  const two = { recordId: second.recordId, sessionJson: second.sessionJson, createdAt: first.fake.records.get(second.recordId).createdAt };
+  const reopened = client({ initialized: true, records: first.fake.records, webLocks: first.webLocks });
+  const heldOne = await reopened.api.reservePreOperation(one);
+  const heldTwo = await reopened.api.reservePreOperation(two);
+  check(heldOne.status === "reserved" && heldTwo.status === "reserved" && first.webLocks.held.size === 2, "Independent record IDs did not acquire independent locks");
+  await Promise.all([heldOne.lease.release(), heldTwo.lease.release()]);
+}
+{
+  const { api, fake, expected } = await seededReservationClient({ lockCallbackDelay: 15, timeoutDelay: 5 });
+  const timedOut = await api.reservePreOperation(expected);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  check(isSafeReservation(timedOut, "indeterminate", "lock_acquire_timeout") && timedOut.lease === null && fake.calls.opens === 0, "Late lock callback opened IndexedDB or published a lease");
+}
+{
+  const { api, fake, expected } = await seededReservationClient({ noWebLocks: true });
+  const reserved = await api.reservePreOperation(expected);
+  const removed = await api.removePreOperation(expected);
+  check(isSafeReservation(reserved, "unavailable", "web_locks_unavailable") && reserved.lease === null
+    && isSafeRemove(removed, "unavailable", "web_locks_unavailable") && fake.calls.opens === 0 && fake.calls.deletes === 0, "Missing Web Locks reached IndexedDB");
+}
+for (const lockOption of [{ lockRequestThrows: true }, { lockRequestRejects: true }]) {
+  const { api, fake, expected } = await seededReservationClient(lockOption);
+  const reserved = await api.reservePreOperation(expected);
+  const removed = await api.removePreOperation(expected);
+  check(isSafeReservation(reserved, "indeterminate", "lock_request_failed") && reserved.lease === null
+    && isSafeRemove(removed, "indeterminate", "lock_request_failed") && fake.calls.opens === 0, "Lock request failure reached IndexedDB or exposed a lease");
+}
+{
+  const { api, expected, webLocks } = await seededReservationClient({ lockRequestRejectsAfterCallback: true, lockRequestRejectsAfterCallbackDelay: 10 });
+  const reserved = await api.reservePreOperation(expected);
+  check(reserved.lease.isHeld(), "Reservation did not publish before the simulated native rejection");
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  const inactiveBeforeRelease = !reserved.lease.isHeld();
+  const firstRelease = reserved.lease.release();
+  const secondRelease = reserved.lease.release();
+  await firstRelease;
+  check(inactiveBeforeRelease && !reserved.lease.isHeld() && firstRelease === secondRelease && webLocks.held.size === 0, "Rejected native request left the published lease held or changed release identity");
+}
+for (const method of ["reservePreOperation", "removePreOperation"]) {
+  const { api, fake, webLocks } = client({ initialized: true, digestPending: true, timeoutDelay: 5 });
+  const input = { recordId: good.recordId, sessionJson: good.sessionJson, createdAt: new Date().toISOString() };
+  const outcome = await api[method](input);
+  const safe = method === "reservePreOperation"
+    ? isSafeReservation(outcome, "indeterminate", "operation_timeout") && outcome.lease === null
+    : isSafeRemove(outcome, "indeterminate", "operation_timeout");
+  check(safe && fake.calls.opens === 0 && webLocks.calls.requests.length === 0, "Pending digest requested a lock or left the public operation unresolved");
+}
+{
+  const { api, fake, expected } = await seededReservationClient({ lockCallbackDelay: 15, timeoutDelay: 5 });
+  const timedOut = await api.removePreOperation(expected);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  check(isSafeRemove(timedOut, "indeterminate", "lock_acquire_timeout") && fake.calls.opens === 0 && fake.calls.deletes === 0, "Late delete lock callback reached IndexedDB");
+}
+{
+  const { api, fake, webLocks } = client({ initialized: true });
+  const rejected = await api.reservePreOperation({ recordId: good.recordId, sessionJson: good.sessionJson, createdAt: new Date().toUTCString() });
+  check(isSafeReservation(rejected, "rejected", "invalid_created_at") && rejected.lease === null && fake.calls.opens === 0 && webLocks.calls.requests.length === 0, "Invalid reservation input requested a lock or opened IndexedDB");
+}
+{
+  const { api, expected } = await seededReservationClient();
+  const removed = await api.removePreOperation(expected);
+  const reserved = await api.reservePreOperation(expected);
+  check(isSafeRemove(removed, "confirmed", "record_removed") && isSafeReservation(reserved, "conflict", "record_not_found") && reserved.lease === null, "Reservation after deletion did not report a locked absence conflict");
 }
 console.log(`Operation journal validation passed: ${checks} checks`);

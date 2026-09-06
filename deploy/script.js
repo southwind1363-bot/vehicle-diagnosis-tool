@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.512";
+const APP_VERSION = "3.13.513";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -729,6 +729,11 @@ const obdOperationJournalSaveState = {
   requiresAck: false
 };
 const obdOperationJournalComparisonState = {
+  generation: 0,
+  promise: null,
+  releasePromise: null,
+  releasingLease: null,
+  reservationUnavailable: false,
   association: null,
   status: ""
 };
@@ -1169,12 +1174,13 @@ obdOperationJournalNext?.addEventListener("click", () => { void listObdOperation
 obdOperationJournalDownload?.addEventListener("click", downloadObdOperationJournalRecordJson);
 obdOperationJournalSaveCurrent?.addEventListener("click", () => { void saveCurrentObdReadoutToOperationJournal(); });
 obdOperationJournalOpenConfirmed?.addEventListener("click", () => { void openConfirmedObdOperationJournalRecord(); });
-obdOperationJournalCompareCurrent?.addEventListener("click", compareCurrentObdReadoutToOperationJournalRecord);
+obdOperationJournalCompareCurrent?.addEventListener("click", () => { void compareCurrentObdReadoutToOperationJournalRecord(); });
 obdOperationJournalSaveAckInput?.addEventListener("change", () => { renderObdOperationJournalViewer(); });
 obdOperationJournalViewer?.addEventListener("toggle", () => {
   if (!obdOperationJournalViewer.open) clearObdOperationJournalViewer();
   else renderObdOperationJournalViewer();
 });
+window.addEventListener("pagehide", () => { clearObdOperationJournalComparison(); });
 obdAccessPasswordInput.addEventListener("keydown", (event) => {
   handleObdUnlockKeydown(event, obdAccessUnlockButton);
 });
@@ -6259,6 +6265,9 @@ function clearObdOperationJournalViewer() {
 }
 
 function setObdOperationJournalSelectedRecord(record, origin) {
+  if (obdOperationJournalState.selectedRecord !== record || obdOperationJournalState.selectedRecordOrigin !== origin) {
+    clearObdOperationJournalComparison();
+  }
   obdOperationJournalState.selectionGeneration += 1;
   obdOperationJournalState.selectedRecord = record;
   obdOperationJournalState.selectedRecordOrigin = origin;
@@ -6281,6 +6290,17 @@ function rememberObdOperationJournalRemovalOutcome(result, expected) {
   if (status === "confirmed" && reason === "record_removed" && recordId === expected.recordId) {
     obdOperationJournalRemovalState.phase = "confirmed";
     obdOperationJournalRemovalState.status = `保存記録を削除しました。 記録ID: ${expected.recordId}`;
+    return;
+  }
+  if (status === "busy" && reason === "record_busy" && recordId === expected.recordId) {
+    obdOperationJournalRemovalState.phase = "busy";
+    obdOperationJournalRemovalState.status = "この保存記録は別の同一サイト画面で比較中のため削除しませんでした。比較候補を解除後、必要ならもう一度削除してください。";
+    return;
+  }
+  if (status === "unavailable" && reason === "web_locks_unavailable") {
+    obdOperationJournalComparisonState.reservationUnavailable = true;
+    obdOperationJournalRemovalState.phase = "rejected";
+    obdOperationJournalRemovalState.status = "このブラウザでは比較中の記録を保護できないため削除できません。";
     return;
   }
   if (status === "conflict" && recordId === expected.recordId && ["record_not_found", "record_mismatch"].includes(reason)) {
@@ -6309,10 +6329,41 @@ function clearMatchingObdOperationJournalLastSave(recordId) {
   obdOperationJournalSaveState.requiresAck = false;
 }
 
+function isObdOperationJournalReservationSupported() {
+  return obdOperationJournalComparisonState.reservationUnavailable !== true
+    && typeof globalThis.navigator?.locks?.request === "function"
+    && typeof window.ObdOperationJournal?.reservePreOperation === "function";
+}
+
+function releaseObdOperationJournalComparisonLease(lease) {
+  if (!lease || typeof lease.release !== "function") return Promise.resolve();
+  if (obdOperationJournalComparisonState.releasingLease === lease && obdOperationJournalComparisonState.releasePromise) {
+    return obdOperationJournalComparisonState.releasePromise;
+  }
+  const releasePromise = Promise.resolve()
+    .then(() => lease.release())
+    .catch(() => undefined)
+    .then(() => undefined);
+  obdOperationJournalComparisonState.releasingLease = lease;
+  obdOperationJournalComparisonState.releasePromise = releasePromise;
+  void releasePromise.then(() => {
+    if (obdOperationJournalComparisonState.releasePromise !== releasePromise) return;
+    obdOperationJournalComparisonState.releasePromise = null;
+    obdOperationJournalComparisonState.releasingLease = null;
+    renderObdOperationJournalViewer();
+  });
+  return releasePromise;
+}
+
 function clearObdOperationJournalComparison() {
+  obdOperationJournalComparisonState.generation += 1;
   obdDtcClearTargetBindingController.invalidate("journal_association_not_current");
+  const lease = obdOperationJournalComparisonState.association?.lease || null;
   obdOperationJournalComparisonState.association = null;
   obdOperationJournalComparisonState.status = "";
+  return lease
+    ? releaseObdOperationJournalComparisonLease(lease)
+    : obdOperationJournalComparisonState.releasePromise || Promise.resolve();
 }
 
 function isObdOperationJournalViewerActive(revision) {
@@ -6353,13 +6404,18 @@ function getObdOperationJournalSaveBlockReason(revision = obdOperationJournalSta
   return getObdSessionExportBlockReason();
 }
 
-function getObdOperationJournalComparisonBlockReason(revision, record, sessionRef, { ignoreRemovalBusy = false } = {}) {
+function getObdOperationJournalComparisonBlockReason(revision, record, sessionRef, { ignoreRemovalBusy = false, ignoreComparisonBusy = false } = {}) {
   if (!record || !isObdOperationJournalViewerActive(revision)
     || obdOperationJournalState.listing || obdOperationJournalState.loading
     || (!ignoreRemovalBusy && Boolean(obdOperationJournalRemovalState.promise))
     || Boolean(obdOperationJournalSaveState.promise)
     || getEligibleObdOperationJournalRecord(revision) !== record
     || obdDevSession.lastSession !== sessionRef) return "照合条件が変わったため、実行しませんでした。";
+  if (!isObdOperationJournalReservationSupported()) return "このブラウザでは保存記録の比較保護を利用できません。";
+  if (!ignoreComparisonBusy && (obdOperationJournalComparisonState.promise || obdOperationJournalComparisonState.releasePromise)) {
+    return "比較候補の保護処理が完了してから操作してください。";
+  }
+  if (!ignoreComparisonBusy && obdOperationJournalComparisonState.association) return "比較候補を解除してから新しい照合をしてください。";
   return getObdOperationJournalSaveBlockReason(revision, { ignoreRemovalBusy });
 }
 
@@ -6369,6 +6425,10 @@ function getObdOperationJournalRemovalBlockReason(revision, record, { ignoreOwnB
     || Boolean(obdOperationJournalSaveState.promise)
     || (!ignoreOwnBusy && Boolean(obdOperationJournalRemovalState.promise))
     || getEligibleObdOperationJournalRecord(revision) !== record) return "検証済みの記録を選択してください。";
+  if (!isObdOperationJournalReservationSupported()) return "このブラウザでは比較中の記録を保護できないため削除できません。";
+  if (obdOperationJournalComparisonState.promise || obdOperationJournalComparisonState.releasePromise) {
+    return "比較候補の保護処理が完了してから削除してください。";
+  }
   if (obdDevSession.pendingWriteOperation || obdDevSession.pendingCommandOperation
     || obdDevSession.readInProgress || obdDevSession.coreScanInProgress || obdDevSession.initializing
     || obdSerialDisconnectOperation || obdSerialConnectPending || obdBridgeOperation) {
@@ -6417,15 +6477,17 @@ function isSafeObdOperationJournalComparisonController(controller, recordId) {
 function getObdOperationJournalComparisonAssociation() {
   const association = obdOperationJournalComparisonState.association;
   if (!association) return null;
-  const blockReason = getObdOperationJournalComparisonBlockReason(association.revision, association.record, association.sessionRef, { ignoreRemovalBusy: true });
+  const blockReason = getObdOperationJournalComparisonBlockReason(association.revision, association.record, association.sessionRef, { ignoreRemovalBusy: true, ignoreComparisonBusy: true });
   if (blockReason || association.record.sessionJson !== association.sessionJson
+    || association.record.createdAt !== association.createdAt
+    || association.lease?.recordId !== association.record.recordId || association.lease?.isHeld?.() !== true
     || !isSafeObdOperationJournalComparisonController(association.controller, association.record.recordId)) {
     clearObdOperationJournalComparison();
     return null;
   }
   try {
     if (buildCurrentObdOperationJournalSaveSnapshot(association.sessionRef, association.exportedAt) !== association.sessionJson
-      || getObdOperationJournalComparisonBlockReason(association.revision, association.record, association.sessionRef, { ignoreRemovalBusy: true })
+      || getObdOperationJournalComparisonBlockReason(association.revision, association.record, association.sessionRef, { ignoreRemovalBusy: true, ignoreComparisonBusy: true })
       || !isSafeObdOperationJournalComparisonController(association.controller, association.record.recordId)) {
       clearObdOperationJournalComparison();
       return null;
@@ -6437,87 +6499,132 @@ function getObdOperationJournalComparisonAssociation() {
   return association;
 }
 
-function compareCurrentObdReadoutToOperationJournalRecord() {
+async function compareCurrentObdReadoutToOperationJournalRecord() {
+  if (obdOperationJournalComparisonState.promise) return obdOperationJournalComparisonState.promise;
+  if (obdOperationJournalComparisonState.association || obdOperationJournalComparisonState.releasePromise) return false;
+  const generation = ++obdOperationJournalComparisonState.generation;
   const revision = obdOperationJournalState.revision;
+  const selectionGeneration = obdOperationJournalState.selectionGeneration;
   const record = getEligibleObdOperationJournalRecord(revision);
   const sessionRef = obdDevSession.lastSession;
-  const blockReason = getObdOperationJournalComparisonBlockReason(revision, record, sessionRef);
-  if (blockReason) {
-    obdOperationJournalState.status = blockReason;
-    obdOperationJournalState.error = true;
-    renderObdOperationJournalViewer();
-    return false;
-  }
-  const exportedAt = getObdOperationJournalRecordExportedAt(record.sessionJson);
-  if (!exportedAt) {
-    clearObdOperationJournalComparison();
-    obdOperationJournalState.status = "記録の照合時刻を確認できないため、照合しませんでした。";
-    obdOperationJournalState.error = true;
-    renderObdOperationJournalViewer();
-    return false;
-  }
-  let currentSessionJson;
-  try {
-    currentSessionJson = buildCurrentObdOperationJournalSaveSnapshot(sessionRef, exportedAt);
-  } catch (_error) {
-    clearObdOperationJournalComparison();
-    obdOperationJournalState.status = "現在の読取結果を照合用に確認できませんでした。";
-    obdOperationJournalState.error = true;
-    renderObdOperationJournalViewer();
-    return false;
-  }
-  const afterBuildReason = getObdOperationJournalComparisonBlockReason(revision, record, sessionRef);
-  if (afterBuildReason) {
-    clearObdOperationJournalComparison();
-    obdOperationJournalState.status = afterBuildReason;
-    obdOperationJournalState.error = true;
-    renderObdOperationJournalViewer();
-    return false;
-  }
-  if (currentSessionJson !== record.sessionJson) {
-    clearObdOperationJournalComparison();
-    obdOperationJournalState.status = "照合時点の読取内容は一致しません。診断結果は変更していません。";
+  let operation;
+  operation = (async () => {
+    const blockReason = getObdOperationJournalComparisonBlockReason(revision, record, sessionRef, { ignoreComparisonBusy: true });
+    if (blockReason) {
+      obdOperationJournalState.status = blockReason;
+      obdOperationJournalState.error = blockReason !== "このブラウザでは保存記録の比較保護を利用できません。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    const expected = Object.freeze({ recordId: record.recordId, sessionJson: record.sessionJson, createdAt: record.createdAt });
+    const exportedAt = getObdOperationJournalRecordExportedAt(expected.sessionJson);
+    if (!exportedAt) {
+      obdOperationJournalState.status = "記録の照合時刻を確認できないため、照合しませんでした。";
+      obdOperationJournalState.error = true;
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    try {
+      if (buildCurrentObdOperationJournalSaveSnapshot(sessionRef, exportedAt) !== expected.sessionJson) {
+        obdOperationJournalState.status = "照合時点の読取内容は一致しません。診断結果は変更していません。";
+        obdOperationJournalState.error = false;
+        renderObdOperationJournalViewer();
+        return false;
+      }
+    } catch (_error) {
+      obdOperationJournalState.status = "現在の読取結果を照合用に確認できませんでした。";
+      obdOperationJournalState.error = true;
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    obdOperationJournalState.status = "保存記録を確認して比較を保護しています。";
     obdOperationJournalState.error = false;
     renderObdOperationJournalViewer();
-    return false;
-  }
-  let controller;
-  try {
-    controller = window.ObdReadOnly?.createGenericObdDtcClearController?.({ target: null, preOperationSessionId: record.recordId, evidence: {} });
-  } catch (_error) {
-    controller = null;
-  }
-  if (!isSafeObdOperationJournalComparisonController(controller, record.recordId)
-    || getObdOperationJournalComparisonBlockReason(revision, record, sessionRef)) {
-    clearObdOperationJournalComparison();
-    obdOperationJournalState.status = "照合結果の安全状態を確認できないため、関連付けませんでした。";
-    obdOperationJournalState.error = true;
-    renderObdOperationJournalViewer();
-    return false;
-  }
-  obdOperationJournalComparisonState.association = Object.freeze({
-    revision,
-    record,
-    sessionRef,
-    sessionJson: record.sessionJson,
-    exportedAt,
-    controller,
-    targetBindingController: obdDtcClearTargetBindingController
-  });
-  try {
-    obdDtcClearTargetBindingController.capture({
-      expectedAssociation: obdOperationJournalComparisonState.association,
-      expectedSessionRef: sessionRef,
-      expectedPortRef: obdDevSession.port,
-      expectedSerialRevision: obdSerialRevision
+    let reservation;
+    try {
+      reservation = await window.ObdOperationJournal.reservePreOperation(expected);
+    } catch (_error) {
+      reservation = null;
+    }
+    const lease = reservation?.lease;
+    const current = obdOperationJournalComparisonState.promise === operation
+      && obdOperationJournalComparisonState.generation === generation
+      && isObdOperationJournalViewerActive(revision)
+      && obdOperationJournalState.selectionGeneration === selectionGeneration
+      && obdOperationJournalState.selectedRecord === record
+      && record.recordId === expected.recordId && record.sessionJson === expected.sessionJson && record.createdAt === expected.createdAt
+      && obdDevSession.lastSession === sessionRef;
+    let currentSessionMatches = false;
+    try { currentSessionMatches = buildCurrentObdOperationJournalSaveSnapshot(sessionRef, exportedAt) === expected.sessionJson; } catch (_error) { /* Stale input is rejected below. */ }
+    const reserved = reservation?.status === "reserved" && reservation.reason === "record_reserved"
+      && reservation.recordId === expected.recordId && reservation.execution?.wouldTransmit === false
+      && reservation.execution?.canExecute === false && reservation.execution?.retryAllowed === false
+      && lease?.recordId === expected.recordId && typeof lease?.isHeld === "function" && lease.isHeld() === true;
+    if (!current || !currentSessionMatches || !reserved
+      || getObdOperationJournalComparisonBlockReason(revision, record, sessionRef, { ignoreComparisonBusy: true })) {
+      if (lease) void releaseObdOperationJournalComparisonLease(lease);
+      if (!current) return false;
+      if (reservation?.status === "busy" && reservation.reason === "record_busy" && reservation.recordId === expected.recordId) {
+        obdOperationJournalState.status = "この保存記録は別の同一サイト画面で使用中です。比較候補を解除後、手動で再試行してください。";
+        obdOperationJournalState.error = false;
+      } else if (reservation?.status === "unavailable" && reservation.reason === "web_locks_unavailable") {
+        obdOperationJournalComparisonState.reservationUnavailable = true;
+        obdOperationJournalState.status = "このブラウザでは保存記録の比較保護を利用できません。";
+        obdOperationJournalState.error = false;
+      } else {
+        obdOperationJournalState.status = "照合条件が変わったため、実行しませんでした。";
+        obdOperationJournalState.error = true;
+      }
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    let controller;
+    try {
+      controller = window.ObdReadOnly?.createGenericObdDtcClearController?.({ target: null, preOperationSessionId: expected.recordId, evidence: {} });
+    } catch (_error) {
+      controller = null;
+    }
+    if (!isSafeObdOperationJournalComparisonController(controller, expected.recordId)) {
+      void releaseObdOperationJournalComparisonLease(lease);
+      obdOperationJournalState.status = "照合結果の安全状態を確認できないため、関連付けませんでした。";
+      obdOperationJournalState.error = true;
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    const association = Object.freeze({
+      revision,
+      record,
+      sessionRef,
+      sessionJson: expected.sessionJson,
+      createdAt: expected.createdAt,
+      exportedAt,
+      controller,
+      lease,
+      targetBindingController: obdDtcClearTargetBindingController
     });
-  } catch (_error) {
-    // A target-binding failure is isolated from the existing comparison result.
-    obdDtcClearTargetBindingController.invalidate("journal_association_not_current");
-  }
-  obdOperationJournalComparisonState.status = `照合時点の読取内容が一致。車両同一性・適合・安全条件・消去許可は未確認。 記録ID: ${record.recordId}`;
+    obdOperationJournalComparisonState.association = association;
+    try {
+      obdDtcClearTargetBindingController.capture({
+        expectedAssociation: association,
+        expectedSessionRef: sessionRef,
+        expectedPortRef: obdDevSession.port,
+        expectedSerialRevision: obdSerialRevision
+      });
+    } catch (_error) {
+      obdDtcClearTargetBindingController.invalidate("journal_association_not_current");
+    }
+    obdOperationJournalComparisonState.status = `照合時点の読取内容が一致。車両同一性・適合・安全条件・消去許可は未確認。 記録ID: ${expected.recordId}`;
+    obdOperationJournalState.status = "";
+    obdOperationJournalState.error = false;
+    renderObdOperationJournalViewer();
+    return true;
+  })().finally(() => {
+    if (obdOperationJournalComparisonState.promise === operation) obdOperationJournalComparisonState.promise = null;
+    renderObdOperationJournalViewer();
+  });
+  obdOperationJournalComparisonState.promise = operation;
   renderObdOperationJournalViewer();
-  return true;
+  return operation;
 }
 
 function renderObdOperationJournalSaveInfo(active) {
@@ -6881,6 +6988,17 @@ async function removeSelectedObdOperationJournalRecord() {
         obdOperationJournalState.status = "選択した保存記録の削除を確認しました。現在の診断結果は変更していません。";
         obdOperationJournalState.error = false;
         return true;
+      }
+      if (result?.status === "busy" && result.reason === "record_busy" && result.recordId === expected.recordId) {
+        obdOperationJournalRemovalState.phase = "busy";
+        obdOperationJournalRemovalState.status = "この保存記録は別の同一サイト画面で比較中のため削除しませんでした。比較候補を解除後、必要ならもう一度削除してください。";
+        return false;
+      }
+      if (result?.status === "unavailable" && result.reason === "web_locks_unavailable") {
+        obdOperationJournalComparisonState.reservationUnavailable = true;
+        obdOperationJournalRemovalState.phase = "rejected";
+        obdOperationJournalRemovalState.status = "このブラウザでは比較中の記録を保護できないため削除できません。";
+        return false;
       }
       if (result?.status === "conflict" && result.recordId === expected.recordId
         && ["record_not_found", "record_mismatch"].includes(result.reason)) {

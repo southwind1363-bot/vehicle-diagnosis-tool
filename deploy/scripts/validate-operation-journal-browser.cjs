@@ -443,7 +443,9 @@ async function tamperRecord(page, recordId, mutate) {
     const removalInput = { recordId: removeId, sessionJson: removalRecord.sessionJson, createdAt: removalRecord.createdAt };
     const countBeforeRemove = await recordCount(page);
     const removalResults = await Promise.all([page, page2].map(tab => tab.evaluate(input => window.ObdOperationJournal.removePreOperation(input), removalInput)));
-    assert.deepEqual(removalResults.map(result => `${result.status}/${result.reason}`).sort(), ['confirmed/record_removed', 'conflict/record_not_found']);
+    assert.equal(removalResults.filter(result => result.status === 'confirmed' && result.reason === 'record_removed').length, 1);
+    assert.equal(removalResults.filter(result => (result.status === 'busy' && result.reason === 'record_busy')
+      || (result.status === 'conflict' && result.reason === 'record_not_found')).length, 1);
     removalResults.forEach(result => assertExecutionFrozen(result, 'concurrent removal'));
     assert.equal(await recordCount(page), countBeforeRemove - 1, 'Concurrent removal must delete exactly one record');
     assert.equal((await load(page, 'canonical-record')).record.sessionJson, canonical, 'Removal must preserve other records');
@@ -458,7 +460,87 @@ async function tamperRecord(page, recordId, mutate) {
     assert.equal((await load(page, removeId)).record.sessionJson, replacementJson, 'Stale confirmation must preserve replacement content');
     checks += 1;
 
+    const reservedId = 'reserved-record';
+    assert.equal((await save(page, reservedId, canonical)).status, 'confirmed');
+    const reservedRecord = (await load(page, reservedId)).record;
+    const reservationInput = { recordId: reservedId, sessionJson: reservedRecord.sessionJson, createdAt: reservedRecord.createdAt };
+    const reservation = await page.evaluate(async input => {
+      window.__journalReservation = await window.ObdOperationJournal.reservePreOperation(input);
+      const result = window.__journalReservation;
+      return { status: result.status, reason: result.reason, recordId: result.recordId, held: result.lease?.isHeld(),
+        frozen: Object.isFrozen(result) && Object.isFrozen(result.lease) && Object.isFrozen(result.execution), execution: result.execution };
+    }, reservationInput);
+    assert.equal(reservation.status, 'reserved');
+    assert.equal(reservation.reason, 'record_reserved');
+    assert.equal(reservation.recordId, reservedId);
+    assert.equal(reservation.held, true);
+    assert.equal(reservation.frozen, true);
+    assertExecutionFrozen(reservation, 'reserved record');
+    checks += 1;
+
+    const busyRemoval = await page2.evaluate(async input => {
+      const original = indexedDB.open;
+      let opens = 0;
+      indexedDB.open = function (...args) { opens += 1; return original.apply(this, args); };
+      try { return { result: await window.ObdOperationJournal.removePreOperation(input), opens }; }
+      finally { indexedDB.open = original; }
+    }, reservationInput);
+    assert.equal(busyRemoval.result.status, 'busy');
+    assert.equal(busyRemoval.result.reason, 'record_busy');
+    assert.equal(busyRemoval.opens, 0, 'A held record must block deletion before IndexedDB access');
+    assertExecutionFrozen(busyRemoval.result, 'busy removal');
+    const busyReservation = await page2.evaluate(input => window.ObdOperationJournal.reservePreOperation(input), reservationInput);
+    assert.equal(busyReservation.status, 'busy');
+    assert.equal(busyReservation.reason, 'record_busy');
+    assert.equal(busyReservation.lease, null);
+    assert.equal((await load(page2, reservedId)).record.sessionJson, canonical, 'Read access remains available while another tab reserves the record');
+    checks += 1;
+
+    const independent = (await load(page2, 'canonical-record')).record;
+    const independentResult = await page2.evaluate(async input => {
+      const result = await window.ObdOperationJournal.reservePreOperation(input);
+      const held = result.lease?.isHeld();
+      if (result.lease) await result.lease.release();
+      return { status: result.status, held };
+    }, { recordId: independent.recordId, sessionJson: independent.sessionJson, createdAt: independent.createdAt });
+    assert.deepEqual(independentResult, { status: 'reserved', held: true }, 'A reservation must not block unrelated records');
+    checks += 1;
+
+    const release = await page.evaluate(async () => {
+      const lease = window.__journalReservation.lease;
+      const first = lease.release();
+      const second = lease.release();
+      const heldAfterCall = lease.isHeld();
+      await first;
+      return { samePromise: first === second, heldAfterCall, heldAfterRelease: lease.isHeld() };
+    });
+    assert.deepEqual(release, { samePromise: true, heldAfterCall: false, heldAfterRelease: false });
+    assert.equal((await load(page2, reservedId)).status, 'loaded', 'Releasing a reservation must not automatically delete');
+    const afterRelease = await page2.evaluate(input => window.ObdOperationJournal.removePreOperation(input), reservationInput);
+    assert.equal(afterRelease.status, 'confirmed');
+    assert.equal(afterRelease.reason, 'record_removed');
+    const removedReservation = await page.evaluate(input => window.ObdOperationJournal.reservePreOperation(input), reservationInput);
+    assert.equal(removedReservation.status, 'conflict');
+    assert.equal(removedReservation.reason, 'record_not_found');
+    assert.equal(removedReservation.lease, null, 'A stale loaded record must not acquire a usable lease');
+    checks += 1;
+
+    assert.equal((await save(page, reservedId, canonical)).status, 'confirmed');
+    const closeRecord = (await load(page, reservedId)).record;
+    const closeInput = { recordId: reservedId, sessionJson: closeRecord.sessionJson, createdAt: closeRecord.createdAt };
+    assert.equal(await page.evaluate(async input => {
+      window.__journalReservation = await window.ObdOperationJournal.reservePreOperation(input);
+      return window.__journalReservation.status;
+    }, closeInput), 'reserved');
     await page.close();
+    const afterClose = await page2.evaluate(async input => {
+      const result = await window.ObdOperationJournal.reservePreOperation(input);
+      const held = result.lease?.isHeld();
+      if (result.lease) await result.lease.release();
+      return { status: result.status, held };
+    }, closeInput);
+    assert.deepEqual(afterClose, { status: 'reserved', held: true }, 'Closing the owning tab must release its native Web Lock');
+    checks += 1;
     await page2.close();
     page = await openPage(context, errors);
     const reopenVerify = await verify(page, 'canonical-record', canonical);
