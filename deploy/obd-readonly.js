@@ -1474,6 +1474,119 @@
     });
   }
 
+  const ELM_MODE04_RAW_TRANSCRIPT_PROFILE = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
+
+  function parseElmMode04RawTranscript(input) {
+    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["profile", "transcript", "completion"], "invalid_elm_mode04_raw_transcript_input");
+    const { profile, transcript, completion: callerCompletion } = inputSnapshot;
+    if (profile !== ELM_MODE04_RAW_TRANSCRIPT_PROFILE) throw new TypeError("invalid_elm_mode04_raw_transcript_profile");
+    if (typeof transcript !== "string") throw new TypeError("invalid_elm_mode04_raw_transcript");
+    if (transcript.length > 32768) throw new RangeError("invalid_elm_mode04_raw_transcript");
+    if (!["complete", "timeout", "disconnected", "error"].includes(callerCompletion)) throw new TypeError("invalid_elm_mode04_raw_transcript_completion");
+
+    const errors = [];
+    const frames = [];
+    let promptObserved = false;
+    const addError = (code, lineNumber) => errors.push({ code, lineNumber });
+
+    const lines = [];
+    let lineNumber = 1;
+    let start = 0;
+    let fatalContent = false;
+    for (let index = 0; index < transcript.length; index += 1) {
+      const code = transcript.charCodeAt(index);
+      if (code === 13) {
+        lines.push({ text: transcript.slice(start, index), lineNumber, terminated: true });
+        if (transcript.charCodeAt(index + 1) === 10) index += 1;
+        start = index + 1;
+        lineNumber += 1;
+        continue;
+      }
+      if (code === 10) {
+        addError("bare_lf", lineNumber);
+        fatalContent = true;
+        break;
+      }
+      if (code < 0x20 || code > 0x7e) {
+        addError("invalid_content", lineNumber);
+        fatalContent = true;
+        break;
+      }
+    }
+    if (!fatalContent && start < transcript.length) lines.push({ text: transcript.slice(start), lineNumber, terminated: false });
+
+    if (lines.length > 256) addError("physical_line_overflow", 257);
+    const boundedLines = lines.slice(0, 256);
+    for (const line of boundedLines) {
+      if (line.text === ">" && !line.terminated) {
+        promptObserved = true;
+        break;
+      }
+      if (line.text.includes(">")) {
+        addError("prompt_not_terminal", line.lineNumber);
+        break;
+      }
+      if (line.text === "") continue;
+      if (!line.terminated && /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line.text)) {
+        addError("incomplete_final_frame", line.lineNumber);
+        continue;
+      }
+      if (/^(?:04|AT(?:[A-Z0-9 ]*)?)$/.test(line.text)) {
+        addError("unexpected_command_echo", line.lineNumber);
+        continue;
+      }
+      if (line.text === "NO DATA" || line.text === "STOPPED") {
+        addError("unexpected_status", line.lineNumber);
+        continue;
+      }
+      if (/^[0-9A-F]{8}(?: [0-9A-F]{2}){8}$/.test(line.text)) {
+        addError("unsupported_29bit_frame", line.lineNumber);
+        continue;
+      }
+      if (/^[0-9A-F]{3}(?: [0-9A-F]{2})+$/.test(line.text)) {
+        const bytes = line.text.split(" ");
+        if (bytes.length !== 9) {
+          addError("invalid_dlc", line.lineNumber);
+          continue;
+        }
+        if (Number.parseInt(bytes[0], 16) > 0x7ff) {
+          addError("invalid_can_id", line.lineNumber);
+          continue;
+        }
+        const pci = Number.parseInt(bytes[1], 16);
+        if (pci < 1 || pci > 7) {
+          addError("non_single_frame", line.lineNumber);
+          continue;
+        }
+        if (frames.length >= 128) {
+          addError("frame_overflow", line.lineNumber);
+          continue;
+        }
+        frames.push({ sourceId: bytes[0], payload: bytes.slice(2, 2 + pci).map((byte) => Number.parseInt(byte, 16)) });
+        continue;
+      }
+      if (/^[0-9A-F]+$/.test(line.text)) {
+        addError("compact_frame", line.lineNumber);
+        continue;
+      }
+      if (/^[0-9A-F ]+$/.test(line.text)) addError("invalid_hex", line.lineNumber);
+      else addError("unexpected_line", line.lineNumber);
+    }
+
+    if (!promptObserved && callerCompletion === "complete") addError("missing_prompt", lineNumber);
+    const completion = errors.length === 0 ? callerCompletion : "error";
+    return freezeGenericObdDtcClearResponse({
+      schemaVersion: 1,
+      profile,
+      callerCompletion,
+      completion,
+      promptObserved,
+      frames,
+      errors,
+      execution: { wouldTransmit: false, canExecute: false, retryAllowed: false }
+    });
+  }
+
   function createGenericObdDtcClearReceiveWindow(input) {
     const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["expectedSourceIds", "connectionToken"], "invalid_generic_obd_dtc_clear_receive_window_input");
     if (inputSnapshot.connectionToken === null || typeof inputSnapshot.connectionToken !== "object") throw new TypeError("invalid_generic_obd_dtc_clear_receive_window_connection_token");
@@ -44775,6 +44888,7 @@
     buildServiceOperationReadiness,
     buildGenericObdDtcClearWorkflow,
     evaluateGenericObdDtcClearResponses,
+    parseElmMode04RawTranscript,
     createGenericObdDtcClearReceiveWindow,
     transitionGenericObdDtcClearWorkflow,
     createGenericObdDtcClearController,

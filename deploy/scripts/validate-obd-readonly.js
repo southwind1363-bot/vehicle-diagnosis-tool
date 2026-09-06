@@ -7,6 +7,7 @@ import "./validate-operation-availability.js";
 import "./validate-dtc-clear-workflow.js";
 import "./validate-dtc-clear-responses.js";
 import "./validate-dtc-clear-receive-window.js";
+import "./validate-elm-mode04-transcript.js";
 import "./validate-mode06-normalization.js";
 import "./validate-supported-pid-roundtrip.js";
 import "./validate-ecu-response-timing.js";
