@@ -1,5 +1,7 @@
 # R2 消去前証拠とintent別ECU範囲の設計案
 
+次工程の設計は [比較用の最小証拠情報](R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md)。現行sequenceの内容非比較を回帰試験で固定し、DTC集合の抽出とreadiness意味解釈を別段階にする。summary・差分・保存形式はまだ追加しない。
+
 ## 3.13.519後続: before/clear/postの模擬順序検査
 
 `evaluateDtcClearReadoutSequenceFixture()` をNode専用ハーネスへ追加。入力はscope/context/beforeReadout/clearWindowSnapshot/clearStartedAt/clearCompletedAt/postReadoutだけ。clearStartedAtは今回のfixture入力であり、実dispatcherから取得した時刻ではない。通常API・保存形式・アプリ本体は変更しない。

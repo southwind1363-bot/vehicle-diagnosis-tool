@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+3.13.519後続の最小比較証拠設計: `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` にintent/source別のDTC集合、検証済み内部コピー、短命な保持、失効と非永続化の要件を整理。DTC消失・追加・置換・status移動やreadiness変化をsequence成立と区別する回帰試験を追加した。比較用summaryや差分、通常API、保存形式、実送信は追加していない。次はテスト内のDTC最小証拠抽出を具体化する。
+
 3.13.519後続の模擬順序検査: before/clear/postを一つのfixture scopeで評価し、3 attemptの相違と取得区間の順序を検査するNode用処理を追加。関連910件がErrors 0。caller入力の時刻・参照を実clear接続の証明にせず、成功推定・比較・送信flagはfalse。アプリ本体・版番号・保存形式は変更しない。次はsource別の最小証拠summaryの設計。詳細は `R2-BEFORE-READOUT-SCOPE-DESIGN.md` 冒頭。
 
 3.13.519後続の消去後scope照合: Node専用ハーネスにpost側を追加し、before側とsource照合を共有した。clear未完了・completion矛盾・attempt再利用・順序逆転をブロックし、Mode04の期待sourceを読取対象へ転用しない。関連782件がErrors 0。アプリ本体と版番号は変更しない。次はbefore/clear/postを同じ模擬範囲と接続世代へ束縛する境界設計。前後比較や実車送信は未実装のまま。

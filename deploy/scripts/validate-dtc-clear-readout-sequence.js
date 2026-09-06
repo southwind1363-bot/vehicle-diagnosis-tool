@@ -91,4 +91,29 @@ for (const side of ["beforeReadout", "postReadout"]) {
   } });
   check(evaluate(value).reason === "scope_invalidated", "Invalidation during sequence was ignored");
 }
+// Scope/ordering success must remain independent of DTC content and readiness changes.
+const sequenceOnly = JSON.stringify(good);
+const dtcTranscript = (service, code) => code === null
+  ? `7E8 02 ${service} 00 AA AA AA AA AA\r>`
+  : `7E8 04 ${service} 01 ${code} AA AA AA\r>`;
+for (let index = 0; index < 3; index += 1) {
+  const service = ["43", "47", "4A"][index];
+  for (const [beforeCode, afterCode] of [["01 33", null], [null, "01 33"], ["01 33", "C1 23"], ["01 33", "01 33"]]) {
+    const value = fixture();
+    value.beforeReadout.receipts[index].transcript = dtcTranscript(service, beforeCode);
+    value.postReadout.receipts[index].transcript = dtcTranscript(service, afterCode);
+    check(JSON.stringify(run(value)) === sequenceOnly, "DTC content changes became a comparison or success inference");
+  }
+}
+for (const readiness of ["00 07 E1 00", "80 00 00 00", "01 07 E1 E1"]) {
+  const value = fixture();
+  value.postReadout.receipts[3].transcript = `7E8 06 41 01 ${readiness} AA\r>`;
+  check(JSON.stringify(run(value)) === sequenceOnly, "Readiness bytes became a repair or completion inference");
+}
+for (const [from, to] of [[0, 1], [1, 2], [2, 0]]) {
+  const value = fixture();
+  value.beforeReadout.receipts[from].transcript = dtcTranscript(["43", "47", "4A"][from], "01 33");
+  value.postReadout.receipts[to].transcript = dtcTranscript(["43", "47", "4A"][to], "01 33");
+  check(JSON.stringify(run(value)) === sequenceOnly, "Cross-category movement became a clear-success inference");
+}
 console.log(`DTC clear readout sequence checks: ${checks} / Errors: 0`);
