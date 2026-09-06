@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+3.13.519後続の模擬clear入力上限: 不変性検査を非再帰化し、own key総数の上限と上限超過専用エラーを追加。深さ5000・幅5000・循環・正当な32-source・opaque tokenの検証を追加し、関連2464件がErrors 0。アプリ本体・保存・実車送信は変更なし。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
+
 3.13.519後続の模擬差分境界検証: 全256集合ペア、255件、32 ECU、順序反転、期待ECU欠落、受信上限超過の回帰検査1084件を追加。関連2459件がErrors 0。差分処理本体・アプリ・保存・実車送信は変更なし。詳細と単独検証コマンドは `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
 
 3.13.519後続の模擬DTC差分: Node専用pair handleにinspectDifferenceを追加し、内部の組証拠だけからintent/source別added/removed/retainedを取得する。scope/context不一致・失効・dispose後は取得拒否。関連1375件がErrors 0。実車の比較可能性・消去成功・故障解消は推定せず、保存・通常API・送信は変更なし。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。

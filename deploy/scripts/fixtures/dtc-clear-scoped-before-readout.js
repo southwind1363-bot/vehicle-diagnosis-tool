@@ -244,20 +244,25 @@ function extractValidatedDtcRows(readout) {
 // Require immutable data, not merely a frozen outer shell. Never freeze caller data.
 function assertImmutableClearSnapshot(snapshot) {
   const seen = new WeakSet();
-  let visited = 0;
-  function visit(value, root = false) {
-    if (value === null || ["string", "number", "boolean", "undefined"].includes(typeof value)) return;
-    if (typeof value !== "object" || !Object.isFrozen(value) || ++visited > 4096) throw new TypeError("mutable_pair_clear_snapshot");
-    if (seen.has(value)) return;
+  const pending = [{ value: snapshot, root: true }];
+  let visited = 0, properties = 0;
+  while (pending.length) {
+    const { value, root } = pending.pop();
+    if (value === null || ["string", "number", "boolean", "undefined"].includes(typeof value)) continue;
+    if (typeof value !== "object" || !Object.isFrozen(value)) throw new TypeError("mutable_pair_clear_snapshot");
+    if (++visited > 4096) throw new TypeError("pair_clear_snapshot_budget_exceeded");
+    if (seen.has(value)) continue;
     seen.add(value);
-    for (const key of Reflect.ownKeys(value)) {
+    const keys = Reflect.ownKeys(value);
+    properties += keys.length;
+    if (properties > 4096) throw new TypeError("pair_clear_snapshot_budget_exceeded");
+    for (const key of keys) {
       const descriptor = Object.getOwnPropertyDescriptor(value, key);
       if (typeof key !== "string" || !descriptor || !Object.hasOwn(descriptor, "value")) throw new TypeError("invalid_pair_clear_descriptor");
       // Identity only: token contents are neither read nor frozen.
-      if (!(root && key === "attemptToken")) visit(descriptor.value);
+      if (!(root && key === "attemptToken")) pending.push({ value: descriptor.value, root: false });
     }
   }
-  visit(snapshot, true);
 }
 
 export function createDtcClearDtcEvidencePairFixture(input) {

@@ -1,5 +1,13 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 3.13.519後続: 模擬clear入力検査の上限整理
+
+一括生成前の不変性検査を再帰から明示的な作業配列へ変更した。object訪問4096回に加え、初回訪問objectのown key総数も4096までとする。上限超過は `pair_clear_snapshot_budget_exceeded`、変更可能な値は従来の `mutable_pair_clear_snapshot` と区別する。既存の深い入力も以前から上限で拒否されており、スタック障害を再現したという意味ではない。
+
+5000段・5000プロパティの入力、循環した不正schema、32-sourceの正当なclear snapshot、内容を読まないopaque attemptTokenを検査。追加5件、境界検証1089件、関連合計2464件がErrors 0。循環の不変性検査は終了し、その後の既存schema検査で拒否される。root tokenは参照だけを扱い、caller objectをfreezeしない。これは走査量の制限であり、Proxy自身の処理時間やownKeys配列の生成コストを隔離するsandboxではない。
+
+アプリ本体・保存・実車送信は変更なし。直前の基準1ff97043ではOBD主検証7447件・補助検証、bridge384件、offline180件の通過を確認済み。今回のNode専用入力検査変更では関連検証と構文/差分検査を実行し、OBD主検証・bridge・offlineは再実行しない。
+
 ## 3.13.519後続: 模擬差分の件数・順序・欠落境界
 
 `scripts/validate-dtc-clear-difference-boundaries.js` を追加し、既存before-readout検証から実行する。単独実行は `npm run validate:dtc-difference-boundaries`。一括生成factoryとinspectDifferenceの実装は変更しない。

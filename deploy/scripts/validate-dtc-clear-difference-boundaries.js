@@ -80,4 +80,32 @@ for (const side of ["beforeReadout", "postReadout"]) {
 const overBudget = fixture(["7E8", "7E9"]);
 overBudget.postReadout.receipts[0].transcript = ["7E8", "7E9"].map((id) => dtcFrames(id, 0x43, maximum)).join("") + ">";
 check(createDtcClearDtcEvidencePairFixture(overBudget).handle === null, "Over-budget receipt yielded a partial difference");
+// Untrusted frozen objects must be rejected within a bounded, stack-safe walk.
+for (const shape of ["deep", "wide"]) {
+  const value = fixture();
+  let oversized = Object.freeze({});
+  if (shape === "deep") {
+    for (let index = 0; index < 5000; index += 1) oversized = Object.freeze({ child: oversized });
+  } else oversized = Object.freeze(Object.fromEntries(Array.from({ length: 5000 }, (_, index) => [`field${index}`, index])));
+  value.clearWindowSnapshot = Object.freeze({ ...value.clearWindowSnapshot, execution: oversized });
+  assert.throws(() => createDtcClearDtcEvidencePairFixture(value),
+    (error) => error instanceof TypeError && error.message === "pair_clear_snapshot_budget_exceeded"); checks += 1;
+}
+const cyclic = fixture(), cycle = {}; cycle.self = cycle; Object.freeze(cycle);
+cyclic.clearWindowSnapshot = Object.freeze({ ...cyclic.clearWindowSnapshot, execution: cycle });
+assert.throws(() => createDtcClearDtcEvidencePairFixture(cyclic), (error) => error.name === "TypeError"); checks += 1;
+const wideClear = fixture();
+const wideConnection = {}, wideWindow = createDtcClearFixtureReceiveWindow({ expectedSourceIds: ids, connectionToken: wideConnection });
+for (const sourceId of ids) wideWindow.append(wideWindow.attemptToken, wideConnection, { sourceId, payload: [0x44] });
+wideClear.clearWindowSnapshot = wideWindow.finish(wideWindow.attemptToken, wideConnection, "complete").snapshot;
+const wideHandle = createDtcClearDtcEvidencePairFixture(wideClear).handle;
+check(wideHandle.inspectDifference(wideClear.context).ok, "Valid 32-source clear snapshot exceeded inspection budget");
+wideHandle.dispose();
+let tokenReads = 0;
+const tokenOnly = fixture();
+const opaqueToken = new Proxy({}, { ownKeys() { tokenReads += 1; throw new Error("Opaque token inspected"); } });
+tokenOnly.clearWindowSnapshot = Object.freeze({ ...tokenOnly.clearWindowSnapshot, attemptToken: opaqueToken });
+const tokenHandle = createDtcClearDtcEvidencePairFixture(tokenOnly).handle;
+check(tokenHandle.inspectDifference(tokenOnly.context).ok && tokenReads === 0, "Identity token contents traversed");
+tokenHandle.dispose();
 console.log(`DTC clear difference boundary checks: ${checks} / Errors: 0`);
