@@ -122,3 +122,19 @@ transport/protocolの適合表、実要求・応答の判定、実車試験、�
 | 従来の事例・JSON入出力 | key/schemaを変更せず、既存データの移行や削除を起こさない |
 
 実装着手条件はSolによる設計・影響範囲レビューの完了。車両との対応付け、実行開始記録、接続世代、消去前後比較は、この保管候補とは別の未完了項目として残る。
+
+## 3.13.501 消去前記録の保管部
+
+上記の使用量上限による停止後、Sol設計レビューを再実行して最小契約案を受領した。今回の対象は保管部だけで、保存開始の画面、消去操作との結合、認証、保持・削除管理は含めない。既存の事例保存・エクスポート形式は変更しない。
+
+`ObdOperationJournal.savePreOperation({ recordId, sessionJson })` と `verifyPreOperation({ recordId, sessionJson })` を独立モジュールに置く。ロード時にはDBを開かず、明示呼出時だけ動作する。DBは `vehicle-diagnosis-operation-journal-v1`、version 1、object storeは `preOperationRecords`。追加のみで、上書き・削除・自動再試行のAPIは公開しない。
+
+保存する情報はrecordId、createdAt、exportType、sourceBytes、byteLength、sha256。正規化し直したJSONではなく、渡されたJSONのUTF-8バイト列を保持する。最大4,000,000 byte、正規のエクスポート外枠と既存のsession JSONポリシーを確認する。ただし内容の真正性、車両適合、網羅性、個人情報除去をこの検査で保証しない。呼出側は事前に利用者確認と保存範囲の確認を実施する必要がある。
+
+保存確認は、追加のreadwrite transactionが完了した後、別readonly transactionで取得した記録のバイト列・長さ・digest・種別・ID等を照合して行う。digestだけの比較では完了扱いしない。strict durabilityを要求するが、将来の削除や破損を防ぐ保証ではない。
+
+createdAtはISO日時文字列、sha256は32byteのArrayBufferとする。保存直後は作成した日時との完全一致も確認する。verifyには期待日時を渡さないため、日時の真正性は保証せず、正規ISO形式と端末現在時刻から60秒先までの範囲だけを確認する。端末時計の変更によっても確認不能になり得る。DBのキー構成や記録の項目集合が異なる場合は、修復・移行せず確認不能とする。
+
+結果のstatusは `confirmed` / `conflict` / `rejected` / `indeterminate`。confirmedもその時点の保存照合だけを表し、消去許可には使わない。期限超過、blocked、読取不能、読取不一致はindeterminateとし、保存されなかったとは断定しない。失敗時も既存記録の削除や上書きで復旧しない。実行・送信・再試行許可は常にfalse。
+
+今回の通常画面からの自動保存・手動保存への接続はない。後続では保存対象と消去前記録IDの対応付け、利用者向けの一覧・エクスポート・削除管理、別タブや再接続時の失効を設計してから操作画面へ接続する。現在のdownload開始通知を保存完了の根拠へ変更しない。

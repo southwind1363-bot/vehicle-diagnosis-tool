@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "vehicle-diagnosis-tool";
-const CACHE_VERSION = "3.13.500";
+const CACHE_VERSION = "3.13.501";
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 const OFFLINE_MANIFEST_URL = "offline-assets.json";
 const OFFLINE_DOWNLOAD_TIMEOUT_MS = 15000;
@@ -10,6 +10,7 @@ const CORE_ASSETS = [
   "style.css",
   "script.js",
   "obd-readonly.js",
+  "obd-operation-journal.js",
   "manifest.webmanifest",
   OFFLINE_MANIFEST_URL
 ];

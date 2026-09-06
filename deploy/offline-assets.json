@@ -1,13 +1,14 @@
 {
-  "version": "3.13.500",
-  "generated_at": "2026-09-05",
-  "asset_count": 211,
+  "version": "3.13.501",
+  "generated_at": "2026-09-06",
+  "asset_count": 212,
   "assets": [
     "./",
     "index.html",
     "style.css",
     "script.js",
     "obd-readonly.js",
+    "obd-operation-journal.js",
     "local-bridge-readonly.js",
     "manifest.webmanifest",
     "service-worker.js",

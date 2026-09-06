@@ -606,6 +606,8 @@ async function validatePortableNpmScripts() {
     "validate:offline": "node scripts/validate-offline-cache.js",
     "validate:scanner-browser": "node scripts/validate-scanner-file-flow.cjs --offline --dense-live",
     "validate:case-storage": "node scripts/validate-case-storage.js",
+    "validate:operation-journal": "node scripts/validate-operation-journal.js",
+    "validate:operation-journal-browser": "node scripts/validate-operation-journal-browser.cjs",
     "validate:serial": "node scripts/validate-serial-lifecycle.js",
     "validate:serial-integration": "node scripts/validate-serial-integration.js",
     "validate:session-export": "node scripts/validate-session-export.js",
