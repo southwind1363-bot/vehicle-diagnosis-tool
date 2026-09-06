@@ -2217,6 +2217,25 @@ body.dark .flow-node-measure .flow-step {
   margin-top: 0;
 }
 
+.obd-readiness-review { grid-column: 1 / -1; }
+.obd-readiness-review h3, .obd-readiness-review h4 { margin: 0 0 10px; }
+.obd-readiness-note { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
+.obd-readiness-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 16px 0; }
+.obd-readiness-controls label { flex: 1 1 190px; min-width: 0; }
+.obd-readiness-controls input, .obd-readiness-controls select { width: 100%; min-height: 44px; }
+.obd-readiness-controls button { min-height: 44px; }
+.obd-readiness-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; }
+.obd-readiness-ecu { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 12px; }
+.obd-readiness-rows { list-style: none; padding: 0 !important; margin: 0; }
+.obd-readiness-rows li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 12px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.obd-readiness-rows li[hidden], .obd-readiness-ecu[hidden] { display: none; }
+.obd-readiness-name { font-weight: 700; }
+.obd-readiness-rows small { grid-column: 1 / -1; color: var(--muted); }
+.obd-readiness-badge { align-self: start; border: 1px solid currentColor; border-radius: 6px; padding: 2px 8px; font-size: 0.85rem; }
+.obd-readiness-rows [data-readiness-state="incomplete"] .obd-readiness-badge,
+.obd-readiness-rows [data-readiness-state="unknown"] .obd-readiness-badge,
+.obd-readiness-rows [data-readiness-state="missing"] .obd-readiness-badge { color: var(--manual); background: var(--manual-bg); }
+
 .obd-session-detail-card {
   display: grid;
   align-content: start;

@@ -1,0 +1,84 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const os = require('node:os');
+const assert = require('node:assert/strict');
+const vm = require('node:vm');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+(async () => {
+    const root = path.resolve(__dirname, '..');
+  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'readiness-review-'));
+  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
+  const errors = [], blocked = [];
+  let page;
+  try {
+    await context.addInitScript(() => {
+      localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
+      sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
+      Object.defineProperty(navigator, 'serial', { value: undefined, configurable: true });
+      Object.defineProperty(navigator, 'bluetooth', { value: undefined, configurable: true });
+    });
+    await context.route('**/*', async route => {
+      const url = new URL(route.request().url());
+      if (url.origin !== 'http://127.0.0.1' || route.request().method() !== 'GET') { blocked.push(url.href); return route.abort(); }
+      const file = path.resolve(root, '.' + (url.pathname === '/' ? '/index.html' : decodeURIComponent(url.pathname)));
+      const relative = path.relative(root, file);
+      if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file)) return route.fulfill({ status: 404, body: '' });
+      const contentType = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'text/plain';
+      await route.fulfill({ contentType, body: fs.readFileSync(file) });
+    });
+    page = await context.newPage();
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto('http://127.0.0.1/');
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    const picker = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: '保存した読取結果を開く', exact: true }).click();
+    const core = vm.createContext({ window: {} });
+    vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), core);
+    const model = core.window.ObdReadOnly;
+    model.configureReadinessMonitors(JSON.parse(fs.readFileSync(path.join(root, 'data/obd-readiness-monitors-2026.json'), 'utf8')));
+    const fixture = model.buildScanSessionFromObdText('>0101\n7E8 06 41 01 80 07 65 20\n7E9 06 41 01 00 07 65 00\n');
+    assert.equal(fixture.readinessSnapshot.readinessEcuSnapshots.length, 2);
+    await (await picker).setFiles({ name: 'synthetic-readiness-review.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(fixture))) });
+    await page.waitForFunction(() => obdDevSession.lastSession?.readinessSnapshot?.readinessEcuSnapshots?.length === 2);
+    await page.locator('#obdSessionDetailReadiness').waitFor({ state: 'attached' });
+    await page.getByRole('button', { name: 'レディネス確認', exact: true }).click();
+    const card = page.locator('#obdSessionDetailReadiness');
+    await card.waitFor({ state: 'visible' });
+    const original = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    assert.match(await card.innerText(), /7E8/); assert.match(await card.innerText(), /7E9/);
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      await card.getByLabel('表示する状態').selectOption('attention');
+      const attention = card.locator('[data-readiness-state]:visible');
+      assert.ok(await attention.count() > 0, 'Fixture must expose attention states');
+      assert.ok((await attention.evaluateAll(rows => rows.map(row => row.dataset.readinessState))).every(state => ['missing', 'unknown', 'incomplete'].includes(state)));
+      await card.getByLabel('監視項目・ECUで検索').fill('7e9');
+      const filtered = card.locator('[data-readiness-state]:visible');
+      for (const text of await filtered.allTextContents()) assert.match(text, /7E9/);
+      await card.getByLabel('監視項目・ECUで検索').fill('存在しない監視項目');
+      assert.equal(await filtered.count(), 0);
+      await card.locator('[data-readiness-empty]').waitFor({ state: 'visible' });
+      await card.getByRole('button', { name: '絞り込みを解除', exact: true }).click();
+      assert.ok(await filtered.count() > 0);
+      assert.equal(await card.getByLabel('表示する状態').inputValue(), 'all');
+      for (const dark of [false, true]) {
+        await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'Horizontal page overflow');
+        await card.screenshot({ path: path.join(output, `readiness-${width}-${dark ? 'dark' : 'light'}.png`) });
+        await card.evaluate(node => window.scrollTo({ top: window.scrollY + node.getBoundingClientRect().top - 230, behavior: 'instant' }));
+        await page.screenshot({ path: path.join(output, `readiness-controls-${width}-${dark ? 'dark' : 'light'}.png`) });
+      }
+    }
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original, 'Review controls changed saved diagnostic data');
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    await page.getByRole('button', { name: 'レディネスの詳細を開く', exact: true }).click();
+    await card.waitFor({ state: 'visible' });
+    assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+    console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
+  } catch (error) {
+    if (page) { await page.screenshot({ path: path.join(output, 'failure.png') }); console.error('Screenshot:', path.join(output, 'failure.png'), 'Page errors:', errors); }
+    throw error;
+  } finally { await context.close(); await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode = 1; });

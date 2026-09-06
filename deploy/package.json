@@ -11,6 +11,8 @@
     "validate:package": "node scripts/validate-workstation-package.js",
     "validate:workstation": "node scripts/validate-local-workstation.js",
     "validate:offline": "node scripts/validate-offline-cache.js",
+    "validate:readiness-review": "node scripts/validate-readiness-review.js",
+    "validate:readiness-review-browser": "node scripts/validate-readiness-review-browser.cjs",
     "validate:scanner-browser": "node scripts/validate-scanner-file-flow.cjs --offline --dense-live",
     "validate:case-storage": "node scripts/validate-case-storage.js",
     "validate:operation-journal": "node scripts/validate-operation-journal.js",

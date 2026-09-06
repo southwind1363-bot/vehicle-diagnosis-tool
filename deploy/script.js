@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.519";
+const APP_VERSION = "3.13.520";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10435,6 +10435,93 @@ function buildObdReadinessDisplayLines(snapshot = null) {
   return lines;
 }
 
+function buildObdReadinessReviewGroups(snapshot = null) {
+  const nested = snapshot?.readinessEcuSnapshots || snapshot?.readiness_ecu_snapshots;
+  const groups = Array.isArray(nested) && nested.length ? nested : snapshot ? [snapshot] : [];
+  return groups.map((group) => {
+    const source = group.sourceEcu || group.source_ecu || "ECU未記録";
+    const monitors = Array.isArray(group.monitors) ? group.monitors : [];
+    const missing = (Array.isArray(group.knownMonitors) ? group.knownMonitors : []).filter((item) => item?.observed === false
+      && !monitors.some((monitor) => item.id && monitor.id === item.id));
+    const rows = [...monitors, ...missing].map((item) => {
+      const status = item.observed === false ? "missing" : item.supported === false ? "unsupported"
+        : item.supported !== true ? "unknown" : item.complete === true ? "complete" : item.complete === false ? "incomplete" : "unknown";
+      const statusLabel = { missing: "未取得", unsupported: "非対応", unknown: "不明", complete: "完了", incomplete: "未完了" }[status];
+      const note = status === "unknown" ? (item.supported === true ? "完了状態を確認できません" : "対応状態を確認できません")
+        : status === "missing" ? "この監視項目の読取データはありません" : item.diagnosticUse || "";
+      return { label: item.label || item.id || "名称未記録", source: item.sourceEcu || item.source_ecu || source,
+        status, statusLabel, note };
+    });
+    return { source, mil: group.milOn === true ? "ON" : group.milOn === false ? "OFF" : "未判定",
+      ignition: ({ spark: "火花点火", compression: "圧縮着火" })[group.readinessIgnitionType || group.readiness_ignition_type] || "未記録",
+      readout: formatObdReadoutStatus(group.readinessReadoutStatus || group.readiness_readout_status, "状態未確認"), rows };
+  });
+}
+
+function createObdReadinessReviewCard(snapshot = null) {
+  const card = document.createElement("article");
+  card.id = "obdSessionDetailReadiness";
+  card.className = "obd-session-detail-card obd-readiness-review";
+  const heading = document.createElement("h3"); heading.textContent = "レディネスを確認";
+  const note = document.createElement("p"); note.className = "obd-readiness-note";
+  note.textContent = "読取結果の確認専用です。監視項目の「完了」は故障なし・修理完了・車検適合を意味しません。ECU間の集約判定や車両への送信は行いません。";
+  const controls = document.createElement("div"); controls.className = "obd-readiness-controls";
+  const searchLabel = document.createElement("label"); searchLabel.textContent = "監視項目・ECUで検索";
+  const search = document.createElement("input"); search.type = "search"; search.placeholder = "例：触媒、7E8";
+  search.dataset.readinessSearch = ""; searchLabel.appendChild(search);
+  const filterLabel = document.createElement("label"); filterLabel.textContent = "表示する状態";
+  const filter = document.createElement("select"); filter.dataset.readinessFilter = "";
+  for (const [value, label] of [["all", "すべて"], ["attention", "未完了・不明・未取得"], ["complete", "完了"], ["unsupported", "非対応"]]) {
+    const option = document.createElement("option"); option.value = value; option.textContent = label; filter.appendChild(option);
+  }
+  filter.value = "all"; filterLabel.appendChild(filter);
+  const reset = document.createElement("button"); reset.type = "button"; reset.className = "secondary-button"; reset.textContent = "絞り込みを解除";
+  controls.append(searchLabel, filterLabel, reset);
+  const count = document.createElement("p"); count.className = "data-status"; count.setAttribute("role", "status");
+  count.setAttribute("aria-live", "polite"); count.dataset.readinessCount = "";
+  const body = document.createElement("div"); body.className = "obd-readiness-groups";
+  const groups = buildObdReadinessReviewGroups(snapshot), entries = [];
+  groups.forEach((group) => {
+    const section = document.createElement("section"); section.className = "obd-readiness-ecu";
+    const title = document.createElement("h4"); title.textContent = `${group.source} — ${group.readout}`;
+    const mil = document.createElement("p"); mil.textContent = `MIL指示：${group.mil} / 観測点火方式：${group.ignition}`;
+    const list = document.createElement("ul"); list.className = "obd-readiness-rows";
+    group.rows.forEach((row) => {
+      const item = document.createElement("li"); item.dataset.readinessState = row.status;
+      const name = document.createElement("span"); name.className = "obd-readiness-name"; name.textContent = row.label;
+      const badge = document.createElement("span"); badge.className = "obd-readiness-badge"; badge.textContent = row.statusLabel;
+      const detail = document.createElement("small"); detail.textContent = `${row.source}${row.note ? ` / ${row.note}` : ""}`;
+      item.append(name, badge, detail); list.appendChild(item);
+      entries.push({ item, section, row, text: `${group.source} ${row.source} ${row.label}`.toLocaleLowerCase() });
+    });
+    if (!group.rows.length) { const empty = document.createElement("p"); empty.textContent = "監視項目の読取データはありません。正常とは判定できません。"; section.appendChild(empty); }
+    section.prepend(title, mil); section.appendChild(list); body.appendChild(section);
+  });
+  const empty = document.createElement("p"); empty.className = "empty-state"; empty.dataset.readinessEmpty = "";
+  const update = () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    for (const entry of entries) {
+      const matchesState = filter.value === "all" || (filter.value === "attention"
+        ? ["incomplete", "unknown", "missing"].includes(entry.row.status) : entry.row.status === filter.value);
+      entry.item.hidden = !matchesState || !entry.text.includes(query);
+      if (!entry.item.hidden) visible += 1;
+    }
+    for (const section of body.children) {
+      const scoped = entries.filter((entry) => entry.section === section);
+      section.hidden = scoped.length ? scoped.every((entry) => entry.item.hidden) : !!query || filter.value !== "all";
+    }
+    count.textContent = `表示 ${visible} / ${entries.length}項目（${groups.length}グループ）`;
+    empty.hidden = visible > 0 || (!entries.length && !query && filter.value === "all" && groups.length > 0);
+    empty.textContent = entries.length ? "条件に一致する監視項目はありません。絞り込みを解除してください。" : "監視項目の読取データはありません。";
+    reset.disabled = !query && filter.value === "all";
+  };
+  search.addEventListener("input", update); filter.addEventListener("change", update);
+  reset.addEventListener("click", () => { search.value = ""; filter.value = "all"; update(); search.focus(); });
+  card.append(heading, note, controls, count, body, empty); update();
+  return card;
+}
+
 function summarizeObdExpectedItems(items = []) {
   const expectedItems = Array.isArray(items) ? items : [];
   const captured = expectedItems.filter((item) => item?.captured);
@@ -11470,7 +11557,7 @@ function renderObdBridgeSessionDetails(session = null) {
   if (monitorLines.length) sections.push(["Mode06", monitorLines]);
 
   const readinessLines = buildObdReadinessDisplayLines(readinessSnapshot);
-  if (readinessLines.length) sections.push(["レディネス", readinessLines]);
+  if (readinessLines.length || readinessSnapshot?.knownMonitors?.length) sections.push(["レディネス", readinessLines]);
 
   const supportedPidLines = buildObdSupportedPidDisplayLines(supportedPidMatrix);
   if (supportedPidLines.length) sections.push(["対応PID", supportedPidLines]);
@@ -11517,6 +11604,10 @@ function renderObdBridgeSessionDetails(session = null) {
   }
 
   sections.forEach(([title, lines]) => {
+    if (title === "レディネス") {
+      obdDevSessionDetails.appendChild(createObdReadinessReviewCard(readinessSnapshot));
+      return;
+    }
     if (title === "ECU応答") {
       obdDevSessionDetails.appendChild(createObdEcuResponseCard(session?.ecuResponseSummary || session?.ecu_response_summary));
       return;
