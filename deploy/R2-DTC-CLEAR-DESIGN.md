@@ -1,5 +1,11 @@
 # R2 汎用OBD DTC消去: 次の非送信実装設計
 
+## 3.13.515 応答評価後の再読取計画
+
+Sol設計に基づき、既存の応答評価結果へ `postOperationReadOnlyFollowupPlan` を追加する。保存DTC、保留DTC、永久DTC、レディネスの4つの既存read-only intentを順に列挙する。肯定応答が揃う場合も、部分応答・無応答・切断・タイムアウト・受信エラーの場合も再読取を必要とする。同一の凍結済み計画を返し、応答の分類や件数は従来の評価だけを使う。
+
+この計画は呼出元が与えた応答からの後続要件であり、実際に消去した証拠ではない。`operationOutcomeInferred` と `repairCompleteInferenceAllowed` はfalse、自動再試行と実行・送信フラグもfalseを維持する。既存受信管理の `snapshot.evaluation` を通して保持し、受信中のevaluationはnullのまま。実transportへの接続、再読取の実行、前後比較、UI、監査保存はこの追加の対象外。root schemaVersionは1、既存保存形式は変更しない。
+
 ## 3.13.510 選択記録の明示削除
 
 Solの保存データ設計に基づき、removePreOperation({recordId, sessionJson, createdAt})を追加する。3つのown data propertyだけを受理し、ID、正規ISO時刻、UTF-8上限、保存schema、安全フラグ、現行ポリシー、digestをDB接続前に検証する。strictのreadwrite transaction内で取得した記録の6項目を完全照合し、一致時だけ同じtransaction内でdeleteする。完了後の別readonly transactionで不在を確認して初めてconfirmed/record_removedを返す。

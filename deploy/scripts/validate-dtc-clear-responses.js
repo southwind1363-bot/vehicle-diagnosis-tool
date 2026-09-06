@@ -11,6 +11,18 @@ const check = (value, message) => { assert.ok(value, message); checks += 1; };
 const typeError = (fn, message) => { assert.throws(fn, (error) => error?.name === "TypeError", message); checks += 1; };
 const rangeError = (fn, message) => { assert.throws(fn, (error) => error?.name === "RangeError", message); checks += 1; };
 const evaluate = (input) => api.evaluateGenericObdDtcClearResponses(input);
+const followupPlanJson = JSON.stringify({
+  required: true,
+  readOnly: true,
+  intents: ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"],
+  automaticRetryAllowed: false,
+  operationOutcomeInferred: false,
+  repairCompleteInferenceAllowed: false,
+  execution: { wouldTransmit: false, canExecute: false, retryAllowed: false }
+});
+const checkFollowupPlan = (result, message) => check(Object.keys(result).join(",") === "schemaVersion,completion,expectedSources,unexpectedSources,counts,allExpectedSourcesAffirmativeObserved,responseEvaluationComplete,postOperationReadOnlyFollowupPlan,execution"
+  && JSON.stringify(result.postOperationReadOnlyFollowupPlan) === followupPlanJson
+  && Object.isFrozen(result.postOperationReadOnlyFollowupPlan) && Object.isFrozen(result.postOperationReadOnlyFollowupPlan.intents) && Object.isFrozen(result.postOperationReadOnlyFollowupPlan.execution), message);
 
 const normalInput = {
   expectedSourceIds: ["engine", "transmission"],
@@ -30,6 +42,7 @@ check(normal.schemaVersion === 1 && normal.completion === "complete" && normal.e
   && normal.execution.wouldTransmit === false && normal.execution.canExecute === false && normal.execution.retryAllowed === false, "Complete affirmative responses were not evaluated correctly");
 check(Object.isFrozen(normal) && Object.isFrozen(normal.expectedSources) && Object.isFrozen(normal.expectedSources[0]) && Object.isFrozen(normal.unexpectedSources)
   && Object.isFrozen(normal.counts) && Object.isFrozen(normal.execution), "Response evaluation result is not deeply frozen");
+checkFollowupPlan(normal, "Normal response result did not retain the exact frozen read-only follow-up plan");
 check(JSON.stringify(evaluate(normalInput)) === JSON.stringify(normal), "Repeated evaluation is not deterministic");
 
 const mixed = evaluate({ expectedSourceIds: ["a", "b", "c"], frames: [
@@ -38,12 +51,16 @@ const mixed = evaluate({ expectedSourceIds: ["a", "b", "c"], frames: [
 check(mixed.expectedSources.map((item) => item.observation).join(",") === "response_uncertain,affirmative_observed,no_response_observed"
   && mixed.unexpectedSources.map((item) => item.sourceId).join(",") === "outside,later" && mixed.unexpectedSources[0].frameCount === 2 && mixed.unexpectedSources[0].affirmativeFrameCount === 1 && mixed.unexpectedSources[0].unrecognizedFrameCount === 1
   && mixed.counts.observedExpectedSourceCount === 2 && mixed.counts.unexpectedSourceCount === 2 && mixed.allExpectedSourcesAffirmativeObserved === false && mixed.responseEvaluationComplete === false, "Mixed, unknown, and absent responses were not preserved correctly");
+checkFollowupPlan(mixed, "Mixed response result did not retain the exact frozen read-only follow-up plan");
 for (const completion of ["timeout", "disconnected", "error"]) {
   const incomplete = evaluate({ ...normalInput, completion });
   check(incomplete.expectedSources.every((item) => item.observation === "affirmative_observed") && incomplete.allExpectedSourcesAffirmativeObserved === false && incomplete.responseEvaluationComplete === false, `${completion} completion was accepted as complete`);
+  checkFollowupPlan(incomplete, `${completion} response result did not retain the exact frozen read-only follow-up plan`);
 }
 const empty = evaluate({ expectedSourceIds: [], frames: [], completion: "complete" });
 check(empty.expectedSources.length === 0 && empty.unexpectedSources.length === 0 && empty.counts.frameCount === 0 && empty.allExpectedSourcesAffirmativeObserved === false && empty.responseEvaluationComplete === false, "Empty expected sources were accepted as affirmative");
+checkFollowupPlan(empty, "Empty response result did not retain the exact frozen read-only follow-up plan");
+check(normal.postOperationReadOnlyFollowupPlan === mixed.postOperationReadOnlyFollowupPlan && mixed.postOperationReadOnlyFollowupPlan === empty.postOperationReadOnlyFollowupPlan, "Response results did not reuse the same follow-up plan");
 const nullPrototypeInput = Object.assign(Object.create(null), { expectedSourceIds: [], frames: [], completion: "complete" });
 check(evaluate(nullPrototypeInput).completion === "complete", "Null-prototype input was rejected");
 

@@ -11,6 +11,8 @@ const check = (value, message) => { assert.ok(value, message); checks += 1; };
 const typeError = (fn, message) => { assert.throws(fn, (error) => error?.name === "TypeError", message); checks += 1; };
 const makeFrame = () => ({ sourceId: "engine", payload: [0x44] });
 const makeWindow = (connectionToken = {}, expectedSourceIds = ["engine"]) => api.createGenericObdDtcClearReceiveWindow({ expectedSourceIds, connectionToken });
+const checkFollowupPlan = (evaluation, message) => check(JSON.stringify(evaluation?.postOperationReadOnlyFollowupPlan) === JSON.stringify({ required: true, readOnly: true, intents: ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"], automaticRetryAllowed: false, operationOutcomeInferred: false, repairCompleteInferenceAllowed: false, execution: { wouldTransmit: false, canExecute: false, retryAllowed: false } })
+  && Object.isFrozen(evaluation?.postOperationReadOnlyFollowupPlan) && Object.isFrozen(evaluation?.postOperationReadOnlyFollowupPlan?.intents) && Object.isFrozen(evaluation?.postOperationReadOnlyFollowupPlan?.execution), message);
 const safeSnapshot = (snapshot) => check(Object.isFrozen(snapshot) && Object.isFrozen(snapshot.attemptToken) && Object.isFrozen(snapshot.execution)
   && snapshot.execution.wouldTransmit === false && snapshot.execution.canExecute === false && snapshot.execution.retryAllowed === false
   && !("frames" in snapshot) && !("connectionToken" in snapshot), "Snapshot exposed unsafe receipt data");
@@ -20,6 +22,7 @@ const receiveWindow = makeWindow(connection);
 check(Object.isFrozen(receiveWindow) && Object.isFrozen(receiveWindow.attemptToken), "Public factory result is not frozen");
 check(Object.isFrozen(connection) === false, "Factory froze caller-owned connection token");
 safeSnapshot(receiveWindow.getSnapshot());
+check(receiveWindow.getSnapshot().state === "collecting" && receiveWindow.getSnapshot().evaluation === null, "Collecting snapshot unexpectedly has a terminal evaluation");
 check(receiveWindow.append({}, connection, { sourceId: "engine", payload: [] }).reason === "stale_attempt", "Stale attempt inspected frame");
 check(receiveWindow.append(receiveWindow.attemptToken, {}, { sourceId: "engine", payload: [] }).reason === "stale_connection", "Stale connection inspected frame");
 check(receiveWindow.getSnapshot().receiptIntegrity === "valid", "Stale frame poisoned receipt");
@@ -29,6 +32,7 @@ callerFrame.sourceId = "changed";
 callerFrame.payload[0] = 0;
 const completed = receiveWindow.finish(receiveWindow.attemptToken, connection, "complete").snapshot;
 check(completed.state === "terminal" && completed.resultStatus === "evaluated" && completed.evaluation?.responseEvaluationComplete === true, "Complete frame was not evaluated");
+checkFollowupPlan(completed.evaluation, "Evaluated terminal snapshot did not retain the exact frozen read-only follow-up plan");
 safeSnapshot(completed);
 const completedJson = JSON.stringify(completed);
 check(receiveWindow.append(receiveWindow.attemptToken, connection, makeFrame()).reason === "already_terminal" && receiveWindow.finish(receiveWindow.attemptToken, connection, "complete").reason === "already_terminal"
@@ -73,6 +77,7 @@ check(mixedSnapshot.resultStatus === "result_unknown" && mixedSnapshot.evaluatio
   && mixedSnapshot.evaluation?.expectedSources.map((item) => item.observation).join(",") === "affirmative_observed,no_response_observed"
   && mixedSnapshot.evaluation?.unexpectedSources[0]?.sourceId === "outside" && mixedSnapshot.evaluation?.responseEvaluationComplete === false,
 "Mixed, missing, and unexpected observations were not retained");
+checkFollowupPlan(mixedSnapshot.evaluation, "Result-unknown terminal snapshot did not retain the exact frozen read-only follow-up plan");
 
 const full = makeWindow(connection);
 for (let index = 0; index < 128; index += 1) check(full.append(full.attemptToken, connection, makeFrame()).ok, "In-capacity frame rejected");

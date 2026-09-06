@@ -12,6 +12,7 @@ const typeError = (fn, message) => { assert.throws(fn, (error) => error?.name ==
 const rangeError = (fn, message) => { assert.throws(fn, (error) => error?.name === "RangeError", message); checks += 1; };
 const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
 const parse = (transcript, completion = "complete") => api.parseElmMode04RawTranscript({ profile, transcript, completion });
+const followupPlanJson = JSON.stringify({ required: true, readOnly: true, intents: ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"], automaticRetryAllowed: false, operationOutcomeInferred: false, repairCompleteInferenceAllowed: false, execution: { wouldTransmit: false, canExecute: false, retryAllowed: false } });
 
 const valid = parse("7E8 01 44 AA BB CC DD EE FF\r7E9 01 44 AA BB CC DD EE FF\r>");
 check(valid.schemaVersion === 1 && valid.profile === profile && valid.callerCompletion === "complete" && valid.completion === "complete" && valid.promptObserved === true
@@ -77,6 +78,8 @@ check(accessorRead === false, "Accessor input was read");
 
 const evaluation = api.evaluateGenericObdDtcClearResponses({ expectedSourceIds: ["7E8", "7E9"], frames: valid.frames, completion: valid.completion });
 check(evaluation.responseEvaluationComplete === true && evaluation.allExpectedSourcesAffirmativeObserved === true, "Parser output did not integrate with response evaluation");
+check(JSON.stringify(evaluation.postOperationReadOnlyFollowupPlan) === followupPlanJson && Object.isFrozen(evaluation.postOperationReadOnlyFollowupPlan)
+  && Object.isFrozen(evaluation.postOperationReadOnlyFollowupPlan.intents) && Object.isFrozen(evaluation.postOperationReadOnlyFollowupPlan.execution), "Parser integration did not retain the exact frozen read-only follow-up plan");
 const connection = {};
 const receiveWindow = api.createGenericObdDtcClearReceiveWindow({ expectedSourceIds: ["7E8", "7E9"], connectionToken: connection });
 for (const frame of valid.frames) check(receiveWindow.append(receiveWindow.attemptToken, connection, frame).ok, "Parser frame was rejected by receive window");

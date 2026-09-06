@@ -1421,6 +1421,16 @@
     return { sourceId, payload };
   }
 
+  const GENERIC_OBD_DTC_CLEAR_POST_OPERATION_READ_ONLY_FOLLOWUP_PLAN = Object.freeze({
+    required: true,
+    readOnly: true,
+    intents: Object.freeze(["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"]),
+    automaticRetryAllowed: false,
+    operationOutcomeInferred: false,
+    repairCompleteInferenceAllowed: false,
+    execution: Object.freeze({ wouldTransmit: false, canExecute: false, retryAllowed: false })
+  });
+
   function evaluateGenericObdDtcClearResponses(input) {
     const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["expectedSourceIds", "frames", "completion"], "invalid_generic_obd_dtc_clear_response_input");
     const expectedSourceIdInput = copyGenericObdDtcClearResponseDenseArray(inputSnapshot.expectedSourceIds, 32, "invalid_generic_obd_dtc_clear_response_expected_sources");
@@ -1470,6 +1480,7 @@
       },
       allExpectedSourcesAffirmativeObserved,
       responseEvaluationComplete: allExpectedSourcesAffirmativeObserved,
+      postOperationReadOnlyFollowupPlan: GENERIC_OBD_DTC_CLEAR_POST_OPERATION_READ_ONLY_FOLLOWUP_PLAN,
       execution: { wouldTransmit: false, canExecute: false, retryAllowed: false }
     });
   }
