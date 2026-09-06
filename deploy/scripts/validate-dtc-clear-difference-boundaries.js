@@ -177,4 +177,48 @@ baseHandle.dispose(); check(baseHandle.inspectBaseMonitorReports(baseInput.conte
 const invalidBase = fixture(), invalidBaseHandle = createDtcClearDtcEvidencePairFixture(invalidBase).handle;
 invalidBase.scope.invalidate(invalidBase.context);
 check(invalidBaseHandle.inspectBaseMonitorReports(invalidBase.context).summary === null, "Invalidated base monitors retained");
+for (const compression of [false, true]) {
+  const names = compression
+    ? ["nmhc_catalyst", "nox_scr", null, "boost_pressure", null, "exhaust_gas_sensor", "pm_filter", "egr_vvt"]
+    : ["catalyst", "heated_catalyst", "evaporative_system", "secondary_air", null, "oxygen_sensor", "oxygen_sensor_heater", "egr_vvt"];
+  for (let supported = 0; supported < 256; supported += 1) {
+    for (const incomplete of [0, supported, 255 - supported]) {
+      const value = fixture();
+      for (const side of ["beforeReadout", "postReadout"]) value[side].receipts[3].transcript = frames("7E8", [0x41, 1, 0, compression ? 15 : 7, supported, incomplete]) + ">";
+      const handle = createDtcClearDtcEvidencePairFixture(value).handle;
+      const summary = handle.inspectNoncontinuousMonitorReports(value.context).summary;
+      const supportBits = supported.toString(2).padStart(8, "0").split("").reverse();
+      const incompleteBits = incomplete.toString(2).padStart(8, "0").split("").reverse();
+      const unmapped = names.some((name, i) => name === null && (supportBits[i] === "1" || incompleteBits[i] === "1"));
+      const expected = [{ sourceId: "7E8", ignitionTypeReported: compression ? "compression" : "spark", reservedBitSet: false,
+        unmappedBitsReported: unmapped, monitors: names.flatMap((monitorId, i) => monitorId === null ? [] : [{ monitorId,
+          supportedReported: supportBits[i] === "1", incompleteReported: incompleteBits[i] === "1",
+          state: unmapped ? "indeterminate" : ["not_supported", "complete", "indeterminate", "incomplete"][Number(supportBits[i]) + 2 * Number(incompleteBits[i])]
+        }]) }];
+      assert.deepEqual(summary.beforeReports, expected); checks += 1;
+      assert.deepEqual(summary.postReports, expected); checks += 1;
+      check(summary.fixtureNoncontinuousMonitorReportsAvailable && ["readinessEvidenceAvailable", "comparisonAvailable", "clearSucceededInferred",
+        "readoutCoverageComplete", "sameVehicleVerified", "clearBoundaryVerified", "realTransportProofAvailable", "executionEnabled",
+        "vehicleCommandEnabled", "wouldTransmit", "canExecute"].every((key) => summary[key] === false), "Noncontinuous reports became real readiness proof");
+      handle.dispose();
+    }
+  }
+}
+const noncontinuous = fixture(["7E8", "7E9"]);
+noncontinuous.beforeReadout.receipts[3].transcript = frames("7E9", [0x41, 1, 0, 15, 1, 1]) + frames("7E8", [0x41, 1, 0, 7, 1, 0]) + ">";
+noncontinuous.postReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 0, 15, 1, 0]) + frames("7E9", [0x41, 1, 0, 0x8F, 1, 0]) + ">";
+const noncontinuousHandle = createDtcClearDtcEvidencePairFixture(noncontinuous).handle;
+const noncontinuousSummary = noncontinuousHandle.inspectNoncontinuousMonitorReports(noncontinuous.context).summary;
+check(noncontinuousSummary.beforeReports[0].monitors[0].monitorId === "catalyst"
+  && noncontinuousSummary.beforeReports[1].monitors[0].monitorId === "nmhc_catalyst"
+  && noncontinuousSummary.postReports[0].monitors[0].monitorId === "nmhc_catalyst", "Ignition mapping crossed ECU or phase");
+check(noncontinuousSummary.postReports[1].reservedBitSet && noncontinuousSummary.postReports[1].monitors.every((m) => m.state === "indeterminate"), "Reserved B bit ignored");
+check(Object.isFrozen(noncontinuousSummary.beforeReports[0].monitors[0]) && !/payload|transcript|Token/.test(JSON.stringify(noncontinuousSummary)), "Noncontinuous raw data leaked");
+noncontinuous.beforeReadout.receipts[3].transcript = "NO DATA\r>";
+check(JSON.stringify(noncontinuousHandle.inspectNoncontinuousMonitorReports(noncontinuous.context).summary) === JSON.stringify(noncontinuousSummary), "Noncontinuous input reread");
+for (const key of ["scopeToken", "connectionToken", "targetToken"]) check(noncontinuousHandle.inspectNoncontinuousMonitorReports({ ...noncontinuous.context, [key]: {} }).summary === null, "Foreign context acquired noncontinuous reports");
+noncontinuousHandle.dispose(); check(noncontinuousHandle.inspectNoncontinuousMonitorReports(noncontinuous.context).summary === null, "Disposed noncontinuous reports retained");
+const staleNoncontinuous = fixture(), staleNoncontinuousHandle = createDtcClearDtcEvidencePairFixture(staleNoncontinuous).handle;
+staleNoncontinuous.scope.invalidate(staleNoncontinuous.context);
+check(staleNoncontinuousHandle.inspectNoncontinuousMonitorReports(staleNoncontinuous.context).summary === null, "Invalidated noncontinuous reports retained");
 console.log(`DTC clear difference boundary checks: ${checks} / Errors: 0`);

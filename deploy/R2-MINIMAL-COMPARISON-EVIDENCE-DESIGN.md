@@ -1,5 +1,15 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 2026-09-07 / 3.13.519後続: 非連続monitorの模擬状態
+
+Node専用pair handleに `inspectNoncontinuousMonitorReports(context)` を追加。検証済み0101コピーのB3でspark/compressionを選び、Cの対応bitをsupportedReported、DをincompleteReportedとしてECU別・前後別に抽出する。bit配置・区分の根拠は [python-OBD公式定義](https://github.com/brendan-w/python-OBD/blob/master/obd/codes.py) と既掲のstatus decoder（2026-09-07確認）。Mode01 PID01に限定し、PID41やメーカー独自の適用を主張しない。
+
+sparkはcatalyst/heated catalyst/evaporative/secondary air/oxygen sensor/oxygen sensor heater/EGR-VVT、compressionはNMHC catalyst/NOx-SCR/boost pressure/exhaust gas sensor/PM filter/EGR-VVTを各定義bitへ対応させる。定義のない位置にはmonitor名を捏造せず、いずれかの報告bitが立つとunmappedBitsReportedを返す。前後で区分が違ってもそれぞれの報告値として扱い、車両変更や修理完了とは判定しない。
+
+stateは基本monitorと同じ4区分。未対応かつ未完了、B7、または未定義位置の報告bitがある場合は保守的なローカル方針でindeterminateとする。未定義位置がある場合、そのsourceの全非連続monitorを保留する。raw/token/B/C/D byteは保持せず派生reportのみを保持。scope/context不一致・失効・disposeで取得拒否。fixtureNoncontinuousMonitorReportsAvailableのみをtrueにし、readinessEvidenceAvailable・実比較・消去成功・実車同一性・網羅性・実行/送信flagはfalse。以前の非連続monitor未実装は履歴であり、全体集計と実車適合確認は依然未実装。
+
+追加4617件。両区分でC全256値×Dの0/同値/反転値を前後検査し、ECU/前後の区分分離、未定義位置、B7、寿命・不変性を確認。境界検証7260件、関連合計8635件がErrors 0。アプリ3.13.519・通常API・保存・実車送信は変更なし。OBD主検証・bridge・offline・実車試験は今回再実行しない。
+
 ## 2026-09-07 / 3.13.519後続: 基本3monitorの模擬状態
 
 Node専用pair handleに `inspectBaseMonitorReports(context)` を追加。固定コピーの0101 B byteからECU別にmisfire/fuel_system/comprehensive_componentsのsupportedReported/incompleteReportedとstateを抽出する。stateはcomplete/incomplete/not_supported/indeterminateの4種類。単独handleや通常APIには公開しない。C/D byteの非連続monitorは未解釈で、readiness全体の完了を返さない。

@@ -202,6 +202,14 @@ function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
       return freeze({ ok: true, reason: null, summary: { ...boundary,
         beforeReports: retained.beforeBaseMonitors, postReports: retained.postBaseMonitors,
         fixtureBaseMonitorReportsAvailable: true, noncontinuousMonitorsInterpreted: false, readinessEvidenceAvailable: false } });
+    }, inspectNoncontinuousMonitorReports(context) {
+      const current = inspectDtcClearReadoutFixtureScope(scope, context);
+      if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
+      if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
+      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_noncontinuous_monitor_reports", null);
+      return freeze({ ok: true, reason: null, summary: { ...boundary,
+        beforeReports: retained.beforeNoncontinuous, postReports: retained.postNoncontinuous,
+        fixtureNoncontinuousMonitorReportsAvailable: true, readinessEvidenceAvailable: false } });
     } } : {})
   });
 }
@@ -294,7 +302,8 @@ export function createDtcClearDtcEvidencePairFixture(input) {
   if (!evaluated.fixtureSequenceMatched) return freeze({ ok: false, reason: evaluated.reason || "fixture_sequence_incomplete", handle: null });
   const evidence = { before: extractValidatedDtcRows(beforeReadout), post: extractValidatedDtcRows(postReadout),
     beforeIndicators: extractValidatedReadinessIndicators(beforeReadout), postIndicators: extractValidatedReadinessIndicators(postReadout),
-    beforeBaseMonitors: extractValidatedBaseMonitors(beforeReadout), postBaseMonitors: extractValidatedBaseMonitors(postReadout) };
+    beforeBaseMonitors: extractValidatedBaseMonitors(beforeReadout), postBaseMonitors: extractValidatedBaseMonitors(postReadout),
+    beforeNoncontinuous: extractValidatedNoncontinuousMonitors(beforeReadout), postNoncontinuous: extractValidatedNoncontinuousMonitors(postReadout) };
   const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
   if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
   return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(value.scope, evidence, true) });
@@ -333,6 +342,33 @@ function extractValidatedBaseMonitors(readout) {
     });
     sources.set(frame.sourceId, { sourceId: frame.sourceId, ignitionTypeReported: (b & 8) ? "compression" : "spark",
       reservedBitSet, monitors });
+  }
+  return [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
+}
+
+function extractValidatedNoncontinuousMonitors(readout) {
+  const receipt = readout.receipts[3];
+  const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
+    command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
+  const sources = new Map();
+  for (const frame of parsed.frames) {
+    if (sources.has(frame.sourceId)) continue;
+    const b = frame.payload[3], c = frame.payload[4], d = frame.payload[5];
+    const compression = (b & 8) !== 0, reservedBitSet = (b & 0x80) !== 0;
+    // PID 01 mapping only; no PID 41 or manufacturer-specific interpretation.
+    const names = compression
+      ? ["nmhc_catalyst", "nox_scr", null, "boost_pressure", null, "exhaust_gas_sensor", "pm_filter", "egr_vvt"]
+      : ["catalyst", "heated_catalyst", "evaporative_system", "secondary_air", null, "oxygen_sensor", "oxygen_sensor_heater", "egr_vvt"];
+    const unmappedBitsReported = names.some((name, index) => name === null && ((c | d) & (1 << index)) !== 0);
+    const monitors = names.flatMap((monitorId, index) => {
+      if (monitorId === null) return [];
+      const supportedReported = (c & (1 << index)) !== 0, incompleteReported = (d & (1 << index)) !== 0;
+      const state = reservedBitSet || unmappedBitsReported || (!supportedReported && incompleteReported) ? "indeterminate"
+        : !supportedReported ? "not_supported" : incompleteReported ? "incomplete" : "complete";
+      return [{ monitorId, supportedReported, incompleteReported, state }];
+    });
+    sources.set(frame.sourceId, { sourceId: frame.sourceId, ignitionTypeReported: compression ? "compression" : "spark",
+      reservedBitSet, unmappedBitsReported, monitors });
   }
   return [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
 }
