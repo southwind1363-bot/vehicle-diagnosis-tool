@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.506";
+const APP_VERSION = "3.13.507";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -509,6 +509,7 @@ const obdOperationJournalPrevious = document.querySelector("#obdOperationJournal
 const obdOperationJournalNext = document.querySelector("#obdOperationJournalNext");
 const obdOperationJournalDownload = document.querySelector("#obdOperationJournalDownload");
 const obdOperationJournalSaveCurrent = document.querySelector("#obdOperationJournalSaveCurrent");
+const obdOperationJournalOpenConfirmed = document.querySelector("#obdOperationJournalOpenConfirmed");
 const obdOperationJournalSaveStatus = document.querySelector("#obdOperationJournalSaveStatus");
 const obdOperationJournalSaveAck = document.querySelector("#obdOperationJournalSaveAck");
 const obdOperationJournalSaveAckInput = document.querySelector("#obdOperationJournalSaveAckInput");
@@ -711,6 +712,7 @@ const obdOperationJournalState = {
   pages: [null],
   recordIds: [],
   selectedRecord: null,
+  selectedRecordOrigin: null,
   status: "一覧未取得",
   error: false,
   listing: false,
@@ -948,6 +950,7 @@ obdOperationJournalPrevious?.addEventListener("click", () => { void listObdOpera
 obdOperationJournalNext?.addEventListener("click", () => { void listObdOperationJournalRecords({ pageIndex: obdOperationJournalState.pageIndex + 1 }); });
 obdOperationJournalDownload?.addEventListener("click", downloadObdOperationJournalRecordJson);
 obdOperationJournalSaveCurrent?.addEventListener("click", () => { void saveCurrentObdReadoutToOperationJournal(); });
+obdOperationJournalOpenConfirmed?.addEventListener("click", () => { void openConfirmedObdOperationJournalRecord(); });
 obdOperationJournalSaveAckInput?.addEventListener("change", () => { renderObdOperationJournalViewer(); });
 obdOperationJournalViewer?.addEventListener("toggle", () => {
   if (!obdOperationJournalViewer.open) clearObdOperationJournalViewer();
@@ -6028,6 +6031,7 @@ function clearObdOperationJournalViewer() {
   obdOperationJournalState.pages = [null];
   obdOperationJournalState.recordIds = [];
   obdOperationJournalState.selectedRecord = null;
+  obdOperationJournalState.selectedRecordOrigin = null;
   obdOperationJournalState.status = "一覧未取得";
   obdOperationJournalState.error = false;
   obdOperationJournalState.listing = false;
@@ -6052,10 +6056,15 @@ function getEligibleObdOperationJournalRecord(revision) {
   if (!isObdOperationJournalViewerActive(revision)
     || obdOperationJournalState.listing || obdOperationJournalState.loading
     || !record || typeof record.recordId !== "string"
-    || !obdOperationJournalState.recordIds.includes(record.recordId)
     || !/^[A-Za-z0-9_-]{1,128}$/.test(record.recordId)
     || typeof record.sessionJson !== "string") return null;
-  return record;
+  if (obdOperationJournalState.selectedRecordOrigin === "list"
+    && obdOperationJournalState.recordIds.includes(record.recordId)) return record;
+  if (obdOperationJournalState.selectedRecordOrigin === "confirmed-save"
+    && obdOperationJournalSaveState.phase === "confirmed"
+    && obdOperationJournalSaveState.id === record.recordId
+    && !obdOperationJournalSaveState.promise) return record;
+  return null;
 }
 
 function getObdOperationJournalSaveBlockReason(revision = obdOperationJournalState.revision) {
@@ -6145,6 +6154,10 @@ async function saveCurrentObdReadoutToOperationJournal() {
     }
     obdOperationJournalSaveState.phase = "confirming";
     obdOperationJournalSaveState.status = "保管の確認待ちです。";
+    if (obdOperationJournalState.selectedRecordOrigin === "confirmed-save") {
+      obdOperationJournalState.selectedRecord = null;
+      obdOperationJournalState.selectedRecordOrigin = null;
+    }
     renderObdOperationJournalViewer();
     let confirmed;
     try {
@@ -6249,6 +6262,12 @@ function renderObdOperationJournalViewer() {
   obdOperationJournalRefresh.disabled = !active || obdOperationJournalState.listing;
   obdOperationJournalPrevious.disabled = !active || obdOperationJournalState.listing || obdOperationJournalState.loading || obdOperationJournalState.pageIndex === 0;
   obdOperationJournalNext.disabled = !active || obdOperationJournalState.listing || obdOperationJournalState.loading || page?.hasMore !== true || !page.nextAfterRecordId;
+  if (obdOperationJournalOpenConfirmed) {
+    const confirmedId = obdOperationJournalSaveState.id;
+    obdOperationJournalOpenConfirmed.disabled = !active || obdOperationJournalState.listing || obdOperationJournalState.loading
+      || Boolean(obdOperationJournalSaveState.promise) || obdOperationJournalSaveState.phase !== "confirmed"
+      || typeof confirmedId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(confirmedId);
+  }
   if (obdOperationJournalDownload) obdOperationJournalDownload.disabled = !getEligibleObdOperationJournalRecord(obdOperationJournalState.revision);
   obdOperationJournalList.replaceChildren();
 
@@ -6327,6 +6346,7 @@ async function listObdOperationJournalRecords({ reset = false, pageIndex = 0 } =
     obdOperationJournalState.pages = [null];
     obdOperationJournalState.recordIds = [];
     obdOperationJournalState.selectedRecord = null;
+    obdOperationJournalState.selectedRecordOrigin = null;
   }
   const afterRecordId = pageIndex === 0 ? null : obdOperationJournalState.pages[pageIndex - 1]?.nextAfterRecordId;
   if (pageIndex < 0 || (pageIndex > 0 && !afterRecordId)) return;
@@ -6334,6 +6354,7 @@ async function listObdOperationJournalRecords({ reset = false, pageIndex = 0 } =
   obdOperationJournalState.listing = true;
   obdOperationJournalState.loading = false;
   obdOperationJournalState.selectedRecord = null;
+  obdOperationJournalState.selectedRecordOrigin = null;
   obdOperationJournalState.status = "保存記録の一覧を確認しています。";
   obdOperationJournalState.error = false;
   renderObdOperationJournalViewer();
@@ -6376,6 +6397,7 @@ async function loadObdOperationJournalRecord(recordId) {
   const revision = ++obdOperationJournalState.revision;
   obdOperationJournalState.loading = true;
   obdOperationJournalState.selectedRecord = null;
+  obdOperationJournalState.selectedRecordOrigin = null;
   obdOperationJournalState.status = "保存記録を検証して読み込んでいます。";
   obdOperationJournalState.error = false;
   renderObdOperationJournalViewer();
@@ -6386,10 +6408,47 @@ async function loadObdOperationJournalRecord(recordId) {
       throw new Error("load_unavailable");
     }
     obdOperationJournalState.selectedRecord = result.record;
+    obdOperationJournalState.selectedRecordOrigin = "list";
     obdOperationJournalState.status = "保存記録を検証して読み込みました。診断結果には反映していません。";
   } catch (_error) {
     if (!isObdOperationJournalViewerActive(revision)) return;
     obdOperationJournalState.status = "保存記録を検証して読み込めませんでした。";
+    obdOperationJournalState.error = true;
+  } finally {
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    obdOperationJournalState.loading = false;
+    renderObdOperationJournalViewer();
+  }
+}
+
+async function openConfirmedObdOperationJournalRecord() {
+  const recordId = obdOperationJournalSaveState.id;
+  if (!isObdOperationJournalViewerActive(obdOperationJournalState.revision)
+    || obdOperationJournalState.listing || obdOperationJournalState.loading
+    || obdOperationJournalSaveState.promise || obdOperationJournalSaveState.phase !== "confirmed"
+    || typeof recordId !== "string" || !/^[A-Za-z0-9_-]{1,128}$/.test(recordId)) return;
+  const revision = ++obdOperationJournalState.revision;
+  obdOperationJournalState.loading = true;
+  obdOperationJournalState.selectedRecord = null;
+  obdOperationJournalState.selectedRecordOrigin = null;
+  obdOperationJournalState.status = "保管した記録を検証して読み込んでいます。";
+  obdOperationJournalState.error = false;
+  renderObdOperationJournalViewer();
+  try {
+    const result = await window.ObdOperationJournal?.loadPreOperation?.({ recordId });
+    if (!isObdOperationJournalViewerActive(revision)
+      || obdOperationJournalSaveState.promise || obdOperationJournalSaveState.phase !== "confirmed"
+      || obdOperationJournalSaveState.id !== recordId) return;
+    if (result?.status !== "loaded" || result.reason !== "valid_record_recovered" || !result.record
+      || result.record.recordId !== recordId || typeof result.record.sessionJson !== "string") throw new Error("load_unavailable");
+    obdOperationJournalState.selectedRecord = result.record;
+    obdOperationJournalState.selectedRecordOrigin = "confirmed-save";
+    obdOperationJournalState.status = "保管した記録を検証して読み込みました。診断結果には反映していません。";
+  } catch (_error) {
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    obdOperationJournalState.selectedRecord = null;
+    obdOperationJournalState.selectedRecordOrigin = null;
+    obdOperationJournalState.status = "保管した記録を検証して読み込めませんでした。";
     obdOperationJournalState.error = true;
   } finally {
     if (!isObdOperationJournalViewerActive(revision)) return;

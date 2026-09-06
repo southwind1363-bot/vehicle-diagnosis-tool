@@ -52,6 +52,7 @@ function asset(pathname) {
     const viewer = page.locator('#obdOperationJournalViewer');
     await viewer.locator(':scope > summary').click();
     const save = page.locator('#obdOperationJournalSaveCurrent');
+    const openConfirmed = page.locator('#obdOperationJournalOpenConfirmed');
     const saveStatus = page.locator('#obdOperationJournalSaveStatus');
     const saveAck = page.locator('#obdOperationJournalSaveAck');
 
@@ -150,7 +151,117 @@ function asset(pathname) {
     await reopenedViewer.screenshot({ path: path.join(output, 'save-confirmed-1280.png') });
 
     const exactJson = await page.evaluate(() => window.__saveCalls[0].sessionJson);
-    await page.evaluate(() => { window.ObdOperationJournal = window.__journalOriginal; });
+    const directOpenCache = await page.evaluate(() => JSON.stringify({
+      pageIndex: obdOperationJournalState.pageIndex,
+      pages: obdOperationJournalState.pages,
+      recordIds: obdOperationJournalState.recordIds
+    }));
+    await page.evaluate(id => {
+      window.__directLoadCalls = 0;
+      window.ObdOperationJournal = Object.freeze({
+        ...window.__journalOriginal,
+        loadPreOperation: input => {
+          window.__directLoadCalls += 1;
+          return new Promise(resolve => { window.__resolveDirectLoad = async () => resolve(await window.__journalOriginal.loadPreOperation(input)); });
+        }
+      });
+      document.getElementById('obdOperationJournalOpenConfirmed').click();
+      document.getElementById('obdOperationJournalOpenConfirmed').click();
+    }, pendingId);
+    await page.waitForFunction(() => typeof window.__resolveDirectLoad === 'function');
+    assert.equal(await page.evaluate(() => window.__directLoadCalls), 1, 'Duplicate direct-open clicks must issue one read');
+    await page.evaluate(() => window.__resolveDirectLoad());
+    await page.waitForFunction(id => obdOperationJournalState.selectedRecord?.recordId === id, pendingId);
+    assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecordOrigin), 'confirmed-save', 'Direct open must mark the confirmed-save origin');
+    assert.equal(await page.evaluate(() => JSON.stringify({
+      pageIndex: obdOperationJournalState.pageIndex,
+      pages: obdOperationJournalState.pages,
+      recordIds: obdOperationJournalState.recordIds
+    })), directOpenCache, 'Direct open must not change list caches');
+    const directDownloadEvent = page.waitForEvent('download');
+    await page.locator('#obdOperationJournalDownload').click();
+    const directDownload = await directDownloadEvent;
+    const directSavedFile = path.join(output, directDownload.suggestedFilename());
+    await directDownload.saveAs(directSavedFile);
+    assert.deepEqual(fs.readFileSync(directSavedFile), Buffer.from(exactJson, 'utf8'), 'Direct open download must preserve exact saved bytes');
+    await reopenedViewer.screenshot({ path: path.join(output, 'save-direct-open-1280.png') });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await reopenedViewer.screenshot({ path: path.join(output, 'save-direct-open-390.png') });
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    await page.evaluate(() => {
+      window.ObdOperationJournal = Object.freeze({ ...window.__journalOriginal, loadPreOperation: async () => ({ status: 'rejected', reason: 'invalid_record_id' }) });
+      void openConfirmedObdOperationJournalRecord();
+    });
+    await page.waitForFunction(() => document.getElementById('obdOperationJournalStatus').textContent.includes('読み込めませんでした'));
+    assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecord), null, 'A failed direct load must not select a record');
+
+    await page.evaluate(() => {
+      window.__directLoadCalls = 0;
+      window.ObdOperationJournal = Object.freeze({
+        ...window.__journalOriginal,
+        loadPreOperation: async () => {
+          window.__directLoadCalls += 1;
+          return { status: 'rejected', reason: 'invalid_record_id' };
+        }
+      });
+      obdOperationJournalSaveState.phase = 'unknown';
+      openConfirmedObdOperationJournalRecord();
+      obdOperationJournalSaveState.phase = 'rejected';
+      openConfirmedObdOperationJournalRecord();
+      obdOperationJournalSaveState.phase = 'confirmed';
+      obdOperationJournalSaveState.id = 'bad id';
+      openConfirmedObdOperationJournalRecord();
+      obdOperationJournalSaveState.id = 'journal-valid-direct-id';
+      obdAccessUnlocked = false;
+      openConfirmedObdOperationJournalRecord();
+      obdAccessUnlocked = true;
+      obdOperationJournalSaveState.id = window.__saveCalls[0].recordId;
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await page.evaluate(() => window.__directLoadCalls), 0, 'Locked, unknown, rejected, and invalid confirmed IDs must not read storage');
+
+    await page.evaluate(async () => {
+      window.ObdOperationJournal = Object.freeze({
+        ...window.__journalOriginal,
+        loadPreOperation: async () => ({ status: 'loaded', reason: 'valid_record_recovered', record: { recordId: 'journal-wrong-id', sessionJson: '{}' } })
+      });
+      await openConfirmedObdOperationJournalRecord();
+    });
+    assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecord), null, 'A mismatched response ID must not select a record');
+    assert.equal(await page.locator('#obdOperationJournalDownload').isDisabled(), true, 'A mismatched response must not enable download');
+
+    await page.evaluate(() => {
+      window.ObdOperationJournal = Object.freeze({
+        ...window.__journalOriginal,
+        loadPreOperation: () => new Promise(resolve => { window.__resolveDirectLoad = resolve; })
+      });
+      openConfirmedObdOperationJournalRecord();
+    });
+    await page.waitForFunction(() => typeof window.__resolveDirectLoad === 'function');
+    await page.evaluate(() => {
+      obdOperationJournalSaveState.id = 'journal-replaced-confirmed-id';
+      window.__resolveDirectLoad({ status: 'loaded', reason: 'valid_record_recovered', record: { recordId: window.__saveCalls[0].recordId, sessionJson: 'stale direct content' } });
+    });
+    await page.waitForTimeout(30);
+    assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecord), null, 'A changed confirmed ID must discard a late direct result');
+
+    await page.evaluate(() => {
+      obdOperationJournalSaveState.id = window.__saveCalls[0].recordId;
+      openConfirmedObdOperationJournalRecord();
+    });
+    await page.waitForFunction(() => typeof window.__resolveDirectLoad === 'function');
+    await page.evaluate(() => {
+      lockObdDeveloperMode();
+      window.__resolveDirectLoad({ status: 'loaded', reason: 'valid_record_recovered', record: { recordId: window.__saveCalls[0].recordId, sessionJson: 'stale direct content' } });
+    });
+    await page.waitForTimeout(30);
+    assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecord), null, 'A lock must discard a late direct result');
+    await page.reload();
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    await page.evaluate(() => setObdStage('details'));
+    await page.locator('#obdOperationJournalViewer').locator(':scope > summary').click();
     await page.locator('#obdOperationJournalRefresh').click();
     await page.waitForFunction(id => [...document.querySelectorAll('#obdOperationJournalList button')].some(node => node.textContent === id), pendingId);
     await page.locator('#obdOperationJournalList button').filter({ hasText: pendingId }).click();
