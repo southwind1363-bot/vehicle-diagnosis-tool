@@ -1,5 +1,15 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 3.13.519後続: 前後証拠の一括生成実装
+
+`createDtcClearDtcEvidencePairFixture` をNode専用harnessへ追加。入力は既存sequenceと同じ7項目。下記factory未実装の記述は履歴。単独handleやsummaryは受け付けず、前後の4 receiptをown data descriptorから固定コピーし、同じコピーでsequence検査とDTC抽出を行う。模擬範囲・3 attempt・順序・clear評価が不成立ならhandleを返さない。
+
+clear snapshotは外側だけでなく内部もfreeze済みのdata descriptorだけを許可する（参照同一性だけを使うroot attemptTokenの内容は読まない）。変更可能な内部値・getterを拒否し、callerをfreezeしない。既存VMで生成したsnapshotのfollow-up-plan参照を維持する。これ自体は生成元の認証や実clear接続の所有証明ではない。内部検査は最大4096 object訪問までとし、循環の再訪も制限する。
+
+scopeを生成前・sequence検査・抽出後に確認し、成功時だけ一つのhandleへ前後の派生DTC値を保持する。summaryはbeforeDtcEvidence/postDtcEvidenceとfixtureSequenceMatchedを持つが、差分・成功推定・実車同一性・消去境界・網羅性・送信flagはfalse。raw応答・token・readiness値は保持しない。inspectは現在のscopeを再確認し、disposeは前後を一緒に破棄する。取得済みsummaryの回収はできず、比較権限として再受理しない。
+
+検証は既存sequence全ケースとの成立一致、片側不成立時のhandle不在、入力変更/再入失効/getter/浅いfreeze拒否、前後とintentの値の分離、scope失効、disposeを追加。sequence377件、関連合計1260件がErrors 0。アプリ版3.13.519・ブラウザAPI・保存形式は変更なし。OBD主集計・bridge・offline・実車試験は今回再実行しない。次はこの一括生成の内部値だけを対象とする、模擬DTC差分の設計とテスト。実車の比較可能性・消去成功は引き続き主張しない。
+
 ## 3.13.519後続: 前後証拠の結び付け設計と回帰検査
 
 基準07b3175b。現在の単独before/post handleはそれぞれの取得内容とscope寿命だけを扱い、相互のattempt・順序・clearとの結び付けは保持しない。両方のinspectがokでも同一sequenceの証明にはならない。別scopeで同じJSON summaryを生成でき、beforeをdisposeしても独立postは有効なままである。これは単独handleの仕様であり、比較APIはまだ存在しない。

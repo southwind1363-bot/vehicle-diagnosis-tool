@@ -153,15 +153,17 @@ function copyEvidenceInput(value) {
   return Object.freeze({ ...before, receipts: Object.freeze(receipts) });
 }
 
-function dtcEvidenceHandle(scope, dtcEvidence) {
+function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
   let retained = freeze(dtcEvidence);
   return Object.freeze({
     inspect(context) {
       const current = inspectDtcClearReadoutFixtureScope(scope, context);
       if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
       if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
-      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_dtc_evidence", null);
-      return freeze({ ok: true, reason: null, summary: { ...boundary, dtcEvidence: retained, readinessEvidenceAvailable: false } });
+      const { readouts, fixtureScopeMatched, ...boundary } = result(paired ? "fixture_dtc_evidence_pair" : "fixture_dtc_evidence", null);
+      const evidence = paired ? { beforeDtcEvidence: retained.before, postDtcEvidence: retained.post, fixtureSequenceMatched: true }
+        : { dtcEvidence: retained };
+      return freeze({ ok: true, reason: null, summary: { ...boundary, ...evidence, readinessEvidenceAvailable: false } });
     },
     dispose() { retained = null; }
   });
@@ -191,9 +193,16 @@ export function createDtcClearPostDtcEvidenceFixture(input) {
 }
 
 function extractDtcEvidence(scope, context, readout) {
+  const dtcEvidence = extractValidatedDtcRows(readout);
+  const current = inspectDtcClearReadoutFixtureScope(scope, context);
+  if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
+  return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(scope, dtcEvidence) });
+}
+
+function extractValidatedDtcRows(readout) {
   // Reparse only the owned, immutable input already validated by the production evaluator.
   // Count, zero-slot, duplicate and conflict policies remain in that evaluator, not reimplemented here.
-  const dtcEvidence = readout.receipts.slice(0, 3).map((receipt) => {
+  return readout.receipts.slice(0, 3).map((receipt) => {
     const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
       command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
     const sources = new Map();
@@ -209,7 +218,40 @@ function extractDtcEvidence(scope, context, readout) {
     }
     return { intent: receipt.intent, sources: [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)) };
   });
-  const current = inspectDtcClearReadoutFixtureScope(scope, context);
+}
+
+// Require immutable data, not merely a frozen outer shell. Never freeze caller data.
+function assertImmutableClearSnapshot(snapshot) {
+  const seen = new WeakSet();
+  let visited = 0;
+  function visit(value, root = false) {
+    if (value === null || ["string", "number", "boolean", "undefined"].includes(typeof value)) return;
+    if (typeof value !== "object" || !Object.isFrozen(value) || ++visited > 4096) throw new TypeError("mutable_pair_clear_snapshot");
+    if (seen.has(value)) return;
+    seen.add(value);
+    for (const key of Reflect.ownKeys(value)) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (typeof key !== "string" || !descriptor || !Object.hasOwn(descriptor, "value")) throw new TypeError("invalid_pair_clear_descriptor");
+      // Identity only: token contents are neither read nor frozen.
+      if (!(root && key === "attemptToken")) visit(descriptor.value);
+    }
+  }
+  visit(snapshot, true);
+}
+
+export function createDtcClearDtcEvidencePairFixture(input) {
+  const value = record(input, ["scope", "context", "beforeReadout", "clearWindowSnapshot", "clearStartedAt", "clearCompletedAt", "postReadout"]);
+  const context = record(value.context, ["scopeToken", "connectionToken", "targetToken"]);
+  const initial = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!initial.ok) return freeze({ ok: false, reason: initial.reason, handle: null });
+  // Fixed production snapshots preserve the same-VM follow-up-plan identity.
+  assertImmutableClearSnapshot(value.clearWindowSnapshot);
+  const beforeReadout = copyEvidenceInput(value.beforeReadout);
+  const postReadout = copyEvidenceInput(value.postReadout);
+  const evaluated = evaluateDtcClearReadoutSequenceFixture({ ...value, context, beforeReadout, postReadout });
+  if (!evaluated.fixtureSequenceMatched) return freeze({ ok: false, reason: evaluated.reason || "fixture_sequence_incomplete", handle: null });
+  const evidence = { before: extractValidatedDtcRows(beforeReadout), post: extractValidatedDtcRows(postReadout) };
+  const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
   if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
-  return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(scope, dtcEvidence) });
+  return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(value.scope, evidence, true) });
 }

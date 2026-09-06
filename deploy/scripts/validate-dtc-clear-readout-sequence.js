@@ -3,6 +3,7 @@ import { createDtcClearReadoutFixtureScope as create } from "./fixtures/dtc-clea
 import { createDtcClearFixtureReceiveWindow as receiveWindow,
   createDtcClearBeforeDtcEvidenceFixture as beforeEvidence,
   createDtcClearPostDtcEvidenceFixture as postEvidence,
+  createDtcClearDtcEvidencePairFixture as pairEvidence,
   evaluateDtcClearReadoutSequenceFixture as evaluate } from "./fixtures/dtc-clear-scoped-before-readout.js";
 
 let checks = 0;
@@ -35,6 +36,15 @@ function run(input) {
   check(out.provenance === "simulated_only" && ["realTransportProofAvailable", "sameVehicleVerified", "clearBoundaryVerified",
     "readoutCoverageComplete", "comparisonAvailable", "clearSucceededInferred", "executionEnabled",
     "vehicleCommandEnabled", "wouldTransmit", "canExecute"].every((key) => out[key] === false), "Sequence overstated real evidence");
+  const paired = pairEvidence(input);
+  check(paired.ok === out.fixtureSequenceMatched, "Pair factory disagreed with sequence gate");
+  if (paired.ok) {
+    const summary = paired.handle.inspect(input.context).summary;
+    check(summary.fixtureSequenceMatched && summary.beforeDtcEvidence.length === 3 && summary.postDtcEvidence.length === 3
+      && summary.comparisonAvailable === false && summary.clearSucceededInferred === false && summary.wouldTransmit === false,
+    "Pair summary omitted evidence or inferred success");
+    paired.handle.dispose();
+  } else check(paired.handle === null, "Failed sequence returned partial pair");
   return out;
 }
 const good = run(fixture());
@@ -167,4 +177,63 @@ secondPair.before.dispose();
 check(secondPair.before.inspect(second.context).summary === null && secondPair.post.inspect(second.context).ok,
   "Standalone disposal unexpectedly coupled separate handles");
 secondPair.post.dispose();
+const pairedInput = fixture(), pairedOriginal = JSON.stringify(pairedInput);
+const pairedHandle = pairEvidence(pairedInput).handle;
+const pairedSummary = pairedHandle.inspect(pairedInput.context).summary;
+check(JSON.stringify(pairedInput) === pairedOriginal && !Object.isFrozen(pairedInput.beforeReadout.attemptToken), "Pair mutated caller input");
+check(!/payload|transcript|Token/.test(JSON.stringify(pairedSummary)) && Object.isFrozen(pairedSummary.beforeDtcEvidence[0].sources[0].codes), "Pair leaked raw or mutable data");
+for (const key of ["realTransportProofAvailable", "sameVehicleVerified", "clearBoundaryVerified", "readoutCoverageComplete",
+  "comparisonAvailable", "clearSucceededInferred", "executionEnabled", "vehicleCommandEnabled", "wouldTransmit", "canExecute", "readinessEvidenceAvailable"]) {
+  check(pairedSummary[key] === false, "Pair became real vehicle authority");
+}
+pairedInput.beforeReadout.receipts[0].transcript = "NO DATA\r>";
+pairedInput.postReadout.receipts[0].transcript = "NO DATA\r>";
+check(JSON.stringify(pairedHandle.inspect(pairedInput.context).summary) === JSON.stringify(pairedSummary), "Caller mutation changed pair");
+for (const key of ["scopeToken", "connectionToken", "targetToken"]) {
+  check(pairedHandle.inspect({ ...pairedInput.context, [key]: {} }).summary === null, "Foreign context acquired pair");
+}
+pairedHandle.dispose(); pairedHandle.dispose();
+check(pairedHandle.inspect(pairedInput.context).reason === "evidence_disposed", "Disposed pair revived");
+const invalidatedPair = fixture(), invalidatedHandle = pairEvidence(invalidatedPair).handle;
+invalidatedPair.scope.invalidate(invalidatedPair.context);
+check(invalidatedHandle.inspect(invalidatedPair.context).summary === null, "Invalidated pair remained accessible");
+for (const side of ["beforeReadout", "postReadout"]) {
+  const value = fixture(); let calls = 0;
+  Object.defineProperty(value[side].receipts[0], "transcript", { get() { calls += 1; return ""; } });
+  assert.throws(() => pairEvidence(value), TypeError); checks += 1;
+  check(calls === 0, "Pair invoked receipt getter");
+  const reentrant = fixture();
+  reentrant[side].receipts[1] = new Proxy(reentrant[side].receipts[1], {
+    ownKeys(target) { reentrant.scope.invalidate(reentrant.context); return Reflect.ownKeys(target); }
+  });
+  check(pairEvidence(reentrant).handle === null, "Pair ignored invalidation while copying");
+}
+const fixed = fixture();
+fixed.postReadout.receipts[0] = new Proxy(fixed.postReadout.receipts[0], {
+  ownKeys(target) { fixed.beforeReadout.receipts[0].transcript = "NO DATA\r>"; return Reflect.ownKeys(target); }
+});
+check(pairEvidence(fixed).handle.inspect(fixed.context).summary.beforeDtcEvidence[0].sources[0].observation === "positive_empty",
+  "Pair reread previously copied before receipt");
+for (const nested of [false, true]) {
+  const value = fixture();
+  value.clearWindowSnapshot = nested
+    ? Object.freeze({ ...value.clearWindowSnapshot, execution: { ...value.clearWindowSnapshot.execution } })
+    : { ...value.clearWindowSnapshot };
+  assert.throws(() => pairEvidence(value), /mutable_pair_clear_snapshot/); checks += 1;
+}
+let clearGetterCalls = 0;
+const clearAccessor = fixture();
+clearAccessor.clearWindowSnapshot = Object.freeze({ ...clearAccessor.clearWindowSnapshot,
+  get completion() { clearGetterCalls += 1; return "complete"; } });
+assert.throws(() => pairEvidence(clearAccessor), /invalid_pair_clear_descriptor/); checks += 1;
+check(clearGetterCalls === 0, "Pair invoked clear snapshot getter");
+for (let index = 0; index < 3; index += 1) {
+  const value = fixture(), service = ["43", "47", "4A"][index];
+  value.beforeReadout.receipts[index].transcript = dtcTranscript(service, "01 33");
+  value.postReadout.receipts[index].transcript = dtcTranscript(service, "C1 23");
+  const handle = pairEvidence(value).handle, summary = handle.inspect(value.context).summary;
+  check(summary.beforeDtcEvidence[index].sources[0].codes.join() === "P0133"
+    && summary.postDtcEvidence[index].sources[0].codes.join() === "U0123", "Pair swapped or merged before/post content");
+  handle.dispose();
+}
 console.log(`DTC clear readout sequence checks: ${checks} / Errors: 0`);
