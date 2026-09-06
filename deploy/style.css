@@ -1518,6 +1518,28 @@ body.dark .flow-node-measure .flow-step {
   color: var(--danger);
 }
 
+.obd-operation-journal-save-ack {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.obd-operation-journal-save-ack[hidden] {
+  display: none;
+}
+
+.obd-operation-journal-save-ack input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
+  margin: 3px 0 0;
+}
+
 .obd-operation-journal-list {
   display: grid;
   gap: 6px;

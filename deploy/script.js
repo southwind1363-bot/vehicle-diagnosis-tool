@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.505";
+const APP_VERSION = "3.13.506";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -508,6 +508,10 @@ const obdOperationJournalRefresh = document.querySelector("#obdOperationJournalR
 const obdOperationJournalPrevious = document.querySelector("#obdOperationJournalPrevious");
 const obdOperationJournalNext = document.querySelector("#obdOperationJournalNext");
 const obdOperationJournalDownload = document.querySelector("#obdOperationJournalDownload");
+const obdOperationJournalSaveCurrent = document.querySelector("#obdOperationJournalSaveCurrent");
+const obdOperationJournalSaveStatus = document.querySelector("#obdOperationJournalSaveStatus");
+const obdOperationJournalSaveAck = document.querySelector("#obdOperationJournalSaveAck");
+const obdOperationJournalSaveAckInput = document.querySelector("#obdOperationJournalSaveAckInput");
 const obdOperationJournalStatus = document.querySelector("#obdOperationJournalStatus");
 const obdOperationJournalList = document.querySelector("#obdOperationJournalList");
 const obdOperationJournalRecord = document.querySelector("#obdOperationJournalRecord");
@@ -711,6 +715,13 @@ const obdOperationJournalState = {
   error: false,
   listing: false,
   loading: false
+};
+const obdOperationJournalSaveState = {
+  promise: null,
+  phase: "idle",
+  id: null,
+  status: "",
+  requiresAck: false
 };
 let obdBridgePairingToken = "";
 let obdBridgeOperation = null;
@@ -936,6 +947,8 @@ obdOperationJournalRefresh?.addEventListener("click", () => { void listObdOperat
 obdOperationJournalPrevious?.addEventListener("click", () => { void listObdOperationJournalRecords({ pageIndex: obdOperationJournalState.pageIndex - 1 }); });
 obdOperationJournalNext?.addEventListener("click", () => { void listObdOperationJournalRecords({ pageIndex: obdOperationJournalState.pageIndex + 1 }); });
 obdOperationJournalDownload?.addEventListener("click", downloadObdOperationJournalRecordJson);
+obdOperationJournalSaveCurrent?.addEventListener("click", () => { void saveCurrentObdReadoutToOperationJournal(); });
+obdOperationJournalSaveAckInput?.addEventListener("change", () => { renderObdOperationJournalViewer(); });
 obdOperationJournalViewer?.addEventListener("toggle", () => {
   if (!obdOperationJournalViewer.open) clearObdOperationJournalViewer();
   else renderObdOperationJournalViewer();
@@ -6045,10 +6058,191 @@ function getEligibleObdOperationJournalRecord(revision) {
   return record;
 }
 
+function getObdOperationJournalSaveBlockReason(revision = obdOperationJournalState.revision) {
+  if (!isObdOperationJournalViewerActive(revision)) return "保管画面を開いてから操作してください。";
+  if (obdOperationJournalState.listing || obdOperationJournalState.loading) return "一覧または記録の読込が完了してから保管してください。";
+  if (obdDevSession.pendingWriteOperation || obdDevSession.pendingCommandOperation) return "通信処理が完了してから保管してください。";
+  // A disconnect has uncertain transport ownership even after quarantine cleanup.
+  if (obdSerialDisconnectOperation) return "VCI切断処理が完了してから保管してください。";
+  return getObdSessionExportBlockReason();
+}
+
+function renderObdOperationJournalSaveInfo(active) {
+  if (!obdOperationJournalSaveCurrent || !obdOperationJournalSaveStatus || !obdOperationJournalSaveAck || !obdOperationJournalSaveAckInput) return;
+  if (!active) {
+    obdOperationJournalSaveCurrent.disabled = true;
+    obdOperationJournalSaveCurrent.title = "保管画面を開いてから操作してください。";
+    obdOperationJournalSaveStatus.textContent = "";
+    obdOperationJournalSaveStatus.classList.remove("error");
+    obdOperationJournalSaveAck.hidden = true;
+    obdOperationJournalSaveAckInput.checked = false;
+    return;
+  }
+  const blockReason = getObdOperationJournalSaveBlockReason(obdOperationJournalState.revision);
+  const waitingForAck = obdOperationJournalSaveState.requiresAck === true;
+  obdOperationJournalSaveCurrent.disabled = Boolean(obdOperationJournalSaveState.promise) || Boolean(blockReason) || (waitingForAck && !obdOperationJournalSaveAckInput.checked);
+  obdOperationJournalSaveCurrent.title = blockReason || (waitingForAck && !obdOperationJournalSaveAckInput.checked
+    ? "前回の保存結果が不明なため、確認してから新しいIDで開始してください。"
+    : "現在の読取結果をこのブラウザに保管");
+  const saveId = ["confirmed", "unknown"].includes(obdOperationJournalSaveState.phase) && obdOperationJournalSaveState.id
+    ? ` 記録ID: ${obdOperationJournalSaveState.id}`
+    : "";
+  obdOperationJournalSaveStatus.textContent = `${obdOperationJournalSaveState.status}${saveId}`;
+  obdOperationJournalSaveStatus.classList.toggle("error", ["unknown", "rejected"].includes(obdOperationJournalSaveState.phase));
+  obdOperationJournalSaveAck.hidden = !waitingForAck;
+}
+
+function buildCurrentObdOperationJournalSaveSnapshot(sessionRef, exportedAt) {
+  const buildExport = window.ObdReadOnly?.buildBridgeSessionExportPayload;
+  const policy = window.ObdReadOnly?.getDiagnosticSessionJsonPolicy;
+  if (typeof buildExport !== "function" || typeof policy !== "function") throw new Error("journal_export_unavailable");
+  const payload = buildExport({ ...sessionRef, exportedAt });
+  if (!payload || payload.schema_version !== "bridge_session_export_v1" || !payload.session || typeof payload.session !== "object" || Array.isArray(payload.session)) {
+    throw new Error("journal_export_invalid");
+  }
+  const sessionJson = JSON.stringify(payload);
+  const bytes = new TextEncoder().encode(sessionJson);
+  const policyResult = policy(sessionJson);
+  if (bytes.byteLength > 4000000 || policyResult?.accepted !== true || policyResult.kind !== "session") throw new Error("journal_export_rejected");
+  return sessionJson;
+}
+
+function createObdOperationJournalRecordId() {
+  const random = new Uint8Array(16);
+  if (!globalThis.crypto || typeof globalThis.crypto.getRandomValues !== "function") throw new Error("journal_random_unavailable");
+  globalThis.crypto.getRandomValues(random);
+  return `journal-${Array.from(random, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+async function saveCurrentObdReadoutToOperationJournal() {
+  if (obdOperationJournalSaveState.promise) return false;
+  let operation;
+  operation = (async () => {
+    // Yield after publishing the sentinel so synthetic and user reentrancy cannot duplicate confirmation or writes.
+    await Promise.resolve();
+    try {
+    const revision = obdOperationJournalState.revision;
+    const blockReason = getObdOperationJournalSaveBlockReason(revision);
+    if (blockReason) {
+      obdOperationJournalSaveState.status = blockReason;
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    if (obdOperationJournalSaveState.requiresAck && !obdOperationJournalSaveAckInput?.checked) {
+      obdOperationJournalSaveState.status = "前回の保存結果が不明です。確認してから新しいIDで開始してください。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    const sessionRef = obdDevSession.lastSession;
+    const exportedAt = new Date().toISOString();
+    let sessionJson;
+    try {
+      sessionJson = buildCurrentObdOperationJournalSaveSnapshot(sessionRef, exportedAt);
+    } catch (_error) {
+      obdOperationJournalSaveState.status = "保管用JSONを確認できませんでした。読取結果は変更していません。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    obdOperationJournalSaveState.phase = "confirming";
+    obdOperationJournalSaveState.status = "保管の確認待ちです。";
+    renderObdOperationJournalViewer();
+    let confirmed;
+    try {
+      confirmed = confirm("現在の読取結果を端末内に保管します。車両通信、DTC消去、消去の許可は行いません。読取結果は変更しません。個人・車両情報を含む可能性があるため共有端末では注意してください。続行しますか？");
+    } catch (_error) {
+      obdOperationJournalSaveState.phase = "idle";
+      obdOperationJournalSaveState.status = "保管の確認を開始できませんでした。読取結果は変更していません。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    if (!confirmed) {
+      obdOperationJournalSaveState.phase = "idle";
+      obdOperationJournalSaveState.status = "保管を取り消しました。読取結果は変更していません。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    const afterConfirmReason = getObdOperationJournalSaveBlockReason(revision);
+    if (afterConfirmReason || obdDevSession.lastSession !== sessionRef) {
+      obdOperationJournalSaveState.phase = "idle";
+      obdOperationJournalSaveState.status = afterConfirmReason || "読取結果が更新されたため、保管を開始しませんでした。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    let rebuiltJson;
+    try {
+      rebuiltJson = buildCurrentObdOperationJournalSaveSnapshot(sessionRef, exportedAt);
+    } catch (_error) {
+      obdOperationJournalSaveState.phase = "idle";
+      obdOperationJournalSaveState.status = "確認後に保管用JSONを再確認できませんでした。読取結果は変更していません。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    if (rebuiltJson !== sessionJson || getObdOperationJournalSaveBlockReason(revision) || obdDevSession.lastSession !== sessionRef) {
+      obdOperationJournalSaveState.phase = "idle";
+      obdOperationJournalSaveState.status = "読取結果または保管条件が変わったため、保管を開始しませんでした。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    let recordId;
+    try {
+      recordId = createObdOperationJournalRecordId();
+    } catch (_error) {
+      obdOperationJournalSaveState.phase = "idle";
+      obdOperationJournalSaveState.status = "安全な保管IDを作成できないため、保管を開始しませんでした。";
+      renderObdOperationJournalViewer();
+      return false;
+    }
+    obdOperationJournalSaveState.requiresAck = false;
+    if (obdOperationJournalSaveAckInput) obdOperationJournalSaveAckInput.checked = false;
+    obdOperationJournalSaveState.id = recordId;
+    obdOperationJournalSaveState.phase = "pending";
+    obdOperationJournalSaveState.status = "現在の読取結果を保管しています。";
+    renderObdOperationJournalViewer();
+    try {
+      const result = await window.ObdOperationJournal?.savePreOperation?.({ recordId, sessionJson });
+      if (result?.status === "confirmed" && result.reason === "record_confirmed" && result.recordId === recordId) {
+        obdOperationJournalSaveState.phase = "confirmed";
+        obdOperationJournalSaveState.id = result.recordId;
+        obdOperationJournalSaveState.status = "端末内に保管しました。";
+        return true;
+      }
+      const knownConflict = result?.status === "conflict" && result.recordId === recordId && result.reason === "record_conflict";
+      const knownRejected = result?.status === "rejected" && result.recordId === recordId && [
+        "invalid_input", "invalid_record_id", "invalid_session_json", "invalid_session_schema",
+        "session_policy_unavailable", "session_policy_rejected", "digest_failed", "digest_unavailable"
+      ].includes(result.reason);
+      if (knownConflict || knownRejected) {
+        obdOperationJournalSaveState.phase = "rejected";
+        obdOperationJournalSaveState.status = "保管を確定できませんでした。自動では再試行しません。";
+        return false;
+      }
+      obdOperationJournalSaveState.phase = "unknown";
+      obdOperationJournalSaveState.status = "保存された可能性があります。";
+      obdOperationJournalSaveState.requiresAck = true;
+      return false;
+    } catch (_error) {
+      obdOperationJournalSaveState.phase = "unknown";
+      obdOperationJournalSaveState.status = "保存された可能性があります。";
+      obdOperationJournalSaveState.requiresAck = true;
+      return false;
+    } finally {
+      renderObdOperationJournalViewer();
+    }
+    } finally {
+      if (obdOperationJournalSaveState.promise === operation) obdOperationJournalSaveState.promise = null;
+      renderObdOperationJournalViewer();
+    }
+  })();
+  obdOperationJournalSaveState.promise = operation;
+  renderObdOperationJournalViewer();
+  return operation;
+}
+
 function renderObdOperationJournalViewer() {
   if (!obdOperationJournalStatus || !obdOperationJournalList || !obdOperationJournalRecord) return;
   if (obdOperationJournalViewer) obdOperationJournalViewer.hidden = obdDevModeUnlocked !== true;
   const active = isObdOperationJournalViewerActive(obdOperationJournalState.revision);
+  renderObdOperationJournalSaveInfo(active);
   const page = obdOperationJournalState.pages[obdOperationJournalState.pageIndex] || null;
   obdOperationJournalStatus.textContent = obdOperationJournalState.status;
   obdOperationJournalStatus.classList.toggle("error", obdOperationJournalState.error);
