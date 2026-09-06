@@ -182,6 +182,7 @@ function asset(pathname) {
     }, 'Comparison must not enable execution or vehicle commands');
     assert.match(matched.status, /車両同一性・適合・安全条件・消去許可は未確認。 記録ID: viewer-record-00/, 'Match status must remain historical and non-authoritative');
     const preparation = record.locator('.obd-operation-journal-clear-preparation');
+    const comparison = record.locator('.obd-operation-journal-comparison');
     const unbind = preparation.getByRole('button', { name: '比較候補を解除', exact: true });
     const conditions = preparation.locator('details');
     const associationView = await page.evaluate(() => {
@@ -205,10 +206,74 @@ function asset(pathname) {
     assert.equal(await preparation.getByText('消去前確認', { exact: true }).count(), 1);
     assert.match(await preparation.textContent(), /対象: 未設定/);
     assert.match(await preparation.textContent(), /実車送信なし/);
-    assert.equal(await record.locator('.obd-operation-journal-status').first().textContent(), '照合時点の読取内容が一致。車両同一性・適合・安全条件・消去許可は未確認。');
+    assert.deepEqual(await comparison.locator(':scope > div').evaluateAll(rows => rows.map(row => [row.querySelector('dt')?.textContent, row.querySelector('dd')?.textContent])), [
+      ['端末内記録', '読取内容と一致'],
+      ['比較保護', '保持中'],
+      ['現在接続', '未確認'],
+      ['車両同一性', '未確認'],
+      ['ECU消去範囲', '未確認']
+    ], 'The comparison evidence must preserve explicit unconfirmed safety scope without a duplicate status paragraph');
+    assert.equal(await record.locator('.obd-operation-journal-status').count(), 1, 'The preparation safety text remains separate from compact comparison evidence');
     assert.equal((await record.textContent()).split(associationView.recordId).length - 1, 1, 'Record ID must appear only in existing metadata');
+    assert.equal(associationView.totalCount, 12, 'The comparison keeps all twelve unconfirmed readiness conditions');
     assert.equal(await conditions.evaluate(node => node.open), false, 'Unconfirmed conditions must be collapsed by default');
     assert.equal(await conditions.locator('summary').textContent(), `未確認の条件 ${associationView.expectedCount}件（確認済み ${associationView.completedCount}/${associationView.totalCount}）`);
+    await page.evaluate(() => {
+      const original = obdOperationJournalComparisonState.association;
+      window.__comparisonAssociation = original;
+      obdOperationJournalComparisonState.association = {
+        ...original,
+        targetBindingController: Object.freeze({ getSnapshot: () => Object.freeze({
+          ...window.__targetBindingSnapshot,
+          transport: Object.freeze({
+            ...window.__targetBindingSnapshot.transport,
+            status: 'current_web_serial_connection',
+            evidenceSource: 'serial_port_object_and_connection_revision',
+            persistentHardwareIdentityVerified: false
+          })
+        }) })
+      };
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await comparison.locator(':scope > div').nth(2).locator('dd').textContent(), 'Web Serial参照確認', 'A recognized current Web Serial binding must be distinct from not bound');
+    await page.evaluate(() => {
+      const original = window.__comparisonAssociation;
+      obdOperationJournalComparisonState.association = {
+        ...original,
+        targetBindingController: Object.freeze({ getSnapshot: () => Object.freeze({
+          ...window.__targetBindingSnapshot,
+          transport: Object.freeze({ ...window.__targetBindingSnapshot.transport, status: 'current_web_serial_connection' })
+        }) })
+      };
+      renderObdOperationJournalViewer();
+    });
+    assert.deepEqual(await comparison.locator(':scope > div').evaluateAll(rows => rows.slice(2).map(row => row.querySelector('dd')?.textContent)), ['確認できません', '確認できません', '確認できません'], 'Contradictory current transport provenance must not be inferred');
+    await page.evaluate(() => {
+      const original = window.__comparisonAssociation;
+      obdOperationJournalComparisonState.association = {
+        ...original,
+        targetBindingController: Object.freeze({ getSnapshot: () => Object.freeze({ schemaVersion: 'unrecognized' }) })
+      };
+      renderObdOperationJournalViewer();
+    });
+    assert.deepEqual(await comparison.locator(':scope > div').evaluateAll(rows => rows.slice(2).map(row => row.querySelector('dd')?.textContent)), ['確認できません', '確認できません', '確認できません'], 'Malformed target binding evidence must not be inferred');
+    await page.evaluate(() => {
+      const original = window.__comparisonAssociation;
+      obdOperationJournalComparisonState.association = {
+        ...original,
+        targetBindingController: Object.freeze({ getSnapshot: () => {
+          obdOperationJournalComparisonState.association = null;
+          return window.__targetBindingSnapshot;
+        } })
+      };
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await comparison.count(), 0, 'A target-binding getter that loses its association must not render stale comparison success');
+    assert.equal(await preparation.count(), 0, 'A lost association must not retain the preparation panel');
+    await page.evaluate(() => {
+      obdOperationJournalComparisonState.association = window.__comparisonAssociation;
+      renderObdOperationJournalViewer();
+    });
     await conditions.locator('summary').click();
     assert.deepEqual(await conditions.locator('li').allTextContents(), associationView.expectedLabels, 'Expanded conditions must show every controller check label');
     assert.equal(await preparation.locator('input, [role="checkbox"], button:not(.secondary-button)').count(), 0, 'Preparation must not expose editable readiness or execution controls');
@@ -250,6 +315,13 @@ function asset(pathname) {
     await page.screenshot({ path: path.join(output, 'operation-journal-toolbar-390-viewport.png') });
     assert.equal(await conditions.locator('summary').evaluate(node => node.scrollWidth <= node.clientWidth), true, '390px conditions summary must wrap without horizontal overflow');
     await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-390.png') });
+    await page.setViewportSize({ width: 320, height: 900 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, '320px journal viewer must not create page-level horizontal overflow');
+    assert.ok(await actionGroups.evaluateAll(groups => groups.every(group => group.scrollWidth <= group.clientWidth)), '320px journal action groups must not overflow');
+    assert.ok(await comparison.locator(':scope > div').evaluateAll(rows => rows.every(row => row.scrollWidth <= row.clientWidth)), '320px comparison rows must wrap without overlap');
+    await assertToolbarWithinViewport('320px');
+    await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-320.png') });
+    await page.setViewportSize({ width: 390, height: 900 });
     await conditions.locator('summary').click();
     await preparation.evaluate(node => node.scrollIntoView({ block: 'center' }));
     assert.equal(await unbind.evaluate(node => {

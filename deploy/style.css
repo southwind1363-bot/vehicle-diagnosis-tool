@@ -1552,6 +1552,32 @@ body.dark .flow-node-measure .flow-step {
   color: var(--danger);
 }
 
+.obd-operation-journal-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 10px;
+  margin: 0;
+  min-width: 0;
+}
+
+.obd-operation-journal-comparison div {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 5px;
+}
+
+.obd-operation-journal-comparison dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.obd-operation-journal-comparison dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
 .obd-operation-journal-save-ack {
   display: flex;
   align-items: flex-start;
@@ -3052,6 +3078,7 @@ body.dark .flow-node-measure .flow-step {
   .obd-stage-tabs,
   .obd-profile-strip,
   .obd-operation-journal-meta,
+  .obd-operation-journal-comparison,
   .obd-session-details,
   .obd-diagnostic-flow-grid,
   .obd-request-grid,
@@ -3145,6 +3172,7 @@ body.dark .flow-node-measure .flow-step {
   .obd-stage-tabs,
   .obd-profile-strip,
   .obd-operation-journal-meta,
+  .obd-operation-journal-comparison,
   .obd-session-details,
   .obd-diagnostic-flow-grid,
   .obd-request-grid,

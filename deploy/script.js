@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.513";
+const APP_VERSION = "3.13.514";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6499,6 +6499,85 @@ function getObdOperationJournalComparisonAssociation() {
   return association;
 }
 
+function readObdOperationJournalOwnValue(value, key) {
+  try {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return { present: false, value: undefined };
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor && Object.prototype.hasOwnProperty.call(descriptor, "value")
+      ? { present: true, value: descriptor.value }
+      : { present: false, value: undefined };
+  } catch (_error) {
+    return { present: false, value: undefined };
+  }
+}
+
+function getObdOperationJournalTargetBindingEvidence(snapshot, recordId) {
+  const schemaVersion = readObdOperationJournalOwnValue(snapshot, "schemaVersion");
+  const state = readObdOperationJournalOwnValue(snapshot, "state");
+  const preOperationSessionId = readObdOperationJournalOwnValue(snapshot, "preOperationSessionId");
+  const target = readObdOperationJournalOwnValue(snapshot, "target");
+  const workflowTargetApplied = readObdOperationJournalOwnValue(snapshot, "workflowTargetApplied");
+  const executionEnabled = readObdOperationJournalOwnValue(snapshot, "executionEnabled");
+  const vehicleCommandEnabled = readObdOperationJournalOwnValue(snapshot, "vehicleCommandEnabled");
+  const wouldTransmit = readObdOperationJournalOwnValue(snapshot, "wouldTransmit");
+  const canExecute = readObdOperationJournalOwnValue(snapshot, "canExecute");
+  const transport = readObdOperationJournalOwnValue(snapshot, "transport");
+  if (schemaVersion.value !== "generic_obd_dtc_clear_target_binding_v1"
+    || state.value !== "blocked" || preOperationSessionId.value !== recordId || target.value !== null
+    || workflowTargetApplied.value !== false || executionEnabled.value !== false
+    || vehicleCommandEnabled.value !== false || wouldTransmit.value !== false || canExecute.value !== false) return null;
+  const transportStatus = readObdOperationJournalOwnValue(transport.value, "status");
+  const transportEvidenceSource = readObdOperationJournalOwnValue(transport.value, "evidenceSource");
+  const persistentHardwareIdentityVerified = readObdOperationJournalOwnValue(transport.value, "persistentHardwareIdentityVerified");
+  const currentWebSerialConnection = transportStatus.value === "current_web_serial_connection"
+    && transportEvidenceSource.value === "serial_port_object_and_connection_revision"
+    && persistentHardwareIdentityVerified.value === false;
+  const notBound = transportStatus.value === "not_bound"
+    && transportEvidenceSource.value === null && persistentHardwareIdentityVerified.value === false;
+  if (!currentWebSerialConnection && !notBound) return null;
+  const vehicleIdentity = readObdOperationJournalOwnValue(snapshot, "vehicleIdentity");
+  const vehicleIdentityStatus = readObdOperationJournalOwnValue(vehicleIdentity.value, "status");
+  const ecuScope = readObdOperationJournalOwnValue(snapshot, "ecuScope");
+  const ecuScopeStatus = readObdOperationJournalOwnValue(ecuScope.value, "status");
+  return {
+    currentConnection: currentWebSerialConnection ? "Web Serial参照確認" : "未確認",
+    vehicleIdentity: vehicleIdentityStatus.value === "not_observed" ? "未確認" : "確認できません",
+    ecuClearScope: ecuScopeStatus.value === "not_observed" ? "未確認" : "確認できません"
+  };
+}
+
+function getObdOperationJournalComparisonEvidence(association, record) {
+  const lease = association?.lease;
+  if (!association || association.record !== record || lease?.recordId !== record.recordId
+    || typeof lease.isHeld !== "function") return null;
+  try {
+    if (lease.isHeld() !== true) return null;
+  } catch (_error) {
+    return null;
+  }
+  let bindingSnapshot;
+  try {
+    bindingSnapshot = association.targetBindingController?.getSnapshot?.();
+  } catch (_error) {
+    bindingSnapshot = null;
+  }
+  // getSnapshot can invalidate its captured association, so never append a stale success view.
+  const currentAssociation = getObdOperationJournalComparisonAssociation();
+  try {
+    if (currentAssociation !== association || association.lease !== lease || lease.isHeld() !== true) return null;
+  } catch (_error) {
+    return null;
+  }
+  const bindingEvidence = getObdOperationJournalTargetBindingEvidence(bindingSnapshot, record.recordId);
+  return {
+    record: "読取内容と一致",
+    protection: "保持中",
+    currentConnection: bindingEvidence?.currentConnection || "確認できません",
+    vehicleIdentity: bindingEvidence?.vehicleIdentity || "確認できません",
+    ecuClearScope: bindingEvidence?.ecuClearScope || "確認できません"
+  };
+}
+
 async function compareCurrentObdReadoutToOperationJournalRecord() {
   if (obdOperationJournalComparisonState.promise) return obdOperationJournalComparisonState.promise;
   if (obdOperationJournalComparisonState.association || obdOperationJournalComparisonState.releasePromise) return false;
@@ -6880,10 +6959,25 @@ function renderObdOperationJournalViewer() {
   remove.title = removeBlockReason || "選択した検証済み記録を端末内から削除";
   remove.addEventListener("click", () => { void removeSelectedObdOperationJournalRecord(); });
   const association = getObdOperationJournalComparisonAssociation();
-  if (association?.record === record) {
-    const comparison = document.createElement("p");
-    comparison.className = "obd-operation-journal-status";
-    comparison.textContent = "照合時点の読取内容が一致。車両同一性・適合・安全条件・消去許可は未確認。";
+  const comparisonEvidence = association ? getObdOperationJournalComparisonEvidence(association, record) : null;
+  if (comparisonEvidence) {
+    const comparison = document.createElement("dl");
+    comparison.className = "obd-operation-journal-comparison";
+    [
+      ["端末内記録", comparisonEvidence.record],
+      ["比較保護", comparisonEvidence.protection],
+      ["現在接続", comparisonEvidence.currentConnection],
+      ["車両同一性", comparisonEvidence.vehicleIdentity],
+      ["ECU消去範囲", comparisonEvidence.ecuClearScope]
+    ].forEach(([label, value]) => {
+      const item = document.createElement("div");
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const detail = document.createElement("dd");
+      detail.textContent = value;
+      item.append(term, detail);
+      comparison.appendChild(item);
+    });
     const snapshot = association.controller.getSnapshot();
     const checks = snapshot.readiness.checks;
     const unconfirmedCount = snapshot.readiness.totalCount - snapshot.readiness.completedCount;
