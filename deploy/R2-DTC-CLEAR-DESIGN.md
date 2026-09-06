@@ -148,3 +148,13 @@ Sol設計に基づき `ObdOperationJournal.loadPreOperation({ recordId })` を�
 成功は `status: "loaded"` / `reason: "valid_record_recovered"` とし、save/verifyのconfirmedと区別する。recordにはID、日時、種別、元のsessionJson、バイト数を不変の値として返す。可変のArrayBufferは公開しない。失敗時のrecordは常にnull。入力不正はrejected、記録不在・破損・DB異常・照合不能・期限超過はindeterminateとし、記録を修復・削除・上書きしない。
 
 DB未作成時は初期化せず、読取完了前や5秒の期限切れ後に内容を返さない。保存内容とdigestを同時に変更できる者への改ざん防止・真正性確認ではなく、ローカルの記録整合性の検査に限る。車両識別、適合、外部に保持した消去前記録との同一性、実行許可の根拠として使わない。
+
+## 3.13.503 保存記録IDの一覧取得
+
+Sol設計に基づき `listPreOperationIds({ limit, afterRecordId })` を追加する。引数はこの2項目のown data propertyだけとし、limitは1から50の整数、afterRecordIdはnullまたは既存のID形式。省略時の補完はしない。prototypeの受付は既存APIと同じくnullまたはその親がnullのものとし、別realmの通常オブジェクトも受け付ける。独自のnull-prototype中間オブジェクトもこの条件に含まれるが、継承値は参照せず、own data値を検証・複写する。DB version・保存schema・save/verify/loadの契約は変更しない。
+
+既存DBのreadonly transactionで `openKeyCursor` を使い、本文・日時・バイト数・digestを読み出さない。afterRecordIdの排他的下限から主キー昇順で最大limit+1件を確認する。余分な1件があればhasMoreをtrueにし、返した最後のIDをnextAfterRecordIdにする。作成日時順ではなく、次のページまで含めた固定スナップショットでもない。並行追加・削除は後続ページに影響し得る。
+
+正常時は `listed / record_ids_listed` と不変のrecordIds配列を返す。transaction完了前に成功を返さず、不正キー・読取失敗・期限超過・異なるDB構造では一覧全体を確認不能にして途中結果を返さない。失敗時はrecordIdsが空、nextAfterRecordIdがnull、hasMoreがfalseとなる。DBがなければupgradeを中断し、初期化しない。書込・移行・削除・自動再試行は行わない。
+
+IDは未検証の参照であり、記録内容は `loadPreOperation` の検査を通して取得する。一覧にある記録でも破損・現在のポリシーへの不適合で読み出せない場合がある。ID自体にも機微情報を含めない呼出側設計が必要。通常画面・認証・対象車両照合・消去処理には接続せず、実行関連の許可はすべてfalseのままとする。

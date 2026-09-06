@@ -201,6 +201,14 @@ async function load(page, recordId) {
   }, recordId);
 }
 
+async function list(page, limit, afterRecordId) {
+  return page.evaluate(async ({ pageLimit, after }) => {
+    const result = await window.ObdOperationJournal.listPreOperationIds({ limit: pageLimit, afterRecordId: after });
+    if (!Object.isFrozen(result) || !Object.isFrozen(result.recordIds) || !Object.isFrozen(result.execution)) throw new Error('List result is not frozen');
+    return result;
+  }, { pageLimit: limit, after: afterRecordId });
+}
+
 async function tamperRecord(page, recordId, mutate) {
   return page.evaluate(async ({ dbName, storeName, id, kind }) => {
     const open = indexedDB.open(dbName);
@@ -349,6 +357,45 @@ async function tamperRecord(page, recordId, mutate) {
     assert.equal(unicodeLoad.record.sessionJson, unicodeJson, 'unicode load exact bytes');
     checks += 1;
 
+    for (const id of ['z-page-a', 'z-page-b', 'z-page-c']) {
+      assert.equal((await save(page, id, await buildCanonicalFixture(page, { diagnosticNote: id }))).status, 'confirmed', `pagination fixture ${id}`);
+    }
+    const pageOne = await list(page, 1, 'z-page-a');
+    assert.equal(pageOne.status, 'listed', 'first key page listed');
+    assert.equal(pageOne.reason, 'record_ids_listed', 'first key page reason');
+    assert.deepEqual(pageOne.recordIds, ['z-page-b'], 'first key page ID');
+    assert.equal(pageOne.nextAfterRecordId, 'z-page-b', 'first key page continuation');
+    assert.equal(pageOne.hasMore, true, 'first key page lookahead');
+    assertExecutionFrozen(pageOne, 'first key page');
+    const pageTwo = await list(page, 1, pageOne.nextAfterRecordId);
+    assert.equal(pageTwo.status, 'listed', 'second key page listed');
+    assert.deepEqual(pageTwo.recordIds, ['z-page-c'], 'exclusive continuation key');
+    assert.equal(pageTwo.nextAfterRecordId, null, 'last page continuation');
+    assert.equal(pageTwo.hasMore, false, 'last page hasMore');
+    checks += 1;
+
+    await tamperRecord(page, 'z-page-b', 'source');
+    const corruptListed = await list(page, 1, 'z-page-a');
+    assert.equal(corruptListed.status, 'listed', 'corrupt payload key remains listable');
+    assert.deepEqual(corruptListed.recordIds, ['z-page-b'], 'key-only list returns corrupt payload key');
+    const corruptLoad = await load(page, 'z-page-b');
+    assert.equal(corruptLoad.status, 'indeterminate', 'corrupt payload still rejected by load');
+    assert.equal(corruptLoad.record, null, 'corrupt payload load leaks no record');
+    const strictList = await page.evaluate(async () => Promise.all([
+      window.ObdOperationJournal.listPreOperationIds({}),
+      window.ObdOperationJournal.listPreOperationIds({ limit: 0, afterRecordId: null }),
+      window.ObdOperationJournal.listPreOperationIds({ limit: 1, afterRecordId: '' }),
+      window.ObdOperationJournal.listPreOperationIds({ limit: 1, afterRecordId: null, extra: true }),
+      window.ObdOperationJournal.listPreOperationIds(Object.defineProperty({ limit: 1, afterRecordId: null }, 'limit', { enumerable: true, get: () => 1 }))
+    ]));
+    for (const rejected of strictList) {
+      assert.equal(rejected.status, 'rejected', 'strict list input');
+      assert.deepEqual(rejected.recordIds, [], 'strict list input has no IDs');
+      assert.equal(rejected.nextAfterRecordId, null, 'strict list input has no continuation');
+      assert.equal(rejected.hasMore, false, 'strict list input has no lookahead');
+    }
+    checks += 1;
+
     const strictLoadResults = await page.evaluate(async () => Promise.all([
       window.ObdOperationJournal.loadPreOperation({}),
       window.ObdOperationJournal.loadPreOperation({ recordId: '' }),
@@ -401,6 +448,11 @@ async function tamperRecord(page, recordId, mutate) {
     const reopenLoad = await load(page, 'unicode-record');
     assert.equal(reopenLoad.status, 'loaded', 'page close/reopen load');
     assert.equal(reopenLoad.record.sessionJson, unicodeJson, 'reopen unicode load');
+    checks += 1;
+
+    const reopenPage = await list(page, 1, 'z-page-a');
+    assert.equal(reopenPage.status, 'listed', 'page reopen key listing');
+    assert.deepEqual(reopenPage.recordIds, ['z-page-b'], 'page reopen retains key pagination');
     checks += 1;
 
     assert.deepEqual(errors, [], 'page errors and console errors');

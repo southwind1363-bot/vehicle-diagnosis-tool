@@ -11,7 +11,7 @@ const copy = (value) => value instanceof ArrayBuffer ? value.slice(0) : value;
 
 function createFakeIdb(options = {}) {
   const records = options.records || new Map();
-  const calls = { opens: 0, writes: 0, reads: 0, closes: 0, aborts: 0, strict: 0 };
+  const calls = { opens: 0, writes: 0, reads: 0, keyCursors: 0, ranges: [], closes: 0, aborts: 0, strict: 0 };
   let initialized = options.initialized === true;
   let hasStore = initialized && !options.wrongStore;
   function request() { return { result: undefined, error: null, onsuccess: null, onerror: null }; }
@@ -68,6 +68,46 @@ function createFakeIdb(options = {}) {
                   finished = true; tx.oncomplete?.();
                 });
                 return get;
+              },
+              openKeyCursor(range, direction) {
+                calls.keyCursors += 1;
+                calls.ranges.push(range || null);
+                if (direction !== "next") throw new Error("wrong cursor direction");
+                const cursorRequest = request();
+                const keys = (options.cursorKeys || Array.from(records.keys()).sort()).filter((key) => !range || key > range.lower);
+                let index = -1;
+                let generation = 0;
+                const advance = () => {
+                  const thisGeneration = ++generation;
+                  const emit = () => {
+                    if (finished) return;
+                    if (options.cursorErrorAt === index + 1) {
+                      cursorRequest.error = { name: "ReadError" };
+                      cursorRequest.onerror?.();
+                      finished = true;
+                      tx.onabort?.();
+                      return;
+                    }
+                    index += 1;
+                    cursorRequest.result = index < keys.length ? { key: keys[index], continue: advance } : null;
+                    cursorRequest.onsuccess?.();
+                    if (options.abortAfterCursorSuccess) {
+                      finished = true;
+                      tx.onabort?.();
+                      return;
+                    }
+                    later(() => {
+                      if (!finished && generation === thisGeneration) {
+                        finished = true;
+                        tx.oncomplete?.();
+                      }
+                    });
+                  };
+                  if (options.lateKeyCursor) setTimeout(emit, options.lateKeyCursor);
+                  else later(emit);
+                };
+                advance();
+                return cursorRequest;
               }
             };
           }
@@ -124,7 +164,7 @@ function client(options = {}) {
     : options.delayedDigest ? { subtle: { digest: (...args) => new Promise((resolve, reject) => setTimeout(() => webcrypto.subtle.digest(...args).then(resolve, reject), options.delayedDigest)) } }
     : options.shortDigest ? { subtle: { digest: async () => new ArrayBuffer(31) } } : webcrypto;
   const operationTimer = options.timeoutDelay === undefined ? setTimeout : (callback) => setTimeout(callback, options.timeoutDelay);
-  const context = vm.createContext({ window: {}, indexedDB: fake, crypto, TextEncoder, TextDecoder, setTimeout: operationTimer, clearTimeout, queueMicrotask, Date });
+  const context = vm.createContext({ window: {}, indexedDB: fake, IDBKeyRange: { lowerBound: (lower, open) => ({ lower, open }) }, crypto, TextEncoder, TextDecoder, setTimeout: operationTimer, clearTimeout, queueMicrotask, Date });
   context.window = context;
   context.ObdReadOnly = { getDiagnosticSessionJsonPolicy: options.policy || (() => ({ accepted: true, kind: "session" })) };
   vm.runInContext(source, context, { filename: "obd-operation-journal.js" });
@@ -133,9 +173,14 @@ function client(options = {}) {
 
 const good = { recordId: "preop_01", sessionJson: payload() };
 function load(api, input) { return api.loadPreOperation(input); }
+function list(api, input) { return api.listPreOperationIds(input); }
 function isArrayBufferLike(value) { return Object.prototype.toString.call(value) === "[object ArrayBuffer]"; }
 function isSafeLoad(result, status) {
   return Object.isFrozen(result) && Object.isFrozen(result.execution) && result.status === status
+    && result.execution.wouldTransmit === false && result.execution.canExecute === false && result.execution.retryAllowed === false;
+}
+function isSafeList(result, status) {
+  return Object.isFrozen(result) && Object.isFrozen(result.recordIds) && Object.isFrozen(result.execution) && result.status === status
     && result.execution.wouldTransmit === false && result.execution.canExecute === false && result.execution.retryAllowed === false;
 }
 {
@@ -373,5 +418,52 @@ for (const options of [{ digestFailure: true }, { digestPending: true, timeoutDe
   const { api, fake } = client({ initialized: true, records: first.fake.records, ...options });
   const invalid = await load(api, { recordId: good.recordId });
   check(isSafeLoad(invalid, "indeterminate") && invalid.record === null && fake.calls.writes === 0, "Load digest failure or timeout leaked a record");
+}
+{
+  const records = new Map(Array.from({ length: 51 }, (_, index) => [`id_${String(index + 1).padStart(2, "0")}`, { payload: "must_not_be_read" }]));
+  const { api, fake } = client({ initialized: true, records, digestFailure: true });
+  const first = await list(api, { limit: 1, afterRecordId: null });
+  const fifty = await list(api, { limit: 50, afterRecordId: null });
+  const next = await list(api, { limit: 50, afterRecordId: "id_50" });
+  check(isSafeList(first, "listed") && first.reason === "record_ids_listed" && first.recordIds.join(",") === "id_01" && first.nextAfterRecordId === "id_01" && first.hasMore === true
+    && isSafeList(fifty, "listed") && fifty.recordIds.length === 50 && fifty.recordIds[49] === "id_50" && fifty.nextAfterRecordId === "id_50" && fifty.hasMore === true
+    && isSafeList(next, "listed") && next.recordIds.join(",") === "id_51" && next.nextAfterRecordId === null && next.hasMore === false
+    && fake.calls.keyCursors === 3 && fake.calls.reads === 0 && fake.calls.writes === 0 && fake.calls.ranges[2]?.lower === "id_50" && fake.calls.ranges[2]?.open === true, "Key-only pagination did not enforce 1/50/51 bounds and exclusive continuation");
+}
+for (const input of [
+  null, {}, { limit: 1 }, { afterRecordId: null }, { limit: 1, afterRecordId: null, extra: true },
+  Object.defineProperty({ limit: 1, afterRecordId: null }, "hidden", { value: true }),
+  Object.assign({ limit: 1, afterRecordId: null }, { [Symbol("extra")]: true }),
+  Object.defineProperty({ limit: 1, afterRecordId: null }, "limit", { enumerable: true, get: () => 1 })
+]) {
+  const { api, fake } = client({ initialized: true });
+  const rejected = await list(api, input);
+  check(isSafeList(rejected, "rejected") && rejected.reason === "invalid_input" && rejected.recordIds.length === 0 && rejected.nextAfterRecordId === null && rejected.hasMore === false && fake.calls.opens === 0, "List accepted an invalid input shape or descriptor");
+}
+for (const [input, reason] of [
+  [{ limit: 0, afterRecordId: null }, "invalid_limit"], [{ limit: 51, afterRecordId: null }, "invalid_limit"], [{ limit: 1.5, afterRecordId: null }, "invalid_limit"],
+  [{ limit: 1, afterRecordId: "" }, "invalid_record_id"], [{ limit: 1, afterRecordId: 1 }, "invalid_record_id"]
+]) {
+  const { api, fake } = client({ initialized: true });
+  const rejected = await list(api, input);
+  check(isSafeList(rejected, "rejected") && rejected.reason === reason && rejected.recordIds.length === 0 && rejected.nextAfterRecordId === null && rejected.hasMore === false && fake.calls.opens === 0, "List did not reject invalid limit or record id");
+}
+for (const options of [
+  {}, { wrongStore: true }, { storeKeyPath: "wrong" }, { autoIncrement: true }, { cursorErrorAt: 0 }, { abortAfterCursorSuccess: true }, { lateKeyCursor: 15, timeoutDelay: 5 }
+]) {
+  const { api, fake } = client({ initialized: Object.keys(options).length !== 0, records: new Map([["id_01", { payload: "must_not_be_read" }]]), ...options });
+  const outcome = await list(api, { limit: 1, afterRecordId: null });
+  const expected = Object.keys(options).length === 0 ? "storage_not_initialized" : options.wrongStore || options.storeKeyPath || options.autoIncrement ? "storage_schema_invalid" : options.lateKeyCursor ? "operation_timeout" : "storage_read_failed";
+  check(isSafeList(outcome, "indeterminate") && outcome.reason === expected && outcome.recordIds.length === 0 && outcome.nextAfterRecordId === null && outcome.hasMore === false && fake.calls.writes === 0, "List failure leaked partial data or changed storage");
+}
+for (const cursorKeys of [["id_01", "bad key"], ["id_01", "bad key", "id_03"]]) {
+  const { api, fake } = client({ initialized: true, cursorKeys });
+  const outcome = await list(api, { limit: 1, afterRecordId: null });
+  check(isSafeList(outcome, "indeterminate") && outcome.reason === "storage_key_invalid" && outcome.recordIds.length === 0 && outcome.nextAfterRecordId === null && outcome.hasMore === false && fake.calls.reads === 0 && fake.calls.writes === 0, "Invalid cursor key, including lookahead, leaked a page");
+}
+{
+  const { api } = client({ initialized: true, cursorKeys: ["id_01"] });
+  const listed = await list(api, { limit: 1, afterRecordId: null });
+  check(isSafeList(listed, "listed") && Reflect.ownKeys(listed).join(",") === "status,reason,recordIds,nextAfterRecordId,hasMore,execution" && Object.isFrozen(listed.recordIds) && listed.recordIds.join(",") === "id_01", "List result was not a complete frozen snapshot");
 }
 console.log(`Operation journal validation passed: ${checks} checks`);
