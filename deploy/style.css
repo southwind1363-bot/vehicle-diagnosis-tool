@@ -1491,19 +1491,53 @@ body.dark .flow-node-measure .flow-step {
   min-width: 0;
 }
 
+#obdOperationJournalViewer {
+  scroll-margin-top: 150px;
+}
+
 .obd-operation-journal-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px;
+}
+
+.obd-operation-journal-action-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.obd-operation-journal-action-group > legend {
+  max-width: 100%;
+  padding: 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.obd-operation-journal-action-buttons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
+  margin-top: 6px;
 }
 
-.obd-operation-journal-actions button {
+.obd-operation-journal-action-group-list .obd-operation-journal-action-buttons {
+  grid-template-columns: minmax(0, 1fr) 42px 42px;
+}
+
+.obd-operation-journal-action-buttons button {
+  min-width: 0;
   min-height: 42px;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
-.obd-operation-journal-actions #obdOperationJournalPrevious,
-.obd-operation-journal-actions #obdOperationJournalNext {
-  min-width: 42px;
+.obd-operation-journal-action-buttons #obdOperationJournalPrevious,
+.obd-operation-journal-action-buttons #obdOperationJournalNext {
   padding: 0;
 }
 
@@ -3027,6 +3061,10 @@ body.dark .flow-node-measure .flow-step {
   .obd-interlock-summary,
   .obd-interlock-checklist {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .obd-operation-journal-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
 
 }

@@ -1044,13 +1044,28 @@
             <summary>消去前の保存記録</summary>
             <div class="obd-operation-journal-viewer">
               <div class="obd-operation-journal-actions">
-                <button id="obdOperationJournalSaveCurrent" class="secondary-button" type="button">現在の読取結果を保管</button>
-                <button id="obdOperationJournalOpenConfirmed" class="secondary-button" type="button" disabled>保管した記録を開く</button>
-                <button id="obdOperationJournalCompareCurrent" class="secondary-button" type="button" disabled>現在の読取結果と照合</button>
-                <button id="obdOperationJournalRefresh" class="secondary-button" type="button">一覧を更新</button>
-                <button id="obdOperationJournalPrevious" class="secondary-button" type="button" aria-label="前のページ" title="前のページ" disabled>&larr;</button>
-                <button id="obdOperationJournalNext" class="secondary-button" type="button" aria-label="次のページ" title="次のページ" disabled>&rarr;</button>
-                <button id="obdOperationJournalDownload" class="secondary-button" type="button" disabled>JSONをダウンロード</button>
+                <fieldset class="obd-operation-journal-action-group">
+                  <legend>保管</legend>
+                  <div class="obd-operation-journal-action-buttons">
+                    <button id="obdOperationJournalSaveCurrent" class="secondary-button" type="button">現在の読取結果を保管</button>
+                    <button id="obdOperationJournalOpenConfirmed" class="secondary-button" type="button" disabled>保管した記録を開く</button>
+                  </div>
+                </fieldset>
+                <fieldset class="obd-operation-journal-action-group obd-operation-journal-action-group-list">
+                  <legend>一覧</legend>
+                  <div class="obd-operation-journal-action-buttons">
+                    <button id="obdOperationJournalRefresh" class="secondary-button" type="button">一覧を更新</button>
+                    <button id="obdOperationJournalPrevious" class="secondary-button" type="button" aria-label="前のページ" title="前のページ" disabled>&larr;</button>
+                    <button id="obdOperationJournalNext" class="secondary-button" type="button" aria-label="次のページ" title="次のページ" disabled>&rarr;</button>
+                  </div>
+                </fieldset>
+                <fieldset class="obd-operation-journal-action-group">
+                  <legend>選択した記録</legend>
+                  <div class="obd-operation-journal-action-buttons">
+                    <button id="obdOperationJournalCompareCurrent" class="secondary-button" type="button" disabled>現在の読取結果と照合</button>
+                    <button id="obdOperationJournalDownload" class="secondary-button" type="button" disabled>JSONをダウンロード</button>
+                  </div>
+                </fieldset>
               </div>
               <p id="obdOperationJournalSaveStatus" class="obd-operation-journal-status" aria-live="polite"></p>
               <p id="obdOperationJournalRemoveStatus" class="obd-operation-journal-status" aria-live="polite"></p>

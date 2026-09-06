@@ -59,6 +59,14 @@ function asset(pathname) {
     const status = page.locator('#obdOperationJournalStatus');
     const list = page.locator('#obdOperationJournalList');
     const record = page.locator('#obdOperationJournalRecord');
+    const actionGroups = viewer.locator('.obd-operation-journal-action-group');
+    assert.deepEqual(await actionGroups.locator(':scope > legend').allTextContents(), ['保管', '一覧', '選択した記録']);
+    assert.deepEqual(await actionGroups.evaluateAll(groups => groups.map(group => [...group.querySelectorAll('button')].map(button => button.id))), [
+      ['obdOperationJournalSaveCurrent', 'obdOperationJournalOpenConfirmed'],
+      ['obdOperationJournalRefresh', 'obdOperationJournalPrevious', 'obdOperationJournalNext'],
+      ['obdOperationJournalCompareCurrent', 'obdOperationJournalDownload']
+    ], 'Journal actions must remain in their semantic groups');
+    assert.equal(await viewer.locator('.obd-operation-journal-action-group #obdOperationJournalRemove').count(), 0, 'Dynamic record deletion must remain in the selected record');
     assert.equal(await viewer.evaluate(node => node.open), false);
     assert.equal(await status.textContent(), '一覧未取得');
     assert.equal(await download.isDisabled(), true, 'Download must be disabled before a record is selected');
@@ -207,8 +215,24 @@ function asset(pathname) {
     assert.equal(await page.evaluate(() => window.__removeCalls), 0, 'A direct removal handler call must not bypass an active comparison candidate');
     assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()?.record?.recordId), 'viewer-record-00', 'A blocked deletion attempt must retain its comparison candidate');
     await page.evaluate(() => { window.ObdOperationJournal = window.__removeOriginal; });
+    async function assertToolbarWithinViewport(label) {
+      await viewer.evaluate(node => node.scrollIntoView({ block: 'start' }));
+      assert.ok(await actionGroups.locator('button').evaluateAll(buttons => buttons.every(button => {
+        const rect = button.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return rect.top >= 0 && rect.bottom <= window.innerHeight && (hit === button || button.contains(hit));
+      })), `${label} journal toolbar buttons must be visible and reachable below sticky navigation`);
+    }
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, '1280px journal viewer must not create page-level horizontal overflow');
+    assert.ok(await actionGroups.evaluateAll(groups => groups.every(group => group.scrollWidth <= group.clientWidth)), '1280px journal action groups must not overflow');
+    await assertToolbarWithinViewport('1280px');
+    await page.screenshot({ path: path.join(output, 'operation-journal-toolbar-1280-viewport.png') });
     await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-1280.png') });
     await page.setViewportSize({ width: 390, height: 900 });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, '390px journal viewer must not create page-level horizontal overflow');
+    assert.ok(await actionGroups.evaluateAll(groups => groups.every(group => group.scrollWidth <= group.clientWidth)), '390px journal action groups must not overflow');
+    await assertToolbarWithinViewport('390px');
+    await page.screenshot({ path: path.join(output, 'operation-journal-toolbar-390-viewport.png') });
     assert.equal(await conditions.locator('summary').evaluate(node => node.scrollWidth <= node.clientWidth), true, '390px conditions summary must wrap without horizontal overflow');
     await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-390.png') });
     await conditions.locator('summary').click();
