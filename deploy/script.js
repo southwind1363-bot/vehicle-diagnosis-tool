@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.504";
+const APP_VERSION = "3.13.505";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -507,6 +507,7 @@ const obdOperationJournalViewer = document.querySelector("#obdOperationJournalVi
 const obdOperationJournalRefresh = document.querySelector("#obdOperationJournalRefresh");
 const obdOperationJournalPrevious = document.querySelector("#obdOperationJournalPrevious");
 const obdOperationJournalNext = document.querySelector("#obdOperationJournalNext");
+const obdOperationJournalDownload = document.querySelector("#obdOperationJournalDownload");
 const obdOperationJournalStatus = document.querySelector("#obdOperationJournalStatus");
 const obdOperationJournalList = document.querySelector("#obdOperationJournalList");
 const obdOperationJournalRecord = document.querySelector("#obdOperationJournalRecord");
@@ -934,6 +935,7 @@ obdAccessLockButton.addEventListener("click", lockObdAccess);
 obdOperationJournalRefresh?.addEventListener("click", () => { void listObdOperationJournalRecords({ reset: true }); });
 obdOperationJournalPrevious?.addEventListener("click", () => { void listObdOperationJournalRecords({ pageIndex: obdOperationJournalState.pageIndex - 1 }); });
 obdOperationJournalNext?.addEventListener("click", () => { void listObdOperationJournalRecords({ pageIndex: obdOperationJournalState.pageIndex + 1 }); });
+obdOperationJournalDownload?.addEventListener("click", downloadObdOperationJournalRecordJson);
 obdOperationJournalViewer?.addEventListener("toggle", () => {
   if (!obdOperationJournalViewer.open) clearObdOperationJournalViewer();
   else renderObdOperationJournalViewer();
@@ -6032,6 +6034,17 @@ function isObdOperationJournalViewerActive(revision) {
     && obdOperationJournalState.revision === revision;
 }
 
+function getEligibleObdOperationJournalRecord(revision) {
+  const record = obdOperationJournalState.selectedRecord;
+  if (!isObdOperationJournalViewerActive(revision)
+    || obdOperationJournalState.listing || obdOperationJournalState.loading
+    || !record || typeof record.recordId !== "string"
+    || !obdOperationJournalState.recordIds.includes(record.recordId)
+    || !/^[A-Za-z0-9_-]{1,128}$/.test(record.recordId)
+    || typeof record.sessionJson !== "string") return null;
+  return record;
+}
+
 function renderObdOperationJournalViewer() {
   if (!obdOperationJournalStatus || !obdOperationJournalList || !obdOperationJournalRecord) return;
   if (obdOperationJournalViewer) obdOperationJournalViewer.hidden = obdDevModeUnlocked !== true;
@@ -6042,6 +6055,7 @@ function renderObdOperationJournalViewer() {
   obdOperationJournalRefresh.disabled = !active || obdOperationJournalState.listing;
   obdOperationJournalPrevious.disabled = !active || obdOperationJournalState.listing || obdOperationJournalState.loading || obdOperationJournalState.pageIndex === 0;
   obdOperationJournalNext.disabled = !active || obdOperationJournalState.listing || obdOperationJournalState.loading || page?.hasMore !== true || !page.nextAfterRecordId;
+  if (obdOperationJournalDownload) obdOperationJournalDownload.disabled = !getEligibleObdOperationJournalRecord(obdOperationJournalState.revision);
   obdOperationJournalList.replaceChildren();
 
   if (active && obdOperationJournalState.recordIds.length) {
@@ -6081,6 +6095,35 @@ function renderObdOperationJournalViewer() {
   json.textContent = record.sessionJson;
   jsonDetails.append(jsonSummary, json);
   obdOperationJournalRecord.append(metadata, jsonDetails);
+}
+
+function downloadObdOperationJournalRecordJson() {
+  const record = getEligibleObdOperationJournalRecord(obdOperationJournalState.revision);
+  if (!record) return false;
+  let link = null;
+  let objectUrl = null;
+  try {
+    const blob = new Blob([record.sessionJson], { type: "application/json;charset=utf-8" });
+    objectUrl = URL.createObjectURL(blob);
+    link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = `pre-operation-record-${record.recordId}.json`;
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    obdOperationJournalState.status = "JSONのダウンロードを開始しました。";
+    obdOperationJournalState.error = false;
+    renderObdOperationJournalViewer();
+    return true;
+  } catch (_error) {
+    obdOperationJournalState.status = "JSONのダウンロードを開始できませんでした。保存記録は保持しています。";
+    obdOperationJournalState.error = true;
+    renderObdOperationJournalViewer();
+    return false;
+  } finally {
+    link?.remove();
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
 }
 
 async function listObdOperationJournalRecords({ reset = false, pageIndex = 0 } = {}) {

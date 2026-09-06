@@ -207,6 +207,7 @@ const context = vm.createContext({
   document: { getElementById: (id) => id === "obdHomeView" ? home : id === "obdStageBackButton" ? back : panel },
   syncObdReadoutSurface() {}, getObdAutoStage: () => "setup",
   clearObdOperationJournalViewer() { journalInvalidations += 1; },
+  renderObdOperationJournalViewer() {},
   obdAccessUnlocked: true, obdUiMode: "simple", activeObdStage: "setup",
   obdStagePanel: element(), obdPanel: panel, obdStageBadge: element(), obdStageStatus: element(),
   obdStageTabs: [], obdSetupPanel: element(), obdStageSetupView: element(),

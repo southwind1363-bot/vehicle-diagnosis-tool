@@ -55,11 +55,13 @@ function asset(pathname) {
     await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
     const viewer = page.locator('#obdOperationJournalViewer');
     const refresh = page.locator('#obdOperationJournalRefresh');
+    const download = page.locator('#obdOperationJournalDownload');
     const status = page.locator('#obdOperationJournalStatus');
     const list = page.locator('#obdOperationJournalList');
     const record = page.locator('#obdOperationJournalRecord');
     assert.equal(await viewer.evaluate(node => node.open), false);
     assert.equal(await status.textContent(), '一覧未取得');
+    assert.equal(await download.isDisabled(), true, 'Download must be disabled before a record is selected');
     const journalDatabases = await page.evaluate(async () => typeof indexedDB.databases === 'function'
       ? (await indexedDB.databases()).map(database => database.name).filter(Boolean)
       : []);
@@ -125,10 +127,101 @@ function asset(pathname) {
     assert.equal(await record.locator('pre').textContent(), canonical);
     assert.equal(await record.locator('img').count(), 0, 'Untrusted JSON must remain text');
     assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), beforeDiagnosis, 'Viewer must not replace the current diagnosis');
+    assert.equal(await download.isEnabled(), true, 'A selected current-page record enables download');
+
+    await page.evaluate(() => {
+      window.__downloadListOriginal = window.ObdOperationJournal;
+      window.ObdOperationJournal = Object.freeze({
+        ...window.__downloadListOriginal,
+        listPreOperationIds: () => new Promise(resolve => { window.__downloadListDeferred = resolve; })
+      });
+    });
+    await refresh.click();
+    await page.waitForFunction(() => typeof window.__downloadListDeferred === 'function');
+    assert.equal(await download.isDisabled(), true, 'Download must be disabled while listing');
+    await page.evaluate(() => {
+      window.__downloadListDeferred({
+        status: 'listed',
+        recordIds: Array.from({ length: 20 }, (_, index) => `viewer-record-${String(index).padStart(2, '0')}`),
+        hasMore: true,
+        nextAfterRecordId: 'viewer-record-19'
+      });
+      window.ObdOperationJournal = window.__downloadListOriginal;
+    });
+    await page.waitForFunction(() => document.querySelectorAll('#obdOperationJournalList button').length === 20);
+    await list.locator('button').first().click();
+    await page.waitForFunction(() => !document.getElementById('obdOperationJournalDownload').disabled);
+
+    const selectedBeforeDownloadFailures = await page.evaluate(() => ({
+      recordId: obdOperationJournalState.selectedRecord.recordId,
+      sessionJson: obdOperationJournalState.selectedRecord.sessionJson
+    }));
+    await page.evaluate(() => {
+      window.__downloadOriginalCreateObjectURL = URL.createObjectURL;
+      window.__downloadOriginalRevokeObjectURL = URL.revokeObjectURL;
+      window.__downloadOriginalCreateElement = document.createElement.bind(document);
+      window.__downloadRevokedUrls = [];
+      URL.createObjectURL = () => { throw new Error('url_creation_failed'); };
+    });
+    await download.click();
+    await page.waitForFunction(() => document.getElementById('obdOperationJournalStatus').textContent.includes('開始できませんでした'));
+    assert.deepEqual(await page.evaluate(() => ({
+      recordId: obdOperationJournalState.selectedRecord.recordId,
+      sessionJson: obdOperationJournalState.selectedRecord.sessionJson
+    })), selectedBeforeDownloadFailures, 'URL creation failure must retain the selected record');
+    await page.evaluate(() => { URL.createObjectURL = window.__downloadOriginalCreateObjectURL; });
+
+    await page.evaluate(() => {
+      URL.createObjectURL = () => 'blob:anchor-click-failure';
+      URL.revokeObjectURL = url => { window.__downloadRevokedUrls.push(url); };
+      document.createElement = tagName => {
+        const node = window.__downloadOriginalCreateElement(tagName);
+        if (String(tagName).toLowerCase() === 'a') node.click = () => { throw new Error('anchor_click_failed'); };
+        return node;
+      };
+    });
+    await download.click();
+    await page.waitForFunction(() => document.getElementById('obdOperationJournalStatus').textContent.includes('開始できませんでした'));
+    await page.waitForTimeout(20);
+    assert.deepEqual(await page.evaluate(() => window.__downloadRevokedUrls), ['blob:anchor-click-failure'], 'Anchor click failure must revoke its object URL');
+    assert.equal(await page.locator('a[href="blob:anchor-click-failure"]').count(), 0, 'Anchor click failure must remove its temporary anchor');
+    assert.deepEqual(await page.evaluate(() => ({
+      recordId: obdOperationJournalState.selectedRecord.recordId,
+      sessionJson: obdOperationJournalState.selectedRecord.sessionJson
+    })), selectedBeforeDownloadFailures, 'Anchor click failure must retain the selected record');
+    await page.evaluate(() => {
+      URL.createObjectURL = window.__downloadOriginalCreateObjectURL;
+      URL.revokeObjectURL = window.__downloadOriginalRevokeObjectURL || URL.revokeObjectURL;
+      document.createElement = window.__downloadOriginalCreateElement;
+    });
+
+    await page.evaluate(() => {
+      window.__downloadBlob = null;
+      URL.createObjectURL = blob => {
+        window.__downloadBlob = blob;
+        return window.__downloadOriginalCreateObjectURL.call(URL, blob);
+      };
+    });
+    const downloadEvent = page.waitForEvent('download');
+    await download.click();
+    const savedDownload = await downloadEvent;
+    const downloadedFile = path.join(output, savedDownload.suggestedFilename());
+    await savedDownload.saveAs(downloadedFile);
+    assert.equal(savedDownload.suggestedFilename(), `pre-operation-record-${selectedBeforeDownloadFailures.recordId}.json`);
+    assert.deepEqual(fs.readFileSync(downloadedFile), Buffer.from(canonical, 'utf8'), 'Downloaded bytes must exactly match the recovered JSON');
+    assert.deepEqual(await page.evaluate(async () => ({ type: window.__downloadBlob.type, text: await window.__downloadBlob.text() })), {
+      type: 'application/json;charset=utf-8', text: canonical
+    }, 'Download must preserve JSON text and MIME type');
+    await page.waitForTimeout(20);
+    await page.evaluate(() => {
+      URL.createObjectURL = window.__downloadOriginalCreateObjectURL;
+      URL.revokeObjectURL = window.__downloadOriginalRevokeObjectURL;
+    });
     await page.locator('#obdOperationJournalNext').click();
     await page.waitForFunction(() => document.querySelectorAll('#obdOperationJournalList button').length === 1);
     assert.equal(await page.locator('#obdOperationJournalPrevious').isEnabled(), true);
     assert.equal(await page.locator('#obdOperationJournalNext').isEnabled(), false);
+    assert.equal(await download.isDisabled(), true, 'Page changes must clear download eligibility');
     await page.locator('#obdOperationJournalPrevious').click();
     await page.waitForFunction(() => document.querySelectorAll('#obdOperationJournalList button').length === 20);
 
@@ -219,7 +312,11 @@ function asset(pathname) {
     await list.locator('button').first().click();
     await page.waitForFunction(() => typeof window.__resolveLoad === 'function');
     await page.evaluate(() => {
+      window.__postLockObjectUrlCalls = 0;
+      window.__postLockCreateObjectURL = URL.createObjectURL;
+      URL.createObjectURL = () => { window.__postLockObjectUrlCalls += 1; return 'blob:post-lock'; };
       lockObdDeveloperMode();
+      document.getElementById('obdOperationJournalDownload').click();
       window.__resolveLoad({ status: 'loaded', reason: 'valid_record_recovered', record: {
         recordId: 'viewer-record-00', sessionJson: 'stale private content', createdAt: new Date().toISOString(), byteLength: 21
       } });
@@ -227,8 +324,11 @@ function asset(pathname) {
     await page.waitForTimeout(50);
     assert.equal(await record.textContent(), '', 'Developer lock must discard a late loaded record');
     assert.equal(await viewer.isHidden(), true, 'Developer lock must hide the viewer');
+    assert.equal(await download.isDisabled(), true, 'Developer lock must disable download');
+    assert.equal(await page.evaluate(() => window.__postLockObjectUrlCalls), 0, 'Locked viewer must not create object URLs or start downloads');
+    await page.evaluate(() => { URL.createObjectURL = window.__postLockCreateObjectURL; });
     assert.deepEqual(errors, [], 'No page or console errors');
-    console.log(`Operation journal viewer checks: empty, load, pagination, stale guards, layout / Errors: 0`);
+    console.log(`Operation journal viewer checks: empty, load, pagination, download guards, stale guards, layout / Errors: 0`);
     console.log(`Screenshots: ${output}`);
     await context.close();
   } finally {

@@ -1501,7 +1501,8 @@ body.dark .flow-node-measure .flow-step {
   min-height: 42px;
 }
 
-.obd-operation-journal-actions button:not(:first-child) {
+.obd-operation-journal-actions #obdOperationJournalPrevious,
+.obd-operation-journal-actions #obdOperationJournalNext {
   min-width: 42px;
   padding: 0;
 }
