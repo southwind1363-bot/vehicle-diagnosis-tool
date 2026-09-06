@@ -236,4 +236,66 @@ for (let index = 0; index < 3; index += 1) {
     && summary.postDtcEvidence[index].sources[0].codes.join() === "U0123", "Pair swapped or merged before/post content");
   handle.dispose();
 }
+// Differences are available only from the pair's retained data, never caller summaries.
+for (let index = 0; index < 3; index += 1) {
+  for (const [beforeCode, afterCode, added, removed, retained] of [
+    [null, null, [], [], []], [null, "01 33", ["P0133"], [], []],
+    ["01 33", null, [], ["P0133"], []], ["01 33", "01 33", [], [], ["P0133"]],
+    ["01 33", "C1 23", ["U0123"], ["P0133"], []]
+  ]) {
+    const value = fixture(), service = ["43", "47", "4A"][index];
+    value.beforeReadout.receipts[index].transcript = dtcTranscript(service, beforeCode);
+    value.postReadout.receipts[index].transcript = dtcTranscript(service, afterCode);
+    const handle = pairEvidence(value).handle, out = handle.inspectDifference(value.context);
+    check(out.ok && out.summary.fixtureDifferenceAvailable, "Pair difference unavailable");
+    assert.deepEqual(out.summary.differences[index].sources[0], { sourceId: "7E8", added, removed, retained }); checks += 1;
+    check(out.summary.differences.every((row, i) => i === index || row.sources.every((s) => !s.added.length && !s.removed.length && !s.retained.length)),
+      "Difference crossed DTC categories");
+    check(["realTransportProofAvailable", "sameVehicleVerified", "clearBoundaryVerified", "readoutCoverageComplete", "comparisonAvailable",
+      "clearSucceededInferred", "executionEnabled", "vehicleCommandEnabled", "wouldTransmit", "canExecute", "readinessEvidenceAvailable"]
+      .every((key) => out.summary[key] === false), "Difference became real success or permission");
+    check(Object.isFrozen(out.summary.differences[index].sources[0].added) && !/transcript|payload|Token/.test(JSON.stringify(out)),
+      "Difference leaked raw or mutable data");
+    value.beforeReadout.receipts[index].transcript = "NO DATA\r>";
+    check(JSON.stringify(handle.inspectDifference(value.context)) === JSON.stringify(out), "Difference reread caller input");
+    handle.dispose(); check(handle.inspectDifference(value.context).summary === null, "Disposed difference remained accessible");
+  }
+}
+const moved = fixture();
+moved.beforeReadout.receipts[0].transcript = dtcTranscript("43", "01 33");
+moved.postReadout.receipts[1].transcript = dtcTranscript("47", "01 33");
+const movedHandle = pairEvidence(moved).handle, movedDiff = movedHandle.inspectDifference(moved.context).summary;
+check(movedDiff.differences[0].sources[0].removed.join() === "P0133"
+  && movedDiff.differences[1].sources[0].added.join() === "P0133", "Status movement collapsed into resolution");
+for (const key of ["scopeToken", "connectionToken", "targetToken"]) {
+  check(movedHandle.inspectDifference({ ...moved.context, [key]: {} }).summary === null, "Foreign context acquired difference");
+}
+assert.throws(() => movedHandle.inspectDifference(movedDiff), TypeError); checks += 1;
+moved.scope.invalidate(moved.context);
+check(movedHandle.inspectDifference(moved.context).summary === null, "Invalidated scope yielded difference");
+const single = fixture(), singleHandles = evidencePair(single);
+check(!Object.hasOwn(singleHandles.before, "inspectDifference") && !Object.hasOwn(singleHandles.post, "inspectDifference"), "Standalone evidence exposed difference");
+singleHandles.before.dispose(); singleHandles.post.dispose();
+const multiple = fixture();
+const multipleScope = create({ provenance: "simulated", profile, connectionToken: multiple.context.connectionToken,
+  targetToken: multiple.context.targetToken, byIntent: intents.map((intent) => ({ intent, sourceIds: ["7E9", "7E8"] })) });
+multiple.scope = multipleScope; multiple.context.scopeToken = multipleScope.scopeToken;
+for (const side of ["beforeReadout", "postReadout"]) {
+  for (const receipt of multiple[side].receipts) receipt.transcript = receipt.transcript.replace(">", receipt.transcript.replaceAll("7E8", "7E9"));
+}
+multiple.beforeReadout.receipts[0].transcript = dtcTranscript("43", "01 33").replace(">", dtcTranscript("43", null).replaceAll("7E8", "7E9"));
+multiple.postReadout.receipts[0].transcript = dtcTranscript("43", null).replace(">", dtcTranscript("43", "01 33").replaceAll("7E8", "7E9"));
+const multipleHandle = pairEvidence(multiple).handle;
+assert.deepEqual(multipleHandle.inspectDifference(multiple.context).summary.differences[0].sources, [
+  { sourceId: "7E8", added: [], removed: ["P0133"], retained: [] },
+  { sourceId: "7E9", added: ["P0133"], removed: [], retained: [] }
+]); checks += 1;
+multipleHandle.dispose();
+const overlap = fixture();
+overlap.beforeReadout.receipts[0].transcript = "7E8 06 43 02 C1 23 01 33 AA\r>";
+overlap.postReadout.receipts[0].transcript = "7E8 06 43 02 81 23 01 33 AA\r>";
+const overlapHandle = pairEvidence(overlap).handle;
+assert.deepEqual(overlapHandle.inspectDifference(overlap.context).summary.differences[0].sources[0],
+  { sourceId: "7E8", added: ["B0123"], removed: ["U0123"], retained: ["P0133"] }); checks += 1;
+overlapHandle.dispose();
 console.log(`DTC clear readout sequence checks: ${checks} / Errors: 0`);

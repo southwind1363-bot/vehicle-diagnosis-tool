@@ -165,7 +165,28 @@ function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
         : { dtcEvidence: retained };
       return freeze({ ok: true, reason: null, summary: { ...boundary, ...evidence, readinessEvidenceAvailable: false } });
     },
-    dispose() { retained = null; }
+    dispose() { retained = null; },
+    ...(paired ? { inspectDifference(context) {
+      const current = inspectDtcClearReadoutFixtureScope(scope, context);
+      if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
+      if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
+      const differences = retained.before.map((before, index) => {
+        const after = retained.post[index];
+        if (before.intent !== after.intent || before.sources.length !== after.sources.length) throw new Error("fixture_pair_shape_mismatch");
+        return { intent: before.intent, sources: before.sources.map((source, sourceIndex) => {
+          const postSource = after.sources[sourceIndex];
+          if (source.sourceId !== postSource.sourceId) throw new Error("fixture_pair_source_mismatch");
+          const beforeCodes = new Set(source.codes), afterCodes = new Set(postSource.codes);
+          return { sourceId: source.sourceId,
+            added: postSource.codes.filter((code) => !beforeCodes.has(code)),
+            removed: source.codes.filter((code) => !afterCodes.has(code)),
+            retained: source.codes.filter((code) => afterCodes.has(code)) };
+        }) };
+      });
+      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_dtc_difference", null);
+      return freeze({ ok: true, reason: null, summary: { ...boundary, differences, fixtureSequenceMatched: true,
+        fixtureDifferenceAvailable: true, readinessEvidenceAvailable: false } });
+    } } : {})
   });
 }
 

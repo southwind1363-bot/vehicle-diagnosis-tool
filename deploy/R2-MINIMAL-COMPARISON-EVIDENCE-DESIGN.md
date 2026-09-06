@@ -1,5 +1,15 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 3.13.519後続: 組証拠からの模擬DTC差分
+
+Node専用pair handleにだけ `inspectDifference(context)` を追加。独立before/post handleには公開しない。callerのsummaryや二つの集合を入力に取らず、一括生成時に検証して保持した内部値だけを使用する。下記の差分未実装という記述は履歴であり、ブラウザAPIや実車診断結果への組込みは依然として未実装。
+
+intent/sourceIdごとにadded（postにだけ存在）、removed（beforeにだけ存在）、retained（両側に存在）を凍結配列で返す。前後のintent/source構造が内部で一致しなければ例外とし、交差集合への縮小や欠落sourceの無視はしない。ECU間・stored/pending/permanent間でコードを統合しない。removedは模擬入力間で見えなくなったという集合上の意味だけであり、消去成功・故障解消の表示ではない。
+
+取得時にscope/contextとdispose状態を再確認し、失効・不一致・破棄後はsummaryなし。差分をキャッシュ・永続化せず、raw/token/readiness値を返さない。fixtureDifferenceAvailableは模擬差分の取得可否だけを示し、comparisonAvailable・clearSucceededInferred・実車同一性・消去境界・網羅性・実行/送信flagはfalseを維持する。返却済みの凍結結果は回収できず、現在の権限証明として受理しない。
+
+回帰検査115件追加。各DTC種別で空/追加/消失/継続/置換、同一コードの種別移動・ECU移動、複数コードの部分重複、入力変更、凍結、失効、context不一致、dispose、単独handleでの非公開を検査。sequence492件、関連合計1375件がErrors 0。アプリ版3.13.519・保存形式・実車送信は変更なし。OBD主集計・bridge・offline・実車試験は今回再実行していない。readinessの意味解釈や実車比較の成立条件は別段階であり、本変更で解決したとは扱わない。
+
 ## 3.13.519後続: 前後証拠の一括生成実装
 
 `createDtcClearDtcEvidencePairFixture` をNode専用harnessへ追加。入力は既存sequenceと同じ7項目。下記factory未実装の記述は履歴。単独handleやsummaryは受け付けず、前後の4 receiptをown data descriptorから固定コピーし、同じコピーでsequence検査とDTC抽出を行う。模擬範囲・3 attempt・順序・clear評価が不成立ならhandleを返さない。

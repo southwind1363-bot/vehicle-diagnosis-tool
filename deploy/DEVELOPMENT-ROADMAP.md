@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+3.13.519後続の模擬DTC差分: Node専用pair handleにinspectDifferenceを追加し、内部の組証拠だけからintent/source別added/removed/retainedを取得する。scope/context不一致・失効・dispose後は取得拒否。関連1375件がErrors 0。実車の比較可能性・消去成功・故障解消は推定せず、保存・通常API・送信は変更なし。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
+
 3.13.519後続の前後証拠一括生成: Node専用factoryで固定コピーからsequence検査とDTC抽出を実行し、両側成立時のみ一つのhandleを生成。模擬clear snapshotの内部不変性、scope寿命、一括disposeを検査。関連1260件がErrors 0。差分・保存・実車送信は追加しない。次は内部の組証拠だけを扱う模擬DTC差分の設計/テスト。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
 
 3.13.519後続の前後証拠結び付け: 単独handleの成立とsequence成立を区別する38件の回帰検査を追加し、関連1103件がErrors 0。summary同値・別scope・attempt使い回し・時系列の重なり・失効を検査。一括生成factoryで固定コピーからsequence検査/抽出を行う方針を `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭へ記載。factory本体・差分・保存・送信は未追加。次はこのNode専用factoryを実装する。以下は履歴。
