@@ -137,7 +137,7 @@ export function evaluateDtcClearReadoutSequenceFixture(input) {
   return sequenceResult("fixture_sequence_matched", null);
 }
 
-function copyBeforeEvidenceInput(value) {
+function copyEvidenceInput(value) {
   const before = record(value, ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"]);
   if (!Array.isArray(before.receipts)) throw new TypeError("invalid_evidence_receipts");
   const keys = Reflect.ownKeys(before.receipts);
@@ -153,7 +153,7 @@ function copyBeforeEvidenceInput(value) {
   return Object.freeze({ ...before, receipts: Object.freeze(receipts) });
 }
 
-function beforeDtcEvidenceHandle(scope, dtcEvidence) {
+function dtcEvidenceHandle(scope, dtcEvidence) {
   let retained = freeze(dtcEvidence);
   return Object.freeze({
     inspect(context) {
@@ -172,12 +172,28 @@ export function createDtcClearBeforeDtcEvidenceFixture(input) {
   const context = record(value.context, ["scopeToken", "connectionToken", "targetToken"]);
   const initial = inspectDtcClearReadoutFixtureScope(value.scope, context);
   if (!initial.ok) return freeze({ ok: false, reason: initial.reason, handle: null });
-  const beforeReadout = copyBeforeEvidenceInput(value.beforeReadout);
+  const beforeReadout = copyEvidenceInput(value.beforeReadout);
   const evaluated = evaluateDtcClearScopedBeforeReadoutFixture({ scope: value.scope, context, beforeReadout });
   if (!evaluated.fixtureScopeMatched) return freeze({ ok: false, reason: evaluated.reason || "before_fixture_scope_incomplete", handle: null });
+  return extractDtcEvidence(value.scope, context, beforeReadout);
+}
+
+export function createDtcClearPostDtcEvidenceFixture(input) {
+  const value = record(input, ["scope", "context", "clearWindowSnapshot", "clearCompletedAt", "postReadout"]);
+  const context = record(value.context, ["scopeToken", "connectionToken", "targetToken"]);
+  const initial = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!initial.ok) return freeze({ ok: false, reason: initial.reason, handle: null });
+  const postReadout = copyEvidenceInput(value.postReadout);
+  const evaluated = evaluateDtcClearScopedPostReadoutFixture({ scope: value.scope, context,
+    clearWindowSnapshot: value.clearWindowSnapshot, clearCompletedAt: value.clearCompletedAt, postReadout });
+  if (!evaluated.fixtureScopeMatched) return freeze({ ok: false, reason: evaluated.reason || "post_fixture_scope_incomplete", handle: null });
+  return extractDtcEvidence(value.scope, context, postReadout);
+}
+
+function extractDtcEvidence(scope, context, readout) {
   // Reparse only the owned, immutable input already validated by the production evaluator.
   // Count, zero-slot, duplicate and conflict policies remain in that evaluator, not reimplemented here.
-  const dtcEvidence = beforeReadout.receipts.slice(0, 3).map((receipt) => {
+  const dtcEvidence = readout.receipts.slice(0, 3).map((receipt) => {
     const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
       command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
     const sources = new Map();
@@ -193,7 +209,7 @@ export function createDtcClearBeforeDtcEvidenceFixture(input) {
     }
     return { intent: receipt.intent, sources: [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)) };
   });
-  const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  const current = inspectDtcClearReadoutFixtureScope(scope, context);
   if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
-  return Object.freeze({ ok: true, reason: null, handle: beforeDtcEvidenceHandle(value.scope, dtcEvidence) });
+  return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(scope, dtcEvidence) });
 }

@@ -1,5 +1,13 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 3.13.519後続: postのテスト用DTC証拠抽出
+
+`createDtcClearPostDtcEvidenceFixture({ scope, context, clearWindowSnapshot, clearCompletedAt, postReadout })` をNode専用harnessへ追加。下記before専用という記述は履歴。所有する4 receiptのコピー・抽出・inspect/disposeをbeforeと共通化し、既存scoped-post評価で模擬clearの終端・評価整合性・読み取り順序・別attempt・ECU範囲を確認してから証拠を返す。不成立ではhandleを返さない。Mode04応答元をreadoutの期待範囲に流用しない。
+
+raw応答・tokenはsummaryに含めず、生成後のcaller入力変更を反映しない。scope失効・context不一致・dispose後は取得拒否。既に取得したsummaryの回収はできない。実車同一性・実消去境界・比較・成功・送信は引き続きfalseで、before/postのsummary自体を比較権限として扱わない。readiness値の抽出、前後比較、保存形式、ブラウザAPIは未実装。
+
+検証: post証拠50件を追加、既存1015件と合わせ1065件がErrors 0。各receiptの欠落・timeout・範囲外・矛盾、clear不完了、順序/attempt/接続不一致、入力変更、getter、疎配列、再入失効、dispose、positive emptyを検査。アプリ版3.13.519は変更せず、OBD主集計・bridge・offline・実車試験は今回再実行しない。次は前後証拠の組合せで同一scope・別attempt・順序の結び付けをどう保証するか設計する。現時点では差分や消去成功を推定しない。
+
 ## 3.13.519後続: beforeのテスト用DTC証拠抽出
 
 `scripts/fixtures/dtc-clear-scoped-before-readout.js` に `createDtcClearBeforeDtcEvidenceFixture({ scope, context, beforeReadout })` を追加した。Nodeのテスト専用であり、ブラウザAPI・実通信・journal/session保存には接続しない。以下の未実装という記述よりこの節を優先する。
