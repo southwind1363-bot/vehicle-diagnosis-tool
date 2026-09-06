@@ -13,7 +13,7 @@ class Element {
   focus() { this.focused = true; }
 }
 const context = vm.createContext({ window: { ObdReadOnly: { getReadinessMonitors: () => [{ id: "catalyst", diagnosticUse: "参考用途", notCompleteNote: "条件を確認", serviceManualRequired: true, source: "同梱出典" }] } }, document: { createElement: (tag) => new Element(tag) }, formatObdReadoutStatus: (value, fallback) => value || fallback });
-vm.runInContext(["buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
+vm.runInContext(["getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
 const all = (node) => [node, ...node.children.flatMap(all)];
 const snapshot = { readinessEcuSnapshots: [
   { sourceEcu: "7E8", milOn: true, readinessIgnitionType: "spark", monitors: [
@@ -66,3 +66,28 @@ const unknownOnly = context.buildObdReadinessReviewGroups({ knownMonitors: [{ id
 check(unknownOnly[0].rows[0].status === "missing", "Unobserved monitor omitted");
 check(nodes.some((node) => node.textContent.includes("故障なし・修理完了・車検適合を意味しません")), "Safety distinction omitted");
 console.log(`Readiness review UI checks: ${checks} / Errors: 0`);
+const ffValues = [
+  { label: "回転数", sourceEcu: "7E8", freezeFrameNumber: 0, value: 0 },
+  { label: "回転数", sourceEcu: "7E9", freezeFrameNumber: 0, value: 1000 },
+  { label: "温度", sourceEcu: "7E8", freezeFrameNumber: 1, decoded: false },
+  { label: "番号不明", sourceEcu: "7E8" }
+];
+const ffBefore = JSON.stringify(ffValues), ffRows = ffValues.map(() => new Element("li"));
+const ff = context.createObdFreezeFrameReviewControls(ffValues, ffRows), ffNodes = all(ff);
+const ffSearch = ffNodes.find((node) => node.tag === "input");
+const [ecu, frame, status] = ffNodes.filter((node) => node.tag === "select");
+const ffCount = ffNodes.find((node) => Object.hasOwn(node.dataset, "freezeReviewCount"));
+ecu.value = "7E8"; frame.value = "0"; frame.handlers.change();
+assert.deepEqual(ffRows.map((row) => row.hidden), [false, true, true, true]);
+frame.value = "unknown"; frame.handlers.change();
+assert.deepEqual(ffRows.map((row) => row.hidden), [true, true, true, false]);
+frame.value = "all"; status.value = "raw"; status.handlers.change();
+assert.deepEqual(ffRows.map((row) => row.hidden), [true, true, false, true]);
+ffSearch.value = "回転数"; ffSearch.handlers.input();
+assert.match(ffCount.textContent, /条件に一致する記録値はありません/);
+ffNodes.find((node) => node.tag === "button").handlers.click();
+assert.ok(ffRows.every((row) => !row.hidden));
+assert.equal(JSON.stringify(ffValues), ffBefore);
+const ffEmpty = context.createObdFreezeFrameReviewControls([], []);
+assert.ok(all(ffEmpty).some((node) => node.textContent.includes("記録値は未取得")));
+console.log('Freeze-frame review checks: 7 / Errors: 0');

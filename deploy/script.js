@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.521";
+const APP_VERSION = "3.13.522";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10080,6 +10080,48 @@ function formatObdFreezeFrameValueLine(item = {}) {
   return `${item.label || item.id || "項目"}: ${formatObdBridgeReadoutValue(item)} [${ecu} / ${frame}]${raw}`;
 }
 
+function createObdFreezeFrameReviewControls(values, rows) {
+  const panel = document.createElement("div"); panel.className = "obd-freeze-review";
+  const note = document.createElement("p"); note.textContent = "故障記録時の値です。現在のライブ値ではありません。未換算値は数値判定に使用せず、対象車両の整備書で確認してください。";
+  const controls = document.createElement("div"); controls.className = "obd-readiness-controls";
+  const searchLabel = document.createElement("label"); searchLabel.textContent = "記録項目を検索";
+  const search = document.createElement("input"); search.type = "search"; search.placeholder = "例：回転数、温度"; searchLabel.appendChild(search);
+  const entries = values.map((value, index) => ({ row: rows[index],
+    ecu: value.sourceEcu || value.source_ecu || "ECU未記録",
+    frame: getObdDisplayByteNumber(value.freezeFrameNumber ?? value.freeze_frame_number),
+    raw: value.decoded === false || value.undecodedRaw === true,
+    text: String(value.label || value.id || "項目").toLocaleLowerCase() }));
+  const select = (labelText, options) => {
+    const label = document.createElement("label"); label.textContent = labelText;
+    const input = document.createElement("select");
+    input.setAttribute("aria-label", labelText);
+    for (const [value, text] of options) { const option = document.createElement("option"); option.value = value; option.textContent = text; input.appendChild(option); }
+    input.value = "all"; label.appendChild(input); controls.appendChild(label); return input;
+  };
+  controls.appendChild(searchLabel);
+  const ecu = select("記録元ECU", [["all", "すべてのECU"], ...[...new Set(entries.map((entry) => entry.ecu))].map((name) => [name, name])]);
+  const frame = select("FF番号", [["all", "すべての記録番号"], ...[...new Set(entries.map((entry) => entry.frame === null ? "unknown" : String(entry.frame)))].map((number) => [number, number === "unknown" ? "FF番号未記録" : `FF #${number}`])]);
+  const status = select("記録値の表示", [["all", "すべての値"], ["raw", "未換算のみ"]]);
+  const reset = document.createElement("button"); reset.type = "button"; reset.className = "secondary-button"; reset.textContent = "記録の絞り込みを解除"; controls.appendChild(reset);
+  const count = document.createElement("p"); count.setAttribute("role", "status"); count.setAttribute("aria-live", "polite"); count.dataset.freezeReviewCount = "";
+  const update = () => {
+    const query = search.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    for (const entry of entries) {
+      const frameId = entry.frame === null ? "unknown" : String(entry.frame);
+      entry.row.hidden = !entry.text.includes(query) || (ecu.value !== "all" && ecu.value !== entry.ecu)
+        || (frame.value !== "all" && frame.value !== frameId) || (status.value === "raw" && !entry.raw);
+      if (!entry.row.hidden) visible += 1;
+    }
+    count.textContent = `記録値：${visible} / ${entries.length}項目` + (!visible ? (entries.length ? "。条件に一致する記録値はありません。" : "。記録値は未取得です。") : "");
+    reset.disabled = !query && ecu.value === "all" && frame.value === "all" && status.value === "all";
+  };
+  search.addEventListener("input", update);
+  for (const input of [ecu, frame, status]) input.addEventListener("change", update);
+  reset.addEventListener("click", () => { search.value = ""; ecu.value = frame.value = status.value = "all"; update(); search.focus(); });
+  panel.append(note, controls, count); update(); return panel;
+}
+
 function formatObdBridgeReadoutValue(item = {}) {
   const value = item.value ?? item.result ?? item.raw ?? NO_DATA;
   const formattedValue = formatObdBridgeCompositeValue(value);
@@ -11647,7 +11689,13 @@ function renderObdBridgeSessionDetails(session = null) {
       item.textContent = line;
       list.appendChild(item);
     });
-    card.append(heading, list);
+    card.append(heading);
+    if (title === "フリーズフレーム") {
+      card.classList.add("obd-freeze-review-card");
+      const valueRows = Array.from(list.children).slice(lines.length - freezeFrameValues.length);
+      card.appendChild(createObdFreezeFrameReviewControls(freezeFrameValues, valueRows));
+    }
+    card.append(list);
     obdDevSessionDetails.appendChild(card);
   });
   const timelineChartRows = buildLivePidTimelineChartRows(livePidTimeline);
