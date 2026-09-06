@@ -77,6 +77,8 @@ transport/protocolの適合表、実要求・応答の判定、実車試験、�
 
 ## 後続の開放条件
 
+通信仕様の確認結果と次工程の受入項目は [R2-ELM327-PROTOCOL-EVIDENCE.md](R2-ELM327-PROTOCOL-EVIDENCE.md) を参照。現在の単一ECU参照を機能宛て要求の消去範囲と同一視しない。汎用要求/肯定応答の根拠確認は進んだが、車種適合・実行transport・監査保存契約は未完了である。
+
 ### メモリ内の現在状態管理
 
 3.13.497: `createGenericObdDtcClearController(input)` は `getSnapshot()` と `transition(expectedSnapshot, event)` を持つ凍結オブジェクトを返す。最新参照でない場合は `stale_dtc_clear_workflow_snapshot`、同期処理中の再入は `reentrant_dtc_clear_workflow_transition` として拒否する。それ以外の入力と遷移の検証は既存の純粋APIへ委譲する。成功時だけ現在参照を置き換え、例外時も処理中フラグを解除する。
