@@ -81,8 +81,10 @@ check(valid.ordering.status === "ordered_after_clear" && valid.receiptStructureC
 check(valid.readouts.map((item) => item.observation).join(",")
   === "indeterminate,indeterminate,indeterminate,source_positive_reported", "Unverified DTC semantics or readiness observations were misclassified");
 check(valid.readouts.every((item) => item.evidenceComplete === false && item.observedSourceIds.join(",") === "7E8"), "Observed sources became complete expected-source evidence");
-check(valid.readouts.slice(0, 3).every((item) => item.positiveEmptySourceIds.length === 0 && item.positiveNonemptySourceIds.length === 0
+check(valid.readouts.slice(1, 3).every((item) => item.positiveEmptySourceIds.length === 0 && item.positiveNonemptySourceIds.length === 0
   && item.blockerIds.includes("payload_semantics_unverified")), "CAN DTC payload semantics were inferred by the receipt evaluator");
+check(valid.readouts[0].positiveEmptySourceIds.length === 0 && valid.readouts[0].blockerIds.includes("dtc_payload_conflict"),
+  "Count-zero payload with extra application bytes was accepted");
 check(valid.readoutCoverageComplete === false && valid.comparisonAvailable === false
   && valid.operationOutcomeInferred === false && valid.clearSucceededInferred === false
   && valid.repairCompleteInferenceAllowed === false && valid.technicianReviewRequired === true
@@ -98,8 +100,8 @@ check(nonempty.readouts[0].observation === "indeterminate" && nonempty.readouts[
   && nonempty.readouts[0].positiveNonemptySourceIds.length === 0, "Unverified nonempty-looking DTC payload became semantic evidence");
 
 for (const transcript of [
-  "7E8 02 43 00 00 00 00 00 00\r>",
-  "7E8 04 43 01 C1 23 00 00 00\r>",
+  "7E8 03 43 00 00 00 00 00 00\r>",
+  "7E8 04 43 02 C1 23 00 00 00\r>",
   "7E8 01 43 00 00 00 00 00 00\r>"
 ]) {
   const semanticsInput = createInput();
@@ -107,7 +109,85 @@ for (const transcript of [
   const result = evaluate(semanticsInput).readouts[0];
   check(result.observation === "indeterminate" && result.observedSourceIds.join(",") === "7E8"
     && result.positiveEmptySourceIds.length === 0 && result.positiveNonemptySourceIds.length === 0
-    && result.blockerIds.includes("payload_semantics_unverified"), "Count-bearing or truncated DTC payload was promoted to empty/nonempty evidence");
+    && result.blockerIds.includes("dtc_payload_conflict"), "Count-mismatched or truncated DTC payload was promoted to empty/nonempty evidence");
+}
+
+function storedResult(transcript, completion = "complete") {
+  const fixture = createInput();
+  Object.assign(fixture.postReadout.receipts[0], { transcript, completion });
+  const result = evaluate(fixture);
+  check(result.state === "indeterminate" && result.provenance.status === "simulated_only"
+    && result.readoutCoverageComplete === false && result.comparisonAvailable === false
+    && result.clearSucceededInferred === false && result.operationOutcomeInferred === false
+    && result.executionEnabled === false && result.vehicleCommandEnabled === false
+    && result.wouldTransmit === false && result.canExecute === false, "Stored DTC observations opened an operation or comparison boundary");
+  return result.readouts[0];
+}
+
+const storedEmptyLine = "7E8 02 43 00 AA BB CC DD EE";
+const storedOneLine = "7E8 04 43 01 C1 23 AA BB CC";
+const storedEmpty = storedResult(`${storedEmptyLine}\r>`);
+check(storedEmpty.observation === "source_positive_empty_observed" && storedEmpty.positiveEmptySourceIds.join(",") === "7E8"
+  && storedEmpty.positiveNonemptySourceIds.length === 0 && storedEmpty.evidenceComplete === false,
+  "Exact Mode 03 count-zero payload did not produce source-local empty evidence");
+const storedOne = storedResult(`${storedOneLine}\r>`);
+check(storedOne.observation === "source_positive_nonempty_observed" && storedOne.positiveNonemptySourceIds.join(",") === "7E8"
+  && storedOne.positiveEmptySourceIds.length === 0, "Mode 03 count byte was treated as a DTC byte");
+const storedMixed = storedResult(`${storedEmptyLine}\r${storedOneLine.replace("7E8", "7E9")}\r>`);
+check(storedMixed.observation === "source_positive_nonempty_observed" && storedMixed.positiveEmptySourceIds.join(",") === "7E8"
+  && storedMixed.positiveNonemptySourceIds.join(",") === "7E9", "Independent ECU counts were merged");
+const storedDuplicate = storedResult(`${storedEmptyLine}\r${storedEmptyLine}\r>`);
+check(storedDuplicate.observation === "source_positive_empty_observed" && storedDuplicate.positiveEmptySourceIds.length === 1,
+  "Identical source payloads were not deduplicated");
+for (const transcript of [
+  `${storedEmptyLine}\r${storedOneLine}\r>`,
+  "7E8 04 43 01 00 00 AA BB CC\r>",
+  "7E8 06 43 02 C1 23 C1 23 AA\r>",
+  "7E8 06 43 01 C1 23 01 33 AA\r>",
+  `${storedEmptyLine}\r7E9 04 43 02 C1 23 AA BB CC\r>`
+]) {
+  const result = storedResult(transcript);
+  check(result.observation === "indeterminate" && result.positiveEmptySourceIds.length === 0
+    && result.positiveNonemptySourceIds.length === 0 && result.blockerIds.includes("dtc_payload_conflict"),
+    "Conflicting counts, zero-code slots, or duplicate codes became empty/nonempty evidence");
+}
+for (const [transcript, completion] of [
+  [`${storedEmptyLine}\r>`, "timeout"],
+  [`${storedEmptyLine}\r>`, "disconnected"],
+  [`${storedEmptyLine}\r>`, "error"],
+  [`${storedEmptyLine}\r`, "complete"],
+  [`${storedEmptyLine}\rNO DATA\r>`, "complete"],
+  [`${storedEmptyLine}\r7E9 03 7F 03 78 00 00 00 00\r>`, "complete"],
+  [`${storedEmptyLine}\r7E9 02 47 00 00 00 00 00 00\r>`, "complete"],
+  [`${storedEmptyLine}\r7E9 10 08 43 03 01 33 02 10\r>`, "complete"]
+]) {
+  const result = storedResult(transcript, completion);
+  check(result.observation === "indeterminate" && result.positiveEmptySourceIds.length === 0
+    && result.positiveNonemptySourceIds.length === 0, "Incomplete or mixed-error receipt retained positive count evidence");
+}
+const storedNoData = storedResult("NO DATA\r>");
+check(storedNoData.observation === "missing_or_unproven" && storedNoData.positiveEmptySourceIds.length === 0,
+  "Mode 03 NO DATA was promoted to empty");
+
+// Generate CAN transport fixtures for count/ISO-TP boundaries, including sequence wrap.
+function canTranscript(payload) {
+  const hex = (byte) => byte.toString(16).toUpperCase().padStart(2, "0");
+  const line = (bytes) => `7E8 ${[...bytes, ...Array(8 - bytes.length).fill(0xAA)].map(hex).join(" ")}`;
+  if (payload.length <= 7) return `${line([payload.length, ...payload])}\r>`;
+  const lines = [line([0x10 | (payload.length >> 8), payload.length & 0xFF, ...payload.slice(0, 6)])];
+  for (let offset = 6, sequence = 1; offset < payload.length; offset += 7, sequence = (sequence + 1) & 15) {
+    lines.push(line([0x20 | sequence, ...payload.slice(offset, offset + 7)]));
+  }
+  return `${lines.join("\r")}\r>`;
+}
+for (const count of [2, 3, 127, 255]) {
+  const payload = [0x43, count, ...Array.from({ length: count }, (_, index) => [0x01, index]).flat()];
+  const result = storedResult(canTranscript(payload));
+  check(result.observation === "source_positive_nonempty_observed" && result.positiveNonemptySourceIds.join(",") === "7E8",
+    `Exact ${count}-DTC CAN payload failed`);
+  const truncated = storedResult(canTranscript(payload.slice(0, -1)));
+  check(truncated.observation === "indeterminate" && truncated.positiveNonemptySourceIds.length === 0,
+    `Truncated ${count}-DTC application payload passed`);
 }
 
 const noDataInput = createInput();

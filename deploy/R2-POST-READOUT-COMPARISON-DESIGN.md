@@ -1,5 +1,19 @@
 # R2 消去後再読取・前後比較: 次の非送信実装設計
 
+## 3.13.517 保存DTCの件数と応答内容の照合
+
+`evaluateGenericObdDtcClearPostReadoutReceipts()` の固定CAN profile・Mode 03だけで、件数付きpayloadを検査する。この節を3.13.516および後述の将来案より優先する。新しいAPIや保存形式は追加せず、通常取込・一般DTC decoder・UI・車両通信には接続しない。
+
+根拠: [ELM327DSL公式資料](https://elmelectronics.com/wp-content/uploads/2020/05/ELM327DSL.pdf) 本文36ページ、2026-09-06確認。CANのMode 03にはserviceに続いて後続DTC数の1byteが加わる。[python-OBDのdecoder実装](https://github.com/brendan-w/python-OBD/blob/master/obd/decoders.py) でもserviceとcountを除外して2byteのDTC対を読む。ただし同実装の複数source結合や余剰byteの読み捨ては、この証拠評価器へ持ち込まない。
+
+今回の受入範囲はプロジェクト側の保守的な制限であり、ISO/SAE規格への全面適合を主張しない。parserがPCI・CAN paddingを除いたpayloadに対し、`43 count (DTC上位byte DTC下位byte)*` が厳密に `2 + 2 * count` bytesある場合だけを対象とする。count=0ならpayloadは `43 00` の2bytesだけ。余分なapplication bytesは0でも無視せず、件数の不足・過剰、0000のDTC枠、同一payload内のコード重複を未確定にする。
+
+同じsourceの応答が複数あればpayload完全一致だけを重複としてまとめ、異なる件数・内容の応答は `dtc_payload_conflict` とする。1つでも矛盾・対象外payloadがあるreceiptでは、positive空/非空のsource配列をどちらも空へ戻して `indeterminate` とする。timeout、切断、parse error、negative、wrong service、NO DATA混在でも同じ配列を返さない。独立して観測したsource IDは保持する。
+
+完結したreceiptでのみ、count=0のsourceは `positiveEmptySourceIds`、count>0のsourceは `positiveNonemptySourceIds` に入る。異なるECU間のcountを合算しない。両方が存在する場合のreceipt observationは `source_positive_nonempty_observed` とし、どのsourceが空かは別配列で保持する。`NO DATA` 単独は引き続き `missing_or_unproven`。07/0Aの意味検証はこの照合だけでは承認せず、`payload_semantics_unverified` を維持する。
+
+これらは模擬入力からのsource単位の観測である。期待ECU範囲、before証拠、実connection・車両同一性、消去作用範囲は未確認のまま。rootは常にindeterminateまたはrejected、比較・coverage・成功推定・送信flagはfalse、parserの `payloadSemanticsVerified:false` も変更しない。既存の実セッション診断結果には影響しない。今回の変更はローカルコード照合と限定試験で検証し、追加のSolレビューや実車試験を実施済みとは記載しない。
+
 ## 3.13.516 先行実装: 読取応答の厳密な組立
 
 後述のreceipt評価器の前提として、`parseElmReadOnlyRawTranscript({profile, command, transcript, completion})` を先に実装する。対象は固定11-bit CAN表示profileの03/07/0A/0101だけ。既存の `buildObdLogPackets()` による組立を再利用し、入力形式、途中終了、source別の連番と割込みを検査する。既存Mode04パーサー・通常取込・セッション保存・画面・通信許可リストは変更しない。
