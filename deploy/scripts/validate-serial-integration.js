@@ -61,7 +61,7 @@ class MockElmPort {
   constructor(responses = {}, options = {}) {
     this.responses = { ...responses };
     this.options = options;
-    this.calls = { select: 0, open: 0, close: 0, cancel: 0, releaseReader: 0, releaseWriter: 0, writes: [], responseChunks: [] };
+    this.calls = { select: 0, open: 0, close: 0, cancel: 0, releaseReader: 0, releaseWriter: 0, writes: [], responseChunks: [], bindingInvalidations: [] };
     this.queue = [];
     this.waiting = null;
     this.closed = false;
@@ -138,7 +138,12 @@ function createClient(responses, options = {}) {
   const uiNode = { value: "", textContent: "", innerHTML: "", hidden: false };
   const context = vm.createContext({
     TextDecoder, TextEncoder, setTimeout, clearTimeout, performance, Date, console,
-    navigator: { serial: { requestPort: async () => { port.calls.select += 1; return port; } } },
+    navigator: { serial: { requestPort: async () => {
+      check(port.calls.bindingInvalidations.at(-1) === "transport_connection_not_current", "Connection selection must invalidate target binding before requesting a port");
+      port.calls.select += 1;
+      return port;
+    } } },
+    obdDtcClearTargetBindingController: { invalidate: (reason) => { port.calls.bindingInvalidations.push(reason); } },
     sessionStorage: { removeItem: () => {}, setItem: () => {} },
     obdAccessUnlocked: true, obdDevModeUnlocked: false, obdUiMode: "simple",
     obdBridgeOperation: null, obdSerialRevision: 0, obdSerialResultOwner: null,

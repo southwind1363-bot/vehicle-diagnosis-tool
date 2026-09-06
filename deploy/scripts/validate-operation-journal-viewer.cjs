@@ -161,6 +161,20 @@ function asset(pathname) {
     });
     assert.equal(matched.recordId, 'viewer-record-00', 'Only the selected loaded record may be associated');
     assert.equal(matched.state, 'pre_save_required');
+    const binding = await page.evaluate(() => {
+      const snapshot = obdDtcClearTargetBindingController.getSnapshot();
+      window.__targetBindingSnapshot = snapshot;
+      return snapshot;
+    });
+    assert.equal(binding.schemaVersion, 'generic_obd_dtc_clear_target_binding_v1');
+    assert.equal(binding.state, 'blocked', 'A matching fixture without live transport must remain blocked');
+    assert.equal(binding.preOperationSessionId, matched.recordId, 'Binding must retain the explicitly compared record without inferring a live target');
+    assert.equal(binding.target, null);
+    assert.equal(binding.workflowTargetApplied, false);
+    assert.equal(binding.transport.status, 'not_bound');
+    assert.equal(binding.vehicleIdentity.status, 'not_observed');
+    assert.equal(binding.ecuScope.status, 'not_observed');
+    assert.ok(['executionEnabled', 'vehicleCommandEnabled', 'wouldTransmit', 'canExecute'].every(key => binding[key] === false));
     assert.ok(matched.checks.length > 0 && matched.checks.every(value => value === false), 'Comparison controller must retain all unmet checks');
     assert.deepEqual({ executionEnabled: matched.executionEnabled, vehicleCommandEnabled: matched.vehicleCommandEnabled, wouldTransmit: matched.wouldTransmit, canExecute: matched.canExecute }, {
       executionEnabled: false, vehicleCommandEnabled: false, wouldTransmit: false, canExecute: false
@@ -244,6 +258,10 @@ function asset(pathname) {
     await page.screenshot({ path: path.join(output, 'operation-journal-preparation-390-viewport.png') });
     await page.setViewportSize({ width: 1280, height: 900 });
     await unbind.click();
+    const releasedBinding = await page.evaluate(() => obdDtcClearTargetBindingController.getSnapshot());
+    assert.equal(releasedBinding.state, 'invalidated', 'Releasing a comparison must invalidate its target binding');
+    assert.equal(releasedBinding.preOperationSessionId, null);
+    assert.ok(releasedBinding.revision > binding.revision);
     assert.equal(await preparation.count(), 0, 'Unbind must remove the clear-preparation candidate');
     assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()), null, 'Unbind must clear only the comparison association');
     assert.deepEqual(await page.evaluate(() => ({
@@ -269,8 +287,11 @@ function asset(pathname) {
     await page.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
     await page.evaluate(() => {
       obdDevSession.lastSession.dtcSnapshot.dtcs[0].code = 'P0420';
+      window.__bindingAfterInPlaceChange = obdDtcClearTargetBindingController.getSnapshot();
       renderObdOperationJournalViewer();
     });
+    assert.equal(await page.evaluate(() => window.__bindingAfterInPlaceChange.state), 'invalidated', 'A disconnected record binding must invalidate on in-place changes before rendering');
+    assert.equal(await page.evaluate(() => window.__bindingAfterInPlaceChange.preOperationSessionId), null);
     assert.equal(await record.textContent().then(value => value.includes('照合時点の読取内容が一致。')), false, 'A render after in-place mutation must remove the historical match claim');
     assert.equal(await record.locator('.obd-operation-journal-clear-preparation').count(), 0, 'Current-session changes must clear the preparation panel');
     assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()), null, 'In-place current-session changes must invalidate future association use');

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.511";
+const APP_VERSION = "3.13.512";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -804,6 +804,210 @@ const obdDevSession = {
   selectedPidList: [...WEB_SERIAL_DEFAULT_LIVE_PID_COMMANDS],
   freezeFramePidList: [...WEB_SERIAL_DEFAULT_FREEZE_FRAME_PID_COMMANDS]
 };
+
+function createObdDtcClearTargetBindingController() {
+  const schemaVersion = "generic_obd_dtc_clear_target_binding_v1";
+  let revision = 0;
+  let snapshot = null;
+  let capturedContext = null;
+  let capturing = false;
+  let revalidating = false;
+  let terminal = false;
+
+  const advanceRevision = () => {
+    if (terminal || !Number.isSafeInteger(revision) || revision >= Number.MAX_SAFE_INTEGER) return false;
+    revision += 1;
+    return true;
+  };
+
+  const freeze = (value) => {
+    if (Array.isArray(value)) return Object.freeze(value.map(freeze));
+    if (value && typeof value === "object") {
+      Object.keys(value).forEach((key) => { value[key] = freeze(value[key]); });
+      return Object.freeze(value);
+    }
+    return value;
+  };
+  const ownData = (value, key) => {
+    if (!value || typeof value !== "object") return { present: false, value: undefined };
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    return descriptor && Object.prototype.hasOwnProperty.call(descriptor, "value")
+      ? { present: true, value: descriptor.value }
+      : { present: false, value: undefined };
+  };
+  const readString = (value, key) => {
+    const field = ownData(value, key);
+    return field.present && typeof field.value === "string" ? field.value : null;
+  };
+  const unique = (values) => [...new Set(values.filter(Boolean))];
+  const isBusy = () => Boolean(
+    obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation
+    || obdDevSession.initializing || obdDevSession.readInProgress || obdDevSession.coreScanInProgress
+    || obdDevSession.pendingCommandOperation || obdDevSession.pendingWriteOperation || obdScannerImportOperation
+  );
+  const isWebSerialSession = (session) => readString(session, "source") === "web_serial"
+    && readString(session, "source_type") !== "sample"
+    && readString(session, "source_type") !== "replay"
+    && readString(session, "source_type") !== "import";
+  const buildScope = (session) => {
+    // Web Serial parses 3/8-hex source headers into ordinary DTC rows, but the current
+    // session producer does not retain their raw header/protocol provenance as scope evidence.
+    void session;
+    return { status: "not_observed", evidenceSource: null, responderKeys: [] };
+  };
+  const buildSnapshot = ({ state = "blocked", association = null, transportCurrent = false, scope = null, blockers = [], sourceIneligible = false } = {}) => {
+    const record = ownData(association, "record").value;
+    const recordId = readString(record, "recordId");
+    const resolvedScope = scope || { status: "not_observed", evidenceSource: null, responderKeys: [] };
+    const resolvedBlockers = unique([
+      ...blockers,
+      ...(sourceIneligible ? ["sample_replay_or_import_ineligible"] : []),
+      "transport_identity_not_bound",
+      "vehicle_identity_not_observed",
+      "ecu_clear_scope_not_verified"
+    ]);
+    return freeze({
+      schemaVersion,
+      state,
+      revision,
+      preOperationSessionId: recordId,
+      vehicleIdentity: { status: "not_observed", evidenceSource: null, retainedIdentifier: false },
+      ecuScope: { status: resolvedScope.status, evidenceSource: resolvedScope.evidenceSource, responderKeys: resolvedScope.responderKeys },
+      transport: {
+        status: transportCurrent ? "current_web_serial_connection" : "not_bound",
+        evidenceSource: transportCurrent ? "serial_port_object_and_connection_revision" : null,
+        persistentHardwareIdentityVerified: false
+      },
+      blockers: resolvedBlockers,
+      target: null,
+      workflowTargetApplied: false,
+      executionEnabled: false,
+      vehicleCommandEnabled: false,
+      wouldTransmit: false,
+      canExecute: false
+    });
+  };
+  const invalidate = (reason = "journal_association_not_current") => {
+    if (!advanceRevision()) terminal = true;
+    capturedContext = null;
+    snapshot = buildSnapshot({ state: "invalidated", blockers: [typeof reason === "string" ? reason : "journal_association_not_current"] });
+    return snapshot;
+  };
+  const currentAssociation = () => typeof getObdOperationJournalComparisonAssociation === "function"
+    ? getObdOperationJournalComparisonAssociation()
+    : null;
+  const contextReason = (context) => {
+    const association = currentAssociation();
+    if (!context || association !== context.association) return "journal_association_not_current";
+    if (obdDevSession.lastSession !== context.session || ownData(association, "sessionRef").value !== context.session) return "live_session_not_current";
+    if (context.live !== true) return null;
+    if (!isWebSerialSession(context.session)) return "sample_replay_or_import_ineligible";
+    if (!isCurrentLiveContext(context)) return isBusy() ? "operation_busy" : "transport_connection_not_current";
+    return null;
+  };
+  const getSnapshot = () => {
+    if (!snapshot) snapshot = buildSnapshot({ blockers: ["journal_association_not_current", "live_session_not_current", "transport_connection_not_current"] });
+    if (terminal || snapshot.state === "invalidated" || !capturedContext) return snapshot;
+    if (revalidating) return invalidate("journal_association_not_current");
+    revalidating = true;
+    try {
+      const reason = contextReason(capturedContext);
+      return reason ? invalidate(reason) : snapshot;
+    } catch (_error) {
+      return invalidate("journal_association_not_current");
+    } finally {
+      revalidating = false;
+    }
+  };
+  const createLiveContext = (association, session, port, serialRevision) => ({
+    live: true,
+    association,
+    session,
+    port,
+    reader: obdDevSession.reader,
+    writer: obdDevSession.writer,
+    owner: obdSerialResultOwner,
+    serialRevision,
+    connectionState: obdDevSession.connectionState,
+    readLoopActive: obdDevSession.readLoopActive,
+    bridgeEndpoint: obdDevSession.bridgeEndpoint,
+    source: readString(session, "source"),
+    sourceType: readString(session, "source_type"),
+    busy: isBusy()
+  });
+  const isCurrentLiveContext = (context) => context?.live === true
+    && context.port && context.reader && context.writer && context.owner
+    && context.connectionState === "ready" && context.readLoopActive === true && context.bridgeEndpoint === null
+    && context.source === "web_serial" && !["sample", "replay", "import"].includes(context.sourceType)
+    && context.busy === false && isWebSerialSession(context.session)
+    && obdDevSession.port === context.port && obdDevSession.reader === context.reader && obdDevSession.writer === context.writer
+    && obdDevSession.connectionState === context.connectionState && obdDevSession.readLoopActive === context.readLoopActive
+    && obdDevSession.bridgeEndpoint === context.bridgeEndpoint && obdSerialResultOwner === context.owner
+    && obdSerialRevision === context.serialRevision && readString(context.session, "source") === context.source
+    && readString(context.session, "source_type") === context.sourceType && isBusy() === context.busy
+    && ownData(obdSerialResultOwner, "revision").value === context.serialRevision
+    && ownData(obdSerialResultOwner, "expectedLastSession").value === context.session;
+  const publishBlocked = ({ association = null, context = null, transportCurrent = false, scope = null, blockers = [], sourceIneligible = false } = {}) => {
+    if (!advanceRevision()) return invalidate("journal_association_not_current");
+    capturedContext = context;
+    snapshot = buildSnapshot({ association, transportCurrent, scope, blockers, sourceIneligible });
+    return snapshot;
+  };
+  const capture = (input) => {
+    const startGeneration = revision;
+    if (terminal) return snapshot || invalidate("journal_association_not_current");
+    if (capturing) return invalidate("journal_association_not_current");
+    capturing = true;
+    try {
+      const expectedKeys = ["expectedAssociation", "expectedSessionRef", "expectedPortRef", "expectedSerialRevision"];
+      const keys = input && typeof input === "object" && !Array.isArray(input) ? Reflect.ownKeys(input) : [];
+      const validInput = keys.length === expectedKeys.length && expectedKeys.every((key) => keys.includes(key) && ownData(input, key).present)
+        && Number.isSafeInteger(ownData(input, "expectedSerialRevision").value);
+      if (!validInput) {
+        if (startGeneration !== revision) return invalidate("journal_association_not_current");
+        return publishBlocked({ blockers: ["journal_association_not_current", "live_session_not_current", "transport_connection_not_current"] });
+      }
+      const association = currentAssociation();
+      if (startGeneration !== revision || terminal) return invalidate("journal_association_not_current");
+      const expectedAssociation = ownData(input, "expectedAssociation").value;
+      const expectedSessionRef = ownData(input, "expectedSessionRef").value;
+      const expectedPortRef = ownData(input, "expectedPortRef").value;
+      const expectedSerialRevision = ownData(input, "expectedSerialRevision").value;
+      const associationSession = ownData(association, "sessionRef").value;
+      if (association !== expectedAssociation || associationSession !== expectedSessionRef || obdDevSession.lastSession !== expectedSessionRef
+        || obdDevSession.port !== expectedPortRef || obdSerialRevision !== expectedSerialRevision) {
+        return invalidate("journal_association_not_current");
+      }
+      const liveContext = createLiveContext(association, expectedSessionRef, expectedPortRef, expectedSerialRevision);
+      const hasLiveContext = isCurrentLiveContext(liveContext);
+      const partialContext = { live: false, association, session: expectedSessionRef };
+      const scope = buildScope(expectedSessionRef);
+      const endAssociation = currentAssociation();
+      const endReason = startGeneration !== revision || endAssociation !== association
+        || ownData(endAssociation, "sessionRef").value !== expectedSessionRef || obdDevSession.lastSession !== expectedSessionRef
+        || obdDevSession.port !== expectedPortRef || obdSerialRevision !== expectedSerialRevision
+        || (hasLiveContext && !isCurrentLiveContext(liveContext))
+        ? "journal_association_not_current"
+        : null;
+      if (endReason) return invalidate(endReason);
+      return publishBlocked({
+        association,
+        context: hasLiveContext ? liveContext : partialContext,
+        transportCurrent: hasLiveContext,
+        scope,
+        blockers: hasLiveContext ? [] : ["transport_connection_not_current", ...(isBusy() ? ["operation_busy"] : [])],
+        sourceIneligible: !isWebSerialSession(expectedSessionRef)
+      });
+    } catch (_error) {
+      return invalidate("journal_association_not_current");
+    } finally {
+      capturing = false;
+    }
+  };
+  return Object.freeze({ getSnapshot, capture, invalidate });
+}
+
+const obdDtcClearTargetBindingController = createObdDtcClearTargetBindingController();
 
 appVersion.textContent = APP_VERSION;
 lastUpdated.textContent = APP_LAST_UPDATED;
@@ -6106,6 +6310,7 @@ function clearMatchingObdOperationJournalLastSave(recordId) {
 }
 
 function clearObdOperationJournalComparison() {
+  obdDtcClearTargetBindingController.invalidate("journal_association_not_current");
   obdOperationJournalComparisonState.association = null;
   obdOperationJournalComparisonState.status = "";
 }
@@ -6296,8 +6501,20 @@ function compareCurrentObdReadoutToOperationJournalRecord() {
     sessionRef,
     sessionJson: record.sessionJson,
     exportedAt,
-    controller
+    controller,
+    targetBindingController: obdDtcClearTargetBindingController
   });
+  try {
+    obdDtcClearTargetBindingController.capture({
+      expectedAssociation: obdOperationJournalComparisonState.association,
+      expectedSessionRef: sessionRef,
+      expectedPortRef: obdDevSession.port,
+      expectedSerialRevision: obdSerialRevision
+    });
+  } catch (_error) {
+    // A target-binding failure is isolated from the existing comparison result.
+    obdDtcClearTargetBindingController.invalidate("journal_association_not_current");
+  }
   obdOperationJournalComparisonState.status = `照合時点の読取内容が一致。車両同一性・適合・安全条件・消去許可は未確認。 記録ID: ${record.recordId}`;
   renderObdOperationJournalViewer();
   return true;
@@ -6919,6 +7136,7 @@ async function connectObdDeveloperVci() {
     return;
   }
 
+  obdDtcClearTargetBindingController.invalidate("transport_connection_not_current");
   const revision = ++obdSerialRevision;
   obdSerialResultOwner = { revision, expectedLastSession: obdDevSession.lastSession };
   obdSerialConnectPending = true;
@@ -7072,6 +7290,7 @@ function handleObdSerialDisconnect(event) {
 
 async function disconnectObdDeveloperVci(options = {}) {
   const reason = typeof options?.reason === "string" ? options.reason : "operator_disconnect";
+  obdDtcClearTargetBindingController.invalidate("transport_connection_not_current");
   // Transport loss retains the original attempt's failure evidence; explicit cancellation invalidates it.
   if (["operator_disconnect", "access_locked", "developer_locked"].includes(reason)) obdSerialRevision += 1;
   if (obdSerialDisconnectOperation) return obdSerialDisconnectOperation.promise;
@@ -7899,6 +8118,7 @@ function isObdBridgeOperationBlocked() {
 
 function beginObdBridgeOperation() {
   if (isObdBridgeOperationBlocked()) return null;
+  obdDtcClearTargetBindingController.invalidate("transport_connection_not_current");
   obdSerialRevision += 1;
   const operation = { cancelled: false, controller: typeof AbortController === "function" ? new AbortController() : null };
   obdBridgeOperation = operation;
@@ -8656,6 +8876,7 @@ async function runObdDeveloperRead(label, commands) {
   }
   if (obdDevSession.readInProgress) return false;
 
+  obdDtcClearTargetBindingController.invalidate("operation_busy");
   obdDevSession.readInProgress = true;
   setObdDeveloperConnectionState("reading");
   renderObdDeveloperGate();

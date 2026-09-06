@@ -16,7 +16,7 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 const settle = () => new Promise(setImmediate);
 function client() {
-  const calls = { open: 0, close: 0, initialize: 0, identify: 0, select: 0, failure: 0, journalInvalidations: 0 };
+  const calls = { open: 0, close: 0, initialize: 0, identify: 0, select: 0, failure: 0, journalInvalidations: 0, bindingInvalidations: [] };
   const port = {
     open: async () => { calls.open += 1; }, close: async () => { calls.close += 1; },
     readable: { getReader: () => ({ cancel: async () => {}, releaseLock: () => {} }) },
@@ -26,6 +26,7 @@ function client() {
     obdAccessUnlocked: true, obdDevModeUnlocked: true, obdBridgeOperation: null, obdUiMode: "details",
     obdSerialRevision: 0, obdSerialResultOwner: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
     obdSerialReadErrors: new WeakMap(),
+    obdDtcClearTargetBindingController: { invalidate: (reason) => { calls.bindingInvalidations.push({ reason, selects: calls.select }); } },
     obdDevSession: { connectionState: "disconnected", port: null, lastSession: { marker: "saved" } },
     obdDevStatus: {}, obdDevBaudRate: { value: "38400" }, obdDevPasswordInput: { value: "" }, obdAccessPasswordInput: { value: "" },
     OBD_DEV_MODE_KEY: "dev", OBD_ACCESS_MODE_KEY: "access",
@@ -71,6 +72,8 @@ function load(context, names) {
   simple.obdUiMode = "simple";
   await simple.connectObdDeveloperVci();
   check(calls.select === 1 && simple.obdDevSession.connectionState === "ready", `Unlocked simple mode could not start the allowlisted read-only Web Serial route (${calls.select}/${simple.obdDevSession.connectionState})`);
+  check(calls.bindingInvalidations[0]?.reason === "transport_connection_not_current" && calls.bindingInvalidations[0].selects === 0,
+    "Simple connection must invalidate target binding before port selection");
   await simple.disconnectObdDeveloperVci();
 }
 for (const lock of ["lockObdAccess", "lockObdDeveloperMode"]) {

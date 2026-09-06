@@ -5,6 +5,7 @@ import "./validate-session-export.js";
 import "./validate-case-storage.js";
 import "./validate-operation-availability.js";
 import "./validate-dtc-clear-workflow.js";
+import "./validate-dtc-clear-target-binding.js";
 import "./validate-dtc-clear-responses.js";
 import "./validate-dtc-clear-receive-window.js";
 import "./validate-elm-mode04-transcript.js";
