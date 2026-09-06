@@ -1484,6 +1484,129 @@ body.dark .flow-node-measure .flow-step {
   font-size: 0.75rem;
 }
 
+.obd-operation-journal-viewer {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  min-width: 0;
+}
+
+.obd-operation-journal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.obd-operation-journal-actions button {
+  min-height: 42px;
+}
+
+.obd-operation-journal-actions button:not(:first-child) {
+  min-width: 42px;
+  padding: 0;
+}
+
+.obd-operation-journal-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  overflow-wrap: anywhere;
+}
+
+.obd-operation-journal-status.error {
+  color: var(--danger);
+}
+
+.obd-operation-journal-list {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.obd-operation-journal-id {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--ink);
+  padding: 8px 10px;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.obd-operation-journal-id:hover,
+.obd-operation-journal-id:focus-visible {
+  border-color: var(--accent);
+}
+
+.obd-operation-journal-id.is-selected {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.obd-operation-journal-record {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.obd-operation-journal-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.obd-operation-journal-meta div {
+  min-width: 0;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0 6px;
+}
+
+.obd-operation-journal-meta dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.obd-operation-journal-meta dd {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 0.82rem;
+  overflow-wrap: anywhere;
+}
+
+.obd-operation-journal-json-details > summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.obd-operation-journal-json-details > summary:focus-visible {
+  outline: 2px solid var(--accent-strong);
+  outline-offset: 3px;
+}
+
+.obd-operation-journal-json {
+  max-height: 280px;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  padding: 10px;
+  color: var(--ink);
+  font: 0.76rem/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .obd-session-details {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2871,6 +2994,7 @@ body.dark .flow-node-measure .flow-step {
   .obd-operation-grid,
   .obd-stage-tabs,
   .obd-profile-strip,
+  .obd-operation-journal-meta,
   .obd-session-details,
   .obd-diagnostic-flow-grid,
   .obd-request-grid,
@@ -2959,6 +3083,7 @@ body.dark .flow-node-measure .flow-step {
   .obd-operation-grid,
   .obd-stage-tabs,
   .obd-profile-strip,
+  .obd-operation-journal-meta,
   .obd-session-details,
   .obd-diagnostic-flow-grid,
   .obd-request-grid,

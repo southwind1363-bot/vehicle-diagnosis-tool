@@ -15,6 +15,7 @@
     "validate:case-storage": "node scripts/validate-case-storage.js",
     "validate:operation-journal": "node scripts/validate-operation-journal.js",
     "validate:operation-journal-browser": "node scripts/validate-operation-journal-browser.cjs",
+    "validate:operation-journal-viewer": "node scripts/validate-operation-journal-viewer.cjs",
     "validate:serial": "node scripts/validate-serial-lifecycle.js",
     "validate:serial-integration": "node scripts/validate-serial-integration.js",
     "validate:session-export": "node scripts/validate-session-export.js",

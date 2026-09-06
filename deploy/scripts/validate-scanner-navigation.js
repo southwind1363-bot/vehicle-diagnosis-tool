@@ -202,9 +202,11 @@ const home = element();
 const panel = element();
 const back = element();
 const session = Object.freeze({ marker: "retained-readout" });
+let journalInvalidations = 0;
 const context = vm.createContext({
   document: { getElementById: (id) => id === "obdHomeView" ? home : id === "obdStageBackButton" ? back : panel },
   syncObdReadoutSurface() {}, getObdAutoStage: () => "setup",
+  clearObdOperationJournalViewer() { journalInvalidations += 1; },
   obdAccessUnlocked: true, obdUiMode: "simple", activeObdStage: "setup",
   obdStagePanel: element(), obdPanel: panel, obdStageBadge: element(), obdStageStatus: element(),
   obdStageTabs: [], obdSetupPanel: element(), obdStageSetupView: element(),
@@ -240,6 +242,7 @@ for (const [current, automatic, mode, expected] of [
   assert.equal(context.activeObdStage, expected);
   assert.equal(context.obdDevSession.lastSession, session);
 }
+assert.ok(journalInvalidations > 0, "Navigation away from details must invalidate the journal viewer");
 context.obdUiMode = "simple";
 let cancelled = 0, invalidated = 0, summaries = 0;
 Object.assign(context, {

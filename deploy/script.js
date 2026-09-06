@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.503";
+const APP_VERSION = "3.13.504";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -503,6 +503,13 @@ const obdDevDisconnectButton = document.querySelector("#obdDevDisconnectButton")
 const obdDevStatus = document.querySelector("#obdDevStatus");
 const obdDiagnosticFlowPanels = document.querySelectorAll("[data-obd-diagnostic-flow-panel]");
 const obdDevSessionSummary = document.querySelector("#obdDevSessionSummary");
+const obdOperationJournalViewer = document.querySelector("#obdOperationJournalViewer");
+const obdOperationJournalRefresh = document.querySelector("#obdOperationJournalRefresh");
+const obdOperationJournalPrevious = document.querySelector("#obdOperationJournalPrevious");
+const obdOperationJournalNext = document.querySelector("#obdOperationJournalNext");
+const obdOperationJournalStatus = document.querySelector("#obdOperationJournalStatus");
+const obdOperationJournalList = document.querySelector("#obdOperationJournalList");
+const obdOperationJournalRecord = document.querySelector("#obdOperationJournalRecord");
 const obdDevSessionDetails = document.querySelector("#obdDevSessionDetails");
 const obdNextReadoutPanel = document.querySelector("#obdNextReadoutPanel");
 const obdNextReadoutList = document.querySelector("#obdNextReadoutList");
@@ -693,6 +700,17 @@ let activeResultView = "flow";
 let obdAccessUnlocked = readOptionalBrowserSetting(OBD_ACCESS_MODE_KEY, true) === "enabled";
 let obdUiMode = readOptionalBrowserSetting(OBD_UI_MODE_KEY) === "details" ? "details" : "simple";
 let obdDevModeUnlocked = readOptionalBrowserSetting(OBD_DEV_MODE_KEY, true) === "enabled";
+const obdOperationJournalState = {
+  revision: 0,
+  pageIndex: 0,
+  pages: [null],
+  recordIds: [],
+  selectedRecord: null,
+  status: "一覧未取得",
+  error: false,
+  listing: false,
+  loading: false
+};
 let obdBridgePairingToken = "";
 let obdBridgeOperation = null;
 let obdSerialRevision = 0;
@@ -913,6 +931,13 @@ obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
 obdAccessUnlockButton.addEventListener("click", unlockObdAccess);
 obdAccessLockButton.addEventListener("click", lockObdAccess);
+obdOperationJournalRefresh?.addEventListener("click", () => { void listObdOperationJournalRecords({ reset: true }); });
+obdOperationJournalPrevious?.addEventListener("click", () => { void listObdOperationJournalRecords({ pageIndex: obdOperationJournalState.pageIndex - 1 }); });
+obdOperationJournalNext?.addEventListener("click", () => { void listObdOperationJournalRecords({ pageIndex: obdOperationJournalState.pageIndex + 1 }); });
+obdOperationJournalViewer?.addEventListener("toggle", () => {
+  if (!obdOperationJournalViewer.open) clearObdOperationJournalViewer();
+  else renderObdOperationJournalViewer();
+});
 obdAccessPasswordInput.addEventListener("keydown", (event) => {
   handleObdUnlockKeydown(event, obdAccessUnlockButton);
 });
@@ -1634,6 +1659,7 @@ function initializeLaunchView() {
 function activateTab(targetId) {
   if (typeof activeObdTimelinePlaybackStop === "function") activeObdTimelinePlaybackStop();
   if (!targetId) return;
+  if (targetId !== "obd-panel") clearObdOperationJournalViewer();
 
   tabPanels.forEach((panel) => {
     const active = panel.id === targetId;
@@ -4638,6 +4664,7 @@ function setObdUiMode(mode = "simple") {
   const disconnectSimpleSerial = obdUiMode === "simple" && nextMode === "details"
     && Boolean(obdDevSession.port) && !obdDevModeUnlocked;
   obdUiMode = nextMode;
+  if (nextMode !== "details") clearObdOperationJournalViewer();
   writeOptionalBrowserSetting(OBD_UI_MODE_KEY, obdUiMode);
   renderObdUiMode();
   if (disconnectSimpleSerial) void disconnectObdDeveloperVci({ reason: "operator_disconnect" });
@@ -4749,10 +4776,12 @@ function renderObdStageView(preferredStage = activeObdStage) {
   const simpleStage = requestedStage === "details" ? "setup" : requestedStage;
   const detailedStage = ["home", "connect", "readout"].includes(requestedStage) ? "setup" : requestedStage;
   const nextStage = obdUiMode === "simple" ? simpleStage : detailedStage;
+  if (nextStage !== "details") clearObdOperationJournalViewer();
   const backButton = document.getElementById("obdStageBackButton");
   if (backButton) backButton.disabled = nextStage === "home";
   activeObdStage = nextStage;
   if (typeof obdPanel !== "undefined" && obdPanel) obdPanel.dataset.obdActiveStage = nextStage;
+  renderObdOperationJournalViewer();
   const panel = document.getElementById("obd-panel");
   if (panel && nextStage === "readout" && !["dtc", "live", "details"].includes(panel.dataset.obdReadoutView)) {
     panel.dataset.obdReadoutView = "dtc";
@@ -5930,6 +5959,7 @@ function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.
   renderObdPreviewButtons();
   renderObdWorkflowGuide(capability);
   renderObdDeveloperSessionSummary(obdDevSession.lastSession);
+  renderObdOperationJournalViewer();
   const autoStage = getObdAutoStage();
   const currentStage = typeof activeObdStage === "string" ? activeObdStage : "";
   const preferredAutoStage = getObdRefreshStage(currentStage, autoStage, obdUiMode);
@@ -5969,11 +5999,166 @@ async function unlockObdAccess() {
 function lockObdAccess() {
   invalidateObdScannerImport();
   obdAccessUnlocked = false;
+  clearObdOperationJournalViewer();
   void disconnectObdDeveloperVci({ reason: "access_locked" });
   clearObdBridgePairingToken();
   try { sessionStorage.removeItem(OBD_ACCESS_MODE_KEY); } catch (_error) { /* Runtime lock still applies. */ }
   obdAccessPasswordInput.value = "";
   renderObdAccessGate();
+}
+
+function clearObdOperationJournalViewer() {
+  obdOperationJournalState.revision += 1;
+  obdOperationJournalState.pageIndex = 0;
+  obdOperationJournalState.pages = [null];
+  obdOperationJournalState.recordIds = [];
+  obdOperationJournalState.selectedRecord = null;
+  obdOperationJournalState.status = "一覧未取得";
+  obdOperationJournalState.error = false;
+  obdOperationJournalState.listing = false;
+  obdOperationJournalState.loading = false;
+  renderObdOperationJournalViewer();
+}
+
+function isObdOperationJournalViewerActive(revision) {
+  const panel = document.getElementById("obd-panel");
+  return obdAccessUnlocked === true
+    && obdOperationJournalViewer?.open === true
+    && obdDevModeUnlocked === true
+    && obdUiMode === "details"
+    && activeObdStage === "details"
+    && panel?.classList.contains("is-active") === true
+    && panel.hidden === false
+    && obdOperationJournalState.revision === revision;
+}
+
+function renderObdOperationJournalViewer() {
+  if (!obdOperationJournalStatus || !obdOperationJournalList || !obdOperationJournalRecord) return;
+  if (obdOperationJournalViewer) obdOperationJournalViewer.hidden = obdDevModeUnlocked !== true;
+  const active = isObdOperationJournalViewerActive(obdOperationJournalState.revision);
+  const page = obdOperationJournalState.pages[obdOperationJournalState.pageIndex] || null;
+  obdOperationJournalStatus.textContent = obdOperationJournalState.status;
+  obdOperationJournalStatus.classList.toggle("error", obdOperationJournalState.error);
+  obdOperationJournalRefresh.disabled = !active || obdOperationJournalState.listing;
+  obdOperationJournalPrevious.disabled = !active || obdOperationJournalState.listing || obdOperationJournalState.loading || obdOperationJournalState.pageIndex === 0;
+  obdOperationJournalNext.disabled = !active || obdOperationJournalState.listing || obdOperationJournalState.loading || page?.hasMore !== true || !page.nextAfterRecordId;
+  obdOperationJournalList.replaceChildren();
+
+  if (active && obdOperationJournalState.recordIds.length) {
+    obdOperationJournalState.recordIds.forEach((recordId) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "obd-operation-journal-id";
+      button.textContent = recordId;
+      button.disabled = obdOperationJournalState.listing || obdOperationJournalState.loading;
+      button.classList.toggle("is-selected", obdOperationJournalState.selectedRecord?.recordId === recordId);
+      button.addEventListener("click", () => { void loadObdOperationJournalRecord(recordId); });
+      obdOperationJournalList.appendChild(button);
+    });
+  }
+
+  obdOperationJournalRecord.replaceChildren();
+  const record = active ? obdOperationJournalState.selectedRecord : null;
+  obdOperationJournalRecord.hidden = !record;
+  if (!record) return;
+  const metadata = document.createElement("dl");
+  metadata.className = "obd-operation-journal-meta";
+  [["ID", record.recordId], ["保存時刻", formatDateTime(record.createdAt)], ["サイズ", `${record.byteLength} bytes`]].forEach(([label, value]) => {
+    const item = document.createElement("div");
+    const title = document.createElement("dt");
+    title.textContent = label;
+    const detail = document.createElement("dd");
+    detail.textContent = String(value);
+    item.append(title, detail);
+    metadata.appendChild(item);
+  });
+  const jsonDetails = document.createElement("details");
+  jsonDetails.className = "obd-operation-journal-json-details";
+  const jsonSummary = document.createElement("summary");
+  jsonSummary.textContent = "記録データ";
+  const json = document.createElement("pre");
+  json.className = "obd-operation-journal-json";
+  json.textContent = record.sessionJson;
+  jsonDetails.append(jsonSummary, json);
+  obdOperationJournalRecord.append(metadata, jsonDetails);
+}
+
+async function listObdOperationJournalRecords({ reset = false, pageIndex = 0 } = {}) {
+  if (!isObdOperationJournalViewerActive(obdOperationJournalState.revision)) return;
+  if (reset) {
+    obdOperationJournalState.pageIndex = 0;
+    obdOperationJournalState.pages = [null];
+    obdOperationJournalState.recordIds = [];
+    obdOperationJournalState.selectedRecord = null;
+  }
+  const afterRecordId = pageIndex === 0 ? null : obdOperationJournalState.pages[pageIndex - 1]?.nextAfterRecordId;
+  if (pageIndex < 0 || (pageIndex > 0 && !afterRecordId)) return;
+  const revision = ++obdOperationJournalState.revision;
+  obdOperationJournalState.listing = true;
+  obdOperationJournalState.loading = false;
+  obdOperationJournalState.selectedRecord = null;
+  obdOperationJournalState.status = "保存記録の一覧を確認しています。";
+  obdOperationJournalState.error = false;
+  renderObdOperationJournalViewer();
+  try {
+    const result = await window.ObdOperationJournal?.listPreOperationIds?.({ limit: 20, afterRecordId });
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    if (result?.status === "indeterminate" && result.reason === "storage_not_initialized") {
+      obdOperationJournalState.recordIds = [];
+      obdOperationJournalState.status = "保存記録はまだありません。";
+      return;
+    }
+    if (result?.status !== "listed" || !Array.isArray(result.recordIds)) throw new Error("list_unavailable");
+    const page = {
+      recordIds: result.recordIds.filter((recordId) => typeof recordId === "string"),
+      hasMore: result.hasMore === true,
+      nextAfterRecordId: typeof result.nextAfterRecordId === "string" ? result.nextAfterRecordId : null
+    };
+    obdOperationJournalState.pageIndex = pageIndex;
+    obdOperationJournalState.pages[pageIndex] = page;
+    obdOperationJournalState.pages.length = pageIndex + 1;
+    obdOperationJournalState.recordIds = page.recordIds;
+    obdOperationJournalState.status = page.recordIds.length
+      ? `保存記録 ${page.recordIds.length}件を表示しています。`
+      : "保存記録はまだありません。";
+  } catch (_error) {
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    obdOperationJournalState.recordIds = [];
+    obdOperationJournalState.status = "保存記録の一覧を確認できませんでした。";
+    obdOperationJournalState.error = true;
+  } finally {
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    obdOperationJournalState.listing = false;
+    renderObdOperationJournalViewer();
+  }
+}
+
+async function loadObdOperationJournalRecord(recordId) {
+  if (!isObdOperationJournalViewerActive(obdOperationJournalState.revision)
+    || typeof recordId !== "string" || !obdOperationJournalState.recordIds.includes(recordId)) return;
+  const revision = ++obdOperationJournalState.revision;
+  obdOperationJournalState.loading = true;
+  obdOperationJournalState.selectedRecord = null;
+  obdOperationJournalState.status = "保存記録を検証して読み込んでいます。";
+  obdOperationJournalState.error = false;
+  renderObdOperationJournalViewer();
+  try {
+    const result = await window.ObdOperationJournal?.loadPreOperation?.({ recordId });
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    if (result?.status !== "loaded" || result.reason !== "valid_record_recovered" || !result.record || result.record.recordId !== recordId || typeof result.record.sessionJson !== "string") {
+      throw new Error("load_unavailable");
+    }
+    obdOperationJournalState.selectedRecord = result.record;
+    obdOperationJournalState.status = "保存記録を検証して読み込みました。診断結果には反映していません。";
+  } catch (_error) {
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    obdOperationJournalState.status = "保存記録を検証して読み込めませんでした。";
+    obdOperationJournalState.error = true;
+  } finally {
+    if (!isObdOperationJournalViewerActive(revision)) return;
+    obdOperationJournalState.loading = false;
+    renderObdOperationJournalViewer();
+  }
 }
 
 function unlockObdDeveloperMode() {
@@ -6002,6 +6187,7 @@ function unlockObdDeveloperMode() {
 function lockObdDeveloperMode() {
   invalidateObdScannerImport();
   obdDevModeUnlocked = false;
+  clearObdOperationJournalViewer();
   void disconnectObdDeveloperVci({ reason: "developer_locked" });
   clearObdBridgePairingToken();
   try { sessionStorage.removeItem(OBD_DEV_MODE_KEY); } catch (_error) { /* Runtime lock still applies. */ }

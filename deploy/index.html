@@ -1040,6 +1040,19 @@
             <summary>読取セッションの技術情報</summary>
             <div id="obdDevSessionSummary" class="obd-profile-strip"></div>
           </details>
+          <details class="obd-dev-task" id="obdOperationJournalViewer" hidden>
+            <summary>消去前の保存記録</summary>
+            <div class="obd-operation-journal-viewer">
+              <div class="obd-operation-journal-actions">
+                <button id="obdOperationJournalRefresh" class="secondary-button" type="button">一覧を更新</button>
+                <button id="obdOperationJournalPrevious" class="secondary-button" type="button" aria-label="前のページ" title="前のページ" disabled>&larr;</button>
+                <button id="obdOperationJournalNext" class="secondary-button" type="button" aria-label="次のページ" title="次のページ" disabled>&rarr;</button>
+              </div>
+              <p id="obdOperationJournalStatus" class="obd-operation-journal-status">一覧未取得</p>
+              <div id="obdOperationJournalList" class="obd-operation-journal-list"></div>
+              <section id="obdOperationJournalRecord" class="obd-operation-journal-record" hidden aria-live="polite"></section>
+            </div>
+          </details>
         </section>
 
         <details class="obd-dev-task" id="obdDevelopmentReference">
