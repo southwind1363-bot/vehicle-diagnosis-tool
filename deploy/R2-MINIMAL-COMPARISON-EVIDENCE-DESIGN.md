@@ -1,5 +1,11 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 2026-09-07 / 3.13.519後続: readiness抽出の共通解析
+
+一括生成のsequence検証後、0101の固定コピーを前後各1回だけ再解析し、MIL/件数・基本monitor・非連続monitorの3抽出へ同じframesを渡すよう整理した。抽出段階のreadiness再解析は6回から2回になる。sequence自身の意味検査は省略しない。公開する派生report、保留条件、寿命管理は変更しない。
+
+framesは一括生成のローカル変数のみで、返すhandleは派生値だけを保持する。3種の取得順・返却値の変更拒否・caller入力変更・一括disposeの回帰検査12件を追加。境界検証7272件、関連合計8647件がErrors 0。アプリ本体・保存・実車送信は変更なし。OBD主検証・bridge・offline・実車試験は今回再実行せず、関連検証と構文/差分検査を実行した。実行時間の改善率は計測していない。
+
 ## 2026-09-07 / 3.13.519後続: 非連続monitorの模擬状態
 
 Node専用pair handleに `inspectNoncontinuousMonitorReports(context)` を追加。検証済み0101コピーのB3でspark/compressionを選び、Cの対応bitをsupportedReported、DをincompleteReportedとしてECU別・前後別に抽出する。bit配置・区分の根拠は [python-OBD公式定義](https://github.com/brendan-w/python-OBD/blob/master/obd/codes.py) と既掲のstatus decoder（2026-09-07確認）。Mode01 PID01に限定し、PID41やメーカー独自の適用を主張しない。

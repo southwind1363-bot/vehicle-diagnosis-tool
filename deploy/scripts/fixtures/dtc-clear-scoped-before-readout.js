@@ -300,22 +300,26 @@ export function createDtcClearDtcEvidencePairFixture(input) {
   const postReadout = copyEvidenceInput(value.postReadout);
   const evaluated = evaluateDtcClearReadoutSequenceFixture({ ...value, context, beforeReadout, postReadout });
   if (!evaluated.fixtureSequenceMatched) return freeze({ ok: false, reason: evaluated.reason || "fixture_sequence_incomplete", handle: null });
+  const beforeFrames = parseValidatedReadinessFrames(beforeReadout), postFrames = parseValidatedReadinessFrames(postReadout);
   const evidence = { before: extractValidatedDtcRows(beforeReadout), post: extractValidatedDtcRows(postReadout),
-    beforeIndicators: extractValidatedReadinessIndicators(beforeReadout), postIndicators: extractValidatedReadinessIndicators(postReadout),
-    beforeBaseMonitors: extractValidatedBaseMonitors(beforeReadout), postBaseMonitors: extractValidatedBaseMonitors(postReadout),
-    beforeNoncontinuous: extractValidatedNoncontinuousMonitors(beforeReadout), postNoncontinuous: extractValidatedNoncontinuousMonitors(postReadout) };
+    beforeIndicators: extractValidatedReadinessIndicators(beforeFrames), postIndicators: extractValidatedReadinessIndicators(postFrames),
+    beforeBaseMonitors: extractValidatedBaseMonitors(beforeFrames), postBaseMonitors: extractValidatedBaseMonitors(postFrames),
+    beforeNoncontinuous: extractValidatedNoncontinuousMonitors(beforeFrames), postNoncontinuous: extractValidatedNoncontinuousMonitors(postFrames) };
   const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
   if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
   return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(value.scope, evidence, true) });
 }
 
-function extractValidatedReadinessIndicators(readout) {
+function parseValidatedReadinessFrames(readout) {
   // Same owned receipt that passed sequence semantics; no permissive general decoder.
   const receipt = readout.receipts[3];
-  const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
-    command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
+  return runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
+    command: receipt.command, transcript: receipt.transcript, completion: receipt.completion }).frames;
+}
+
+function extractValidatedReadinessIndicators(frames) {
   const sources = new Map();
-  for (const frame of parsed.frames) {
+  for (const frame of frames) {
     if (sources.has(frame.sourceId)) continue;
     // python-OBD status decoder: A7 is MIL, A6..A0 is reported DTC count.
     sources.set(frame.sourceId, { sourceId: frame.sourceId, milCommandedOn: (frame.payload[2] & 0x80) !== 0,
@@ -324,12 +328,9 @@ function extractValidatedReadinessIndicators(readout) {
   return [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
 }
 
-function extractValidatedBaseMonitors(readout) {
-  const receipt = readout.receipts[3];
-  const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
-    command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
+function extractValidatedBaseMonitors(frames) {
   const sources = new Map();
-  for (const frame of parsed.frames) {
+  for (const frame of frames) {
     if (sources.has(frame.sourceId)) continue;
     const b = frame.payload[3], reservedBitSet = (b & 0x80) !== 0;
     // PID 01 B0..2 support and B4..6 incomplete. Unsupported never means complete.
@@ -346,12 +347,9 @@ function extractValidatedBaseMonitors(readout) {
   return [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
 }
 
-function extractValidatedNoncontinuousMonitors(readout) {
-  const receipt = readout.receipts[3];
-  const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
-    command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
+function extractValidatedNoncontinuousMonitors(frames) {
   const sources = new Map();
-  for (const frame of parsed.frames) {
+  for (const frame of frames) {
     if (sources.has(frame.sourceId)) continue;
     const b = frame.payload[3], c = frame.payload[4], d = frame.payload[5];
     const compression = (b & 8) !== 0, reservedBitSet = (b & 0x80) !== 0;

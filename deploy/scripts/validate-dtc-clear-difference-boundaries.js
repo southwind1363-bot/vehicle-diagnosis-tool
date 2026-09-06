@@ -221,4 +221,17 @@ noncontinuousHandle.dispose(); check(noncontinuousHandle.inspectNoncontinuousMon
 const staleNoncontinuous = fixture(), staleNoncontinuousHandle = createDtcClearDtcEvidencePairFixture(staleNoncontinuous).handle;
 staleNoncontinuous.scope.invalidate(staleNoncontinuous.context);
 check(staleNoncontinuousHandle.inspectNoncontinuousMonitorReports(staleNoncontinuous.context).summary === null, "Invalidated noncontinuous reports retained");
+// All readiness views share generation-time parsing, but expose only immutable derived data.
+const sharedInput = fixture(), sharedHandle = createDtcClearDtcEvidencePairFixture(sharedInput).handle;
+const views = ["inspectReadinessIndicators", "inspectBaseMonitorReports", "inspectNoncontinuousMonitorReports"];
+const savedViews = views.map((name) => JSON.stringify(sharedHandle[name](sharedInput.context)));
+for (const name of [...views].reverse()) {
+  const output = sharedHandle[name](sharedInput.context);
+  check(!/frames|payload|transcript|Token/.test(JSON.stringify(output)), "Shared readiness parse leaked retained frames");
+  assert.throws(() => { output.summary.extra = true; }, TypeError); checks += 1;
+}
+sharedInput.beforeReadout.receipts[3].transcript = "NO DATA\r>";
+for (const [index, name] of views.entries()) check(JSON.stringify(sharedHandle[name](sharedInput.context)) === savedViews[index], "Readiness views changed each other or reread inputs");
+sharedHandle.dispose();
+for (const name of views) check(sharedHandle[name](sharedInput.context).reason === "evidence_disposed", "Shared readiness view outlived disposal");
 console.log(`DTC clear difference boundary checks: ${checks} / Errors: 0`);
