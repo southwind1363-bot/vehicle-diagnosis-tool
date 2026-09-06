@@ -6,6 +6,12 @@ import { inspectDtcClearReadoutFixtureScope } from "./dtc-clear-readout-scope.js
 const runtime = vm.createContext({ window: {}, navigator: {} });
 vm.runInContext(fs.readFileSync(new URL("../../obd-readonly.js", import.meta.url), "utf8"), runtime);
 const evaluateBefore = runtime.window.ObdReadOnly.evaluateGenericObdDtcClearBeforeReadoutReceipts;
+const evaluatePost = runtime.window.ObdReadOnly.evaluateGenericObdDtcClearPostReadoutReceipts;
+
+// Construct clear fixtures in this VM so the immutable follow-up-plan identity is preserved.
+export function createDtcClearFixtureReceiveWindow(input) {
+  return runtime.window.ObdReadOnly.createGenericObdDtcClearReceiveWindow(input);
+}
 
 function record(value, keys) {
   if (value === null || typeof value !== "object" || Array.isArray(value)
@@ -47,8 +53,12 @@ export function evaluateDtcClearScopedBeforeReadoutFixture(input) {
   const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
   if (!current.ok) return result("rejected", current.reason);
   if (before.state === "rejected") return result("rejected", "before_readout_order_invalid");
-  const readouts = before.readouts.map((row, index) => {
-    const expected = current.snapshot.byIntent[index];
+  return matchFixtureReadouts(before.readouts, current.snapshot);
+}
+
+function matchFixtureReadouts(rows, snapshot) {
+  const readouts = rows.map((row, index) => {
+    const expected = snapshot.byIntent[index];
     if (expected.intent !== row.intent) throw new TypeError("fixture_intent_mismatch");
     const positive = row.intent === "read_readiness"
       ? (row.observation === "source_positive_reported" ? row.observedSourceIds : [])
@@ -64,4 +74,24 @@ export function evaluateDtcClearScopedBeforeReadoutFixture(input) {
   });
   return result(readouts.every((row) => row.fixtureScopeMatched) ? "fixture_scope_matched" : "fixture_scope_incomplete",
     null, readouts);
+}
+
+export function evaluateDtcClearScopedPostReadoutFixture(input) {
+  const value = record(input, ["scope", "context", "clearWindowSnapshot", "clearCompletedAt", "postReadout"]);
+  const context = record(value.context, ["scopeToken", "connectionToken", "targetToken"]);
+  const initial = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!initial.ok) return result("rejected", initial.reason);
+  const postReadout = record(value.postReadout,
+    ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"]);
+  if (postReadout.connectionToken !== context.connectionToken) return result("rejected", "receipt_connection_reference_mismatch");
+  const post = evaluatePost({ clearWindowSnapshot: value.clearWindowSnapshot, clearCompletedAt: value.clearCompletedAt, postReadout });
+  const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!current.ok) return result("rejected", current.reason);
+  if (post.state === "rejected") return result("rejected",
+    post.provenance.blockerIds.includes("post_attempt_not_distinct") ? "post_attempt_not_distinct" : "post_readout_order_invalid");
+  const clearBlocker = ["clear_snapshot_evaluation_mismatch", "clear_window_not_terminal", "clear_evaluation_incomplete"]
+    .find((id) => post.provenance.blockerIds.includes(id));
+  if (clearBlocker) return result("fixture_scope_incomplete", clearBlocker);
+  // A complete simulated Mode 04 evaluation does not establish real clear success or connection ownership.
+  return matchFixtureReadouts(post.readouts, current.snapshot);
 }

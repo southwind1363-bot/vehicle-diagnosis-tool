@@ -1,5 +1,19 @@
 # R2 消去前証拠とintent別ECU範囲の設計案
 
+## 3.13.519後続: 消去後側の模擬範囲照合
+
+同じNode専用ハーネスに `evaluateDtcClearScopedPostReadoutFixture({ scope, context, clearWindowSnapshot, clearCompletedAt, postReadout })` を追加した。beforeとsource照合関数を共有し、postは現行のstrict評価器をそのまま呼ぶ。アプリ本体・通常API・保存形式・版番号は変更しない。
+
+handleの生成元確認、評価前後の失効照会、contextとpost receiptの接続参照一致を検査する。clear/postのattempt再利用や時刻逆転はrejected。clear snapshotと評価のcompletion不一致、非terminal、評価未完了のいずれかがあればfixture_scope_incompleteとし、readoutsを返さない。消去後の4応答が正常という理由でこれらを上書きしない。
+
+Mode04の期待sourceとは独立したfixture範囲を照合する。試験では消去側7EA、読取側7E8/7E9を指定し、消去側の集合を読取側へ複写しないことを確認した。clear側のconnection tokenはsnapshotに含まれないため、その一致や実dispatcher所有権を証明しない。scope照合が成立してもclearBoundaryVerified・readoutCoverageComplete・comparisonAvailable・clearSucceededInferred・実証拠・同一性・送信flagはfalse。
+
+`createDtcClearFixtureReceiveWindow()` はテスト用clear snapshotを現行評価器と同じVMで作るfactoryであり、follow-up-planの定数参照同一性を維持する。別realmのsnapshotを受け入れるために定数や検査を差し替えない。factoryも模擬モデルにすぎず、caller入力が実車の事実だと認証するものではない。
+
+scope48件・scoped-before126件・scoped-post164件・before205件・post239件、合計782件がErrors 0。scoped-postは各intentのNO DATA、範囲外肯定応答、timeout/disconnected/error、negative、内容矛盾、wrong service、prompt欠落、clear未完了、attempt再利用、順序逆転、失効、偽handle、getter拒否を検査する。before validator経由でvalidate:obdにも接続。構文・差分検査を実施し、アプリ本体変更なしのためOBD主集計・bridge・offline・ブラウザ・実車試験は今回再実行しない。
+
+次はbefore/clear/postを同じfixture scopeと接続世代へ束縛する順序設計。現行のclear開始時刻・接続所有権の証拠がない問題は残る。DTC集合やreadiness値の前後比較、診断結果・保存schema、実車操作は追加しない。
+
 ## 3.13.519後続: scopeと消去前模擬応答の照合
 
 `scripts/fixtures/dtc-clear-scoped-before-readout.js` にNode専用の `evaluateDtcClearScopedBeforeReadoutFixture({ scope, context, beforeReadout })` を追加した。テスト側から現行obd-readonly.jsを分離VMへ読み込み、strictなbefore評価器を呼ぶ。アプリ本体・通常API・保存形式・通信経路に変更はない。
