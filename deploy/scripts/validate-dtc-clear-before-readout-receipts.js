@@ -4,6 +4,7 @@ import vm from "node:vm";
 import "./validate-dtc-clear-fixture-scope.js";
 import "./validate-dtc-clear-scoped-before-readout.js";
 import "./validate-dtc-clear-scoped-post-readout.js";
+import "./validate-dtc-clear-readout-sequence.js";
 
 let ioCalls = 0;
 const forbidden = () => { ioCalls += 1; throw new Error("Unexpected I/O"); };

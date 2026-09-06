@@ -95,3 +95,44 @@ export function evaluateDtcClearScopedPostReadoutFixture(input) {
   // A complete simulated Mode 04 evaluation does not establish real clear success or connection ownership.
   return matchFixtureReadouts(post.readouts, current.snapshot);
 }
+
+// Checks a caller-described simulated sequence, not an actual clear operation.
+export function evaluateDtcClearReadoutSequenceFixture(input) {
+  const value = record(input, ["scope", "context", "beforeReadout", "clearWindowSnapshot", "clearStartedAt", "clearCompletedAt", "postReadout"]);
+  const context = record(value.context, ["scopeToken", "connectionToken", "targetToken"]);
+  const readoutKeys = ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"];
+  const beforeReadout = record(value.beforeReadout, readoutKeys);
+  const postReadout = record(value.postReadout, readoutKeys);
+  const sequenceResult = (state, reason) => {
+    const { fixtureScopeMatched, readouts, ...boundary } = result(state, reason);
+    return freeze({ ...boundary, fixtureSequenceMatched: state === "fixture_sequence_matched" });
+  };
+  const initial = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!initial.ok) return sequenceResult("rejected", initial.reason);
+  for (const time of [value.clearStartedAt, value.clearCompletedAt]) {
+    if (typeof time !== "string" || !Number.isFinite(Date.parse(time)) || new Date(time).toISOString() !== time) {
+      throw new TypeError("invalid_fixture_clear_timestamp");
+    }
+  }
+  // Capture the reference without invoking an accessor; post evaluation validates the full snapshot.
+  const clearAttempt = value.clearWindowSnapshot !== null && typeof value.clearWindowSnapshot === "object"
+    ? Object.getOwnPropertyDescriptor(value.clearWindowSnapshot, "attemptToken") : null;
+  if (!clearAttempt || !Object.hasOwn(clearAttempt, "value")) throw new TypeError("invalid_fixture_clear_attempt");
+  const before = evaluateDtcClearScopedBeforeReadoutFixture({ scope: value.scope, context, beforeReadout });
+  if (before.state === "rejected") return sequenceResult("rejected", before.reason);
+  const post = evaluateDtcClearScopedPostReadoutFixture({ scope: value.scope, context,
+    clearWindowSnapshot: value.clearWindowSnapshot, clearCompletedAt: value.clearCompletedAt, postReadout });
+  if (post.state === "rejected") return sequenceResult("rejected", post.reason);
+  const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!current.ok) return sequenceResult("rejected", current.reason);
+  if (new Set([beforeReadout.attemptToken, clearAttempt.value, postReadout.attemptToken]).size !== 3) {
+    return sequenceResult("rejected", "sequence_attempt_not_distinct");
+  }
+  const boundaries = [beforeReadout.completedAt, value.clearStartedAt, value.clearCompletedAt, postReadout.startedAt].map(Date.parse);
+  if (!boundaries.every((time, index) => index === 0 || time >= boundaries[index - 1])) {
+    return sequenceResult("rejected", "fixture_sequence_order_invalid");
+  }
+  if (!before.fixtureScopeMatched) return sequenceResult("fixture_sequence_incomplete", "before_fixture_scope_incomplete");
+  if (!post.fixtureScopeMatched) return sequenceResult("fixture_sequence_incomplete", post.reason || "post_fixture_scope_incomplete");
+  return sequenceResult("fixture_sequence_matched", null);
+}

@@ -1,5 +1,17 @@
 # R2 消去前証拠とintent別ECU範囲の設計案
 
+## 3.13.519後続: before/clear/postの模擬順序検査
+
+`evaluateDtcClearReadoutSequenceFixture()` をNode専用ハーネスへ追加。入力はscope/context/beforeReadout/clearWindowSnapshot/clearStartedAt/clearCompletedAt/postReadoutだけ。clearStartedAtは今回のfixture入力であり、実dispatcherから取得した時刻ではない。通常API・保存形式・アプリ本体は変更しない。
+
+一つのscope handleとcontextでbefore/postのraw receiptをそれぞれ再評価し、両側の接続参照一致、範囲一致、clear評価完了、各側の内部順序を要求する。before完了 <= clear開始 <= clear終了 <= post開始を正規ISO日時で照合し、等しい隣接境界は許す。before/clear/postのattempt参照は三つとも異なることを要求する。before開始や各receipt内の順序検査を省略するものではない。
+
+順序不正、attempt再利用、接続/対象/範囲不一致、失効はrejected。beforeまたはpostが範囲未一致、あるいはclearが未完了ならfixture_sequence_incomplete。すべて揃った場合だけfixture_sequence_matched / fixtureSequenceMatched trueを返す。raw情報・token・source集合・DTC集合は返さない。結果は凍結し、実証拠、実車同一性、clearBoundaryVerified、網羅性、比較、消去成功、実行、送信flagはfalse。
+
+clear snapshotは接続所有権を公開しないため、clear接続がbefore/postと同じことを検証したとは扱わない。試験では別のclear接続参照でも模擬順序だけは成立させ、実証拠flagがfalseのままであることを確認する。caller時刻やtoken一致を実車の事実へ昇格させない。新しい実clear証拠契約やdispatcherとの統合は別工程。
+
+順序128件、scope48件、scoped-before126件、scoped-post164件、before205件、post239件、合計910件がErrors 0。境界逆転・重複attemptの全ペア・両側4 intentの未取得/範囲外/timeout・clear未完了・失効・getter拒否を検査した。before validator経由でvalidate:obdへ接続。構文・差分検査を実施し、アプリ本体変更なしのためOBD主集計・bridge・offline・ブラウザ・実車試験は今回再実行しない。次は比較に必要なsource別の最小証拠summaryの設計であり、DTC差分や修理完了の推定は未実装。
+
 ## 3.13.519後続: 消去後側の模擬範囲照合
 
 同じNode専用ハーネスに `evaluateDtcClearScopedPostReadoutFixture({ scope, context, clearWindowSnapshot, clearCompletedAt, postReadout })` を追加した。beforeとsource照合関数を共有し、postは現行のstrict評価器をそのまま呼ぶ。アプリ本体・通常API・保存形式・版番号は変更しない。

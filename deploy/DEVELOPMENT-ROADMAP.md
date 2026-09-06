@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+3.13.519後続の模擬順序検査: before/clear/postを一つのfixture scopeで評価し、3 attemptの相違と取得区間の順序を検査するNode用処理を追加。関連910件がErrors 0。caller入力の時刻・参照を実clear接続の証明にせず、成功推定・比較・送信flagはfalse。アプリ本体・版番号・保存形式は変更しない。次はsource別の最小証拠summaryの設計。詳細は `R2-BEFORE-READOUT-SCOPE-DESIGN.md` 冒頭。
+
 3.13.519後続の消去後scope照合: Node専用ハーネスにpost側を追加し、before側とsource照合を共有した。clear未完了・completion矛盾・attempt再利用・順序逆転をブロックし、Mode04の期待sourceを読取対象へ転用しない。関連782件がErrors 0。アプリ本体と版番号は変更しない。次はbefore/clear/postを同じ模擬範囲と接続世代へ束縛する境界設計。前後比較や実車送信は未実装のまま。
 
 3.13.519後続の模擬scope照合: テスト専用handleとstrictなbefore receiptを照合するNode用ハーネスを追加した。肯定応答の不足・範囲外・矛盾・途中終了を一致扱いにせず、評価前後の失効照会と接続参照一致を確認する。照合126件・scope48件・before205件・post239件がErrors 0。実車網羅性や成功推定のflagはfalse。アプリ本体と版番号は変更せず、次はpost側の模擬照合と各取得境界の設計へ進む。詳細は `R2-BEFORE-READOUT-SCOPE-DESIGN.md` 冒頭。
