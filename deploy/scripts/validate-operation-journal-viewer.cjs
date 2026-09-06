@@ -194,6 +194,19 @@ function asset(pathname) {
       const readiness = getObdOperationJournalComparisonAssociation().controller.getSnapshot().readiness;
       return [readiness.completedCount, readiness.totalCount];
     }), [associationView.completedCount, associationView.totalCount], 'Viewing preparation must not rejudge readiness counts');
+    await page.evaluate(async () => {
+      window.__removeCalls = 0;
+      window.__removeOriginal = window.ObdOperationJournal;
+      window.ObdOperationJournal = Object.freeze({
+        ...window.__removeOriginal,
+        removePreOperation: async () => { window.__removeCalls += 1; return { status: 'confirmed', reason: 'record_removed', recordId: 'viewer-record-00' }; }
+      });
+      window.confirm = () => true;
+      await removeSelectedObdOperationJournalRecord();
+    });
+    assert.equal(await page.evaluate(() => window.__removeCalls), 0, 'A direct removal handler call must not bypass an active comparison candidate');
+    assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()?.record?.recordId), 'viewer-record-00', 'A blocked deletion attempt must retain its comparison candidate');
+    await page.evaluate(() => { window.ObdOperationJournal = window.__removeOriginal; });
     await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-1280.png') });
     await page.setViewportSize({ width: 390, height: 900 });
     assert.equal(await conditions.locator('summary').evaluate(node => node.scrollWidth <= node.clientWidth), true, '390px conditions summary must wrap without horizontal overflow');
@@ -495,6 +508,155 @@ function asset(pathname) {
     assert.equal(await download.isDisabled(), true, 'Developer lock must disable download');
     assert.equal(await page.evaluate(() => window.__postLockObjectUrlCalls), 0, 'Locked viewer must not create object URLs or start downloads');
     await page.evaluate(() => { URL.createObjectURL = window.__postLockCreateObjectURL; });
+
+    // Removal coverage deliberately starts from a fresh, unlocked view after the stale-load lock test.
+    await page.reload();
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    await page.evaluate(() => setObdStage('details'));
+    await page.locator('#obdOperationJournalViewer').locator(':scope > summary').click();
+    const removalId = 'removal-target-00';
+    const peerId = 'removal-peer-00';
+    await page.evaluate(async ({ removalId, peerId, canonical }) => {
+      window.__removalJournal = window.ObdOperationJournal;
+      for (const recordId of [removalId, peerId]) {
+        const saved = await window.__removalJournal.savePreOperation({ recordId, sessionJson: canonical });
+        if (saved.status !== 'confirmed') throw new Error(`removal fixture failed: ${recordId}`);
+      }
+      obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
+        source: 'synthetic_removal_fixture',
+        session_id: 'removal-fixture',
+        dtcSnapshot: { dtcs: [{ code: 'P0300', status: 'stored' }] }
+      });
+    }, { removalId, peerId, canonical });
+    async function reselectRemovalTarget() {
+      await page.locator('#obdOperationJournalRefresh').click();
+      await page.waitForFunction(id => [...document.querySelectorAll('#obdOperationJournalList button')].some(button => button.textContent === id), removalId);
+      await page.evaluate(id => loadObdOperationJournalRecord(id), removalId);
+      await page.waitForFunction(id => obdOperationJournalState.selectedRecord?.recordId === id, removalId);
+    }
+    await reselectRemovalTarget();
+    const removeButton = page.locator('#obdOperationJournalRecord .obd-operation-journal-remove');
+    const removeStatus = page.locator('#obdOperationJournalRemoveStatus');
+    const diagnosisBeforeRemoval = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await page.evaluate(() => {
+      window.__removeCalls = 0;
+      window.ObdOperationJournal = Object.freeze({ ...window.__removalJournal, removePreOperation: async () => { window.__removeCalls += 1; throw new Error('must_not_run'); } });
+      obdDevSession.readInProgress = true;
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await removeButton.isDisabled(), true, 'Active read I/O must disable removal without requiring a current saveable session');
+    await page.evaluate(async () => { await removeSelectedObdOperationJournalRecord(); obdDevSession.readInProgress = false; renderObdOperationJournalViewer(); });
+    assert.equal(await page.evaluate(() => window.__removeCalls), 0, 'Active read I/O must not invoke removal');
+
+    await page.evaluate(() => { window.confirm = () => false; });
+    await removeButton.click();
+    assert.equal(await page.evaluate(() => window.__removeCalls), 0, 'Cancel must not invoke removal');
+    assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecord?.recordId), removalId, 'Cancel must retain selection');
+    for (const [name, response] of [
+      ['throw', null],
+      ['rejected', { status: 'rejected', reason: 'invalid_input', recordId: removalId }],
+      ['digest_failed', { status: 'rejected', reason: 'digest_failed', recordId: removalId }],
+      ['unknown', { status: 'indeterminate', reason: 'operation_timeout', recordId: removalId }]
+    ]) {
+      await page.evaluate(({ response }) => {
+        window.confirm = () => true;
+        window.ObdOperationJournal = Object.freeze({
+          ...window.__removalJournal,
+          removePreOperation: async () => {
+            window.__removeCalls += 1;
+            if (response === null) throw new Error('removal_failure');
+            return response;
+          }
+        });
+      }, { response });
+      await removeButton.click();
+      await page.waitForFunction(() => ['unknown', 'rejected'].includes(obdOperationJournalRemovalState.phase));
+      assert.equal(await removeButton.isDisabled(), true, `${name} requires refresh or reselection before another attempt`);
+      assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecord?.recordId), removalId, `${name} retains the selected record`);
+      if (name === 'digest_failed') {
+        assert.equal(await page.evaluate(() => obdOperationJournalRemovalState.phase), 'rejected', 'digest_failed must confirm no deletion and prohibit automatic retry');
+        assert.equal(await page.evaluate(() => window.__removeCalls), 3, 'digest_failed must issue exactly one manual attempt');
+      }
+      await reselectRemovalTarget();
+    }
+    await page.evaluate(() => {
+      window.__removeCalls = 0;
+      window.confirm = () => {
+        setObdOperationJournalSelectedRecord({ ...obdOperationJournalState.selectedRecord, sessionJson: 'mutated-after-confirm' }, 'list');
+        return true;
+      };
+      window.ObdOperationJournal = Object.freeze({ ...window.__removalJournal, removePreOperation: async () => { window.__removeCalls += 1; return { status: 'confirmed', reason: 'record_removed', recordId: 'removal-target-00' }; } });
+    });
+    await removeButton.click();
+    assert.equal(await page.evaluate(() => window.__removeCalls), 0, 'A post-confirm selection mutation must not invoke removal');
+    await reselectRemovalTarget();
+
+    await page.evaluate(() => {
+      window.__removeCalls = 0;
+      window.confirm = () => true;
+      window.ObdOperationJournal = Object.freeze({
+        ...window.__removalJournal,
+        removePreOperation: () => new Promise(resolve => { window.__removeCalls += 1; window.__resolveRemoval = resolve; })
+      });
+      void removeSelectedObdOperationJournalRecord();
+      void removeSelectedObdOperationJournalRecord();
+    });
+    await page.waitForFunction(() => typeof window.__resolveRemoval === 'function');
+    assert.equal(await page.evaluate(() => window.__removeCalls), 1, 'Duplicate removal attempts must share one pending operation');
+    assert.equal(await page.locator('#obdOperationJournalRefresh').isDisabled(), true, 'Removal busy state blocks list actions');
+    await page.evaluate(() => {
+      document.getElementById('obdOperationJournalViewer').open = false;
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await removeStatus.textContent(), '', 'Closing the viewer must not expose removal status');
+    await page.evaluate(() => lockObdDeveloperMode());
+    assert.equal(await page.evaluate(() => Boolean(obdOperationJournalRemovalState.promise)), true, 'Lock must retain the pending removal sentinel');
+    await page.evaluate(() => window.__resolveRemoval({ status: 'confirmed', reason: 'record_removed', recordId: 'removal-target-00' }));
+    await page.waitForFunction(() => !obdOperationJournalRemovalState.promise);
+
+    await page.reload();
+    await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+    await page.evaluate(() => setObdStage('details'));
+    await page.locator('#obdOperationJournalViewer').locator(':scope > summary').click();
+    await page.evaluate(() => {
+      window.__removalJournal = window.ObdOperationJournal;
+      obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({
+        source: 'synthetic_removal_preservation',
+        session_id: 'removal-preservation',
+        dtcSnapshot: { dtcs: [{ code: 'P0300', status: 'stored' }] }
+      });
+    });
+    const diagnosisBeforeConfirmedRemoval = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await reselectRemovalTarget();
+    await page.evaluate(id => {
+      obdOperationJournalSaveState.phase = 'confirmed';
+      obdOperationJournalSaveState.id = id;
+      obdOperationJournalSaveState.status = 'fixture confirmed';
+      window.confirm = () => true;
+      window.ObdOperationJournal = window.__removalJournal;
+    }, removalId);
+    await removeButton.click();
+    await page.waitForFunction(() => obdOperationJournalRemovalState.phase === 'confirmed');
+    assert.equal(await page.evaluate(id => new Promise((resolve, reject) => {
+      const open = indexedDB.open('vehicle-diagnosis-operation-journal-v1');
+      open.onerror = () => reject(open.error);
+      open.onsuccess = () => {
+        const db = open.result;
+        const request = db.transaction('preOperationRecords', 'readonly').objectStore('preOperationRecords').get(id);
+        request.onerror = () => { db.close(); reject(request.error); };
+        request.onsuccess = () => { const missing = request.result === undefined; db.close(); resolve(missing); };
+      };
+    }), removalId), true, 'Confirmed UI removal must be absent from IndexedDB');
+    assert.equal(await page.evaluate(id => window.__removalJournal.loadPreOperation({ recordId: id }).then(result => result.status), peerId), 'loaded', 'Removal must preserve other records');
+    assert.equal(await page.locator('#obdOperationJournalOpenConfirmed').isDisabled(), true, 'Removing the matching last-save ID must disable direct open');
+    assert.deepEqual(await page.evaluate(() => ({ pages: obdOperationJournalState.pages, recordIds: obdOperationJournalState.recordIds, selected: obdOperationJournalState.selectedRecord })), { pages: [null], recordIds: [], selected: null }, 'Confirmed removal must invalidate cached pages and selection');
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), diagnosisBeforeConfirmedRemoval, 'Removal must not change the current diagnosis');
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.locator('#obdOperationJournalViewer').screenshot({ path: path.join(output, 'operation-journal-removal-1280.png') });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await page.locator('#obdOperationJournalViewer').screenshot({ path: path.join(output, 'operation-journal-removal-390.png') });
     assert.deepEqual(errors, [], 'No page or console errors');
     console.log(`Operation journal viewer checks: empty, load, pagination, download guards, stale guards, layout / Errors: 0`);
     console.log(`Screenshots: ${output}`);

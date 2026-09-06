@@ -11,7 +11,7 @@ const copy = (value) => value instanceof ArrayBuffer ? value.slice(0) : value;
 
 function createFakeIdb(options = {}) {
   const records = options.records || new Map();
-  const calls = { opens: 0, writes: 0, reads: 0, keyCursors: 0, ranges: [], closes: 0, aborts: 0, strict: 0 };
+  const calls = { opens: 0, writes: 0, deletes: 0, reads: 0, keyCursors: 0, ranges: [], closes: 0, aborts: 0, strict: 0, modes: [] };
   let initialized = options.initialized === true;
   let hasStore = initialized && !options.wrongStore;
   function request() { return { result: undefined, error: null, onsuccess: null, onerror: null }; }
@@ -25,14 +25,42 @@ function createFakeIdb(options = {}) {
         if (options.transactionThrows) throw new Error("transaction");
         if (mode === "readwrite" && settings?.durability !== "strict") throw new Error("not strict");
         if (mode === "readwrite") calls.strict += 1;
+        calls.modes.push(mode);
         let finished = false;
+        let pendingDeletes = 0;
+        const completeIfIdle = () => {
+          if (!finished && pendingDeletes === 0) {
+            finished = true;
+            tx.oncomplete?.();
+          }
+        };
         const tx = {
           oncomplete: null, onabort: null, onerror: null,
           abort() { if (!finished) { finished = true; calls.aborts += 1; later(() => this.onabort?.()); } },
           objectStore() {
-            return mode === "readwrite" ? {
+            const store = {
               keyPath: options.storeKeyPath || "recordId", autoIncrement: options.autoIncrement === true,
+              get(recordId) {
+                calls.reads += 1;
+                const get = request();
+                later(() => {
+                  if (finished) return;
+                  if (options.readError || (options.readErrorOnRead && calls.reads === options.readErrorOnRead)) { get.error = { name: "ReadError" }; get.onerror?.(); finished = true; tx.onabort?.(); return; }
+                  const value = records.get(recordId);
+                  const returned = value && { ...value, sourceBytes: copy(value.sourceBytes), sha256: copy(value.sha256) };
+                  if (returned && options.readbackMismatch) returned.byteLength += 1;
+                  if (returned && options.tamperCreatedAt) returned.createdAt = "1970-01-01T00:00:00.000Z";
+                  if (returned && options.storedExtra) returned.injected = true;
+                  if (returned && typeof options.transformReadRecord === "function") options.transformReadRecord(returned);
+                  get.result = returned;
+                  get.onsuccess?.();
+                  if (options.readAbortAfterRequestSuccess) { finished = true; tx.onabort?.(); return; }
+                  later(completeIfIdle);
+                });
+                return get;
+              },
               add(record) {
+                if (mode !== "readwrite") throw new Error("readonly");
                 calls.writes += 1;
                 const add = request();
                 const complete = () => {
@@ -47,29 +75,28 @@ function createFakeIdb(options = {}) {
                 if (options.delayedWrite) setTimeout(complete, options.delayedWrite);
                 else later(complete);
                 return add;
-              }
-            } : {
-              keyPath: options.storeKeyPath || "recordId", autoIncrement: options.autoIncrement === true,
-              get(recordId) {
-                calls.reads += 1;
-                const get = request();
-                later(() => {
+              },
+              delete(recordId) {
+                if (mode !== "readwrite") throw new Error("readonly");
+                calls.deletes += 1;
+                const remove = request();
+                pendingDeletes += 1;
+                const complete = () => {
                   if (finished) return;
-                  if (options.readError) { get.error = { name: "ReadError" }; get.onerror?.(); finished = true; tx.onabort?.(); return; }
-                  const value = records.get(recordId);
-                  const returned = value && { ...value };
-                  if (returned && options.readbackMismatch) returned.byteLength += 1;
-                  if (returned && options.tamperCreatedAt) returned.createdAt = "1970-01-01T00:00:00.000Z";
-                  if (returned && options.storedExtra) returned.injected = true;
-                  if (returned && typeof options.transformReadRecord === "function") options.transformReadRecord(returned);
-                  get.result = returned;
-                  get.onsuccess?.();
-                  if (options.readAbortAfterRequestSuccess) { finished = true; tx.onabort?.(); return; }
-                  finished = true; tx.oncomplete?.();
-                });
-                return get;
+                  if (options.deleteError) { remove.error = { name: "DeleteError" }; remove.onerror?.(); finished = true; tx.onabort?.(); return; }
+                  remove.result = undefined;
+                  remove.onsuccess?.();
+                  if (options.deleteAbortAfterRequestSuccess) { finished = true; tx.onabort?.(); return; }
+                  if (!options.deleteNoEffect) records.delete(recordId);
+                  pendingDeletes -= 1;
+                  completeIfIdle();
+                };
+                if (options.delayedDelete) setTimeout(complete, options.delayedDelete);
+                else later(complete);
+                return remove;
               },
               openKeyCursor(range, direction) {
+                if (mode !== "readonly") throw new Error("readwrite cursor");
                 calls.keyCursors += 1;
                 calls.ranges.push(range || null);
                 if (direction !== "next") throw new Error("wrong cursor direction");
@@ -110,6 +137,7 @@ function createFakeIdb(options = {}) {
                 return cursorRequest;
               }
             };
+            return store;
           }
         };
         return tx;
@@ -465,5 +493,99 @@ for (const cursorKeys of [["id_01", "bad key"], ["id_01", "bad key", "id_03"]]) 
   const { api } = client({ initialized: true, cursorKeys: ["id_01"] });
   const listed = await list(api, { limit: 1, afterRecordId: null });
   check(isSafeList(listed, "listed") && Reflect.ownKeys(listed).join(",") === "status,reason,recordIds,nextAfterRecordId,hasMore,execution" && Object.isFrozen(listed.recordIds) && listed.recordIds.join(",") === "id_01", "List result was not a complete frozen snapshot");
+}
+function isSafeRemove(outcome, status, reason) {
+  return Object.isFrozen(outcome) && Object.isFrozen(outcome.execution) && outcome.status === status && outcome.reason === reason
+    && outcome.execution.wouldTransmit === false && outcome.execution.canExecute === false && outcome.execution.retryAllowed === false;
+}
+async function seededRemoveClient(options = {}) {
+  const first = client();
+  const saved = await first.api.savePreOperation(good);
+  assert.equal(saved.status, "confirmed", "Removal fixture failed to save");
+  const expected = { recordId: good.recordId, sessionJson: good.sessionJson, createdAt: first.fake.records.get(good.recordId).createdAt };
+  return { ...client({ initialized: true, records: first.fake.records, ...options }), expected };
+}
+{
+  const { api, fake, expected } = await seededRemoveClient();
+  const removed = await api.removePreOperation(expected);
+  check(isSafeRemove(removed, "confirmed", "record_removed") && fake.calls.deletes === 1 && !fake.records.has(expected.recordId)
+    && fake.calls.strict === 1 && fake.calls.modes.join(",") === "readwrite,readonly", "Remove did not use strict CAS deletion followed by readonly absence confirmation");
+}
+{
+  const { api, fake } = client({ initialized: true });
+  const absent = await api.removePreOperation({ recordId: good.recordId, sessionJson: good.sessionJson, createdAt: new Date().toISOString() });
+  check(isSafeRemove(absent, "conflict", "record_not_found") && fake.calls.deletes === 0, "Absent record issued a delete or did not report conflict");
+}
+for (const mutate of [
+  (record) => { record.recordId = "other_record"; },
+  (record) => { record.createdAt = "2026-01-01T00:00:00.000Z"; },
+  (record) => { record.exportType = "unknown_schema"; },
+  (record) => { new Uint8Array(record.sourceBytes)[0] ^= 1; },
+  (record) => { record.byteLength += 1; },
+  (record) => { new Uint8Array(record.sha256)[0] ^= 1; }
+]) {
+  const { api, fake, expected } = await seededRemoveClient();
+  mutate(fake.records.get(expected.recordId));
+  const mismatch = await api.removePreOperation(expected);
+  check(isSafeRemove(mismatch, "conflict", "record_mismatch") && fake.calls.deletes === 0 && fake.records.has(expected.recordId), "CAS mismatch deleted or did not report conflict");
+}
+for (const [input, reason] of [
+  [{ recordId: "", sessionJson: good.sessionJson, createdAt: new Date().toISOString() }, "invalid_record_id"],
+  [{ recordId: good.recordId, sessionJson: "{}", createdAt: new Date().toISOString() }, "invalid_session_schema"],
+  [{ recordId: good.recordId, sessionJson: good.sessionJson, createdAt: new Date().toUTCString() }, "invalid_created_at"],
+  [{ recordId: good.recordId, sessionJson: payload({ schema_version: "unknown_schema" }), createdAt: new Date().toISOString() }, "invalid_session_schema"],
+  [{ recordId: good.recordId, sessionJson: payload(), createdAt: "not-a-date" }, "invalid_created_at"]
+]) {
+  const { api, fake } = client({ initialized: true });
+  const rejected = await api.removePreOperation(input);
+  check(isSafeRemove(rejected, "rejected", reason) && fake.calls.opens === 0, "Remove invalid input reached IndexedDB");
+}
+{
+  const { api, fake } = client({ initialized: true, policy: () => ({ accepted: false, kind: "session" }) });
+  const rejected = await api.removePreOperation({ recordId: good.recordId, sessionJson: good.sessionJson, createdAt: new Date().toISOString() });
+  check(isSafeRemove(rejected, "rejected", "session_policy_rejected") && fake.calls.opens === 0, "Remove bypassed the read-only session policy");
+}
+{
+  const { api, fake } = client({ initialized: true, digestFailure: true });
+  const rejected = await api.removePreOperation({ recordId: good.recordId, sessionJson: good.sessionJson, createdAt: new Date().toISOString() });
+  check(isSafeRemove(rejected, "rejected", "digest_failed") && fake.calls.opens === 0, "Remove digest failure reached IndexedDB");
+}
+{
+  const { api, fake } = client({ initialized: true });
+  const accessor = { sessionJson: good.sessionJson, createdAt: new Date().toISOString() };
+  Object.defineProperty(accessor, "recordId", { enumerable: true, get: () => good.recordId });
+  const rejected = await api.removePreOperation(accessor);
+  check(isSafeRemove(rejected, "rejected", "invalid_input") && fake.calls.opens === 0, "Remove accepted a getter input");
+}
+{
+  const { api, fake, expected } = await seededRemoveClient({ delayedDigest: 15 });
+  const removing = api.removePreOperation(expected);
+  expected.recordId = "mutated_record";
+  expected.sessionJson = payload({ canExecute: true });
+  expected.createdAt = "2026-01-01T00:00:00.000Z";
+  const removed = await removing;
+  check(isSafeRemove(removed, "confirmed", "record_removed") && !fake.records.has(good.recordId), "Caller mutation changed the removal snapshot");
+}
+for (const [options, reason, remains] of [
+  [{ deleteError: true }, "storage_delete_failed", true],
+  [{ deleteAbortAfterRequestSuccess: true }, "storage_delete_failed", true],
+  [{ deleteNoEffect: true }, "record_still_present", true],
+  [{ readErrorOnRead: 2 }, "storage_read_failed", false]
+]) {
+  const { api, fake, expected } = await seededRemoveClient(options);
+  const outcome = await api.removePreOperation(expected);
+  check(isSafeRemove(outcome, "indeterminate", reason) && fake.records.has(expected.recordId) === remains, "Remove error or readback fault had an unsafe result");
+}
+{
+  const { api, fake, expected } = await seededRemoveClient({ delayedDelete: 15, timeoutDelay: 5 });
+  const timedOut = await api.removePreOperation(expected);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  check(isSafeRemove(timedOut, "indeterminate", "operation_timeout") && fake.records.has(expected.recordId) && fake.calls.deletes === 1 && fake.calls.aborts >= 1, "Late delete callback ran after timeout");
+}
+{
+  const { api, fake, expected } = await seededRemoveClient({ lateOpen: 15, timeoutDelay: 5 });
+  const timedOut = await api.removePreOperation(expected);
+  await new Promise((resolve) => setTimeout(resolve, 25));
+  check(isSafeRemove(timedOut, "indeterminate", "operation_timeout") && fake.calls.deletes === 0 && fake.records.has(expected.recordId), "Late open started deletion after timeout");
 }
 console.log(`Operation journal validation passed: ${checks} checks`);

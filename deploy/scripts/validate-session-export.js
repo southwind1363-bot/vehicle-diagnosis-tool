@@ -14,7 +14,7 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 
 function client(session = { source: "web_serial" }) {
-  const calls = { blobs: [], clicks: 0, removed: 0, revoked: [], timers: [], build: 0, listeners: new Set(), attached: 0, detached: 0 };
+  const calls = { blobs: [], clicks: 0, removed: 0, revoked: [], timers: [], build: 0, listeners: new Set(), attached: 0, detached: 0, journalLifecycle: [] };
   const options = {};
   const buttons = [{}, {}];
   const statuses = [{}, {}];
@@ -23,6 +23,8 @@ function client(session = { source: "web_serial" }) {
     obdDevSession: { lastSession: session, connectionState: "disconnected" },
     obdReadoutExitGuardAttached: false,
     renderObdReadoutVehicle: () => {},
+    clearObdOperationJournalComparison: () => { calls.journalLifecycle.push("clear"); },
+    renderObdOperationJournalViewer: () => { calls.journalLifecycle.push("render"); },
     obdBridgeOperation: null, obdScannerImportOperation: null, obdSerialConnectPending: false, obdSerialDisconnectOperation: null,
     window: {
       addEventListener: (event, handler) => { assert.equal(event, "beforeunload"); calls.attached += 1; calls.listeners.add(handler); },
@@ -278,7 +280,9 @@ for (const next of [{ source: "web_serial", sessionId: "same-id", value: 900 }, 
     check(test.statuses.every((status) => status.textContent === notice), "Routine render removed the current session's export notification");
     test.c.obdDevSession.lastSession = next;
     const before = JSON.stringify(next);
+    const lifecycleStart = test.calls.journalLifecycle.length;
     test.c.handleObdReadoutSessionReplacement();
+    check(test.calls.journalLifecycle.slice(lifecycleStart).join(",") === "clear,render", "Session replacement must clear the journal candidate before redrawing it");
     check(test.statuses.every((status) => status.textContent === "") && test.c.obdDevSession.lastSession === next && JSON.stringify(next) === before,
       "Session replacement retained stale export status or mutated the new session");
     check(test.calls.listeners.size === (next?.source === "web_serial" ? 1 : 0), "Export status cleanup changed exit protection");

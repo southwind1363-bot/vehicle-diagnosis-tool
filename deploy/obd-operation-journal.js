@@ -46,6 +46,26 @@
     }
   }
 
+  function snapshotRemoveInput(input) {
+    try {
+      if (input === null || typeof input !== "object") return { error: "invalid_input", recordId: null };
+      const prototype = Object.getPrototypeOf(input);
+      if (prototype !== null && Object.getPrototypeOf(prototype) !== null) return { error: "invalid_input", recordId: null };
+      const keys = Reflect.ownKeys(input);
+      const requiredKeys = ["recordId", "sessionJson", "createdAt"];
+      if (keys.length !== requiredKeys.length || !keys.every((key) => typeof key === "string" && requiredKeys.includes(key))) return { error: "invalid_input", recordId: null };
+      const fields = Object.fromEntries(requiredKeys.map((key) => [key, Object.getOwnPropertyDescriptor(input, key)]));
+      if (requiredKeys.some((key) => !fields[key] || !("value" in fields[key]))) return { error: "invalid_input", recordId: null };
+      const recordId = validRecordId(fields.recordId.value);
+      if (!recordId) return { error: "invalid_record_id", recordId: null };
+      if (typeof fields.sessionJson.value !== "string") return { error: "invalid_session_json", recordId };
+      if (!isValidCreatedAt(fields.createdAt.value, null)) return { error: "invalid_created_at", recordId };
+      return { recordId, sessionJson: fields.sessionJson.value, createdAt: fields.createdAt.value };
+    } catch {
+      return { error: "invalid_input", recordId: null };
+    }
+  }
+
   function validateSession(recordId, sessionJson) {
     if (sessionJson.length > MAX_BYTES || sessionJson.includes("\0")) return { error: "invalid_session_json", recordId };
     let bytes;
@@ -540,9 +560,151 @@
     });
   }
 
+  function removePreOperationRecord(input) {
+    const snapshot = snapshotRemoveInput(input);
+    if (snapshot.error) return Promise.resolve(result("rejected", snapshot.error, snapshot.recordId));
+    const validated = validateSession(snapshot.recordId, snapshot.sessionJson);
+    if (validated.error) return Promise.resolve(result("rejected", validated.error, validated.recordId));
+
+    return new Promise((resolve) => {
+      let settled = false;
+      let db = null;
+      let activeTransaction = null;
+      let timer = null;
+      const finish = (status, reason) => {
+        if (settled) return;
+        settled = true;
+        if (timer !== null) clearTimeout(timer);
+        if (activeTransaction) {
+          try { activeTransaction.abort(); } catch {}
+        }
+        if (db) {
+          try { db.close(); } catch {}
+        }
+        resolve(result(status, reason, snapshot.recordId));
+      };
+      timer = setTimeout(() => finish("indeterminate", "operation_timeout"), TIMEOUT_MS);
+
+      (async () => {
+        let digest;
+        try {
+          if (!globalThis.crypto?.subtle?.digest) return finish("rejected", "digest_unavailable");
+          digest = await globalThis.crypto.subtle.digest("SHA-256", validated.bytes);
+        } catch {
+          return finish("rejected", "digest_failed");
+        }
+        if (settled) return;
+        if (!isArrayBuffer(digest) || digest.byteLength !== 32) return finish("rejected", "digest_failed");
+
+        let openRequest;
+        try {
+          if (!globalThis.indexedDB?.open) return finish("indeterminate", "storage_unavailable");
+          openRequest = globalThis.indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+        } catch {
+          return finish("indeterminate", "storage_open_failed");
+        }
+        openRequest.onblocked = () => finish("indeterminate", "storage_blocked");
+        openRequest.onerror = () => finish("indeterminate", "storage_open_failed");
+        openRequest.onupgradeneeded = () => {
+          try { openRequest.transaction?.abort(); } catch {}
+          try { openRequest.result?.close(); } catch {}
+          finish("indeterminate", "storage_not_initialized");
+        };
+        openRequest.onsuccess = () => {
+          const opened = openRequest.result;
+          if (settled) {
+            try { opened.close(); } catch {}
+            return;
+          }
+          db = opened;
+          db.onversionchange = () => finish("indeterminate", "storage_version_changed");
+          if (!db.objectStoreNames.contains(STORE_NAME)) return finish("indeterminate", "storage_schema_invalid");
+          compareAndDelete(digest);
+        };
+
+        function startTransaction(mode, options) {
+          try {
+            activeTransaction = options === undefined ? db.transaction(STORE_NAME, mode) : db.transaction(STORE_NAME, mode, options);
+            return activeTransaction;
+          } catch {
+            finish("indeterminate", "storage_transaction_failed");
+            return null;
+          }
+        }
+
+        function compareAndDelete(expectedDigest) {
+          const tx = startTransaction("readwrite", { durability: "strict" });
+          if (!tx) return;
+          let deleteIssued = false;
+          tx.onerror = () => {};
+          tx.onabort = () => finish("indeterminate", deleteIssued ? "storage_delete_failed" : "storage_read_failed");
+          tx.oncomplete = () => {
+            if (settled) return;
+            activeTransaction = null;
+            if (!deleteIssued) return finish("indeterminate", "storage_delete_failed");
+            confirmAbsence();
+          };
+          let getRequest;
+          let store;
+          try {
+            store = tx.objectStore(STORE_NAME);
+            if (store.keyPath !== "recordId" || store.autoIncrement !== false) return finish("indeterminate", "storage_schema_invalid");
+            getRequest = store.get(snapshot.recordId);
+          } catch {
+            return finish("indeterminate", "storage_read_failed");
+          }
+          getRequest.onerror = () => finish("indeterminate", "storage_read_failed");
+          getRequest.onsuccess = () => {
+            if (settled) return;
+            if (getRequest.result === undefined) return finish("conflict", "record_not_found");
+            if (!storedRecordMatches(getRequest.result, snapshot.recordId, validated.bytes.buffer, validated.bytes.byteLength, expectedDigest, snapshot.createdAt)) {
+              return finish("conflict", "record_mismatch");
+            }
+            try {
+              deleteIssued = true;
+              const deleteRequest = store.delete(snapshot.recordId);
+              deleteRequest.onerror = () => finish("indeterminate", "storage_delete_failed");
+            } catch {
+              finish("indeterminate", "storage_delete_failed");
+            }
+          };
+        }
+
+        function confirmAbsence() {
+          const tx = startTransaction("readonly");
+          if (!tx) return;
+          let checked = false;
+          let absent = false;
+          tx.onerror = () => {};
+          tx.onabort = () => finish("indeterminate", "storage_read_failed");
+          tx.oncomplete = () => {
+            if (settled) return;
+            activeTransaction = null;
+            if (!checked) return finish("indeterminate", "storage_read_failed");
+            finish(absent ? "confirmed" : "indeterminate", absent ? "record_removed" : "record_still_present");
+          };
+          let getRequest;
+          try {
+            const store = tx.objectStore(STORE_NAME);
+            if (store.keyPath !== "recordId" || store.autoIncrement !== false) return finish("indeterminate", "storage_schema_invalid");
+            getRequest = store.get(snapshot.recordId);
+          } catch {
+            return finish("indeterminate", "storage_read_failed");
+          }
+          getRequest.onerror = () => finish("indeterminate", "storage_read_failed");
+          getRequest.onsuccess = () => {
+            checked = true;
+            absent = getRequest.result === undefined;
+          };
+        }
+      })();
+    });
+  }
+
   const savePreOperation = Object.freeze(async function savePreOperation(input) { return journalOperation("save", input); });
   const verifyPreOperation = Object.freeze(async function verifyPreOperation(input) { return journalOperation("verify", input); });
   const loadPreOperation = Object.freeze(async function loadPreOperation(input) { return loadPreOperationRecord(input); });
   const listPreOperationIdsApi = Object.freeze(async function listPreOperationIdsApi(input) { return listPreOperationIds(input); });
-  window.ObdOperationJournal = Object.freeze({ savePreOperation, verifyPreOperation, loadPreOperation, listPreOperationIds: listPreOperationIdsApi });
+  const removePreOperation = Object.freeze(async function removePreOperation(input) { return removePreOperationRecord(input); });
+  window.ObdOperationJournal = Object.freeze({ savePreOperation, verifyPreOperation, loadPreOperation, listPreOperationIds: listPreOperationIdsApi, removePreOperation });
 })();

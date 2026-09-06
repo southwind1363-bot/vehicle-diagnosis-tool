@@ -437,6 +437,27 @@ async function tamperRecord(page, recordId, mutate) {
     assert.equal(await recordCount(page), beforeBadInput, 'bad input must not create DB records');
     checks += 1;
 
+    const removeId = 'concurrent-remove';
+    assert.equal((await save(page, removeId, canonical)).status, 'confirmed');
+    const removalRecord = (await load(page, removeId)).record;
+    const removalInput = { recordId: removeId, sessionJson: removalRecord.sessionJson, createdAt: removalRecord.createdAt };
+    const countBeforeRemove = await recordCount(page);
+    const removalResults = await Promise.all([page, page2].map(tab => tab.evaluate(input => window.ObdOperationJournal.removePreOperation(input), removalInput)));
+    assert.deepEqual(removalResults.map(result => `${result.status}/${result.reason}`).sort(), ['confirmed/record_removed', 'conflict/record_not_found']);
+    removalResults.forEach(result => assertExecutionFrozen(result, 'concurrent removal'));
+    assert.equal(await recordCount(page), countBeforeRemove - 1, 'Concurrent removal must delete exactly one record');
+    assert.equal((await load(page, 'canonical-record')).record.sessionJson, canonical, 'Removal must preserve other records');
+    checks += 1;
+
+    const replacementJson = await buildCanonicalFixture(page, { diagnosticNote: 'replacement after removal' });
+    assert.notEqual(replacementJson, canonical);
+    assert.equal((await save(page, removeId, replacementJson)).status, 'confirmed');
+    const staleRemoval = await page2.evaluate(input => window.ObdOperationJournal.removePreOperation(input), removalInput);
+    assert.equal(staleRemoval.status, 'conflict');
+    assert.equal(staleRemoval.reason, 'record_mismatch');
+    assert.equal((await load(page, removeId)).record.sessionJson, replacementJson, 'Stale confirmation must preserve replacement content');
+    checks += 1;
+
     await page.close();
     await page2.close();
     page = await openPage(context, errors);
