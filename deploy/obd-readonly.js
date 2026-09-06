@@ -1518,6 +1518,25 @@
     throw createDtcClearWorkflowError("invalid_dtc_clear_workflow_event");
   }
 
+  function createGenericObdDtcClearController(input = {}) {
+    let current = buildGenericObdDtcClearWorkflow(input);
+    let transitioning = false;
+    const getSnapshot = () => current;
+    const transition = (expectedSnapshot, event) => {
+      if (expectedSnapshot !== current) throw createDtcClearWorkflowError("stale_dtc_clear_workflow_snapshot");
+      if (transitioning) throw createDtcClearWorkflowError("reentrant_dtc_clear_workflow_transition");
+      transitioning = true;
+      try {
+        const next = transitionGenericObdDtcClearWorkflow(current, event);
+        current = next;
+        return next;
+      } finally {
+        transitioning = false;
+      }
+    };
+    return Object.freeze({ getSnapshot, transition });
+  }
+
   function buildServiceOperationReadinessPlan(evidenceByOperation = {}) {
     const operationReadiness = vehicleOperationPlan
       .filter((operation) => operation.commandClass === "state-changing")
@@ -44556,6 +44575,7 @@
     buildServiceOperationReadiness,
     buildGenericObdDtcClearWorkflow,
     transitionGenericObdDtcClearWorkflow,
+    createGenericObdDtcClearController,
     getMobileReadoutTransportPlan,
     evaluateMobileReadoutTransport,
     getInterfaceReadoutRoutePlan,

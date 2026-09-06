@@ -77,4 +77,12 @@ transport/protocolの適合表、実要求・応答の判定、実車試験、�
 
 ## 後続の開放条件
 
+### メモリ内の現在状態管理
+
+3.13.497: `createGenericObdDtcClearController(input)` は `getSnapshot()` と `transition(expectedSnapshot, event)` を持つ凍結オブジェクトを返す。最新参照でない場合は `stale_dtc_clear_workflow_snapshot`、同期処理中の再入は `reentrant_dtc_clear_workflow_transition` として拒否する。それ以外の入力と遷移の検証は既存の純粋APIへ委譲する。成功時だけ現在参照を置き換え、例外時も処理中フラグを解除する。
+
+純粋APIは古いスナップショットを独立して扱えるため、利用側へ接続する前に現在状態を一か所で保持する層を置く。状態変更は現在のスナップショット参照を要求し、JSON複製、別管理インスタンスの参照、以前の参照は拒否する。確認・取消がrevisionを増やさない場合も、参照は更新されるため古い要求を見分けられる。
+
+この管理範囲は一つのJavaScript実行環境のメモリ内だけであり、認証、別タブの排他、再起動後の復元、車両送信の許可を提供しない。失敗時は現在状態を維持し、検証中の再入を拒否する。実行・保存・UIへ接続する際は別途設計する。
+
 実dispatchはこの単位に続けて追加しない。対象transportの allowlist/専用dispatcher、要求と応答の根拠、適合、precondition、監査保存形式、異常時復旧、独立レビュー、対象実車での試験が個別に揃った後、別レビューで `dispatching` への入口を設計する。公開UIの有効化はさらに別判断とする。

@@ -145,4 +145,41 @@ error(() => api.transitionGenericObdDtcClearWorkflow({ ...cancelled, dispatch: {
 const nearLimitCancelled = api.transitionGenericObdDtcClearWorkflow(nearLimit, { type: "cancel", revision: Number.MAX_SAFE_INTEGER - 1 });
 check(nearLimitCancelled.state === "cancelled" && nearLimitCancelled.revision === Number.MAX_SAFE_INTEGER - 1, "Cancellation did not retain the maximum valid revision");
 error(() => api.transitionGenericObdDtcClearWorkflow(nearLimitCancelled, { type: "cancel", revision: Number.MAX_SAFE_INTEGER - 1 }), "invalid_dtc_clear_workflow_transition");
+const controller = api.createGenericObdDtcClearController({ target, preOperationSessionId: session, evidence });
+const controllerReady = controller.getSnapshot();
+check(Object.isFrozen(controller) && Object.isFrozen(controllerReady), "DTC clear controller or initial snapshot is mutable");
+safe(controllerReady, "Controller initial snapshot changed safety flags");
+const controllerConfirmed = controller.transition(controllerReady, { type: "record_confirmation", revision: 0, target, preOperationSessionId: session, impactAcknowledged: true });
+check(controller.getSnapshot() === controllerConfirmed && Object.isFrozen(controllerConfirmed), "Controller did not retain its confirmed snapshot");
+safe(controllerConfirmed, "Controller confirmation changed safety flags");
+error(() => controller.transition(controllerReady, { type: "cancel", revision: 0 }), "stale_dtc_clear_workflow_snapshot");
+check(controller.getSnapshot() === controllerConfirmed, "Stale pre-confirmation snapshot changed controller state");
+const controllerCancelled = controller.transition(controllerConfirmed, { type: "cancel", revision: 0 });
+check(controller.getSnapshot() === controllerCancelled && controllerCancelled.state === "cancelled" && Object.isFrozen(controllerCancelled), "Controller cancellation did not retain a frozen terminal snapshot");
+safe(controllerCancelled, "Controller cancellation changed safety flags");
+error(() => controller.transition(controllerConfirmed, { type: "cancel", revision: 0 }), "stale_dtc_clear_workflow_snapshot");
+error(() => controller.transition(controllerCancelled, { type: "cancel", revision: 0 }), "invalid_dtc_clear_workflow_transition");
+check(controller.getSnapshot() === controllerCancelled, "Terminal controller transition changed its snapshot");
+const invalidController = api.createGenericObdDtcClearController({ target, preOperationSessionId: session, evidence });
+const invalidControllerSnapshot = invalidController.getSnapshot();
+error(() => invalidController.transition(invalidControllerSnapshot, { type: "unknown", revision: 0 }), "invalid_dtc_clear_workflow_event");
+check(invalidController.getSnapshot() === invalidControllerSnapshot, "Invalid controller event changed its snapshot");
+error(() => invalidController.transition(JSON.parse(JSON.stringify(invalidControllerSnapshot)), { type: "cancel", revision: 0 }), "stale_dtc_clear_workflow_snapshot");
+const otherController = api.createGenericObdDtcClearController({ target, preOperationSessionId: session, evidence });
+error(() => invalidController.transition(otherController.getSnapshot(), { type: "cancel", revision: 0 }), "stale_dtc_clear_workflow_snapshot");
+let staleEventGetterRead = false;
+const staleEvent = { get type() { staleEventGetterRead = true; throw new Error("stale event getter read"); }, revision: 0 };
+error(() => invalidController.transition(JSON.parse(JSON.stringify(invalidControllerSnapshot)), staleEvent), "stale_dtc_clear_workflow_snapshot");
+check(staleEventGetterRead === false, "Stale controller event getter was read");
+const reentrantController = api.createGenericObdDtcClearController({ target, preOperationSessionId: session, evidence });
+const reentrantSnapshot = reentrantController.getSnapshot();
+const reentrantEvent = {
+  get type() { return reentrantController.transition(reentrantController.getSnapshot(), { type: "cancel", revision: 0 }); },
+  revision: 0
+};
+error(() => reentrantController.transition(reentrantSnapshot, reentrantEvent), "reentrant_dtc_clear_workflow_transition");
+check(reentrantController.getSnapshot() === reentrantSnapshot, "Reentrant controller event changed its snapshot");
+const reentrantCancelled = reentrantController.transition(reentrantSnapshot, { type: "cancel", revision: 0 });
+check(reentrantController.getSnapshot() === reentrantCancelled && reentrantCancelled.state === "cancelled", "Reentrancy guard did not reset for a valid cancellation");
+safe(reentrantCancelled, "Reentrancy recovery changed safety flags");
 console.log(`DTC clear workflow checks: ${checks} / Errors: 0`);
