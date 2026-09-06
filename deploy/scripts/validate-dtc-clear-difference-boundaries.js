@@ -142,4 +142,39 @@ for (const side of ["beforeReadout", "postReadout"]) {
     + frames("7E8", [0x41, 1, 0, 7, 0xE1, 0]) + ">";
   check(createDtcClearDtcEvidencePairFixture(value).handle === null, "Conflicting readiness yielded indicators");
 }
+for (let byteB = 0; byteB < 256; byteB += 1) {
+  const value = fixture();
+  value.beforeReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 0x80, byteB, 0xFF, 0xFF]) + ">";
+  value.postReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 0, 255 - byteB, 0, 0]) + ">";
+  const handle = createDtcClearDtcEvidencePairFixture(value).handle;
+  const summary = handle.inspectBaseMonitorReports(value.context).summary;
+  for (const [reports, b] of [[summary.beforeReports, byteB], [summary.postReports, 255 - byteB]]) {
+    const bits = b.toString(2).padStart(8, "0").split("").reverse();
+    assert.deepEqual(reports, [{ sourceId: "7E8", ignitionTypeReported: bits[3] === "1" ? "compression" : "spark",
+      reservedBitSet: bits[7] === "1", monitors: ["misfire", "fuel_system", "comprehensive_components"].map((monitorId, index) => ({
+        monitorId, supportedReported: bits[index] === "1", incompleteReported: bits[index + 4] === "1",
+        state: bits[7] === "1" ? "indeterminate" : ["not_supported", "complete", "indeterminate", "incomplete"][Number(bits[index]) + 2 * Number(bits[index + 4])]
+      })) }]); checks += 1;
+  }
+  check(summary.fixtureBaseMonitorReportsAvailable && ["noncontinuousMonitorsInterpreted", "readinessEvidenceAvailable", "comparisonAvailable",
+    "clearSucceededInferred", "sameVehicleVerified", "readoutCoverageComplete", "clearBoundaryVerified", "realTransportProofAvailable",
+    "executionEnabled", "vehicleCommandEnabled", "wouldTransmit", "canExecute"].every((key) => summary[key] === false), "Base monitors became whole readiness or operation proof");
+  handle.dispose();
+}
+const baseInput = fixture(["7E8", "7E9"]);
+baseInput.beforeReadout.receipts[3].transcript = frames("7E9", [0x41, 1, 0, 0x77, 0, 0])
+  + frames("7E8", [0x41, 1, 0, 7, 0, 0]) + frames("7E8", [0x41, 1, 0, 7, 0, 0]) + ">";
+const baseHandle = createDtcClearDtcEvidencePairFixture(baseInput).handle;
+const baseSummary = baseHandle.inspectBaseMonitorReports(baseInput.context).summary;
+check(baseSummary.beforeReports.length === 2 && baseSummary.beforeReports[0].sourceId === "7E8"
+  && baseSummary.beforeReports[0].monitors.every((row) => row.state === "complete")
+  && baseSummary.beforeReports[1].monitors.every((row) => row.state === "incomplete"), "ECU monitor reports merged or duplicate retained");
+check(Object.isFrozen(baseSummary.beforeReports[0].monitors[0]) && !/payload|transcript|Token/.test(JSON.stringify(baseSummary)), "Base monitors leaked mutable/raw data");
+baseInput.beforeReadout.receipts[3].transcript = "NO DATA\r>";
+check(JSON.stringify(baseHandle.inspectBaseMonitorReports(baseInput.context).summary) === JSON.stringify(baseSummary), "Base monitor extraction reread input");
+for (const key of ["scopeToken", "connectionToken", "targetToken"]) check(baseHandle.inspectBaseMonitorReports({ ...baseInput.context, [key]: {} }).summary === null, "Foreign context acquired base monitors");
+baseHandle.dispose(); check(baseHandle.inspectBaseMonitorReports(baseInput.context).summary === null, "Disposed base monitors retained");
+const invalidBase = fixture(), invalidBaseHandle = createDtcClearDtcEvidencePairFixture(invalidBase).handle;
+invalidBase.scope.invalidate(invalidBase.context);
+check(invalidBaseHandle.inspectBaseMonitorReports(invalidBase.context).summary === null, "Invalidated base monitors retained");
 console.log(`DTC clear difference boundary checks: ${checks} / Errors: 0`);

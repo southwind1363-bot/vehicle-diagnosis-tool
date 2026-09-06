@@ -194,6 +194,14 @@ function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
       return freeze({ ok: true, reason: null, summary: { ...boundary,
         beforeIndicators: retained.beforeIndicators, postIndicators: retained.postIndicators,
         fixtureReadinessIndicatorsAvailable: true, monitorEvidenceAvailable: false, readinessEvidenceAvailable: false } });
+    }, inspectBaseMonitorReports(context) {
+      const current = inspectDtcClearReadoutFixtureScope(scope, context);
+      if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
+      if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
+      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_base_monitor_reports", null);
+      return freeze({ ok: true, reason: null, summary: { ...boundary,
+        beforeReports: retained.beforeBaseMonitors, postReports: retained.postBaseMonitors,
+        fixtureBaseMonitorReportsAvailable: true, noncontinuousMonitorsInterpreted: false, readinessEvidenceAvailable: false } });
     } } : {})
   });
 }
@@ -285,7 +293,8 @@ export function createDtcClearDtcEvidencePairFixture(input) {
   const evaluated = evaluateDtcClearReadoutSequenceFixture({ ...value, context, beforeReadout, postReadout });
   if (!evaluated.fixtureSequenceMatched) return freeze({ ok: false, reason: evaluated.reason || "fixture_sequence_incomplete", handle: null });
   const evidence = { before: extractValidatedDtcRows(beforeReadout), post: extractValidatedDtcRows(postReadout),
-    beforeIndicators: extractValidatedReadinessIndicators(beforeReadout), postIndicators: extractValidatedReadinessIndicators(postReadout) };
+    beforeIndicators: extractValidatedReadinessIndicators(beforeReadout), postIndicators: extractValidatedReadinessIndicators(postReadout),
+    beforeBaseMonitors: extractValidatedBaseMonitors(beforeReadout), postBaseMonitors: extractValidatedBaseMonitors(postReadout) };
   const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
   if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
   return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(value.scope, evidence, true) });
@@ -302,6 +311,28 @@ function extractValidatedReadinessIndicators(readout) {
     // python-OBD status decoder: A7 is MIL, A6..A0 is reported DTC count.
     sources.set(frame.sourceId, { sourceId: frame.sourceId, milCommandedOn: (frame.payload[2] & 0x80) !== 0,
       reportedDtcCount: frame.payload[2] & 0x7F });
+  }
+  return [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
+}
+
+function extractValidatedBaseMonitors(readout) {
+  const receipt = readout.receipts[3];
+  const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
+    command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
+  const sources = new Map();
+  for (const frame of parsed.frames) {
+    if (sources.has(frame.sourceId)) continue;
+    const b = frame.payload[3], reservedBitSet = (b & 0x80) !== 0;
+    // PID 01 B0..2 support and B4..6 incomplete. Unsupported never means complete.
+    const monitors = ["misfire", "fuel_system", "comprehensive_components"].map((monitorId, index) => {
+      const supportedReported = (b & (1 << index)) !== 0;
+      const incompleteReported = (b & (1 << (index + 4))) !== 0;
+      const state = reservedBitSet || (!supportedReported && incompleteReported) ? "indeterminate"
+        : !supportedReported ? "not_supported" : incompleteReported ? "incomplete" : "complete";
+      return { monitorId, supportedReported, incompleteReported, state };
+    });
+    sources.set(frame.sourceId, { sourceId: frame.sourceId, ignitionTypeReported: (b & 8) ? "compression" : "spark",
+      reservedBitSet, monitors });
   }
   return [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
 }

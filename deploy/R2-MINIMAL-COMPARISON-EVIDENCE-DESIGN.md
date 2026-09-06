@@ -1,5 +1,15 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 2026-09-07 / 3.13.519後続: 基本3monitorの模擬状態
+
+Node専用pair handleに `inspectBaseMonitorReports(context)` を追加。固定コピーの0101 B byteからECU別にmisfire/fuel_system/comprehensive_componentsのsupportedReported/incompleteReportedとstateを抽出する。stateはcomplete/incomplete/not_supported/indeterminateの4種類。単独handleや通常APIには公開しない。C/D byteの非連続monitorは未解釈で、readiness全体の完了を返さない。
+
+bit対応は [python-OBD公式status decoder](https://github.com/brendan-w/python-OBD/blob/master/obd/decoders.py)（2026-09-07確認）のB0..2 supported、B4..6 not ready、B3 ignition。ignitionTypeReportedはspark/compressionの報告値に限り、実車適合の確認ではない。B7をreservedBitSetとして示す。未対応かつ未完了bitが立つ場合、またはB7が立つ場合は保守的なローカル方針でindeterminateとし、completeへ補正しない。これは公式decoderの符号化とは区別した、本試験用の判定方針。
+
+前後の派生reportだけを保持し、raw/token/B/C/D byteは保持しない。取得時にscope/contextとdisposeを確認し、全体の比較可能性・成功・実車同一性・網羅性・実行/送信flagはfalse。monitorのcompleteは当該模擬報告の状態であり、故障なし・修理完了・消去成功を意味しない。fixtureBaseMonitorReportsAvailableだけをtrueにし、noncontinuousMonitorsInterpreted/readinessEvidenceAvailableはfalse。
+
+追加776件でB全256値を前後で検査、複数ECU・同一応答重複・入力変更・凍結・失効・context不一致・disposeを確認。境界検証2643件、関連合計4018件がErrors 0。アプリ3.13.519・保存・実車送信は変更せず、OBD主検証・bridge・offline・実車試験は今回再実行しない。次は非連続monitorの適用区分を確認する段階であり、readiness全体を対応済みとは扱わない。
+
 ## 2026-09-07 / 3.13.519後続: MIL指示・報告DTC件数の模擬抽出
 
 Node専用pair handleへ `inspectReadinessIndicators(context)` を追加。sequence検証済みの同じ固定receipt（0101）からsource別のmilCommandedOn/reportedDtcCountを生成時に抽出し、前後を保持する。summaryはbeforeIndicators/postIndicatorsとして取得する。単独handleには追加しない。以前の「readiness値は保持しない」は履歴であり、今回保持するのはこの二つの派生値だけ。raw・token・monitor用のB/C/D byteは保持しない。
