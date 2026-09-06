@@ -1408,6 +1408,19 @@
     return Object.freeze(value);
   }
 
+  function copyGenericObdDtcClearResponseFrame(value) {
+    const frame = copyGenericObdDtcClearResponseRecord(value, ["sourceId", "payload"], "invalid_generic_obd_dtc_clear_response_frame");
+    const sourceId = frame.sourceId;
+    const payload = copyGenericObdDtcClearResponseDenseArray(frame.payload, 64, "invalid_generic_obd_dtc_clear_response_payload");
+    assertGenericObdDtcClearResponseSourceId(sourceId, "invalid_generic_obd_dtc_clear_response_source_id");
+    if (payload.length < 1) throw new RangeError("invalid_generic_obd_dtc_clear_response_payload");
+    for (const byte of payload) {
+      if (!Number.isInteger(byte)) throw new TypeError("invalid_generic_obd_dtc_clear_response_byte");
+      if (byte < 0 || byte > 255) throw new RangeError("invalid_generic_obd_dtc_clear_response_byte");
+    }
+    return { sourceId, payload };
+  }
+
   function evaluateGenericObdDtcClearResponses(input) {
     const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["expectedSourceIds", "frames", "completion"], "invalid_generic_obd_dtc_clear_response_input");
     const expectedSourceIdInput = copyGenericObdDtcClearResponseDenseArray(inputSnapshot.expectedSourceIds, 32, "invalid_generic_obd_dtc_clear_response_expected_sources");
@@ -1425,15 +1438,7 @@
     const unexpectedObservations = new Map();
 
     for (const frameInputItem of frameInput) {
-      const frame = copyGenericObdDtcClearResponseRecord(frameInputItem, ["sourceId", "payload"], "invalid_generic_obd_dtc_clear_response_frame");
-      const sourceId = frame.sourceId;
-      const payload = copyGenericObdDtcClearResponseDenseArray(frame.payload, 64, "invalid_generic_obd_dtc_clear_response_payload");
-      assertGenericObdDtcClearResponseSourceId(sourceId, "invalid_generic_obd_dtc_clear_response_source_id");
-      if (payload.length < 1) throw new RangeError("invalid_generic_obd_dtc_clear_response_payload");
-      for (const byte of payload) {
-        if (!Number.isInteger(byte)) throw new TypeError("invalid_generic_obd_dtc_clear_response_byte");
-        if (byte < 0 || byte > 255) throw new RangeError("invalid_generic_obd_dtc_clear_response_byte");
-      }
+      const { sourceId, payload } = copyGenericObdDtcClearResponseFrame(frameInputItem);
       const observation = observations.get(sourceId) || unexpectedObservations.get(sourceId)
         || { sourceId, frameCount: 0, affirmativeFrameCount: 0, unrecognizedFrameCount: 0 };
       if (!expectedSourceIdSet.has(sourceId) && !unexpectedObservations.has(sourceId)) unexpectedObservations.set(sourceId, observation);
@@ -1467,6 +1472,87 @@
       responseEvaluationComplete: allExpectedSourcesAffirmativeObserved,
       execution: { wouldTransmit: false, canExecute: false, retryAllowed: false }
     });
+  }
+
+  function createGenericObdDtcClearReceiveWindow(input) {
+    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["expectedSourceIds", "connectionToken"], "invalid_generic_obd_dtc_clear_receive_window_input");
+    if (inputSnapshot.connectionToken === null || typeof inputSnapshot.connectionToken !== "object") throw new TypeError("invalid_generic_obd_dtc_clear_receive_window_connection_token");
+    const expectedEvaluation = evaluateGenericObdDtcClearResponses({ expectedSourceIds: inputSnapshot.expectedSourceIds, frames: [], completion: "complete" });
+    const expectedSourceIds = expectedEvaluation.expectedSources.map((item) => item.sourceId);
+    const connectionToken = inputSnapshot.connectionToken;
+    const attemptToken = Object.freeze({});
+    const frames = [];
+    let state = "collecting";
+    let receiptError = null;
+    let completion = null;
+    let evaluation = null;
+    let busy = false;
+
+    const reject = (reason) => Object.freeze({ ok: false, reason });
+    const getSnapshot = () => freezeGenericObdDtcClearResponse({
+      schemaVersion: 1,
+      state,
+      attemptToken,
+      frameCount: frames.length,
+      frameCapacity: 128,
+      receiptIntegrity: receiptError === null ? "valid" : "poisoned",
+      receiptError,
+      completion,
+      resultStatus: state === "collecting" ? "collecting" : (evaluation?.responseEvaluationComplete === true ? "evaluated" : "result_unknown"),
+      evaluation,
+      execution: { wouldTransmit: false, canExecute: false, retryAllowed: false }
+    });
+    const succeed = () => Object.freeze({ ok: true, snapshot: getSnapshot() });
+    const rejectScope = (suppliedAttemptToken, suppliedConnectionToken) => {
+      if (suppliedAttemptToken !== attemptToken) return reject("stale_attempt");
+      if (suppliedConnectionToken !== connectionToken) return reject("stale_connection");
+      if (state === "terminal") return reject("already_terminal");
+      return null;
+    };
+
+    const append = (suppliedAttemptToken, suppliedConnectionToken, frame) => {
+      const scopeRejection = rejectScope(suppliedAttemptToken, suppliedConnectionToken);
+      if (scopeRejection) return scopeRejection;
+      if (busy) return reject("operation_in_progress");
+      busy = true;
+      try {
+        if (receiptError !== null) return reject("receipt_poisoned");
+        if (frames.length >= 128) {
+          receiptError = "frame_overflow";
+          return reject("frame_overflow");
+        }
+        try {
+          frames.push(copyGenericObdDtcClearResponseFrame(frame));
+        } catch {
+          receiptError = "invalid_frame";
+          return reject("invalid_frame");
+        }
+        return succeed();
+      } finally {
+        busy = false;
+      }
+    };
+
+    const finish = (suppliedAttemptToken, suppliedConnectionToken, requestedCompletion) => {
+      const scopeRejection = rejectScope(suppliedAttemptToken, suppliedConnectionToken);
+      if (scopeRejection) return scopeRejection;
+      if (busy) return reject("operation_in_progress");
+      busy = true;
+      try {
+        if (!["complete", "timeout", "disconnected", "error"].includes(requestedCompletion)) throw new TypeError("invalid_generic_obd_dtc_clear_response_completion");
+        const terminalCompletion = receiptError === null ? requestedCompletion : "error";
+        const terminalEvaluation = evaluateGenericObdDtcClearResponses({ expectedSourceIds, frames, completion: terminalCompletion });
+        completion = terminalCompletion;
+        evaluation = terminalEvaluation;
+        state = "terminal";
+        return succeed();
+      } finally {
+        busy = false;
+      }
+    };
+
+    const invalidate = (suppliedAttemptToken, suppliedConnectionToken) => finish(suppliedAttemptToken, suppliedConnectionToken, "disconnected");
+    return Object.freeze({ attemptToken, append, finish, invalidate, getSnapshot });
   }
 
   function normalizeDtcClearWorkflowTarget(value) {
@@ -44689,6 +44775,7 @@
     buildServiceOperationReadiness,
     buildGenericObdDtcClearWorkflow,
     evaluateGenericObdDtcClearResponses,
+    createGenericObdDtcClearReceiveWindow,
     transitionGenericObdDtcClearWorkflow,
     createGenericObdDtcClearController,
     getMobileReadoutTransportPlan,
