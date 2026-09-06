@@ -11,6 +11,7 @@ import "./validate-dtc-clear-receive-window.js";
 import "./validate-elm-mode04-transcript.js";
 import "./validate-elm-readonly-transcript.js";
 import "./validate-dtc-clear-post-readout-receipts.js";
+import "./validate-dtc-clear-before-readout-receipts.js";
 import "./validate-mode06-normalization.js";
 import "./validate-supported-pid-roundtrip.js";
 import "./validate-ecu-response-timing.js";

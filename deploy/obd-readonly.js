@@ -1841,44 +1841,24 @@
     return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value;
   }
 
-  function evaluateGenericObdDtcClearPostReadoutReceipts(input) {
-    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["clearWindowSnapshot", "clearCompletedAt", "postReadout"], "invalid_generic_obd_dtc_clear_post_readout_input");
-    const clearSnapshot = copyGenericObdDtcClearResponseRecord(inputSnapshot.clearWindowSnapshot,
-      ["schemaVersion", "state", "attemptToken", "frameCount", "frameCapacity", "receiptIntegrity", "receiptError", "completion", "resultStatus", "evaluation", "execution"],
-      "invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
-    const postReadout = copyGenericObdDtcClearResponseRecord(inputSnapshot.postReadout,
-      ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"],
-      "invalid_generic_obd_dtc_clear_post_readout_attempt");
-    const clearExecution = copyGenericObdDtcClearResponseRecord(clearSnapshot.execution,
-      ["wouldTransmit", "canExecute", "retryAllowed"], "invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
-    if (clearSnapshot.schemaVersion !== 1 || !["collecting", "terminal"].includes(clearSnapshot.state)
-      || clearSnapshot.attemptToken === null || typeof clearSnapshot.attemptToken !== "object"
-      || clearExecution.wouldTransmit !== false || clearExecution.canExecute !== false || clearExecution.retryAllowed !== false) {
-      throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
-    }
-    if (postReadout.provenance !== "simulated") throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_provenance");
-    if (postReadout.attemptToken === null || typeof postReadout.attemptToken !== "object"
-      || postReadout.connectionToken === null || typeof postReadout.connectionToken !== "object") {
-      throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_scope_token");
-    }
-    const timestamps = [inputSnapshot.clearCompletedAt, postReadout.startedAt, postReadout.completedAt];
-    if (!timestamps.every(isCanonicalGenericObdDtcClearPostReadoutTimestamp)) throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_timestamp");
-    const receiptInput = copyGenericObdDtcClearResponseDenseArray(postReadout.receipts, 4, "invalid_generic_obd_dtc_clear_post_readout_receipts");
-    if (receiptInput.length !== 4) throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_receipts");
+  // Shared pure validation; callers retain their own attempt and operation boundaries.
+  function parseGenericObdDtcClearReadoutReceipts(receiptValues, errorPrefix) {
+    const receiptInput = copyGenericObdDtcClearResponseDenseArray(receiptValues, 4, `${errorPrefix}_receipts`);
+    if (receiptInput.length !== 4) throw new TypeError(`${errorPrefix}_receipts`);
 
-    const receipts = receiptInput.map((value, index) => {
+    return receiptInput.map((value, index) => {
       const receipt = copyGenericObdDtcClearResponseRecord(value,
         ["ordinal", "intent", "command", "profile", "startedAt", "completedAt", "completion", "transcript"],
-        "invalid_generic_obd_dtc_clear_post_readout_receipt");
+        `${errorPrefix}_receipt`);
       const expected = GENERIC_OBD_DTC_CLEAR_POST_READOUT_INTENTS[index];
       if (receipt.ordinal !== expected.ordinal || receipt.intent !== expected.intent || receipt.command !== expected.command
         || receipt.profile !== GENERIC_OBD_DTC_CLEAR_POST_READOUT_PROFILE
         || !["complete", "timeout", "disconnected", "error"].includes(receipt.completion)) {
-        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_receipt");
+        throw new TypeError(`${errorPrefix}_receipt`);
       }
       if (!isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.startedAt)
         || !isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.completedAt)) {
-        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_timestamp");
+        throw new TypeError(`${errorPrefix}_timestamp`);
       }
       return {
         ...receipt,
@@ -1891,46 +1871,10 @@
         })
       };
     });
+  }
 
-    let clearResponseExpectedSourceIds = [];
-    const clearTerminal = clearSnapshot.state === "terminal" && clearSnapshot.evaluation !== null;
-    let clearEvaluationComplete = false;
-    let clearSnapshotEvaluationMismatch = false;
-    if (clearSnapshot.evaluation !== null) {
-      const evaluation = copyGenericObdDtcClearResponseRecord(clearSnapshot.evaluation,
-        ["schemaVersion", "completion", "expectedSources", "unexpectedSources", "counts", "allExpectedSourcesAffirmativeObserved", "responseEvaluationComplete", "postOperationReadOnlyFollowupPlan", "execution"],
-        "invalid_generic_obd_dtc_clear_post_readout_clear_evaluation");
-      const expectedSources = copyGenericObdDtcClearResponseDenseArray(evaluation.expectedSources, 32, "invalid_generic_obd_dtc_clear_post_readout_clear_expected_sources");
-      if (evaluation.postOperationReadOnlyFollowupPlan !== GENERIC_OBD_DTC_CLEAR_POST_OPERATION_READ_ONLY_FOLLOWUP_PLAN) {
-        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_evaluation");
-      }
-      clearSnapshotEvaluationMismatch = clearSnapshot.completion !== evaluation.completion;
-      clearEvaluationComplete = clearSnapshot.state === "terminal" && clearSnapshot.completion === "complete"
-        && evaluation.completion === "complete" && evaluation.responseEvaluationComplete === true;
-      clearResponseExpectedSourceIds = expectedSources.map((value) => {
-        const row = copyGenericObdDtcClearResponseRecord(value,
-          ["sourceId", "frameCount", "affirmativeFrameCount", "unrecognizedFrameCount", "observation"],
-          "invalid_generic_obd_dtc_clear_post_readout_clear_expected_source");
-        assertGenericObdDtcClearResponseSourceId(row.sourceId, "invalid_generic_obd_dtc_clear_post_readout_clear_expected_source");
-        return row.sourceId;
-      });
-      if (new Set(clearResponseExpectedSourceIds).size !== clearResponseExpectedSourceIds.length) {
-        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_expected_sources");
-      }
-    }
-
-    const orderedTimes = [inputSnapshot.clearCompletedAt, postReadout.startedAt,
-      ...receipts.flatMap((receipt) => [receipt.startedAt, receipt.completedAt]), postReadout.completedAt].map(Date.parse);
-    const orderingValid = orderedTimes.every((value, index) => index === 0 || value >= orderedTimes[index - 1]);
-    const attemptDistinct = postReadout.attemptToken !== clearSnapshot.attemptToken;
-    const rootBlockers = [...GENERIC_OBD_DTC_CLEAR_POST_READOUT_BLOCKERS];
-    if (!clearTerminal) rootBlockers.push("clear_window_not_terminal");
-    if (clearSnapshotEvaluationMismatch) rootBlockers.push("clear_snapshot_evaluation_mismatch");
-    if ((clearTerminal && !clearEvaluationComplete) || clearSnapshotEvaluationMismatch) rootBlockers.push("clear_evaluation_incomplete");
-    if (!orderingValid) rootBlockers.push("post_readout_order_invalid");
-    if (!attemptDistinct) rootBlockers.push("post_attempt_not_distinct");
-
-    const readouts = receipts.map((receipt) => {
+  function observeGenericObdDtcClearReadoutReceipts(receipts) {
+    return receipts.map((receipt) => {
       const parsed = receipt.parsed;
       const positiveFrames = parsed.frames.filter((frame) => frame.responseKind === "matching_positive_service");
       const observedSourceIds = [];
@@ -2023,6 +1967,125 @@
         blockerIds
       };
     });
+  }
+
+
+  // Before-readout observation only: no clear event or expected ECU scope is inferred.
+  function evaluateGenericObdDtcClearBeforeReadoutReceipts(input) {
+    const errorPrefix = "invalid_generic_obd_dtc_clear_before_readout";
+    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["beforeReadout"], `${errorPrefix}_input`);
+    const beforeReadout = copyGenericObdDtcClearResponseRecord(inputSnapshot.beforeReadout,
+      ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"], `${errorPrefix}_attempt`);
+    if (beforeReadout.provenance !== "simulated") throw new TypeError(`${errorPrefix}_provenance`);
+    if (beforeReadout.attemptToken === null || typeof beforeReadout.attemptToken !== "object"
+      || beforeReadout.connectionToken === null || typeof beforeReadout.connectionToken !== "object") {
+      throw new TypeError(`${errorPrefix}_scope_token`);
+    }
+    if (![beforeReadout.startedAt, beforeReadout.completedAt].every(isCanonicalGenericObdDtcClearPostReadoutTimestamp)) {
+      throw new TypeError(`${errorPrefix}_timestamp`);
+    }
+    const receipts = parseGenericObdDtcClearReadoutReceipts(beforeReadout.receipts, errorPrefix);
+    const orderedTimes = [beforeReadout.startedAt,
+      ...receipts.flatMap((receipt) => [receipt.startedAt, receipt.completedAt]), beforeReadout.completedAt].map(Date.parse);
+    const orderingValid = orderedTimes.every((value, index) => index === 0 || value >= orderedTimes[index - 1]);
+    const blockerIds = [...GENERIC_OBD_DTC_CLEAR_POST_READOUT_BLOCKERS, "before_clear_boundary_unverified"];
+    if (!orderingValid) blockerIds.push("before_readout_order_invalid");
+    return freezeGenericObdDtcClearResponse({
+      schemaVersion: "generic_obd_dtc_clear_before_readout_receipts_v1",
+      state: orderingValid ? "indeterminate" : "rejected",
+      provenance: {
+        status: "simulated_only",
+        operationBound: false,
+        sameConnectionReferenceObserved: false,
+        sameVehicleVerified: false,
+        realTransportProofAvailable: false,
+        expectedSourceScopeStatus: "unavailable",
+        clearBoundaryVerified: false,
+        blockerIds
+      },
+      ordering: {
+        status: orderingValid ? "ordered_within_attempt" : "invalid",
+        beforeReadoutStartedAt: beforeReadout.startedAt,
+        beforeReadoutCompletedAt: beforeReadout.completedAt
+      },
+      readouts: observeGenericObdDtcClearReadoutReceipts(receipts),
+      receiptStructureComplete: receipts.every((receipt) => receipt.parsed.errors.length === 0),
+      readoutCoverageComplete: false,
+      comparisonAvailable: false,
+      operationOutcomeInferred: false,
+      clearSucceededInferred: false,
+      repairCompleteInferenceAllowed: false,
+      technicianReviewRequired: true,
+      executionEnabled: false,
+      vehicleCommandEnabled: false,
+      wouldTransmit: false,
+      canExecute: false
+    });
+  }
+
+  function evaluateGenericObdDtcClearPostReadoutReceipts(input) {
+    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["clearWindowSnapshot", "clearCompletedAt", "postReadout"], "invalid_generic_obd_dtc_clear_post_readout_input");
+    const clearSnapshot = copyGenericObdDtcClearResponseRecord(inputSnapshot.clearWindowSnapshot,
+      ["schemaVersion", "state", "attemptToken", "frameCount", "frameCapacity", "receiptIntegrity", "receiptError", "completion", "resultStatus", "evaluation", "execution"],
+      "invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
+    const postReadout = copyGenericObdDtcClearResponseRecord(inputSnapshot.postReadout,
+      ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"],
+      "invalid_generic_obd_dtc_clear_post_readout_attempt");
+    const clearExecution = copyGenericObdDtcClearResponseRecord(clearSnapshot.execution,
+      ["wouldTransmit", "canExecute", "retryAllowed"], "invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
+    if (clearSnapshot.schemaVersion !== 1 || !["collecting", "terminal"].includes(clearSnapshot.state)
+      || clearSnapshot.attemptToken === null || typeof clearSnapshot.attemptToken !== "object"
+      || clearExecution.wouldTransmit !== false || clearExecution.canExecute !== false || clearExecution.retryAllowed !== false) {
+      throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
+    }
+    if (postReadout.provenance !== "simulated") throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_provenance");
+    if (postReadout.attemptToken === null || typeof postReadout.attemptToken !== "object"
+      || postReadout.connectionToken === null || typeof postReadout.connectionToken !== "object") {
+      throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_scope_token");
+    }
+    const timestamps = [inputSnapshot.clearCompletedAt, postReadout.startedAt, postReadout.completedAt];
+    if (!timestamps.every(isCanonicalGenericObdDtcClearPostReadoutTimestamp)) throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_timestamp");
+    const receipts = parseGenericObdDtcClearReadoutReceipts(postReadout.receipts, "invalid_generic_obd_dtc_clear_post_readout");
+
+    let clearResponseExpectedSourceIds = [];
+    const clearTerminal = clearSnapshot.state === "terminal" && clearSnapshot.evaluation !== null;
+    let clearEvaluationComplete = false;
+    let clearSnapshotEvaluationMismatch = false;
+    if (clearSnapshot.evaluation !== null) {
+      const evaluation = copyGenericObdDtcClearResponseRecord(clearSnapshot.evaluation,
+        ["schemaVersion", "completion", "expectedSources", "unexpectedSources", "counts", "allExpectedSourcesAffirmativeObserved", "responseEvaluationComplete", "postOperationReadOnlyFollowupPlan", "execution"],
+        "invalid_generic_obd_dtc_clear_post_readout_clear_evaluation");
+      const expectedSources = copyGenericObdDtcClearResponseDenseArray(evaluation.expectedSources, 32, "invalid_generic_obd_dtc_clear_post_readout_clear_expected_sources");
+      if (evaluation.postOperationReadOnlyFollowupPlan !== GENERIC_OBD_DTC_CLEAR_POST_OPERATION_READ_ONLY_FOLLOWUP_PLAN) {
+        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_evaluation");
+      }
+      clearSnapshotEvaluationMismatch = clearSnapshot.completion !== evaluation.completion;
+      clearEvaluationComplete = clearSnapshot.state === "terminal" && clearSnapshot.completion === "complete"
+        && evaluation.completion === "complete" && evaluation.responseEvaluationComplete === true;
+      clearResponseExpectedSourceIds = expectedSources.map((value) => {
+        const row = copyGenericObdDtcClearResponseRecord(value,
+          ["sourceId", "frameCount", "affirmativeFrameCount", "unrecognizedFrameCount", "observation"],
+          "invalid_generic_obd_dtc_clear_post_readout_clear_expected_source");
+        assertGenericObdDtcClearResponseSourceId(row.sourceId, "invalid_generic_obd_dtc_clear_post_readout_clear_expected_source");
+        return row.sourceId;
+      });
+      if (new Set(clearResponseExpectedSourceIds).size !== clearResponseExpectedSourceIds.length) {
+        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_expected_sources");
+      }
+    }
+
+    const orderedTimes = [inputSnapshot.clearCompletedAt, postReadout.startedAt,
+      ...receipts.flatMap((receipt) => [receipt.startedAt, receipt.completedAt]), postReadout.completedAt].map(Date.parse);
+    const orderingValid = orderedTimes.every((value, index) => index === 0 || value >= orderedTimes[index - 1]);
+    const attemptDistinct = postReadout.attemptToken !== clearSnapshot.attemptToken;
+    const rootBlockers = [...GENERIC_OBD_DTC_CLEAR_POST_READOUT_BLOCKERS];
+    if (!clearTerminal) rootBlockers.push("clear_window_not_terminal");
+    if (clearSnapshotEvaluationMismatch) rootBlockers.push("clear_snapshot_evaluation_mismatch");
+    if ((clearTerminal && !clearEvaluationComplete) || clearSnapshotEvaluationMismatch) rootBlockers.push("clear_evaluation_incomplete");
+    if (!orderingValid) rootBlockers.push("post_readout_order_invalid");
+    if (!attemptDistinct) rootBlockers.push("post_attempt_not_distinct");
+
+    const readouts = observeGenericObdDtcClearReadoutReceipts(receipts);
 
     return freezeGenericObdDtcClearResponse({
       schemaVersion: "generic_obd_dtc_clear_post_readout_receipts_v1",
@@ -45281,6 +45344,7 @@
     parseElmMode04RawTranscript,
     parseElmReadOnlyRawTranscript,
     createGenericObdDtcClearReceiveWindow,
+    evaluateGenericObdDtcClearBeforeReadoutReceipts,
     evaluateGenericObdDtcClearPostReadoutReceipts,
     transitionGenericObdDtcClearWorkflow,
     createGenericObdDtcClearController,

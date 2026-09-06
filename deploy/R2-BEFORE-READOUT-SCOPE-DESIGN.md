@@ -1,5 +1,21 @@
 # R2 消去前証拠とintent別ECU範囲の設計案
 
+## 3.13.519 消去前4 receiptの限定実装
+
+以下の旧設計案に対し、消去前の模擬観測だけを先行実装した。新しい `evaluateGenericObdDtcClearBeforeReadoutReceipts({ beforeReadout })` は通常画面・保存・workflow・実通信には接続しない。before/postのstrict receipt検査とsource観測を内部関数へ切り出し、postの入出力契約・エラー識別子を保持した。偽のclear snapshotは作らない。
+
+`beforeReadout` のown data propertyは `provenance, attemptToken, connectionToken, startedAt, completedAt, receipts` の6項目だけ。provenanceはsimulated、tokenは非null object参照、日時は正規ISO文字列。receiptsはpostと同じ03/07/0A/0101の固定4件・同じ8項目であり、同じ固定CAN profileと上限を使う。getter・余剰項目・疎配列・暗黙変換を拒否する。期待source、before session、clear時刻、verified flagは受理しない。
+
+取得開始→receipt 1〜4→取得終了の順序だけを検査する。順序正常は `ordered_within_attempt`、不正はinvalidとroot rejected。正常でもroot indeterminate、provenance simulated_only、`clearBoundaryVerified:false` と `before_clear_boundary_unverified` を保持する。「消去より前に実際に読んだ」とは証明しない。
+
+返却schema識別子は `generic_obd_dtc_clear_before_readout_receipts_v1`。readoutsはpostと同じsource観測項目、receiptStructureCompleteはstrict parse errorの有無だけを表す。orderingにbeforeReadoutStartedAt/beforeReadoutCompletedAt、provenanceに実証拠・対象同一性・接続一致・期待範囲未確立を明示する。post専用のclearResponseExpectedSourceIdsは返さない。比較・網羅性・成功推定・実行・送信のflagはすべてfalse。深くfreezeし、raw transcript・DTC集合・tokenを出力せず、入力は変更しない。永続保存契約ではない。
+
+専用試験205件で正常・NO DATA・途中終了・negative・件数不整合・複数source・順序逆転・厳密入力拒否・getter非実行・凍結・非送信を確認。40通りでbefore/postのsource観測出力を比較した。post既存試験239件も通過し、6ad47d2d版との返却JSON比較を既存試験の正常返却ケースに対して実施して一致した。別realmのfollowup-plan定数参照だけは比較用に各realmへ対応させた。
+
+期待sourceの独立したfixture scope、失効とbefore/clear/post束縛、DTC集合・readiness値の最小証拠summary、前後比較は未実装のまま。次はfixture scopeの最小契約を設計する。実車producerや保存形式を増やす判断は別工程に残す。
+
+## 3.13.518時点の設計履歴
+
 2026-09-06、コード基準 `92bfd4c4` / 3.13.518。設計案であり、新しい公開API・診断結果契約・保存形式の承認や実装ではない。通常取込、journal、UI、車両送信は変更しない。
 
 ## 現行コードからの結論
