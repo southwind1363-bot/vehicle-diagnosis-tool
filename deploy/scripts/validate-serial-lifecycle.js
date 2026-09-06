@@ -16,7 +16,7 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 const settle = () => new Promise(setImmediate);
 function client() {
-  const calls = { open: 0, close: 0, initialize: 0, identify: 0, select: 0, failure: 0 };
+  const calls = { open: 0, close: 0, initialize: 0, identify: 0, select: 0, failure: 0, journalInvalidations: 0 };
   const port = {
     open: async () => { calls.open += 1; }, close: async () => { calls.close += 1; },
     readable: { getReader: () => ({ cancel: async () => {}, releaseLock: () => {} }) },
@@ -33,6 +33,8 @@ function client() {
     sessionStorage: { removeItem: () => {} }, TextDecoder, TextEncoder, setTimeout, clearTimeout, performance,
     navigator: { serial: { requestPort: async () => { calls.select += 1; return port; } } },
     clearRequestedInterfaceSelection: () => {}, renderObdDeveloperGate: () => {}, renderObdAccessGate: () => {},
+    clearObdOperationJournalViewer: () => { calls.journalInvalidations += 1; },
+    renderObdOperationJournalViewer: () => {},
     renderObdSessionExportControls: () => {},
     renderObdReadoutVehicle: () => {},
     syncObdReadoutExitGuard: () => {},
@@ -77,6 +79,7 @@ for (const lock of ["lockObdAccess", "lockObdDeveloperMode"]) {
   c.context.navigator.serial.requestPort = () => selected.promise;
   const pending = c.context.connectObdDeveloperVci();
   c.context[lock]();
+  check(c.calls.journalInvalidations === 1, `${lock}: lock did not invalidate the operation journal viewer`);
   selected.resolve(c.port);
   await pending;
   check(c.calls.open === 0 && c.calls.initialize === 0 && c.context.obdDevSession.port === null, `${lock}: late device selection opened a port after lock`);
