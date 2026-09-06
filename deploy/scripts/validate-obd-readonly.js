@@ -5,6 +5,7 @@ import "./validate-session-export.js";
 import "./validate-case-storage.js";
 import "./validate-operation-availability.js";
 import "./validate-dtc-clear-workflow.js";
+import "./validate-dtc-clear-responses.js";
 import "./validate-mode06-normalization.js";
 import "./validate-supported-pid-roundtrip.js";
 import "./validate-ecu-response-timing.js";

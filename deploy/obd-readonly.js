@@ -1355,6 +1355,120 @@
     return error;
   }
 
+  function isGenericObdDtcClearResponseRecord(value) {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+    const prototype = Object.getPrototypeOf(value);
+    if (prototype === null) return true;
+    const constructor = Object.getOwnPropertyDescriptor(prototype, "constructor");
+    return constructor && Object.hasOwn(constructor, "value") && typeof constructor.value === "function"
+      && constructor.value.prototype === prototype && constructor.value.name === "Object"
+      && Function.prototype.toString.call(constructor.value).includes("[native code]");
+  }
+
+  function copyGenericObdDtcClearResponseRecord(value, keys, code) {
+    if (!isGenericObdDtcClearResponseRecord(value)) throw new TypeError(code);
+    const actual = Reflect.ownKeys(value);
+    if (actual.length !== keys.length || actual.some((key) => typeof key !== "string" || !keys.includes(key))) throw new TypeError(code);
+    const snapshot = {};
+    for (const key of keys) {
+      const descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !Object.hasOwn(descriptor, "value")) throw new TypeError(code);
+      snapshot[key] = descriptor.value;
+    }
+    return snapshot;
+  }
+
+  function copyGenericObdDtcClearResponseDenseArray(value, maximumLength, code) {
+    if (!Array.isArray(value)) throw new TypeError(code);
+    const lengthDescriptor = Object.getOwnPropertyDescriptor(value, "length");
+    if (!lengthDescriptor || !Object.hasOwn(lengthDescriptor, "value")) throw new TypeError(code);
+    const length = lengthDescriptor.value;
+    if (length > maximumLength) throw new RangeError(code);
+    const actual = Reflect.ownKeys(value);
+    if (actual.length !== length + 1 || actual[length] !== "length") throw new TypeError(code);
+    const snapshot = [];
+    for (let index = 0; index < length; index += 1) {
+      if (actual[index] !== String(index)) throw new TypeError(code);
+      const descriptor = Object.getOwnPropertyDescriptor(value, String(index));
+      if (!descriptor || !Object.hasOwn(descriptor, "value")) throw new TypeError(code);
+      snapshot.push(descriptor.value);
+    }
+    return snapshot;
+  }
+
+  function assertGenericObdDtcClearResponseSourceId(value, code) {
+    if (typeof value !== "string") throw new TypeError(code);
+    if (value.length < 1 || value.length > 64) throw new RangeError(code);
+    if (!/^[\x21-\x7E]+$/.test(value)) throw new TypeError(code);
+  }
+
+  function freezeGenericObdDtcClearResponse(value) {
+    if (Array.isArray(value)) value.forEach(freezeGenericObdDtcClearResponse);
+    else if (value !== null && typeof value === "object") Object.values(value).forEach(freezeGenericObdDtcClearResponse);
+    return Object.freeze(value);
+  }
+
+  function evaluateGenericObdDtcClearResponses(input) {
+    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["expectedSourceIds", "frames", "completion"], "invalid_generic_obd_dtc_clear_response_input");
+    const expectedSourceIdInput = copyGenericObdDtcClearResponseDenseArray(inputSnapshot.expectedSourceIds, 32, "invalid_generic_obd_dtc_clear_response_expected_sources");
+    const frameInput = copyGenericObdDtcClearResponseDenseArray(inputSnapshot.frames, 128, "invalid_generic_obd_dtc_clear_response_frames");
+    const completion = inputSnapshot.completion;
+    if (!["complete", "timeout", "disconnected", "error"].includes(completion)) throw new TypeError("invalid_generic_obd_dtc_clear_response_completion");
+
+    const expectedSourceIds = expectedSourceIdInput.map((sourceId) => {
+      assertGenericObdDtcClearResponseSourceId(sourceId, "invalid_generic_obd_dtc_clear_response_source_id");
+      return sourceId;
+    });
+    if (new Set(expectedSourceIds).size !== expectedSourceIds.length) throw new TypeError("invalid_generic_obd_dtc_clear_response_expected_sources");
+    const expectedSourceIdSet = new Set(expectedSourceIds);
+    const observations = new Map(expectedSourceIds.map((sourceId) => [sourceId, { sourceId, frameCount: 0, affirmativeFrameCount: 0, unrecognizedFrameCount: 0 }]));
+    const unexpectedObservations = new Map();
+
+    for (const frameInputItem of frameInput) {
+      const frame = copyGenericObdDtcClearResponseRecord(frameInputItem, ["sourceId", "payload"], "invalid_generic_obd_dtc_clear_response_frame");
+      const sourceId = frame.sourceId;
+      const payload = copyGenericObdDtcClearResponseDenseArray(frame.payload, 64, "invalid_generic_obd_dtc_clear_response_payload");
+      assertGenericObdDtcClearResponseSourceId(sourceId, "invalid_generic_obd_dtc_clear_response_source_id");
+      if (payload.length < 1) throw new RangeError("invalid_generic_obd_dtc_clear_response_payload");
+      for (const byte of payload) {
+        if (!Number.isInteger(byte)) throw new TypeError("invalid_generic_obd_dtc_clear_response_byte");
+        if (byte < 0 || byte > 255) throw new RangeError("invalid_generic_obd_dtc_clear_response_byte");
+      }
+      const observation = observations.get(sourceId) || unexpectedObservations.get(sourceId)
+        || { sourceId, frameCount: 0, affirmativeFrameCount: 0, unrecognizedFrameCount: 0 };
+      if (!expectedSourceIdSet.has(sourceId) && !unexpectedObservations.has(sourceId)) unexpectedObservations.set(sourceId, observation);
+      observation.frameCount += 1;
+      if (payload.length === 1 && payload[0] === 0x44) observation.affirmativeFrameCount += 1;
+      else observation.unrecognizedFrameCount += 1;
+    }
+
+    const expectedSources = expectedSourceIds.map((sourceId) => {
+      const observation = observations.get(sourceId);
+      return {
+        ...observation,
+        observation: observation.frameCount === 0 ? "no_response_observed" : (observation.unrecognizedFrameCount === 0 ? "affirmative_observed" : "response_uncertain")
+      };
+    });
+    const unexpectedSources = [...unexpectedObservations.values()].map((observation) => ({ ...observation, observation: "unexpected_source_observed" }));
+    const allExpectedSourcesAffirmativeObserved = completion === "complete" && expectedSources.length > 0
+      && expectedSources.every((observation) => observation.observation === "affirmative_observed") && unexpectedSources.length === 0;
+    return freezeGenericObdDtcClearResponse({
+      schemaVersion: 1,
+      completion,
+      expectedSources,
+      unexpectedSources,
+      counts: {
+        expectedSourceCount: expectedSources.length,
+        observedExpectedSourceCount: expectedSources.filter((observation) => observation.frameCount > 0).length,
+        unexpectedSourceCount: unexpectedSources.length,
+        frameCount: frameInput.length
+      },
+      allExpectedSourcesAffirmativeObserved,
+      responseEvaluationComplete: allExpectedSourcesAffirmativeObserved,
+      execution: { wouldTransmit: false, canExecute: false, retryAllowed: false }
+    });
+  }
+
   function normalizeDtcClearWorkflowTarget(value) {
     if (value === undefined || value === null) return null;
     if (!isDtcClearWorkflowRecord(value) || !hasExactDtcClearWorkflowKeys(value, DTC_CLEAR_WORKFLOW_TARGET_KEYS)
@@ -44574,6 +44688,7 @@
     getElmTransportProfile,
     buildServiceOperationReadiness,
     buildGenericObdDtcClearWorkflow,
+    evaluateGenericObdDtcClearResponses,
     transitionGenericObdDtcClearWorkflow,
     createGenericObdDtcClearController,
     getMobileReadoutTransportPlan,
