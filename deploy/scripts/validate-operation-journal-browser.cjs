@@ -193,6 +193,43 @@ async function verify(page, recordId, sessionJson) {
   }, { id: recordId, json: sessionJson });
 }
 
+async function load(page, recordId) {
+  return page.evaluate(async (id) => {
+    const result = await window.ObdOperationJournal.loadPreOperation({ recordId: id });
+    if (!Object.isFrozen(result) || !Object.isFrozen(result.execution) || (result.record && !Object.isFrozen(result.record))) throw new Error('Load result is not frozen');
+    return result;
+  }, recordId);
+}
+
+async function tamperRecord(page, recordId, mutate) {
+  return page.evaluate(async ({ dbName, storeName, id, kind }) => {
+    const open = indexedDB.open(dbName);
+    const db = await new Promise((resolve, reject) => {
+      open.onsuccess = () => resolve(open.result);
+      open.onerror = () => reject(open.error || new Error('open failed'));
+    });
+    try {
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const get = store.get(id);
+        get.onerror = () => reject(get.error || new Error('get failed'));
+        get.onsuccess = () => {
+          const value = get.result;
+          if (kind === 'metadata') value.createdAt = 'not-a-timestamp';
+          if (kind === 'digest') new Uint8Array(value.sha256)[0] ^= 1;
+          if (kind === 'source') new Uint8Array(value.sourceBytes)[0] ^= 1;
+          store.put(value);
+        };
+        tx.oncomplete = () => resolve();
+        tx.onabort = () => reject(tx.error || new Error('tamper aborted'));
+      });
+    } finally {
+      db.close();
+    }
+  }, { dbName: DB_NAME, storeName: STORE_NAME, id: recordId, kind: mutate });
+}
+
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'block' });
@@ -207,6 +244,13 @@ async function verify(page, recordId, sessionJson) {
       assert.deepEqual(databasesBeforeFirstCall.filter((name) => name === DB_NAME), [], 'journal module must not auto-open IndexedDB');
       checks += 1;
     }
+
+    const absentLoad = await load(page, 'absent-before-save');
+    assert.equal(absentLoad.status, 'indeterminate', 'absent database load');
+    assert.equal(absentLoad.record, null, 'absent database must not leak a record');
+    const databasesAfterAbsentLoad = await listDatabases(page);
+    if (databasesAfterAbsentLoad) assert.deepEqual(databasesAfterAbsentLoad.filter((name) => name === DB_NAME), [], 'load must abort an absent database upgrade');
+    checks += 1;
 
     const canonical = await buildCanonicalFixture(page);
     const canonicalParsed = JSON.parse(canonical);
@@ -224,6 +268,14 @@ async function verify(page, recordId, sessionJson) {
     assert.equal(firstVerify.status, 'confirmed', 'canonical verify');
     assertExecutionFrozen(firstVerify, 'canonical verify');
     assert.equal(firstVerify.recordId, 'canonical-record');
+    checks += 1;
+
+    const firstLoad = await load(page, 'canonical-record');
+    assert.equal(firstLoad.status, 'loaded', 'canonical load');
+    assert.equal(firstLoad.reason, 'valid_record_recovered');
+    assert.equal(firstLoad.record.sessionJson, canonical, 'load returns original JSON without caller input');
+    assert.deepEqual(Object.keys(firstLoad.record), ['recordId', 'createdAt', 'exportType', 'sessionJson', 'byteLength']);
+    assert.deepEqual(firstLoad.execution, { wouldTransmit: false, canExecute: false, retryAllowed: false });
     checks += 1;
 
     const stored = await readRecord(page, 'canonical-record');
@@ -292,6 +344,36 @@ async function verify(page, recordId, sessionJson) {
     assert.equal(unicodeStored.sourceText, unicodeJson, 'unicode JSON exact byte preservation');
     checks += 1;
 
+    const unicodeLoad = await load(page, 'unicode-record');
+    assert.equal(unicodeLoad.status, 'loaded', 'unicode load');
+    assert.equal(unicodeLoad.record.sessionJson, unicodeJson, 'unicode load exact bytes');
+    checks += 1;
+
+    const strictLoadResults = await page.evaluate(async () => Promise.all([
+      window.ObdOperationJournal.loadPreOperation({}),
+      window.ObdOperationJournal.loadPreOperation({ recordId: '' }),
+      window.ObdOperationJournal.loadPreOperation({ recordId: 'canonical-record', extra: true }),
+      window.ObdOperationJournal.loadPreOperation(Object.defineProperty({}, 'recordId', { enumerable: true, get: () => 'canonical-record' })),
+      window.ObdOperationJournal.loadPreOperation(Object.defineProperty({ recordId: 'canonical-record' }, 'hidden', { value: true })),
+      window.ObdOperationJournal.loadPreOperation(Object.assign({ recordId: 'canonical-record' }, { [Symbol('extra')]: true }))
+    ]));
+    for (const rejected of strictLoadResults) {
+      assert.equal(rejected.status, 'rejected', 'strict load input');
+      assert.equal(rejected.record, null, 'strict load input must not leak record');
+    }
+    checks += 1;
+
+    for (const kind of ['metadata', 'digest', 'source']) {
+      const id = `tampered-load-${kind}`;
+      const json = await buildCanonicalFixture(page, { diagnosticNote: `tampered ${kind}` });
+      assert.equal((await save(page, id, json)).status, 'confirmed');
+      await tamperRecord(page, id, kind);
+      const tampered = await load(page, id);
+      assert.equal(tampered.status, 'indeterminate', `tampered ${kind} load`);
+      assert.equal(tampered.record, null, `tampered ${kind} must not leak`);
+    }
+    checks += 1;
+
     const beforeBadInput = await recordCount(page);
     for (const badInput of [
       {},
@@ -314,6 +396,11 @@ async function verify(page, recordId, sessionJson) {
     const reopenVerify = await verify(page, 'canonical-record', canonical);
     assert.equal(reopenVerify.status, 'confirmed', 'page close/reopen same context verify');
     assertExecutionFrozen(reopenVerify, 'page close/reopen same context verify');
+    checks += 1;
+
+    const reopenLoad = await load(page, 'unicode-record');
+    assert.equal(reopenLoad.status, 'loaded', 'page close/reopen load');
+    assert.equal(reopenLoad.record.sessionJson, unicodeJson, 'reopen unicode load');
     checks += 1;
 
     assert.deepEqual(errors, [], 'page errors and console errors');

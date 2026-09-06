@@ -119,6 +119,160 @@
     }
   }
 
+  function loadResult(status, reason, recordId, record) {
+    const snapshot = record === null ? null : Object.freeze({
+      recordId: record.recordId,
+      createdAt: record.createdAt,
+      exportType: record.exportType,
+      sessionJson: record.sessionJson,
+      byteLength: record.byteLength
+    });
+    return Object.freeze({ status, reason, recordId: recordId || null, record: snapshot, execution: execution() });
+  }
+
+  function snapshotLoadInput(input) {
+    try {
+      if (input === null || typeof input !== "object") return { error: "invalid_input", recordId: null };
+      const prototype = Object.getPrototypeOf(input);
+      if (prototype !== null && Object.getPrototypeOf(prototype) !== null) return { error: "invalid_input", recordId: null };
+      const keys = Reflect.ownKeys(input);
+      if (keys.length !== 1 || keys[0] !== "recordId") return { error: "invalid_input", recordId: null };
+      const descriptor = Object.getOwnPropertyDescriptor(input, "recordId");
+      if (!descriptor || !("value" in descriptor)) return { error: "invalid_input", recordId: null };
+      const recordId = validRecordId(descriptor.value);
+      return recordId ? { recordId } : { error: "invalid_record_id", recordId: null };
+    } catch {
+      return { error: "invalid_input", recordId: null };
+    }
+  }
+
+  function snapshotStoredLoadRecord(stored, recordId) {
+    try {
+      if (stored === null || typeof stored !== "object") return null;
+      const prototype = Object.getPrototypeOf(stored);
+      if (prototype !== null && Object.getPrototypeOf(prototype) !== null) return null;
+      const requiredKeys = ["recordId", "createdAt", "exportType", "sourceBytes", "byteLength", "sha256"];
+      const keys = Reflect.ownKeys(stored);
+      if (keys.length !== requiredKeys.length || !keys.every((key) => typeof key === "string" && requiredKeys.includes(key))) return null;
+      const fields = Object.fromEntries(requiredKeys.map((key) => [key, Object.getOwnPropertyDescriptor(stored, key)]));
+      if (requiredKeys.some((key) => !fields[key] || !("value" in fields[key]))) return null;
+      const sourceBytes = fields.sourceBytes.value;
+      const digest = fields.sha256.value;
+      if (fields.recordId.value !== recordId || !isValidCreatedAt(fields.createdAt.value, null) || fields.exportType.value !== EXPORT_TYPE
+        || !Number.isInteger(fields.byteLength.value) || fields.byteLength.value < 0 || fields.byteLength.value > MAX_BYTES
+        || !isArrayBuffer(sourceBytes) || sourceBytes.byteLength !== fields.byteLength.value || !isArrayBuffer(digest) || digest.byteLength !== 32) return null;
+      return {
+        recordId: fields.recordId.value,
+        createdAt: fields.createdAt.value,
+        exportType: fields.exportType.value,
+        byteLength: fields.byteLength.value,
+        sourceBytes: sourceBytes.slice(0),
+        sha256: digest.slice(0)
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function loadPreOperationRecord(input) {
+    const snapshot = snapshotLoadInput(input);
+    if (snapshot.error) return Promise.resolve(loadResult("rejected", snapshot.error, snapshot.recordId, null));
+
+    return new Promise((resolve) => {
+      let settled = false;
+      let db = null;
+      let activeTransaction = null;
+      let timer = null;
+      const finish = (status, reason, record) => {
+        if (settled) return;
+        settled = true;
+        if (timer !== null) clearTimeout(timer);
+        if (activeTransaction) {
+          try { activeTransaction.abort(); } catch {}
+        }
+        if (db) {
+          try { db.close(); } catch {}
+        }
+        resolve(loadResult(status, reason, snapshot.recordId, record || null));
+      };
+      timer = setTimeout(() => finish("indeterminate", "operation_timeout", null), TIMEOUT_MS);
+
+      let openRequest;
+      try {
+        if (!globalThis.indexedDB?.open) return finish("indeterminate", "storage_unavailable", null);
+        openRequest = globalThis.indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
+      } catch {
+        return finish("indeterminate", "storage_open_failed", null);
+      }
+      openRequest.onblocked = () => finish("indeterminate", "storage_blocked", null);
+      openRequest.onerror = () => finish("indeterminate", "storage_open_failed", null);
+      openRequest.onupgradeneeded = () => {
+        try { openRequest.transaction?.abort(); } catch {}
+        try { openRequest.result?.close(); } catch {}
+        finish("indeterminate", "storage_not_initialized", null);
+      };
+      openRequest.onsuccess = () => {
+        const opened = openRequest.result;
+        if (settled) {
+          try { opened.close(); } catch {}
+          return;
+        }
+        db = opened;
+        db.onversionchange = () => finish("indeterminate", "storage_version_changed", null);
+        if (!db.objectStoreNames.contains(STORE_NAME)) return finish("indeterminate", "storage_schema_invalid", null);
+        let stored = null;
+        let tx;
+        try {
+          tx = db.transaction(STORE_NAME, "readonly");
+          activeTransaction = tx;
+        } catch {
+          return finish("indeterminate", "storage_transaction_failed", null);
+        }
+        tx.onerror = () => {};
+        tx.onabort = () => finish("indeterminate", "storage_read_failed", null);
+        tx.oncomplete = () => {
+          if (settled) return;
+          activeTransaction = null;
+          if (!stored) return finish("indeterminate", "record_not_recovered", null);
+          recoverStoredRecord(stored);
+        };
+        let getRequest;
+        try {
+          const store = tx.objectStore(STORE_NAME);
+          if (store.keyPath !== "recordId" || store.autoIncrement !== false) return finish("indeterminate", "storage_schema_invalid", null);
+          getRequest = store.get(snapshot.recordId);
+        } catch {
+          return finish("indeterminate", "storage_read_failed", null);
+        }
+        getRequest.onerror = () => finish("indeterminate", "storage_read_failed", null);
+        getRequest.onsuccess = () => { stored = snapshotStoredLoadRecord(getRequest.result, snapshot.recordId); };
+      };
+
+      async function recoverStoredRecord(stored) {
+        let sessionJson;
+        try {
+          sessionJson = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(stored.sourceBytes);
+          const reencoded = new TextEncoder().encode(sessionJson);
+          if (settled || !bytesEqual(reencoded.buffer, stored.sourceBytes)) return finish("indeterminate", "record_invalid", null);
+        } catch {
+          return finish("indeterminate", "record_invalid", null);
+        }
+        const validated = validateSession(snapshot.recordId, sessionJson);
+        if (settled || validated.error || !bytesEqual(validated.bytes.buffer, stored.sourceBytes)) return finish("indeterminate", "record_invalid", null);
+        let digest;
+        try {
+          if (!globalThis.crypto?.subtle?.digest) return finish("indeterminate", "digest_failed", null);
+          digest = await globalThis.crypto.subtle.digest("SHA-256", stored.sourceBytes);
+        } catch {
+          return finish("indeterminate", "digest_failed", null);
+        }
+        if (settled) return;
+        if (!isArrayBuffer(digest) || digest.byteLength !== 32 || !bytesEqual(digest, stored.sha256)) return finish("indeterminate", "record_invalid", null);
+        finish("loaded", "valid_record_recovered", { ...stored, sessionJson });
+      }
+    });
+  }
+
   function journalOperation(mode, input) {
     const snapshot = snapshotInput(input);
     if (snapshot.error) return Promise.resolve(result("rejected", snapshot.error, snapshot.recordId));
@@ -262,5 +416,6 @@
 
   const savePreOperation = Object.freeze(async function savePreOperation(input) { return journalOperation("save", input); });
   const verifyPreOperation = Object.freeze(async function verifyPreOperation(input) { return journalOperation("verify", input); });
-  window.ObdOperationJournal = Object.freeze({ savePreOperation, verifyPreOperation });
+  const loadPreOperation = Object.freeze(async function loadPreOperation(input) { return loadPreOperationRecord(input); });
+  window.ObdOperationJournal = Object.freeze({ savePreOperation, verifyPreOperation, loadPreOperation });
 })();

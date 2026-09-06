@@ -61,6 +61,7 @@ function createFakeIdb(options = {}) {
                   if (returned && options.readbackMismatch) returned.byteLength += 1;
                   if (returned && options.tamperCreatedAt) returned.createdAt = "1970-01-01T00:00:00.000Z";
                   if (returned && options.storedExtra) returned.injected = true;
+                  if (returned && typeof options.transformReadRecord === "function") options.transformReadRecord(returned);
                   get.result = returned;
                   get.onsuccess?.();
                   if (options.readAbortAfterRequestSuccess) { finished = true; tx.onabort?.(); return; }
@@ -83,11 +84,20 @@ function createFakeIdb(options = {}) {
     },
     open() {
       calls.opens += 1;
-      const open = { result: database(), transaction: { abort() { calls.aborts += 1; } }, onsuccess: null, onerror: null, onblocked: null, onupgradeneeded: null };
+      let upgradeAborted = false;
+      const open = { result: database(), transaction: { abort() { upgradeAborted = true; calls.aborts += 1; } }, onsuccess: null, onerror: null, onblocked: null, onupgradeneeded: null };
+      const completeOpen = () => {
+        if (!initialized) {
+          open.onupgradeneeded?.({ oldVersion: 0 });
+          if (upgradeAborted) return;
+          initialized = true;
+        }
+        open.onsuccess?.();
+      };
       if (options.blocked) later(() => open.onblocked?.());
       else if (options.openError) later(() => open.onerror?.());
-      else if (!options.lateOpen) later(() => { if (!initialized) { open.onupgradeneeded?.({ oldVersion: 0 }); initialized = true; } open.onsuccess?.(); });
-      if (options.lateOpen) setTimeout(() => { if (!initialized) { open.onupgradeneeded?.({ oldVersion: 0 }); initialized = true; } open.onsuccess?.(); }, options.lateOpen);
+      else if (!options.lateOpen) later(completeOpen);
+      if (options.lateOpen) setTimeout(completeOpen, options.lateOpen);
       return open;
     }
   };
@@ -122,6 +132,12 @@ function client(options = {}) {
 }
 
 const good = { recordId: "preop_01", sessionJson: payload() };
+function load(api, input) { return api.loadPreOperation(input); }
+function isArrayBufferLike(value) { return Object.prototype.toString.call(value) === "[object ArrayBuffer]"; }
+function isSafeLoad(result, status) {
+  return Object.isFrozen(result) && Object.isFrozen(result.execution) && result.status === status
+    && result.execution.wouldTransmit === false && result.execution.canExecute === false && result.execution.retryAllowed === false;
+}
 {
   const exactJson = payloadWithExactUtf8Bytes(4000000);
   const { api, fake } = client();
@@ -268,5 +284,94 @@ for (const input of [
   const { api, fake } = client();
   const outcome = await api.savePreOperation(input);
   check(outcome.status === "rejected" && fake.calls.opens === 0, "Hidden or symbol input key reached IndexedDB");
+}
+{
+  const first = client();
+  await first.api.savePreOperation(good);
+  const reopened = client({ initialized: true, records: first.fake.records });
+  const loaded = await load(reopened.api, { recordId: good.recordId });
+  check(isSafeLoad(loaded, "loaded") && loaded.reason === "valid_record_recovered" && Object.isFrozen(loaded.record)
+    && loaded.record.sessionJson === good.sessionJson && loaded.record.byteLength === Buffer.byteLength(good.sessionJson)
+    && Reflect.ownKeys(loaded.record).join(",") === "recordId,createdAt,exportType,sessionJson,byteLength"
+    && !Object.values(loaded.record).some((value) => isArrayBufferLike(value)), "Load did not recover a frozen public snapshot without buffers");
+}
+{
+  const unicode = payload({ diagnosticNote: "日本語診断記録 / Ω" });
+  const first = client();
+  await first.api.savePreOperation({ recordId: "load_unicode", sessionJson: unicode });
+  const reopened = client({ initialized: true, records: first.fake.records });
+  const loaded = await load(reopened.api, { recordId: "load_unicode" });
+  check(isSafeLoad(loaded, "loaded") && loaded.record.sessionJson === unicode, "Load did not preserve unicode JSON after reopen");
+}
+{
+  const { api, fake } = client();
+  const absent = await load(api, { recordId: good.recordId });
+  const saved = await api.savePreOperation(good);
+  check(isSafeLoad(absent, "indeterminate") && absent.reason === "storage_not_initialized" && absent.record === null
+    && fake.calls.writes === 1 && saved.status === "confirmed", "Load initialized an absent database or wrote during read");
+}
+{
+  const first = client();
+  await first.api.savePreOperation(good);
+  const { api, fake } = client({ initialized: true, records: first.fake.records, readAbortAfterRequestSuccess: true });
+  const aborted = await load(api, { recordId: good.recordId });
+  check(isSafeLoad(aborted, "indeterminate") && aborted.record === null && fake.calls.reads === 1 && fake.calls.writes === 0, "Aborted read success exposed a record");
+}
+for (const [transformIndex, transformReadRecord] of [
+  (record) => { record.createdAt = "not-a-timestamp"; },
+  (record) => { new Uint8Array(record.sha256)[0] ^= 1; },
+  (record) => { new Uint8Array(record.sourceBytes)[0] ^= 1; },
+  (record) => { record.injected = true; }
+].entries()) {
+  const first = client();
+  await first.api.savePreOperation(good);
+  const { api } = client({ initialized: true, records: first.fake.records, transformReadRecord });
+  const tampered = await load(api, { recordId: good.recordId });
+  check(isSafeLoad(tampered, "indeterminate") && tampered.record === null, `Tampered stored record ${transformIndex} leaked through load: ${tampered.status}/${tampered.reason}`);
+}
+for (const input of [
+  {}, { recordId: "" }, { recordId: good.recordId, extra: true },
+  Object.defineProperty({}, "recordId", { enumerable: true, get: () => good.recordId }),
+  Object.defineProperty({ recordId: good.recordId }, "hidden", { value: true }),
+  Object.assign({ recordId: good.recordId }, { [Symbol("extra")]: true })
+]) {
+  const { api, fake } = client({ initialized: true });
+  const rejected = await load(api, input);
+  check(isSafeLoad(rejected, "rejected") && rejected.record === null && fake.calls.opens === 0, "Load accepted non-exact input");
+}
+{
+  const exactJson = payloadWithExactUtf8Bytes(4000000);
+  const first = client();
+  await first.api.savePreOperation({ recordId: "load_cap", sessionJson: exactJson });
+  const reopened = client({ initialized: true, records: first.fake.records });
+  const exact = await load(reopened.api, { recordId: "load_cap" });
+  first.fake.records.get("load_cap").byteLength = 4000001;
+  const over = await load(reopened.api, { recordId: "load_cap" });
+  check(isSafeLoad(exact, "loaded") && isSafeLoad(over, "indeterminate") && over.record === null, "Load did not enforce stored byte caps");
+}
+for (const sourceBytes of [new Uint8Array([0xc3, 0x28]).buffer, new Uint8Array([0xef, 0xbb, 0xbf, 0x7b, 0x7d]).buffer]) {
+  const first = client();
+  await first.api.savePreOperation(good);
+  const record = first.fake.records.get(good.recordId);
+  record.sourceBytes = sourceBytes;
+  record.byteLength = sourceBytes.byteLength;
+  const reopened = client({ initialized: true, records: first.fake.records });
+  const invalid = await load(reopened.api, { recordId: good.recordId });
+  check(isSafeLoad(invalid, "indeterminate") && invalid.record === null, "Malformed UTF-8 or BOM stored bytes loaded");
+}
+for (const length of [31, 33]) {
+  const first = client();
+  await first.api.savePreOperation(good);
+  first.fake.records.get(good.recordId).sha256 = new ArrayBuffer(length);
+  const reopened = client({ initialized: true, records: first.fake.records });
+  const invalid = await load(reopened.api, { recordId: good.recordId });
+  check(isSafeLoad(invalid, "indeterminate") && invalid.record === null, "Non-32-byte stored digest loaded");
+}
+for (const options of [{ digestFailure: true }, { digestPending: true, timeoutDelay: 5 }, { delayedDigest: 15, timeoutDelay: 5 }]) {
+  const first = client();
+  await first.api.savePreOperation(good);
+  const { api, fake } = client({ initialized: true, records: first.fake.records, ...options });
+  const invalid = await load(api, { recordId: good.recordId });
+  check(isSafeLoad(invalid, "indeterminate") && invalid.record === null && fake.calls.writes === 0, "Load digest failure or timeout leaked a record");
 }
 console.log(`Operation journal validation passed: ${checks} checks`);

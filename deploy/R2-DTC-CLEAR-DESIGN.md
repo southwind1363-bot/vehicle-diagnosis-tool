@@ -138,3 +138,13 @@ createdAtはISO日時文字列、sha256は32byteのArrayBufferとする。保存
 結果のstatusは `confirmed` / `conflict` / `rejected` / `indeterminate`。confirmedもその時点の保存照合だけを表し、消去許可には使わない。期限超過、blocked、読取不能、読取不一致はindeterminateとし、保存されなかったとは断定しない。失敗時も既存記録の削除や上書きで復旧しない。実行・送信・再試行許可は常にfalse。
 
 今回の通常画面からの自動保存・手動保存への接続はない。後続では保存対象と消去前記録IDの対応付け、利用者向けの一覧・エクスポート・削除管理、別タブや再接続時の失効を設計してから操作画面へ接続する。現在のdownload開始通知を保存完了の根拠へ変更しない。
+
+## 3.13.502 保存した記録の読み出し
+
+Sol設計に基づき `ObdOperationJournal.loadPreOperation({ recordId })` を追加する。元のJSONを呼出側が保持していなくても、既存記録をIDで取得するための内部API。save/verifyの返却形式や処理、DB versionと保存schemaは変えない。一覧・削除・通常画面の復元操作・診断セッションへの自動取込は含めない。
+
+既存DBからreadonly transactionで取得し、transaction完了後に記録の項目集合、ID、日時、種別、バイト長、4MB上限、digestの型と長さを確認する。UTF-8を厳密に復号し、再符号化したバイト列との完全一致も確認する。BOMを黙って取り除いた別内容は返さない。現行の保存対象ポリシーを再確認したうえでSHA-256を計算し、保存digestと比較する。取得当時のポリシーでは有効でも、現在のポリシーで拒否される記録は返さない。
+
+成功は `status: "loaded"` / `reason: "valid_record_recovered"` とし、save/verifyのconfirmedと区別する。recordにはID、日時、種別、元のsessionJson、バイト数を不変の値として返す。可変のArrayBufferは公開しない。失敗時のrecordは常にnull。入力不正はrejected、記録不在・破損・DB異常・照合不能・期限超過はindeterminateとし、記録を修復・削除・上書きしない。
+
+DB未作成時は初期化せず、読取完了前や5秒の期限切れ後に内容を返さない。保存内容とdigestを同時に変更できる者への改ざん防止・真正性確認ではなく、ローカルの記録整合性の検査に限る。車両識別、適合、外部に保持した消去前記録との同一性、実行許可の根拠として使わない。
