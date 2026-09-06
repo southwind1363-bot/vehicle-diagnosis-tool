@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.508";
+const APP_VERSION = "3.13.509";
 const APP_LAST_UPDATED = "2026-09-06";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -6466,8 +6466,38 @@ function renderObdOperationJournalViewer() {
   if (association?.record === record) {
     const comparison = document.createElement("p");
     comparison.className = "obd-operation-journal-status";
-    comparison.textContent = obdOperationJournalComparisonState.status;
-    obdOperationJournalRecord.append(metadata, comparison, jsonDetails);
+    comparison.textContent = "照合時点の読取内容が一致。車両同一性・適合・安全条件・消去許可は未確認。";
+    const snapshot = association.controller.getSnapshot();
+    const checks = snapshot.readiness.checks;
+    const unconfirmedCount = snapshot.readiness.totalCount - snapshot.readiness.completedCount;
+    const preparation = document.createElement("section");
+    preparation.className = "obd-operation-journal-clear-preparation obd-operation-journal-status";
+    const title = document.createElement("strong");
+    title.textContent = "消去前確認";
+    const target = document.createElement("span");
+    target.textContent = " / 対象: 未設定";
+    const conditions = document.createElement("details");
+    const conditionsSummary = document.createElement("summary");
+    conditionsSummary.textContent = `未確認の条件 ${unconfirmedCount}件（確認済み ${snapshot.readiness.completedCount}/${snapshot.readiness.totalCount}）`;
+    const conditionList = document.createElement("ul");
+    checks.forEach((check) => {
+      const item = document.createElement("li");
+      item.textContent = check.label;
+      conditionList.appendChild(item);
+    });
+    conditions.append(conditionsSummary, conditionList);
+    const unbind = document.createElement("button");
+    unbind.type = "button";
+    unbind.className = "secondary-button";
+    unbind.textContent = "比較候補を解除";
+    unbind.addEventListener("click", () => {
+      clearObdOperationJournalComparison();
+      renderObdOperationJournalViewer();
+    });
+    const transmission = document.createElement("span");
+    transmission.textContent = "実車送信なし ";
+    preparation.append(title, target, conditions, transmission, unbind);
+    obdOperationJournalRecord.append(metadata, comparison, preparation, jsonDetails);
   } else {
     obdOperationJournalRecord.append(metadata, jsonDetails);
   }
@@ -14547,6 +14577,7 @@ function getObdSessionExportBlockReason() {
 
 function handleObdReadoutSessionReplacement() {
   clearObdOperationJournalComparison();
+  renderObdOperationJournalViewer();
   syncObdReadoutExitGuard();
   setObdSessionExportStatus("");
 }

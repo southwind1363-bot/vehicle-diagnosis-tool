@@ -158,15 +158,84 @@ function asset(pathname) {
       executionEnabled: false, vehicleCommandEnabled: false, wouldTransmit: false, canExecute: false
     }, 'Comparison must not enable execution or vehicle commands');
     assert.match(matched.status, /車両同一性・適合・安全条件・消去許可は未確認。 記録ID: viewer-record-00/, 'Match status must remain historical and non-authoritative');
+    const preparation = record.locator('.obd-operation-journal-clear-preparation');
+    const unbind = preparation.getByRole('button', { name: '比較候補を解除', exact: true });
+    const conditions = preparation.locator('details');
+    const associationView = await page.evaluate(() => {
+      const controller = getObdOperationJournalComparisonAssociation().controller;
+      const snapshot = controller.getSnapshot();
+      window.__comparisonController = controller;
+      window.__comparisonSnapshot = snapshot;
+      return {
+        recordId: obdOperationJournalState.selectedRecord.recordId,
+        sessionJson: obdOperationJournalState.selectedRecord.sessionJson,
+        save: { ...obdOperationJournalSaveState },
+        list: [...obdOperationJournalState.recordIds],
+        currentSession: obdDevSession.lastSession,
+        expectedLabels: snapshot.readiness.checks.map(check => check.label),
+        expectedCount: snapshot.readiness.totalCount - snapshot.readiness.completedCount,
+        completedCount: snapshot.readiness.completedCount,
+        totalCount: snapshot.readiness.totalCount,
+        journalCalls: window.__journalCalls
+      };
+    });
+    assert.equal(await preparation.getByText('消去前確認', { exact: true }).count(), 1);
+    assert.match(await preparation.textContent(), /対象: 未設定/);
+    assert.match(await preparation.textContent(), /実車送信なし/);
+    assert.equal(await record.locator('.obd-operation-journal-status').first().textContent(), '照合時点の読取内容が一致。車両同一性・適合・安全条件・消去許可は未確認。');
+    assert.equal((await record.textContent()).split(associationView.recordId).length - 1, 1, 'Record ID must appear only in existing metadata');
+    assert.equal(await conditions.evaluate(node => node.open), false, 'Unconfirmed conditions must be collapsed by default');
+    assert.equal(await conditions.locator('summary').textContent(), `未確認の条件 ${associationView.expectedCount}件（確認済み ${associationView.completedCount}/${associationView.totalCount}）`);
+    await conditions.locator('summary').click();
+    assert.deepEqual(await conditions.locator('li').allTextContents(), associationView.expectedLabels, 'Expanded conditions must show every controller check label');
+    assert.equal(await preparation.locator('input, [role="checkbox"], button:not(.secondary-button)').count(), 0, 'Preparation must not expose editable readiness or execution controls');
+    assert.deepEqual(await page.evaluate(() => getObdOperationJournalComparisonAssociation().controller.getSnapshot().readiness.checks.map(check => check.complete)), matched.checks, 'Viewing preparation must not mark readiness automatically');
+    assert.deepEqual(await page.evaluate(() => {
+      const readiness = getObdOperationJournalComparisonAssociation().controller.getSnapshot().readiness;
+      return [readiness.completedCount, readiness.totalCount];
+    }), [associationView.completedCount, associationView.totalCount], 'Viewing preparation must not rejudge readiness counts');
     await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-1280.png') });
     await page.setViewportSize({ width: 390, height: 900 });
+    assert.equal(await conditions.locator('summary').evaluate(node => node.scrollWidth <= node.clientWidth), true, '390px conditions summary must wrap without horizontal overflow');
     await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-390.png') });
+    await conditions.locator('summary').click();
+    await preparation.evaluate(node => node.scrollIntoView({ block: 'center' }));
+    assert.equal(await unbind.evaluate(node => {
+      const rect = node.getBoundingClientRect();
+      return node.contains(document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2));
+    }), true, 'The mobile unbind button must not be covered by sticky navigation');
+    await page.screenshot({ path: path.join(output, 'operation-journal-preparation-390-viewport.png') });
     await page.setViewportSize({ width: 1280, height: 900 });
+    await unbind.click();
+    assert.equal(await preparation.count(), 0, 'Unbind must remove the clear-preparation candidate');
+    assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()), null, 'Unbind must clear only the comparison association');
+    assert.deepEqual(await page.evaluate(() => ({
+      recordId: obdOperationJournalState.selectedRecord.recordId,
+      sessionJson: obdOperationJournalState.selectedRecord.sessionJson,
+      save: { ...obdOperationJournalSaveState },
+      list: [...obdOperationJournalState.recordIds],
+      currentSession: obdDevSession.lastSession,
+      journalCalls: window.__journalCalls
+    })), {
+      recordId: associationView.recordId,
+      sessionJson: associationView.sessionJson,
+      save: associationView.save,
+      list: associationView.list,
+      currentSession: associationView.currentSession,
+      journalCalls: associationView.journalCalls
+    }, 'Unbind must retain the selected record, saved outcome, list, and current diagnosis without storage access');
+    assert.equal(await download.isEnabled(), true, 'Unbind must retain JSON download eligibility for the selected record');
+    assert.equal(await compare.isEnabled(), true, 'Relinking requires the explicit comparison command');
+    assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.status), '', 'Unbind must clear the comparison status');
+    assert.equal(await page.evaluate(() => window.__comparisonController.getSnapshot() === window.__comparisonSnapshot), true, 'Unbind must not transition or cancel the controller');
+    await compare.click();
+    await page.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
     await page.evaluate(() => {
       obdDevSession.lastSession.dtcSnapshot.dtcs[0].code = 'P0420';
       renderObdOperationJournalViewer();
     });
     assert.equal(await record.textContent().then(value => value.includes('照合時点の読取内容が一致。')), false, 'A render after in-place mutation must remove the historical match claim');
+    assert.equal(await record.locator('.obd-operation-journal-clear-preparation').count(), 0, 'Current-session changes must clear the preparation panel');
     assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()), null, 'In-place current-session changes must invalidate future association use');
     await compare.click();
     await page.waitForFunction(() => document.getElementById('obdOperationJournalStatus').textContent.includes('一致しません'));
@@ -190,6 +259,7 @@ function asset(pathname) {
       handleObdReadoutSessionReplacement();
     });
     assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.association), null, 'Session-reference replacement must invalidate association');
+    assert.equal(await record.locator('.obd-operation-journal-clear-preparation').count(), 0, 'Session-reference replacement must clear the preparation panel');
     await page.evaluate(() => {
       obdDevSession.lastSession = JSON.parse(window.__comparisonSessionJson);
       renderObdOperationJournalViewer();
