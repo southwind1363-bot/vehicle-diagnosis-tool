@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+3.13.519後続の前後証拠結び付け: 単独handleの成立とsequence成立を区別する38件の回帰検査を追加し、関連1103件がErrors 0。summary同値・別scope・attempt使い回し・時系列の重なり・失効を検査。一括生成factoryで固定コピーからsequence検査/抽出を行う方針を `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭へ記載。factory本体・差分・保存・送信は未追加。次はこのNode専用factoryを実装する。以下は履歴。
+
 3.13.519後続のpost DTC証拠抽出: beforeと入力コピー・抽出・寿命管理を共通化し、模擬clear終端とscoped-post評価の成立時だけテスト用証拠を返す。関連1065件がErrors 0。アプリ本体・保存・比較・送信は変更なし。次は前後証拠の組合せに必要なscope/attempt/順序の結び付け設計。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
 
 3.13.519後続のbefore DTC証拠抽出: 検証済みコピーからintent/source別コード集合を作るテスト用handleを追加。失効・context不一致・dispose後は取得を拒否し、raw応答やtokenを出力しない。関連1015件がErrors 0。通常API・保存・比較・送信は変更しない。次はpost側の証拠抽出。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。

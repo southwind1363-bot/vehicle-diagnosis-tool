@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createDtcClearReadoutFixtureScope as create } from "./fixtures/dtc-clear-readout-scope.js";
 import { createDtcClearFixtureReceiveWindow as receiveWindow,
+  createDtcClearBeforeDtcEvidenceFixture as beforeEvidence,
+  createDtcClearPostDtcEvidenceFixture as postEvidence,
   evaluateDtcClearReadoutSequenceFixture as evaluate } from "./fixtures/dtc-clear-scoped-before-readout.js";
 
 let checks = 0;
@@ -116,4 +118,53 @@ for (const [from, to] of [[0, 1], [1, 2], [2, 0]]) {
   value.postReadout.receipts[to].transcript = dtcTranscript(["43", "47", "4A"][to], "01 33");
   check(JSON.stringify(run(value)) === sequenceOnly, "Cross-category movement became a clear-success inference");
 }
+// Two valid standalone handles do not prove that their attempts form one sequence.
+function evidencePair(value) {
+  const { scope, context, beforeReadout, postReadout, clearWindowSnapshot, clearCompletedAt } = value;
+  const before = beforeEvidence({ scope, context, beforeReadout });
+  const post = postEvidence({ scope, context, postReadout, clearWindowSnapshot, clearCompletedAt });
+  check(before.ok && post.ok, "Standalone evidence unexpectedly rejected");
+  return { before: before.handle, post: post.handle };
+}
+for (const mutate of [
+  (v) => { v.postReadout.attemptToken = v.beforeReadout.attemptToken; },
+  (v) => { v.beforeReadout.attemptToken = v.clearWindowSnapshot.attemptToken; },
+  (v) => { v.clearStartedAt = stamp(5); }
+]) {
+  const value = fixture(); mutate(value);
+  const pair = evidencePair(value);
+  check(pair.before.inspect(value.context).ok && pair.post.inspect(value.context).ok, "Individual evidence unavailable");
+  check(!run(value).fixtureSequenceMatched, "Individual evidence bypassed sequence boundary");
+  pair.before.dispose(); pair.post.dispose();
+}
+// Equal JSON values can come from different scopes, targets and connections.
+const first = fixture(), second = fixture();
+const firstPair = evidencePair(first), secondPair = evidencePair(second);
+const oldSummary = firstPair.before.inspect(first.context).summary;
+check(JSON.stringify(oldSummary) === JSON.stringify(secondPair.post.inspect(second.context).summary),
+  "Fixture must demonstrate that equal values carry no binding identity");
+for (const handle of [firstPair.before, firstPair.post]) {
+  check(handle.inspect(second.context).summary === null, "Foreign scope context acquired evidence");
+}
+for (const side of ["beforeReadout", "postReadout"]) {
+  const value = fixture(); value[side] = second[side];
+  check(!run(value).fixtureSequenceMatched, "Foreign readout connection accepted");
+}
+for (const substitute of [oldSummary, JSON.parse(JSON.stringify(oldSummary)), firstPair.before, firstPair.post]) {
+  for (const side of ["beforeReadout", "postReadout"]) {
+    const value = fixture(); value[side] = substitute;
+    assert.throws(() => evaluate(value), (error) => error.name === "TypeError"); checks += 1;
+  }
+}
+first.scope.invalidate(first.context);
+check(firstPair.before.inspect(first.context).summary === null && firstPair.post.inspect(first.context).summary === null,
+  "Invalidated pair remained accessible");
+check(Object.isFrozen(oldSummary) && oldSummary.comparisonAvailable === false,
+  "Historical frozen summary became current comparison authority");
+check(secondPair.before.inspect(second.context).ok && secondPair.post.inspect(second.context).ok,
+  "Invalidating one scope affected another");
+secondPair.before.dispose();
+check(secondPair.before.inspect(second.context).summary === null && secondPair.post.inspect(second.context).ok,
+  "Standalone disposal unexpectedly coupled separate handles");
+secondPair.post.dispose();
 console.log(`DTC clear readout sequence checks: ${checks} / Errors: 0`);

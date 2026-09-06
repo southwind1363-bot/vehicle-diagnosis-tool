@@ -1,5 +1,19 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 3.13.519後続: 前後証拠の結び付け設計と回帰検査
+
+基準07b3175b。現在の単独before/post handleはそれぞれの取得内容とscope寿命だけを扱い、相互のattempt・順序・clearとの結び付けは保持しない。両方のinspectがokでも同一sequenceの証明にはならない。別scopeで同じJSON summaryを生成でき、beforeをdisposeしても独立postは有効なままである。これは単独handleの仕様であり、比較APIはまだ存在しない。
+
+次の実装はNode専用の一括生成factoryとする。単独handleやsummaryを後から寄せ集めず、同一のscope/contextとbefore/clear/post入力を受け取る。両側の4 receiptを所有する固定コピーにして、その同じコピーにsequence検査とDTC抽出を適用する。clear snapshotも検査時の値と後続処理が食い違わないよう扱い、検査後にcaller入力を再読しない。既存の単独抽出器をcaller入力で順番に呼ぶだけの実装は禁止する。
+
+- 同一の有効scope/context、固定profile、intentごとの期待source全体を両側で検査する。source交差集合への縮小やDTC値の一致を代替条件にしない。
+- before/clear/postの3 attemptは別参照、時刻はbefore終了 <= clear開始 <= clear終了 <= post開始。clear評価の終端・整合性も既存sequence検査へ委ねる。模擬時刻や参照は実車の証明ではない。
+- コピー前・検査後・抽出後にscopeの有効性を確認する。部分的成功では組のhandleを返さない。rawやtokenをsummaryへ出さず、将来の組handleには派生した前後値だけを保持させる。
+- 組handleのinspectは現在のscopeを確認し、disposeは前後の保持を一緒に破棄する。既に取得されたsummaryは回収不能であり、入力の権限証明として再受理しない。
+- 最初の組handleも差分を計算しない。comparisonAvailable・clearSucceededInferred・sameVehicleVerified・clearBoundaryVerified・実行/送信flagはfalseを維持し、保存・ブラウザAPI・実clear接続の所有証明は追加しない。
+
+回帰検査を38件追加した。単独抽出が両方成立してもattempt再利用/clear開始の重なりではsequence拒否、別scopeの同値summary、外国context/connection拒否、summary・JSON複製・単独handleのraw入力への代入拒否、scope失効と独立disposeを確認。sequence220件、関連合計1103件がErrors 0。今回はテストと設計文書のみで、一括生成factoryは次の実装対象。アプリ版3.13.519は変更せず、OBD主集計・bridge・offline・実車試験は再実行していない。
+
 ## 3.13.519後続: postのテスト用DTC証拠抽出
 
 `createDtcClearPostDtcEvidenceFixture({ scope, context, clearWindowSnapshot, clearCompletedAt, postReadout })` をNode専用harnessへ追加。下記before専用という記述は履歴。所有する4 receiptのコピー・抽出・inspect/disposeをbeforeと共通化し、既存scoped-post評価で模擬clearの終端・評価整合性・読み取り順序・別attempt・ECU範囲を確認してから証拠を返す。不成立ではhandleを返さない。Mode04応答元をreadoutの期待範囲に流用しない。
