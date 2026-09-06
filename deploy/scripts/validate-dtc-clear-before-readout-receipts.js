@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import "./validate-dtc-clear-fixture-scope.js";
+import "./validate-dtc-clear-scoped-before-readout.js";
 
 let ioCalls = 0;
 const forbidden = () => { ioCalls += 1; throw new Error("Unexpected I/O"); };

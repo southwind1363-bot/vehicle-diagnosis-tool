@@ -1,6 +1,12 @@
 // Test-only model. Caller-supplied scope is never evidence about a real vehicle.
 const profile = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
 const intents = ["read_stored_dtc", "read_pending_dtc", "read_permanent_dtc", "read_readiness"];
+const scopeHandles = new WeakSet();
+
+export function inspectDtcClearReadoutFixtureScope(handle, context) {
+  if (!scopeHandles.has(handle)) throw new TypeError("unrecognized_fixture_scope_handle");
+  return handle.inspect(context);
+}
 
 function record(value, keys) {
   if (value === null || typeof value !== "object" || Array.isArray(value)
@@ -65,7 +71,7 @@ export function createDtcClearReadoutFixtureScope(input) {
     return null;
   };
   const result = (reason) => Object.freeze({ ok: reason === null, reason, snapshot: reason === null ? snapshot() : null });
-  return Object.freeze({
+  const handle = Object.freeze({
     scopeToken,
     inspect(context) { return result(rejection(context)); },
     invalidate(context) {
@@ -75,4 +81,6 @@ export function createDtcClearReadoutFixtureScope(input) {
       return result(null);
     }
   });
+  scopeHandles.add(handle);
+  return handle;
 }

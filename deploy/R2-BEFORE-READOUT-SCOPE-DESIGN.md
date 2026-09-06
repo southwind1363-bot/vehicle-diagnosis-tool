@@ -1,5 +1,19 @@
 # R2 消去前証拠とintent別ECU範囲の設計案
 
+## 3.13.519後続: scopeと消去前模擬応答の照合
+
+`scripts/fixtures/dtc-clear-scoped-before-readout.js` にNode専用の `evaluateDtcClearScopedBeforeReadoutFixture({ scope, context, beforeReadout })` を追加した。テスト側から現行obd-readonly.jsを分離VMへ読み込み、strictなbefore評価器を呼ぶ。アプリ本体・通常API・保存形式・通信経路に変更はない。
+
+scopeは同じfixture moduleで生成したhandleだけをWeakSetで受理する。任意のinspect関数、凍結済みの古いsnapshot、callerが作ったreadouts要約を信用しない。contextはscopeToken/connectionToken/targetTokenだけをown data propertyとして受け取り、beforeReadoutの接続参照がcontextと同じことも検査する。これは模擬入力の参照照合であって、実車や実接続の認証ではない。
+
+評価の前後でhandleを照会する。失効、不一致、before順序不正はreadoutsを返さずrejected。現行before評価器の入力拒否は例外のまま返す。raw transcriptから改めて評価するため、callerが空配列やreportedという要約を渡して成功扱いにする経路はない。
+
+intentごとにfixtureExpectedSourceIds、missingFixtureSourceIds、positiveSourceIdsOutsideFixtureを返す。missingは「意味検証済みの肯定応答が不足」であり、ECUが実在しないという意味ではない。範囲外配列は観測できた肯定応答sourceだけを扱い、negativeやparse不能応答の全source一覧ではない。これらの異常は元のobservationがindeterminateとなるため、範囲一致を阻止する。
+
+DTCはpositiveEmptySourceIds/positiveNonemptySourceIds、readinessはsource_positive_reportedのsourceだけを有効な観測として照合する。期待sourceの不足・範囲外の肯定応答・未確定/未取得のいずれかがあれば、そのintentはfixtureScopeMatched false。4 intentすべてが満たす場合だけstateはfixture_scope_matchedとなる。これはテスト指定範囲との一致であり、readoutCoverageComplete・comparisonAvailable・clearSucceededInferred・実証拠・実車同一性・消去境界・送信flagはfalseのまま。raw文字列やtokenは返さない。
+
+照合試験126件、scope48件、before205件、post239件を実行してErrors 0。評価中の失効も評価後の再照会で拒否する試験を含む。既存before validatorから新規試験を読み込み、validate:obdにも間接接続する。構文・差分検査を実施し、アプリ本体に変更がないためOBD主集計・bridge・offline・ブラウザ・実車試験は今回再実行しない。次はpost側の模擬範囲照合とbefore/clear/postの境界設計であり、DTC前後比較はまだ追加しない。
+
 ## 3.13.519後続: テスト専用の範囲と失効モデル
 
 `scripts/fixtures/dtc-clear-readout-scope.js` に `createDtcClearReadoutFixtureScope()` を追加。ブラウザ向けAPIではなく、before/post評価器・UI・保存・実通信には接続しない。アプリ本体と版番号は3.13.519のまま。
