@@ -104,7 +104,7 @@ function asset(pathname) {
         exportedAt: '2026-09-06T00:00:00.000Z'
       });
       const payload = window.ObdReadOnly.buildBridgeSessionExportPayload(session);
-      Object.assign(payload, { wouldTransmit: false, canExecute: false, retryAllowed: false, vehicleCommandEnabled: false });
+      window.__comparisonSessionJson = JSON.stringify(session);
       return JSON.stringify(payload);
     });
     await page.evaluate(async (json) => {
@@ -128,6 +128,104 @@ function asset(pathname) {
     assert.equal(await record.locator('img').count(), 0, 'Untrusted JSON must remain text');
     assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), beforeDiagnosis, 'Viewer must not replace the current diagnosis');
     assert.equal(await download.isEnabled(), true, 'A selected current-page record enables download');
+    const compare = page.locator('#obdOperationJournalCompareCurrent');
+    assert.equal(await compare.isDisabled(), true, 'Comparison requires a current readout');
+    await page.evaluate(() => {
+      obdDevSession.lastSession = JSON.parse(window.__comparisonSessionJson);
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await compare.isEnabled(), true, 'A selected validated record and idle readout enable explicit comparison');
+    await compare.click();
+    await page.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    const matched = await page.evaluate(() => {
+      const association = getObdOperationJournalComparisonAssociation();
+      const snapshot = association?.controller?.getSnapshot?.();
+      return {
+        recordId: association?.record?.recordId,
+        state: snapshot?.state,
+        checks: snapshot?.readiness?.checks?.map(check => check.complete),
+        executionEnabled: snapshot?.executionEnabled,
+        vehicleCommandEnabled: snapshot?.vehicleCommandEnabled,
+        wouldTransmit: snapshot?.wouldTransmit,
+        canExecute: snapshot?.canExecute,
+        status: obdOperationJournalComparisonState.status
+      };
+    });
+    assert.equal(matched.recordId, 'viewer-record-00', 'Only the selected loaded record may be associated');
+    assert.equal(matched.state, 'pre_save_required');
+    assert.ok(matched.checks.length > 0 && matched.checks.every(value => value === false), 'Comparison controller must retain all unmet checks');
+    assert.deepEqual({ executionEnabled: matched.executionEnabled, vehicleCommandEnabled: matched.vehicleCommandEnabled, wouldTransmit: matched.wouldTransmit, canExecute: matched.canExecute }, {
+      executionEnabled: false, vehicleCommandEnabled: false, wouldTransmit: false, canExecute: false
+    }, 'Comparison must not enable execution or vehicle commands');
+    assert.match(matched.status, /車両同一性・適合・安全条件・消去許可は未確認。 記録ID: viewer-record-00/, 'Match status must remain historical and non-authoritative');
+    await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-1280.png') });
+    await page.setViewportSize({ width: 390, height: 900 });
+    await viewer.screenshot({ path: path.join(output, 'operation-journal-comparison-390.png') });
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.evaluate(() => {
+      obdDevSession.lastSession.dtcSnapshot.dtcs[0].code = 'P0420';
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await record.textContent().then(value => value.includes('照合時点の読取内容が一致。')), false, 'A render after in-place mutation must remove the historical match claim');
+    assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()), null, 'In-place current-session changes must invalidate future association use');
+    await compare.click();
+    await page.waitForFunction(() => document.getElementById('obdOperationJournalStatus').textContent.includes('一致しません'));
+    assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.association), null, 'A mismatch must not associate a record');
+    await page.evaluate(() => {
+      obdDevSession.lastSession = JSON.parse(window.__comparisonSessionJson);
+      renderObdOperationJournalViewer();
+    });
+    await compare.click();
+    await page.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    await page.evaluate(() => {
+      const controller = obdOperationJournalComparisonState.association.controller;
+      const snapshot = controller.getSnapshot();
+      controller.transition(snapshot, { type: 'cancel', revision: snapshot.revision });
+    });
+    assert.equal(await page.evaluate(() => getObdOperationJournalComparisonAssociation()), null, 'A transitioned controller must not remain associated');
+    await compare.click();
+    await page.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    await page.evaluate(() => {
+      obdDevSession.lastSession = JSON.parse(window.__comparisonSessionJson);
+      handleObdReadoutSessionReplacement();
+    });
+    assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.association), null, 'Session-reference replacement must invalidate association');
+    await page.evaluate(() => {
+      obdDevSession.lastSession = JSON.parse(window.__comparisonSessionJson);
+      renderObdOperationJournalViewer();
+    });
+    await compare.click();
+    await page.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    await list.locator('button').nth(1).click();
+    await page.waitForFunction(() => obdOperationJournalState.selectedRecord?.recordId === 'viewer-record-01');
+    assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.association), null, 'Selecting another record must invalidate association');
+    await compare.click();
+    await page.waitForFunction(() => obdOperationJournalComparisonState.association !== null);
+    await page.evaluate(() => {
+      const payload = JSON.parse(obdOperationJournalState.selectedRecord.sessionJson);
+      payload.exported_at = 'invalid-export-time';
+      obdOperationJournalState.selectedRecord = { ...obdOperationJournalState.selectedRecord, sessionJson: JSON.stringify(payload) };
+      clearObdOperationJournalComparison();
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await page.evaluate(() => compareCurrentObdReadoutToOperationJournalRecord()), false, 'Invalid exported_at must reject comparison');
+    assert.match(await status.textContent(), /照合時刻を確認できない/);
+    assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.association), null, 'Invalid exported_at must not fall back to a current timestamp');
+    await refresh.click();
+    await page.waitForFunction(() => document.querySelectorAll('#obdOperationJournalList button').length === 20);
+    await list.locator('button').first().click();
+    await page.waitForFunction(() => !document.getElementById('obdOperationJournalCompareCurrent').disabled);
+    await page.evaluate(() => {
+      obdDevSession.pendingCommandOperation = {};
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await compare.isDisabled(), true, 'Active vehicle I/O must disable comparison');
+    await page.evaluate(() => {
+      compareCurrentObdReadoutToOperationJournalRecord();
+      obdDevSession.pendingCommandOperation = null;
+      renderObdOperationJournalViewer();
+    });
+    assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.association), null, 'Active vehicle I/O must not create an association');
 
     await page.evaluate(() => {
       window.__downloadListOriginal = window.ObdOperationJournal;

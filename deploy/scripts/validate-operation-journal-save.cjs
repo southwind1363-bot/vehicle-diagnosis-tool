@@ -134,6 +134,7 @@ function asset(pathname) {
         }
       });
       obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({ source: 'synthetic_current_readout', session_id: 'synthetic-current-readout', captured_at: '2026-09-06T00:00:00.000Z', dtcSnapshot: { dtcs: [{ code: 'P0300', status: 'stored' }] }, vehicleProfile: { make: 'Synthetic', model: 'Current Readout', year: 2026 } });
+      window.__confirmedSaveSessionJson = JSON.stringify(obdDevSession.lastSession);
       window.confirm = () => true;
     });
     const reopenedViewer = page.locator('#obdOperationJournalViewer');
@@ -144,9 +145,14 @@ function asset(pathname) {
     await reopenedViewer.locator(':scope > summary').click();
     await reopenedViewer.locator(':scope > summary').click();
     const pendingId = await page.evaluate(() => obdOperationJournalSaveState.id);
+    await page.evaluate(() => {
+      obdDevSession.lastSession = window.ObdReadOnly.buildDiagnosticScanSession({ source: 'synthetic_current_readout', session_id: 'changed-mid-save', dtcSnapshot: { dtcs: [{ code: 'P0420', status: 'stored' }] } });
+      handleObdReadoutSessionReplacement();
+    });
     await page.evaluate(() => window.__resolveSave());
     await page.waitForFunction(() => obdOperationJournalSaveState.phase === 'confirmed');
     assert.equal(await page.evaluate(() => obdOperationJournalSaveState.id), pendingId, 'Close and reopen must retain the pending result');
+    assert.equal(await page.evaluate(() => obdOperationJournalComparisonState.association), null, 'A changed mid-save readout must not auto-associate the confirmed record');
     await reopenedViewer.evaluate(node => node.scrollIntoView({ block: 'center' }));
     await reopenedViewer.screenshot({ path: path.join(output, 'save-confirmed-1280.png') });
 
@@ -173,6 +179,45 @@ function asset(pathname) {
     await page.evaluate(() => window.__resolveDirectLoad());
     await page.waitForFunction(id => obdOperationJournalState.selectedRecord?.recordId === id, pendingId);
     assert.equal(await page.evaluate(() => obdOperationJournalState.selectedRecordOrigin), 'confirmed-save', 'Direct open must mark the confirmed-save origin');
+    await page.evaluate(() => {
+      obdDevSession.lastSession = JSON.parse(window.__confirmedSaveSessionJson);
+      renderObdOperationJournalViewer();
+    });
+    const compare = page.locator('#obdOperationJournalCompareCurrent');
+    assert.equal(await compare.isEnabled(), true, 'A confirmed-save origin may be explicitly compared');
+    await compare.click();
+    await page.waitForFunction(id => obdOperationJournalComparisonState.association?.record?.recordId === id, pendingId);
+    const confirmedOriginComparison = await page.evaluate(() => {
+      const association = getObdOperationJournalComparisonAssociation();
+      const snapshot = association?.controller?.getSnapshot?.();
+      return {
+        recordId: association?.record?.recordId,
+        origin: obdOperationJournalState.selectedRecordOrigin,
+        state: snapshot?.state,
+        checks: snapshot?.readiness?.checks?.map(check => check.complete),
+        target: snapshot?.target,
+        confirmed: snapshot?.confirmation?.recorded,
+        attempted: snapshot?.dispatch?.attempted,
+        executionEnabled: snapshot?.executionEnabled,
+        vehicleCommandEnabled: snapshot?.vehicleCommandEnabled,
+        wouldTransmit: snapshot?.wouldTransmit,
+        canExecute: snapshot?.canExecute
+      };
+    });
+    assert.equal(confirmedOriginComparison.recordId, pendingId, 'Confirmed-save comparison must retain its opaque saved record ID');
+    assert.equal(confirmedOriginComparison.origin, 'confirmed-save');
+    assert.equal(confirmedOriginComparison.state, 'pre_save_required');
+    assert.ok(confirmedOriginComparison.checks.length > 0 && confirmedOriginComparison.checks.every(value => value === false), 'Confirmed-save comparison must retain all unmet checks');
+    assert.deepEqual(confirmedOriginComparison, {
+      ...confirmedOriginComparison,
+      target: null,
+      confirmed: false,
+      attempted: false,
+      executionEnabled: false,
+      vehicleCommandEnabled: false,
+      wouldTransmit: false,
+      canExecute: false
+    }, 'Confirmed-save comparison must remain a disabled pre-save candidate');
     assert.equal(await page.evaluate(() => JSON.stringify({
       pageIndex: obdOperationJournalState.pageIndex,
       pages: obdOperationJournalState.pages,
