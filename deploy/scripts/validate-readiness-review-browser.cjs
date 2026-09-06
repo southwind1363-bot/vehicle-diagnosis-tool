@@ -148,6 +148,37 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original);
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('Mode06 browser passed: search/status intersection, no match, warning retained, reset, 390/1280 light/dark, unchanged session.');
+    const failed = model.buildDiagnosticScanSession({
+      freezeFrameSnapshot: { source_ecu: '7E8', freeze_frame_readout_status: 'blocked', error_codes: ['adapter_timeout'] },
+      onboardMonitorSnapshot: { source_ecu: '7E9', onboard_monitor_readout_status: 'unparsed', error_codes: ['transport:timeout'] }
+    });
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    const replacementPicker = page.waitForEvent('filechooser', { timeout: 5000 });
+    replacementPicker.catch(() => {});
+    page.once('dialog', dialog => dialog.accept());
+    await page.getByRole('button', { name: '読取結果ファイルを開く', exact: true }).click();
+    await (await replacementPicker).setFiles({ name: 'synthetic-empty-readout.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(failed))) });
+    await page.waitForFunction(() => obdDevSession.lastSession?.freezeFrameSnapshot?.freezeFrameReadoutStatus === 'blocked');
+    const failedBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const [button, id, state, reason, counter] of [
+      ['フリーズフレームの詳細を開く', 'obdSessionDetailFreezeFrame', '読取拒否', 'アダプター応答タイムアウト', '[data-freeze-review-count]'],
+      ['Mode06の詳細を開く', 'obdSessionDetailMode06', '応答未解析', '通信タイムアウト', '[data-mode06-review-count]']
+    ]) {
+      await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      await page.getByRole('button', { name: button, exact: true }).click();
+      const detail = page.locator('#' + id);
+      await detail.waitFor({ state: 'visible' });
+      assert.ok((await detail.innerText()).includes(state));
+      assert.ok((await detail.innerText()).includes(reason));
+      assert.match(await detail.locator(counter).innerText(), /0 \/ 0/);
+      assert.equal(await detail.locator('.obd-readiness-controls').isVisible(), false);
+      await detail.evaluate(node => window.scrollTo({ top: window.scrollY + node.getBoundingClientRect().top - 230, behavior: 'instant' }));
+      await page.screenshot({ animations: 'disabled', path: path.join(output, `empty-${id}.png`) });
+    }
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), failedBefore);
+    assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+    console.log('Empty-result browser passed: imported rejected FF and unparsed Mode06, detail navigation, recorded errors, no fabricated values, unchanged session.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
   } catch (error) {
     if (page) { await page.screenshot({ path: path.join(output, 'failure.png') }); console.error('Screenshot:', path.join(output, 'failure.png'), 'Page errors:', errors); console.error('Freeze card:', await page.locator('#obdSessionDetailFreezeFrame').allTextContents()); }

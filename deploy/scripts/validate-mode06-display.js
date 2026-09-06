@@ -8,7 +8,7 @@ let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 const context = vm.createContext({ NO_DATA: "未記録" });
 vm.runInContext(["formatObdOnboardMonitorTestLine", "buildObdOnboardMonitorDisplayLines", "formatObdBridgeOnboardMonitorSummary",
-  "formatObdBridgeReadoutValue", "formatObdBridgeCompositeValue", "formatObdReadoutStatus"].map(extract).join("\n"), context);
+  "formatReadoutErrorCodes", "buildObdFreezeFrameDispositionLines", "formatObdBridgeReadoutValue", "formatObdBridgeCompositeValue", "formatObdReadoutStatus"].map(extract).join("\n"), context);
 for (const [status, label] of [["pass", "合格"], ["fail", "不合格"], ["unknown", "未判定"], [null, "未判定"],
   [undefined, "未判定"], ["", "未判定"], ["PASS", "未判定 (PASS)"], ["<img src=x>", "未判定 (<img src=x>)"]]) {
   for (const passed of [true, false, null]) {
@@ -92,3 +92,28 @@ const details = extract("renderObdBridgeSessionDetails");
 check(details.includes("buildObdOnboardMonitorDisplayLines(onboardMonitorSnapshot)") && details.includes('sections.push(["Mode06", monitorLines])'), "Detailed view does not use full Mode06 display");
 check(details.includes("item.textContent = line;"), "Mode06 must render literal text");
 console.log(`Mode06 display checks: ${checks} / Errors: 0`);
+for (const status of ["unknown", "blocked", "unparsed", "reported"]) {
+  const snapshot = { sourceEcu: "7E8", tests: [], onboardMonitorReadoutStatus: status, error_codes: ["adapter_timeout"] };
+  const before = JSON.stringify(snapshot), lines = context.buildObdOnboardMonitorDisplayLines(snapshot);
+  assert.ok(lines.includes(`7E8: ${context.formatObdReadoutStatus(status)}`));
+  assert.ok(lines.includes("7E8: 理由:アダプター応答タイムアウト"));
+  assert.ok(lines.includes("検査明細: 登録データなし"));
+  assert.equal(JSON.stringify(snapshot), before);
+}
+const failedFrame = { freezeFrameReadoutStatus: "unknown", freezeFrameEcuSnapshots: [], freeze_frame_ecu_snapshots: [
+  { source_ecu: "7E8", freeze_frame_readout_status: "unparsed", errorCodes: [], error_codes: ["adapter_timeout"] },
+  { sourceEcu: "7E9", freezeFrameReadoutStatus: "blocked" }
+] };
+const failedBefore = JSON.stringify(failedFrame), failureLines = context.buildObdFreezeFrameDispositionLines(failedFrame);
+assert.ok(failureLines.includes("7E8: 応答未解析") && failureLines.includes("7E9: 読取拒否"));
+assert.ok(failureLines.includes("7E8: 理由:アダプター応答タイムアウト"));
+assert.equal(JSON.stringify(failedFrame), failedBefore);
+assert.equal(context.buildObdFreezeFrameDispositionLines(null).length, 0);
+assert.equal(context.buildObdFreezeFrameDispositionLines({}).length, 0);
+const failedMode = context.buildObdOnboardMonitorDisplayLines({ onboardMonitorEcuSnapshots: [],
+  onboard_monitor_ecu_snapshots: [{ source_ecu: "7E9", onboard_monitor_readout_status: "blocked", error_codes: ["adapter_timeout"] }],
+  error_codes: ["transport:timeout"] });
+assert.ok(failedMode.includes("7E9: 読取拒否"));
+assert.ok(failedMode.includes("7E9: 理由:アダプター応答タイムアウト"));
+assert.ok(failedMode.includes("全体: 理由:通信タイムアウト"));
+console.log('Empty readout disposition checks: 24 / Errors: 0');

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.523";
+const APP_VERSION = "3.13.524";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10091,6 +10091,7 @@ function createObdFreezeFrameReviewControls(values, rows) {
     frame: getObdDisplayByteNumber(value.freezeFrameNumber ?? value.freeze_frame_number),
     raw: value.decoded === false || value.undecodedRaw === true,
     text: String(value.label || value.id || "項目").toLocaleLowerCase() }));
+  controls.hidden = entries.length === 0;
   const select = (labelText, options) => {
     const label = document.createElement("label"); label.textContent = labelText;
     const input = document.createElement("select");
@@ -10385,13 +10386,19 @@ function formatObdOnboardMonitorTestLine(item = {}) {
 
 function buildObdOnboardMonitorDisplayLines(snapshot = null) {
   const tests = snapshot?.tests || [];
-  const ecuSnapshots = snapshot?.onboardMonitorEcuSnapshots || snapshot?.onboard_monitor_ecu_snapshots || [];
+  const ecuSnapshots = [snapshot?.onboardMonitorEcuSnapshots, snapshot?.onboard_monitor_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
   const summaryOnly = !tests.length && snapshot?.testCount > 0;
-  if (!tests.length && !ecuSnapshots.length && !summaryOnly) return [];
+  const dispositionRecorded = snapshot?.onboardMonitorReadoutStatus || snapshot?.onboard_monitor_readout_status
+    || snapshot?.errorCodes?.length || snapshot?.error_codes?.length;
+  if (!tests.length && !ecuSnapshots.length && !summaryOnly && !dispositionRecorded) return [];
   const lines = [`${summaryOnly ? "記録された集計（検査明細なし）" : "要約"}: ${formatObdBridgeOnboardMonitorSummary(snapshot)}`];
+  const parentErrorLabel = formatReadoutErrorCodes(snapshot?.errorCodes?.length ? snapshot.errorCodes : snapshot?.error_codes || []);
+  if (ecuSnapshots.length && parentErrorLabel) lines.push(`全体: ${parentErrorLabel}`);
   (ecuSnapshots.length ? ecuSnapshots : [snapshot]).forEach((group) => {
     const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
     lines.push(`${ecu}: ${formatObdReadoutStatus(group.onboardMonitorReadoutStatus || group.onboard_monitor_readout_status, "状態未確認")}`);
+    const errorLabel = formatReadoutErrorCodes(group.errorCodes?.length ? group.errorCodes : group.error_codes || []);
+    if (errorLabel) lines.push(`${ecu}: ${errorLabel}`);
     if (ecuSnapshots.length && !group.tests?.length && group.testCount > 0) {
       lines.push(`${ecu}: 記録された集計（検査明細なし）: ${formatObdBridgeOnboardMonitorSummary(group)}`);
     }
@@ -10399,6 +10406,22 @@ function buildObdOnboardMonitorDisplayLines(snapshot = null) {
   lines.push(...tests.map(formatObdOnboardMonitorTestLine));
   if (!tests.length) lines.push("検査明細: 登録データなし");
   lines.push("TID/CIDの意味と単位は車種別の整備書で確認してください。記録判定は車両全体の正常・異常を示すものではありません。");
+  return lines;
+}
+
+function buildObdFreezeFrameDispositionLines(snapshot = null) {
+  if (!snapshot) return [];
+  const children = [snapshot.freezeFrameEcuSnapshots, snapshot.freeze_frame_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
+  const lines = [];
+  for (const group of [snapshot, ...children]) {
+    if (!group) continue;
+    const status = group.freezeFrameReadoutStatus || group.freeze_frame_readout_status;
+    const errorLabel = formatReadoutErrorCodes(group.errorCodes?.length ? group.errorCodes : group.error_codes || []);
+    if (!status && !errorLabel) continue;
+    const ecu = group.sourceEcu || group.source_ecu || (group === snapshot && children.length ? "全体" : "ECU未記録");
+    lines.push(`${ecu}: ${formatObdReadoutStatus(status, "状態未確認")}`);
+    if (errorLabel) lines.push(`${ecu}: ${errorLabel}`);
+  }
   return lines;
 }
 
@@ -10418,6 +10441,7 @@ function createObdMode06ReviewControls(tests, rows) {
   const entries = tests.map((test, index) => ({ row: rows[index],
     text: `${test.sourceEcu || test.source_ecu || "ECU未記録"} TID ${test.testId ?? test.tid ?? "未記録"} CID ${test.componentId ?? test.cid ?? "未記録"}`.toLocaleLowerCase(),
     state: ["pass", "fail"].includes(test.status) ? test.status : "unknown" }));
+  controls.hidden = entries.length === 0;
   entries.forEach((entry) => { entry.row.dataset.mode06ReviewRow = entry.state; });
   const update = () => {
     const words = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
@@ -11655,7 +11679,8 @@ function renderObdBridgeSessionDetails(session = null) {
 
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
   const freezeFrameTriggerEntries = getObdFreezeFrameTriggerEntries(freezeFrameSnapshot);
-  if (freezeFrameValues.length || freezeFrameTriggerEntries.length) {
+  const freezeDispositionLines = buildObdFreezeFrameDispositionLines(freezeFrameSnapshot);
+  if (freezeFrameValues.length || freezeFrameTriggerEntries.length || freezeDispositionLines.length) {
     const freezeExpectedSummary = summarizeObdExpectedItems(freezeFrameSnapshot?.expectedItems || []);
     const freezeFrameEcuSnapshots = freezeFrameSnapshot?.freezeFrameEcuSnapshots || freezeFrameSnapshot?.freeze_frame_ecu_snapshots || [];
     const freezeFrameEcuScopeLines = freezeFrameEcuSnapshots.length > 1
@@ -11670,6 +11695,7 @@ function renderObdBridgeSessionDetails(session = null) {
       ]
       : [];
     const lines = [];
+    lines.push(...freezeDispositionLines);
     lines.push(...freezeFrameEcuScopeLines);
     if (freezeFrameTriggerEntries.length) {
       lines.push(`起点DTC: ${freezeFrameTriggerEntries.map(formatObdFreezeFrameTriggerEntry).join(" / ")}`);
@@ -11678,7 +11704,7 @@ function renderObdBridgeSessionDetails(session = null) {
     }
     lines.push(freezeFrameValues.length
       ? `要約: ${formatObdBridgeMonitorSummary(freezeFrameSnapshot?.monitorValueSummary)}`
-      : "読取値: 未出力 (起点情報のみ取得)");
+      : freezeFrameTriggerEntries.length ? "読取値: 未出力 (起点情報のみ取得)" : "読取値: 未出力。正常とは判定できません。");
     if (freezeExpectedSummary.totalCount) {
       lines.push(`取得状況: ${freezeExpectedSummary.capturedCount}/${freezeExpectedSummary.totalCount}`);
     }
