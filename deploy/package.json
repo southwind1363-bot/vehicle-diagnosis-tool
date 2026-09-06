@@ -36,6 +36,7 @@
     "validate:dtc-scoped-readout": "node scripts/validate-dtc-clear-scoped-before-readout.js",
     "validate:dtc-scoped-post-readout": "node scripts/validate-dtc-clear-scoped-post-readout.js",
     "validate:dtc-sequence": "node scripts/validate-dtc-clear-readout-sequence.js",
+    "validate:dtc-before-evidence": "node scripts/validate-dtc-clear-before-evidence.js",
     "validate:bridge": "node scripts/validate-local-bridge-readonly.js",
     "validate:j2534-lifecycle": "node scripts/validate-j2534-identity-lifecycle.js",
     "validate:j2534-supervisor": "node scripts/validate-j2534-identity-supervisor.js",

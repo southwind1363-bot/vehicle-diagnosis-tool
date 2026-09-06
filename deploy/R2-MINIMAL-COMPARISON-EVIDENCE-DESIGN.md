@@ -1,5 +1,23 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 3.13.519後続: beforeのテスト用DTC証拠抽出
+
+`scripts/fixtures/dtc-clear-scoped-before-readout.js` に `createDtcClearBeforeDtcEvidenceFixture({ scope, context, beforeReadout })` を追加した。Nodeのテスト専用であり、ブラウザAPI・実通信・journal/session保存には接続しない。以下の未実装という記述よりこの節を優先する。
+
+入力の4 receiptをown data descriptorからコピーし、所有するレコードと配列だけをfreezeする。callerのtokenはfreezeしない。コピーを既存scoped-before評価へ渡し、全4 receiptのscope/意味/順序が成立した場合だけDTC集合を抽出する。不成立ならhandleなしで理由を返す。抽出ではcaller入力を読み直さず、検証済みコピーの同じ文字列を既存strict parserへ再度渡す。件数・0000枠・重複・矛盾の受入判定を再実装しない。
+
+コード表現はP/C/B/U + 数字1桁 + hex3桁。根拠は [Scapy公式OBD_DTC実装](https://github.com/secdev/scapy/blob/master/scapy/contrib/automotive/obd/services.py)（2026-09-06確認）のsystem2bit、先頭桁2bit、残り4bit×3の構造。コード値の表現だけであり、コードの定義文や車種への適合を主張しない。一般decoderの寛容な正規化は使わない。
+
+summaryは3つのintentごとにsourceId・positive_empty/positive_nonempty・ソート済みcodesを保持する。同一sourceの同一応答は一度だけ取り、異なるECU間やstatus間でコードを統合しない。raw文字列・CAN frame・件数byte・readiness値・tokenは出力しない。readinessEvidenceAvailableはfalse。
+
+生成成功はテスト用handleを返す。inspect(context)は都度scopeを再照会し、不一致・失効ならsummaryを返さない。dispose()は内部summary参照を破棄し、以後の取得を拒否する。callerが既に保持している凍結summaryを回収・失効表示へ書き換える仕組みではなく、過去summaryを将来の比較APIの権限として受理しない設計が引き続き必要。永続化・エクスポートは追加しない。
+
+実証拠・実車同一性・消去境界・網羅性・比較・消去成功・実行・送信flagはすべてfalse。今回の抽出はbeforeだけで、post証拠と前後比較は未実装。次は同じコピー・検証・寿命管理をpost抽出へ適用する。
+
+検証: 新規51件、scope48件・scoped-before126件・scoped-post164件・sequence182件・before205件・post239件、合計1015件がErrors 0。0件、P/C/B/U表現、各serviceの2/3/255件とISO-TP、同一コードの複数ECU、矛盾、NO DATA、timeout、入力コピー後の変更、getter拒否、疎配列、失効、disposeを検査。構文・差分検査も通過。アプリ本体に変更がないためOBD主集計・bridge・offline・ブラウザ・実車試験は今回再実行しない。
+
+## 抽出前の設計履歴
+
 2026-09-06、基準bcf551fb / アプリ3.13.519。これは次のテスト用実装に向けた設計案であり、公開API・診断結果・永続保存形式の追加ではない。
 
 ## 現行実装との区別

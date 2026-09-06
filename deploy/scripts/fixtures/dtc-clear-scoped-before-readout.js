@@ -136,3 +136,64 @@ export function evaluateDtcClearReadoutSequenceFixture(input) {
   if (!post.fixtureScopeMatched) return sequenceResult("fixture_sequence_incomplete", post.reason || "post_fixture_scope_incomplete");
   return sequenceResult("fixture_sequence_matched", null);
 }
+
+function copyBeforeEvidenceInput(value) {
+  const before = record(value, ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"]);
+  if (!Array.isArray(before.receipts)) throw new TypeError("invalid_evidence_receipts");
+  const keys = Reflect.ownKeys(before.receipts);
+  if (Object.getOwnPropertyDescriptor(before.receipts, "length").value !== 4
+    || keys.some((key) => typeof key !== "string") || keys.join(",") !== "0,1,2,3,length") throw new TypeError("invalid_evidence_receipts");
+  const receipts = [0, 1, 2, 3].map((index) => {
+    const descriptor = Object.getOwnPropertyDescriptor(before.receipts, String(index));
+    if (!descriptor || !Object.hasOwn(descriptor, "value")) throw new TypeError("invalid_evidence_receipt_accessor");
+    const receipt = record(descriptor.value, ["ordinal", "intent", "command", "profile", "startedAt", "completedAt", "completion", "transcript"]);
+    return Object.freeze(receipt);
+  });
+  // Freeze owned records only, never caller-owned attempt or connection references.
+  return Object.freeze({ ...before, receipts: Object.freeze(receipts) });
+}
+
+function beforeDtcEvidenceHandle(scope, dtcEvidence) {
+  let retained = freeze(dtcEvidence);
+  return Object.freeze({
+    inspect(context) {
+      const current = inspectDtcClearReadoutFixtureScope(scope, context);
+      if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
+      if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
+      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_dtc_evidence", null);
+      return freeze({ ok: true, reason: null, summary: { ...boundary, dtcEvidence: retained, readinessEvidenceAvailable: false } });
+    },
+    dispose() { retained = null; }
+  });
+}
+
+export function createDtcClearBeforeDtcEvidenceFixture(input) {
+  const value = record(input, ["scope", "context", "beforeReadout"]);
+  const context = record(value.context, ["scopeToken", "connectionToken", "targetToken"]);
+  const initial = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!initial.ok) return freeze({ ok: false, reason: initial.reason, handle: null });
+  const beforeReadout = copyBeforeEvidenceInput(value.beforeReadout);
+  const evaluated = evaluateDtcClearScopedBeforeReadoutFixture({ scope: value.scope, context, beforeReadout });
+  if (!evaluated.fixtureScopeMatched) return freeze({ ok: false, reason: evaluated.reason || "before_fixture_scope_incomplete", handle: null });
+  // Reparse only the owned, immutable input already validated by the production evaluator.
+  // Count, zero-slot, duplicate and conflict policies remain in that evaluator, not reimplemented here.
+  const dtcEvidence = beforeReadout.receipts.slice(0, 3).map((receipt) => {
+    const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
+      command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
+    const sources = new Map();
+    for (const frame of parsed.frames) {
+      if (sources.has(frame.sourceId)) continue;
+      const codes = [];
+      for (let index = 2; index < frame.payload.length; index += 2) {
+        // Scapy OBD_DTC: system 2 bits, first digit 2 bits, then three hex nibbles.
+        const high = frame.payload[index], low = frame.payload[index + 1];
+        codes.push(`${["P", "C", "B", "U"][high >> 6]}${(high >> 4) & 3}${(high & 15).toString(16)}${low.toString(16).padStart(2, "0")}`.toUpperCase());
+      }
+      sources.set(frame.sourceId, { sourceId: frame.sourceId, observation: codes.length ? "positive_nonempty" : "positive_empty", codes: codes.sort() });
+    }
+    return { intent: receipt.intent, sources: [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId)) };
+  });
+  const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
+  if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
+  return Object.freeze({ ok: true, reason: null, handle: beforeDtcEvidenceHandle(value.scope, dtcEvidence) });
+}

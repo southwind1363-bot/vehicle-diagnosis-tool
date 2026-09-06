@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+3.13.519後続のbefore DTC証拠抽出: 検証済みコピーからintent/source別コード集合を作るテスト用handleを追加。失効・context不一致・dispose後は取得を拒否し、raw応答やtokenを出力しない。関連1015件がErrors 0。通常API・保存・比較・送信は変更しない。次はpost側の証拠抽出。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。
+
 3.13.519後続の最小比較証拠設計: `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` にintent/source別のDTC集合、検証済み内部コピー、短命な保持、失効と非永続化の要件を整理。DTC消失・追加・置換・status移動やreadiness変化をsequence成立と区別する回帰試験を追加した。比較用summaryや差分、通常API、保存形式、実送信は追加していない。次はテスト内のDTC最小証拠抽出を具体化する。
 
 3.13.519後続の模擬順序検査: before/clear/postを一つのfixture scopeで評価し、3 attemptの相違と取得区間の順序を検査するNode用処理を追加。関連910件がErrors 0。caller入力の時刻・参照を実clear接続の証明にせず、成功推定・比較・送信flagはfalse。アプリ本体・版番号・保存形式は変更しない。次はsource別の最小証拠summaryの設計。詳細は `R2-BEFORE-READOUT-SCOPE-DESIGN.md` 冒頭。
