@@ -186,6 +186,14 @@ function dtcEvidenceHandle(scope, dtcEvidence, paired = false) {
       const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_dtc_difference", null);
       return freeze({ ok: true, reason: null, summary: { ...boundary, differences, fixtureSequenceMatched: true,
         fixtureDifferenceAvailable: true, readinessEvidenceAvailable: false } });
+    }, inspectReadinessIndicators(context) {
+      const current = inspectDtcClearReadoutFixtureScope(scope, context);
+      if (!current.ok) return freeze({ ok: false, reason: current.reason, summary: null });
+      if (retained === null) return freeze({ ok: false, reason: "evidence_disposed", summary: null });
+      const { readouts, fixtureScopeMatched, ...boundary } = result("fixture_readiness_indicators", null);
+      return freeze({ ok: true, reason: null, summary: { ...boundary,
+        beforeIndicators: retained.beforeIndicators, postIndicators: retained.postIndicators,
+        fixtureReadinessIndicatorsAvailable: true, monitorEvidenceAvailable: false, readinessEvidenceAvailable: false } });
     } } : {})
   });
 }
@@ -276,8 +284,24 @@ export function createDtcClearDtcEvidencePairFixture(input) {
   const postReadout = copyEvidenceInput(value.postReadout);
   const evaluated = evaluateDtcClearReadoutSequenceFixture({ ...value, context, beforeReadout, postReadout });
   if (!evaluated.fixtureSequenceMatched) return freeze({ ok: false, reason: evaluated.reason || "fixture_sequence_incomplete", handle: null });
-  const evidence = { before: extractValidatedDtcRows(beforeReadout), post: extractValidatedDtcRows(postReadout) };
+  const evidence = { before: extractValidatedDtcRows(beforeReadout), post: extractValidatedDtcRows(postReadout),
+    beforeIndicators: extractValidatedReadinessIndicators(beforeReadout), postIndicators: extractValidatedReadinessIndicators(postReadout) };
   const current = inspectDtcClearReadoutFixtureScope(value.scope, context);
   if (!current.ok) return freeze({ ok: false, reason: current.reason, handle: null });
   return Object.freeze({ ok: true, reason: null, handle: dtcEvidenceHandle(value.scope, evidence, true) });
+}
+
+function extractValidatedReadinessIndicators(readout) {
+  // Same owned receipt that passed sequence semantics; no permissive general decoder.
+  const receipt = readout.receipts[3];
+  const parsed = runtime.window.ObdReadOnly.parseElmReadOnlyRawTranscript({ profile: receipt.profile,
+    command: receipt.command, transcript: receipt.transcript, completion: receipt.completion });
+  const sources = new Map();
+  for (const frame of parsed.frames) {
+    if (sources.has(frame.sourceId)) continue;
+    // python-OBD status decoder: A7 is MIL, A6..A0 is reported DTC count.
+    sources.set(frame.sourceId, { sourceId: frame.sourceId, milCommandedOn: (frame.payload[2] & 0x80) !== 0,
+      reportedDtcCount: frame.payload[2] & 0x7F });
+  }
+  return [...sources.values()].sort((a, b) => a.sourceId.localeCompare(b.sourceId));
 }

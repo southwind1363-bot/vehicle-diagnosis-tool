@@ -1,5 +1,15 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 2026-09-07 / 3.13.519後続: MIL指示・報告DTC件数の模擬抽出
+
+Node専用pair handleへ `inspectReadinessIndicators(context)` を追加。sequence検証済みの同じ固定receipt（0101）からsource別のmilCommandedOn/reportedDtcCountを生成時に抽出し、前後を保持する。summaryはbeforeIndicators/postIndicatorsとして取得する。単独handleには追加しない。以前の「readiness値は保持しない」は履歴であり、今回保持するのはこの二つの派生値だけ。raw・token・monitor用のB/C/D byteは保持しない。
+
+符号化の根拠は [python-OBD公式status decoder](https://github.com/brendan-w/python-OBD/blob/master/obd/decoders.py) と [公式Status説明](https://python-obd.readthedocs.io/en/latest/Responses/#status)（2026-09-07確認）。A byte最上位bitがMIL、残り7bitが報告DTC件数。ECUの指示状態であり、実際のランプ点灯を目視確認したとは扱わない。DTC一覧との件数照合は未実装であり、値を合わせるための補正やECU間の合算はしない。
+
+fixtureReadinessIndicatorsAvailableはこの模擬抽出だけを示す。monitorEvidenceAvailable/readinessEvidenceAvailable、実比較・消去成功・実車同一性・網羅性・実行/送信flagはfalse。readiness全体の完了、故障解消、修理完了を推定しない。取得時にscope/contextとdispose状態を確認する。矛盾・欠落・timeoutは既存sequence検査により組handleを生成しない。
+
+新規778件でA byte全256値を前後で検査し、異なるECU・同一応答重複・不変性・入力変更・失効・dispose・矛盾を確認。境界検証1867件、関連合計3242件がErrors 0。アプリ版3.13.519・通常API・保存・実車送信は変更せず、OBD主検証・bridge・offline・実車試験は今回再実行しない。次はmonitor情報の適用条件を整理する段階であり、本変更でreadiness全体を対応済みとは扱わない。
+
 ## 3.13.519後続: 模擬clear入力検査の上限整理
 
 一括生成前の不変性検査を再帰から明示的な作業配列へ変更した。object訪問4096回に加え、初回訪問objectのown key総数も4096までとする。上限超過は `pair_clear_snapshot_budget_exceeded`、変更可能な値は従来の `mutable_pair_clear_snapshot` と区別する。既存の深い入力も以前から上限で拒否されており、スタック障害を再現したという意味ではない。

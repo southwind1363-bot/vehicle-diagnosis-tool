@@ -108,4 +108,38 @@ tokenOnly.clearWindowSnapshot = Object.freeze({ ...tokenOnly.clearWindowSnapshot
 const tokenHandle = createDtcClearDtcEvidencePairFixture(tokenOnly).handle;
 check(tokenHandle.inspectDifference(tokenOnly.context).ok && tokenReads === 0, "Identity token contents traversed");
 tokenHandle.dispose();
+for (let valueA = 0; valueA < 256; valueA += 1) {
+  const value = fixture();
+  value.beforeReadout.receipts[3].transcript = frames("7E8", [0x41, 1, valueA, 7, 0xE1, 0]) + ">";
+  value.postReadout.receipts[3].transcript = frames("7E8", [0x41, 1, 255 - valueA, 0, 0, 0]) + ">";
+  const handle = createDtcClearDtcEvidencePairFixture(value).handle;
+  const summary = handle.inspectReadinessIndicators(value.context).summary;
+  assert.deepEqual(summary.beforeIndicators, [{ sourceId: "7E8", milCommandedOn: valueA >= 128, reportedDtcCount: valueA % 128 }]); checks += 1;
+  assert.deepEqual(summary.postIndicators, [{ sourceId: "7E8", milCommandedOn: 255 - valueA >= 128, reportedDtcCount: (255 - valueA) % 128 }]); checks += 1;
+  check(summary.fixtureReadinessIndicatorsAvailable && ["monitorEvidenceAvailable", "readinessEvidenceAvailable", "comparisonAvailable",
+    "clearSucceededInferred", "readoutCoverageComplete", "sameVehicleVerified", "clearBoundaryVerified", "realTransportProofAvailable",
+    "executionEnabled", "vehicleCommandEnabled", "wouldTransmit", "canExecute"].every((key) => summary[key] === false), "MIL/count became readiness or success proof");
+  handle.dispose();
+}
+const indicatorsInput = fixture(["7E8", "7E9"]);
+indicatorsInput.beforeReadout.receipts[3].transcript = frames("7E9", [0x41, 1, 0xFF, 7, 0xE1, 0])
+  + frames("7E8", [0x41, 1, 0, 7, 0xE1, 0]) + frames("7E8", [0x41, 1, 0, 7, 0xE1, 0]) + ">";
+const indicatorsHandle = createDtcClearDtcEvidencePairFixture(indicatorsInput).handle;
+const indicators = indicatorsHandle.inspectReadinessIndicators(indicatorsInput.context).summary;
+assert.deepEqual(indicators.beforeIndicators, [{ sourceId: "7E8", milCommandedOn: false, reportedDtcCount: 0 },
+  { sourceId: "7E9", milCommandedOn: true, reportedDtcCount: 127 }]); checks += 1;
+check(Object.isFrozen(indicators.beforeIndicators[0]) && !/payload|transcript|Token/.test(JSON.stringify(indicators)), "Indicator raw data or mutability leaked");
+indicatorsInput.beforeReadout.receipts[3].transcript = "NO DATA\r>";
+check(JSON.stringify(indicatorsHandle.inspectReadinessIndicators(indicatorsInput.context).summary) === JSON.stringify(indicators), "Indicator extraction reread caller input");
+for (const key of ["scopeToken", "connectionToken", "targetToken"]) check(indicatorsHandle.inspectReadinessIndicators({ ...indicatorsInput.context, [key]: {} }).summary === null, "Foreign context acquired indicators");
+indicatorsHandle.dispose();
+check(indicatorsHandle.inspectReadinessIndicators(indicatorsInput.context).summary === null, "Disposed indicators retained");
+const staleIndicators = fixture(), staleHandle = createDtcClearDtcEvidencePairFixture(staleIndicators).handle;
+staleIndicators.scope.invalidate(staleIndicators.context);
+check(staleHandle.inspectReadinessIndicators(staleIndicators.context).summary === null, "Invalidated indicators retained");
+for (const side of ["beforeReadout", "postReadout"]) {
+  const value = fixture(); value[side].receipts[3].transcript = frames("7E8", [0x41, 1, 0x80, 7, 0xE1, 0])
+    + frames("7E8", [0x41, 1, 0, 7, 0xE1, 0]) + ">";
+  check(createDtcClearDtcEvidencePairFixture(value).handle === null, "Conflicting readiness yielded indicators");
+}
 console.log(`DTC clear difference boundary checks: ${checks} / Errors: 0`);

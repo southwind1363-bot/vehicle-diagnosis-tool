@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+2026-09-07 / 3.13.519後続: Node専用pair handleにMIL指示・報告DTC件数の取得を追加。0101の検証済みコピーからECU別に抽出し、全256値など関連3242件がErrors 0。monitor完了・DTC一覧との件数照合・実車比較・成功判定・保存・送信は未追加。詳細と符号化根拠は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
+
 3.13.519後続の模擬clear入力上限: 不変性検査を非再帰化し、own key総数の上限と上限超過専用エラーを追加。深さ5000・幅5000・循環・正当な32-source・opaque tokenの検証を追加し、関連2464件がErrors 0。アプリ本体・保存・実車送信は変更なし。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
 
 3.13.519後続の模擬差分境界検証: 全256集合ペア、255件、32 ECU、順序反転、期待ECU欠落、受信上限超過の回帰検査1084件を追加。関連2459件がErrors 0。差分処理本体・アプリ・保存・実車送信は変更なし。詳細と単独検証コマンドは `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
