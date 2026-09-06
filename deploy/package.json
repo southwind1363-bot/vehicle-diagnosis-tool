@@ -32,6 +32,7 @@
     "validate:data": "node scripts/validate-data.js",
     "validate:dtc-import": "node scripts/validate-verified-dtc-import.js",
     "validate:obd": "node scripts/validate-obd-readonly.js",
+    "validate:dtc-scope": "node scripts/validate-dtc-clear-fixture-scope.js",
     "validate:bridge": "node scripts/validate-local-bridge-readonly.js",
     "validate:j2534-lifecycle": "node scripts/validate-j2534-identity-lifecycle.js",
     "validate:j2534-supervisor": "node scripts/validate-j2534-identity-supervisor.js",

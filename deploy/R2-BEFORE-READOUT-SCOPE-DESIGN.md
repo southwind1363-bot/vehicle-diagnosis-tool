@@ -1,5 +1,19 @@
 # R2 消去前証拠とintent別ECU範囲の設計案
 
+## 3.13.519後続: テスト専用の範囲と失効モデル
+
+`scripts/fixtures/dtc-clear-readout-scope.js` に `createDtcClearReadoutFixtureScope()` を追加。ブラウザ向けAPIではなく、before/post評価器・UI・保存・実通信には接続しない。アプリ本体と版番号は3.13.519のまま。
+
+入力はown data propertyの `provenance, profile, connectionToken, targetToken, byIntent` だけ。provenanceはsimulated、profileは既存の固定11-bit CAN形式、tokenは非null object参照。byIntentは03/07/0A/0101に対応する固定順の4行で、各行はintent/sourceIdsだけ。sourceIdsは各intentにつき1〜32件、3桁大文字hexの000〜7FF、重複・空・暗黙変換を拒否する。32件はテストモデルの上限であり、実車のECU数や適合の主張ではない。入力配列をコピーし、source順だけを正規化する。各intentの集合は合算・相互補完しない。
+
+raw応答・観測結果・Mode04 snapshotを入力に受け取らない。ただしcallerが観測したsourceを入力へコピーしていないことまで証明する仕組みではない。範囲を収集結果とは別の入力にするテスト規律であって、実際の独立性や正当性の認証ではない。
+
+生成時に新しいscopeTokenを発行し、inspect/invalidateにはscopeToken・connectionToken・targetTokenの3参照を要求する。いずれかが不一致ならsnapshotなしで拒否し、失効操作も状態を変えない。正しいinvalidateは一方向にinvalidatedへ移り、source一覧を空にした失効snapshotを返す。その後のinspect/invalidateは拒否する。再作成は新しいscopeTokenを発行し、古い参照を受理しない。接続変更を自動検知するproducerはなく、モデル利用側が新しい接続世代参照を渡すか、旧範囲を失効させる必要がある。
+
+snapshotは凍結した観測時点の情報であり、有効性を保持する権限ではない。過去に取得したactive snapshotから後の失効を検知できるとは扱わず、将来の評価器はhandleへ都度照会する設計が必要。参照一致も実接続や実車同一性の証拠ではない。返却provenanceはsimulated_only、実証拠・同一性・網羅性・比較・成功推定・実行・送信flagはfalse。
+
+検証は `npm run validate:dtc-scope` の48件と、before205件・post239件がErrors 0。before validatorからscope validatorを読み込み、既存validate:obdにも間接接続する。新規・関連ファイルの構文と差分を確認した。アプリ本体に変更がないためOBD主集計・bridge・offline・ブラウザ・実車試験は今回再実行しない。次はこのテスト専用handleと模擬receiptのscope照合を設計する段階であり、比較機能や実車網羅性の判定は追加していない。
+
 ## 3.13.519 消去前4 receiptの限定実装
 
 以下の旧設計案に対し、消去前の模擬観測だけを先行実装した。新しい `evaluateGenericObdDtcClearBeforeReadoutReceipts({ beforeReadout })` は通常画面・保存・workflow・実通信には接続しない。before/postのstrict receipt検査とsource観測を内部関数へ切り出し、postの入出力契約・エラー識別子を保持した。偽のclear snapshotは作らない。
