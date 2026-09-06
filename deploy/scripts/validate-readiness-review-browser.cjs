@@ -39,7 +39,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const model = core.window.ObdReadOnly;
     model.configureMonitorDefinitions(JSON.parse(fs.readFileSync(path.join(root, 'data/obd-monitor-definitions.json'), 'utf8')));
     model.configureReadinessMonitors(JSON.parse(fs.readFileSync(path.join(root, 'data/obd-readiness-monitors-2026.json'), 'utf8')));
-    const fixture = model.buildScanSessionFromObdText('>0101\n7E8 06 41 01 80 07 65 20\n7E9 06 41 01 00 07 65 00\n>0202\n7E8 05 42 02 00 01 71\n>020C\n7E8 05 42 0C 00 00 00\n7E9 05 42 0C 00 1A F8\n>0205\n7E8 04 42 05 01 7B\n');
+    const onboardMonitorSnapshot = model.normalizeOnboardMonitorSnapshot({ onboard_monitor_readout_status: 'reported', tests: [
+      { source_ecu: '7E8', test_id: '01', component_id: '02', value: 1, min: 0, max: 2 },
+      { source_ecu: '7E9', test_id: '01', component_id: '02', value: 3, min: 0, max: 2 },
+      { source_ecu: '7E8', test_id: '03', component_id: '04', value: 4 }
+    ] });
+    const fixture = model.buildScanSessionFromObdText('>0101\n7E8 06 41 01 80 07 65 20\n7E9 06 41 01 00 07 65 00\n>0202\n7E8 05 42 02 00 01 71\n>020C\n7E8 05 42 0C 00 00 00\n7E9 05 42 0C 00 1A F8\n>0205\n7E8 04 42 05 01 7B\n', { onboardMonitorSnapshot });
     assert.equal(fixture.freezeFrameSnapshot.monitorValues.length, 3);
     assert.equal(fixture.readinessSnapshot.readinessEcuSnapshots.length, 2);
     await (await picker).setFiles({ name: 'synthetic-readiness-review.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(fixture))) });
@@ -118,6 +123,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original);
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('Freeze-frame browser passed: ECU/frame intersection, zero value, no match, persistent trigger, reset, 390/1280 light/dark, unchanged session.');
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    await page.getByRole('button', { name: 'Mode06の詳細を開く', exact: true }).click();
+    const mode = page.locator('#obdSessionDetailMode06');
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      await mode.getByLabel('Mode06の記録判定', { exact: true }).selectOption('attention');
+      assert.equal(await mode.locator('[data-mode06-review-row]:visible').count(), 2);
+      await mode.getByLabel('Mode06のECU・TID・CIDを検索').fill('7e9 tid 01 cid 02');
+      assert.equal(await mode.locator('[data-mode06-review-row]:visible').count(), 1);
+      assert.match(await mode.locator('[data-mode06-review-row]:visible').innerText(), /不合格/);
+      await mode.getByLabel('Mode06のECU・TID・CIDを検索').fill('存在しない検査');
+      assert.match(await mode.locator('[data-mode06-review-count]').innerText(), /正常を意味しません/);
+      assert.match(await mode.innerText(), /TID\/CIDの意味と単位/);
+      await mode.getByRole('button', { name: 'Mode06の絞り込みを解除', exact: true }).click();
+      assert.equal(await mode.locator('[data-mode06-review-row]:visible').count(), 3);
+      for (const dark of [false, true]) {
+        await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+        await mode.evaluate(node => window.scrollTo({ top: window.scrollY + node.getBoundingClientRect().top - 230, behavior: 'instant' }));
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+        await page.screenshot({ animations: 'disabled', path: path.join(output, `mode06-${width}-${dark ? 'dark' : 'light'}.png`) });
+      }
+    }
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original);
+    assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+    console.log('Mode06 browser passed: search/status intersection, no match, warning retained, reset, 390/1280 light/dark, unchanged session.');
     console.log(`Readiness review browser passed: actual JSON-file import, ECU/state search, reset, navigation, 390/1280 light/dark, unchanged session, zero external/vehicle requests. Artifacts: ${output}`);
   } catch (error) {
     if (page) { await page.screenshot({ path: path.join(output, 'failure.png') }); console.error('Screenshot:', path.join(output, 'failure.png'), 'Page errors:', errors); console.error('Freeze card:', await page.locator('#obdSessionDetailFreezeFrame').allTextContents()); }

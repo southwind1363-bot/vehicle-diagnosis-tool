@@ -13,7 +13,7 @@ class Element {
   focus() { this.focused = true; }
 }
 const context = vm.createContext({ window: { ObdReadOnly: { getReadinessMonitors: () => [{ id: "catalyst", diagnosticUse: "参考用途", notCompleteNote: "条件を確認", serviceManualRequired: true, source: "同梱出典" }] } }, document: { createElement: (tag) => new Element(tag) }, formatObdReadoutStatus: (value, fallback) => value || fallback });
-vm.runInContext(["getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
+vm.runInContext(["createObdMode06ReviewControls", "getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
 const all = (node) => [node, ...node.children.flatMap(all)];
 const snapshot = { readinessEcuSnapshots: [
   { sourceEcu: "7E8", milOn: true, readinessIgnitionType: "spark", monitors: [
@@ -91,3 +91,24 @@ assert.equal(JSON.stringify(ffValues), ffBefore);
 const ffEmpty = context.createObdFreezeFrameReviewControls([], []);
 assert.ok(all(ffEmpty).some((node) => node.textContent.includes("記録値は未取得")));
 console.log('Freeze-frame review checks: 7 / Errors: 0');
+const modeTests = [
+  { sourceEcu: "7E8", testId: "01", componentId: "02", status: "pass" },
+  { sourceEcu: "7E9", testId: "01", componentId: "02", status: "fail" },
+  { sourceEcu: "7E8", testId: "03", componentId: "04", status: "unrecognized", value: 1, min: 0, max: 2 }
+];
+const modeBefore = JSON.stringify(modeTests), modeRows = modeTests.map(() => new Element("li"));
+const mode = all(context.createObdMode06ReviewControls(modeTests, modeRows));
+const modeSearch = mode.find((node) => node.tag === "input"), modeFilter = mode.find((node) => node.tag === "select");
+modeFilter.value = "attention"; modeFilter.handlers.change();
+assert.deepEqual(modeRows.map((row) => row.hidden), [true, false, false]);
+modeSearch.value = "7e9 tid 01 cid 02"; modeSearch.handlers.input();
+assert.deepEqual(modeRows.map((row) => row.hidden), [true, false, true]);
+modeSearch.value = ""; modeFilter.value = "unknown"; modeFilter.handlers.change();
+assert.deepEqual(modeRows.map((row) => row.hidden), [true, true, false]);
+modeSearch.value = "missing"; modeSearch.handlers.input();
+assert.ok(mode.some((node) => node.textContent.includes("正常を意味しません")));
+mode.find((node) => node.tag === "button").handlers.click();
+assert.ok(modeRows.every((row) => !row.hidden));
+assert.equal(JSON.stringify(modeTests), modeBefore);
+assert.ok(all(context.createObdMode06ReviewControls([], [])).some((node) => node.textContent.includes("明細未取得")));
+console.log('Mode06 review checks: 7 / Errors: 0');

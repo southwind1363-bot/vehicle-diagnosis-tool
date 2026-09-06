@@ -2221,6 +2221,8 @@ body.dark .flow-node-measure .flow-step {
 .obd-freeze-review-card { grid-column: 1 / -1; }
 .obd-freeze-review-card li[hidden] { display: none; }
 .obd-freeze-review { overflow-wrap: anywhere; }
+.obd-mode06-review-card { grid-column: 1 / -1; overflow-wrap: anywhere; }
+.obd-mode06-review-card li[hidden] { display: none; }
 .obd-readiness-review h3, .obd-readiness-review h4 { margin: 0 0 10px; }
 .obd-readiness-note { color: var(--muted); font-size: 0.9rem; line-height: 1.6; }
 .obd-readiness-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin: 16px 0; }

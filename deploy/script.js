@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.522";
+const APP_VERSION = "3.13.523";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10402,6 +10402,38 @@ function buildObdOnboardMonitorDisplayLines(snapshot = null) {
   return lines;
 }
 
+function createObdMode06ReviewControls(tests, rows) {
+  const panel = document.createElement("div"); panel.className = "obd-mode06-review";
+  const controls = document.createElement("div"); controls.className = "obd-readiness-controls";
+  const label = document.createElement("label"); label.textContent = "Mode06のECU・TID・CIDを検索";
+  const search = document.createElement("input"); search.type = "search"; search.placeholder = "例：7E8、TID 01、CID 02"; label.appendChild(search);
+  const stateLabel = document.createElement("label"); stateLabel.textContent = "Mode06の記録判定";
+  const filter = document.createElement("select"); filter.setAttribute("aria-label", "Mode06の記録判定");
+  for (const [value, text] of [["all", "すべて"], ["attention", "不合格・未判定"], ["fail", "不合格のみ"], ["unknown", "未判定のみ"], ["pass", "合格のみ"]]) {
+    const option = document.createElement("option"); option.value = value; option.textContent = text; filter.appendChild(option);
+  }
+  filter.value = "all"; stateLabel.appendChild(filter);
+  const reset = document.createElement("button"); reset.type = "button"; reset.className = "secondary-button"; reset.textContent = "Mode06の絞り込みを解除";
+  const count = document.createElement("p"); count.setAttribute("role", "status"); count.setAttribute("aria-live", "polite"); count.dataset.mode06ReviewCount = "";
+  const entries = tests.map((test, index) => ({ row: rows[index],
+    text: `${test.sourceEcu || test.source_ecu || "ECU未記録"} TID ${test.testId ?? test.tid ?? "未記録"} CID ${test.componentId ?? test.cid ?? "未記録"}`.toLocaleLowerCase(),
+    state: ["pass", "fail"].includes(test.status) ? test.status : "unknown" }));
+  entries.forEach((entry) => { entry.row.dataset.mode06ReviewRow = entry.state; });
+  const update = () => {
+    const words = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    let visible = 0;
+    entries.forEach((entry) => {
+      entry.row.hidden = !words.every((word) => entry.text.includes(word)) || !(filter.value === "all" || (filter.value === "attention" ? entry.state !== "pass" : entry.state === filter.value));
+      if (!entry.row.hidden) visible += 1;
+    });
+    count.textContent = `検査明細：${visible} / ${entries.length}件` + (!visible ? (entries.length ? "。条件に一致する検査明細はありません。正常を意味しません。" : "。明細未取得です。集計だけでは個別検査を確認できません。") : "");
+    reset.disabled = !words.length && filter.value === "all";
+  };
+  search.addEventListener("input", update); filter.addEventListener("change", update);
+  reset.addEventListener("click", () => { search.value = ""; filter.value = "all"; update(); search.focus(); });
+  controls.append(label, stateLabel, reset); panel.append(controls, count); update(); return panel;
+}
+
 function summarizeObdBridgeReadiness(snapshot = null) {
   const monitors = Array.isArray(snapshot?.monitors) ? snapshot.monitors : [];
   const knownMonitors = Array.isArray(snapshot?.knownMonitors) ? snapshot.knownMonitors : [];
@@ -11694,6 +11726,12 @@ function renderObdBridgeSessionDetails(session = null) {
       card.classList.add("obd-freeze-review-card");
       const valueRows = Array.from(list.children).slice(lines.length - freezeFrameValues.length);
       card.appendChild(createObdFreezeFrameReviewControls(freezeFrameValues, valueRows));
+    }
+    if (title === "Mode06") {
+      card.classList.add("obd-mode06-review-card");
+      const tests = onboardMonitorSnapshot?.tests || [];
+      const testRows = Array.from(list.children).slice(lines.length - tests.length - 1, lines.length - 1);
+      card.appendChild(createObdMode06ReviewControls(tests, testRows));
     }
     card.append(list);
     obdDevSessionDetails.appendChild(card);
