@@ -249,6 +249,35 @@ for (const [receiptIndex, service] of [[1, 0x47], [2, 0x4A]]) {
     `${command}: NO DATA became zero DTCs`);
 }
 
+// Positive observations never establish a caller-invented expected-source scope.
+for (const clearSources of [["7E8"], ["7E8", "7E9"]]) {
+  const fixture = createInput({ clearWindowSnapshot: createTerminalClearSnapshot(clearSources) });
+  for (const [index, service] of [[0, 0x43], [1, 0x47], [2, 0x4A]]) {
+    fixture.postReadout.receipts[index].transcript = canTranscript([service, 0]);
+  }
+  const result = evaluate(fixture);
+  check(result.readouts.slice(0, 3).every((row) => row.observation === "source_positive_empty_observed")
+    && result.readouts[3].observation === "source_positive_reported", "Positive scope fixture was not fully observed");
+  check(result.provenance.clearResponseExpectedSourceIds.join(",") === clearSources.join(",")
+    && result.provenance.expectedSourceScopeStatus === "unavailable"
+    && result.readouts.every((row) => row.evidenceComplete === false && row.blockerIds.includes("expected_source_scope_unavailable"))
+    && result.readoutCoverageComplete === false && result.comparisonAvailable === false
+    && result.clearSucceededInferred === false && result.operationOutcomeInferred === false,
+    "Clear source scope or all-positive observations fabricated complete readout coverage");
+  check(!JSON.stringify(result).includes("missingSourceIds") && !JSON.stringify(result).includes("unexpectedSourceIds"),
+    "Unestablished readout scope produced missing/unexpected ECU classifications");
+}
+for (const [key, value] of [
+  ["expectedSourceIds", ["7E8"]], ["expectedSourcesByIntent", Object.fromEntries(intents.map(([intent]) => [intent, ["7E8"]]))],
+  ["beforeReadout", { dtcReadoutStatus: "reported", dtcs: [] }], ["scopeVerified", true], ["sameVehicleVerified", true]
+]) {
+  typeError(() => evaluate({ ...createInput(), [key]: value }), `Caller ${key} accepted at evaluator root`);
+  typeError(() => evaluate(createInput({ postReadout: { [key]: value } })), `Caller ${key} accepted on post attempt`);
+  const fixture = createInput();
+  fixture.postReadout.receipts[0][key] = value;
+  typeError(() => evaluate(fixture), `Caller ${key} accepted on receipt`);
+}
+
 const noDataInput = createInput();
 noDataInput.postReadout.receipts[1].transcript = "NO DATA\r>";
 const noData = evaluate(noDataInput);

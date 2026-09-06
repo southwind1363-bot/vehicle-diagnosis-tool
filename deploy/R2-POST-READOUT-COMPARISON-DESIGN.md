@@ -1,5 +1,7 @@
 # R2 消去後再読取・前後比較: 次の非送信実装設計
 
+次工程の設計案は [消去前証拠とintent別ECU範囲](R2-BEFORE-READOUT-SCOPE-DESIGN.md)。3.13.518の実装契約は維持し、before APIや保存形式はまだ追加しない。以下の「次に実装」等は先行版の設計履歴として読む。
+
 ## 3.13.518 保留・永久DTCへの限定件数検証の適用
 
 3.13.517の保守的な受入制限を固定CAN profileの03/07/0Aへ共通適用する。この節を過去版の意味未検証という記述より優先する。根拠は [Scapy公式実装 services.py](https://github.com/secdev/scapy/blob/master/scapy/contrib/automotive/obd/services.py) の `OBD_S03_PR` / `OBD_S07_PR` / `OBD_S0A_PR` と `OBD_DTC`（2026-09-06確認）。各応答に1byteのcount、続いて2byte単位のDTCを定義する。これは公開実装による構造の裏付けであり、ISO/SAE規格の全面適合や対象実車の互換性を証明しない。
