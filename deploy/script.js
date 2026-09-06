@@ -228,8 +228,8 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.520";
-const APP_LAST_UPDATED = "2026-09-06";
+const APP_VERSION = "3.13.521";
+const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const MAX_SUPPORTED_ECU_COUNT = 64;
@@ -10436,7 +10436,8 @@ function buildObdReadinessDisplayLines(snapshot = null) {
 }
 
 function buildObdReadinessReviewGroups(snapshot = null) {
-  const nested = snapshot?.readinessEcuSnapshots || snapshot?.readiness_ecu_snapshots;
+  const references = window.ObdReadOnly?.getReadinessMonitors?.() || [];
+  const nested = [snapshot?.readinessEcuSnapshots, snapshot?.readiness_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length);
   const groups = Array.isArray(nested) && nested.length ? nested : snapshot ? [snapshot] : [];
   return groups.map((group) => {
     const source = group.sourceEcu || group.source_ecu || "ECU未記録";
@@ -10450,7 +10451,7 @@ function buildObdReadinessReviewGroups(snapshot = null) {
       const note = status === "unknown" ? (item.supported === true ? "完了状態を確認できません" : "対応状態を確認できません")
         : status === "missing" ? "この監視項目の読取データはありません" : item.diagnosticUse || "";
       return { label: item.label || item.id || "名称未記録", source: item.sourceEcu || item.source_ecu || source,
-        status, statusLabel, note };
+        status, statusLabel, note, reference: references.find((reference) => reference.id === item.id) || null };
     });
     return { source, mil: group.milOn === true ? "ON" : group.milOn === false ? "OFF" : "未判定",
       ignition: ({ spark: "火花点火", compression: "圧縮着火" })[group.readinessIgnitionType || group.readiness_ignition_type] || "未記録",
@@ -10471,7 +10472,7 @@ function createObdReadinessReviewCard(snapshot = null) {
   search.dataset.readinessSearch = ""; searchLabel.appendChild(search);
   const filterLabel = document.createElement("label"); filterLabel.textContent = "表示する状態";
   const filter = document.createElement("select"); filter.dataset.readinessFilter = "";
-  for (const [value, label] of [["all", "すべて"], ["attention", "未完了・不明・未取得"], ["complete", "完了"], ["unsupported", "非対応"]]) {
+  for (const [value, label] of [["all", "すべて"], ["attention", "未完了・不明・未取得"], ["incomplete", "未完了のみ"], ["unknown", "不明のみ"], ["missing", "未取得のみ"], ["complete", "完了"], ["unsupported", "非対応"]]) {
     const option = document.createElement("option"); option.value = value; option.textContent = label; filter.appendChild(option);
   }
   filter.value = "all"; filterLabel.appendChild(filter);
@@ -10485,6 +10486,10 @@ function createObdReadinessReviewCard(snapshot = null) {
     const section = document.createElement("section"); section.className = "obd-readiness-ecu";
     const title = document.createElement("h4"); title.textContent = `${group.source} — ${group.readout}`;
     const mil = document.createElement("p"); mil.textContent = `MIL指示：${group.mil} / 観測点火方式：${group.ignition}`;
+    const totals = document.createElement("p"); totals.className = "obd-readiness-note";
+    totals.dataset.readinessTotals = "";
+    totals.textContent = "表示項目の内訳：" + [["incomplete", "未完了"], ["unknown", "不明"], ["missing", "未取得"], ["complete", "完了"], ["unsupported", "非対応"]]
+      .map(([state, label]) => `${label} ${group.rows.filter((row) => row.status === state).length}`).join(" / ") + "（絞り込み前）";
     const list = document.createElement("ul"); list.className = "obd-readiness-rows";
     group.rows.forEach((row) => {
       const item = document.createElement("li"); item.dataset.readinessState = row.status;
@@ -10492,10 +10497,22 @@ function createObdReadinessReviewCard(snapshot = null) {
       const badge = document.createElement("span"); badge.className = "obd-readiness-badge"; badge.textContent = row.statusLabel;
       const detail = document.createElement("small"); detail.textContent = `${row.source}${row.note ? ` / ${row.note}` : ""}`;
       item.append(name, badge, detail); list.appendChild(item);
+      if (row.reference) {
+        const guide = document.createElement("details"); guide.className = "obd-readiness-guide";
+        const toggle = document.createElement("summary"); toggle.textContent = "参考情報・整備書確認";
+        guide.appendChild(toggle);
+        const guidance = ["同梱カタログの一般参考情報です。この車両への適合や故障原因を確定する情報ではありません。",
+          row.reference.diagnosticUse,
+          row.status === "incomplete" ? row.reference.notCompleteNote : "",
+          row.reference.serviceManualRequired ? "整備書確認必須：対象車両の適用条件・確認手順を整備書で確認してください。" : "",
+          `参考情報の出典：${row.reference.source || "未記録"}`];
+        for (const text of guidance.filter(Boolean)) { const paragraph = document.createElement("p"); paragraph.textContent = text; guide.appendChild(paragraph); }
+        item.appendChild(guide);
+      }
       entries.push({ item, section, row, text: `${group.source} ${row.source} ${row.label}`.toLocaleLowerCase() });
     });
     if (!group.rows.length) { const empty = document.createElement("p"); empty.textContent = "監視項目の読取データはありません。正常とは判定できません。"; section.appendChild(empty); }
-    section.prepend(title, mil); section.appendChild(list); body.appendChild(section);
+    section.prepend(title, mil, totals); section.appendChild(list); body.appendChild(section);
   });
   const empty = document.createElement("p"); empty.className = "empty-state"; empty.dataset.readinessEmpty = "";
   const update = () => {

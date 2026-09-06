@@ -12,7 +12,7 @@ class Element {
   addEventListener(name, fn) { this.handlers[name] = fn; }
   focus() { this.focused = true; }
 }
-const context = vm.createContext({ document: { createElement: (tag) => new Element(tag) }, formatObdReadoutStatus: (value, fallback) => value || fallback });
+const context = vm.createContext({ window: { ObdReadOnly: { getReadinessMonitors: () => [{ id: "catalyst", diagnosticUse: "参考用途", notCompleteNote: "条件を確認", serviceManualRequired: true, source: "同梱出典" }] } }, document: { createElement: (tag) => new Element(tag) }, formatObdReadoutStatus: (value, fallback) => value || fallback });
 vm.runInContext(["buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
 const all = (node) => [node, ...node.children.flatMap(all)];
 const snapshot = { readinessEcuSnapshots: [
@@ -47,6 +47,17 @@ check(rows.filter((row) => !row.hidden).length === 1 && rows.find((row) => !row.
 const reset = nodes.find((node) => node.tag === "button"); reset.handlers.click();
 check(rows.every((row) => !row.hidden) && reset.disabled && search.focused, "Reset failed");
 check(JSON.stringify(snapshot) === original, "Review mutated diagnostic evidence");
+for (const [state, expected] of [["incomplete", 1], ["unknown", 2], ["missing", 1]]) {
+  filter.value = state; filter.handlers.change();
+  check(rows.filter((row) => !row.hidden).length === expected, `Exact ${state} filter failed`);
+}
+check(nodes.some((node) => node.textContent.includes("整備書確認必須")) && nodes.some((node) => node.textContent === "参考情報の出典：同梱出典"), "Trusted guidance or source missing");
+check(nodes.filter((node) => node.textContent === "条件を確認").length === 1, "Incomplete guidance leaked to complete item");
+check(find("readinessTotals").textContent.includes("未完了 1 / 不明 2 / 未取得 1 / 完了 1 / 非対応 1"), "ECU totals conflated statuses");
+check(context.buildObdReadinessReviewGroups({ readinessEcuSnapshots: [], readiness_ecu_snapshots: [{ source_ecu: "7E9" }] })[0].source === "7E9", "Empty alias hid ECU data");
+const importedGuide = context.createObdReadinessReviewCard({ monitors: [{ id: "external", supported: true, complete: false, source: "Untrusted recommendation", notCompleteNote: "Untrusted operation" }] });
+check(!all(importedGuide).some((node) => node.tag === "details"), "Imported reference generated trusted guidance");
+check(find("readinessTotals").textContent.includes("未完了 1 / 不明 2 / 未取得 1"), "Filtering changed evidence totals");
 const malicious = context.createObdReadinessReviewCard({ monitors: [{ label: '<img src=x onerror=alert(1)>', supported: true, complete: false }] });
 check(all(malicious).some((node) => node.textContent.startsWith("<img")) && !all(malicious).some((node) => node.tag === "img"), "Labels became HTML");
 const empty = context.createObdReadinessReviewCard(null);

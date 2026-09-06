@@ -2230,6 +2230,9 @@ body.dark .flow-node-measure .flow-step {
 .obd-readiness-rows li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; padding: 12px 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
 .obd-readiness-rows li[hidden], .obd-readiness-ecu[hidden] { display: none; }
 .obd-readiness-name { font-weight: 700; }
+.obd-readiness-guide { grid-column: 1 / -1; font-size: 0.9rem; }
+.obd-readiness-guide summary { cursor: pointer; padding: 12px 0; min-height: 44px; }
+.obd-readiness-guide p { margin: 8px 0; line-height: 1.6; }
 .obd-readiness-rows small { grid-column: 1 / -1; color: var(--muted); }
 .obd-readiness-badge { align-self: start; border: 1px solid currentColor; border-radius: 6px; padding: 2px 8px; font-size: 0.85rem; }
 .obd-readiness-rows [data-readiness-state="incomplete"] .obd-readiness-badge,

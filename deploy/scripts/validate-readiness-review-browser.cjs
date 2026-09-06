@@ -48,6 +48,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await card.waitFor({ state: 'visible' });
     const original = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
     assert.match(await card.innerText(), /7E8/); assert.match(await card.innerText(), /7E9/);
+    for (const state of ['incomplete', 'missing', 'unknown']) {
+      await card.getByLabel('表示する状態').selectOption(state);
+      assert.ok((await card.locator('[data-readiness-state]:visible').evaluateAll(rows => rows.map(row => row.dataset.readinessState))).every(actual => actual === state));
+    }
+    await card.getByRole('button', { name: '絞り込みを解除', exact: true }).click();
+    const guide = card.locator('[data-readiness-state="incomplete"] .obd-readiness-guide').first();
+    await guide.locator('summary').click();
+    assert.match(await guide.innerText(), /整備書確認必須/);
+    assert.match(await guide.innerText(), /参考情報の出典/);
+    assert.match(await guide.innerText(), /一般参考情報/);
+    await guide.evaluate(node => window.scrollTo({ top: window.scrollY + node.getBoundingClientRect().top - 230, behavior: 'instant' }));
+    await page.screenshot({ path: path.join(output, 'readiness-guidance-mobile.png') });
+    assert.equal(await card.locator('[data-readiness-totals]').count(), 2);
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 844 });
       await card.getByLabel('表示する状態').selectOption('attention');
