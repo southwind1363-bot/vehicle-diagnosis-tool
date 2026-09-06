@@ -1598,6 +1598,146 @@
     });
   }
 
+  const ELM_READ_ONLY_RAW_TRANSCRIPT_COMMANDS = Object.freeze({ "03": 0x43, "07": 0x47, "0A": 0x4A, "0101": 0x41 });
+
+  function parseElmReadOnlyRawTranscript(input) {
+    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["profile", "command", "transcript", "completion"], "invalid_elm_read_only_raw_transcript_input");
+    const { profile, command, transcript, completion: callerCompletion } = inputSnapshot;
+    if (profile !== ELM_MODE04_RAW_TRANSCRIPT_PROFILE) throw new TypeError("invalid_elm_read_only_raw_transcript_profile");
+    if (typeof command !== "string" || !Object.hasOwn(ELM_READ_ONLY_RAW_TRANSCRIPT_COMMANDS, command)) throw new TypeError("invalid_elm_read_only_raw_transcript_command");
+    if (typeof transcript !== "string") throw new TypeError("invalid_elm_read_only_raw_transcript");
+    if (transcript.length > 32768) throw new RangeError("invalid_elm_read_only_raw_transcript");
+    if (!["complete", "timeout", "disconnected", "error"].includes(callerCompletion)) throw new TypeError("invalid_elm_read_only_raw_transcript_completion");
+
+    const errors = [];
+    const statuses = [];
+    const acceptedPackets = [];
+    const pendingBySource = new Map();
+    let promptObserved = false;
+    let canLineCount = 0;
+    let anyCanLine = false;
+    let noDataObserved = false;
+    let canSectionObserved = false;
+    const informationalStatusCodes = new Set();
+    const addError = (code, lineNumber, sourceId = null) => errors.push({ code, lineNumber, sourceId });
+    const addStatus = (code, lineNumber) => statuses.push({ code, lineNumber });
+    const discardPending = (sourceId, code, lineNumber) => {
+      if (pendingBySource.has(sourceId)) {
+        pendingBySource.delete(sourceId);
+        addError(code, lineNumber, sourceId);
+      }
+    };
+    const acceptPacketLines = (sourceId, lines, lineNumber, singlePayload = null) => acceptedPackets.push({ sourceId, lines, lineNumber, singlePayload });
+    const lines = [];
+    let lineNumber = 1;
+    let start = 0;
+    let fatalContent = false;
+    for (let index = 0; index < transcript.length; index += 1) {
+      const characterCode = transcript.charCodeAt(index);
+      if (characterCode === 13) {
+        lines.push({ text: transcript.slice(start, index), lineNumber, terminated: true });
+        if (transcript.charCodeAt(index + 1) === 10) index += 1;
+        start = index + 1;
+        lineNumber += 1;
+      } else if (characterCode === 10) {
+        addError("bare_lf", lineNumber);
+        fatalContent = true;
+        break;
+      } else if (characterCode < 0x20 || characterCode > 0x7e) {
+        addError("invalid_content", lineNumber);
+        fatalContent = true;
+        break;
+      }
+    }
+    if (!fatalContent && start < transcript.length) lines.push({ text: transcript.slice(start), lineNumber, terminated: false });
+    if (lines.length > 256) addError("physical_line_overflow", 257);
+
+    for (const line of lines.slice(0, 256)) {
+      if (line.text === ">" && !line.terminated) { promptObserved = true; break; }
+      if (line.text.includes(">")) { addError("prompt_not_terminal", line.lineNumber); break; }
+      if (line.text === "") continue;
+      if (line.text === "SEARCHING..." || line.text === "BUS INIT: OK") {
+        const statusCode = line.text === "SEARCHING..." ? "searching" : "bus_init_ok";
+        if (noDataObserved) addError("informational_status_after_no_data", line.lineNumber);
+        else if (canSectionObserved) addError("informational_status_after_can", line.lineNumber);
+        else if (informationalStatusCodes.has(statusCode)) addError("duplicate_informational_status", line.lineNumber);
+        else { informationalStatusCodes.add(statusCode); addStatus(statusCode, line.lineNumber); }
+        continue;
+      }
+      if (line.text === "NO DATA") {
+        if (noDataObserved) addError("duplicate_no_data", line.lineNumber);
+        else { addStatus("no_data", line.lineNumber); noDataObserved = true; }
+        continue;
+      }
+      const terminalStatus = new Map([["STOPPED", "stopped"], ["ERROR", "error"], ["UNABLE TO CONNECT", "unable_to_connect"], ["CAN ERROR", "can_error"], ["BUFFER FULL", "buffer_full"]]).get(line.text);
+      if (terminalStatus) { addStatus(terminalStatus, line.lineNumber); addError(terminalStatus, line.lineNumber); continue; }
+      if (!line.terminated && /^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line.text)) { addError("incomplete_final_frame", line.lineNumber); continue; }
+      if (/^(?:03|07|0A|0101|AT(?:[A-Z0-9 ]*)?)$/.test(line.text)) { addError("unexpected_command_echo", line.lineNumber); continue; }
+      if (/^[0-9A-F]{8}(?: [0-9A-F]{2}){8}$/.test(line.text)) { addError("unsupported_29bit_frame", line.lineNumber); continue; }
+      if (!/^[0-9A-F]{3}(?: [0-9A-F]{2}){8}$/.test(line.text)) {
+        addError(/^[0-9A-F]+$/.test(line.text) ? "compact_frame" : (/^[0-9A-F ]+$/.test(line.text) ? "invalid_hex" : "unexpected_line"), line.lineNumber);
+        continue;
+      }
+      canSectionObserved = true;
+      anyCanLine = true;
+      if (canLineCount >= 128) { addError("can_line_overflow", line.lineNumber); continue; }
+      canLineCount += 1;
+      const tokens = line.text.split(" ");
+      const sourceId = tokens[0];
+      const bytes = tokens.slice(1).map((token) => Number.parseInt(token, 16));
+      if (Number.parseInt(sourceId, 16) > 0x7ff) { addError("invalid_can_id", line.lineNumber, sourceId); continue; }
+      const pci = bytes[0];
+      const frameType = pci >> 4;
+      if (frameType === 0) {
+        const length = pci & 0x0f;
+        if (length < 1 || length > 7) { discardPending(sourceId, "malformed_single_frame_interrupted_first_frame", line.lineNumber); addError("invalid_single_frame_length", line.lineNumber, sourceId); continue; }
+        discardPending(sourceId, "single_frame_interrupted_first_frame", line.lineNumber);
+        acceptPacketLines(sourceId, [line.text], line.lineNumber, bytes.slice(1, 1 + length));
+      } else if (frameType === 1) {
+        const expectedLength = ((pci & 0x0f) << 8) + bytes[1];
+        if (expectedLength < 8 || expectedLength > 4095) { discardPending(sourceId, "malformed_first_frame_interrupted_first_frame", line.lineNumber); addError("invalid_first_frame_length", line.lineNumber, sourceId); continue; }
+        discardPending(sourceId, "replaced_first_frame", line.lineNumber);
+        pendingBySource.set(sourceId, { expectedLength, nextSequence: 1, lines: [line.text], lineNumber: line.lineNumber });
+      } else if (frameType === 2) {
+        const pending = pendingBySource.get(sourceId);
+        if (!pending) { addError("orphan_consecutive_frame", line.lineNumber, sourceId); continue; }
+        if ((pci & 0x0f) !== pending.nextSequence) { pendingBySource.delete(sourceId); addError("consecutive_frame_sequence_error", line.lineNumber, sourceId); continue; }
+        pending.lines.push(line.text);
+        pending.nextSequence = (pending.nextSequence + 1) & 0x0f;
+        if (6 + ((pending.lines.length - 1) * 7) >= pending.expectedLength) { pendingBySource.delete(sourceId); acceptPacketLines(sourceId, pending.lines, pending.lineNumber); }
+      } else {
+        discardPending(sourceId, "interrupted_first_frame", line.lineNumber);
+        addError("unsupported_pci", line.lineNumber, sourceId);
+      }
+    }
+    for (const [sourceId, pending] of pendingBySource) addError("incomplete_first_frame", pending.lineNumber, sourceId);
+    if (!promptObserved && callerCompletion === "complete") addError("missing_prompt", lineNumber);
+    if (noDataObserved && anyCanLine) addError("no_data_frame_conflict", statuses.find((item) => item.code === "no_data")?.lineNumber || null);
+
+    const frames = [];
+    for (const packetInput of acceptedPackets) {
+      const packet = packetInput.singlePayload === null ? buildObdLogPackets(packetInput.lines.join("\n"))[0] : null;
+      if (packetInput.singlePayload === null && (!packet || packet.metadata?.incomplete || packet.metadata?.sequenceError || !Array.isArray(packet.bytes) || packet.bytes.length < 1)) { addError("packet_assembly_error", packetInput.lineNumber, packetInput.sourceId); continue; }
+      if (frames.length >= 128) { addError("payload_overflow", packetInput.lineNumber, packetInput.sourceId); continue; }
+      const payload = packetInput.singlePayload === null ? packet.bytes.slice() : packetInput.singlePayload.slice();
+      const expectedPositiveService = ELM_READ_ONLY_RAW_TRANSCRIPT_COMMANDS[command];
+      const requestedService = Number.parseInt(command.length === 2 ? command : command.slice(0, 2), 16);
+      const positive = payload[0] === expectedPositiveService && (command !== "0101" || payload[1] === 0x01);
+      const negative = payload[0] === 0x7f && payload[1] === requestedService;
+      const responseKind = positive ? "matching_positive_service" : (negative ? "matching_negative_service" : "unexpected_response");
+      const negativeResponseCode = negative && payload.length === 3 ? payload[2].toString(16).toUpperCase().padStart(2, "0") : null;
+      if (responseKind === "unexpected_response") addError("unexpected_response_service", packetInput.lineNumber, packetInput.sourceId);
+      frames.push({ sourceId: packetInput.sourceId, payload, responseKind, negativeResponseCode, payloadSemanticsVerified: false });
+    }
+    const completion = errors.length === 0 ? callerCompletion : "error";
+    return freezeGenericObdDtcClearResponse({
+      schemaVersion: 1, profile, command, callerCompletion, completion, promptObserved,
+      status: completion === "error" ? "error" : (frames.length > 0 ? "responses_observed" : "no_response"),
+      statuses, frames, errors, payloadSemanticsVerified: false,
+      execution: { wouldTransmit: false, canExecute: false, retryAllowed: false }
+    });
+  }
+
   function createGenericObdDtcClearReceiveWindow(input) {
     const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["expectedSourceIds", "connectionToken"], "invalid_generic_obd_dtc_clear_receive_window_input");
     if (inputSnapshot.connectionToken === null || typeof inputSnapshot.connectionToken !== "object") throw new TypeError("invalid_generic_obd_dtc_clear_receive_window_connection_token");
@@ -1677,6 +1817,214 @@
 
     const invalidate = (suppliedAttemptToken, suppliedConnectionToken) => finish(suppliedAttemptToken, suppliedConnectionToken, "disconnected");
     return Object.freeze({ attemptToken, append, finish, invalidate, getSnapshot });
+  }
+
+  const GENERIC_OBD_DTC_CLEAR_POST_READOUT_PROFILE = "iso15765_11bit_normal_h1_caf1_d0_s1_e0";
+  const GENERIC_OBD_DTC_CLEAR_POST_READOUT_INTENTS = Object.freeze([
+    Object.freeze({ ordinal: 1, intent: "read_stored_dtc", command: "03" }),
+    Object.freeze({ ordinal: 2, intent: "read_pending_dtc", command: "07" }),
+    Object.freeze({ ordinal: 3, intent: "read_permanent_dtc", command: "0A" }),
+    Object.freeze({ ordinal: 4, intent: "read_readiness", command: "0101" })
+  ]);
+  const GENERIC_OBD_DTC_CLEAR_POST_READOUT_BLOCKERS = Object.freeze([
+    "simulated_provenance_only",
+    "dispatcher_not_implemented",
+    "connection_boundary_unverified",
+    "expected_source_scope_unavailable",
+    "vehicle_identity_not_observed",
+    "ecu_clear_scope_not_verified"
+  ]);
+
+  function isCanonicalGenericObdDtcClearPostReadoutTimestamp(value) {
+    if (typeof value !== "string") return false;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) && new Date(timestamp).toISOString() === value;
+  }
+
+  function evaluateGenericObdDtcClearPostReadoutReceipts(input) {
+    const inputSnapshot = copyGenericObdDtcClearResponseRecord(input, ["clearWindowSnapshot", "clearCompletedAt", "postReadout"], "invalid_generic_obd_dtc_clear_post_readout_input");
+    const clearSnapshot = copyGenericObdDtcClearResponseRecord(inputSnapshot.clearWindowSnapshot,
+      ["schemaVersion", "state", "attemptToken", "frameCount", "frameCapacity", "receiptIntegrity", "receiptError", "completion", "resultStatus", "evaluation", "execution"],
+      "invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
+    const postReadout = copyGenericObdDtcClearResponseRecord(inputSnapshot.postReadout,
+      ["provenance", "attemptToken", "connectionToken", "startedAt", "completedAt", "receipts"],
+      "invalid_generic_obd_dtc_clear_post_readout_attempt");
+    const clearExecution = copyGenericObdDtcClearResponseRecord(clearSnapshot.execution,
+      ["wouldTransmit", "canExecute", "retryAllowed"], "invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
+    if (clearSnapshot.schemaVersion !== 1 || !["collecting", "terminal"].includes(clearSnapshot.state)
+      || clearSnapshot.attemptToken === null || typeof clearSnapshot.attemptToken !== "object"
+      || clearExecution.wouldTransmit !== false || clearExecution.canExecute !== false || clearExecution.retryAllowed !== false) {
+      throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_snapshot");
+    }
+    if (postReadout.provenance !== "simulated") throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_provenance");
+    if (postReadout.attemptToken === null || typeof postReadout.attemptToken !== "object"
+      || postReadout.connectionToken === null || typeof postReadout.connectionToken !== "object") {
+      throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_scope_token");
+    }
+    const timestamps = [inputSnapshot.clearCompletedAt, postReadout.startedAt, postReadout.completedAt];
+    if (!timestamps.every(isCanonicalGenericObdDtcClearPostReadoutTimestamp)) throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_timestamp");
+    const receiptInput = copyGenericObdDtcClearResponseDenseArray(postReadout.receipts, 4, "invalid_generic_obd_dtc_clear_post_readout_receipts");
+    if (receiptInput.length !== 4) throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_receipts");
+
+    const receipts = receiptInput.map((value, index) => {
+      const receipt = copyGenericObdDtcClearResponseRecord(value,
+        ["ordinal", "intent", "command", "profile", "startedAt", "completedAt", "completion", "transcript"],
+        "invalid_generic_obd_dtc_clear_post_readout_receipt");
+      const expected = GENERIC_OBD_DTC_CLEAR_POST_READOUT_INTENTS[index];
+      if (receipt.ordinal !== expected.ordinal || receipt.intent !== expected.intent || receipt.command !== expected.command
+        || receipt.profile !== GENERIC_OBD_DTC_CLEAR_POST_READOUT_PROFILE
+        || !["complete", "timeout", "disconnected", "error"].includes(receipt.completion)) {
+        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_receipt");
+      }
+      if (!isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.startedAt)
+        || !isCanonicalGenericObdDtcClearPostReadoutTimestamp(receipt.completedAt)) {
+        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_timestamp");
+      }
+      return {
+        ...receipt,
+        expected,
+        parsed: parseElmReadOnlyRawTranscript({
+          profile: receipt.profile,
+          command: receipt.command,
+          transcript: receipt.transcript,
+          completion: receipt.completion
+        })
+      };
+    });
+
+    let clearResponseExpectedSourceIds = [];
+    const clearTerminal = clearSnapshot.state === "terminal" && clearSnapshot.evaluation !== null;
+    let clearEvaluationComplete = false;
+    let clearSnapshotEvaluationMismatch = false;
+    if (clearSnapshot.evaluation !== null) {
+      const evaluation = copyGenericObdDtcClearResponseRecord(clearSnapshot.evaluation,
+        ["schemaVersion", "completion", "expectedSources", "unexpectedSources", "counts", "allExpectedSourcesAffirmativeObserved", "responseEvaluationComplete", "postOperationReadOnlyFollowupPlan", "execution"],
+        "invalid_generic_obd_dtc_clear_post_readout_clear_evaluation");
+      const expectedSources = copyGenericObdDtcClearResponseDenseArray(evaluation.expectedSources, 32, "invalid_generic_obd_dtc_clear_post_readout_clear_expected_sources");
+      if (evaluation.postOperationReadOnlyFollowupPlan !== GENERIC_OBD_DTC_CLEAR_POST_OPERATION_READ_ONLY_FOLLOWUP_PLAN) {
+        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_evaluation");
+      }
+      clearSnapshotEvaluationMismatch = clearSnapshot.completion !== evaluation.completion;
+      clearEvaluationComplete = clearSnapshot.state === "terminal" && clearSnapshot.completion === "complete"
+        && evaluation.completion === "complete" && evaluation.responseEvaluationComplete === true;
+      clearResponseExpectedSourceIds = expectedSources.map((value) => {
+        const row = copyGenericObdDtcClearResponseRecord(value,
+          ["sourceId", "frameCount", "affirmativeFrameCount", "unrecognizedFrameCount", "observation"],
+          "invalid_generic_obd_dtc_clear_post_readout_clear_expected_source");
+        assertGenericObdDtcClearResponseSourceId(row.sourceId, "invalid_generic_obd_dtc_clear_post_readout_clear_expected_source");
+        return row.sourceId;
+      });
+      if (new Set(clearResponseExpectedSourceIds).size !== clearResponseExpectedSourceIds.length) {
+        throw new TypeError("invalid_generic_obd_dtc_clear_post_readout_clear_expected_sources");
+      }
+    }
+
+    const orderedTimes = [inputSnapshot.clearCompletedAt, postReadout.startedAt,
+      ...receipts.flatMap((receipt) => [receipt.startedAt, receipt.completedAt]), postReadout.completedAt].map(Date.parse);
+    const orderingValid = orderedTimes.every((value, index) => index === 0 || value >= orderedTimes[index - 1]);
+    const attemptDistinct = postReadout.attemptToken !== clearSnapshot.attemptToken;
+    const rootBlockers = [...GENERIC_OBD_DTC_CLEAR_POST_READOUT_BLOCKERS];
+    if (!clearTerminal) rootBlockers.push("clear_window_not_terminal");
+    if (clearSnapshotEvaluationMismatch) rootBlockers.push("clear_snapshot_evaluation_mismatch");
+    if ((clearTerminal && !clearEvaluationComplete) || clearSnapshotEvaluationMismatch) rootBlockers.push("clear_evaluation_incomplete");
+    if (!orderingValid) rootBlockers.push("post_readout_order_invalid");
+    if (!attemptDistinct) rootBlockers.push("post_attempt_not_distinct");
+
+    const readouts = receipts.map((receipt) => {
+      const parsed = receipt.parsed;
+      const positiveFrames = parsed.frames.filter((frame) => frame.responseKind === "matching_positive_service");
+      const observedSourceIds = [];
+      const positiveEmptySourceIds = [];
+      const positiveNonemptySourceIds = [];
+      let readinessPayloadConflict = false;
+      if (receipt.intent === "read_readiness") {
+        const readinessFramesBySource = new Map();
+        for (const frame of positiveFrames) {
+          const frames = readinessFramesBySource.get(frame.sourceId) || [];
+          frames.push(frame);
+          readinessFramesBySource.set(frame.sourceId, frames);
+        }
+        for (const [sourceId, frames] of readinessFramesBySource) {
+          const payloads = new Set(frames.map((frame) => frame.payload.join(",")));
+          const allExactReadinessPayloads = frames.every((frame) => frame.payload.length === 6);
+          if (!allExactReadinessPayloads || payloads.size !== 1) {
+            readinessPayloadConflict = true;
+            continue;
+          }
+          observedSourceIds.push(sourceId);
+        }
+      } else {
+        for (const frame of positiveFrames) {
+          observedSourceIds.push(frame.sourceId);
+        }
+      }
+      let observation;
+      if (receipt.completion !== "complete" || parsed.errors.length > 0
+        || parsed.frames.some((frame) => frame.responseKind === "matching_negative_service")
+        || readinessPayloadConflict
+        || (positiveFrames.length > 0 && observedSourceIds.length === 0)) {
+        observation = "indeterminate";
+      } else if (receipt.intent !== "read_readiness" && positiveFrames.length > 0) {
+        observation = "indeterminate";
+      } else if (receipt.intent === "read_readiness" && observedSourceIds.length > 0) {
+        observation = "source_positive_reported";
+      } else if (positiveNonemptySourceIds.length > 0) {
+        observation = "source_positive_nonempty_observed";
+      } else if (positiveEmptySourceIds.length > 0) {
+        observation = "source_positive_empty_observed";
+      } else {
+        observation = "missing_or_unproven";
+      }
+      const blockerIds = ["expected_source_scope_unavailable"];
+      if (receipt.intent !== "read_readiness" && positiveFrames.length > 0) blockerIds.push("payload_semantics_unverified");
+      if (receipt.intent === "read_readiness" && readinessPayloadConflict) blockerIds.push("readiness_payload_conflict");
+      if (observation === "missing_or_unproven") blockerIds.push("source_positive_response_unobserved");
+      if (observation === "indeterminate") blockerIds.push("receipt_result_indeterminate");
+      return {
+        ordinal: receipt.ordinal,
+        intent: receipt.intent,
+        command: receipt.command,
+        observation,
+        evidenceComplete: false,
+        observedSourceIds: [...new Set(observedSourceIds)],
+        positiveEmptySourceIds: [...new Set(positiveEmptySourceIds)],
+        positiveNonemptySourceIds: [...new Set(positiveNonemptySourceIds)],
+        blockerIds
+      };
+    });
+
+    return freezeGenericObdDtcClearResponse({
+      schemaVersion: "generic_obd_dtc_clear_post_readout_receipts_v1",
+      state: !orderingValid || !attemptDistinct ? "rejected" : "indeterminate",
+      provenance: {
+        status: "simulated_only",
+        operationBound: false,
+        sameConnectionReferenceObserved: false,
+        sameVehicleVerified: false,
+        realTransportProofAvailable: false,
+        clearResponseExpectedSourceIds,
+        expectedSourceScopeStatus: "unavailable",
+        blockerIds: rootBlockers
+      },
+      ordering: {
+        status: orderingValid ? "ordered_after_clear" : "invalid",
+        clearCompletedAt: inputSnapshot.clearCompletedAt,
+        postReadoutStartedAt: postReadout.startedAt,
+        postReadoutCompletedAt: postReadout.completedAt
+      },
+      readouts,
+      receiptStructureComplete: receipts.every((receipt) => receipt.parsed.errors.length === 0),
+      readoutCoverageComplete: false,
+      comparisonAvailable: false,
+      operationOutcomeInferred: false,
+      clearSucceededInferred: false,
+      repairCompleteInferenceAllowed: false,
+      technicianReviewRequired: true,
+      executionEnabled: false,
+      vehicleCommandEnabled: false,
+      wouldTransmit: false,
+      canExecute: false
+    });
   }
 
   function normalizeDtcClearWorkflowTarget(value) {
@@ -44900,7 +45248,9 @@
     buildGenericObdDtcClearWorkflow,
     evaluateGenericObdDtcClearResponses,
     parseElmMode04RawTranscript,
+    parseElmReadOnlyRawTranscript,
     createGenericObdDtcClearReceiveWindow,
+    evaluateGenericObdDtcClearPostReadoutReceipts,
     transitionGenericObdDtcClearWorkflow,
     createGenericObdDtcClearController,
     getMobileReadoutTransportPlan,

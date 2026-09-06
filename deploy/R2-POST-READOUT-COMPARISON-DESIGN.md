@@ -1,5 +1,17 @@
 # R2 消去後再読取・前後比較: 次の非送信実装設計
 
+## 3.13.516 先行実装: 読取応答の厳密な組立
+
+後述のreceipt評価器の前提として、`parseElmReadOnlyRawTranscript({profile, command, transcript, completion})` を先に実装する。対象は固定11-bit CAN表示profileの03/07/0A/0101だけ。既存の `buildObdLogPackets()` による組立を再利用し、入力形式、途中終了、source別の連番と割込みを検査する。既存Mode04パーサー・通常取込・セッション保存・画面・通信許可リストは変更しない。
+
+参照: [ELM327公式データシート ELM327DSL](https://elmelectronics.com/wp-content/uploads/2020/05/ELM327DSL.pdf)、2026-09-06参照。本文17-18ページのD0/D1、45ページのヘッダー付き複数ECU応答、46ページのCAN message typesを照合した。H1表示ではPCIが残り、D0では独立したDLC桁を表示しない。このparserの8-byte固定受入範囲を、可変長・CAN FD・29-bitや互換品の全表示形式へ広げたとは扱わない。
+
+Solレビューで、transportの組立とpayloadの意味判定を分離した。`matching_positive_service` / `matching_negative_service` は先頭のservice照合だけで、DTC件数やreadinessの完全性を証明しない。CANの件数byteを非CANのDTC対へ誤認しないよう、DTC payloadの奇数長制約やデコードは追加しない。各frameの `payloadSemanticsVerified:false` を保持する。`NO DATA` は状態行でありDTC空応答には変換しない。異常時は完了へ昇格せず、独立して組み立てられた応答だけを保持する。
+
+このparserは受信済み文字列を解析する純粋関数であり、車両へ送信しない。同じ版で `evaluateGenericObdDtcClearPostReadoutReceipts()` もparserへ接続し、4 receiptの時刻順序、別attempt参照、観測sourceを評価する。別タスクの暫定parserは残さず、共通の厳密な組立処理へ統合した。意味検証、前後比較、実車接続との統合は後続工程である。
+
+以下の設計案に対する実装時の限定: DTCの `positiveEmptySourceIds` / `positiveNonemptySourceIds` は空を維持し、matching positiveでも `indeterminate` と `payload_semantics_unverified` を返す。DTC件数形式の意味検証が未実装だからである。レディネスの観測は完全な応答だけを対象とする。clearの評価未完了は `clear_evaluation_incomplete` として保持し、再読取の評価自体を止めたり消去を再送したりしない。rootのcomparison・coverage・実行フラグは引き続きfalse。この節を後述の将来の意味判定案より優先する。
+
 ## 結論
 
 次に実装できる最小単位は、**消去後を想定した4 intentのraw receipt証拠評価**だけである。前後比較APIはまだ実装しない。
