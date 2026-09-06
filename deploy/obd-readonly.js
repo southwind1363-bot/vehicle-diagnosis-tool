@@ -1937,7 +1937,7 @@
       const positiveEmptySourceIds = [];
       const positiveNonemptySourceIds = [];
       let readinessPayloadConflict = false;
-      let storedDtcPayloadConflict = false;
+      let dtcPayloadConflict = false;
       if (receipt.intent === "read_readiness") {
         const readinessFramesBySource = new Map();
         for (const frame of positiveFrames) {
@@ -1958,8 +1958,8 @@
         for (const frame of positiveFrames) {
           observedSourceIds.push(frame.sourceId);
         }
-        if (receipt.command === "03") {
-          // ELM327DSL p36: CAN Mode 03 adds a count after the service byte.
+        if (["03", "07", "0A"].includes(receipt.command)) {
+          // ELM327DSL p36 (03) and Scapy OBD_S03/07/0A_PR: service, count, DTC pairs.
           // Only accept exact count-bearing payloads; ISO-TP padding is already removed.
           const framesBySource = new Map();
           for (const frame of positiveFrames) {
@@ -1979,7 +1979,7 @@
               codes.add(code);
             }
             if (!valid) {
-              storedDtcPayloadConflict = true;
+              dtcPayloadConflict = true;
               continue;
             }
             (count === 0 ? positiveEmptySourceIds : positiveNonemptySourceIds).push(sourceId);
@@ -1988,16 +1988,14 @@
       }
       const receiptUncertain = receipt.completion !== "complete" || parsed.errors.length > 0
         || parsed.frames.some((frame) => frame.responseKind === "matching_negative_service");
-      if (receiptUncertain || storedDtcPayloadConflict) {
+      if (receiptUncertain || dtcPayloadConflict) {
         positiveEmptySourceIds.length = 0;
         positiveNonemptySourceIds.length = 0;
       }
       let observation;
-      if (receiptUncertain || storedDtcPayloadConflict
+      if (receiptUncertain || dtcPayloadConflict
         || readinessPayloadConflict
         || (positiveFrames.length > 0 && observedSourceIds.length === 0)) {
-        observation = "indeterminate";
-      } else if (["07", "0A"].includes(receipt.command) && positiveFrames.length > 0) {
         observation = "indeterminate";
       } else if (receipt.intent === "read_readiness" && observedSourceIds.length > 0) {
         observation = "source_positive_reported";
@@ -2009,8 +2007,7 @@
         observation = "missing_or_unproven";
       }
       const blockerIds = ["expected_source_scope_unavailable"];
-      if (["07", "0A"].includes(receipt.command) && positiveFrames.length > 0) blockerIds.push("payload_semantics_unverified");
-      if (storedDtcPayloadConflict) blockerIds.push("dtc_payload_conflict");
+      if (dtcPayloadConflict) blockerIds.push("dtc_payload_conflict");
       if (receipt.intent === "read_readiness" && readinessPayloadConflict) blockerIds.push("readiness_payload_conflict");
       if (observation === "missing_or_unproven") blockerIds.push("source_positive_response_unobserved");
       if (observation === "indeterminate") blockerIds.push("receipt_result_indeterminate");

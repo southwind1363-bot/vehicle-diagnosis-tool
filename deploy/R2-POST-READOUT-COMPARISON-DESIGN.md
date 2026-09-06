@@ -1,5 +1,13 @@
 # R2 消去後再読取・前後比較: 次の非送信実装設計
 
+## 3.13.518 保留・永久DTCへの限定件数検証の適用
+
+3.13.517の保守的な受入制限を固定CAN profileの03/07/0Aへ共通適用する。この節を過去版の意味未検証という記述より優先する。根拠は [Scapy公式実装 services.py](https://github.com/secdev/scapy/blob/master/scapy/contrib/automotive/obd/services.py) の `OBD_S03_PR` / `OBD_S07_PR` / `OBD_S0A_PR` と `OBD_DTC`（2026-09-06確認）。各応答に1byteのcount、続いて2byte単位のDTCを定義する。これは公開実装による構造の裏付けであり、ISO/SAE規格の全面適合や対象実車の互換性を証明しない。
+
+serviceは要求に対応する43/47/4Aだけを許し、payload長は厳密に `2 + 2 * count`。件数不一致、余剰byte、0000枠、コード重複、同sourceの異なる応答は `dtc_payload_conflict`。途中終了・negative・wrong service・NO DATA混在を含め、異常のあるreceipt全体の空/非空の証拠を保留する。`NO DATA`単独は未取得であり0件ではない。正常な複数sourceは個別に保持する。
+
+模擬評価器だけの変更。parserの意味検証flag、rootの比較・coverage・消去成功推定・実行・送信flagはfalseのまま。通常decoder、UI、保存形式、実通信は変更しない。before証拠とintent別の期待source集合は次の設計対象であり、前後比較は未実装。新たな外部エージェントレビュー・実車試験は実施していない。
+
 ## 3.13.517 保存DTCの件数と応答内容の照合
 
 `evaluateGenericObdDtcClearPostReadoutReceipts()` の固定CAN profile・Mode 03だけで、件数付きpayloadを検査する。この節を3.13.516および後述の将来案より優先する。新しいAPIや保存形式は追加せず、通常取込・一般DTC decoder・UI・車両通信には接続しない。

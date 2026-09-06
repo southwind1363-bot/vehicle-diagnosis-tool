@@ -82,7 +82,7 @@ check(valid.readouts.map((item) => item.observation).join(",")
   === "indeterminate,indeterminate,indeterminate,source_positive_reported", "Unverified DTC semantics or readiness observations were misclassified");
 check(valid.readouts.every((item) => item.evidenceComplete === false && item.observedSourceIds.join(",") === "7E8"), "Observed sources became complete expected-source evidence");
 check(valid.readouts.slice(1, 3).every((item) => item.positiveEmptySourceIds.length === 0 && item.positiveNonemptySourceIds.length === 0
-  && item.blockerIds.includes("payload_semantics_unverified")), "CAN DTC payload semantics were inferred by the receipt evaluator");
+  && item.blockerIds.includes("dtc_payload_conflict")), "Extra application bytes became valid CAN DTC evidence");
 check(valid.readouts[0].positiveEmptySourceIds.length === 0 && valid.readouts[0].blockerIds.includes("dtc_payload_conflict"),
   "Count-zero payload with extra application bytes was accepted");
 check(valid.readoutCoverageComplete === false && valid.comparisonAvailable === false
@@ -188,6 +188,65 @@ for (const count of [2, 3, 127, 255]) {
   const truncated = storedResult(canTranscript(payload.slice(0, -1)));
   check(truncated.observation === "indeterminate" && truncated.positiveNonemptySourceIds.length === 0,
     `Truncated ${count}-DTC application payload passed`);
+}
+
+// Run the same count-bearing acceptance and failure matrix for pending/permanent receipts.
+for (const [receiptIndex, service] of [[1, 0x47], [2, 0x4A]]) {
+  const command = intents[receiptIndex][1];
+  const resultFor = (transcript, completion = "complete") => {
+    const fixture = createInput();
+    Object.assign(fixture.postReadout.receipts[receiptIndex], { transcript, completion });
+    const result = evaluate(fixture);
+    check(result.state === "indeterminate" && result.provenance.status === "simulated_only"
+      && result.readoutCoverageComplete === false && result.comparisonAvailable === false
+      && result.clearSucceededInferred === false && result.operationOutcomeInferred === false
+      && result.executionEnabled === false && result.vehicleCommandEnabled === false
+      && result.wouldTransmit === false && result.canExecute === false, `${command}: safety boundary changed`);
+    return result.readouts[receiptIndex];
+  };
+  const empty = canTranscript([service, 0]);
+  const one = canTranscript([service, 1, 0xC1, 0x23]);
+  const join = (...parts) => `${parts.map((part) => part.replace(/>$/, "")).join("")}>`;
+  for (const count of [0, 1, 2, 3, 127, 255]) {
+    const payload = [service, count, ...Array.from({ length: count }, (_, index) => [1, index]).flat()];
+    const result = resultFor(canTranscript(payload));
+    check(result.observation === (count === 0 ? "source_positive_empty_observed" : "source_positive_nonempty_observed")
+      && result[count === 0 ? "positiveEmptySourceIds" : "positiveNonemptySourceIds"].join(",") === "7E8"
+      && result.evidenceComplete === false, `${command}: exact count ${count} failed`);
+    const truncated = resultFor(canTranscript(payload.slice(0, -1)));
+    check(truncated.observation === "indeterminate" && truncated.positiveEmptySourceIds.length === 0
+      && truncated.positiveNonemptySourceIds.length === 0, `${command}: truncated count ${count} passed`);
+  }
+  const mixed = resultFor(join(empty, one.replaceAll("7E8", "7E9")));
+  check(mixed.positiveEmptySourceIds.join(",") === "7E8" && mixed.positiveNonemptySourceIds.join(",") === "7E9",
+    `${command}: ECU counts merged`);
+  const duplicate = resultFor(join(empty, empty));
+  check(duplicate.observation === "source_positive_empty_observed" && duplicate.positiveEmptySourceIds.length === 1,
+    `${command}: identical duplicate failed`);
+  for (const transcript of [
+    join(empty, one), canTranscript([service, 0, 0]), canTranscript([service, 1, 0, 0]),
+    canTranscript([service, 2, 0xC1, 0x23, 0xC1, 0x23]), canTranscript([service, 1, 1, 0, 1, 1]),
+    join(empty, canTranscript([service, 2, 1, 0]).replaceAll("7E8", "7E9"))
+  ]) {
+    const result = resultFor(transcript);
+    check(result.observation === "indeterminate" && result.positiveEmptySourceIds.length === 0
+      && result.positiveNonemptySourceIds.length === 0 && result.blockerIds.includes("dtc_payload_conflict"),
+      `${command}: conflicting payload retained evidence`);
+  }
+  for (const [transcript, completion] of [
+    [empty, "timeout"], [empty, "disconnected"], [empty, "error"], [empty.replace(">", ""), "complete"],
+    [join(empty, "NO DATA\r>"), "complete"],
+    [join(empty, canTranscript([0x7F, parseInt(command, 16), 0x78]).replaceAll("7E8", "7E9")), "complete"],
+    [join(empty, canTranscript([0x43, 0]).replaceAll("7E8", "7E9")), "complete"],
+    [join(empty, `7E9 10 08 ${service.toString(16).toUpperCase()} 03 01 33 02 10\r>`), "complete"]
+  ]) {
+    const result = resultFor(transcript, completion);
+    check(result.observation === "indeterminate" && result.positiveEmptySourceIds.length === 0
+      && result.positiveNonemptySourceIds.length === 0, `${command}: incomplete receipt retained evidence`);
+  }
+  const missing = resultFor("NO DATA\r>");
+  check(missing.observation === "missing_or_unproven" && missing.positiveEmptySourceIds.length === 0,
+    `${command}: NO DATA became zero DTCs`);
 }
 
 const noDataInput = createInput();
