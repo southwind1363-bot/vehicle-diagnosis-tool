@@ -1,5 +1,15 @@
 # R2 比較用の最小証拠情報: 非送信の設計案
 
+## 3.13.519後続: 模擬差分の件数・順序・欠落境界
+
+`scripts/validate-dtc-clear-difference-boundaries.js` を追加し、既存before-readout検証から実行する。単独実行は `npm run validate:dtc-difference-boundaries`。一括生成factoryとinspectDifferenceの実装は変更しない。
+
+4コードの全16部分集合について全256組を検査し、追加/消失/継続の期待集合と「消失+継続=before件数、追加+継続=post件数」を照合する。入力コード順は反転し、DTC種別へ分散して検査する。各3種別で255件の全消失・全追加・順序反転の不変・部分重複をISO-TP経由で検査する。32 ECUでは同じコードが全sourceにあっても統合せず、前後でECU応答順が逆でもsourceごとの差分を維持する。
+
+前後の各4 receiptで期待ECUの一つが欠落した場合は組handleなし。2 ECU×255件で既存parserのCAN frame上限を超えた場合も部分差分を返さない。0件との混同や共通sourceへの縮小を許可しない。これは模擬入力検査であり、実車互換性や網羅性の証明ではない。
+
+新規1084件、既存1375件と合わせ関連2459件がErrors 0。今回の変更は検証スクリプト・実行登録・文書のみ。アプリ3.13.519、差分処理本体、保存、実車送信は変更せず、OBD主集計・bridge・offline・実車試験は今回再実行しない。
+
 ## 3.13.519後続: 組証拠からの模擬DTC差分
 
 Node専用pair handleにだけ `inspectDifference(context)` を追加。独立before/post handleには公開しない。callerのsummaryや二つの集合を入力に取らず、一括生成時に検証して保持した内部値だけを使用する。下記の差分未実装という記述は履歴であり、ブラウザAPIや実車診断結果への組込みは依然として未実装。

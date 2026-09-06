@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+3.13.519後続の模擬差分境界検証: 全256集合ペア、255件、32 ECU、順序反転、期待ECU欠落、受信上限超過の回帰検査1084件を追加。関連2459件がErrors 0。差分処理本体・アプリ・保存・実車送信は変更なし。詳細と単独検証コマンドは `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
+
 3.13.519後続の模擬DTC差分: Node専用pair handleにinspectDifferenceを追加し、内部の組証拠だけからintent/source別added/removed/retainedを取得する。scope/context不一致・失効・dispose後は取得拒否。関連1375件がErrors 0。実車の比較可能性・消去成功・故障解消は推定せず、保存・通常API・送信は変更なし。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。
 
 3.13.519後続の前後証拠一括生成: Node専用factoryで固定コピーからsequence検査とDTC抽出を実行し、両側成立時のみ一つのhandleを生成。模擬clear snapshotの内部不変性、scope寿命、一括disposeを検査。関連1260件がErrors 0。差分・保存・実車送信は追加しない。次は内部の組証拠だけを扱う模擬DTC差分の設計/テスト。詳細は `R2-MINIMAL-COMPARISON-EVIDENCE-DESIGN.md` 冒頭。以下は履歴。

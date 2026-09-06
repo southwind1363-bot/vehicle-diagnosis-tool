@@ -7,6 +7,7 @@ import "./validate-dtc-clear-scoped-post-readout.js";
 import "./validate-dtc-clear-readout-sequence.js";
 import "./validate-dtc-clear-before-evidence.js";
 import "./validate-dtc-clear-post-evidence.js";
+import "./validate-dtc-clear-difference-boundaries.js";
 
 let ioCalls = 0;
 const forbidden = () => { ioCalls += 1; throw new Error("Unexpected I/O"); };
