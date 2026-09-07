@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.524";
+const APP_VERSION = "3.13.525";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10162,7 +10162,7 @@ function formatObdEcuInfoItemLine(item = {}) {
   return `[${ecu}] ${item.label || item.id || "項目"}${identifier}: ${value}`;
 }
 
-function buildObdEcuInfoDisplayLines(snapshot = null) {
+function buildObdEcuInfoDisplayLines(snapshot = null, recordIndexes = null) {
   const items = snapshot?.items || [];
   const ecus = snapshot?.ecuInfoEcuSnapshots || snapshot?.ecu_info_ecu_snapshots || [];
   const status = snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status;
@@ -10184,7 +10184,10 @@ function buildObdEcuInfoDisplayLines(snapshot = null) {
     const errors = group.errorCodes || group.error_codes || [];
     errors.forEach((error) => lines.push(`[${ecu}] ${formatReadoutErrorCodes([error])}`));
   });
-  lines.push(...items.map(formatObdEcuInfoItemLine));
+  for (const item of items) {
+    if (recordIndexes) recordIndexes.push(lines.length);
+    lines.push(formatObdEcuInfoItemLine(item));
+  }
   if (!items.length) lines.push("項目明細: 登録データなし");
   lines.push(`主要要約: ${formatObdBridgeEcuKeySummary(keySummary)}`);
   if (expected.totalCount) lines.push(`取得状況: ${expected.capturedCount}/${expected.totalCount}`);
@@ -10329,7 +10332,7 @@ function createObdEcuResponseCard(summary = null) {
   return card;
 }
 
-function buildObdSupportedPidDisplayLines(snapshot = null) {
+function buildObdSupportedPidDisplayLines(snapshot = null, recordIndexes = null) {
   const pids = snapshot?.supportedPids || snapshot?.supported_pids || [];
   const pages = snapshot?.supportedPidPageBases || snapshot?.supported_pid_page_bases || [];
   const ecus = snapshot?.supportedPidEcuSnapshots || snapshot?.supported_pid_ecu_snapshots || [];
@@ -10357,11 +10360,34 @@ function buildObdSupportedPidDisplayLines(snapshot = null) {
     const groupErrors = group.errorCodes || group.error_codes || [];
     lines.push(`[${ecu}] 読取状態: ${formatObdReadoutStatus(groupStatus, "状態未確認")}`);
     const label = groupStatus === "reported" ? "対応PID" : "記録PID（対応未確認）";
+    if (recordIndexes) recordIndexes.push(lines.length);
     lines.push(`[${ecu}] ${label}: ${groupPids.length}件${groupPids.length ? ` / ${groupPids.join(", ")}` : " / 記録なし"}`);
     lines.push(`[${ecu}] 記録ページ: ${groupPages.length ? groupPages.join(" / ") : "未記録"}`);
     groupErrors.forEach((error) => lines.push(`[${ecu}] ${formatReadoutErrorCodes([error])}`));
   });
   return lines;
+}
+
+function createObdReferenceSearchControls(title, rows) {
+  const panel = document.createElement("div"); panel.className = "obd-reference-search";
+  const note = document.createElement("p"); note.textContent = "検索は表示明細だけに適用します。読取状態・エラー・取得状況は表示を維持します。";
+  const controls = document.createElement("div"); controls.className = "obd-readiness-controls"; controls.hidden = rows.length === 0;
+  const label = document.createElement("label"); label.textContent = `${title}のECU・項目を検索`;
+  const search = document.createElement("input"); search.type = "search"; search.placeholder = title === "対応PID" ? "例：7E8 0C" : "例：7E8 校正"; label.appendChild(search);
+  const reset = document.createElement("button"); reset.type = "button"; reset.className = "secondary-button"; reset.textContent = `${title}の検索を解除`;
+  const count = document.createElement("p"); count.setAttribute("role", "status"); count.setAttribute("aria-live", "polite"); count.dataset.referenceSearchCount = "";
+  // Only index already-redacted display text, never diagnostic source objects.
+  const entries = rows.map((row) => ({ row, text: row.textContent.toLocaleLowerCase() }));
+  rows.forEach((row) => { row.dataset.referenceSearchRow = ""; });
+  const update = () => {
+    const words = search.value.trim().toLocaleLowerCase().split(/\s+/).filter(Boolean);
+    let visible = 0;
+    for (const entry of entries) { entry.row.hidden = !words.every((word) => entry.text.includes(word)); if (!entry.row.hidden) visible += 1; }
+    count.textContent = `表示明細：${visible} / ${entries.length}行` + (!visible ? (entries.length ? "。検索条件に一致する明細はありません。未対応・正常を意味しません。" : "。明細未取得です。") : "");
+    reset.disabled = words.length === 0;
+  };
+  search.addEventListener("input", update); reset.addEventListener("click", () => { search.value = ""; update(); search.focus(); });
+  controls.append(label, reset); panel.append(note, controls, count); update(); return panel;
 }
 
 function formatObdBridgeOnboardMonitorSummary(snapshot = null) {
@@ -11601,7 +11627,8 @@ function renderObdBridgeSessionDetails(session = null) {
     sections.push(["DTC状態", [summary, ...lines].filter(Boolean)]);
   }
 
-  const ecuInfoLines = buildObdEcuInfoDisplayLines(ecuInfoSnapshot);
+  const ecuInfoRecordIndexes = [];
+  const ecuInfoLines = buildObdEcuInfoDisplayLines(ecuInfoSnapshot, ecuInfoRecordIndexes);
   if (ecuInfoLines.length) sections.push(["ECU情報", ecuInfoLines]);
 
   const ecuResponseLines = buildObdEcuResponseDisplayLines(session?.ecuResponseSummary || session?.ecu_response_summary);
@@ -11674,7 +11701,8 @@ function renderObdBridgeSessionDetails(session = null) {
   const readinessLines = buildObdReadinessDisplayLines(readinessSnapshot);
   if (readinessLines.length || readinessSnapshot?.knownMonitors?.length) sections.push(["レディネス", readinessLines]);
 
-  const supportedPidLines = buildObdSupportedPidDisplayLines(supportedPidMatrix);
+  const supportedPidRecordIndexes = [];
+  const supportedPidLines = buildObdSupportedPidDisplayLines(supportedPidMatrix, supportedPidRecordIndexes);
   if (supportedPidLines.length) sections.push(["対応PID", supportedPidLines]);
 
   const freezeFrameValues = freezeFrameSnapshot?.monitorValues || [];
@@ -11748,6 +11776,11 @@ function renderObdBridgeSessionDetails(session = null) {
       list.appendChild(item);
     });
     card.append(heading);
+    if (title === "ECU情報" || title === "対応PID") {
+      card.classList.add("obd-reference-search-card");
+      const indexes = title === "ECU情報" ? ecuInfoRecordIndexes : supportedPidRecordIndexes;
+      card.appendChild(createObdReferenceSearchControls(title, indexes.map((index) => list.children[index])));
+    }
     if (title === "フリーズフレーム") {
       card.classList.add("obd-freeze-review-card");
       const valueRows = Array.from(list.children).slice(lines.length - freezeFrameValues.length);

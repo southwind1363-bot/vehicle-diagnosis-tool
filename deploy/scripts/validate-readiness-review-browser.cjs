@@ -37,6 +37,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const core = vm.createContext({ window: {} });
     vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), core);
     const model = core.window.ObdReadOnly;
+    const ecuInfoSnapshot = model.normalizeBridgeEcuInfoSnapshot({ ok: true, blocked: false, would_transmit: false, data: { ecu_snapshots: [
+      { source_ecu: '7E8', ecu_info_readout_status: 'reported', items: [{ id: 'calibration_id', value: 'CAL-A' }, { id: 'vin', info_type: '02', value: 'JH4KA8260MC000001' }] },
+      { source_ecu: '7E9', ecu_info_readout_status: 'reported', items: [{ id: 'calibration_id', value: 'CAL-B' }] },
+      { source_ecu: '7EA', ecu_info_readout_status: 'blocked', items: [] }
+    ] } });
+    const supportedPidMatrix = model.buildSupportedPidMatrix({ supportedPidEcuSnapshots: [
+      { sourceEcu: '7E8', supportedPidReadoutStatus: 'reported', supportedPids: ['0C'] },
+      { sourceEcu: '7E9', supportedPidReadoutStatus: 'reported', supportedPids: ['05'] },
+      { sourceEcu: '7EA', supportedPidReadoutStatus: 'blocked', supportedPids: [] }
+    ] });
     model.configureMonitorDefinitions(JSON.parse(fs.readFileSync(path.join(root, 'data/obd-monitor-definitions.json'), 'utf8')));
     model.configureReadinessMonitors(JSON.parse(fs.readFileSync(path.join(root, 'data/obd-readiness-monitors-2026.json'), 'utf8')));
     const onboardMonitorSnapshot = model.normalizeOnboardMonitorSnapshot({ onboard_monitor_readout_status: 'reported', tests: [
@@ -44,7 +54,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       { source_ecu: '7E9', test_id: '01', component_id: '02', value: 3, min: 0, max: 2 },
       { source_ecu: '7E8', test_id: '03', component_id: '04', value: 4 }
     ] });
-    const fixture = model.buildScanSessionFromObdText('>0101\n7E8 06 41 01 80 07 65 20\n7E9 06 41 01 00 07 65 00\n>0202\n7E8 05 42 02 00 01 71\n>020C\n7E8 05 42 0C 00 00 00\n7E9 05 42 0C 00 1A F8\n>0205\n7E8 04 42 05 01 7B\n', { onboardMonitorSnapshot });
+    const fixture = model.buildScanSessionFromObdText('>0101\n7E8 06 41 01 80 07 65 20\n7E9 06 41 01 00 07 65 00\n>0202\n7E8 05 42 02 00 01 71\n>020C\n7E8 05 42 0C 00 00 00\n7E9 05 42 0C 00 1A F8\n>0205\n7E8 04 42 05 01 7B\n', { onboardMonitorSnapshot, ecuInfoSnapshot, supportedPidMatrix });
     assert.equal(fixture.freezeFrameSnapshot.monitorValues.length, 3);
     assert.equal(fixture.readinessSnapshot.readinessEcuSnapshots.length, 2);
     await (await picker).setFiles({ name: 'synthetic-readiness-review.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(fixture))) });
@@ -148,6 +158,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original);
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log('Mode06 browser passed: search/status intersection, no match, warning retained, reset, 390/1280 light/dark, unchanged session.');
+    for (const [title, id, query] of [['ECU情報', 'obdSessionDetailEcuInfo', '7e8 cal-a'], ['対応PID', 'obdSessionDetailSupportedPid', '7e8 0c']]) {
+      await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      await page.getByRole('button', { name: `${title}の詳細を開く`, exact: true }).click();
+      const reference = page.locator('#' + id);
+      for (const width of [390, 1280]) {
+        await page.setViewportSize({ width, height: 844 });
+        await reference.getByLabel(`${title}のECU・項目を検索`).fill(query);
+        assert.equal(await reference.locator('[data-reference-search-row]:visible').count(), 1);
+        assert.match(await reference.innerText(), /読取拒否/);
+        await reference.getByLabel(`${title}のECU・項目を検索`).fill('JH4KA8260MC000001');
+        assert.equal(await reference.locator('[data-reference-search-row]:visible').count(), 0);
+        assert.equal((await reference.innerText()).includes('JH4KA8260MC000001'), false);
+        assert.match(await reference.locator('[data-reference-search-count]').innerText(), /未対応・正常を意味しません/);
+        await reference.getByRole('button', { name: `${title}の検索を解除`, exact: true }).click();
+        assert.ok(await reference.locator('[data-reference-search-row]:visible').count() >= 2);
+        for (const dark of [false, true]) {
+          await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+          await reference.evaluate(node => window.scrollTo({ top: window.scrollY + node.getBoundingClientRect().top - 230, behavior: 'instant' }));
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+          await page.screenshot({ animations: 'disabled', path: path.join(output, `${id}-${width}-${dark ? 'dark' : 'light'}.png`) });
+        }
+      }
+    }
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original);
+    console.log('ECU/PID search passed: masked display-only indexing, ECU/query intersection, metadata retained, reset, mobile/desktop themes, unchanged session.');
     const failed = model.buildDiagnosticScanSession({
       freezeFrameSnapshot: { source_ecu: '7E8', freeze_frame_readout_status: 'blocked', error_codes: ['adapter_timeout'] },
       onboardMonitorSnapshot: { source_ecu: '7E9', onboard_monitor_readout_status: 'unparsed', error_codes: ['transport:timeout'] }

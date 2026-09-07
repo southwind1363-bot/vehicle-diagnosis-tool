@@ -87,7 +87,9 @@ check(JSON.stringify(obd.buildBridgeSessionExportPayload({ ...session, exportedA
 const reopened = obd.buildDiagnosticScanSessionFromJson(exportedBefore);
 check(reopened && context.buildObdEcuInfoDisplayLines(reopened.ecuInfoSnapshot).some((line) => line.includes("CAL-9")), "Reopened detail missing");
 const details = extract("renderObdBridgeSessionDetails");
-check(details.includes("buildObdEcuInfoDisplayLines(ecuInfoSnapshot)") && details.includes('sections.push(["ECU情報", ecuInfoLines])'), "ECU detail helper not wired");
+check(details.includes("buildObdEcuInfoDisplayLines(ecuInfoSnapshot, ecuInfoRecordIndexes)") && details.includes('sections.push(["ECU情報", ecuInfoLines])'), "ECU detail helper not wired");
+const recordIndexes = [], indexedLines = context.buildObdEcuInfoDisplayLines(snapshot, recordIndexes);
+check(recordIndexes.length === items.length && recordIndexes.every((index, i) => indexedLines[index] === context.formatObdEcuInfoItemLine(items[i])), "Search includes metadata or misses items");
 check(details.includes("item.textContent = line;"), "ECU information must render as literal text");
 check(extract("renderObdDeveloperSessionSummary").includes('["Mode09対応タイプ00", formatObdEcuSupportCapture(ecuInfoSnapshot)]'), "Summary still infers acquisition");
 console.log(`ECU info display checks: ${checks} / Errors: 0`);

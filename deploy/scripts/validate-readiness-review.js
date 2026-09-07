@@ -13,7 +13,7 @@ class Element {
   focus() { this.focused = true; }
 }
 const context = vm.createContext({ window: { ObdReadOnly: { getReadinessMonitors: () => [{ id: "catalyst", diagnosticUse: "参考用途", notCompleteNote: "条件を確認", serviceManualRequired: true, source: "同梱出典" }] } }, document: { createElement: (tag) => new Element(tag) }, formatObdReadoutStatus: (value, fallback) => value || fallback });
-vm.runInContext(["createObdMode06ReviewControls", "getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
+vm.runInContext(["createObdReferenceSearchControls", "createObdMode06ReviewControls", "getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
 const all = (node) => [node, ...node.children.flatMap(all)];
 const snapshot = { readinessEcuSnapshots: [
   { sourceEcu: "7E8", milOn: true, readinessIgnitionType: "spark", monitors: [
@@ -112,3 +112,16 @@ assert.ok(modeRows.every((row) => !row.hidden));
 assert.equal(JSON.stringify(modeTests), modeBefore);
 assert.ok(all(context.createObdMode06ReviewControls([], [])).some((node) => node.textContent.includes("明細未取得")));
 console.log('Mode06 review checks: 7 / Errors: 0');
+const referenceRows = ['[7E8] 校正: CAL-A', '[7E9] 校正: CAL-B', '[7E8] VIN: 識別情報（非表示）'].map((text) => { const row = new Element('li'); row.textContent = text; return row; });
+const reference = all(context.createObdReferenceSearchControls('ECU情報', referenceRows));
+const referenceSearch = reference.find((node) => node.tag === 'input');
+referenceSearch.value = '7e8 校正'; referenceSearch.handlers.input();
+assert.deepEqual(referenceRows.map((row) => row.hidden), [false, true, true]);
+referenceSearch.value = 'SECRET-VIN'; referenceSearch.handlers.input();
+assert.ok(referenceRows.every((row) => row.hidden));
+assert.ok(reference.some((node) => node.textContent.includes('未対応・正常を意味しません')));
+reference.find((node) => node.tag === 'button').handlers.click();
+assert.ok(referenceRows.every((row) => !row.hidden));
+assert.equal(referenceRows[2].textContent, '[7E8] VIN: 識別情報（非表示）');
+assert.ok(all(context.createObdReferenceSearchControls('ECU情報', [])).some((node) => node.textContent.includes('明細未取得')));
+console.log('Reference search checks: 6 / Errors: 0');
