@@ -512,6 +512,7 @@ try {
       : entry === "inspect-validate-uds-large" ? '""inspect-workstation-j2534.cmd" --validate-uds-preparation-stdin --no-pause"'
       : entry === "inspect-invalid" ? '""inspect-workstation-j2534.cmd" --preflight-index 0 --no-pause"'
       : entry === "inspect-uds-invalid" ? '""inspect-workstation-j2534.cmd" --prepare-uds-request 1 7E0 7E8 F189 --no-pause"'
+      : entry === "verify" ? '""verify-workstation.cmd" --no-pause"'
       : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
       { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
@@ -603,7 +604,7 @@ try {
       }
     } finally { fs.writeFileSync(target, original); }
   }
-  if (process.platform === "win32") {
+  {
     const packageInfoPath = path.join(actual.directory, "package-info.json");
     const packageIntegrityPath = path.join(actual.directory, "package-integrity.json");
     const packageInfo = fs.readFileSync(packageInfoPath);
@@ -611,18 +612,31 @@ try {
     try {
       fs.unlinkSync(packageInfoPath);
       fs.unlinkSync(packageIntegrityPath);
-      const blocked = await runEntry("inspect");
-      check(blocked.code === 1 && blocked.output.includes("Package verification files are missing")
-        && !blocked.output.includes("J2534接続準備チェック"), "J2534 inspection failed open when both package verification files were missing");
-      const startupBlocked = await runEntry("cmd");
-      check(startupBlocked.code === 1 && startupBlocked.output.includes("Package verification failed")
-        && !startupBlocked.output.includes("診断画面:") && !startupBlocked.output.includes("ペアリング値"), "Packaged launcher bypassed verification when both metadata files were missing");
+      const missingMetadataEntries = process.platform === "win32"
+        ? [...guardedEntries, "verify", "verify:package"] : [...entries, "verify:package"];
+      for (const entry of missingMetadataEntries) {
+        const blocked = await runEntry(entry);
+        check(blocked.code === 1 && /Package verification (?:failed|files are missing)/.test(blocked.output),
+          `${entry}: both missing metadata files did not stop the entry point`);
+        check(!blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値")
+          && !blocked.output.includes("J2534接続準備チェック") && !blocked.output.includes("Package files match:"),
+          `${entry}: missing metadata reached startup, inspection, or a successful verification`);
+        check(!fs.existsSync(packageInfoPath) && !fs.existsSync(packageIntegrityPath),
+          `${entry}: missing metadata was silently repaired`);
+      }
     } finally {
       fs.writeFileSync(packageInfoPath, packageInfo);
       fs.writeFileSync(packageIntegrityPath, packageIntegrity);
     }
   }
   check(verifyWorkstationPackage(actual.directory).appVersion === actual.appVersion, "Startup failure tests did not restore the package");
+  for (const entry of entries) {
+    const recovered = await runEntry(entry);
+    check(recovered.code === 0 && recovered.output.includes("Package files match:") && recovered.output.includes("診断画面:"),
+      `${entry}: restoring the original package did not recover startup`);
+    check(recovered.output.indexOf("Package files match:") < recovered.output.indexOf("診断画面:"),
+      `${entry}: recovered startup skipped verification`);
+  }
   const smoke = `
     import assert from "node:assert/strict";
     import fs from "node:fs";
