@@ -5,6 +5,7 @@ import { webcrypto } from "node:crypto";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["persistCases", "loadCases", "saveCase", "handleCaseDelete", "seedDummyCases", "createDummyCases", "importCasesJson", "findDuplicateCase", "duplicateKey", "normalizeCase", "isCaseRecord", "createCaseId", "createId", "normalizeCode", "runSelfCheck", "buildCasesCsv", "csvCell", "buildCasesBackup", "renderCaseStorageWarning", "reloadSavedCases", "readOptionalBrowserSetting", "writeOptionalBrowserSetting", "clearAllLocalStorage", "showInitialNotice", "exportCasesCsv", "exportCasesJson"];
+functions.push("cancelCaseImport");
 const code = functions.map((name) => {
   const match = source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing application function: ${name}`);
@@ -70,6 +71,24 @@ function client(options = {}) {
 }
 
 const removeEvent = { target: { closest: () => ({ dataset: { deleteCase: "existing" } }) } };
+for (const action of ["clear", "reload"]) {
+  for (const lateEvent of ["load", "error", "abort"]) {
+    const c = client();
+    c.context.importCasesJson({ target: { files: [{}] } });
+    const pending = c.getReader();
+    pending.result = JSON.stringify([{ id: "obsolete", model: "obsolete" }]);
+    pending.abort = () => { pending.onabort(); throw new Error("abort_unavailable"); };
+    if (action === "clear") c.context.clearAllLocalStorage();
+    else c.context.reloadSavedCases();
+    const before = JSON.stringify({ records: c.context.savedCases, stored: c.store.get(key), status: c.context.caseStatus.textContent, operations: c.calls.operations, writes: c.calls.writes.length });
+    pending[`on${lateEvent}`]();
+    check(JSON.stringify({ records: c.context.savedCases, stored: c.store.get(key), status: c.context.caseStatus.textContent, operations: c.calls.operations, writes: c.calls.writes.length }) === before,
+      `${action}: stale ${lateEvent} restored data or replaced the completed action`);
+    check(c.context.caseImportOperation === null && c.context.importJsonInput.value === "", `${action}: pending import was not released`);
+    c.import([{ id: "fresh", model: "fresh" }]);
+    check(c.context.savedCases.some((item) => item.id === "fresh") && !c.context.savedCases.some((item) => item.id === "obsolete"), `${action}: subsequent import did not recover`);
+  }
+}
 for (const lateEvent of ["load", "error", "abort"]) {
   for (const [afterLatest, abortMode] of [false, true].flatMap((after) => ["absent", "synchronous", "throws"].map((mode) => [after, mode]))) {
     const c = client();
@@ -92,6 +111,24 @@ for (const lateEvent of ["load", "error", "abort"]) {
     check(c.context.savedCases.length === 2 && c.context.savedCases.some((item) => item.id === "latest") && !c.context.savedCases.some((item) => item.id === "old"), "Superseded file was imported after reselection");
     check(c.context.caseImportOperation === null, "Completed import retained operation ownership");
   }
+}
+for (const action of ["decline-first", "decline-second", "clear-failed", "reload-failed"]) {
+  const c = client();
+  c.context.importCasesJson({ target: { files: [{}] } });
+  const pending = c.getReader();
+  const owner = c.context.caseImportOperation;
+  let confirmations = 0;
+  c.context.confirm = () => { confirmations += 1; return action === "decline-first" ? false : action !== "decline-second" || confirmations < 2; };
+  if (action === "clear-failed") c.options.failRemove = true;
+  if (action === "reload-failed") { c.options.failRead = true; c.context.reloadSavedCases(); }
+  else c.context.clearAllLocalStorage();
+  check(c.context.caseImportOperation === owner && c.context.savedCases === c.original && c.store.get(key) === c.bytes,
+    `${action}: unsuccessful replacement cancelled the pending import or changed data`);
+  c.options.failRead = false;
+  c.context.caseStorageReadError = "";
+  pending.result = JSON.stringify([{ id: "retained", model: "retained" }]);
+  pending.onload();
+  check(c.context.savedCases.some((item) => item.id === "retained"), `${action}: pending import was silently discarded`);
 }
 for (const failure of ["construct", "read", "error", "abort"]) {
   const c = client();
