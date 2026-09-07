@@ -22,7 +22,7 @@ function client(options = {}) {
   const calls = { reset: 0, render: 0, similar: 0, ids: 0, quality: 0, operations: [], writes: [], removals: [], alerts: [] };
   let reader;
   const context = vm.createContext({
-    savedCases: original, caseStorageReadError: "", CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
+    savedCases: original, caseStorageReadError: "", caseImportOperation: null, CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
     THEME_KEY: "theme", NOTICE_KEY: "notice", OBD_UI_MODE_KEY: "ui-mode", applyTheme: () => {},
     caseStorageWarning: { hidden: true }, caseStorageWarningText: {},
     noticeModal: { showModal: () => { calls.noticeShown = true; }, close: () => { calls.noticeClosed = true; } },
@@ -70,6 +70,42 @@ function client(options = {}) {
 }
 
 const removeEvent = { target: { closest: () => ({ dataset: { deleteCase: "existing" } }) } };
+for (const lateEvent of ["load", "error", "abort"]) {
+  for (const [afterLatest, abortMode] of [false, true].flatMap((after) => ["absent", "synchronous", "throws"].map((mode) => [after, mode]))) {
+    const c = client();
+    c.context.importCasesJson({ target: { files: [{}] } });
+    const oldReader = c.getReader();
+    oldReader.result = JSON.stringify([{ id: "old", model: "old" }]);
+    if (abortMode !== "absent") oldReader.abort = () => {
+      oldReader.onabort();
+      if (abortMode === "throws") throw new Error("abort_failed");
+    };
+    c.context.importCasesJson({ target: { files: [{}] } });
+    const latestReader = c.getReader();
+    latestReader.result = JSON.stringify([{ id: "latest", model: "latest" }]);
+    if (afterLatest) latestReader.onload();
+    const before = JSON.stringify({ data: c.context.savedCases, status: c.context.caseStatus.textContent, input: c.context.importJsonInput.value, writes: c.calls.writes.length });
+    oldReader[`on${lateEvent}`]();
+    check(JSON.stringify({ data: c.context.savedCases, status: c.context.caseStatus.textContent, input: c.context.importJsonInput.value, writes: c.calls.writes.length }) === before,
+      `Stale ${lateEvent} changed the latest import or its status`);
+    if (!afterLatest) latestReader.onload();
+    check(c.context.savedCases.length === 2 && c.context.savedCases.some((item) => item.id === "latest") && !c.context.savedCases.some((item) => item.id === "old"), "Superseded file was imported after reselection");
+    check(c.context.caseImportOperation === null, "Completed import retained operation ownership");
+  }
+}
+for (const failure of ["construct", "read", "error", "abort"]) {
+  const c = client();
+  c.context.importCasesJson({ target: { files: [{}] } });
+  const oldReader = c.getReader();
+  oldReader.result = JSON.stringify([{ id: "old", model: "old" }]);
+  c.options.failReader = failure;
+  c.context.importCasesJson({ target: { files: [{}] } });
+  if (failure === "error" || failure === "abort") c.getReader()[`on${failure}`]();
+  const status = c.context.caseStatus.textContent;
+  oldReader.onload();
+  check(c.context.savedCases === c.original && c.store.get(key) === c.bytes && c.calls.writes.length === 0, "Failed reselection restored an obsolete import");
+  check(c.context.caseStatus.textContent === status && c.context.caseImportOperation === null, "Stale completion replaced the latest failure");
+}
 {
   const c = client();
   c.import("private-file-detail is not JSON");

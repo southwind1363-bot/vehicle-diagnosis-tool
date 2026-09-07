@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.533";
+const APP_VERSION = "3.13.534";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -702,6 +702,7 @@ const tabPanels = document.querySelectorAll("[data-tab-panel]");
 
 let dataStore = fallbackData;
 let caseStorageReadError = "";
+let caseImportOperation = null;
 let savedCases = loadCases();
 let copyToastTimer = null;
 let activeResultView = "flow";
@@ -16757,15 +16758,24 @@ function importCasesJson(event) {
   const file = event.target.files[0];
   if (!file) return;
 
+  const previous = caseImportOperation;
+  const operation = { reader: null };
+  caseImportOperation = operation;
+  // Invalidate first: abort may synchronously dispatch the old callback.
+  try { previous?.reader?.abort?.(); } catch (_) { /* Ownership still prevents stale results. */ }
   const failRead = () => {
+    if (caseImportOperation !== operation) return;
+    caseImportOperation = null;
     caseStatus.textContent = "JSONインポート失敗: ファイルを読み取れませんでした。保存済み事例は変更していません。ファイルを選び直してください。";
     importJsonInput.value = "";
   };
   let reader;
   try { reader = new FileReader(); } catch (_) { failRead(); return; }
+  operation.reader = reader;
   reader.onerror = failRead;
   reader.onabort = failRead;
   reader.onload = () => {
+    if (caseImportOperation !== operation) return;
     try {
       const parsed = JSON.parse(reader.result);
       const records = Array.isArray(parsed) ? parsed : parsed.records;
@@ -16797,7 +16807,10 @@ function importCasesJson(event) {
     } catch (error) {
       caseStatus.textContent = `JSONインポート失敗: ${error.message}`;
     } finally {
-      importJsonInput.value = "";
+      if (caseImportOperation === operation) {
+        caseImportOperation = null;
+        importJsonInput.value = "";
+      }
     }
   };
   try { reader.readAsText(file, "utf-8"); } catch (_) { failRead(); }
