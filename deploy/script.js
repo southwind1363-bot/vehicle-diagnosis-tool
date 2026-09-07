@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.532";
+const APP_VERSION = "3.13.533";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16757,7 +16757,14 @@ function importCasesJson(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  const reader = new FileReader();
+  const failRead = () => {
+    caseStatus.textContent = "JSONインポート失敗: ファイルを読み取れませんでした。保存済み事例は変更していません。ファイルを選び直してください。";
+    importJsonInput.value = "";
+  };
+  let reader;
+  try { reader = new FileReader(); } catch (_) { failRead(); return; }
+  reader.onerror = failRead;
+  reader.onabort = failRead;
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
@@ -16793,7 +16800,7 @@ function importCasesJson(event) {
       importJsonInput.value = "";
     }
   };
-  reader.readAsText(file, "utf-8");
+  try { reader.readAsText(file, "utf-8"); } catch (_) { failRead(); }
 }
 
 function scoreCase(item, terms, input) {

@@ -37,7 +37,10 @@ function client(options = {}) {
     setDefaultCaseDate: () => { calls.ids += 1; }, setNextCaseId: () => { calls.ids += 1; },
     renderCases: () => { calls.render += 1; }, renderSimilarCases: () => { calls.similar += 1; },
     renderOpsResults: (results) => { calls.operations = results; },
-    FileReader: class { constructor() { reader = this; } readAsText() {} },
+    FileReader: class {
+      constructor() { if (options.failReader === "construct") throw new Error("private-file-detail"); reader = this; }
+      readAsText() { if (options.failReader === "read") throw new Error("private-file-detail"); }
+    },
     localStorage: {
       setItem: (name, value) => {
         calls.writes.push(name);
@@ -57,7 +60,7 @@ function client(options = {}) {
     }
   });
   vm.runInContext(code, context);
-  return { context, original, bytes, store, calls, options,
+  return { context, original, bytes, store, calls, options, getReader: () => reader,
     import: (records) => {
       context.importCasesJson({ target: { files: [{}] } });
       reader.result = typeof records === "string" ? records : JSON.stringify(records);
@@ -67,6 +70,26 @@ function client(options = {}) {
 }
 
 const removeEvent = { target: { closest: () => ({ dataset: { deleteCase: "existing" } }) } };
+{
+  const c = client();
+  c.import("private-file-detail is not JSON");
+  check(c.context.caseStatus.textContent.includes("JSONインポート失敗") && !c.context.caseStatus.textContent.includes("private-file-detail"), "Malformed JSON error disclosed input contents");
+  check(c.store.get(key) === c.bytes && c.calls.writes.length === 0 && c.context.importJsonInput.value === "", "Malformed JSON changed storage or prevented retry");
+}
+for (const failure of ["construct", "read", "error", "abort"]) {
+  const c = client({ failReader: failure });
+  c.context.caseStatus.textContent = "以前のインポート完了";
+  assert.doesNotThrow(() => c.context.importCasesJson({ target: { files: [{}] } }));
+  if (failure === "error") c.getReader().onerror?.();
+  if (failure === "abort") c.getReader().onabort?.();
+  check(c.context.caseStatus.textContent.includes("JSONインポート失敗"), `${failure}: file failure left stale success status`);
+  check(c.context.importJsonInput.value === "", `${failure}: same file cannot be selected again`);
+  check(c.context.savedCases === c.original && c.store.get(key) === c.bytes && c.calls.writes.length === 0, `${failure}: read failure modified stored cases`);
+  check(!c.context.caseStatus.textContent.includes("private-file-detail"), `${failure}: raw error details leaked`);
+  c.options.failReader = false;
+  c.import([{ id: "retry", model: "B", symptom: "retry" }]);
+  check(c.context.savedCases.length === 2 && c.context.caseStatus.textContent.includes("インポート完了"), `${failure}: retry did not recover`);
+}
 for (const failure of ["QuotaExceededError", "SecurityError"]) {
   for (const action of ["save", "delete", "seed", "import"]) {
     const c = client({ failWrite: failure });
