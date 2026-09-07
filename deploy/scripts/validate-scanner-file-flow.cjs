@@ -157,14 +157,20 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.ok(JSON.stringify(json).includes('P0300') && JSON.stringify(json).includes('P0420'));
     if (offline) {
       const manifest = JSON.parse(fs.readFileSync(path.join(root, 'offline-assets.json'), 'utf8'));
-      await page.waitForFunction(async manifest => {
+      // Await the resolved boolean: this Playwright runtime treats an async
+      // waitForFunction predicate's Promise as truthy before it resolves false.
+      const cacheDeadline = Date.now() + 60000;
+      while (!await page.evaluate(async manifest => {
         if (!navigator.serviceWorker.controller) return false;
         const name = 'vehicle-diagnosis-tool-' + manifest.version;
         if (!(await caches.has(name))) return false;
         const cache = await caches.open(name);
         const keys = new Set((await cache.keys()).map(request => request.url));
         return ['/', '/index.html', '/offline-assets.json', ...manifest.assets].every(url => keys.has(new URL(url, location.href).href));
-      }, manifest, { timeout: 60000 });
+      }, manifest)) {
+        assert.ok(Date.now() < cacheDeadline, 'Complete offline cache did not become ready');
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
       if (!serverStopOnly) await context.setOffline(true);
       await new Promise(resolve => server.close(resolve));
       server = null;
