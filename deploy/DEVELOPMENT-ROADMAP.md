@@ -5,6 +5,8 @@
 
 ## 現在地とR1の出口
 
+2026-09-08 / 3.13.536 総合検証追補: validate:releaseでECU情報表示の古い文字列照合（items.map）が失敗したため、formatterの実行結果を検査する1項目へ置換し、公開検査数7447との整合も維持した。既存のECU表示検査をOBD検査から実行し、camel/snakeのDID表記・記録値の無解釈表示・入力不変性を追加（87項目）。修正後のvalidate:releaseは全工程合格: OBD主集計7447、bridge384、J2534 lifecycle242/supervisor154、PC起動1313、配布389、offline180、データJSON203ファイル/DTC3878件、Errors 0/Warnings 0。validate:r1とキャッシュ待機回帰16項目も合格。配布ZIPのSHA256は9A60F8865BE622EF13BD7D3E5DD2FE9B6372F164BF09DD7D2AAB81A9410C4C04で変更なし。検査コードの修正だけで、アプリ本体・版番号・車両送信・保存形式は変更していない。ソフト検査の合格を実VCI・別PC・実車適合の証明にはしない。
+
 2026-09-08 / 3.13.536 待機処理の横断修正: scripts内で残っていた非同期waitForFunctionは診断結果ファイル一巡検査のキャッシュ準備1か所。配布版検査と同じく、Node側で解決値を待つ60秒上限のポーリングへ修正した。`node scripts/validate-browser-cache-wait.cjs` は両検査の実際の待機ループを抽出し、false継続・即時成功・時間切れ・例外伝播をブラウザなしで検査（16項目合格）。`node scripts/validate-scanner-file-flow.cjs --offline --dense-live`（Playwright必要）も合格し、模擬認証、JSON取込/保存/再取込、60点ライブ推移と複数ECU、詳細遷移、検索保持、読込異常・遅着、接続取消、無応答/正常0件、通信障害後と無応答後の復帰、オフライン保存復元を確認。390幅の追加データ画面も目視確認。車両通信・実パスワード・既存利用者データ・アプリ本体・版番号・配布ZIPは変更しない。
 
 2026-09-08 / 3.13.536 配布版再起動の検証修正: `validate-packaged-browser.cjs <展開した配布フォルダー> --restart` を追加。初期試験では再起動時にERR_INTERNET_DISCONNECTED（遮断模擬なしではERR_CONNECTION_REFUSED）となったが、保存状態の比較でサーバー停止前からキャッシュ・active workerが未準備と判明。使用中のPlaywright 1.62.1実装はwaitForFunctionの非同期predicateが返すPromiseをtruthyとして扱い、解決値falseを再ポーリングしない。試験をNode側でpage.evaluateの解決値を待つ60秒上限のポーリングへ変更した。変更後、キャッシュ18,352,896 bytesとService Worker 8,893 bytesがブラウザ終了前後で保持され、両サーバー停止・通信遮断・同じ隔離プロファイルでのChrome再起動後にService Worker応答で画面が開くことを確認。初回注意の承諾保持、ロック保持、誤入力消去、事例未保存、390/1280幅も検査し390幅を目視確認。通常再読込モードも再検証して合格。再起動失敗はこの試験の待機不足であり、アプリ本体の不具合という前段の疑いを訂正する。起動前のabout:blankではCDPのキャッシュ名取得がNo frame foundとなるが、容量取得と実ナビゲーションの応答で別途確認する。実パスワード解除・OS再起動・別PC・実車は未検証。アプリ・版番号・ZIP・実データ・車両通信は変更していない。

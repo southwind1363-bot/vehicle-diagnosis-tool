@@ -20,6 +20,12 @@ for (const empty of [null, {}, { items: [] }]) {
   check(context.formatObdEcuSupportCapture(empty) === "未確認", "Empty input became acquired");
 }
 const items = Array.from({ length: 10 }, (_, i) => ({ id: "calibration_id", label: `項目${i}`, value: `CAL-${i}`, sourceEcu: i % 2 ? "7E9" : "7E8", infoType: "04" }));
+for (const key of ["dataIdentifier", "data_identifier"]) {
+  const snapshot = { items: [{ id: "reported", sourceEcu: "7E8", [key]: "F187", value: "uninterpreted-value" }] };
+  const original = JSON.stringify(snapshot);
+  check(context.buildObdEcuInfoDisplayLines(snapshot).includes("[7E8] reported / DID 0xF187: uninterpreted-value"), "Reported UDS DID/value lost from displayed details");
+  check(JSON.stringify(snapshot) === original, "Displaying a UDS DID must not reinterpret the recorded value");
+}
 const labels = Array.from({ length: 9 }, (_, i) => `対応${i}`);
 const snapshot = { items, itemCount: 10, supportInfoTypesCaptured: true, supportInfoTypesSummary: { count: 9, labels },
   ecuInfoEcuSnapshots: [
