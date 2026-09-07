@@ -59,6 +59,28 @@ const mixed = { tests: [tests[0]], testCount: 1, unknownCount: 1, onboardMonitor
 const mixedLines = context.buildObdOnboardMonitorDisplayLines(mixed);
 check(mixedLines.includes("7E9: 記録された集計（検査明細なし）: 2件 / 不合格2") && mixedLines.includes(context.formatObdOnboardMonitorTestLine(tests[0])), "Mixed detail/summary ECU results were hidden or combined");
 check(!mixedLines.some((line) => line.startsWith("7E8: 記録された集計")), "Measured ECU was mislabeled as summary-only");
+for (const field of ["onboardMonitorReadoutStatus", "onboard_monitor_readout_status"]) {
+  for (const status of ["blocked", "unparsed", "unknown", "reported"]) {
+    const snapshot = { [field]: status, tests: [], onboardMonitorEcuSnapshots: [
+      { sourceEcu: "7E8", onboardMonitorReadoutStatus: "reported" }
+    ] };
+    const before = JSON.stringify(snapshot);
+    const lines = context.buildObdOnboardMonitorDisplayLines(snapshot);
+    check(lines.includes(`全体: ${context.formatObdReadoutStatus(status)}`), "ECU details hid the recorded overall Mode06 disposition");
+    check(lines.includes("7E8: 取得済み"), "Overall disposition replaced an ECU's own readout status");
+    check(JSON.stringify(snapshot) === before, "Overall disposition display changed readout data");
+  }
+}
+for (const parentStatus of [undefined, null, ""]) {
+  const lines = context.buildObdOnboardMonitorDisplayLines({ onboardMonitorReadoutStatus: parentStatus,
+    onboardMonitorEcuSnapshots: [{ sourceEcu: "7E8", onboardMonitorReadoutStatus: "reported" }] });
+  check(!lines.some((line) => line.startsWith("全体:")), "Missing overall Mode06 disposition was fabricated");
+}
+const conflictingLines = context.buildObdOnboardMonitorDisplayLines({ onboardMonitorReadoutStatus: "blocked",
+  onboard_monitor_readout_status: "reported", errorCodes: ["adapter_timeout"], onboardMonitorEcuSnapshots: [],
+  onboard_monitor_ecu_snapshots: [{ source_ecu: "7E9", onboard_monitor_readout_status: "reported" }] });
+check(conflictingLines.includes("全体: 読取拒否") && !conflictingLines.includes("全体: 取得済み"), "Overall Mode06 alias precedence changed");
+check(conflictingLines.includes("全体: 理由:アダプター応答タイムアウト") && conflictingLines.includes("7E9: 取得済み"), "Overall status hid failure evidence or a populated ECU alias");
 const coreContext = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), coreContext);
 const obd = coreContext.window.ObdReadOnly;
