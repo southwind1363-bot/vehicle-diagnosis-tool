@@ -184,6 +184,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), original);
     console.log('ECU/PID search passed: masked display-only indexing, ECU/query intersection, metadata retained, reset, mobile/desktop themes, unchanged session.');
     const failed = model.buildDiagnosticScanSession({
+      readinessSnapshot: { source_ecu: '7EA', readiness_readout_status: 'blocked', error_codes: ['transport:timeout'], monitors: [] },
       freezeFrameSnapshot: { source_ecu: '7E8', freeze_frame_readout_status: 'blocked', error_codes: ['adapter_timeout'] },
       onboardMonitorSnapshot: { source_ecu: '7E9', onboard_monitor_readout_status: 'unparsed', error_codes: ['transport:timeout'] }
     });
@@ -195,6 +196,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await (await replacementPicker).setFiles({ name: 'synthetic-empty-readout.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(model.buildBridgeSessionExportPayload(failed))) });
     await page.waitForFunction(() => obdDevSession.lastSession?.freezeFrameSnapshot?.freezeFrameReadoutStatus === 'blocked');
     const failedBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    await page.getByRole('button', { name: 'レディネスの詳細を開く', exact: true }).click();
+    const failedReadiness = page.locator('#obdSessionDetailReadiness');
+    const disposition = failedReadiness.locator('[data-readiness-disposition]');
+    await disposition.waitFor({ state: 'visible' });
+    assert.match(await disposition.innerText(), /7EA: 読取拒否/);
+    assert.match(await disposition.innerText(), /通信タイムアウト/);
+    const failureSearch = failedReadiness.locator('[data-readiness-search]');
+    if (await failureSearch.isVisible()) {
+      await failureSearch.fill('no-matching-monitor');
+      await failedReadiness.locator('[data-readiness-filter]').selectOption('complete');
+      assert.match(await disposition.innerText(), /7EA: 読取拒否/);
+      assert.match(await disposition.innerText(), /通信タイムアウト/);
+      assert.equal(await failedReadiness.locator('[data-readiness-state]:visible').count(), 0);
+    }
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      for (const dark of [false, true]) {
+        await page.evaluate(dark => document.body.classList.toggle('dark', dark), dark);
+        await failedReadiness.evaluate(node => window.scrollTo({ top: window.scrollY + node.getBoundingClientRect().top - 230, behavior: 'instant' }));
+        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+        await page.screenshot({ animations: 'disabled', path: path.join(output, `readiness-failure-${width}-${dark ? 'dark' : 'light'}.png`) });
+      }
+    }
+    console.log('Readiness failure passed: JSON import, rejected ECU and timeout retained during filtering, no complete evidence fabricated, mobile/desktop themes.');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const [button, id, state, reason, counter] of [
       ['フリーズフレームの詳細を開く', 'obdSessionDetailFreezeFrame', '読取拒否', 'アダプター応答タイムアウト', '[data-freeze-review-count]'],

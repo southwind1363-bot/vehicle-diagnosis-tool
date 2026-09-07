@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.527";
+const APP_VERSION = "3.13.528";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10546,11 +10546,29 @@ function formatObdReadinessMonitorLine(item = {}) {
   return `${item.label || item.id || "項目"}: ${status} [${ecu}]${item.diagnosticUse ? ` / ${item.diagnosticUse}` : ""}`;
 }
 
+function buildObdReadinessDispositionLines(snapshot = null) {
+  if (!snapshot) return [];
+  const children = [snapshot.readinessEcuSnapshots, snapshot.readiness_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
+  const lines = [];
+  for (const group of [snapshot, ...children]) {
+    if (!group) continue;
+    const status = group.readinessReadoutStatus || group.readiness_readout_status;
+    const errors = [group.errorCodes, group.error_codes].find((rows) => Array.isArray(rows) && rows.length) || [];
+    if (!status && !errors.length) continue;
+    const ecu = group === snapshot && children.length ? "全体" : group.sourceEcu || group.source_ecu || "ECU未記録";
+    lines.push(`${ecu}: ${formatObdReadoutStatus(status, "状態未確認")}`);
+    errors.forEach((error) => lines.push(`${ecu}: ${formatReadoutErrorCodes([error])}`));
+  }
+  return lines;
+}
+
 function buildObdReadinessDisplayLines(snapshot = null) {
   const ecuSnapshots = [snapshot?.readinessEcuSnapshots, snapshot?.readiness_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
-  if (!snapshot?.monitors?.length && !ecuSnapshots.length) return [];
+  const disposition = buildObdReadinessDispositionLines(snapshot);
+  if (!snapshot?.monitors?.length && !ecuSnapshots.length && !disposition.length) return [];
   const groups = ecuSnapshots.length ? ecuSnapshots : [snapshot];
   const lines = ecuSnapshots.length > 1 ? [`ECU別 ${ecuSnapshots.length}系統 / 集約判定なし`] : [];
+  lines.push(...disposition);
   groups.forEach((group) => {
     const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
     const readoutStatus = group.readinessReadoutStatus || group.readiness_readout_status;
@@ -10614,6 +10632,10 @@ function createObdReadinessReviewCard(snapshot = null) {
   const count = document.createElement("p"); count.className = "data-status"; count.setAttribute("role", "status");
   count.setAttribute("aria-live", "polite"); count.dataset.readinessCount = "";
   const body = document.createElement("div"); body.className = "obd-readiness-groups";
+  const disposition = document.createElement("ul"); disposition.dataset.readinessDisposition = "";
+  const dispositionLines = buildObdReadinessDispositionLines(snapshot);
+  disposition.hidden = dispositionLines.length === 0;
+  for (const line of dispositionLines) { const item = document.createElement("li"); item.textContent = line; disposition.appendChild(item); }
   const groups = buildObdReadinessReviewGroups(snapshot), entries = [];
   groups.forEach((group) => {
     const section = document.createElement("section"); section.className = "obd-readiness-ecu";
@@ -10668,7 +10690,8 @@ function createObdReadinessReviewCard(snapshot = null) {
   };
   search.addEventListener("input", update); filter.addEventListener("change", update);
   reset.addEventListener("click", () => { search.value = ""; filter.value = "all"; update(); search.focus(); });
-  card.append(heading, note, controls, count, body, empty); update();
+  controls.hidden = entries.length === 0;
+  card.append(heading, note, disposition, controls, count, body, empty); update();
   return card;
 }
 

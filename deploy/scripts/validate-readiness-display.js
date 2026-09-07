@@ -7,7 +7,7 @@ const extract = (name) => source.match(new RegExp(`function ${name}\\([^)]*\\) \
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
 const context = vm.createContext({ NO_DATA: "未記録" });
-vm.runInContext(["formatObdReadinessMonitorLine", "buildObdReadinessDisplayLines", "formatObdReadoutStatus",
+vm.runInContext(["buildObdReadinessDispositionLines", "formatReadoutErrorCodes", "formatObdReadinessMonitorLine", "buildObdReadinessDisplayLines", "formatObdReadoutStatus",
   "formatObdBridgeReadinessSummary", "summarizeObdBridgeReadiness"].map(extract).join("\n"), context);
 for (const supported of [true, false, null, undefined, 0, 1, "true", "false"]) {
   for (const complete of [true, false, null, undefined, 0, 1, "true", "false"]) {
@@ -26,6 +26,13 @@ for (const empty of [null, {}, { monitors: [] }]) {
   check(context.buildObdReadinessDisplayLines(empty).length === 0, "Empty snapshot fabricated a readiness result");
 }
 const monitors = Array.from({ length: 9 }, (_, i) => ({ id: `Monitor${i}`, supported: true, complete: i !== 0, sourceEcu: "7E8" }));
+for (const status of ["blocked", "unparsed", "unknown"]) {
+  const failed = { source_ecu: "7E8", readiness_readout_status: status, error_codes: ["transport:timeout"], monitors: [] };
+  const saved = JSON.stringify(failed);
+  const failedLines = context.buildObdReadinessDisplayLines(failed);
+  check(failedLines.some((line) => line.includes("通信タイムアウト")), "Readiness failure without monitors disappeared");
+  check(JSON.stringify(failed) === saved, "Readiness failure display mutated source");
+}
 const single = { sourceEcu: "7E8", readinessReadoutStatus: "reported", milOn: false, readinessIgnitionType: "spark", monitors,
   knownMonitors: Array.from({ length: 6 }, (_, i) => ({ id: `Missing${i}`, observed: false })) };
 const singleBefore = JSON.stringify(single);

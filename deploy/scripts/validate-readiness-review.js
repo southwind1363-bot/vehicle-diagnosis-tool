@@ -13,7 +13,7 @@ class Element {
   focus() { this.focused = true; }
 }
 const context = vm.createContext({ window: { ObdReadOnly: { getReadinessMonitors: () => [{ id: "catalyst", diagnosticUse: "参考用途", notCompleteNote: "条件を確認", serviceManualRequired: true, source: "同梱出典" }] } }, document: { createElement: (tag) => new Element(tag) }, formatObdReadoutStatus: (value, fallback) => value || fallback });
-vm.runInContext(["createObdReferenceSearchControls", "createObdMode06ReviewControls", "getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
+vm.runInContext(["buildObdReadinessDispositionLines", "formatReadoutErrorCodes", "createObdReferenceSearchControls", "createObdMode06ReviewControls", "getObdDisplayByteNumber", "createObdFreezeFrameReviewControls", "buildObdReadinessReviewGroups", "createObdReadinessReviewCard"].map(extract).join("\n"), context);
 const all = (node) => [node, ...node.children.flatMap(all)];
 const snapshot = { readinessEcuSnapshots: [
   { sourceEcu: "7E8", milOn: true, readinessIgnitionType: "spark", monitors: [
@@ -65,6 +65,18 @@ check(all(empty).find((node) => Object.hasOwn(node.dataset, "readinessEmpty")).h
 const unknownOnly = context.buildObdReadinessReviewGroups({ knownMonitors: [{ id: "x", observed: false }] });
 check(unknownOnly[0].rows[0].status === "missing", "Unobserved monitor omitted");
 check(nodes.some((node) => node.textContent.includes("故障なし・修理完了・車検適合を意味しません")), "Safety distinction omitted");
+const failedCard = context.createObdReadinessReviewCard({ readinessReadoutStatus: "blocked", errorCodes: ["transport:timeout"], readinessEcuSnapshots: [
+  { sourceEcu: "7E8", readinessReadoutStatus: "reported", monitors: [{ id: "fuel", supported: true, complete: true }] },
+  { sourceEcu: "7E9", readinessReadoutStatus: "unparsed", errorCodes: [], error_codes: ["transport:timeout"], monitors: [] }
+] });
+const failedNodes = all(failedCard);
+check(failedNodes.some((node) => node.textContent.includes("通信タイムアウト")), "Readiness card omitted failure reason");
+const failureEvidence = failedNodes.find((node) => Object.hasOwn(node.dataset, "readinessDisposition"));
+const failedSearch = failedNodes.find((node) => Object.hasOwn(node.dataset, "readinessSearch"));
+failedSearch.value = "no-match"; failedSearch.handlers.input();
+check(failureEvidence && !failureEvidence.hidden && failedCard.children.includes(failureEvidence), "Search hid disposition evidence with monitor rows");
+check(all(failureEvidence).some((node) => node.textContent.startsWith("全体:")) && all(failureEvidence).some((node) => node.textContent.startsWith("7E9:")), "Aggregate and child failure evidence were conflated");
+check(all(context.createObdReadinessReviewCard({ readinessReadoutStatus: "blocked" })).find((node) => node.className === "obd-readiness-controls").hidden, "Empty readiness offered ineffective filters");
 console.log(`Readiness review UI checks: ${checks} / Errors: 0`);
 const ffValues = [
   { label: "回転数", sourceEcu: "7E8", freezeFrameNumber: 0, value: 0 },
