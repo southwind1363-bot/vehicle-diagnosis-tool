@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.531";
+const APP_VERSION = "3.13.532";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10498,17 +10498,13 @@ function createObdMode06ReviewControls(tests, rows) {
 function summarizeObdBridgeReadiness(snapshot = null) {
   const monitors = Array.isArray(snapshot?.monitors) ? snapshot.monitors : [];
   const knownMonitors = Array.isArray(snapshot?.knownMonitors) ? snapshot.knownMonitors : [];
-  const readinessEcuSnapshots = Array.isArray(snapshot?.readinessEcuSnapshots)
-    ? snapshot.readinessEcuSnapshots
-    : Array.isArray(snapshot?.readiness_ecu_snapshots)
-      ? snapshot.readiness_ecu_snapshots
-      : [];
+  const readinessEcuSnapshots = [snapshot?.readinessEcuSnapshots, snapshot?.readiness_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
   const supportedCount = monitors.filter((item) => item?.supported === true).length;
   const completeCount = monitors.filter((item) => item?.supported === true && item?.complete === true).length;
   const incompleteCount = monitors.filter((item) => item?.supported === true && item?.complete === false).length;
-  const completionUnknownCount = monitors.filter((item) => item?.supported === true && (item?.complete === null || item?.complete === undefined)).length;
+  const completionUnknownCount = monitors.filter((item) => item?.supported === true && item?.complete !== true && item?.complete !== false).length;
   const unsupportedCount = monitors.filter((item) => item?.supported === false).length;
-  const supportUnknownCount = monitors.filter((item) => item?.supported === null || item?.supported === undefined).length;
+  const supportUnknownCount = monitors.filter((item) => item?.supported !== true && item?.supported !== false).length;
   const unknownCount = knownMonitors.filter((item) => item?.observed === false).length;
   return {
     monitorCount: monitors.length,
@@ -10567,7 +10563,8 @@ function buildObdReadinessDispositionLines(snapshot = null) {
 function buildObdReadinessDisplayLines(snapshot = null) {
   const ecuSnapshots = [snapshot?.readinessEcuSnapshots, snapshot?.readiness_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
   const disposition = buildObdReadinessDispositionLines(snapshot);
-  if (!snapshot?.monitors?.length && !ecuSnapshots.length && !disposition.length) return [];
+  const missingRecorded = Array.isArray(snapshot?.knownMonitors) && snapshot.knownMonitors.some((item) => item?.observed === false);
+  if (!snapshot?.monitors?.length && !ecuSnapshots.length && !disposition.length && !missingRecorded) return [];
   const groups = ecuSnapshots.length ? ecuSnapshots : [snapshot];
   const lines = ecuSnapshots.length > 1 ? [`ECU別 ${ecuSnapshots.length}系統 / 集約判定なし`] : [];
   lines.push(...disposition);

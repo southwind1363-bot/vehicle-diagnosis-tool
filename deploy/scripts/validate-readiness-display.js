@@ -16,6 +16,8 @@ for (const supported of [true, false, null, undefined, 0, 1, "true", "false"]) {
       : complete === true ? "完了" : complete === false ? "未完了" : "完了状態不明";
     const before = JSON.stringify(item);
     check(context.formatObdReadinessMonitorLine(item) === `monitor: ${expected} [7E8]`, "Readiness display inferred boolean flags");
+    const summary = context.formatObdBridgeReadinessSummary({ monitors: [item] });
+    check(summary === `${expected}1`, "Readiness summary omitted a non-boolean unknown flag");
     check(JSON.stringify(item) === before, "Monitor display mutated source data");
   }
 }
@@ -36,6 +38,14 @@ for (const status of ["blocked", "unparsed", "unknown"]) {
 const single = { sourceEcu: "7E8", readinessReadoutStatus: "reported", milOn: false, readinessIgnitionType: "spark", monitors,
   knownMonitors: Array.from({ length: 6 }, (_, i) => ({ id: `Missing${i}`, observed: false })) };
 const singleBefore = JSON.stringify(single);
+const missingOnly = { knownMonitors: [{ id: "evap", label: "蒸発ガス", observed: false }] };
+const missingBefore = JSON.stringify(missingOnly);
+check(context.buildObdReadinessDisplayLines(missingOnly).includes("未取得: 蒸発ガス"), "Missing-only readiness snapshot lost its recorded unavailable item");
+check(JSON.stringify(missingOnly) === missingBefore, "Missing-only display modified source data");
+const mixedFlags = { monitors: [{ supported: true, complete: true }, { supported: true, complete: "true" }, { supported: 1, complete: true }] };
+const mixedBefore = JSON.stringify(mixedFlags);
+check(context.formatObdBridgeReadinessSummary(mixedFlags) === "完了状態不明1 / 完了1 / 対応状態不明1", "A completed monitor hid other unknown readiness flags");
+check(JSON.stringify(mixedFlags) === mixedBefore, "Readiness summary coerced stored flags");
 const singleLines = context.buildObdReadinessDisplayLines(single);
 check(monitors.every((item) => singleLines.includes(context.formatObdReadinessMonitorLine(item))), "Completed or late monitors were hidden");
 check(singleLines.some((line) => line.startsWith("MIL: OFF")) && singleLines.includes("PID 01 観測点火方式: 火花点火"), "MIL or ignition evidence was lost");
@@ -48,6 +58,7 @@ for (const key of ["readinessEcuSnapshots", "readiness_ecu_snapshots"]) {
   const before = JSON.stringify(multi);
   const lines = context.buildObdReadinessDisplayLines(multi);
   const aliasSnapshot = { monitors: [], readinessEcuSnapshots: [], readiness_ecu_snapshots: multi[key] };
+  check(context.formatObdBridgeReadinessSummary(aliasSnapshot) === "ECU別 3系統 / 集約判定なし", "Readiness summary hid populated ECU aliases");
   check(JSON.stringify(context.buildObdReadinessDisplayLines(aliasSnapshot)) === JSON.stringify(lines), "Empty primary array hid readiness alias groups");
   check(JSON.stringify(context.buildObdReadinessDisplayLines({ readinessEcuSnapshots: multi[key], readiness_ecu_snapshots: [single] })) === JSON.stringify(lines), "Populated readiness primary array lost precedence");
   check(lines[0] === "ECU別 3系統 / 集約判定なし", "Multi-ECU results were combined");
