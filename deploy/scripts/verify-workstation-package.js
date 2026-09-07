@@ -53,6 +53,9 @@ export function verifyWorkstationPackage(directory) {
   for (const required of ["index.html", "script.js", "obd-readonly.js", "offline-assets.json", "package.json", "package-lock.json",
     "package-info.json", "start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd",
     "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js",
+    "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js",
+    "scripts/j2534-native-quarantine.js", "scripts/j2534-uds-readout-attempt-controller.js",
+    "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js",
     "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json",
     "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     if (!seen.has(required)) fail("package_integrity_manifest_incomplete", required);
@@ -71,6 +74,20 @@ export function verifyWorkstationPackage(directory) {
   } catch { fail("package_integrity_metadata_invalid"); }
   if (info?.appVersion !== manifest.appVersion || assets?.version !== manifest.appVersion
     || info.fileCount !== manifest.files.length + 1) fail("package_integrity_metadata_invalid");
+  if (!Array.isArray(assets.assets) || !Number.isInteger(assets.asset_count)
+    || assets.asset_count < 1 || assets.asset_count > 2000 || assets.assets.length !== assets.asset_count) fail("package_integrity_metadata_invalid");
+  const assetNames = new Set();
+  for (const asset of assets.assets) {
+    if (typeof asset !== "string" || (asset !== "./" && (!/^[a-z0-9][a-z0-9._/-]*$/i.test(asset)
+      || asset.split("/").some((part) => !part || part === "." || part === ".." || part.endsWith("."))))
+      || assetNames.has(asset.toLowerCase())) fail("package_integrity_metadata_invalid");
+    assetNames.add(asset.toLowerCase());
+    const file = asset === "./" ? "index.html" : asset;
+    if (!seen.has(file.toLowerCase())) fail("package_integrity_manifest_incomplete", file);
+  }
+  for (const required of ["index.html", "style.css", "script.js", "obd-readonly.js", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js"]) {
+    if (!assetNames.has(required)) fail("package_integrity_metadata_invalid", required);
+  }
   return { appVersion: manifest.appVersion, fileCount: manifest.files.length, totalBytes };
 }
 

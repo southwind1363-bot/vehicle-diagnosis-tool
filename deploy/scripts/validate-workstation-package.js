@@ -331,6 +331,52 @@ try {
   check(instructions.includes("verify-workstation.cmd") && instructions.includes("署名・真正性・実車適合の証明ではありません"), "Integrity instructions overclaim verification");
   const integrityPath = path.join(result.directory, "package-integrity.json");
   const originalManifest = fs.readFileSync(integrityPath);
+  const originalInfo = fs.readFileSync(path.join(result.directory, "package-info.json"));
+  const assetsPath = path.join(result.directory, "offline-assets.json");
+  const originalAssets = fs.readFileSync(assetsPath);
+  for (const mutate of [
+    (a) => { a.assets = null; },
+    (a) => { a.asset_count += 1; },
+    (a) => { a.assets[0] = "../outside.js"; },
+    (a) => { a.assets[0] = "https://example.invalid/file"; },
+    (a) => { a.assets[0] = 7; },
+    (a) => { a.assets[0] = a.assets[1]; },
+    (a) => { a.assets = a.assets.filter((asset) => asset !== "style.css"); a.asset_count = a.assets.length; }
+  ]) {
+    const changedAssets = JSON.parse(originalAssets);
+    mutate(changedAssets);
+    const bytes = Buffer.from(JSON.stringify(changedAssets));
+    const changedManifest = JSON.parse(originalManifest);
+    const entry = changedManifest.files.find((file) => file.path === "offline-assets.json");
+    entry.size = bytes.length;
+    entry.sha256 = createHash("sha256").update(bytes).digest("hex");
+    try {
+      fs.writeFileSync(assetsPath, bytes);
+      fs.writeFileSync(integrityPath, JSON.stringify(changedManifest));
+      assert.throws(() => verifyWorkstationPackage(result.directory), /package_integrity_metadata_invalid/);
+      check(fs.readFileSync(assetsPath).equals(bytes), "Malformed asset list was repaired instead of rejected");
+    } finally {
+      fs.writeFileSync(assetsPath, originalAssets);
+      fs.writeFileSync(integrityPath, originalManifest);
+    }
+  }
+  for (const omitted of ["style.css", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) {
+    const incomplete = JSON.parse(originalManifest);
+    incomplete.files = incomplete.files.filter((entry) => entry.path !== omitted);
+    const infoBytes = Buffer.from(JSON.stringify({ ...JSON.parse(originalInfo), fileCount: incomplete.files.length + 1 }));
+    const infoEntry = incomplete.files.find((entry) => entry.path === "package-info.json");
+    infoEntry.size = infoBytes.length;
+    infoEntry.sha256 = createHash("sha256").update(infoBytes).digest("hex");
+    try {
+      fs.writeFileSync(path.join(result.directory, "package-info.json"), infoBytes);
+      fs.writeFileSync(integrityPath, JSON.stringify(incomplete));
+      assert.throws(() => verifyWorkstationPackage(result.directory), (error) => error.code === "package_integrity_manifest_incomplete" && error.file === omitted);
+      check(true, `Required file omitted from integrity list was accepted: ${omitted}`);
+    } finally {
+      fs.writeFileSync(path.join(result.directory, "package-info.json"), originalInfo);
+      fs.writeFileSync(integrityPath, originalManifest);
+    }
+  }
   for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     const target = path.join(result.directory, relative);
     const original = fs.readFileSync(target);
