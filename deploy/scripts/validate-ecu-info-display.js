@@ -68,8 +68,33 @@ for (const [item, expected] of [
 check(context.buildObdEcuInfoDisplayLines({ sourceEcu: "7E8", items: [{ id: "unscoped", value: "X" }] }).includes("[ECU未記録] unscoped: X"), "Aggregate source was assigned to unscoped item");
 
 const coreContext = vm.createContext({ window: {} });
+for (const metadata of [
+  { errorCodes: ["transport:timeout"] },
+  { errorCodes: [], error_codes: ["transport:timeout"] },
+  { ecuInfoNegativeResponseService: "09", ecuInfoNegativeResponseCode: "11" }
+]) {
+  const saved = JSON.stringify(metadata);
+  const result = context.buildObdEcuInfoDisplayLines(metadata);
+  check(result.some((line) => line.includes(metadata.ecuInfoNegativeResponseCode ? "NRC 11" : "通信タイムアウト")), "Metadata-only ECU failure disappeared");
+  check(JSON.stringify(metadata) === saved, "Failure display mutated evidence");
+}
+const aggregateFailure = context.buildObdEcuInfoDisplayLines({
+  ecuInfoReadoutStatus: "blocked", errorCodes: ["transport:timeout"],
+  ecuInfoNegativeResponseService: "09", ecuInfoNegativeResponseCode: "11",
+  ecuInfoEcuSnapshots: [{ sourceEcu: "7E8", ecuInfoReadoutStatus: "reported", items: [] }]
+});
+check(aggregateFailure.includes("全体の読取状態: 読取拒否") && aggregateFailure.includes("[7E8] 読取状態: 取得済み"), "Aggregate failure was hidden by child success");
+check(aggregateFailure.includes("全体: 理由:通信タイムアウト") && aggregateFailure.some((line) => line.startsWith("全体: 負応答:") && line.includes("NRC 11")), "Aggregate failure reason was lost or assigned to a child ECU");
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), coreContext);
 const obd = coreContext.window.ObdReadOnly;
+const failureSession = obd.buildDiagnosticScanSession({ ecuInfoSnapshot: {
+  source_ecu: "7E8", ecu_info_readout_status: "blocked", error_codes: ["transport:timeout"]
+} });
+const failureExport = JSON.stringify(obd.buildBridgeSessionExportPayload(failureSession));
+const failureReopened = obd.buildDiagnosticScanSessionFromJson(failureExport);
+const failureIndexes = [];
+check(context.buildObdEcuInfoDisplayLines(failureReopened.ecuInfoSnapshot, failureIndexes).some((line) => line.includes("通信タイムアウト")), "Saved/reopened failure reason disappeared");
+check(failureIndexes.length === 0, "Failure reason became searchable item evidence");
 const normalized = obd.normalizeBridgeEcuInfoSnapshot({ ok: true, blocked: false, would_transmit: false, data: { ecu_snapshots: [
   { source_ecu: "7E8", ecu_info_readout_status: "reported", items: [...items.filter((item) => item.sourceEcu === "7E8"), { id: "vin", info_type: "02", value: "JH4KA8260MC000001" }] },
   { source_ecu: "7E9", ecu_info_readout_status: "reported", items: items.filter((item) => item.sourceEcu === "7E9") },

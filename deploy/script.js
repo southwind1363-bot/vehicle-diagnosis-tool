@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.525";
+const APP_VERSION = "3.13.526";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10166,7 +10166,11 @@ function buildObdEcuInfoDisplayLines(snapshot = null, recordIndexes = null) {
   const items = snapshot?.items || [];
   const ecus = snapshot?.ecuInfoEcuSnapshots || snapshot?.ecu_info_ecu_snapshots || [];
   const status = snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status;
+  const errors = snapshot?.errorCodes?.length ? snapshot.errorCodes : snapshot?.error_codes || [];
+  const service = snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service;
+  const code = snapshot?.ecuInfoNegativeResponseCode || snapshot?.ecu_info_negative_response_code;
   if (!items.length && !ecus.length && !(snapshot?.itemCount > 0)
+    && !errors.length && !service && !code
     && !["reported", "blocked", "unparsed"].includes(status) && formatObdEcuSupportCapture(snapshot) !== "取得済み") return [];
   const keySummary = snapshot?.keyItemSummary;
   const supported = snapshot?.supportInfoTypesSummary || snapshot?.support_info_types_summary;
@@ -10175,13 +10179,18 @@ function buildObdEcuInfoDisplayLines(snapshot = null, recordIndexes = null) {
     `記録項目数: ${snapshot?.itemCount ?? items.length} / 表示明細: ${items.length}`,
     `Mode09対応情報タイプ00: ${formatObdEcuSupportCapture(snapshot)}`
   ];
+  if (ecus.length) {
+    lines.push(`全体の読取状態: ${formatObdReadoutStatus(status, "状態未確認")}`);
+    if (service || code) lines.push(`全体: 負応答: サービス ${service || NO_DATA} / NRC ${code || NO_DATA}`);
+    errors.forEach((error) => lines.push(`全体: ${formatReadoutErrorCodes([error])}`));
+  }
   (ecus.length ? ecus : [snapshot]).forEach((group) => {
     const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
     lines.push(`[${ecu}] 読取状態: ${formatObdReadoutStatus(group.ecuInfoReadoutStatus || group.ecu_info_readout_status, "状態未確認")}`);
     const service = group.ecuInfoNegativeResponseService || group.ecu_info_negative_response_service;
     const code = group.ecuInfoNegativeResponseCode || group.ecu_info_negative_response_code;
     if (service || code) lines.push(`[${ecu}] 負応答: サービス ${service || NO_DATA} / NRC ${code || NO_DATA}`);
-    const errors = group.errorCodes || group.error_codes || [];
+    const errors = group.errorCodes?.length ? group.errorCodes : group.error_codes || [];
     errors.forEach((error) => lines.push(`[${ecu}] ${formatReadoutErrorCodes([error])}`));
   });
   for (const item of items) {
