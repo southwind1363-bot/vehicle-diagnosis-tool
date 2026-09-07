@@ -20,6 +20,7 @@ function fixture() {
   const outputDirectory = path.join(root, `output-${next++}`);
   fs.mkdirSync(path.join(sourceDirectory, "scripts"), { recursive: true });
   fs.mkdirSync(path.join(sourceDirectory, "scripts", "native"), { recursive: true });
+  fs.copyFileSync(new URL("../start-packaged-workstation.cmd", import.meta.url), path.join(sourceDirectory, "start-packaged-workstation.cmd"));
   const assets = ["./", "index.html", "style.css", "script.js", "obd-readonly.js", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js"];
   for (const asset of assets.filter((asset) => asset !== "./")) fs.writeFileSync(path.join(sourceDirectory, asset), "fixture");
   fs.writeFileSync(path.join(sourceDirectory, "script.js"), 'const APP_VERSION = "1.0.0";');
@@ -613,6 +614,9 @@ try {
       const blocked = await runEntry("inspect");
       check(blocked.code === 1 && blocked.output.includes("Package verification files are missing")
         && !blocked.output.includes("J2534接続準備チェック"), "J2534 inspection failed open when both package verification files were missing");
+      const startupBlocked = await runEntry("cmd");
+      check(startupBlocked.code === 1 && startupBlocked.output.includes("Package verification failed")
+        && !startupBlocked.output.includes("診断画面:") && !startupBlocked.output.includes("ペアリング値"), "Packaged launcher bypassed verification when both metadata files were missing");
     } finally {
       fs.writeFileSync(packageInfoPath, packageInfo);
       fs.writeFileSync(packageIntegrityPath, packageIntegrity);

@@ -106,7 +106,8 @@ export function packageWorkstation(options = {}) {
     integrityFiles.push({ path: relative, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
   };
   const copyFile = (relative) => {
-    const from = safeSource(relative);
+    // Packaged startup always requires integrity metadata; source-tree startup remains separate.
+    const from = safeSource(relative === "start-workstation.cmd" ? "start-packaged-workstation.cmd" : relative);
     const stat = fs.statSync(from);
     if (!stat.isFile() || stat.size > 64 * 1024 * 1024) throw new Error("workstation_package_file_invalid");
     const target = path.join(staging, relative);
