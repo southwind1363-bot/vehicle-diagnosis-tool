@@ -228,8 +228,8 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.535";
-const APP_LAST_UPDATED = "2026-09-07";
+const APP_VERSION = "3.13.536";
+const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
 const MAX_SUPPORTED_ECU_COUNT = 64;
@@ -387,6 +387,7 @@ const similarCases = document.querySelector("#similarCases");
 const exportCsvButton = document.querySelector("#exportCsvButton");
 const exportJsonButton = document.querySelector("#exportJsonButton");
 const importJsonInput = document.querySelector("#importJsonInput");
+const caseImportStatus = document.querySelector("#caseImportStatus");
 const caseStatus = document.querySelector("#caseStatus");
 const caseStorageWarning = document.querySelector("#caseStorageWarning");
 const caseStorageWarningText = document.querySelector("#caseStorageWarningText");
@@ -16755,11 +16756,17 @@ function showInitialNotice() {
   }
 }
 
+function setCaseImportStatus(message) {
+  caseStatus.textContent = message;
+  if (caseImportStatus) caseImportStatus.textContent = message;
+}
+
 function cancelCaseImport() {
   const operation = caseImportOperation;
   caseImportOperation = null;
   if (!operation) return;
   importJsonInput.value = "";
+  setCaseImportStatus("JSONインポートを中断しました。読込中だったファイルは取り込んでいません。");
   try { operation.reader?.abort?.(); } catch (_) { /* Late callbacks remain invalidated. */ }
 }
 
@@ -16772,10 +16779,11 @@ function importCasesJson(event) {
   caseImportOperation = operation;
   // Invalidate first: abort may synchronously dispatch the old callback.
   try { previous?.reader?.abort?.(); } catch (_) { /* Ownership still prevents stale results. */ }
+  setCaseImportStatus("JSONファイルを読み込んでいます。保存への反映はまだ完了していません。");
   const failRead = () => {
     if (caseImportOperation !== operation) return;
     caseImportOperation = null;
-    caseStatus.textContent = "JSONインポート失敗: ファイルを読み取れませんでした。保存済み事例は変更していません。ファイルを選び直してください。";
+    setCaseImportStatus("JSONインポート失敗: ファイルを読み取れませんでした。保存済み事例は変更していません。ファイルを選び直してください。");
     importJsonInput.value = "";
   };
   let reader;
@@ -16808,13 +16816,13 @@ function importCasesJson(event) {
         added += 1;
       });
 
-      if (!persistCases(nextCases)) return;
+      if (!persistCases(nextCases)) { setCaseImportStatus(caseStatus.textContent); return; }
       renderCases();
       renderSimilarCases();
-      caseStatus.textContent = `JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`;
+      setCaseImportStatus(`JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`);
       setNextCaseId();
     } catch (error) {
-      caseStatus.textContent = `JSONインポート失敗: ${error.message}`;
+      setCaseImportStatus(`JSONインポート失敗: ${error.message}`);
     } finally {
       if (caseImportOperation === operation) {
         caseImportOperation = null;

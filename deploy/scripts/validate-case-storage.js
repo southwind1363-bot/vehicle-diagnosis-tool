@@ -5,7 +5,7 @@ import { webcrypto } from "node:crypto";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["persistCases", "loadCases", "saveCase", "handleCaseDelete", "seedDummyCases", "createDummyCases", "importCasesJson", "findDuplicateCase", "duplicateKey", "normalizeCase", "isCaseRecord", "createCaseId", "createId", "normalizeCode", "runSelfCheck", "buildCasesCsv", "csvCell", "buildCasesBackup", "renderCaseStorageWarning", "reloadSavedCases", "readOptionalBrowserSetting", "writeOptionalBrowserSetting", "clearAllLocalStorage", "showInitialNotice", "exportCasesCsv", "exportCasesJson"];
-functions.push("cancelCaseImport");
+functions.push("cancelCaseImport", "setCaseImportStatus");
 const code = functions.map((name) => {
   const match = source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing application function: ${name}`);
@@ -29,7 +29,7 @@ function client(options = {}) {
     noticeModal: { showModal: () => { calls.noticeShown = true; }, close: () => { calls.noticeClosed = true; } },
     sessionStorage: { getItem: () => { if (options.failRead) throw new Error("SecurityError"); return null; } },
     window: { crypto: webcrypto }, crypto: webcrypto,
-    caseStatus: {}, caseForm: { reset: () => { calls.reset += 1; } },
+    caseStatus: {}, caseImportStatus: {}, caseForm: { reset: () => { calls.reset += 1; } },
     importJsonInput: { value: "selected.json" }, confirm: () => true,
     alert: (message) => { calls.alerts.push(message); },
     collectCaseForm: () => ({ ...timestamps, id: "new", maker: "TEST", model: "B", symptom: "new", obdCode: "P0300", finalCause: "measured" }),
@@ -156,6 +156,7 @@ for (const failure of ["construct", "read", "error", "abort"]) {
   if (failure === "error") c.getReader().onerror?.();
   if (failure === "abort") c.getReader().onabort?.();
   check(c.context.caseStatus.textContent.includes("JSONインポート失敗"), `${failure}: file failure left stale success status`);
+  check(c.context.caseImportStatus.textContent === c.context.caseStatus.textContent, `${failure}: data-management status differs from the registration status`);
   check(c.context.importJsonInput.value === "", `${failure}: same file cannot be selected again`);
   check(c.context.savedCases === c.original && c.store.get(key) === c.bytes && c.calls.writes.length === 0, `${failure}: read failure modified stored cases`);
   check(!c.context.caseStatus.textContent.includes("private-file-detail"), `${failure}: raw error details leaked`);
@@ -176,6 +177,7 @@ for (const failure of ["QuotaExceededError", "SecurityError"]) {
     check(c.context.savedCases === c.original && JSON.stringify(c.original) === c.bytes && c.store.get(key) === c.bytes, `${action}: failed write changed existing records`);
     check(c.calls.reset === 0 && c.calls.render === 0 && c.calls.similar === 0 && c.calls.ids === 0, `${action}: failed write reset input or changed displayed records`);
     check(c.context.caseStatus.textContent.includes("保存に失敗"), `${action}: missing failure status`);
+    if (action === "import") check(c.context.caseImportStatus.textContent === c.context.caseStatus.textContent, "Import persistence failure was hidden from data management");
     check(c.calls.alerts.length === 1 && c.calls.alerts[0] === c.context.caseStatus.textContent, `${action}: failure was hidden in another tab`);
     c.options.failWrite = false;
     run();
