@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.526";
+const APP_VERSION = "3.13.527";
 const APP_LAST_UPDATED = "2026-09-07";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -10164,7 +10164,7 @@ function formatObdEcuInfoItemLine(item = {}) {
 
 function buildObdEcuInfoDisplayLines(snapshot = null, recordIndexes = null) {
   const items = snapshot?.items || [];
-  const ecus = snapshot?.ecuInfoEcuSnapshots || snapshot?.ecu_info_ecu_snapshots || [];
+  const ecus = [snapshot?.ecuInfoEcuSnapshots, snapshot?.ecu_info_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
   const status = snapshot?.ecuInfoReadoutStatus || snapshot?.ecu_info_readout_status;
   const errors = snapshot?.errorCodes?.length ? snapshot.errorCodes : snapshot?.error_codes || [];
   const service = snapshot?.ecuInfoNegativeResponseService || snapshot?.ecu_info_negative_response_service;
@@ -10342,11 +10342,11 @@ function createObdEcuResponseCard(summary = null) {
 }
 
 function buildObdSupportedPidDisplayLines(snapshot = null, recordIndexes = null) {
-  const pids = snapshot?.supportedPids || snapshot?.supported_pids || [];
-  const pages = snapshot?.supportedPidPageBases || snapshot?.supported_pid_page_bases || [];
-  const ecus = snapshot?.supportedPidEcuSnapshots || snapshot?.supported_pid_ecu_snapshots || [];
+  const pids = [snapshot?.supportedPids, snapshot?.supported_pids].find((rows) => Array.isArray(rows) && rows.length) || [];
+  const pages = [snapshot?.supportedPidPageBases, snapshot?.supported_pid_page_bases].find((rows) => Array.isArray(rows) && rows.length) || [];
+  const ecus = [snapshot?.supportedPidEcuSnapshots, snapshot?.supported_pid_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
   const status = snapshot?.supportedPidReadoutStatus || snapshot?.supported_pid_readout_status;
-  const errors = snapshot?.errorCodes || snapshot?.error_codes || [];
+  const errors = [snapshot?.errorCodes, snapshot?.error_codes].find((rows) => Array.isArray(rows) && rows.length) || [];
   if (!pids.length && !pages.length && !ecus.length && !errors.length && !["reported", "blocked", "unparsed"].includes(status)) return [];
   const scope = snapshot?.supportedPidAggregationScope || snapshot?.supported_pid_aggregation_scope;
   const scopeLabel = { single_ecu: "単一ECU", multiple_ecus_union: "複数ECUの和集合", unspecified: "未確認" }[scope] || "未確認";
@@ -10364,9 +10364,9 @@ function buildObdSupportedPidDisplayLines(snapshot = null, recordIndexes = null)
   (ecus.length ? ecus : [snapshot]).forEach((group) => {
     const ecu = group.sourceEcu || group.source_ecu || "ECU未記録";
     const groupStatus = group.supportedPidReadoutStatus || group.supported_pid_readout_status;
-    const groupPids = group.supportedPids || group.supported_pids || [];
-    const groupPages = group.supportedPidPageBases || group.supported_pid_page_bases || [];
-    const groupErrors = group.errorCodes || group.error_codes || [];
+    const groupPids = [group.supportedPids, group.supported_pids].find((rows) => Array.isArray(rows) && rows.length) || [];
+    const groupPages = [group.supportedPidPageBases, group.supported_pid_page_bases].find((rows) => Array.isArray(rows) && rows.length) || [];
+    const groupErrors = [group.errorCodes, group.error_codes].find((rows) => Array.isArray(rows) && rows.length) || [];
     lines.push(`[${ecu}] 読取状態: ${formatObdReadoutStatus(groupStatus, "状態未確認")}`);
     const label = groupStatus === "reported" ? "対応PID" : "記録PID（対応未確認）";
     if (recordIndexes) recordIndexes.push(lines.length);
@@ -10547,7 +10547,7 @@ function formatObdReadinessMonitorLine(item = {}) {
 }
 
 function buildObdReadinessDisplayLines(snapshot = null) {
-  const ecuSnapshots = snapshot?.readinessEcuSnapshots || snapshot?.readiness_ecu_snapshots || [];
+  const ecuSnapshots = [snapshot?.readinessEcuSnapshots, snapshot?.readiness_ecu_snapshots].find((rows) => Array.isArray(rows) && rows.length) || [];
   if (!snapshot?.monitors?.length && !ecuSnapshots.length) return [];
   const groups = ecuSnapshots.length ? ecuSnapshots : [snapshot];
   const lines = ecuSnapshots.length > 1 ? [`ECU別 ${ecuSnapshots.length}系統 / 集約判定なし`] : [];

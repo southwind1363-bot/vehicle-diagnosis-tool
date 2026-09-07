@@ -59,6 +59,24 @@ check(context.buildObdSupportedPidDisplayLines({ supportedPids: ["0C"] }).some((
 check(context.buildObdSupportedPidDisplayLines({ supportedPids: ["<PID>"], sourceEcu: "<ECU>" }).some((line) => line.includes("[<ECU>]") && line.includes("<PID>")), "Literal text was altered");
 
 const coreContext = vm.createContext({ window: {} });
+for (const [primary, alias, value] of [
+  ["supportedPids", "supported_pids", ["0C"]],
+  ["supportedPidPageBases", "supported_pid_page_bases", ["00"]],
+  ["supportedPidEcuSnapshots", "supported_pid_ecu_snapshots", children],
+  ["errorCodes", "error_codes", ["transport:timeout"]]
+]) {
+  const aliasOnly = { [alias]: value };
+  const withEmpty = { ...aliasOnly, [primary]: [] };
+  const beforeAlias = JSON.stringify(withEmpty);
+  check(JSON.stringify(context.buildObdSupportedPidDisplayLines(withEmpty)) === JSON.stringify(context.buildObdSupportedPidDisplayLines(aliasOnly)), `Empty ${primary} hid recorded alias evidence`);
+  check(JSON.stringify(withEmpty) === beforeAlias, "Alias rendering mutated source data");
+  const withBoth = { [primary]: value, [alias]: ["SHOULD-NOT-MERGE"] };
+  check(JSON.stringify(context.buildObdSupportedPidDisplayLines(withBoth)) === JSON.stringify(context.buildObdSupportedPidDisplayLines({ [primary]: value })), "Populated primary array lost precedence or merged alias");
+}
+const aliasChild = { sourceEcu: "7E8", supportedPidReadoutStatus: "blocked", supportedPids: [], supported_pids: ["0C"], supportedPidPageBases: [], supported_pid_page_bases: ["00"], errorCodes: [], error_codes: ["transport:timeout"] };
+const childLines = context.buildObdSupportedPidDisplayLines({ supportedPidEcuSnapshots: [aliasChild] });
+check(childLines.includes("[7E8] 記録PID（対応未確認）: 1件 / 0C") && childLines.includes("[7E8] 記録ページ: 00") && childLines.includes("[7E8] 理由:通信タイムアウト"), "Nested alias evidence lost or blocked record promoted");
+check(childLines.includes("集約記録PID: 0件 / 記録なし"), "Child alias synthesized aggregate evidence");
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), coreContext);
 const obd = coreContext.window.ObdReadOnly;
 const repeatedEcu = obd.buildSupportedPidMatrix({ supportedPidEcuSnapshots: [children[0], children[2]] });

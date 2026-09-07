@@ -29,6 +29,9 @@ const snapshot = { items, itemCount: 10, supportInfoTypesCaptured: true, support
     { sourceEcu: "7EB", ecuInfoReadoutStatus: "unknown" }
   ] };
 const before = JSON.stringify(snapshot);
+const aliasSnapshot = { ...snapshot, ecuInfoEcuSnapshots: [], ecu_info_ecu_snapshots: snapshot.ecuInfoEcuSnapshots };
+check(JSON.stringify(context.buildObdEcuInfoDisplayLines(aliasSnapshot)) === JSON.stringify(context.buildObdEcuInfoDisplayLines(snapshot)), "Empty primary ECU array hid recorded alias groups");
+check(JSON.stringify(context.buildObdEcuInfoDisplayLines({ ...snapshot, ecu_info_ecu_snapshots: [{ source_ecu: "ALIAS-ONLY" }] })) === JSON.stringify(context.buildObdEcuInfoDisplayLines(snapshot)), "Populated primary ECU array lost precedence");
 const lines = context.buildObdEcuInfoDisplayLines(snapshot);
 for (const item of items) check(lines.includes(context.formatObdEcuInfoItemLine(item)), "Item truncated or ECU source collapsed");
 check(labels.every((label) => lines.some((line) => line.includes(label))), "Supported type labels truncated");

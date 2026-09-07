@@ -40,6 +40,9 @@ for (const key of ["readinessEcuSnapshots", "readiness_ecu_snapshots"]) {
   const multi = { monitors: [], [key]: [single, other, { sourceEcu: "7EA", readinessReadoutStatus: "blocked", monitors: [] }] };
   const before = JSON.stringify(multi);
   const lines = context.buildObdReadinessDisplayLines(multi);
+  const aliasSnapshot = { monitors: [], readinessEcuSnapshots: [], readiness_ecu_snapshots: multi[key] };
+  check(JSON.stringify(context.buildObdReadinessDisplayLines(aliasSnapshot)) === JSON.stringify(lines), "Empty primary array hid readiness alias groups");
+  check(JSON.stringify(context.buildObdReadinessDisplayLines({ readinessEcuSnapshots: multi[key], readiness_ecu_snapshots: [single] })) === JSON.stringify(lines), "Populated readiness primary array lost precedence");
   check(lines[0] === "ECU別 3系統 / 集約判定なし", "Multi-ECU results were combined");
   check(lines.includes("Monitor0: 未完了 [7E8]") && lines.includes("Monitor0: 完了 [7E9]"), "Same monitor from different ECUs was lost");
   check(lines.includes("7EA: 読取拒否") && lines.includes("監視項目: 登録データなし"), "Empty/blocked ECU was presented as complete");
