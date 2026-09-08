@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.544";
+const APP_VERSION = "3.13.545";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16596,13 +16596,28 @@ function exportCasesCsv() {
     return;
   }
 
-  const csv = buildCasesCsv(savedCases);
-  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `整備事例_${new Date().toISOString().slice(0, 10)}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
+  const status = document.getElementById("caseExportStatus");
+  let link = null;
+  let objectUrl = null;
+  try {
+    const csv = buildCasesCsv(savedCases);
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+    link = document.createElement("a");
+    objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = `整備事例_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    if (status) status.textContent = `整備事例${savedCases.length}件のCSV保存を開始しました。保存完了はブラウザーのダウンロード一覧で確認してください。`;
+    return true;
+  } catch (_) {
+    if (status) status.textContent = "CSVの保存を開始できませんでした。端末内の整備事例は変更していません。ブラウザーの保存設定・空き容量を確認し、改めて保存してください。";
+    return false;
+  } finally {
+    link?.remove();
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
 }
 
 function exportCasesJson() {

@@ -192,6 +192,27 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.locator('#caseList').screenshot({ path: path.join(output, 'exact-delete-retained.png') });
       console.log('Exact case deletion: numeric/string and duplicate IDs retain other records across reload');
     }
+    if (process.argv.includes('--csv')) {
+      await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([{ id: 'csv-test', model: '模擬CSV車両', memo: '引用符"と,改行\nの検査' }])));
+      await page.reload();
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      const storedBefore = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      await page.evaluate(() => { window.originalCsvUrl = URL.createObjectURL; URL.createObjectURL = () => { throw new Error('private CSV detail'); }; });
+      await page.getByRole('button', { name: 'CSVエクスポート', exact: true }).click();
+      const exportStatus = page.locator('#caseExportStatus');
+      assert.match(await exportStatus.innerText(), /CSV.*開始できません/);
+      assert.equal((await exportStatus.innerText()).includes('private CSV detail'), false);
+      await page.evaluate(() => { URL.createObjectURL = window.originalCsvUrl; });
+      const pendingCsv = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'CSVエクスポート', exact: true }).click();
+      const csvPath = path.join(output, 'case-export.csv');
+      await (await pendingCsv).saveAs(csvPath);
+      assert.equal(fs.readFileSync(csvPath, 'utf8'), await page.evaluate(() => '\uFEFF' + buildCasesCsv(savedCases)));
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), storedBefore);
+      assert.match(await exportStatus.innerText(), /1件.*CSV.*開始しました.*保存完了はブラウザー/);
+      await exportStatus.screenshot({ path: path.join(output, 'csv-export-status.png') });
+      console.log('CSV export: injected failure, retry, exact BOM/content and storage retention passed');
+    }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }
