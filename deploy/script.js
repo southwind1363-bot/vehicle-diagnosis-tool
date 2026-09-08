@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.542";
+const APP_VERSION = "3.13.543";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16562,7 +16562,7 @@ function renderCaseCards(container, cases, emptyText) {
       <p><strong>最終原因:</strong> ${escapeHtml(item.finalCause || NO_DATA)}</p>
       <p><strong>交換部品:</strong> ${escapeHtml(item.replacedParts || NO_DATA)}</p>
       <div class="case-actions">
-        <button class="small-danger-button" type="button" data-delete-case="${item.id}">削除</button>
+        <button class="small-danger-button" type="button" data-delete-case="${escapeHtml(item.id)}">削除</button>
       </div>
     `;
     fragment.appendChild(card);

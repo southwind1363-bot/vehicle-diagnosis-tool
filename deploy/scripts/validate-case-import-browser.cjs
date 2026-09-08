@@ -153,6 +153,27 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.screenshot({ path: path.join(output, 'bulk-backup-roundtrip.png') });
       console.log(JSON.stringify({ bulk: true, inputRecords: 1100, retainedRecords: 1000, initialKeyCalls: 1100, elapsedMs }));
     }
+    if (process.argv.includes('--unsafe-id')) {
+      await page.reload();
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      // Inert HTML only: verify imported identifiers cannot become markup.
+      const specialId = 'case"><span data-case-injection>inert marker</span><span data-id="&特殊';
+      const records = [{ id: specialId, model: '模擬特殊ID', symptom: '表示試験' }, { id: 'keep-case', model: '残す模擬車両', symptom: '保持試験' }];
+      await input.setInputFiles({ name: 'special-id.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ records })) });
+      await page.waitForFunction(id => savedCases.some(item => item.id === id), specialId);
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      assert.equal(await page.locator('[data-case-injection]').count(), 0, 'Imported ID became HTML');
+      const card = page.locator('#caseList .case-card').filter({ hasText: '模擬特殊ID' });
+      const remove = card.getByRole('button', { name: '削除', exact: true });
+      assert.equal(await remove.getAttribute('data-delete-case'), specialId);
+      assert.ok((await card.innerText()).includes(specialId));
+      await card.screenshot({ path: path.join(output, 'special-id-case.png') });
+      await remove.click();
+      assert.equal(await page.evaluate(id => savedCases.some(item => item.id === id), specialId), false);
+      assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'keep-case')), true);
+      assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'))).some(item => item.id === specialId), false);
+      console.log('Special case ID: literal display, exact delete target and other record retention passed');
+    }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }
