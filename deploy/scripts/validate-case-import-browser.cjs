@@ -123,6 +123,36 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         await page.screenshot({ path: path.join(output, `case-import-${width}-${dark ? 'dark' : 'light'}.png`) });
       }
     }
+    if (process.argv.includes('--bulk')) {
+      // Reload releases the synthetic FileReader used above. Only this isolated
+      // profile has been cleared; no personal browser storage is accessible.
+      await page.reload();
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      const records = Array.from({ length: 1000 }, (_, i) => ({ id: `bulk-${i}`, model: `模擬車両-${i}`, symptom: `試験-${i}` }));
+      await page.evaluate(() => {
+        window.originalCaseDuplicateKey = duplicateKey;
+        window.caseDuplicateKeyCalls = 0;
+        duplicateKey = item => { window.caseDuplicateKeyCalls++; return window.originalCaseDuplicateKey(item); };
+      });
+      const started = Date.now();
+      await input.setInputFiles({ name: 'bulk.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ records: [...records, ...records.slice(0, 100)] })) });
+      await page.waitForFunction(() => savedCases.length === 1000);
+      assert.match(await status.innerText(), /追加 1000件 \/ 重複スキップ 100件 \/ 不正行スキップ 0件/);
+      assert.equal(await page.evaluate(() => window.caseDuplicateKeyCalls), 1100);
+      const elapsedMs = Date.now() - started;
+      const pending = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+      const file = path.join(output, 'bulk-backup.json');
+      await (await pending).saveAs(file);
+      const snapshot = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      assert.deepEqual(JSON.parse(fs.readFileSync(file, 'utf8')).records, JSON.parse(snapshot));
+      await input.setInputFiles(file);
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('重複スキップ 1000件'));
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), snapshot);
+      await status.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, 'bulk-backup-roundtrip.png') });
+      console.log(JSON.stringify({ bulk: true, inputRecords: 1100, retainedRecords: 1000, initialKeyCalls: 1100, elapsedMs }));
+    }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }

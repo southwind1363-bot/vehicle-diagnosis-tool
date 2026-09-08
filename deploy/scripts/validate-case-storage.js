@@ -372,4 +372,36 @@ const index = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8")
   check(c.store.get("theme") === "light", "Optional settings no longer persist when available");
 }
 check(index.indexOf('id="caseStorageWarning"') < index.indexOf('id="diagnosis-panel"') && index.includes('id="caseStorageWarningText" class="data-status error" role="alert"') && index.includes('id="retryCaseStorageButton" class="secondary-button"'), "Storage warning is hidden in a tab or lacks accessible recovery controls");
+{
+  const c = client();
+  const records = Array.from({ length: 300 }, (_, i) => ({ id: `bulk-${i}`, model: `model-${i}`, symptom: `symptom-${i}` }));
+  let keyCalls = 0;
+  const originalKey = c.context.duplicateKey;
+  c.context.duplicateKey = item => { keyCalls++; return originalKey(item); };
+  c.import(records);
+  check(c.context.savedCases.length === 301 && c.calls.writes.length === 1, "Bulk import must save all unique cases once");
+  check(keyCalls <= 301, `Bulk duplicate matching rescanned the entire list (${keyCalls} key calls)`);
+}
+for (let seed = 0; seed < 12; seed++) {
+  const c = client();
+  const timestamp = "2026-09-08T00:00:00.000Z";
+  const records = Array.from({ length: 80 }, (_, i) => ({
+    id: i % 13 === 0 ? "existing" : i % 9 === 0 ? (i % 18 ? 1 : "1") : `batch-${(i + seed) % 41}`,
+    maker: i % 3 ? "TEST" : " test ", model: `m-${(i + seed) % 19}`,
+    symptom: `s-${i % 7}`, obdCode: "p0300", createdAt: timestamp, updatedAt: timestamp
+  }));
+  records.push(null, [], "bad", {}, records[0]);
+  const expected = [...c.original];
+  let added = 0, skipped = 0, invalid = 0;
+  // Independent legacy algorithm: preserve its first accepted record and order.
+  for (const item of records) {
+    if (!c.context.isCaseRecord(item)) { invalid++; continue; }
+    const record = c.context.normalizeCase(item);
+    if (c.context.findDuplicateCase(record, expected) || expected.some(item => item.id === record.id)) { skipped++; continue; }
+    expected.push(record); added++;
+  }
+  c.import(records);
+  check(JSON.stringify(c.context.savedCases) === JSON.stringify(expected), `Batch ${seed}: indexed matching changed legacy records or order`);
+  check(c.context.caseStatus.textContent === `JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`, `Batch ${seed}: counts changed`);
+}
 console.log(`Case storage checks: ${checks} / Errors: 0`);
