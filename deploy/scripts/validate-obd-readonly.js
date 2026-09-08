@@ -3,6 +3,7 @@ import vm from "node:vm";
 import "./validate-serial-lifecycle.js";
 import "./validate-session-export.js";
 import "./validate-case-storage.js";
+import "./validate-readout-print.js";
 import "./validate-operation-availability.js";
 import "./validate-dtc-clear-workflow.js";
 import "./validate-dtc-clear-target-binding.js";

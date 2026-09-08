@@ -646,7 +646,7 @@ async function validatePortableNpmScripts() {
     "validate:navigation": "node scripts/validate-scanner-navigation.js && node scripts/validate-readout-detail-navigation.js",
     "validate:timeline-playback": "node scripts/validate-timeline-playback.js",
     "validate:readout-filters": "node scripts/validate-monitor-filter.js && node scripts/validate-dtc-filter.js",
-    "validate:r1": "npm run validate:navigation && npm run validate:readout-filters && npm run validate:timeline-playback && npm run validate:serial && npm run validate:case-storage && npm run validate:session-export && npm run validate:offline",
+    "validate:r1": "node scripts/validate-readout-print.js && npm run validate:navigation && npm run validate:readout-filters && npm run validate:timeline-playback && npm run validate:serial && npm run validate:case-storage && npm run validate:session-export && npm run validate:offline",
     "bridge:dev": "node local-bridge-readonly.js",
     "bridge:j2534:dev": "node scripts/start-j2534-readonly-bridge.js",
     "inspect:j2534": "node scripts/inspect-j2534-drivers.js",
