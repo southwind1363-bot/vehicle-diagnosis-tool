@@ -76,6 +76,19 @@ function client(options = {}) {
 
 const removeButton = { dataset: { deleteCase: "existing" } };
 const removeEvent = { target: { closest: () => removeButton } };
+for (const accepted of [false, true]) {
+  const c = client();
+  let handler;
+  const prompts = [];
+  c.context.caseResetButton = { addEventListener: (type, callback) => { check(type === "click", "Reset event changed"); handler = callback; } };
+  c.context.confirm = message => { prompts.push(message); return accepted; };
+  vm.runInContext(source.slice(source.indexOf('caseResetButton.addEventListener("click"'), source.indexOf('caseSearch.addEventListener("input"')), c.context);
+  handler();
+  check(prompts.length === 1 && prompts[0].includes("保存済みの事例は削除しません"), "Reset must explain input-only deletion before clearing");
+  check(c.calls.reset === Number(accepted) && c.calls.quality === Number(accepted), "Cancelled reset changed form or quality preview");
+  check(c.store.get(key) === c.bytes && c.context.savedCases === c.original && c.calls.writes.length === 0, "Form reset changed stored cases");
+  check(c.context.caseStatus.textContent.includes(accepted ? "クリアしました" : "キャンセル"), "Reset outcome missing");
+}
 {
   const c = client({ failRead: true });
   check(!c.context.persistCases([]) && c.calls.writes.length === 0 && c.context.savedCases === c.original, "Denied conflict check permitted a write");

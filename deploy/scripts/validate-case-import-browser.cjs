@@ -50,6 +50,36 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.waitForFunction(() => savedCases.some(item => item.id === 'browser-case'));
     assert.match(await status.innerText(), /追加 1件/);
     const stored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+    await page.getByRole('button', { name: '3. 整備事例登録', exact: true }).click();
+    await page.locator('#caseModel').fill('未保存の模擬車両');
+    await page.locator('#caseMemo').fill('クリア取消で残す模擬メモ');
+    await page.locator('#caseConfidence').selectOption('中');
+    const formBeforeClear = await page.locator('#caseForm input, #caseForm textarea, #caseForm select').evaluateAll(nodes => nodes.map(node => [node.id, node.value]));
+    const clearPrompts = [];
+    for (const accepted of [false, true]) {
+      page.once('dialog', async dialog => {
+        clearPrompts.push(dialog.message());
+        if (accepted) await dialog.accept(); else await dialog.dismiss();
+      });
+      await page.getByRole('button', { name: '事例入力をクリア', exact: true }).click();
+      assert.match(clearPrompts.at(-1), /未保存の入力は元に戻せません.*保存済みの事例は削除しません/);
+      assert.match(await page.locator('#caseStatus').innerText(), accepted ? /クリアしました/ : /キャンセル.*保持/);
+      if (!accepted) {
+        assert.deepEqual(await page.locator('#caseForm input, #caseForm textarea, #caseForm select').evaluateAll(nodes => nodes.map(node => [node.id, node.value])), formBeforeClear);
+      } else {
+        assert.equal(await page.locator('#caseModel').inputValue(), '');
+        assert.equal(await page.locator('#caseMemo').inputValue(), '');
+        assert.equal(await page.locator('#caseConfidence').inputValue(), '低');
+        assert.notEqual(await page.locator('#caseDate').inputValue(), '');
+        assert.notEqual(await page.locator('#caseId').inputValue(), '');
+      }
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), stored);
+      await page.locator('#caseStatus').scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, `case-reset-${accepted ? 'confirmed' : 'cancelled'}-mobile.png`) });
+    }
+    assert.equal(clearPrompts.length, 2);
+    console.log('Case input reset: native confirm cancellation retains all inputs; accepted reset keeps stored cases and initializes defaults');
+    await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
     const exportStatus = page.locator('#caseExportStatus');
     const savedBeforeFailure = await page.evaluate(() => JSON.stringify(savedCases));
     await page.evaluate(() => {
