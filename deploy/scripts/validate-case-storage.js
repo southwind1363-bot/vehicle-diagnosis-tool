@@ -131,6 +131,14 @@ for (const action of ["decline-first", "decline-second", "clear-failed", "reload
   pending.onload();
   check(c.context.savedCases.some((item) => item.id === "retained"), `${action}: pending import was silently discarded`);
 }
+{
+  const c = client();
+  // Parser exception text varies by engine and may echo the input.
+  c.context.JSON = { parse: () => { throw new SyntaxError('Unexpected token in "PRIVATE_INPUT"'); } };
+  c.import("invalid");
+  check(!c.context.caseStatus.textContent.includes("PRIVATE_INPUT"), "Engine-specific parser message disclosed imported text");
+  check(c.store.get(key) === c.bytes && c.calls.writes.length === 0 && c.context.importJsonInput.value === "", "Parser failure must retain storage and release the picker");
+}
 for (const failure of ["construct", "read", "error", "abort"]) {
   const c = client();
   c.context.importCasesJson({ target: { files: [{}] } });

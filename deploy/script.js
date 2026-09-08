@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.540";
+const APP_VERSION = "3.13.541";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16884,8 +16884,10 @@ function importCasesJson(event) {
       renderSimilarCases();
       setCaseImportStatus(`JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`);
       setNextCaseId();
-    } catch (error) {
-      setCaseImportStatus(`JSONインポート失敗: ${error.message}`);
+    } catch (_) {
+      // Engine exceptions may include file contents. Do not display raw details,
+      // or claim storage is unchanged if a post-save rendering step failed.
+      setCaseImportStatus("JSONインポート失敗: ファイルの形式・内容を確認してください。保存済み一覧を確認してから、ファイルを選び直してください。");
     } finally {
       if (caseImportOperation === operation) {
         caseImportOperation = null;
