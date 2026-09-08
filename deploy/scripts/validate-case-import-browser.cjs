@@ -242,6 +242,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), searchStored);
     console.log('Case search: multi-keyword, full-width whitespace, ID, work, no match and reset passed');
     if (process.argv.includes('--data-timeout')) {
+      assert.equal(await page.locator('#staticDataWarning').isVisible(), false);
       await page.addInitScript(() => {
         const original = window.fetch;
         window.staticStallCalls = 0;
@@ -262,6 +263,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.evaluate(() => obdAccessUnlocked), false);
       assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), searchStored);
       await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      assert.equal(await page.locator('#dataStatus').isVisible(), false);
+      for (const tab of ['7. OBD2車両読取', '5. データ管理', '4. 事例検索']) {
+        await page.getByRole('button', { name: tab, exact: true }).click();
+        assert.equal(await page.locator('#staticDataWarning').isVisible(), true);
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.locator('#staticDataWarning').scrollIntoViewIfNeeded();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       await page.screenshot({ path: path.join(output, 'static-data-timeout-locked.png') });
       console.log('Static data stall: real 30-second deadline, fallback, one attempt, retained lock and saved cases passed');
     }

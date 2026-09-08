@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.547";
+const APP_VERSION = "3.13.548";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1707,15 +1707,22 @@ async function loadData() {
     };
     dataStatus.textContent = `登録済み整備データを読み込みました。車種候補 ${countVehicleModels(dataStore.vehicleInputOptions)}件 / 詳細候補 ${countVehicleDetailOptions(dataStore.vehicleInputOptions)}件 / 年式範囲 ${dataStore.vehicleYearRangesDomestic2026.length}件。`;
     dataStatus.classList.remove("error");
+    renderStaticDataWarning(false);
   } catch (error) {
     dataStore = fallbackData;
     dataStatus.textContent = "JSON読込不可のため、内蔵サンプルデータで動作中です。ローカルサーバーで開くと data フォルダのJSONを参照します。";
     dataStatus.classList.add("error");
+    renderStaticDataWarning(true);
   }
 
   initializeObdReadOnlyPanel();
   renderSymptomOptions();
   renderVehicleMakerOptions();
+}
+
+function renderStaticDataWarning(failed) {
+  const warning = document.getElementById("staticDataWarning");
+  if (warning) warning.hidden = !failed;
 }
 
 async function fetchJson(path) {

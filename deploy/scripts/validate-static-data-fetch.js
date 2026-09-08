@@ -45,3 +45,13 @@ for (const mode of ["success", "http", "parse", "network", "headers-stall", "bod
   checks += 5;
 }
 console.log(`Static JSON fetch checks: ${checks} / Errors: 0`);
+
+const warningCode = source.match(/function renderStaticDataWarning\(failed\) \{[\s\S]*?\r?\n\}/)[0];
+const warning = { hidden: true };
+const warningContext = vm.createContext({ document: { getElementById: () => warning } });
+vm.runInContext(warningCode, warningContext);
+for (const failed of [false, true, false]) {
+  warningContext.renderStaticDataWarning(failed);
+  assert.equal(warning.hidden, !failed);
+}
+console.log('Static data warning: hidden normally, visible on failure, cleared on success');
