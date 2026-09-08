@@ -2812,7 +2812,7 @@ body.dark .flow-node-measure .flow-step {
 }
 
 @media print {
-  body.obd-print-readout .obd-print-ancestor > :not(.obd-print-ancestor):not(#obdStageResultsView),
+  body.obd-print-readout .obd-print-ancestor > :not(.obd-print-ancestor):not(#obdStageResultsView):not(#staticDataWarning),
   body.obd-print-readout > :not(.obd-print-ancestor),
   body.obd-print-readout #obdStageResultsView button:not(.obd-simple-result-item),
   body.obd-print-readout .obd-simple-result-arrow,
@@ -2825,6 +2825,7 @@ body.dark .flow-node-measure .flow-step {
   body.obd-print-readout .obd-simple-result-actions,
   body.obd-print-readout [data-obd-session-export-status] { display: none !important; }
   body.obd-print-readout,
+  body.obd-print-readout #staticDataWarning,
   body.obd-print-readout .obd-print-ancestor,
   body.obd-print-readout #obdStageResultsView,
   body.obd-print-readout #obdStageResultsView * {

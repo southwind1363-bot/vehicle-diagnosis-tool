@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 
 module.exports = async (page, output, label = 'overview') => {
-  const initial = await page.evaluate(() => ({ session: JSON.stringify(obdDevSession.lastSession), open: document.querySelector('#obdReadoutDetails').open }));
+  const initial = await page.evaluate(() => ({ session: JSON.stringify(obdDevSession.lastSession), open: document.querySelector('#obdReadoutDetails').open, warningHidden: document.querySelector('#staticDataWarning').hidden }));
   const selectors = ['#obdSimpleResultSummary', '#obdDetectedCodes', '#obdDetectedCodes > *', '.obd-simple-result-item:first-child', '#obdMonitorStatus', '#obdReadoutDetails', '#obdReadoutDetailEmpty', '#obdDevSessionDetails > *'];
   const readVisibility = async () => {
     const snapshot = {};
@@ -44,7 +44,13 @@ module.exports = async (page, output, label = 'overview') => {
     assert.equal(await page.locator('#obdAccessPasswordInput').isVisible(), false);
     assert.equal(await page.locator('#obdStageSetupView').isVisible(), false);
     assert.equal(await page.locator('.obd-readout-print-note').isVisible(), true);
+    assert.equal(await page.locator('#staticDataWarning').isVisible(), !initial.warningHidden);
+    await page.evaluate(() => renderStaticDataWarning(true));
+    assert.equal(await page.locator('#staticDataWarning').isVisible(), true, 'Active fallback warning must remain visible in printed results');
+    assert.match(await page.locator('#staticDataWarning').innerText(), /最新の登録データとして扱わない/);
+    assert.deepEqual(await readVisibility(), visibleBefore, 'Fallback warning must not change printed result selection');
     await page.screenshot({ path: path.join(output, `readout-print-${label}.png`), fullPage: true });
+    await page.evaluate(hidden => { document.querySelector('#staticDataWarning').hidden = hidden; }, initial.warningHidden);
     await page.emulateMedia({ media: 'screen' });
     await page.evaluate(() => {
       document.querySelectorAll('.obd-print-ancestor, .obd-print-readout').forEach(node => node.classList.remove('obd-print-ancestor', 'obd-print-readout'));
@@ -63,6 +69,7 @@ module.exports = async (page, output, label = 'overview') => {
     })), selectionBefore, 'Print must not change filters or navigation');
     await page.evaluate(() => setObdSessionExportStatus(''));
   } finally {
+    await page.evaluate(hidden => { document.querySelector('#staticDataWarning').hidden = hidden; }, initial.warningHidden);
     await page.emulateMedia({ media: 'screen' });
     await page.evaluate(() => {
       document.querySelectorAll('.obd-print-ancestor, .obd-print-readout').forEach(node => node.classList.remove('obd-print-ancestor', 'obd-print-readout'));
