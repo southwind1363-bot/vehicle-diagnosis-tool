@@ -13,7 +13,7 @@
     "validate:offline": "node scripts/validate-offline-cache.js",
     "validate:readiness-review": "node scripts/validate-readiness-review.js",
     "validate:readiness-review-browser": "node scripts/validate-readiness-review-browser.cjs",
-    "validate:scanner-browser": "node scripts/validate-scanner-file-flow.cjs --offline --dense-live",
+    "validate:scanner-browser": "node scripts/validate-scanner-file-flow.cjs --offline --dense-live && node scripts/validate-case-import-browser.cjs --bulk --unsafe-id --delete-identity --csv",
     "validate:case-storage": "node scripts/validate-case-storage.js",
     "validate:operation-journal": "node scripts/validate-operation-journal.js",
     "validate:operation-journal-browser": "node scripts/validate-operation-journal-browser.cjs",

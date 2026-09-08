@@ -6,8 +6,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 (async () => {
   const root = path.resolve(__dirname, '..');
-  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'case-import-browser-'));
-  const browser = await chromium.launch({ channel: 'chrome', headless: true });
+  // Share the existing CI screenshot artifact glob without collecting backups.
+  const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-cases-'));
+  const channel = process.env.PLAYWRIGHT_CHANNEL || 'chrome';
+  const browser = await chromium.launch({ channel, headless: true });
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
   const errors = [], blocked = [];
   try {
