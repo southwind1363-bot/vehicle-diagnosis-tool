@@ -26,7 +26,7 @@ function client(options = {}) {
   const calls = { reset: 0, render: 0, similar: 0, ids: 0, quality: 0, operations: [], writes: [], removals: [], alerts: [] };
   let reader;
   const context = vm.createContext({
-    savedCases: original, caseDeleteTargets: new WeakMap(), caseStorageReadError: "", caseImportOperation: null, CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
+    savedCases: original, caseStorageSnapshot: bytes, caseDeleteTargets: new WeakMap(), caseStorageReadError: "", caseImportOperation: null, CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
     THEME_KEY: "theme", NOTICE_KEY: "notice", OBD_UI_MODE_KEY: "ui-mode", applyTheme: () => {},
     caseStorageWarning: { hidden: true }, caseStorageWarningText: {},
     noticeModal: { showModal: () => { calls.noticeShown = true; }, close: () => { calls.noticeClosed = true; } },
@@ -76,6 +76,28 @@ function client(options = {}) {
 
 const removeButton = { dataset: { deleteCase: "existing" } };
 const removeEvent = { target: { closest: () => removeButton } };
+{
+  const c = client({ failRead: true });
+  check(!c.context.persistCases([]) && c.calls.writes.length === 0 && c.context.savedCases === c.original, "Denied conflict check permitted a write");
+  check(c.context.caseStorageSnapshot === c.bytes, "Failed check changed the last known storage snapshot");
+  c.options.failRead = false;
+  check(c.context.persistCases([]) && c.context.caseStorageSnapshot === "[]", "Recovery failed to update storage snapshot");
+  check(c.context.persistCases(c.original) && c.store.get(key) === c.bytes, "Consecutive successful writes caused a false conflict");
+}
+for (const replacement of [null, "[]", '{broken', JSON.stringify([{ id: "other-tab", model: "B" }])]) {
+  const c = client();
+  if (replacement === null) c.store.delete(key);
+  else c.store.set(key, replacement);
+  check(c.context.persistCases([]) === false, "A stale tab overwrote externally changed cases");
+  check((c.store.get(key) ?? null) === replacement && c.context.savedCases === c.original && c.calls.writes.length === 0, "Conflict changed memory or persisted bytes");
+  check(c.context.caseStorageReadError && !c.context.caseStorageWarning.hidden, "Conflict warning is missing");
+  if (replacement === '{broken') continue;
+  c.context.reloadSavedCases();
+  check(!c.context.caseStorageReadError, "Manual reload failed to release conflict guard");
+  c.context.saveCase();
+  check(c.context.savedCases.some(item => item.id === "new") && c.calls.reset === 1, "Manual recovery did not permit a new save");
+  if (replacement?.includes('other-tab')) check(c.context.savedCases.some(item => item.id === "other-tab"), "Recovery discarded the other tab's case");
+}
 for (const action of ["clear", "reload"]) {
   for (const lateEvent of ["load", "error", "abort"]) {
     const c = client();

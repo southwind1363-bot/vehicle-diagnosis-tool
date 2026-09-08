@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.549";
+const APP_VERSION = "3.13.550";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -704,6 +704,7 @@ const tabPanels = document.querySelectorAll("[data-tab-panel]");
 
 let dataStore = fallbackData;
 let caseStorageReadError = "";
+let caseStorageSnapshot = null;
 let caseImportOperation = null;
 const caseDeleteTargets = new WeakMap();
 let savedCases = loadCases();
@@ -16808,6 +16809,7 @@ function clearAllLocalStorage() {
   }
   cancelCaseImport();
   savedCases = [];
+  caseStorageSnapshot = null;
   caseStorageReadError = "";
   let preferencesCleared = true;
   for (const key of [THEME_KEY, NOTICE_KEY, OBD_UI_MODE_KEY]) {
@@ -16964,11 +16966,13 @@ function loadCases() {
     const stored = localStorage.getItem(CASES_KEY);
     if (stored === null) {
       caseStorageReadError = "";
+      caseStorageSnapshot = null;
       return [];
     }
     const parsed = JSON.parse(stored);
     if (!Array.isArray(parsed) || !parsed.every(isCaseRecord)) throw new Error("invalid_saved_cases");
     const cases = parsed.map(normalizeCase);
+    caseStorageSnapshot = stored;
     caseStorageReadError = "";
     return cases;
   } catch (error) {
@@ -17017,7 +17021,18 @@ function persistCases(nextCases) {
     return false;
   }
   try {
-    localStorage.setItem(CASES_KEY, JSON.stringify(nextCases));
+    const serialized = JSON.stringify(nextCases);
+    // Compare exact stored bytes, not normalized records with generated defaults.
+    // This detects prior external changes; localStorage is not a transaction lock.
+    if (localStorage.getItem(CASES_KEY) !== caseStorageSnapshot) {
+      caseStorageReadError = "保存事例が別タブなどで変更されています。上書きを停止しました。入力内容を控えてから「保存事例を再読込」で最新の一覧を確認してください。";
+      renderCaseStorageWarning();
+      caseStatus.textContent = caseStorageReadError;
+      alert(caseStorageReadError);
+      return false;
+    }
+    localStorage.setItem(CASES_KEY, serialized);
+    caseStorageSnapshot = serialized;
   } catch (error) {
     caseStatus.textContent = "端末内への保存に失敗しました。一覧は変更していません。空き容量・保存権限を確認してください。";
     alert(caseStatus.textContent);

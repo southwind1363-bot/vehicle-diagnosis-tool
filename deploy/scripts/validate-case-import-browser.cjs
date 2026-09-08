@@ -274,6 +274,39 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.screenshot({ path: path.join(output, 'static-data-timeout-locked.png') });
       console.log('Static data stall: real 30-second deadline, fallback, one attempt, retained lock and saved cases passed');
     }
+    // A second real page shares storage but not the first page's in-memory list.
+    const otherPage = await context.newPage();
+    try {
+      await otherPage.goto('http://127.0.0.1/');
+      await otherPage.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await otherPage.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      await otherPage.locator('#importJsonInput').setInputFiles({ name: 'other-tab.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([{ id: 'other-tab-case', model: '別タブ模擬車両' }])) });
+      await otherPage.waitForFunction(() => savedCases.some(item => item.id === 'other-tab-case'));
+      const latestBytes = await otherPage.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      await page.getByRole('button', { name: '3. 整備事例登録', exact: true }).click();
+      await page.locator('#caseMemo').fill('未保存の模擬メモ');
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      const candidate = { name: 'stale-tab.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([{ id: 'retry-after-conflict', model: '復帰模擬車両' }])) };
+      await input.setInputFiles(candidate);
+      await page.waitForFunction(() => Boolean(caseStorageReadError));
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), latestBytes);
+      assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case')), false);
+      assert.match(await status.innerText(), /別タブ.*上書きを停止/);
+      assert.equal(await page.locator('#caseMemo').inputValue(), '未保存の模擬メモ');
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.locator('#caseStorageWarning').scrollIntoViewIfNeeded();
+      assert.equal(await page.locator('#caseStorageWarning').isVisible(), true);
+      await page.screenshot({ path: path.join(output, 'case-storage-conflict-mobile.png') });
+      await page.getByRole('button', { name: '保存事例を再読込', exact: true }).click();
+      assert.equal(await page.locator('#caseStorageWarning').isVisible(), false);
+      assert.equal(await page.locator('#caseMemo').inputValue(), '未保存の模擬メモ');
+      await input.setInputFiles(candidate);
+      await page.waitForFunction(() => savedCases.some(item => item.id === 'retry-after-conflict'));
+      assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case')), true);
+      await page.reload();
+      assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case') && savedCases.some(item => item.id === 'retry-after-conflict')), true);
+      console.log('Two-tab storage: stale write blocked, latest bytes and form retained, manual reload and import recovery passed');
+    } finally { await otherPage.close(); }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }
