@@ -686,6 +686,23 @@
           <p id="obdSimpleConnectStatus" class="data-status" role="status" aria-live="polite">車両とVCIの選択内容を確認してください。</p>
         </section>
 
+        <section id="obdSerialSettingsPanel" class="obd-operation-panel" aria-label="VCI通信設定" hidden>
+          <details class="obd-dev-task" id="obdSerialSettings">
+            <summary>通信設定（ELM327 / Web Serial）</summary>
+            <div class="obd-dev-gate">
+              <label>
+                通信速度
+                <select id="obdDevBaudRate" aria-describedby="obdSerialSettingsHelp" disabled>
+                  <option value="38400">38400</option>
+                  <option value="115200">115200</option>
+                  <option value="9600">9600</option>
+                </select>
+              </label>
+            </div>
+            <p id="obdSerialSettingsHelp" class="data-status">VCIの説明書に記載された速度を選んでください。接続開始前だけ変更できます。自動で速度を試したり再接続したりしません。</p>
+          </details>
+        </section>
+
         <section class="obd-operation-panel obd-expert-only" aria-labelledby="obdProgressTitle">
           <div class="obd-result-heading">
             <div>
@@ -876,19 +893,6 @@
             </label>
             <button id="obdDevUnlockButton" class="secondary-button" type="button">設定して開く</button>
           </div>
-          <details class="obd-dev-task" id="obdSerialSettings">
-            <summary>通信設定（ELM327 / Web Serial）</summary>
-            <div class="obd-dev-gate">
-            <label>
-              通信速度
-              <select id="obdDevBaudRate">
-                <option value="38400">38400</option>
-                <option value="115200">115200</option>
-                <option value="9600">9600</option>
-              </select>
-            </label>
-            </div>
-          </details>
           <div id="obdBridgePairingControls" hidden>
             <div class="obd-dev-gate">
               <label>

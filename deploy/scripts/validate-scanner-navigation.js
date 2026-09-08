@@ -103,7 +103,7 @@ const accessMarkup = html.slice(html.indexOf('<section id="obdAccessGatePanel"')
 assert.ok(accessMarkup.indexOf('id="obdAccessLockButton"') < accessMarkup.indexOf('class="obd-dev-gate"'), "Lock must remain outside collapsed password entry");
 assert.equal((html.match(/id="obdAccessLockButton"/g) || []).length, 1);
 assert.match(css, /#obdAccessGatePanel:has\(#obdAccessLockButton:enabled\) \.obd-dev-gate:has\(> #obdAccessUnlockButton:disabled\)\s*\{\s*display: none;/, "Password entry must remain visible while password verification is pending");
-const serialSettings = html.slice(html.indexOf('<details class="obd-dev-task" id="obdSerialSettings">'), html.indexOf('id="obdBridgePairingControls"'));
+const serialSettings = html.match(/<details class="obd-dev-task" id="obdSerialSettings">[\s\S]*?<\/details>/)?.[0] || "";
 assert.ok(serialSettings.includes('id="obdDevBaudRate"'), "Serial speed belongs to collapsed communication settings");
 assert.ok(!serialSettings.includes('id="obdDevPasswordInput"') && !serialSettings.includes('id="obdDevUnlockButton"'), "Password entry must stay outside communication settings");
 assert.equal((html.match(/id="obdDevBaudRate"/g) || []).length, 1);

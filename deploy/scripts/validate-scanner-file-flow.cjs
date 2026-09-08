@@ -713,7 +713,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.reload();
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
     await page.evaluate(() => {
-      window.__serialFailureFixture = { mode: 'cancel', selections: 0, opens: 0, writes: 0 };
+      window.__serialFailureFixture = { mode: 'cancel', selections: 0, opens: 0, writes: 0, baudRates: [] };
       Object.defineProperty(navigator, 'serial', { configurable: true, value: {
         requestPort: async () => {
           const fixture = window.__serialFailureFixture;
@@ -722,7 +722,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
             fixture.finish = () => { delete fixture.finish; reject(new DOMException('Synthetic picker cancellation', 'NotFoundError')); };
           });
           return {
-            open: async () => {
+            open: async options => {
+              fixture.baudRates.push(options.baudRate);
               fixture.opens += 1;
               return new Promise((_, reject) => {
                 fixture.finish = () => { delete fixture.finish; reject(new DOMException('Synthetic port unavailable', 'NetworkError')); };
@@ -736,12 +737,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
     await page.getByRole('button', { name: '接続を確認', exact: true }).click();
     const connect = page.locator('#obdSimpleConnectButton');
+    const baud = page.locator('#obdDevBaudRate');
+    await page.locator('#obdSerialSettings > summary').click();
+    assert.equal(await baud.isVisible(), true, 'Normal connection screen must expose serial settings');
+    assert.equal(await baud.isEnabled(), true);
+    await baud.selectOption('115200');
+    await page.locator('#obdSerialSettingsPanel').screenshot({ path: path.join(output, 'serial-settings-mobile.png') });
     for (const [mode, expectedReason] of [['cancel', 'port_selection_cancelled'], ['open-error', 'port_open_failed'], ['cancel', 'port_selection_cancelled']]) {
       await page.evaluate(mode => { window.__serialFailureFixture.mode = mode; }, mode);
       await connect.click();
       await page.waitForFunction(mode => typeof window.__serialFailureFixture.finish === 'function'
         && obdDevSession.connectionState === (mode === 'cancel' ? 'selecting' : 'opening'), mode);
       assert.equal(await connect.isEnabled(), false, 'Pending acquisition must disable repeat connection');
+      assert.equal(await baud.isEnabled(), false, 'Pending connection must freeze the chosen baud rate');
       assert.match(await page.locator('#obdSimpleConnectStatus').innerText(), mode === 'cancel' ? /VCI.*選択/ : /ポート.*開いて/);
       const pendingCounts = await page.evaluate(() => ({ selections: window.__serialFailureFixture.selections, opens: window.__serialFailureFixture.opens }));
       await connect.evaluate(node => node.click());
@@ -750,6 +758,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.evaluate(() => window.__serialFailureFixture.finish());
       await page.waitForFunction(reason => !obdSerialConnectPending && obdDevSession.connectionState === 'disconnected' && obdDevSession.lastDisconnectReason === reason, expectedReason);
       assert.equal(await connect.isEnabled(), true, 'Connection failure must allow another attempt');
+      assert.equal(await baud.isEnabled(), true, 'Cancelled or failed connection must release serial settings');
+      assert.equal(await baud.inputValue(), '115200', 'Connection failure must retain the operator choice');
       assert.equal(await page.locator('#obdSimpleConnectStatus').isVisible(), true, 'Normal connection screen must expose the outcome');
       assert.match(await page.locator('#obdSimpleConnectStatus').innerText(), mode === 'cancel' ? /キャンセル/ : /開け|使用中|接続.*失敗/);
       assert.equal(await page.locator('#obdSimpleConnectDisconnectButton').isVisible(), false, 'Failed connection must not look connected');
@@ -758,7 +768,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.locator('#obdSetupPanel').isVisible(), true, 'Back must return to vehicle setup');
       await page.locator('.obd-stage-tab[data-obd-stage="connect"]').click();
     }
-    assert.deepEqual(await page.evaluate(() => window.__serialFailureFixture), { mode: 'cancel', selections: 3, opens: 1, writes: 0 });
+    assert.deepEqual(await page.evaluate(() => window.__serialFailureFixture), { mode: 'cancel', selections: 3, opens: 1, writes: 0, baudRates: [115200] });
+    await baud.selectOption('38400');
     await page.screenshot({ path: path.join(output, 'connection-retry.png') });
     // The known persistent-browser second-download issue is covered separately, not by this normal-context flow.
     const readoutCases = [

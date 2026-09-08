@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.536";
+const APP_VERSION = "3.13.537";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -465,6 +465,7 @@ const obdPreviewStatus = document.querySelector("#obdPreviewStatus");
 const obdPreviewGuide = document.querySelector("#obdPreviewGuide");
 const obdDevPasswordInput = document.querySelector("#obdDevPasswordInput");
 const obdDevBaudRate = document.querySelector("#obdDevBaudRate");
+const obdSerialSettingsPanel = document.querySelector("#obdSerialSettingsPanel");
 const obdDevUnlockButton = document.querySelector("#obdDevUnlockButton");
 const obdDevLockButton = document.querySelector("#obdDevLockButton");
 const obdBridgePairingControls = document.querySelector("#obdBridgePairingControls");
@@ -6085,7 +6086,18 @@ function renderObdDeveloperPasswordState() {
   obdDevPasswordInput.placeholder = unlocked ? "解除済み" : configured ? "この端末で設定したパスワード" : "12文字以上で新規設定";
 }
 
+function renderObdSerialSettings() {
+  if (!obdSerialSettingsPanel || !obdDevBaudRate) return;
+  const elmRoute = resolveObdInterfaceId() === "user-vci-elm327"
+    && getObdInterfaceReadoutRoute("user-vci-elm327")?.route === "desktop_web_serial";
+  obdSerialSettingsPanel.hidden = !elmRoute;
+  obdDevBaudRate.disabled = !elmRoute || !obdAccessUnlocked || (obdUiMode !== "simple" && !obdDevModeUnlocked)
+    || Boolean(obdBridgeOperation || obdSerialConnectPending || obdSerialDisconnectOperation || obdDevSession.port)
+    || obdDevSession.connectionState !== "disconnected";
+}
+
 function renderObdDeveloperGate(capability = window.ObdReadOnly?.getCapability?.()) {
+  if (typeof renderObdSerialSettings === "function") renderObdSerialSettings();
   renderObdMeasurementConditionSummary();
   renderObdDeveloperPasswordState();
   renderObdSessionExportControls();
@@ -7334,6 +7346,7 @@ function handleObdPrimaryAction() {
 }
 
 function renderObdPendingConnection(message) {
+  if (typeof renderObdSerialSettings === "function") renderObdSerialSettings();
   obdDevStatus.textContent = message;
   if (typeof obdDevConnectButton !== "undefined" && obdDevConnectButton) obdDevConnectButton.disabled = true;
   if (typeof renderObdSetupActionButtons === "function") renderObdSetupActionButtons();
