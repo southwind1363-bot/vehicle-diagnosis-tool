@@ -273,6 +273,11 @@ try {
   const packaged = JSON.parse(fs.readFileSync(path.join(result.directory, "package.json"), "utf8"));
   const instructions = fs.readFileSync(path.join(result.directory, "README.txt"), "utf8");
   check(instructions.includes("Node.js 22以降") && instructions.includes("24 LTS"), "Package instructions omitted the runtime prerequisite");
+  check(instructions.includes(`この配布物の版は${result.appVersion}です`), "Update instructions should use the packaged version");
+  check(["JSONバックアップ", "読取結果をJSON保存", "JSONインポート", "保存した読取結果を開く", "別々に保存"].every(text => instructions.includes(text)), "Package omitted separate case and readout backup/restore instructions");
+  check(["別フォルダーへ全展開", "同じブラウザープロファイル", "ホスト名・ポート番号", "localhostと127.0.0.1"].every(text => instructions.includes(text)), "Package omitted safe folder and browser origin migration boundaries");
+  check(["サイトデータやキャッシュを削除しない", "旧版へ戻す前に新版をqとEnterで終了", "任意の旧版との保存形式互換性は保証しません"].every(text => instructions.includes(text)), "Package omitted non-destructive rollback instructions and compatibility limits");
+  check(["車両読取中には更新しません", "実車適合の確認を意味しません", "自動再試行はこの案内では有効にしません"].every(text => instructions.includes(text)), "Package instructions overstated real vehicle verification or update authority");
   check(instructions.includes("inspect-workstation-j2534.cmd") && instructions.includes("--evidence-json") && instructions.includes("--validate-evidence-stdin") && instructions.includes("--validate-uds-preparation-stdin") && instructions.includes("--prepare-uds-request") && instructions.includes("32KB上限") && instructions.includes("DLLパス、名称、device ID、nonceを含みません") && fs.existsSync(path.join(result.directory, "scripts/inspect-workstation-j2534.js")) && fs.existsSync(path.join(result.directory, "scripts/j2534-uds-preparation-evidence.js")), "Package omitted the standalone J2534 preparation check or sanitized evidence instructions");
   check(["scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"].every(relative => fs.existsSync(path.join(result.directory, relative))), "Package omitted the non-executing J2534 native preflight runtime");
   check(packaged.scripts.start === "node scripts/verify-workstation-package.js && node scripts/start-local-workstation.js"
@@ -378,7 +383,7 @@ try {
       fs.writeFileSync(integrityPath, originalManifest);
     }
   }
-  for (const relative of ["script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
+  for (const relative of ["README.txt", "script.js", "node_modules/express/index.js", "node_modules/express/node_modules/nested/LICENSE", "package-info.json", "scripts/verify-workstation-package.js", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-registered-driver-native-preflight.js", "scripts/j2534-uds-preparation-evidence.js", "scripts/native/j2534-preflight-workers.json", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {
     const target = path.join(result.directory, relative);
     const original = fs.readFileSync(target);
     const changed = Buffer.from(original);
