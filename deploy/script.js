@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.545";
+const APP_VERSION = "3.13.546";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16498,12 +16498,16 @@ function containsPersonalInfoRisk(record) {
 function renderCases() {
   renderCaseStorageWarning();
   const keyword = caseSearch.value.trim().toLowerCase();
+  const terms = keyword.split(/\s+/).filter(Boolean);
   const filtered = savedCases.filter((item) => {
-    const target = [item.maker, item.model, item.symptom, item.obdCode, item.finalCause, item.confirmedFacts].join(" ").toLowerCase();
-    return target.includes(keyword);
+    const target = [item.id, item.maker, item.model, item.symptom, item.obdCode, item.finalCause, item.confirmedFacts, item.work, item.replacedParts, item.memo].join(" ").toLowerCase();
+    return terms.every((term) => target.includes(term));
   });
 
-  renderCaseCards(caseList, filtered, caseStorageReadError ? "保存事例を読み込めていません。" : "保存済み事例はまだありません。");
+  const emptyText = caseStorageReadError ? "保存事例を読み込めていません。"
+    : savedCases.length ? "検索条件に一致する事例はありません。検索語を減らすか変更してください。"
+    : "保存済み事例はまだありません。";
+  renderCaseCards(caseList, filtered, emptyText);
   if (caseStorageReadError) {
     caseStatus.textContent = caseStorageReadError;
     return;

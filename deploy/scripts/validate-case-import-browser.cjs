@@ -215,6 +215,32 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await exportStatus.screenshot({ path: path.join(output, 'csv-export-status.png') });
       console.log('CSV export: injected failure, retry, exact BOM/content and storage retention passed');
     }
+    // Search must accept the UI's own multi-keyword example after restoration.
+    await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([
+      { id: 'CASE-101', model: 'プリウス', symptom: 'アイドル不調', obdCode: 'P0171', work: '吸気ダクト交換' },
+      { id: 'CASE-102', model: 'フィット', symptom: 'アイドル不調', obdCode: 'P0300' }
+    ])));
+    await page.reload();
+    await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+    const searchStored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+    const search = page.locator('#caseSearch');
+    for (const query of ['プリウス P0171 アイドル', ' p0171　プリウス ', 'case-101', 'ダクト']) {
+      await search.fill(query);
+      assert.equal(await page.locator('#caseList .case-card').count(), 1);
+      assert.match(await page.locator('#caseList').innerText(), /CASE-101/);
+    }
+    await search.fill('プリウス P0300');
+    assert.match(await page.locator('#caseList').innerText(), /検索条件に一致する事例はありません/);
+    for (const width of [390, 1280]) {
+      await page.setViewportSize({ width, height: 844 });
+      await search.scrollIntoViewIfNeeded();
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+      await page.screenshot({ path: path.join(output, `case-search-empty-${width}.png`) });
+    }
+    await search.fill('');
+    assert.equal(await page.locator('#caseList .case-card').count(), 2);
+    assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), searchStored);
+    console.log('Case search: multi-keyword, full-width whitespace, ID, work, no match and reset passed');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }

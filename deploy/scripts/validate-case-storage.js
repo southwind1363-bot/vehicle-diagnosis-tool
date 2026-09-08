@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { webcrypto } from "node:crypto";
 import "./validate-case-export.js";
 import "./validate-case-card-markup.js";
+import "./validate-case-search.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["persistCases", "loadCases", "saveCase", "handleCaseDelete", "seedDummyCases", "createDummyCases", "importCasesJson", "findDuplicateCase", "duplicateKey", "normalizeCase", "isCaseRecord", "createCaseId", "createId", "normalizeCode", "runSelfCheck", "buildCasesCsv", "csvCell", "buildCasesBackup", "renderCaseStorageWarning", "reloadSavedCases", "readOptionalBrowserSetting", "writeOptionalBrowserSetting", "clearAllLocalStorage", "showInitialNotice", "exportCasesCsv", "exportCasesJson"];
