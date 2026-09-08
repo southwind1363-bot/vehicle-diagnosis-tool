@@ -39,6 +39,18 @@ export function describeWorkstationPortError(error = {}) {
     + (service === "web" ? "\n画面ポートを変更すると保存領域も別になります。元のURLの保存データは残ります。" : "");
 }
 
+export function describeWorkstationConfigError(error = {}) {
+  switch (error?.message) {
+    case "invalid_workstation_port":
+      return "PORTまたはLOCAL_BRIDGE_PORTが有効なポート番号ではありません。0〜65535の整数を設定してください（0は空きポートを自動選択します）。画面ポートを変更すると保存領域も別になります。元のURLの保存データは残ります。設定値は表示していません。今回の起動は行っていません。";
+    case "workstation_pairing_token_too_short":
+      return "LOCAL_BRIDGE_PAIRING_TOKENは12文字以上で設定してください。未設定なら起動時に自動生成します。接続キーは表示・変更していません。今回の起動は行っていません。";
+    case "workstation_replay_not_allowed":
+      return "LOCAL_BRIDGE_REPLAY_LOGが設定されているため起動できません。通常の診断画面を起動する場合は、この環境変数を解除して再起動してください。ログファイルの削除は不要です。記録の再生を実接続として使用しません。今回の起動は行っていません。";
+    default: return null;
+  }
+}
+
 function listen(server, port, service) {
   return new Promise((resolve, reject) => {
     const failed = (error) => {
@@ -163,7 +175,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
     console.error(error.code === "workstation_assets_invalid"
       ? `ローカル資材を確認できません（${error.asset.slice(0, 160)}）。同じ版のdeployフォルダーを一式復元してから再起動してください。`
       : error.message === "workstation_node_version_unsupported" ? "Node.js 22以降が必要です。Node.js 24 LTSを推奨します。自動インストールは行いません。"
-      : describeWorkstationPortError(error) || "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");
+      : describeWorkstationPortError(error) || describeWorkstationConfigError(error) || "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");
     process.exitCode = 1;
   }
 }

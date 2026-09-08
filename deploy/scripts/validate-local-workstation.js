@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { execFile } from "node:child_process";
 import { webcrypto } from "node:crypto";
 import { EventEmitter } from "node:events";
-import { startLocalWorkstation, openWorkstationBrowser, describeWorkstationPortError } from "./start-local-workstation.js";
+import { startLocalWorkstation, openWorkstationBrowser, describeWorkstationPortError, describeWorkstationConfigError } from "./start-local-workstation.js";
 import { validateWorkstationAssets } from "./workstation-assets.js";
 import "./validate-sample-preview.js";
 import "./validate-readout-vehicle.js";
@@ -31,6 +31,33 @@ const check = (condition, message) => { assert.ok(condition, message); checks +=
 const options = { webPort: 0, bridgePort: 0, pairingToken: "workstation-test-token", j2534RegistryText: "" };
 const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const indexSource = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+
+for (const [message, required] of [
+  ["invalid_workstation_port", ["PORT", "LOCAL_BRIDGE_PORT", "0〜65535", "元のURLの保存データは残ります", "今回の起動は行っていません"]],
+  ["workstation_pairing_token_too_short", ["12文字以上", "未設定なら", "表示・変更していません"]],
+  ["workstation_replay_not_allowed", ["LOCAL_BRIDGE_REPLAY_LOG", "ログファイルの削除は不要", "実接続として使用しません"]]
+]) {
+  const error = Object.assign(new Error(message), { value: "private-config-value" });
+  const description = describeWorkstationConfigError(error);
+  check(required.every(text => description.includes(text)), `Missing recovery instruction for ${message}`);
+  check(!description.includes(error.value) && error.value === "private-config-value", "Configuration error leaked or modified its input");
+}
+check([null, undefined, {}, new Error("private-config-value")].every(error => describeWorkstationConfigError(error) === null), "Unknown configuration error was exposed or misclassified");
+for (const [setting, value, expected] of [
+  ["PORT", "private-invalid-port", "0〜65535"],
+  ["LOCAL_BRIDGE_PORT", "private-invalid-port", "0〜65535"],
+  ["LOCAL_BRIDGE_PAIRING_TOKEN", "short-key", "12文字以上"],
+  ["LOCAL_BRIDGE_REPLAY_LOG", "private-replay-fixture.json", "ログファイルの削除は不要"]
+]) {
+  const environment = { ...process.env, PORT: "0", LOCAL_BRIDGE_PORT: "0" };
+  delete environment.LOCAL_BRIDGE_PAIRING_TOKEN;
+  delete environment.LOCAL_BRIDGE_REPLAY_LOG;
+  environment[setting] = value;
+  const result = await new Promise(resolve => execFile(process.execPath, [fileURLToPath(new URL("./start-local-workstation.js", import.meta.url))],
+    { env: environment, windowsHide: true, timeout: 5000 }, (error, stdout, stderr) => resolve({ code: error?.code ?? 0, stdout, stderr })));
+  check(result.code === 1 && result.stderr.includes(expected), `${setting}: actual launcher omitted recovery instructions`);
+  check(result.stdout === "" && !result.stderr.includes(value), `${setting}: invalid startup emitted a URL or private configuration`);
+}
 
 const launchViewSource = appSource.match(/function initializeLaunchView\(\) \{[\s\S]*?\r?\n\}/)?.[0];
 check(Boolean(launchViewSource), "Launch view entry point is missing");
@@ -306,7 +333,7 @@ async function validateBrowserLaunch() {
     let closes = 0;
     const context = { process: processMock, path, starterPath: path.resolve("starter.js"), AbortController,
       console: { log: (...args) => messages.push(args.join(" ")), error: (...args) => messages.push(args.join(" ")) },
-      createInterface: () => input, startLocalWorkstation: () => ready.promise, describeWorkstationPortError,
+      createInterface: () => input, startLocalWorkstation: () => ready.promise, describeWorkstationPortError, describeWorkstationConfigError,
       openWorkstationBrowser: (value, settings) => { launchCalls.push({ value, settings }); return opened.promise; } };
     const startup = vm.runInNewContext(`(async () => { ${cli} })()`, context);
     check(launchCalls.length === 0, "Browser opened before workstation readiness");
@@ -416,7 +443,7 @@ async function validateWindowsLauncher(occupiedWebPort) {
   const missingNode = await run(launcherPath, { PATH: "" });
   check(missingNode.code === 1 && missingNode.output.includes("Node.js was not found"), "Windows launcher did not explain missing Node.js or preserve its failure code");
   const replay = await run(launcherPath, { LOCAL_BRIDGE_REPLAY_LOG: "must-not-be-read.log" });
-  check(replay.code === 1 && replay.output.includes("ローカル起動に失敗しました") && !replay.output.includes("診断画面:"), "Windows launcher bypassed replay protection or depended on the caller's working directory");
+  check(replay.code === 1 && replay.output.includes("LOCAL_BRIDGE_REPLAY_LOGが設定されているため起動できません") && replay.output.includes("ログファイルの削除は不要") && !replay.output.includes("must-not-be-read.log") && !replay.output.includes("診断画面:"), "Windows launcher bypassed replay protection, exposed private configuration or omitted recovery instructions");
   const conflict = await run(launcherPath, { PORT: String(occupiedWebPort), LOCAL_BRIDGE_PORT: "0" });
   check(conflict.code === 1 && conflict.output.includes(`診断画面用ポート ${occupiedWebPort} は使用中`) && conflict.output.includes("保存領域も別") && !conflict.output.includes("ペアリング値"), "Windows launcher hid a web port conflict or exposed a pairing key after failed startup");
   const bridgeConflict = await run(launcherPath, { PORT: "0", LOCAL_BRIDGE_PORT: String(occupiedWebPort) });
