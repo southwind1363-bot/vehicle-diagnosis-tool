@@ -241,6 +241,30 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.locator('#caseList .case-card').count(), 2);
     assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), searchStored);
     console.log('Case search: multi-keyword, full-width whitespace, ID, work, no match and reset passed');
+    if (process.argv.includes('--data-timeout')) {
+      await page.addInitScript(() => {
+        const original = window.fetch;
+        window.staticStallCalls = 0;
+        window.fetch = (input, options) => {
+          if (String(input) !== 'data/obd-codes.json') return original(input, options);
+          window.staticStallCalls++;
+          return new Promise((_, reject) => {
+            const stop = () => reject(new DOMException('Synthetic stalled static data', 'AbortError'));
+            if (options?.signal?.aborted) stop();
+            else options?.signal?.addEventListener('abort', stop, { once: true });
+          });
+        };
+      });
+      await page.reload();
+      await page.waitForFunction(() => document.querySelector('#dataStatus').textContent.includes('内蔵サンプルデータで動作中'), null, { timeout: 40000 });
+      assert.equal(await page.evaluate(() => window.staticStallCalls), 1);
+      assert.notEqual(await page.locator('#obdCapabilityBadge').innerText(), '対応状況を確認中');
+      assert.equal(await page.evaluate(() => obdAccessUnlocked), false);
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), searchStored);
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await page.screenshot({ path: path.join(output, 'static-data-timeout-locked.png') });
+      console.log('Static data stall: real 30-second deadline, fallback, one attempt, retained lock and saved cases passed');
+    }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }
