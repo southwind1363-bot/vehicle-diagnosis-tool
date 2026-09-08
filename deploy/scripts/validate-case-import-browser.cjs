@@ -174,6 +174,24 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(JSON.parse(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'))).some(item => item.id === specialId), false);
       console.log('Special case ID: literal display, exact delete target and other record retention passed');
     }
+    if (process.argv.includes('--delete-identity')) {
+      // Synthetic legacy storage, including IDs the importer does not coalesce.
+      await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([
+        { id: 17, model: '数値ID対象' }, { id: '17', model: '文字列ID保持' },
+        { id: 'same', model: '同一ID対象' }, { id: 'same', model: '同一ID保持' }
+      ])));
+      await page.reload();
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      for (const model of ['数値ID対象', '同一ID対象']) {
+        await page.locator('#caseList .case-card').filter({ hasText: model }).getByRole('button', { name: '削除', exact: true }).click();
+      }
+      assert.deepEqual(await page.evaluate(() => savedCases.map(item => item.model)), ['文字列ID保持', '同一ID保持']);
+      await page.reload();
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      assert.deepEqual(await page.evaluate(() => savedCases.map(item => item.model)), ['文字列ID保持', '同一ID保持']);
+      await page.locator('#caseList').screenshot({ path: path.join(output, 'exact-delete-retained.png') });
+      console.log('Exact case deletion: numeric/string and duplicate IDs retain other records across reload');
+    }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }

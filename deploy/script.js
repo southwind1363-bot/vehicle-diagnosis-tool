@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.543";
+const APP_VERSION = "3.13.544";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -705,6 +705,7 @@ const tabPanels = document.querySelectorAll("[data-tab-panel]");
 let dataStore = fallbackData;
 let caseStorageReadError = "";
 let caseImportOperation = null;
+const caseDeleteTargets = new WeakMap();
 let savedCases = loadCases();
 let copyToastTimer = null;
 let activeResultView = "flow";
@@ -16565,6 +16566,7 @@ function renderCaseCards(container, cases, emptyText) {
         <button class="small-danger-button" type="button" data-delete-case="${escapeHtml(item.id)}">削除</button>
       </div>
     `;
+    caseDeleteTargets.set(card.querySelector("[data-delete-case]"), item);
     fragment.appendChild(card);
   });
 
@@ -16577,9 +16579,12 @@ similarCases.addEventListener("click", handleCaseDelete);
 function handleCaseDelete(event) {
   const button = event.target.closest("[data-delete-case]");
   if (!button) return;
+  const record = caseDeleteTargets.get(button);
+  const index = savedCases.indexOf(record);
+  if (index < 0) return;
   if (!confirm("この整備事例を削除しますか？")) return;
 
-  if (!persistCases(savedCases.filter((item) => item.id !== button.dataset.deleteCase))) return;
+  if (!persistCases(savedCases.filter((_, itemIndex) => itemIndex !== index))) return;
   renderCases();
   renderSimilarCases();
 }

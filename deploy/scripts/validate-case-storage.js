@@ -25,7 +25,7 @@ function client(options = {}) {
   const calls = { reset: 0, render: 0, similar: 0, ids: 0, quality: 0, operations: [], writes: [], removals: [], alerts: [] };
   let reader;
   const context = vm.createContext({
-    savedCases: original, caseStorageReadError: "", caseImportOperation: null, CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
+    savedCases: original, caseDeleteTargets: new WeakMap(), caseStorageReadError: "", caseImportOperation: null, CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
     THEME_KEY: "theme", NOTICE_KEY: "notice", OBD_UI_MODE_KEY: "ui-mode", applyTheme: () => {},
     caseStorageWarning: { hidden: true }, caseStorageWarningText: {},
     noticeModal: { showModal: () => { calls.noticeShown = true; }, close: () => { calls.noticeClosed = true; } },
@@ -63,6 +63,7 @@ function client(options = {}) {
     }
   });
   vm.runInContext(code, context);
+  context.caseDeleteTargets.set(removeEvent.target.closest(), original[0]);
   return { context, original, bytes, store, calls, options, getReader: () => reader,
     import: (records) => {
       context.importCasesJson({ target: { files: [{}] } });
@@ -72,7 +73,8 @@ function client(options = {}) {
   };
 }
 
-const removeEvent = { target: { closest: () => ({ dataset: { deleteCase: "existing" } }) } };
+const removeButton = { dataset: { deleteCase: "existing" } };
+const removeEvent = { target: { closest: () => removeButton } };
 for (const action of ["clear", "reload"]) {
   for (const lateEvent of ["load", "error", "abort"]) {
     const c = client();
