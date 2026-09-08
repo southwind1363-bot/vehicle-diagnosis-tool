@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.537";
+const APP_VERSION = "3.13.538";
 const APP_LAST_UPDATED = "2026-09-08";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1167,6 +1167,7 @@ obdSampleButton.addEventListener("click", loadObdMonitorSample);
 document.querySelector("#obdResultsSampleButton")?.addEventListener("click", loadObdMonitorSample);
 obdManufacturerSampleTemplateButton?.addEventListener("click", downloadManufacturerSampleTemplate);
 document.querySelectorAll("[data-obd-session-export]").forEach((button) => button.addEventListener("click", downloadObdSessionJson));
+document.querySelectorAll("[data-obd-readout-print]").forEach((button) => button.addEventListener("click", printObdReadout));
 obdImportClearButton.addEventListener("click", clearObdScannerImport);
 obdDetectedCodes.addEventListener("click", handleDetectedDtcClick);
 obdAccessUnlockButton.addEventListener("click", unlockObdAccess);
@@ -15550,6 +15551,40 @@ function renderObdSessionExportControls() {
     button.disabled = Boolean(reason);
     button.title = reason || "現在の読取セッションをJSONファイルに保存";
   });
+  document.querySelectorAll("[data-obd-readout-print]").forEach((button) => {
+    button.disabled = Boolean(reason) || !obdAccessUnlocked;
+    button.title = reason ? "有効な読取結果があり、読取・取込・接続処理が停止しているときに印刷できます。" : "表示中の範囲だけを印刷（JSON保存とは別です）";
+  });
+}
+
+function printObdReadout() {
+  if (!obdAccessUnlocked || getObdSessionExportBlockReason()
+    || !obdStageResultsView || !obdStageResultsView.getClientRects().length
+    || document.body.classList.contains("obd-print-readout")) return false;
+  const ancestors = [];
+  const restore = () => {
+    document.body.classList.remove("obd-print-readout");
+    ancestors.forEach((node) => node.classList.remove("obd-print-ancestor"));
+    window.removeEventListener("afterprint", restore);
+  };
+  try {
+    if (typeof window.print !== "function") throw new Error("print_unavailable");
+    for (let node = obdStageResultsView.parentElement; node; node = node.parentElement) {
+      node.classList.add("obd-print-ancestor");
+      ancestors.push(node);
+    }
+    document.body.classList.add("obd-print-readout");
+    window.addEventListener("afterprint", restore);
+    window.print();
+    return true;
+  } catch (_) {
+    setObdSessionExportStatus("印刷画面を開けませんでした。読取結果は変更していません。JSON保存も利用できます。");
+    return false;
+  } finally {
+    // Chrome/Edge print() blocks until preview closes; also clean up on failure.
+    // Printing must never mark the session as saved or change the visible filters.
+    restore();
+  }
 }
 
 function setObdSessionExportStatus(message) {

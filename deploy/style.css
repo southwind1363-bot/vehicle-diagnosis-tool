@@ -2813,6 +2813,32 @@ body.dark .flow-node-measure .flow-step {
 }
 
 @media print {
+  body.obd-print-readout .obd-print-ancestor > :not(.obd-print-ancestor):not(#obdStageResultsView),
+  body.obd-print-readout > :not(.obd-print-ancestor),
+  body.obd-print-readout #obdStageResultsView button:not(.obd-simple-result-item),
+  body.obd-print-readout .obd-simple-result-arrow,
+  body.obd-print-readout #obdStageResultsView input,
+  body.obd-print-readout #obdStageResultsView select,
+  body.obd-print-readout #obdStageResultsView textarea,
+  body.obd-print-readout #obdStageResultsView nav,
+  body.obd-print-readout .obd-results-file-actions,
+  body.obd-print-readout .obd-simple-result-actions,
+  body.obd-print-readout [data-obd-session-export-status] { display: none !important; }
+  body.obd-print-readout,
+  body.obd-print-readout .obd-print-ancestor,
+  body.obd-print-readout #obdStageResultsView,
+  body.obd-print-readout #obdStageResultsView * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  body.obd-print-readout .obd-print-ancestor {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: none !important;
+    width: auto !important;
+  }
   .obd-technical-notes-body { display: block; }
   .obd-technical-notes label { display: none; }
   .obd-status-body { max-height: none; overflow: visible; }

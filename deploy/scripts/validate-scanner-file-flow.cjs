@@ -132,6 +132,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const exportStatus = page.locator('#obdStageResultsView [data-obd-session-export-status]');
     assert.equal(await exportStatus.textContent(), '');
     assert.equal(await exportStatus.evaluate(node => node.getBoundingClientRect().height), 0, 'Empty export notification must not leave a blank band');
+    await require('./validate-readout-print.cjs')(page, output);
     const beforeSaveFailure = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
     await page.evaluate(() => {
       window.__originalCreateObjectURL = URL.createObjectURL;

@@ -838,9 +838,11 @@
         <div class="button-row obd-results-file-actions">
           <button class="secondary-button" type="button" data-obd-session-export disabled>読取結果をJSON保存</button>
           <button id="obdSessionOpenButton" class="secondary-button" type="button">読取結果ファイルを開く</button>
+          <button class="secondary-button" type="button" data-obd-readout-print disabled>表示中の結果を印刷</button>
           <button id="obdResultsSampleButton" class="secondary-button obd-expert-only" type="button">入力例（架空データ）</button>
         </div>
         <p class="data-status" data-obd-session-export-status role="status"></p>
+        <p class="obd-readout-print-note">印刷対象は表示中の結果のみです。絞り込みで非表示の項目・閉じた追加データは含みません。再取込用の保管にはJSON保存を使用してください。整備判断には車種別整備書の確認が必要です。</p>
 
         <nav class="obd-results-nav" aria-label="読取結果内の移動">
           <button class="secondary-button" type="button" data-obd-scroll-target="obdSimpleResultSummary" aria-label="基本読取結果へ戻る"><span aria-hidden="true">↑</span> 結果</button>

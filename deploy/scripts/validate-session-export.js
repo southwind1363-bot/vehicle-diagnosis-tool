@@ -38,7 +38,7 @@ function client(session = { source: "web_serial" }) {
     URL: { createObjectURL: (blob) => { fail("url"); calls.blobs.push(blob); return "blob:test"; }, revokeObjectURL: (url) => calls.revoked.push(url) },
     setTimeout: (callback) => { calls.timers.push(callback); },
     document: {
-      querySelectorAll: (selector) => selector === "[data-obd-session-export]" ? buttons : statuses,
+      querySelectorAll: (selector) => selector === "[data-obd-session-export]" ? buttons : selector === "[data-obd-session-export-status]" ? statuses : [],
       createElement: () => { fail("element"); return {
         click() { fail("click"); calls.clicks += 1; calls.filename = this.download; },
         remove() { calls.removed += 1; }
