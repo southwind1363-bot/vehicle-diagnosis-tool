@@ -44,11 +44,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.waitForFunction(() => savedCases.some(item => item.id === 'browser-case'));
     assert.match(await status.innerText(), /追加 1件/);
     const stored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+    const exportStatus = page.locator('#caseExportStatus');
+    const savedBeforeFailure = await page.evaluate(() => JSON.stringify(savedCases));
+    await page.evaluate(() => {
+      window.originalCaseExportURL = URL.createObjectURL;
+      URL.createObjectURL = () => { throw new Error('private download failure'); };
+    });
+    try {
+      await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+      assert.ok(await exportStatus.isVisible());
+      assert.match(await exportStatus.innerText(), /保存を開始できませんでした.*変更していません/);
+      assert.doesNotMatch(await exportStatus.innerText(), /private download failure/);
+      assert.equal(await page.evaluate(() => JSON.stringify(savedCases)), savedBeforeFailure);
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), stored);
+      await exportStatus.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, 'case-export-failure-mobile.png') });
+    } finally {
+      await page.evaluate(() => { URL.createObjectURL = window.originalCaseExportURL; delete window.originalCaseExportURL; });
+    }
     const downloadEvent = page.waitForEvent('download');
     await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
     const download = await downloadEvent;
     const backup = path.join(output, 'synthetic-backup.json');
     await download.saveAs(backup);
+    assert.match(await exportStatus.innerText(), /整備事例1件.*開始しました.*保存完了はブラウザー/);
+    assert.equal(await page.locator('a[download]').count(), 0, 'Temporary download link leaked');
     assert.deepEqual(JSON.parse(fs.readFileSync(backup, 'utf8')).records, JSON.parse(stored));
     await page.reload();
     await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
