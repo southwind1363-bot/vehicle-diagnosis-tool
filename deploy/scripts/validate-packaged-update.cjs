@@ -20,6 +20,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   }
   assert.notEqual(packages[0].manifest.version, packages[1].manifest.version);
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-update-'));
+  const failedUpdate = process.argv.includes('--failed-update');
+  let failedAssetRequests = 0;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: 390, height: 844 } });
   let workstation, origin, port, stored;
@@ -72,12 +74,53 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       workstation = await pkg.start({ webPort: port ?? 0, bridgePort: 0, j2534RegistryText: '' });
       if (!origin) { origin = workstation.webUrl; port = Number(new URL(origin).port); }
       assert.equal(workstation.webUrl, origin);
+      if (index === 1 && failedUpdate) {
+        // Fault injection applies only to this test-owned server, never package files.
+        const server = workstation.webServer;
+        const listeners = server.listeners('request');
+        assert.equal(listeners.length, 1);
+        server.removeAllListeners('request');
+        server.on('request', (request, response) => {
+          if (new URL(request.url, origin).pathname === '/style.css') {
+            failedAssetRequests += 1;
+            response.writeHead(503, { 'Cache-Control': 'no-store' });
+            response.end('Synthetic update asset unavailable');
+            return;
+          }
+          listeners[0].call(server, request, response);
+        });
+      }
       await context.setOffline(false);
       if (index === 0) {
         await page.goto(origin);
         await page.locator('#noticeCloseButton').click();
       } else {
         await page.reload(); // Existing app checks for a worker update itself.
+      }
+      if (index === 1 && failedUpdate) {
+        await page.waitForFunction(() => document.querySelector('#offlineCacheStatus').textContent.includes('今回のオフライン更新は採用されませんでした'));
+        assert.ok(failedAssetRequests > 0, 'Fault must actually reach the worker download');
+        assert.equal(await page.locator('#appVersion').innerText(), packages[0].manifest.version);
+        assert.equal(await page.evaluate(version => caches.has('vehicle-diagnosis-tool-' + version), pkg.manifest.version), false);
+        await waitCache(packages[0].manifest);
+        await checkSaved();
+        await page.getByRole('button', { name: '1. 診断補助', exact: true }).click();
+        await page.locator('#offlineCacheStatus').scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(output, 'failed-update-warning.png') });
+        await workstation.close();
+        assert.equal(workstation.webServer.listening, false);
+        assert.equal(workstation.bridgeServer.listening, false);
+        await context.setOffline(true);
+        assert.equal((await page.reload()).fromServiceWorker(), true);
+        await page.waitForFunction(version => document.querySelector('#appVersion').textContent === version, packages[0].manifest.version);
+        await checkSaved();
+        await waitCache(packages[0].manifest);
+        console.log('Failed update rejected; prior complete cache and synthetic case retained offline');
+        // Explicit operator-like retry with a fresh healthy server; no automatic retry added.
+        workstation = await pkg.start({ webPort: port, bridgePort: 0, j2534RegistryText: '' });
+        assert.equal(workstation.webUrl, origin);
+        await context.setOffline(false);
+        await page.reload();
       }
       await waitCache(pkg.manifest);
       if (index > 0) {
@@ -114,7 +157,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     for (const pkg of packages) assert.deepEqual(pkg.verify(pkg.root), pkg.integrity);
-    console.log(JSON.stringify({ passed: true, versions, output, savedDataUnchanged: true, optionalIconErrors,
+    console.log(JSON.stringify({ passed: true, versions, output, failedUpdate, failedAssetRequests, savedDataUnchanged: true, optionalIconErrors,
       limitations: 'Same PC and origin; synthetic case only; no real password, vehicle, OS restart, or format migration' }));
   } finally { await context.close(); await browser.close(); if (workstation) await workstation.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
