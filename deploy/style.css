@@ -1364,8 +1364,7 @@ body.dark .flow-node-measure .flow-step {
 #obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] #obdSimpleSystemSummary,
 #obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] .obd-simple-result-actions,
 #obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] #obdSimpleResultStatus,
-#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] .obd-results-file-actions,
-#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] [data-obd-session-export-status] {
+#obd-panel[data-obd-ui-mode="simple"][data-obd-active-stage="readout"] .obd-results-file-actions {
   display: none !important;
 }
 
@@ -2822,6 +2821,7 @@ body.dark .flow-node-measure .flow-step {
   body.obd-print-readout #obdStageResultsView textarea,
   body.obd-print-readout #obdStageResultsView nav,
   body.obd-print-readout .obd-results-file-actions,
+  body.obd-print-readout .obd-readout-print-actions,
   body.obd-print-readout .obd-simple-result-actions,
   body.obd-print-readout [data-obd-session-export-status] { display: none !important; }
   body.obd-print-readout,

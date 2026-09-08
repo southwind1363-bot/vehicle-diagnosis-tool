@@ -263,6 +263,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
       assert.equal(await page.locator('#obdMonitorStatus').isVisible(), true);
       assert.equal(await page.locator('#obdMonitorGrid').locator(':scope > *').count(), 0, 'DTC-only archive must not invent live values');
+      if (width === 390) await require('./validate-readout-print.cjs')(page, output, 'live-empty');
       await resultNav.getByRole('button', { name: '追加データ', exact: true }).click();
       const detailButtons = page.locator('#obdReadoutDetailMenu [data-obd-detail-target]');
       for (let index = 1; index < await detailButtons.count(); index += 1) {
@@ -278,6 +279,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(await page.locator('#obdReadoutDetailEmpty').isVisible(), !selection.exists);
       }
       await page.screenshot({ path: path.join(output, `additional-data-${width}.png`) });
+      if (width === 390) await require('./validate-readout-print.cjs')(page, output, 'additional-selected');
       await resultNav.getByRole('button', { name: 'DTC一覧', exact: true }).click();
       assert.equal(await page.locator('#obdDetectedCodes').innerText(), before, 'Detail navigation must retain the DTC result');
       for (const dark of [false, true]) {
@@ -300,6 +302,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.locator('#obdDtcSearch').inputValue(), 'P0420');
       assert.equal(await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().isVisible(), false);
       assert.equal(await page.locator('#obdDetectedCodes').getByText('P0420', { exact: false }).first().isVisible(), true);
+      if (width === 390) await require('./validate-readout-print.cjs')(page, output, 'dtc-filtered');
       await page.getByRole('button', { name: 'DTC検索を解除', exact: true }).click();
       assert.equal(await page.locator('#obdDetectedCodes').innerText(), before);
       assert.equal(await page.locator('#obdDtcFilterCount').innerText(), unfilteredCount);
