@@ -356,6 +356,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.deepEqual(JSON.parse(fs.readFileSync(originalJsonPath, 'utf8')).records[0], originalValues, 'JSON download must preserve original formula-like values without CSV prefixes');
       assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), storedBefore);
       console.log('CSV export: injected failure, retry, exact BOM/content and storage retention passed');
+      // Exercise FileReader and persistence, not just pre-seeded storage/export builders.
+      const zeroInput = [{ id: 'file-zero', model: '数値ゼロ取込試験', year: 0, mileage: 0, measurements: 0 },
+        { id: 'file-empty', model: '空欄取込試験', year: '', mileage: null, measurements: '' }];
+      await input.setInputFiles({ name: 'numeric-zero.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(zeroInput)) });
+      await page.waitForFunction(() => savedCases.some(item => item.id === 'file-zero'));
+      const zeroStored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      for (const [id, expected] of [['file-zero', '0'], ['file-empty', '']]) {
+        const saved = JSON.parse(zeroStored).find(item => item.id === id);
+        for (const field of ['year', 'mileage', 'measurements']) assert.equal(saved[field], expected);
+      }
+      const zeroDownload = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+      const zeroPath = path.join(output, 'numeric-zero-backup.json');
+      await (await zeroDownload).saveAs(zeroPath);
+      assert.deepEqual(JSON.parse(fs.readFileSync(zeroPath, 'utf8')).records, JSON.parse(zeroStored));
+      await page.reload();
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      await input.setInputFiles(zeroPath);
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('重複スキップ 3件'));
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), zeroStored);
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      await page.locator('#caseSearch').fill('file-zero');
+      assert.equal(await page.locator('#caseList .case-card').count(), 1);
+      await page.locator('#caseList').screenshot({ path: path.join(output, 'numeric-zero-restored.png') });
+      console.log('Numeric zero: real JSON file import, persisted fields, backup download, reload and duplicate reimport retain zero separately from missing values');
     }
     // Search must accept the UI's own multi-keyword example after restoration.
     await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([
