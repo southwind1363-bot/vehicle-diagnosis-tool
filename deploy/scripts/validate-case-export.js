@@ -8,7 +8,7 @@ let checks = 0;
 for (const failure of ["none", "blocked", "build", "serialize", "blob", "element", "url", "append", "click"]) {
   const records = [{ id: "synthetic", memo: "unchanged" }];
   const before = JSON.stringify(records);
-  const status = {};
+  const status = { textContent: "以前の保存を開始しました。" };
   const calls = { clicks: 0, removes: 0, attached: 0, blobs: [], revoked: [], timers: [], alerts: [] };
   const fail = stage => { if (failure === stage) throw new Error("private detail"); };
   const context = {
@@ -39,7 +39,8 @@ for (const failure of ["none", "blocked", "build", "serialize", "blob", "element
   if (failure === "none") {
     assert.deepEqual(JSON.parse(await calls.blobs[0].text()), { schemaVersion: 2, records });
     assert.match(status.textContent, /1件.*開始しました.*保存完了はブラウザー/);
-  } else if (failure !== "blocked") assert.match(status.textContent, /開始できません.*変更していません/);
+  } else if (failure === "blocked") assert.match(status.textContent, /開始しませんでした.*保存事例を再読込/);
+  else assert.match(status.textContent, /開始できません.*変更していません/);
   checks += 7 + (failure === "none" ? 2 : failure === "blocked" ? 0 : 1);
 }
 console.log(`Case JSON export checks: ${checks} / Errors: 0`);
@@ -49,7 +50,7 @@ let csvChecks = 0;
 for (const failure of ["none", "blocked", "empty", "build", "blob", "element", "url", "append", "click"]) {
   const records = failure === "empty" ? [] : [{ id: "synthetic", memo: "unchanged" }];
   const before = JSON.stringify(records);
-  const status = {};
+  const status = { textContent: "以前の保存を開始しました。" };
   const calls = { clicks: 0, removed: 0, blobs: [], timers: [], revoked: [], alerts: [] };
   let stage = failure;
   const fail = name => { if (stage === name) throw new Error("private CSV detail"); };
@@ -80,7 +81,9 @@ for (const failure of ["none", "blocked", "empty", "build", "blob", "element", "
     assert.deepEqual(Array.from(new Uint8Array(await calls.blobs[0].arrayBuffer()).slice(0, 3)), [239, 187, 191]);
     assert.match(status.textContent, /1件.*CSV.*開始しました.*保存完了はブラウザー/);
     csvChecks += 2;
-  } else if (!["blocked", "empty"].includes(failure)) {
+  } else if (failure === "blocked") assert.match(status.textContent, /開始しませんでした.*保存事例を再読込/);
+  else if (failure === "empty") assert.match(status.textContent, /開始しませんでした.*事例がありません/);
+  else {
     assert.match(status.textContent, /開始できません.*変更していません/);
     stage = "none";
     assert.equal(context.exportCasesCsv(), true, "Retry should recover");

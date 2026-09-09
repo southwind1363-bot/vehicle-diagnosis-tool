@@ -378,6 +378,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.locator('#caseExportStatus').screenshot({ path: path.join(output, 'stale-export-warning.png') });
       await input.setInputFiles(candidate);
       await page.waitForFunction(() => Boolean(caseStorageReadError));
+      for (const button of ['JSONバックアップ', 'CSVエクスポート']) {
+        await page.getByRole('button', { name: button, exact: true }).click();
+        assert.match(await page.locator('#caseExportStatus').innerText(), /開始しませんでした.*保存事例を再読込/);
+        assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), latestBytes);
+      }
+      await page.locator('#caseExportStatus').screenshot({ path: path.join(output, 'blocked-export-status.png') });
       assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), latestBytes);
       assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case')), false);
       assert.match(await status.innerText(), /別タブ.*上書きを停止/);

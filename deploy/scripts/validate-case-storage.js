@@ -39,6 +39,7 @@ function client(options = {}) {
     sessionStorage: { getItem: () => { if (options.failRead) throw new Error("SecurityError"); return null; } },
     window: { crypto: webcrypto }, crypto: webcrypto,
     caseStatus: {}, caseImportStatus: {}, caseForm: { reset: () => { calls.reset += 1; } },
+    document: { getElementById: id => { assert.equal(id, "caseExportStatus"); return {}; } },
     importJsonInput: { value: "selected.json" }, confirm: () => true,
     alert: (message) => { calls.alerts.push(message); },
     collectCaseForm: () => ({ ...timestamps, id: "new", maker: "TEST", model: "B", symptom: "new", obdCode: "P0300", finalCause: "measured" }),
