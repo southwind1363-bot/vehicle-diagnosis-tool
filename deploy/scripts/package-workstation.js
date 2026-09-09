@@ -136,9 +136,10 @@ export function packageWorkstation(options = {}) {
       const compiler = fs.realpathSync(path.join(windows, "Microsoft.NET", framework, "v4.0.30319", "csc.exe"));
       const file = `j2534-registered-driver-preflight-${architecture}.exe`;
       const output = path.join(nativeOutput, file);
+      // Explicit piping prevents execFileSync from forwarding private stderr before CLI sanitization.
       execFileSync(compiler, ["/nologo", "/target:exe", `/platform:${architecture}`, "/optimize+", "/warnaserror+",
         "/reference:System.Runtime.Serialization.dll", `/out:${output}`, ...sources], {
-        cwd: nativeOutput, windowsHide: true, shell: false, timeout: 30000, maxBuffer: 65536,
+        cwd: nativeOutput, windowsHide: true, shell: false, timeout: 30000, maxBuffer: 65536, stdio: "pipe",
         env: { SystemRoot: windows, WINDIR: windows, TEMP: process.env.TEMP || nativeOutput, TMP: process.env.TMP || nativeOutput }
       });
       const bytes = fs.readFileSync(output);

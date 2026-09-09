@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { packageWorkstation, formatWorkstationPackageError } from "./package-workstation.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
@@ -13,6 +13,25 @@ import { parseJ2534UdsPreparationArguments, runJ2534UdsPreparationEvidence, vali
 
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
+// Exercise the production compiler options in a separate process: execFileSync
+// otherwise forwards child stderr before the caller can sanitize the failure.
+const packagingSource = fs.readFileSync(new URL("./package-workstation.js", import.meta.url), "utf8");
+const compilerOptions = packagingSource.match(/execFileSync\(compiler,[\s\S]*?, (\{\r?\n\s*cwd: nativeOutput,[\s\S]*?\r?\n\s*\})\);/)?.[1];
+check(Boolean(compilerOptions), "Compiler execution options missing");
+const compilerProbe = spawnSync(process.execPath, ["--input-type=module", "-e", `
+  import { execFileSync } from 'node:child_process';
+  const nativeOutput = ${JSON.stringify(os.tmpdir())};
+  const windows = process.env.SystemRoot || process.env.WINDIR || 'C:/Windows';
+  try {
+    execFileSync(process.execPath, ['-e', 'process.stdout.write("synthetic-private-output");process.stderr.write("synthetic-private-path");process.exit(1)'], ${compilerOptions});
+  } catch (error) {
+    if (error.status !== 1) throw error;
+    process.stderr.write('sanitized-compiler-failure');
+    process.exitCode = 1;
+  }
+`], { encoding: "utf8", windowsHide: true, shell: false, timeout: 10000 });
+check(compilerProbe.status === 1, "Compiler failure status changed");
+check(compilerProbe.stdout === "" && compilerProbe.stderr === "sanitized-compiler-failure", "Compiler output escaped before sanitized failure handling");
 for (const code of ["ENOSPC", "EDQUOT", "EACCES", "EPERM", "EBUSY", "ENOENT"]) {
   const message = formatWorkstationPackageError({ code, message: "private-path-and-password", stdout: "private-compiler-output" });
   check(message.includes(code) && message.includes("確認"), `Missing actionable package failure: ${code}`);
