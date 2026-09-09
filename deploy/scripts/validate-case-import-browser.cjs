@@ -394,14 +394,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     // Search must accept the UI's own multi-keyword example after restoration.
     await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([
-      { id: 'CASE-101', model: 'プリウス', symptom: 'アイドル不調', obdCode: 'P0171', work: '吸気ダクト交換' },
+      { id: 'CASE-101', model: 'プリウス', symptom: 'アイドル不調', obdCode: 'P0171', work: '吸気ダクト交換', measurements: '燃料補正 +18%', engine: '2ZR-FXE', year: '2018', mileage: '85000', technician: '試験整備士' },
       { id: 'CASE-102', model: 'フィット', symptom: 'アイドル不調', obdCode: 'P0300' }
     ])));
     await page.reload();
     await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
     const searchStored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
     const search = page.locator('#caseSearch');
-    for (const query of ['プリウス P0171 アイドル', ' p0171　プリウス ', 'case-101', 'ダクト']) {
+    for (const query of ['プリウス P0171 アイドル', ' p0171　プリウス ', 'case-101', 'ダクト', '燃料補正 +18%', '2zr-fxe 2018', '85000 試験整備士']) {
       await search.fill(query);
       assert.equal(await page.locator('#caseList .case-card').count(), 1);
       assert.match(await page.locator('#caseList').innerText(), /CASE-101/);

@@ -5,7 +5,7 @@ import vm from "node:vm";
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const code = source.match(/function renderCases\(\) \{[\s\S]*?\r?\n\}/)[0];
 const records = [
-  { id: "CASE-101", model: "プリウス", symptom: "アイドル不調", obdCode: "P0171", work: "吸気ダクト交換", replacedParts: "ダクト", memo: "温間で確認" },
+  { id: "CASE-101", model: "プリウス", symptom: "アイドル不調", obdCode: "P0171", work: "吸気ダクト交換", replacedParts: "ダクト", memo: "温間で確認", measurements: "燃料補正 +18%", engine: "2ZR-FXE", year: "2018", mileage: "85000", technician: "試験整備士" },
   { id: 202, model: "フィット", symptom: "アイドル不調", obdCode: "P0300" }
 ];
 const before = JSON.stringify(records);
@@ -19,6 +19,8 @@ let checks = 0;
 for (const [query, expected] of [
   ["プリウス P0171 アイドル", [records[0]]], [" p0171　プリウス ", [records[0]]],
   ["CASE-101", [records[0]]], ["202", [records[1]]], ["ダクト 温間", [records[0]]],
+  ["燃料補正 +18%", [records[0]]], ["2zr-fxe 2018", [records[0]]],
+  ["85000 試験整備士", [records[0]]], ["フィット +18%", []],
   ["アイドル", records], ["P0171 フィット", []], ["", records], ["　 ", records]
 ]) {
   context.caseSearch.value = query;
