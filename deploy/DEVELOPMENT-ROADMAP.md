@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.572 公開CI完了: 34348049545/2dcb8b1e708ec54e457c7d6e24de8bc6d859d95dはcompleted/success。診断データ/read-only契約検証とChromium上のオフライン診断・事例保存復元の両ジョブが合格した。以下の同CI実行中という記述は当時の経過。新たな実装・再試験・ZIP変更はなく、実Excel・実VCI/実車・別PC・OS再起動の未検証はそのまま残す。
+
 3.13.572 公開反映待ちの切り分け: GitHub mainは2dcb8b1e708ec54e457c7d6e24de8bc6d859d95dと一致していたが、最初は対応CI/デプロイが見えず公開HTTPは571のままだった。デプロイ/APIスキルに沿い接続済みVercelを読取確認すると、後に同SHAのGit連携本番デプロイdpl_8xNzVQirpqhnfRvb5vnaar7sVtXRがREADYとなり、tool.mukiguri.comへのalias一致・aliasErrorなしを確認。repoPushedAtからデプロイ作成まで約238秒の間隔を観測したが、遅延の根本原因は未確定。主要5資材HTTP200、script/SW/manifestの572一致、CSV対策実装と画面注意文の配信を確認し公開待ちを解消。強制デプロイ・空コミット・再push・連携/権限変更・保存データ操作は行っていない。今回CI 34348049545はin_progress/conclusion=nullで合格扱いにしない。先行571のCI 34346678277と記録コミットの34346979680はcompleted/success。実Excel/実VCI/実車/別PCは引き続き未確認。
 
 3.13.572 Excel向けCSVの数式解釈抑止: CSVの仕様変更（対策文字の付加と他ソフトへの再取込時の残存）を説明し、利用者の「続けて」を受けて実装。csvCellで半角/全角の=・+・-・@から始まる値（先行空白/C0制御文字を含む）にタブを付け、既存の引用符エスケープを適用する。負数もCSVでは文字列扱いになる。JSON・端末内データ・診断結果・車両通信は変更しない。根拠はOWASP CSV Injection https://owasp.org/www-community/attacks/CSV_Injection のExcel向け対策であり、全表計算ソフトや再保存後の安全性を保証せず、画面にも用途・副作用・原本にはJSONを使う旨を表示。修正前の=1+1の未対策出力を再現し、48種類の先頭文字条件・通常の引用符/改行・原本不変の回帰が合格。実Excel/LibreOfficeでの実行試験は行っていない。
