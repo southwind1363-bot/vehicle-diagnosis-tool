@@ -21,6 +21,8 @@ function asset(pathname) {
   let browser;
   let context;
   const restart = process.argv.includes('--restart');
+  const restartDownload = process.argv.includes('--restart-download');
+  assert.ok(!restartDownload || restart, '--restart-download requires --restart');
   const profile = path.join(output, 'browser-profile');
   const launchOptions = { channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true };
   const contextOptions = { viewport: { width: 1280, height: 900 }, acceptDownloads: true, serviceWorkers: 'block' };
@@ -403,11 +405,22 @@ function asset(pathname) {
       await restored.waitForFunction(id => obdOperationJournalState.selectedRecord?.recordId === id, pendingId);
       assert.equal(await restored.evaluate(() => obdOperationJournalState.selectedRecord.sessionJson), exactJson);
       assert.equal(await restored.evaluate(() => JSON.stringify(obdDevSession.lastSession)), currentBefore, 'Opening history must not replace the current diagnosis');
-      // Post-restart download is a separate unresolved browser-automation failure.
-      // This branch verifies persisted record recovery, not a download workaround.
       await restored.setViewportSize({ width: 390, height: 900 });
       await restored.locator('#obdOperationJournalViewer').screenshot({ path: path.join(output, 'journal-restored-after-restart-390.png') });
-      console.log('Full browser restart: IndexedDB record recovered through UI with exact stored JSON and current diagnosis unchanged; same PC, online server, synthetic access fixture only; post-restart download NOT verified');
+      if (restartDownload) {
+        // Explicit diagnostic only: a known local Chrome process crash remains unresolved.
+        // Do not repeat this branch without new evidence or an environment change.
+        const downloadPending = restored.waitForEvent('download');
+        await restored.locator('#obdOperationJournalDownload').click();
+        const download = await downloadPending;
+        const failure = await download.failure();
+        console.log(JSON.stringify({ phase: 'restart-download', failure, browserConnected: browser.isConnected(), pageClosed: restored.isClosed(), filename: download.suggestedFilename() }));
+        assert.equal(failure, null, 'Restarted download must complete before saving');
+        const backup = path.join(output, 'synthetic-after-restart.json');
+        await download.saveAs(backup);
+        assert.deepEqual(fs.readFileSync(backup), Buffer.from(exactJson, 'utf8'));
+      }
+      console.log(`Full browser restart: IndexedDB record recovered through UI with exact stored JSON and current diagnosis unchanged; same PC, online server, synthetic access fixture only; post-restart download ${restartDownload ? 'verified' : 'NOT verified'}`);
     }
     assert.deepEqual(errors, [], 'No page or console errors');
     console.log(`Operation journal save checks: cancel, snapshot guards, exact save/load/download, acknowledgement, crypto / Errors: 0`);
