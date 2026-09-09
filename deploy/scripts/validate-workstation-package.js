@@ -4,7 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { execFile, spawnSync } from "node:child_process";
+import { execFile, execFileSync, spawnSync } from "node:child_process";
 import { packageWorkstation, formatWorkstationPackageError } from "./package-workstation.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
@@ -32,7 +32,21 @@ const compilerProbe = spawnSync(process.execPath, ["--input-type=module", "-e", 
 `], { encoding: "utf8", windowsHide: true, shell: false, timeout: 10000 });
 check(compilerProbe.status === 1, "Compiler failure status changed");
 check(compilerProbe.stdout === "" && compilerProbe.stderr === "sanitized-compiler-failure", "Compiler output escaped before sanitized failure handling");
-for (const code of ["ENOSPC", "EDQUOT", "EACCES", "EPERM", "EBUSY", "ENOENT"]) {
+// Real bounded child failures, without running a driver or leaking child output.
+for (const [expectedCode, source, limits] of [
+  ["ETIMEDOUT", "setInterval(() => {}, 1000)", { timeout: 200 }],
+  ["ENOBUFS", "process.stdout.write('synthetic-private-output'.repeat(10000))", { maxBuffer: 1024 }]
+]) {
+  let failure;
+  try {
+    execFileSync(process.execPath, ["-e", source], { windowsHide: true, shell: false, stdio: "pipe", timeout: 5000, maxBuffer: 65536, ...limits });
+  } catch (error) { failure = error; }
+  check(failure?.code === expectedCode, `Unexpected bounded child failure: ${expectedCode}`);
+  const message = formatWorkstationPackageError(failure);
+  check(message.includes(expectedCode) && message.includes("確認"), `Missing bounded child failure guidance: ${expectedCode}`);
+  check(!message.includes("synthetic-private") && !message.includes(process.execPath), "Bounded child failure leaked details");
+}
+for (const code of ["ENOSPC", "EDQUOT", "EACCES", "EPERM", "EBUSY", "ENOENT", "ETIMEDOUT", "ENOBUFS"]) {
   const message = formatWorkstationPackageError({ code, message: "private-path-and-password", stdout: "private-compiler-output" });
   check(message.includes(code) && message.includes("確認"), `Missing actionable package failure: ${code}`);
   check(!message.includes("private"), "Package error leaked raw details");

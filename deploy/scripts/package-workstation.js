@@ -222,6 +222,8 @@ export function formatWorkstationPackageError(error) {
     EPERM: "ファイル操作が許可されませんでした。アクセス設定や他のアプリによる使用状況を確認してください（EPERM）。",
     EBUSY: "ファイルが使用中です。関連する作成処理や同期処理の状態を確認してから手動で実行してください（EBUSY）。",
     ENOENT: "必要なファイルが見つかりません。配布資材・依存ライブラリ・コンパイラーの存在を確認してください（ENOENT）。",
+    ETIMEDOUT: "外部の作成処理が制限時間を超えました。端末の負荷とコンパイラーの動作環境を確認してください。自動再実行はしません（ETIMEDOUT）。",
+    ENOBUFS: "外部の作成処理の出力量が上限を超えました。コンパイラーと入力資材を確認してください。内部出力は表示せず、自動再実行はしません（ENOBUFS）。",
     workstation_assets_invalid: "配布資材を確認してください",
     workstation_package_exists: "同じ版の出力先が既に存在します。既存の配布物を確認してください。上書きはしていません（workstation_package_exists）。",
     workstation_package_busy: "別の配布作成処理が実行中か、作成用ロックが残っています。処理の状態を確認してください。ロックを自動解除しません（workstation_package_busy）。"
