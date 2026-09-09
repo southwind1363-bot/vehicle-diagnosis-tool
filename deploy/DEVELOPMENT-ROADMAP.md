@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.560 配布版再起動確認: 未変更ZIP展開物をブラウザー検証スキルの代替となる隔離Chromeで起動し、初回注意・誤パスワード拒否・全資材保存・両サーバー停止後のブラウザー終了/再起動・オフライン画面復元・ロック保持が合格（packaged-browser-Q7gqsC）。キャッシュ18,374,144 bytes保持、390幅画面を目視確認。補助CDP一覧のNo frameは実画面復元とは別扱い、ページエラー/想定外要求/任意faviconエラーは0。ZIP SHA256 A2C4CCFF1223FAF746EE0D3F9546EF7C875C44016B8ACCFAEFF2CEB660F8E6E8不変。デプロイスキルに沿いCI実行34318186125/dcfe08fb8121eda42cfc2d34c5b39754b99fdcc1を照会したが、in_progress/conclusion=nullで完了未確認。アプリ変更・検査追加・ZIP再生成なし。実パスワード成功・実VCI/実車・別PC・OS再起動・既知waiting停止の解消は未確認。
+
 3.13.560 配布整合性: ZIP 2,663,082 bytes / SHA256 A2C4CCFF1223FAF746EE0D3F9546EF7C875C44016B8ACCFAEFF2CEB660F8E6E8。別展開で846ファイル / 16,888,924 bytes一致・終了0。これはコピー整合性検査であり、実機適合の証明ではない。公開は別途確認する。
 
 3.13.559 配布前確認: 端末起動1330項目/エラー0。ブラウザー検証スキルのCLI不在を確認し、既存隔離Playwright/Chromeを代替使用。実windowへ合成beforeunloadをdispatchし、初回取込開始でpreventDefault、取消後は解除、セッション不変を確認した（ネイティブ確認ダイアログの実表示試験ではない）。オフライン読取→保存→復元、失敗後の保持・再接続、DTC0件/無応答の区別を含む既存一巡も合格（obd-file-flow-ass8HM）、390幅画面を目視確認。ZIP 2,663,087 bytes / SHA256 475F8B4B487257D74C94DFBC2C4C1A8BAF900D961A43F8A08FCEE1FF95E8F750、別展開で846ファイル / 16,888,932 bytes一致・終了0。実VCI/実車・別PC・OS再起動は未確認、既知のwaiting停止は再試験せず未解決を保持。
