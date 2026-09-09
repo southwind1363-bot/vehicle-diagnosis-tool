@@ -24,7 +24,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   let failedAssetRequests = 0;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: 390, height: 844 } });
-  let workstation, origin, port, stored;
+  let workstation, origin, port, stored, page;
+  const responses = [];
   const errors = [], blocked = [], versions = [], optionalIconErrors = [];
   try {
     await context.addInitScript(() => {
@@ -38,7 +39,13 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       }
       return route.continue();
     });
-    const page = await context.newPage();
+    page = await context.newPage();
+    context.on('response', response => {
+      const url = new URL(response.url());
+      if (['/service-worker.js', '/offline-assets.json', '/style.css', '/script.js'].includes(url.pathname)) {
+        responses.push({ path: url.pathname + url.search, status: response.status(), worker: response.fromServiceWorker() });
+      }
+    });
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => {
       if (message.type() !== 'error') return;
@@ -159,5 +166,24 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     for (const pkg of packages) assert.deepEqual(pkg.verify(pkg.root), pkg.integrity);
     console.log(JSON.stringify({ passed: true, versions, output, failedUpdate, failedAssetRequests, savedDataUnchanged: true, optionalIconErrors,
       limitations: 'Same PC and origin; synthetic case only; no real password, vehicle, OS restart, or format migration' }));
+  } catch (error) {
+    try {
+      const state = await page.evaluate(async expectedStorage => {
+        const registration = await navigator.serviceWorker.getRegistration();
+        const describe = worker => worker ? { url: worker.scriptURL, state: worker.state } : null;
+        return {
+          appVersion: document.querySelector('#appVersion')?.textContent,
+          status: document.querySelector('#offlineCacheStatus')?.textContent,
+          controller: describe(navigator.serviceWorker.controller),
+          active: describe(registration?.active), waiting: describe(registration?.waiting), installing: describe(registration?.installing),
+          caches: await caches.keys(),
+          savedDataUnchanged: localStorage.getItem('vehicle-diagnosis-cases-v1') === expectedStorage
+        };
+      }, stored);
+      // Only test-owned worker metadata and asset paths, never record bodies.
+      console.error(JSON.stringify({ output, state, responses, errors, blocked, failedAssetRequests }));
+      await page.screenshot({ path: path.join(output, 'update-failure.png') });
+    } catch (diagnosticError) { console.error('Update diagnostic capture failed:', diagnosticError.message); }
+    throw error;
   } finally { await context.close(); await browser.close(); if (workstation) await workstation.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
