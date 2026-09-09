@@ -423,6 +423,15 @@ for (const deniedProperty of [false, true]) {
 const index = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 {
   const c = client();
+  c.context.cancelCaseImportButton = null;
+  const binding = source.split(/\r?\n/).find(line => line.startsWith('cancelCaseImportButton'));
+  assert.ok(binding, 'Missing optional cancel control binding');
+  assert.doesNotThrow(() => vm.runInContext(binding, c.context), 'Older HTML without the optional cancel control must still initialize');
+  assert.doesNotThrow(() => c.import([{ id: 'legacy-shell', model: 'legacy-shell' }]), 'Older HTML must still import cases');
+  assert.ok(c.context.savedCases.some(item => item.id === 'legacy-shell'));
+}
+{
+  const c = client();
   c.context.savedCases = [];
   c.context.caseStorageReadError = "unread";
   c.context.caseSearch = { value: "" };

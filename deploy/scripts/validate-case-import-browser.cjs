@@ -9,6 +9,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   // Share the existing CI screenshot artifact glob without collecting backups.
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-cases-'));
   const channel = process.env.PLAYWRIGHT_CHANNEL || 'chrome';
+  const legacyImportControls = process.argv.includes('--legacy-import-controls');
+  assert.ok(!legacyImportControls || !process.argv.includes('--file-timeout'), 'Legacy controls do not include the cancel button required by --file-timeout');
   const browser = await chromium.launch({ channel, headless: true });
   const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
   const errors = [], blocked = [];
@@ -27,13 +29,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const relative = path.relative(root, file);
       if (relative.startsWith('..') || path.isAbsolute(relative) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return route.fulfill({ status: 404, body: '' });
       const contentType = { '.js': 'text/javascript', '.json': 'application/json', '.html': 'text/html', '.css': 'text/css', '.svg': 'image/svg+xml' }[path.extname(file)] || 'text/plain';
-      await route.fulfill({ contentType, body: fs.readFileSync(file) });
+      let body = fs.readFileSync(file);
+      if (legacyImportControls && path.basename(file) === 'index.html') {
+        const html = body.toString('utf8');
+        body = html.replace(/<button id="cancelCaseImportButton"[^>]*>[^<]*<\/button>/, '');
+        assert.notEqual(body, html, 'Legacy HTML fixture must remove only the newly added cancel control');
+      }
+      await route.fulfill({ contentType, body });
     });
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto('http://127.0.0.1/');
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    if (legacyImportControls) {
+      assert.equal(await page.locator('#cancelCaseImportButton').count(), 0);
+      console.log('Legacy HTML without optional import-cancel control initialized; running the existing import/export flow');
+    }
     await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
     const input = page.locator('#importJsonInput');
     const status = page.locator('#caseImportStatus');
