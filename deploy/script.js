@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.558";
+const APP_VERSION = "3.13.559";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -15490,14 +15490,22 @@ function hasActiveObdReadoutForExitWarning() {
     && !session.previewMode && !session.preview_mode && session.source !== "interface_preview" && session.source_type !== "interface_preview");
 }
 
+function shouldWarnBeforeObdReadoutExit() {
+  // Acquisition can still be pending before the first result exists.
+  // Keep this separate from the retained-result/replacement checks.
+  return Boolean(obdScannerImportOperation || obdBridgeOperation
+    || obdDevSession.readInProgress || obdDevSession.coreScanInProgress
+    || hasActiveObdReadoutForExitWarning());
+}
+
 function handleObdReadoutBeforeUnload(event) {
-  if (!hasActiveObdReadoutForExitWarning()) return;
+  if (!shouldWarnBeforeObdReadoutExit()) return;
   event.preventDefault();
   event.returnValue = true;
 }
 
 function syncObdReadoutExitGuard() {
-  const needed = hasActiveObdReadoutForExitWarning();
+  const needed = shouldWarnBeforeObdReadoutExit();
   if (needed === obdReadoutExitGuardAttached) return;
   if (needed) window.addEventListener("beforeunload", handleObdReadoutBeforeUnload);
   else window.removeEventListener("beforeunload", handleObdReadoutBeforeUnload);

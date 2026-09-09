@@ -9,7 +9,7 @@ const html = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
 const core = vm.createContext({ window: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), core);
 const obd = core.window.ObdReadOnly;
-const names = ["hasActiveObdReadoutForExitWarning", "handleObdReadoutBeforeUnload", "syncObdReadoutExitGuard", "handleObdReadoutSessionReplacement", "getObdSessionExportBlockReason", "renderObdSessionExportControls", "setObdSessionExportStatus", "downloadObdSessionJson"];
+const names = ["hasActiveObdReadoutForExitWarning", "shouldWarnBeforeObdReadoutExit", "handleObdReadoutBeforeUnload", "syncObdReadoutExitGuard", "handleObdReadoutSessionReplacement", "getObdSessionExportBlockReason", "renderObdSessionExportControls", "setObdSessionExportStatus", "downloadObdSessionJson"];
 const code = names.map((name) => source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))?.[0] || assert.fail(`Missing ${name}`)).join("\n");
 let checks = 0;
 const check = (condition, message) => { assert.ok(condition, message); checks += 1; };
@@ -232,6 +232,21 @@ for (const [profileKey, applicabilityKey] of [["vehicleProfile", "vehicleApplica
     check(!JSON.stringify(result.vehicleProfile).includes("JTDBR32E720123456"), `${mode}: profile restoration retained VIN`);
     if (mode === "separate") check(result.vehicleApplicability.engineCode === "ENGINE-B" && result.vehicleProfile.engineCode === "ENGINE-A", "Vehicle profile must not rewrite separate applicability evidence");
   }
+}
+for (const key of ["obdScannerImportOperation", "obdBridgeOperation", "readInProgress", "coreScanInProgress"]) {
+  const test = client(null);
+  const owner = key.startsWith("obd") ? test.c : test.c.obdDevSession;
+  owner[key] = key.startsWith("obd") ? {} : true;
+  test.c.renderObdSessionExportControls();
+  check(test.calls.listeners.size === 1, `${key}: first acquisition has no exit protection`);
+  const event = { prevented: false, preventDefault() { this.prevented = true; } };
+  test.c.handleObdReadoutBeforeUnload(event);
+  check(event.prevented && event.returnValue === true, `${key}: pending acquisition did not warn`);
+  check(!test.c.hasActiveObdReadoutForExitWarning() && test.c.obdDevSession.lastSession === null && test.calls.build === 0,
+    `${key}: pending acquisition was promoted to a retained result`);
+  owner[key] = null;
+  test.c.renderObdSessionExportControls();
+  check(test.calls.listeners.size === 0, `${key}: stopped empty acquisition retained exit protection`);
 }
 for (const session of [null, undefined, [], {}, "invalid", { accepted: false }, { ok: false }, { blocked: true },
   { previewMode: true }, { preview_mode: true }, { source: "interface_preview" }, { source_type: "interface_preview" }]) {

@@ -1,6 +1,10 @@
 # 診断機完成までの開発計画
 
-確認日: 2026-09-09。ローカル実装対象: 3.13.558。公開確認済み: 3.13.558。計画改訂時の基準版: 3.13.436 / 63510896。
+3.13.559 配布前確認: 端末起動1330項目/エラー0。ブラウザー検証スキルのCLI不在を確認し、既存隔離Playwright/Chromeを代替使用。実windowへ合成beforeunloadをdispatchし、初回取込開始でpreventDefault、取消後は解除、セッション不変を確認した（ネイティブ確認ダイアログの実表示試験ではない）。オフライン読取→保存→復元、失敗後の保持・再接続、DTC0件/無応答の区別を含む既存一巡も合格（obd-file-flow-ass8HM）、390幅画面を目視確認。ZIP 2,663,087 bytes / SHA256 475F8B4B487257D74C94DFBC2C4C1A8BAF900D961A43F8A08FCEE1FF95E8F750、別展開で846ファイル / 16,888,932 bytes一致・終了0。実VCI/実車・別PC・OS再起動は未確認、既知のwaiting停止は再試験せず未解決を保持。
+
+確認日: 2026-09-09。ローカル実装対象: 3.13.559。公開確認済み: 3.13.558。計画改訂時の基準版: 3.13.436 / 63510896。
+
+3.13.559 初回取得中の離脱保護: 既存警告はlastSessionだけを見ており、初回ファイル取込の保留中にlistenerが付かないことを修正前検査で再現。離脱専用判定にscanner import/bridge/readInProgress/coreScanInProgressを加え、結果置換確認やプレビュー判定に用いる既存hasActive関数は変更しない。16検査で初回保留・取消後解除・結果への昇格なしを確認、session exportは266件、R1全工程合格（offline183）。自動保存・再試行・実車通信・診断契約・保存形式は変更しない。OS強制終了やブラウザーの警告抑止は対象外、実VCI/実車・別PCは未確認。公開・配布確認は別途記録。
 
 3.13.558 コピー後処理の実DOM確認と配布起動: ブラウザー検証スキルの代替の隔離Chromeで、標準Clipboard API拒否と旧式select例外を注入。実textareaの残存を旧557で再現（packaged-browser-sHQ3hz、意図した比較失敗）、未変更558配布物では要素数が元に戻り、次の操作が成功し、セッション参照も不変（packaged-browser-NivqWo）。navigator.clipboardとexecCommandだけを検査内で置き換え、実クリップボードは読み書きせず、descriptor/prototypeはfinallyで復元する。既存配布検査に明示--clipboard-cleanupとして統合、実際のコピー互換性確認とは区別。558配布版の初回注意・誤パスワード拒否・全資材キャッシュ・両サーバー停止後のブラウザー終了/再起動・ロック保持も合格。キャッシュ容量18,373,632 bytesと画面復元を確認、補助CDPのNo frameと未同梱faviconの1失敗は別扱い。390幅画面を目視確認。ZIP SHA256 24E5690DFC729F53FF6192A03B2CB0AB1E7BE732BB14B45837D5C0F1CF0FA5FBは不変。CI実行34312508732/e48ae8c902423a5141ecae617d8702ce055ac0d0はcompleted/success。アプリ・ZIP変更なし。実VCI/実車・別PC・OS再起動とwaiting停止の修復は未確認。
 

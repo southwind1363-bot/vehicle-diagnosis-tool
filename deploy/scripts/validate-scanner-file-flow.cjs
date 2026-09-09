@@ -125,6 +125,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await (await picker).setFiles(file);
       await page.waitForFunction(() => document.getElementById('obdImportFileInput').value === '');
     };
+    const firstImportExit = await page.evaluate(() => {
+      const session = obdDevSession.lastSession;
+      const probe = () => {
+        const event = new Event('beforeunload', { cancelable: true });
+        window.dispatchEvent(event);
+        return event.defaultPrevented;
+      };
+      const idle = probe();
+      const operation = beginObdScannerImport();
+      const pending = probe();
+      const retained = hasActiveObdReadoutForExitWarning();
+      invalidateObdScannerImport();
+      return { idle, pending, retained, stopped: probe(), unchanged: session === obdDevSession.lastSession,
+        released: obdScannerImportOperation !== operation };
+    });
+    assert.deepEqual(firstImportExit, { idle: false, pending: true, retained: false, stopped: false, unchanged: true, released: true });
+    console.log('First import: real window exit listener attaches while pending and detaches after cancellation; synthetic event, no native dialog claim');
     await openFile(page.getByRole('button', { name: '保存した読取結果を開く', exact: true }), path.join(__dirname, 'fixtures/native-elm327-scan-archive.json'));
     await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().waitFor();
     assert.match(await page.locator('#obdDetectedCodes').innerText(), /P0420/);
