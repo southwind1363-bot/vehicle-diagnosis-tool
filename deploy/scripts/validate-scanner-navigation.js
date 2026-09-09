@@ -483,3 +483,4 @@ for (const stage of ["setup", "connect", "results", "readout"]) {
   assert.ok(html.slice(html.indexOf('id="obdHomeView"'), html.indexOf('id="obdSetupPanel"')).includes(`data-obd-stage="${stage}"`));
 }
 console.log("Scanner navigation: home, back, developer return, event scope, access lock and session retention passed");
+import "./validate-clipboard-cleanup.js";
