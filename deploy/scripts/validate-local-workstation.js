@@ -46,6 +46,10 @@ check([null, undefined, {}, new Error("private-config-value")].every(error => de
 for (const [setting, value, expected] of [
   ["PORT", "private-invalid-port", "0〜65535"],
   ["LOCAL_BRIDGE_PORT", "private-invalid-port", "0〜65535"],
+  ["PORT", "", "0〜65535"],
+  ["PORT", " \t ", "0〜65535"],
+  ["LOCAL_BRIDGE_PORT", "", "0〜65535"],
+  ["LOCAL_BRIDGE_PORT", " \t ", "0〜65535"],
   ["LOCAL_BRIDGE_PAIRING_TOKEN", "short-key", "12文字以上"],
   ["LOCAL_BRIDGE_REPLAY_LOG", "private-replay-fixture.json", "ログファイルの削除は不要"]
 ]) {
@@ -56,7 +60,7 @@ for (const [setting, value, expected] of [
   const result = await new Promise(resolve => execFile(process.execPath, [fileURLToPath(new URL("./start-local-workstation.js", import.meta.url))],
     { env: environment, windowsHide: true, timeout: 5000 }, (error, stdout, stderr) => resolve({ code: error?.code ?? 0, stdout, stderr })));
   check(result.code === 1 && result.stderr.includes(expected), `${setting}: actual launcher omitted recovery instructions`);
-  check(result.stdout === "" && !result.stderr.includes(value), `${setting}: invalid startup emitted a URL or private configuration`);
+  check(result.stdout === "" && (!value.trim() || !result.stderr.includes(value)), `${setting}: invalid startup emitted a URL or private configuration`);
 }
 
 const launchViewSource = appSource.match(/function initializeLaunchView\(\) \{[\s\S]*?\r?\n\}/)?.[0];
@@ -93,6 +97,12 @@ async function validateWorkstationRuntime() {
     if (supported) {
       await assert.rejects(context.startLocalWorkstation({ webPort: 3001, bridgePort: 3001 }), { code: "workstation_ports_overlap" });
       check(assetChecks === 1, "Overlapping ports reached asset inspection or bridge creation");
+      for (const field of ["webPort", "bridgePort"]) {
+        for (const value of ["", " ", "\t\r\n"]) {
+          await assert.rejects(context.startLocalWorkstation({ [field]: value }), /invalid_workstation_port/);
+          check(assetChecks === 1, "Blank port silently selected a new origin before rejection");
+        }
+      }
     }
   }
 }

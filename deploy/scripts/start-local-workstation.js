@@ -77,8 +77,14 @@ function closeServer(server) {
 
 export async function startLocalWorkstation(options = {}) {
   if (!(Number(process.versions.node.split(".")[0]) >= 22)) throw new Error("workstation_node_version_unsupported");
-  const webPort = Number(options.webPort ?? process.env.PORT ?? 3001);
-  const bridgePort = Number(options.bridgePort ?? process.env.LOCAL_BRIDGE_PORT ?? 8765);
+  const configuredWebPort = options.webPort ?? process.env.PORT ?? 3001;
+  const configuredBridgePort = options.bridgePort ?? process.env.LOCAL_BRIDGE_PORT ?? 8765;
+  // An empty setting is not an explicit request for a new, randomly assigned origin.
+  if ([configuredWebPort, configuredBridgePort].some((port) => typeof port === "string" && !port.trim())) {
+    throw new Error("invalid_workstation_port");
+  }
+  const webPort = Number(configuredWebPort);
+  const bridgePort = Number(configuredBridgePort);
   if (![webPort, bridgePort].every((port) => Number.isInteger(port) && port >= 0 && port <= 65535)) {
     throw new Error("invalid_workstation_port");
   }
