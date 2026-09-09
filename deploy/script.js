@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.555";
+const APP_VERSION = "3.13.556";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16641,6 +16641,10 @@ function exportCasesCsv() {
   let objectUrl = null;
   try {
     const csv = buildCasesCsv(savedCases);
+    if (localStorage.getItem(CASES_KEY) !== caseStorageSnapshot) {
+      if (status) status.textContent = "保存事例が別タブなどで変更されています。古い一覧のCSV保存は開始しませんでした。「保存事例を再読込」で最新の一覧を確認してから保存してください。";
+      return false;
+    }
     const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
     link = document.createElement("a");
     objectUrl = URL.createObjectURL(blob);
@@ -16667,6 +16671,10 @@ function exportCasesJson() {
   let objectUrl = null;
   try {
     const backup = buildCasesBackup();
+    if (localStorage.getItem(CASES_KEY) !== caseStorageSnapshot) {
+      if (status) status.textContent = "保存事例が別タブなどで変更されています。古い一覧のJSON保存は開始しませんでした。「保存事例を再読込」で最新の一覧を確認してから保存してください。";
+      return false;
+    }
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
     link = document.createElement("a");
     objectUrl = URL.createObjectURL(blob);

@@ -12,6 +12,7 @@ for (const failure of ["none", "blocked", "build", "serialize", "blob", "element
   const calls = { clicks: 0, removes: 0, attached: 0, blobs: [], revoked: [], timers: [], alerts: [] };
   const fail = stage => { if (failure === stage) throw new Error("private detail"); };
   const context = {
+    CASES_KEY: "cases", caseStorageSnapshot: before, localStorage: { getItem: () => before },
     caseStorageReadError: failure === "blocked" ? "storage unavailable" : "",
     alert: text => calls.alerts.push(text),
     buildCasesBackup: () => { fail("build"); const backup = { schemaVersion: 2, records }; if (failure === "serialize") backup.self = backup; return backup; },
@@ -53,6 +54,7 @@ for (const failure of ["none", "blocked", "empty", "build", "blob", "element", "
   let stage = failure;
   const fail = name => { if (stage === name) throw new Error("private CSV detail"); };
   const context = vm.createContext({
+    CASES_KEY: "cases", caseStorageSnapshot: before, localStorage: { getItem: () => before },
     savedCases: records, caseStorageReadError: failure === "blocked" ? "unavailable" : "",
     alert: text => calls.alerts.push(text), buildCasesCsv: () => { fail("build"); return 'ID,メモ\r\nsynthetic,"unchanged"'; },
     Blob: class extends Blob { constructor(parts, options) { fail("blob"); super(parts, options); } },
@@ -87,3 +89,29 @@ for (const failure of ["none", "blocked", "empty", "build", "blob", "element", "
   }
 }
 console.log(`Case CSV export checks: ${csvChecks} / Errors: 0`);
+
+for (const format of ["Json", "Csv"]) {
+  for (const external of ['[{"id":"new"}]', null, "unreadable"]) {
+    const records = [{ id: "original" }], snapshot = JSON.stringify(records);
+    const status = {};
+    let stored = external, clicks = 0;
+    const context = vm.createContext({
+      CASES_KEY: "cases", caseStorageSnapshot: snapshot, savedCases: records, caseStorageReadError: "",
+      localStorage: { getItem(key) { assert.equal(key, "cases"); if (stored === "unreadable") throw new Error("PRIVATE_READ_FAILURE"); return stored; } },
+      buildCasesBackup: () => ({ records }), buildCasesCsv: () => 'id\noriginal', Blob,
+      document: { getElementById: () => status, createElement: () => ({ click() { clicks++; }, remove() {} }), body: { appendChild() {} } },
+      URL: { createObjectURL: () => "blob:test", revokeObjectURL() {} }, setTimeout: fn => fn(), alert() {}
+    });
+    vm.runInContext(format === "Json" ? code : csvCode, context);
+    assert.equal(context['exportCases' + format](), false);
+    assert.equal(clicks, 0);
+    assert.equal(JSON.stringify(records), snapshot);
+    assert.equal(stored, external);
+    assert.equal(status.textContent.includes("PRIVATE_READ_FAILURE"), false);
+    if (external !== "unreadable") assert.match(status.textContent, /保存事例を再読込/);
+    stored = snapshot; // A matching freshly read snapshot permits manual export again.
+    assert.equal(context['exportCases' + format](), true);
+    assert.equal(clicks, 1);
+  }
+}
+console.log("Case export snapshot: external update/removal/read failure block stale downloads; matching snapshot recovers");

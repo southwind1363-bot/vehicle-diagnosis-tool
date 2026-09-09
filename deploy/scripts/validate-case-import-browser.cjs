@@ -321,6 +321,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.locator('#caseMemo').fill('未保存の模擬メモ');
       await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
       const candidate = { name: 'stale-tab.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([{ id: 'retry-after-conflict', model: '復帰模擬車両' }])) };
+      for (const format of ['Json', 'Csv']) {
+        assert.equal(await page.evaluate(format => window['exportCases' + format](), format), false);
+        assert.match(await page.locator('#caseExportStatus').innerText(), /古い一覧.*保存事例を再読込/);
+        assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), latestBytes);
+      }
+      await page.locator('#caseExportStatus').screenshot({ path: path.join(output, 'stale-export-warning.png') });
       await input.setInputFiles(candidate);
       await page.waitForFunction(() => Boolean(caseStorageReadError));
       assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), latestBytes);
@@ -338,8 +344,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.locator('#similarCases .case-card').count(), 1);
       assert.equal(await page.locator('#caseMemo').inputValue(), '未保存の模擬メモ');
       await input.setInputFiles(candidate);
+      // Freshly reloaded state can be backed up without losing the other tab's record.
       await page.waitForFunction(() => savedCases.some(item => item.id === 'retry-after-conflict'));
       assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case')), true);
+      const freshDownload = page.waitForEvent('download');
+      await page.evaluate(() => exportCasesJson());
+      const freshPath = path.join(output, 'fresh-after-conflict.json');
+      await (await freshDownload).saveAs(freshPath);
+      assert.equal(JSON.parse(fs.readFileSync(freshPath, 'utf8')).records.some(item => item.id === 'other-tab-case'), true);
       await page.reload();
       assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case') && savedCases.some(item => item.id === 'retry-after-conflict')), true);
       console.log('Two-tab storage: stale write blocked, latest bytes and form retained, manual reload and import recovery passed');
