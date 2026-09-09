@@ -19,6 +19,11 @@ function asset(pathname) {
 (async () => {
   let server;
   let browser;
+  let context;
+  const restart = process.argv.includes('--restart');
+  const profile = path.join(output, 'browser-profile');
+  const launchOptions = { channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true };
+  const contextOptions = { viewport: { width: 1280, height: 900 }, acceptDownloads: true, serviceWorkers: 'block' };
   const errors = [];
   const deadline = setTimeout(() => { void browser?.close(); }, 90000);
   try {
@@ -32,15 +37,22 @@ function asset(pathname) {
     });
     await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
     const origin = `http://127.0.0.1:${server.address().port}`;
-    browser = await chromium.launch({ channel: process.env.PLAYWRIGHT_CHANNEL || 'chrome', headless: true });
-    const context = await browser.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true, serviceWorkers: 'block' });
-    await context.addInitScript(() => {
+    if (restart) {
+      context = await chromium.launchPersistentContext(profile, { ...launchOptions, ...contextOptions });
+      browser = context.browser();
+    } else {
+      browser = await chromium.launch(launchOptions);
+      context = await browser.newContext(contextOptions);
+    }
+    const prepareContext = async () => context.addInitScript(() => {
       localStorage.setItem('vehicle-diagnosis-notice-accepted-v1', 'accepted');
       localStorage.setItem('vehicle-diagnosis-obd-ui-mode-v1', 'details');
       sessionStorage.setItem('vehicle-diagnosis-obd-access-v1', 'enabled');
       sessionStorage.setItem('vehicle-diagnosis-obd-dev-mode-v1', 'enabled');
       Object.defineProperty(navigator, 'serial', { value: undefined, configurable: true });
+      Object.defineProperty(navigator, 'bluetooth', { value: undefined, configurable: true });
     });
+    await prepareContext();
     const page = await context.newPage();
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(`${message.text()} ${message.location().url || ''}`.trim()); });
@@ -367,6 +379,36 @@ function asset(pathname) {
     await page.waitForFunction(() => document.getElementById('obdOperationJournalSaveStatus').textContent.includes('IDを作成できない'));
     assert.equal(await page.evaluate(() => window.__saveCalls.length), beforeCryptoFailure, 'Crypto failure must happen before the API call');
     await page.evaluate(() => Object.defineProperty(globalThis, 'crypto', { value: window.__cryptoOriginal, configurable: true }));
+    if (restart) {
+      await context.close();
+      assert.equal(page.isClosed(), true);
+      assert.equal(browser.isConnected(), false, 'The original browser must fully disconnect');
+      context = await chromium.launchPersistentContext(profile, { ...launchOptions, ...contextOptions });
+      browser = context.browser();
+      // Reinstall only the synthetic access fixture; never restore journal records from memory.
+      await prepareContext();
+      const restored = await context.newPage();
+      restored.on('pageerror', error => errors.push(error.message));
+      restored.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+      restored.setDefaultTimeout(15000);
+      await restored.goto(origin + '/');
+      await restored.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await restored.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await restored.evaluate(() => setObdStage('details'));
+      await restored.locator('#obdOperationJournalViewer').locator(':scope > summary').click();
+      await restored.locator('#obdOperationJournalRefresh').click();
+      await restored.waitForFunction(id => [...document.querySelectorAll('#obdOperationJournalList button')].some(node => node.textContent === id), pendingId);
+      const currentBefore = await restored.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+      await restored.locator('#obdOperationJournalList button').filter({ hasText: pendingId }).click();
+      await restored.waitForFunction(id => obdOperationJournalState.selectedRecord?.recordId === id, pendingId);
+      assert.equal(await restored.evaluate(() => obdOperationJournalState.selectedRecord.sessionJson), exactJson);
+      assert.equal(await restored.evaluate(() => JSON.stringify(obdDevSession.lastSession)), currentBefore, 'Opening history must not replace the current diagnosis');
+      // Post-restart download is a separate unresolved browser-automation failure.
+      // This branch verifies persisted record recovery, not a download workaround.
+      await restored.setViewportSize({ width: 390, height: 900 });
+      await restored.locator('#obdOperationJournalViewer').screenshot({ path: path.join(output, 'journal-restored-after-restart-390.png') });
+      console.log('Full browser restart: IndexedDB record recovered through UI with exact stored JSON and current diagnosis unchanged; same PC, online server, synthetic access fixture only; post-restart download NOT verified');
+    }
     assert.deepEqual(errors, [], 'No page or console errors');
     console.log(`Operation journal save checks: cancel, snapshot guards, exact save/load/download, acknowledgement, crypto / Errors: 0`);
     console.log(`Screenshots: ${output}`);
