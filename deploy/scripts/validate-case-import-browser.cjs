@@ -321,7 +321,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       console.log('Exact case deletion: numeric/string and duplicate IDs retain other records across reload');
     }
     if (process.argv.includes('--csv')) {
-      await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([{ id: 'csv-test', model: '模擬CSV車両', memo: '引用符"と,改行\nの検査' }])));
+      await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([{ id: 'csv-test', model: '模擬CSV車両', memo: '引用符"と,改行\nの検査', measurements: '-12', work: '=1+1', finalCause: '  ＝1+1' }])));
       await page.reload();
       await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
       const storedBefore = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
@@ -336,9 +336,23 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const csvPath = path.join(output, 'case-export.csv');
       await (await pendingCsv).saveAs(csvPath);
       assert.equal(fs.readFileSync(csvPath, 'utf8'), await page.evaluate(() => '\uFEFF' + buildCasesCsv(savedCases)));
+      const csvText = fs.readFileSync(csvPath, 'utf8');
+      for (const field of ['"\t-12"', '"\t=1+1"', '"\t  ＝1+1"']) assert.ok(csvText.includes(field), 'Downloaded CSV lost its Excel text prefix');
+      const originalValues = await page.evaluate(() => buildCasesBackup().records[0]);
+      assert.equal(originalValues.measurements, '-12');
+      assert.equal(originalValues.work, '=1+1');
+      assert.equal(originalValues.finalCause, '  ＝1+1');
+      assert.match(await page.locator('#caseCsvSafetyNote').innerText(), /タブ.*JSONバックアップ/);
+      await page.locator('#caseCsvSafetyNote').screenshot({ path: path.join(output, 'csv-safety-note.png') });
       assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), storedBefore);
       assert.match(await exportStatus.innerText(), /1件.*CSV.*開始しました.*保存完了はブラウザー/);
       await exportStatus.screenshot({ path: path.join(output, 'csv-export-status.png') });
+      const originalJsonDownload = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+      const originalJsonPath = path.join(output, 'csv-original-backup.json');
+      await (await originalJsonDownload).saveAs(originalJsonPath);
+      assert.deepEqual(JSON.parse(fs.readFileSync(originalJsonPath, 'utf8')).records[0], originalValues, 'JSON download must preserve original formula-like values without CSV prefixes');
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), storedBefore);
       console.log('CSV export: injected failure, retry, exact BOM/content and storage retention passed');
     }
     // Search must accept the UI's own multi-keyword example after restoration.

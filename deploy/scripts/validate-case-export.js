@@ -3,6 +3,23 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+const csvContext = vm.createContext({});
+vm.runInContext(["csvCell", "buildCasesCsv"].map(name => source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`))[0]).join("\n"), csvContext);
+for (const prefix of ["=", "+", "-", "@", "＝", "＋", "－", "＠"]) {
+  for (const whitespace of ["", " ", "\t", "\r\n", "\uFEFF", "\u0000"]) {
+    const input = `${whitespace}${prefix}1+1`;
+    assert.equal(csvContext.csvCell(input), `"\t${input}"`, "Formula-like CSV cells need an Excel text prefix");
+  }
+}
+for (const input of ["P0300", "普通のメモ", "1+1", "説明 =1+1", '引用符"と,改行\nの検査', "", null, undefined]) {
+  assert.equal(csvContext.csvCell(input), `"${String(input ?? "").replace(/"/g, '""')}"`, "Ordinary CSV escaping changed");
+}
+const formulaRecords = [{ id: "csv-formula", memo: '=1+1",ordinary', measurements: "-12", sources: "https://example.invalid" }];
+const formulaSnapshot = JSON.stringify(formulaRecords);
+const formulaCsv = csvContext.buildCasesCsv(formulaRecords);
+assert.ok(formulaCsv.includes('"\t=1+1"",ordinary"') && formulaCsv.includes('"\t-12"'));
+assert.equal(JSON.stringify(formulaRecords), formulaSnapshot, "CSV mitigation mutated saved records");
+console.log("Case CSV formula mitigation: 48 prefixes, ordinary quoting and source immutability passed; no spreadsheet execution");
 const code = source.match(/function exportCasesJson\(\) \{[\s\S]*?\r?\n\}/)[0];
 let checks = 0;
 for (const failure of ["none", "blocked", "build", "serialize", "blob", "element", "url", "append", "click"]) {

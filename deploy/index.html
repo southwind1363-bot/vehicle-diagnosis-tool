@@ -461,13 +461,14 @@
         <h2>データ管理</h2>
         <p class="data-status">整備事例データのCSV出力、JSONバックアップ、JSONインポートを行います。</p>
         <div class="button-row">
-          <button id="exportCsvButton" class="secondary-button" type="button">CSVエクスポート</button>
+          <button id="exportCsvButton" class="secondary-button" type="button" aria-describedby="caseCsvSafetyNote">CSVエクスポート</button>
           <button id="exportJsonButton" class="secondary-button" type="button">JSONバックアップ</button>
           <label class="import-button">JSONインポート<input id="importJsonInput" type="file" accept="application/json,.json"></label>
           <button id="cancelCaseImportButton" type="button" class="secondary-button" disabled>JSON読込を中断</button>
         </div>
         <p id="caseImportStatus" class="data-status" role="status" aria-live="polite">JSON取込の結果をここに表示します。</p>
         <p id="caseExportStatus" class="data-status" role="status" aria-live="polite"></p>
+        <p id="caseCsvSafetyNote">CSVはExcelでの閲覧向けです。数式に見える値（負数を含む）の先頭にタブを付けます。他ソフトへの再取込ではタブが残る場合があります。原本の保存・復元にはJSONバックアップを使用してください。すべての表計算ソフトや再保存後の安全性を保証するものではありません。</p>
       </section>
     </section>
 
