@@ -150,6 +150,42 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await exportStatus.textContent(), '');
     assert.equal(await exportStatus.evaluate(node => node.getBoundingClientRect().height), 0, 'Empty export notification must not leave a blank band');
     await require('./validate-readout-print.cjs')(page, output);
+    if (process.argv.includes('--clipboard-timeout')) {
+      await page.evaluate(() => {
+        window.__clipboardTimeoutTest = { descriptor: Object.getOwnPropertyDescriptor(navigator, 'clipboard'),
+          session: obdDevSession.lastSession, calls: 0, done: false, started: performance.now() };
+        const fixture = window.__clipboardTimeoutTest;
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+          readText: () => { fixture.calls += 1; return new Promise(resolve => { fixture.resolve = resolve; }); }
+        } });
+        fixture.task = pasteObdScannerImport().then(() => { fixture.done = true; });
+      });
+      try {
+        assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isDisabled(), true);
+        await page.waitForFunction(() => window.__clipboardTimeoutTest.done, null, { timeout: 45000 });
+        assert.match(await page.locator('#obdImportStatus').textContent(), /クリップボードを読めませんでした/);
+        assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true);
+        const outcome = await page.evaluate(async () => {
+          const fixture = window.__clipboardTimeoutTest;
+          fixture.resolve('late synthetic data');
+          await fixture.task;
+          return { unchanged: obdDevSession.lastSession === fixture.session, calls: fixture.calls,
+            released: obdScannerImportOperation === null, elapsed: performance.now() - fixture.started };
+        });
+        assert.equal(outcome.unchanged, true);
+        assert.equal(outcome.calls, 1);
+        assert.equal(outcome.released, true);
+        assert.ok(outcome.elapsed >= 29000);
+        console.log('Clipboard timeout: real 30-second timer releases import/export guard and ignores late synthetic reply; no system clipboard read');
+      } finally {
+        await page.evaluate(() => {
+          const fixture = window.__clipboardTimeoutTest;
+          if (fixture.descriptor) Object.defineProperty(navigator, 'clipboard', fixture.descriptor);
+          else delete navigator.clipboard;
+          delete window.__clipboardTimeoutTest;
+        });
+      }
+    }
     const beforeSaveFailure = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
     await page.evaluate(() => {
       window.__originalCreateObjectURL = URL.createObjectURL;

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.561";
+const APP_VERSION = "3.13.562";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -15817,14 +15817,22 @@ async function pasteObdScannerImport() {
     return;
   }
   let text;
+  let timeout = null;
   try {
-    text = await navigator.clipboard.readText();
+    text = await Promise.race([
+      navigator.clipboard.readText(),
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error("clipboard_read_timeout")), 30000);
+      })
+    ]);
   } catch (error) {
     if (!isCurrentObdScannerImport(operation)) return;
     invalidateObdScannerImport();
     obdScannerText.focus();
     obdImportStatus.textContent = "クリップボードを読めませんでした。読取結果を長押しして貼り付けてから「診断機データを解析」を押してください。";
     return;
+  } finally {
+    if (timeout !== null) clearTimeout(timeout);
   }
   if (!isCurrentObdScannerImport(operation)) return;
   invalidateObdScannerImport();
