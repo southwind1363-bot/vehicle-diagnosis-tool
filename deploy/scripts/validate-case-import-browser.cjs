@@ -357,7 +357,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), storedBefore);
       console.log('CSV export: injected failure, retry, exact BOM/content and storage retention passed');
       // Exercise FileReader and persistence, not just pre-seeded storage/export builders.
-      const zeroInput = [{ id: 'file-zero', model: '数値ゼロ取込試験', year: 0, mileage: 0, measurements: 0 },
+      const zeroInput = [{ id: 'file-zero', model: '数値ゼロ取込試験', year: 0, mileage: 0, measurements: 0,
+        work: '測定結果を確認\n再点検は未実施', memo: '<img src=x onerror=alert(1)>', sources: '試験用記録' },
         { id: 'file-empty', model: '空欄取込試験', year: '', mileage: null, measurements: '' }];
       await input.setInputFiles({ name: 'numeric-zero.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(zeroInput)) });
       await page.waitForFunction(() => savedCases.some(item => item.id === 'file-zero'));
@@ -379,6 +380,15 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
       await page.locator('#caseSearch').fill('file-zero');
       assert.equal(await page.locator('#caseList .case-card').count(), 1);
+      const savedDetails = page.locator('#caseList .case-saved-details');
+      await savedDetails.locator('summary').click();
+      for (const label of ['年式', '走行距離', '測定値']) assert.ok((await savedDetails.innerText()).includes(`${label}: 0`));
+      assert.ok((await savedDetails.innerText()).includes(zeroInput[0].work));
+      assert.ok((await savedDetails.innerText()).includes(zeroInput[0].memo));
+      assert.equal(await savedDetails.locator('img').count(), 0);
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), zeroStored);
+      await page.setViewportSize({ width: 390, height: 844 });
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       await page.locator('#caseList').screenshot({ path: path.join(output, 'numeric-zero-restored.png') });
       console.log('Numeric zero: real JSON file import, persisted fields, backup download, reload and duplicate reimport retain zero separately from missing values');
     }

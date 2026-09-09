@@ -2947,6 +2947,22 @@ body.dark .flow-node-measure .flow-step {
   box-shadow: 0 3px 12px rgba(23, 33, 38, 0.04);
 }
 
+.case-saved-details > summary {
+  cursor: pointer;
+  min-height: 48px;
+  padding: 12px 0;
+}
+
+.case-saved-details > summary:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.case-saved-details p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .case-card h4 {
   margin: 0 0 8px;
   font-size: 1rem;

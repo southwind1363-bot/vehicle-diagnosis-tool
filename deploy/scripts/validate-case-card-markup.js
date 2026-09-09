@@ -42,4 +42,18 @@ for (const ids of [[17, "17"], ["same", "same"], [true, "true"], [{ value: 1 }, 
   assert.equal(writes, beforeWrites, "Stale button must not write storage");
   checks += 4;
 }
+{
+  const record = { id: 'details', year: 0, mileage: '0', measurements: '0', work: '<img src=x onerror=alert(1)>', memo: 'line1\nline2', sources: 'https://example.invalid/?a="&b=1' };
+  const before = JSON.stringify(record);
+  const container = node();
+  context.renderCaseCards(container, [record], 'empty');
+  const markup = container.children[0].children[0].innerHTML;
+  assert.ok(markup.includes('<details class="case-saved-details">'));
+  for (const label of ['年式', '走行距離', '測定値']) assert.ok(markup.includes(`<strong>${label}:</strong> 0`));
+  assert.ok(markup.includes(context.escapeHtml(record.work)) && !markup.includes('<img'));
+  assert.ok(markup.includes(context.escapeHtml(record.sources)));
+  assert.ok(markup.includes('line1\nline2'));
+  assert.equal(JSON.stringify(record), before);
+  checks += 8;
+}
 console.log(`Case card markup checks: ${checks} / Errors: 0`);

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.573";
+const APP_VERSION = "3.13.574";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16642,6 +16642,13 @@ function renderCaseCards(container, cases, emptyText) {
       <p><strong>実際に確認した内容:</strong> ${escapeHtml(item.confirmedFacts || NO_DATA)}</p>
       <p><strong>最終原因:</strong> ${escapeHtml(item.finalCause || NO_DATA)}</p>
       <p><strong>交換部品:</strong> ${escapeHtml(item.replacedParts || NO_DATA)}</p>
+      <details class="case-saved-details">
+        <summary>保存した測定値・作業内容を確認</summary>
+        ${[["年式", item.year], ["エンジン型式", item.engine], ["走行距離", item.mileage],
+          ["整備士名", item.technician], ["測定値", item.measurements], ["作業内容", item.work],
+          ["メモ", item.memo], ["確信度", item.confidence], ["出典", item.sources]]
+          .map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value === 0 ? "0" : value || NO_DATA)}</p>`).join("")}
+      </details>
       <div class="case-actions">
         <button class="small-danger-button" type="button" data-delete-case="${escapeHtml(item.id)}">削除</button>
       </div>
