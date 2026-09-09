@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.553";
+const APP_VERSION = "3.13.554";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -15699,9 +15699,10 @@ function downloadManufacturerSampleTemplate() {
     : "空の実機サンプルTSVを保存しました。車両・ECU・要求・応答を1行ずつ記録し、この欄から再取込できます。";
 }
 
-function invalidateObdScannerImport() {
+function invalidateObdScannerImport(preserveInput = null) {
   const operation = obdScannerImportOperation;
   obdScannerImportOperation = null;
+  if (operation?.input && operation.input !== preserveInput) operation.input.value = "";
   // Revoke ownership before abort, which can synchronously dispatch callbacks.
   try {
     if (operation?.reader?.readyState === 1) operation.reader.abort();
@@ -15709,8 +15710,8 @@ function invalidateObdScannerImport() {
   renderObdSessionExportControls();
 }
 
-function beginObdScannerImport() {
-  invalidateObdScannerImport();
+function beginObdScannerImport(preserveInput = null) {
+  invalidateObdScannerImport(preserveInput);
   const operation = { textAtStart: obdScannerText.value, sessionAtStart: obdDevSession.lastSession };
   obdScannerImportOperation = operation;
   renderObdSessionExportControls();
@@ -15830,7 +15831,8 @@ function importObdScannerFile(event) {
   const input = event.currentTarget;
   const file = input?.files?.[0];
   if (!file) return;
-  const operation = beginObdScannerImport();
+  const operation = beginObdScannerImport(input);
+  operation.input = input;
 
   const acceptedTypes = new Set(["application/json", "text/csv", "text/tab-separated-values", "text/plain", "text/html"]);
   const hasAcceptedExtension = /\.(json|csv|tsv|txt|html?|htm)$/i.test(file.name || "");

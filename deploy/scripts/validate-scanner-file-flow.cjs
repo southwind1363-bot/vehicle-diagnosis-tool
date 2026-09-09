@@ -343,17 +343,25 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const cancellation = await page.evaluate(replace => {
         const statusBefore = obdImportStatus.textContent;
         const file = new File([' '.repeat(1000000)], 'cancel-pending.txt', { type: 'text/plain' });
-        importObdScannerFile({ currentTarget: { files: [file], value: 'synthetic' } });
+        const input = document.querySelector('#obdImportFileInput');
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
         const reader = obdScannerImportOperation.reader;
         const loading = reader?.readyState;
         let aborts = 0;
         reader?.addEventListener('abort', () => aborts++);
-        if (replace) beginObdScannerImport(); else invalidateObdScannerImport();
+        if (replace) {
+          input.files = transfer.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        } else invalidateObdScannerImport();
         const done = reader?.readyState;
+        const newSelectionRetained = !replace || input.files.length === 1;
         invalidateObdScannerImport();
-        return { loading, done, aborts, statusUnchanged: obdImportStatus.textContent === statusBefore };
+        return { loading, done, aborts, newSelectionRetained, selectionCleared: input.value === '' && input.files.length === 0, statusUnchanged: obdImportStatus.textContent === statusBefore };
       }, replace);
-      assert.deepEqual(cancellation, { loading: 1, done: 2, aborts: 1, statusUnchanged: true });
+      assert.deepEqual(cancellation, { loading: 1, done: 2, aborts: 1, newSelectionRetained: true, selectionCleared: true, statusUnchanged: true });
       await assertRetained();
       assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true);
     }

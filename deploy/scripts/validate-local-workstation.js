@@ -1244,10 +1244,11 @@ async function validateScannerJsonFileSyntax(webUrl) {
     if (outcome === "stale") {
       client.editScannerText("newer input");
       client.obdImportStatus.textContent = "NEW_STATUS";
+      check(input.value === "", "Invalidated file selection must clear before late completion");
     }
     await pending.complete(outcome === "empty" ? " \ufeff\r\n " : '{"P0420":');
     if (outcome === "empty") check(client.obdImportStatus.textContent.includes("診断結果がありません"), "Empty JSON file lost existing empty-file handling");
-    if (outcome === "stale") check(input.value === "broken.json" && client.obdScannerText.value === "newer input" && client.obdImportStatus.textContent === "NEW_STATUS", "Stale malformed JSON reset newer UI state");
+    if (outcome === "stale") check(input.value === "" && client.obdScannerText.value === "newer input" && client.obdImportStatus.textContent === "NEW_STATUS", "Stale malformed JSON reset newer UI state");
     if (outcome === "reselect") {
       const retry = startPendingScannerAcquisition(client, "file", input);
       await retry.complete('{"dtcs":[]}');
