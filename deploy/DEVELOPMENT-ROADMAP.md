@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.564 継続確認: デプロイスキルに沿い、ca5bdac0215f01089bbc944ebbb43896f02bf285の公開CI 34323323761（Deploy Read-Only Validation）completed/successを確認。ブラウザー検証スキルのCLI不在につき既存隔離Chromeで展開配布物563→564→563の通常更新/旧版復帰を確認し、人工整備事例の保存文字列不変、各版の両サーバー停止後のオフライン再読込に合格（packaged-update-AEBqzt）。画面を目視確認。ページ例外・想定外通信なし。任意faviconのERR_FAILED/404は分離記録。既知waiting停止の故障注入は繰り返しておらず、解消とは扱わない。本体・検査コード・ZIP変更なし。実VCI/実車・実パスワード・他PC・OS再起動は未確認。
+
 3.13.564 公開確認: ca5bdac0をmainへ送信。tool.mukiguri.comの /・script.js・obd-readonly.js・service-worker.js・offline-assets.json はHTTP200、script/SW/manifestの564版と事例読込タイマーの実装を確認。GitHub CI完了は未確認。実車・別PC検証とは区別する。
 
 3.13.564 配布確認: ZIP 2,663,646 bytes / SHA256 4F0315EEFC2C147D5612BCF23D1D7E49AE6CA4EE5BD1112EE9AB5603EAB06E71。別展開で846ファイル/16,890,842 bytes一致・終了0。展開した配布版の両サーバー停止→Chrome完全終了/再起動→オフライン画面・ロック・人工保存事例の検索・一致するJSON再出力が合格（packaged-browser-syPLCA）。ブラウザー検証スキルの代替で実行し、画面を目視確認。ページ例外・想定外要求・任意アイコンエラー0。補助CDPのNo frameは実画面復元とは区別。ZIPは改変していない。実パスワード成功・別PC・OS再起動・実車適合は未確認。
