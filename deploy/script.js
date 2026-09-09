@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.566";
+const APP_VERSION = "3.13.567";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16943,6 +16943,7 @@ function setCaseImportStatus(message) {
 function cancelCaseImport() {
   const operation = caseImportOperation;
   caseImportOperation = null;
+  syncCaseDraftExitGuard();
   if (!operation) return;
   clearTimeout(operation.timeout);
   importJsonInput.value = "";
@@ -16957,6 +16958,7 @@ function importCasesJson(event) {
   const previous = caseImportOperation;
   const operation = { reader: null };
   caseImportOperation = operation;
+  syncCaseDraftExitGuard();
   // Invalidate first: abort may synchronously dispatch the old callback.
   clearTimeout(previous?.timeout);
   try { previous?.reader?.abort?.(); } catch (_) { /* Ownership still prevents stale results. */ }
@@ -16965,6 +16967,7 @@ function importCasesJson(event) {
     if (caseImportOperation !== operation) return;
     caseImportOperation = null;
     clearTimeout(operation.timeout);
+    syncCaseDraftExitGuard();
     setCaseImportStatus("JSONインポート失敗: ファイルを読み取れませんでした。保存済み事例は変更していません。ファイルを選び直してください。");
     importJsonInput.value = "";
   };
@@ -17017,6 +17020,7 @@ function importCasesJson(event) {
     } finally {
       if (caseImportOperation === operation) {
         caseImportOperation = null;
+        syncCaseDraftExitGuard();
         importJsonInput.value = "";
       }
     }
@@ -17137,13 +17141,13 @@ function hasUnsavedCaseDraft() {
 }
 
 function handleCaseDraftBeforeUnload(event) {
-  if (!hasUnsavedCaseDraft()) return;
+  if (!caseImportOperation && !hasUnsavedCaseDraft()) return;
   event.preventDefault();
   event.returnValue = true;
 }
 
 function syncCaseDraftExitGuard() {
-  const needed = hasUnsavedCaseDraft();
+  const needed = Boolean(caseImportOperation) || hasUnsavedCaseDraft();
   if (needed === caseDraftExitGuardAttached) return;
   if (needed) window.addEventListener("beforeunload", handleCaseDraftBeforeUnload);
   else window.removeEventListener("beforeunload", handleCaseDraftBeforeUnload);

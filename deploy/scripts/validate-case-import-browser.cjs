@@ -61,7 +61,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       });
       try {
         await input.setInputFiles({ name: 'stalled.json', mimeType: 'application/json', buffer: Buffer.from('synthetic stalled input') });
+        assert.equal(await page.evaluate(() => hasUnsavedCaseDraft()), false);
+        const pendingExit = page.waitForEvent('dialog');
+        await page.close({ runBeforeUnload: true });
+        const pendingConfirmation = await pendingExit;
+        assert.equal(pendingConfirmation.type(), 'beforeunload');
+        await pendingConfirmation.dismiss();
+        assert.equal(page.isClosed(), false);
+        assert.equal(await page.evaluate(() => Boolean(caseImportOperation)), true);
         await page.waitForFunction(() => caseImportOperation === null, null, { timeout: 45000 });
+        assert.equal(await page.evaluate(() => caseDraftExitGuardAttached), false);
         assert.match(await status.innerText(), /ファイルを読み取れませんでした.*保存済み事例は変更していません/);
         assert.equal(await input.inputValue(), '');
         const result = await page.evaluate(() => {

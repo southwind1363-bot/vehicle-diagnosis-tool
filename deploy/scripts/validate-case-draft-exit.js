@@ -8,7 +8,7 @@ const fields = [{ value: "auto-id", readOnly: true }, { value: "2026-09-09" }, {
 const listeners = new Set();
 const otherGuard = () => {};
 listeners.add(otherGuard);
-const context = vm.createContext({ caseDraftBaseline: new Map(), caseDraftExitGuardAttached: false,
+const context = vm.createContext({ caseDraftBaseline: new Map(), caseDraftExitGuardAttached: false, caseImportOperation: null,
   caseForm: { querySelectorAll: () => fields },
   window: { addEventListener: (type, fn) => { assert.equal(type, "beforeunload"); listeners.add(fn); },
     removeEventListener: (type, fn) => { assert.equal(type, "beforeunload"); listeners.delete(fn); } } });
@@ -38,4 +38,15 @@ fields[3].value = "";
 context.resetCaseDraftExitGuard();
 assert.deepEqual([...listeners], [otherGuard]);
 context.handleCaseDraftBeforeUnload({ preventDefault: () => assert.fail("Reset draft warned") });
+context.caseImportOperation = {};
+context.syncCaseDraftExitGuard();
+assert.equal(listeners.size, 2, 'Pending import without a draft must guard page exit');
+const importingEvent = { prevented: false, preventDefault() { this.prevented = true; } };
+context.handleCaseDraftBeforeUnload(importingEvent);
+assert.equal(importingEvent.prevented, true);
+context.resetCaseDraftExitGuard();
+assert.equal(listeners.size, 2, 'Resetting the form must preserve the pending import guard');
+context.caseImportOperation = null;
+context.syncCaseDraftExitGuard();
+assert.deepEqual([...listeners], [otherGuard]);
 console.log("Case draft exit: edit/undo/date/select/readonly ID/reset and separate readout guard passed; no storage or I/O");
