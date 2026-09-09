@@ -16,9 +16,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const { startLocalWorkstation } = await load('start-local-workstation.js');
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-browser-'));
   const restart = process.argv.includes('--restart');
+  const savedCase = process.argv.includes('--saved-case');
+  assert.ok(!savedCase || restart, '--saved-case requires --restart');
   const serverStopOnly = process.argv.includes('--server-stop-only');
   const profile = path.join(output, 'browser-profile');
-  const contextOptions = { serviceWorkers: 'allow', viewport: { width: 390, height: 844 } };
+  const contextOptions = { serviceWorkers: 'allow', acceptDownloads: true, viewport: { width: 390, height: 844 } };
+  let savedCaseSnapshot = null;
   let workstation, browser, context;
   const errors = [], unexpected = [], optionalIconErrors = [];
   let offlinePhase = false;
@@ -96,6 +99,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     assert.deepEqual(errors, [], 'Online page errors');
+    if (savedCase) {
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      await page.locator('#importJsonInput').setInputFiles({ name: 'synthetic-restart.json', mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify([{ id: 'package-restart-fixture', model: '再起動検証用模擬車両',
+          symptom: '人工の保存復元確認', obdCode: 'P0300', memo: '実車の診断記録ではありません' }])) });
+      await page.waitForFunction(() => savedCases.some(item => item.id === 'package-restart-fixture'));
+      savedCaseSnapshot = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      assert.equal(JSON.parse(savedCaseSnapshot).length, 1);
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await locked();
+    }
     if (process.argv.includes('--clipboard-cleanup')) {
       const results = await page.evaluate(async () => {
         const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
@@ -160,11 +174,32 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(await page.locator('#noticeModal').isVisible(), false);
     assert.equal(await page.locator('#obdAccessPasswordInput').inputValue(), '');
     assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-notice-accepted-v1')), 'accepted');
-    assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), null);
+    assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), savedCaseSnapshot);
     for (const width of [390, 1280]) {
       await page.setViewportSize({ width, height: 844 });
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
       await page.screenshot({ path: path.join(output, `offline-lock-${width}.png`) });
+    }
+    if (savedCase) {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      await page.locator('#caseSearch').fill('再起動検証用模擬車両 P0300');
+      const card = page.locator('#caseList .case-card');
+      assert.equal(await card.count(), 1);
+      assert.match(await card.innerText(), /症状: 人工の保存復元確認/);
+      assert.match(await card.innerText(), /OBD2: P0300/);
+      await page.screenshot({ path: path.join(output, 'offline-restored-case-390.png') });
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      const pendingDownload = page.waitForEvent('download');
+      await page.locator('#exportJsonButton').click();
+      const download = await pendingDownload;
+      const backup = path.join(output, 'synthetic-restart-backup.json');
+      await download.saveAs(backup);
+      assert.equal(await download.failure(), null);
+      assert.deepEqual(JSON.parse(fs.readFileSync(backup, 'utf8')).records, JSON.parse(savedCaseSnapshot));
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), savedCaseSnapshot);
+      assert.equal(await page.locator('a[download]').count(), 0);
+      console.log('Saved synthetic case survived full browser restart: offline search and matching JSON backup passed');
     }
     assert.deepEqual(errors, [], 'Cached page errors');
     const unavailable = await page.evaluate(async () => {
@@ -174,7 +209,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.equal(unavailable, true, 'Uncached network must be unavailable');
     assert.deepEqual(unexpected, []);
     assert.deepEqual(verifyWorkstationPackage(root), before, 'Package must remain unchanged');
-    console.log(JSON.stringify({ passed: true, version: before.appVersion, output, restart, serverStopOnly, optionalIconErrors,
+    console.log(JSON.stringify({ passed: true, version: before.appVersion, output, restart, savedCase, serverStopOnly, optionalIconErrors,
       flow: 'extracted package -> actual local server -> first notice -> rejected password -> stopped servers and offline cache reload -> retained lock',
       limitations: `No successful real-password login, ${restart ? '' : 'browser restart, '}OS restart, other PC, or vehicle test` }));
   } catch (error) {
