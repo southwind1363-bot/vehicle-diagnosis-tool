@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.572";
+const APP_VERSION = "3.13.573";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16418,14 +16418,14 @@ function normalizeCase(item) {
     technician: source.technician || "",
     maker: source.maker || "",
     model: source.model || "",
-    year: source.year || "",
+    year: source.year === 0 ? "0" : source.year || "",
     engine: source.engine || "",
-    mileage: source.mileage || "",
+    mileage: source.mileage === 0 ? "0" : source.mileage || "",
     symptom: source.symptom || "",
     obdCode: normalizeCode(source.obdCode || ""),
     aiGuess: source.aiGuess || "",
     confirmedFacts: source.confirmedFacts || "",
-    measurements: source.measurements || "",
+    measurements: source.measurements === 0 ? "0" : source.measurements || "",
     finalCause: source.finalCause || "",
     work: source.work || "",
     replacedParts: source.replacedParts || "",
@@ -17192,7 +17192,7 @@ function valueOf(selector) {
 }
 
 function csvCell(value) {
-  const textValue = String(value || "");
+  const textValue = String(value === 0 ? 0 : value || "");
   // Excel-oriented export only; retain original values in JSON and local storage.
   // The tab remains data for other CSV consumers. This is not universal sanitization.
   const excelText = /^[\s\u0000-\u001f]*[=+\-@＝＋－＠]/u.test(textValue) ? `\t${textValue}` : textValue;

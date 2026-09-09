@@ -502,4 +502,25 @@ for (let seed = 0; seed < 12; seed++) {
   check(JSON.stringify(c.context.savedCases) === JSON.stringify(expected), `Batch ${seed}: indexed matching changed legacy records or order`);
   check(c.context.caseStatus.textContent === `JSONインポート完了: 追加 ${added}件 / 重複スキップ ${skipped}件 / 不正行スキップ ${invalid}件`, `Batch ${seed}: counts changed`);
 }
+{
+  const c = client();
+  const input = { id: "numeric-zero", model: "zero-fixture", year: 0, mileage: 0, measurements: 0 };
+  const before = JSON.stringify(input);
+  c.import([input]);
+  const restored = c.context.loadCases().find(item => item.id === input.id);
+  const backup = c.context.buildCasesBackup([restored]);
+  for (const field of ["year", "mileage", "measurements"]) {
+    check(restored[field] === "0" && backup.records[0][field] === "0", `${field}: numeric zero was lost in storage or backup`);
+    for (const missing of [null, undefined, "", false]) {
+      check(c.context.normalizeCase({ ...input, [field]: missing })[field] === "", `${field}: missing value became zero`);
+    }
+  }
+  const bytes = c.store.get(key);
+  c.import(backup);
+  check(c.store.get(key) === bytes, "Zero backup reimport changed stored data");
+  check(JSON.stringify(input) === before, "Zero normalization mutated source");
+  check(c.context.csvCell(0) === '"0"' && c.context.csvCell("0") === '"0"', "CSV dropped zero");
+  const cells = c.context.buildCasesCsv([restored]).split("\r\n")[1].split(",");
+  check([8, 10, 15].every(index => cells[index] === '"0"'), "CSV lost numeric zero fields");
+}
 console.log(`Case storage checks: ${checks} / Errors: 0`);

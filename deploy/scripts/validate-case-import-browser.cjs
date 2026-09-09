@@ -321,7 +321,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       console.log('Exact case deletion: numeric/string and duplicate IDs retain other records across reload');
     }
     if (process.argv.includes('--csv')) {
-      await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([{ id: 'csv-test', model: '模擬CSV車両', memo: '引用符"と,改行\nの検査', measurements: '-12', work: '=1+1', finalCause: '  ＝1+1' }])));
+      await page.evaluate(() => localStorage.setItem('vehicle-diagnosis-cases-v1', JSON.stringify([{ id: 'csv-test', model: '模擬CSV車両', year: 0, mileage: 0, memo: '引用符"と,改行\nの検査', measurements: '-12', work: '=1+1', finalCause: '  ＝1+1' }])));
       await page.reload();
       await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
       const storedBefore = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
@@ -339,6 +339,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const csvText = fs.readFileSync(csvPath, 'utf8');
       for (const field of ['"\t-12"', '"\t=1+1"', '"\t  ＝1+1"']) assert.ok(csvText.includes(field), 'Downloaded CSV lost its Excel text prefix');
       const originalValues = await page.evaluate(() => buildCasesBackup().records[0]);
+      assert.equal(originalValues.year, '0');
+      assert.equal(originalValues.mileage, '0');
       assert.equal(originalValues.measurements, '-12');
       assert.equal(originalValues.work, '=1+1');
       assert.equal(originalValues.finalCause, '  ＝1+1');
