@@ -5,6 +5,39 @@ const assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
+// Failure evidence only: never infer a worker's internal version from its URL.
+async function capturePackagedUpdateState({ expectedStorage, expectedManifest }) {
+  const registration = await navigator.serviceWorker.getRegistration();
+  const describe = async worker => {
+    if (!worker) return null;
+    let identity = null;
+    try {
+      if (typeof getOfflineWorkerIdentity === 'function') identity = await getOfflineWorkerIdentity(worker);
+    } catch (_) { /* Keep missing identity explicit; do not print arbitrary errors. */ }
+    return { url: worker.scriptURL, state: worker.state,
+      identity: identity ? { version: identity.version, cacheName: identity.cacheName } : null };
+  };
+  const [controller, active, waiting, installing] = await Promise.all([
+    navigator.serviceWorker.controller, registration?.active, registration?.waiting, registration?.installing
+  ].map(describe));
+  const cacheNames = await caches.keys();
+  const expectedCache = 'vehicle-diagnosis-tool-' + expectedManifest.version;
+  let missingAssetCount = null;
+  // has() before open(): diagnostics must not create a missing cache.
+  if (await caches.has(expectedCache)) {
+    const cache = await caches.open(expectedCache);
+    const present = new Set((await cache.keys()).map(request => request.url));
+    const expected = new Set(['/', '/index.html', '/offline-assets.json', ...expectedManifest.assets]
+      .map(asset => new URL(asset, location.href).href));
+    missingAssetCount = [...expected].filter(url => !present.has(url)).length;
+  }
+  return { appVersion: document.querySelector('#appVersion')?.textContent,
+    status: document.querySelector('#offlineCacheStatus')?.textContent,
+    expectedVersion: expectedManifest.version, controller, active, waiting, installing,
+    caches: cacheNames, expectedCachePresent: cacheNames.includes(expectedCache), missingAssetCount,
+    savedDataUnchanged: localStorage.getItem('vehicle-diagnosis-cases-v1') === expectedStorage };
+}
+
 // Two existing packages, one temporary browser, one origin. No personal storage.
 (async () => {
   assert.ok(process.argv[2] && process.argv[3], 'Pass old and new package directories');
@@ -26,7 +59,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   let failedAssetRequests = 0;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: 390, height: 844 } });
-  let workstation, origin, port, stored, page;
+  let workstation, origin, port, stored, page, expectedManifest;
   const responses = [];
   const errors = [], blocked = [], versions = [], optionalIconErrors = [];
   try {
@@ -80,6 +113,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.evaluate(() => sessionStorage.getItem('vehicle-diagnosis-obd-access-v1')), null);
     };
     for (const [index, pkg] of [packages[0], packages[1], packages[0]].entries()) {
+      expectedManifest = pkg.manifest;
       workstation = await pkg.start({ webPort: port ?? 0, bridgePort: 0, j2534RegistryText: '' });
       if (!origin) { origin = workstation.webUrl; port = Number(new URL(origin).port); }
       assert.equal(workstation.webUrl, origin);
@@ -206,18 +240,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       limitations: 'Same PC and origin; synthetic case only; no real password, vehicle, OS restart, or format migration' }));
   } catch (error) {
     try {
-      const state = await page.evaluate(async expectedStorage => {
-        const registration = await navigator.serviceWorker.getRegistration();
-        const describe = worker => worker ? { url: worker.scriptURL, state: worker.state } : null;
-        return {
-          appVersion: document.querySelector('#appVersion')?.textContent,
-          status: document.querySelector('#offlineCacheStatus')?.textContent,
-          controller: describe(navigator.serviceWorker.controller),
-          active: describe(registration?.active), waiting: describe(registration?.waiting), installing: describe(registration?.installing),
-          caches: await caches.keys(),
-          savedDataUnchanged: localStorage.getItem('vehicle-diagnosis-cases-v1') === expectedStorage
-        };
-      }, stored);
+      const state = await page.evaluate(capturePackagedUpdateState, { expectedStorage: stored, expectedManifest });
       // Only test-owned worker metadata and asset paths, never record bodies.
       console.error(JSON.stringify({ output, state, responses, errors, blocked, failedAssetRequests }));
       await page.screenshot({ path: path.join(output, 'update-failure.png') });
