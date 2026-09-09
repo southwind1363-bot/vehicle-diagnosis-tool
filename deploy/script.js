@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.560";
+const APP_VERSION = "3.13.561";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -380,6 +380,8 @@ const customerList = document.querySelector("#customerList");
 const sourceList = document.querySelector("#sourceList");
 const confidenceList = document.querySelector("#confidenceList");
 const caseForm = document.querySelector("#caseForm");
+let caseDraftBaseline = new Map();
+let caseDraftExitGuardAttached = false;
 const caseResetButton = document.querySelector("#caseResetButton");
 const caseSearch = document.querySelector("#caseSearch");
 const caseList = document.querySelector("#caseList");
@@ -1161,6 +1163,7 @@ exportCsvButton.addEventListener("click", exportCasesCsv);
 exportJsonButton.addEventListener("click", exportCasesJson);
 importJsonInput.addEventListener("change", importCasesJson);
 caseForm.addEventListener("input", updateCaseQualityPreview);
+caseForm.addEventListener("change", syncCaseDraftExitGuard);
 seedDummyButton.addEventListener("click", seedDummyCases);
 runSelfTestButton.addEventListener("click", runSelfCheck);
 clearStorageButton.addEventListener("click", clearAllLocalStorage);
@@ -16498,6 +16501,7 @@ function evaluateCaseQuality(record) {
 }
 
 function updateCaseQualityPreview() {
+  syncCaseDraftExitGuard();
   const quality = evaluateCaseQuality(collectCaseForm());
   renderCaseQuality(quality);
 }
@@ -17085,10 +17089,36 @@ function persistCases(nextCases) {
   return true;
 }
 
+function hasUnsavedCaseDraft() {
+  return [...caseDraftBaseline].some(([field, value]) => field.value !== value);
+}
+
+function handleCaseDraftBeforeUnload(event) {
+  if (!hasUnsavedCaseDraft()) return;
+  event.preventDefault();
+  event.returnValue = true;
+}
+
+function syncCaseDraftExitGuard() {
+  const needed = hasUnsavedCaseDraft();
+  if (needed === caseDraftExitGuardAttached) return;
+  if (needed) window.addEventListener("beforeunload", handleCaseDraftBeforeUnload);
+  else window.removeEventListener("beforeunload", handleCaseDraftBeforeUnload);
+  caseDraftExitGuardAttached = needed;
+}
+
+function resetCaseDraftExitGuard() {
+  // In-memory baseline only; never store an unfinished case automatically.
+  caseDraftBaseline = new Map([...caseForm.querySelectorAll("input, textarea, select")]
+    .filter((field) => !field.readOnly).map((field) => [field, field.value]));
+  syncCaseDraftExitGuard();
+}
+
 function setDefaultCaseDate() {
   const dateInput = document.querySelector("#caseDate");
   if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
   setNextCaseId();
+  resetCaseDraftExitGuard();
 }
 
 function setNextCaseId() {

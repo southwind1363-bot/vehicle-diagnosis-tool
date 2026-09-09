@@ -60,6 +60,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.doesNotMatch(await page.locator('#caseQualityIssues').innerText(), /個人情報やナンバーらしき文字列/);
     await page.locator('#caseConfidence').selectOption('中');
     const formBeforeClear = await page.locator('#caseForm input, #caseForm textarea, #caseForm select').evaluateAll(nodes => nodes.map(node => [node.id, node.value]));
+    const exitDialog = page.waitForEvent('dialog');
+    await page.close({ runBeforeUnload: true });
+    const exitConfirmation = await exitDialog;
+    assert.equal(exitConfirmation.type(), 'beforeunload');
+    await exitConfirmation.dismiss();
+    assert.equal(page.isClosed(), false);
+    assert.deepEqual(await page.locator('#caseForm input, #caseForm textarea, #caseForm select').evaluateAll(nodes => nodes.map(node => [node.id, node.value])), formBeforeClear);
+    await page.evaluate(() => saveCase()); // Required fields missing: no write/reset.
+    assert.equal(await page.evaluate(() => hasUnsavedCaseDraft()), true);
+    assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), stored);
     const clearPrompts = [];
     for (const accepted of [false, true]) {
       page.once('dialog', async dialog => {
@@ -69,6 +79,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.getByRole('button', { name: '事例入力をクリア', exact: true }).click();
       assert.match(clearPrompts.at(-1), /未保存の入力は元に戻せません.*保存済みの事例は削除しません/);
       assert.match(await page.locator('#caseStatus').innerText(), accepted ? /クリアしました/ : /キャンセル.*保持/);
+      assert.equal(await page.evaluate(() => hasUnsavedCaseDraft()), !accepted);
       if (!accepted) {
         assert.deepEqual(await page.locator('#caseForm input, #caseForm textarea, #caseForm select').evaluateAll(nodes => nodes.map(node => [node.id, node.value])), formBeforeClear);
       } else {
@@ -357,11 +368,41 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const freshPath = path.join(output, 'fresh-after-conflict.json');
       await (await freshDownload).saveAs(freshPath);
       assert.equal(JSON.parse(fs.readFileSync(freshPath, 'utf8')).records.some(item => item.id === 'other-tab-case'), true);
+      page.once('dialog', dialog => {
+        assert.equal(dialog.type(), 'beforeunload');
+        // The existing synthetic-confirmation handler accepts this abandonment.
+      });
       await page.reload();
       assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case') && savedCases.some(item => item.id === 'retry-after-conflict')), true);
       console.log('Two-tab storage: stale write blocked, latest bytes and form retained, manual reload and import recovery passed');
       console.log('Similar cases: prior cards removed on detected conflict, restored after successful reload');
     } finally { await otherPage.close(); }
+    await page.getByRole('button', { name: '3. 整備事例登録', exact: true }).click();
+    for (const [id, value] of Object.entries({ caseCreator: '試験専用', caseMaker: 'TEST', caseModel: 'draft-exit-test',
+      caseYear: '2020', caseMileage: '100', caseSymptom: '模擬症状', caseConfirmed: '模擬確認',
+      caseCause: '模擬原因', caseWork: '模擬作業', caseSources: '合成テスト', caseMemo: '保存失敗で保持する模擬メモ' })) {
+      await page.locator('#' + id).fill(value);
+    }
+    const beforeDraftSave = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+    await page.evaluate(() => {
+      window.originalDraftSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function(key, value) {
+        if (key === 'vehicle-diagnosis-cases-v1') throw new DOMException('Synthetic quota failure', 'QuotaExceededError');
+        return window.originalDraftSetItem.call(this, key, value);
+      };
+    });
+    try {
+      await page.getByRole('button', { name: '事例を保存', exact: true }).click();
+      assert.equal(await page.evaluate(() => hasUnsavedCaseDraft()), true);
+      assert.equal(await page.locator('#caseMemo').inputValue(), '保存失敗で保持する模擬メモ');
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), beforeDraftSave);
+    } finally {
+      await page.evaluate(() => { Storage.prototype.setItem = window.originalDraftSetItem; delete window.originalDraftSetItem; });
+    }
+    await page.getByRole('button', { name: '事例を保存', exact: true }).click();
+    assert.equal(await page.evaluate(() => hasUnsavedCaseDraft()), false);
+    assert.equal(await page.evaluate(() => savedCases.some(item => item.model === 'draft-exit-test')), true);
+    console.log('Draft exit: native close cancellation retains inputs; failed save retains warning; successful manual save clears it');
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));
   } finally { await context.close(); await browser.close(); }
