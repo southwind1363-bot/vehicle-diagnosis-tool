@@ -28,6 +28,24 @@ function packageFile(root, relative) {
   return { absolute: current, size: stat.size };
 }
 
+function readPackageBytes(file, relative) {
+  const descriptor = fs.openSync(file.absolute, "r");
+  try {
+    const before = fs.fstatSync(descriptor);
+    if (!before.isFile() || before.size !== file.size) fail("package_integrity_size_mismatch", relative);
+    // Never let a concurrent copy grow an unbounded readFileSync allocation.
+    const bytes = Buffer.alloc(file.size + 1);
+    let size = 0;
+    while (size < bytes.length) {
+      const count = fs.readSync(descriptor, bytes, size, bytes.length - size, null);
+      if (!count) break;
+      size += count;
+    }
+    if (size !== file.size || fs.fstatSync(descriptor).size !== file.size) fail("package_integrity_size_mismatch", relative);
+    return bytes.subarray(0, size);
+  } finally { fs.closeSync(descriptor); }
+}
+
 // This detects copy damage against the bundled manifest, not publisher authenticity.
 export function verifyWorkstationPackage(directory) {
   const root = path.resolve(directory);
@@ -35,7 +53,7 @@ export function verifyWorkstationPackage(directory) {
   const manifestFile = packageFile(root, MANIFEST);
   if (manifestFile.size > 4 * 1024 * 1024) fail("package_integrity_manifest_invalid");
   let manifest;
-  try { manifest = JSON.parse(fs.readFileSync(manifestFile.absolute, "utf8")); }
+  try { manifest = JSON.parse(readPackageBytes(manifestFile, MANIFEST).toString("utf8")); }
   catch { fail("package_integrity_manifest_invalid"); }
   if (manifest?.schemaVersion !== "workstation_package_integrity_v1" || manifest.algorithm !== "sha256"
     || typeof manifest.appVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(manifest.appVersion)
@@ -63,14 +81,14 @@ export function verifyWorkstationPackage(directory) {
   for (const entry of manifest.files) {
     const file = packageFile(root, entry.path);
     if (file.size !== entry.size) fail("package_integrity_size_mismatch", entry.path);
-    const hash = createHash("sha256").update(fs.readFileSync(file.absolute)).digest("hex");
+    const hash = createHash("sha256").update(readPackageBytes(file, entry.path)).digest("hex");
     if (hash !== entry.sha256) fail("package_integrity_hash_mismatch", entry.path);
   }
   let info;
   let assets;
   try {
-    info = JSON.parse(fs.readFileSync(path.join(root, "package-info.json"), "utf8"));
-    assets = JSON.parse(fs.readFileSync(path.join(root, "offline-assets.json"), "utf8"));
+    info = JSON.parse(readPackageBytes(packageFile(root, "package-info.json"), "package-info.json").toString("utf8"));
+    assets = JSON.parse(readPackageBytes(packageFile(root, "offline-assets.json"), "offline-assets.json").toString("utf8"));
   } catch { fail("package_integrity_metadata_invalid"); }
   if (info?.appVersion !== manifest.appVersion || assets?.version !== manifest.appVersion
     || info.fileCount !== manifest.files.length + 1) fail("package_integrity_metadata_invalid");
