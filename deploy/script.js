@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.567";
+const APP_VERSION = "3.13.568";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -390,6 +390,7 @@ const exportCsvButton = document.querySelector("#exportCsvButton");
 const exportJsonButton = document.querySelector("#exportJsonButton");
 const importJsonInput = document.querySelector("#importJsonInput");
 const caseImportStatus = document.querySelector("#caseImportStatus");
+const cancelCaseImportButton = document.querySelector("#cancelCaseImportButton");
 const caseStatus = document.querySelector("#caseStatus");
 const caseStorageWarning = document.querySelector("#caseStorageWarning");
 const caseStorageWarningText = document.querySelector("#caseStorageWarningText");
@@ -1162,6 +1163,7 @@ caseSearch.addEventListener("input", renderCases);
 exportCsvButton.addEventListener("click", exportCasesCsv);
 exportJsonButton.addEventListener("click", exportCasesJson);
 importJsonInput.addEventListener("change", importCasesJson);
+cancelCaseImportButton.addEventListener("click", cancelCaseImport);
 caseForm.addEventListener("input", updateCaseQualityPreview);
 caseForm.addEventListener("change", syncCaseDraftExitGuard);
 seedDummyButton.addEventListener("click", seedDummyCases);
@@ -16940,10 +16942,15 @@ function setCaseImportStatus(message) {
   if (caseImportStatus) caseImportStatus.textContent = message;
 }
 
+function syncCaseImportControls() {
+  cancelCaseImportButton.disabled = !caseImportOperation;
+  syncCaseDraftExitGuard();
+}
+
 function cancelCaseImport() {
   const operation = caseImportOperation;
   caseImportOperation = null;
-  syncCaseDraftExitGuard();
+  syncCaseImportControls();
   if (!operation) return;
   clearTimeout(operation.timeout);
   importJsonInput.value = "";
@@ -16958,7 +16965,7 @@ function importCasesJson(event) {
   const previous = caseImportOperation;
   const operation = { reader: null };
   caseImportOperation = operation;
-  syncCaseDraftExitGuard();
+  syncCaseImportControls();
   // Invalidate first: abort may synchronously dispatch the old callback.
   clearTimeout(previous?.timeout);
   try { previous?.reader?.abort?.(); } catch (_) { /* Ownership still prevents stale results. */ }
@@ -16967,7 +16974,7 @@ function importCasesJson(event) {
     if (caseImportOperation !== operation) return;
     caseImportOperation = null;
     clearTimeout(operation.timeout);
-    syncCaseDraftExitGuard();
+    syncCaseImportControls();
     setCaseImportStatus("JSONインポート失敗: ファイルを読み取れませんでした。保存済み事例は変更していません。ファイルを選び直してください。");
     importJsonInput.value = "";
   };
@@ -17020,7 +17027,7 @@ function importCasesJson(event) {
     } finally {
       if (caseImportOperation === operation) {
         caseImportOperation = null;
-        syncCaseDraftExitGuard();
+        syncCaseImportControls();
         importJsonInput.value = "";
       }
     }

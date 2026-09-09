@@ -60,6 +60,26 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         };
       });
       try {
+        const cancelImport = page.getByRole('button', { name: 'JSON読込を中断', exact: true });
+        assert.equal(await cancelImport.isDisabled(), true);
+        await input.setInputFiles({ name: 'stalled.json', mimeType: 'application/json', buffer: Buffer.from('synthetic cancelled input') });
+        assert.equal(await cancelImport.isEnabled(), true);
+        await cancelImport.click();
+        assert.equal(await cancelImport.isDisabled(), true);
+        assert.equal(await input.inputValue(), '');
+        assert.match(await status.innerText(), /中断しました/);
+        assert.equal(await page.evaluate(() => caseDraftExitGuardAttached), false);
+        const cancelled = await page.evaluate(() => {
+          const fixture = window.caseReadFixture;
+          fixture.reader.result = JSON.stringify([{ id: 'cancelled-late', model: 'cancelled-late' }]);
+          fixture.reader.onload();
+          return { aborts: fixture.aborts, stored: localStorage.getItem('vehicle-diagnosis-cases-v1') };
+        });
+        assert.equal(cancelled.aborts, 1);
+        assert.equal(cancelled.stored, stored);
+        await cancelImport.scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(output, 'case-import-cancel-390.png') });
+        await page.evaluate(() => Object.assign(window.caseReadFixture, { reads: 0, aborts: 0, started: performance.now() }));
         await input.setInputFiles({ name: 'stalled.json', mimeType: 'application/json', buffer: Buffer.from('synthetic stalled input') });
         assert.equal(await page.evaluate(() => hasUnsavedCaseDraft()), false);
         const pendingExit = page.waitForEvent('dialog');
@@ -71,6 +91,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(await page.evaluate(() => Boolean(caseImportOperation)), true);
         await page.waitForFunction(() => caseImportOperation === null, null, { timeout: 45000 });
         assert.equal(await page.evaluate(() => caseDraftExitGuardAttached), false);
+        assert.equal(await cancelImport.isDisabled(), true);
         assert.match(await status.innerText(), /ファイルを読み取れませんでした.*保存済み事例は変更していません/);
         assert.equal(await input.inputValue(), '');
         const result = await page.evaluate(() => {

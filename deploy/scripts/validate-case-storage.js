@@ -10,7 +10,7 @@ import "./validate-case-draft-exit.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["persistCases", "loadCases", "saveCase", "handleCaseDelete", "seedDummyCases", "createDummyCases", "importCasesJson", "findDuplicateCase", "duplicateKey", "normalizeCase", "isCaseRecord", "createCaseId", "createId", "normalizeCode", "runSelfCheck", "buildCasesCsv", "csvCell", "buildCasesBackup", "renderCaseStorageWarning", "reloadSavedCases", "readOptionalBrowserSetting", "writeOptionalBrowserSetting", "clearAllLocalStorage", "showInitialNotice", "exportCasesCsv", "exportCasesJson"];
-functions.push("cancelCaseImport", "setCaseImportStatus", "hasUnsavedCaseDraft", "handleCaseDraftBeforeUnload", "syncCaseDraftExitGuard");
+functions.push("cancelCaseImport", "setCaseImportStatus", "hasUnsavedCaseDraft", "handleCaseDraftBeforeUnload", "syncCaseDraftExitGuard", "syncCaseImportControls");
 const code = functions.map((name) => {
   const match = source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing application function: ${name}`);
@@ -39,7 +39,7 @@ function client(options = {}) {
     sessionStorage: { getItem: () => { if (options.failRead) throw new Error("SecurityError"); return null; } },
     caseDraftBaseline: new Map(), caseDraftExitGuardAttached: false,
     window: { crypto: webcrypto, addEventListener: () => {}, removeEventListener: () => {} }, crypto: webcrypto,
-    caseStatus: {}, caseImportStatus: {}, caseForm: { reset: () => { calls.reset += 1; } },
+    caseStatus: {}, caseImportStatus: {}, cancelCaseImportButton: { disabled: true }, caseForm: { reset: () => { calls.reset += 1; } },
     document: { getElementById: id => { assert.equal(id, "caseExportStatus"); return {}; } },
     importJsonInput: { value: "selected.json" }, confirm: () => true,
     alert: (message) => { calls.alerts.push(message); },
@@ -89,6 +89,7 @@ for (const action of ["timeout", "cancel", "replace", "success"]) {
   c.context.importCasesJson({ target: { files: [{}] } });
   assert.equal(c.timers.size, 1, "Case import needs a bounded file read");
   assert.equal(c.context.caseDraftExitGuardAttached, true, 'Pending import must guard exit');
+  assert.equal(c.context.cancelCaseImportButton.disabled, false);
   const lateTimeout = [...c.timers.values()][0];
   const pending = c.getReader();
   let aborts = 0;
@@ -100,6 +101,7 @@ for (const action of ["timeout", "cancel", "replace", "success"]) {
   if (action === "success") pending.onload();
   assert.equal(c.timers.size, action === "replace" ? 1 : 0, "Completed/replaced read retained its timer");
   assert.equal(c.context.caseDraftExitGuardAttached, action === 'replace', 'Import completion must release only its exit protection');
+  assert.equal(c.context.cancelCaseImportButton.disabled, action !== 'replace');
   const before = JSON.stringify({ stored: c.store.get(key), status: c.context.caseStatus.textContent, writes: c.calls.writes });
   lateTimeout(); pending.onload(); pending.onerror();
   assert.equal(JSON.stringify({ stored: c.store.get(key), status: c.context.caseStatus.textContent, writes: c.calls.writes }), before);
