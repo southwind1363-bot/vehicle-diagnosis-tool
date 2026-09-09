@@ -187,6 +187,36 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       }
     }
     const beforeSaveFailure = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    if (process.argv.includes('--file-timeout')) {
+      await page.evaluate(() => {
+        const fixture = window.__fileTimeoutTest = { original: FileReader, session: obdDevSession.lastSession, reads: 0, aborts: 0 };
+        window.FileReader = class {
+          constructor() { this.readyState = 0; fixture.reader = this; }
+          readAsText() { this.readyState = 1; fixture.reads += 1; }
+          abort() { this.readyState = 2; fixture.aborts += 1; this.onabort(); }
+        };
+        const input = document.getElementById('obdImportFileInput');
+        const selection = new DataTransfer();
+        selection.items.add(new File(['synthetic'], 'stalled.txt', { type: 'text/plain' }));
+        input.files = selection.files;
+        importObdScannerFile({ currentTarget: input });
+      });
+      try {
+        assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isDisabled(), true);
+        await page.waitForFunction(() => obdScannerImportOperation === null, null, { timeout: 45000 });
+        assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true);
+        assert.equal(await page.locator('#obdImportFileInput').inputValue(), '');
+        assert.match(await page.locator('#obdImportStatus').textContent(), /診断結果ファイルを読めませんでした/);
+        assert.deepEqual(await page.evaluate(() => {
+          const fixture = window.__fileTimeoutTest;
+          fixture.reader.result = 'obsolete'; fixture.reader.onload();
+          return { reads: fixture.reads, aborts: fixture.aborts, unchanged: obdDevSession.lastSession === fixture.session };
+        }), { reads: 1, aborts: 1, unchanged: true });
+        console.log('File timeout: real 30-second timer aborts pending reader once, clears selection and restores export; late reply ignored');
+      } finally {
+        await page.evaluate(() => { FileReader = window.__fileTimeoutTest.original; delete window.__fileTimeoutTest; });
+      }
+    }
     await page.evaluate(() => {
       window.__originalCreateObjectURL = URL.createObjectURL;
       URL.createObjectURL = () => { throw new Error('Synthetic export URL failure'); };
