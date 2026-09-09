@@ -50,6 +50,39 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.waitForFunction(() => savedCases.some(item => item.id === 'browser-case'));
     assert.match(await status.innerText(), /追加 1件/);
     const stored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+    if (process.argv.includes('--file-timeout')) {
+      await page.evaluate(() => {
+        window.caseReadFixture = { original: window.FileReader, reads: 0, aborts: 0, started: performance.now() };
+        window.FileReader = class {
+          constructor() { window.caseReadFixture.reader = this; }
+          readAsText() { window.caseReadFixture.reads++; }
+          abort() { window.caseReadFixture.aborts++; this.onabort?.(); }
+        };
+      });
+      try {
+        await input.setInputFiles({ name: 'stalled.json', mimeType: 'application/json', buffer: Buffer.from('synthetic stalled input') });
+        await page.waitForFunction(() => caseImportOperation === null, null, { timeout: 45000 });
+        assert.match(await status.innerText(), /ファイルを読み取れませんでした.*保存済み事例は変更していません/);
+        assert.equal(await input.inputValue(), '');
+        const result = await page.evaluate(() => {
+          const fixture = window.caseReadFixture;
+          fixture.reader.result = JSON.stringify([{ id: 'late', model: 'late' }]);
+          fixture.reader.onload();
+          return { reads: fixture.reads, aborts: fixture.aborts, elapsed: performance.now() - fixture.started,
+            stored: localStorage.getItem('vehicle-diagnosis-cases-v1'), lateApplied: savedCases.some(item => item.id === 'late') };
+        });
+        assert.equal(result.reads, 1); assert.equal(result.aborts, 1); assert.ok(result.elapsed >= 29000);
+        assert.equal(result.stored, stored); assert.equal(result.lateApplied, false);
+        await status.scrollIntoViewIfNeeded();
+        await page.screenshot({ path: path.join(output, 'case-import-timeout-390.png') });
+      } finally {
+        await page.evaluate(() => { window.FileReader = window.caseReadFixture.original; delete window.caseReadFixture; });
+      }
+      await input.setInputFiles({ name: 'cases.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ records: [record] })) });
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('重複スキップ 1件'));
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), stored);
+      console.log('Case file timeout: real 30-second wait, one abort, stale load ignored, stored cases retained and manual reimport passed');
+    }
     await page.getByRole('button', { name: '3. 整備事例登録', exact: true }).click();
     await page.locator('#caseModel').fill('未保存の模擬車両');
     await page.locator('#caseMemo').fill('人工番号 000-0000-0000');

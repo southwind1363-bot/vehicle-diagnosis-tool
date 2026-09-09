@@ -27,7 +27,11 @@ function client(options = {}) {
   const store = new Map([[key, bytes]]);
   const calls = { reset: 0, render: 0, similar: 0, ids: 0, quality: 0, operations: [], writes: [], removals: [], alerts: [] };
   let reader;
+  const timers = new Map();
+  let timerId = 0;
   const context = vm.createContext({
+    setTimeout: (callback, ms) => { assert.equal(ms, 30000); timers.set(++timerId, callback); return timerId; },
+    clearTimeout: id => timers.delete(id),
     savedCases: original, caseStorageSnapshot: bytes, caseDeleteTargets: new WeakMap(), caseStorageReadError: "", caseImportOperation: null, CASES_KEY: key, APP_VERSION: "test", NO_DATA: "none",
     THEME_KEY: "theme", NOTICE_KEY: "notice", OBD_UI_MODE_KEY: "ui-mode", applyTheme: () => {},
     caseStorageWarning: { hidden: true }, caseStorageWarningText: {},
@@ -67,7 +71,7 @@ function client(options = {}) {
   });
   vm.runInContext(code, context);
   context.caseDeleteTargets.set(removeEvent.target.closest(), original[0]);
-  return { context, original, bytes, store, calls, options, getReader: () => reader,
+  return { context, original, bytes, store, calls, options, timers, getReader: () => reader,
     import: (records) => {
       context.importCasesJson({ target: { files: [{}] } });
       reader.result = typeof records === "string" ? records : JSON.stringify(records);
@@ -78,6 +82,32 @@ function client(options = {}) {
 
 const removeButton = { dataset: { deleteCase: "existing" } };
 const removeEvent = { target: { closest: () => removeButton } };
+for (const action of ["timeout", "cancel", "replace", "success"]) {
+  const c = client();
+  c.context.importCasesJson({ target: { files: [{}] } });
+  assert.equal(c.timers.size, 1, "Case import needs a bounded file read");
+  const lateTimeout = [...c.timers.values()][0];
+  const pending = c.getReader();
+  let aborts = 0;
+  pending.abort = () => { aborts++; pending.onabort(); throw new Error("synthetic abort error"); };
+  pending.result = JSON.stringify([{ id: "late", model: "late" }]);
+  if (action === "timeout") lateTimeout();
+  if (action === "cancel") c.context.cancelCaseImport();
+  if (action === "replace") c.context.importCasesJson({ target: { files: [{}] } });
+  if (action === "success") pending.onload();
+  assert.equal(c.timers.size, action === "replace" ? 1 : 0, "Completed/replaced read retained its timer");
+  const before = JSON.stringify({ stored: c.store.get(key), status: c.context.caseStatus.textContent, writes: c.calls.writes });
+  lateTimeout(); pending.onload(); pending.onerror();
+  assert.equal(JSON.stringify({ stored: c.store.get(key), status: c.context.caseStatus.textContent, writes: c.calls.writes }), before);
+  if (action !== "success") assert.equal(c.store.get(key), c.bytes);
+  if (action === "timeout") {
+    assert.equal(aborts, 1);
+    assert.equal(c.context.importJsonInput.value, "");
+    assert.match(c.context.caseImportStatus.textContent, /保存済み事例は変更していません/);
+    c.import([{ id: "recovered", model: "recovered" }]);
+    assert.ok(c.context.savedCases.some(item => item.id === "recovered"));
+  }
+}
 for (const accepted of [false, true]) {
   const c = client();
   let handler;
