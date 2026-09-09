@@ -21,6 +21,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   assert.notEqual(packages[0].manifest.version, packages[1].manifest.version);
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'packaged-update-'));
   const failedUpdate = process.argv.includes('--failed-update');
+  const closeWaitingClient = process.argv.includes('--close-waiting-client');
+  let clientClosedForUpdate = false;
   let failedAssetRequests = 0;
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   const context = await browser.newContext({ serviceWorkers: 'allow', viewport: { width: 390, height: 844 } });
@@ -129,12 +131,48 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         await context.setOffline(false);
         await page.reload();
       }
+      if (index === 1 && closeWaitingClient) {
+        const deadline = Date.now() + 20000;
+        let prepared;
+        do {
+          prepared = await page.evaluate(async manifest => {
+            const registration = await navigator.serviceWorker.getRegistration();
+            const worker = registration?.waiting || registration?.active;
+            const identity = worker && await getOfflineWorkerIdentity(worker);
+            if (identity?.version !== manifest.version) return null;
+            const cacheName = 'vehicle-diagnosis-tool-' + manifest.version;
+            if (identity.cacheName !== cacheName || !await caches.has(cacheName)) return null;
+            const cache = await caches.open(cacheName);
+            const keys = new Set((await cache.keys()).map(request => request.url));
+            if (!['/', '/index.html', '/offline-assets.json', ...manifest.assets].every(url => keys.has(new URL(url, location.href).href))) return null;
+            return { version: identity.version, state: worker.state, waiting: worker === registration.waiting };
+          }, pkg.manifest);
+          if (prepared) break;
+          assert.ok(Date.now() < deadline, 'New worker identity and complete cache not ready');
+          await new Promise(resolve => setTimeout(resolve, 100));
+        } while (!prepared);
+        console.log(JSON.stringify({ phase: 'before-client-close', prepared }));
+        await checkSaved();
+        if (prepared.waiting) {
+          // Explicit user-like close/reopen; never send skipWaiting or clear storage.
+          const errorListeners = page.listeners('pageerror'), consoleListeners = page.listeners('console');
+          assert.equal(context.pages().length, 1, 'Unexpected test client');
+          await page.close();
+          assert.equal(context.pages().length, 0);
+          page = await context.newPage();
+          for (const listener of errorListeners) page.on('pageerror', listener);
+          for (const listener of consoleListeners) page.on('console', listener);
+          page.setDefaultTimeout(20000);
+          await page.goto(origin);
+          clientClosedForUpdate = true;
+        }
+      }
       await waitCache(pkg.manifest);
       if (index > 0) {
-        if (index === 1) {
+        if (index === 1 && !clientClosedForUpdate) {
           await page.locator('#offlineUpdateStatus').waitFor({ state: 'visible' });
           assert.ok((await page.locator('#offlineUpdateStatus').innerText()).includes(pkg.manifest.version));
-        } else {
+        } else if (index === 2) {
           await page.waitForFunction(() => document.querySelector('#offlineCacheStatus').textContent.includes('画面とオフライン基盤の版を照合できません'));
           assert.equal(await page.locator('#offlineUpdateStatus').isVisible(), false);
         }
@@ -164,7 +202,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     for (const pkg of packages) assert.deepEqual(pkg.verify(pkg.root), pkg.integrity);
-    console.log(JSON.stringify({ passed: true, versions, output, failedUpdate, failedAssetRequests, savedDataUnchanged: true, optionalIconErrors,
+    console.log(JSON.stringify({ passed: true, versions, output, failedUpdate, failedAssetRequests, clientClosedForUpdate, savedDataUnchanged: true, optionalIconErrors,
       limitations: 'Same PC and origin; synthetic case only; no real password, vehicle, OS restart, or format migration' }));
   } catch (error) {
     try {
