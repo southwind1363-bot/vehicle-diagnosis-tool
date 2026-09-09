@@ -90,20 +90,22 @@ for (const value of [0, "0", null, undefined, false, true, [], [1], "", " ", "0x
 const rawInvalid = { dtcSnapshot: { dtcs: [{ code: "P0300", dtcWarmUpCycleCount: [7] }] } };
 equal(obd.buildManufacturerSampleCollectionExport(rawInvalid).tsv.includes("invalid_integer"), true, "Raw-value validation was disabled");
 
-function client(input, build = obd.buildManufacturerSampleCollectionExport) {
+function client(input, build = obd.buildManufacturerSampleCollectionExport, failure = "") {
   const calls = { blobs: 0, urls: 0, clicks: 0, appended: 0, revoked: 0 };
+  let removed = 0;
+  const fail = stage => { if (failure === stage) throw new Error("PRIVATE_DOWNLOAD_FAILURE"); };
   const status = { textContent: "" };
   const context = vm.createContext({
     window: { ObdReadOnly: { buildManufacturerSampleCollectionExport: build } },
     obdDevSession: { lastSession: input }, obdImportStatus: status,
-    Blob: class extends Blob { constructor(parts, options) { super(parts, options); calls.blobs += 1; } },
-    URL: { createObjectURL() { calls.urls += 1; return "blob:test"; }, revokeObjectURL() { calls.revoked += 1; } },
-    document: { createElement() { return { click() { calls.clicks += 1; }, remove() {} }; }, body: { appendChild() { calls.appended += 1; } } },
+    Blob: class extends Blob { constructor(parts, options) { fail("blob"); super(parts, options); calls.blobs += 1; } },
+    URL: { createObjectURL() { fail("url"); calls.urls += 1; return "blob:test"; }, revokeObjectURL() { calls.revoked += 1; } },
+    document: { createElement() { fail("element"); return { click() { fail("click"); calls.clicks += 1; }, remove() { removed++; } }; }, body: { appendChild() { fail("append"); calls.appended += 1; } } },
     setTimeout(callback) { callback(); }
   });
   vm.runInContext(downloadCode, context);
   context.downloadManufacturerSampleTemplate();
-  return { calls, status };
+  return { calls, status, removed };
 }
 const denied = client(session);
 equal(denied.calls, { blobs: 0, urls: 0, clicks: 0, appended: 0, revoked: 0 }, "Blocked UI allocated or downloaded a lossy file");
@@ -113,4 +115,15 @@ equal(allowed.calls, { blobs: 1, urls: 1, clicks: 1, appended: 1, revoked: 1 }, 
 const failed = client(valid, () => { throw new Error("PRIVATE_FAILURE_DETAIL"); });
 equal(failed.calls.blobs, 0, "Failed exporter created a file");
 equal(failed.status.textContent.includes("PRIVATE_FAILURE_DETAIL"), false, "UI leaked raw export failure details");
+for (const stage of ["blob", "element", "url", "append", "click"]) {
+  const before = JSON.stringify(valid);
+  const result = client(valid, undefined, stage);
+  equal(result.status.textContent.includes("保存を開始できませんでした"), true, `${stage}: failure not reported`);
+  equal(result.status.textContent.includes("PRIVATE_DOWNLOAD_FAILURE"), false, `${stage}: private error leaked`);
+  equal(result.calls.revoked, result.calls.urls, `${stage}: URL leaked`);
+  equal(result.removed, ["url", "append", "click"].includes(stage) ? 1 : 0, `${stage}: link leaked`);
+  equal(JSON.stringify(valid), before, `${stage}: result mutated`);
+  equal(client(valid).status.textContent.includes("保存を開始しました"), true, `${stage}: manual retry failed`);
+}
+equal(allowed.status.textContent.includes("保存しました"), false, "Download start was reported as completed save");
 console.log(`Manufacturer history export checks: ${checks} / Errors: 0`);

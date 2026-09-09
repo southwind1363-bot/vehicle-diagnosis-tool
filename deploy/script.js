@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.554";
+const APP_VERSION = "3.13.555";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -15680,23 +15680,30 @@ function downloadManufacturerSampleTemplate() {
       : "実機サンプルTSVを準備できませんでした。読取結果は変更していません。";
     return;
   }
-  const blob = new Blob([`\uFEFF${exportBundle.tsv}`], { type: "text/tab-separated-values;charset=utf-8" });
-  const link = document.createElement("a");
-  const objectUrl = URL.createObjectURL(blob);
-  link.href = objectUrl;
-  link.download = `メーカー実機サンプル_${new Date().toISOString().slice(0, 10)}.tsv`;
-  link.hidden = true;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-  obdImportStatus.textContent = exportBundle.truncated
-    ? `DTC ${exportBundle.exportedRowCount}/${exportBundle.sourceDtcCount}件を保存しました。上限500件を超えたため、残りは別セッションで収集してください。`
-    : exportBundle.exportedRowCount > 0 && exportBundle.contractCompleteForSampleReview !== true
-      ? `読取済みDTC ${exportBundle.exportedRowCount}件を保存しました。証跡不足 ${exportBundle.incompleteRowCount}行 / ${exportBundle.missingRequirementCount}要件は未確認です。`
-      : exportBundle.exportedRowCount > 0
-        ? `読取済みDTC ${exportBundle.exportedRowCount}件を実機サンプルTSVへ保存しました。この欄から再取込できます。`
-    : "空の実機サンプルTSVを保存しました。車両・ECU・要求・応答を1行ずつ記録し、この欄から再取込できます。";
+  let link = null;
+  let objectUrl = null;
+  try {
+    const blob = new Blob([`\uFEFF${exportBundle.tsv}`], { type: "text/tab-separated-values;charset=utf-8" });
+    link = document.createElement("a");
+    objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = `メーカー実機サンプル_${new Date().toISOString().slice(0, 10)}.tsv`;
+    link.hidden = true;
+    document.body.appendChild(link);
+    link.click();
+    obdImportStatus.textContent = exportBundle.truncated
+      ? `DTC ${exportBundle.exportedRowCount}/${exportBundle.sourceDtcCount}件の保存を開始しました。上限500件を超えたため、残りは別セッションで収集してください。`
+      : exportBundle.exportedRowCount > 0 && exportBundle.contractCompleteForSampleReview !== true
+        ? `読取済みDTC ${exportBundle.exportedRowCount}件の保存を開始しました。証跡不足 ${exportBundle.incompleteRowCount}行 / ${exportBundle.missingRequirementCount}要件は未確認です。`
+        : exportBundle.exportedRowCount > 0
+          ? `読取済みDTC ${exportBundle.exportedRowCount}件の実機サンプルTSV保存を開始しました。この欄から再取込できます。`
+      : "空の実機サンプルTSVの保存を開始しました。車両・ECU・要求・応答を1行ずつ記録し、この欄から再取込できます。";
+  } catch (_error) {
+    obdImportStatus.textContent = "実機サンプルTSVの保存を開始できませんでした。読取結果は保持しています。もう一度保存を操作してください。";
+  } finally {
+    link?.remove();
+    if (objectUrl) setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
 }
 
 function invalidateObdScannerImport(preserveInput = null) {

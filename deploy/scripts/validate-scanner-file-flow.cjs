@@ -143,9 +143,22 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await exportStatus.isVisible(), true);
       assert.equal(await exportStatus.innerText(), 'JSON保存を開始できませんでした。読取結果は変更していません。');
       assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), beforeSaveFailure);
+      await page.evaluate(() => downloadManufacturerSampleTemplate());
+      assert.match(await page.locator('#obdImportStatus').textContent(), /実機サンプルTSVの保存を開始できませんでした/);
+      assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), beforeSaveFailure);
+      assert.equal(await page.locator('a[download$=".tsv"]').count(), 0);
     } finally {
       await page.evaluate(() => { URL.createObjectURL = window.__originalCreateObjectURL; delete window.__originalCreateObjectURL; });
     }
+    const expectedTsv = await page.evaluate(() => '\uFEFF' + window.ObdReadOnly.buildManufacturerSampleCollectionExport(obdDevSession.lastSession).tsv);
+    const pendingTsv = page.waitForEvent('download');
+    await page.evaluate(() => downloadManufacturerSampleTemplate());
+    const tsvDownload = await pendingTsv;
+    const tsvPath = path.join(output, 'manufacturer-retry.tsv');
+    await tsvDownload.saveAs(tsvPath);
+    assert.equal(fs.readFileSync(tsvPath, 'utf8'), expectedTsv);
+    assert.match(await page.locator('#obdImportStatus').textContent(), /保存を開始しました/);
+    assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), beforeSaveFailure);
     const pendingDownload = page.waitForEvent('download');
     await page.locator('#obdStageResultsView [data-obd-session-export]').click();
     const download = await pendingDownload;
