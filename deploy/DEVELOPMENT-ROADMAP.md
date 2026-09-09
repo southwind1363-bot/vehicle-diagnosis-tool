@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.572 更新・旧版復帰確認: 未変更の展開配布物571→572→571を同一originの隔離Chromeで通常更新し、各版でサーバー停止後のオフライン再読込と人工整備事例の保存文字列不変を確認（packaged-update-Tj2bP2）。ブラウザー検証スキルの専用CLI不在につき既存Playwright経路を使用し、572の390幅画面を目視確認。ページ例外・想定外通信なし、任意faviconのERR_FAILED/404は分離。故障注入・待機クライアント強制終了は行わず、既知waiting停止やChrome異常終了の解決とはしない。572 ZIPのSHA256は4F2CE9BFBF83549BF6FA3B6A326A362CB0AFE844FFEFBB33CB99F8DA7B39F099で不変。本体・検査コード・保存形式・ZIPに変更なし。実Excel・実VCI/実車・別PC・OS再起動・実パスワードは未確認。
+
 3.13.572 公開CI完了: 34348049545/2dcb8b1e708ec54e457c7d6e24de8bc6d859d95dはcompleted/success。診断データ/read-only契約検証とChromium上のオフライン診断・事例保存復元の両ジョブが合格した。以下の同CI実行中という記述は当時の経過。新たな実装・再試験・ZIP変更はなく、実Excel・実VCI/実車・別PC・OS再起動の未検証はそのまま残す。
 
 3.13.572 公開反映待ちの切り分け: GitHub mainは2dcb8b1e708ec54e457c7d6e24de8bc6d859d95dと一致していたが、最初は対応CI/デプロイが見えず公開HTTPは571のままだった。デプロイ/APIスキルに沿い接続済みVercelを読取確認すると、後に同SHAのGit連携本番デプロイdpl_8xNzVQirpqhnfRvb5vnaar7sVtXRがREADYとなり、tool.mukiguri.comへのalias一致・aliasErrorなしを確認。repoPushedAtからデプロイ作成まで約238秒の間隔を観測したが、遅延の根本原因は未確定。主要5資材HTTP200、script/SW/manifestの572一致、CSV対策実装と画面注意文の配信を確認し公開待ちを解消。強制デプロイ・空コミット・再push・連携/権限変更・保存データ操作は行っていない。今回CI 34348049545はin_progress/conclusion=nullで合格扱いにしない。先行571のCI 34346678277と記録コミットの34346979680はcompleted/success。実Excel/実VCI/実車/別PCは引き続き未確認。
