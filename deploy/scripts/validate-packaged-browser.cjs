@@ -96,6 +96,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     assert.deepEqual(errors, [], 'Online page errors');
+    if (process.argv.includes('--clipboard-cleanup')) {
+      const results = await page.evaluate(async () => {
+        const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+        const select = HTMLTextAreaElement.prototype.select;
+        const commandDescriptor = Object.getOwnPropertyDescriptor(document, 'execCommand');
+        const originalSession = obdDevSession.lastSession;
+        const initialCount = document.querySelectorAll('textarea').length;
+        const results = [];
+        let copies = 0;
+        try {
+          Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('synthetic API rejection'); } } });
+          Object.defineProperty(document, 'execCommand', { configurable: true, value: () => { copies++; return true; } });
+          for (const failSelection of [true, false]) {
+            HTMLTextAreaElement.prototype.select = failSelection ? function () { throw new Error('synthetic selection failure'); } : select;
+            let succeeded = false;
+            try { await copyTextToClipboard('synthetic consultation only'); succeeded = true; } catch (_) {}
+            results.push({ succeeded, temporaryElementsRemoved: document.querySelectorAll('textarea').length === initialCount,
+              sessionRetained: obdDevSession.lastSession === originalSession });
+          }
+          return { results, copies };
+        } finally {
+          HTMLTextAreaElement.prototype.select = select;
+          if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor); else delete navigator.clipboard;
+          if (commandDescriptor) Object.defineProperty(document, 'execCommand', commandDescriptor); else delete document.execCommand;
+        }
+      });
+      assert.deepEqual(results, { results: [
+        { succeeded: false, temporaryElementsRemoved: true, sessionRetained: true },
+        { succeeded: true, temporaryElementsRemoved: true, sessionRetained: true }
+      ], copies: 1 });
+      console.log('Actual DOM clipboard fallback: selection failure cleanup and subsequent operation passed; clipboard writes stubbed');
+    }
     const inspectPageStorage = async phase => console.log(JSON.stringify({ phase, ...await page.evaluate(async () => ({
       caches: await caches.keys(),
       registrations: (await navigator.serviceWorker.getRegistrations()).map(item => ({ scope: item.scope, active: item.active?.state, installing: item.installing?.state })),

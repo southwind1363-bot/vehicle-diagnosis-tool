@@ -2,6 +2,8 @@
 
 確認日: 2026-09-09。ローカル実装対象: 3.13.558。公開確認済み: 3.13.558。計画改訂時の基準版: 3.13.436 / 63510896。
 
+3.13.558 コピー後処理の実DOM確認と配布起動: ブラウザー検証スキルの代替の隔離Chromeで、標準Clipboard API拒否と旧式select例外を注入。実textareaの残存を旧557で再現（packaged-browser-sHQ3hz、意図した比較失敗）、未変更558配布物では要素数が元に戻り、次の操作が成功し、セッション参照も不変（packaged-browser-NivqWo）。navigator.clipboardとexecCommandだけを検査内で置き換え、実クリップボードは読み書きせず、descriptor/prototypeはfinallyで復元する。既存配布検査に明示--clipboard-cleanupとして統合、実際のコピー互換性確認とは区別。558配布版の初回注意・誤パスワード拒否・全資材キャッシュ・両サーバー停止後のブラウザー終了/再起動・ロック保持も合格。キャッシュ容量18,373,632 bytesと画面復元を確認、補助CDPのNo frameと未同梱faviconの1失敗は別扱い。390幅画面を目視確認。ZIP SHA256 24E5690DFC729F53FF6192A03B2CB0AB1E7BE732BB14B45837D5C0F1CF0FA5FBは不変。CI実行34312508732/e48ae8c902423a5141ecae617d8702ce055ac0d0はcompleted/success。アプリ・ZIP変更なし。実VCI/実車・別PC・OS再起動とwaiting停止の修復は未確認。
+
 3.13.558 公開確認: e48ae8c9を承認済みGitHub mainへ送信。デプロイスキルに沿い公開主要5経路のHTTP 200、script/SW/manifestの558一致、textarea追加がtry内に入った修正の反映を確認した。
 
 3.13.558 診断相談文コピーの失敗時後処理: 旧式コピーfallbackでDOM追加・focus・select・選択範囲設定がtry/finallyの外にあり、その例外で相談文を含む一時textareaが残る経路を修正。これらの操作を既存finallyの対象へ移した。相談文内容・コピー成功判定・標準Clipboard API経路・外部送信先・接続権限・保存形式は変更しない。隔離VMの7条件（正常/追加/focus/select/range/copy例外/false）で一時要素除去とコピー回数を確認しnavigation/R1へ統合、R1全工程合格。実クリップボード・実パスワード・実VCI/実車は操作しておらず、ブラウザー別のコピー互換性は今回未検証。ZIP 2,662,992 bytes / SHA256 24E5690DFC729F53FF6192A03B2CB0AB1E7BE732BB14B45837D5C0F1CF0FA5FB、別展開後846ファイル / 16,888,570 bytes一致、終了0。先行版のwaiting停止は未解決。公開は別途確認。
