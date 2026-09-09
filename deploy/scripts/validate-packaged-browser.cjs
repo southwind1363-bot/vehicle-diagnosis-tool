@@ -99,6 +99,49 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     assert.deepEqual(errors, [], 'Online page errors');
+    if (process.argv.includes('--clipboard-write-timeout')) {
+      await page.setViewportSize({ width: 1280, height: 844 });
+      await page.getByRole('button', { name: '1. 診断補助', exact: true }).click();
+      await page.evaluate(() => {
+        const fixture = window.copyWaitFixture = { descriptor: Object.getOwnPropertyDescriptor(navigator, 'clipboard'),
+          open: window.open, command: Object.getOwnPropertyDescriptor(document, 'execCommand'),
+          writes: 0, fallbacks: 0, opened: 0, done: false, started: performance.now() };
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: () => {
+          fixture.writes++; return new Promise(resolve => { fixture.resolve = resolve; });
+        } } });
+        Object.defineProperty(document, 'execCommand', { configurable: true, value: () => { fixture.fallbacks++; return true; } });
+        window.open = () => { fixture.opened++; return null; };
+        void sendToExternalGpt().then(() => { fixture.done = true; });
+      });
+      try {
+        assert.equal(await page.evaluate(() => aiButton.disabled), true);
+        await page.waitForFunction(() => window.copyWaitFixture.done, null, { timeout: 45000 });
+        assert.equal(await page.evaluate(() => aiButton.disabled), false);
+        assert.match(await page.locator('#aiStatus').innerText(), /コピーできませんでした/);
+        const result = await page.evaluate(async () => {
+          const fixture = window.copyWaitFixture;
+          fixture.resolve();
+          // The successful desktop flow opens its window after 1300 ms.
+          await new Promise(resolve => setTimeout(resolve, 1600));
+          return { writes: fixture.writes, fallbacks: fixture.fallbacks, opened: fixture.opened, elapsed: performance.now() - fixture.started };
+        });
+        assert.equal(result.writes, 1); assert.equal(result.fallbacks, 0); assert.equal(result.opened, 0);
+        assert.ok(result.elapsed >= 29000);
+        await page.locator('#aiStatus').screenshot({ path: path.join(output, 'clipboard-write-timeout.png') });
+      } finally {
+        await page.evaluate(() => {
+          const fixture = window.copyWaitFixture;
+          if (fixture.descriptor) Object.defineProperty(navigator, 'clipboard', fixture.descriptor); else delete navigator.clipboard;
+          if (fixture.command) Object.defineProperty(document, 'execCommand', fixture.command); else delete document.execCommand;
+          window.open = fixture.open;
+          delete window.copyWaitFixture;
+        });
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await locked();
+      console.log('Consultation copy stall: real 30-second deadline, button recovery, no fallback or external window; clipboard stubbed');
+    }
     if (savedCase) {
       await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
       await page.locator('#importJsonInput').setInputFiles({ name: 'synthetic-restart.json', mimeType: 'application/json',
