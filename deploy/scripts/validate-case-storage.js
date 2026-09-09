@@ -10,7 +10,7 @@ import "./validate-case-draft-exit.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["persistCases", "loadCases", "saveCase", "handleCaseDelete", "seedDummyCases", "createDummyCases", "importCasesJson", "findDuplicateCase", "duplicateKey", "normalizeCase", "isCaseRecord", "createCaseId", "createId", "normalizeCode", "runSelfCheck", "buildCasesCsv", "csvCell", "buildCasesBackup", "renderCaseStorageWarning", "reloadSavedCases", "readOptionalBrowserSetting", "writeOptionalBrowserSetting", "clearAllLocalStorage", "showInitialNotice", "exportCasesCsv", "exportCasesJson"];
-functions.push("cancelCaseImport", "setCaseImportStatus", "hasUnsavedCaseDraft", "handleCaseDraftBeforeUnload", "syncCaseDraftExitGuard", "syncCaseImportControls");
+functions.push("cancelCaseImport", "setCaseImportStatus", "hasUnsavedCaseDraft", "handleCaseDraftBeforeUnload", "syncCaseDraftExitGuard", "syncCaseImportControls", "clearCaseExportStatus");
 const code = functions.map((name) => {
   const match = source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing application function: ${name}`);
@@ -421,6 +421,16 @@ for (const deniedProperty of [false, true]) {
 }
 
 const index = fs.readFileSync(new URL("../index.html", import.meta.url), "utf8");
+for (const action of ['save', 'reload', 'failed-save', 'failed-reload']) {
+  const c = client();
+  const status = { textContent: '以前のJSON保存を開始しました。' };
+  c.context.document.getElementById = id => { assert.equal(id, 'caseExportStatus'); return status; };
+  if (action === 'failed-save') c.options.failWrite = 'QuotaExceededError';
+  if (action === 'failed-reload') c.options.failRead = true;
+  if (action.endsWith('reload')) c.context.reloadSavedCases();
+  else c.context.persistCases([...c.original, { id: 'new', model: 'new' }]);
+  assert.equal(status.textContent, action.startsWith('failed-') ? '以前のJSON保存を開始しました。' : '', 'Successful case-list replacement must clear stale export status; failed replacement must retain it');
+}
 {
   const c = client();
   c.context.cancelCaseImportButton = null;
