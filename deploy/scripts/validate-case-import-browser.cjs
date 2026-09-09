@@ -305,6 +305,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       console.log('Static data stall: real 30-second deadline, fallback, one attempt, retained lock and saved cases passed');
     }
     // A second real page shares storage but not the first page's in-memory list.
+    await page.getByRole('button', { name: '1. 診断補助', exact: true }).click();
+    await page.locator('#obdCode').fill('P0171');
+    await page.evaluate(() => renderSimilarCases());
+    assert.equal(await page.locator('#similarCases .case-card').count(), 1);
     const otherPage = await context.newPage();
     try {
       await otherPage.goto('http://127.0.0.1/');
@@ -322,6 +326,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), latestBytes);
       assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case')), false);
       assert.match(await status.innerText(), /別タブ.*上書きを停止/);
+      assert.equal(await page.locator('#similarCases .case-card').count(), 0);
+      assert.match(await page.locator('#similarCases').textContent(), /未読込.*未確認/);
       assert.equal(await page.locator('#caseMemo').inputValue(), '未保存の模擬メモ');
       await page.setViewportSize({ width: 390, height: 844 });
       await page.locator('#caseStorageWarning').scrollIntoViewIfNeeded();
@@ -329,6 +335,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.screenshot({ path: path.join(output, 'case-storage-conflict-mobile.png') });
       await page.getByRole('button', { name: '保存事例を再読込', exact: true }).click();
       assert.equal(await page.locator('#caseStorageWarning').isVisible(), false);
+      assert.equal(await page.locator('#similarCases .case-card').count(), 1);
       assert.equal(await page.locator('#caseMemo').inputValue(), '未保存の模擬メモ');
       await input.setInputFiles(candidate);
       await page.waitForFunction(() => savedCases.some(item => item.id === 'retry-after-conflict'));
@@ -336,6 +343,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.reload();
       assert.equal(await page.evaluate(() => savedCases.some(item => item.id === 'other-tab-case') && savedCases.some(item => item.id === 'retry-after-conflict')), true);
       console.log('Two-tab storage: stale write blocked, latest bytes and form retained, manual reload and import recovery passed');
+      console.log('Similar cases: prior cards removed on detected conflict, restored after successful reload');
     } finally { await otherPage.close(); }
     assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
     console.log(JSON.stringify({ passed: true, flow: 'invalid file -> retry -> backup -> reload -> reimport -> read failure -> reselection -> confirmed clear -> stale callbacks ignored', output }));

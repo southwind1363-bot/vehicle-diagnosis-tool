@@ -104,6 +104,7 @@ for (const replacement of [null, "[]", '{broken', JSON.stringify([{ id: "other-t
   check(c.context.persistCases([]) === false, "A stale tab overwrote externally changed cases");
   check((c.store.get(key) ?? null) === replacement && c.context.savedCases === c.original && c.calls.writes.length === 0, "Conflict changed memory or persisted bytes");
   check(c.context.caseStorageReadError && !c.context.caseStorageWarning.hidden, "Conflict warning is missing");
+  check(c.calls.similar === 1, "Conflict left prior similar-case suggestions rendered");
   if (replacement === '{broken') continue;
   c.context.reloadSavedCases();
   check(!c.context.caseStorageReadError, "Manual reload failed to release conflict guard");
@@ -300,6 +301,7 @@ for (const stored of ["", "{broken", "null", "{}", '[{"id":"valid"},null]', '[{"
   c.store.set(key, stored);
   c.context.reloadSavedCases();
   check(c.context.savedCases === c.original && c.context.caseStorageReadError && !c.context.caseStorageWarning.hidden, "Malformed storage replaced memory or hid its warning");
+  check(c.calls.similar === 1, "Failed reload left prior similar-case suggestions rendered");
   for (const run of [() => c.context.saveCase(), () => c.context.handleCaseDelete(removeEvent), () => c.context.seedDummyCases(), () => c.import([{ id: "new", model: "new" }]), () => c.context.exportCasesCsv(), () => c.context.exportCasesJson()]) run();
   check(c.store.get(key) === stored && c.calls.writes.length === 0 && c.context.savedCases === c.original && c.calls.reset === 0, "Unresolved storage failure allowed a mutation or reset the form");
   check(c.calls.alerts.length === 6, "Blocked mutation or export was not reported");

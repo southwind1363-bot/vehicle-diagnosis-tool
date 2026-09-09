@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.551";
+const APP_VERSION = "3.13.552";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16994,7 +16994,10 @@ function renderCaseStorageWarning() {
 function reloadSavedCases() {
   const cases = loadCases();
   renderCaseStorageWarning();
-  if (caseStorageReadError) return;
+  if (caseStorageReadError) {
+    renderSimilarCases();
+    return;
+  }
   cancelCaseImport();
   savedCases = cases;
   renderCases();
@@ -17032,6 +17035,7 @@ function persistCases(nextCases) {
     if (localStorage.getItem(CASES_KEY) !== caseStorageSnapshot) {
       caseStorageReadError = "保存事例が別タブなどで変更されています。上書きを停止しました。入力内容を控えてから「保存事例を再読込」で最新の一覧を確認してください。";
       renderCaseStorageWarning();
+      renderSimilarCases();
       caseStatus.textContent = caseStorageReadError;
       alert(caseStorageReadError);
       return false;
