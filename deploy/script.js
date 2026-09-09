@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.556";
+const APP_VERSION = "3.13.557";
 const APP_LAST_UPDATED = "2026-09-09";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -1773,6 +1773,8 @@ async function registerOfflineCache() {
         if (worker.state === "redundant") {
           installFailed = true;
           setOfflineCacheStatus("今回のオフライン更新は採用されませんでした。失敗理由は未確認です。この版のオフライン利用は未確認です。", true);
+        } else if (worker.state === "installed") {
+          setOfflineCacheStatus("オフライン更新は切替待ちです。更新完了は未確認です。読取中の画面は閉じず、終了後に結果を保存してから更新状況を確認してください。");
         } else if (worker.state === "activated") {
           void refreshOfflineCacheStatus(worker, () => registration.active === worker && !installFailed);
         }
