@@ -339,6 +339,25 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.locator('#obdImportStatus').filter({ hasText: message }).waitFor();
       await assertRetained();
     }
+    for (const replace of [false, true]) {
+      const cancellation = await page.evaluate(replace => {
+        const statusBefore = obdImportStatus.textContent;
+        const file = new File([' '.repeat(1000000)], 'cancel-pending.txt', { type: 'text/plain' });
+        importObdScannerFile({ currentTarget: { files: [file], value: 'synthetic' } });
+        const reader = obdScannerImportOperation.reader;
+        const loading = reader?.readyState;
+        let aborts = 0;
+        reader?.addEventListener('abort', () => aborts++);
+        if (replace) beginObdScannerImport(); else invalidateObdScannerImport();
+        const done = reader?.readyState;
+        invalidateObdScannerImport();
+        return { loading, done, aborts, statusUnchanged: obdImportStatus.textContent === statusBefore };
+      }, replace);
+      assert.deepEqual(cancellation, { loading: 1, done: 2, aborts: 1, statusUnchanged: true });
+      await assertRetained();
+      assert.equal(await page.locator('#obdStageResultsView [data-obd-session-export]').isEnabled(), true);
+    }
+    console.log('Native FileReader: invalidation and replacement abort pending reads once, preserve readout/status and restore export');
     // Fault injection is confined to this fresh browser context and restored before real-file recovery.
     for (const failure of ['error', 'abort', 'throw']) {
       await page.evaluate(failure => {
