@@ -5,7 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { execFile } from "node:child_process";
-import { packageWorkstation } from "./package-workstation.js";
+import { packageWorkstation, formatWorkstationPackageError } from "./package-workstation.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
 import { buildJ2534NativePreflightEvidence, formatJ2534NativePreflightResult, formatJ2534WorkstationInspection, parseJ2534InspectionArguments, parseJ2534PreflightSelection, runJ2534WorkstationPreflight, validateJ2534NativePreflightEvidence } from "./inspect-workstation-j2534.js";
@@ -13,6 +13,17 @@ import { parseJ2534UdsPreparationArguments, runJ2534UdsPreparationEvidence, vali
 
 let checks = 0;
 const check = (value, message) => { assert.ok(value, message); checks += 1; };
+for (const code of ["ENOSPC", "EDQUOT", "EACCES", "EPERM", "EBUSY", "ENOENT"]) {
+  const message = formatWorkstationPackageError({ code, message: "private-path-and-password", stdout: "private-compiler-output" });
+  check(message.includes(code) && message.includes("確認"), `Missing actionable package failure: ${code}`);
+  check(!message.includes("private"), "Package error leaked raw details");
+}
+for (const reason of ["exists", "busy", "path_invalid", "cleanup_invalid", "lock_mismatch"]) {
+  check(formatWorkstationPackageError(new Error(`workstation_package_${reason}`)).includes(`workstation_package_${reason}`), "Known package reason lost");
+}
+for (const error of [null, undefined, "private", { message: "workstation_package_private-secret" }, { code: "toString", message: "private" }]) {
+  check(formatWorkstationPackageError(error) === "資材または依存ライブラリの読込に失敗しました", "Unknown package failure leaked or threw");
+}
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "vehicle package & test-"));
 let next = 0;
 function fixture() {

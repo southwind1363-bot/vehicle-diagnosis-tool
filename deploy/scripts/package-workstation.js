@@ -213,13 +213,38 @@ export function packageWorkstation(options = {}) {
   }
 }
 
+export function formatWorkstationPackageError(error) {
+  const messages = {
+    ENOSPC: "空き容量が不足しています。出力先と一時フォルダーの空き容量を確認してください（ENOSPC）。",
+    EDQUOT: "保存容量の割当上限に達しました。出力先の使用量を確認してください（EDQUOT）。",
+    EACCES: "ファイルへのアクセスが拒否されました。資材と出力先のアクセス設定を確認してください（EACCES）。",
+    EPERM: "ファイル操作が許可されませんでした。アクセス設定や他のアプリによる使用状況を確認してください（EPERM）。",
+    EBUSY: "ファイルが使用中です。関連する作成処理や同期処理の状態を確認してから手動で実行してください（EBUSY）。",
+    ENOENT: "必要なファイルが見つかりません。配布資材・依存ライブラリ・コンパイラーの存在を確認してください（ENOENT）。",
+    workstation_assets_invalid: "配布資材を確認してください",
+    workstation_package_exists: "同じ版の出力先が既に存在します。既存の配布物を確認してください。上書きはしていません（workstation_package_exists）。",
+    workstation_package_busy: "別の配布作成処理が実行中か、作成用ロックが残っています。処理の状態を確認してください。ロックを自動解除しません（workstation_package_busy）。"
+  };
+  // Never expose raw paths, compiler output, or an arbitrary exception message.
+  for (const key of [error?.code, error?.message]) {
+    if (typeof key === "string" && Object.hasOwn(messages, key)) return messages[key];
+  }
+  const internalReasons = new Set([
+    "asset_invalid", "cleanup_invalid", "dependency_depth", "dependency_invalid", "dependency_version_mismatch",
+    "external_dependency", "file_invalid", "link_not_allowed", "lock_mismatch", "native_compiler_unsupported",
+    "output_invalid", "path_invalid", "private_file", "registry_not_allowed"
+  ].map(reason => `workstation_package_${reason}`));
+  if (internalReasons.has(error?.message)) return error.message;
+  return "資材または依存ライブラリの読込に失敗しました";
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
     const result = packageWorkstation();
     console.log(`オフライン移行用フォルダー: ${result.directory}`);
     console.log(`版: ${result.appVersion} / 依存ライブラリ: ${result.dependencyCount} / Node.js 22以降とnpmの事前導入が必要です（24 LTS推奨）。`);
   } catch (error) {
-    console.error(`移行用フォルダーを作成できません: ${error.code === "workstation_assets_invalid" ? "配布資材を確認してください" : error.message.startsWith("workstation_package_") ? error.message : "資材または依存ライブラリの読込に失敗しました"}`);
+    console.error(`移行用フォルダーを作成できません: ${formatWorkstationPackageError(error)}`);
     process.exitCode = 1;
   }
 }
