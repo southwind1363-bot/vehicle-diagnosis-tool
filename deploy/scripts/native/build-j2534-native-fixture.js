@@ -1,6 +1,6 @@
 const ARCHITECTURES = new Set(["x86", "x64"]);
 const SCENARIOS = new Set([
-  "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only",
+  "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -82,6 +82,7 @@ function scenarioCode(architecture, scenario) {
 }
 
 function exportsFor(scenario) {
+  if (scenario === "receive-success") return [{ name: "PassThruReadMsgs", key: "read" }];
   if (scenario === "decorated-open-only") return [{ name: "_PassThruOpen@8", key: "open" }];
   return [
     { name: "PassThruClose", key: "close" },
@@ -98,6 +99,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
 
   const is64 = architecture === "x64";
   const code = scenarioCode(architecture, scenario);
+  if (scenario === "receive-success") code.read = receiveCode(architecture);
   const codeOffsets = {};
   let textLength = 0;
   for (const key of ["close", "open", "read"]) {
@@ -168,4 +170,35 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   section(2, ".reloc", 12, 0x3000, reloc.length, 0x600, 0x42000040);
   text.copy(image, 0x200); rdata.copy(image, 0x400); reloc.copy(image, 0x600);
   return image;
+}
+
+// Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.
+function receiveCode(architecture) {
+  const x86 = architecture === "x86";
+  const ret = x86 ? [0xc2, 0x10, 0x00] : [0xc3];
+  const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...ret]);
+  const write = (offset, value) => Buffer.concat([
+    Buffer.from(x86 ? [0xc7, 0x80] : [0xc7, 0x82]), int32(offset), int32(value),
+  ]);
+  let body = Buffer.concat([
+    // x86: EAX = messages, ECX = count. x64: RDX/R8 are already pointers.
+    Buffer.from(x86 ? [0x8b, 0x44, 0x24, 0x08, 0x8b, 0x4c, 0x24, 0x0c] : []),
+    ...[6, 0, 0, -249346713, 4, 4].map((value, index) => write(index * 4, value)),
+    write(24, 0x04030201),
+    ...[6, 2, 0, 7, 0, 0].map((value, index) => write(4152 + index * 4, value)),
+    Buffer.from(x86 ? [0xc7, 0x01, 2, 0, 0, 0] : [0x41, 0xc7, 0x00, 2, 0, 0, 0]),
+    Buffer.from([0x31, 0xc0, ...ret]),
+  ]);
+  const comparisons = x86 ? [
+    [0x81, 0x7c, 0x24, 0x04, 0x67, 0x45, 0x23, 0xf1], // channel
+    [0x83, 0x7c, 0x24, 0x10, 0], // timeout
+    [0x8b, 0x44, 0x24, 0x0c, 0x83, 0x38, 3], // requested count
+  ] : [
+    [0x81, 0xf9, 0x67, 0x45, 0x23, 0xf1],
+    [0x41, 0x83, 0xf9, 0],
+    [0x41, 0x83, 0x38, 3],
+  ];
+  for (const compare of comparisons.reverse())
+    body = Buffer.concat([Buffer.from([...compare, 0x0f, 0x85]), int32(body.length), body, failure]);
+  return body;
 }

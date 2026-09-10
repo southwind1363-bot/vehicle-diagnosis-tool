@@ -1,9 +1,39 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using VehicleDiagnosis.Native;
 
 internal static class NativeReceiveTests
 {
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
+    private static extern IntPtr GetProcAddress(IntPtr module, string name);
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool FreeLibrary(IntPtr module);
+    private static void RunNative()
+    {
+        // Self-test executable has no driver/path CLI; only its generated fixture.
+        string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "receive-success.dll");
+        IntPtr module = LoadLibraryExW(path, IntPtr.Zero, 0x00000900);
+        Check(module != IntPtr.Zero);
+        try
+        {
+            IntPtr export = GetProcAddress(module, "PassThruReadMsgs");
+            Check(export != IntPtr.Zero && GetProcAddress(module, "PassThruOpen") == IntPtr.Zero);
+            var read = (J2534ReceiveNative.ReadFunction)Marshal.GetDelegateForFunctionPointer(export, typeof(J2534ReceiveNative.ReadFunction));
+            var result = new J2534ReceiveNative(read).ReadOnce(0xf1234567, 3);
+            Check(result.Status == 0 && result.ReportedCount == 2 && result.Messages.Length == 2);
+            Check(result.Messages[0].ProtocolId == 6 && result.Messages[0].Timestamp == 0xf1234567);
+            Check(result.Messages[0].Data.Length == 4 && result.Messages[0].Data[0] == 1 && result.Messages[0].Data[3] == 4);
+            Check(result.Messages[1].Timestamp == 7 && result.Messages[1].RxStatus == 2 && result.Messages[1].Data.Length == 0);
+            Check(new J2534ReceiveNative(read).ReadOnce(0, 3).Status == -8);
+            Check(new J2534ReceiveNative(read).ReadOnce(0xf1234567, 2).Status == -8);
+            GC.KeepAlive(read);
+        }
+        finally { Check(FreeLibrary(module)); }
+    }
     private static int checks;
     private static void Check(bool value) { if (!value) throw new Exception("receive_assertion_failed"); checks++; }
     private static void Reject(Action action, string code)
@@ -86,6 +116,7 @@ internal static class NativeReceiveTests
             Check(rejected);
         }
         Check(reader.ReadOnce(0, 16).Messages.Length == 0);
+        RunNative();
         return checks;
     }
 }

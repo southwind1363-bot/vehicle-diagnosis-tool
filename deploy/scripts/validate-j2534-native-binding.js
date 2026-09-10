@@ -98,6 +98,7 @@ function validateFixturePe(buffer, platform, expectedNames) {
 }
 
 function fixtureNames(scenario) {
+  if (scenario === "receive-success") return ["PassThruReadMsgs"];
   if (scenario === "decorated-open-only") return ["_PassThruOpen@8"];
   return ["PassThruClose", "PassThruOpen", "PassThruReadVersion"].filter(name =>
     !(scenario === "missing-open" && name === "PassThruOpen")
@@ -148,7 +149,7 @@ async function main() {
     for (const platform of platforms) {
       const platformDirectory = path.join(directory, platform.name);
       fs.mkdirSync(platformDirectory); createdDirectories.push({ path: platformDirectory, identity: fs.statSync(platformDirectory) });
-      for (const scenario of ["success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close"])
+      for (const scenario of ["success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "receive-success"])
       {
         const fixture = buildJ2534NativeFixture(platform.name, scenario);
         validateFixturePe(fixture, platform, fixtureNames(scenario)); total++;
@@ -945,7 +946,7 @@ async function main() {
     && !distributionSources.includes("j2534-native-preflight-fixture-v1")
     && !distributionSources.includes("j2534-verified-identity-fixture-v1"), "Native preflight fixture reached a public or PC package manifest");
   total++;
-  console.log(`J2534 native binding checks: ${total} / independent identity native fixture ABI: tested / receive: managed callbacks only / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
+  console.log(`J2534 native binding checks: ${total} / generated identity and receive native fixture ABI: tested / compiler-built C reference: not tested / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
 }
 
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

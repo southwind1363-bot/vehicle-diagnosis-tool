@@ -204,10 +204,19 @@ without invoking driver cleanup or retrying.
 The existing x86/x64 validator now also runs managed receive callbacks for
 maximum payloads, multi-message stride, empty results, partial timeout, error
 discard, corrupt lengths/counts/guards, exceptions and one-shot enforcement.
-These receive tests are NOT independent native ABI or real VCI evidence.
-The existing generated DLL still tests identity exports only. Next: an
-independent receive ABI fixture, then reviewed worker ownership integration;
-actual driver/vehicle execution remains disabled.
+Those callbacks alone are NOT independent native ABI or real VCI evidence.
+A separate import-free `receive-success.dll` now exports only PassThruReadMsgs.
+Fixed x86 StdCall/x64 instructions independently check the channel, zero timeout,
+and requested count, write two distinct 4152-byte-stride records, and update
+the count from three to two. Tests bind its export and verify signed failure,
+unsigned timestamp/channel, payload bytes and the preserved receive indicator.
+The self-test accepts no driver path; it loads only the generated sibling DLL
+in its temporary architecture directory, under the existing 30-second child
+deadline. Production loaders and workers do not reference this fixture.
+This is generated native receive ABI evidence, not a compiler-built C reference
+or vendor/VCI compatibility evidence. No C compiler was found on PATH in this
+run. Next: reviewed worker ownership integration and an independent C reference
+when a reviewed toolchain is available. Actual driver/vehicle execution stays disabled.
 
 Layout/call reference: [Quantex PassThruReadMsgs](https://quantexlab.com/en/develop/j2534/pt_readmsg.html)
 (checked 2026-09-10, v04.04 layout only; not a universal driver guarantee).
