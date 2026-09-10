@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.577 配布への反映: 接続準備依存の固定01d0faccと読取スコープ/runner固定26c443ddをPC配布へ含めるため、576を上書きせず577を作成。本体は版同期だけ、実通信機能の有効化なし。R1全工程、validate:package 431項目が合格。ZIP 2,665,152 bytes / SHA256 AE5388E1F3546546E495623CC98F19ADB7CF95351F61FCD905E0A3BE62E876E6。別一時フォルダーへ展開してverify-workstation.cmdが846ファイル/16,896,594 bytes一致・終了0、修正した2つのcontroller資材も元ソースとSHA256一致。今回はブラウザー起動/再起動・別PC・実VCI/実車を試験していない。過去の576ブラウザー合格を577の実機確認へ転用しない。診断/保存形式・実行権限不変。
+
 2026-09-10 読取先スコープの固定: readout controllerを直接生成した際、呼出側のrequest_scopeを書換えるとECU/DID制約も変わることを人工runnerで再現。生成時にscopeを複製/固定し、runner関数も保持する。元scopeや元runnerプロパティの変更後も、変更先要求は実行前にscope_mismatchで拒否、元要求だけが元runnerへ渡る。呼出側のオブジェクトは凍結/書換えしない。負例確認後、依存/scope13項目・native全体2013/Errors 0、構文/diff合格。既存adapter経由の凍結済scopeに加え直接生成経路を保護。公開実行無効・診断/保存形式・本体/ZIPを維持し、実VCI/実車は未使用。
 
 2026-09-10 接続準備の依存先固定: adapter-request作成後に依存オブジェクトを書換えると、検査済みfixture以外のrunへ差替わることを人工callbackで再現。生成時にpreflight/完了変換/runの関数を取得・検査して保持し、内部の固定facadeから元runを呼ぶよう修正。呼出先の事後差替えを防ぐもので、任意callbackの隔離や内部可変状態を保証しない。fixture_only・実行無効・one-shot・既存公開契約を維持。負例確認後、依存固定7項目とnative全体2007/Errors 0、構文/diffが合格。実VCI/実車不使用、本体3.13.576と既存ZIPは不変。
