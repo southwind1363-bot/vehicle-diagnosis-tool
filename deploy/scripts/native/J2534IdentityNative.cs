@@ -84,7 +84,14 @@ namespace VehicleDiagnosis.Native
     internal sealed class VersionBuffer : IDisposable
     {
         private IntPtr allocation;
-        internal IntPtr Data { get { return IntPtr.Add(allocation, 16); } }
+        internal IntPtr Data
+        {
+            get
+            {
+                if (allocation == IntPtr.Zero) throw new ObjectDisposedException("version_buffer");
+                return IntPtr.Add(allocation, 16);
+            }
+        }
         internal VersionBuffer()
         {
             allocation = Marshal.AllocHGlobal(112);
@@ -92,6 +99,7 @@ namespace VehicleDiagnosis.Native
         }
         internal void CheckGuards()
         {
+            if (allocation == IntPtr.Zero) throw new ObjectDisposedException("version_buffer");
             for (int i = 0; i < 16; i++)
                 if (Marshal.ReadByte(allocation, i) != 0xA5 || Marshal.ReadByte(allocation, 96 + i) != 0xA5)
                     throw new InvalidOperationException("native_version_buffer_overrun");

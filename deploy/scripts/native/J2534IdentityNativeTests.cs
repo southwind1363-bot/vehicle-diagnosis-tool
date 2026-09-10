@@ -120,6 +120,20 @@ internal static class NativeIdentityTests
     }
     private static void Run()
     {
+        var disposedBuffer = new VersionBuffer();
+        Check(disposedBuffer.Data != IntPtr.Zero, "Version buffer was not allocated");
+        disposedBuffer.Dispose();
+        disposedBuffer.Dispose();
+        bool disposedPointerRejected = false;
+        try { IntPtr pointer = disposedBuffer.Data; }
+        catch (ObjectDisposedException) { disposedPointerRejected = true; }
+        // Check the pointer getter first: never dereference the freed allocation
+        // when running this regression against the old implementation.
+        Check(disposedPointerRejected, "Disposed version buffer exposed an invalid pointer");
+        bool disposedCheckRejected = false, disposedCopyRejected = false;
+        try { disposedBuffer.CheckGuards(); } catch (ObjectDisposedException) { disposedCheckRejected = true; }
+        try { disposedBuffer.Copy(); } catch (ObjectDisposedException) { disposedCopyRejected = true; }
+        Check(disposedCheckRejected && disposedCopyRejected, "Disposed version buffer accessed native memory");
         foreach (uint id in new uint[] { 0, 1, UInt32.MaxValue })
         {
             MockIdentityLibrary mock = Fixture(id);

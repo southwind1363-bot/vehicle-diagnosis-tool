@@ -137,6 +137,10 @@ claiming compatibility.
   is compatible solely because its exports exist.
 - Buffers have sentinel bytes and adjacent guards; copy exactly 80 bytes and
   never use unbounded native string reads. No terminator or text is invented.
+  A disposed version buffer rejects pointer access, guard checks, and copying
+  before touching native memory. Double disposal remains harmless. This is
+  use-after-disposal rejection, not independent concurrent buffer safety; the
+  binding's lifecycle lock still owns synchronization.
   Guards detect only nearby overwrite, not arbitrary native memory corruption.
   Detected damage poisons the binding: further Open/ReadVersion/Close calls are
   rejected and Dispose retains the library reference until process exit.
