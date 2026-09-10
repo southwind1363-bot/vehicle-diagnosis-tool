@@ -1,5 +1,12 @@
 @echo off
 setlocal
+set "inspection_no_pause="
+if /i "%~1"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~2"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~3"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~4"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~5"=="--no-pause" set "inspection_no_pause=1"
+if /i "%~6"=="--no-pause" set "inspection_no_pause=1"
 cd /d "%~dp0"
 if errorlevel 1 exit /b 1
 node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 22 ? 0 : 1)" >nul 2>&1
@@ -39,13 +46,6 @@ if errorlevel 1 (
 )
 
 :inspect
-set "inspection_no_pause="
-if /i "%~1"=="--no-pause" set "inspection_no_pause=1"
-if /i "%~2"=="--no-pause" set "inspection_no_pause=1"
-if /i "%~3"=="--no-pause" set "inspection_no_pause=1"
-if /i "%~4"=="--no-pause" set "inspection_no_pause=1"
-if /i "%~5"=="--no-pause" set "inspection_no_pause=1"
-if /i "%~6"=="--no-pause" set "inspection_no_pause=1"
 if /i "%~1"=="--validate-uds-preparation-stdin" (
   if not "%~2"=="" if /i not "%~2"=="--no-pause" goto invalid_option
   node "scripts\inspect-workstation-j2534.js" --validate-uds-preparation-stdin

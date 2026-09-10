@@ -656,6 +656,8 @@ try {
         check(blocked.code !== 0 && !blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値"), `${entry}: ${relative} failure started a server or disclosed a key`);
         check(!blocked.output.includes("dependency-loaded-before-check"), `${entry}: damaged dependency executed before verification`);
         if (entry === "inspect") check(!blocked.output.includes("J2534接続準備チェック"), "Failed verification reached driver inspection");
+        if (entry.startsWith("inspect")) check(!/Press any key|\. \. \./i.test(blocked.output),
+          `${entry}: --no-pause was ignored on early verification failure`);
         check(missing ? !fs.existsSync(target) : fs.readFileSync(target, "utf8").startsWith("throw new Error"), `${entry}: failed verification repaired or removed files`);
       }
     } finally { fs.writeFileSync(target, original); }
