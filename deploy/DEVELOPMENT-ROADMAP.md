@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+2026-09-11 開始/終了管理の検証: native全体2393項目/Errors 0（x86 666/x64 664）。正常の開始→受信→終了→Close→解放と、開始/終了エラー・例外・出力破損・受信破損・Close失敗・未終了Dispose時の保持、所有ID不一致、再入/再試行拒否、受信中Disconnect待機が合格。今回追加したchannel呼出しは管理callbackのみで、独立したnative ABIや実車の検証ではない。
+
+2026-09-11 通信路の開始/終了管理（承認済み）: 前回の安全管理変更の質問に対する利用者「続けて」を受け、実行無効の内部Connect/Disconnectと受信channel所有権照合を追加。同じidentity gate内で各1回だけ開始/終了し、受信中の終了を待機させる。正常Disconnectの後に正常Closeした場合のみmodule解放を許可。開始/終了失敗・例外・出力破損・受信破損時は再試行/推測cleanupなしで参照保持。従来の未管理fixture channelは引き続き終了未確認として保持。loaderの許可export、公開worker、実車通信、診断保存形式、580 ZIPは変更しない。管理callback検査はnative Connect/Disconnect ABIや実VCIの確認ではない。次はこの承認済み経路を固定生成DLLの隔離workerへ結合して検証する。
+
 2026-09-10 隔離worker内の受信所有権接続: 開発専用workerで同じ生成DLLからidentity ownerと受信delegateを作り、1回の受信・コピー・owner破棄まで接続。固定の隣接fixtureだけをコンパイル時SHA256と照合し、読取lease中にロード。パス/チャンネルの外部入力なし、公開workerのexport制限は不変。x86/x64とも独立processで正常終了と固定概要を照合、異なるPEと余分な引数を無出力で拒否。native2095項目/Errors 0。通信路終了未確認のためClose/unloadせず終了まで参照保持、実車通信なしを概要にも明記。生成fixtureでの統合確認であり、実VCI・実車・別PC・実channel生成/終了は未確認。配布580や診断保存形式を変更しない。次はproduction channel所有権/終了管理の未実装を扱う必要があり、その安全境界変更は別判断とする。
 
 2026-09-10 受信所有権管理の統合（承認済み）: 安全管理統合の判断依頼に対する「はい 進めてください」を受け、owner付き受信経路を追加。受信のメモリー確保～コピー/解放まで既存identity gate内で管理し、所有device ID一致を要求。別thread Disposeは受信終了まで待ち、同thread Dispose/Close再入を拒否。ownerごと1回、受信例外はownerを無効化。通信路の終了確認は未実装なので成功時もCloseを拒否し、Disposeはmodule参照をprocess終了まで保持する。native検査2061/Errors 0（x86 517/x64 515）、diff合格。管理callbackでの同期検査であり実ドライバー寿命確認ではない。既存loaderの3export制限・公開worker・実車実行無効・診断保存契約は不変。本体/580 ZIPは変更せず、次は専用worker内でのowner生成と受信経路の接続。channel生成/終了確認・実VCI/実車試験は未完了。

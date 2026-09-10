@@ -7,6 +7,131 @@ using VehicleDiagnosis.Native;
 
 internal static class NativeReceiveTests
 {
+    private static void RunChannelLifecycle()
+    {
+        // Normal completion, then each uncertain phase. No native channel opened.
+        foreach (string mode in new[] { "success", "connect-status", "connect-throw", "connect-overrun",
+            "disconnect-status", "disconnect-throw", "close-status", "receive-overrun", "dispose-open" })
+        {
+            var library = IdentityFixture();
+            uint device, channel = 0;
+            int connects = 0, disconnects = 0, closes = 0;
+            library.Close = delegate(uint d) { closes++; return mode == "close-status" ? -8 : 0; };
+            var owner = new J2534IdentityNative(library);
+            owner.Open(out device);
+            J2534IdentityNative.ConnectFunction connect = delegate(uint d, uint p, uint f, uint b, IntPtr output) {
+                connects++;
+                Check(d == device && p == 6 && f == 0x100 && b == 500000);
+                Reject(delegate { owner.Dispose(); }, "native_identity_call_in_progress");
+                Marshal.WriteInt32(output, unchecked((int)0xe1234567));
+                if (mode == "connect-overrun") Marshal.WriteByte(output, 4, 0);
+                if (mode == "connect-throw") throw new Exception("private callback detail");
+                return mode == "connect-status" ? -8 : 0;
+            };
+            J2534IdentityNative.DisconnectFunction disconnect = delegate(uint c) {
+                disconnects++;
+                Check(c == 0xe1234567);
+                Reject(delegate { owner.Close(device); }, "native_identity_call_in_progress");
+                if (mode == "disconnect-throw") throw new Exception("private callback detail");
+                return mode == "disconnect-status" ? -8 : 0;
+            };
+            Reject(delegate { owner.Connect(1, 6, 0x100, 500000, connect, disconnect, out channel); }, "native_identity_device_not_owned");
+            Check(connects == 0);
+            if (mode == "connect-throw" || mode == "connect-overrun")
+                Reject(delegate { owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out channel); },
+                    mode == "connect-throw" ? "native_channel_connect_threw" : "native_channel_buffer_overrun");
+            else
+                Check(owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out channel) == (mode == "connect-status" ? -8 : 0));
+            if (mode.StartsWith("connect-"))
+            {
+                Check(channel == 0);
+                Reject(delegate { owner.Close(device); }, "native_identity_corrupted");
+                Reject(delegate { owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out channel); }, "native_identity_corrupted");
+            }
+            else
+            {
+                Check(channel == 0xe1234567);
+                Reject(delegate { owner.Close(device); }, "native_identity_receive_cleanup_unconfirmed");
+                uint extra;
+                Reject(delegate { owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out extra); }, "native_channel_connect_already_attempted");
+                Reject(delegate { owner.Disconnect(device, 1); }, "native_channel_not_owned");
+                J2534ReceiveNative.ReadFunction read = delegate(uint c, IntPtr p, IntPtr n, uint t) {
+                    Check(c == channel && t == 0);
+                    if (mode == "receive-overrun") Marshal.WriteByte(p, -1, 0);
+                    Marshal.WriteInt32(n, 0); return 0;
+                };
+                var receiver = new J2534ReceiveNative(owner, device, read);
+                Reject(delegate { receiver.ReadOnce(1, 1); }, "native_channel_not_owned");
+                Reject(delegate { owner.RunOwnedReceive(device, delegate { return 0; }); }, "native_channel_not_owned");
+                if (mode == "receive-overrun")
+                {
+                    Reject(delegate { receiver.ReadOnce(channel, 1); }, "native_receive_buffer_overrun");
+                    Reject(delegate { owner.Disconnect(device, channel); }, "native_identity_corrupted");
+                }
+                else if (mode != "dispose-open")
+                {
+                    Check(receiver.ReadOnce(channel, 1).Status == 0);
+                    if (mode == "disconnect-throw")
+                        Reject(delegate { owner.Disconnect(device, channel); }, "native_channel_disconnect_threw");
+                    else Check(owner.Disconnect(device, channel) == (mode == "disconnect-status" ? -8 : 0));
+                    if (mode.StartsWith("disconnect-"))
+                    {
+                        Reject(delegate { owner.Disconnect(device, channel); }, "native_identity_corrupted");
+                        Reject(delegate { owner.Close(device); }, "native_identity_corrupted");
+                    }
+                    else
+                    {
+                        Reject(delegate { owner.Disconnect(device, channel); }, "native_channel_not_owned");
+                        Reject(delegate { receiver.ReadOnce(channel, 1); }, "native_channel_not_owned");
+                        Check(owner.Close(device) == (mode == "close-status" ? -8 : 0));
+                    }
+                }
+            }
+            owner.Dispose();
+            Check(connects == 1 && disconnects <= 1 && closes <= 1 && library.Releases == 1);
+            Check(library.AllowedUnload == (mode == "success"));
+            GC.KeepAlive(library);
+        }
+        var concurrentLibrary = IdentityFixture();
+        concurrentLibrary.Close = delegate(uint d) { return 0; };
+        var concurrentOwner = new J2534IdentityNative(concurrentLibrary);
+        uint concurrentDevice, concurrentChannel;
+        concurrentOwner.Open(out concurrentDevice);
+        using (var entered = new ManualResetEventSlim(false))
+        using (var release = new ManualResetEventSlim(false))
+        using (var disconnectStarted = new ManualResetEventSlim(false))
+        {
+            int disconnectCalls = 0;
+            concurrentOwner.Connect(concurrentDevice, 6, 0, 500000,
+                delegate(uint d, uint p, uint f, uint b, IntPtr output) { Marshal.WriteInt32(output, 7); return 0; },
+                delegate(uint c) { Interlocked.Increment(ref disconnectCalls); return 0; }, out concurrentChannel);
+            var reader = new J2534ReceiveNative(concurrentOwner, concurrentDevice,
+                delegate(uint c, IntPtr p, IntPtr n, uint t) {
+                    entered.Set();
+                    if (!release.Wait(5000)) throw new Exception("fixture_deadline");
+                    Marshal.WriteInt32(n, 0); return 0;
+                });
+            Task receive = Task.Run(delegate { reader.ReadOnce(concurrentChannel, 1); });
+            Task disconnectTask = null;
+            try
+            {
+                Check(entered.Wait(5000));
+                disconnectTask = Task.Run(delegate { disconnectStarted.Set(); Check(concurrentOwner.Disconnect(concurrentDevice, concurrentChannel) == 0); });
+                Check(disconnectStarted.Wait(5000));
+                Check(!disconnectTask.Wait(100) && Volatile.Read(ref disconnectCalls) == 0);
+            }
+            finally
+            {
+                release.Set();
+                Check(receive.Wait(5000));
+                if (disconnectTask != null) Check(disconnectTask.Wait(5000));
+            }
+            Check(disconnectCalls == 1 && concurrentOwner.Close(concurrentDevice) == 0);
+        }
+        concurrentOwner.Dispose();
+        Check(concurrentLibrary.AllowedUnload);
+        GC.KeepAlive(concurrentLibrary);
+    }
     private static MockIdentityLibrary IdentityFixture()
     {
         return new MockIdentityLibrary {
@@ -205,6 +330,7 @@ internal static class NativeReceiveTests
         Check(reader.ReadOnce(0, 16).Messages.Length == 0);
         RunNative();
         RunOwnedReceive();
+        RunChannelLifecycle();
         return checks;
     }
 }

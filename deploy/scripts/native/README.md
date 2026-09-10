@@ -4,10 +4,11 @@
 
 Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
-`PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. It has no vehicle
-channel, message transmission, discovery, public path input, or retry API.
-The public app and PC package metadata are 3.13.357. This native binding remains
-development-only and is not bundled in either release.
+`PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. Internal caller-bound
+channel lifecycle code remains disabled in shipped workers. There is no message
+transmission, discovery, public path input, or retry API in this binding.
+This native binding remains development-only and is not bundled in the public
+app or workstation release (currently 3.13.580).
 
 ## Validation
 
@@ -217,9 +218,9 @@ through the identity binding's gate. It requires the exact owned device ID.
 Dispose on another thread waits for the receive; same-thread Dispose/Close
 reentry is rejected. Only one receive attempt is allowed per owner, even if
 another receive wrapper is created. Receive exceptions poison the owner.
-No channel-disconnect verification exists yet, so after any receive attempt
-Close is refused and Dispose retains the library reference until process exit,
-even on success. There is no implicit cleanup or automatic retry.
+For an untracked fixture channel, after any receive attempt Close is refused
+and Dispose retains the library reference until process exit, even on success.
+There is no implicit cleanup or automatic retry.
 
 The unbound constructor remains for isolated ABI tests; it does not manage
 module lifetime. The owner must exclusively control library release and receive
@@ -257,7 +258,7 @@ in its temporary architecture directory, under the existing 30-second child
 deadline. Production loaders and workers do not reference this fixture.
 This is generated native receive ABI evidence, not a compiler-built C reference
 or vendor/VCI compatibility evidence. No C compiler was found on PATH in this
-run. Next: production channel ownership integration and an independent C reference
+run. Next: generated-native channel lifecycle integration and an independent C reference
 when a reviewed toolchain is available. Actual driver/vehicle execution stays disabled.
 
 `J2534OwnedReceiveFixtureWorker.cs` now integrates the owner and native receive
@@ -274,6 +275,31 @@ fields, argument rejection, and silent rejection of a substituted valid PE.
 This is isolated generated-native integration evidence, not actual channel
 creation, driver cleanup, vendor compatibility, or vehicle diagnosis. The
 fixture-only loader does not widen `WindowsIdentityLibrary`'s export allowlist.
+
+### Approved internal channel lifecycle (2026-09-11)
+
+The internal identity owner now accepts caller-bound Connect/Disconnect delegates
+without resolving new exports or enabling any shipped worker. Connect, receive,
+Disconnect, Close and Dispose share its gate. One channel may be attempted, and
+receive requires the exact channel obtained from successful Connect. The output
+DWORD is guarded using the existing buffer with all remaining bytes protected.
+Disconnect is attempted at most once and cannot run during receive. Only status
+zero from Disconnect followed by status zero from Close permits library unload.
+Failed/throwing Connect or Disconnect, and receive corruption, poison the owner;
+Dispose retains the reference and performs no native cleanup calls. Protocol,
+flags and rate are passed through, not certified as vehicle-safe or applicable.
+Future callers must supply delegates from the same module, reviewed configuration
+and an isolated process deadline; no vendor calls are authorized by this API.
+
+Managed callback tests cover normal cleanup, wrong device/channel, repeated
+operations, reentry, guarded output, failure/exception retention, Close failure,
+Dispose without cleanup, and a concurrent Disconnect waiting for receive.
+These are lifecycle tests, NOT independent native Connect/Disconnect ABI tests.
+The generated worker still exercises its original untracked fixture channel;
+connecting the newly approved lifecycle there is the next integration step.
+Signatures checked against vendor primary documentation, v04.04 Windows DWORD
+layout only: [Connect](https://quantexlab.com/en/develop/j2534/pt_connect.html),
+[Disconnect](https://quantexlab.com/en/develop/j2534/pt_disconnect.html).
 
 Layout/call reference: [Quantex PassThruReadMsgs](https://quantexlab.com/en/develop/j2534/pt_readmsg.html)
 (checked 2026-09-10, v04.04 layout only; not a universal driver guarantee).

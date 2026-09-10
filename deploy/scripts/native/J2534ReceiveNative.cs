@@ -45,7 +45,7 @@ namespace VehicleDiagnosis.Native
         {
             if (capacity < 1 || capacity > 16) throw new ArgumentOutOfRangeException("capacity");
             return owner == null ? ReadOnceCore(channel, capacity)
-                : owner.RunOwnedReceive(deviceId, delegate { return ReadOnceCore(channel, capacity); });
+                : owner.RunOwnedReceive(deviceId, channel, delegate { return ReadOnceCore(channel, capacity); });
         }
         private Result ReadOnceCore(uint channel, int capacity)
         {

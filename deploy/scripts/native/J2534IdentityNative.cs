@@ -127,6 +127,10 @@ namespace VehicleDiagnosis.Native
         internal delegate int ReadVersionFunction(uint deviceId, IntPtr firmware, IntPtr dll, IntPtr api);
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         internal delegate int CloseFunction(uint deviceId);
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        internal delegate int ConnectFunction(uint deviceId, uint protocolId, uint flags, uint baudRate, IntPtr channelId);
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        internal delegate int DisconnectFunction(uint channelId);
 
         private readonly object gate = new object();
         private readonly IIdentityLibrary library;
@@ -135,6 +139,9 @@ namespace VehicleDiagnosis.Native
         private readonly CloseFunction close;
         private bool disposed, openAttempted, readAttempted, closeAttempted;
         private bool callInProgress, corrupted, receiveAttempted;
+        private bool channelAttempted, disconnectAttempted, channelCleanupConfirmed;
+        private uint? ownedChannel;
+        private DisconnectFunction disconnect;
         private bool allowUnload = true;
         private uint? ownedDevice;
         internal bool ReferenceReleased { get; private set; }
@@ -224,15 +231,85 @@ namespace VehicleDiagnosis.Native
             }
         }
 
-        // Development-only receive lease. No loader/export/channel permissions
-        // are added. Channel cleanup is not yet implemented, so retain the module
-        // after any receive attempt, including a successful one, until process exit.
+        // Internal, disabled in shipped workers. Delegates must belong to this
+        // owner's module. This adds no export resolution or runtime permissions.
+        internal int Connect(uint deviceId, uint protocolId, uint flags, uint baudRate,
+            ConnectFunction connect, DisconnectFunction disconnectFunction, out uint channelId)
+        {
+            if (connect == null || disconnectFunction == null) throw new ArgumentNullException("channel_functions");
+            channelId = 0;
+            lock (gate)
+            {
+                CheckOwner(deviceId);
+                if (channelAttempted || receiveAttempted) throw new InvalidOperationException("native_channel_connect_already_attempted");
+                channelAttempted = true;
+                disconnect = disconnectFunction;
+                allowUnload = false;
+                callInProgress = true;
+                try
+                {
+                    // Only the first DWORD may be written; retain guard checks
+                    // even when the callback fails. No raw callback text escapes.
+                    using (var output = new VersionBuffer())
+                    {
+                        int status;
+                        try { status = connect(deviceId, protocolId, flags, baudRate, output.Data); }
+                        catch { throw new InvalidOperationException("native_channel_connect_threw"); }
+                        finally
+                        {
+                            byte[] bytes = output.Copy();
+                            for (int i = 4; i < bytes.Length; i++)
+                                if (bytes[i] != 0xa5) throw new InvalidOperationException("native_channel_buffer_overrun");
+                            GC.KeepAlive(connect);
+                        }
+                        if (status == 0) ownedChannel = channelId = unchecked((uint)Marshal.ReadInt32(output.Data));
+                        else corrupted = true; // Uncertain channel state: no cleanup guess or retry.
+                        return status;
+                    }
+                }
+                catch { corrupted = true; throw; }
+                finally { callInProgress = false; }
+            }
+        }
+
+        internal int Disconnect(uint deviceId, uint channelId)
+        {
+            lock (gate)
+            {
+                CheckOwner(deviceId);
+                if (!ownedChannel.HasValue || ownedChannel.Value != channelId || disconnectAttempted)
+                    throw new InvalidOperationException("native_channel_not_owned");
+                disconnectAttempted = true;
+                callInProgress = true;
+                try
+                {
+                    int status;
+                    try { status = disconnect(channelId); }
+                    catch { throw new InvalidOperationException("native_channel_disconnect_threw"); }
+                    if (status == 0) { ownedChannel = null; channelCleanupConfirmed = true; }
+                    else corrupted = true;
+                    return status;
+                }
+                catch { corrupted = true; throw; }
+                finally { callInProgress = false; GC.KeepAlive(disconnect); }
+            }
+        }
+
+        // Untracked fixture channels retain the module as before. A managed
+        // channel must match exactly and be disconnected before device Close.
         internal T RunOwnedReceive<T>(uint deviceId, Func<T> receive)
+        { return RunReceive(deviceId, null, receive); }
+        internal T RunOwnedReceive<T>(uint deviceId, uint channelId, Func<T> receive)
+        { return RunReceive(deviceId, channelId, receive); }
+        private T RunReceive<T>(uint deviceId, uint? channelId, Func<T> receive)
         {
             if (receive == null) throw new ArgumentNullException("receive");
             lock (gate)
             {
                 CheckOwner(deviceId);
+                if (channelAttempted && (!ownedChannel.HasValue || !channelId.HasValue
+                    || ownedChannel.Value != channelId.Value || disconnectAttempted))
+                    throw new InvalidOperationException("native_channel_not_owned");
                 if (receiveAttempted) throw new InvalidOperationException("native_identity_receive_already_attempted");
                 receiveAttempted = true;
                 allowUnload = false;
@@ -248,7 +325,8 @@ namespace VehicleDiagnosis.Native
             lock (gate)
             {
                 CheckOwner(deviceId);
-                if (receiveAttempted) throw new InvalidOperationException("native_identity_receive_cleanup_unconfirmed");
+                if ((receiveAttempted || channelAttempted) && !channelCleanupConfirmed)
+                    throw new InvalidOperationException("native_identity_receive_cleanup_unconfirmed");
                 closeAttempted = true;
                 int status;
                 callInProgress = true;
