@@ -258,7 +258,7 @@ in its temporary architecture directory, under the existing 30-second child
 deadline. Production loaders and workers do not reference this fixture.
 This is generated native receive ABI evidence, not a compiler-built C reference
 or vendor/VCI compatibility evidence. No C compiler was found on PATH in this
-run. Next: native hang/crash integration and an independent C reference
+run. An independent C reference is still needed
 when a reviewed toolchain is available. Actual driver/vehicle execution stays disabled.
 
 `J2534OwnedReceiveFixtureWorker.cs` now integrates the owner and native receive
@@ -312,8 +312,17 @@ and Disconnect after failed Connect, Close after either failure), so accidentall
 continuing cannot pass as controlled failure. The validator requires exact
 failure summaries and exit 1, not a crash/timeout or success. Shipped manifests
 and production entry points explicitly exclude this development worker.
-Native hang/crash integration and an independent compiler-built C reference
-remain unverified; these status failures do not substitute for either.
+The owned receive supervisor now uses the existing bounded child runner, with
+exact temp paths, pinned worker/DLL identities and SHA256, fixed CLI, minimal
+environment, stderr rejection, and a one-attempt latch. It accepts a result only
+after successful process close and strict summary validation. Native Connect
+hang, Disconnect illegal-instruction crash, and a compile-only result-then-hang
+variant exercise timeout/crash handling in both architectures. Timeout requests
+termination and waits for the child's close event; all abnormal exits return no
+parsed result, including the earlier valid JSON from status-failure workers.
+These fixtures demonstrate process containment here, not physical adapter cleanup.
+The independent compiler-built C reference, other-PC and actual VCI remain
+unverified; the production bridge still does not include this supervisor.
 Signatures checked against vendor primary documentation, v04.04 Windows DWORD
 layout only: [Connect](https://quantexlab.com/en/develop/j2534/pt_connect.html),
 [Disconnect](https://quantexlab.com/en/develop/j2534/pt_disconnect.html).

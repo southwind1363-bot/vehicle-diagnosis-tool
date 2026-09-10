@@ -7,6 +7,8 @@ import { createBoundedFixtureWorker } from "./bounded-fixture-worker.js";
 import { buildJ2534UdsTransportResult } from "./j2534-readonly-worker.js";
 
 const SCENARIOS = new Set(["success", "open-failure", "overrun", "hang", "crash", "result-then-hang"]);
+const OWNED_SCENARIOS = new Set(["owned-receive", "owned-connect-failure", "owned-disconnect-failure",
+  "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang"]);
 const VERIFIED_IDENTITY_SCENARIOS = new Set(["success", "hold"]);
 const UDS_TRANSPORT_SCENARIOS = new Set(["positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"]);
 const UDS_TRANSPORT_CONTROL_SCENARIOS = new Set(["hang", "overflow", "stderr", "crash", "result-then-hang"]);
@@ -120,6 +122,66 @@ export function parseJ2534UdsTransportFixtureOutput(output, context) {
   return structuredClone(envelope);
 }
 // Development-only factory. The validator supplies a fixed, integrity-pinned temp descriptor.
+export function createJ2534OwnedReceiveFixtureSupervisor(descriptor) {
+  if (!keysMatch(descriptor, ["temp_root", "architecture", "scenario", "worker", "fixture"])
+    || !["x86", "x64"].includes(descriptor.architecture) || !OWNED_SCENARIOS.has(descriptor.scenario))
+    throw new Error("owned_fixture_descriptor_invalid");
+  const architecture = descriptor.architecture;
+  const root = fs.realpathSync(descriptor.temp_root);
+  if (path.dirname(root) !== fs.realpathSync(os.tmpdir()) || !path.basename(root).startsWith("vehicle-j2534-native-"))
+    throw new Error("owned_fixture_descriptor_invalid");
+  const directory = path.join(root, architecture, descriptor.scenario === "owned-receive" ? "" : descriptor.scenario);
+  const pinned = ["worker", "fixture"].map(name => {
+    const file = descriptor[name];
+    if (!keysMatch(file, ["path", "sha256"]) || !isHash(file.sha256)
+      || file.path !== path.join(directory, name === "worker" ? "owned-receive-worker.exe" : "owned-receive.dll")
+      || fs.realpathSync(file.path) !== file.path) throw new Error("owned_fixture_descriptor_invalid");
+    const stat = fs.lstatSync(file.path);
+    if (!stat.isFile() || stat.isSymbolicLink() || digest(file.path) !== file.sha256)
+      throw new Error("owned_fixture_descriptor_invalid");
+    return Object.freeze({ path: file.path, hash: file.sha256, dev: stat.dev, ino: stat.ino, size: stat.size });
+  });
+  let consumed = false;
+  const bounded = createBoundedFixtureWorker({
+    rejectStderr: true,
+    spawnWorker() {
+      for (const file of pinned) {
+        const stat = fs.lstatSync(file.path);
+        if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(file.path) !== file.path
+          || stat.dev !== file.dev || stat.ino !== file.ino || stat.size !== file.size || digest(file.path) !== file.hash)
+          throw new Error("owned_fixture_changed");
+      }
+      const windows = process.env.SystemRoot || "C:\\Windows";
+      return spawn(pinned[0].path, ["--fixture-owned-receive"], {
+        cwd: directory, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"],
+        env: { SystemRoot: windows, WINDIR: windows, TEMP: os.tmpdir(), TMP: os.tmpdir() },
+      });
+    },
+    parseOutput(output) {
+      let value;
+      try { value = JSON.parse(output); } catch { return null; }
+      if (!keysMatch(value, ["fixture_only", "pointer_bits", "received_count", "module_retained", "cleanup_confirmed", "vehicle_communication"])
+        || value.fixture_only !== true || value.pointer_bits !== (architecture === "x86" ? 32 : 64)
+        || value.received_count !== 2 || value.module_retained !== false
+        || value.cleanup_confirmed !== true || value.vehicle_communication !== false) return null;
+      return value;
+    },
+  });
+  return Object.freeze({ async run(options = {}) {
+    const blocked = error => ({ execution_status: "request_blocked", worker_started: false, worker_exited: false,
+      termination_requested: false, termination_signal_sent: false, parsed_result: null, errors: [error] });
+    if (!options || typeof options !== "object" || Array.isArray(options)
+      || Object.keys(options).some(key => key !== "timeout_ms" && key !== "signal")) return blocked("owned_fixture_request_invalid");
+    const timeout = options.timeout_ms ?? 5000, signal = options.signal;
+    if (!Number.isInteger(timeout) || timeout < 1000 || timeout > 10000
+      || (signal != null && !(signal instanceof AbortSignal))) return blocked("owned_fixture_request_invalid");
+    if (consumed) return blocked("owned_fixture_already_attempted");
+    consumed = true;
+    if (signal?.aborted) return { ...blocked("worker_cancelled"), execution_status: "worker_cancelled" };
+    return bounded({ timeout, signal });
+  } });
+}
+
 export function createJ2534NativeFixtureSupervisor(descriptor, controls = {}) {
   if (controls === null || typeof controls !== "object" || Array.isArray(controls))
     throw new Error("native_fixture_supervisor_controls_invalid");

@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+2026-09-11 停止/クラッシュ監視検証: native全体2505項目/Errors 0、diff合格。正常結果採用と再実行拒否、native status失敗2種・開始hang・終了crash・結果後hangで不採用、hangで終了要求/送信と子process closeを確認。生成fixtureの試験結果であり実VCI/実車/別PCや独立C参照は未検証。
+
+2026-09-11 隔離受信workerの停止/クラッシュ監視: 専用supervisorを既存bounded child runnerへ接続。固定一時パス・worker/DLLのidentity/SHA256再照合、固定CLI、最小環境、stderr拒否、1回だけの実行を維持。正常process closeと厳密概要一致の両方でのみ結果を採用。生成nativeのConnect無限待機、Disconnect不正命令、コンパイル限定の概要出力後待機をx86/x64で実行し、期限到達時の終了要求/close確認と全異常時parsed_result:nullを確認する。失敗終了1の正しいJSONも破棄する。物理VCIのcleanup確認ではなく、公開bridge/実通信/保存形式/580ZIPは変更しない。
+
 2026-09-11 native開始/終了失敗の隔離処理: 開発workerでConnect失敗時は受信せず、Disconnect失敗時はCloseせず、owner参照保持を確認して終了1を返す。失敗概要がJSONとして整っていても成功終了へ変換しない。固定生成DLLの失敗2種を別ディレクトリ/別コンパイル時digestで検証し、禁止された後続呼出しにはtrap命令を置いて誤継続を検出。native2437項目Errors 0（x86 678/x64 676）、公開entry/配布manifestから専用workerの除外とdiff合格。任意DLL/パス/故障コード入力は追加せず、本体/保存形式/580ZIP/実行権限不変。生成nativeのstatus失敗に限る確認で、hang/crash・実VCI/実車/別PC・独立C参照は未検証。
 
 2026-09-11 native隔離結合の検証: native全体2417項目/Errors 0（x86 678/x64 676）、diff合格。固定生成DLLの正常開始/終了経路についての結果。実VCI/実車/独立C参照や故障nativeの終了処理まで確認済みとはしない。

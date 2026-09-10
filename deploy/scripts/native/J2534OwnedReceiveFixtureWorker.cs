@@ -99,6 +99,10 @@ internal static class J2534OwnedReceiveFixtureWorker
                 + ",\"received_count\":" + receivedCount + ",\"module_retained\":" + (failed ? "true" : "false")
                 + ",\"cleanup_confirmed\":" + (failed ? "false" : "true") + ",\"vehicle_communication\":false}");
             // Even a well-formed failure summary is not a successful worker result.
+#if OWNED_RECEIVE_RESULT_THEN_HANG
+            Console.Out.Flush();
+            System.Threading.Thread.Sleep(System.Threading.Timeout.Infinite);
+#endif
             return failed ? 1 : 0;
         }
         catch { return 1; } // No native data, paths, or exception text on either stream.

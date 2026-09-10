@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { buildJ2534NativeFixture } from "./native/build-j2534-native-fixture.js";
 import {
   createJ2534NativeFixtureSupervisor,
+  createJ2534OwnedReceiveFixtureSupervisor,
   createJ2534UdsTransportFixtureSupervisor,
   createJ2534VerifiedIdentityFixtureSupervisor,
   parseJ2534NativeFixtureOutput,
@@ -221,6 +222,18 @@ async function main() {
         fixture_only: true, pointer_bits: platform.bits, received_count: 2,
         module_retained: false, cleanup_confirmed: true, vehicle_communication: false,
       });
+      const ownedSupervisor = (worker, fixturePath, scenario) => createJ2534OwnedReceiveFixtureSupervisor({
+        temp_root: directory, architecture: platform.name, scenario,
+        worker: { path: worker, sha256: createHash("sha256").update(fs.readFileSync(worker)).digest("hex") },
+        fixture: { path: fixturePath, sha256: createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex") },
+      });
+      const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
+      const managedSuccess = await managedOwned.run();
+      assert.equal(managedSuccess.execution_status, "worker_completed");
+      assert.equal(managedSuccess.worker_exited, true);
+      assert.deepEqual(managedSuccess.parsed_result, JSON.parse(ownedRun.stdout));
+      assert.equal((await managedOwned.run()).execution_status, "request_blocked");
+      total += 4;
       for (const args of [[], ["--driver-path", "forbidden.dll"], ["--fixture-owned-receive", "extra"]]) {
         const rejectedOwned = await execute(ownedWorker, args);
         assert.equal(rejectedOwned.error?.code, 2);
@@ -239,7 +252,7 @@ async function main() {
 
       // Separate binaries/digests, same fixed CLI and sibling filename. The child
       // never accepts a vendor path, fault code, or caller-supplied expected hash.
-      for (const scenario of ["owned-connect-failure", "owned-disconnect-failure"]) {
+      for (const scenario of ["owned-connect-failure", "owned-disconnect-failure", "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang"]) {
         const faultDirectory = path.join(platformDirectory, scenario);
         fs.mkdirSync(faultDirectory);
         createdDirectories.push({ path: faultDirectory, identity: fs.statSync(faultDirectory) });
@@ -253,19 +266,32 @@ async function main() {
         createdFiles.push(faultWorker);
         const compiledFault = await execute(platform.compiler, [
           "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
-          "/define:NATIVE_RECEIVE_FIXTURE_TESTS", `/out:${faultWorker}`, sources[0], sources[2], faultSource,
+          `/define:NATIVE_RECEIVE_FIXTURE_TESTS${scenario === "owned-result-then-hang" ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${faultWorker}`, sources[0], sources[2], faultSource,
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compiledFault.error, null, `Failure worker compile failed: ${compiledFault.stdout}${compiledFault.stderr}`);
-        const fault = await execute(faultWorker, ["--fixture-owned-receive"]);
-        assert.equal(fault.error?.code, 1, "Native failure was not a controlled unsuccessful exit");
-        assert.equal(fault.stderr, "");
-        assert.deepEqual(JSON.parse(fault.stdout), {
-          fixture_only: true, pointer_bits: platform.bits,
-          received_count: scenario === "owned-connect-failure" ? 0 : 2,
-          module_retained: true, cleanup_confirmed: false, vehicle_communication: false,
-        });
-        total += 5;
+        if (scenario.endsWith("failure")) {
+          const fault = await execute(faultWorker, ["--fixture-owned-receive"]);
+          assert.equal(fault.error?.code, 1, "Native failure was not a controlled unsuccessful exit");
+          assert.equal(fault.stderr, "");
+          assert.deepEqual(JSON.parse(fault.stdout), {
+            fixture_only: true, pointer_bits: platform.bits,
+            received_count: scenario === "owned-connect-failure" ? 0 : 2,
+            module_retained: true, cleanup_confirmed: false, vehicle_communication: false,
+          });
+          total += 3;
+        }
+        const boundedFault = await ownedSupervisor(faultWorker, path.join(faultDirectory, "owned-receive.dll"), scenario).run({ timeout_ms: 2000 });
+        const timedOut = scenario.endsWith("hang");
+        assert.equal(boundedFault.execution_status, timedOut ? "worker_timed_out" : "worker_failed");
+        assert.equal(boundedFault.worker_started, true);
+        assert.equal(boundedFault.worker_exited, true);
+        assert.equal(boundedFault.parsed_result, null, "Abnormal child result must not be adopted");
+        if (timedOut) {
+          assert.equal(boundedFault.termination_requested, true);
+          assert.equal(boundedFault.termination_signal_sent, true);
+        }
+        total += 6 + (timedOut ? 2 : 0);
       }
 
       const preflightWorker = path.join(platformDirectory, "j2534-native-preflight-fixture-worker.exe");

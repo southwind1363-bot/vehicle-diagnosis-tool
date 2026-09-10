@@ -1,6 +1,7 @@
 const ARCHITECTURES = new Set(["x86", "x64"]);
 const SCENARIOS = new Set([
   "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success", "owned-receive", "owned-connect-failure", "owned-disconnect-failure",
+  "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -110,15 +111,15 @@ export function buildJ2534NativeFixture(architecture, scenario) {
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
     Object.assign(code, channelCode(architecture));
-    if (scenario !== "owned-receive") {
+    if (scenario !== "owned-receive" && scenario !== "owned-result-then-hang") {
       const failure = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
       // An unexpected cleanup or later receive must fail the child process,
       // not silently pass because a stateless fixture tolerated it.
       code.close = Buffer.from([0x0f, 0x0b]);
-      if (scenario === "owned-connect-failure") {
-        code.connect = failure(20);
+      if (scenario === "owned-connect-failure" || scenario === "owned-connect-hang") {
+        code.connect = scenario === "owned-connect-hang" ? Buffer.from([0xeb, 0xfe]) : failure(20);
         code.read = code.disconnect = Buffer.from([0x0f, 0x0b]);
-      } else code.disconnect = failure(4);
+      } else code.disconnect = scenario === "owned-disconnect-crash" ? Buffer.from([0x0f, 0x0b]) : failure(4);
     }
   }
   const codeOffsets = {};
