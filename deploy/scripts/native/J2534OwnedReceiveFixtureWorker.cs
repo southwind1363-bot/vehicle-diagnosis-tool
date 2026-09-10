@@ -65,6 +65,8 @@ internal static class J2534OwnedReceiveFixtureWorker
                 if (key.StartsWith("COR_") || key.StartsWith("CORECLR_") || key.StartsWith("COMPLUS_") || key == "NODE_OPTIONS" || key == "NODE_PATH") return 3;
             }
             var library = new FixtureLibrary();
+            bool failed = false;
+            int receivedCount = 0;
             using (var owner = new J2534IdentityNative(library))
             {
                 uint device;
@@ -76,20 +78,28 @@ internal static class J2534OwnedReceiveFixtureWorker
                 var disconnect = (J2534IdentityNative.DisconnectFunction)Marshal.GetDelegateForFunctionPointer(
                     library.Resolve("PassThruDisconnect"), typeof(J2534IdentityNative.DisconnectFunction));
                 uint channel;
-                if (owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out channel) != 0
-                    || channel != 0xe1234567 || channel == device) return 1;
-                var receiver = new J2534ReceiveNative(owner, device, read);
-                var result = receiver.ReadOnce(channel, 3);
-                if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
-                    || result.Messages[0].Data.Length != 4 || result.Messages[0].Data[0] != 1
-                    || result.Messages[0].Data[3] != 4 || result.Messages[1].Data.Length != 0
-                    || result.Messages[1].RxStatus != 2) return 1;
-                if (owner.Disconnect(device, channel) != 0 || owner.Close(device) != 0) return 1;
+                if (owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out channel) != 0) failed = true;
+                else
+                {
+                    if (channel != 0xe1234567 || channel == device) return 1;
+                    var receiver = new J2534ReceiveNative(owner, device, read);
+                    var result = receiver.ReadOnce(channel, 3);
+                    if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
+                        || result.Messages[0].Data.Length != 4 || result.Messages[0].Data[0] != 1
+                        || result.Messages[0].Data[3] != 4 || result.Messages[1].Data.Length != 0
+                        || result.Messages[1].RxStatus != 2) return 1;
+                    receivedCount = result.Messages.Length;
+                    // A failed Disconnect must never fall through to Close.
+                    if (owner.Disconnect(device, channel) != 0) failed = true;
+                    else if (owner.Close(device) != 0) failed = true;
+                }
             }
-            if (library.Retained) return 1;
+            if (library.Retained != failed) return 1;
             Console.Out.Write("{\"fixture_only\":true,\"pointer_bits\":" + (IntPtr.Size * 8)
-                + ",\"received_count\":2,\"module_retained\":false,\"cleanup_confirmed\":true,\"vehicle_communication\":false}");
-            return 0;
+                + ",\"received_count\":" + receivedCount + ",\"module_retained\":" + (failed ? "true" : "false")
+                + ",\"cleanup_confirmed\":" + (failed ? "false" : "true") + ",\"vehicle_communication\":false}");
+            // Even a well-formed failure summary is not a successful worker result.
+            return failed ? 1 : 0;
         }
         catch { return 1; } // No native data, paths, or exception text on either stream.
     }

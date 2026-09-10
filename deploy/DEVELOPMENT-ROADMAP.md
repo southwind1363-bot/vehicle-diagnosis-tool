@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-11 native開始/終了失敗の隔離処理: 開発workerでConnect失敗時は受信せず、Disconnect失敗時はCloseせず、owner参照保持を確認して終了1を返す。失敗概要がJSONとして整っていても成功終了へ変換しない。固定生成DLLの失敗2種を別ディレクトリ/別コンパイル時digestで検証し、禁止された後続呼出しにはtrap命令を置いて誤継続を検出。native2437項目Errors 0（x86 678/x64 676）、公開entry/配布manifestから専用workerの除外とdiff合格。任意DLL/パス/故障コード入力は追加せず、本体/保存形式/580ZIP/実行権限不変。生成nativeのstatus失敗に限る確認で、hang/crash・実VCI/実車/別PC・独立C参照は未検証。
+
 2026-09-11 native隔離結合の検証: native全体2417項目/Errors 0（x86 678/x64 676）、diff合格。固定生成DLLの正常開始/終了経路についての結果。実VCI/実車/独立C参照や故障nativeの終了処理まで確認済みとはしない。
 
 2026-09-11 開始/終了のnative隔離結合: 固定生成DLLにConnect/Disconnectを追加し、隔離workerをOpen→Connect→返却channelでReadMsgs→Disconnect→Close→FreeLibraryへ接続。deviceとは異なるchannelを使い、x86 StdCall/x64第5引数のDWORD出力を確認。各Connect引数の誤りとDisconnectへのdevice ID誤渡しは固定native命令側で拒否し出力buffer不変を確認。コンパイル時digest/固定隣接DLL/30秒process期限/固定概要のみ/任意パス拒否を維持。正常fixtureのcleanup確認であり、実ドライバー内部状態・実車・別PCは未検証。公開workerや実行権限、診断保存形式、580ZIP不変。native失敗/停止経路の統合と独立Cコンパイル照合は残す。

@@ -258,7 +258,7 @@ in its temporary architecture directory, under the existing 30-second child
 deadline. Production loaders and workers do not reference this fixture.
 This is generated native receive ABI evidence, not a compiler-built C reference
 or vendor/VCI compatibility evidence. No C compiler was found on PATH in this
-run. Next: native failure-path integration and an independent C reference
+run. Next: native hang/crash integration and an independent C reference
 when a reviewed toolchain is available. Actual driver/vehicle execution stays disabled.
 
 `J2534OwnedReceiveFixtureWorker.cs` now integrates the owner and native receive
@@ -303,9 +303,17 @@ write the output DWORD (including the x64 fifth stack argument), and check the
 distinct channel for receive/Disconnect. Additional direct ABI tests reject each
 incorrect Connect argument without changing the guarded output, and reject the
 device ID passed to Disconnect. This generated oracle has no imports or entry
-point and does not emulate a vendor driver's internal channel state. Native
-failure/hang integration and an independent compiler-built C reference remain
-unverified; managed failure coverage does not substitute for either.
+point and does not emulate a vendor driver's internal channel state.
+Two additional fixed, separately compiled/digest-bound binaries now return a
+native failure from Connect or Disconnect. The worker stops the sequence,
+retains the module and exits 1 even when its sanitized failure summary is valid
+JSON. Failure fixtures put trap instructions in forbidden later calls (receive
+and Disconnect after failed Connect, Close after either failure), so accidentally
+continuing cannot pass as controlled failure. The validator requires exact
+failure summaries and exit 1, not a crash/timeout or success. Shipped manifests
+and production entry points explicitly exclude this development worker.
+Native hang/crash integration and an independent compiler-built C reference
+remain unverified; these status failures do not substitute for either.
 Signatures checked against vendor primary documentation, v04.04 Windows DWORD
 layout only: [Connect](https://quantexlab.com/en/develop/j2534/pt_connect.html),
 [Disconnect](https://quantexlab.com/en/develop/j2534/pt_disconnect.html).

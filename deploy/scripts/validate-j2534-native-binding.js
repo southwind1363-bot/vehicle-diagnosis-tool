@@ -99,7 +99,7 @@ function validateFixturePe(buffer, platform, expectedNames) {
 }
 
 function fixtureNames(scenario) {
-  if (scenario === "owned-receive") return ["PassThruClose", "PassThruConnect", "PassThruDisconnect", "PassThruOpen", "PassThruReadMsgs", "PassThruReadVersion"];
+  if (scenario.startsWith("owned-")) return ["PassThruClose", "PassThruConnect", "PassThruDisconnect", "PassThruOpen", "PassThruReadMsgs", "PassThruReadVersion"];
   if (scenario === "receive-success") return ["PassThruReadMsgs"];
   if (scenario === "decorated-open-only") return ["_PassThruOpen@8"];
   return ["PassThruClose", "PassThruOpen", "PassThruReadVersion"].filter(name =>
@@ -236,6 +236,37 @@ async function main() {
         assert.equal(mismatch.stdout, ""); assert.equal(mismatch.stderr, "");
       } finally { fs.writeFileSync(ownedPath, ownedFixture); }
       total += 7;
+
+      // Separate binaries/digests, same fixed CLI and sibling filename. The child
+      // never accepts a vendor path, fault code, or caller-supplied expected hash.
+      for (const scenario of ["owned-connect-failure", "owned-disconnect-failure"]) {
+        const faultDirectory = path.join(platformDirectory, scenario);
+        fs.mkdirSync(faultDirectory);
+        createdDirectories.push({ path: faultDirectory, identity: fs.statSync(faultDirectory) });
+        const fixture = buildJ2534NativeFixture(platform.name, scenario);
+        validateFixturePe(fixture, platform, fixtureNames(scenario));
+        writeCreatedFile(path.join(faultDirectory, "owned-receive.dll"), fixture);
+        const faultDigest = createHash("sha256").update(fixture).digest("hex").toUpperCase();
+        const faultSource = path.join(faultDirectory, "OwnedReceiveFixtureDigest.cs");
+        writeCreatedFile(faultSource, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const string Value = "${faultDigest}"; }`));
+        const faultWorker = path.join(faultDirectory, "owned-receive-worker.exe");
+        createdFiles.push(faultWorker);
+        const compiledFault = await execute(platform.compiler, [
+          "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
+          "/define:NATIVE_RECEIVE_FIXTURE_TESTS", `/out:${faultWorker}`, sources[0], sources[2], faultSource,
+          path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
+        ]);
+        assert.equal(compiledFault.error, null, `Failure worker compile failed: ${compiledFault.stdout}${compiledFault.stderr}`);
+        const fault = await execute(faultWorker, ["--fixture-owned-receive"]);
+        assert.equal(fault.error?.code, 1, "Native failure was not a controlled unsuccessful exit");
+        assert.equal(fault.stderr, "");
+        assert.deepEqual(JSON.parse(fault.stdout), {
+          fixture_only: true, pointer_bits: platform.bits,
+          received_count: scenario === "owned-connect-failure" ? 0 : 2,
+          module_retained: true, cleanup_confirmed: false, vehicle_communication: false,
+        });
+        total += 5;
+      }
 
       const preflightWorker = path.join(platformDirectory, "j2534-native-preflight-fixture-worker.exe");
       createdFiles.push(preflightWorker);
@@ -972,6 +1003,7 @@ async function main() {
       && !production.includes("J2534NativeFixtureWorker") && !production.includes("J2534NativePreflightFixtureWorker")
       && !production.includes("J2534VerifiedIdentityFixtureWorker")
       && !production.includes("J2534UdsTransportFixtureWorker")
+      && !production.includes("J2534OwnedReceiveFixtureWorker")
       && !production.includes("j2534-native-preflight-fixture-v1") && !production.includes("j2534-verified-identity-fixture-v1"), "Development native worker reached a production entry point");
     total++;
   }
@@ -979,6 +1011,7 @@ async function main() {
     .map(relative => fs.readFileSync(new URL(relative, import.meta.url), "utf8")).join("\n");
   assert.ok(!distributionSources.includes("J2534NativePreflightFixtureWorker")
     && !distributionSources.includes("J2534UdsTransportFixtureWorker")
+    && !distributionSources.includes("J2534OwnedReceiveFixtureWorker")
     && !distributionSources.includes("J2534VerifiedIdentityFixtureWorker")
     && !distributionSources.includes("j2534-native-preflight-fixture-v1")
     && !distributionSources.includes("j2534-verified-identity-fixture-v1"), "Native preflight fixture reached a public or PC package manifest");

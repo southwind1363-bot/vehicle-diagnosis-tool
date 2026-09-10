@@ -1,6 +1,6 @@
 const ARCHITECTURES = new Set(["x86", "x64"]);
 const SCENARIOS = new Set([
-  "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success", "owned-receive",
+  "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success", "owned-receive", "owned-connect-failure", "owned-disconnect-failure",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -82,7 +82,7 @@ function scenarioCode(architecture, scenario) {
 }
 
 function exportsFor(scenario) {
-  if (scenario === "owned-receive") return [
+  if (scenario.startsWith("owned-")) return [
     { name: "PassThruClose", key: "close" }, { name: "PassThruConnect", key: "connect" },
     { name: "PassThruDisconnect", key: "disconnect" }, { name: "PassThruOpen", key: "open" },
     { name: "PassThruReadMsgs", key: "read" }, { name: "PassThruReadVersion", key: "version" },
@@ -105,11 +105,21 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   const is64 = architecture === "x64";
   const code = scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
-  if (scenario === "owned-receive") {
+  if (scenario.startsWith("owned-")) {
     code.read = receiveCode(architecture, -517782169); // 0xe1234567, distinct from device
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
     Object.assign(code, channelCode(architecture));
+    if (scenario !== "owned-receive") {
+      const failure = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
+      // An unexpected cleanup or later receive must fail the child process,
+      // not silently pass because a stateless fixture tolerated it.
+      code.close = Buffer.from([0x0f, 0x0b]);
+      if (scenario === "owned-connect-failure") {
+        code.connect = failure(20);
+        code.read = code.disconnect = Buffer.from([0x0f, 0x0b]);
+      } else code.disconnect = failure(4);
+    }
   }
   const codeOffsets = {};
   let textLength = 0;
