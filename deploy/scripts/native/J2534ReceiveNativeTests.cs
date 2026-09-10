@@ -1,10 +1,84 @@
 using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using VehicleDiagnosis.Native;
 
 internal static class NativeReceiveTests
 {
+    private static MockIdentityLibrary IdentityFixture()
+    {
+        return new MockIdentityLibrary {
+            Open = delegate(IntPtr name, out uint id) { id = 0xf1234567; return 0; },
+            Read = delegate(uint id, IntPtr a, IntPtr b, IntPtr c) { return 0; },
+            Close = delegate(uint id) { throw new Exception("Unexpected channel cleanup"); }
+        };
+    }
+    private static void RunOwnedReceive()
+    {
+        var library = IdentityFixture();
+        var owner = new J2534IdentityNative(library);
+        uint id;
+        Check(owner.Open(out id) == 0);
+        int calls = 0;
+        J2534ReceiveNative.ReadFunction read = delegate(uint channel, IntPtr p, IntPtr n, uint timeout) {
+            calls++;
+            Reject(delegate { owner.Dispose(); }, "native_identity_call_in_progress");
+            Reject(delegate { owner.Close(id); }, "native_identity_call_in_progress");
+            Marshal.WriteInt32(n, 0); return 0;
+        };
+        Reject(delegate { new J2534ReceiveNative(owner, 1, read).ReadOnce(7, 1); }, "native_identity_device_not_owned");
+        Check(calls == 0);
+        Check(new J2534ReceiveNative(owner, id, read).ReadOnce(7, 1).Status == 0);
+        Reject(delegate { new J2534ReceiveNative(owner, id, read).ReadOnce(7, 1); }, "native_identity_receive_already_attempted");
+        Reject(delegate { owner.Close(id); }, "native_identity_receive_cleanup_unconfirmed");
+        owner.Dispose();
+        Check(calls == 1 && library.Releases == 1 && !library.AllowedUnload);
+        GC.KeepAlive(library);
+
+        library = IdentityFixture();
+        owner = new J2534IdentityNative(library);
+        owner.Open(out id);
+        Reject(delegate { new J2534ReceiveNative(owner, id, delegate(uint c, IntPtr p, IntPtr n, uint t) {
+            Marshal.WriteByte(p, -1, 0); return 0;
+        }).ReadOnce(7, 1); }, "native_receive_buffer_overrun");
+        Reject(delegate { owner.Close(id); }, "native_identity_corrupted");
+        owner.Dispose();
+        Check(library.Releases == 1 && !library.AllowedUnload);
+        GC.KeepAlive(library);
+
+        library = IdentityFixture();
+        owner = new J2534IdentityNative(library);
+        owner.Open(out id);
+        using (var entered = new ManualResetEventSlim(false))
+        using (var release = new ManualResetEventSlim(false))
+        using (var disposing = new ManualResetEventSlim(false))
+        {
+            var reader = new J2534ReceiveNative(owner, id, delegate(uint c, IntPtr p, IntPtr n, uint t) {
+                entered.Set();
+                if (!release.Wait(5000)) throw new Exception("fixture_deadline");
+                Marshal.WriteInt32(n, 0); return 0;
+            });
+            Task receiveTask = Task.Run(delegate { reader.ReadOnce(7, 1); });
+            Task disposeTask = null;
+            try
+            {
+                Check(entered.Wait(5000));
+                disposeTask = Task.Run(delegate { disposing.Set(); owner.Dispose(); });
+                Check(disposing.Wait(5000));
+                Check(!disposeTask.Wait(100) && library.Releases == 0);
+            }
+            finally
+            {
+                release.Set();
+                Check(receiveTask.Wait(5000));
+                if (disposeTask != null) Check(disposeTask.Wait(5000));
+            }
+            Check(library.Releases == 1 && !library.AllowedUnload);
+        }
+        GC.KeepAlive(library);
+    }
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
     [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
@@ -130,6 +204,7 @@ internal static class NativeReceiveTests
         }
         Check(reader.ReadOnce(0, 16).Messages.Length == 0);
         RunNative();
+        RunOwnedReceive();
         return checks;
     }
 }

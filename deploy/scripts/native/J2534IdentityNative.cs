@@ -134,7 +134,7 @@ namespace VehicleDiagnosis.Native
         private readonly ReadVersionFunction readVersion;
         private readonly CloseFunction close;
         private bool disposed, openAttempted, readAttempted, closeAttempted;
-        private bool callInProgress, corrupted;
+        private bool callInProgress, corrupted, receiveAttempted;
         private bool allowUnload = true;
         private uint? ownedDevice;
         internal bool ReferenceReleased { get; private set; }
@@ -224,11 +224,31 @@ namespace VehicleDiagnosis.Native
             }
         }
 
+        // Development-only receive lease. No loader/export/channel permissions
+        // are added. Channel cleanup is not yet implemented, so retain the module
+        // after any receive attempt, including a successful one, until process exit.
+        internal T RunOwnedReceive<T>(uint deviceId, Func<T> receive)
+        {
+            if (receive == null) throw new ArgumentNullException("receive");
+            lock (gate)
+            {
+                CheckOwner(deviceId);
+                if (receiveAttempted) throw new InvalidOperationException("native_identity_receive_already_attempted");
+                receiveAttempted = true;
+                allowUnload = false;
+                callInProgress = true;
+                try { return receive(); }
+                catch { corrupted = true; throw; }
+                finally { callInProgress = false; }
+            }
+        }
+
         internal int Close(uint deviceId)
         {
             lock (gate)
             {
                 CheckOwner(deviceId);
+                if (receiveAttempted) throw new InvalidOperationException("native_identity_receive_cleanup_unconfirmed");
                 closeAttempted = true;
                 int status;
                 callInProgress = true;

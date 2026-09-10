@@ -22,11 +22,19 @@ namespace VehicleDiagnosis.Native
         }
         internal const int MessageSize = 24 + 4128;
         private readonly ReadFunction read;
+        private readonly J2534IdentityNative owner;
+        private readonly uint deviceId;
         private int consumed;
         internal J2534ReceiveNative(ReadFunction read)
         {
             if (read == null) throw new ArgumentNullException("read");
             this.read = read;
+        }
+        internal J2534ReceiveNative(J2534IdentityNative owner, uint deviceId, ReadFunction read) : this(read)
+        {
+            if (owner == null) throw new ArgumentNullException("owner");
+            this.owner = owner;
+            this.deviceId = deviceId;
         }
         private static uint UInt32(IntPtr address, int offset)
         { return unchecked((uint)Marshal.ReadInt32(address, offset)); }
@@ -36,6 +44,11 @@ namespace VehicleDiagnosis.Native
         internal Result ReadOnce(uint channel, int capacity)
         {
             if (capacity < 1 || capacity > 16) throw new ArgumentOutOfRangeException("capacity");
+            return owner == null ? ReadOnceCore(channel, capacity)
+                : owner.RunOwnedReceive(deviceId, delegate { return ReadOnceCore(channel, capacity); });
+        }
+        private Result ReadOnceCore(uint channel, int capacity)
+        {
             if (Interlocked.Exchange(ref consumed, 1) != 0)
                 throw new InvalidOperationException("native_receive_already_attempted");
             using (var messages = new GuardedMemory(capacity * MessageSize))

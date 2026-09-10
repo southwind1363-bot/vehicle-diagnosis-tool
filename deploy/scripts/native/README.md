@@ -208,8 +208,27 @@ it neither releases an in-flight owner early nor triggers another attempt.
 delegate call with a fixed 1–16 message allocation and nonblocking timeout zero.
 It is not referenced by a production worker or loader. Each instance permits
 one attempt, including exceptions and reentry; it performs no retry, Connect,
-filter setup, or WriteMsgs. Channel/module ownership and a process deadline
-remain prerequisites for future integration, not capabilities of this helper.
+filter setup, or WriteMsgs. Channel ownership and a process deadline remain
+prerequisites for future worker integration.
+
+Following explicit user approval, the optional owner-bound constructor now
+routes the entire receive operation (including copying and buffer disposal)
+through the identity binding's gate. It requires the exact owned device ID.
+Dispose on another thread waits for the receive; same-thread Dispose/Close
+reentry is rejected. Only one receive attempt is allowed per owner, even if
+another receive wrapper is created. Receive exceptions poison the owner.
+No channel-disconnect verification exists yet, so after any receive attempt
+Close is refused and Dispose retains the library reference until process exit,
+even on success. There is no implicit cleanup or automatic retry.
+
+The unbound constructor remains for isolated ABI tests; it does not manage
+module lifetime. The owner must exclusively control library release and receive
+delegates must belong to that owner's module; this is not a sandbox against
+callbacks that directly release a library behind the owner. The production
+loader's three-export allowlist is unchanged and no worker uses this receive
+path yet. x86/x64 managed tests verify wrong-owner rejection, one-shot ownership,
+reentry rejection, corruption retention and concurrent Dispose serialization.
+These tests are not real driver/channel lifetime evidence.
 Receive callback exceptions are replaced by `native_receive_call_threw` without
 retaining their message or inner exception. Guard corruption still takes
 precedence and the attempt remains consumed. This matches identity-call error
