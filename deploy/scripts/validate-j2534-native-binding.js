@@ -20,7 +20,7 @@ import { createJ2534UdsTransportAdapterRequestBoundary } from "./j2534-uds-trans
 import { buildUdsReadAdapterCompletionManifest } from "../local-bridge-readonly.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
-const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs"]
+const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs", "J2534ReceiveNative.cs", "J2534ReceiveNativeTests.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
 const preflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534NativePreflightFixtureWorker.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
@@ -945,7 +945,7 @@ async function main() {
     && !distributionSources.includes("j2534-native-preflight-fixture-v1")
     && !distributionSources.includes("j2534-verified-identity-fixture-v1"), "Native preflight fixture reached a public or PC package manifest");
   total++;
-  console.log(`J2534 native binding checks: ${total} / independent native fixture ABI: tested / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
+  console.log(`J2534 native binding checks: ${total} / independent identity native fixture ABI: tested / receive: managed callbacks only / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
 }
 
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

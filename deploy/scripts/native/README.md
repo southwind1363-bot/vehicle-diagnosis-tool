@@ -183,6 +183,35 @@ runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
 
 ## Next Gates
 
+### Receive code increment (2026-09-10)
+
+`J2534ReceiveNative.cs` adds a development-only v04.04 `PassThruReadMsgs`
+delegate call with a fixed 1–16 message allocation and nonblocking timeout zero.
+It is not referenced by a production worker or loader. Each instance permits
+one attempt, including exceptions and reentry; it performs no retry, Connect,
+filter setup, or WriteMsgs. Channel/module ownership and a process deadline
+remain prerequisites for future integration, not capabilities of this helper.
+
+The 4152-byte message layout uses six 32-bit fields and 4128 data bytes.
+Count and message allocations have adjacent guards; invalid counts, data sizes
+and extra-data offsets fail before any result is returned. Only status 0/9
+returns copied messages; all other statuses retain their code/count without
+publishing message data. RxStatus indicators remain raw observations, never
+diagnostic results. Guards do not sandbox arbitrary native writes or detect
+every incomplete payload. An isolated worker must terminate after corruption
+without invoking driver cleanup or retrying.
+
+The existing x86/x64 validator now also runs managed receive callbacks for
+maximum payloads, multi-message stride, empty results, partial timeout, error
+discard, corrupt lengths/counts/guards, exceptions and one-shot enforcement.
+These receive tests are NOT independent native ABI or real VCI evidence.
+The existing generated DLL still tests identity exports only. Next: an
+independent receive ABI fixture, then reviewed worker ownership integration;
+actual driver/vehicle execution remains disabled.
+
+Layout/call reference: [Quantex PassThruReadMsgs](https://quantexlab.com/en/develop/j2534/pt_readmsg.html)
+(checked 2026-09-10, v04.04 layout only; not a universal driver guarantee).
+
 1. Cross-check the generated fixture with a compiler-built C reference when a
    reviewed native toolchain is available.
 2. The packaged CLI emits `j2534-native-preflight-evidence-v1` without DLL
