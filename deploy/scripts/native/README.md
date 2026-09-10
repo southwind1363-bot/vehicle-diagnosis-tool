@@ -193,6 +193,10 @@ cannot substitute another runner after preparation; a frozen internal facade
 retains the original run function and receiver. This is dependency identity
 stability, not a sandbox for untrusted callbacks or mutable callback internals.
 Execution flags and the fixture-only requirement remain unchanged.
+The readout controller also copies/freezes its ECU/DID scope and captures the
+runner function, including when constructed directly. Mutating the caller's
+scope cannot retarget a prepared readout. Caller objects are not frozen or
+rewritten; this preserves their ownership without sharing the validated scope.
 
 ### Receive code increment (2026-09-10)
 

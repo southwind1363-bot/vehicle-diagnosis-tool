@@ -40,10 +40,14 @@ function blocked(reason, selectedDeviceId = null) {
 
 export function createJ2534UdsReadoutAttemptController(options = {}) {
   const hasRequestScope = options && typeof options === "object" && Object.hasOwn(options, "request_scope");
-  const requestScope = hasRequestScope ? options.request_scope : null;
+  const suppliedScope = hasRequestScope ? options.request_scope : null;
+  const requestScope = suppliedScope && typeof suppliedScope === "object" && !Array.isArray(suppliedScope)
+    ? Object.freeze({ ...suppliedScope }) : suppliedScope;
+  const transportSupervisor = options?.transport_supervisor;
+  const runTransport = transportSupervisor?.run;
   if (!exactKeys(options, ["selected_device_id", "transport_supervisor", "build_completion_manifest", ...(hasRequestScope ? ["request_scope"] : [])])
     || !SAFE_DEVICE_ID.test(options.selected_device_id)
-    || typeof options.transport_supervisor?.run !== "function"
+    || typeof runTransport !== "function"
     || typeof options.build_completion_manifest !== "function"
     || (hasRequestScope && (!exactKeys(requestScope, ["target_ecu", "expected_response_ecu", "requested_data_identifier"])
       || !SAFE_ECU_ADDRESS.test(requestScope.target_ecu) || !SAFE_ECU_ADDRESS.test(requestScope.expected_response_ecu)
@@ -51,7 +55,6 @@ export function createJ2534UdsReadoutAttemptController(options = {}) {
       || !SAFE_DID.test(requestScope.requested_data_identifier))))
     throw new Error("j2534_uds_attempt_controller_invalid");
   const selectedDeviceId = options.selected_device_id;
-  const transportSupervisor = options.transport_supervisor;
   const buildCompletionManifest = options.build_completion_manifest;
   let active = false;
 
@@ -84,7 +87,7 @@ export function createJ2534UdsReadoutAttemptController(options = {}) {
       try {
         operationNonce = randomBytes(16).toString("hex");
         readoutAttemptId = `j2534-uds-${randomBytes(16).toString("hex")}`;
-        const supervised = await transportSupervisor.run({
+        const supervised = await Reflect.apply(runTransport, transportSupervisor, [{
           mode: "uds_transport_fixture",
           scenario: request.scenario,
           operation_nonce: operationNonce,
@@ -95,7 +98,7 @@ export function createJ2534UdsReadoutAttemptController(options = {}) {
           requested_data_identifier: requestedDataIdentifier,
           timeout_ms: timeoutMs,
           ...(request.signal ? { signal: request.signal } : {})
-        });
+        }]);
         const transportResult = supervised?.result?.transport_result || null;
         const bindingsMatch = supervised?.result?.operation_nonce === operationNonce
           && supervised.result.selected_device_id === selectedDeviceId

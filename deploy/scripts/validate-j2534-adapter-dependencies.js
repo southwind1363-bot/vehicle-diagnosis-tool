@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createJ2534UdsTransportAdapterRequestBoundary } from "./j2534-uds-transport-adapter-request.js";
+import { createJ2534UdsReadoutAttemptController } from "./j2534-uds-readout-attempt-controller.js";
 
 export async function validateAdapterDependencyCapture() {
   let originalRuns = 0, replacementRuns = 0;
@@ -37,5 +38,23 @@ export async function validateAdapterDependencyCapture() {
   assert.equal(result.vehicle_communication_started, false);
   assert.equal((await boundary.prepare({}, request)).preparation_status, "prepared_non_executable");
   assert.equal(boundary.createAttemptController(prepared.adapter_request), null);
-  return 7;
+  const scope = { target_ecu: "7E0", expected_response_ecu: "7E8", requested_data_identifier: "F190" };
+  let scopedRuns = 0;
+  const scopedSupervisor = { async run() { scopedRuns++; return { execution_status: "blocked" }; } };
+  const scoped = createJ2534UdsReadoutAttemptController({ selected_device_id: "j2534-0123456789abcdef",
+    transport_supervisor: scopedSupervisor, build_completion_manifest: () => null, request_scope: scope });
+  scope.target_ecu = "7E1";
+  scope.expected_response_ecu = "7E9";
+  scope.requested_data_identifier = "F187";
+  const changed = await scoped.run({ mode: "uds_readout_attempt", scenario: "positive", ...scope });
+  assert.deepEqual(changed.blockers, ["j2534_uds_attempt_scope_mismatch"]);
+  assert.equal(scopedRuns, 0);
+  scopedSupervisor.run = replacement;
+  const original = await scoped.run({ mode: "uds_readout_attempt", scenario: "positive",
+    target_ecu: "7E0", expected_response_ecu: "7E8", requested_data_identifier: "F190" });
+  assert.equal(original.attempt_status, "blocked");
+  assert.equal(scopedRuns, 1);
+  assert.equal(replacementRuns, 0);
+  assert.equal(scope.target_ecu, "7E1", "Do not freeze or rewrite caller state");
+  return 13;
 }

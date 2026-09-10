@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-10 読取先スコープの固定: readout controllerを直接生成した際、呼出側のrequest_scopeを書換えるとECU/DID制約も変わることを人工runnerで再現。生成時にscopeを複製/固定し、runner関数も保持する。元scopeや元runnerプロパティの変更後も、変更先要求は実行前にscope_mismatchで拒否、元要求だけが元runnerへ渡る。呼出側のオブジェクトは凍結/書換えしない。負例確認後、依存/scope13項目・native全体2013/Errors 0、構文/diff合格。既存adapter経由の凍結済scopeに加え直接生成経路を保護。公開実行無効・診断/保存形式・本体/ZIPを維持し、実VCI/実車は未使用。
+
 2026-09-10 接続準備の依存先固定: adapter-request作成後に依存オブジェクトを書換えると、検査済みfixture以外のrunへ差替わることを人工callbackで再現。生成時にpreflight/完了変換/runの関数を取得・検査して保持し、内部の固定facadeから元runを呼ぶよう修正。呼出先の事後差替えを防ぐもので、任意callbackの隔離や内部可変状態を保証しない。fixture_only・実行無効・one-shot・既存公開契約を維持。負例確認後、依存固定7項目とnative全体2007/Errors 0、構文/diffが合格。実VCI/実車不使用、本体3.13.576と既存ZIPは不変。
 
 2026-09-10 native版情報領域の解放後アクセス防止: 所有権確認中、VersionBuffer.Dispose後もDataが無効ポインター16を返し、guard/copyが解放後領域へ進めることを確認。旧実装への検査はポインター取得時点で安全に失敗させ、無効メモリー読込は行わない。Data/CheckGuards/CopyをObjectDisposedExceptionで拒否し、二重Disposeは維持。修正後validate:j2534-native 2000/Errors 0（x86 499/x64 497）、diff合格。buffer単体の並行安全化ではなく既存lifecycle lockは引き続き必要。公開workerへの受信統合・実DLL/実VCI/実車の実行は行わず、本体/ZIP・診断/保存形式に変更なし。
