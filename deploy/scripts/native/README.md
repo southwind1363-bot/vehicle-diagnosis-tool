@@ -225,8 +225,8 @@ The unbound constructor remains for isolated ABI tests; it does not manage
 module lifetime. The owner must exclusively control library release and receive
 delegates must belong to that owner's module; this is not a sandbox against
 callbacks that directly release a library behind the owner. The production
-loader's three-export allowlist is unchanged and no worker uses this receive
-path yet. x86/x64 managed tests verify wrong-owner rejection, one-shot ownership,
+loader's three-export allowlist is unchanged and no production worker uses this
+receive path. x86/x64 managed tests verify wrong-owner rejection, one-shot ownership,
 reentry rejection, corruption retention and concurrent Dispose serialization.
 These tests are not real driver/channel lifetime evidence.
 Receive callback exceptions are replaced by `native_receive_call_threw` without
@@ -257,8 +257,23 @@ in its temporary architecture directory, under the existing 30-second child
 deadline. Production loaders and workers do not reference this fixture.
 This is generated native receive ABI evidence, not a compiler-built C reference
 or vendor/VCI compatibility evidence. No C compiler was found on PATH in this
-run. Next: reviewed worker ownership integration and an independent C reference
+run. Next: production channel ownership integration and an independent C reference
 when a reviewed toolchain is available. Actual driver/vehicle execution stays disabled.
+
+`J2534OwnedReceiveFixtureWorker.cs` now integrates the owner and native receive
+binding inside a dedicated x86/x64 child process. It is compiled only with
+`NATIVE_RECEIVE_FIXTURE_TESTS`, outside the workstation package. It opens only
+the fixed sibling `owned-receive.dll`, checks the digest compiled by the validator
+while holding a read-only file lease through loading, and binds identity and
+receive exports from the same module. It accepts no driver path or channel input.
+The synthetic channel performs one zero-timeout receive, checks copied records,
+then disposes the owner without Close/unload. Only a fixed summary is emitted,
+with cleanup explicitly unconfirmed; no raw messages or exception details leave
+the process. The validator requires normal exit within 30 seconds, exact summary
+fields, argument rejection, and silent rejection of a substituted valid PE.
+This is isolated generated-native integration evidence, not actual channel
+creation, driver cleanup, vendor compatibility, or vehicle diagnosis. The
+fixture-only loader does not widen `WindowsIdentityLibrary`'s export allowlist.
 
 Layout/call reference: [Quantex PassThruReadMsgs](https://quantexlab.com/en/develop/j2534/pt_readmsg.html)
 (checked 2026-09-10, v04.04 layout only; not a universal driver guarantee).

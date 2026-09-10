@@ -99,6 +99,7 @@ function validateFixturePe(buffer, platform, expectedNames) {
 }
 
 function fixtureNames(scenario) {
+  if (scenario === "owned-receive") return ["PassThruClose", "PassThruOpen", "PassThruReadMsgs", "PassThruReadVersion"];
   if (scenario === "receive-success") return ["PassThruReadMsgs"];
   if (scenario === "decorated-open-only") return ["_PassThruOpen@8"];
   return ["PassThruClose", "PassThruOpen", "PassThruReadVersion"].filter(name =>
@@ -150,7 +151,7 @@ async function main() {
     for (const platform of platforms) {
       const platformDirectory = path.join(directory, platform.name);
       fs.mkdirSync(platformDirectory); createdDirectories.push({ path: platformDirectory, identity: fs.statSync(platformDirectory) });
-      for (const scenario of ["success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "receive-success"])
+      for (const scenario of ["success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "receive-success", "owned-receive"])
       {
         const fixture = buildJ2534NativeFixture(platform.name, scenario);
         validateFixturePe(fixture, platform, fixtureNames(scenario)); total++;
@@ -200,6 +201,41 @@ async function main() {
       assert.equal(rejected.stdout, "");
       assert.equal(rejected.stderr, "");
       total += 3;
+
+      const ownedWorker = path.join(platformDirectory, "owned-receive-worker.exe");
+      const digestSource = path.join(platformDirectory, "OwnedReceiveFixtureDigest.cs");
+      const ownedFixture = buildJ2534NativeFixture(platform.name, "owned-receive");
+      const digest = createHash("sha256").update(ownedFixture).digest("hex").toUpperCase();
+      writeCreatedFile(digestSource, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const string Value = "${digest}"; }`));
+      createdFiles.push(ownedWorker);
+      const ownedCompile = await execute(platform.compiler, [
+        "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
+        "/define:NATIVE_RECEIVE_FIXTURE_TESTS", `/out:${ownedWorker}`, sources[0], sources[2], digestSource,
+        path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
+      ]);
+      assert.equal(ownedCompile.error, null, `Owned receive compilation failed: ${ownedCompile.stdout}${ownedCompile.stderr}`);
+      const ownedRun = await execute(ownedWorker, ["--fixture-owned-receive"]);
+      assert.equal(ownedRun.error, null, "Owned receive isolated worker failed");
+      assert.equal(ownedRun.stderr, "");
+      assert.deepEqual(JSON.parse(ownedRun.stdout), {
+        fixture_only: true, pointer_bits: platform.bits, received_count: 2,
+        module_retained: true, cleanup_confirmed: false, vehicle_communication: false,
+      });
+      for (const args of [[], ["--driver-path", "forbidden.dll"], ["--fixture-owned-receive", "extra"]]) {
+        const rejectedOwned = await execute(ownedWorker, args);
+        assert.equal(rejectedOwned.error?.code, 2);
+        assert.equal(rejectedOwned.stdout, ""); assert.equal(rejectedOwned.stderr, "");
+        total += 3;
+      }
+      // A different valid PE must fail before loading; restore only our generated file.
+      const ownedPath = path.join(platformDirectory, "owned-receive.dll");
+      try {
+        fs.writeFileSync(ownedPath, buildJ2534NativeFixture(platform.name, "success"));
+        const mismatch = await execute(ownedWorker, ["--fixture-owned-receive"]);
+        assert.equal(mismatch.error?.code, 1);
+        assert.equal(mismatch.stdout, ""); assert.equal(mismatch.stderr, "");
+      } finally { fs.writeFileSync(ownedPath, ownedFixture); }
+      total += 7;
 
       const preflightWorker = path.join(platformDirectory, "j2534-native-preflight-fixture-worker.exe");
       createdFiles.push(preflightWorker);

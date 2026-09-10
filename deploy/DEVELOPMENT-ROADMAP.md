@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-10 隔離worker内の受信所有権接続: 開発専用workerで同じ生成DLLからidentity ownerと受信delegateを作り、1回の受信・コピー・owner破棄まで接続。固定の隣接fixtureだけをコンパイル時SHA256と照合し、読取lease中にロード。パス/チャンネルの外部入力なし、公開workerのexport制限は不変。x86/x64とも独立processで正常終了と固定概要を照合、異なるPEと余分な引数を無出力で拒否。native2095項目/Errors 0。通信路終了未確認のためClose/unloadせず終了まで参照保持、実車通信なしを概要にも明記。生成fixtureでの統合確認であり、実VCI・実車・別PC・実channel生成/終了は未確認。配布580や診断保存形式を変更しない。次はproduction channel所有権/終了管理の未実装を扱う必要があり、その安全境界変更は別判断とする。
+
 2026-09-10 受信所有権管理の統合（承認済み）: 安全管理統合の判断依頼に対する「はい 進めてください」を受け、owner付き受信経路を追加。受信のメモリー確保～コピー/解放まで既存identity gate内で管理し、所有device ID一致を要求。別thread Disposeは受信終了まで待ち、同thread Dispose/Close再入を拒否。ownerごと1回、受信例外はownerを無効化。通信路の終了確認は未実装なので成功時もCloseを拒否し、Disposeはmodule参照をprocess終了まで保持する。native検査2061/Errors 0（x86 517/x64 515）、diff合格。管理callbackでの同期検査であり実ドライバー寿命確認ではない。既存loaderの3export制限・公開worker・実車実行無効・診断保存契約は不変。本体/580 ZIPは変更せず、次は専用worker内でのowner生成と受信経路の接続。channel生成/終了確認・実VCI/実車試験は未完了。
 
 3.13.580 承認済み完了判定修正の同梱: 531bc38aをPC配布へ反映し、579を上書きせず580を新規作成。R1全工程が合格。ZIP 2,665,247 bytes / SHA256 AA1BA3F1E6CD759A446DB109527D24AE427FD55D48CF06B3D44AE92DD385D498。別展開verify-workstationは846ファイル/16,897,275 bytes一致・終了0、controllerは修正ソースとhash一致。別展開した実moduleに人工supervisorを与え、正常終了だけ完了化し、中止/時間切れ/異常終了は破棄する4状態を確認。実VCI/実車の検証ではない。診断保存形式/実行権限に追加変更なし。今回はブラウザー再起動/別PCを未検証、生成器自体は変更していないため既知失敗や同じ生成器試験の反復は行わない。

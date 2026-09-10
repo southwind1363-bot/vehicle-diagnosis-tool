@@ -1,6 +1,6 @@
 const ARCHITECTURES = new Set(["x86", "x64"]);
 const SCENARIOS = new Set([
-  "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success",
+  "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success", "owned-receive",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -82,6 +82,10 @@ function scenarioCode(architecture, scenario) {
 }
 
 function exportsFor(scenario) {
+  if (scenario === "owned-receive") return [
+    { name: "PassThruClose", key: "close" }, { name: "PassThruOpen", key: "open" },
+    { name: "PassThruReadMsgs", key: "read" }, { name: "PassThruReadVersion", key: "version" },
+  ];
   if (scenario === "receive-success") return [{ name: "PassThruReadMsgs", key: "read" }];
   if (scenario === "decorated-open-only") return [{ name: "_PassThruOpen@8", key: "open" }];
   return [
@@ -100,13 +104,19 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   const is64 = architecture === "x64";
   const code = scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
+  if (scenario === "owned-receive") {
+    code.read = receiveCode(architecture);
+    // Resolved for identity ownership, but never called by the receive worker.
+    code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
+  }
   const codeOffsets = {};
   let textLength = 0;
-  for (const key of ["close", "open", "read"]) {
+  for (const key of Object.keys(code)) {
     textLength = align(textLength, 16); codeOffsets[key] = textLength; textLength += code[key].length;
   }
+  if (textLength > 0x200) throw new Error("native_fixture_text_section_overflow");
   const text = Buffer.alloc(align(textLength, 0x200));
-  for (const key of ["close", "open", "read"]) code[key].copy(text, codeOffsets[key]);
+  for (const key of Object.keys(code)) code[key].copy(text, codeOffsets[key]);
 
   const exports = exportsFor(scenario);
   const directorySize = 40;
