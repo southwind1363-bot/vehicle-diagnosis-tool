@@ -197,6 +197,10 @@ The readout controller also copies/freezes its ECU/DID scope and captures the
 runner function, including when constructed directly. Mutating the caller's
 scope cannot retarget a prepared readout. Caller objects are not frozen or
 rewritten; this preserves their ownership without sharing the validated scope.
+Completion conversion additionally requires `worker_completed`. Matching IDs
+on a cancelled, timed-out or crashed worker response cannot publish a completion
+manifest. This independently enforces the supervisor's existing discard policy;
+it neither releases an in-flight owner early nor triggers another attempt.
 
 ### Receive code increment (2026-09-10)
 

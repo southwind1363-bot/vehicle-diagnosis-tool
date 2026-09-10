@@ -56,5 +56,22 @@ export async function validateAdapterDependencyCapture() {
   assert.equal(scopedRuns, 1);
   assert.equal(replacementRuns, 0);
   assert.equal(scope.target_ecu, "7E1", "Do not freeze or rewrite caller state");
-  return 13;
+  for (const terminalStatus of ["worker_cancelled", "worker_timeout", "worker_crashed"]) {
+    let converted = 0;
+    const interrupted = createJ2534UdsReadoutAttemptController({ selected_device_id: "j2534-0123456789abcdef",
+      transport_supervisor: { async run(request) {
+        return { execution_status: terminalStatus, worker_started: true, result: {
+          ...request, transport_result: { readout_attempt_id: request.readout_attempt_id,
+            target_ecu: request.target_ecu, expected_response_ecu: request.expected_response_ecu,
+            requested_data_identifier: request.requested_data_identifier }
+        } };
+      } }, build_completion_manifest: () => { converted++; return { status: "completed" }; } });
+    const discarded = await interrupted.run({ mode: "uds_readout_attempt", scenario: "positive",
+      target_ecu: "7E0", expected_response_ecu: "7E8", requested_data_identifier: "F190" });
+    assert.equal(converted, 0, "Abnormal worker outcome was converted into a completed readout");
+    assert.equal(discarded.completion_manifest, null);
+    assert.equal(discarded.attempt_status, terminalStatus);
+    assert.equal(discarded.vehicle_communication_started, false);
+  }
+  return 25;
 }

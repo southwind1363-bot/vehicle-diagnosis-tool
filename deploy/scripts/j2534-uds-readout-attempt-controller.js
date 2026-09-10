@@ -100,7 +100,9 @@ export function createJ2534UdsReadoutAttemptController(options = {}) {
           ...(request.signal ? { signal: request.signal } : {})
         }]);
         const transportResult = supervised?.result?.transport_result || null;
-        const bindingsMatch = supervised?.result?.operation_nonce === operationNonce
+        // Matching identifiers alone cannot authorize a cancelled/failed result.
+        const bindingsMatch = supervised?.execution_status === "worker_completed"
+          && supervised?.result?.operation_nonce === operationNonce
           && supervised.result.selected_device_id === selectedDeviceId
           && supervised.result.readout_attempt_id === readoutAttemptId
           && supervised.result.target_ecu === targetEcu
