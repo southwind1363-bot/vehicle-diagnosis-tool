@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-10 受信例外の情報抑制: 受信callbackの例外本文/内部例外がそのまま上位へ渡る点を人工の私的情報風文字列で再現。identity側と同様に固定コードnative_receive_call_threwへ置換し、元例外を保持しない。guard破損の優先・失敗後の再呼出禁止を維持。修正前x86検査が失敗、修正後validate:j2534-native 1994/Errors 0（x86 496/x64 494）とdiff検査が合格。公開workerへ未接続、本体・配布ZIP・診断/保存形式・実行権限は不変。実VCI例外の回復や全native障害の捕捉を保証しない。
+
 2026-09-10 受信native ABI確認: 管理callbackだけでは呼出規約を確認できないため、既存の固定PE生成器へReadMsgsだけをexportする独立生成DLLを追加。x86 StdCall/x64でチャネル・待ち時間0・要求3件をnative側で確認し、4152バイト間隔の2メッセージと返却件数2を書き戻す。実delegate経由で高位bit ID/時刻、符号付き失敗、データ・受信indicator・件数更新を確認。validate:j2534-native 1982/Errors 0（x86 490/x64 488）、生成の再現性/固定text領域上限/構文/diff確認済み。試験専用子プロセスの固定一時DLLのみで、公開loader・worker・本体/ZIPは不変。PATH上にCコンパイラーなし。生成機械語によるABI確認であり、C参照実装・実VCI・実車の検証ではない。次は所有権統合、実行権限は引き続き無効。
 
 受信追加の検証: validate:j2534-native 1962項目/Errors 0（x86 481・x64 479の自己検査を含む）。追加受信検査は各26項目の管理callback検査であり、既存identity DLL検査と区別する。構文/diff確認済み。実VCI/実車・受信native ABIは未確認。

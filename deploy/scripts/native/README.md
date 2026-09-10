@@ -191,6 +191,10 @@ It is not referenced by a production worker or loader. Each instance permits
 one attempt, including exceptions and reentry; it performs no retry, Connect,
 filter setup, or WriteMsgs. Channel/module ownership and a process deadline
 remain prerequisites for future integration, not capabilities of this helper.
+Receive callback exceptions are replaced by `native_receive_call_threw` without
+retaining their message or inner exception. Guard corruption still takes
+precedence and the attempt remains consumed. This matches identity-call error
+hygiene; it does not recover a failed driver or catch every native process fault.
 
 The 4152-byte message layout uses six 32-bit fields and 4128 data bytes.
 Count and message allocations have adjacent guards; invalid counts, data sizes

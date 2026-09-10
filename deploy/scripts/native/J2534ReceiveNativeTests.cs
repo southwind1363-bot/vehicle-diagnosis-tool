@@ -96,11 +96,24 @@ internal static class NativeReceiveTests
                 throw new Exception("callback_failed");
             }).ReadOnce(0, 1); }, "native_receive_buffer_overrun");
         }
-        reader = new J2534ReceiveNative(delegate(uint c, IntPtr p, IntPtr n, uint t) {
-            throw new InvalidOperationException("callback_failed");
-        });
-        Reject(delegate { reader.ReadOnce(0, 1); }, "callback_failed");
-        Reject(delegate { reader.ReadOnce(0, 1); }, "native_receive_already_attempted");
+        foreach (Exception failure in new Exception[] {
+            new InvalidOperationException("synthetic-private-driver-path"),
+            new Exception("synthetic-raw-response", new Exception("synthetic-private-inner"))
+        })
+        {
+            Exception captured = failure;
+            reader = new J2534ReceiveNative(delegate(uint c, IntPtr p, IntPtr n, uint t) { throw captured; });
+            bool rejected = false;
+            try { reader.ReadOnce(0, 1); }
+            catch (InvalidOperationException error)
+            {
+                Check(error.Message == "native_receive_call_threw");
+                Check(error.InnerException == null && !error.ToString().Contains("synthetic-"));
+                rejected = true;
+            }
+            Check(rejected);
+            Reject(delegate { reader.ReadOnce(0, 1); }, "native_receive_already_attempted");
+        }
         result = new J2534ReceiveNative(delegate(uint c, IntPtr p, IntPtr n, uint t) {
             Fill(p, 1); return 18; // Buffer overflow must not publish partial ECU data.
         }).ReadOnce(0, 1);

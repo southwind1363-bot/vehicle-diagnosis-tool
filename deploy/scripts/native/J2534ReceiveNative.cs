@@ -44,6 +44,9 @@ namespace VehicleDiagnosis.Native
                 Marshal.WriteInt32(count.Pointer, capacity);
                 int status;
                 try { status = read(channel, messages.Pointer, count.Pointer, 0); }
+                // Never propagate vendor/callback text or nested exceptions.
+                // The finally guard checks still take precedence over this code.
+                catch { throw new InvalidOperationException("native_receive_call_threw"); }
                 finally
                 {
                     // Guard damage takes precedence even if the callback throws.
