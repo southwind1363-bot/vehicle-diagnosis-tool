@@ -566,7 +566,7 @@ try {
       : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
       { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
-      (error, stdout, stderr) => resolve({ code: error?.code ?? 0, output: stdout + stderr }));
+      (error, stdout, stderr) => resolve({ code: error?.code ?? 0, stdout, stderr, output: stdout + stderr }));
     const invalidUdsEvidence = { ...udsPreparationEvidence, private_library_path: "C:/private/must-not-echo.dll", vehicle_command_enabled: true };
     child.stdin.end(entry === "inspect-validate" ? `${JSON.stringify(noDriverEvidence)}\n`
       : entry === "inspect-validate-large" || entry === "inspect-validate-uds-large" ? "A".repeat(32769)
@@ -626,6 +626,12 @@ try {
     const oversizedValidation = await runEntry("inspect-validate-large");
     const oversizedLine = oversizedValidation.output.split(/\r?\n/).find((line) => line.startsWith('{"schema_version":"j2534-native-preflight-evidence-validation-v1"'));
     const oversizedResult = JSON.parse(oversizedLine || "null");
+    for (const response of [evidenceInspection, validatedInspection, validatedUdsPreparation,
+      rejectedUdsValidation, oversizedUdsValidation, oversizedValidation]) {
+      const standalone = JSON.parse(response.stdout.trim());
+      check(typeof standalone.schema_version === "string" && response.stderr.includes("Package files match:"),
+        "Machine-readable inspection stdout was contaminated by package verification text");
+    }
     check(oversizedValidation.code === 1 && oversizedResult?.valid === false
       && oversizedResult?.evidence_authorizes_execution === false && !oversizedValidation.output.includes("AAAAA"),
     "Packaged J2534 evidence validation accepted or disclosed an oversized input");

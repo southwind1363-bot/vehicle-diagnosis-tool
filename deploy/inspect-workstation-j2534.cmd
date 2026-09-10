@@ -19,7 +19,18 @@ set "inspection_exit=1"
 goto finish
 
 :package_check
-node "scripts\verify-workstation-package.js"
+set "inspection_json_output="
+if /i "%~1"=="--evidence-json" set "inspection_json_output=1"
+if /i "%~2"=="--evidence-json" set "inspection_json_output=1"
+if /i "%~3"=="--evidence-json" set "inspection_json_output=1"
+if /i "%~1"=="--validate-evidence-stdin" set "inspection_json_output=1"
+if /i "%~1"=="--validate-uds-preparation-stdin" set "inspection_json_output=1"
+if /i "%~1"=="--prepare-uds-request" set "inspection_json_output=1"
+if defined inspection_json_output (
+  node "scripts\verify-workstation-package.js" 1>&2
+) else (
+  node "scripts\verify-workstation-package.js"
+)
 if errorlevel 1 (
   echo Package verification failed. Restore the complete original package.
   echo No driver inspection or vehicle connection was started.
