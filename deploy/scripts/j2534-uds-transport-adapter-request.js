@@ -53,12 +53,24 @@ function verifiedIdentity(snapshot) {
 }
 
 export function createJ2534UdsTransportAdapterRequestBoundary(dependencies = {}) {
-  if (!plainObject(dependencies) || Object.keys(dependencies).length !== 3
-    || typeof dependencies.run_identity_preflight !== "function"
-    || typeof dependencies.build_completion_manifest !== "function"
-    || dependencies.transport_supervisor?.fixture_only !== true
-    || typeof dependencies.transport_supervisor?.run !== "function")
+  let runIdentityPreflight, buildCompletionManifest, originalSupervisor, runTransport, fixtureOnly;
+  try {
+    if (!plainObject(dependencies) || Object.keys(dependencies).length !== 3) throw new Error();
+    runIdentityPreflight = dependencies.run_identity_preflight;
+    buildCompletionManifest = dependencies.build_completion_manifest;
+    originalSupervisor = dependencies.transport_supervisor;
+    fixtureOnly = originalSupervisor?.fixture_only;
+    runTransport = originalSupervisor?.run;
+  } catch { throw new Error("j2534_uds_transport_adapter_dependencies_invalid"); }
+  if (typeof runIdentityPreflight !== "function" || typeof buildCompletionManifest !== "function"
+    || fixtureOnly !== true || typeof runTransport !== "function")
     throw new Error("j2534_uds_transport_adapter_dependencies_invalid");
+  // Retain the validated functions, not mutable dependency properties. This
+  // does not sandbox supplied code; dependencies are still trusted internal code.
+  const transportSupervisor = Object.freeze({
+    fixture_only: true,
+    run: (...args) => Reflect.apply(runTransport, originalSupervisor, args)
+  });
   const preparedSecrets = new WeakMap();
   const consumedRequests = new WeakSet();
 
@@ -77,7 +89,7 @@ export function createJ2534UdsTransportAdapterRequestBoundary(dependencies = {})
         || !isRequestResponseEcuMatch(targetEcu, expectedResponseEcu) || !SAFE_DID.test(requestedDataIdentifier))
         return blocked("j2534_uds_transport_adapter_request_invalid");
       let identitySnapshot;
-      try { identitySnapshot = await dependencies.run_identity_preflight(identityOperation); }
+      try { identitySnapshot = await Reflect.apply(runIdentityPreflight, dependencies, [identityOperation]); }
       catch { return blocked("j2534_identity_preflight_failed"); }
       if (!verifiedIdentity(identitySnapshot)) return blocked("j2534_identity_preflight_not_verified");
       const adapterRequest = Object.freeze({
@@ -123,8 +135,8 @@ export function createJ2534UdsTransportAdapterRequestBoundary(dependencies = {})
       preparedSecrets.delete(adapterRequest);
       return createJ2534UdsReadoutAttemptController({
         selected_device_id: secret.selectedDeviceId,
-        transport_supervisor: dependencies.transport_supervisor,
-        build_completion_manifest: dependencies.build_completion_manifest,
+        transport_supervisor: transportSupervisor,
+        build_completion_manifest: buildCompletionManifest,
         request_scope: Object.freeze({
           target_ecu: adapterRequest.target_ecu,
           expected_response_ecu: adapterRequest.expected_response_ecu,

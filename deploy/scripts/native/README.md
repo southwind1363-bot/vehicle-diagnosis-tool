@@ -187,6 +187,13 @@ runtime accepts only those fixed workers. Neither worker loads a vendor DLL.
 
 ## Next Gates
 
+The adapter-request boundary captures its validated preflight, completion and
+fixture-run functions at construction. Replacing dependency properties later
+cannot substitute another runner after preparation; a frozen internal facade
+retains the original run function and receiver. This is dependency identity
+stability, not a sandbox for untrusted callbacks or mutable callback internals.
+Execution flags and the fixture-only requirement remain unchanged.
+
 ### Receive code increment (2026-09-10)
 
 `J2534ReceiveNative.cs` adds a development-only v04.04 `PassThruReadMsgs`

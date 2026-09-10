@@ -17,6 +17,7 @@ import {
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { createJ2534UdsReadoutAttemptController } from "./j2534-uds-readout-attempt-controller.js";
 import { createJ2534UdsTransportAdapterRequestBoundary } from "./j2534-uds-transport-adapter-request.js";
+import { validateAdapterDependencyCapture } from "./validate-j2534-adapter-dependencies.js";
 import { buildUdsReadAdapterCompletionManifest } from "../local-bridge-readonly.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -138,7 +139,7 @@ async function main() {
     fs.writeFileSync(target, contents, { flag: "wx" }); createdFiles.push(target);
     assert.deepEqual(fs.readFileSync(target), contents, "Generated fixture changed after writing");
   };
-  let total = 0;
+  let total = await validateAdapterDependencyCapture();
   const udsTransportFixtureSource = fs.readFileSync(path.join(scriptsDirectory, "native", "J2534UdsTransportFixtureWorker.cs"), "utf8");
   assert.ok(!/(?:DllImport|LoadLibrary|GetProcAddress|PassThru|VehicleDiagnosis\.Native)/.test(udsTransportFixtureSource), "UDS transport fixture gained a native or vehicle communication API");
   total++;
