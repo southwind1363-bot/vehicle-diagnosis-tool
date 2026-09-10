@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-11 隔離supervisor入力例外の抑止: timeout/signal getterやProxy ownKeysの例外でrunがrejectし生の例外文字列が外へ出る点を再現。入力列挙/読込/型確認を保護し、子process未開始の固定request_blockedへ変換。拒否後も通常1回実行可能で、入力項目や実行権限は増やさない。修正前は人工private-option-detailで検査終了1、修正後native2529項目Errors 0とdiff合格。公開worker/診断保存形式/580ZIP不変、実VCI/実車/別PCは未確認。
+
 2026-09-11 停止/クラッシュ監視検証: native全体2505項目/Errors 0、diff合格。正常結果採用と再実行拒否、native status失敗2種・開始hang・終了crash・結果後hangで不採用、hangで終了要求/送信と子process closeを確認。生成fixtureの試験結果であり実VCI/実車/別PCや独立C参照は未検証。
 
 2026-09-11 隔離受信workerの停止/クラッシュ監視: 専用supervisorを既存bounded child runnerへ接続。固定一時パス・worker/DLLのidentity/SHA256再照合、固定CLI、最小環境、stderr拒否、1回だけの実行を維持。正常process closeと厳密概要一致の両方でのみ結果を採用。生成nativeのConnect無限待機、Disconnect不正命令、コンパイル限定の概要出力後待機をx86/x64で実行し、期限到達時の終了要求/close確認と全異常時parsed_result:nullを確認する。失敗終了1の正しいJSONも破棄する。物理VCIのcleanup確認ではなく、公開bridge/実通信/保存形式/580ZIPは変更しない。

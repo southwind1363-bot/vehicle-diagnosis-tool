@@ -323,6 +323,11 @@ parsed result, including the earlier valid JSON from status-failure workers.
 These fixtures demonstrate process containment here, not physical adapter cleanup.
 The independent compiler-built C reference, other-PC and actual VCI remain
 unverified; the production bridge still does not include this supervisor.
+Owned-supervisor request inspection is guarded: throwing option getters or
+proxy key enumeration return only `owned_fixture_request_invalid`, without
+spawning a process, leaking exception text, or consuming the one-attempt latch.
+A subsequent valid request still runs once. This hardens the development API;
+it does not enable any vehicle operation or accept additional input fields.
 Signatures checked against vendor primary documentation, v04.04 Windows DWORD
 layout only: [Connect](https://quantexlab.com/en/develop/j2534/pt_connect.html),
 [Disconnect](https://quantexlab.com/en/develop/j2534/pt_disconnect.html).

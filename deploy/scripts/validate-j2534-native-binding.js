@@ -228,6 +228,18 @@ async function main() {
         fixture: { path: fixturePath, sha256: createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex") },
       });
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
+      for (const invalid of [
+        Object.defineProperty({}, "timeout_ms", { enumerable: true, get() { throw new Error("private-option-detail"); } }),
+        Object.defineProperty({}, "signal", { enumerable: true, get() { throw new Error("private-signal-detail"); } }),
+        new Proxy({}, { ownKeys() { throw new Error("private-proxy-detail"); } }),
+      ]) {
+        const rejectedInput = await managedOwned.run(invalid);
+        assert.equal(rejectedInput.execution_status, "request_blocked");
+        assert.equal(rejectedInput.worker_started, false);
+        assert.equal(rejectedInput.parsed_result, null);
+        assert.deepEqual(rejectedInput.errors, ["owned_fixture_request_invalid"]);
+        total += 4;
+      }
       const managedSuccess = await managedOwned.run();
       assert.equal(managedSuccess.execution_status, "worker_completed");
       assert.equal(managedSuccess.worker_exited, true);

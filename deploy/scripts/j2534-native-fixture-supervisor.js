@@ -170,14 +170,18 @@ export function createJ2534OwnedReceiveFixtureSupervisor(descriptor) {
   return Object.freeze({ async run(options = {}) {
     const blocked = error => ({ execution_status: "request_blocked", worker_started: false, worker_exited: false,
       termination_requested: false, termination_signal_sent: false, parsed_result: null, errors: [error] });
-    if (!options || typeof options !== "object" || Array.isArray(options)
-      || Object.keys(options).some(key => key !== "timeout_ms" && key !== "signal")) return blocked("owned_fixture_request_invalid");
-    const timeout = options.timeout_ms ?? 5000, signal = options.signal;
-    if (!Number.isInteger(timeout) || timeout < 1000 || timeout > 10000
-      || (signal != null && !(signal instanceof AbortSignal))) return blocked("owned_fixture_request_invalid");
+    let timeout, signal, aborted;
+    try {
+      if (!options || typeof options !== "object" || Array.isArray(options)
+        || Object.keys(options).some(key => key !== "timeout_ms" && key !== "signal")) return blocked("owned_fixture_request_invalid");
+      timeout = options.timeout_ms ?? 5000; signal = options.signal;
+      if (!Number.isInteger(timeout) || timeout < 1000 || timeout > 10000
+        || (signal != null && !(signal instanceof AbortSignal))) return blocked("owned_fixture_request_invalid");
+      aborted = signal?.aborted;
+    } catch { return blocked("owned_fixture_request_invalid"); }
     if (consumed) return blocked("owned_fixture_already_attempted");
     consumed = true;
-    if (signal?.aborted) return { ...blocked("worker_cancelled"), execution_status: "worker_cancelled" };
+    if (aborted) return { ...blocked("worker_cancelled"), execution_status: "worker_cancelled" };
     return bounded({ timeout, signal });
   } });
 }
