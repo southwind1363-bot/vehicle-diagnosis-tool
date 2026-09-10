@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+2026-09-11 native隔離結合の検証: native全体2417項目/Errors 0（x86 678/x64 676）、diff合格。固定生成DLLの正常開始/終了経路についての結果。実VCI/実車/独立C参照や故障nativeの終了処理まで確認済みとはしない。
+
+2026-09-11 開始/終了のnative隔離結合: 固定生成DLLにConnect/Disconnectを追加し、隔離workerをOpen→Connect→返却channelでReadMsgs→Disconnect→Close→FreeLibraryへ接続。deviceとは異なるchannelを使い、x86 StdCall/x64第5引数のDWORD出力を確認。各Connect引数の誤りとDisconnectへのdevice ID誤渡しは固定native命令側で拒否し出力buffer不変を確認。コンパイル時digest/固定隣接DLL/30秒process期限/固定概要のみ/任意パス拒否を維持。正常fixtureのcleanup確認であり、実ドライバー内部状態・実車・別PCは未検証。公開workerや実行権限、診断保存形式、580ZIP不変。native失敗/停止経路の統合と独立Cコンパイル照合は残す。
+
 2026-09-11 開始/終了管理の検証: native全体2393項目/Errors 0（x86 666/x64 664）。正常の開始→受信→終了→Close→解放と、開始/終了エラー・例外・出力破損・受信破損・Close失敗・未終了Dispose時の保持、所有ID不一致、再入/再試行拒否、受信中Disconnect待機が合格。今回追加したchannel呼出しは管理callbackのみで、独立したnative ABIや実車の検証ではない。
 
 2026-09-11 通信路の開始/終了管理（承認済み）: 前回の安全管理変更の質問に対する利用者「続けて」を受け、実行無効の内部Connect/Disconnectと受信channel所有権照合を追加。同じidentity gate内で各1回だけ開始/終了し、受信中の終了を待機させる。正常Disconnectの後に正常Closeした場合のみmodule解放を許可。開始/終了失敗・例外・出力破損・受信破損時は再試行/推測cleanupなしで参照保持。従来の未管理fixture channelは引き続き終了未確認として保持。loaderの許可export、公開worker、実車通信、診断保存形式、580 ZIPは変更しない。管理callback検査はnative Connect/Disconnect ABIや実VCIの確認ではない。次はこの承認済み経路を固定生成DLLの隔離workerへ結合して検証する。

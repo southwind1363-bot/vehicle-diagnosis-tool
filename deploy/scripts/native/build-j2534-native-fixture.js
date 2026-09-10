@@ -83,7 +83,8 @@ function scenarioCode(architecture, scenario) {
 
 function exportsFor(scenario) {
   if (scenario === "owned-receive") return [
-    { name: "PassThruClose", key: "close" }, { name: "PassThruOpen", key: "open" },
+    { name: "PassThruClose", key: "close" }, { name: "PassThruConnect", key: "connect" },
+    { name: "PassThruDisconnect", key: "disconnect" }, { name: "PassThruOpen", key: "open" },
     { name: "PassThruReadMsgs", key: "read" }, { name: "PassThruReadVersion", key: "version" },
   ];
   if (scenario === "receive-success") return [{ name: "PassThruReadMsgs", key: "read" }];
@@ -105,9 +106,10 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   const code = scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
   if (scenario === "owned-receive") {
-    code.read = receiveCode(architecture);
+    code.read = receiveCode(architecture, -517782169); // 0xe1234567, distinct from device
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
+    Object.assign(code, channelCode(architecture));
   }
   const codeOffsets = {};
   let textLength = 0;
@@ -183,7 +185,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
 }
 
 // Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.
-function receiveCode(architecture) {
+function receiveCode(architecture, channel = -249346713) {
   const x86 = architecture === "x86";
   const ret = x86 ? [0xc2, 0x10, 0x00] : [0xc3];
   const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...ret]);
@@ -200,15 +202,37 @@ function receiveCode(architecture) {
     Buffer.from([0x31, 0xc0, ...ret]),
   ]);
   const comparisons = x86 ? [
-    [0x81, 0x7c, 0x24, 0x04, 0x67, 0x45, 0x23, 0xf1], // channel
+    [0x81, 0x7c, 0x24, 0x04, ...int32(channel)], // channel
     [0x83, 0x7c, 0x24, 0x10, 0], // timeout
     [0x8b, 0x44, 0x24, 0x0c, 0x83, 0x38, 3], // requested count
   ] : [
-    [0x81, 0xf9, 0x67, 0x45, 0x23, 0xf1],
+    [0x81, 0xf9, ...int32(channel)],
     [0x41, 0x83, 0xf9, 0],
     [0x41, 0x83, 0x38, 3],
   ];
   for (const compare of comparisons.reverse())
     body = Buffer.concat([Buffer.from([...compare, 0x0f, 0x85]), int32(body.length), body, failure]);
   return body;
+}
+
+// Fixed v04.04 channel ABI oracle. No imports, hardware access, or executable input.
+function channelCode(architecture) {
+  const x86 = architecture === "x86";
+  const wrap = (body, comparisons, bytes) => {
+    const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(x86 ? [0xc2, bytes, 0] : [0xc3])]);
+    for (const compare of [...comparisons].reverse())
+      body = Buffer.concat([Buffer.from([...compare, 0x0f, 0x85]), int32(body.length), body, failure]);
+    return body;
+  };
+  const compareStack = (offset, value) => [0x81, 0x7c, 0x24, offset, ...int32(value)];
+  const connect = wrap(Buffer.from([
+    ...(x86 ? [0x8b, 0x44, 0x24, 0x14] : [0x48, 0x8b, 0x44, 0x24, 0x28]),
+    0xc7, 0x00, 0x67, 0x45, 0x23, 0xe1, 0x31, 0xc0,
+    ...(x86 ? [0xc2, 0x14, 0] : [0xc3]),
+  ]), x86 ? [compareStack(4, -249346713), compareStack(8, 6), compareStack(12, 0x100), compareStack(16, 500000)]
+    : [[0x81, 0xf9, ...int32(-249346713)], [0x81, 0xfa, ...int32(6)],
+      [0x41, 0x81, 0xf8, ...int32(0x100)], [0x41, 0x81, 0xf9, ...int32(500000)]], 20);
+  const disconnect = wrap(Buffer.from([0x31, 0xc0, ...(x86 ? [0xc2, 4, 0] : [0xc3])]),
+    [x86 ? compareStack(4, -517782169) : [0x81, 0xf9, ...int32(-517782169)]], 4);
+  return { connect, disconnect };
 }

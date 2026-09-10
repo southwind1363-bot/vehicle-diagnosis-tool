@@ -99,7 +99,7 @@ function validateFixturePe(buffer, platform, expectedNames) {
 }
 
 function fixtureNames(scenario) {
-  if (scenario === "owned-receive") return ["PassThruClose", "PassThruOpen", "PassThruReadMsgs", "PassThruReadVersion"];
+  if (scenario === "owned-receive") return ["PassThruClose", "PassThruConnect", "PassThruDisconnect", "PassThruOpen", "PassThruReadMsgs", "PassThruReadVersion"];
   if (scenario === "receive-success") return ["PassThruReadMsgs"];
   if (scenario === "decorated-open-only") return ["_PassThruOpen@8"];
   return ["PassThruClose", "PassThruOpen", "PassThruReadVersion"].filter(name =>
@@ -219,7 +219,7 @@ async function main() {
       assert.equal(ownedRun.stderr, "");
       assert.deepEqual(JSON.parse(ownedRun.stdout), {
         fixture_only: true, pointer_bits: platform.bits, received_count: 2,
-        module_retained: true, cleanup_confirmed: false, vehicle_communication: false,
+        module_retained: false, cleanup_confirmed: true, vehicle_communication: false,
       });
       for (const args of [[], ["--driver-path", "forbidden.dll"], ["--fixture-owned-receive", "extra"]]) {
         const rejectedOwned = await execute(ownedWorker, args);

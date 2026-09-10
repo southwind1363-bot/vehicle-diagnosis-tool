@@ -19,6 +19,9 @@ internal static class J2534OwnedReceiveFixtureWorker
         private static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
         [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern IntPtr GetProcAddress(IntPtr library, string name);
+        [DllImport("kernel32.dll", ExactSpelling = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool FreeLibrary(IntPtr library);
 
         internal FixtureLibrary()
         {
@@ -36,16 +39,18 @@ internal static class J2534OwnedReceiveFixtureWorker
         public IntPtr Resolve(string name)
         {
             if (disposed) throw new ObjectDisposedException("fixture_library");
-            if (name != "PassThruOpen" && name != "PassThruClose" && name != "PassThruReadVersion" && name != "PassThruReadMsgs")
+            if (name != "PassThruOpen" && name != "PassThruClose" && name != "PassThruReadVersion"
+                && name != "PassThruReadMsgs" && name != "PassThruConnect" && name != "PassThruDisconnect")
                 throw new InvalidOperationException("fixture_export_rejected");
             return GetProcAddress(module, name);
         }
         public bool Release(bool allowUnload)
         {
-            // No unload path in this fixture harness, even on early failure.
+            if (disposed) return !Retained;
             disposed = true;
-            Retained = true;
-            return false;
+            Retained = !(allowUnload && FreeLibrary(module));
+            module = IntPtr.Zero;
+            return !Retained;
         }
     }
 
@@ -66,18 +71,24 @@ internal static class J2534OwnedReceiveFixtureWorker
                 if (owner.Open(out device) != 0) return 1;
                 var read = (J2534ReceiveNative.ReadFunction)Marshal.GetDelegateForFunctionPointer(
                     library.Resolve("PassThruReadMsgs"), typeof(J2534ReceiveNative.ReadFunction));
-                // Synthetic fixture channel only. No PassThruConnect or vehicle.
+                var connect = (J2534IdentityNative.ConnectFunction)Marshal.GetDelegateForFunctionPointer(
+                    library.Resolve("PassThruConnect"), typeof(J2534IdentityNative.ConnectFunction));
+                var disconnect = (J2534IdentityNative.DisconnectFunction)Marshal.GetDelegateForFunctionPointer(
+                    library.Resolve("PassThruDisconnect"), typeof(J2534IdentityNative.DisconnectFunction));
+                uint channel;
+                if (owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out channel) != 0
+                    || channel != 0xe1234567 || channel == device) return 1;
                 var receiver = new J2534ReceiveNative(owner, device, read);
-                var result = receiver.ReadOnce(0xf1234567, 3);
+                var result = receiver.ReadOnce(channel, 3);
                 if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
                     || result.Messages[0].Data.Length != 4 || result.Messages[0].Data[0] != 1
                     || result.Messages[0].Data[3] != 4 || result.Messages[1].Data.Length != 0
                     || result.Messages[1].RxStatus != 2) return 1;
-                // Deliberately no Close: channel cleanup has not been established.
+                if (owner.Disconnect(device, channel) != 0 || owner.Close(device) != 0) return 1;
             }
-            if (!library.Retained) return 1;
+            if (library.Retained) return 1;
             Console.Out.Write("{\"fixture_only\":true,\"pointer_bits\":" + (IntPtr.Size * 8)
-                + ",\"received_count\":2,\"module_retained\":true,\"cleanup_confirmed\":false,\"vehicle_communication\":false}");
+                + ",\"received_count\":2,\"module_retained\":false,\"cleanup_confirmed\":true,\"vehicle_communication\":false}");
             return 0;
         }
         catch { return 1; } // No native data, paths, or exception text on either stream.

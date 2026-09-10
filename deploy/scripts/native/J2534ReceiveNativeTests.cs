@@ -234,6 +234,33 @@ internal static class NativeReceiveTests
         finally { Check(FreeLibrary(module)); }
     }
     private static int checks;
+    private static void RunNativeChannelArguments()
+    {
+        IntPtr module = LoadLibraryExW(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "owned-receive.dll"), IntPtr.Zero, 0x00000900);
+        Check(module != IntPtr.Zero);
+        try
+        {
+            var connect = (J2534IdentityNative.ConnectFunction)Marshal.GetDelegateForFunctionPointer(
+                GetProcAddress(module, "PassThruConnect"), typeof(J2534IdentityNative.ConnectFunction));
+            var disconnect = (J2534IdentityNative.DisconnectFunction)Marshal.GetDelegateForFunctionPointer(
+                GetProcAddress(module, "PassThruDisconnect"), typeof(J2534IdentityNative.DisconnectFunction));
+            // Each ABI argument independently rejected by fixed native instructions.
+            for (int bad = 0; bad < 4; bad++)
+            using (var output = new VersionBuffer())
+            {
+                Check(connect(bad == 0 ? 1u : 0xf1234567u, bad == 1 ? 1u : 6u,
+                    bad == 2 ? 0u : 0x100u, bad == 3 ? 1u : 500000u, output.Data) == -8);
+                byte[] bytes = output.Copy();
+                bool unchanged = true;
+                for (int i = 0; i < bytes.Length; i++) unchanged &= bytes[i] == 0xa5;
+                Check(unchanged);
+            }
+            Check(disconnect(0xf1234567) == -8); // Device ID is not a channel ID.
+            Check(disconnect(0xe1234567) == 0);
+            GC.KeepAlive(connect); GC.KeepAlive(disconnect);
+        }
+        finally { Check(FreeLibrary(module)); }
+    }
     private static void Check(bool value) { if (!value) throw new Exception("receive_assertion_failed"); checks++; }
     private static void Reject(Action action, string code)
     {
@@ -331,6 +358,7 @@ internal static class NativeReceiveTests
         RunNative();
         RunOwnedReceive();
         RunChannelLifecycle();
+        RunNativeChannelArguments();
         return checks;
     }
 }

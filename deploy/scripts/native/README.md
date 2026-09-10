@@ -258,7 +258,7 @@ in its temporary architecture directory, under the existing 30-second child
 deadline. Production loaders and workers do not reference this fixture.
 This is generated native receive ABI evidence, not a compiler-built C reference
 or vendor/VCI compatibility evidence. No C compiler was found on PATH in this
-run. Next: generated-native channel lifecycle integration and an independent C reference
+run. Next: native failure-path integration and an independent C reference
 when a reviewed toolchain is available. Actual driver/vehicle execution stays disabled.
 
 `J2534OwnedReceiveFixtureWorker.cs` now integrates the owner and native receive
@@ -266,10 +266,12 @@ binding inside a dedicated x86/x64 child process. It is compiled only with
 `NATIVE_RECEIVE_FIXTURE_TESTS`, outside the workstation package. It opens only
 the fixed sibling `owned-receive.dll`, checks the digest compiled by the validator
 while holding a read-only file lease through loading, and binds identity and
-receive exports from the same module. It accepts no driver path or channel input.
-The synthetic channel performs one zero-timeout receive, checks copied records,
-then disposes the owner without Close/unload. Only a fixed summary is emitted,
-with cleanup explicitly unconfirmed; no raw messages or exception details leave
+receive/channel exports from the same module. It accepts no driver path or channel input.
+The generated Connect returns a channel distinct from the device ID; the worker
+uses that returned ID for one zero-timeout receive and Disconnect, then Close
+and Dispose. Only the confirmed successful fixture sequence permits FreeLibrary.
+Only a fixed fixture summary is emitted, with fixture cleanup confirmed;
+no raw messages or exception details leave
 the process. The validator requires normal exit within 30 seconds, exact summary
 fields, argument rejection, and silent rejection of a substituted valid PE.
 This is isolated generated-native integration evidence, not actual channel
@@ -295,8 +297,15 @@ Managed callback tests cover normal cleanup, wrong device/channel, repeated
 operations, reentry, guarded output, failure/exception retention, Close failure,
 Dispose without cleanup, and a concurrent Disconnect waiting for receive.
 These are lifecycle tests, NOT independent native Connect/Disconnect ABI tests.
-The generated worker still exercises its original untracked fixture channel;
-connecting the newly approved lifecycle there is the next integration step.
+The generated worker now separately exercises the complete native success path.
+Its fixed x86 StdCall and x64 instructions check all four Connect value arguments,
+write the output DWORD (including the x64 fifth stack argument), and check the
+distinct channel for receive/Disconnect. Additional direct ABI tests reject each
+incorrect Connect argument without changing the guarded output, and reject the
+device ID passed to Disconnect. This generated oracle has no imports or entry
+point and does not emulate a vendor driver's internal channel state. Native
+failure/hang integration and an independent compiler-built C reference remain
+unverified; managed failure coverage does not substitute for either.
 Signatures checked against vendor primary documentation, v04.04 Windows DWORD
 layout only: [Connect](https://quantexlab.com/en/develop/j2534/pt_connect.html),
 [Disconnect](https://quantexlab.com/en/develop/j2534/pt_disconnect.html).
