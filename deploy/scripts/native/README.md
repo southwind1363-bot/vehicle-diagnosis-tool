@@ -321,6 +321,10 @@ variant exercise timeout/crash handling in both architectures. Timeout requests
 termination and waits for the child's close event; all abnormal exits return no
 parsed result, including the earlier valid JSON from status-failure workers.
 These fixtures demonstrate process containment here, not physical adapter cleanup.
+Additional integration checks cover cancellation before spawn and during the
+hang-worker run: the latter requires termination signalling, child close, and
+no parsed result. A modified pinned DLL blocks spawning; restoring it does not
+reset the attempted supervisor. Cancellation also does not reset that latch.
 The independent compiler-built C reference, other-PC and actual VCI remain
 unverified; the production bridge still does not include this supervisor.
 Owned-supervisor request inspection is guarded: throwing option getters or

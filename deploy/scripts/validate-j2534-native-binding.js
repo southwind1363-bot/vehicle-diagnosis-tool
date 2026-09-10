@@ -254,13 +254,27 @@ async function main() {
       }
       // A different valid PE must fail before loading; restore only our generated file.
       const ownedPath = path.join(platformDirectory, "owned-receive.dll");
+      const pinnedOwned = ownedSupervisor(ownedWorker, ownedPath, "owned-receive");
       try {
         fs.writeFileSync(ownedPath, buildJ2534NativeFixture(platform.name, "success"));
+        const blockedChangedFile = await pinnedOwned.run();
+        assert.equal(blockedChangedFile.execution_status, "worker_failed");
+        assert.equal(blockedChangedFile.worker_started, false);
+        assert.equal(blockedChangedFile.parsed_result, null);
+        assert.deepEqual(blockedChangedFile.errors, ["worker_spawn_failed"]);
+        total += 4;
         const mismatch = await execute(ownedWorker, ["--fixture-owned-receive"]);
         assert.equal(mismatch.error?.code, 1);
         assert.equal(mismatch.stdout, ""); assert.equal(mismatch.stderr, "");
       } finally { fs.writeFileSync(ownedPath, ownedFixture); }
+      // Restoring a file does not silently reset an already attempted supervisor.
+      assert.equal((await pinnedOwned.run()).execution_status, "request_blocked"); total++;
       total += 7;
+      const preAborted = new AbortController(); preAborted.abort();
+      const beforeStart = await ownedSupervisor(ownedWorker, ownedPath, "owned-receive").run({ signal: preAborted.signal });
+      assert.equal(beforeStart.execution_status, "worker_cancelled");
+      assert.equal(beforeStart.worker_started, false);
+      assert.equal(beforeStart.parsed_result, null); total += 3;
 
       // Separate binaries/digests, same fixed CLI and sibling filename. The child
       // never accepts a vendor path, fault code, or caller-supplied expected hash.
@@ -304,6 +318,22 @@ async function main() {
           assert.equal(boundedFault.termination_signal_sent, true);
         }
         total += 6 + (timedOut ? 2 : 0);
+        if (scenario === "owned-connect-hang") {
+          const cancellable = ownedSupervisor(faultWorker, path.join(faultDirectory, "owned-receive.dll"), scenario);
+          const controller = new AbortController();
+          const cancellation = setTimeout(() => controller.abort(), 200);
+          let cancelled;
+          try { cancelled = await cancellable.run({ signal: controller.signal, timeout_ms: 5000 }); }
+          finally { clearTimeout(cancellation); }
+          assert.equal(cancelled.execution_status, "worker_cancelled");
+          assert.equal(cancelled.worker_started, true);
+          assert.equal(cancelled.worker_exited, true);
+          assert.equal(cancelled.termination_requested, true);
+          assert.equal(cancelled.termination_signal_sent, true);
+          assert.equal(cancelled.parsed_result, null);
+          assert.equal((await cancellable.run()).execution_status, "request_blocked");
+          total += 7;
+        }
       }
 
       const preflightWorker = path.join(platformDirectory, "j2534-native-preflight-fixture-worker.exe");
