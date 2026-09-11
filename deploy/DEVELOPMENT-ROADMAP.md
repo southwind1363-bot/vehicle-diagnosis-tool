@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-11 単発の応答待ち: 要求受付直後のtimeout0受信は待たずに空queueを返すため、開発隔離workerへ固定1000msのReadDtcResponseOnceを追加。成功した要求・同一owner/channel・有効filterが前提で、従来ReadOnce(timeout0)は維持。どちらも同じ1回制限、再送/自動pollなし。status9・部分/空応答を保持し診断成功に変えない。native6617項目Errors 0（x86 2679/x64 2677）とdiff合格。管理callbackで前提拒否/状態保持/再試行拒否、生成nativeで1000ms引数を確認。実時間待機・実VCI応答・車種ごとの適正期限の検証ではなく、1000msは開発上限。親process期限は維持。公開実行経路・本体/581ZIP・保存形式不変。
+
 2026-09-11 読取一連処理の隔離native結合: compile限定workerを単一の固定9export生成DLLへ接続し、Open→Connect→filter開始→固定03要求→受信→filter終了→Disconnect→Closeを統合。SHA256コンパイル固定・読込lease・固定CLI・親processの上限/正常終了判定を維持。Write/Stop失敗後の禁止呼出にnative不正命令trapを置き、正常な失敗終了1・module保持・親側parsed_result:nullを確認。native6515項目Errors 0（x86 2628/x64 2626）、diff合格。初回は検査側の既存status名期待値の誤り(worker_process_failed→worker_failed)を修正して再検証。9export結合fixtureのみtext上限1024byte、他の既存fixtureは512維持・代表8組のSHA不変。出力は人工受信markerの概要で診断結果ではない。実VCI/実車/独立C参照・結合経路の開始失敗/hang/crash・実応答待ち時間は未検証。公開実行権限・本体/581ZIP・保存形式不変。
 
 2026-09-11 読取要求/filterのnative ABI結合: 固定生成request-abi.dllの3exportへ実際のrequest/filter builderとownerを結合し、x86 StdCall/x64 register・第5/第6stack引数を確認。channel/type/count/timeout/構造体protocol・size・address・SIDの誤りはnative側で-8、filter IDのunsigned DWORD出力と正常Stopを確認。import/entry pointなし・既存512byte text制限・固定検査用子process内のみ。native6461項目Errors 0（x86 2628/x64 2626）、生成再現性/構文/diff合格。identity/channelは管理callbackであり完全native worker結合・独立Cコンパイル照合・実VCI/実車は未確認。次は隔離workerへ一連の処理を統合し、失敗時の終了・結果不採用まで確認する。公開loader/worker実行権限・本体/581ZIP不変。

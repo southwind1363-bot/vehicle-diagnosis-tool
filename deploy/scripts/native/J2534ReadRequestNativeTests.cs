@@ -145,7 +145,48 @@ internal static class NativeReadRequestTests
         }
         RunFilters();
         RunNativeRequestAbi();
+        RunBoundedResponseReceive();
         return checks;
+    }
+
+    private static void RunBoundedResponseReceive()
+    {
+        Reject(delegate { new J2534ReceiveNative(delegate { throw new Exception("unowned read"); }).ReadDtcResponseOnce(Channel, 3); }, "native_receive_owner_required");
+        foreach (int status in new int[] { 0, 9 })
+        foreach (bool empty in new bool[] { false, true })
+        {
+            MockIdentityLibrary library;
+            using (var owner = Open(out library, 6, 0, true))
+            {
+                int calls = 0;
+                J2534ReceiveNative.ReadFunction read = delegate(uint c, IntPtr m, IntPtr n, uint timeout) {
+                    calls++;
+                    Check(c == Channel && timeout == 1000 && Marshal.ReadInt32(n) == 3, "Response wait is not bounded to fixed 1000 ms");
+                    Marshal.WriteInt32(n, empty ? 0 : 1);
+                    if (!empty) {
+                        for (int i = 0; i < 24; i += 4) Marshal.WriteInt32(m, i, 0);
+                        Marshal.WriteInt32(m, 0, 6); Marshal.WriteInt32(m, 16, 1);
+                        Marshal.WriteByte(m, 24, 0x43);
+                    }
+                    return status;
+                };
+                var receiver = new J2534ReceiveNative(owner, Device, read);
+                Reject(delegate { receiver.ReadDtcResponseOnce(Channel, 3); }, "native_request_not_queued");
+                var request = new J2534ReadRequestNative(owner, Device, delegate { return 0; });
+                uint filter = Prepare(request, 0x7e0);
+                Reject(delegate { receiver.ReadDtcResponseOnce(Channel, 3); }, "native_request_not_queued");
+                request.DispatchDtcReadOnce(Channel, 0x7e0, 3);
+                Reject(delegate { receiver.ReadDtcResponseOnce(Channel + 1, 3); }, "native_channel_not_owned");
+                var result = receiver.ReadDtcResponseOnce(Channel, 3);
+                Check(calls == 1 && result.Status == status && result.Messages.Length == (empty ? 0 : 1), "Partial/empty response status was changed or retried");
+                if (!empty) Check(result.Messages[0].Data[0] == 0x43, "Partial response data lost");
+                Reject(delegate { receiver.ReadDtcResponseOnce(Channel, 3); }, "native_identity_receive_already_attempted");
+                Reject(delegate { new J2534ReceiveNative(owner, Device, read).ReadOnce(Channel, 3); }, "native_identity_receive_already_attempted");
+                Check(calls == 1, "Response wait silently polled again");
+                owner.StopDtcReadFilter(Device, Channel, filter); owner.Disconnect(Device, Channel); owner.Close(Device);
+            }
+            Check(library.AllowedUnload, "Response wait prevented confirmed cleanup");
+        }
     }
 
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]

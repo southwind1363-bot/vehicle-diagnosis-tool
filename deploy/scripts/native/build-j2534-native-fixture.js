@@ -116,7 +116,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   const code = scenario === "request-abi" ? requestCode(architecture) : scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
   if (scenario.startsWith("owned-")) {
-    code.read = receiveCode(architecture, -517782169); // 0xe1234567, distinct from device
+    code.read = receiveCode(architecture, -517782169, scenario.startsWith("owned-dtc-") ? 1000 : 0); // distinct from device
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
     Object.assign(code, channelCode(architecture, scenario.startsWith("owned-dtc-") ? 0 : 0x100));
@@ -262,7 +262,7 @@ function requestCode(architecture) {
 }
 
 // Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.
-function receiveCode(architecture, channel = -249346713) {
+function receiveCode(architecture, channel = -249346713, timeout = 0) {
   const x86 = architecture === "x86";
   const ret = x86 ? [0xc2, 0x10, 0x00] : [0xc3];
   const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...ret]);
@@ -280,11 +280,11 @@ function receiveCode(architecture, channel = -249346713) {
   ]);
   const comparisons = x86 ? [
     [0x81, 0x7c, 0x24, 0x04, ...int32(channel)], // channel
-    [0x83, 0x7c, 0x24, 0x10, 0], // timeout
+    timeout === 0 ? [0x83, 0x7c, 0x24, 0x10, 0] : [0x81, 0x7c, 0x24, 0x10, ...int32(timeout)],
     [0x8b, 0x44, 0x24, 0x0c, 0x83, 0x38, 3], // requested count
   ] : [
     [0x81, 0xf9, ...int32(channel)],
-    [0x41, 0x83, 0xf9, 0],
+    timeout === 0 ? [0x41, 0x83, 0xf9, 0] : [0x41, 0x81, 0xf9, ...int32(timeout)],
     [0x41, 0x83, 0x38, 3],
   ];
   for (const compare of comparisons.reverse())

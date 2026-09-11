@@ -44,10 +44,20 @@ namespace VehicleDiagnosis.Native
         internal Result ReadOnce(uint channel, int capacity)
         {
             if (capacity < 1 || capacity > 16) throw new ArgumentOutOfRangeException("capacity");
-            return owner == null ? ReadOnceCore(channel, capacity)
-                : owner.RunOwnedReceive(deviceId, channel, delegate { return ReadOnceCore(channel, capacity); });
+            return owner == null ? ReadOnceCore(channel, capacity, 0)
+                : owner.RunOwnedReceive(deviceId, channel, delegate { return ReadOnceCore(channel, capacity, 0); });
         }
-        private Result ReadOnceCore(uint channel, int capacity)
+        // One bounded wait following queue acceptance, not polling/retry. The
+        // process supervisor must still stop a driver that ignores this timeout.
+        // 1000 ms is a development limit, not verified vehicle applicability.
+        internal Result ReadDtcResponseOnce(uint channel, int capacity)
+        {
+            if (capacity < 1 || capacity > 16) throw new ArgumentOutOfRangeException("capacity");
+            if (owner == null) throw new InvalidOperationException("native_receive_owner_required");
+            return owner.RunOwnedDtcResponseReceive(deviceId, channel,
+                delegate { return ReadOnceCore(channel, capacity, 1000); });
+        }
+        private Result ReadOnceCore(uint channel, int capacity, uint timeout)
         {
             if (Interlocked.Exchange(ref consumed, 1) != 0)
                 throw new InvalidOperationException("native_receive_already_attempted");
@@ -56,7 +66,7 @@ namespace VehicleDiagnosis.Native
             {
                 Marshal.WriteInt32(count.Pointer, capacity);
                 int status;
-                try { status = read(channel, messages.Pointer, count.Pointer, 0); }
+                try { status = read(channel, messages.Pointer, count.Pointer, timeout); }
                 // Never propagate vendor/callback text or nested exceptions.
                 // The finally guard checks still take precedence over this code.
                 catch { throw new InvalidOperationException("native_receive_call_threw"); }

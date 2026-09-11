@@ -80,6 +80,24 @@ No public worker path, vendor DLL, real VCI, automatic retry, or vehicle operati
 is enabled. Combined start/hang/crash fault cases and real response timing remain
 unverified and must not be inferred from these success/status-failure cases.
 
+### One-shot response wait
+
+The combined worker now calls `ReadDtcResponseOnce` after successful queue
+acceptance. Unlike the unchanged `ReadOnce` queue snapshot (timeout 0), it asks
+ReadMsgs to wait up to a fixed 1000 ms in a single call. It requires the same
+owner, queued request and active filter; no caller-provided timeout or polling
+loop is introduced. See the [vendor ReadMsgs API](https://quantexlab.de/en/develop/j2534/pt_readmsg.html)
+for timeout-zero versus waiting semantics. 1000 ms is a development bound, NOT a
+verified response deadline for any vehicle or VCI. The parent process deadline
+is still needed if a driver ignores the argument.
+
+Status 9 and partial/empty records remain unchanged in the internal result; they
+are not upgraded to diagnostic completion. Both receive methods share the
+one-attempt latch, so switching methods/wrappers cannot silently retry. Managed
+tests cover pre-request refusal, wrong channel, partial/empty status preservation,
+and no retry. The generated combined DLL validates the exact nonzero timeout on
+x86/x64; it does not simulate elapsed response timing or prove real-device timing.
+
 ## Validation
 
 Run `npm run validate:j2534-native` from `deploy` on 64-bit Windows with both

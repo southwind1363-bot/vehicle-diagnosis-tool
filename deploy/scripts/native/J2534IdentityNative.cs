@@ -403,6 +403,16 @@ namespace VehicleDiagnosis.Native
         { return RunReceive(deviceId, null, receive); }
         internal T RunOwnedReceive<T>(uint deviceId, uint channelId, Func<T> receive)
         { return RunReceive(deviceId, channelId, receive); }
+        internal T RunOwnedDtcResponseReceive<T>(uint deviceId, uint channelId, Func<T> receive)
+        {
+            lock (gate)
+            {
+                CheckOwner(deviceId);
+                // Failed or in-flight dispatch is already rejected by CheckOwner.
+                if (!requestAttempted) throw new InvalidOperationException("native_request_not_queued");
+                return RunReceive(deviceId, channelId, receive);
+            }
+        }
         private T RunReceive<T>(uint deviceId, uint? channelId, Func<T> receive)
         {
             if (receive == null) throw new ArgumentNullException("receive");

@@ -108,7 +108,11 @@ internal static class J2534OwnedReceiveFixtureWorker
                     if (!failed)
                     {
                         var receiver = new J2534ReceiveNative(owner, device, read);
+#if OWNED_DTC_REQUEST_FIXTURE
+                        var result = receiver.ReadDtcResponseOnce(channel, 3);
+#else
                         var result = receiver.ReadOnce(channel, 3);
+#endif
                         if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
                             || result.Messages[0].Data.Length != 4 || result.Messages[0].Data[0] != 1
                             || result.Messages[0].Data[3] != 4 || result.Messages[1].Data.Length != 0
