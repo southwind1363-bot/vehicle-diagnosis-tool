@@ -1,7 +1,7 @@
 const ARCHITECTURES = new Set(["x86", "x64"]);
 const SCENARIOS = new Set([
   "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success", "owned-receive", "owned-connect-failure", "owned-disconnect-failure",
-  "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang",
+  "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang", "request-abi",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -83,6 +83,11 @@ function scenarioCode(architecture, scenario) {
 }
 
 function exportsFor(scenario) {
+  if (scenario === "request-abi") return [
+    { name: "PassThruStartMsgFilter", key: "start" },
+    { name: "PassThruStopMsgFilter", key: "stop" },
+    { name: "PassThruWriteMsgs", key: "write" },
+  ];
   if (scenario.startsWith("owned-")) return [
     { name: "PassThruClose", key: "close" }, { name: "PassThruConnect", key: "connect" },
     { name: "PassThruDisconnect", key: "disconnect" }, { name: "PassThruOpen", key: "open" },
@@ -104,7 +109,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   if (scenario === "decorated-open-only" && architecture !== "x86") throw new Error("native_fixture_option_rejected");
 
   const is64 = architecture === "x64";
-  const code = scenarioCode(architecture, scenario);
+  const code = scenario === "request-abi" ? requestCode(architecture) : scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
   if (scenario.startsWith("owned-")) {
     code.read = receiveCode(architecture, -517782169); // 0xe1234567, distinct from device
@@ -193,6 +198,51 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   section(2, ".reloc", 12, 0x3000, reloc.length, 0x600, 0x42000040);
   text.copy(image, 0x200); rdata.copy(image, 0x400); reloc.copy(image, 0x600);
   return image;
+}
+
+// Fixed import-free v04.04 ABI oracle, not a driver. No caller-supplied code,
+// pointers in the image, entry point, or hardware APIs. Only volatile RAX/EAX
+// and flags are touched; x86 pops each exact StdCall argument list.
+function requestCode(architecture) {
+  const x86 = architecture === "x86";
+  const build = (argc, emit) => {
+    const bytes = [], branches = [];
+    const put = (...values) => bytes.push(...values);
+    const arg = index => {
+      if (x86) put(0x8b, 0x44, 0x24, index * 4);
+      else if (index <= 4) put(...[[0x48, 0x89, 0xc8], [0x48, 0x89, 0xd0], [0x4c, 0x89, 0xc0], [0x4c, 0x89, 0xc8]][index - 1]);
+      else put(0x48, 0x8b, 0x44, 0x24, 0x28 + (index - 5) * 8);
+    };
+    const unequal = () => { put(0x0f, 0x85); branches.push(bytes.length); put(0, 0, 0, 0); };
+    const scalar = (index, value) => { arg(index); put(0x3d, ...int32(value)); unequal(); };
+    const field = (offset, value) => { put(0x81, 0x78, offset, ...int32(value)); unequal(); };
+    emit({ put, arg, scalar, field, unequal });
+    const ret = x86 ? [0xc2, argc * 4, 0] : [0xc3];
+    put(0x31, 0xc0, ...ret);
+    const failure = bytes.length;
+    put(0xb8, 0xf8, 0xff, 0xff, 0xff, ...ret);
+    const result = Buffer.from(bytes);
+    for (const offset of branches) result.writeInt32LE(failure - offset - 4, offset);
+    return result;
+  };
+  return {
+    start: build(6, ({ put, arg, scalar, field }) => {
+      scalar(1, -517782169); scalar(2, 3);
+      for (const [index, address] of [[3, -1], [4, -402194432], [5, -536412160]]) {
+        arg(index); field(0, 6); field(16, 4); field(24, address);
+      }
+      arg(6); put(0xc7, 0x00, 0x67, 0x45, 0x23, 0xd1);
+    }),
+    stop: build(2, ({ scalar }) => { scalar(1, -517782169); scalar(2, -786217625); }),
+    write: build(4, ({ put, arg, scalar, field, unequal }) => {
+      scalar(1, -517782169); scalar(4, 0);
+      arg(3); field(0, 1);
+      arg(2); field(0, 6); field(8, 0x40); field(16, 5); field(24, -536412160);
+      put(0x80, 0x78, 28, 3); unequal();
+      // Report one queue-accepted message, not a diagnostic response.
+      arg(3); put(0xc7, 0x00, 1, 0, 0, 0);
+    }),
+  };
 }
 
 // Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.

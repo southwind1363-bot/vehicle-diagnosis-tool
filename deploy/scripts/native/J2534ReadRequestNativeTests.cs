@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -143,7 +144,79 @@ internal static class NativeReadRequestTests
             Check(!blocked.AllowedUnload, "Unclosed request owner unloaded");
         }
         RunFilters();
+        RunNativeRequestAbi();
         return checks;
+    }
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
+    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
+    private static extern IntPtr GetProcAddress(IntPtr module, string name);
+    [DllImport("kernel32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool FreeLibrary(IntPtr module);
+
+    private static void MutatedNativeArgument(IntPtr pointer, int offset, int value, Func<int> invoke)
+    {
+        int previous = Marshal.ReadInt32(pointer, offset);
+        try {
+            Marshal.WriteInt32(pointer, offset, value);
+            Check(invoke() == -8, "Native oracle accepted altered message argument");
+        }
+        finally { Marshal.WriteInt32(pointer, offset, previous); }
+    }
+    private static void RunNativeRequestAbi()
+    {
+        // Only a fixed generated sibling DLL inside the bounded self-test child.
+        // Identity/channel setup remains managed; these THREE exports execute
+        // native machine code. No production loader/export policy is changed.
+        IntPtr module = LoadLibraryExW(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "request-abi.dll"), IntPtr.Zero, 0x900);
+        Check(module != IntPtr.Zero, "Request ABI fixture did not load");
+        try
+        {
+            IntPtr startAddress = GetProcAddress(module, "PassThruStartMsgFilter");
+            IntPtr stopAddress = GetProcAddress(module, "PassThruStopMsgFilter");
+            IntPtr writeAddress = GetProcAddress(module, "PassThruWriteMsgs");
+            Check(startAddress != IntPtr.Zero && stopAddress != IntPtr.Zero && writeAddress != IntPtr.Zero
+                && GetProcAddress(module, "PassThruOpen") == IntPtr.Zero, "Wrong request fixture exports");
+            var start = (J2534ReadRequestNative.StartFilterFunction)Marshal.GetDelegateForFunctionPointer(startAddress, typeof(J2534ReadRequestNative.StartFilterFunction));
+            var stop = (J2534ReadRequestNative.StopFilterFunction)Marshal.GetDelegateForFunctionPointer(stopAddress, typeof(J2534ReadRequestNative.StopFilterFunction));
+            var write = (J2534ReadRequestNative.WriteFunction)Marshal.GetDelegateForFunctionPointer(writeAddress, typeof(J2534ReadRequestNative.WriteFunction));
+            MockIdentityLibrary library;
+            using (var owner = Open(out library, 6, 0, true))
+            {
+                var request = new J2534ReadRequestNative(owner, Device, delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                    Check(write(c + 1, m, n, t) == -8 && write(c, m, n, 1) == -8, "Native WriteMsgs scalar arguments ignored");
+                    MutatedNativeArgument(n, 0, 2, delegate { return write(c, m, n, t); });
+                    foreach (int offset in new int[] { 0, 8, 16, 24, 28 })
+                        MutatedNativeArgument(m, offset, 0, delegate { return write(c, m, n, t); });
+                    Check(Marshal.ReadInt32(n) == 1, "Rejected WriteMsgs changed count");
+                    return write(c, m, n, t);
+                });
+                uint filter;
+                int status = request.PrepareDtcFilterOnce(Channel, 0x7e0,
+                    delegate(uint c, uint type, IntPtr m, IntPtr p, IntPtr f, IntPtr id) {
+                        Marshal.WriteInt32(id, 0x13579bdf);
+                        Check(start(c + 1, type, m, p, f, id) == -8 && start(c, 1, m, p, f, id) == -8, "Native filter scalar arguments ignored");
+                        foreach (IntPtr message in new IntPtr[] { m, p, f })
+                        foreach (int offset in new int[] { 0, 16, 24 })
+                            MutatedNativeArgument(message, offset, 0, delegate { return start(c, type, m, p, f, id); });
+                        Check(Marshal.ReadInt32(id) == 0x13579bdf, "Rejected filter call modified sixth-argument output");
+                        return start(c, type, m, p, f, id);
+                    },
+                    delegate(uint c, uint id) {
+                        Check(stop(c + 1, id) == -8 && stop(c, id ^ 1) == -8, "Native stop arguments ignored");
+                        return stop(c, id);
+                    }, out filter);
+                Check(status == 0 && filter == 0xd1234567, "Native filter unsigned ID writeback failed");
+                Check(request.DispatchDtcReadOnce(Channel, 0x7e0, 3) == 0, "Native WriteMsgs ABI rejected fixed read request");
+                Check(owner.StopDtcReadFilter(Device, Channel, filter) == 0, "Native filter cleanup failed");
+                Check(owner.Disconnect(Device, Channel) == 0 && owner.Close(Device) == 0, "Managed request owner cleanup failed");
+            }
+            Check(library.AllowedUnload, "Managed owner retained successful fixture");
+            GC.KeepAlive(start); GC.KeepAlive(stop); GC.KeepAlive(write); GC.KeepAlive(library);
+        }
+        finally { Check(FreeLibrary(module), "Generated request DLL reference not released"); }
     }
 
     private static void RunFilters()

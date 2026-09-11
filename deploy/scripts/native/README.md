@@ -43,10 +43,25 @@ prerequisites. No loader resolves WriteMsgs or filter exports here.
 
 The new dispatch tests use managed callbacks on x86/x64: layout, all other byte
 SIDs rejected, wrong owner/channel/protocol/flags, no retry, reentry/disposal,
-fault retention, and request/receive/cleanup ordering. These are NOT independent
-native WriteMsgs/filter ABI tests or real VCI evidence. Filter tests additionally
+fault retention, and request/receive/cleanup ordering. These managed tests alone
+are NOT native ABI tests or real VCI evidence. Filter tests additionally
 check exact mask/address layouts, unsigned IDs, ownership/ordering, and failure
 retention. Existing generated identity/receive fixtures remain separate.
+
+The additional fixed `request-abi.dll` fixture independently executes native
+StartMsgFilter, StopMsgFilter and WriteMsgs entry points on x86/x64. It checks
+channel/type/count/timeout, message protocol/length/address and read SID, writes
+an unsigned filter ID through the sixth argument, and exercises x86 StdCall stack
+cleanup and x64 register/stack arguments. Altered arguments return -8 without
+changing the output. It has no imports, entry point, hardware access, or arbitrary
+code input and stays within the existing 512-byte executable section limit.
+Only the fixed sibling DLL in the bounded self-test process can be selected.
+
+This joins the actual request/filter builders and owner lifecycle to native
+fixture delegates, but identity/channel setup is still managed in this test.
+It is not a complete native worker transaction, compiler-built C reference,
+driver compatibility test, or vehicle readout. The production export allowlist,
+worker execution policy, and public workstation package are unchanged.
 
 ## Validation
 

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-11 読取要求/filterのnative ABI結合: 固定生成request-abi.dllの3exportへ実際のrequest/filter builderとownerを結合し、x86 StdCall/x64 register・第5/第6stack引数を確認。channel/type/count/timeout/構造体protocol・size・address・SIDの誤りはnative側で-8、filter IDのunsigned DWORD出力と正常Stopを確認。import/entry pointなし・既存512byte text制限・固定検査用子process内のみ。native6461項目Errors 0（x86 2628/x64 2626）、生成再現性/構文/diff合格。identity/channelは管理callbackであり完全native worker結合・独立Cコンパイル照合・実VCI/実車は未確認。次は隔離workerへ一連の処理を統合し、失敗時の終了・結果不採用まで確認する。公開loader/worker実行権限・本体/581ZIP不変。
+
 2026-09-11 読取用flow-control filter所有権: 開発隔離範囲で固定ISO15765/11-bitのmask・応答ECU=request+8・flow送信先=requestを生成し、返却filter IDと対象ECUをownerへ保持。適合filterなし/異なるECUへの読取要求、filter終了後の受信、filter未終了のDisconnectを拒否。開始/終了の失敗・例外・buffer破損時は以後のdriver呼出禁止とmodule保持、正常時は明示Stop→Disconnect→Close。native6399項目Errors 0（x86 2598/x64 2596）、diff合格。新規filter/WriteMsgsは管理callback検証で独立native ABI未確認。実機に設定すれば自動flow-control送信につながる部品のため、公開loader/workerへの接続や実DLL/VCI/実車実行は無効のまま。次は固定生成native/隔離worker結合とAPI呼出規約検証。診断保存形式・本体/581ZIP不変。
 
 2026-09-11 読取要求の開発承認・実装: 直前の送信側コード開発への質問に利用者「続けて」。実行無効のまま、所有済みISO15765/11-bit通信路へDTC読取03/07/0Aだけを1回渡す内部部品を追加。任意payload/機能broadcast/消去/作動/再試行なし。異常件数・guard破損・例外・非0statusで以後のdriver呼出を拒否しmodule保持。受付成功はqueue受付のみで診断完了にしない。native全体6009項目Errors 0（x86 2403/x64 2401）、新規要求は管理callback検証であり独立WriteMsgs ABI・実VCIの確認ではない。次は必要なflow-control filter所有権と隔離結合。実DLL/実VCI/実車は未実行、公開実行経路・保存形式・本体/581ZIP不変。
