@@ -2,6 +2,7 @@ const ARCHITECTURES = new Set(["x86", "x64"]);
 const SCENARIOS = new Set([
   "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success", "owned-receive", "owned-connect-failure", "owned-disconnect-failure",
   "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang", "request-abi",
+  "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -83,6 +84,9 @@ function scenarioCode(architecture, scenario) {
 }
 
 function exportsFor(scenario) {
+  if (scenario.startsWith("owned-dtc-")) return [
+    ...exportsFor("owned-receive"), ...exportsFor("request-abi"),
+  ].sort((a, b) => a.name.localeCompare(b.name, "en"));
   if (scenario === "request-abi") return [
     { name: "PassThruStartMsgFilter", key: "start" },
     { name: "PassThruStopMsgFilter", key: "stop" },
@@ -115,8 +119,17 @@ export function buildJ2534NativeFixture(architecture, scenario) {
     code.read = receiveCode(architecture, -517782169); // 0xe1234567, distinct from device
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
-    Object.assign(code, channelCode(architecture));
-    if (scenario !== "owned-receive" && scenario !== "owned-result-then-hang") {
+    Object.assign(code, channelCode(architecture, scenario.startsWith("owned-dtc-") ? 0 : 0x100));
+    if (scenario.startsWith("owned-dtc-")) {
+      Object.assign(code, requestCode(architecture));
+      if (scenario !== "owned-dtc-read") {
+        const fail = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
+        code.close = code.disconnect = Buffer.from([0x0f, 0x0b]);
+        if (scenario === "owned-dtc-write-failure") {
+          code.write = fail(16); code.read = code.stop = Buffer.from([0x0f, 0x0b]);
+        } else code.stop = fail(8);
+      }
+    } else if (scenario !== "owned-receive" && scenario !== "owned-result-then-hang") {
       const failure = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
       // An unexpected cleanup or later receive must fail the child process,
       // not silently pass because a stateless fixture tolerated it.
@@ -132,7 +145,8 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   for (const key of Object.keys(code)) {
     textLength = align(textLength, 16); codeOffsets[key] = textLength; textLength += code[key].length;
   }
-  if (textLength > 0x200) throw new Error("native_fixture_text_section_overflow");
+  // Only the combined nine-export fixture needs a second fixed text block.
+  if (textLength > (scenario.startsWith("owned-dtc-") ? 0x400 : 0x200)) throw new Error("native_fixture_text_section_overflow");
   const text = Buffer.alloc(align(textLength, 0x200));
   for (const key of Object.keys(code)) code[key].copy(text, codeOffsets[key]);
 
@@ -162,7 +176,9 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   reloc.writeUInt32LE(0x1000, 0); reloc.writeUInt32LE(12, 4);
   const optionalSize = is64 ? 0xf0 : 0xe0;
   const sectionTable = 0x98 + optionalSize;
-  const image = Buffer.alloc(0x600 + reloc.length);
+  const rdataRaw = 0x200 + text.length;
+  const relocRaw = rdataRaw + rdata.length;
+  const image = Buffer.alloc(relocRaw + reloc.length);
   image.writeUInt16LE(0x5a4d, 0); image.writeUInt32LE(0x80, 0x3c); image.write("PE\0\0", 0x80, "binary");
   image.writeUInt16LE(is64 ? 0x8664 : 0x14c, 0x84); image.writeUInt16LE(3, 0x86);
   image.writeUInt16LE(optionalSize, 0x94); image.writeUInt16LE(is64 ? 0x2022 : 0x2102, 0x96);
@@ -194,9 +210,9 @@ export function buildJ2534NativeFixture(architecture, scenario) {
     image.writeUInt32LE(rawSize, offset + 16); image.writeUInt32LE(rawOffset, offset + 20); image.writeUInt32LE(characteristics, offset + 36);
   };
   section(0, ".text", textLength, 0x1000, text.length, 0x200, 0x60000020);
-  section(1, ".rdata", cursor, 0x2000, rdata.length, 0x400, 0x40000040);
-  section(2, ".reloc", 12, 0x3000, reloc.length, 0x600, 0x42000040);
-  text.copy(image, 0x200); rdata.copy(image, 0x400); reloc.copy(image, 0x600);
+  section(1, ".rdata", cursor, 0x2000, rdata.length, rdataRaw, 0x40000040);
+  section(2, ".reloc", 12, 0x3000, reloc.length, relocRaw, 0x42000040);
+  text.copy(image, 0x200); rdata.copy(image, rdataRaw); reloc.copy(image, relocRaw);
   return image;
 }
 
@@ -277,7 +293,7 @@ function receiveCode(architecture, channel = -249346713) {
 }
 
 // Fixed v04.04 channel ABI oracle. No imports, hardware access, or executable input.
-function channelCode(architecture) {
+function channelCode(architecture, flags = 0x100) {
   const x86 = architecture === "x86";
   const wrap = (body, comparisons, bytes) => {
     const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(x86 ? [0xc2, bytes, 0] : [0xc3])]);
@@ -290,9 +306,9 @@ function channelCode(architecture) {
     ...(x86 ? [0x8b, 0x44, 0x24, 0x14] : [0x48, 0x8b, 0x44, 0x24, 0x28]),
     0xc7, 0x00, 0x67, 0x45, 0x23, 0xe1, 0x31, 0xc0,
     ...(x86 ? [0xc2, 0x14, 0] : [0xc3]),
-  ]), x86 ? [compareStack(4, -249346713), compareStack(8, 6), compareStack(12, 0x100), compareStack(16, 500000)]
+  ]), x86 ? [compareStack(4, -249346713), compareStack(8, 6), compareStack(12, flags), compareStack(16, 500000)]
     : [[0x81, 0xf9, ...int32(-249346713)], [0x81, 0xfa, ...int32(6)],
-      [0x41, 0x81, 0xf8, ...int32(0x100)], [0x41, 0x81, 0xf9, ...int32(500000)]], 20);
+      [0x41, 0x81, 0xf8, ...int32(flags)], [0x41, 0x81, 0xf9, ...int32(500000)]], 20);
   const disconnect = wrap(Buffer.from([0x31, 0xc0, ...(x86 ? [0xc2, 4, 0] : [0xc3])]),
     [x86 ? compareStack(4, -517782169) : [0x81, 0xf9, ...int32(-517782169)]], 4);
   return { connect, disconnect };

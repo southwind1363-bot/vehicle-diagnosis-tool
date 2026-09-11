@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-11 読取一連処理の隔離native結合: compile限定workerを単一の固定9export生成DLLへ接続し、Open→Connect→filter開始→固定03要求→受信→filter終了→Disconnect→Closeを統合。SHA256コンパイル固定・読込lease・固定CLI・親processの上限/正常終了判定を維持。Write/Stop失敗後の禁止呼出にnative不正命令trapを置き、正常な失敗終了1・module保持・親側parsed_result:nullを確認。native6515項目Errors 0（x86 2628/x64 2626）、diff合格。初回は検査側の既存status名期待値の誤り(worker_process_failed→worker_failed)を修正して再検証。9export結合fixtureのみtext上限1024byte、他の既存fixtureは512維持・代表8組のSHA不変。出力は人工受信markerの概要で診断結果ではない。実VCI/実車/独立C参照・結合経路の開始失敗/hang/crash・実応答待ち時間は未検証。公開実行権限・本体/581ZIP・保存形式不変。
+
 2026-09-11 読取要求/filterのnative ABI結合: 固定生成request-abi.dllの3exportへ実際のrequest/filter builderとownerを結合し、x86 StdCall/x64 register・第5/第6stack引数を確認。channel/type/count/timeout/構造体protocol・size・address・SIDの誤りはnative側で-8、filter IDのunsigned DWORD出力と正常Stopを確認。import/entry pointなし・既存512byte text制限・固定検査用子process内のみ。native6461項目Errors 0（x86 2628/x64 2626）、生成再現性/構文/diff合格。identity/channelは管理callbackであり完全native worker結合・独立Cコンパイル照合・実VCI/実車は未確認。次は隔離workerへ一連の処理を統合し、失敗時の終了・結果不採用まで確認する。公開loader/worker実行権限・本体/581ZIP不変。
 
 2026-09-11 読取用flow-control filter所有権: 開発隔離範囲で固定ISO15765/11-bitのmask・応答ECU=request+8・flow送信先=requestを生成し、返却filter IDと対象ECUをownerへ保持。適合filterなし/異なるECUへの読取要求、filter終了後の受信、filter未終了のDisconnectを拒否。開始/終了の失敗・例外・buffer破損時は以後のdriver呼出禁止とmodule保持、正常時は明示Stop→Disconnect→Close。native6399項目Errors 0（x86 2598/x64 2596）、diff合格。新規filter/WriteMsgsは管理callback検証で独立native ABI未確認。実機に設定すれば自動flow-control送信につながる部品のため、公開loader/workerへの接続や実DLL/VCI/実車実行は無効のまま。次は固定生成native/隔離worker結合とAPI呼出規約検証。診断保存形式・本体/581ZIP不変。

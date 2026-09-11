@@ -100,6 +100,7 @@ function validateFixturePe(buffer, platform, expectedNames) {
 }
 
 function fixtureNames(scenario) {
+  if (scenario.startsWith("owned-dtc-")) return [...fixtureNames("owned-receive"), ...fixtureNames("request-abi")].sort();
   if (scenario === "request-abi") return ["PassThruStartMsgFilter", "PassThruStopMsgFilter", "PassThruWriteMsgs"];
   if (scenario.startsWith("owned-")) return ["PassThruClose", "PassThruConnect", "PassThruDisconnect", "PassThruOpen", "PassThruReadMsgs", "PassThruReadVersion"];
   if (scenario === "receive-success") return ["PassThruReadMsgs"];
@@ -229,6 +230,41 @@ async function main() {
         fixture: { path: fixturePath, sha256: createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex") },
       });
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
+      for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure"]) {
+        const combinedDirectory = path.join(platformDirectory, scenario);
+        fs.mkdirSync(combinedDirectory);
+        createdDirectories.push({ path: combinedDirectory, identity: fs.statSync(combinedDirectory) });
+        const fixture = buildJ2534NativeFixture(platform.name, scenario);
+        validateFixturePe(fixture, platform, fixtureNames(scenario));
+        assert.deepEqual(fixture, buildJ2534NativeFixture(platform.name, scenario));
+        const fixturePath = path.join(combinedDirectory, "owned-receive.dll");
+        writeCreatedFile(fixturePath, fixture);
+        const compiledDigest = path.join(combinedDirectory, "OwnedReceiveFixtureDigest.cs");
+        writeCreatedFile(compiledDigest, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const string Value = "${createHash("sha256").update(fixture).digest("hex").toUpperCase()}"; }`));
+        const worker = path.join(combinedDirectory, "owned-receive-worker.exe");
+        createdFiles.push(worker);
+        const compilation = await execute(platform.compiler, [
+          "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
+          "/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE", `/out:${worker}`,
+          sources[0], sources[2], sources[4], compiledDigest,
+          path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
+        ]);
+        assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
+        const direct = await execute(worker, ["--fixture-owned-receive"]);
+        const success = scenario === "owned-dtc-read";
+        assert.equal(direct.error?.code ?? 0, success ? 0 : 1, "Combined worker failed or reached a forbidden native trap");
+        assert.equal(direct.stderr, "");
+        assert.deepEqual(JSON.parse(direct.stdout), {
+          fixture_only: true, pointer_bits: platform.bits,
+          received_count: scenario === "owned-dtc-write-failure" ? 0 : 2,
+          module_retained: !success, cleanup_confirmed: success, vehicle_communication: false,
+        });
+        const bounded = await ownedSupervisor(worker, fixturePath, scenario).run();
+        assert.equal(bounded.worker_exited, true);
+        assert.equal(bounded.execution_status, success ? "worker_completed" : "worker_failed");
+        assert.deepEqual(bounded.parsed_result, success ? JSON.parse(direct.stdout) : null);
+        total += 9;
+      }
       for (const invalid of [
         Object.defineProperty({}, "timeout_ms", { enumerable: true, get() { throw new Error("private-option-detail"); } }),
         Object.defineProperty({}, "signal", { enumerable: true, get() { throw new Error("private-signal-detail"); } }),

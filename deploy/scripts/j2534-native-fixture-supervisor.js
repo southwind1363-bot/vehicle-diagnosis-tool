@@ -8,7 +8,8 @@ import { buildJ2534UdsTransportResult } from "./j2534-readonly-worker.js";
 
 const SCENARIOS = new Set(["success", "open-failure", "overrun", "hang", "crash", "result-then-hang"]);
 const OWNED_SCENARIOS = new Set(["owned-receive", "owned-connect-failure", "owned-disconnect-failure",
-  "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang"]);
+  "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang",
+  "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure"]);
 const VERIFIED_IDENTITY_SCENARIOS = new Set(["success", "hold"]);
 const UDS_TRANSPORT_SCENARIOS = new Set(["positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"]);
 const UDS_TRANSPORT_CONTROL_SCENARIOS = new Set(["hang", "overflow", "stderr", "crash", "result-then-hang"]);

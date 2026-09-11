@@ -40,7 +40,11 @@ internal static class J2534OwnedReceiveFixtureWorker
         {
             if (disposed) throw new ObjectDisposedException("fixture_library");
             if (name != "PassThruOpen" && name != "PassThruClose" && name != "PassThruReadVersion"
-                && name != "PassThruReadMsgs" && name != "PassThruConnect" && name != "PassThruDisconnect")
+                && name != "PassThruReadMsgs" && name != "PassThruConnect" && name != "PassThruDisconnect"
+#if OWNED_DTC_REQUEST_FIXTURE
+                && name != "PassThruStartMsgFilter" && name != "PassThruStopMsgFilter" && name != "PassThruWriteMsgs"
+#endif
+                )
                 throw new InvalidOperationException("fixture_export_rejected");
             return GetProcAddress(module, name);
         }
@@ -78,20 +82,47 @@ internal static class J2534OwnedReceiveFixtureWorker
                 var disconnect = (J2534IdentityNative.DisconnectFunction)Marshal.GetDelegateForFunctionPointer(
                     library.Resolve("PassThruDisconnect"), typeof(J2534IdentityNative.DisconnectFunction));
                 uint channel;
-                if (owner.Connect(device, 6, 0x100, 500000, connect, disconnect, out channel) != 0) failed = true;
+#if OWNED_DTC_REQUEST_FIXTURE
+                const uint channelFlags = 0;
+#else
+                const uint channelFlags = 0x100;
+#endif
+                if (owner.Connect(device, 6, channelFlags, 500000, connect, disconnect, out channel) != 0) failed = true;
                 else
                 {
                     if (channel != 0xe1234567 || channel == device) return 1;
-                    var receiver = new J2534ReceiveNative(owner, device, read);
-                    var result = receiver.ReadOnce(channel, 3);
-                    if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
-                        || result.Messages[0].Data.Length != 4 || result.Messages[0].Data[0] != 1
-                        || result.Messages[0].Data[3] != 4 || result.Messages[1].Data.Length != 0
-                        || result.Messages[1].RxStatus != 2) return 1;
-                    receivedCount = result.Messages.Length;
-                    // A failed Disconnect must never fall through to Close.
-                    if (owner.Disconnect(device, channel) != 0) failed = true;
-                    else if (owner.Close(device) != 0) failed = true;
+#if OWNED_DTC_REQUEST_FIXTURE
+                    var start = (J2534ReadRequestNative.StartFilterFunction)Marshal.GetDelegateForFunctionPointer(
+                        library.Resolve("PassThruStartMsgFilter"), typeof(J2534ReadRequestNative.StartFilterFunction));
+                    var stop = (J2534ReadRequestNative.StopFilterFunction)Marshal.GetDelegateForFunctionPointer(
+                        library.Resolve("PassThruStopMsgFilter"), typeof(J2534ReadRequestNative.StopFilterFunction));
+                    var write = (J2534ReadRequestNative.WriteFunction)Marshal.GetDelegateForFunctionPointer(
+                        library.Resolve("PassThruWriteMsgs"), typeof(J2534ReadRequestNative.WriteFunction));
+                    var request = new J2534ReadRequestNative(owner, device, write);
+                    uint filter;
+                    if (request.PrepareDtcFilterOnce(channel, 0x7e0, start, stop, out filter) != 0) failed = true;
+                    else if (request.DispatchDtcReadOnce(channel, 0x7e0, 3) != 0) failed = true;
+                    // Queue acceptance is not a readout. Read fixture records
+                    // only after both preceding calls succeeded; no retry.
+#endif
+                    if (!failed)
+                    {
+                        var receiver = new J2534ReceiveNative(owner, device, read);
+                        var result = receiver.ReadOnce(channel, 3);
+                        if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
+                            || result.Messages[0].Data.Length != 4 || result.Messages[0].Data[0] != 1
+                            || result.Messages[0].Data[3] != 4 || result.Messages[1].Data.Length != 0
+                            || result.Messages[1].RxStatus != 2) return 1;
+                        receivedCount = result.Messages.Length;
+#if OWNED_DTC_REQUEST_FIXTURE
+                        if (owner.StopDtcReadFilter(device, channel, filter) != 0) failed = true;
+#endif
+                        // A failed Disconnect must never fall through to Close.
+                        if (!failed) {
+                            if (owner.Disconnect(device, channel) != 0) failed = true;
+                            else if (owner.Close(device) != 0) failed = true;
+                        }
+                    }
                 }
             }
             if (library.Retained != failed) return 1;
