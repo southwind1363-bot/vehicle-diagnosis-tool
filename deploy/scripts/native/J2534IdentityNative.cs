@@ -140,7 +140,10 @@ namespace VehicleDiagnosis.Native
         private bool disposed, openAttempted, readAttempted, closeAttempted;
         private bool callInProgress, corrupted, receiveAttempted;
         private bool channelAttempted, disconnectAttempted, channelCleanupConfirmed;
-        private bool requestAttempted;
+        private bool requestAttempted, filterAttempted;
+        private uint? ownedFilter;
+        private uint filterRequestEcu;
+        private Func<uint, uint, int> stopFilter;
         private uint channelProtocol, channelFlags;
         private uint? ownedChannel;
         private DisconnectFunction disconnect;
@@ -284,6 +287,7 @@ namespace VehicleDiagnosis.Native
                 CheckOwner(deviceId);
                 if (!ownedChannel.HasValue || ownedChannel.Value != channelId || disconnectAttempted)
                     throw new InvalidOperationException("native_channel_not_owned");
+                if (ownedFilter.HasValue) throw new InvalidOperationException("native_filter_cleanup_required");
                 disconnectAttempted = true;
                 callInProgress = true;
                 try
@@ -300,9 +304,75 @@ namespace VehicleDiagnosis.Native
             }
         }
 
-        // Development-only, one fixed read request before receive. No export is
-        // resolved here. Timeout-zero acceptance is not evidence of vehicle I/O.
-        internal int RunOwnedReadRequest(uint deviceId, uint channelId, Func<int> dispatch)
+        // Development-only filter lifecycle under the same channel/module gate.
+        // The caller builds fixed messages; no additional export is resolved.
+        internal int InstallDtcReadFilter(uint deviceId, uint channelId, uint requestEcu,
+            Func<IntPtr, int> start, Func<uint, uint, int> stop, out uint filterId)
+        {
+            filterId = 0;
+            if (start == null || stop == null) throw new ArgumentNullException("filter_functions");
+            if (requestEcu < 0x7e0 || requestEcu > 0x7e7)
+                throw new InvalidOperationException("native_read_request_not_allowed");
+            lock (gate)
+            {
+                CheckOwner(deviceId);
+                if (!ownedChannel.HasValue || ownedChannel.Value != channelId || disconnectAttempted)
+                    throw new InvalidOperationException("native_channel_not_owned");
+                if (channelProtocol != 6 || channelFlags != 0)
+                    throw new InvalidOperationException("native_request_channel_unsupported");
+                if (filterAttempted || requestAttempted || receiveAttempted)
+                    throw new InvalidOperationException("native_filter_already_attempted");
+                filterAttempted = true; callInProgress = true; allowUnload = false;
+                try
+                {
+                    using (var output = new VersionBuffer())
+                    {
+                        int status;
+                        try { status = start(output.Data); }
+                        catch { throw new InvalidOperationException("native_filter_start_threw"); }
+                        finally {
+                            byte[] bytes = output.Copy();
+                            for (int i = 4; i < bytes.Length; i++)
+                                if (bytes[i] != 0xa5) throw new InvalidOperationException("native_filter_buffer_overrun");
+                        }
+                        if (status == 0) {
+                            filterId = unchecked((uint)Marshal.ReadInt32(output.Data));
+                            ownedFilter = filterId; filterRequestEcu = requestEcu; stopFilter = stop;
+                        }
+                        else corrupted = true;
+                        return status;
+                    }
+                }
+                catch { corrupted = true; throw; }
+                finally { callInProgress = false; GC.KeepAlive(start); }
+            }
+        }
+
+        internal int StopDtcReadFilter(uint deviceId, uint channelId, uint filterId)
+        {
+            lock (gate)
+            {
+                CheckOwner(deviceId);
+                if (!ownedChannel.HasValue || ownedChannel.Value != channelId || disconnectAttempted)
+                    throw new InvalidOperationException("native_channel_not_owned");
+                if (!ownedFilter.HasValue || ownedFilter.Value != filterId)
+                    throw new InvalidOperationException("native_filter_not_owned");
+                callInProgress = true;
+                try {
+                    int status;
+                    try { status = stopFilter(channelId, filterId); }
+                    catch { throw new InvalidOperationException("native_filter_stop_threw"); }
+                    if (status == 0) ownedFilter = null;
+                    else corrupted = true;
+                    return status;
+                }
+                catch { corrupted = true; throw; }
+                finally { callInProgress = false; GC.KeepAlive(stopFilter); }
+            }
+        }
+
+        // Queue acceptance is not evidence of vehicle I/O or diagnostic completion.
+        internal int RunOwnedReadRequest(uint deviceId, uint channelId, uint requestEcu, Func<int> dispatch)
         {
             if (dispatch == null) throw new ArgumentNullException("dispatch");
             lock (gate)
@@ -314,6 +384,8 @@ namespace VehicleDiagnosis.Native
                     throw new InvalidOperationException("native_request_channel_unsupported");
                 if (requestAttempted || receiveAttempted)
                     throw new InvalidOperationException("native_request_already_attempted");
+                if (!ownedFilter.HasValue || filterRequestEcu != requestEcu)
+                    throw new InvalidOperationException("native_request_filter_required");
                 requestAttempted = true; allowUnload = false; callInProgress = true;
                 try {
                     int status = dispatch();
@@ -340,6 +412,8 @@ namespace VehicleDiagnosis.Native
                 if (channelAttempted && (!ownedChannel.HasValue || !channelId.HasValue
                     || ownedChannel.Value != channelId.Value || disconnectAttempted))
                     throw new InvalidOperationException("native_channel_not_owned");
+                if (filterAttempted && !ownedFilter.HasValue)
+                    throw new InvalidOperationException("native_request_filter_required");
                 if (receiveAttempted) throw new InvalidOperationException("native_identity_receive_already_attempted");
                 receiveAttempted = true;
                 allowUnload = false;

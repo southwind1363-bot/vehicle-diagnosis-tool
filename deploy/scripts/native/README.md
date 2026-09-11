@@ -24,15 +24,29 @@ The guarded 4152-byte message is zero-initialized, with frame padding 0x40,
 four big-endian address bytes, one SID, count 1, and timeout 0. Timeout-zero
 success means queue acceptance, not vehicle transmission or a completed result;
 see [vendor WriteMsgs API](https://quantexlab.com/en/develop/j2534/pt_writemsg.html).
-That API also requires ISO15765 flow-control filters. Filter ownership, protocol
-applicability, and isolated-worker integration are still prerequisites, not
-implemented or bypassed by this source. No loader resolves WriteMsgs here.
+That API also requires ISO15765 flow-control filters. The disabled
+`PrepareDtcFilterOnce` now builds a full four-byte mask, response address
+request+8, and flow-control address equal to the request ECU. All three messages
+use protocol 6, padding 0x40, and size 4. See the vendor
+[StartMsgFilter](https://quantexlab.com/en/develop/j2534/pt_start_msgfilt.html) and
+[StopMsgFilter](https://quantexlab.com/en/develop/j2534/pt_stop_msgfilt.html) APIs.
+Installing this filter on real hardware could trigger automatic transport
+flow-control frames: it is NOT a passive receive feature or vehicle permission.
+
+The owner retains one returned unsigned filter ID and its ECU address. A request
+requires that matching active filter. Start failure, stop failure, or callback
+uncertainty prevents further driver calls. A successful explicit filter stop is
+required before Disconnect, and stops further request/receive operations. Start,
+stop, request, receive, and Dispose share one gate. No retry or implicit cleanup
+is performed. Protocol applicability and isolated-worker integration remain
+prerequisites. No loader resolves WriteMsgs or filter exports here.
 
 The new dispatch tests use managed callbacks on x86/x64: layout, all other byte
 SIDs rejected, wrong owner/channel/protocol/flags, no retry, reentry/disposal,
 fault retention, and request/receive/cleanup ordering. These are NOT independent
-native WriteMsgs ABI tests or real VCI evidence. The complete native suite passes
-6009 checks; existing generated identity/receive fixtures remain separate.
+native WriteMsgs/filter ABI tests or real VCI evidence. Filter tests additionally
+check exact mask/address layouts, unsigned IDs, ownership/ordering, and failure
+retention. Existing generated identity/receive fixtures remain separate.
 
 ## Validation
 

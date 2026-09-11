@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-11 読取用flow-control filter所有権: 開発隔離範囲で固定ISO15765/11-bitのmask・応答ECU=request+8・flow送信先=requestを生成し、返却filter IDと対象ECUをownerへ保持。適合filterなし/異なるECUへの読取要求、filter終了後の受信、filter未終了のDisconnectを拒否。開始/終了の失敗・例外・buffer破損時は以後のdriver呼出禁止とmodule保持、正常時は明示Stop→Disconnect→Close。native6399項目Errors 0（x86 2598/x64 2596）、diff合格。新規filter/WriteMsgsは管理callback検証で独立native ABI未確認。実機に設定すれば自動flow-control送信につながる部品のため、公開loader/workerへの接続や実DLL/VCI/実車実行は無効のまま。次は固定生成native/隔離worker結合とAPI呼出規約検証。診断保存形式・本体/581ZIP不変。
+
 2026-09-11 読取要求の開発承認・実装: 直前の送信側コード開発への質問に利用者「続けて」。実行無効のまま、所有済みISO15765/11-bit通信路へDTC読取03/07/0Aだけを1回渡す内部部品を追加。任意payload/機能broadcast/消去/作動/再試行なし。異常件数・guard破損・例外・非0statusで以後のdriver呼出を拒否しmodule保持。受付成功はqueue受付のみで診断完了にしない。native全体6009項目Errors 0（x86 2403/x64 2401）、新規要求は管理callback検証であり独立WriteMsgs ABI・実VCIの確認ではない。次は必要なflow-control filter所有権と隔離結合。実DLL/実VCI/実車は未実行、公開実行経路・保存形式・本体/581ZIP不変。
 
 2026-09-11 配布生成の起動拒否案内: EPERM/EACCESにspawn/spawnSyncのsyscall情報がある場合もファイル操作拒否と表示していたため、外部プログラム起動拒否として案内する。内部パス/出力は非表示、ファイル操作時や操作不明時は従来案内を維持。人工例外で誤案内を再現、実コンパイル/配布を含むpackage477項目Errors 0とdiff合格。前回EPERMの原因は未確定（今回csc /helpは成功）、自動再試行/権限変更なし。生成器のみの変更で本体/581ZIP/保存形式不変。581のCI34548239155はcompleted/successを確認。

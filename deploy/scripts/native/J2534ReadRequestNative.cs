@@ -9,6 +9,10 @@ namespace VehicleDiagnosis.Native
     {
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         internal delegate int WriteFunction(uint channel, IntPtr messages, IntPtr count, uint timeout);
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        internal delegate int StartFilterFunction(uint channel, uint type, IntPtr mask, IntPtr pattern, IntPtr flow, IntPtr filterId);
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        internal delegate int StopFilterFunction(uint channel, uint filterId);
         private readonly J2534IdentityNative owner;
         private readonly uint device;
         private readonly WriteFunction write;
@@ -18,15 +22,42 @@ namespace VehicleDiagnosis.Native
             this.owner = owner; this.device = device; this.write = write;
         }
 
+        // Fixed standard 11-bit OBD address pair only. This can cause automatic
+        // transport flow-control if wired to a driver: development-only, NOT a
+        // passive receive filter or permission to execute on a vehicle.
+        internal int PrepareDtcFilterOnce(uint channel, uint requestEcu,
+            StartFilterFunction start, StopFilterFunction stop, out uint filterId)
+        {
+            if (start == null || stop == null) throw new ArgumentNullException("filter_binding");
+            return owner.InstallDtcReadFilter(device, channel, requestEcu, delegate(IntPtr output) {
+                using (var mask = new RequestBuffer(4152))
+                using (var pattern = new RequestBuffer(4152))
+                using (var flow = new RequestBuffer(4152))
+                {
+                    foreach (var buffer in new RequestBuffer[] { mask, pattern, flow }) {
+                        Marshal.WriteInt32(buffer.Data, 0, 6);
+                        Marshal.WriteInt32(buffer.Data, 8, 0x40);
+                        Marshal.WriteInt32(buffer.Data, 16, 4);
+                    }
+                    Marshal.WriteInt32(mask.Data, 24, -1);
+                    Marshal.WriteByte(pattern.Data, 26, 7);
+                    Marshal.WriteByte(pattern.Data, 27, (byte)(requestEcu + 8));
+                    Marshal.WriteByte(flow.Data, 26, 7);
+                    Marshal.WriteByte(flow.Data, 27, (byte)requestEcu);
+                    try { return start(channel, 3, mask.Data, pattern.Data, flow.Data, output); }
+                    finally { mask.Check(); pattern.Check(); flow.Check(); GC.KeepAlive(start); }
+                }
+            }, delegate(uint c, uint id) { return stop(c, id); }, out filterId);
+        }
+
         // Only standard stored/pending/permanent DTC read services. Protocol
-        // applicability and flow-control filters remain prerequisites for a
-        // future isolated worker; this method is not wired to any live driver.
+        // applicability and isolated-worker integration remain prerequisites.
         internal int DispatchDtcReadOnce(uint channel, uint requestEcu, byte service)
         {
             if (requestEcu < 0x7e0 || requestEcu > 0x7e7
                 || (service != 0x03 && service != 0x07 && service != 0x0a))
                 throw new InvalidOperationException("native_read_request_not_allowed");
-            return owner.RunOwnedReadRequest(device, channel, delegate {
+            return owner.RunOwnedReadRequest(device, channel, requestEcu, delegate {
                 using (var message = new RequestBuffer(4152))
                 using (var count = new RequestBuffer(4))
                 {
