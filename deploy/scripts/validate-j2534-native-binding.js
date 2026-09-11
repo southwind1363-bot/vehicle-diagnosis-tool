@@ -230,7 +230,9 @@ async function main() {
         fixture: { path: fixturePath, sha256: createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex") },
       });
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
-      for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure"]) {
+      for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
+        "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
+        "owned-dtc-stop-crash", "owned-dtc-result-then-hang"]) {
         const combinedDirectory = path.join(platformDirectory, scenario);
         fs.mkdirSync(combinedDirectory);
         createdDirectories.push({ path: combinedDirectory, identity: fs.statSync(combinedDirectory) });
@@ -245,25 +247,53 @@ async function main() {
         createdFiles.push(worker);
         const compilation = await execute(platform.compiler, [
           "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
-          "/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE", `/out:${worker}`,
+          `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE${scenario === "owned-dtc-result-then-hang" ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
           sources[0], sources[2], sources[4], compiledDigest,
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
-        const direct = await execute(worker, ["--fixture-owned-receive"]);
         const success = scenario === "owned-dtc-read";
-        assert.equal(direct.error?.code ?? 0, success ? 0 : 1, "Combined worker failed or reached a forbidden native trap");
-        assert.equal(direct.stderr, "");
-        assert.deepEqual(JSON.parse(direct.stdout), {
-          fixture_only: true, pointer_bits: platform.bits,
-          received_count: scenario === "owned-dtc-write-failure" ? 0 : 2,
-          module_retained: !success, cleanup_confirmed: success, vehicle_communication: false,
-        });
-        const bounded = await ownedSupervisor(worker, fixturePath, scenario).run();
+        const timedOut = scenario.endsWith("hang");
+        let expected = null;
+        if (success || scenario.endsWith("failure")) {
+          const direct = await execute(worker, ["--fixture-owned-receive"]);
+          assert.equal(direct.error?.code ?? 0, success ? 0 : 1, "Combined worker failed or reached a forbidden native trap");
+          assert.equal(direct.stderr, "");
+          expected = {
+            fixture_only: true, pointer_bits: platform.bits,
+            received_count: ["owned-dtc-write-failure", "owned-dtc-start-failure"].includes(scenario) ? 0 : 2,
+            module_retained: !success, cleanup_confirmed: success, vehicle_communication: false,
+          };
+          assert.deepEqual(JSON.parse(direct.stdout), expected);
+          total += 3;
+        }
+        const supervisor = ownedSupervisor(worker, fixturePath, scenario);
+        const bounded = await supervisor.run({ timeout_ms: 2000 });
+        assert.equal(bounded.worker_started, true);
         assert.equal(bounded.worker_exited, true);
-        assert.equal(bounded.execution_status, success ? "worker_completed" : "worker_failed");
-        assert.deepEqual(bounded.parsed_result, success ? JSON.parse(direct.stdout) : null);
-        total += 9;
+        assert.equal(bounded.execution_status, success ? "worker_completed" : timedOut ? "worker_timed_out" : "worker_failed");
+        assert.deepEqual(bounded.parsed_result, success ? expected : null);
+        assert.equal((await supervisor.run()).execution_status, "request_blocked");
+        total += 7;
+        if (timedOut) {
+          assert.equal(bounded.termination_requested, true);
+          assert.equal(bounded.termination_signal_sent, true);
+          total += 2;
+        }
+        if (scenario === "owned-dtc-read-hang") {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 200);
+          let cancelled;
+          try { cancelled = await ownedSupervisor(worker, fixturePath, scenario).run({ timeout_ms: 5000, signal: controller.signal }); }
+          finally { clearTimeout(timer); }
+          assert.equal(cancelled.execution_status, "worker_cancelled");
+          assert.equal(cancelled.worker_started, true);
+          assert.equal(cancelled.worker_exited, true);
+          assert.equal(cancelled.termination_requested, true);
+          assert.equal(cancelled.termination_signal_sent, true);
+          assert.equal(cancelled.parsed_result, null);
+          total += 6;
+        }
       }
       for (const invalid of [
         Object.defineProperty({}, "timeout_ms", { enumerable: true, get() { throw new Error("private-option-detail"); } }),

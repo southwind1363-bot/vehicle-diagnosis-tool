@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-11 結合経路の異常終了確認: 固定生成DLLへfilter開始失敗/開始hang/1000msを無視する受信hang/終了crash/正常概要出力後hangを追加し、既存の親process監視へ接続。開始失敗は後続API trapへ進まず終了1、全異常でparsed_result:null、hangは終了要求/送信/process close、2回目実行拒否を確認。受信hangシナリオの取消も終了/不採用を確認（native entry到達時刻は計測せず）。native6723項目Errors 0（x86 2679/x64 2677）、diff合格。検査用経路の監視確認であり新たな実機機能の公開ではない。実VCI/実車・driver cleanup/実応答時間・独立C参照は未検証。公開本体/581ZIP/診断保存契約/実行権限不変。
+
 2026-09-11 単発の応答待ち: 要求受付直後のtimeout0受信は待たずに空queueを返すため、開発隔離workerへ固定1000msのReadDtcResponseOnceを追加。成功した要求・同一owner/channel・有効filterが前提で、従来ReadOnce(timeout0)は維持。どちらも同じ1回制限、再送/自動pollなし。status9・部分/空応答を保持し診断成功に変えない。native6617項目Errors 0（x86 2679/x64 2677）とdiff合格。管理callbackで前提拒否/状態保持/再試行拒否、生成nativeで1000ms引数を確認。実時間待機・実VCI応答・車種ごとの適正期限の検証ではなく、1000msは開発上限。親process期限は維持。公開実行経路・本体/581ZIP・保存形式不変。
 
 2026-09-11 読取一連処理の隔離native結合: compile限定workerを単一の固定9export生成DLLへ接続し、Open→Connect→filter開始→固定03要求→受信→filter終了→Disconnect→Closeを統合。SHA256コンパイル固定・読込lease・固定CLI・親processの上限/正常終了判定を維持。Write/Stop失敗後の禁止呼出にnative不正命令trapを置き、正常な失敗終了1・module保持・親側parsed_result:nullを確認。native6515項目Errors 0（x86 2628/x64 2626）、diff合格。初回は検査側の既存status名期待値の誤り(worker_process_failed→worker_failed)を修正して再検証。9export結合fixtureのみtext上限1024byte、他の既存fixtureは512維持・代表8組のSHA不変。出力は人工受信markerの概要で診断結果ではない。実VCI/実車/独立C参照・結合経路の開始失敗/hang/crash・実応答待ち時間は未検証。公開実行権限・本体/581ZIP・保存形式不変。

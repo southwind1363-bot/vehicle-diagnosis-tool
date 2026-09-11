@@ -3,6 +3,8 @@ const SCENARIOS = new Set([
   "success", "open-failure", "overrun", "hang", "crash", "missing-open", "missing-read", "missing-close", "decorated-open-only", "receive-success", "owned-receive", "owned-connect-failure", "owned-disconnect-failure",
   "owned-connect-hang", "owned-disconnect-crash", "owned-result-then-hang", "request-abi",
   "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
+  "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
+  "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -122,12 +124,18 @@ export function buildJ2534NativeFixture(architecture, scenario) {
     Object.assign(code, channelCode(architecture, scenario.startsWith("owned-dtc-") ? 0 : 0x100));
     if (scenario.startsWith("owned-dtc-")) {
       Object.assign(code, requestCode(architecture));
-      if (scenario !== "owned-dtc-read") {
+      if (scenario !== "owned-dtc-read" && scenario !== "owned-dtc-result-then-hang") {
         const fail = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
         code.close = code.disconnect = Buffer.from([0x0f, 0x0b]);
-        if (scenario === "owned-dtc-write-failure") {
+        if (scenario === "owned-dtc-start-failure" || scenario === "owned-dtc-start-hang") {
+          code.start = scenario.endsWith("hang") ? Buffer.from([0xeb, 0xfe]) : fail(24);
+          code.write = code.read = code.stop = Buffer.from([0x0f, 0x0b]);
+        } else if (scenario === "owned-dtc-write-failure") {
           code.write = fail(16); code.read = code.stop = Buffer.from([0x0f, 0x0b]);
-        } else code.stop = fail(8);
+        } else if (scenario === "owned-dtc-read-hang") {
+          // Intentionally ignores the 1000 ms argument: parent must stop it.
+          code.read = Buffer.from([0xeb, 0xfe]); code.stop = Buffer.from([0x0f, 0x0b]);
+        } else code.stop = scenario === "owned-dtc-stop-crash" ? Buffer.from([0x0f, 0x0b]) : fail(8);
       }
     } else if (scenario !== "owned-receive" && scenario !== "owned-result-then-hang") {
       const failure = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);

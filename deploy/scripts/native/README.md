@@ -71,14 +71,20 @@ request 7E0/03, and is pinned by a compiled SHA256 with the existing file lease.
 Only this combined fixture permits up to 1024 bytes of generated machine code;
 other fixture limits and captured prior fixture digests remain unchanged.
 
-Native write/stop failure fixtures install illegal-instruction traps in forbidden
+Native start/write/stop failure fixtures install illegal-instruction traps in forbidden
 later calls. They must exit normally with failure code 1, retain the module, and
 have their summary discarded by the bounded supervisor. Success requires normal
 process exit and confirmed cleanup. The output remains a fixture summary, NOT
 diagnostic results: the received synthetic records are the existing ABI markers.
 No public worker path, vendor DLL, real VCI, automatic retry, or vehicle operation
-is enabled. Combined start/hang/crash fault cases and real response timing remain
-unverified and must not be inferred from these success/status-failure cases.
+is enabled. Combined fixtures also cover a filter-start hang, a receive hang
+that ignores the 1000 ms argument, a filter-stop crash, and a flushed successful
+summary followed by a hang. The bounded supervisor must wait for process close,
+discard all abnormal results, send termination for hangs, and reject a second
+run. Cancellation of the hanging-receive scenario likewise requires process exit
+and no adopted result (the cancellation test does not instrument the native
+entry point to establish its exact timing). These are synthetic failure-path checks; real response timing,
+vendor cleanup behaviour and VCI compatibility remain unverified.
 
 ### One-shot response wait
 
