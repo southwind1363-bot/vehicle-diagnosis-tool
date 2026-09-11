@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+3.13.581 保存事例の全角/半角検索: 全角DTC「Ｐ０１７１」や半角カナ「ﾌﾟﾘｳｽ」で保存済みのP0171/プリウスが見つからない負例を確認。検索語と検索対象の一時文字列だけNFKCで照合し、保存本文/JSON/CSVや診断順位を変更しない。逆方向（全角保存値を半角検索）と原記録不変も確認、R1全工程合格。隔離Chromeの実入力で全角DTC・半角カナ・全角型式/測定値の複合検索が1件に一致（obd-file-flow-cases-vCh7Md）、390幅の検索画面を目視確認。
+
+3.13.581 配布確認: 通常の生成はEPERMで失敗、581完成フォルダー/一時残留なしを確認後、許可審査付き実行で生成成功。失敗原因の詳細は未確定で同条件反復はしない。新規ZIP 2,665,295 bytes / SHA256 A8B55416CE0F2D62C57682B191D930A646B4C442BD45BFC3599F3A4778C443A2。別展開846ファイル/16,897,384 bytes一致。配布物の初回案内・誤パスワード拒否・全cache・両server停止後のChrome再起動/オフライン人工事例検索/同内容JSON出力が合格（packaged-browser-h61yxm）。補助CDP No frameは実際の復元成功と分離。ブラウザースキルの専用CLI不在により既存隔離Chrome経路を使用。実VCI/実車/別PC/OS再起動/実パスワード・既知の2回目download異常や旧版復帰原因の確認ではない。
+
 2026-09-11 隔離supervisor入力例外の抑止: timeout/signal getterやProxy ownKeysの例外でrunがrejectし生の例外文字列が外へ出る点を再現。入力列挙/読込/型確認を保護し、子process未開始の固定request_blockedへ変換。拒否後も通常1回実行可能で、入力項目や実行権限は増やさない。修正前は人工private-option-detailで検査終了1、修正後native2529項目Errors 0とdiff合格。公開worker/診断保存形式/580ZIP不変、実VCI/実車/別PCは未確認。
 
 2026-09-11 停止/クラッシュ監視検証: native全体2505項目/Errors 0、diff合格。正常結果採用と再実行拒否、native status失敗2種・開始hang・終了crash・結果後hangで不採用、hangで終了要求/送信と子process closeを確認。生成fixtureの試験結果であり実VCI/実車/別PCや独立C参照は未検証。

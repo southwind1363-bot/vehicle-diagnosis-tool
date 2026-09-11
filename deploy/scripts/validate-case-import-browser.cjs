@@ -401,7 +401,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
     const searchStored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
     const search = page.locator('#caseSearch');
-    for (const query of ['プリウス P0171 アイドル', ' p0171　プリウス ', 'case-101', 'ダクト', '燃料補正 +18%', '2zr-fxe 2018', '85000 試験整備士']) {
+    for (const query of ['プリウス P0171 アイドル', ' p0171　プリウス ', 'case-101', 'ダクト', '燃料補正 +18%', '2zr-fxe 2018', '85000 試験整備士', 'Ｐ０１７１ ﾌﾟﾘｳｽ', '２ＺＲ－ＦＸＥ　＋１８％']) {
       await search.fill(query);
       assert.equal(await page.locator('#caseList .case-card').count(), 1);
       assert.match(await page.locator('#caseList').innerText(), /CASE-101/);

@@ -21,6 +21,7 @@ for (const [query, expected] of [
   ["CASE-101", [records[0]]], ["202", [records[1]]], ["ダクト 温間", [records[0]]],
   ["燃料補正 +18%", [records[0]]], ["2zr-fxe 2018", [records[0]]],
   ["85000 試験整備士", [records[0]]], ["フィット +18%", []],
+  ["Ｐ０１７１ ﾌﾟﾘｳｽ", [records[0]]], ["２ＺＲ－ＦＸＥ　＋１８％", [records[0]]],
   ["アイドル", records], ["P0171 フィット", []], ["", records], ["　 ", records]
 ]) {
   context.caseSearch.value = query;
@@ -29,6 +30,15 @@ for (const [query, expected] of [
   assert.equal(JSON.stringify(records), before);
   checks += 2;
 }
+const wideRecord = { id: "wide", model: "ﾌﾟﾘｳｽ", obdCode: "Ｐ０１７１", measurements: "＋１８％" };
+const wideBefore = JSON.stringify(wideRecord);
+context.savedCases = [wideRecord];
+context.caseSearch.value = "プリウス p0171 +18%";
+context.renderCases();
+assert.deepEqual(result, [wideRecord]);
+assert.equal(JSON.stringify(wideRecord), wideBefore);
+checks += 2;
+context.savedCases = records;
 context.caseSearch.value = "一致しない";
 context.renderCases();
 assert.match(empty, /検索条件に一致/);
