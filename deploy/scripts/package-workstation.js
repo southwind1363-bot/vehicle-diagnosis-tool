@@ -215,6 +215,12 @@ export function packageWorkstation(options = {}) {
 }
 
 export function formatWorkstationPackageError(error) {
+  // Permission codes also describe process-launch failures. Use only the
+  // operation prefix for classification; never print its embedded path.
+  if (["EPERM", "EACCES"].includes(error?.code) && typeof error?.syscall === "string"
+    && /^spawn(?:Sync)?(?: |$)/.test(error.syscall)) {
+    return `外部プログラムの起動が拒否されました。コンパイラーの実行許可と端末の管理設定を確認してください。設定の自動変更・自動再実行はしません（${error.code}）。`;
+  }
   const messages = {
     ENOSPC: "空き容量が不足しています。出力先と一時フォルダーの空き容量を確認してください（ENOSPC）。",
     EDQUOT: "保存容量の割当上限に達しました。出力先の使用量を確認してください（EDQUOT）。",

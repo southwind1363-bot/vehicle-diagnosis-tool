@@ -52,6 +52,14 @@ for (const code of ["ENOSPC", "EDQUOT", "EACCES", "EPERM", "EBUSY", "ENOENT", "E
   check(message.includes(code) && message.includes("確認"), `Missing actionable package failure: ${code}`);
   check(!message.includes("private"), "Package error leaked raw details");
 }
+for (const code of ["EPERM", "EACCES"]) {
+  for (const syscall of ["spawnSync C:/synthetic-private/compiler.exe", "spawn C:/synthetic-private/compiler.exe"]) {
+    const message = formatWorkstationPackageError({ code, syscall, message: "synthetic-private", stderr: "synthetic-private-output" });
+    check(message.includes("外部プログラムの起動") && message.includes(code), "Compiler launch denial mislabeled as file access");
+    check(!message.includes("synthetic-private") && message.includes("自動"), "Launch denial leaked details or lacks no-retry guidance");
+  }
+  check(!formatWorkstationPackageError({ code, syscall: "open" }).includes("外部プログラムの起動"), "Filesystem denial mistaken for process launch denial");
+}
 for (const reason of ["exists", "busy", "path_invalid", "cleanup_invalid", "lock_mismatch"]) {
   check(formatWorkstationPackageError(new Error(`workstation_package_${reason}`)).includes(`workstation_package_${reason}`), "Known package reason lost");
 }
