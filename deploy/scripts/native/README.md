@@ -5,10 +5,34 @@
 Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. Internal caller-bound
-channel lifecycle code remains disabled in shipped workers. There is no message
-transmission, discovery, public path input, or retry API in this binding.
+channel lifecycle and fixed read-request code remain disabled in shipped workers.
+There is no live message transmission, discovery, public path input, or retry API.
 This native binding remains development-only and is not bundled in the public
-app or workstation release (currently 3.13.580).
+app or workstation release (currently 3.13.581).
+
+### Fixed read request (2026-09-11 approval)
+
+`J2534ReadRequestNative.cs` builds one v04.04 ISO15765 message with a physical
+11-bit ECU address 0x7E0..0x7E7 and only SID 03, 07, or 0A. The owner must have
+opened that device and connected that exact protocol-6, flags-0 channel. The
+single request latch is shared across wrappers and rejects requests after a
+receive attempt. No arbitrary payload, functional broadcast, erase, actuator,
+or retry interface is exposed. A nonzero native status or uncertain buffer/call
+failure poisons the owner and retains its module without further driver calls.
+
+The guarded 4152-byte message is zero-initialized, with frame padding 0x40,
+four big-endian address bytes, one SID, count 1, and timeout 0. Timeout-zero
+success means queue acceptance, not vehicle transmission or a completed result;
+see [vendor WriteMsgs API](https://quantexlab.com/en/develop/j2534/pt_writemsg.html).
+That API also requires ISO15765 flow-control filters. Filter ownership, protocol
+applicability, and isolated-worker integration are still prerequisites, not
+implemented or bypassed by this source. No loader resolves WriteMsgs here.
+
+The new dispatch tests use managed callbacks on x86/x64: layout, all other byte
+SIDs rejected, wrong owner/channel/protocol/flags, no retry, reentry/disposal,
+fault retention, and request/receive/cleanup ordering. These are NOT independent
+native WriteMsgs ABI tests or real VCI evidence. The complete native suite passes
+6009 checks; existing generated identity/receive fixtures remain separate.
 
 ## Validation
 

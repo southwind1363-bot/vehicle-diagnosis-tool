@@ -1,0 +1,128 @@
+using System;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
+using VehicleDiagnosis.Native;
+
+internal static class NativeReadRequestTests
+{
+    private const uint Device = 0xf1234567, Channel = 0xe1234567;
+    private static int checks;
+    private static void Check(bool value, string message)
+    { if (!value) throw new Exception(message); checks++; }
+    private static void Reject(Action action, string code)
+    {
+        try { action(); }
+        catch (InvalidOperationException error) { Check(error.Message == code && error.InnerException == null, "Request failure was not sanitized: " + error.Message); return; }
+        throw new Exception("Expected request rejection: " + code);
+    }
+    private static J2534IdentityNative Open(out MockIdentityLibrary library, uint protocol, uint flags, bool connect)
+    {
+        library = new MockIdentityLibrary();
+        library.Open = delegate(IntPtr name, out uint id) { id = Device; return 0; };
+        library.Read = delegate { return 0; };
+        library.Close = delegate { return 0; };
+        var owner = new J2534IdentityNative(library);
+        uint device, channel;
+        Check(owner.Open(out device) == 0 && device == Device, "Request fixture open failed");
+        if (connect) Check(owner.Connect(device, protocol, flags, 500000,
+            delegate(uint d, uint p, uint f, uint b, IntPtr output) { Marshal.WriteInt32(output, unchecked((int)Channel)); return 0; },
+            delegate { return 0; }, out channel) == 0 && channel == Channel, "Request fixture connect failed");
+        return owner;
+    }
+    internal static int Run()
+    {
+        foreach (byte service in new byte[] { 3, 7, 10 })
+        foreach (uint ecu in new uint[] { 0x7e0, 0x7e7 })
+        {
+            MockIdentityLibrary library;
+            using (var owner = Open(out library, 6, 0, true))
+            {
+                int calls = 0;
+                J2534ReadRequestNative.WriteFunction write = delegate(uint channel, IntPtr message, IntPtr count, uint timeout) {
+                    calls++;
+                    Check(channel == Channel && timeout == 0 && Marshal.ReadInt32(count) == 1, "Request call arguments changed");
+                    byte[] actual = new byte[4152], expected = new byte[4152];
+                    Marshal.Copy(message, actual, 0, actual.Length);
+                    expected[0] = 6; expected[8] = 0x40; expected[16] = 5;
+                    expected[26] = (byte)(ecu >> 8); expected[27] = (byte)ecu; expected[28] = service;
+                    Check(Convert.ToBase64String(actual) == Convert.ToBase64String(expected), "Request layout or zero initialization changed");
+                    Reject(delegate { owner.Dispose(); }, "native_identity_call_in_progress");
+                    Reject(delegate { owner.Disconnect(Device, Channel); }, "native_identity_call_in_progress");
+                    Reject(delegate { owner.Close(Device); }, "native_identity_call_in_progress");
+                    return 0;
+                };
+                var request = new J2534ReadRequestNative(owner, Device, write);
+                for (int sid = 0; sid <= 255; sid++)
+                    if (sid != 3 && sid != 7 && sid != 10) {
+                        byte denied = (byte)sid;
+                        Reject(delegate { request.DispatchDtcReadOnce(Channel, ecu, denied); }, "native_read_request_not_allowed");
+                    }
+                foreach (uint denied in new uint[] { 0, 0x7df, 0x7e8, 0xffffffff })
+                    Reject(delegate { request.DispatchDtcReadOnce(Channel, denied, service); }, "native_read_request_not_allowed");
+                Reject(delegate { request.DispatchDtcReadOnce(Channel + 1, ecu, service); }, "native_channel_not_owned");
+                Reject(delegate { new J2534ReadRequestNative(owner, Device + 1, write).DispatchDtcReadOnce(Channel, ecu, service); }, "native_identity_device_not_owned");
+                Check(calls == 0, "Rejected request invoked callback");
+                Check(request.DispatchDtcReadOnce(Channel, ecu, service) == 0 && calls == 1, "Allowed request was not queued once");
+                Reject(delegate { new J2534ReadRequestNative(owner, Device, write).DispatchDtcReadOnce(Channel, ecu, service); }, "native_request_already_attempted");
+                var receiver = new J2534ReceiveNative(owner, Device, delegate(uint c, IntPtr m, IntPtr n, uint t) { Marshal.WriteInt32(n, 0); return 0; });
+                Check(receiver.ReadOnce(Channel, 1).Messages.Length == 0, "Queue acceptance fabricated diagnostic data");
+                Check(owner.Disconnect(Device, Channel) == 0 && owner.Close(Device) == 0, "Request cleanup failed");
+            }
+            Check(library.AllowedUnload && library.Exports.Count == 3, "Request resolved exports or retained cleaned module");
+        }
+        foreach (int scenario in new int[] { 0, 1, 2, 3 })
+        {
+            MockIdentityLibrary library;
+            using (var owner = Open(out library, scenario == 1 ? 5u : 6u, scenario == 2 ? 0x100u : 0u, scenario != 0))
+            {
+                int calls = 0;
+                if (scenario == 3) new J2534ReceiveNative(owner, Device, delegate(uint c, IntPtr m, IntPtr n, uint t) { Marshal.WriteInt32(n, 0); return 0; }).ReadOnce(Channel, 1);
+                var request = new J2534ReadRequestNative(owner, Device, delegate { calls++; return 0; });
+                Reject(delegate { request.DispatchDtcReadOnce(Channel, 0x7e0, 3); }, scenario == 0 ? "native_channel_not_owned" : scenario == 3 ? "native_request_already_attempted" : "native_request_channel_unsupported");
+                Check(calls == 0, "Invalid owner state dispatched request");
+            }
+        }
+        for (int fault = 0; fault < 8; fault++)
+        {
+            MockIdentityLibrary library;
+            using (var owner = Open(out library, 6, 0, true))
+            {
+                int calls = 0;
+                var request = new J2534ReadRequestNative(owner, Device, delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                    calls++;
+                    if (fault == 0) { Marshal.WriteInt32(n, 0); return 8; }
+                    if (fault == 1 || fault == 2) Marshal.WriteInt32(n, fault == 1 ? 0 : 2);
+                    if (fault == 3) throw new Exception("private path and driver error");
+                    if (fault >= 4) Marshal.WriteByte(fault < 6 ? m : n, fault == 4 || fault == 6 ? -1 : fault == 5 ? 4152 : 4, 0);
+                    return 0;
+                });
+                if (fault == 0) Check(request.DispatchDtcReadOnce(Channel, 0x7e0, 3) == 8, "Native failure status lost");
+                else Reject(delegate { request.DispatchDtcReadOnce(Channel, 0x7e0, 3); }, fault < 3 ? "native_read_request_count_invalid" : fault == 3 ? "native_read_request_threw" : "native_read_request_buffer_overrun");
+                Reject(delegate { request.DispatchDtcReadOnce(Channel, 0x7e0, 3); }, "native_identity_corrupted");
+                Reject(delegate { owner.Disconnect(Device, Channel); }, "native_identity_corrupted");
+                Reject(delegate { owner.Close(Device); }, "native_identity_corrupted");
+                Reject(delegate { new J2534ReceiveNative(owner, Device, delegate { throw new Exception("must not read"); }).ReadOnce(Channel, 1); }, "native_identity_corrupted");
+                Check(calls == 1, "Faulted request was retried");
+            }
+            Check(!library.AllowedUnload, "Uncertain request state unloaded module");
+        }
+        MockIdentityLibrary blocked;
+        using (var owner = Open(out blocked, 6, 0, true))
+        using (var entered = new ManualResetEvent(false))
+        using (var release = new ManualResetEvent(false))
+        {
+            var request = new J2534ReadRequestNative(owner, Device, delegate {
+                entered.Set(); if (!release.WaitOne(3000)) throw new Exception("test deadline"); return 0;
+            });
+            Task dispatching = Task.Run(delegate { request.DispatchDtcReadOnce(Channel, 0x7e0, 3); });
+            Check(entered.WaitOne(3000), "Request callback did not enter");
+            Task disposing = Task.Run(delegate { owner.Dispose(); });
+            try { Check(!disposing.Wait(50) && blocked.Releases == 0, "Module released during request"); }
+            finally { release.Set(); }
+            Check(Task.WaitAll(new Task[] { dispatching, disposing }, 5000), "Request disposal deadlocked");
+            Check(!blocked.AllowedUnload, "Unclosed request owner unloaded");
+        }
+        return checks;
+    }
+}

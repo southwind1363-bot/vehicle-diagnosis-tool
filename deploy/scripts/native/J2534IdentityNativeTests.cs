@@ -291,7 +291,7 @@ internal static class NativeIdentityTests
     public static int Main(string[] args)
     {
         if (args.Length != 1 || args[0] != "--self-test") return 2;
-        try { Run(); checks += NativeReceiveTests.Run(); Console.WriteLine("Native identity binding checks: " + checks + " / bitness: " + (IntPtr.Size * 8) + " / generated fixture DLL executed: true / vendor DLL executed: false / Errors: 0"); return 0; }
+        try { Run(); checks += NativeReceiveTests.Run(); checks += NativeReadRequestTests.Run(); Console.WriteLine("Native identity binding checks: " + checks + " / bitness: " + (IntPtr.Size * 8) + " / generated fixture DLL executed: true / vendor DLL executed: false / Errors: 0"); return 0; }
         catch (Exception error) { Console.Error.WriteLine(error.Message); return 1; }
     }
 }

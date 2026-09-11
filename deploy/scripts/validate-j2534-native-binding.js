@@ -22,7 +22,7 @@ import { validateAdapterDependencyCapture } from "./validate-j2534-adapter-depen
 import { buildUdsReadAdapterCompletionManifest } from "../local-bridge-readonly.js";
 
 const scriptsDirectory = path.dirname(fileURLToPath(import.meta.url));
-const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs", "J2534ReceiveNative.cs", "J2534ReceiveNativeTests.cs"]
+const sources = ["J2534IdentityNative.cs", "J2534IdentityNativeTests.cs", "J2534ReceiveNative.cs", "J2534ReceiveNativeTests.cs", "J2534ReadRequestNative.cs", "J2534ReadRequestNativeTests.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));
 const preflightSources = ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534NativePreflightFixtureWorker.cs"]
   .map(name => path.join(scriptsDirectory, "native", name));

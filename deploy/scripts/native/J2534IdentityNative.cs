@@ -140,6 +140,8 @@ namespace VehicleDiagnosis.Native
         private bool disposed, openAttempted, readAttempted, closeAttempted;
         private bool callInProgress, corrupted, receiveAttempted;
         private bool channelAttempted, disconnectAttempted, channelCleanupConfirmed;
+        private bool requestAttempted;
+        private uint channelProtocol, channelFlags;
         private uint? ownedChannel;
         private DisconnectFunction disconnect;
         private bool allowUnload = true;
@@ -262,7 +264,10 @@ namespace VehicleDiagnosis.Native
                                 if (bytes[i] != 0xa5) throw new InvalidOperationException("native_channel_buffer_overrun");
                             GC.KeepAlive(connect);
                         }
-                        if (status == 0) ownedChannel = channelId = unchecked((uint)Marshal.ReadInt32(output.Data));
+                        if (status == 0) {
+                            ownedChannel = channelId = unchecked((uint)Marshal.ReadInt32(output.Data));
+                            channelProtocol = protocolId; channelFlags = flags;
+                        }
                         else corrupted = true; // Uncertain channel state: no cleanup guess or retry.
                         return status;
                     }
@@ -292,6 +297,31 @@ namespace VehicleDiagnosis.Native
                 }
                 catch { corrupted = true; throw; }
                 finally { callInProgress = false; GC.KeepAlive(disconnect); }
+            }
+        }
+
+        // Development-only, one fixed read request before receive. No export is
+        // resolved here. Timeout-zero acceptance is not evidence of vehicle I/O.
+        internal int RunOwnedReadRequest(uint deviceId, uint channelId, Func<int> dispatch)
+        {
+            if (dispatch == null) throw new ArgumentNullException("dispatch");
+            lock (gate)
+            {
+                CheckOwner(deviceId);
+                if (!ownedChannel.HasValue || ownedChannel.Value != channelId || disconnectAttempted)
+                    throw new InvalidOperationException("native_channel_not_owned");
+                if (channelProtocol != 6 || channelFlags != 0)
+                    throw new InvalidOperationException("native_request_channel_unsupported");
+                if (requestAttempted || receiveAttempted)
+                    throw new InvalidOperationException("native_request_already_attempted");
+                requestAttempted = true; allowUnload = false; callInProgress = true;
+                try {
+                    int status = dispatch();
+                    if (status != 0) corrupted = true;
+                    return status;
+                }
+                catch { corrupted = true; throw; }
+                finally { callInProgress = false; }
             }
         }
 
