@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-12 結果変換の開発承認: 直前の確認に利用者「続けて」。既存decodeObdDtcResponseを再利用する内部JSON変換部品を追加。正常worker終了/cleanup・要求ECU/service・native構造体を照合し、別ECU/別service/複数応答/不完全indicator/時間切れ/不正長はsnapshot:null。明示的な正常ゼロ件応答と未取得を区別する。診断順位・既存decoder・保存形式は変更しない。人工入力→既存decoderの専用82項目、native既存6723項目Errors 0とdiff合格。まだnative workerの6項目概要とは未接続で、公開画面や実機の結果取得を完成扱いしない。次は同承認範囲で信頼済み親processからの受渡しに結合。公開実行無効・本体/581ZIP不変。
+
 2026-09-11 結合経路の異常終了確認: 固定生成DLLへfilter開始失敗/開始hang/1000msを無視する受信hang/終了crash/正常概要出力後hangを追加し、既存の親process監視へ接続。開始失敗は後続API trapへ進まず終了1、全異常でparsed_result:null、hangは終了要求/送信/process close、2回目実行拒否を確認。受信hangシナリオの取消も終了/不採用を確認（native entry到達時刻は計測せず）。native6723項目Errors 0（x86 2679/x64 2677）、diff合格。検査用経路の監視確認であり新たな実機機能の公開ではない。実VCI/実車・driver cleanup/実応答時間・独立C参照は未検証。公開本体/581ZIP/診断保存契約/実行権限不変。
 
 2026-09-11 単発の応答待ち: 要求受付直後のtimeout0受信は待たずに空queueを返すため、開発隔離workerへ固定1000msのReadDtcResponseOnceを追加。成功した要求・同一owner/channel・有効filterが前提で、従来ReadOnce(timeout0)は維持。どちらも同じ1回制限、再送/自動pollなし。status9・部分/空応答を保持し診断成功に変えない。native6617項目Errors 0（x86 2679/x64 2677）とdiff合格。管理callbackで前提拒否/状態保持/再試行拒否、生成nativeで1000ms引数を確認。実時間待機・実VCI応答・車種ごとの適正期限の検証ではなく、1000msは開発上限。親process期限は維持。公開実行経路・本体/581ZIP・保存形式不変。

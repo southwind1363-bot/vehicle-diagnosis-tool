@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./validate-j2534-dtc-result-converter.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";

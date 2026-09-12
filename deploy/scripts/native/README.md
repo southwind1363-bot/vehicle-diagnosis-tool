@@ -1,5 +1,29 @@
 # J2534 Windows Identity Binding
 
+## Development result conversion (2026-09-12 approval)
+
+`../j2534-dtc-result-converter.js` introduces a bounded JSON-only internal
+conversion boundary. It requires schema `j2534-dtc-read-v1`, a successful parent
+worker status and cleanup confirmation, request ECU/service, and the existing
+C# `Status`/`ReportedCount`/`Messages` layout. These flags are not authentication:
+the future caller must supply them from the trusted bounded supervisor, not UI
+input. The native fixture worker still returns only its six-field summary; this
+converter is not yet wired to its output or any public/live route.
+
+Only one complete ISO15765 11-bit positive 03/07/0A response from request ECU+8
+is decoded. Exact start indicators may precede it; missing/trailing indicators,
+multiple responses, unknown receive flags, different ECUs/services, extra data,
+bad lengths/padding, and nonzero native status (including partial timeout) yield
+`unavailable` with no snapshot. It does not infer no faults from an empty queue.
+Explicit valid zero-code payloads may pass the unchanged existing DTC decoder;
+that is not a whole-vehicle health assertion.
+
+The converter reuses `decodeObdDtcResponse` and returns its existing snapshot
+without changing diagnostic ranking or saved formats. It retains no raw envelope
+or native frames, emits fixed error reasons, accepts no driver paths, and enables
+no native execution. Current coverage is synthetic JSON into the real existing
+decoder, not a native-to-UI readout or real VCI validation.
+
 ## Status
 
 Development-only source, not a production bridge or runnable driver host.
