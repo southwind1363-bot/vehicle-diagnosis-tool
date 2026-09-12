@@ -50,6 +50,26 @@ export function validatePackagedDependencies(directory) {
   }
 }
 
+function hashPackagedFile(absolute) {
+  const descriptor = fs.openSync(absolute, "r");
+  try {
+    const before = fs.fstatSync(descriptor);
+    if (!before.isFile() || before.size > 64 * 1024 * 1024) throw new Error("workstation_package_file_invalid");
+    const hash = createHash("sha256");
+    const buffer = Buffer.alloc(65536);
+    let size = 0;
+    while (size <= before.size) {
+      const count = fs.readSync(descriptor, buffer, 0, Math.min(buffer.length, before.size + 1 - size), null);
+      if (!count) break;
+      size += count;
+      if (size > before.size) throw new Error("workstation_package_file_changed");
+      hash.update(buffer.subarray(0, count));
+    }
+    if (size !== before.size || fs.fstatSync(descriptor).size !== before.size) throw new Error("workstation_package_file_changed");
+    return { size, sha256: hash.digest("hex") };
+  } finally { fs.closeSync(descriptor); }
+}
+
 export function packageWorkstation(options = {}) {
   const sourcePath = path.resolve(options.sourceDirectory ?? deployDirectory);
   rejectLinks(sourcePath);
@@ -102,8 +122,7 @@ export function packageWorkstation(options = {}) {
   let fileCount = 0;
   const integrityFiles = [];
   const recordFile = (relative) => {
-    const bytes = fs.readFileSync(path.join(staging, relative));
-    integrityFiles.push({ path: relative, size: bytes.length, sha256: createHash("sha256").update(bytes).digest("hex") });
+    integrityFiles.push({ path: relative, ...hashPackagedFile(path.join(staging, relative)) });
   };
   const copyFile = (relative) => {
     // Packaged startup always requires integrity metadata; source-tree startup remains separate.
@@ -231,6 +250,7 @@ export function formatWorkstationPackageError(error) {
     ETIMEDOUT: "外部の作成処理が制限時間を超えました。端末の負荷とコンパイラーの動作環境を確認してください。自動再実行はしません（ETIMEDOUT）。",
     ENOBUFS: "外部の作成処理の出力量が上限を超えました。コンパイラーと入力資材を確認してください。内部出力は表示せず、自動再実行はしません（ENOBUFS）。",
     workstation_assets_invalid: "配布資材を確認してください",
+    workstation_package_file_changed: "配布ファイルのサイズが検査中に変わりました。コピーや同期処理の終了を確認してから手動で作成してください。完成扱いにはせず、自動再実行はしません。",
     workstation_package_exists: "同じ版の出力先が既に存在します。既存の配布物を確認してください。上書きはしていません（workstation_package_exists）。",
     workstation_package_busy: "別の配布作成処理が実行中か、作成用ロックが残っています。処理の状態を確認してください。ロックを自動解除しません（workstation_package_busy）。"
   };

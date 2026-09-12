@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
+import { createHash } from "node:crypto";
 
 const source = fs.readFileSync(new URL("./verify-workstation-package.js", import.meta.url), "utf8");
 const helper = source.match(/function readPackageBytes\(file, relative\) \{[\s\S]*?\n\}/)?.[0];
@@ -44,6 +45,43 @@ try {
     assert.equal(fs.statSync(target).size, expectedSize, "Reader modified fixture");
   }
   console.log("Package bounded reads: growth, truncation, short reads and handle cleanup passed");
+  const generator = fs.readFileSync(new URL("./package-workstation.js", import.meta.url), "utf8");
+  const hashHelper = generator.match(/function hashPackagedFile\(absolute\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(hashHelper, "Generator bounded hash missing");
+  for (const scenario of ["normal", "empty", "short-reads", "growth", "shrink", "read-error", "oversize"]) {
+    const original = Buffer.alloc(scenario === "empty" ? 0 : 150000, 7);
+    fs.writeFileSync(target, original);
+    let closed = 0, changed = false, bytesRead = 0;
+    const testFs = { ...fs,
+      fstatSync(fd) {
+        const stat = fs.fstatSync(fd);
+        if (scenario === "oversize") stat.size = 64 * 1024 * 1024 + 1;
+        return stat;
+      },
+      readSync(fd, buffer, offset, length, position) {
+        assert.ok(buffer.length <= 65536 && length <= 65536);
+        if (!changed) {
+          changed = true;
+          if (scenario === "growth") fs.appendFileSync(target, Buffer.alloc(100000));
+          if (scenario === "shrink") fs.truncateSync(target, 2);
+          if (scenario === "read-error") throw new Error("synthetic_read_failure");
+        }
+        const count = fs.readSync(fd, buffer, offset, scenario === "short-reads" ? Math.min(length, 127) : length, position);
+        bytesRead += count; return count;
+      },
+      closeSync(fd) { closed++; return fs.closeSync(fd); }
+    };
+    const hash = vm.runInNewContext(`(${hashHelper})`, { fs: testFs, Buffer, createHash });
+    if (["normal", "empty", "short-reads"].includes(scenario)) {
+      const actual = hash(target);
+      assert.equal(actual.size, original.length);
+      assert.equal(actual.sha256, createHash("sha256").update(original).digest("hex"));
+    } else assert.throws(() => hash(target), scenario === "read-error" ? /synthetic_read_failure/
+      : scenario === "oversize" ? /workstation_package_file_invalid/ : /workstation_package_file_changed/);
+    assert.equal(closed, 1);
+    assert.ok(bytesRead <= original.length + 1);
+  }
+  console.log("Package generation hashing: bounded chunks, size changes and handle cleanup passed");
 } finally {
   fs.unlinkSync(target);
   fs.rmdirSync(directory);
