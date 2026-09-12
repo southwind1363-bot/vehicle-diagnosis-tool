@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 時間切れに伴う完全応答の採用: 利用者「続けて」で直前の判定変更を承認。native status9は要求件数未満でも完全応答を含み得るため、workerが元statusを保持して親へ渡し、converterはstatus0と同じECU/service/構造/長さ/単一応答検査を適用する。空・開始indicatorのみ・不完全/複数/異常応答と親process時間切れは不採用、追加read/再送なし。固定生成nativeのcount3要求→status9/count1→既存session/JSON復元をx86/x64確認。専用148項目と保存往復、native6795項目Errors 0、diff合格。実時間待機/実VCI/実車は未検証。保存形式・公開実行無効・本体/581ZIP不変。
+
 2026-09-12 既存セッション/保存形式への受渡し: 開発専用session builderを追加し、正常終了・取消なし・エラーなし・検査用decoded結果のみを既存buildDiagnosticScanSessionへ渡す。不完全/失敗結果を空DTCセッションへ変えず拒否。生成native→C#→親→decoder→既存session→JSON→再読込でP0171/7E8/storedとsource j2534_development_read保持をx86/x64で確認。外側のfixture印は維持するが保存形式に新規flagは追加せず、実測UIへ接続しない。専用82項目+session往復/拒否検査、native6795項目Errors 0、diff合格。メモリー内人工データのみで利用者ファイル/ディスク保存/ブラウザー/実VCI/実車は未検証。公開実行無効・本体/581ZIP/保存形式不変。
 
 2026-09-12 正常終了後の受信結果受渡し: compile限定workerがcleanup後にコピー済みnative結果をJSON化し、専用の親supervisorが正常exit/stream close後だけ固定要求ECU/serviceと完了状態を付与して既存結果converterへ渡すよう結合。単一生成DLLの人工7E8/43 01 71が既存P0171 snapshotへ変換される経路をx86/x64で確認。データ出力後hangはdecoder呼出0で不採用、通常概要supervisorはデータシナリオを拒否。外側にfixture_only:true/vehicle_communication:false、rawフレームは返さない。専用82項目・native6781項目Errors 0とdiff合格。実VCI/実車/公開UIへの接続確認ではない。公開実行無効・本体/581ZIP/保存形式不変。

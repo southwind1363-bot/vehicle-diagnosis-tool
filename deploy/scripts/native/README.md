@@ -24,10 +24,19 @@ routes remain unconnected.
 Only one complete ISO15765 11-bit positive 03/07/0A response from request ECU+8
 is decoded. Exact start indicators may precede it; missing/trailing indicators,
 multiple responses, unknown receive flags, different ECUs/services, extra data,
-bad lengths/padding, and nonzero native status (including partial timeout) yield
+bad lengths/padding, and native statuses other than 0 or 9 yield
 `unavailable` with no snapshot. It does not infer no faults from an empty queue.
 Explicit valid zero-code payloads may pass the unchanged existing DTC decoder;
 that is not a whole-vehicle health assertion.
+
+With the 2026-09-13 approval, ERR_TIMEOUT (9) may carry a complete response:
+the requested record count need not have been reached. Status 9 is preserved,
+not rewritten to success, and must pass the same complete-payload checks as 0.
+An empty queue, start indicator alone, truncated payload or timed-out parent
+still produces no snapshot. There is no retry or additional read call.
+The fixed data fixture now returns status 9/count 1 for requested count 3;
+this tests the handoff and archive roundtrip, not real elapsed-time behavior.
+Reference: https://quantexlab.de/en/develop/j2534/pt_readmsg.html
 
 The converter reuses `decodeObdDtcResponse` and returns its existing snapshot
 without changing diagnostic ranking or saved formats. It retains no raw envelope

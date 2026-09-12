@@ -266,7 +266,7 @@ async function main() {
           assert.equal(direct.stderr, "");
           expected = dataOutput ? {
             fixture_only: true, pointer_bits: platform.bits, cleanup_confirmed: true,
-            read_result: { Status: 0, ReportedCount: 1, Messages: [{ ProtocolId: 6, RxStatus: 0, TxFlags: 0,
+            read_result: { Status: 9, ReportedCount: 1, Messages: [{ ProtocolId: 6, RxStatus: 0, TxFlags: 0,
               Timestamp: 0xf1234567, ExtraDataIndex: 7, Data: [0, 0, 7, 0xe8, 0x43, 1, 0x71] }] },
           } : {
             fixture_only: true, pointer_bits: platform.bits,

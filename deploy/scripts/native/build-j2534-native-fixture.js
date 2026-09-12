@@ -286,7 +286,9 @@ function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = 
     ...(dtcData ? [write(28, 0x00710143)]
       : [6, 2, 0, 7, 0, 0].map((value, index) => write(4152 + index * 4, value))),
     Buffer.from(x86 ? [0xc7, 0x01, dtcData ? 1 : 2, 0, 0, 0] : [0x41, 0xc7, 0x00, dtcData ? 1 : 2, 0, 0, 0]),
-    Buffer.from([0x31, 0xc0, ...ret]),
+    // A single complete DTC message can accompany ERR_TIMEOUT when three
+    // records were requested. This models the return value, not elapsed time.
+    Buffer.from(dtcData ? [0xb8, 9, 0, 0, 0, ...ret] : [0x31, 0xc0, ...ret]),
   ]);
   const comparisons = x86 ? [
     [0x81, 0x7c, 0x24, 0x04, ...int32(channel)], // channel

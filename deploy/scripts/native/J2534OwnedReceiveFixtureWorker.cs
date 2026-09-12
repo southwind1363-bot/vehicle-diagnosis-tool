@@ -117,7 +117,8 @@ internal static class J2534OwnedReceiveFixtureWorker
                         var result = receiver.ReadOnce(channel, 3);
 #endif
 #if OWNED_DTC_RESULT_OUTPUT
-                        if (result.Status != 0 || result.ReportedCount != 1 || result.Messages.Length != 1) return 1;
+                        // Preserve ERR_TIMEOUT for the parent's strict payload validation.
+                        if ((result.Status != 0 && result.Status != 9) || result.ReportedCount != 1 || result.Messages.Length != 1) return 1;
                         captured = result;
 #else
                         if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2

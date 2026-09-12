@@ -11,8 +11,9 @@ const message = data => ({ ProtocolId: 6, RxStatus: 0, TxFlags: 0, Timestamp: 0,
 const sample = () => ({ schema_version: "j2534-dtc-read-v1", worker_status: "worker_completed", cleanup_confirmed: true,
   request_ecu: 0x7e0, service: 3, read_result: { Status: 0, ReportedCount: 1, Messages: [message([0x43, 1, 0x71])] } });
 const run = value => convert(JSON.stringify(value));
-for (const service of [3, 7, 10]) {
+for (const status of [0, 9]) for (const service of [3, 7, 10]) {
   const input = sample(); input.service = service; input.read_result.Messages[0].Data[4] = service + 0x40;
+  input.read_result.Status = status;
   const before = JSON.stringify(input), result = run(input);
   assert.equal(result.status, "decoded");
   assert.equal(result.snapshot.dtcs[0].code, "P0171");
@@ -24,9 +25,9 @@ assert.equal(run(empty).status, "decoded"); assert.equal(run(empty).snapshot.dtc
 const indicated = sample(); const start = message([]); start.RxStatus = 2;
 indicated.read_result.Messages.unshift(start); indicated.read_result.ReportedCount = 2;
 assert.equal(run(indicated).status, "decoded"); checks++;
-for (const mutate of [
+for (const status of [0, 9]) for (const mutate of [
   v => v.worker_status = "worker_timed_out", v => v.cleanup_confirmed = false,
-  v => v.read_result.Status = 9, v => v.read_result.Status = 8,
+  v => v.read_result.Status = 8,
   v => v.read_result.ReportedCount = 0, v => v.request_ecu = 0x7df, v => v.service = 4,
   v => v.read_result.Messages[0].Data[3] = 0xe9,
   v => v.read_result.Messages[0].RxStatus = 8,
@@ -43,7 +44,7 @@ for (const mutate of [
   v => { v.read_result.Messages.push(message([0x43, 0, 0])); v.read_result.ReportedCount = 2; },
   v => { v.read_result.Messages.push(start); v.read_result.ReportedCount = 2; },
 ]) {
-  const value = sample(); mutate(value); const before = calls;
+  const value = sample(); value.read_result.Status = status; mutate(value); const before = calls;
   const result = run(value);
   assert.equal(result.status, "unavailable"); assert.equal(result.snapshot, null); assert.equal(calls, before); checks += 3;
 }
@@ -63,7 +64,8 @@ const buildSession = createJ2534FixtureSessionBuilder(input => { sessionCalls++;
 const completed = value => ({ execution_status: "worker_completed", worker_started: true, worker_exited: true,
   termination_requested: false, termination_signal_sent: false, errors: [],
   parsed_result: { fixture_only: true, vehicle_communication: false, ...run(value) } });
-for (const value of [sample(), empty]) {
+for (const status of [0, 9]) for (const value of [sample(), empty, indicated]) {
+  value.read_result.Status = status;
   const input = completed(value), before = JSON.stringify(input);
   const built = buildSession(input);
   assert.equal(built.fixture_only, true); assert.equal(built.vehicle_communication, false);

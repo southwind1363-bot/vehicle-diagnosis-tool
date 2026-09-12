@@ -21,8 +21,9 @@ export function createJ2534DtcResultConverter(decodeDtcResponse) {
       if (!exact(read, ["Status", "ReportedCount", "Messages"]) || !Number.isInteger(read.Status)
         || !Array.isArray(read.Messages) || read.Messages.length > 16
         || read.ReportedCount !== read.Messages.length) return unavailable("invalid_read_result");
-      // Preserve uncertainty: a partial timeout must not become an empty result.
-      if (read.Status !== 0) return unavailable("read_not_complete");
+      // ERR_TIMEOUT can mean fewer records than requested, not an incomplete
+      // diagnostic message. Both statuses must pass every payload check below.
+      if (read.Status !== 0 && read.Status !== 9) return unavailable("read_not_complete");
       let payload = null, started = false;
       for (const message of read.Messages) {
         if (!exact(message, ["ProtocolId", "RxStatus", "TxFlags", "Timestamp", "ExtraDataIndex", "Data"])
