@@ -48,7 +48,7 @@ try {
   const generator = fs.readFileSync(new URL("./package-workstation.js", import.meta.url), "utf8");
   const hashHelper = generator.match(/function hashPackagedFile\(absolute\) \{[\s\S]*?\n\}/)?.[0];
   assert.ok(hashHelper, "Generator bounded hash missing");
-  for (const scenario of ["normal", "empty", "short-reads", "growth", "shrink", "read-error", "oversize"]) {
+  for (const scenario of ["normal", "empty", "short-reads", "growth", "shrink", "same-size-change", "read-error", "oversize"]) {
     const original = Buffer.alloc(scenario === "empty" ? 0 : 150000, 7);
     fs.writeFileSync(target, original);
     let closed = 0, changed = false, bytesRead = 0;
@@ -67,6 +67,12 @@ try {
           if (scenario === "read-error") throw new Error("synthetic_read_failure");
         }
         const count = fs.readSync(fd, buffer, offset, scenario === "short-reads" ? Math.min(length, 127) : length, position);
+        if (scenario === "same-size-change" && bytesRead === 0) {
+          // Change the file after the first chunk without changing its length.
+          const previous = fs.statSync(target);
+          fs.writeFileSync(target, Buffer.alloc(original.length, 9));
+          fs.utimesSync(target, previous.atime, new Date(previous.mtimeMs + 2000));
+        }
         bytesRead += count; return count;
       },
       closeSync(fd) { closed++; return fs.closeSync(fd); }

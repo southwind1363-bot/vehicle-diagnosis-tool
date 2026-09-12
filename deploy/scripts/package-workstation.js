@@ -65,7 +65,11 @@ function hashPackagedFile(absolute) {
       if (size > before.size) throw new Error("workstation_package_file_changed");
       hash.update(buffer.subarray(0, count));
     }
-    if (size !== before.size || fs.fstatSync(descriptor).size !== before.size) throw new Error("workstation_package_file_changed");
+    const after = fs.fstatSync(descriptor);
+    // Size alone misses an in-place rewrite while chunks are being hashed.
+    // This detects observable changes; it is not a filesystem snapshot/lock.
+    if (size !== before.size || after.size !== before.size
+      || after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs) throw new Error("workstation_package_file_changed");
     return { size, sha256: hash.digest("hex") };
   } finally { fs.closeSync(descriptor); }
 }
@@ -250,7 +254,7 @@ export function formatWorkstationPackageError(error) {
     ETIMEDOUT: "外部の作成処理が制限時間を超えました。端末の負荷とコンパイラーの動作環境を確認してください。自動再実行はしません（ETIMEDOUT）。",
     ENOBUFS: "外部の作成処理の出力量が上限を超えました。コンパイラーと入力資材を確認してください。内部出力は表示せず、自動再実行はしません（ENOBUFS）。",
     workstation_assets_invalid: "配布資材を確認してください",
-    workstation_package_file_changed: "配布ファイルのサイズが検査中に変わりました。コピーや同期処理の終了を確認してから手動で作成してください。完成扱いにはせず、自動再実行はしません。",
+    workstation_package_file_changed: "配布ファイルが検査中に変更されました。コピーや同期処理の終了を確認してから手動で作成してください。完成扱いにはせず、自動再実行はしません。",
     workstation_package_exists: "同じ版の出力先が既に存在します。既存の配布物を確認してください。上書きはしていません（workstation_package_exists）。",
     workstation_package_busy: "別の配布作成処理が実行中か、作成用ロックが残っています。処理の状態を確認してください。ロックを自動解除しません（workstation_package_busy）。"
   };
