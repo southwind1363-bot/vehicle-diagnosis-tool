@@ -71,6 +71,9 @@ internal static class J2534OwnedReceiveFixtureWorker
             var library = new FixtureLibrary();
             bool failed = false;
             int receivedCount = 0;
+#if OWNED_DTC_RESULT_OUTPUT
+            J2534ReceiveNative.Result captured = null;
+#endif
             using (var owner = new J2534IdentityNative(library))
             {
                 uint device;
@@ -113,10 +116,15 @@ internal static class J2534OwnedReceiveFixtureWorker
 #else
                         var result = receiver.ReadOnce(channel, 3);
 #endif
+#if OWNED_DTC_RESULT_OUTPUT
+                        if (result.Status != 0 || result.ReportedCount != 1 || result.Messages.Length != 1) return 1;
+                        captured = result;
+#else
                         if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
                             || result.Messages[0].Data.Length != 4 || result.Messages[0].Data[0] != 1
                             || result.Messages[0].Data[3] != 4 || result.Messages[1].Data.Length != 0
                             || result.Messages[1].RxStatus != 2) return 1;
+#endif
                         receivedCount = result.Messages.Length;
 #if OWNED_DTC_REQUEST_FIXTURE
                         if (owner.StopDtcReadFilter(device, channel, filter) != 0) failed = true;
@@ -130,9 +138,15 @@ internal static class J2534OwnedReceiveFixtureWorker
                 }
             }
             if (library.Retained != failed) return 1;
+#if OWNED_DTC_RESULT_OUTPUT
+            if (failed || captured == null || receivedCount != 1) return 1;
+            Console.Out.Write("{\"fixture_only\":true,\"pointer_bits\":" + (IntPtr.Size * 8)
+                + ",\"cleanup_confirmed\":true,\"read_result\":" + SerializeRead(captured) + "}");
+#else
             Console.Out.Write("{\"fixture_only\":true,\"pointer_bits\":" + (IntPtr.Size * 8)
                 + ",\"received_count\":" + receivedCount + ",\"module_retained\":" + (failed ? "true" : "false")
                 + ",\"cleanup_confirmed\":" + (failed ? "false" : "true") + ",\"vehicle_communication\":false}");
+#endif
             // Even a well-formed failure summary is not a successful worker result.
 #if OWNED_RECEIVE_RESULT_THEN_HANG
             Console.Out.Flush();
@@ -142,5 +156,24 @@ internal static class J2534OwnedReceiveFixtureWorker
         }
         catch { return 1; } // No native data, paths, or exception text on either stream.
     }
+#if OWNED_DTC_RESULT_OUTPUT
+    // Numbers only, bounded synthetic records; no arbitrary strings or paths.
+    private static string N(long value) { return value.ToString(System.Globalization.CultureInfo.InvariantCulture); }
+    private static string SerializeRead(J2534ReceiveNative.Result result)
+    {
+        var json = new System.Text.StringBuilder();
+        json.Append("{\"Status\":").Append(N(result.Status)).Append(",\"ReportedCount\":").Append(N(result.ReportedCount)).Append(",\"Messages\":[");
+        for (int i = 0; i < result.Messages.Length; i++) {
+            if (i > 0) json.Append(',');
+            var m = result.Messages[i];
+            json.Append("{\"ProtocolId\":").Append(N(m.ProtocolId)).Append(",\"RxStatus\":").Append(N(m.RxStatus))
+                .Append(",\"TxFlags\":").Append(N(m.TxFlags)).Append(",\"Timestamp\":").Append(N(m.Timestamp))
+                .Append(",\"ExtraDataIndex\":").Append(N(m.ExtraDataIndex)).Append(",\"Data\":[");
+            for (int j = 0; j < m.Data.Length; j++) { if (j > 0) json.Append(','); json.Append(N(m.Data[j])); }
+            json.Append("]}");
+        }
+        return json.Append("]}").ToString();
+    }
+#endif
 }
 #endif

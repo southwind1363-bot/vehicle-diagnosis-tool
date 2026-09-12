@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createBoundedFixtureWorker } from "./bounded-fixture-worker.js";
+import { createJ2534DtcResultConverter } from "./j2534-dtc-result-converter.js";
 import { buildJ2534UdsTransportResult } from "./j2534-readonly-worker.js";
 
 const SCENARIOS = new Set(["success", "open-failure", "overrun", "hang", "crash", "result-then-hang"]);
@@ -12,6 +13,7 @@ const OWNED_SCENARIOS = new Set(["owned-receive", "owned-connect-failure", "owne
   "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
   "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang"]);
+const DTC_RESULT_SCENARIOS = new Set(["owned-dtc-data", "owned-dtc-data-hang"]);
 const VERIFIED_IDENTITY_SCENARIOS = new Set(["success", "hold"]);
 const UDS_TRANSPORT_SCENARIOS = new Set(["positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"]);
 const UDS_TRANSPORT_CONTROL_SCENARIOS = new Set(["hang", "overflow", "stderr", "crash", "result-then-hang"]);
@@ -126,8 +128,15 @@ export function parseJ2534UdsTransportFixtureOutput(output, context) {
 }
 // Development-only factory. The validator supplies a fixed, integrity-pinned temp descriptor.
 export function createJ2534OwnedReceiveFixtureSupervisor(descriptor) {
+  return createOwnedFixtureSupervisor(descriptor, null);
+}
+export function createJ2534DtcResultFixtureSupervisor(descriptor, decodeDtcResponse) {
+  return createOwnedFixtureSupervisor(descriptor, createJ2534DtcResultConverter(decodeDtcResponse));
+}
+function createOwnedFixtureSupervisor(descriptor, convert) {
   if (!keysMatch(descriptor, ["temp_root", "architecture", "scenario", "worker", "fixture"])
-    || !["x86", "x64"].includes(descriptor.architecture) || !OWNED_SCENARIOS.has(descriptor.scenario))
+    || !["x86", "x64"].includes(descriptor.architecture)
+    || !(convert ? DTC_RESULT_SCENARIOS : OWNED_SCENARIOS).has(descriptor.scenario))
     throw new Error("owned_fixture_descriptor_invalid");
   const architecture = descriptor.architecture;
   const root = fs.realpathSync(descriptor.temp_root);
@@ -163,6 +172,17 @@ export function createJ2534OwnedReceiveFixtureSupervisor(descriptor) {
     parseOutput(output) {
       let value;
       try { value = JSON.parse(output); } catch { return null; }
+      if (convert) {
+        if (!keysMatch(value, ["fixture_only", "pointer_bits", "cleanup_confirmed", "read_result"])
+          || value.fixture_only !== true || value.pointer_bits !== (architecture === "x86" ? 32 : 64)
+          || value.cleanup_confirmed !== true) return null;
+        // This callback runs only after the bounded parent observes exit 0 and
+        // stream close. Child JSON cannot assert its own completion or request.
+        const result = convert(JSON.stringify({ schema_version: "j2534-dtc-read-v1",
+          worker_status: "worker_completed", cleanup_confirmed: true,
+          request_ecu: 0x7e0, service: 3, read_result: value.read_result }));
+        return result.status === "decoded" ? { fixture_only: true, vehicle_communication: false, ...result } : null;
+      }
       if (!keysMatch(value, ["fixture_only", "pointer_bits", "received_count", "module_retained", "cleanup_confirmed", "vehicle_communication"])
         || value.fixture_only !== true || value.pointer_bits !== (architecture === "x86" ? 32 : 64)
         || value.received_count !== 2 || value.module_retained !== false

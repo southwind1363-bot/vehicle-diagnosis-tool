@@ -6,9 +6,20 @@
 conversion boundary. It requires schema `j2534-dtc-read-v1`, a successful parent
 worker status and cleanup confirmation, request ECU/service, and the existing
 C# `Status`/`ReportedCount`/`Messages` layout. These flags are not authentication:
-the future caller must supply them from the trusted bounded supervisor, not UI
-input. The native fixture worker still returns only its six-field summary; this
-converter is not yet wired to its output or any public/live route.
+the caller must supply them from the trusted bounded supervisor, not UI input.
+The separate `OWNED_DTC_RESULT_OUTPUT` compile-time variant now serializes a
+copied receive result only after confirmed filter/channel/device cleanup. Its
+fixed generated DLL returns the synthetic 7E8 / 43 01 71 response, not vehicle
+data. Ordinary fixture workers retain the original six-field summary.
+
+`createJ2534DtcResultFixtureSupervisor` accepts only the dedicated fixed-data
+scenarios and integrity-pinned worker/DLL paths. After normal process exit and
+stream close, it checks the child envelope, supplies the fixed parent-owned
+request ECU/service and completion status, and invokes the converter. Its output
+contains the existing decoded snapshot with explicit `fixture_only:true` and
+`vehicle_communication:false` markers, not the raw native records. The
+ordinary summary supervisor rejects these data-output scenarios. Public/live
+routes remain unconnected.
 
 Only one complete ISO15765 11-bit positive 03/07/0A response from request ECU+8
 is decoded. Exact start indicators may precede it; missing/trailing indicators,
@@ -21,8 +32,11 @@ that is not a whole-vehicle health assertion.
 The converter reuses `decodeObdDtcResponse` and returns its existing snapshot
 without changing diagnostic ranking or saved formats. It retains no raw envelope
 or native frames, emits fixed error reasons, accepts no driver paths, and enables
-no native execution. Current coverage is synthetic JSON into the real existing
-decoder, not a native-to-UI readout or real VCI validation.
+no native execution. Coverage now includes the fixed generated native DLL through
+the isolated C# worker, bounded parent and real existing decoder on x86/x64, plus
+synthetic JSON rejection cases. A valid data envelope followed by a hung worker
+must time out without invoking the decoder. This is not a native-to-UI readout or
+real VCI validation.
 
 ## Status
 

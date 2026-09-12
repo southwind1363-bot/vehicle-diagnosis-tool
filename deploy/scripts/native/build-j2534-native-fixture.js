@@ -5,6 +5,7 @@ const SCENARIOS = new Set([
   "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
   "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
+  "owned-dtc-data", "owned-dtc-data-hang",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -118,13 +119,13 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   const code = scenario === "request-abi" ? requestCode(architecture) : scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
   if (scenario.startsWith("owned-")) {
-    code.read = receiveCode(architecture, -517782169, scenario.startsWith("owned-dtc-") ? 1000 : 0); // distinct from device
+    code.read = receiveCode(architecture, -517782169, scenario.startsWith("owned-dtc-") ? 1000 : 0, scenario.startsWith("owned-dtc-data"));
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
     Object.assign(code, channelCode(architecture, scenario.startsWith("owned-dtc-") ? 0 : 0x100));
     if (scenario.startsWith("owned-dtc-")) {
       Object.assign(code, requestCode(architecture));
-      if (scenario !== "owned-dtc-read" && scenario !== "owned-dtc-result-then-hang") {
+      if (scenario !== "owned-dtc-read" && scenario !== "owned-dtc-result-then-hang" && !scenario.startsWith("owned-dtc-data")) {
         const fail = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
         code.close = code.disconnect = Buffer.from([0x0f, 0x0b]);
         if (scenario === "owned-dtc-start-failure" || scenario === "owned-dtc-start-hang") {
@@ -270,7 +271,7 @@ function requestCode(architecture) {
 }
 
 // Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.
-function receiveCode(architecture, channel = -249346713, timeout = 0) {
+function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = false) {
   const x86 = architecture === "x86";
   const ret = x86 ? [0xc2, 0x10, 0x00] : [0xc3];
   const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...ret]);
@@ -280,10 +281,11 @@ function receiveCode(architecture, channel = -249346713, timeout = 0) {
   let body = Buffer.concat([
     // x86: EAX = messages, ECX = count. x64: RDX/R8 are already pointers.
     Buffer.from(x86 ? [0x8b, 0x44, 0x24, 0x08, 0x8b, 0x4c, 0x24, 0x0c] : []),
-    ...[6, 0, 0, -249346713, 4, 4].map((value, index) => write(index * 4, value)),
-    write(24, 0x04030201),
-    ...[6, 2, 0, 7, 0, 0].map((value, index) => write(4152 + index * 4, value)),
-    Buffer.from(x86 ? [0xc7, 0x01, 2, 0, 0, 0] : [0x41, 0xc7, 0x00, 2, 0, 0, 0]),
+    ...[6, 0, 0, -249346713, dtcData ? 7 : 4, dtcData ? 7 : 4].map((value, index) => write(index * 4, value)),
+    write(24, dtcData ? -402194432 : 0x04030201),
+    ...(dtcData ? [write(28, 0x00710143)]
+      : [6, 2, 0, 7, 0, 0].map((value, index) => write(4152 + index * 4, value))),
+    Buffer.from(x86 ? [0xc7, 0x01, dtcData ? 1 : 2, 0, 0, 0] : [0x41, 0xc7, 0x00, dtcData ? 1 : 2, 0, 0, 0]),
     Buffer.from([0x31, 0xc0, ...ret]),
   ]);
   const comparisons = x86 ? [

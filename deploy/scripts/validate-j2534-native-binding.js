@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import vm from "node:vm";
 import "./validate-j2534-dtc-result-converter.js";
 import fs from "node:fs";
 import os from "node:os";
@@ -10,6 +11,7 @@ import { buildJ2534NativeFixture } from "./native/build-j2534-native-fixture.js"
 import {
   createJ2534NativeFixtureSupervisor,
   createJ2534OwnedReceiveFixtureSupervisor,
+  createJ2534DtcResultFixtureSupervisor,
   createJ2534UdsTransportFixtureSupervisor,
   createJ2534VerifiedIdentityFixtureSupervisor,
   parseJ2534NativeFixtureOutput,
@@ -225,15 +227,16 @@ async function main() {
         fixture_only: true, pointer_bits: platform.bits, received_count: 2,
         module_retained: false, cleanup_confirmed: true, vehicle_communication: false,
       });
-      const ownedSupervisor = (worker, fixturePath, scenario) => createJ2534OwnedReceiveFixtureSupervisor({
+      const ownedSupervisor = (worker, fixturePath, scenario, decoder = null) => (decoder ? createJ2534DtcResultFixtureSupervisor : createJ2534OwnedReceiveFixtureSupervisor)({
         temp_root: directory, architecture: platform.name, scenario,
         worker: { path: worker, sha256: createHash("sha256").update(fs.readFileSync(worker)).digest("hex") },
         fixture: { path: fixturePath, sha256: createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex") },
-      });
+      }, decoder);
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
       for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
         "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
-        "owned-dtc-stop-crash", "owned-dtc-result-then-hang"]) {
+        "owned-dtc-stop-crash", "owned-dtc-result-then-hang", "owned-dtc-data", "owned-dtc-data-hang"]) {
+        const dataOutput = scenario.startsWith("owned-dtc-data");
         const combinedDirectory = path.join(platformDirectory, scenario);
         fs.mkdirSync(combinedDirectory);
         createdDirectories.push({ path: combinedDirectory, identity: fs.statSync(combinedDirectory) });
@@ -248,19 +251,23 @@ async function main() {
         createdFiles.push(worker);
         const compilation = await execute(platform.compiler, [
           "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
-          `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE${scenario === "owned-dtc-result-then-hang" ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
+          `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE${dataOutput ? ";OWNED_DTC_RESULT_OUTPUT" : ""}${["owned-dtc-result-then-hang", "owned-dtc-data-hang"].includes(scenario) ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
           sources[0], sources[2], sources[4], compiledDigest,
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
-        const success = scenario === "owned-dtc-read";
+        const success = scenario === "owned-dtc-read" || scenario === "owned-dtc-data";
         const timedOut = scenario.endsWith("hang");
         let expected = null;
         if (success || scenario.endsWith("failure")) {
           const direct = await execute(worker, ["--fixture-owned-receive"]);
           assert.equal(direct.error?.code ?? 0, success ? 0 : 1, "Combined worker failed or reached a forbidden native trap");
           assert.equal(direct.stderr, "");
-          expected = {
+          expected = dataOutput ? {
+            fixture_only: true, pointer_bits: platform.bits, cleanup_confirmed: true,
+            read_result: { Status: 0, ReportedCount: 1, Messages: [{ ProtocolId: 6, RxStatus: 0, TxFlags: 0,
+              Timestamp: 0xf1234567, ExtraDataIndex: 7, Data: [0, 0, 7, 0xe8, 0x43, 1, 0x71] }] },
+          } : {
             fixture_only: true, pointer_bits: platform.bits,
             received_count: ["owned-dtc-write-failure", "owned-dtc-start-failure"].includes(scenario) ? 0 : 2,
             module_retained: !success, cleanup_confirmed: success, vehicle_communication: false,
@@ -268,12 +275,29 @@ async function main() {
           assert.deepEqual(JSON.parse(direct.stdout), expected);
           total += 3;
         }
-        const supervisor = ownedSupervisor(worker, fixturePath, scenario);
+        let decodeCalls = 0, decoder = null;
+        if (dataOutput) {
+          const context = vm.createContext({ window: {}, navigator: {} });
+          vm.runInContext(fs.readFileSync(path.join(scriptsDirectory, "..", "obd-readonly.js"), "utf8"), context);
+          decoder = input => { decodeCalls++; return context.window.ObdReadOnly.decodeObdDtcResponse(input); };
+          assert.throws(() => ownedSupervisor(worker, fixturePath, scenario), /owned_fixture_descriptor_invalid/);
+          total++;
+        }
+        const supervisor = ownedSupervisor(worker, fixturePath, scenario, decoder);
         const bounded = await supervisor.run({ timeout_ms: 2000 });
         assert.equal(bounded.worker_started, true);
         assert.equal(bounded.worker_exited, true);
         assert.equal(bounded.execution_status, success ? "worker_completed" : timedOut ? "worker_timed_out" : "worker_failed");
-        assert.deepEqual(bounded.parsed_result, success ? expected : null);
+        if (dataOutput && success) {
+          assert.equal(bounded.parsed_result.status, "decoded");
+          assert.equal(bounded.parsed_result.fixture_only, true);
+          assert.equal(bounded.parsed_result.vehicle_communication, false);
+          assert.equal(bounded.parsed_result.snapshot.dtcs[0].code, "P0171");
+          assert.equal(bounded.parsed_result.snapshot.schema_version, "dtc_snapshot_v1");
+          assert.equal(Object.hasOwn(bounded.parsed_result, "read_result"), false);
+          total += 6;
+        } else assert.deepEqual(bounded.parsed_result, success ? expected : null);
+        if (dataOutput) { assert.equal(decodeCalls, success ? 1 : 0); total++; }
         assert.equal((await supervisor.run()).execution_status, "request_blocked");
         total += 7;
         if (timedOut) {
