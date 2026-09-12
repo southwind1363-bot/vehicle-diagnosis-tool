@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import vm from "node:vm";
+import { createJ2534FixtureSessionBuilder } from "./j2534-fixture-session-builder.js";
 import "./validate-j2534-dtc-result-converter.js";
 import fs from "node:fs";
 import os from "node:os";
@@ -275,10 +276,11 @@ async function main() {
           assert.deepEqual(JSON.parse(direct.stdout), expected);
           total += 3;
         }
-        let decodeCalls = 0, decoder = null;
+        let decodeCalls = 0, decoder = null, sessionApi = null;
         if (dataOutput) {
           const context = vm.createContext({ window: {}, navigator: {} });
           vm.runInContext(fs.readFileSync(path.join(scriptsDirectory, "..", "obd-readonly.js"), "utf8"), context);
+          sessionApi = context.window.ObdReadOnly;
           decoder = input => { decodeCalls++; return context.window.ObdReadOnly.decodeObdDtcResponse(input); };
           assert.throws(() => ownedSupervisor(worker, fixturePath, scenario), /owned_fixture_descriptor_invalid/);
           total++;
@@ -295,7 +297,17 @@ async function main() {
           assert.equal(bounded.parsed_result.snapshot.dtcs[0].code, "P0171");
           assert.equal(bounded.parsed_result.snapshot.schema_version, "dtc_snapshot_v1");
           assert.equal(Object.hasOwn(bounded.parsed_result, "read_result"), false);
-          total += 6;
+          const built = createJ2534FixtureSessionBuilder(sessionApi.buildDiagnosticScanSession)(bounded);
+          assert.equal(built.fixture_only, true);
+          const archived = sessionApi.buildBridgeSessionExportPayload(built.session);
+          const restored = sessionApi.buildDiagnosticScanSessionFromJson(JSON.stringify(archived));
+          assert.equal(restored.source, "j2534_development_read");
+          assert.equal(restored.dtcSnapshot.dtcs[0].code, "P0171");
+          assert.equal(restored.dtcSnapshot.dtcs[0].ecu, "7E8");
+          assert.equal(restored.dtcSnapshot.dtcs[0].status, "stored");
+          assert.equal(archived.vehicle_command_enabled, false);
+          assert.equal(archived.retained_raw_text, false);
+          total += 13;
         } else assert.deepEqual(bounded.parsed_result, success ? expected : null);
         if (dataOutput) { assert.equal(decodeCalls, success ? 1 : 0); total++; }
         assert.equal((await supervisor.run()).execution_status, "request_blocked");

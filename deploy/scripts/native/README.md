@@ -40,6 +40,17 @@ real VCI validation.
 
 ## Status
 
+The development-only `../j2534-fixture-session-builder.js` now accepts a completed,
+non-terminated, error-free fixture result and calls the existing session builder.
+It refuses missing/unavailable snapshots rather than constructing an empty DTC
+session. The returned wrapper keeps fixture-only/no-vehicle flags. In the existing
+archive format, `source: j2534_development_read` survives export/reopen together
+with ECU-scoped DTC status; wrapper flags are not new saved-format fields. This is
+not permission to present fixture data as live vehicle measurements in the UI.
+The fixed native result is checked through session → in-memory JSON archive →
+reopen on x86/x64. No user saved files, disk export, browser UI, or real VCI is
+used by this check, and no public route is connected.
+
 Development-only source, not a production bridge or runnable driver host.
 `J2534IdentityNative.cs` implements loading and binding of exactly
 `PassThruOpen`, `PassThruReadVersion`, and `PassThruClose`. Internal caller-bound

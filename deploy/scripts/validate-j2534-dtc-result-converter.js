@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { createJ2534DtcResultConverter } from "./j2534-dtc-result-converter.js";
+import { createJ2534FixtureSessionBuilder } from "./j2534-fixture-session-builder.js";
 const context = vm.createContext({ window: {}, navigator: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), context);
 let calls = 0, checks = 0;
@@ -55,3 +56,35 @@ for (const malformed of [null, {}, { schema_version: "dtc_snapshot_v1", dtc_read
   assert.equal(createJ2534DtcResultConverter(() => malformed)(JSON.stringify(sample())).reason, "invalid_decoder_result"); checks++;
 }
 console.log(`J2534 DTC result converter checks: ${checks} / synthetic inputs only / Errors: 0`);
+
+const api = context.window.ObdReadOnly;
+let sessionCalls = 0;
+const buildSession = createJ2534FixtureSessionBuilder(input => { sessionCalls++; return api.buildDiagnosticScanSession(input); });
+const completed = value => ({ execution_status: "worker_completed", worker_started: true, worker_exited: true,
+  termination_requested: false, termination_signal_sent: false, errors: [],
+  parsed_result: { fixture_only: true, vehicle_communication: false, ...run(value) } });
+for (const value of [sample(), empty]) {
+  const input = completed(value), before = JSON.stringify(input);
+  const built = buildSession(input);
+  assert.equal(built.fixture_only, true); assert.equal(built.vehicle_communication, false);
+  const archive = api.buildBridgeSessionExportPayload(built.session);
+  const restored = api.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
+  assert.equal(restored.source, "j2534_development_read");
+  assert.equal(restored.dtcSnapshot.source, "j2534_development_read");
+  assert.deepEqual(restored.dtcSnapshot.dtcs, built.session.dtcSnapshot.dtcs);
+  assert.equal(restored.dtcSnapshot.dtc_readout_status, "reported");
+  assert.equal(archive.vehicle_command_enabled, false); assert.equal(archive.retained_raw_text, false);
+  assert.equal(JSON.stringify(input), before);
+}
+for (const mutate of [
+  v => v.execution_status = "worker_failed", v => v.worker_started = false, v => v.worker_exited = false,
+  v => v.termination_requested = true, v => v.termination_signal_sent = true,
+  v => v.errors.push("worker_timeout"), v => v.parsed_result.fixture_only = false,
+  v => v.parsed_result.vehicle_communication = true, v => v.parsed_result.snapshot = null,
+  v => v.parsed_result.status = "unavailable", v => v.parsed_result.snapshot.source = "web_serial",
+]) {
+  const input = completed(sample()); mutate(input); const before = sessionCalls;
+  assert.equal(buildSession(input), null); assert.equal(sessionCalls, before);
+}
+assert.equal(buildSession(Object.defineProperty({}, "execution_status", { get() { throw new Error("private"); } })), null);
+console.log("J2534 fixture session handoff and archive roundtrip: passed / no user files used");
