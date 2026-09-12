@@ -5,7 +5,7 @@ const SCENARIOS = new Set([
   "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
   "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
-  "owned-dtc-data", "owned-dtc-data-hang",
+  "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -119,7 +119,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   const code = scenario === "request-abi" ? requestCode(architecture) : scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
   if (scenario.startsWith("owned-")) {
-    code.read = receiveCode(architecture, -517782169, scenario.startsWith("owned-dtc-") ? 1000 : 0, scenario.startsWith("owned-dtc-data"));
+    code.read = receiveCode(architecture, -517782169, scenario.startsWith("owned-dtc-") ? 1000 : 0, scenario.startsWith("owned-dtc-data"), scenario === "owned-dtc-data-start");
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
     Object.assign(code, channelCode(architecture, scenario.startsWith("owned-dtc-") ? 0 : 0x100));
@@ -271,21 +271,24 @@ function requestCode(architecture) {
 }
 
 // Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.
-function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = false) {
+function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = false, indicated = false) {
   const x86 = architecture === "x86";
   const ret = x86 ? [0xc2, 0x10, 0x00] : [0xc3];
   const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...ret]);
   const write = (offset, value) => Buffer.concat([
     Buffer.from(x86 ? [0xc7, 0x80] : [0xc7, 0x82]), int32(offset), int32(value),
   ]);
+  const dataOffset = indicated ? 4152 : 0;
+  const count = dtcData && !indicated ? 1 : 2;
   let body = Buffer.concat([
     // x86: EAX = messages, ECX = count. x64: RDX/R8 are already pointers.
     Buffer.from(x86 ? [0x8b, 0x44, 0x24, 0x08, 0x8b, 0x4c, 0x24, 0x0c] : []),
-    ...[6, 0, 0, -249346713, dtcData ? 7 : 4, dtcData ? 7 : 4].map((value, index) => write(index * 4, value)),
-    write(24, dtcData ? -402194432 : 0x04030201),
-    ...(dtcData ? [write(28, 0x00710143)]
+    ...(indicated ? [...[6, 2, 0, 7, 4, 4].map((value, index) => write(index * 4, value)), write(24, -402194432)] : []),
+    ...[6, 0, 0, -249346713, dtcData ? 7 : 4, dtcData ? 7 : 4].map((value, index) => write(dataOffset + index * 4, value)),
+    write(dataOffset + 24, dtcData ? -402194432 : 0x04030201),
+    ...(dtcData ? [write(dataOffset + 28, 0x00710143)]
       : [6, 2, 0, 7, 0, 0].map((value, index) => write(4152 + index * 4, value))),
-    Buffer.from(x86 ? [0xc7, 0x01, dtcData ? 1 : 2, 0, 0, 0] : [0x41, 0xc7, 0x00, dtcData ? 1 : 2, 0, 0, 0]),
+    Buffer.from(x86 ? [0xc7, 0x01, count, 0, 0, 0] : [0x41, 0xc7, 0x00, count, 0, 0, 0]),
     // A single complete DTC message can accompany ERR_TIMEOUT when three
     // records were requested. This models the return value, not elapsed time.
     Buffer.from(dtcData ? [0xb8, 9, 0, 0, 0, ...ret] : [0x31, 0xc0, ...ret]),

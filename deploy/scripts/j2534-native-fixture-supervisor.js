@@ -13,7 +13,7 @@ const OWNED_SCENARIOS = new Set(["owned-receive", "owned-connect-failure", "owne
   "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
   "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang"]);
-const DTC_RESULT_SCENARIOS = new Set(["owned-dtc-data", "owned-dtc-data-hang"]);
+const DTC_RESULT_SCENARIOS = new Set(["owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start"]);
 const VERIFIED_IDENTITY_SCENARIOS = new Set(["success", "hold"]);
 const UDS_TRANSPORT_SCENARIOS = new Set(["positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"]);
 const UDS_TRANSPORT_CONTROL_SCENARIOS = new Set(["hang", "overflow", "stderr", "crash", "result-then-hang"]);

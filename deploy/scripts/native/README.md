@@ -38,6 +38,13 @@ The fixed data fixture now returns status 9/count 1 for requested count 3;
 this tests the handoff and archive roundtrip, not real elapsed-time behavior.
 Reference: https://quantexlab.de/en/develop/j2534/pt_readmsg.html
 
+The result-output worker accepts one or two records, rather than assuming one
+record equals one response. This lets an exact start indicator and its complete
+response reach the existing strict parent converter. The parent still rejects
+two data responses or a trailing/unmatched indicator. A dedicated generated
+`owned-dtc-data-start` fixture covers the two-record handoff through archive
+reopen; the single-record fixture remains covered. No extra receive call is made.
+
 The converter reuses `decodeObdDtcResponse` and returns its existing snapshot
 without changing diagnostic ranking or saved formats. It retains no raw envelope
 or native frames, emits fixed error reasons, accepts no driver paths, and enables

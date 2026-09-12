@@ -118,7 +118,11 @@ internal static class J2534OwnedReceiveFixtureWorker
 #endif
 #if OWNED_DTC_RESULT_OUTPUT
                         // Preserve ERR_TIMEOUT for the parent's strict payload validation.
-                        if ((result.Status != 0 && result.Status != 9) || result.ReportedCount != 1 || result.Messages.Length != 1) return 1;
+                        // One complete response may have a separate start indicator.
+                        // The parent validates their meaning; this only bounds copying.
+                        if ((result.Status != 0 && result.Status != 9)
+                            || result.Messages.Length < 1 || result.Messages.Length > 2
+                            || result.ReportedCount != result.Messages.Length) return 1;
                         captured = result;
 #else
                         if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
@@ -140,7 +144,7 @@ internal static class J2534OwnedReceiveFixtureWorker
             }
             if (library.Retained != failed) return 1;
 #if OWNED_DTC_RESULT_OUTPUT
-            if (failed || captured == null || receivedCount != 1) return 1;
+            if (failed || captured == null || receivedCount < 1 || receivedCount > 2) return 1;
             Console.Out.Write("{\"fixture_only\":true,\"pointer_bits\":" + (IntPtr.Size * 8)
                 + ",\"cleanup_confirmed\":true,\"read_result\":" + SerializeRead(captured) + "}");
 #else

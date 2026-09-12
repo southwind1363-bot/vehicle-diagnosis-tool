@@ -236,7 +236,7 @@ async function main() {
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
       for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
         "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
-        "owned-dtc-stop-crash", "owned-dtc-result-then-hang", "owned-dtc-data", "owned-dtc-data-hang"]) {
+        "owned-dtc-stop-crash", "owned-dtc-result-then-hang", "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start"]) {
         const dataOutput = scenario.startsWith("owned-dtc-data");
         const combinedDirectory = path.join(platformDirectory, scenario);
         fs.mkdirSync(combinedDirectory);
@@ -257,7 +257,7 @@ async function main() {
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
-        const success = scenario === "owned-dtc-read" || scenario === "owned-dtc-data";
+        const success = scenario === "owned-dtc-read" || scenario === "owned-dtc-data" || scenario === "owned-dtc-data-start";
         const timedOut = scenario.endsWith("hang");
         let expected = null;
         if (success || scenario.endsWith("failure")) {
@@ -273,6 +273,11 @@ async function main() {
             received_count: ["owned-dtc-write-failure", "owned-dtc-start-failure"].includes(scenario) ? 0 : 2,
             module_retained: !success, cleanup_confirmed: success, vehicle_communication: false,
           };
+          if (scenario === "owned-dtc-data-start") {
+            expected.read_result.ReportedCount = 2;
+            expected.read_result.Messages.unshift({ ProtocolId: 6, RxStatus: 2, TxFlags: 0,
+              Timestamp: 7, ExtraDataIndex: 4, Data: [0, 0, 7, 0xe8] });
+          }
           assert.deepEqual(JSON.parse(direct.stdout), expected);
           total += 3;
         }
