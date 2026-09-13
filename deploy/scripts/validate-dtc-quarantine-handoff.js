@@ -54,3 +54,47 @@ for (const spawnEvent of [true, false]) {
   }
 }
 console.log("DTC termination-to-quarantine handoff: missing spawn/close and recreated supervisor blocked; no native execution");
+
+for (const kind of ["native", "verified"]) {
+  const root = fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), "vehicle-j2534-native-"));
+  const directory = path.join(root, "x64"); fs.mkdirSync(directory);
+  const owned = [];
+  const file = name => {
+    const target = path.join(directory, name); owned.push(target);
+    fs.writeFileSync(target, "inert-test-only");
+    return { path: target, sha256: createHash("sha256").update(fs.readFileSync(target)).digest("hex") };
+  };
+  const child = new EventEmitter(); child.stdout = new EventEmitter(); child.stderr = new EventEmitter();
+  child.pid = 123; child.exitCode = null; child.signalCode = null;
+  let spawns = 0; child.kill = () => false;
+  try {
+    const factory = vm.runInNewContext(`${source}\n${kind === "native" ? "createJ2534NativeFixtureSupervisor" : "createJ2534VerifiedIdentityFixtureSupervisor"}`, {
+      fs, os, path, createHash, createBoundedFixtureWorker, Buffer, process, AbortSignal,
+      spawn() { spawns++; return child; }
+    });
+    const descriptor = { temp_root: root, architecture: "x64",
+      worker: file(kind === "native" ? "j2534-native-fixture-worker.exe" : "j2534-verified-identity-fixture.exe") };
+    if (kind === "native") descriptor.fixtures = Object.fromEntries(
+      ["success", "open-failure", "overrun", "hang", "crash"].map(name => [name, file(`${name}.dll`)]));
+    else descriptor.fixture = { ...file("success.dll"), size: 15 };
+    const options = { mode: kind === "native" ? "native_fixture" : "verified_identity_fixture",
+      scenario: "success", timeout_ms: 1000, interactive_trial_confirmation: true,
+      ...(kind === "verified" ? { request_nonce: "synthetic_nonce", selected_device_id: "synthetic_device" } : {}) };
+    const controls = { quarantineStore: createJ2534NativeQuarantineStore(directory), requireTrialConfirmation: true };
+    const result = await factory(descriptor, controls).run(options);
+    assert.equal(result.errors[0], "worker_termination_unconfirmed");
+    assert.equal(result.worker_exited, false); assert.equal(result.result, null);
+    const reopened = createJ2534NativeQuarantineStore(directory);
+    assert.equal(reopened.read().quarantined, true, `${kind}: missing notification bypassed quarantine`);
+    const denied = await factory(descriptor, { ...controls, quarantineStore: reopened }).run(options);
+    assert.equal(denied.execution_status, "worker_quarantined");
+    assert.equal(denied.worker_started, false); assert.equal(spawns, 1);
+  } finally {
+    child.emit("close", null, "SIGKILL");
+    for (const target of [...owned, path.join(directory, "j2534-native-quarantine-v1.json")]) {
+      if (fs.existsSync(target)) fs.unlinkSync(target);
+    }
+    fs.rmdirSync(directory); fs.rmdirSync(root);
+  }
+}
+console.log("Identity supervisors: unconfirmed termination persists quarantine without spawn notification; inert files only");

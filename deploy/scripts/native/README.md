@@ -91,6 +91,11 @@ spawn notification was observed; it does not reinterpret missing notification
 as proof of non-execution. An inert-file/injected-child integration test follows
 the real bounded worker, supervisor and disk store through the secondary deadline,
 store recreation and blocked relaunch. No executable bytes run in this test.
+The ordinary native-identity and verified-identity fixture supervisors apply the
+same missing-notification rule. Their inert-file integration cases preserve the
+interactive confirmation requirement, then verify that a recreated disk store
+blocks another supervisor before spawn. This does not enable packaged identity
+execution or alter the quarantine schema.
 
 The DTC-result supervisor uses a 64 KiB output cap, sufficient for the worker's
 two bounded decimal-byte records; summary-only workers retain 4 KiB. The cap is

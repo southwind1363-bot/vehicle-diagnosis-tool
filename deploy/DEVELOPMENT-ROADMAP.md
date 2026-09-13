@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 識別確認2経路の終了未確認保持: 通常native identity/verified identityの開発supervisorにも起動通知条件による隔離記録漏れを確認。native側の負例を再現後、両方でworker_termination_unconfirmedなら既存記録を残すよう修正。実行確認必須設定を維持したinertファイル/注入child→実bounded→ディスクstore→再作成supervisorで起動拒否を両経路確認。native6997・専用148/pipe/保存・追加結合・構文/diff合格。公開実行/保存形式/583ZIP不変、実VCI/実車/実OS終了不能は未検証。7603c201 CI34756252405 success、6d8faeed CI34756453072は確認時in_progress。
+
 2026-09-13 二次期限から隔離記録への結合修正: 起動通知なし/終了通知なしの人工childで終了未確認が返っても、worker_started条件により隔離記録が省略される負例を再現。終了未確認errorでも既存cleanup_unconfirmedを記録するよう修正。実bounded worker→DTC supervisor→実一時store→再作成supervisorの起動拒否まで、起動通知あり/なし両方で確認。inertファイルと注入childを使用し実process/native実行なし。初回検査抽出のexport構文不備は抽出式を修正して切り分け。native6997・専用148/pipe/保存・新規結合・構文/diff合格。公開実行/保存形式/583ZIP不変、実VCI/実車/OS終了不能は未検証。直近9d419305/4cea215b CI success、7603c201は確認時in_progress。
 
 2026-09-13 終了未確認の二次期限: 直前の安全境界確認へ利用者「続けて」。開発bounded workerに終了要求後1000msのclose待ち上限を追加。未着ならworker_termination_unconfirmed/worker_exited:false/結果なしを返し、同instanceは遅延close後も再実行禁止。子参照はcloseまで保持、遅延イベントによる結果書換え/解析を拒否。既存DTC supervisorは戻り後に既存cleanup_unconfirmed記録へ進める。kill false/throw/true・exitのみの人工イベントで期限到達と遅延通知/再利用拒否を確認、native6997・専用148/pipe/保存・構文/diff合格。実OSの終了不能process/実VCI/実車は未検証、ホストprocess終了やnative lock解放を保証しない。保存失敗後の再起動保証も未対応。公開実行/保存形式/583ZIP不変。

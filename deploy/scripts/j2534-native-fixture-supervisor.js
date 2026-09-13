@@ -320,7 +320,8 @@ export function createJ2534NativeFixtureSupervisor(descriptor, controls = {}) {
       });
       base.native_fixture_execution_confirmed = base.result !== null;
       if (base.result) base.fixture_cleanup_status = base.result.lifecycle.cleanup_status;
-      if (quarantineStore && base.worker_started && !["confirmed", "not_required"].includes(base.fixture_cleanup_status)) {
+      if (quarantineStore && (base.worker_started || base.errors.includes("worker_termination_unconfirmed"))
+        && !["confirmed", "not_required"].includes(base.fixture_cleanup_status)) {
         const reason = base.result?.lifecycle?.status === "corrupted" ? "worker_corrupted" : "cleanup_unconfirmed";
         try { quarantineStore.mark(reason); } catch { /* A failed latch remains fail-closed on its next read. */ }
       }
@@ -514,7 +515,8 @@ export function createJ2534VerifiedIdentityFixtureSupervisor(descriptor, control
       });
       base.verified_identity_execution_confirmed = base.result !== null;
       if (base.result) base.fixture_cleanup_status = "confirmed";
-      if (quarantineStore && base.worker_started && base.fixture_cleanup_status !== "confirmed") {
+      if (quarantineStore && (base.worker_started || base.errors.includes("worker_termination_unconfirmed"))
+        && base.fixture_cleanup_status !== "confirmed") {
         try { quarantineStore.mark("cleanup_unconfirmed"); } catch { /* The real store reports a fail-closed state. */ }
       }
       return base;
