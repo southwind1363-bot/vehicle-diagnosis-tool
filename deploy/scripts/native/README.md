@@ -25,6 +25,13 @@ architecture, ECU or service returns no result. This is fixture-only IPC, not a
 generic external selector or vendor execution route. The legacy single fixture
 argument remains for direct fixture tests.
 
+`J2534DtcReadSelection.MatchesArguments` centralizes the six-field IPC
+comparison without file access or loading. It requires an already constructed,
+independent selection, an exact remaining argument count and invariant decimal
+numbers. The fixture worker keeps that original selection after a match instead
+of rebuilding it from caller arguments. This reusable development component does
+not add a public command line or a driver execution entry point.
+
 Pending and permanent scenarios each compile their own expected service and
 generate a native fixture that checks the outgoing service byte and returns
 the matching response prefix. Their parent-owned expectation is chosen from

@@ -48,6 +48,24 @@ internal static class WindowsDtcReadLibraryTests
                 var selected = new J2534DtcReadSelection(path, hash.ToLowerInvariant(), size, architecture, ecu, service);
                 if (selected.RequestEcu != ecu || selected.Service != service || selected.Sha256 != hash || selected.Path != path
                     || selected.Size != size || selected.Architecture != architecture) throw new Exception("selection_changed");
+                string[] handoff = { path, hash.ToLowerInvariant(), size.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    architecture, ecu.ToString(System.Globalization.CultureInfo.InvariantCulture), service.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+                if (!selected.MatchesArguments(handoff, 0)) throw new Exception("handoff_rejected");
+                string[] prefixed = new string[8]; Array.Copy(handoff, 0, prefixed, 2, 6);
+                if (!selected.MatchesArguments(prefixed, 2)) throw new Exception("prefixed_handoff_rejected");
+                foreach (int offset in new int[] { -1, 1, Int32.MaxValue })
+                    if (selected.MatchesArguments(handoff, offset)) throw new Exception("invalid_offset_accepted");
+                if (selected.MatchesArguments(null, 0) || selected.MatchesArguments(new string[5], 0)
+                    || selected.MatchesArguments(new string[7], 0)) throw new Exception("invalid_shape_accepted");
+                for (int index = 0; index < 6; index++) {
+                    string original = handoff[index];
+                    foreach (string invalid in new string[] { null, "", " " + original, original + " ", "other", "4294967296", "9223372036854775808" }) {
+                        handoff[index] = invalid;
+                        if (selected.MatchesArguments(handoff, 0)) throw new Exception("changed_handoff_accepted");
+                    }
+                    handoff[index] = original;
+                }
+                if (!selected.MatchesArguments(handoff, 0)) throw new Exception("selection_mutated_by_handoff");
             }
             Rejected(delegate { WindowsDtcReadLibrary.LoadSelected(null); }, "native_dtc_selection_invalid");
             int verifiedCalls = 0;

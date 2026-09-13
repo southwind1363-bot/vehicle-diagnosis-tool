@@ -1,6 +1,7 @@
 #if J2534_DTC_DEVELOPMENT
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -31,6 +32,19 @@ namespace VehicleDiagnosis.Native
                 throw new InvalidOperationException("native_dtc_selection_invalid");
             Path = path; Sha256 = sha256.ToUpperInvariant(); Size = size; Architecture = architecture;
             RequestEcu = requestEcu; Service = (byte)service;
+        }
+
+        // Compare an IPC handoff to an independently pinned selection. Never
+        // construct trust from the arguments or perform I/O while matching.
+        internal bool MatchesArguments(string[] args, int offset)
+        {
+            if (args == null || offset < 0 || offset > args.Length || args.Length - offset != 6) return false;
+            long size; uint ecu; uint service;
+            return Int64.TryParse(args[offset + 2], NumberStyles.None, CultureInfo.InvariantCulture, out size)
+                && UInt32.TryParse(args[offset + 4], NumberStyles.None, CultureInfo.InvariantCulture, out ecu)
+                && UInt32.TryParse(args[offset + 5], NumberStyles.None, CultureInfo.InvariantCulture, out service)
+                && args[offset] == Path && String.Equals(args[offset + 1], Sha256, StringComparison.OrdinalIgnoreCase)
+                && size == Size && args[offset + 3] == Architecture && ecu == RequestEcu && service == Service;
         }
     }
 

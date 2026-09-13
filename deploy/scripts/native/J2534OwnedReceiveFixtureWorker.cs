@@ -2,7 +2,6 @@
 using System;
 using System.Collections;
 using System.IO;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using VehicleDiagnosis.Native;
@@ -84,18 +83,8 @@ internal static class J2534OwnedReceiveFixtureWorker
             J2534RegisteredDriverPreflight.FixtureHandleVerified = delegate(string verifiedPath) { };
             var selection = new J2534DtcReadSelection(fixturePath, OwnedReceiveFixtureDigest.Value,
                 new FileInfo(fixturePath).Length, IntPtr.Size == 4 ? "x86" : "x64", OwnedReceiveFixtureDigest.RequestEcu, OwnedReceiveFixtureDigest.Service);
-            if (args.Length == 8) {
-                long size; uint ecu; uint service;
-                if (!Int64.TryParse(args[4], NumberStyles.None, CultureInfo.InvariantCulture, out size)
-                    || !UInt32.TryParse(args[6], NumberStyles.None, CultureInfo.InvariantCulture, out ecu)
-                    || !UInt32.TryParse(args[7], NumberStyles.None, CultureInfo.InvariantCulture, out service)
-                    || args[2] != selection.Path || !String.Equals(args[3], selection.Sha256, StringComparison.OrdinalIgnoreCase)
-                    || size != selection.Size || args[5] != selection.Architecture
-                    || ecu != selection.RequestEcu || service != selection.Service) return 2;
-                // All fields must match the independently pinned fixture before
-                // loading; arbitrary paths or changed request intent stay refused.
-                selection = new J2534DtcReadSelection(args[2], args[3], size, args[5], ecu, service);
-            }
+            // Retain the independent selection, not a replacement built from IPC.
+            if (args.Length == 8 && !selection.MatchesArguments(args, 2)) return 2;
             var library = WindowsDtcReadLibrary.LoadSelected(selection);
             try { library.Resolve("PassThruIoctl"); return 1; }
             catch (InvalidOperationException) { /* Arbitrary/service exports stay rejected. */ }
