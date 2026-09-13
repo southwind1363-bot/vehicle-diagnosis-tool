@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 終了未確認の二次期限: 直前の安全境界確認へ利用者「続けて」。開発bounded workerに終了要求後1000msのclose待ち上限を追加。未着ならworker_termination_unconfirmed/worker_exited:false/結果なしを返し、同instanceは遅延close後も再実行禁止。子参照はcloseまで保持、遅延イベントによる結果書換え/解析を拒否。既存DTC supervisorは戻り後に既存cleanup_unconfirmed記録へ進める。kill false/throw/true・exitのみの人工イベントで期限到達と遅延通知/再利用拒否を確認、native6997・専用148/pipe/保存・構文/diff合格。実OSの終了不能process/実VCI/実車は未検証、ホストprocess終了やnative lock解放を保証しない。保存失敗後の再起動保証も未対応。公開実行/保存形式/583ZIP不変。
+
 2026-09-13 開発DTC結果supervisorと既存隔離記録の結合: optional quarantineStoreを追加し、起動前のblocked/不正/読込例外を拒否。開始済workerが正常な結果として採用されず戻った場合、既存cleanup_unconfirmedを記録する。固定生成nativeの正常・開始通知付き正常はclear維持、data出力後hangは結果不採用/記録保持、新store+新supervisorでも起動なし/decoder呼出なしをx86/x64で確認。native6997・専用148/pipe/保存・構文/diff合格。隔離fixture向け任意controlであり公開安全gateや実機機能の完成ではない。closeが永遠に来ない場合は記録処理へ到達せず、保存失敗後の再起動をまたぐ保証も未対応。保存形式/公開実行/583ZIPは不変。前回582のCI34755600060 success、583のCI34755814241は確認時in_progress。
 
 3.13.583 保存後の再実行防止記録確認: 書込/close成功後に記録が消失するとmarkはstate_invalidでも次のreadがclearになる負例を再現。保存後確認で欠落/不正なら既存per-store失敗保持を設定し、EEXIST後の消失も再書込せずblockedに維持。人工の消失/破損/作成競合と既存I/O失敗、package477・offline183・native6903/専用148/pipe/保存検査が合格。ZIP 2,665,552 bytes / SHA256 7948778BC8FE4BFB211B52B562278306B28AB4A5420FBAC258EF514455074813。別展開846ファイル/16,898,091 bytes整合、修正moduleもsourceと一致。保存形式/実行権限は変更せず、再起動後の永続保証・実VCI/実車/別PCは未検証。旧582ZIPは保持。

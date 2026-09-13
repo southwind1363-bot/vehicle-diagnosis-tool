@@ -77,9 +77,15 @@ clear store unchanged. This integration is exercised with the fixed generated
 data and data-then-hang workers on x86/x64, not with vendor drivers or vehicles.
 It does not add a public execution route, retry, reset, or new saved format.
 The control is optional for existing isolated fixtures, not a production safety
-gate. Marking occurs after the bounded worker returns: termination that never
-produces a close event and persistence failure across process restart remain
-limitations and are not claimed as protected here.
+gate. The bounded worker now waits at most 1000 ms after requesting termination
+for a close event. Without it, the result is rejected as
+`worker_termination_unconfirmed`, with `worker_exited:false`, and reuse of that
+bounded worker remains blocked even after a late close. The DTC supervisor can
+then persist its existing cleanup-unconfirmed record. Child references are held
+until close; this neither proves OS process death nor forcibly releases a native
+lock. The host process may still be held alive by the child. Synthetic event tests
+cover kill false/throw/true and exit without close; real unkillable processes and
+persistence failure across restart remain unverified limitations.
 
 The DTC-result supervisor uses a 64 KiB output cap, sufficient for the worker's
 two bounded decimal-byte records; summary-only workers retain 4 KiB. The cap is

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./validate-fixture-termination-deadline.js";
 import vm from "node:vm";
 import { createJ2534FixtureSessionBuilder } from "./j2534-fixture-session-builder.js";
 import "./validate-j2534-dtc-result-converter.js";
