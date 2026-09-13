@@ -292,6 +292,9 @@ marks on that store remain blocked without another persistence attempt, even
 if no file exists. A failed disk write cannot provide a durable guarantee across
 process restart or a new store instance; those remain limitations. This fix is
 included in the 3.13.582 PC package; the previously generated 3.13.581 ZIP is unchanged.
+Version 3.13.583 also retains that latch when post-write verification finds the
+record missing or invalid, including a create collision followed by disappearance.
+Successful write calls alone do not prove that the quarantine record persisted.
 
 The generated verified-identity supervisor requires an explicit trial
 confirmation, revalidates its pinned worker and DLL descriptors immediately

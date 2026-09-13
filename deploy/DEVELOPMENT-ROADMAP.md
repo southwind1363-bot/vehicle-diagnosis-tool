@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.583 保存後の再実行防止記録確認: 書込/close成功後に記録が消失するとmarkはstate_invalidでも次のreadがclearになる負例を再現。保存後確認で欠落/不正なら既存per-store失敗保持を設定し、EEXIST後の消失も再書込せずblockedに維持。人工の消失/破損/作成競合と既存I/O失敗、package477・offline183・native6903/専用148/pipe/保存検査が合格。ZIP 2,665,552 bytes / SHA256 7948778BC8FE4BFB211B52B562278306B28AB4A5420FBAC258EF514455074813。別展開846ファイル/16,898,091 bytes整合、修正moduleもsourceと一致。保存形式/実行権限は変更せず、再起動後の永続保証・実VCI/実車/別PCは未検証。旧582ZIPは保持。
+
 3.13.582 PC配布版への修正反映: 再実行防止記録の保存失敗を同一store内で保持する修正を新規配布物へ同梱。既存581は上書きしない。package477・workstation1362・offline183がErrors 0。ZIP 2,665,452 bytes / SHA256 59A1A1CF20E8ED158C655450C80165718716B98C0A5A0B4956CEC2088A5E6007。別展開後846ファイル/16,897,863 bytesの整合性検査に合格し、修正moduleのSHA256がsourceと一致。開発専用DTC実行経路は公開有効化せず、実VCI/実車/別PC・ディスク満杯/再起動後の保護は未検証。ZIPはローカル配布成果物で公開Webからの配信とは区別する。
 
 2026-09-13 再実行防止記録の保存失敗保持: HEAD版でmarkがstate_invalidを返した直後readがquarantined:falseに戻るENOSPC負例を再現。同じstore内ではopen/write/fsync/close失敗を記憶してread/markをblockedに維持し、自動再書込せず例外詳細も返さない。保存形式は変更なし。人工I/O失敗の専用確認、実生成を含むpackage477・native6903・専用148/pipe/保存検査とdiff合格。新store生成/再起動をまたぐ保護はディスク保存失敗時には保証できない。実ディスク満杯/実VCI/実車未検証。公開source修正で既存581ZIPは未更新、次の配布版への反映を残す。DTC専用supervisorへの永続隔離結合は別途残る。

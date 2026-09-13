@@ -31,7 +31,33 @@ try {
     assert.equal(attempts, before, "Persistence failure triggered another write attempt");
     assert.ok(!JSON.stringify(marked).includes("synthetic-private-detail"));
   }
-  console.log("Quarantine persistence failures: open/write/fsync/close remain blocked without retry");
+  for (const mode of ["removed_after_close", "corrupted_after_close", "exists_then_missing"]) {
+    let attempts = 0;
+    const testFs = { ...fs,
+      openSync(...args) {
+        attempts++;
+        if (mode === "exists_then_missing") throw Object.assign(new Error("synthetic-race"), { code: "EEXIST" });
+        return fs.openSync(...args);
+      },
+      closeSync(...args) {
+        fs.closeSync(...args);
+        if (mode === "removed_after_close") fs.unlinkSync(file);
+        else if (mode === "corrupted_after_close") fs.writeFileSync(file, "{}");
+      }
+    };
+    const create = vm.runInNewContext(`${source}\ncreateJ2534NativeQuarantineStore`, { fs: testFs, path, Buffer });
+    const store = create(root);
+    assert.equal(store.read().quarantined, false);
+    const marked = store.mark("cleanup_unconfirmed");
+    assert.equal(marked.quarantined, true);
+    assert.equal(marked.reason, "state_invalid");
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+    assert.equal(store.read().quarantined, true, `${mode}: lost failed verification state`);
+    const before = attempts;
+    assert.equal(store.mark("cleanup_unconfirmed").quarantined, true);
+    assert.equal(attempts, before, `${mode}: retried after failed verification`);
+  }
+  console.log("Quarantine persistence failures: I/O and post-write verification remain blocked without retry");
 } finally {
   if (fs.existsSync(file)) fs.unlinkSync(file);
   fs.rmdirSync(root);

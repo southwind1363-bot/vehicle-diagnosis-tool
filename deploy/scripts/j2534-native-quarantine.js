@@ -59,7 +59,13 @@ export function createJ2534NativeQuarantineStore(directory) {
       }
       if (persistenceFailed) return failedState();
       const stored = readState(file);
-      return Object.freeze(stored.quarantined ? stored : { quarantined: true, reason: "state_invalid" });
+      // Successful system calls are insufficient if the record cannot be
+      // verified afterwards (including an EEXIST race). Do not retry this store.
+      if (!stored.quarantined || stored.reason === "state_invalid") {
+        persistenceFailed = true;
+        return failedState();
+      }
+      return Object.freeze(stored);
     }
   });
 }
