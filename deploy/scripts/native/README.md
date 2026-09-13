@@ -4,7 +4,13 @@
 
 `WindowsDtcReadLibrary.cs` is a separate internal loader, compiled only with
 `J2534_DTC_DEVELOPMENT`. The existing three-export identity loader is unchanged.
-It checks the supplied uppercase SHA256 under a read-only file lease, loads with
+Its `LoadVerified` entry first reuses the registered-driver preflight to check
+file identity/final path, size, SHA256, PE/runtime architecture and Authenticode.
+Only the callback under the held verification handle may invoke the private
+loader. SHA256 case is normalized between the existing components; whitespace
+or non-hex values are not accepted. Failure returns no library, and preflight's
+non-execution flags are not presented as evidence about the loading callback.
+The private loader rechecks SHA256 under a read-only file lease, loads with
 the existing DLL-directory/System32 search flags, and requires all nine fixed
 identity/channel/read/filter/write exports before returning. Unknown export
 names are rejected. Failed binding unloads before any PassThru call; uncertain
@@ -19,6 +25,10 @@ distribution do not reference the new loader or enable its compilation flag.
 The combined isolated workers now exercise this binding using only generated
 fixture DLLs. Separate process checks cover malformed/mismatched digests,
 missing exports, forbidden names and release/retention. No vendor DLL is loaded.
+The integrated preflight tests use `PREFLIGHT_FIXTURE_TESTS` and thus a signature
+stub for generated DLLs, not real publisher trust. Incorrect size/architecture/
+digest never reaches the verified callback; write access is denied while it is
+held. Registration-to-selected-device provenance is not established by this test.
 Integration with trusted driver selection and the public readout controller,
 dependency identity, real VCI compatibility and vehicle timing remain unverified.
 

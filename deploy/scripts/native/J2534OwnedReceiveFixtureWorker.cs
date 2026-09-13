@@ -69,7 +69,10 @@ internal static class J2534OwnedReceiveFixtureWorker
                 if (key.StartsWith("COR_") || key.StartsWith("CORECLR_") || key.StartsWith("COMPLUS_") || key == "NODE_OPTIONS" || key == "NODE_PATH") return 3;
             }
 #if OWNED_DTC_REQUEST_FIXTURE
-            var library = WindowsDtcReadLibrary.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "owned-receive.dll"), OwnedReceiveFixtureDigest.Value);
+            string fixturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "owned-receive.dll");
+            J2534RegisteredDriverPreflight.FixtureHandleVerified = delegate(string verifiedPath) { };
+            var library = WindowsDtcReadLibrary.LoadVerified(fixturePath, OwnedReceiveFixtureDigest.Value,
+                new FileInfo(fixturePath).Length, IntPtr.Size == 4 ? "x86" : "x64");
             try { library.Resolve("PassThruIoctl"); return 1; }
             catch (InvalidOperationException) { /* Arbitrary/service exports stay rejected. */ }
 #else

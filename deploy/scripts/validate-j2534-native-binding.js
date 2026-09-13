@@ -252,9 +252,10 @@ async function main() {
         createdFiles.push(worker);
         const compilation = await execute(platform.compiler, [
           "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
-          `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE;J2534_DTC_DEVELOPMENT${dataOutput ? ";OWNED_DTC_RESULT_OUTPUT" : ""}${["owned-dtc-result-then-hang", "owned-dtc-data-hang"].includes(scenario) ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
+          `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE;J2534_DTC_DEVELOPMENT;PREFLIGHT_FIXTURE_TESTS${dataOutput ? ";OWNED_DTC_RESULT_OUTPUT" : ""}${["owned-dtc-result-then-hang", "owned-dtc-data-hang"].includes(scenario) ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
           sources[0], sources[2], sources[4], compiledDigest,
           path.join(scriptsDirectory, "native", "WindowsDtcReadLibrary.cs"),
+          preflightSources[0], preflightSources[1],
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
@@ -341,7 +342,8 @@ async function main() {
       const bindingTest = path.join(platformDirectory, "dtc-library-test.exe");
       createdFiles.push(bindingTest);
       const bindingCompile = await execute(platform.compiler, ["/nologo", "/target:exe", `/platform:${platform.name}`,
-        "/optimize+", "/warnaserror+", "/define:J2534_DTC_DEVELOPMENT;NATIVE_RECEIVE_FIXTURE_TESTS", `/out:${bindingTest}`,
+        "/optimize+", "/warnaserror+", "/define:J2534_DTC_DEVELOPMENT;NATIVE_RECEIVE_FIXTURE_TESTS;PREFLIGHT_FIXTURE_TESTS", `/out:${bindingTest}`,
+        preflightSources[0], preflightSources[1],
         sources[0], path.join(scriptsDirectory, "native", "WindowsDtcReadLibrary.cs"),
         path.join(scriptsDirectory, "native", "WindowsDtcReadLibraryTests.cs")]);
       assert.equal(bindingCompile.error, null, `DTC library test compile failed: ${bindingCompile.stdout}${bindingCompile.stderr}`);

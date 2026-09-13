@@ -26,7 +26,23 @@ namespace VehicleDiagnosis.Native
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool FreeLibrary(IntPtr library);
 
-        internal static WindowsDtcReadLibrary Load(string path, string expectedDigest)
+        internal static WindowsDtcReadLibrary LoadVerified(string path, string expectedDigest, long expectedSize, string architecture)
+        {
+            WindowsDtcReadLibrary library = null;
+            var verification = J2534RegisteredDriverPreflight.VerifyWhileHandleHeld(path, expectedDigest == null ? null : expectedDigest.ToLowerInvariant(),
+                expectedSize, architecture, delegate(string verifiedPath) {
+                    library = Load(verifiedPath, expectedDigest.ToUpperInvariant());
+                });
+            if (verification.Status != "verified_non_executable" || library == null) {
+                if (library != null) library.Release(true); // No PassThru operation has occurred.
+                throw new InvalidOperationException("native_dtc_verified_binding_failed");
+            }
+            // Do not return preflight flags as execution evidence: the callback
+            // loaded a module, although preflight itself is a non-executing check.
+            return library;
+        }
+
+        private static WindowsDtcReadLibrary Load(string path, string expectedDigest)
         {
             if (expectedDigest == null || expectedDigest.Length != 64)
                 throw new InvalidOperationException("native_dtc_digest_invalid");

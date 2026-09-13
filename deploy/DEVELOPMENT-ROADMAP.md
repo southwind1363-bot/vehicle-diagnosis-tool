@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 DTC接続層と既存事前検査の結合: LoadVerifiedを入口にして低水準Loadをprivate化。既存VerifyWhileHandleHeldのファイル識別/最終パス/サイズ/SHA256/PE・実行bitness/署名検査を通過したcallback内だけで読み込む。事前検査の非実行flagをロード結果へ転用しない。初回はSHA大小文字の規約不一致で結合失敗、大小文字を各既存規約へ正規化して修正。生成DLLと署名stubでx86/x64の読取・結果保存経路、誤サイズ/bitness/digestのcallback未到達、検査handle保持中の書込拒否を確認。native6853 Errors 0、専用148/pipe/保存・diff合格。実署名/登録deviceとの同一性/依存DLL/実VCI/実車は未確認。公開実行/配布581ZIP/保存形式不変。
+
 2026-09-13 内部DTC接続層の開発承認・実装: 直前の安全境界確認へ利用者「続けて」。既存3関数identity loaderを維持し、J2534_DTC_DEVELOPMENT指定時のみコンパイルする別のWindowsDtcReadLibraryを追加。SHA256をread lease下で照合、固定9関数が全部揃ってから返却、任意関数名拒否、所有不明時保持を維持。既存固定03/07/0A builder/ownerに結合した隔離workerをこの接続層へ切替。生成DLLのみでx86/x64の正常/失敗/hang/結果/保存往復と不正digest/不足export/禁止名/解放後拒否/保持を確認。native6853 Errors 0、専用148/pipe/保存検証・公開entry/配布除外検査・diff合格。実vendor DLLは未実行。信頼済みdriver選択/依存DLL識別/公開読取controllerへの統合・実VCI/実車は残る。ハッシュ一致は真正性証明ではなく、Write/filter API自体を安全な読取専用APIとは見なさない。公開実行/本体581ZIP/保存形式不変。
 
 2026-09-13 長い受信結果の親process上限: 許容4099byteの人工DTCレコードはJSONで8412byteとなり、従来の概要用4096byte上限では結果判定前に破棄される制約を確認。開発DTC結果supervisorのみ64KiB上限へ変更し、概要workerは4KiB維持。実Node子processのpipeで長い正常payloadの既存decoder到達と64KiB超過の解析前拒否を確認。専用148項目/保存往復/pipe検査、native6845項目Errors 0、diff合格。長いnative受信や実VCI/実車の確認ではない。診断判定/保存形式/実行権限/本体581ZIP不変。直近5commitのGitHub CI成功も確認済み（最新061820ef run34726555203はChromium import/replay/recovery/exportとread-only/data検証成功）。
