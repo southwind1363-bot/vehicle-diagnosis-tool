@@ -21,6 +21,13 @@ contains the existing decoded snapshot with explicit `fixture_only:true` and
 ordinary summary supervisor rejects these data-output scenarios. Public/live
 routes remain unconnected.
 
+The DTC-result supervisor uses a 64 KiB output cap, sufficient for the worker's
+two bounded decimal-byte records; summary-only workers retain 4 KiB. The cap is
+still enforced before parsing and oversized output never reaches the decoder.
+A real Node child pipe checks a 4099-byte synthetic padded response against both
+caps and rejects output above 64 KiB. This is a pipe/decoder regression check,
+not a long native response or real VCI test.
+
 Only one complete ISO15765 11-bit positive 03/07/0A response from request ECU+8
 is decoded. Exact start indicators may precede it; missing/trailing indicators,
 multiple responses, unknown receive flags, different ECUs/services, extra data,

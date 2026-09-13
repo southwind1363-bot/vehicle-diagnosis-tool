@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import { spawn } from "node:child_process";
+import { createBoundedFixtureWorker } from "./bounded-fixture-worker.js";
+import { J2534_DTC_OUTPUT_LIMIT } from "./j2534-native-fixture-supervisor.js";
 import { createJ2534DtcResultConverter } from "./j2534-dtc-result-converter.js";
 import { createJ2534FixtureSessionBuilder } from "./j2534-fixture-session-builder.js";
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -90,3 +93,41 @@ for (const mutate of [
 }
 assert.equal(buildSession(Object.defineProperty({}, "execution_status", { get() { throw new Error("private"); } })), null);
 console.log("J2534 fixture session handoff and archive roundtrip: passed / no user files used");
+
+// Actual child pipe delivery, not vendor DLL/vehicle data. The old summary cap
+// must reject this valid padded response; the dedicated DTC cap must preserve it.
+const longInput = sample();
+longInput.read_result.Status = 9;
+longInput.read_result.Messages[0].Data.push(...Array(4092).fill(0));
+const longJson = JSON.stringify(longInput);
+assert.ok(Buffer.byteLength(longJson) > 4096);
+for (const [limit, output, expected] of [
+  [4096, longJson, "worker_failed"],
+  [J2534_DTC_OUTPUT_LIMIT, longJson, "worker_completed"],
+  [J2534_DTC_OUTPUT_LIMIT, " ".repeat(J2534_DTC_OUTPUT_LIMIT + 1), "worker_failed"],
+]) {
+  let parsedCalls = 0;
+  const runChild = createBoundedFixtureWorker({ outputLimit: limit, rejectStderr: true,
+    spawnWorker() {
+      const child = spawn(process.execPath, ["--input-type=module", "-e", "process.stdin.pipe(process.stdout)"],
+        { windowsHide: true, shell: false, stdio: ["pipe", "pipe", "pipe"] });
+      child.stdin.on("error", () => {}); // Parent may stop an over-limit child.
+      child.stdin.end(output);
+      return child;
+    },
+    parseOutput(json) { parsedCalls++; return convert(json); }
+  });
+  const result = await runChild({ timeout: 5000 });
+  assert.equal(result.execution_status, expected);
+  assert.equal(result.worker_exited, true);
+  if (expected === "worker_completed") {
+    assert.equal(result.parsed_result.status, "decoded");
+    assert.equal(result.parsed_result.snapshot.dtcs[0].code, "P0171");
+    assert.equal(parsedCalls, 1);
+  } else {
+    assert.equal(result.parsed_result, null);
+    assert.ok(result.errors.includes("worker_output_limit"));
+    assert.equal(parsedCalls, 0);
+  }
+}
+console.log("J2534 bounded result pipe: long response retained, summary and oversized output rejected");

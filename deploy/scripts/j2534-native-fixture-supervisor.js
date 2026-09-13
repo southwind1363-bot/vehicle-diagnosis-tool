@@ -133,6 +133,9 @@ export function createJ2534OwnedReceiveFixtureSupervisor(descriptor) {
 export function createJ2534DtcResultFixtureSupervisor(descriptor, decodeDtcResponse) {
   return createOwnedFixtureSupervisor(descriptor, createJ2534DtcResultConverter(decodeDtcResponse));
 }
+// Two bounded native records (at most 4099 data bytes each) fit even when
+// every byte uses three decimal digits. Summary-only workers keep 4 KiB.
+export const J2534_DTC_OUTPUT_LIMIT = 65536;
 function createOwnedFixtureSupervisor(descriptor, convert) {
   if (!keysMatch(descriptor, ["temp_root", "architecture", "scenario", "worker", "fixture"])
     || !["x86", "x64"].includes(descriptor.architecture)
@@ -155,6 +158,7 @@ function createOwnedFixtureSupervisor(descriptor, convert) {
   });
   let consumed = false;
   const bounded = createBoundedFixtureWorker({
+    outputLimit: convert ? J2534_DTC_OUTPUT_LIMIT : 4096,
     rejectStderr: true,
     spawnWorker() {
       for (const file of pinned) {
