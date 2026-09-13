@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 承認済みdriver選択受渡しの第一段: readonly J2534DtcReadSelectionへlocal絶対path/SHA256/size/architecture/物理ECU7E0..7E7/SID03・07・0Aを保持、構築時は非I/Oで不正metadataを拒否。LoadSelectedは既存の保持handle下preflight/固定export検査を使用し、生成workerのloader/filter/dispatchへ同じ選択を渡す。既存mutex/終了不明時保持/無再試行は維持。初回uint→byteコンパイル不一致を修正し、x86/x64でreadonly/許可24組/不正入力/実size不一致拒否と既存生成DLL読取→結果→保存往復、native6997/専用converter148、diff合格。構築だけで署名信頼や実行許可を立証しない。fixtureの選択元と親側期待は7E0/03固定であり、外部selector・親からの要求IPCは次工程。実vendor DLL/実VCI/実車/公開実行/保存形式/590ZIP不変。
+
 2026-09-14 登録日の配布Chrome確認: integrity合格の展開590（846files/16,899,385bytes）を隔離Chromeへ供給、Asia/Tokyoと検査用Dateを設定してUTC1/1 15:30=現地1/2 00:30を再現。登録日inputの2026/01/02を目視、手入力12/20はパネル往復でも保持、空欄時の収集値は現地1/2、createdAtは元UTCのまま。事例storageは未作成、console/pageerror/外部通信0。browserスキルの専用CLI不在で既存Playwrightを使用、--local-date-uiを追加（zml8X1）。本体/590ZIP/保存形式不変。実時計経過/事例保存・復元/別PC/実VCI/実車をこの検査で確認済みとはしない。
 
 3.13.590 FF番号の表示整合: 記録値の行表示が文字列"0"/" 2 "を未記録、数値256をFF #256とする一方、既存絞込/トリガー表示は逆の扱いになる不一致を表示関数へ直接入力して再現。行表示でも既存getObdDisplayByteNumberを共用し、0..255の整数/十進文字列のみ番号表示。読取decoder/保存データ/診断判定は変更しない。FF171、workstation1362、R1全工程/offline183・構文/diff合格。ZIP2,665,941bytes / SHA256CF7FAC3266B5759343991713FF6F4637D86390658CB3007378ED353CEC24AA55、別展開846files/16,899,385bytes整合。人工表示入力による検査であり、実取込経路や実車の当該値発生を確認したものではない。今回実ブラウザー/別PC/実VCI/実車未検証。

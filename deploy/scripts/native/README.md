@@ -2,6 +2,18 @@
 
 ## Development DTC library binding (2026-09-13 approval)
 
+The 2026-09-14 selection-handoff approval adds an immutable
+`J2534DtcReadSelection` for a local absolute path, digest, expected size,
+architecture, physical ECU 0x7E0..0x7E7 and service 03/07/0A. Construction only
+validates metadata: it neither accesses a file nor establishes publisher trust.
+`LoadSelected` still uses the existing held-file preflight and binding checks.
+The generated worker now passes this same selection to binding, filter setup
+and request dispatch, under its existing execution lease. Its selection still
+comes from fixed fixture inputs; no CLI, vendor-driver selection, public bridge
+entry, or new dependency trust policy is enabled. The parent still pins its
+fixture result expectation to ECU 7E0/service 03. External selector and parent
+request handoff remain to be connected within a separately disabled route.
+
 The isolated DTC worker now acquires `J2534DtcExecutionLease` before preflight or
 DLL loading. It reuses the existing global mutex name and performs one immediate
 acquisition attempt per process. Busy acquisition exits without a result or DLL

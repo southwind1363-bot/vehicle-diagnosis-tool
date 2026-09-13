@@ -76,8 +76,9 @@ internal static class J2534OwnedReceiveFixtureWorker
             if (!J2534DtcExecutionLease.TryAcquire(out executionLease)) return 4;
             string fixturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "owned-receive.dll");
             J2534RegisteredDriverPreflight.FixtureHandleVerified = delegate(string verifiedPath) { };
-            var library = WindowsDtcReadLibrary.LoadVerified(fixturePath, OwnedReceiveFixtureDigest.Value,
-                new FileInfo(fixturePath).Length, IntPtr.Size == 4 ? "x86" : "x64");
+            var selection = new J2534DtcReadSelection(fixturePath, OwnedReceiveFixtureDigest.Value,
+                new FileInfo(fixturePath).Length, IntPtr.Size == 4 ? "x86" : "x64", 0x7e0, 3);
+            var library = WindowsDtcReadLibrary.LoadSelected(selection);
             try { library.Resolve("PassThruIoctl"); return 1; }
             catch (InvalidOperationException) { /* Arbitrary/service exports stay rejected. */ }
 #else
@@ -117,8 +118,8 @@ internal static class J2534OwnedReceiveFixtureWorker
                         library.Resolve("PassThruWriteMsgs"), typeof(J2534ReadRequestNative.WriteFunction));
                     var request = new J2534ReadRequestNative(owner, device, write);
                     uint filter;
-                    if (request.PrepareDtcFilterOnce(channel, 0x7e0, start, stop, out filter) != 0) failed = true;
-                    else if (request.DispatchDtcReadOnce(channel, 0x7e0, 3) != 0) failed = true;
+                    if (request.PrepareDtcFilterOnce(channel, selection.RequestEcu, start, stop, out filter) != 0) failed = true;
+                    else if (request.DispatchDtcReadOnce(channel, selection.RequestEcu, selection.Service) != 0) failed = true;
                     // Queue acceptance is not a readout. Read fixture records
                     // only after both preceding calls succeeded; no retry.
 #endif

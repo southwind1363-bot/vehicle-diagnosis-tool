@@ -7,6 +7,33 @@ using System.Security.Cryptography;
 
 namespace VehicleDiagnosis.Native
 {
+    // Immutable handoff from a trusted selector, not proof of trust or permission.
+    // Construction performs no file access, loading, or vehicle operation.
+    internal sealed class J2534DtcReadSelection
+    {
+        internal readonly string Path, Sha256, Architecture;
+        internal readonly long Size;
+        internal readonly uint RequestEcu;
+        internal readonly byte Service;
+
+        internal J2534DtcReadSelection(string path, string sha256, long size, string architecture, uint requestEcu, uint service)
+        {
+            bool validPath = false;
+            try {
+                validPath = path != null && path.Length > 3 && Char.IsLetter(path[0]) && path[1] == ':' && path[2] == '\\'
+                    && String.Equals(System.IO.Path.GetFullPath(path), path, StringComparison.Ordinal);
+            } catch { }
+            bool validHash = sha256 != null && sha256.Length == 64;
+            if (validHash) foreach (char digit in sha256)
+                if (!((digit >= '0' && digit <= '9') || (digit >= 'a' && digit <= 'f') || (digit >= 'A' && digit <= 'F'))) validHash = false;
+            if (!validPath || !validHash || size <= 0 || (architecture != "x86" && architecture != "x64")
+                || requestEcu < 0x7e0 || requestEcu > 0x7e7 || (service != 3 && service != 7 && service != 10))
+                throw new InvalidOperationException("native_dtc_selection_invalid");
+            Path = path; Sha256 = sha256.ToUpperInvariant(); Size = size; Architecture = architecture;
+            RequestEcu = requestEcu; Service = (byte)service;
+        }
+    }
+
     // Development binding only. No discovery, CLI or public execution route.
     // The caller must provide an independently verified digest and own the
     // isolated process. A matching digest is not publisher authentication.
@@ -25,6 +52,12 @@ namespace VehicleDiagnosis.Native
         [DllImport("kernel32.dll", ExactSpelling = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool FreeLibrary(IntPtr library);
+
+        internal static WindowsDtcReadLibrary LoadSelected(J2534DtcReadSelection selection)
+        {
+            if (selection == null) throw new InvalidOperationException("native_dtc_selection_invalid");
+            return LoadVerified(selection.Path, selection.Sha256, selection.Size, selection.Architecture);
+        }
 
         internal static WindowsDtcReadLibrary LoadVerified(string path, string expectedDigest, long expectedSize, string architecture)
         {
