@@ -347,7 +347,7 @@ async function main() {
         "/optimize+", "/warnaserror+", "/define:J2534_DTC_DEVELOPMENT;NATIVE_RECEIVE_FIXTURE_TESTS", `/out:${leaseTest}`,
         ...["J2534GlobalMutexLease.cs", "J2534DtcExecutionLease.cs", "J2534DtcExecutionLeaseTests.cs"].map(n => path.join(scriptsDirectory, "native", n))]);
       assert.equal(leaseCompile.error, null, `${leaseCompile.stdout}${leaseCompile.stderr}`);
-      for (const state of ["active", "retained", "released"]) {
+      for (const state of ["active", "retained", "released", "other-thread"]) {
         let peerResult, peerTask, ready = false, collected = "";
         const heldResult = await new Promise(resolve => {
           const child = execFile(leaseTest, [state], { windowsHide: true, shell: false, timeout: 10000, maxBuffer: 4096 },
