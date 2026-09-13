@@ -539,4 +539,22 @@ for (let seed = 0; seed < 12; seed++) {
   check(restored.context.savedCases.map(item => item.id).join(",") === "existing,delimiter-a,delimiter-b", "Backup round-trip lost distinct field boundaries");
   check(restored.context.savedCases[1].maker === "A|B" && restored.context.savedCases[2].model === "B|C", "Backup field text changed");
 }
+{
+  const c = client();
+  c.import([
+    { id: "good-before", model: "before" },
+    { id: "bad-code", model: "bad", obdCode: 123 },
+    { id: "bad-key", maker: { toString: null }, model: "bad" },
+    { id: "good-after", model: "after" }
+  ]);
+  check(c.context.savedCases.map(item => item.id).join(",") === "existing,good-before,good-after", "One malformed row prevented valid rows from importing");
+  check(c.context.caseImportStatus.textContent.includes("追加 2件 / 重複スキップ 0件 / 不正行スキップ 2件"), "Malformed-row count was not reported");
+  check(!c.context.caseImportStatus.textContent.includes("bad-code"), "Malformed row contents leaked into status");
+  const reloaded = client();
+  reloaded.import(JSON.stringify(c.context.buildCasesBackup()));
+  check(reloaded.context.savedCases.map(item => item.id).join(",") === "existing,good-before,good-after", "Valid rows did not survive backup restore");
+  const failed = client({ failWrite: "QuotaExceededError" });
+  failed.import([{ id: "good", model: "good" }, { id: "bad", obdCode: 123 }]);
+  check(failed.store.get(key) === failed.bytes && failed.context.savedCases === failed.original, "Failed persistence partially applied valid rows");
+}
 console.log(`Case storage checks: ${checks} / Errors: 0`);
