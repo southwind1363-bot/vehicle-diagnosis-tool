@@ -255,7 +255,7 @@ async function main() {
         writeCreatedFile(compiledDigest, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const uint RequestEcu = ${requestEcu}; internal const uint Service = ${service}; internal const string Value = "${createHash("sha256").update(fixture).digest("hex").toUpperCase()}"; }`));
         const worker = path.join(combinedDirectory, "owned-receive-worker.exe");
         createdFiles.push(worker);
-        const compilation = await execute(platform.compiler, [
+        const compilationArgs = [
           "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
           `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE;J2534_DTC_DEVELOPMENT;PREFLIGHT_FIXTURE_TESTS${dataOutput ? ";OWNED_DTC_RESULT_OUTPUT" : ""}${["owned-dtc-result-then-hang", "owned-dtc-data-hang"].includes(scenario) ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
           sources[0], sources[2], sources[4], compiledDigest,
@@ -265,8 +265,24 @@ async function main() {
           path.join(scriptsDirectory, "native", "J2534GlobalMutexLease.cs"),
           path.join(scriptsDirectory, "native", "J2534DtcExecutionLease.cs"),
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
-        ]);
+        ];
+        const compilation = await execute(platform.compiler, compilationArgs);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
+        // Reuse existing failure DLLs, but exercise the shared data-result path
+        // as well as the legacy summary path. Later forbidden calls trap in the
+        // DLL; a leaked out-result has a separate fixture-only exit code (5).
+        if (["owned-dtc-start-failure", "owned-dtc-write-failure", "owned-dtc-stop-failure"].includes(scenario)) {
+          const failureWorker = path.join(combinedDirectory, "result-failure-worker.exe");
+          createdFiles.push(failureWorker);
+          const failureArgs = compilationArgs.map(arg => arg.startsWith("/out:") ? `/out:${failureWorker}`
+            : arg.startsWith("/define:") ? `${arg};OWNED_DTC_RESULT_OUTPUT` : arg);
+          const failureCompile = await execute(platform.compiler, failureArgs);
+          assert.equal(failureCompile.error, null, `Result failure worker compile failed: ${failureCompile.stdout}${failureCompile.stderr}`);
+          const failedRead = await execute(failureWorker, ["--fixture-owned-receive"]);
+          assert.equal(failedRead.error?.code, 1, "Shared read failure reached a forbidden call or leaked a result");
+          assert.equal(failedRead.stdout, ""); assert.equal(failedRead.stderr, "");
+          total += 4;
+        }
         const success = scenario === "owned-dtc-read" || (dataOutput && !scenario.endsWith("hang"));
         const timedOut = scenario.endsWith("hang");
         let expected = null;

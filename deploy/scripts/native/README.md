@@ -19,6 +19,11 @@ fixture workers use this method, then independently dispose/verify the module
 before serializing. The parent still waits for normal process completion and
 validates ECU, service and payload; the shared method does not decode or certify
 the diagnostic contents. Summary-only ABI fixtures retain their own record checks.
+The existing start/write/stop failure DLLs are also run through separately
+compiled data-output workers. They must exit with failure and empty stdout/stderr;
+the harness uses a distinct exit code if a failed operation returns a non-null
+result. The DLLs trap forbidden subsequent calls, and the legacy summary workers
+are still tested separately. These are artificial failure paths, not driver tests.
 No discovery, loading, retry, public entry or new request
 type is added. The existing generated workers exercise this shared implementation.
 

@@ -122,6 +122,7 @@ internal static class J2534OwnedReceiveFixtureWorker
                     J2534ReceiveNative.Result result;
 #if OWNED_DTC_RESULT_OUTPUT
                     failed = !J2534DtcReadOperation.TryReadAndFinish(library, owner, device, channel, selection, read, out result);
+                    if (failed && result != null) return 5; // Failed operations must not leak a captured result.
 #else
                     uint filter;
                     failed = !J2534DtcReadOperation.TryReadOnce(library, owner, device, channel, selection, read, out filter, out result);

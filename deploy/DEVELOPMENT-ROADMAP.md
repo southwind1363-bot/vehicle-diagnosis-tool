@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 共通読取終了wrapperの失敗検証完了: 既存start/write/stop失敗DLLをdata-output workerでも別コンパイルしてTryReadAndFinishへ直接通す。従来summary worker検査は残す。x86/x64で終了code1・stdout/stderr空を確認。failedなのにout resultが非nullなら検査専用code5、失敗後の禁止API到達はDLL内trapになるため区別して拒否を確認。native7363/専用converter148/保存復元/構文/diff合格、前回記録のwrapper専用失敗検証不足を解消。追加DLL scenario/本体変更/公開権限拡張なし、実vendor DLL/VCI/実車未検証・保存形式/590ZIP不変。
+
 2026-09-14 読取結果の終了前返却を内部部品で抑止: TryReadAndFinishへ既存単発読取・status0/9/1..2件/件数一致の形状検査・Stop/Disconnect/Closeをまとめ、全成功時だけout resultを設定。data-output workerを同部品へ接続し、続くowner Dispose/module保持確認/正常process終了/親のECU・service・payload照合は維持。要約専用ABI fixtureの独自record検査は残す。x86/x64 native7339/専用converter148/保存復元/既存異常終了隔離/diff合格。追加scenarioなし。終了失敗用の既存要約scenarioはTryReadOnce/TryFinish経路の回帰であり、新wrapper専用の終了失敗検査とは区別する。実DLL/VCI/実車・公開entry・保存形式・590ZIP不変。
 
 2026-09-14 DTC接続・終了処理の共通化: 既存workerのISO15765/11-bit/500000baud接続をTryConnect、Stop→Disconnect→CloseをTryFinishへ抽出し共通部品に接続。固定条件・delegate・owner照合・最初の失敗で短絡する順序は不変。結果検査後のみ終了処理を呼び、owner Dispose/module保持確認/process lease完了はworker側で維持。API Close成功をmodule解放確認の代わりにしない。x86/x64 native7339/専用converter148/保存復元/異常終了隔離/diff合格。新scenarioなし。公開entry・driver選択権限・実VCI/実車実行・保存形式・590ZIPは不変、生成DLL以外未検証。
