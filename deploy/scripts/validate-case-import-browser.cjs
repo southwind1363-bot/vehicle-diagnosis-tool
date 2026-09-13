@@ -5,7 +5,11 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 (async () => {
-  const root = path.resolve(__dirname, '..');
+  const root = path.resolve(process.env.CASE_BROWSER_ROOT || path.resolve(__dirname, '..'));
+  if (process.env.CASE_BROWSER_ROOT) {
+    const { verifyWorkstationPackage } = await import('./verify-workstation-package.js');
+    console.log('Verified browser package source:', JSON.stringify(verifyWorkstationPackage(root)));
+  }
   // Share the existing CI screenshot artifact glob without collecting backups.
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-cases-'));
   const channel = process.env.PLAYWRIGHT_CHANNEL || 'chrome';
@@ -54,9 +58,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         { id: 'boundary-a', maker: 'A|B', model: 'C', symptom: '試験専用' },
         { id: 'boundary-b', maker: 'A', model: 'B|C', symptom: '試験専用' }
       ];
-      await input.setInputFiles({ name: 'boundaries.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(records)) });
+      const malformed = process.argv.includes('--malformed-fields');
+      const inputRecords = malformed ? [records[0],
+        { id: 'private-invalid-code', model: 'invalid', obdCode: 123 },
+        { id: 'private-invalid-key', maker: { toString: null }, model: 'invalid' }, records[1]] : records;
+      await input.setInputFiles({ name: 'boundaries.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(inputRecords)) });
       await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('JSONインポート完了'));
       assert.match(await status.innerText(), /追加 2件/);
+      assert.match(await status.innerText(), malformed ? /不正行スキップ 2件/ : /不正行スキップ 0件/);
+      assert.doesNotMatch(await status.innerText(), /private-invalid/);
+      await status.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, 'case-field-import-status.png') });
       await page.reload();
       await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
       assert.deepEqual(await page.evaluate(() => savedCases.map(({ id, maker, model }) => ({ id, maker, model }))),
@@ -65,7 +77,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.equal(await page.locator('#caseList .case-card').count(), 2);
       assert.match(await page.locator('#caseList').innerText(), /boundary-a/);
       assert.match(await page.locator('#caseList').innerText(), /boundary-b/);
-      await page.screenshot({ path: path.join(output, 'case-boundaries-list.png') });
+      await page.locator('#caseList').screenshot({ path: path.join(output, 'case-boundaries-list.png') });
       await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
       const downloadEvent = page.waitForEvent('download');
       await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
@@ -81,7 +93,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await status.scrollIntoViewIfNeeded();
       await page.screenshot({ path: path.join(output, 'case-boundaries-restored.png') });
       assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
-      console.log(JSON.stringify({ passed: true, flow: 'field boundaries -> actual file import -> reload -> downloaded backup -> duplicate reimport', output }));
+      console.log(JSON.stringify({ passed: true, malformedFields: malformed, packageSource: Boolean(process.env.CASE_BROWSER_ROOT), flow: 'field boundaries -> actual file import -> reload -> downloaded backup -> duplicate reimport', output }));
       return;
     }
     await input.setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('PRIVATE_INPUT is not JSON') });
