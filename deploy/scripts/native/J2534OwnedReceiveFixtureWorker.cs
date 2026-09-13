@@ -119,9 +119,13 @@ internal static class J2534OwnedReceiveFixtureWorker
                 {
                     if (channel != 0xe1234567 || channel == device) return 1;
 #if OWNED_DTC_REQUEST_FIXTURE
-                    uint filter;
                     J2534ReceiveNative.Result result;
+#if OWNED_DTC_RESULT_OUTPUT
+                    failed = !J2534DtcReadOperation.TryReadAndFinish(library, owner, device, channel, selection, read, out result);
+#else
+                    uint filter;
                     failed = !J2534DtcReadOperation.TryReadOnce(library, owner, device, channel, selection, read, out filter, out result);
+#endif
 #endif
                     if (!failed)
                     {
@@ -130,12 +134,8 @@ internal static class J2534OwnedReceiveFixtureWorker
                         var result = receiver.ReadOnce(channel, 3);
 #endif
 #if OWNED_DTC_RESULT_OUTPUT
-                        // Preserve ERR_TIMEOUT for the parent's strict payload validation.
-                        // One complete response may have a separate start indicator.
-                        // The parent validates their meaning; this only bounds copying.
-                        if ((result.Status != 0 && result.Status != 9)
-                            || result.Messages.Length < 1 || result.Messages.Length > 2
-                            || result.ReportedCount != result.Messages.Length) return 1;
+                        // Shared operation has completed bounded shape validation
+                        // and API shutdown; module cleanup is still checked below.
                         captured = result;
 #else
                         if (result.Status != 0 || result.ReportedCount != 2 || result.Messages.Length != 2
@@ -145,7 +145,9 @@ internal static class J2534OwnedReceiveFixtureWorker
 #endif
                         receivedCount = result.Messages.Length;
 #if OWNED_DTC_REQUEST_FIXTURE
+#if !OWNED_DTC_RESULT_OUTPUT
                         failed = !J2534DtcReadOperation.TryFinish(owner, device, channel, filter);
+#endif
 #else
                         // A failed Disconnect must never fall through to Close.
                         if (!failed) {

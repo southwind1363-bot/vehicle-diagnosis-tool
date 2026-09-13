@@ -8,6 +8,28 @@ namespace VehicleDiagnosis.Native
     // The caller owns the process lease, binding and result validation.
     internal static class J2534DtcReadOperation
     {
+        // A result leaves this method only after the existing bounded native
+        // shape check and ordered channel/device shutdown have both succeeded.
+        // The caller must still dispose the owner and verify module release.
+        internal static bool TryReadAndFinish(WindowsDtcReadLibrary library, J2534IdentityNative owner,
+            uint device, uint channel, J2534DtcReadSelection selection,
+            J2534ReceiveNative.ReadFunction read, out J2534ReceiveNative.Result result)
+        {
+            result = null;
+            uint filter;
+            J2534ReceiveNative.Result captured;
+            if (!TryReadOnce(library, owner, device, channel, selection, read, out filter, out captured)) return false;
+            // ERR_TIMEOUT may accompany fewer complete messages than requested.
+            // This is shape validation only; the parent still checks ECU/service
+            // and payload semantics after normal worker exit. No retry here.
+            if ((captured.Status != 0 && captured.Status != 9)
+                || captured.Messages.Length < 1 || captured.Messages.Length > 2
+                || captured.ReportedCount != captured.Messages.Length) return false;
+            if (!TryFinish(owner, device, channel, filter)) return false;
+            result = captured;
+            return true;
+        }
+
         internal static bool TryConnect(WindowsDtcReadLibrary library, J2534IdentityNative owner,
             uint device, out uint channel, out J2534ReceiveNative.ReadFunction read)
         {

@@ -12,6 +12,13 @@ After result validation, `TryFinish` shares the existing Stop/Disconnect/Close
 ordering, stopping at the first failure. Result validation, owner disposal,
 module-retention verification and process-lease completion remain with the caller;
 successful API close alone is not module cleanup confirmation.
+`TryReadAndFinish` combines the single read, the existing bounded result-shape
+check (status 0/9, one or two copied records, matching count), and ordered API
+shutdown. It keeps its output null unless all those steps succeed. Data-output
+fixture workers use this method, then independently dispose/verify the module
+before serializing. The parent still waits for normal process completion and
+validates ECU, service and payload; the shared method does not decode or certify
+the diagnostic contents. Summary-only ABI fixtures retain their own record checks.
 No discovery, loading, retry, public entry or new request
 type is added. The existing generated workers exercise this shared implementation.
 
