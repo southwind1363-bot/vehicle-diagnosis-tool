@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 586配布資材のライブ欠損表示確認: 展開586の846files/16,898,717bytesをintegrity確認して隔離Chromeへ供給。通常画面のライブ詳細を開いた後、表示関数へ人工null/undefined/空文字/0/string0/780を直接渡し、390/1280幅で値未確認3件と0 rpm2件/780 rpm、元配列・保存対象session不変、console/pageerror/外部通信0を確認。初回は通常画面に存在しない詳細ナビを検査が選択してtimeout、実在する「ライブデータの詳細を開く」へ検査だけ修正して合格（obd-file-flow-PZlkMu）。browserスキルのCLI不在により既存Playwright経路を使用。1280画像で全6件を目視、390画像は固定ナビが先頭カードへ重なるため全カードの視覚確認とはしない。実取得/取込の欠損再現・別PC/実VCI/実車/Service Worker/起動cmd確認ではない。本体/保存形式/586ZIP不変。
+
 3.13.586 ライブ値の欠損表示: renderObdMonitorValuesにnull/undefined/空文字を渡すとnull rpm等になる表示上の負例を再現。これらのみ「値未確認」と表示し、数値0/文字列0/通常値・元配列は維持。診断判定/取得status/保存形式は変更せず、実車応答や取込経路での欠損発生を確認したものではない。monitor52、R1全工程（offline183）・package477・構文/diff合格。ZIP 2,665,736 bytes / SHA256 5CC05761AD367DF04FAFE92F8E1B11E5F854D78B69E6BC30B335ED5EC3410D00、別展開846files/16,898,717bytes整合。今回の実ブラウザー/別PC/実VCI/実車は未検証、公開実行無効維持。
 
 2026-09-13 585配布資材の実Chrome取込確認: 展開済み585の846files/16,898,623bytesを既存integrity検査してからbrowserへroute供給。実file inputで正常2件+型不正2件を取込、追加2/不正2と内容非開示を目視、reload後2カードとID/項目値、実JSON download内容、同backup再取込の重複2件を確認。console/pageerror/外部通信0。既存検査に検証済みpackage root指定と--malformed-fieldsを追加。専用CLI不在のためbrowserスキルの代替として隔離Chrome/Playwrightを使用（obd-file-flow-cases-QZaXen）。同PCの配布資材検査であり、別PC/実VCI/実車/Service Worker・PC起動cmdの検証ではない。本体/保存形式/585ZIP不変。

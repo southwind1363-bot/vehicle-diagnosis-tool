@@ -7,7 +7,11 @@ const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 
 (async () => {
-  const root = path.resolve(__dirname, '..');
+  const root = path.resolve(process.env.SCANNER_BROWSER_ROOT || path.resolve(__dirname, '..'));
+  if (process.env.SCANNER_BROWSER_ROOT) {
+    const { verifyWorkstationPackage } = await import('./verify-workstation-package.js');
+    console.log('Verified scanner package source:', JSON.stringify(verifyWorkstationPackage(root)));
+  }
   const output = fs.mkdtempSync(path.join(os.tmpdir(), 'obd-file-flow-'));
   const restart = process.argv.includes('--restart');
   const denseLive = process.argv.includes('--dense-live');
@@ -146,6 +150,31 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().waitFor();
     assert.match(await page.locator('#obdDetectedCodes').innerText(), /P0420/);
     await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    if (process.argv.includes('--missing-live-display')) {
+      await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
+      const retained = await page.evaluate(() => {
+        const before = JSON.stringify(obdDevSession.lastSession);
+        const samples = [null, undefined, '', 0, '0', 780].map((value, index) => ({
+          id: `display-test-${index}`, label: `表示試験 ${index + 1}`, value, unit: 'rpm', sourceEcu: '7E8'
+        }));
+        const original = JSON.stringify(samples);
+        renderObdMonitorValues(samples);
+        return { session: before === JSON.stringify(obdDevSession.lastSession), input: original === JSON.stringify(samples) };
+      });
+      assert.deepEqual(retained, { session: true, input: true });
+      const readings = page.locator('#obdMonitorGrid .obd-monitor-reading');
+      const expected = ['値未確認', '値未確認', '値未確認', '0 rpm', '0 rpm', '780 rpm'];
+      for (const width of [390, 1280]) {
+        await page.setViewportSize({ width, height: 900 });
+        assert.deepEqual(await readings.allTextContents(), expected);
+        assert.equal(await readings.first().isVisible(), true);
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+        await page.locator('#obdMonitorGrid').screenshot({ path: path.join(output, `missing-live-${width}.png`) });
+      }
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(JSON.stringify({ passed: true, flow: 'injected display-only missing values and zero; saved session unchanged', output }));
+      return;
+    }
     const exportStatus = page.locator('#obdStageResultsView [data-obd-session-export-status]');
     assert.equal(await exportStatus.textContent(), '');
     assert.equal(await exportStatus.evaluate(node => node.getBoundingClientRect().height), 0, 'Empty export notification must not leave a blank band');
