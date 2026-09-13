@@ -162,6 +162,9 @@ function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = nul
     return Object.freeze({ path: file.path, hash: file.sha256, dev: stat.dev, ino: stat.ino, size: stat.size });
   });
   let consumed = false;
+  // Parent-owned expectation, never taken from the child result. This fixture
+  // still exercises only 7E0/03; it is not a generic vendor-driver entry point.
+  const request = Object.freeze({ ecu: 0x7e0, service: 3 });
   const bounded = createBoundedFixtureWorker({
     outputLimit: convert ? J2534_DTC_OUTPUT_LIMIT : 4096,
     rejectStderr: true,
@@ -173,7 +176,10 @@ function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = nul
           throw new Error("owned_fixture_changed");
       }
       const windows = process.env.SystemRoot || "C:\\Windows";
-      return spawn(pinned[0].path, ["--fixture-owned-receive"], {
+      const args = convert ? ["--fixture-owned-receive", "--selected-dtc", pinned[1].path,
+        pinned[1].hash, String(pinned[1].size), architecture, String(request.ecu), String(request.service)]
+        : ["--fixture-owned-receive"];
+      return spawn(pinned[0].path, args, {
         cwd: directory, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"],
         env: { SystemRoot: windows, WINDIR: windows, TEMP: os.tmpdir(), TMP: os.tmpdir() },
       });
@@ -189,7 +195,7 @@ function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = nul
         // stream close. Child JSON cannot assert its own completion or request.
         const result = convert(JSON.stringify({ schema_version: "j2534-dtc-read-v1",
           worker_status: "worker_completed", cleanup_confirmed: true,
-          request_ecu: 0x7e0, service: 3, read_result: value.read_result }));
+          request_ecu: request.ecu, service: request.service, read_result: value.read_result }));
         return result.status === "decoded" ? { fixture_only: true, vehicle_communication: false, ...result } : null;
       }
       if (!keysMatch(value, ["fixture_only", "pointer_bits", "received_count", "module_retained", "cleanup_confirmed", "vehicle_communication"])

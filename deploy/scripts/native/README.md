@@ -9,10 +9,16 @@ validates metadata: it neither accesses a file nor establishes publisher trust.
 `LoadSelected` still uses the existing held-file preflight and binding checks.
 The generated worker now passes this same selection to binding, filter setup
 and request dispatch, under its existing execution lease. Its selection still
-comes from fixed fixture inputs; no CLI, vendor-driver selection, public bridge
+comes from fixed fixture inputs; no vendor-driver selection, public bridge
 entry, or new dependency trust policy is enabled. The parent still pins its
-fixture result expectation to ECU 7E0/service 03. External selector and parent
-request handoff remain to be connected within a separately disabled route.
+fixture result expectation to ECU 7E0/service 03. Result workers receive the
+pinned path/hash/size/architecture and request through fixed argument positions.
+The child checks every field against its independent compiled fixture selection
+before loading. The same parent-owned request supplies the converter expectation;
+the child cannot select its expected response. Mismatched path, hash, size,
+architecture, ECU or service returns no result. This is fixture-only IPC, not a
+generic external selector or vendor execution route. The legacy single fixture
+argument remains for direct fixture tests.
 
 The isolated DTC worker now acquires `J2534DtcExecutionLease` before preflight or
 DLL loading. It reuses the existing global mutex name and performs one immediate

@@ -288,6 +288,19 @@ async function main() {
           total += 3;
         }
         let decodeCalls = 0, decoder = null, sessionApi = null;
+        if (scenario === "owned-dtc-data") {
+          const requestArgs = ["--fixture-owned-receive", "--selected-dtc", fixturePath,
+            createHash("sha256").update(fixture).digest("hex"), String(fixture.length), platform.name, String(0x7e0), "3"];
+          const selected = await execute(worker, requestArgs);
+          assert.equal(selected.error, null); assert.equal(selected.stderr, "");
+          assert.deepEqual(JSON.parse(selected.stdout), expected); total += 3;
+          for (const [index, value] of [[2, path.join(combinedDirectory, "other.dll")], [3, "0".repeat(64)],
+            [4, "1"], [4, " " + fixture.length], [5, platform.name === "x86" ? "x64" : "x86"], [6, "2017"], [7, "4"], [7, "7"]]) {
+            const invalid = [...requestArgs]; invalid[index] = value;
+            const rejected = await execute(worker, invalid);
+            assert.equal(rejected.error?.code, 2); assert.equal(rejected.stdout, ""); assert.equal(rejected.stderr, ""); total += 3;
+          }
+        }
         if (dataOutput) {
           const context = vm.createContext({ window: {}, navigator: {} });
           vm.runInContext(fs.readFileSync(path.join(scriptsDirectory, "..", "obd-readonly.js"), "utf8"), context);
