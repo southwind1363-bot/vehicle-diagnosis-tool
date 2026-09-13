@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.588";
+const APP_VERSION = "3.13.589";
 const APP_LAST_UPDATED = "2026-09-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16383,7 +16383,7 @@ function collectCaseForm() {
     createdAt: now,
     updatedAt: now,
     creatorName,
-    registrationDate: valueOf("#caseDate") || new Date().toISOString().slice(0, 10),
+    registrationDate: valueOf("#caseDate") || getLocalCaseDate(),
     technician: valueOf("#caseTechnician"),
     maker: valueOf("#caseMaker"),
     model: valueOf("#caseModel"),
@@ -17204,9 +17204,14 @@ function resetCaseDraftExitGuard() {
   syncCaseDraftExitGuard();
 }
 
+function getLocalCaseDate() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 function setDefaultCaseDate() {
   const dateInput = document.querySelector("#caseDate");
-  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+  if (dateInput && !dateInput.value) dateInput.value = getLocalCaseDate();
   setNextCaseId();
   resetCaseDraftExitGuard();
 }
