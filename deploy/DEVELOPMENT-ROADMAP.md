@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 登録日の配布Chrome確認: integrity合格の展開590（846files/16,899,385bytes）を隔離Chromeへ供給、Asia/Tokyoと検査用Dateを設定してUTC1/1 15:30=現地1/2 00:30を再現。登録日inputの2026/01/02を目視、手入力12/20はパネル往復でも保持、空欄時の収集値は現地1/2、createdAtは元UTCのまま。事例storageは未作成、console/pageerror/外部通信0。browserスキルの専用CLI不在で既存Playwrightを使用、--local-date-uiを追加（zml8X1）。本体/590ZIP/保存形式不変。実時計経過/事例保存・復元/別PC/実VCI/実車をこの検査で確認済みとはしない。
+
 3.13.590 FF番号の表示整合: 記録値の行表示が文字列"0"/" 2 "を未記録、数値256をFF #256とする一方、既存絞込/トリガー表示は逆の扱いになる不一致を表示関数へ直接入力して再現。行表示でも既存getObdDisplayByteNumberを共用し、0..255の整数/十進文字列のみ番号表示。読取decoder/保存データ/診断判定は変更しない。FF171、workstation1362、R1全工程/offline183・構文/diff合格。ZIP2,665,941bytes / SHA256CF7FAC3266B5759343991713FF6F4637D86390658CB3007378ED353CEC24AA55、別展開846files/16,899,385bytes整合。人工表示入力による検査であり、実取込経路や実車の当該値発生を確認したものではない。今回実ブラウザー/別PC/実VCI/実車未検証。
 
 3.13.589 事例登録日の現地日付: 日本時間2026-01-01 00:30で初期登録日が2025-12-31になるUTC切出しの負例を再現。フォーム初期値と未入力時の登録日だけ端末現地年月日へ修正。手入力日付、createdAt/updatedAtのUTC、既存事例、ID/ファイル名規約は変更しない。独立Node子processのAsia/Tokyo・America/Los_Angeles、00/23時と年境界で検査、case486/R1全工程/offline183/package477・構文/diff合格。ZIP2,665,945bytes / SHA25643AC54A0CF93242487129B25B9A91DEE514EDD8798075CD09491E5762D0E7C8B、別展開846files/16,899,389bytes整合。保存schema/診断結果/通信境界不変。今回実ブラウザー/別PC/実VCI/実車未検証。

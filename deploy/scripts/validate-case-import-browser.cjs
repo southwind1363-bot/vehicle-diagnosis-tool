@@ -16,7 +16,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const legacyImportControls = process.argv.includes('--legacy-import-controls');
   assert.ok(!legacyImportControls || !process.argv.includes('--file-timeout'), 'Legacy controls do not include the cancel button required by --file-timeout');
   const browser = await chromium.launch({ channel, headless: true });
-  const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 } });
+  const localDateUi = process.argv.includes('--local-date-ui');
+  const context = await browser.newContext({ serviceWorkers: 'block', viewport: { width: 390, height: 844 },
+    ...(localDateUi ? { timezoneId: 'Asia/Tokyo' } : {}) });
   const errors = [], blocked = [];
   try {
     await context.addInitScript(() => {
@@ -42,10 +44,38 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await route.fulfill({ contentType, body });
     });
     const page = await context.newPage();
+    if (localDateUi) await page.addInitScript(() => {
+      const RealDate = Date;
+      const fixed = RealDate.parse('2026-01-01T15:30:00.000Z');
+      window.Date = class extends RealDate {
+        constructor(...args) { super(...(args.length ? args : [fixed])); }
+        static now() { return fixed; }
+      };
+    });
     page.on('pageerror', error => errors.push(error.message));
     page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto('http://127.0.0.1/');
     await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+    if (localDateUi) {
+      await page.getByRole('button', { name: '3. 整備事例登録', exact: true }).click();
+      const date = page.locator('#caseDate');
+      assert.equal(await date.inputValue(), '2026-01-02');
+      assert.equal(await date.isVisible(), true);
+      await date.screenshot({ path: path.join(output, 'case-local-date.png') });
+      await date.fill('2025-12-20');
+      const entered = await page.evaluate(() => collectCaseForm());
+      assert.equal(entered.registrationDate, '2025-12-20');
+      assert.equal(entered.createdAt, '2026-01-01T15:30:00.000Z');
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      await page.getByRole('button', { name: '3. 整備事例登録', exact: true }).click();
+      assert.equal(await date.inputValue(), '2025-12-20');
+      await date.fill('');
+      assert.equal(await page.evaluate(() => collectCaseForm().registrationDate), '2026-01-02');
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), null);
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(JSON.stringify({ passed: true, flow: 'Tokyo synthetic midnight -> local date input -> manual date retained across panels -> empty fallback; no record saved', output }));
+      return;
+    }
     if (legacyImportControls) {
       assert.equal(await page.locator('#cancelCaseImportButton').count(), 0);
       console.log('Legacy HTML without optional import-cancel control initialized; running the existing import/export flow');
