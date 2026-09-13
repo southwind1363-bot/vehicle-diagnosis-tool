@@ -260,6 +260,7 @@ async function main() {
           `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE;J2534_DTC_DEVELOPMENT;PREFLIGHT_FIXTURE_TESTS${dataOutput ? ";OWNED_DTC_RESULT_OUTPUT" : ""}${["owned-dtc-result-then-hang", "owned-dtc-data-hang"].includes(scenario) ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
           sources[0], sources[2], sources[4], compiledDigest,
           path.join(scriptsDirectory, "native", "WindowsDtcReadLibrary.cs"),
+          path.join(scriptsDirectory, "native", "J2534DtcReadOperation.cs"),
           preflightSources[0], preflightSources[1],
           path.join(scriptsDirectory, "native", "J2534GlobalMutexLease.cs"),
           path.join(scriptsDirectory, "native", "J2534DtcExecutionLease.cs"),

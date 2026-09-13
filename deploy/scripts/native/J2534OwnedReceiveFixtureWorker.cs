@@ -117,25 +117,14 @@ internal static class J2534OwnedReceiveFixtureWorker
                 {
                     if (channel != 0xe1234567 || channel == device) return 1;
 #if OWNED_DTC_REQUEST_FIXTURE
-                    var start = (J2534ReadRequestNative.StartFilterFunction)Marshal.GetDelegateForFunctionPointer(
-                        library.Resolve("PassThruStartMsgFilter"), typeof(J2534ReadRequestNative.StartFilterFunction));
-                    var stop = (J2534ReadRequestNative.StopFilterFunction)Marshal.GetDelegateForFunctionPointer(
-                        library.Resolve("PassThruStopMsgFilter"), typeof(J2534ReadRequestNative.StopFilterFunction));
-                    var write = (J2534ReadRequestNative.WriteFunction)Marshal.GetDelegateForFunctionPointer(
-                        library.Resolve("PassThruWriteMsgs"), typeof(J2534ReadRequestNative.WriteFunction));
-                    var request = new J2534ReadRequestNative(owner, device, write);
                     uint filter;
-                    if (request.PrepareDtcFilterOnce(channel, selection.RequestEcu, start, stop, out filter) != 0) failed = true;
-                    else if (request.DispatchDtcReadOnce(channel, selection.RequestEcu, selection.Service) != 0) failed = true;
-                    // Queue acceptance is not a readout. Read fixture records
-                    // only after both preceding calls succeeded; no retry.
+                    J2534ReceiveNative.Result result;
+                    failed = !J2534DtcReadOperation.TryReadOnce(library, owner, device, channel, selection, read, out filter, out result);
 #endif
                     if (!failed)
                     {
+#if !OWNED_DTC_REQUEST_FIXTURE
                         var receiver = new J2534ReceiveNative(owner, device, read);
-#if OWNED_DTC_REQUEST_FIXTURE
-                        var result = receiver.ReadDtcResponseOnce(channel, 3);
-#else
                         var result = receiver.ReadOnce(channel, 3);
 #endif
 #if OWNED_DTC_RESULT_OUTPUT

@@ -2,6 +2,15 @@
 
 ## Development DTC library binding (2026-09-13 approval)
 
+`J2534DtcReadOperation` extracts the existing filter/dispatch/single-receive
+sequence from the fixture worker into a development-only internal component.
+It operates on an already owned channel with the existing immutable selection,
+owner gates and fixed exports. Its boolean only indicates that execution reached
+the receive result; it is not a successful diagnosis or cleanup confirmation.
+Result validation, Stop/Disconnect/Close ordering and process-lease completion
+remain with the caller. No discovery, loading, retry, public entry or new request
+type is added. The existing generated workers exercise this shared implementation.
+
 The 2026-09-14 selection-handoff approval adds an immutable
 `J2534DtcReadSelection` for a local absolute path, digest, expected size,
 architecture, physical ECU 0x7E0..0x7E7 and service 03/07/0A. Construction only

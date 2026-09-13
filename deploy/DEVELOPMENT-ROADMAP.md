@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 単発DTC読取処理の共通化: fixture workerに埋め込まれていたfilter準備→03/07/0A要求→受信1回をJ2534DtcReadOperationへ抽出し、既存workerを同部品へ接続。所有済みchannel/既存selection/owner制約を使用し、boolは受信結果取得まで到達した意味に限定。結果検査・Stop/Disconnect/Close・mutex完了は従来の呼出元に残し、失敗後再試行や推測cleanupなし。既存固定scenarioをそのままx86/x64実行し、native7339/専用converter148/保存復元/異常終了隔離/diff合格。新scenario追加なし。J2534_DTC_DEVELOPMENT専用で、公開worker/実DLL/実VCI/実車実行・保存形式・590ZIPは変更しない。実機で使える完成版という意味ではない。
+
 2026-09-14 選択IPC照合の共通化: fixture worker内の6項目照合を内部J2534DtcReadSelection.MatchesArgumentsへ移し、独立pin済み選択をそのままloader/filter/dispatchへ保持。引数から選択を再構築しない。非I/Oの共通部品として厳密な残り要素数・offset範囲・Invariant数値・全項目一致を確認。全ECU7E0..7E7×03/07/0Aで通常/offset付き、null/欠落/余分/空白/overflow/変更拒否と拒否後の選択保持を検査。x86/x64 native7339・専用converter148/diff合格（新規内部assertは既存library検査内、集計数は不変）。新たな公開入口・任意driver実行・接続権限は追加せず、実機未検証と590ZIP/保存形式不変を維持。
 
 2026-09-14 ECU指定の内部往復: 固定生成DLL scenarioに7E7要求/7EF応答を追加。親の固定選択、子のcompile時RequestEcu、filter/write照合、応答decode、保存復元まで同じ対象を保持。x86/x64で正常IPCと別path/hash/size/architecture/ECU/serviceの拒否、復元後P0171/7EF/storedを確認。native7339/専用converter148・構文/diff合格。既存7E0/03・07・0A、異常終了・隔離も回帰合格。任意driver/要求入口、実vendor DLL/VCI/実車通信は未開放・未検証。保存形式/公開本体/590ZIPは不変。次は固定fixtureから一般の内部選択へ進む際の残る結合点を確認し、実機段階と切り分ける。
