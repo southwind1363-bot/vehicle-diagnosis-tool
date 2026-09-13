@@ -5,7 +5,7 @@ const SCENARIOS = new Set([
   "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
   "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
-  "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent",
+  "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent", "owned-dtc-data-last-ecu",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -117,15 +117,16 @@ export function buildJ2534NativeFixture(architecture, scenario) {
 
   const is64 = architecture === "x64";
   const dtcService = scenario === "owned-dtc-data-pending" ? 7 : scenario === "owned-dtc-data-permanent" ? 10 : 3;
+  const requestEcu = scenario === "owned-dtc-data-last-ecu" ? 0x7e7 : 0x7e0;
   const code = scenario === "request-abi" ? requestCode(architecture) : scenarioCode(architecture, scenario);
   if (scenario === "receive-success") code.read = receiveCode(architecture);
   if (scenario.startsWith("owned-")) {
-    code.read = receiveCode(architecture, -517782169, scenario.startsWith("owned-dtc-") ? 1000 : 0, scenario.startsWith("owned-dtc-data"), scenario === "owned-dtc-data-start", dtcService);
+    code.read = receiveCode(architecture, -517782169, scenario.startsWith("owned-dtc-") ? 1000 : 0, scenario.startsWith("owned-dtc-data"), scenario === "owned-dtc-data-start", dtcService, requestEcu + 8);
     // Resolved for identity ownership, but never called by the receive worker.
     code.version = Buffer.from(is64 ? [0xb8, 1, 0, 0, 0, 0xc3] : [0xb8, 1, 0, 0, 0, 0xc2, 0x10, 0]);
     Object.assign(code, channelCode(architecture, scenario.startsWith("owned-dtc-") ? 0 : 0x100));
     if (scenario.startsWith("owned-dtc-")) {
-      Object.assign(code, requestCode(architecture, dtcService));
+      Object.assign(code, requestCode(architecture, dtcService, requestEcu));
       if (scenario !== "owned-dtc-read" && scenario !== "owned-dtc-result-then-hang" && !scenario.startsWith("owned-dtc-data")) {
         const fail = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
         code.close = code.disconnect = Buffer.from([0x0f, 0x0b]);
@@ -229,7 +230,9 @@ export function buildJ2534NativeFixture(architecture, scenario) {
 // Fixed import-free v04.04 ABI oracle, not a driver. No caller-supplied code,
 // pointers in the image, entry point, or hardware APIs. Only volatile RAX/EAX
 // and flags are touched; x86 pops each exact StdCall argument list.
-function requestCode(architecture, service = 3) {
+function requestCode(architecture, service = 3, requestEcu = 0x7e0) {
+  const requestAddress = ((requestEcu & 0xff) << 24) | ((requestEcu >>> 8) << 16);
+  const responseAddress = (((requestEcu + 8) & 0xff) << 24) | (((requestEcu + 8) >>> 8) << 16);
   const x86 = architecture === "x86";
   const build = (argc, emit) => {
     const bytes = [], branches = [];
@@ -254,7 +257,7 @@ function requestCode(architecture, service = 3) {
   return {
     start: build(6, ({ put, arg, scalar, field }) => {
       scalar(1, -517782169); scalar(2, 3);
-      for (const [index, address] of [[3, -1], [4, -402194432], [5, -536412160]]) {
+      for (const [index, address] of [[3, -1], [4, responseAddress], [5, requestAddress]]) {
         arg(index); field(0, 6); field(16, 4); field(24, address);
       }
       arg(6); put(0xc7, 0x00, 0x67, 0x45, 0x23, 0xd1);
@@ -263,7 +266,7 @@ function requestCode(architecture, service = 3) {
     write: build(4, ({ put, arg, scalar, field, unequal }) => {
       scalar(1, -517782169); scalar(4, 0);
       arg(3); field(0, 1);
-      arg(2); field(0, 6); field(8, 0x40); field(16, 5); field(24, -536412160);
+      arg(2); field(0, 6); field(8, 0x40); field(16, 5); field(24, requestAddress);
       put(0x80, 0x78, 28, service); unequal();
       // Report one queue-accepted message, not a diagnostic response.
       arg(3); put(0xc7, 0x00, 1, 0, 0, 0);
@@ -272,7 +275,8 @@ function requestCode(architecture, service = 3) {
 }
 
 // Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.
-function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = false, indicated = false, service = 3) {
+function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = false, indicated = false, service = 3, responseEcu = 0x7e8) {
+  const responseAddress = ((responseEcu & 0xff) << 24) | ((responseEcu >>> 8) << 16);
   const x86 = architecture === "x86";
   const ret = x86 ? [0xc2, 0x10, 0x00] : [0xc3];
   const failure = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...ret]);
@@ -284,9 +288,9 @@ function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = 
   let body = Buffer.concat([
     // x86: EAX = messages, ECX = count. x64: RDX/R8 are already pointers.
     Buffer.from(x86 ? [0x8b, 0x44, 0x24, 0x08, 0x8b, 0x4c, 0x24, 0x0c] : []),
-    ...(indicated ? [...[6, 2, 0, 7, 4, 4].map((value, index) => write(index * 4, value)), write(24, -402194432)] : []),
+    ...(indicated ? [...[6, 2, 0, 7, 4, 4].map((value, index) => write(index * 4, value)), write(24, responseAddress)] : []),
     ...[6, 0, 0, -249346713, dtcData ? 7 : 4, dtcData ? 7 : 4].map((value, index) => write(dataOffset + index * 4, value)),
-    write(dataOffset + 24, dtcData ? -402194432 : 0x04030201),
+    write(dataOffset + 24, dtcData ? responseAddress : 0x04030201),
     ...(dtcData ? [write(dataOffset + 28, 0x00710140 + service)]
       : [6, 2, 0, 7, 0, 0].map((value, index) => write(4152 + index * 4, value))),
     Buffer.from(x86 ? [0xc7, 0x01, count, 0, 0, 0] : [0x41, 0xc7, 0x00, count, 0, 0, 0]),

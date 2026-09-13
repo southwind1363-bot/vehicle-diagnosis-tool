@@ -238,9 +238,11 @@ async function main() {
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
       for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
         "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
-        "owned-dtc-stop-crash", "owned-dtc-result-then-hang", "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent"]) {
+        "owned-dtc-stop-crash", "owned-dtc-result-then-hang", "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent", "owned-dtc-data-last-ecu"]) {
         const dataOutput = scenario.startsWith("owned-dtc-data");
         const service = scenario === "owned-dtc-data-pending" ? 7 : scenario === "owned-dtc-data-permanent" ? 10 : 3;
+        const requestEcu = scenario === "owned-dtc-data-last-ecu" ? 0x7e7 : 0x7e0;
+        const responseEcu = requestEcu + 8;
         const combinedDirectory = path.join(platformDirectory, scenario);
         fs.mkdirSync(combinedDirectory);
         createdDirectories.push({ path: combinedDirectory, identity: fs.statSync(combinedDirectory) });
@@ -250,7 +252,7 @@ async function main() {
         const fixturePath = path.join(combinedDirectory, "owned-receive.dll");
         writeCreatedFile(fixturePath, fixture);
         const compiledDigest = path.join(combinedDirectory, "OwnedReceiveFixtureDigest.cs");
-        writeCreatedFile(compiledDigest, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const uint Service = ${service}; internal const string Value = "${createHash("sha256").update(fixture).digest("hex").toUpperCase()}"; }`));
+        writeCreatedFile(compiledDigest, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const uint RequestEcu = ${requestEcu}; internal const uint Service = ${service}; internal const string Value = "${createHash("sha256").update(fixture).digest("hex").toUpperCase()}"; }`));
         const worker = path.join(combinedDirectory, "owned-receive-worker.exe");
         createdFiles.push(worker);
         const compilation = await execute(platform.compiler, [
@@ -274,7 +276,7 @@ async function main() {
           expected = dataOutput ? {
             fixture_only: true, pointer_bits: platform.bits, cleanup_confirmed: true,
             read_result: { Status: 9, ReportedCount: 1, Messages: [{ ProtocolId: 6, RxStatus: 0, TxFlags: 0,
-              Timestamp: 0xf1234567, ExtraDataIndex: 7, Data: [0, 0, 7, 0xe8, service + 0x40, 1, 0x71] }] },
+              Timestamp: 0xf1234567, ExtraDataIndex: 7, Data: [0, 0, 7, responseEcu & 0xff, service + 0x40, 1, 0x71] }] },
           } : {
             fixture_only: true, pointer_bits: platform.bits,
             received_count: ["owned-dtc-write-failure", "owned-dtc-start-failure"].includes(scenario) ? 0 : 2,
@@ -289,9 +291,9 @@ async function main() {
           total += 3;
         }
         let decodeCalls = 0, decoder = null, sessionApi = null;
-        if (scenario === "owned-dtc-data") {
+        if (scenario === "owned-dtc-data" || scenario === "owned-dtc-data-last-ecu") {
           const requestArgs = ["--fixture-owned-receive", "--selected-dtc", fixturePath,
-            createHash("sha256").update(fixture).digest("hex"), String(fixture.length), platform.name, String(0x7e0), "3"];
+            createHash("sha256").update(fixture).digest("hex"), String(fixture.length), platform.name, String(requestEcu), "3"];
           const selected = await execute(worker, requestArgs);
           assert.equal(selected.error, null); assert.equal(selected.stderr, "");
           assert.deepEqual(JSON.parse(selected.stdout), expected); total += 3;
@@ -344,7 +346,7 @@ async function main() {
           const restored = sessionApi.buildDiagnosticScanSessionFromJson(JSON.stringify(archived));
           assert.equal(restored.source, "j2534_development_read");
           assert.equal(restored.dtcSnapshot.dtcs[0].code, "P0171");
-          assert.equal(restored.dtcSnapshot.dtcs[0].ecu, "7E8");
+          assert.equal(restored.dtcSnapshot.dtcs[0].ecu, responseEcu.toString(16).toUpperCase());
           assert.equal(restored.dtcSnapshot.dtcs[0].status, service === 3 ? "stored" : service === 7 ? "pending" : "permanent");
           assert.equal(archived.vehicle_command_enabled, false);
           assert.equal(archived.retained_raw_text, false);

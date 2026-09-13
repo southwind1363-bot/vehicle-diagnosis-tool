@@ -12,7 +12,11 @@ and request dispatch, under its existing execution lease. Its selection still
 comes from fixed fixture inputs; no vendor-driver selection, public bridge
 entry, or new dependency trust policy is enabled. The parent still pins its
 fixture result expectation to ECU 7E0 and one fixed service per scenario:
-03 (stored), 07 (pending), or 0A (permanent). Result workers receive the
+03 (stored), 07 (pending), or 0A (permanent). A separate fixed
+`owned-dtc-data-last-ecu` scenario uses request 7E7 and response 7EF with 03.
+Its compiled ECU selection also drives filter/write ABI checks and the receive
+payload; archive restoration must retain 7EF. This is generated-fixture coverage,
+not evidence of support for any vehicle ECU. Result workers receive the
 pinned path/hash/size/architecture and request through fixed argument positions.
 The child checks every field against its independent compiled fixture selection
 before loading. The same parent-owned request supplies the converter expectation;

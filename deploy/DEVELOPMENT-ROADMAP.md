@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 ECU指定の内部往復: 固定生成DLL scenarioに7E7要求/7EF応答を追加。親の固定選択、子のcompile時RequestEcu、filter/write照合、応答decode、保存復元まで同じ対象を保持。x86/x64で正常IPCと別path/hash/size/architecture/ECU/serviceの拒否、復元後P0171/7EF/storedを確認。native7339/専用converter148・構文/diff合格。既存7E0/03・07・0A、異常終了・隔離も回帰合格。任意driver/要求入口、実vendor DLL/VCI/実車通信は未開放・未検証。保存形式/公開本体/590ZIPは不変。次は固定fixtureから一般の内部選択へ進む際の残る結合点を確認し、実機段階と切り分ける。
+
 2026-09-14 保留/永久DTCの内部往復: 固定scenarioを07/0Aへ追加し、親の要求・期待値、子のcompile時Service、生成DLLのWriteMsgs byte検査と応答prefixを対応。既存LoadSelected/所有権/filter/dispatch/正常終了converter/JSON復元を通して、P0171/ECU7E8とpending・permanentの種別保持をx86/x64で確認。native7207/専用converter148・構文/diff合格。既存03の要求不一致拒否/異常終了/隔離/再使用拒否は回帰合格。固定生成DLLの単発経路であり、任意driver/任意要求の入口、3種連続読取、自動再試行は追加しない。実vendor DLL/実VCI/実車/公開実行/保存形式/590ZIP不変。
 
 2026-09-14 親子DTC選択のIPC結合: 親がpinしたfixture path/hash/size/architectureとimmutable request ECU7E0/SID03を固定argvで子へ渡す。子はcompile時digestと既定fixture対象へ全一致する値のみLoadSelected/filter/dispatchに使用。親converterの期待も同requestから作り、子JSONで期待ECU/serviceを上書きさせない。既存fixture単独起動は維持。x86/x64生成DLLで正常受渡し、別path/hash/size/空白size/architecture/ECU/消去04・異なる読取07の拒否と空stdout、既存timeout/隔離/結果保存往復を確認。native7051/専用converter148・構文/diff合格。一般driver選択は未公開で、fixture7E0/03以外をこの経路で実行しない。実vendor DLL/実VCI/実車/公開実行/保存形式/590ZIP不変。
