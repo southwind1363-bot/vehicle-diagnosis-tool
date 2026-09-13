@@ -523,4 +523,20 @@ for (let seed = 0; seed < 12; seed++) {
   const cells = c.context.buildCasesCsv([restored]).split("\r\n")[1].split(",");
   check([8, 10, 15].every(index => cells[index] === '"0"'), "CSV lost numeric zero fields");
 }
+{
+  const c = client();
+  const first = { id: "delimiter-a", maker: "A|B", model: "C", symptom: "same" };
+  const second = { id: "delimiter-b", maker: "A", model: "B|C", symptom: "same" };
+  c.import([first, second]);
+  check(c.context.savedCases.length === 3, "Field separators caused a distinct imported case to be skipped");
+  check(c.context.savedCases.some(item => item.id === first.id) && c.context.savedCases.some(item => item.id === second.id), "Distinct field boundaries were lost");
+  c.import([first, second]);
+  check(c.context.savedCases.length === 3, "Exact duplicates were no longer skipped");
+  c.import([{ ...first, id: "same-normalized", maker: " a|b ", model: " c " }]);
+  check(c.context.savedCases.length === 3, "Normalized duplicates were no longer skipped");
+  const restored = client();
+  restored.import(JSON.stringify(c.context.buildCasesBackup()));
+  check(restored.context.savedCases.map(item => item.id).join(",") === "existing,delimiter-a,delimiter-b", "Backup round-trip lost distinct field boundaries");
+  check(restored.context.savedCases[1].maker === "A|B" && restored.context.savedCases[2].model === "B|C", "Backup field text changed");
+}
 console.log(`Case storage checks: ${checks} / Errors: 0`);

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.584 保存事例復元の誤重複修正: maker=A|B/model=Cとmaker=A/model=B|Cが旧区切り文字連結で同じkeyになり、別記録がimport時に1件スキップされる負例を再現。比較用keyだけJSON配列化して項目境界を保持、保存形式/本文/大小文字・空白の比較規約/ID照合は変更しない。両記録取込・同一/正規化重複除外・backup往復で元文字列保持を確認。case369、R1全工程（offline183）・package477合格。ZIP 2,665,588 bytes / SHA256 18763E7C3F4D9FCF34E20A5959BC049737B7D68E3D74959F45CAE2FCAD898059、別展開846files/16,898,177bytes整合。今回は実ブラウザー/別PC/実VCI/実車未検証、公開実行無効維持。以前誤スキップされた記録は元バックアップから再取込が必要。
+
 2026-09-13 識別確認2経路の終了未確認保持: 通常native identity/verified identityの開発supervisorにも起動通知条件による隔離記録漏れを確認。native側の負例を再現後、両方でworker_termination_unconfirmedなら既存記録を残すよう修正。実行確認必須設定を維持したinertファイル/注入child→実bounded→ディスクstore→再作成supervisorで起動拒否を両経路確認。native6997・専用148/pipe/保存・追加結合・構文/diff合格。公開実行/保存形式/583ZIP不変、実VCI/実車/実OS終了不能は未検証。7603c201 CI34756252405 success、6d8faeed CI34756453072は確認時in_progress。
 
 2026-09-13 二次期限から隔離記録への結合修正: 起動通知なし/終了通知なしの人工childで終了未確認が返っても、worker_started条件により隔離記録が省略される負例を再現。終了未確認errorでも既存cleanup_unconfirmedを記録するよう修正。実bounded worker→DTC supervisor→実一時store→再作成supervisorの起動拒否まで、起動通知あり/なし両方で確認。inertファイルと注入childを使用し実process/native実行なし。初回検査抽出のexport構文不備は抽出式を修正して切り分け。native6997・専用148/pipe/保存・新規結合・構文/diff合格。公開実行/保存形式/583ZIP不変、実VCI/実車/OS終了不能は未検証。直近9d419305/4cea215b CI success、7603c201は確認時in_progress。
