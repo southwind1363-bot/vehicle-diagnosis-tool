@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 保留/永久DTCの内部往復: 固定scenarioを07/0Aへ追加し、親の要求・期待値、子のcompile時Service、生成DLLのWriteMsgs byte検査と応答prefixを対応。既存LoadSelected/所有権/filter/dispatch/正常終了converter/JSON復元を通して、P0171/ECU7E8とpending・permanentの種別保持をx86/x64で確認。native7207/専用converter148・構文/diff合格。既存03の要求不一致拒否/異常終了/隔離/再使用拒否は回帰合格。固定生成DLLの単発経路であり、任意driver/任意要求の入口、3種連続読取、自動再試行は追加しない。実vendor DLL/実VCI/実車/公開実行/保存形式/590ZIP不変。
+
 2026-09-14 親子DTC選択のIPC結合: 親がpinしたfixture path/hash/size/architectureとimmutable request ECU7E0/SID03を固定argvで子へ渡す。子はcompile時digestと既定fixture対象へ全一致する値のみLoadSelected/filter/dispatchに使用。親converterの期待も同requestから作り、子JSONで期待ECU/serviceを上書きさせない。既存fixture単独起動は維持。x86/x64生成DLLで正常受渡し、別path/hash/size/空白size/architecture/ECU/消去04・異なる読取07の拒否と空stdout、既存timeout/隔離/結果保存往復を確認。native7051/専用converter148・構文/diff合格。一般driver選択は未公開で、fixture7E0/03以外をこの経路で実行しない。実vendor DLL/実VCI/実車/公開実行/保存形式/590ZIP不変。
 
 2026-09-14 承認済みdriver選択受渡しの第一段: readonly J2534DtcReadSelectionへlocal絶対path/SHA256/size/architecture/物理ECU7E0..7E7/SID03・07・0Aを保持、構築時は非I/Oで不正metadataを拒否。LoadSelectedは既存の保持handle下preflight/固定export検査を使用し、生成workerのloader/filter/dispatchへ同じ選択を渡す。既存mutex/終了不明時保持/無再試行は維持。初回uint→byteコンパイル不一致を修正し、x86/x64でreadonly/許可24組/不正入力/実size不一致拒否と既存生成DLL読取→結果→保存往復、native6997/専用converter148、diff合格。構築だけで署名信頼や実行許可を立証しない。fixtureの選択元と親側期待は7E0/03固定であり、外部selector・親からの要求IPCは次工程。実vendor DLL/実VCI/実車/公開実行/保存形式/590ZIP不変。

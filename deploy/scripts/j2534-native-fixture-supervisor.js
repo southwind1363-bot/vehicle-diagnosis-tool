@@ -13,7 +13,7 @@ const OWNED_SCENARIOS = new Set(["owned-receive", "owned-connect-failure", "owne
   "owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
   "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang"]);
-const DTC_RESULT_SCENARIOS = new Set(["owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start"]);
+const DTC_RESULT_SCENARIOS = new Set(["owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent"]);
 const VERIFIED_IDENTITY_SCENARIOS = new Set(["success", "hold"]);
 const UDS_TRANSPORT_SCENARIOS = new Set(["positive", "positive-29bit", "negative", "pending", "timeout", "transport-error", "cancelled"]);
 const UDS_TRANSPORT_CONTROL_SCENARIOS = new Set(["hang", "overflow", "stderr", "crash", "result-then-hang"]);
@@ -163,8 +163,9 @@ function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = nul
   });
   let consumed = false;
   // Parent-owned expectation, never taken from the child result. This fixture
-  // still exercises only 7E0/03; it is not a generic vendor-driver entry point.
-  const request = Object.freeze({ ecu: 0x7e0, service: 3 });
+  // exercises only fixed 7E0 scenarios; not a generic vendor-driver entry point.
+  const request = Object.freeze({ ecu: 0x7e0,
+    service: descriptor.scenario === "owned-dtc-data-pending" ? 7 : descriptor.scenario === "owned-dtc-data-permanent" ? 10 : 3 });
   const bounded = createBoundedFixtureWorker({
     outputLimit: convert ? J2534_DTC_OUTPUT_LIMIT : 4096,
     rejectStderr: true,

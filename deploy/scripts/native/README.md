@@ -11,7 +11,8 @@ The generated worker now passes this same selection to binding, filter setup
 and request dispatch, under its existing execution lease. Its selection still
 comes from fixed fixture inputs; no vendor-driver selection, public bridge
 entry, or new dependency trust policy is enabled. The parent still pins its
-fixture result expectation to ECU 7E0/service 03. Result workers receive the
+fixture result expectation to ECU 7E0 and one fixed service per scenario:
+03 (stored), 07 (pending), or 0A (permanent). Result workers receive the
 pinned path/hash/size/architecture and request through fixed argument positions.
 The child checks every field against its independent compiled fixture selection
 before loading. The same parent-owned request supplies the converter expectation;
@@ -19,6 +20,13 @@ the child cannot select its expected response. Mismatched path, hash, size,
 architecture, ECU or service returns no result. This is fixture-only IPC, not a
 generic external selector or vendor execution route. The legacy single fixture
 argument remains for direct fixture tests.
+
+Pending and permanent scenarios each compile their own expected service and
+generate a native fixture that checks the outgoing service byte and returns
+the matching response prefix. Their parent-owned expectation is chosen from
+the fixed scenario allowlist, never from arbitrary caller input. The existing
+decoder and archive roundtrip preserve the corresponding DTC status. This
+does not add a combined three-read workflow, automatic retry, or real I/O.
 
 The isolated DTC worker now acquires `J2534DtcExecutionLease` before preflight or
 DLL loading. It reuses the existing global mutex name and performs one immediate

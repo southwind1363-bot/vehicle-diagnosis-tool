@@ -238,8 +238,9 @@ async function main() {
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
       for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
         "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
-        "owned-dtc-stop-crash", "owned-dtc-result-then-hang", "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start"]) {
+        "owned-dtc-stop-crash", "owned-dtc-result-then-hang", "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent"]) {
         const dataOutput = scenario.startsWith("owned-dtc-data");
+        const service = scenario === "owned-dtc-data-pending" ? 7 : scenario === "owned-dtc-data-permanent" ? 10 : 3;
         const combinedDirectory = path.join(platformDirectory, scenario);
         fs.mkdirSync(combinedDirectory);
         createdDirectories.push({ path: combinedDirectory, identity: fs.statSync(combinedDirectory) });
@@ -249,7 +250,7 @@ async function main() {
         const fixturePath = path.join(combinedDirectory, "owned-receive.dll");
         writeCreatedFile(fixturePath, fixture);
         const compiledDigest = path.join(combinedDirectory, "OwnedReceiveFixtureDigest.cs");
-        writeCreatedFile(compiledDigest, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const string Value = "${createHash("sha256").update(fixture).digest("hex").toUpperCase()}"; }`));
+        writeCreatedFile(compiledDigest, Buffer.from(`internal static class OwnedReceiveFixtureDigest { internal const uint Service = ${service}; internal const string Value = "${createHash("sha256").update(fixture).digest("hex").toUpperCase()}"; }`));
         const worker = path.join(combinedDirectory, "owned-receive-worker.exe");
         createdFiles.push(worker);
         const compilation = await execute(platform.compiler, [
@@ -263,7 +264,7 @@ async function main() {
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
-        const success = scenario === "owned-dtc-read" || scenario === "owned-dtc-data" || scenario === "owned-dtc-data-start";
+        const success = scenario === "owned-dtc-read" || (dataOutput && !scenario.endsWith("hang"));
         const timedOut = scenario.endsWith("hang");
         let expected = null;
         if (success || scenario.endsWith("failure")) {
@@ -273,7 +274,7 @@ async function main() {
           expected = dataOutput ? {
             fixture_only: true, pointer_bits: platform.bits, cleanup_confirmed: true,
             read_result: { Status: 9, ReportedCount: 1, Messages: [{ ProtocolId: 6, RxStatus: 0, TxFlags: 0,
-              Timestamp: 0xf1234567, ExtraDataIndex: 7, Data: [0, 0, 7, 0xe8, 0x43, 1, 0x71] }] },
+              Timestamp: 0xf1234567, ExtraDataIndex: 7, Data: [0, 0, 7, 0xe8, service + 0x40, 1, 0x71] }] },
           } : {
             fixture_only: true, pointer_bits: platform.bits,
             received_count: ["owned-dtc-write-failure", "owned-dtc-start-failure"].includes(scenario) ? 0 : 2,
@@ -344,7 +345,7 @@ async function main() {
           assert.equal(restored.source, "j2534_development_read");
           assert.equal(restored.dtcSnapshot.dtcs[0].code, "P0171");
           assert.equal(restored.dtcSnapshot.dtcs[0].ecu, "7E8");
-          assert.equal(restored.dtcSnapshot.dtcs[0].status, "stored");
+          assert.equal(restored.dtcSnapshot.dtcs[0].status, service === 3 ? "stored" : service === 7 ? "pending" : "permanent");
           assert.equal(archived.vehicle_command_enabled, false);
           assert.equal(archived.retained_raw_text, false);
           total += 13;

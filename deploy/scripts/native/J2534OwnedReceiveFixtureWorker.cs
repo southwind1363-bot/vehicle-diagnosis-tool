@@ -83,7 +83,7 @@ internal static class J2534OwnedReceiveFixtureWorker
             string fixturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "owned-receive.dll");
             J2534RegisteredDriverPreflight.FixtureHandleVerified = delegate(string verifiedPath) { };
             var selection = new J2534DtcReadSelection(fixturePath, OwnedReceiveFixtureDigest.Value,
-                new FileInfo(fixturePath).Length, IntPtr.Size == 4 ? "x86" : "x64", 0x7e0, 3);
+                new FileInfo(fixturePath).Length, IntPtr.Size == 4 ? "x86" : "x64", 0x7e0, OwnedReceiveFixtureDigest.Service);
             if (args.Length == 8) {
                 long size; uint ecu; uint service;
                 if (!Int64.TryParse(args[4], NumberStyles.None, CultureInfo.InvariantCulture, out size)
