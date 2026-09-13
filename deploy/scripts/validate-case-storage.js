@@ -10,7 +10,7 @@ import "./validate-case-draft-exit.js";
 
 const source = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
 const functions = ["persistCases", "loadCases", "saveCase", "handleCaseDelete", "seedDummyCases", "createDummyCases", "importCasesJson", "findDuplicateCase", "duplicateKey", "normalizeCase", "isCaseRecord", "createCaseId", "createId", "normalizeCode", "runSelfCheck", "buildCasesCsv", "csvCell", "buildCasesBackup", "renderCaseStorageWarning", "reloadSavedCases", "readOptionalBrowserSetting", "writeOptionalBrowserSetting", "clearAllLocalStorage", "showInitialNotice", "exportCasesCsv", "exportCasesJson"];
-functions.push("cancelCaseImport", "setCaseImportStatus", "hasUnsavedCaseDraft", "handleCaseDraftBeforeUnload", "syncCaseDraftExitGuard", "syncCaseImportControls", "clearCaseExportStatus");
+functions.push("hasValidCaseFieldTypes", "cancelCaseImport", "setCaseImportStatus", "hasUnsavedCaseDraft", "handleCaseDraftBeforeUnload", "syncCaseDraftExitGuard", "syncCaseImportControls", "clearCaseExportStatus");
 const code = functions.map((name) => {
   const match = source.match(new RegExp(`function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing application function: ${name}`);
@@ -564,5 +564,22 @@ for (const field of ["confirmedFacts", "measurements", "memo", "sources", "id", 
     check(c.context.savedCases.map(item => item.id).join(",") === "existing,good-before,good-after", `${field}: malformed compound field reached persistent storage`);
     check(c.context.caseImportStatus.textContent.includes("不正行スキップ 1件"), `${field}: invalid count missing`);
   }
+}
+for (const field of ["confirmedFacts", "measurements", "memo", "maker", "id", "schemaVersion"]) {
+  const c = client();
+  const corrupt = JSON.stringify([...c.original, { id: "legacy-invalid", model: "bad", [field]: { toString: null } }]);
+  c.store.set(key, corrupt);
+  c.context.reloadSavedCases();
+  check(Boolean(c.context.caseStorageReadError), `${field}: malformed stored row was accepted on reload`);
+  check(c.context.savedCases === c.original, `${field}: failed reload replaced the current list`);
+  check(!c.context.caseStorageWarning.hidden, `${field}: storage warning missing`);
+  c.context.persistCases([]);
+  c.context.exportCasesJson();
+  c.context.exportCasesCsv();
+  check(c.store.get(key) === corrupt && c.calls.writes.length === 0, `${field}: malformed original bytes were overwritten`);
+  c.store.set(key, c.bytes);
+  c.context.reloadSavedCases();
+  check(!c.context.caseStorageReadError && c.context.caseStorageWarning.hidden, `${field}: valid data did not recover on explicit reload`);
+  check(c.context.savedCases.length === 1, `${field}: recovery lost valid records`);
 }
 console.log(`Case storage checks: ${checks} / Errors: 0`);

@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.587";
+const APP_VERSION = "3.13.588";
 const APP_LAST_UPDATED = "2026-09-13";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -16445,6 +16445,17 @@ function isCaseRecord(item) {
     && ["id", "maker", "model", "symptom", "confirmedFacts", "finalCause", "work"].some((key) => key in item);
 }
 
+function hasValidCaseFieldTypes(item) {
+  return isCaseRecord(item)
+    && !(item.obdCode && typeof item.obdCode !== "string")
+    && ![item.maker, item.model, item.year, item.engine, item.symptom, item.finalCause,
+      item.confirmedFacts, item.measurements, item.memo, item.sources, item.id, item.schemaVersion,
+      item.createdAt, item.updatedAt, item.creatorName, item.registrationDate, item.date,
+      item.technician, item.mileage, item.aiGuess, item.work, item.replacedParts,
+      item.repairResult, item.recurrence, item.confidence]
+      .some(value => value !== null && typeof value === "object");
+}
+
 function findDuplicateCase(record, cases = savedCases) {
   const key = duplicateKey(record);
   return cases.find((item) => duplicateKey(item) === key);
@@ -17021,13 +17032,7 @@ function importCasesJson(event) {
         }
         // Reject malformed field types before normalization. Unexpected internal
         // exceptions still abort the batch without committing a partial import.
-        if ((item.obdCode && typeof item.obdCode !== "string")
-          || [item.maker, item.model, item.year, item.engine, item.symptom, item.finalCause,
-            item.confirmedFacts, item.measurements, item.memo, item.sources, item.id, item.schemaVersion,
-            item.createdAt, item.updatedAt, item.creatorName, item.registrationDate, item.date,
-            item.technician, item.mileage, item.aiGuess, item.work, item.replacedParts,
-            item.repairResult, item.recurrence, item.confidence]
-            .some(value => value !== null && typeof value === "object")) {
+        if (!hasValidCaseFieldTypes(item)) {
           invalid += 1;
           return;
         }
@@ -17095,7 +17100,8 @@ function loadCases() {
       return [];
     }
     const parsed = JSON.parse(stored);
-    if (!Array.isArray(parsed) || !parsed.every(isCaseRecord)) throw new Error("invalid_saved_cases");
+    // Stored data is all-or-nothing: never discard bad rows and overwrite the original.
+    if (!Array.isArray(parsed) || !parsed.every(hasValidCaseFieldTypes)) throw new Error("invalid_saved_cases");
     const cases = parsed.map(normalizeCase);
     caseStorageSnapshot = stored;
     caseStorageReadError = "";
