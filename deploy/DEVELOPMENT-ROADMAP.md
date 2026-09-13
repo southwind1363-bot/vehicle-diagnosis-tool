@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 3.13.584の実ブラウザー復元確認: 隔離Chrome/390幅で「|」を含む別項目の2件を実file inputから取込、reload後の一覧2カード/各ID、実JSON download内容、同backup再取込で重複2件/件数維持を確認。console/pageerrorと外部送信なし、終了時context/browserを閉じた。専用CLI不在のためbrowserスキルの代替として既存Playwright経路を使用。検査へ--field-boundariesを追加（obd-file-flow-cases-erJDmQ）。本文/保存形式/版/ZIP変更なし。ローカルsourceをroute供給した同PC確認であり公開ネットワーク/Service Worker/別PC/実VCIの確認ではない。aa60b04a CI34756869902は確認時in_progress、041eaa6c CIはsuccess。
+
 3.13.584 保存事例復元の誤重複修正: maker=A|B/model=Cとmaker=A/model=B|Cが旧区切り文字連結で同じkeyになり、別記録がimport時に1件スキップされる負例を再現。比較用keyだけJSON配列化して項目境界を保持、保存形式/本文/大小文字・空白の比較規約/ID照合は変更しない。両記録取込・同一/正規化重複除外・backup往復で元文字列保持を確認。case369、R1全工程（offline183）・package477合格。ZIP 2,665,588 bytes / SHA256 18763E7C3F4D9FCF34E20A5959BC049737B7D68E3D74959F45CAE2FCAD898059、別展開846files/16,898,177bytes整合。今回は実ブラウザー/別PC/実VCI/実車未検証、公開実行無効維持。以前誤スキップされた記録は元バックアップから再取込が必要。
 
 2026-09-13 識別確認2経路の終了未確認保持: 通常native identity/verified identityの開発supervisorにも起動通知条件による隔離記録漏れを確認。native側の負例を再現後、両方でworker_termination_unconfirmedなら既存記録を残すよう修正。実行確認必須設定を維持したinertファイル/注入child→実bounded→ディスクstore→再作成supervisorで起動拒否を両経路確認。native6997・専用148/pipe/保存・追加結合・構文/diff合格。公開実行/保存形式/583ZIP不変、実VCI/実車/実OS終了不能は未検証。7603c201 CI34756252405 success、6d8faeed CI34756453072は確認時in_progress。

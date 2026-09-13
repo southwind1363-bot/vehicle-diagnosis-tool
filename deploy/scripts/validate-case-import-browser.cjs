@@ -49,6 +49,41 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
     const input = page.locator('#importJsonInput');
     const status = page.locator('#caseImportStatus');
+    if (process.argv.includes('--field-boundaries')) {
+      const records = [
+        { id: 'boundary-a', maker: 'A|B', model: 'C', symptom: '試験専用' },
+        { id: 'boundary-b', maker: 'A', model: 'B|C', symptom: '試験専用' }
+      ];
+      await input.setInputFiles({ name: 'boundaries.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(records)) });
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('JSONインポート完了'));
+      assert.match(await status.innerText(), /追加 2件/);
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      assert.deepEqual(await page.evaluate(() => savedCases.map(({ id, maker, model }) => ({ id, maker, model }))),
+        records.map(({ id, maker, model }) => ({ id, maker, model })));
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      assert.equal(await page.locator('#caseList .case-card').count(), 2);
+      assert.match(await page.locator('#caseList').innerText(), /boundary-a/);
+      assert.match(await page.locator('#caseList').innerText(), /boundary-b/);
+      await page.screenshot({ path: path.join(output, 'case-boundaries-list.png') });
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      const downloadEvent = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+      const download = await downloadEvent;
+      const backup = path.join(output, 'synthetic-boundaries.json');
+      await download.saveAs(backup);
+      const exported = JSON.parse(fs.readFileSync(backup, 'utf8'));
+      assert.deepEqual(exported.records.map(({ id, maker, model }) => ({ id, maker, model })),
+        records.map(({ id, maker, model }) => ({ id, maker, model })));
+      await input.setInputFiles(backup);
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('重複スキップ 2件'));
+      assert.equal(await page.evaluate(() => savedCases.length), 2);
+      await status.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, 'case-boundaries-restored.png') });
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(JSON.stringify({ passed: true, flow: 'field boundaries -> actual file import -> reload -> downloaded backup -> duplicate reimport', output }));
+      return;
+    }
     await input.setInputFiles({ name: 'invalid.json', mimeType: 'application/json', buffer: Buffer.from('PRIVATE_INPUT is not JSON') });
     await page.waitForFunction(() => document.querySelector('#caseStatus').textContent.includes('JSONインポート失敗'));
     assert.ok(await status.isVisible(), 'Import failure is hidden outside the active data-management panel');
