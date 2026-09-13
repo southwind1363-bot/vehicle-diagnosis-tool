@@ -29,6 +29,9 @@ check(JSON.stringify({ live, freeze }) === original, "Presentation changed sourc
 for (const [item, expected] of [
   [{ label: "RPM", value: 0, unit: "rpm", sourceEcu: "7E8", freezeFrameNumber: 0 }, "RPM: 0 rpm [7E8 / FF #0]"],
   [{ id: "rpm", value: 2000, source_ecu: "7E9", freeze_frame_number: 2 }, "rpm: 2000 [7E9 / FF #2]"],
+  [{ id: "rpm", value: 0, freezeFrameNumber: "0" }, "rpm: 0 [ECU未記録 / FF #0]"],
+  [{ id: "rpm", value: 2000, freeze_frame_number: " 2 " }, "rpm: 2000 [ECU未記録 / FF #2]"],
+  [{ id: "rpm", value: 2000, freezeFrameNumber: 256 }, "rpm: 2000 [ECU未記録 / FF番号未記録]"],
   [{ id: "raw", value: "AA BB", decoded: false }, "raw: AA BB [ECU未記録 / FF番号未記録] / 未換算"],
   [{ id: "missing", value: null, freezeFrameNumber: null }, "missing: 未記録 [ECU未記録 / FF番号未記録]"],
   [{ id: "negative", value: -40, freezeFrameNumber: -1 }, "negative: -40 [ECU未記録 / FF番号未記録]"],
