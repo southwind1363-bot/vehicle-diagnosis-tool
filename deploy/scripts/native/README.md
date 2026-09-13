@@ -2,6 +2,21 @@
 
 ## Development DTC library binding (2026-09-13 approval)
 
+The isolated DTC worker now acquires `J2534DtcExecutionLease` before preflight or
+DLL loading. It reuses the existing global mutex name and performs one immediate
+acquisition attempt per process. Busy acquisition exits without a result or DLL
+load. Only confirmed module cleanup releases the lease in the worker's final
+exit path. Uncertain cleanup retains a strong reference to the mutex until
+process exit; a later completion call cannot upgrade it to released. Completion
+from a different thread also retains rather than releasing an unowned mutex.
+The existing abandoned-mutex policy is unchanged and is not evidence that a
+vehicle/driver was cleaned up. This gate belongs to worker orchestration, not the
+low-level loader; it is not wired into a public execution route.
+
+Separate generated test processes check active ownership, retained ownership
+after GC, and normal release against an actual generated-DLL DTC worker. They
+also check same-process re-acquisition refusal. No real adapter is used.
+
 `WindowsDtcReadLibrary.cs` is a separate internal loader, compiled only with
 `J2534_DTC_DEVELOPMENT`. The existing three-export identity loader is unchanged.
 Its `LoadVerified` entry first reuses the registered-driver preflight to check

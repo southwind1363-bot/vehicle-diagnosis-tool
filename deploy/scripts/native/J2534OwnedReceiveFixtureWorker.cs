@@ -61,6 +61,10 @@ internal static class J2534OwnedReceiveFixtureWorker
     public static int Main(string[] args)
     {
         if (args.Length != 1 || args[0] != "--fixture-owned-receive") return 2;
+#if OWNED_DTC_REQUEST_FIXTURE
+        J2534DtcExecutionLease executionLease = null;
+        bool cleanupConfirmed = false;
+#endif
         try
         {
             foreach (DictionaryEntry entry in Environment.GetEnvironmentVariables())
@@ -69,6 +73,7 @@ internal static class J2534OwnedReceiveFixtureWorker
                 if (key.StartsWith("COR_") || key.StartsWith("CORECLR_") || key.StartsWith("COMPLUS_") || key == "NODE_OPTIONS" || key == "NODE_PATH") return 3;
             }
 #if OWNED_DTC_REQUEST_FIXTURE
+            if (!J2534DtcExecutionLease.TryAcquire(out executionLease)) return 4;
             string fixturePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "owned-receive.dll");
             J2534RegisteredDriverPreflight.FixtureHandleVerified = delegate(string verifiedPath) { };
             var library = WindowsDtcReadLibrary.LoadVerified(fixturePath, OwnedReceiveFixtureDigest.Value,
@@ -152,6 +157,9 @@ internal static class J2534OwnedReceiveFixtureWorker
                 }
             }
             if (library.Retained != failed) return 1;
+#if OWNED_DTC_REQUEST_FIXTURE
+            cleanupConfirmed = !library.Retained;
+#endif
 #if OWNED_DTC_RESULT_OUTPUT
             if (failed || captured == null || receivedCount < 1 || receivedCount > 2) return 1;
             Console.Out.Write("{\"fixture_only\":true,\"pointer_bits\":" + (IntPtr.Size * 8)
@@ -169,6 +177,9 @@ internal static class J2534OwnedReceiveFixtureWorker
             return failed ? 1 : 0;
         }
         catch { return 1; } // No native data, paths, or exception text on either stream.
+#if OWNED_DTC_REQUEST_FIXTURE
+        finally { if (executionLease != null) executionLease.Complete(cleanupConfirmed); }
+#endif
     }
 #if OWNED_DTC_RESULT_OUTPUT
     // Numbers only, bounded synthetic records; no arbitrary strings or paths.

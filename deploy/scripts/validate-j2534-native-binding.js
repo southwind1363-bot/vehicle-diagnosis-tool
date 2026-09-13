@@ -256,6 +256,8 @@ async function main() {
           sources[0], sources[2], sources[4], compiledDigest,
           path.join(scriptsDirectory, "native", "WindowsDtcReadLibrary.cs"),
           preflightSources[0], preflightSources[1],
+          path.join(scriptsDirectory, "native", "J2534GlobalMutexLease.cs"),
+          path.join(scriptsDirectory, "native", "J2534DtcExecutionLease.cs"),
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
@@ -339,6 +341,36 @@ async function main() {
           total += 6;
         }
       }
+      const leaseTest = path.join(platformDirectory, "dtc-execution-lease-test.exe");
+      createdFiles.push(leaseTest);
+      const leaseCompile = await execute(platform.compiler, ["/nologo", "/target:exe", `/platform:${platform.name}`,
+        "/optimize+", "/warnaserror+", "/define:J2534_DTC_DEVELOPMENT;NATIVE_RECEIVE_FIXTURE_TESTS", `/out:${leaseTest}`,
+        ...["J2534GlobalMutexLease.cs", "J2534DtcExecutionLease.cs", "J2534DtcExecutionLeaseTests.cs"].map(n => path.join(scriptsDirectory, "native", n))]);
+      assert.equal(leaseCompile.error, null, `${leaseCompile.stdout}${leaseCompile.stderr}`);
+      for (const state of ["active", "retained", "released"]) {
+        let peerResult, peerTask, ready = false, collected = "";
+        const heldResult = await new Promise(resolve => {
+          const child = execFile(leaseTest, [state], { windowsHide: true, shell: false, timeout: 10000, maxBuffer: 4096 },
+            (error, stdout, stderr) => resolve({ error, stdout, stderr }));
+          child.stdin.on("error", () => {});
+          child.stdout.on("data", chunk => {
+            collected += chunk;
+            if (ready || !collected.includes("READY")) return;
+            ready = true;
+            peerTask = execute(path.join(platformDirectory, "owned-dtc-data", "owned-receive-worker.exe"), ["--fixture-owned-receive"])
+              .then(result => { peerResult = result; child.stdin.end("done\n"); });
+          });
+        });
+        if (peerTask) await peerTask;
+        assert.equal(heldResult.error, null, heldResult.stderr);
+        assert.equal(ready, true); assert.equal(heldResult.stderr, "");
+        assert.equal(peerResult.error?.code ?? 0, state === "released" ? 0 : 4);
+        assert.equal(peerResult.stderr, "");
+        if (state !== "released") assert.equal(peerResult.stdout, "");
+        else assert.equal(JSON.parse(peerResult.stdout).cleanup_confirmed, true);
+        total += 6;
+      }
+      total++;
       const bindingTest = path.join(platformDirectory, "dtc-library-test.exe");
       createdFiles.push(bindingTest);
       const bindingCompile = await execute(platform.compiler, ["/nologo", "/target:exe", `/platform:${platform.name}`,
