@@ -68,7 +68,13 @@ internal static class J2534OwnedReceiveFixtureWorker
                 string key = Convert.ToString(entry.Key).ToUpperInvariant();
                 if (key.StartsWith("COR_") || key.StartsWith("CORECLR_") || key.StartsWith("COMPLUS_") || key == "NODE_OPTIONS" || key == "NODE_PATH") return 3;
             }
+#if OWNED_DTC_REQUEST_FIXTURE
+            var library = WindowsDtcReadLibrary.Load(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "owned-receive.dll"), OwnedReceiveFixtureDigest.Value);
+            try { library.Resolve("PassThruIoctl"); return 1; }
+            catch (InvalidOperationException) { /* Arbitrary/service exports stay rejected. */ }
+#else
             var library = new FixtureLibrary();
+#endif
             bool failed = false;
             int receivedCount = 0;
 #if OWNED_DTC_RESULT_OUTPUT

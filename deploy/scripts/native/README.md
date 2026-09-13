@@ -1,5 +1,27 @@
 # J2534 Windows Identity Binding
 
+## Development DTC library binding (2026-09-13 approval)
+
+`WindowsDtcReadLibrary.cs` is a separate internal loader, compiled only with
+`J2534_DTC_DEVELOPMENT`. The existing three-export identity loader is unchanged.
+It checks the supplied uppercase SHA256 under a read-only file lease, loads with
+the existing DLL-directory/System32 search flags, and requires all nine fixed
+identity/channel/read/filter/write exports before returning. Unknown export
+names are rejected. Failed binding unloads before any PassThru call; uncertain
+ownership retains the module until process exit through the existing owner.
+
+WriteMsgs/filter APIs are not inherently read-only: the existing fixed
+03/07/0A request builder and ownership gates constrain their use. This loader
+alone is not authorization to send, nor a verified-driver selection boundary.
+Digest matching is not publisher authentication. Production entry points and
+distribution do not reference the new loader or enable its compilation flag.
+
+The combined isolated workers now exercise this binding using only generated
+fixture DLLs. Separate process checks cover malformed/mismatched digests,
+missing exports, forbidden names and release/retention. No vendor DLL is loaded.
+Integration with trusted driver selection and the public readout controller,
+dependency identity, real VCI compatibility and vehicle timing remain unverified.
+
 ## Development result conversion (2026-09-12 approval)
 
 `../j2534-dtc-result-converter.js` introduces a bounded JSON-only internal

@@ -252,8 +252,9 @@ async function main() {
         createdFiles.push(worker);
         const compilation = await execute(platform.compiler, [
           "/nologo", "/target:exe", `/platform:${platform.name}`, "/optimize+", "/warnaserror+",
-          `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE${dataOutput ? ";OWNED_DTC_RESULT_OUTPUT" : ""}${["owned-dtc-result-then-hang", "owned-dtc-data-hang"].includes(scenario) ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
+          `/define:NATIVE_RECEIVE_FIXTURE_TESTS;OWNED_DTC_REQUEST_FIXTURE;J2534_DTC_DEVELOPMENT${dataOutput ? ";OWNED_DTC_RESULT_OUTPUT" : ""}${["owned-dtc-result-then-hang", "owned-dtc-data-hang"].includes(scenario) ? ";OWNED_RECEIVE_RESULT_THEN_HANG" : ""}`, `/out:${worker}`,
           sources[0], sources[2], sources[4], compiledDigest,
+          path.join(scriptsDirectory, "native", "WindowsDtcReadLibrary.cs"),
           path.join(scriptsDirectory, "native", "J2534OwnedReceiveFixtureWorker.cs"),
         ]);
         assert.equal(compilation.error, null, `Combined read worker compile failed: ${compilation.stdout}${compilation.stderr}`);
@@ -337,6 +338,18 @@ async function main() {
           total += 6;
         }
       }
+      const bindingTest = path.join(platformDirectory, "dtc-library-test.exe");
+      createdFiles.push(bindingTest);
+      const bindingCompile = await execute(platform.compiler, ["/nologo", "/target:exe", `/platform:${platform.name}`,
+        "/optimize+", "/warnaserror+", "/define:J2534_DTC_DEVELOPMENT;NATIVE_RECEIVE_FIXTURE_TESTS", `/out:${bindingTest}`,
+        sources[0], path.join(scriptsDirectory, "native", "WindowsDtcReadLibrary.cs"),
+        path.join(scriptsDirectory, "native", "WindowsDtcReadLibraryTests.cs")]);
+      assert.equal(bindingCompile.error, null, `DTC library test compile failed: ${bindingCompile.stdout}${bindingCompile.stderr}`);
+      const bindingResult = await execute(bindingTest, []);
+      assert.equal(bindingResult.error, null, bindingResult.stderr);
+      assert.equal(bindingResult.stderr, "");
+      assert.ok(bindingResult.stdout.includes("DTC library digest/export/lifetime checks passed"));
+      total += 4;
       for (const invalid of [
         Object.defineProperty({}, "timeout_ms", { enumerable: true, get() { throw new Error("private-option-detail"); } }),
         Object.defineProperty({}, "signal", { enumerable: true, get() { throw new Error("private-signal-detail"); } }),
@@ -1181,12 +1194,14 @@ async function main() {
       && !production.includes("J2534VerifiedIdentityFixtureWorker")
       && !production.includes("J2534UdsTransportFixtureWorker")
       && !production.includes("J2534OwnedReceiveFixtureWorker")
+      && !production.includes("WindowsDtcReadLibrary") && !production.includes("J2534_DTC_DEVELOPMENT")
       && !production.includes("j2534-native-preflight-fixture-v1") && !production.includes("j2534-verified-identity-fixture-v1"), "Development native worker reached a production entry point");
     total++;
   }
   const distributionSources = ["../offline-assets.json", "./workstation-assets.js", "./package-workstation.js"]
     .map(relative => fs.readFileSync(new URL(relative, import.meta.url), "utf8")).join("\n");
   assert.ok(!distributionSources.includes("J2534NativePreflightFixtureWorker")
+    && !distributionSources.includes("WindowsDtcReadLibrary") && !distributionSources.includes("J2534_DTC_DEVELOPMENT")
     && !distributionSources.includes("J2534UdsTransportFixtureWorker")
     && !distributionSources.includes("J2534OwnedReceiveFixtureWorker")
     && !distributionSources.includes("J2534VerifiedIdentityFixtureWorker")
