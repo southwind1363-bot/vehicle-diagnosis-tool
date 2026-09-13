@@ -222,7 +222,9 @@ function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = nul
     const result = await bounded({ timeout, signal });
     // Process exit alone is not confirmed native cleanup. Only a fully accepted
     // result can attest cleanup; retain the existing quarantine format otherwise.
-    if (quarantineStore && result.worker_started && result.execution_status !== "worker_completed") {
+    // Missing spawn notification is not proof that an unconfirmed child never ran.
+    if (quarantineStore && (result.worker_started || result.errors.includes("worker_termination_unconfirmed"))
+      && result.execution_status !== "worker_completed") {
       try { quarantineStore.mark("cleanup_unconfirmed"); } catch { /* Never retry or expose storage details. */ }
     }
     return result;

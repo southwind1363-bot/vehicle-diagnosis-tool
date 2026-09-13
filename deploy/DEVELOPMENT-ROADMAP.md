@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 二次期限から隔離記録への結合修正: 起動通知なし/終了通知なしの人工childで終了未確認が返っても、worker_started条件により隔離記録が省略される負例を再現。終了未確認errorでも既存cleanup_unconfirmedを記録するよう修正。実bounded worker→DTC supervisor→実一時store→再作成supervisorの起動拒否まで、起動通知あり/なし両方で確認。inertファイルと注入childを使用し実process/native実行なし。初回検査抽出のexport構文不備は抽出式を修正して切り分け。native6997・専用148/pipe/保存・新規結合・構文/diff合格。公開実行/保存形式/583ZIP不変、実VCI/実車/OS終了不能は未検証。直近9d419305/4cea215b CI success、7603c201は確認時in_progress。
+
 2026-09-13 終了未確認の二次期限: 直前の安全境界確認へ利用者「続けて」。開発bounded workerに終了要求後1000msのclose待ち上限を追加。未着ならworker_termination_unconfirmed/worker_exited:false/結果なしを返し、同instanceは遅延close後も再実行禁止。子参照はcloseまで保持、遅延イベントによる結果書換え/解析を拒否。既存DTC supervisorは戻り後に既存cleanup_unconfirmed記録へ進める。kill false/throw/true・exitのみの人工イベントで期限到達と遅延通知/再利用拒否を確認、native6997・専用148/pipe/保存・構文/diff合格。実OSの終了不能process/実VCI/実車は未検証、ホストprocess終了やnative lock解放を保証しない。保存失敗後の再起動保証も未対応。公開実行/保存形式/583ZIP不変。
 
 2026-09-13 開発DTC結果supervisorと既存隔離記録の結合: optional quarantineStoreを追加し、起動前のblocked/不正/読込例外を拒否。開始済workerが正常な結果として採用されず戻った場合、既存cleanup_unconfirmedを記録する。固定生成nativeの正常・開始通知付き正常はclear維持、data出力後hangは結果不採用/記録保持、新store+新supervisorでも起動なし/decoder呼出なしをx86/x64で確認。native6997・専用148/pipe/保存・構文/diff合格。隔離fixture向け任意controlであり公開安全gateや実機機能の完成ではない。closeが永遠に来ない場合は記録処理へ到達せず、保存失敗後の再起動をまたぐ保証も未対応。保存形式/公開実行/583ZIPは不変。前回582のCI34755600060 success、583のCI34755814241は確認時in_progress。
