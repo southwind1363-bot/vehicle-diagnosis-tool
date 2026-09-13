@@ -135,4 +135,15 @@ for (const hasRows of [true, false]) {
   nav.scrollToObdSection("obdMonitorGrid");
   check(scrolled === "", "Search navigation bypassed locked readout access");
 }
+{
+  const h = harness();
+  const missing = [null, undefined, ""];
+  const samples = [...missing, 0, "0", 780].map(value => ({ id: "rpm", label: "回転数", value, unit: "rpm" }));
+  const before = JSON.stringify(samples);
+  h.context.renderObdMonitorValues(samples);
+  const readings = h.context.obdMonitorGrid.children.map(card => card.children.find(child => child.className === "obd-monitor-reading").textContent);
+  check(readings.slice(0, 3).every(text => text === "値未確認"), "Missing live readings were displayed as values");
+  check(readings.slice(3).join(",") === "0 rpm,0 rpm,780 rpm", "Zero or recorded readings changed");
+  check(JSON.stringify(samples) === before, "Display formatting rewrote live evidence");
+}
 console.log(`Monitor filter checks: ${checks} / Errors: 0`);

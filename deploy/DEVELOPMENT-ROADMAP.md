@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.586 ライブ値の欠損表示: renderObdMonitorValuesにnull/undefined/空文字を渡すとnull rpm等になる表示上の負例を再現。これらのみ「値未確認」と表示し、数値0/文字列0/通常値・元配列は維持。診断判定/取得status/保存形式は変更せず、実車応答や取込経路での欠損発生を確認したものではない。monitor52、R1全工程（offline183）・package477・構文/diff合格。ZIP 2,665,736 bytes / SHA256 5CC05761AD367DF04FAFE92F8E1B11E5F854D78B69E6BC30B335ED5EC3410D00、別展開846files/16,898,717bytes整合。今回の実ブラウザー/別PC/実VCI/実車は未検証、公開実行無効維持。
+
 2026-09-13 585配布資材の実Chrome取込確認: 展開済み585の846files/16,898,623bytesを既存integrity検査してからbrowserへroute供給。実file inputで正常2件+型不正2件を取込、追加2/不正2と内容非開示を目視、reload後2カードとID/項目値、実JSON download内容、同backup再取込の重複2件を確認。console/pageerror/外部通信0。既存検査に検証済みpackage root指定と--malformed-fieldsを追加。専用CLI不在のためbrowserスキルの代替として隔離Chrome/Playwrightを使用（obd-file-flow-cases-QZaXen）。同PCの配布資材検査であり、別PC/実VCI/実車/Service Worker・PC起動cmdの検証ではない。本体/保存形式/585ZIP不変。
 
 3.13.585 保存事例取込の型不正行の分離: 数値OBDコードや重複比較項目のobject/arrayがnormalize/比較で例外となり正常行も取り込めないケースを再現。入力型だけ事前に不正行へ分類し、既存のスキップ件数で通知する。最初の包括catch案は既存の内部異常時全件保護検査に反したため撤回し、内部例外/保存失敗は従来どおり部分反映なしを維持。case374（正常行のbackup復元含む）・R1各工程・offline183・package477・構文/diff合格。ZIP 2,665,701 bytes / SHA256 70BBB2682C72117B7266EF4A22F508C6461249B80C3DC5872E2AF78FA2233650、別展開846files/16,898,623bytes整合。保存形式/診断判定/実行権限不変。今回の実ブラウザー/別PC/実VCI/実車は未検証。前回aa60b04a/15286b3f CI success確認。
