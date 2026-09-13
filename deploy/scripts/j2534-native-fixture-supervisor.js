@@ -130,13 +130,18 @@ export function parseJ2534UdsTransportFixtureOutput(output, context) {
 export function createJ2534OwnedReceiveFixtureSupervisor(descriptor) {
   return createOwnedFixtureSupervisor(descriptor, null);
 }
-export function createJ2534DtcResultFixtureSupervisor(descriptor, decodeDtcResponse) {
-  return createOwnedFixtureSupervisor(descriptor, createJ2534DtcResultConverter(decodeDtcResponse));
+export function createJ2534DtcResultFixtureSupervisor(descriptor, decodeDtcResponse, controls = {}) {
+  if (!controls || typeof controls !== "object" || Array.isArray(controls)
+    || Object.keys(controls).some(key => key !== "quarantineStore")
+    || (Object.hasOwn(controls, "quarantineStore")
+      && (typeof controls.quarantineStore?.read !== "function" || typeof controls.quarantineStore?.mark !== "function")))
+    throw new Error("owned_fixture_controls_invalid");
+  return createOwnedFixtureSupervisor(descriptor, createJ2534DtcResultConverter(decodeDtcResponse), controls.quarantineStore);
 }
 // Two bounded native records (at most 4099 data bytes each) fit even when
 // every byte uses three decimal digits. Summary-only workers keep 4 KiB.
 export const J2534_DTC_OUTPUT_LIMIT = 65536;
-function createOwnedFixtureSupervisor(descriptor, convert) {
+function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = null) {
   if (!keysMatch(descriptor, ["temp_root", "architecture", "scenario", "worker", "fixture"])
     || !["x86", "x64"].includes(descriptor.architecture)
     || !(convert ? DTC_RESULT_SCENARIOS : OWNED_SCENARIOS).has(descriptor.scenario))
@@ -209,7 +214,18 @@ function createOwnedFixtureSupervisor(descriptor, convert) {
     if (consumed) return blocked("owned_fixture_already_attempted");
     consumed = true;
     if (aborted) return { ...blocked("worker_cancelled"), execution_status: "worker_cancelled" };
-    return bounded({ timeout, signal });
+    if (quarantineStore) {
+      let state;
+      try { state = quarantineStore.read(); } catch { state = null; }
+      if (state?.quarantined !== false) return blocked("owned_fixture_quarantine_not_clear");
+    }
+    const result = await bounded({ timeout, signal });
+    // Process exit alone is not confirmed native cleanup. Only a fully accepted
+    // result can attest cleanup; retain the existing quarantine format otherwise.
+    if (quarantineStore && result.worker_started && result.execution_status !== "worker_completed") {
+      try { quarantineStore.mark("cleanup_unconfirmed"); } catch { /* Never retry or expose storage details. */ }
+    }
+    return result;
   } });
 }
 

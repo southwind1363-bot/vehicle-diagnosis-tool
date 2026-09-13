@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 開発DTC結果supervisorと既存隔離記録の結合: optional quarantineStoreを追加し、起動前のblocked/不正/読込例外を拒否。開始済workerが正常な結果として採用されず戻った場合、既存cleanup_unconfirmedを記録する。固定生成nativeの正常・開始通知付き正常はclear維持、data出力後hangは結果不採用/記録保持、新store+新supervisorでも起動なし/decoder呼出なしをx86/x64で確認。native6997・専用148/pipe/保存・構文/diff合格。隔離fixture向け任意controlであり公開安全gateや実機機能の完成ではない。closeが永遠に来ない場合は記録処理へ到達せず、保存失敗後の再起動をまたぐ保証も未対応。保存形式/公開実行/583ZIPは不変。前回582のCI34755600060 success、583のCI34755814241は確認時in_progress。
+
 3.13.583 保存後の再実行防止記録確認: 書込/close成功後に記録が消失するとmarkはstate_invalidでも次のreadがclearになる負例を再現。保存後確認で欠落/不正なら既存per-store失敗保持を設定し、EEXIST後の消失も再書込せずblockedに維持。人工の消失/破損/作成競合と既存I/O失敗、package477・offline183・native6903/専用148/pipe/保存検査が合格。ZIP 2,665,552 bytes / SHA256 7948778BC8FE4BFB211B52B562278306B28AB4A5420FBAC258EF514455074813。別展開846ファイル/16,898,091 bytes整合、修正moduleもsourceと一致。保存形式/実行権限は変更せず、再起動後の永続保証・実VCI/実車/別PCは未検証。旧582ZIPは保持。
 
 3.13.582 PC配布版への修正反映: 再実行防止記録の保存失敗を同一store内で保持する修正を新規配布物へ同梱。既存581は上書きしない。package477・workstation1362・offline183がErrors 0。ZIP 2,665,452 bytes / SHA256 59A1A1CF20E8ED158C655450C80165718716B98C0A5A0B4956CEC2088A5E6007。別展開後846ファイル/16,897,863 bytesの整合性検査に合格し、修正moduleのSHA256がsourceと一致。開発専用DTC実行経路は公開有効化せず、実VCI/実車/別PC・ディスク満杯/再起動後の保護は未検証。ZIPはローカル配布成果物で公開Webからの配信とは区別する。

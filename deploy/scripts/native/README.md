@@ -68,6 +68,19 @@ contains the existing decoded snapshot with explicit `fixture_only:true` and
 ordinary summary supervisor rejects these data-output scenarios. Public/live
 routes remain unconnected.
 
+The development DTC factory also accepts an optional `quarantineStore` control,
+using the existing store interface and saved format. A non-clear, unreadable or
+malformed store blocks before spawn. Once a started worker returns without an
+accepted result, the parent marks `cleanup_unconfirmed`; recreating the store
+and supervisor then blocks another launch. A normally accepted result leaves a
+clear store unchanged. This integration is exercised with the fixed generated
+data and data-then-hang workers on x86/x64, not with vendor drivers or vehicles.
+It does not add a public execution route, retry, reset, or new saved format.
+The control is optional for existing isolated fixtures, not a production safety
+gate. Marking occurs after the bounded worker returns: termination that never
+produces a close event and persistence failure across process restart remain
+limitations and are not claimed as protected here.
+
 The DTC-result supervisor uses a 64 KiB output cap, sufficient for the worker's
 two bounded decimal-byte records; summary-only workers retain 4 KiB. The cap is
 still enforced before parsing and oversized output never reaches the decoder.

@@ -228,11 +228,11 @@ async function main() {
         fixture_only: true, pointer_bits: platform.bits, received_count: 2,
         module_retained: false, cleanup_confirmed: true, vehicle_communication: false,
       });
-      const ownedSupervisor = (worker, fixturePath, scenario, decoder = null) => (decoder ? createJ2534DtcResultFixtureSupervisor : createJ2534OwnedReceiveFixtureSupervisor)({
+      const ownedSupervisor = (worker, fixturePath, scenario, decoder = null, controls = {}) => (decoder ? createJ2534DtcResultFixtureSupervisor : createJ2534OwnedReceiveFixtureSupervisor)({
         temp_root: directory, architecture: platform.name, scenario,
         worker: { path: worker, sha256: createHash("sha256").update(fs.readFileSync(worker)).digest("hex") },
         fixture: { path: fixturePath, sha256: createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex") },
-      }, decoder);
+      }, decoder, controls);
       const managedOwned = ownedSupervisor(ownedWorker, path.join(platformDirectory, "owned-receive.dll"), "owned-receive");
       for (const scenario of ["owned-dtc-read", "owned-dtc-write-failure", "owned-dtc-stop-failure",
         "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
@@ -294,7 +294,23 @@ async function main() {
           assert.throws(() => ownedSupervisor(worker, fixturePath, scenario), /owned_fixture_descriptor_invalid/);
           total++;
         }
-        const supervisor = ownedSupervisor(worker, fixturePath, scenario, decoder);
+        const quarantineStore = dataOutput ? createJ2534NativeQuarantineStore(combinedDirectory) : null;
+        if (dataOutput) {
+          for (const controls of [null, [], { unknown: true }, { quarantineStore: {} }]) {
+            assert.throws(() => ownedSupervisor(worker, fixturePath, scenario, decoder, controls), /owned_fixture_controls_invalid/);
+            total++;
+          }
+          for (const read of [() => ({ quarantined: true }), () => null, () => { throw new Error("private-storage"); }]) {
+            const denied = await ownedSupervisor(worker, fixturePath, scenario, decoder,
+              { quarantineStore: { read, mark() { throw new Error("must-not-mark"); } } }).run();
+            assert.equal(denied.worker_started, false);
+            assert.equal(denied.parsed_result, null);
+            assert.deepEqual(denied.errors, ["owned_fixture_quarantine_not_clear"]);
+            total += 3;
+          }
+          createdFiles.push(path.join(combinedDirectory, "j2534-native-quarantine-v1.json"));
+        }
+        const supervisor = ownedSupervisor(worker, fixturePath, scenario, decoder, dataOutput ? { quarantineStore } : {});
         const bounded = await supervisor.run({ timeout_ms: 2000 });
         assert.equal(bounded.worker_started, true);
         assert.equal(bounded.worker_exited, true);
@@ -319,6 +335,20 @@ async function main() {
           total += 13;
         } else assert.deepEqual(bounded.parsed_result, success ? expected : null);
         if (dataOutput) { assert.equal(decodeCalls, success ? 1 : 0); total++; }
+        if (dataOutput) {
+          const reopened = createJ2534NativeQuarantineStore(combinedDirectory);
+          assert.equal(reopened.read().quarantined, !success);
+          total++;
+          if (!success) {
+            assert.equal(reopened.read().reason, "cleanup_unconfirmed");
+            const denied = await ownedSupervisor(worker, fixturePath, scenario, decoder, { quarantineStore: reopened }).run();
+            assert.equal(denied.worker_started, false);
+            assert.equal(denied.parsed_result, null);
+            assert.deepEqual(denied.errors, ["owned_fixture_quarantine_not_clear"]);
+            assert.equal(decodeCalls, 0);
+            total += 5;
+          }
+        }
         assert.equal((await supervisor.run()).execution_status, "request_blocked");
         total += 7;
         if (timedOut) {
