@@ -30,10 +30,15 @@ export function createJ2534NativeQuarantineStore(directory) {
   if (requestedStat.isSymbolicLink() || !requestedStat.isDirectory() || root.startsWith("\\\\"))
     throw new Error("j2534_quarantine_directory_invalid");
   const file = path.join(root, FILE_NAME);
+  // A failed write may leave no file. Keep this store blocked rather than
+  // interpreting ENOENT as a safe state on its next read. Not restart persistence.
+  let persistenceFailed = false;
+  const failedState = () => Object.freeze({ quarantined: true, reason: "state_invalid" });
   return Object.freeze({
-    read() { return Object.freeze(readState(file)); },
+    read() { return persistenceFailed ? failedState() : Object.freeze(readState(file)); },
     mark(reason) {
       if (!REASONS.has(reason)) throw new Error("j2534_quarantine_reason_invalid");
+      if (persistenceFailed) return failedState();
       const current = readState(file);
       if (current.quarantined) return Object.freeze(current);
       const bytes = Buffer.from(`${JSON.stringify({
@@ -45,10 +50,14 @@ export function createJ2534NativeQuarantineStore(directory) {
         fs.writeFileSync(descriptor, bytes);
         fs.fsyncSync(descriptor);
       } catch (error) {
-        if (error?.code !== "EEXIST") return Object.freeze({ quarantined: true, reason: "state_invalid" });
+        if (error?.code !== "EEXIST") { persistenceFailed = true; return failedState(); }
       } finally {
-        if (descriptor !== undefined) fs.closeSync(descriptor);
+        if (descriptor !== undefined) {
+          try { fs.closeSync(descriptor); }
+          catch { persistenceFailed = true; }
+        }
       }
+      if (persistenceFailed) return failedState();
       const stored = readState(file);
       return Object.freeze(stored.quarantined ? stored : { quarantined: true, reason: "state_invalid" });
     }

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import "./validate-package-bounded-read.js";
+import "./validate-quarantine-persistence-failure.js";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";

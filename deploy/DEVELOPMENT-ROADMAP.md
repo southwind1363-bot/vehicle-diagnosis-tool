@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 再実行防止記録の保存失敗保持: HEAD版でmarkがstate_invalidを返した直後readがquarantined:falseに戻るENOSPC負例を再現。同じstore内ではopen/write/fsync/close失敗を記憶してread/markをblockedに維持し、自動再書込せず例外詳細も返さない。保存形式は変更なし。人工I/O失敗の専用確認、実生成を含むpackage477・native6903・専用148/pipe/保存検査とdiff合格。新store生成/再起動をまたぐ保護はディスク保存失敗時には保証できない。実ディスク満杯/実VCI/実車未検証。公開source修正で既存581ZIPは未更新、次の配布版への反映を残す。DTC専用supervisorへの永続隔離結合は別途残る。
+
 2026-09-13 別thread終了通知の未確認経路: 既存Completeの別thread保持分岐を実Threadで通し、所有threadから後でComplete(true)しても保持を解除せず、GC後にも別processの生成DTC workerがbusy4/結果なしとなることをx86/x64で確認。native6903 Errors 0、専用148/pipe/保存・diff合格。実装不具合は見つからず本体コード変更なし、今回の変更は未検証だった異常終了経路の回帰検査。実VCI/実車/公開実行/保存形式/581ZIP不変。
 
 2026-09-13 DTC workerのプロセス間所有権: 直前確認へ利用者「続けて」。開発限定J2534DtcExecutionLeaseを追加し、既存global mutexを事前検査/DLLロード前に1回だけ即時取得。同一processの再取得も拒否。worker最終終了経路でmodule解放確認済みだけ解放し、不確実/別thread完了は強参照でprocess終了まで保持、後からtrueで解放へ変更不可。別processのactive/GC後retained/releasedに対し実生成DTC workerがbusy終了4・結果なし/正常終了へ分かれることをx86/x64で確認。native6891 Errors 0、専用148/pipe/保存・diff合格。既存abandoned mutex規約は変更せず実車cleanupの証明にしない。実vendor DLL/実VCI/実車・公開実行/保存形式/本体581ZIPは未変更。

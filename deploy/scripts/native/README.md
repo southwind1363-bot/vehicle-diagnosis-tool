@@ -286,6 +286,13 @@ native directory. Recreated controllers read that state before spawning and
 reject automatically; malformed state also blocks. There is no runtime clear or
 overwrite API. This is an accidental-retry barrier, not tamper-proof storage.
 
+The source implementation also retains a per-store failure latch if opening,
+writing, syncing or closing the quarantine record fails. Subsequent reads and
+marks on that store remain blocked without another persistence attempt, even
+if no file exists. A failed disk write cannot provide a durable guarantee across
+process restart or a new store instance; those remain limitations. This fix is
+not included in the previously generated 3.13.581 ZIP until a new package is built.
+
 The generated verified-identity supervisor requires an explicit trial
 confirmation, revalidates its pinned worker and DLL descriptors immediately
 before spawn, and starts only the fixed x86/x64 fixture worker. It strictly
