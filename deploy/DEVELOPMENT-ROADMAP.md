@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.587 事例JSONの型不正検査を補完: confirmedFactsのobjectが事前検査を通り保存される負例を再現。確認内容/測定値/メモ/出典/ID/日時等の既存スカラー項目19種にもobject・array除外を適用し、不正行を保存前にスキップする。正常な前後行は保持、内部例外時の全件保護・容量不足時の元データ保持・既存backup復元検査も維持。case450/R1全工程/offline183/package477・構文/diff合格。ZIP2,665,785bytes、SHA2565C648361C3E5BD0C71AB40653EBB1D33049CCE715647E0ED64A69D055311D16C、別展開846files/16,899,072bytes整合。保存schema/診断結果/通信境界は変更なし、既存利用者データは操作しない。今回の実ブラウザー/別PC/実VCI/実車は未検証。
+
 2026-09-13 586配布資材のライブ欠損表示確認: 展開586の846files/16,898,717bytesをintegrity確認して隔離Chromeへ供給。通常画面のライブ詳細を開いた後、表示関数へ人工null/undefined/空文字/0/string0/780を直接渡し、390/1280幅で値未確認3件と0 rpm2件/780 rpm、元配列・保存対象session不変、console/pageerror/外部通信0を確認。初回は通常画面に存在しない詳細ナビを検査が選択してtimeout、実在する「ライブデータの詳細を開く」へ検査だけ修正して合格（obd-file-flow-PZlkMu）。browserスキルのCLI不在により既存Playwright経路を使用。1280画像で全6件を目視、390画像は固定ナビが先頭カードへ重なるため全カードの視覚確認とはしない。実取得/取込の欠損再現・別PC/実VCI/実車/Service Worker/起動cmd確認ではない。本体/保存形式/586ZIP不変。
 
 3.13.586 ライブ値の欠損表示: renderObdMonitorValuesにnull/undefined/空文字を渡すとnull rpm等になる表示上の負例を再現。これらのみ「値未確認」と表示し、数値0/文字列0/通常値・元配列は維持。診断判定/取得status/保存形式は変更せず、実車応答や取込経路での欠損発生を確認したものではない。monitor52、R1全工程（offline183）・package477・構文/diff合格。ZIP 2,665,736 bytes / SHA256 5CC05761AD367DF04FAFE92F8E1B11E5F854D78B69E6BC30B335ED5EC3410D00、別展開846files/16,898,717bytes整合。今回の実ブラウザー/別PC/実VCI/実車は未検証、公開実行無効維持。

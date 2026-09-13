@@ -557,4 +557,12 @@ for (let seed = 0; seed < 12; seed++) {
   failed.import([{ id: "good", model: "good" }, { id: "bad", obdCode: 123 }]);
   check(failed.store.get(key) === failed.bytes && failed.context.savedCases === failed.original, "Failed persistence partially applied valid rows");
 }
+for (const field of ["confirmedFacts", "measurements", "memo", "sources", "id", "schemaVersion", "createdAt", "updatedAt", "creatorName", "registrationDate", "date", "technician", "mileage", "aiGuess", "work", "replacedParts", "repairResult", "recurrence", "confidence"]) {
+  for (const value of [{ toString: null }, []]) {
+    const c = client();
+    c.import([{ id: "good-before", model: "before" }, { id: "malformed", model: "bad", [field]: value }, { id: "good-after", model: "after" }]);
+    check(c.context.savedCases.map(item => item.id).join(",") === "existing,good-before,good-after", `${field}: malformed compound field reached persistent storage`);
+    check(c.context.caseImportStatus.textContent.includes("不正行スキップ 1件"), `${field}: invalid count missing`);
+  }
+}
 console.log(`Case storage checks: ${checks} / Errors: 0`);
