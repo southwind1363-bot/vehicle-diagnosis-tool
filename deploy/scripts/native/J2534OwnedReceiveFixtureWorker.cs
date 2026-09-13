@@ -100,6 +100,11 @@ internal static class J2534OwnedReceiveFixtureWorker
             {
                 uint device;
                 if (owner.Open(out device) != 0) return 1;
+#if OWNED_DTC_REQUEST_FIXTURE
+                uint channel;
+                J2534ReceiveNative.ReadFunction read;
+                if (!J2534DtcReadOperation.TryConnect(library, owner, device, out channel, out read)) failed = true;
+#else
                 var read = (J2534ReceiveNative.ReadFunction)Marshal.GetDelegateForFunctionPointer(
                     library.Resolve("PassThruReadMsgs"), typeof(J2534ReceiveNative.ReadFunction));
                 var connect = (J2534IdentityNative.ConnectFunction)Marshal.GetDelegateForFunctionPointer(
@@ -107,12 +112,9 @@ internal static class J2534OwnedReceiveFixtureWorker
                 var disconnect = (J2534IdentityNative.DisconnectFunction)Marshal.GetDelegateForFunctionPointer(
                     library.Resolve("PassThruDisconnect"), typeof(J2534IdentityNative.DisconnectFunction));
                 uint channel;
-#if OWNED_DTC_REQUEST_FIXTURE
-                const uint channelFlags = 0;
-#else
                 const uint channelFlags = 0x100;
-#endif
                 if (owner.Connect(device, 6, channelFlags, 500000, connect, disconnect, out channel) != 0) failed = true;
+#endif
                 else
                 {
                     if (channel != 0xe1234567 || channel == device) return 1;
@@ -143,13 +145,14 @@ internal static class J2534OwnedReceiveFixtureWorker
 #endif
                         receivedCount = result.Messages.Length;
 #if OWNED_DTC_REQUEST_FIXTURE
-                        if (owner.StopDtcReadFilter(device, channel, filter) != 0) failed = true;
-#endif
+                        failed = !J2534DtcReadOperation.TryFinish(owner, device, channel, filter);
+#else
                         // A failed Disconnect must never fall through to Close.
                         if (!failed) {
                             if (owner.Disconnect(device, channel) != 0) failed = true;
                             else if (owner.Close(device) != 0) failed = true;
                         }
+#endif
                     }
                 }
             }
