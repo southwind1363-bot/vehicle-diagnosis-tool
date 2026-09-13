@@ -109,6 +109,48 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.waitForFunction(() => savedCases.some(item => item.id === 'browser-case'));
     assert.match(await status.innerText(), /追加 1件/);
     const stored = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+    if (process.argv.includes('--stored-field-protection')) {
+      const corrupt = JSON.stringify([...JSON.parse(stored), { id: 'synthetic-invalid', model: 'bad', confirmedFacts: { toString: null } }]);
+      // Only this isolated test origin is modified; never migrate or repair user data.
+      await page.evaluate(bytes => localStorage.setItem('vehicle-diagnosis-cases-v1', bytes), corrupt);
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      const warning = page.locator('#caseStorageWarning');
+      assert.equal(await warning.isVisible(), true);
+      assert.match(await warning.innerText(), /元データ保護/);
+      assert.deepEqual(await page.evaluate(() => savedCases), []);
+      const downloads = [];
+      page.on('download', download => downloads.push(download.suggestedFilename()));
+      const dialogs = [];
+      page.on('dialog', async dialog => { dialogs.push(dialog.message()); await dialog.accept(); });
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+      assert.match(await page.locator('#caseExportStatus').innerText(), /JSON保存は開始しませんでした/);
+      await input.setInputFiles({ name: 'blocked.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([record])) });
+      await page.waitForFunction(() => !caseImportOperation);
+      assert.match(await status.innerText(), /元データ保護/);
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), corrupt);
+      assert.deepEqual(downloads, []);
+      assert.ok(dialogs.length >= 1);
+      await warning.screenshot({ path: path.join(output, 'stored-field-protection.png') });
+      await page.evaluate(bytes => localStorage.setItem('vehicle-diagnosis-cases-v1', bytes), stored);
+      await page.getByRole('button', { name: '保存事例を再読込', exact: true }).click();
+      assert.equal(await warning.isVisible(), false);
+      assert.equal(await page.evaluate(() => savedCases.length), 1);
+      await page.getByRole('button', { name: '4. 事例検索', exact: true }).click();
+      assert.equal(await page.locator('#caseList .case-card').count(), 1);
+      assert.match(await page.locator('#caseList').innerText(), /browser-case/);
+      await page.locator('#caseList').screenshot({ path: path.join(output, 'stored-field-recovered.png') });
+      await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
+      const resumedDownload = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'JSONバックアップ', exact: true }).click();
+      const recoveredBackup = path.join(output, 'synthetic-recovered.json');
+      await (await resumedDownload).saveAs(recoveredBackup);
+      assert.deepEqual(JSON.parse(fs.readFileSync(recoveredBackup, 'utf8')).records, JSON.parse(stored));
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(JSON.stringify({ passed: true, flow: 'synthetic corrupt storage -> page reload -> visible protection -> blocked backup/import -> original bytes retained -> explicit reload recovery', output }));
+      return;
+    }
     if (process.argv.includes('--file-timeout')) {
       await page.evaluate(() => {
         window.caseReadFixture = { original: window.FileReader, reads: 0, aborts: 0, started: performance.now() };

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-13 588配布資材の保存保護を実Chrome確認: integrity合格の展開588（846files/16,899,246bytes）を隔離browserへ供給。正常事例を実file inputで取り込み、検査originのstorageへ人工型不正行を追加してpage reload。保護警告表示、JSON保存開始なし/取込による上書きなし/元bytes保持、正常fixtureへ戻した後の「保存事例を再読込」で警告解除と1カード復帰を確認。復帰後の実JSON downloadも元recordsと一致。console/pageerror/外部通信0、context/browser終了。browserスキルのCLI不在で既存Playwrightを使用。警告と復帰カードを目視（Or20T9）、download復帰を追加して34NBPa合格。本体/588ZIP/保存形式不変。利用者データの修復機能を実装したものではなく、同PCの人工storage検査。別PC/実VCI/実車/Service Worker/起動cmd未検証。
+
 3.13.588 配布物検査: package477合格。
 
 3.13.588 保存済み事例の再読込保護: 587の取込検査とは別に、保存済みconfirmedFactsの型不正objectがloadCasesを通る負例を再現。既存型検査を共通化し、保存済み配列は全件有効な場合のみ採用する。取込の不正行スキップとは異なり、再読込時は不正行を捨てず全体を既存の読込エラー保護へ移し、元bytes/現一覧を維持・変更/出力を停止。6項目の不正例と正常データの明示的再読込による復帰を確認。case486/R1全工程/offline183・構文/diff合格。ZIP2,665,869bytes / SHA25622993A1EA7800FD74E6184BB16D47450AE31A9380B9889EFEE69EC5FE36EAFBE、別展開846files/16,899,246bytes整合。保存schema/診断契約/通信境界不変。人工storageのみ、利用者データは未操作、今回実ブラウザー/別PC/実VCI/実車未検証。
