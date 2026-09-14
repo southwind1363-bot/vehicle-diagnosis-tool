@@ -1,5 +1,21 @@
 # J2534 Windows Identity Binding
 
+## Non-executing vendor package comparison (2026-09-15)
+
+`vendor-package-review.js` compares developer-supplied metadata against a copied,
+default-empty catalog. Vendor, version, architecture, source URL, entry DLL and
+the complete listed file inventory (relative name, size, SHA256) must match.
+Missing/extra files, Windows filename aliases and malformed records are rejected.
+Run `node --test scripts/native/vendor-package-review.test.js` from deploy.
+
+This module does not read files, authenticate a website/publisher, verify signatures,
+discover dependencies, or load anything. An HTTPS source string is provenance metadata,
+not evidence that the source is official. `metadata_match_only` never grants execution.
+No real manufacturer record is included; no loader, public route or package is connected.
+Next: obtain inventory from an explicitly selected development folder without loading
+code, using synthetic files first. Official-source review, signature verification and
+runtime dependency closure remain separate unresolved requirements.
+
 ## Declared dependency rejection (2026-09-14 approval)
 
 The development DTC loader checks the held, hashed file before LoadLibraryExW.
