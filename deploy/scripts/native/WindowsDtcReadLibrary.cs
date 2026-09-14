@@ -67,6 +67,43 @@ namespace VehicleDiagnosis.Native
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool FreeLibrary(IntPtr library);
 
+        // Conservative development gate: imported dependencies have no approved
+        // identity policy yet. An empty table is NOT proof of trustworthy code
+        // (runtime loading, forwarders and entry-point behavior remain separate).
+        internal static void RequireNoDeclaredDependencies(Stream file)
+        {
+            long original = file.Position;
+            try {
+                using (var reader = new BinaryReader(file, System.Text.Encoding.UTF8, true)) {
+                    if (file.Length < 64) throw new InvalidOperationException();
+                    file.Position = 0;
+                    if (reader.ReadUInt16() != 0x5a4d) throw new InvalidOperationException();
+                    file.Position = 60;
+                    long pe = reader.ReadUInt32();
+                    if (pe < 64 || pe > file.Length - 24) throw new InvalidOperationException();
+                    file.Position = pe;
+                    if (reader.ReadUInt32() != 0x4550) throw new InvalidOperationException();
+                    file.Position = pe + 20;
+                    int optionalSize = reader.ReadUInt16();
+                    long optional = pe + 24;
+                    if (optionalSize < 2 || optionalSize > file.Length - optional) throw new InvalidOperationException();
+                    file.Position = optional;
+                    int magic = reader.ReadUInt16();
+                    int directories = magic == 0x10b ? 96 : magic == 0x20b ? 112 : -1;
+                    if (directories < 0 || optionalSize < directories + 16 * 8) throw new InvalidOperationException();
+                    file.Position = optional + directories - 4;
+                    if (reader.ReadUInt32() != 16) throw new InvalidOperationException();
+                    // Import, bound import, IAT, delay import and CLR directories.
+                    foreach (int index in new int[] { 1, 11, 12, 13, 14 }) {
+                        file.Position = optional + directories + index * 8;
+                        uint address = reader.ReadUInt32(), size = reader.ReadUInt32();
+                        if (address != 0 || size != 0) throw new InvalidOperationException();
+                    }
+                }
+            } catch { throw new InvalidOperationException("native_dtc_dependencies_unverified"); }
+            finally { file.Position = original; }
+        }
+
         internal static WindowsDtcReadLibrary LoadSelected(J2534DtcReadSelection selection)
         {
             if (selection == null) throw new InvalidOperationException("native_dtc_selection_invalid");
@@ -105,6 +142,7 @@ namespace VehicleDiagnosis.Native
                 using (var sha = SHA256.Create()) {
                     if (BitConverter.ToString(sha.ComputeHash(file)).Replace("-", "") != expectedDigest)
                         throw new InvalidOperationException();
+                    RequireNoDeclaredDependencies(file);
                     library.module = LoadLibraryExW(fullPath, IntPtr.Zero, 0x00000900);
                     if (library.module == IntPtr.Zero) throw new InvalidOperationException();
                     foreach (string name in new string[] { "PassThruOpen", "PassThruReadVersion", "PassThruClose",

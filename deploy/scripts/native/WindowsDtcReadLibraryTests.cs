@@ -30,6 +30,26 @@ internal static class WindowsDtcReadLibraryTests
             string architecture = IntPtr.Size == 4 ? "x86" : "x64";
             string hash = Digest(path);
             long size = new FileInfo(path).Length;
+            byte[] image = File.ReadAllBytes(path);
+            int optional = BitConverter.ToInt32(image, 60) + 24;
+            int directories = BitConverter.ToUInt16(image, optional) == 0x10b ? 96 : 112;
+            using (var input = new MemoryStream(image)) {
+                input.Position = 7;
+                WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input);
+                if (input.Position != 7 || !input.CanRead) throw new Exception("dependency_check_changed_stream");
+            }
+            foreach (int index in new int[] { 1, 11, 12, 13, 14 }) foreach (int field in new int[] { 0, 4 }) {
+                byte[] changed = (byte[])image.Clone(); changed[optional + directories + index * 8 + field] = 1;
+                using (var input = new MemoryStream(changed)) {
+                    input.Position = 7;
+                    Rejected(delegate { WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input); }, "native_dtc_dependencies_unverified");
+                    if (input.Position != 7 || !input.CanRead) throw new Exception("dependency_rejection_changed_stream");
+                }
+            }
+            foreach (int length in new int[] { 0, 63, optional + directories + 127 }) {
+                using (var input = new MemoryStream(image, 0, length))
+                    Rejected(delegate { WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input); }, "native_dtc_dependencies_unverified");
+            }
             foreach (string badPath in new string[] { null, "", "relative.dll", "C:relative.dll", "\\\\server\\share\\driver.dll" })
                 Rejected(delegate { new J2534DtcReadSelection(badPath, hash, size, architecture, 0x7e0, 3); }, "native_dtc_selection_invalid");
             foreach (string badHash in new string[] { null, "", "ABC", new String('G', 64), " " + hash })

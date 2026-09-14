@@ -1,5 +1,18 @@
 # J2534 Windows Identity Binding
 
+## Declared dependency rejection (2026-09-14 approval)
+
+The development DTC loader checks the held, hashed file before LoadLibraryExW.
+Until a dependency identity policy exists, nonzero import, bound-import, IAT,
+delay-import or CLR directory address/size is rejected. Truncated/unsupported
+headers and directory counts other than 16 are also rejected conservatively.
+PE32/PE32+ offsets follow [Microsoft PE Format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format).
+This is not a complete PE validator or proof of no runtime dependencies: export
+forwarders, dynamic loading, TLS/entry-point code and publisher trust remain
+separate unresolved concerns. It does not authorize vendor DLL execution.
+Generated import-free native fixtures still use the existing loader; modified
+header tests use memory streams only and do not load dependency-bearing DLLs.
+
 ## Development DTC library binding (2026-09-13 approval)
 
 The 2026-09-14 registered-selection development approval adds
