@@ -110,13 +110,19 @@ export function verifyWorkstationPackage(directory) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  try {
-    const result = verifyWorkstationPackage(fileURLToPath(new URL("../", import.meta.url)));
-    console.log(`Package files match: ${result.appVersion} / ${result.fileCount} files / ${result.totalBytes} bytes.`);
-    console.log("Copy integrity only. Not a signature, vehicle compatibility, or permission to transmit.");
-  } catch (error) {
-    console.error(`Package verification failed: ${error.code?.startsWith("package_integrity_") ? error.code : "package_unreadable"}${error.file ? ` (${error.file})` : ""}`);
-    console.error("Restore the complete package from the original build before using it. No files were changed.");
+  if (process.argv.length !== 2) {
+    console.error("Package verification failed: unsupported_arguments");
+    console.error("対象フォルダーを引数では指定できません。確認したい配布フォルダー内の verify-workstation.cmd を実行してください。検査は行っていません。");
     process.exitCode = 1;
+  } else {
+    try {
+      const result = verifyWorkstationPackage(fileURLToPath(new URL("../", import.meta.url)));
+      console.log(`Package files match: ${result.appVersion} / ${result.fileCount} files / ${result.totalBytes} bytes.`);
+      console.log("Copy integrity only. Not a signature, vehicle compatibility, or permission to transmit.");
+    } catch (error) {
+      console.error(`Package verification failed: ${error.code?.startsWith("package_integrity_") ? error.code : "package_unreadable"}${error.file ? ` (${error.file})` : ""}`);
+      console.error("Restore the complete package from the original build before using it. No files were changed.");
+      process.exitCode = 1;
+    }
   }
 }

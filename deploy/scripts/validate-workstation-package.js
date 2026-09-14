@@ -555,6 +555,14 @@ try {
   check(fs.readdirSync(competing.outputDirectory).length === 1, "Concurrent publication left locks or staging behind");
 
   const actual = packageWorkstation({ outputDirectory: path.join(root, "relocated") });
+  for (const args of [["C:/synthetic-missing-package"], ["--root", "synthetic-private-target"], [""]]) {
+    const rejected = spawnSync(process.execPath, [path.join(actual.directory, "scripts/verify-workstation-package.js"), ...args],
+      { cwd: os.tmpdir(), encoding: "utf8", windowsHide: true, shell: false, timeout: 10000 });
+    check(rejected.status === 1 && rejected.stdout === "" && rejected.stderr.includes("unsupported_arguments"),
+      "Verifier ignored a target argument and reported success for its own package");
+    check(rejected.stderr.includes("検査は行っていません") && !rejected.stderr.includes("synthetic-")
+      && !rejected.stderr.includes("Package files match:"), "Verifier rejection disclosed input or claimed a completed check");
+  }
   const verified = await run(`import {pathToFileURL} from "node:url";import path from "node:path";const {verifyWorkstationPackage}=await import(pathToFileURL(path.join(process.argv[1],"scripts/verify-workstation-package.js")));console.log(verifyWorkstationPackage(process.argv[1]).appVersion);`, [actual.directory]);
   check(verified.code === 0 && verified.output.trim() === actual.appVersion, "Relocated verifier borrowed runtime files or failed offline");
   const entries = process.platform === "win32" ? ["cmd", "start", "workstation:dev"] : ["start", "workstation:dev"];
