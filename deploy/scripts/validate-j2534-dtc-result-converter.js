@@ -62,6 +62,14 @@ for (const malformed of [null, {}, { schema_version: "dtc_snapshot_v1", dtc_read
 console.log(`J2534 DTC result converter checks: ${checks} / synthetic inputs only / Errors: 0`);
 
 const api = context.window.ObdReadOnly;
+const appSource = fs.readFileSync(new URL("../script.js", import.meta.url), "utf8");
+const sourceLabelCode = appSource.match(/function formatObdSessionSourceLabel\([^)]*\) \{[\s\S]*?\r?\n\}/)?.[0];
+assert.ok(sourceLabelCode, "Missing session source display formatter");
+vm.runInContext(sourceLabelCode, context);
+const sourceLabel = source => context.formatObdSessionSourceLabel(source, "未記録");
+assert.equal(sourceLabel("local_bridge"), "ローカルブリッジ");
+assert.equal(sourceLabel("unknown_source"), "unknown_source");
+assert.equal(sourceLabel(null), "未記録");
 let sessionCalls = 0;
 const buildSession = createJ2534FixtureSessionBuilder(input => { sessionCalls++; return api.buildDiagnosticScanSession(input); });
 const completed = value => ({ execution_status: "worker_completed", worker_started: true, worker_exited: true,
@@ -75,6 +83,7 @@ for (const status of [0, 9]) for (const value of [sample(), empty, indicated]) {
   const archive = api.buildBridgeSessionExportPayload(built.session);
   const restored = api.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
   assert.equal(restored.source, "j2534_development_read");
+  assert.equal(sourceLabel(restored.source), "J2534開発検証データ（実車読取ではありません）");
   assert.equal(restored.dtcSnapshot.source, "j2534_development_read");
   assert.deepEqual(restored.dtcSnapshot.dtcs, built.session.dtcSnapshot.dtcs);
   assert.equal(restored.dtcSnapshot.dtc_readout_status, "reported");

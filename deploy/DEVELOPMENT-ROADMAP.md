@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.594 開発読取結果の入力源表示: 保存復元されたj2534_development_readが内部コード名だけになる表示を、日本語の「J2534開発検証データ（実車読取ではありません）」へ変更。既存converter→session→archive→復元の6例から実表示formatterを呼び、表示保持と既存入力源/不明値/未記録の表示を確認。専用converter148と保存往復/pipe検査、package489/offline183・構文/diff合格。保存source/形式/診断判定/通信権限は不変。ZIP2,668,386bytes/SHA256A3A9EA38A33254410D78E18A58D67B466985D8F06B25F1879C8FF02F3AAB1100、別展開847files/16,905,669bytes整合。今回は実ブラウザー表示/別PC/実VCI/実車未検証、入力源名は実行実績の証明ではない。前回e55556e9 CI success確認。購入まだ不要。
+
 3.13.593 Windows検査入口の対象誤認防止: 592展開版のverify-workstation.cmdが--no-pause後の別対象を無視して成功する負例を再現。cmdでも引数なし/--no-pauseだけを許可し、対象指定/余分な空引数は検査・pause前に拒否。初回実装は空白付きquoted pathでcmd構文エラーとなり専用検査が失敗、展開済み引数と空引数の判定順を修正して解消。package489/offline183・構文/diff合格。ZIP2,668,339bytes/SHA256775D86A2A04F7308DDFA9C4129371F7B1C1ED9B0F72DA7B8E34EBA81818EA13C、別展開847files/16,905,572bytesのcmd検査成功と余分な対象の拒否を確認。失敗候補はrejected-vehicle-diagnosis-tool-3.13.593へ保管して未配布、修正版のみZIP化。保存形式/通信権限不変、実VCI/実車/別PC未検証。前回e1470990 CI success確認。購入まだ不要。
 
 3.13.592 配布検査の対象誤認防止: 591展開版のverifierへ存在しない別フォルダーを引数指定しても自身の配布物を検査して成功する負例を再現。CLIの追加引数を検査前に拒否し、対象フォルダー内のverify-workstation.cmdを案内する。入力パスを表示せず、既存の引数なし検査/API/保存形式/通信権限は不変。実生成パッケージでパス・option・空引数を確認、package483/offline183・構文/diff合格。ZIP2,668,175bytes/SHA256CE9EC610FB77614047C1CF8761951CD38F3951B9729BBBAEF7475354C8FE1702、別展開847files/16,905,055bytes整合と誤指定拒否を確認。591で記録したmetadata欠損検査の一時失敗は今回再現せず原因未確定のまま。前回27224d62のGitHub自動検証success確認。別PC/実VCI/実車未検証、購入まだ不要。
