@@ -110,17 +110,21 @@ namespace VehicleDiagnosis.Native
                     long sectionTable = optional + optionalSize;
                     if (sectionCount < 1 || sectionCount > 96 || sectionTable + sectionCount * 40 > file.Length)
                         throw new InvalidOperationException();
+                    file.Position = optional + 60; // SizeOfHeaders includes alignment padding.
+                    uint headerSize = reader.ReadUInt32();
+                    if (headerSize < sectionTable + sectionCount * 40 || headerSize > file.Length)
+                        throw new InvalidOperationException();
                     file.Position = optional + directories;
                     uint exportRva = reader.ReadUInt32(), exportSize = reader.ReadUInt32();
                     if (exportRva == 0 || exportSize < 40 || (ulong)exportRva + exportSize > 0x100000000UL)
                         throw new InvalidOperationException();
-                    long exportOffset = MapDeclaredRva(reader, sectionTable, sectionCount, exportRva, exportSize);
+                    long exportOffset = MapDeclaredRva(reader, sectionTable, sectionCount, headerSize, exportRva, exportSize);
                     file.Position = exportOffset + 20;
                     uint functionCount = reader.ReadUInt32();
                     if (functionCount == 0 || functionCount > 4096) throw new InvalidOperationException();
                     file.Position = exportOffset + 28;
                     uint functionsRva = reader.ReadUInt32();
-                    long functionsOffset = MapDeclaredRva(reader, sectionTable, sectionCount, functionsRva, functionCount * 4);
+                    long functionsOffset = MapDeclaredRva(reader, sectionTable, sectionCount, headerSize, functionsRva, functionCount * 4);
                     file.Position = functionsOffset;
                     for (uint index = 0; index < functionCount; index++) {
                         uint functionRva = reader.ReadUInt32();
@@ -133,18 +137,22 @@ namespace VehicleDiagnosis.Native
             finally { file.Position = original; }
         }
 
-        private static long MapDeclaredRva(BinaryReader reader, long sectionTable, int sectionCount, uint rva, uint length)
+        private static long MapDeclaredRva(BinaryReader reader, long sectionTable, int sectionCount, uint headerSize, uint rva, uint length)
         {
             long found = -1;
-            if (rva == 0 || length == 0 || (ulong)rva + length > 0x100000000UL) throw new InvalidOperationException();
+            if (rva < headerSize || length == 0 || (ulong)rva + length > 0x100000000UL) throw new InvalidOperationException();
             for (int index = 0; index < sectionCount; index++) {
                 reader.BaseStream.Position = sectionTable + index * 40 + 8;
                 uint virtualSize = reader.ReadUInt32(), address = reader.ReadUInt32();
                 uint rawSize = reader.ReadUInt32(), rawOffset = reader.ReadUInt32();
                 ulong span = Math.Max(virtualSize, rawSize);
+                // A header declaration overlapping another section is ambiguous
+                // even when the export tables themselves are in a later section.
+                if ((span > 0 && address < headerSize) || (rawSize > 0 && rawOffset < headerSize))
+                    throw new InvalidOperationException();
                 if ((ulong)rva < address + span && (ulong)address < (ulong)rva + length) {
-                    if (found >= 0 || rva < address || (ulong)rva - address + length > rawSize
-                        || rawOffset < sectionTable + sectionCount * 40
+                    if (found >= 0 || address < headerSize || rva < address || (ulong)rva - address + length > rawSize
+                        || rawOffset < headerSize
                         || (ulong)rawOffset + rawSize > (ulong)reader.BaseStream.Length) throw new InvalidOperationException();
                     found = (long)rawOffset + rva - address;
                 }

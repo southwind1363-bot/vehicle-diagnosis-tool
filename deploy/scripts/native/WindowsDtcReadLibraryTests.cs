@@ -68,6 +68,13 @@ internal static class WindowsDtcReadLibraryTests
                 Array.Copy(BitConverter.GetBytes(UInt32.MaxValue), 0, changed, offset, 4);
                 dependencyImages.Add(changed);
             }
+            int sections = optional + BitConverter.ToUInt16(image, optional - 4);
+            uint firstRawOffset = BitConverter.ToUInt32(image, sections + 20);
+            foreach (uint headerSize in new uint[] { 0, 1, UInt32.MaxValue, firstRawOffset + 1 }) {
+                byte[] changed = (byte[])image.Clone();
+                Array.Copy(BitConverter.GetBytes(headerSize), 0, changed, optional + 60, 4);
+                dependencyImages.Add(changed);
+            }
             using (var input = new MemoryStream(image)) {
                 input.Position = 7;
                 WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input);

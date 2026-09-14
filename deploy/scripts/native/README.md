@@ -13,6 +13,9 @@ The held-file gate also rejects export forwarders before any GetProcAddress call
 Export directories and address tables must map unambiguously into file-backed
 sections (1..96 sections, 1..4096 functions); missing, overflowing, overlapping
 or unbacked table ranges are rejected. Header-resident tables are not supported.
+The declared SizeOfHeaders must cover the section table and fit the file. Table
+RVAs, their containing sections and raw offsets must lie outside that declared
+header extent, including padding, not just outside the section-table bytes.
 Every export address is checked, not only the nine requested API names.
 This is not a complete PE validator or proof of no runtime dependencies:
 dynamic loading from exported code and publisher trust remain

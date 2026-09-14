@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 宣言ヘッダー領域の検査漏れ修正: SizeOfHeadersを0/1/uint最大/先頭raw+1に変更した候補が旧guardを通る負例を追加して失敗を確認。宣言headerがsection tableを包含しfile内に収まること、table RVAおよび全sectionの仮想/raw領域がheaderへ侵入しないことを確認する。最初の修正はtableを含むsectionだけに適用して再度失敗、生成fixtureの.text/.rdata配置から原因を切り分け全sectionへ修正。24候補のmemory/実LoadVerified拒否と正常native経路をx86/x64で確認、native7365/専用148/保存復元/pipe・構文/diff合格。OSが不正PEを実際に受理するかは試していない。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。前回bbf61a3c CI success確認。
+
 2026-09-14 export転送のロード前拒否: 登録側JSのcallable export除外に加え、開発native loaderの保持file検査でも全EAT項目を走査しexport directory範囲内のforwarder RVAを拒否。1..96section/1..4096function、tableの一意なfile-backed mapping/範囲/overflowを検査し、header配置tableは未対応として拒否。先頭/末尾関数×転送範囲の両端4例とsize/count/table RVA不正3例を既存13例へ追加。memoryおよび実LoadVerifiedのpreflight到達/OS loader直前未到達を両bitnessで確認、native7365/専用148/保存復元/pipe・構文/diff合格（内部case数20、集計数は不変）。正常なforward先DLLの実行・動的ロード・発行元信頼の検証ではない。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。前回3fe9d7eb CI success確認。
 
 2026-09-14 未確認のDLL初期化をロード前拒否: 承認済み依存関係検査の範囲で、開発DTC loaderの既存PE検査へAddressOfEntryPoint非zeroとTLS directory address/size非zeroの拒否を追加。Microsoft PE Formatの定義を参照。従来10例に3例を加え、memoryと実LoadVerifiedで保持preflight到達/OS loader直前未到達をx86/x64で確認。正常import-free/entryなし生成DLLと終了管理は維持、native7365/専用148/保存復元/pipe・構文/diff合格（追加caseは既存内部集計内）。実TLS callbackやDllMainを実行した検査ではない。export forwarder/呼出後の動的依存/発行元信頼は未完了。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。前回2763ae53 CI success確認。
