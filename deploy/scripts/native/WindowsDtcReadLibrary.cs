@@ -72,7 +72,7 @@ namespace VehicleDiagnosis.Native
 
         // Conservative development gate: imported dependencies have no approved
         // identity policy yet. An empty table is NOT proof of trustworthy code
-        // (runtime loading and forwarders remain separate). Initialization entry
+        // (runtime loading remains separate). Initialization entry
         // points and TLS are rejected too; this is not a code sandbox.
         internal static void RequireNoDeclaredDependencies(Stream file)
         {
@@ -105,9 +105,52 @@ namespace VehicleDiagnosis.Native
                         uint address = reader.ReadUInt32(), size = reader.ReadUInt32();
                         if (address != 0 || size != 0) throw new InvalidOperationException();
                     }
+                    file.Position = pe + 6;
+                    int sectionCount = reader.ReadUInt16();
+                    long sectionTable = optional + optionalSize;
+                    if (sectionCount < 1 || sectionCount > 96 || sectionTable + sectionCount * 40 > file.Length)
+                        throw new InvalidOperationException();
+                    file.Position = optional + directories;
+                    uint exportRva = reader.ReadUInt32(), exportSize = reader.ReadUInt32();
+                    if (exportRva == 0 || exportSize < 40 || (ulong)exportRva + exportSize > 0x100000000UL)
+                        throw new InvalidOperationException();
+                    long exportOffset = MapDeclaredRva(reader, sectionTable, sectionCount, exportRva, exportSize);
+                    file.Position = exportOffset + 20;
+                    uint functionCount = reader.ReadUInt32();
+                    if (functionCount == 0 || functionCount > 4096) throw new InvalidOperationException();
+                    file.Position = exportOffset + 28;
+                    uint functionsRva = reader.ReadUInt32();
+                    long functionsOffset = MapDeclaredRva(reader, sectionTable, sectionCount, functionsRva, functionCount * 4);
+                    file.Position = functionsOffset;
+                    for (uint index = 0; index < functionCount; index++) {
+                        uint functionRva = reader.ReadUInt32();
+                        // An EAT entry inside the export directory is a forwarder.
+                        if (functionRva >= exportRva && (ulong)functionRva < (ulong)exportRva + exportSize)
+                            throw new InvalidOperationException();
+                    }
                 }
             } catch { throw new InvalidOperationException("native_dtc_dependencies_unverified"); }
             finally { file.Position = original; }
+        }
+
+        private static long MapDeclaredRva(BinaryReader reader, long sectionTable, int sectionCount, uint rva, uint length)
+        {
+            long found = -1;
+            if (rva == 0 || length == 0 || (ulong)rva + length > 0x100000000UL) throw new InvalidOperationException();
+            for (int index = 0; index < sectionCount; index++) {
+                reader.BaseStream.Position = sectionTable + index * 40 + 8;
+                uint virtualSize = reader.ReadUInt32(), address = reader.ReadUInt32();
+                uint rawSize = reader.ReadUInt32(), rawOffset = reader.ReadUInt32();
+                ulong span = Math.Max(virtualSize, rawSize);
+                if ((ulong)rva < address + span && (ulong)address < (ulong)rva + length) {
+                    if (found >= 0 || rva < address || (ulong)rva - address + length > rawSize
+                        || rawOffset < sectionTable + sectionCount * 40
+                        || (ulong)rawOffset + rawSize > (ulong)reader.BaseStream.Length) throw new InvalidOperationException();
+                    found = (long)rawOffset + rva - address;
+                }
+            }
+            if (found < 0) throw new InvalidOperationException();
+            return found;
         }
 
         internal static WindowsDtcReadLibrary LoadSelected(J2534DtcReadSelection selection)

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 export転送のロード前拒否: 登録側JSのcallable export除外に加え、開発native loaderの保持file検査でも全EAT項目を走査しexport directory範囲内のforwarder RVAを拒否。1..96section/1..4096function、tableの一意なfile-backed mapping/範囲/overflowを検査し、header配置tableは未対応として拒否。先頭/末尾関数×転送範囲の両端4例とsize/count/table RVA不正3例を既存13例へ追加。memoryおよび実LoadVerifiedのpreflight到達/OS loader直前未到達を両bitnessで確認、native7365/専用148/保存復元/pipe・構文/diff合格（内部case数20、集計数は不変）。正常なforward先DLLの実行・動的ロード・発行元信頼の検証ではない。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。前回3fe9d7eb CI success確認。
+
 2026-09-14 未確認のDLL初期化をロード前拒否: 承認済み依存関係検査の範囲で、開発DTC loaderの既存PE検査へAddressOfEntryPoint非zeroとTLS directory address/size非zeroの拒否を追加。Microsoft PE Formatの定義を参照。従来10例に3例を加え、memoryと実LoadVerifiedで保持preflight到達/OS loader直前未到達をx86/x64で確認。正常import-free/entryなし生成DLLと終了管理は維持、native7365/専用148/保存復元/pipe・構文/diff合格（追加caseは既存内部集計内）。実TLS callbackやDllMainを実行した検査ではない。export forwarder/呼出後の動的依存/発行元信頼は未完了。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。前回2763ae53 CI success確認。
 
 2026-09-14 依存宣言拒否のloader結合検証: 生成DLLの5directory各address/sizeだけを変更した10ファイルをCreateNewで作成し、実LoadVerifiedへ渡す。保持下preflight callback到達とOSロード直前hook未到達をx86/x64で確認。hookは検査compile限定で、誤到達時も例外でOSロードを止める。通常生成DLL3経路はhook到達と従来寿命検査を維持。初回は別fixtureコンパイルで未代入field警告CS0649、auto-propertyに変更して解消。native7365/専用148/保存復元/pipe・構文/diff合格。変更headerは依存宣言の拒否候補で、正常な依存付きDLLや推移依存の解決検査ではない。作成した一時候補は各case終了時だけ削除、利用者データは未使用。公開実行/保存形式/594ZIP不変、実DLL/VCI/実車未検証。前回8c180e0a CI success確認。

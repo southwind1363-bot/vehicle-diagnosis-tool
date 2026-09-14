@@ -23,6 +23,18 @@ internal static class WindowsDtcReadLibraryTests
     {
         return WindowsDtcReadLibrary.LoadVerified(path, digest, new FileInfo(path).Length, IntPtr.Size == 4 ? "x86" : "x64");
     }
+    private static int FixtureOffset(byte[] image, uint rva)
+    {
+        int pe = BitConverter.ToInt32(image, 60);
+        int table = pe + 24 + BitConverter.ToUInt16(image, pe + 20);
+        for (int i = 0; i < BitConverter.ToUInt16(image, pe + 6); i++) {
+            int section = table + i * 40;
+            uint address = BitConverter.ToUInt32(image, section + 12), size = BitConverter.ToUInt32(image, section + 16);
+            if (rva >= address && rva - address < size)
+                return checked((int)(BitConverter.ToUInt32(image, section + 20) + rva - address));
+        }
+        throw new Exception("fixture_rva_missing");
+    }
     public static int Main()
     {
         try {
@@ -37,13 +49,31 @@ internal static class WindowsDtcReadLibraryTests
             var dependencyOffsets = new List<int> { optional + 16 };
             foreach (int index in new int[] { 1, 9, 11, 12, 13, 14 }) foreach (int field in new int[] { 0, 4 })
                 dependencyOffsets.Add(optional + directories + index * 8 + field);
+            var dependencyImages = new List<byte[]>();
+            foreach (int offset in dependencyOffsets) {
+                byte[] changed = (byte[])image.Clone(); changed[offset] = 1; dependencyImages.Add(changed);
+            }
+            uint exportRva = BitConverter.ToUInt32(image, optional + directories);
+            uint exportSize = BitConverter.ToUInt32(image, optional + directories + 4);
+            int exportOffset = FixtureOffset(image, exportRva);
+            uint functionCount = BitConverter.ToUInt32(image, exportOffset + 20);
+            int functionsOffset = FixtureOffset(image, BitConverter.ToUInt32(image, exportOffset + 28));
+            foreach (uint index in new uint[] { 0, functionCount - 1 }) foreach (uint target in new uint[] { exportRva, exportRva + exportSize - 1 }) {
+                byte[] changed = (byte[])image.Clone();
+                Array.Copy(BitConverter.GetBytes(target), 0, changed, functionsOffset + index * 4, 4);
+                dependencyImages.Add(changed);
+            }
+            foreach (int offset in new int[] { optional + directories + 4, exportOffset + 20, exportOffset + 28 }) {
+                byte[] changed = (byte[])image.Clone();
+                Array.Copy(BitConverter.GetBytes(UInt32.MaxValue), 0, changed, offset, 4);
+                dependencyImages.Add(changed);
+            }
             using (var input = new MemoryStream(image)) {
                 input.Position = 7;
                 WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input);
                 if (input.Position != 7 || !input.CanRead) throw new Exception("dependency_check_changed_stream");
             }
-            foreach (int offset in dependencyOffsets) {
-                byte[] changed = (byte[])image.Clone(); changed[offset] = 1;
+            foreach (byte[] changed in dependencyImages) {
                 using (var input = new MemoryStream(changed)) {
                     input.Position = 7;
                     Rejected(delegate { WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input); }, "native_dtc_dependencies_unverified");
@@ -112,9 +142,7 @@ internal static class WindowsDtcReadLibraryTests
                 throw new Exception("dependency_reached_os_loader"); // Stop even if the gate regresses.
             };
             int dependencyCases = 0;
-            foreach (int offset in dependencyOffsets) {
-                byte[] changed = (byte[])image.Clone();
-                changed[offset] = 1;
+            foreach (byte[] changed in dependencyImages) {
                 string candidate = Path.Combine(root, "dependency-check-" + Guid.NewGuid().ToString("N") + ".dll");
                 bool created = false;
                 try {

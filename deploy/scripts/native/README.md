@@ -9,8 +9,13 @@ is also rejected before loading; this deliberately excludes unreviewed DLL
 initialization rather than attempting to execute and inspect its effects. Truncated/unsupported
 headers and directory counts other than 16 are also rejected conservatively.
 PE32/PE32+ offsets follow [Microsoft PE Format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format).
-This is not a complete PE validator or proof of no runtime dependencies: export
-forwarders, dynamic loading from exported code and publisher trust remain
+The held-file gate also rejects export forwarders before any GetProcAddress call.
+Export directories and address tables must map unambiguously into file-backed
+sections (1..96 sections, 1..4096 functions); missing, overflowing, overlapping
+or unbacked table ranges are rejected. Header-resident tables are not supported.
+Every export address is checked, not only the nine requested API names.
+This is not a complete PE validator or proof of no runtime dependencies:
+dynamic loading from exported code and publisher trust remain
 separate unresolved concerns. It does not authorize vendor DLL execution.
 Generated import-free native fixtures still use the existing loader. Modified
 header tests cover memory streams and temporary files passed through LoadVerified.
@@ -19,6 +24,9 @@ the nonzero entry-point candidate must
 reach the held-file preflight callback but never the OS loader call. A test-only
 pre-load hook counts and stops any unexpected attempt before LoadLibraryExW;
 normal import-free cases reach that hook and retain existing lifetime checks.
+The first and last export addresses are tested at both ends of the forwarder
+range, alongside oversized directory/count/table-address candidates. These are
+rejection tests, not executions of a real forwarded function or external DLL.
 The altered headers are rejection candidates, not valid dependency-bearing DLLs
 or evidence of transitive dependency resolution. No altered DLL is loaded.
 
