@@ -102,6 +102,29 @@ internal static class WindowsDtcReadLibraryTests
             Rejected(delegate { WindowsDtcReadLibrary.LoadSelected(new J2534DtcReadSelection(path, hash, 1, architecture, 0x7e0, 3)); }, "native_dtc_verified_binding_failed");
             Rejected(delegate { WindowsDtcReadLibrary.LoadVerified(path, Digest(path), new FileInfo(path).Length, IntPtr.Size == 4 ? "x64" : "x86"); }, "native_dtc_verified_binding_failed");
             if (verifiedCalls != 0) throw new Exception("rejected_input_reached_callback");
+            int loadCalls = 0;
+            WindowsDtcReadLibrary.FixtureBeforeLoad = delegate {
+                loadCalls++;
+                throw new Exception("dependency_reached_os_loader"); // Stop even if the gate regresses.
+            };
+            int dependencyCases = 0;
+            foreach (int index in new int[] { 1, 11, 12, 13, 14 }) foreach (int field in new int[] { 0, 4 }) {
+                byte[] changed = (byte[])image.Clone();
+                changed[optional + directories + index * 8 + field] = 1;
+                string candidate = Path.Combine(root, "dependency-check-" + Guid.NewGuid().ToString("N") + ".dll");
+                bool created = false;
+                try {
+                    using (var output = new FileStream(candidate, FileMode.CreateNew, FileAccess.Write, FileShare.None)) {
+                        created = true; output.Write(changed, 0, changed.Length);
+                    }
+                    int before = verifiedCalls;
+                    Rejected(delegate { Load(candidate, Digest(candidate)); }, "native_dtc_verified_binding_failed");
+                    if (verifiedCalls != before + 1 || loadCalls != 0)
+                        throw new Exception("dependency_rejected_at_wrong_boundary");
+                    dependencyCases++;
+                } finally { if (created) File.Delete(candidate); }
+            }
+            WindowsDtcReadLibrary.FixtureBeforeLoad = delegate { loadCalls++; };
             string missing = Path.Combine(root, "success.dll"); // Three identity exports only.
             Rejected(delegate { Load(missing, Digest(missing)); }, "native_dtc_verified_binding_failed");
             var library = WindowsDtcReadLibrary.LoadSelected(new J2534DtcReadSelection(path, hash.ToLowerInvariant(), size, architecture, 0x7e0, 3));
@@ -113,7 +136,8 @@ internal static class WindowsDtcReadLibraryTests
             catch (ObjectDisposedException) { }
             var retained = Load(path, Digest(path));
             if (retained.Release(false) || !retained.Retained || retained.Release(true)) throw new Exception("retention_failed");
-            if (verifiedCalls != 3) throw new Exception("verified_callback_count_wrong");
+            if (verifiedCalls != dependencyCases + 3 || loadCalls != 3) throw new Exception("verified_callback_count_wrong");
+            Console.WriteLine("DTC declared dependency loader gate: " + dependencyCases + " rejected before OS loading");
             Console.WriteLine("DTC library digest/export/lifetime checks passed; generated DLL only");
             return 0;
         } catch { Console.Error.WriteLine("dtc_library_checks_failed"); return 1; }

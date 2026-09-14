@@ -10,8 +10,14 @@ PE32/PE32+ offsets follow [Microsoft PE Format](https://learn.microsoft.com/en-u
 This is not a complete PE validator or proof of no runtime dependencies: export
 forwarders, dynamic loading, TLS/entry-point code and publisher trust remain
 separate unresolved concerns. It does not authorize vendor DLL execution.
-Generated import-free native fixtures still use the existing loader; modified
-header tests use memory streams only and do not load dependency-bearing DLLs.
+Generated import-free native fixtures still use the existing loader. Modified
+header tests cover memory streams and temporary files passed through LoadVerified.
+For each of the five directories, address-only and size-only declarations must
+reach the held-file preflight callback but never the OS loader call. A test-only
+pre-load hook counts and stops any unexpected attempt before LoadLibraryExW;
+normal import-free cases reach that hook and retain existing lifetime checks.
+The altered headers are rejection candidates, not valid dependency-bearing DLLs
+or evidence of transitive dependency resolution. No altered DLL is loaded.
 
 ## Development DTC library binding (2026-09-13 approval)
 

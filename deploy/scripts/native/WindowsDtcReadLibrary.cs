@@ -58,6 +58,9 @@ namespace VehicleDiagnosis.Native
         private IntPtr module;
         private bool released;
         internal bool Retained { get; private set; }
+#if NATIVE_RECEIVE_FIXTURE_TESTS
+        internal static Action FixtureBeforeLoad { get; set; }
+#endif
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
         private static extern IntPtr LoadLibraryExW(string path, IntPtr file, uint flags);
@@ -143,6 +146,9 @@ namespace VehicleDiagnosis.Native
                     if (BitConverter.ToString(sha.ComputeHash(file)).Replace("-", "") != expectedDigest)
                         throw new InvalidOperationException();
                     RequireNoDeclaredDependencies(file);
+#if NATIVE_RECEIVE_FIXTURE_TESTS
+                    if (FixtureBeforeLoad != null) FixtureBeforeLoad();
+#endif
                     library.module = LoadLibraryExW(fullPath, IntPtr.Zero, 0x00000900);
                     if (library.module == IntPtr.Zero) throw new InvalidOperationException();
                     foreach (string name in new string[] { "PassThruOpen", "PassThruReadVersion", "PassThruClose",

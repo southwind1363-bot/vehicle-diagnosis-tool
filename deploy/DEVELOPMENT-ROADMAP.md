@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 依存宣言拒否のloader結合検証: 生成DLLの5directory各address/sizeだけを変更した10ファイルをCreateNewで作成し、実LoadVerifiedへ渡す。保持下preflight callback到達とOSロード直前hook未到達をx86/x64で確認。hookは検査compile限定で、誤到達時も例外でOSロードを止める。通常生成DLL3経路はhook到達と従来寿命検査を維持。初回は別fixtureコンパイルで未代入field警告CS0649、auto-propertyに変更して解消。native7365/専用148/保存復元/pipe・構文/diff合格。変更headerは依存宣言の拒否候補で、正常な依存付きDLLや推移依存の解決検査ではない。作成した一時候補は各case終了時だけ削除、利用者データは未使用。公開実行/保存形式/594ZIP不変、実DLL/VCI/実車未検証。前回8c180e0a CI success確認。
+
 2026-09-14 依存関係未確認時の拒否・第一段: 直前のコード開発確認へ利用者「続けて」。開発DTC loaderの保持/hash照合後・LoadLibraryExW前にPE32/PE32+のimport/bound import/IAT/delay import/CLR directoryを検査し、address/sizeのいずれか非zeroなら拒否。ヘッダー不足/未知magic/16以外のdirectory数も保守的に拒否する。生成DLLの変更ヘッダー10例/切詰め3例はMemoryStreamのみで検査し位置/非closeを確認、生成import-free DLLは既存native経路で回帰。x86/x64 native7363・専用converter148/保存復元/pipe・diff合格（追加内部assertは既存集計内）。関連DLLを信頼して許可する機能ではなく、forwarder/動的ロード/TLS/entry point/発行元の信頼確認は未完了。依存付きDLLの実loader拒否到達の独立検査も次工程。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。自動継続を再開する。
 
 3.13.594 開発読取結果の入力源表示: 保存復元されたj2534_development_readが内部コード名だけになる表示を、日本語の「J2534開発検証データ（実車読取ではありません）」へ変更。既存converter→session→archive→復元の6例から実表示formatterを呼び、表示保持と既存入力源/不明値/未記録の表示を確認。専用converter148と保存往復/pipe検査、package489/offline183・構文/diff合格。保存source/形式/診断判定/通信権限は不変。ZIP2,668,386bytes/SHA256A3A9EA38A33254410D78E18A58D67B466985D8F06B25F1879C8FF02F3AAB1100、別展開847files/16,905,669bytes整合。今回は実ブラウザー表示/別PC/実VCI/実車未検証、入力源名は実行実績の証明ではない。前回e55556e9 CI success確認。購入まだ不要。

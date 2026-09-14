@@ -449,7 +449,8 @@ async function main() {
       assert.equal(bindingResult.error, null, bindingResult.stderr);
       assert.equal(bindingResult.stderr, "");
       assert.ok(bindingResult.stdout.includes("DTC library digest/export/lifetime checks passed"));
-      total += 4;
+      assert.ok(bindingResult.stdout.includes("DTC declared dependency loader gate: 10 rejected before OS loading"));
+      total += 5;
       for (const invalid of [
         Object.defineProperty({}, "timeout_ms", { enumerable: true, get() { throw new Error("private-option-detail"); } }),
         Object.defineProperty({}, "signal", { enumerable: true, get() { throw new Error("private-signal-detail"); } }),
