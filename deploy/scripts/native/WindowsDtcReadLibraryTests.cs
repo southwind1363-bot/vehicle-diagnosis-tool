@@ -1,5 +1,6 @@
 #if J2534_DTC_DEVELOPMENT && NATIVE_RECEIVE_FIXTURE_TESTS
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using VehicleDiagnosis.Native;
@@ -33,13 +34,16 @@ internal static class WindowsDtcReadLibraryTests
             byte[] image = File.ReadAllBytes(path);
             int optional = BitConverter.ToInt32(image, 60) + 24;
             int directories = BitConverter.ToUInt16(image, optional) == 0x10b ? 96 : 112;
+            var dependencyOffsets = new List<int> { optional + 16 };
+            foreach (int index in new int[] { 1, 9, 11, 12, 13, 14 }) foreach (int field in new int[] { 0, 4 })
+                dependencyOffsets.Add(optional + directories + index * 8 + field);
             using (var input = new MemoryStream(image)) {
                 input.Position = 7;
                 WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input);
                 if (input.Position != 7 || !input.CanRead) throw new Exception("dependency_check_changed_stream");
             }
-            foreach (int index in new int[] { 1, 11, 12, 13, 14 }) foreach (int field in new int[] { 0, 4 }) {
-                byte[] changed = (byte[])image.Clone(); changed[optional + directories + index * 8 + field] = 1;
+            foreach (int offset in dependencyOffsets) {
+                byte[] changed = (byte[])image.Clone(); changed[offset] = 1;
                 using (var input = new MemoryStream(changed)) {
                     input.Position = 7;
                     Rejected(delegate { WindowsDtcReadLibrary.RequireNoDeclaredDependencies(input); }, "native_dtc_dependencies_unverified");
@@ -108,9 +112,9 @@ internal static class WindowsDtcReadLibraryTests
                 throw new Exception("dependency_reached_os_loader"); // Stop even if the gate regresses.
             };
             int dependencyCases = 0;
-            foreach (int index in new int[] { 1, 11, 12, 13, 14 }) foreach (int field in new int[] { 0, 4 }) {
+            foreach (int offset in dependencyOffsets) {
                 byte[] changed = (byte[])image.Clone();
-                changed[optional + directories + index * 8 + field] = 1;
+                changed[offset] = 1;
                 string candidate = Path.Combine(root, "dependency-check-" + Guid.NewGuid().ToString("N") + ".dll");
                 bool created = false;
                 try {

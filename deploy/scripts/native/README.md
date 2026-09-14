@@ -3,16 +3,19 @@
 ## Declared dependency rejection (2026-09-14 approval)
 
 The development DTC loader checks the held, hashed file before LoadLibraryExW.
-Until a dependency identity policy exists, nonzero import, bound-import, IAT,
-delay-import or CLR directory address/size is rejected. Truncated/unsupported
+Until a dependency identity policy exists, nonzero import, TLS, bound-import, IAT,
+delay-import or CLR directory address/size is rejected. A nonzero entry-point RVA
+is also rejected before loading; this deliberately excludes unreviewed DLL
+initialization rather than attempting to execute and inspect its effects. Truncated/unsupported
 headers and directory counts other than 16 are also rejected conservatively.
 PE32/PE32+ offsets follow [Microsoft PE Format](https://learn.microsoft.com/en-us/windows/win32/debug/pe-format).
 This is not a complete PE validator or proof of no runtime dependencies: export
-forwarders, dynamic loading, TLS/entry-point code and publisher trust remain
+forwarders, dynamic loading from exported code and publisher trust remain
 separate unresolved concerns. It does not authorize vendor DLL execution.
 Generated import-free native fixtures still use the existing loader. Modified
 header tests cover memory streams and temporary files passed through LoadVerified.
-For each of the five directories, address-only and size-only declarations must
+For each of the six directories, address-only and size-only declarations plus
+the nonzero entry-point candidate must
 reach the held-file preflight callback but never the OS loader call. A test-only
 pre-load hook counts and stops any unexpected attempt before LoadLibraryExW;
 normal import-free cases reach that hook and retain existing lifetime checks.

@@ -72,7 +72,8 @@ namespace VehicleDiagnosis.Native
 
         // Conservative development gate: imported dependencies have no approved
         // identity policy yet. An empty table is NOT proof of trustworthy code
-        // (runtime loading, forwarders and entry-point behavior remain separate).
+        // (runtime loading and forwarders remain separate). Initialization entry
+        // points and TLS are rejected too; this is not a code sandbox.
         internal static void RequireNoDeclaredDependencies(Stream file)
         {
             long original = file.Position;
@@ -94,10 +95,12 @@ namespace VehicleDiagnosis.Native
                     int magic = reader.ReadUInt16();
                     int directories = magic == 0x10b ? 96 : magic == 0x20b ? 112 : -1;
                     if (directories < 0 || optionalSize < directories + 16 * 8) throw new InvalidOperationException();
+                    file.Position = optional + 16; // AddressOfEntryPoint, PE32 and PE32+.
+                    if (reader.ReadUInt32() != 0) throw new InvalidOperationException();
                     file.Position = optional + directories - 4;
                     if (reader.ReadUInt32() != 16) throw new InvalidOperationException();
-                    // Import, bound import, IAT, delay import and CLR directories.
-                    foreach (int index in new int[] { 1, 11, 12, 13, 14 }) {
+                    // Import, TLS, bound import, IAT, delay import and CLR directories.
+                    foreach (int index in new int[] { 1, 9, 11, 12, 13, 14 }) {
                         file.Position = optional + directories + index * 8;
                         uint address = reader.ReadUInt32(), size = reader.ReadUInt32();
                         if (address != 0 || size != 0) throw new InvalidOperationException();

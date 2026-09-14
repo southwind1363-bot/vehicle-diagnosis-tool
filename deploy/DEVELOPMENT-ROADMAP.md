@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 未確認のDLL初期化をロード前拒否: 承認済み依存関係検査の範囲で、開発DTC loaderの既存PE検査へAddressOfEntryPoint非zeroとTLS directory address/size非zeroの拒否を追加。Microsoft PE Formatの定義を参照。従来10例に3例を加え、memoryと実LoadVerifiedで保持preflight到達/OS loader直前未到達をx86/x64で確認。正常import-free/entryなし生成DLLと終了管理は維持、native7365/専用148/保存復元/pipe・構文/diff合格（追加caseは既存内部集計内）。実TLS callbackやDllMainを実行した検査ではない。export forwarder/呼出後の動的依存/発行元信頼は未完了。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。前回2763ae53 CI success確認。
+
 2026-09-14 依存宣言拒否のloader結合検証: 生成DLLの5directory各address/sizeだけを変更した10ファイルをCreateNewで作成し、実LoadVerifiedへ渡す。保持下preflight callback到達とOSロード直前hook未到達をx86/x64で確認。hookは検査compile限定で、誤到達時も例外でOSロードを止める。通常生成DLL3経路はhook到達と従来寿命検査を維持。初回は別fixtureコンパイルで未代入field警告CS0649、auto-propertyに変更して解消。native7365/専用148/保存復元/pipe・構文/diff合格。変更headerは依存宣言の拒否候補で、正常な依存付きDLLや推移依存の解決検査ではない。作成した一時候補は各case終了時だけ削除、利用者データは未使用。公開実行/保存形式/594ZIP不変、実DLL/VCI/実車未検証。前回8c180e0a CI success確認。
 
 2026-09-14 依存関係未確認時の拒否・第一段: 直前のコード開発確認へ利用者「続けて」。開発DTC loaderの保持/hash照合後・LoadLibraryExW前にPE32/PE32+のimport/bound import/IAT/delay import/CLR directoryを検査し、address/sizeのいずれか非zeroなら拒否。ヘッダー不足/未知magic/16以外のdirectory数も保守的に拒否する。生成DLLの変更ヘッダー10例/切詰め3例はMemoryStreamのみで検査し位置/非closeを確認、生成import-free DLLは既存native経路で回帰。x86/x64 native7363・専用converter148/保存復元/pipe・diff合格（追加内部assertは既存集計内）。関連DLLを信頼して許可する機能ではなく、forwarder/動的ロード/TLS/entry point/発行元の信頼確認は未完了。依存付きDLLの実loader拒否到達の独立検査も次工程。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。自動継続を再開する。
