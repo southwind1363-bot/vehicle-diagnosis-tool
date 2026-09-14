@@ -580,6 +580,9 @@ try {
       : entry === "inspect-invalid" ? '""inspect-workstation-j2534.cmd" --preflight-index 0 --no-pause"'
       : entry === "inspect-uds-invalid" ? '""inspect-workstation-j2534.cmd" --prepare-uds-request 1 7E0 7E8 F189 --no-pause"'
       : entry === "verify" ? '""verify-workstation.cmd" --no-pause"'
+      : entry === "verify-extra" ? '""verify-workstation.cmd" --no-pause C:/synthetic-missing-package"'
+      : entry === "verify-target" ? '""verify-workstation.cmd" "C:/synthetic private target""'
+      : entry === "verify-empty" ? '""verify-workstation.cmd" --no-pause """'
       : entry === "cmd" ? '""start-workstation.cmd" --no-pause"' : `"npm.cmd run ${entry}"`;
     const child = execFile(windows ? process.env.ComSpec || "cmd.exe" : "npm", windows ? ["/d", "/s", "/c", command] : ["run", entry],
       { cwd: actual.directory, env, windowsHide: true, windowsVerbatimArguments: windows, timeout: 20000 },
@@ -596,6 +599,13 @@ try {
     check(launched.output.indexOf("Package files match:") < launched.output.indexOf("診断画面:"), `${entry}: started before package verification`);
   }
   if (process.platform === "win32") {
+    for (const entry of ["verify-extra", "verify-target", "verify-empty"]) {
+      const rejected = await runEntry(entry);
+      check(rejected.code === 1 && rejected.output.includes("unsupported_arguments")
+        && rejected.output.includes("No verification was performed."), "Windows verifier ignored an unsupported target argument");
+      check(!rejected.output.includes("Package files match:") && !rejected.output.includes("synthetic")
+        && !/Press any key|\. \. \./i.test(rejected.output), "Windows verifier disclosed arguments, claimed success, or paused after rejection");
+    }
     const inspection = await runEntry("inspect");
     check(inspection.code === 0 && inspection.output.includes("J2534接続準備チェック"), `Packaged J2534 inspection failed: ${inspection.output}`);
     check(inspection.output.includes("Package files match:") && inspection.output.indexOf("Package files match:") < inspection.output.indexOf("J2534接続準備チェック"), "Driver inspection started before package verification");
