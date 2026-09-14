@@ -72,7 +72,7 @@ export function verifyWorkstationPackage(directory) {
     "package-info.json", "start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd",
     "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js",
     "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js",
-    "scripts/j2534-native-quarantine.js", "scripts/j2534-uds-readout-attempt-controller.js",
+    "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-uds-readout-attempt-controller.js",
     "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js",
     "scripts/j2534-registered-driver-native-preflight.js", "scripts/native/j2534-preflight-workers.json",
     "scripts/native/j2534-registered-driver-preflight-x86.exe", "scripts/native/j2534-registered-driver-preflight-x64.exe"]) {

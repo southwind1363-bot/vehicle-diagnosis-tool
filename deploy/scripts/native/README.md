@@ -11,7 +11,12 @@ dependencies are trusted internal code, not proof that caller-provided metadata
 came from the registry. Private selections must not be logged or exported.
 The fixed generated-DLL supervisor now builds child arguments through this
 handoff and rechecks file identity/hash. Its synthetic device ID is not a VCI ID.
-The live registry/opaque descriptor resolver is still not connected to DTC;
+The bridge's internal `createJ2534RegisteredDtcSelectionHandoff` now supplies a
+resolver from its actual private descriptor store. It reissues the selection from
+the live registry and compares source, device ID, path and all six fingerprint
+fields before yielding private metadata. Clones and fixture-source descriptors
+are refused. This is static, non-executing preparation, not native preflight or
+publisher/dependency trust. No HTTP route or native execution consumes it yet;
 fixture allowlists, signature policy and public execution remain unchanged.
 
 `J2534DtcReadOperation` extracts the existing filter/dispatch/single-receive

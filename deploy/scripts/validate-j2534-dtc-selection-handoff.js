@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import "./validate-j2534-registered-dtc-selection.js";
 import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
 
 let checks = 0;

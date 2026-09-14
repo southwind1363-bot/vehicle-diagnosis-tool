@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 import { runJ2534NativePreflight } from "./scripts/j2534-registered-driver-native-preflight.js";
 import { createJ2534UdsTransportAdapterRequestBoundary } from "./scripts/j2534-uds-transport-adapter-request.js";
 import { verifyWorkstationPackage } from "./scripts/verify-workstation-package.js";
+import { createJ2534DtcSelectionHandoff } from "./scripts/j2534-dtc-selection-handoff.js";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
@@ -1558,6 +1559,30 @@ function createJ2534RegisteredDriverDescriptorFromRegistry(registryText, request
     });
   }
   return descriptor;
+}
+
+// Private metadata only: possession of a public descriptor clone grants nothing.
+// Reissue from the live registry and compare the complete stored file identity.
+function resolveJ2534RegisteredDtcSelection(descriptor) {
+  const original = descriptor && typeof descriptor === "object" ? j2534RegisteredDriverDescriptorSecrets.get(descriptor) : null;
+  if (!original || original.descriptorSource !== "live_windows_registry") return null;
+  const current = createJ2534RegisteredDriverDescriptor({ enabled: true, selectedDeviceId: original.selectedDeviceId });
+  const secret = j2534RegisteredDriverDescriptorSecrets.get(current);
+  if (!secret || secret.descriptorSource !== "live_windows_registry"
+    || secret.selectedDeviceId !== original.selectedDeviceId || secret.libraryPath !== original.libraryPath
+    || current.exact_readonly_api_ready !== true || current.execution_enabled !== false
+    || !original.fingerprint || !secret.fingerprint
+    || !["device", "inode", "size", "mtime_ns", "ctime_ns", "sha256"]
+      .every(key => original.fingerprint[key] === secret.fingerprint[key])) return null;
+  return { selected_device_id: secret.selectedDeviceId, path: secret.libraryPath,
+    sha256: current.sha256, size: current.file_size, architecture: current.driver_architecture };
+}
+
+// Internal JS API only; no HTTP route, spawn or DLL loader. Native preflight,
+// dependency trust and execution authorization are separate, mandatory stages.
+export function createJ2534RegisteredDtcSelectionHandoff() {
+  return createJ2534DtcSelectionHandoff({ resolveDescriptor: resolveJ2534RegisteredDtcSelection,
+    revalidateDescriptor: resolveJ2534RegisteredDtcSelection, now: () => performance.now() });
 }
 
 export function verifyJ2534RegisteredDriverDescriptor(descriptor) {

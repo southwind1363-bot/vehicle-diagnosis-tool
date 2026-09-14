@@ -80,7 +80,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "script.js"), 'const APP_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
-  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
   fs.copyFileSync(new URL("./j2534-native-quarantine.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-native-quarantine.js"));
   fs.copyFileSync(new URL("./j2534-registered-driver-native-preflight.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-registered-driver-native-preflight.js"));
   for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534GlobalMutexLease.cs", "J2534RegisteredDriverPreflightWorker.cs"])
@@ -684,7 +684,7 @@ try {
       for (const entry of missingMetadataEntries) {
         const blocked = await runEntry(entry);
         check(blocked.code === 1 && /Package verification (?:failed|files are missing)/.test(blocked.output),
-          `${entry}: both missing metadata files did not stop the entry point`);
+          `${entry}: both missing metadata files did not stop the entry point (exit=${blocked.code}; diagnostic=${blocked.output.split(/\r?\n/).filter(line => /Package verification|ERR_|Error:/.test(line)).join(" | ").slice(0, 400)})`);
         check(!blocked.output.includes("診断画面:") && !blocked.output.includes("ペアリング値")
           && !blocked.output.includes("J2534接続準備チェック") && !blocked.output.includes("Package files match:"),
           `${entry}: missing metadata reached startup, inspection, or a successful verification`);
