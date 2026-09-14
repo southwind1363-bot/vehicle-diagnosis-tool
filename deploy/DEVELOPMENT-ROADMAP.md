@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-14 登録選択結合の開発承認・private handoff: 購入を後段へ回しdesktopで先行する方針へ利用者「その方針で進めてください」。登録driver選択結合のコード開発を再開。新内部部品はopaque ticket/期限/1回消費/選択再照合を持ち、private path/hash/size/architecture/device IDと03/07/0A intentをimmutableコピーする。親fixture supervisorのargv生成を接続し、再照合時に実file identity/hashも確認。専用156・native7363/専用converter148/保存復元/構文/diff合格。初回はVM検査の依存注入漏れでReferenceError、依存関数/clockを追加して解消。実registry秘密descriptor resolverとの接続は次工程で、依存callbackの存在を実登録/署名検証の証拠とはしない。固定fixture制限・実DLL/VCI/実車/公開entry/依存DLL信頼規約・保存形式/590ZIP不変。購入はまだ不要。
+
 2026-09-14 共通読取終了wrapperの失敗検証完了: 既存start/write/stop失敗DLLをdata-output workerでも別コンパイルしてTryReadAndFinishへ直接通す。従来summary worker検査は残す。x86/x64で終了code1・stdout/stderr空を確認。failedなのにout resultが非nullなら検査専用code5、失敗後の禁止API到達はDLL内trapになるため区別して拒否を確認。native7363/専用converter148/保存復元/構文/diff合格、前回記録のwrapper専用失敗検証不足を解消。追加DLL scenario/本体変更/公開権限拡張なし、実vendor DLL/VCI/実車未検証・保存形式/590ZIP不変。
 
 2026-09-14 読取結果の終了前返却を内部部品で抑止: TryReadAndFinishへ既存単発読取・status0/9/1..2件/件数一致の形状検査・Stop/Disconnect/Closeをまとめ、全成功時だけout resultを設定。data-output workerを同部品へ接続し、続くowner Dispose/module保持確認/正常process終了/親のECU・service・payload照合は維持。要約専用ABI fixtureの独自record検査は残す。x86/x64 native7339/専用converter148/保存復元/既存異常終了隔離/diff合格。追加scenarioなし。終了失敗用の既存要約scenarioはTryReadOnce/TryFinish経路の回帰であり、新wrapper専用の終了失敗検査とは区別する。実DLL/VCI/実車・公開entry・保存形式・590ZIP不変。

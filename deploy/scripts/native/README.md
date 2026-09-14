@@ -2,6 +2,18 @@
 
 ## Development DTC library binding (2026-09-13 approval)
 
+The 2026-09-14 registered-selection development approval adds
+`../j2534-dtc-selection-handoff.js`: an internal, non-executing handoff with opaque
+one-use tickets, a bounded lifetime and descriptor revalidation before consumption.
+It copies private device/path/hash/size/architecture and fixed 03/07/0A intent;
+expired, cloned, changed or already consumed tickets return no selection. Resolver
+dependencies are trusted internal code, not proof that caller-provided metadata
+came from the registry. Private selections must not be logged or exported.
+The fixed generated-DLL supervisor now builds child arguments through this
+handoff and rechecks file identity/hash. Its synthetic device ID is not a VCI ID.
+The live registry/opaque descriptor resolver is still not connected to DTC;
+fixture allowlists, signature policy and public execution remain unchanged.
+
 `J2534DtcReadOperation` extracts the existing filter/dispatch/single-receive
 sequence from the fixture worker into a development-only internal component.
 It operates on an already opened, owned device with the existing immutable selection,

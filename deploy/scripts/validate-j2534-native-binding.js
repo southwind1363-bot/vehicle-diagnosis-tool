@@ -4,6 +4,7 @@ import "./validate-dtc-quarantine-handoff.js";
 import vm from "node:vm";
 import { createJ2534FixtureSessionBuilder } from "./j2534-fixture-session-builder.js";
 import "./validate-j2534-dtc-result-converter.js";
+import "./validate-j2534-dtc-selection-handoff.js";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";

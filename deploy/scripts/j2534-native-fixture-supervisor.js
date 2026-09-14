@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { createBoundedFixtureWorker } from "./bounded-fixture-worker.js";
+import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
 import { createJ2534DtcResultConverter } from "./j2534-dtc-result-converter.js";
 import { buildJ2534UdsTransportResult } from "./j2534-readonly-worker.js";
 
@@ -166,6 +167,20 @@ function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = nul
   // exercises only fixed 7E0/7E7 scenarios; not a generic vendor-driver entry point.
   const request = Object.freeze({ ecu: descriptor.scenario === "owned-dtc-data-last-ecu" ? 0x7e7 : 0x7e0,
     service: descriptor.scenario === "owned-dtc-data-pending" ? 7 : descriptor.scenario === "owned-dtc-data-permanent" ? 10 : 3 });
+  // Fixture-only resolver for the shared private handoff. This identifier is
+  // derived from the generated DLL, not a discovered or verified vehicle VCI.
+  const resolveSelection = file => file === pinned[1] ? {
+    selected_device_id: `j2534-${file.hash.slice(0, 16)}`, path: file.path,
+    sha256: file.hash, size: file.size, architecture
+  } : null;
+  const handoff = createJ2534DtcSelectionHandoff({ resolveDescriptor: resolveSelection,
+    revalidateDescriptor(file) {
+      if (file !== pinned[1]) return null;
+      const stat = fs.lstatSync(file.path);
+      if (!stat.isFile() || stat.isSymbolicLink() || fs.realpathSync(file.path) !== file.path
+        || stat.dev !== file.dev || stat.ino !== file.ino || stat.size !== file.size || digest(file.path) !== file.hash) return null;
+      return resolveSelection(file);
+    }, now: () => performance.now() });
   const bounded = createBoundedFixtureWorker({
     outputLimit: convert ? J2534_DTC_OUTPUT_LIMIT : 4096,
     rejectStderr: true,
@@ -177,9 +192,14 @@ function createOwnedFixtureSupervisor(descriptor, convert, quarantineStore = nul
           throw new Error("owned_fixture_changed");
       }
       const windows = process.env.SystemRoot || "C:\\Windows";
-      const args = convert ? ["--fixture-owned-receive", "--selected-dtc", pinned[1].path,
-        pinned[1].hash, String(pinned[1].size), architecture, String(request.ecu), String(request.service)]
-        : ["--fixture-owned-receive"];
+      let args = ["--fixture-owned-receive"];
+      if (convert) {
+        const ticket = handoff.prepare(pinned[1], { request_ecu: request.ecu, service: request.service });
+        const selected = handoff.consume(ticket);
+        if (!selected) throw new Error("owned_fixture_selection_invalid");
+        args = ["--fixture-owned-receive", "--selected-dtc", selected.path, selected.sha256,
+          String(selected.size), selected.architecture, String(selected.request_ecu), String(selected.service)];
+      }
       return spawn(pinned[0].path, args, {
         cwd: directory, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"],
         env: { SystemRoot: windows, WINDIR: windows, TEMP: os.tmpdir(), TMP: os.tmpdir() },

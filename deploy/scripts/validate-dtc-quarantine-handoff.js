@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import { createBoundedFixtureWorker } from "./bounded-fixture-worker.js";
 import { createJ2534DtcResultConverter } from "./j2534-dtc-result-converter.js";
+import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 
 const source = fs.readFileSync(new URL("./j2534-native-fixture-supervisor.js", import.meta.url), "utf8")
@@ -25,7 +26,7 @@ for (const spawnEvent of [true, false]) {
   try {
     const factory = vm.runInNewContext(`${source}\ncreateJ2534DtcResultFixtureSupervisor`, {
       fs, os, path, createHash, createBoundedFixtureWorker, createJ2534DtcResultConverter,
-      Buffer, process, AbortSignal,
+      Buffer, process, AbortSignal, performance, createJ2534DtcSelectionHandoff,
       spawn() { spawns++; if (spawnEvent) queueMicrotask(() => child.emit("spawn")); return child; }
     });
     const descriptor = { temp_root: root, architecture: "x64", scenario: "owned-dtc-data",
