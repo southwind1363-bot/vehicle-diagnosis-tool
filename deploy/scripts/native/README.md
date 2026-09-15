@@ -2,6 +2,22 @@
 
 ## Non-executing vendor package comparison (2026-09-15)
 
+The development entry `vendor-package-folder-review.js` connects folder inventory
+to comparison without accepting caller-provided file hashes. Its private factory
+accepts a development catalog; the CLI always uses an empty catalog. Invoke from
+deploy with exactly six positional arguments (quote paths/labels containing spaces):
+
+`node scripts/native/vendor-package-folder-review.js <absolute-folder> <vendor> <version> <x86-or-x64> <https-source-url> <relative-entry.dll>`
+
+Use only an explicitly selected development folder. This command does not discover
+installed drivers, load a DLL, contact the URL or write a report. JSON output contains
+only status/count/byte total and fixed explanations, not file names, hashes or paths.
+Exit 0 means inventory was observed, NOT that the package is trusted or usable;
+`status` remains `unverified` with the CLI's empty catalog. Exit 1 means no complete
+observation. All outcomes explicitly disable execution. Extra arguments are rejected.
+The declared vendor/version/architecture/source remain declarations, not extracted or
+authenticated facts. This command is development-only and excluded from the PC ZIP.
+
 `vendor-package-review.js` compares developer-supplied metadata against a copied,
 default-empty catalog. Vendor, version, architecture, source URL, entry DLL and
 the complete listed file inventory (relative name, size, SHA256) must match.
