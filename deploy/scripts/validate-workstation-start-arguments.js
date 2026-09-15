@@ -15,8 +15,9 @@ for (const args of [["other-folder"], [""], ["--open-browser", "other-folder"], 
   checks++;
 }
 if (process.platform === "win32") {
+  for (const target of [launcher, fileURLToPath(new URL("../start-packaged-workstation.cmd", import.meta.url)), ...(process.env.START_ARGUMENT_PACKAGE ? [process.env.START_ARGUMENT_PACKAGE] : [])]) {
   for (const suffix of [' other-folder', ' ""', ' --no-pause other-folder', ' --no-pause ""', ' --no-browser --no-pause']) {
-    const result = spawnSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `""${launcher}"${suffix}"`], {
+    const result = spawnSync(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `""${target}"${suffix}"`], {
       encoding: "utf8", timeout: 10000, windowsHide: true, windowsVerbatimArguments: true,
       input: "\n", env: { ...process.env, PATH: "" }
     });
@@ -24,6 +25,7 @@ if (process.platform === "win32") {
     assert.match(result.stdout, /unsupported_arguments/);
     assert.ok(!result.stdout.includes("Node.js was not found"));
     checks++;
+  }
   }
 }
 console.log(`Workstation startup argument checks: ${checks}`);

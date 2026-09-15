@@ -1,5 +1,14 @@
 @echo off
 setlocal
+if not "%~2"=="" goto invalid_arguments
+if "%2"=="""" goto invalid_arguments
+if "%~1"=="" goto empty_first_argument
+if /i "%~1"=="--no-pause" goto arguments_checked
+if /i "%~1"=="--no-browser" goto arguments_checked
+goto invalid_arguments
+:empty_first_argument
+if not "%1"=="" goto invalid_arguments
+:arguments_checked
 cd /d "%~dp0"
 if errorlevel 1 exit /b 1
 
@@ -32,3 +41,9 @@ set "workstation_exit=1"
 if /i "%~1"=="--no-pause" exit /b %workstation_exit%
 if not "%workstation_exit%"=="0" pause
 exit /b %workstation_exit%
+
+:invalid_arguments
+echo Workstation startup failed: unsupported_arguments
+echo Only --no-browser or --no-pause is supported. Do not specify another folder.
+echo No server or vehicle connection was started.
+exit /b 1

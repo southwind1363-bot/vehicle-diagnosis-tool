@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+3.13.596 配布専用起動templateの修正: start-packaged-workstation.cmdにも起動前引数拒否を適用。専用検査は通常/template/展開cmdを対象に19件合格、別展開JSも未知引数を起動前拒否。package489/offline183合格。ZIP2,668,705bytes/SHA2564F22ADF59CD26DAADA8E5FC368AB54DA3644C735158F4BA38A478930DDE8B24F、別展開847files/16,906,774bytes整合。失敗595ZIPはrejected名へ移し保管、削除なし。保存形式/通信権限不変、実VCI/実車/別PC/596実browser未検証。
+
+3.13.595 記録訂正: 下記の「実展開cmd/JSの別対象拒否を確認」は誤記。展開cmdは別template start-packaged-workstation.cmd由来で、修正漏れにより不正引数でもローカルserverが起動しstdin終了で停止した。JS側の展開検査はその時点で未実施。実車送信なし。595は配布候補から外し、templateも修正する596で展開検査をやり直す。
+
 3.13.595 起動引数の誤認防止: JS起動入口が未知引数を無視して設定検査まで進む負例を再現（再生guardで実起動は阻止）。cmdも余分な対象・空引数をNode確認前に拒否し、JSは既知flagの重複/未知値を起動前に拒否。初回は既存open+no-browser抑止併用を拒否して回帰失敗、併用時no-browser優先を維持して解消。専用9/workstation1362/package489/offline183・構文/diff合格。ZIP2,668,555bytes/SHA256FFD5B1C142196B1ABC4ECD9D52598112480DAF77F47D4F474E8E0225D83E3F35、別展開847files/16,906,189bytes整合・実展開cmd/JSの別対象拒否を確認。保存形式/通信権限不変、実VCI/実車/別PC/595実browserは未検証。
 
 2026-09-15 配布594の再起動後オフライン保存復元確認: 展開済み594の847files/16,905,669bytes整合を確認し隔離Chromeで実file取込→JSON保存→配信server停止/通信offline→browser終了/再起動→JSON再取込を検証。詳細navigation/検索保持/不正file時元結果保持/読込中断・遅延callbackも既存実flowで合格。1280dark結果画像でDTC2件と未取得項目を目視。専用browser CLIなし、初回playwright解決不可を同梱runtimeの明示指定で解消（追加installなし）。検査接続は人工API・zero writesで実VCI/実車/別PC/起動cmdの検証ではない。本体・保存形式・594ZIP不変。成果物obd-file-flow-Xj32AO。88df8534 CI success確認。
