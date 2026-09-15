@@ -2811,7 +2811,13 @@ body.dark .flow-node-measure .flow-step {
   outline-offset: 2px;
 }
 
+#obdPrintSourceWarning { display: none; }
+
 @media print {
+  body.obd-print-readout #obdPrintSourceWarning:not([hidden]) {
+    display: block;
+    font-weight: 700;
+  }
   body.obd-print-readout .obd-print-ancestor > :not(.obd-print-ancestor):not(#obdStageResultsView):not(#staticDataWarning),
   body.obd-print-readout > :not(.obd-print-ancestor),
   body.obd-print-readout #obdStageResultsView button:not(.obd-simple-result-item),

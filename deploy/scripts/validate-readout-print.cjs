@@ -44,6 +44,13 @@ module.exports = async (page, output, label = 'overview') => {
     assert.equal(await page.locator('#obdAccessPasswordInput').isVisible(), false);
     assert.equal(await page.locator('#obdStageSetupView').isVisible(), false);
     assert.equal(await page.locator('.obd-readout-print-note').isVisible(), true);
+    const developmentSource = await page.evaluate(() => {
+      const session = obdDevSession.lastSession;
+      const snapshot = session?.dtcSnapshot || session?.dtc_snapshot;
+      return [session?.source, session?.source_type, snapshot?.source, snapshot?.source_type].includes('j2534_development_read');
+    });
+    assert.equal(await page.locator('#obdPrintSourceWarning').isVisible(), developmentSource, 'Development provenance must survive printing any selected result range');
+    if (developmentSource) assert.match(await page.locator('#obdPrintSourceWarning').innerText(), /実車読取ではありません/);
     assert.equal(await page.locator('#staticDataWarning').isVisible(), !initial.warningHidden);
     await page.evaluate(() => renderStaticDataWarning(true));
     assert.equal(await page.locator('#staticDataWarning').isVisible(), true, 'Active fallback warning must remain visible in printed results');

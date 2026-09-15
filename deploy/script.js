@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.597";
+const APP_VERSION = "3.13.598";
 const APP_LAST_UPDATED = "2026-09-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -429,6 +429,7 @@ const obdSimpleResultSummary = document.querySelector("#obdSimpleResultSummary")
 const obdSimpleResultBadge = document.querySelector("#obdSimpleResultBadge");
 const obdSimpleResultGrid = document.querySelector("#obdSimpleResultGrid");
 const obdSimpleResultNote = document.querySelector("#obdSimpleResultNote");
+const obdPrintSourceWarning = document.querySelector("#obdPrintSourceWarning");
 const obdSimpleResultPrimaryButton = document.querySelector("#obdSimpleResultPrimaryButton");
 const obdSimpleResultDisconnectButton = document.querySelector("#obdSimpleResultDisconnectButton");
 const obdSimpleResultStatus = document.querySelector("#obdSimpleResultStatus");
@@ -13303,6 +13304,7 @@ function renderObdDiagnosticFlowPanel(session = null) {
 }
 
 function renderObdSimpleResultSummary(session = null) {
+  if (obdPrintSourceWarning) obdPrintSourceWarning.hidden = true;
   if (!obdSimpleResultSummary || !obdSimpleResultBadge || !obdSimpleResultGrid || !obdSimpleResultNote) return;
   obdSimpleResultGrid.innerHTML = "";
   if (!session || typeof session !== "object") {
@@ -13417,6 +13419,7 @@ function renderObdSimpleResultSummary(session = null) {
         : "DTC読取は未取得です。";
   const developmentSource = [session?.source, session?.source_type, dtcSnapshot?.source, dtcSnapshot?.source_type]
     .includes("j2534_development_read");
+  if (obdPrintSourceWarning) obdPrintSourceWarning.hidden = !developmentSource;
   obdSimpleResultNote.textContent = (developmentSource ? "J2534開発検証データ（実車読取ではありません）。 " : "") + dtcNote
     + (pendingIds.length ? " 未完了の主要読取は" + pendingIds.length + "項目です。" : "")
     + " 消去・作動系は実行しません。";
