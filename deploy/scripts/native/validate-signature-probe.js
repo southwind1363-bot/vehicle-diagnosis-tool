@@ -29,6 +29,7 @@ try {
     assert.equal(observed.status, 0, observed.stdout + observed.stderr);
     assert.equal(observed.stderr, "");
     const data = JSON.parse(observed.stdout);
+    assert.equal(data.signer_certificate_sha256, null); checks++;
     assert.equal(data.observation_status, "observed_only");
     assert.equal(data.wintrust_status, "0x800B0100"); // TRUST_E_NOSIGNATURE
     assert.equal(data.cache_only, true);
@@ -46,6 +47,14 @@ try {
     }
     // The worker has exited and its held file is released.
     const fd = fs.openSync(fixture, "r+"); fs.closeSync(fd); checks++;
+    const memoryProbe = path.join(root, `memory-${platform}.exe`);
+    const memorySource = fileURLToPath(new URL("./SignatureCertificateFixture.cs", import.meta.url));
+    const memoryBuild = run(compiler, ["/nologo", "/warnaserror", `/platform:${platform}`, "/target:exe",
+      "/main:SignatureCertificateFixture", `/out:${memoryProbe}`, source, memorySource]);
+    assert.equal(memoryBuild.status, 0, memoryBuild.stdout + memoryBuild.stderr);
+    const memoryResult = run(memoryProbe, []);
+    assert.equal(memoryResult.status, 0, memoryResult.stdout + memoryResult.stderr);
+    assert.match(memoryResult.stdout, /Certificate memory checks: 9/); checks += 11;
   }
   console.log(`Native signature probe: ${checks} checks passed; unsigned generated PE only; no DLL execution or signed-vendor validation`);
   console.log(`Artifacts: ${root}`);

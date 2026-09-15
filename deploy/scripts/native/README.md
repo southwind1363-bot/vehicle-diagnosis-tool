@@ -8,8 +8,18 @@ target read-only, compares whole-file SHA256 before/after, invokes WinVerifyTrus
 with UI disabled and cache-only chain revocation flags, then closes provider state.
 It never loads the target DLL. No public/package entry or vendor allowlist uses it.
 The raw WinTrust status is deliberately NOT a publisher approval or execution gate.
-Catalog lookup and signer identity extraction are not implemented; embedded-file
+Catalog lookup and publisher identity approval are not implemented; embedded-file
 scope must not be interpreted as a PowerShell SignatureType result.
+
+When WinVerifyTrust returns zero, the probe copies the first primary signer's
+leaf certificate bytes from the retained provider state before CLOSE and returns
+their SHA256. Missing provider/signer/certificate pointers, short provider prefix,
+non-X509 encoding and sizes outside 1..65536 are rejected. No certificate subject
+or provider-owned pointer escapes the worker. The memory-copy test uses artificial
+bytes, not a real signed certificate: positive OS signer extraction remains
+unverified. A returned certificate fingerprint is not a manufacturer allowlist.
+See [provider certificate](https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-crypt_provider_cert)
+and [certificate context](https://learn.microsoft.com/en-us/windows/win32/api/wincrypt/ns-wincrypt-cert_context).
 
 Run `node scripts/native/validate-signature-probe.js` for x86/x64 generated unsigned
 PE tests. The Node host bounds each child to 15 seconds; it is not a production

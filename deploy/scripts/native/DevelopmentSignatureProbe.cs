@@ -28,6 +28,55 @@ internal static class DevelopmentSignatureProbe
     }
     [DllImport("wintrust.dll", ExactSpelling = true, CallingConvention = CallingConvention.Winapi)]
     private static extern int WinVerifyTrust(IntPtr window, ref Guid action, ref TrustData data);
+    [DllImport("wintrust.dll", ExactSpelling = true)]
+    private static extern IntPtr WTHelperProvDataFromStateData(IntPtr state);
+    [DllImport("wintrust.dll", ExactSpelling = true)]
+    private static extern IntPtr WTHelperGetProvSignerFromChain(IntPtr provider, uint signer,
+        [MarshalAs(UnmanagedType.Bool)] bool counterSigner, uint counterIndex);
+    [DllImport("wintrust.dll", ExactSpelling = true)]
+    private static extern IntPtr WTHelperGetProvCertFromChain(IntPtr signer, uint certificate);
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ProviderCertificatePrefix
+    {
+        public uint Size;
+        public IntPtr Certificate;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct CertificateContext
+    {
+        public uint Encoding;
+        public IntPtr Encoded;
+        public uint EncodedSize;
+        public IntPtr Info, Store;
+    }
+    // Only called with provider-owned memory before WTD_STATEACTION_CLOSE.
+    // Copies bounded DER bytes; never retains a provider pointer or certificate subject.
+    internal static string HashProviderCertificate(IntPtr providerCertificate)
+    {
+        if (providerCertificate == IntPtr.Zero) throw new InvalidDataException();
+        if (unchecked((uint)Marshal.ReadInt32(providerCertificate)) < Marshal.SizeOf(typeof(ProviderCertificatePrefix)))
+            throw new InvalidDataException();
+        var prefix = (ProviderCertificatePrefix)Marshal.PtrToStructure(providerCertificate, typeof(ProviderCertificatePrefix));
+        if (prefix.Certificate == IntPtr.Zero) throw new InvalidDataException();
+        var context = (CertificateContext)Marshal.PtrToStructure(prefix.Certificate, typeof(CertificateContext));
+        if ((context.Encoding & 1) == 0 || context.Encoded == IntPtr.Zero
+            || context.EncodedSize < 1 || context.EncodedSize > 65536) throw new InvalidDataException();
+        var bytes = new byte[(int)context.EncodedSize];
+        Marshal.Copy(context.Encoded, bytes, 0, bytes.Length);
+        using (var sha = SHA256.Create())
+            return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "");
+    }
+
+    private static string SignerHash(IntPtr state)
+    {
+        if (state == IntPtr.Zero) throw new InvalidDataException();
+        IntPtr provider = WTHelperProvDataFromStateData(state);
+        if (provider == IntPtr.Zero) throw new InvalidDataException();
+        IntPtr signer = WTHelperGetProvSignerFromChain(provider, 0, false, 0);
+        if (signer == IntPtr.Zero) throw new InvalidDataException();
+        return HashProviderCertificate(WTHelperGetProvCertFromChain(signer, 0));
+    }
 
     private static string Hash(Stream stream)
     {
@@ -54,6 +103,7 @@ internal static class DevelopmentSignatureProbe
                 if (digest != args[1].ToUpperInvariant()) throw new InvalidDataException();
                 IntPtr name = Marshal.StringToCoTaskMemUni(path), file = IntPtr.Zero;
                 int status;
+                string signerHash = null;
                 try
                 {
                     var nativeFile = new FileInfoNative { Size = (uint)Marshal.SizeOf(typeof(FileInfoNative)),
@@ -66,7 +116,11 @@ internal static class DevelopmentSignatureProbe
                         Flags = 0x1000 | 0x80 | 0x2000 };
                     var action = new Guid("00AAC56B-CD44-11d0-8CC2-00C04FC295EE");
                     int closed = -1;
-                    try { status = WinVerifyTrust(new IntPtr(-1), ref action, ref data); }
+                    try
+                    {
+                        status = WinVerifyTrust(new IntPtr(-1), ref action, ref data);
+                        if (status == 0) signerHash = SignerHash(data.State);
+                    }
                     finally
                     {
                         data.StateAction = 2;
@@ -83,7 +137,8 @@ internal static class DevelopmentSignatureProbe
                 // Raw status only: zero is not a publisher identity or consent.
                 Console.WriteLine("{\"observation_status\":\"observed_only\",\"wintrust_status\":\"0x"
                     + unchecked((uint)status).ToString("X8") + "\",\"file_sha256\":\"" + digest
-                    + "\",\"scope\":\"embedded_file\",\"cache_only\":true,\"publisher_verified\":false,"
+                    + "\",\"signer_certificate_sha256\":" + (signerHash == null ? "null" : "\"" + signerHash + "\"")
+                    + ",\"scope\":\"embedded_file\",\"cache_only\":true,\"publisher_verified\":false,"
                     + "\"dependency_closure_verified\":false,\"execution_enabled\":false}");
                 return 0;
             }
