@@ -124,9 +124,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.locator('#obdUiModeSwitch [data-obd-ui-mode="simple"]').click();
     assert.equal(await reference.isVisible(), false, 'Development reference must not leak into normal diagnosis');
     const openFile = async (button, file) => {
-      const picker = page.waitForEvent('filechooser');
-      await button.click();
-      await (await picker).setFiles(file);
+      await button.waitFor({ state: 'visible' });
+      const [picker] = await Promise.all([page.waitForEvent('filechooser'), button.click()]);
+      await picker.setFiles(file);
       await page.waitForFunction(() => document.getElementById('obdImportFileInput').value === '');
     };
     const firstImportExit = await page.evaluate(() => {
@@ -165,8 +165,19 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       assert.ok(built?.session);
       const input = path.join(output, 'development-source.json');
       fs.writeFileSync(input, JSON.stringify(api.buildBridgeSessionExportPayload(built.session)));
-      const checkSource = async file => {
-        await openFile(page.getByRole('button', { name: '保存した読取結果を開く', exact: true }), file);
+      const replaceFile = async file => {
+        await Promise.all([
+          page.waitForEvent('dialog').then(async dialog => {
+            assert.equal(dialog.type(), 'confirm');
+            assert.match(dialog.message(), /^現在の読取結果を新しい入力で置き換えますか？/);
+            await dialog.accept();
+          }),
+          openFile(page.locator('#obdSessionOpenButton'), file)
+        ]);
+      };
+      const checkSource = async (file, fromResults = false) => {
+        if (fromResults) await replaceFile(file);
+        else await openFile(page.locator('#obdHomeOpenSessionButton'), file);
         await page.locator('#obdDetectedCodes').getByText('P0171', { exact: false }).first().waitFor();
         assert.equal(await page.evaluate(() => obdDevSession.lastSession.source), 'j2534_development_read');
         await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
@@ -187,6 +198,17 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
       await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
       await checkSource(saved);
+      // Replacement must update both provenance warning and codes, not leave a
+      // stale warning on an ordinary archive or silently merge the two readouts.
+      await replaceFile(path.join(__dirname, 'fixtures/native-elm327-scan-archive.json'));
+      await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().waitFor();
+      assert.match(await page.locator('#obdDetectedCodes').innerText(), /P0420/);
+      assert.doesNotMatch(await page.locator('#obdDetectedCodes').innerText(), /P0171/);
+      await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      assert.doesNotMatch(await page.locator('#obdSimpleResultNote').innerText(), /J2534開発検証データ/);
+      assert.notEqual(await page.evaluate(() => obdDevSession.lastSession.source), 'j2534_development_read');
+      await checkSource(saved, true);
+      assert.doesNotMatch(await page.locator('#obdDetectedCodes').textContent(), /P0300|P0420/);
       await page.locator('[data-obd-stage="home"]').click();
       await page.locator('#obdHomeView [data-obd-ui-mode="details"]').click();
       await page.getByText('読取セッションの技術情報', { exact: true }).click();

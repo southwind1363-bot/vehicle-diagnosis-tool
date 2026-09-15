@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 異なる入力源への置換確認: 展開597で開発P0171→通常archiveのP0300/P0420→開発P0171を実file chooser/置換confirm承認で往復。通常noteの開発注意解除/再表示と旧DTC非混入を確認。最初はホーム用buttonの誤指定、次は確認dialogの自動dismissで検査失敗、実画面buttonとconfirm照合・承認へ修正して合格（CDnXmK）。filechooser待機もPromise.allでclick失敗を捕捉する形へ改善。browserスキルの既存Playwright代替、人工archiveのみ、成功時errors/外部要求0。アプリ本体/597ZIP/保存形式/通信権限は不変、実VCI/実車/別PC未検証。
+
 3.13.597 通常結果の開発データ注意: 人工J2534開発archiveの取込後、通常結果noteに実車ではない表示がない負例をChromeで再現。sessionまたはDTC snapshotのsource/source_typeがj2534_development_readなら既存noteの先頭へ注意を追加。診断判定/元メッセージ/保存形式不変。配布folder597を隔離Chromeに供給し取込/download/reload/再取込で通常note可視と技術情報sourceを確認・通常note画像目視（R9I1Df）。browserスキルのCLI不在で既存Playwright使用。R1全工程/package490/offline183合格。ZIP2,668,805bytes/SHA2566447ADBFB1D4A28C1A500827EA8E7FF1191FDC89F18ADC089E0DB399F0ED8608、別展開847files/16,907,031bytes整合。実DLL/VCI/実車/別PC未検証、公開実行無効維持。
 
 2026-09-15 開発入力源の配布browser往復: 整合確認済み596を隔離Chromeへ供給し、人工completed-worker情報→実converter/session builder→archive→file取込→JSON download→reload→再取込でP0171/source保持を確認。開発・通信設定の技術情報を開き「J2534開発検証データ（実車読取ではありません）」をDOM/画像で確認。初回の不存在切替、次の閉じたdetails撮影を実HTML操作へ修正、固定nav被りは入力源card単体撮影へ変更。専用browser CLI不在で既存Playwright使用、console/pageerror/外部要求なし、終了時browser解放。--development-source追加（成果物obd-file-flow-zpMDg5）。通常結果画面で同警告が常時可視であることの確認ではない。実DLL/VCI/実車/別PCなし、本体/596ZIP/保存形式不変。
