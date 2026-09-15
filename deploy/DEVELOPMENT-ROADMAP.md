@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 PowerShell非依存の署名観測: 直前の方式切替確認へ利用者「続けて」。既存Windows実行policyを変更せず、開発用C# exeからWinVerifyTrustを呼ぶ方式を実装。対象file read保持/hash前後照合、UIなし、cache-only/chain-exclude-root/MD2-MD4拒否、provider state CLOSEを使用。Nodeの15秒制限子processでx86/x64生成未署名PEのTRUST_E_NOSIGNATURE、hash不一致/引数異常/終了後file解放を56項目確認。既存受取/配布結合10テストも合格。実行対象は検査exeのみで対象DLLをロードしない。生WinTrust statusのみ返し、署名者抽出/catalog検索/既存signature-resultへの変換/production終了管理は未結合、実署名vendor/実VCI/実車は未検証。旧PS1二点は未commitで保留、599ZIP/公開実行/保存形式不変。次は同じ開発範囲で署名者証拠と隔離host受渡しを進める。
+
 2026-09-15 署名報告と配布inventoryの結合: private folder inspectの任意第3引数で主DLLの署名報告を受け、同じinventoryから計算したentry SHA256を期待値として受取validatorへ渡す。別ファイルhash/内容変更後の旧報告/権限trueを拒否し、NotTrustedは保持。entry_signatureは別枠の凍結観測で、metadata一致を暗号検証や実行許可に格上げしない。人工実file/JSONを使う関連20テスト合格。CLI6引数・既定catalog空・権限false・599ZIP不変。実行policy制限のあるPS1二点は未検証/未commitのまま。OSprovider起動/真正性/終了管理/署名実検査は未結合で、実DLL/VCI/実車は未実行。
 
 2026-09-15 署名観測結果の受取検査: 利用者「続けて」を受け、PowerShell実行制限は変更せず独立したNode受取検査を追加。4096文字以内の厳密field集合・期待file SHA256・署名status/type・証明書SHA256と権限falseを照合。負の署名statusを保持し、Validの証明書欠落/None、NotSignedの署名者混入を拒否。受取合格は暗号検証・発行元承認・実行許可ではない。人工JSONの専用4/関連合計19テスト合格。未検証PS1の2ファイルは未commitのまま分離し、OS署名検査・失効照会・実DLL/VCI/実車は未検証。公開entry/保存形式/599ZIP不変、実行policyの回避なし。

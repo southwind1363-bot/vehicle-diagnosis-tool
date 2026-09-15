@@ -1,5 +1,26 @@
 # J2534 Windows Identity Binding
 
+## Native signature probe (development only)
+
+`DevelopmentSignatureProbe.cs` replaces the blocked PowerShell approach with a
+separate Windows executable, explicitly approved for development. It holds the
+target read-only, compares whole-file SHA256 before/after, invokes WinVerifyTrust
+with UI disabled and cache-only chain revocation flags, then closes provider state.
+It never loads the target DLL. No public/package entry or vendor allowlist uses it.
+The raw WinTrust status is deliberately NOT a publisher approval or execution gate.
+Catalog lookup and signer identity extraction are not implemented; embedded-file
+scope must not be interpreted as a PowerShell SignatureType result.
+
+Run `node scripts/native/validate-signature-probe.js` for x86/x64 generated unsigned
+PE tests. The Node host bounds each child to 15 seconds; it is not a production
+supervisor or proof of handling an unkillable worker. No signed-vendor validation,
+online revocation freshness, malicious path-race resistance or target execution
+is established by these tests. The old uncommitted PS1 files are not retried.
+
+References: [WINTRUST_DATA](https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-wintrust_data),
+[WINTRUST_FILE_INFO](https://learn.microsoft.com/en-us/windows/win32/api/wintrust/ns-wintrust-wintrust_file_info),
+[WinVerifyTrust](https://learn.microsoft.com/en-us/windows/win32/api/wintrust/nf-wintrust-winverifytrust).
+
 ## Signature observation result boundary (development only)
 
 `vendor-signature-result.js` validates a bounded JSON observation against the
