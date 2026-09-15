@@ -3,7 +3,7 @@ const path = require('node:path');
 
 module.exports = async (page, output, label = 'overview') => {
   const initial = await page.evaluate(() => ({ session: JSON.stringify(obdDevSession.lastSession), open: document.querySelector('#obdReadoutDetails').open, warningHidden: document.querySelector('#staticDataWarning').hidden }));
-  const selectors = ['#obdSimpleResultSummary', '#obdDetectedCodes', '#obdDetectedCodes > *', '.obd-simple-result-item:first-child', '#obdMonitorStatus', '#obdReadoutDetails', '#obdReadoutDetailEmpty', '#obdDevSessionDetails > *'];
+  const selectors = ['#obdSimpleResultSummary', '#obdDetectedCodes', '#obdDetectedCodes > *', '.obd-simple-result-item:first-child', '#obdMonitorStatus', '#obdMonitorSnapshotNotice', '#obdReadoutDetails', '#obdReadoutDetailEmpty', '#obdDevSessionDetails > *'];
   const readVisibility = async () => {
     const snapshot = {};
     for (const selector of selectors) snapshot[selector] = await page.locator(selector).evaluateAll(nodes => nodes.map(node => ({ id: node.id, visible: Boolean(node.getBoundingClientRect().height), text: node.textContent })));

@@ -256,6 +256,26 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       return;
     }
     const exportStatus = page.locator('#obdStageResultsView [data-obd-session-export-status]');
+    const checkSnapshotNotice = async label => {
+      const sessionBefore = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+      await page.getByRole('button', { name: 'ライブデータの詳細を開く', exact: true }).click();
+      const status = page.locator('#obdLiveStatusDetails');
+      const wasOpen = await status.evaluate(node => node.open);
+      if (wasOpen) await status.locator(':scope > summary').click();
+      for (const width of [390, 1280]) {
+        await page.setViewportSize({ width, height: 900 });
+        const notice = page.locator('#obdMonitorSnapshotNotice');
+        assert.equal(await notice.isVisible(), true, 'Snapshot notice must remain outside collapsed status');
+        assert.match(await notice.innerText(), /読取時点の記録値.*自動更新はされません/);
+        assert.ok(await notice.evaluate(node => node.scrollWidth <= node.clientWidth + 1));
+        await notice.screenshot({ path: path.join(output, `snapshot-notice-${label}-${width}.png`) });
+      }
+      await require('./validate-readout-print.cjs')(page, output, `snapshot-${label}`);
+      if (wasOpen) await status.locator(':scope > summary').click();
+      assert.equal(await page.evaluate(() => JSON.stringify(obdDevSession.lastSession)), sessionBefore);
+      await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+    };
+    if (process.argv.includes('--snapshot-notice')) await checkSnapshotNotice('import');
     assert.equal(await exportStatus.textContent(), '');
     assert.equal(await exportStatus.evaluate(node => node.getBoundingClientRect().height), 0, 'Empty export notification must not leave a blank band');
     await require('./validate-readout-print.cjs')(page, output);
@@ -416,6 +436,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     assert.match(before, /P0420/);
     await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
     const originalSession = await page.evaluate(() => JSON.stringify(obdDevSession.lastSession));
+    if (process.argv.includes('--snapshot-notice')) {
+      await checkSnapshotNotice('restored');
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(`Snapshot notice: import/download/reload/reimport, collapsed status, print media and 390/1280px passed / Artifacts: ${output}`);
+      return;
+    }
     const registeredVehicle = { obdVehicleMaker: 'トヨタ', obdVehicleModel: 'プリウス', obdVehicleModelCode: 'NHW20' };
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 900 });
