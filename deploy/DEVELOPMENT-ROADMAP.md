@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 開発inventoryの列挙量制限: readdirSyncで全名を配列化してから512件制限を適用していた箇所を、opendirSync(bufferSize1)の逐次列挙へ変更。513件目で全体拒否しfinallyでdirectory handleを閉じる。実513fileのread/close回数観測を追加して旧実装の非対応を確認、修正後13テスト合格。正常範囲のsort・file hash・照合/実行無効は維持。巨大directoryでの負荷実測や悪意ある競合耐性の証明ではない。開発専用部品で本体/596ZIP/保存形式不変。c396b626 CI success確認。
+
 2026-09-15 配布起動引数検査の標準化: validate:packageで生成した実配布folderのcmdとJSを専用検査へ渡し、通常/template/生成cmdおよびsource/生成JSの23例を確認する工程を追加。旧595展開cmdはPATH無効下で拒否漏れを検出（server起動なし）。初回はfileURLToPath import漏れで失敗し修正後package490合格。公開script/cache/manifestの596・HTTP200とe02de7f8 CI success確認。本体/596ZIP/保存形式/通信権限は変更しない。実VCI/実車/別PC未検証。
 
 3.13.596 配布専用起動templateの修正: start-packaged-workstation.cmdにも起動前引数拒否を適用。専用検査は通常/template/展開cmdを対象に19件合格、別展開JSも未知引数を起動前拒否。package489/offline183合格。ZIP2,668,705bytes/SHA2564F22ADF59CD26DAADA8E5FC368AB54DA3644C735158F4BA38A478930DDE8B24F、別展開847files/16,906,774bytes整合。失敗595ZIPはrejected名へ移し保管、削除なし。保存形式/通信権限不変、実VCI/実車/別PC/596実browser未検証。

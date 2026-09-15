@@ -50,5 +50,16 @@ test("directory junctions cannot supply an inventory", () => fixture(root => {
 }));
 test("entry count limit fails the whole observation", () => fixture(root => {
   for (let i = 0; i < 513; i++) fs.writeFileSync(path.join(root, `f${i}.dll`), "abc");
-  assert.throws(() => collectVendorPackageInventory(root), /vendor_inventory_unverified/);
+  const original = fs.opendirSync;
+  let reads = 0, closes = 0;
+  fs.opendirSync = (...args) => {
+    const directory = original(...args);
+    return { readSync() { reads++; return directory.readSync(); },
+      closeSync() { closes++; return directory.closeSync(); } };
+  };
+  try {
+    assert.throws(() => collectVendorPackageInventory(root), /vendor_inventory_unverified/);
+    assert.equal(reads, 513, "Enumeration must stop at the first excess entry");
+    assert.equal(closes, 1, "Directory handle must close on limit rejection");
+  } finally { fs.opendirSync = original; }
 }));

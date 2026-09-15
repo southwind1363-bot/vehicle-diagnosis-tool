@@ -25,8 +25,16 @@ export function collectVendorPackageInventory(root) {
       const before = inspect(directory);
       if (!before.isDirectory()) throw new Error();
       checkpoints.push([directory, before]);
-      for (const name of fs.readdirSync(directory).sort()) {
-        if (++entries > 512 || !validPart(name)) throw new Error();
+      // Bound enumeration itself, not just processing of an unbounded name array.
+      const listing = [], handle = fs.opendirSync(directory, { bufferSize: 1 });
+      try {
+        let entry;
+        while ((entry = handle.readSync()) !== null) {
+          if (++entries > 512 || !validPart(entry.name)) throw new Error();
+          listing.push(entry.name);
+        }
+      } finally { handle.closeSync(); }
+      for (const name of listing.sort()) {
         const relativeName = relative ? `${relative}/${name}` : name;
         if (relativeName.length > 240 || names.has(relativeName.toLowerCase())) throw new Error();
         names.add(relativeName.toLowerCase());
