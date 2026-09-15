@@ -1,5 +1,20 @@
 # J2534 Windows Identity Binding
 
+## Signature observation result boundary (development only)
+
+`vendor-signature-result.js` validates a bounded JSON observation against the
+expected whole-file SHA256. It preserves negative signature statuses and the
+reported Authenticode/Catalog type, rejects missing or contradictory signer
+information, and never grants publisher trust or execution. `observation_accepted`
+means only that the report shape and file digest match, not that cryptographic
+verification occurred. This parser must not be exposed as an authorization route.
+No real publisher allowlist or loader integration is included.
+
+Run `node --test scripts/native/vendor-signature-result.test.js`.
+Windows observation scripts remain local uncommitted work: their test launch was
+blocked by execution policy. Do not bypass that policy or claim this Node test
+validates Windows signature checking, revocation, file locking, or real drivers.
+
 ## Non-executing vendor package comparison (2026-09-15)
 
 The development entry `vendor-package-folder-review.js` connects folder inventory

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 署名観測結果の受取検査: 利用者「続けて」を受け、PowerShell実行制限は変更せず独立したNode受取検査を追加。4096文字以内の厳密field集合・期待file SHA256・署名status/type・証明書SHA256と権限falseを照合。負の署名statusを保持し、Validの証明書欠落/None、NotSignedの署名者混入を拒否。受取合格は暗号検証・発行元承認・実行許可ではない。人工JSONの専用4/関連合計19テスト合格。未検証PS1の2ファイルは未commitのまま分離し、OS署名検査・失効照会・実DLL/VCI/実車は未検証。公開entry/保存形式/599ZIP不変、実行policyの回避なし。
+
 2026-09-15 非実行配布照合の失敗切分け: folder reviewに固定reasonと日本語案内を追加し、引数不正/宣言metadata不正/一覧取得不可/登録なし/登録不一致/metadata一致だけを区別。元のstatus・inventory_observed・終了code・実行不可は維持し、OS詳細/絶対path/入力文字列は出さない。metadata不正時はdirectory列挙0回、人工fileの変更/欠落、実CLI、catalog元array変更後の判定を含む関連15テスト合格。既定catalog空、再試行・DLL実行・診断結果契約・保存形式・599ZIP変更なし。実vendor/実VCI/実車/別PCは未検証。
 
 3.13.599 ライブ欄の記録値明示: renderObdMonitorValuesのスナップショット説明は統合入力のsummaryで上書きされるため、ライブ見出し下に「読取時点の記録値・自動更新なし・保存値は現在値ではない」案内を追加。取得状況detailsの外に置き、折畳み/検索/印刷でも説明を失わない。値/診断判定/保存形式/通信処理は不変。ブラウザースキルの既存Playwright代替で実file取込→JSON download→reload→再取込、390/1280幅、状況折畳み、印刷media、session不変を検証。source q0UjIUの390幅を目視し、実ZIP別展開ory0ldでも合格。R1全工程/offline183・構文/diff合格。配布生成/別展開整合847files/16,907,832bytes、ZIP2,669,013bytes/SHA256FB5FDC032221D0C2E15C940B4C4B08963E3393F64E8B808BF49F144DB0CD94A9。package生成器の変更なし、package全490検査は今回は再実行せず。実VCI/実車/別PC/実プリンター未検証、購入まだ不要。前回b7a8bbfb CI success確認。
