@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { convertNativeSignatureResult } from "./native-signature-result.js";
+import { createVendorFolderReview } from "./vendor-package-folder-review.js";
 
 assert.equal(process.platform, "win32");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "signature-probe-"));
@@ -37,6 +39,15 @@ try {
     assert.equal(data.file_sha256, digest.toUpperCase());
     assert.equal(data.publisher_verified, false);
     assert.equal(data.execution_enabled, false); checks += 9;
+    const converted = convertNativeSignatureResult(observed, digest);
+    assert.equal(converted.reason, "observation_only");
+    assert.equal(JSON.parse(converted.signature_report).signature_status, "NotSigned");
+    const reviewed = createVendorFolderReview().inspect(root, { vendor: "Synthetic", version: "test-1",
+      architecture: platform, source_url: "https://example.invalid/unsigned.zip", entry: path.basename(fixture) }, converted.signature_report);
+    assert.equal(reviewed.entry_signature.signature_status, "NotSigned");
+    assert.equal(reviewed.entry_signature.observation_accepted, true);
+    assert.equal(reviewed.publisher_verified, false);
+    assert.equal(reviewed.execution_enabled, false); checks += 6;
     for (const args of [[fixture, "0".repeat(64)], [fixture, digest, "extra"], ["unsigned.dll", digest], [fixture, "bad"]]) {
       const rejected = run(probe, args);
       assert.equal(rejected.status, 1);
@@ -44,6 +55,7 @@ try {
       assert.equal(value.observation_status, "unverified");
       assert.equal(Object.hasOwn(value, "file_sha256"), false);
       assert.ok(!rejected.stdout.includes(root)); checks += 4;
+      assert.equal(convertNativeSignatureResult(rejected, digest).signature_report, null); checks++;
     }
     // The worker has exited and its held file is released.
     const fd = fs.openSync(fixture, "r+"); fs.closeSync(fd); checks++;

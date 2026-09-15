@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 native署名結果の配布照合接続: trusted親のspawnSync完了結果から既存署名観測JSONへ変換する内部adapterを追加。exit0/signal null/errorなし/stderr空/4096文字以内/厳密fields/embedded-file/cache-only必須。status0は証明書hash付きValid、TRUST_E_NOSIGNATUREは証明書なしNotSignedのみ対応し、不明statusや未完了・別file・権限混入は報告なし。実生成未署名PEのx86/x64 native→adapter→folder inventory再hash照合を100項目確認、関連Node13テスト合格。Validは人工JSONのみで署名済みOS実検証ではない。providerの真正性/production寿命管理/catalog/最新失効情報/メーカー承認は未実装。公開実行・診断保存形式・599ZIP不変、実DLL/VCI/実車未実行。
+
 2026-09-15 native署名者証拠の取り出し: WinTrust status0の時に保持provider stateからprimary signer0/cert0を参照し、CLOSE前に証明書bytesを上限65536でコピー・SHA256化する処理を追加。null/短いprefix/非X509/空・上限超過を拒否し、所有pointerやsubjectを返さない。x86/x64未署名PEと人工unmanaged memory検査で80項目合格。署名済みfileでの実helper成功経路は未検証で、メーカー発行元承認・catalog検索・公開実行・599ZIP・保存形式は変わらない。旧PS1は未追跡で保留。GitHub statusはAll Systems Operational、remote mainはc376f08eで前回fdd1db0a未反映を読取確認。前回の連続再試行ではなく今回変更の送信時に未送信分もまとめる。
 
 2026-09-15 PowerShell非依存の署名観測: 直前の方式切替確認へ利用者「続けて」。既存Windows実行policyを変更せず、開発用C# exeからWinVerifyTrustを呼ぶ方式を実装。対象file read保持/hash前後照合、UIなし、cache-only/chain-exclude-root/MD2-MD4拒否、provider state CLOSEを使用。Nodeの15秒制限子processでx86/x64生成未署名PEのTRUST_E_NOSIGNATURE、hash不一致/引数異常/終了後file解放を56項目確認。既存受取/配布結合10テストも合格。実行対象は検査exeのみで対象DLLをロードしない。生WinTrust statusのみ返し、署名者抽出/catalog検索/既存signature-resultへの変換/production終了管理は未結合、実署名vendor/実VCI/実車は未検証。旧PS1二点は未commitで保留、599ZIP/公開実行/保存形式不変。次は同じ開発範囲で署名者証拠と隔離host受渡しを進める。

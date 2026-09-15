@@ -2,6 +2,17 @@
 
 ## Native signature probe (development only)
 
+`native-signature-result.js` adapts a trusted parent's completed `spawnSync`
+result to the existing signature observation validator. Exit 0, null signal,
+no error/stderr, bounded exact output, embedded-file scope and cache-only mode
+are mandatory. Only zero (Valid with a signer hash) and TRUST_E_NOSIGNATURE
+(NotSigned without a signer) are mapped; other statuses produce no report.
+The generated unsigned PE test now passes real native output through this adapter
+and the private folder review, which recomputes the entry hash. Synthetic Valid
+JSON tests do not establish successful OS verification of a signed file.
+Worker authenticity, production supervision, online revocation freshness and
+manufacturer approval remain outside this adapter. It never launches a process.
+
 `DevelopmentSignatureProbe.cs` replaces the blocked PowerShell approach with a
 separate Windows executable, explicitly approved for development. It holds the
 target read-only, compares whole-file SHA256 before/after, invokes WinVerifyTrust
