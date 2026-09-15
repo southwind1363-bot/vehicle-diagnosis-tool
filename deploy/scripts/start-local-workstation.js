@@ -145,6 +145,11 @@ export async function startLocalWorkstation(options = {}) {
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
+    const args = process.argv.slice(2);
+    if (args.length > 2 || new Set(args).size !== args.length
+      || args.some(arg => !["--open-browser", "--no-browser"].includes(arg))) {
+      throw new Error("unsupported_arguments");
+    }
     const workstation = await startLocalWorkstation();
     console.log(`診断画面: ${workstation.webUrl}/#obd-panel`);
     console.log(`J2534静的確認ブリッジ: ${workstation.bridgeUrl}`);
@@ -178,7 +183,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       });
     }
   } catch (error) {
-    console.error(error.code === "workstation_assets_invalid"
+    console.error(error.message === "unsupported_arguments"
+      ? "unsupported_arguments: 起動引数が不正です。対応する引数は--open-browserと--no-browserだけです。対象フォルダーや重複引数は指定できません。今回の起動は行っていません。"
+      : error.code === "workstation_assets_invalid"
       ? `ローカル資材を確認できません（${error.asset.slice(0, 160)}）。同じ版のdeployフォルダーを一式復元してから再起動してください。`
       : error.message === "workstation_node_version_unsupported" ? "Node.js 22以降が必要です。Node.js 24 LTSを推奨します。自動インストールは行いません。"
       : describeWorkstationPortError(error) || describeWorkstationConfigError(error) || "ローカル起動に失敗しました。ポート・ペアリング値・再生ログ設定を確認してください。");

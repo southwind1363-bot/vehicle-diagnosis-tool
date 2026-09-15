@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.595 起動引数の誤認防止: JS起動入口が未知引数を無視して設定検査まで進む負例を再現（再生guardで実起動は阻止）。cmdも余分な対象・空引数をNode確認前に拒否し、JSは既知flagの重複/未知値を起動前に拒否。初回は既存open+no-browser抑止併用を拒否して回帰失敗、併用時no-browser優先を維持して解消。専用9/workstation1362/package489/offline183・構文/diff合格。ZIP2,668,555bytes/SHA256FFD5B1C142196B1ABC4ECD9D52598112480DAF77F47D4F474E8E0225D83E3F35、別展開847files/16,906,189bytes整合・実展開cmd/JSの別対象拒否を確認。保存形式/通信権限不変、実VCI/実車/別PC/595実browserは未検証。
+
 2026-09-15 配布594の再起動後オフライン保存復元確認: 展開済み594の847files/16,905,669bytes整合を確認し隔離Chromeで実file取込→JSON保存→配信server停止/通信offline→browser終了/再起動→JSON再取込を検証。詳細navigation/検索保持/不正file時元結果保持/読込中断・遅延callbackも既存実flowで合格。1280dark結果画像でDTC2件と未取得項目を目視。専用browser CLIなし、初回playwright解決不可を同梱runtimeの明示指定で解消（追加installなし）。検査接続は人工API・zero writesで実VCI/実車/別PC/起動cmdの検証ではない。本体・保存形式・594ZIP不変。成果物obd-file-flow-Xj32AO。88df8534 CI success確認。
 
 2026-09-15 非実行folder review入口: 実file inventoryをmetadata照合へ結合する開発API/CLIを追加。宣言metadataを事前検査し、呼出側からのfiles差込は禁止。CLIは6引数完全一致・catalog空固定、JSONへpath/file名/hashを出さず、件数/byte数・未確認/実行不可を表示。終了0は観測完了だけで許可を示さない。人工fileと実Node子processを含む13テスト合格、実DLL実行なし。公式source/署名/依存完全性・実VCI/実車未検証、実vendor登録/公開entry/保存形式/594ZIP不変。

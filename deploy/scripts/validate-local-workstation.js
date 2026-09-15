@@ -11,6 +11,7 @@ import { EventEmitter } from "node:events";
 import { startLocalWorkstation, openWorkstationBrowser, describeWorkstationPortError, describeWorkstationConfigError } from "./start-local-workstation.js";
 import { validateWorkstationAssets } from "./workstation-assets.js";
 import "./validate-sample-preview.js";
+import "./validate-workstation-start-arguments.js";
 import "./validate-readout-vehicle.js";
 import "./validate-status-disclosures.js";
 import "./validate-quality-disclosure.js";
