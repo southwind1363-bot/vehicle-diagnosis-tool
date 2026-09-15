@@ -6,7 +6,13 @@
 direct `signature-probe-*` temp directory, fixed architecture-specific filenames,
 and trusted build-harness digests are accepted. Regular single-link files are
 checked for size, canonical path, identity and hash again immediately before
-spawn. The command has exactly the target path and digest arguments, no shell,
+spawn. Hashing holds a read descriptor, uses at most a 64 KiB buffer, and reads
+only the previously checked size. Identity/size/timestamps/link count must agree
+before and after reading, including the final path observation; short reads
+reject and the descriptor closes on failure. This still does not prevent a
+replacement after the final check. Focused non-executing tests cover bounded
+reads and truncation in `signature-fixture-supervisor.test.js`.
+The command has exactly the target path and digest arguments, no shell,
 and a minimal Windows/temp environment (no inherited profiler/startup hooks).
 Changed worker bytes reject before spawn and restoring them does not reset the
 single attempt. This is not a general vendor launcher, publisher authentication,

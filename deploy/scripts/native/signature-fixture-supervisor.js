@@ -5,7 +5,22 @@ import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createSignatureObservationWorker } from "./signature-observation-worker.js";
 
-const hash = file => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+const sameFile = (a, b) => ["dev", "ino", "size", "mtimeMs", "ctimeMs", "nlink"].every(key => a[key] === b[key]);
+const hash = (file, expected) => {
+  const fd = fs.openSync(file, fs.constants.O_RDONLY);
+  try {
+    if (!sameFile(expected, fs.fstatSync(fd))) throw 0;
+    const digest = createHash("sha256"), buffer = Buffer.alloc(64 * 1024);
+    let offset = 0;
+    while (offset < expected.size) {
+      const count = fs.readSync(fd, buffer, 0, Math.min(buffer.length, expected.size - offset), offset);
+      if (!count) throw 0;
+      digest.update(buffer.subarray(0, count)); offset += count;
+    }
+    if (!sameFile(expected, fs.fstatSync(fd)) || !sameFile(expected, fs.lstatSync(file))) throw 0;
+    return digest.digest("hex");
+  } finally { fs.closeSync(fd); }
+};
 const keys = (value, expected) => value && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).length === expected.length && expected.every(key => Object.hasOwn(value, key));
 const requireAbsent = file => {
@@ -29,7 +44,7 @@ export function createSignatureFixtureSupervisor(descriptor) {
     const pinned = [[`probe-${architecture}.exe`, worker_sha256], [`unsigned-${architecture}.dll`, fixture_sha256]].map(([name, digest]) => {
       const file = path.join(root, name), stat = fs.lstatSync(file);
       if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || stat.size < 1 || stat.size > 64 * 1024 * 1024
-        || fs.realpathSync(file) !== file || hash(file) !== digest) throw 0;
+        || fs.realpathSync(file) !== file || hash(file, stat) !== digest) throw 0;
       return Object.freeze({ file, digest, size: stat.size, dev: stat.dev, ino: stat.ino });
     });
     const windows = process.env.SystemRoot || "C:\\Windows";
@@ -45,7 +60,7 @@ export function createSignatureFixtureSupervisor(descriptor) {
         for (const item of pinned) {
           const stat = fs.lstatSync(item.file);
           if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || fs.realpathSync(item.file) !== item.file
-            || stat.dev !== item.dev || stat.ino !== item.ino || stat.size !== item.size || hash(item.file) !== item.digest) throw 0;
+            || stat.dev !== item.dev || stat.ino !== item.ino || stat.size !== item.size || hash(item.file, stat) !== item.digest) throw 0;
         }
         requireAbsent(configuration);
         // Do not inherit profiler/startup-hook variables from the host environment.
