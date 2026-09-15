@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 配布594の再起動後オフライン保存復元確認: 展開済み594の847files/16,905,669bytes整合を確認し隔離Chromeで実file取込→JSON保存→配信server停止/通信offline→browser終了/再起動→JSON再取込を検証。詳細navigation/検索保持/不正file時元結果保持/読込中断・遅延callbackも既存実flowで合格。1280dark結果画像でDTC2件と未取得項目を目視。専用browser CLIなし、初回playwright解決不可を同梱runtimeの明示指定で解消（追加installなし）。検査接続は人工API・zero writesで実VCI/実車/別PC/起動cmdの検証ではない。本体・保存形式・594ZIP不変。成果物obd-file-flow-Xj32AO。88df8534 CI success確認。
+
 2026-09-15 非実行folder review入口: 実file inventoryをmetadata照合へ結合する開発API/CLIを追加。宣言metadataを事前検査し、呼出側からのfiles差込は禁止。CLIは6引数完全一致・catalog空固定、JSONへpath/file名/hashを出さず、件数/byte数・未確認/実行不可を表示。終了0は観測完了だけで許可を示さない。人工fileと実Node子processを含む13テスト合格、実DLL実行なし。公式source/署名/依存完全性・実VCI/実車未検証、実vendor登録/公開entry/保存形式/594ZIP不変。
 
 2026-09-15 開発folderの非実行inventory取得: 明示絶対folderから通常fileのsize/SHA256/相対名を取得し、前回metadata照合へ渡す部品を追加。リンク/別名/空file/上限超過を全体拒否、file保持中と終了時のidentity・時刻、およびdirectory変化を確認。人工text fileを.dll名で保存した実file検査とmetadata検査の計10テスト合格。実DLLロードなし。これは競合を完全排除したsnapshotや実行leaseではなく、悪意ある同時差替えへの保証にはしない。公式source/署名/依存完全性/実VCI/実車未検証。公開entry/実vendor登録/保存形式/594ZIP不変。
