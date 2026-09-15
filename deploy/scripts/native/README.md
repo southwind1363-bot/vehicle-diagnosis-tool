@@ -10,6 +10,14 @@ means only that the report shape and file digest match, not that cryptographic
 verification occurred. This parser must not be exposed as an authorization route.
 No real publisher allowlist or loader integration is included.
 
+The private folder API optionally accepts a third `signatureReport` argument.
+It binds that report to the entry DLL's hash computed by the current inventory,
+returning a separate frozen `entry_signature` observation. A mismatched file or
+invalid report never becomes a successful signature observation; package status
+still means metadata comparison only. This covers the entry DLL, not all files
+or dependency closure. The six-argument CLI is unchanged and cannot accept reports.
+No provider is invoked; authenticating and supervising an OS provider is pending.
+
 Run `node --test scripts/native/vendor-signature-result.test.js`.
 Windows observation scripts remain local uncommitted work: their test launch was
 blocked by execution policy. Do not bypass that policy or claim this Node test

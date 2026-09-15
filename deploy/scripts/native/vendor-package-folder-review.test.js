@@ -94,3 +94,32 @@ test("catalog emptiness follows the copied catalog, not later caller mutation", 
   mutable.push(catalog[0]);
   assert.equal(review.inspect(root, metadata).reason, "catalog_empty");
 }));
+
+test("entry signature report binds to actual inventory bytes, never to claimed hashes", () => fixture(root => {
+  const report = { observation_status: "observed_only", signature_status: "Valid",
+    signature_type: "Authenticode", signer_certificate_sha256: "A".repeat(64),
+    file_sha256: catalog[0].files[0].sha256, publisher_verified: false,
+    dependency_closure_verified: false, execution_enabled: false };
+  const review = createVendorFolderReview(catalog);
+  const inspect = change => review.inspect(root, metadata, JSON.stringify({ ...report, ...change }));
+  const good = inspect({});
+  assert.equal(good.status, "metadata_match_only");
+  assert.equal(good.entry_signature.observation_accepted, true);
+  assert.ok(Object.isFrozen(good.entry_signature));
+  for (const result of [good, inspect({ file_sha256: "0".repeat(64) }), inspect({ execution_enabled: true })]) {
+    assert.equal(result.publisher_verified, false);
+    assert.equal(result.execution_enabled, false);
+    assert.equal(result.entry_signature.publisher_verified, false);
+    assert.equal(result.entry_signature.execution_enabled, false);
+    assert.ok(!JSON.stringify(result).includes(root));
+  }
+  assert.equal(inspect({ file_sha256: "0".repeat(64) }).entry_signature.reason, "file_mismatch");
+  assert.equal(inspect({ execution_enabled: true }).entry_signature.observation_accepted, false);
+  assert.equal(inspect({ signature_status: "NotTrusted" }).entry_signature.signature_status, "NotTrusted");
+  assert.equal(createVendorFolderReview().inspect(root, metadata, JSON.stringify(report)).status, "unverified");
+  fs.writeFileSync(path.join(root, "driver.dll"), "abd");
+  const changed = inspect({});
+  assert.equal(changed.status, "unverified");
+  assert.equal(changed.entry_signature.reason, "file_mismatch");
+  assert.equal(Object.hasOwn(review.inspect(root, metadata), "entry_signature"), false);
+}));

@@ -2,6 +2,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { collectVendorPackageInventory } from "./vendor-package-inventory.js";
 import { createVendorPackageReview } from "./vendor-package-review.js";
+import { validateVendorSignatureResult } from "./vendor-signature-result.js";
 
 const metadataKeys = ["vendor", "version", "architecture", "source_url", "entry"];
 const messages = Object.freeze({
@@ -21,7 +22,7 @@ export function createVendorFolderReview(catalog = []) {
   const review = createVendorPackageReview(catalog);
   const catalogEmpty = catalog.length === 0;
   return Object.freeze({
-    inspect(root, metadata) {
+    inspect(root, metadata, signatureReport = undefined) {
       let copy;
       try {
         if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)
@@ -35,11 +36,18 @@ export function createVendorFolderReview(catalog = []) {
       try {
         const files = collectVendorPackageInventory(root);
         const result = review.compare({ ...copy, files });
+        // Bind an optional main-DLL report to bytes observed in this inventory,
+        // never to a hash supplied alongside the report. This does not execute
+        // a signature provider, validate dependencies or grant publisher trust.
+        const signature = signatureReport === undefined ? {} : {
+          entry_signature: validateVendorSignatureResult(signatureReport,
+            files.find(file => file.name.toLowerCase() === copy.entry.toLowerCase())?.sha256)
+        };
         const reason = result.status === "metadata_match_only" ? "metadata_match_only"
           : catalogEmpty ? "catalog_empty" : "metadata_mismatch";
         return Object.freeze({ ...result, inventory_observed: true, file_count: files.length,
           total_bytes: files.reduce((total, file) => total + file.size, 0),
-          reason, message: messages[reason] });
+          reason, message: messages[reason], ...signature });
       } catch { return failure("inventory_unavailable"); }
     }
   });
