@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 署名検査APIの検索先限定: 開発probe assemblyのP/Invoke検索先をSystem32だけに明示。x86/x64の検査exe隣接・作業folderへ実行不能なwintrust.dll名のtextを置いても未署名観測が不変、compiled attributeも確認。変更前もこのPCでは同名file検査が合格しており、脆弱性再現ではなく予防的限定。native108項目/関連Node13テスト合格。対象DLL実行・process全体policy・公開権限・保存形式・599ZIPは変更なし。署名済みvendor/別PC/VCI/実車は未検証。
+
 2026-09-15 native署名結果の配布照合接続: trusted親のspawnSync完了結果から既存署名観測JSONへ変換する内部adapterを追加。exit0/signal null/errorなし/stderr空/4096文字以内/厳密fields/embedded-file/cache-only必須。status0は証明書hash付きValid、TRUST_E_NOSIGNATUREは証明書なしNotSignedのみ対応し、不明statusや未完了・別file・権限混入は報告なし。実生成未署名PEのx86/x64 native→adapter→folder inventory再hash照合を100項目確認、関連Node13テスト合格。Validは人工JSONのみで署名済みOS実検証ではない。providerの真正性/production寿命管理/catalog/最新失効情報/メーカー承認は未実装。公開実行・診断保存形式・599ZIP不変、実DLL/VCI/実車未実行。
 
 2026-09-15 native署名者証拠の取り出し: WinTrust status0の時に保持provider stateからprimary signer0/cert0を参照し、CLOSE前に証明書bytesを上限65536でコピー・SHA256化する処理を追加。null/短いprefix/非X509/空・上限超過を拒否し、所有pointerやsubjectを返さない。x86/x64未署名PEと人工unmanaged memory検査で80項目合格。署名済みfileでの実helper成功経路は未検証で、メーカー発行元承認・catalog検索・公開実行・599ZIP・保存形式は変わらない。旧PS1は未追跡で保留。GitHub statusはAll Systems Operational、remote mainはc376f08eで前回fdd1db0a未反映を読取確認。前回の連続再試行ではなく今回変更の送信時に未送信分もまとめる。

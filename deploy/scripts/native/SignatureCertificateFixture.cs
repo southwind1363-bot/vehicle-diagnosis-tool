@@ -12,6 +12,10 @@ internal static class SignatureCertificateFixture
     }
     private static int Main()
     {
+        var search = (DefaultDllImportSearchPathsAttribute)Attribute.GetCustomAttribute(
+            typeof(DevelopmentSignatureProbe).Assembly, typeof(DefaultDllImportSearchPathsAttribute));
+        if (search == null || search.Paths != DllImportSearchPath.System32)
+            throw new Exception("system_api_search_policy");
         IntPtr bytes = Marshal.AllocHGlobal(3);
         IntPtr cert = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(DevelopmentSignatureProbe.CertificateContext)));
         IntPtr provider = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(DevelopmentSignatureProbe.ProviderCertificatePrefix)));
@@ -36,6 +40,7 @@ internal static class SignatureCertificateFixture
             prefix.Certificate = IntPtr.Zero; Marshal.StructureToPtr(prefix, provider, false); Reject(provider);
             prefix.Size = 1; Marshal.StructureToPtr(prefix, provider, false); Reject(provider);
             Console.WriteLine("Certificate memory checks: 9; artificial bytes only");
+            Console.WriteLine("System API search policy checks: 1");
             return 0;
         }
         finally

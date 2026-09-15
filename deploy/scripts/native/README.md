@@ -2,6 +2,16 @@
 
 ## Native signature probe (development only)
 
+The probe assembly explicitly restricts P/Invoke DLL search to `System32` via
+`DefaultDllImportSearchPaths`; this is not a process-wide policy or permission
+to load an inspected file. In x86/x64 tests, non-executable text named
+`wintrust.dll` beside the probe (also its working directory) does not change the
+unsigned observation. The same test passed before this restriction on this PC,
+so this is defense in depth, not a reproduced DLL-shadowing vulnerability.
+The compiled assembly attribute is checked separately. These tests do not prove
+signed-vendor compatibility or cover every Windows loader configuration.
+Reference: [Microsoft P/Invoke search policy](https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.defaultdllimportsearchpathsattribute).
+
 `native-signature-result.js` adapts a trusted parent's completed `spawnSync`
 result to the existing signature observation validator. Exit 0, null signal,
 no error/stderr, bounded exact output, embedded-file scope and cache-only mode

@@ -6,6 +6,10 @@ using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 
+// Resolve OS verification APIs only from the Windows system directory.
+// This does not authorize loading the file being inspected.
+[assembly: DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+
 internal static class DevelopmentSignatureProbe
 {
     [StructLayout(LayoutKind.Sequential)]

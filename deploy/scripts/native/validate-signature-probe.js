@@ -48,6 +48,17 @@ try {
     assert.equal(reviewed.entry_signature.observation_accepted, true);
     assert.equal(reviewed.publisher_verified, false);
     assert.equal(reviewed.execution_enabled, false); checks += 6;
+    // Non-executable text only: never create or execute a replacement native DLL.
+    const shadowFolder = path.join(root, `shadow-${platform}`);
+    fs.mkdirSync(shadowFolder);
+    const shadowProbe = path.join(shadowFolder, path.basename(probe));
+    fs.copyFileSync(probe, shadowProbe);
+    fs.writeFileSync(path.join(shadowFolder, "wintrust.dll"), "Not a PE image. Test data only.\n");
+    const shadowResult = spawnSync(shadowProbe, [fixture, digest], { cwd: shadowFolder,
+      windowsHide: true, shell: false, encoding: "utf8", timeout: 15000, maxBuffer: 65536 });
+    assert.equal(shadowResult.status, 0, shadowResult.stdout + shadowResult.stderr);
+    assert.equal(shadowResult.stderr, "");
+    assert.deepEqual(JSON.parse(shadowResult.stdout), data); checks += 3;
     for (const args of [[fixture, "0".repeat(64)], [fixture, digest, "extra"], ["unsigned.dll", digest], [fixture, "bad"]]) {
       const rejected = run(probe, args);
       assert.equal(rejected.status, 1);
@@ -67,6 +78,7 @@ try {
     const memoryResult = run(memoryProbe, []);
     assert.equal(memoryResult.status, 0, memoryResult.stdout + memoryResult.stderr);
     assert.match(memoryResult.stdout, /Certificate memory checks: 9/); checks += 11;
+    assert.match(memoryResult.stdout, /System API search policy checks: 1/); checks++;
   }
   console.log(`Native signature probe: ${checks} checks passed; unsigned generated PE only; no DLL execution or signed-vendor validation`);
   console.log(`Artifacts: ${root}`);
