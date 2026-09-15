@@ -20,6 +20,7 @@ test("folder evidence is used instead of caller-supplied hashes", () => fixture(
   const review = createVendorFolderReview(catalog);
   const observed = review.inspect(root, metadata);
   assert.equal(observed.status, "metadata_match_only");
+  assert.equal(observed.reason, "metadata_match_only");
   assert.equal(observed.file_count, 1);
   assert.equal(observed.total_bytes, 3);
   assert.equal(observed.execution_enabled, false);
@@ -29,11 +30,13 @@ test("folder evidence is used instead of caller-supplied hashes", () => fixture(
   assert.equal(review.inspect(root, catalog[0]).inventory_observed, false);
   fs.writeFileSync(path.join(root, "driver.dll"), "abd");
   assert.equal(review.inspect(root, metadata).status, "unverified");
+  assert.equal(review.inspect(root, metadata).reason, "metadata_mismatch");
 }));
 test("default review stays unverified and omits filenames and paths", () => fixture(root => {
   const result = createVendorFolderReview().inspect(root, metadata);
   assert.equal(result.inventory_observed, true);
   assert.equal(result.status, "unverified");
+  assert.equal(result.reason, "catalog_empty");
   for (const secret of [root, "driver.dll", "example.invalid", "BA7816"]) {
     assert.ok(!JSON.stringify(result).includes(secret));
   }
@@ -48,12 +51,46 @@ test("CLI accepts only one exact target and does not signal approval", () => fix
   assert.equal(good.stderr, "");
   assert.equal(JSON.parse(good.stdout).status, "unverified");
   assert.equal(JSON.parse(good.stdout).execution_enabled, false);
+  assert.equal(JSON.parse(good.stdout).reason, "catalog_empty");
   for (const extra of [["other-folder"], [""]]) {
     const bad = run(extra);
     assert.equal(bad.status, 1);
     assert.equal(JSON.parse(bad.stdout).inventory_observed, false);
+    assert.equal(JSON.parse(bad.stdout).reason, "invalid_arguments");
     assert.equal(bad.stderr, "");
   }
   assert.equal(runVendorFolderReview([]).inventory_observed, false);
   assert.equal(runVendorFolderReview([root, "Synthetic", "1", "x64", "bad", "driver.dll"]).inventory_observed, false);
+}));
+
+test("failure reasons distinguish declaration from inventory without leaking inputs", () => fixture(root => {
+  const review = createVendorFolderReview();
+  const original = fs.opendirSync;
+  let enumerations = 0;
+  fs.opendirSync = (...args) => { enumerations++; return original(...args); };
+  try {
+    const invalid = review.inspect(root, { ...metadata, source_url: "secret-invalid-url" });
+    assert.equal(invalid.reason, "invalid_metadata");
+    assert.equal(enumerations, 0, "Invalid declarations must not enumerate the folder");
+    const missing = review.inspect(path.join(root, "missing"), metadata);
+    assert.equal(missing.reason, "inventory_unavailable");
+    for (const result of [invalid, missing]) {
+      assert.equal(result.inventory_observed, false);
+      assert.equal(result.execution_enabled, false);
+      assert.ok(Object.isFrozen(result));
+      for (const secret of [root, "secret-invalid-url", "ENOENT", "driver.dll"]) {
+        assert.ok(!JSON.stringify(result).includes(secret));
+      }
+    }
+    const observed = review.inspect(root, metadata);
+    assert.equal(observed.reason, "catalog_empty");
+    assert.equal(observed.inventory_observed, true);
+  } finally { fs.opendirSync = original; }
+}));
+
+test("catalog emptiness follows the copied catalog, not later caller mutation", () => fixture(root => {
+  const mutable = [];
+  const review = createVendorFolderReview(mutable);
+  mutable.push(catalog[0]);
+  assert.equal(review.inspect(root, metadata).reason, "catalog_empty");
 }));

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 非実行配布照合の失敗切分け: folder reviewに固定reasonと日本語案内を追加し、引数不正/宣言metadata不正/一覧取得不可/登録なし/登録不一致/metadata一致だけを区別。元のstatus・inventory_observed・終了code・実行不可は維持し、OS詳細/絶対path/入力文字列は出さない。metadata不正時はdirectory列挙0回、人工fileの変更/欠落、実CLI、catalog元array変更後の判定を含む関連15テスト合格。既定catalog空、再試行・DLL実行・診断結果契約・保存形式・599ZIP変更なし。実vendor/実VCI/実車/別PCは未検証。
+
 3.13.599 ライブ欄の記録値明示: renderObdMonitorValuesのスナップショット説明は統合入力のsummaryで上書きされるため、ライブ見出し下に「読取時点の記録値・自動更新なし・保存値は現在値ではない」案内を追加。取得状況detailsの外に置き、折畳み/検索/印刷でも説明を失わない。値/診断判定/保存形式/通信処理は不変。ブラウザースキルの既存Playwright代替で実file取込→JSON download→reload→再取込、390/1280幅、状況折畳み、印刷media、session不変を検証。source q0UjIUの390幅を目視し、実ZIP別展開ory0ldでも合格。R1全工程/offline183・構文/diff合格。配布生成/別展開整合847files/16,907,832bytes、ZIP2,669,013bytes/SHA256FB5FDC032221D0C2E15C940B4C4B08963E3393F64E8B808BF49F144DB0CD94A9。package生成器の変更なし、package全490検査は今回は再実行せず。実VCI/実車/別PC/実プリンター未検証、購入まだ不要。前回b7a8bbfb CI success確認。
 
 3.13.598 開発結果の印刷注意: 通常結果noteは詳細選択時に非表示になるため、結果範囲と独立した印刷専用の開発入力源注意を追加。session/DTC snapshotの既存source判定のみ使用し、初期化/通常archive置換時は解除。画面の選択範囲・診断値・保存形式・通信権限は不変。専用要素の負例検出後、隔離Chromeのprint mediaで基本結果/詳細DTC/通常archive置換の注意表示、印刷失敗時の後始末・session不変を確認。source画像GIUUw1を目視、実展開版BrMPZgも合格。ブラウザースキルの専用CLI不在で既存Playwrightを使用、実プリンター/ダイアログの検証ではない。R1全工程/offline183/package490・構文/diff合格。ZIP2,668,933bytes/SHA2562D3B5801F2569B735F660E1F3BD57FA3312AD00FFF427177D518865DAA1D3B82、別展開847files/16,907,577bytes整合。最初のverify CLIは対象引数未対応で検査せず拒否され、既存browserのpackage API検査で整合確認。実VCI/実車/別PC未検証、購入まだ不要。

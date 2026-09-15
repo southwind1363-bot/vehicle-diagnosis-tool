@@ -15,6 +15,12 @@ only status/count/byte total and fixed explanations, not file names, hashes or p
 Exit 0 means inventory was observed, NOT that the package is trusted or usable;
 `status` remains `unverified` with the CLI's empty catalog. Exit 1 means no complete
 observation. All outcomes explicitly disable execution. Extra arguments are rejected.
+The fixed `reason` distinguishes `invalid_arguments`, `invalid_metadata`,
+`inventory_unavailable`, `catalog_empty`, `metadata_mismatch`, and
+`metadata_match_only`. Invalid declarations do not enumerate the folder.
+`inventory_unavailable` does not identify a specific OS failure: inspect the path,
+read permissions and documented inventory limits before another manual attempt.
+No outcome triggers retries or changes execution authority.
 The declared vendor/version/architecture/source remain declarations, not extracted or
 authenticated facts. This command is development-only and excluded from the PC ZIP.
 
