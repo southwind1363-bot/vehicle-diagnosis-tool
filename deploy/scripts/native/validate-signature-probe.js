@@ -67,6 +67,22 @@ try {
       assert.equal(blocked.errors[0], "worker_spawn_failed"); checks += 3;
     } finally { fs.writeFileSync(probe, original); }
     assert.equal((await changed()).errors[0], "signature_worker_already_attempted"); checks++;
+    const configGuard = createSignatureFixtureSupervisor(descriptor);
+    const configPath = `${probe}.config`;
+    fs.writeFileSync(configPath, "<configuration />\n");
+    try {
+      assert.throws(() => createSignatureFixtureSupervisor(descriptor), /signature_fixture_descriptor_invalid/);
+      const blocked = await configGuard();
+      assert.equal(blocked.worker_started, false);
+      assert.equal(blocked.parsed_result, null);
+      assert.equal(blocked.errors[0], "worker_spawn_failed"); checks += 4;
+    } finally { fs.renameSync(configPath, `${configPath}.retained-text`); }
+    assert.equal((await configGuard()).errors[0], "signature_worker_already_attempted"); checks++;
+    // A directory at the same path is also unverified, not equivalent to absent.
+    fs.mkdirSync(configPath);
+    try {
+      assert.throws(() => createSignatureFixtureSupervisor(descriptor), /signature_fixture_descriptor_invalid/); checks++;
+    } finally { fs.renameSync(configPath, `${configPath}.retained-directory`); }
     for (const change of [{ fixture_sha256: "0".repeat(64) }, { worker_sha256: "0".repeat(64) },
       { architecture: "arm64" }, { extra: true }, { root: path.join(root, "..") }]) {
       assert.throws(() => createSignatureFixtureSupervisor({ ...descriptor, ...change }),

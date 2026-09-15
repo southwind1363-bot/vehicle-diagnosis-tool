@@ -8,6 +8,11 @@ import { createSignatureObservationWorker } from "./signature-observation-worker
 const hash = file => createHash("sha256").update(fs.readFileSync(file)).digest("hex");
 const keys = (value, expected) => value && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).length === expected.length && expected.every(key => Object.hasOwn(value, key));
+const requireAbsent = file => {
+  try { fs.lstatSync(file); }
+  catch (error) { if (error?.code === "ENOENT") return; throw error; }
+  throw new Error("signature_fixture_configuration_present");
+};
 
 // Generated-fixture parent only. A digest supplied by a trusted build harness is
 // not a publisher identity. No public CLI, registry discovery or vendor launch.
@@ -28,6 +33,10 @@ export function createSignatureFixtureSupervisor(descriptor) {
       return Object.freeze({ file, digest, size: stat.size, dev: stat.dev, ino: stat.ino });
     });
     const windows = process.env.SystemRoot || "C:\\Windows";
+    const configuration = `${pinned[0].file}.config`;
+    // This fixed probe needs no application configuration. Do not read or adopt
+    // an adjacent file, directory or link as an implicit runtime policy.
+    requireAbsent(configuration);
     return createSignatureObservationWorker({ expectedFileSha256: fixture_sha256,
       spawnWorker() {
         const current = fs.lstatSync(root);
@@ -38,6 +47,7 @@ export function createSignatureFixtureSupervisor(descriptor) {
           if (!stat.isFile() || stat.isSymbolicLink() || stat.nlink !== 1 || fs.realpathSync(item.file) !== item.file
             || stat.dev !== item.dev || stat.ino !== item.ino || stat.size !== item.size || hash(item.file) !== item.digest) throw 0;
         }
+        requireAbsent(configuration);
         // Do not inherit profiler/startup-hook variables from the host environment.
         return spawn(pinned[0].file, [pinned[1].file, pinned[1].digest], {
           cwd: root, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"],

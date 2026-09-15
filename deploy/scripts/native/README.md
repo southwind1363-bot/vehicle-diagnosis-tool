@@ -11,7 +11,13 @@ and a minimal Windows/temp environment (no inherited profiler/startup hooks).
 Changed worker bytes reject before spawn and restoring them does not reset the
 single attempt. This is not a general vendor launcher, publisher authentication,
 an ACL/sandbox boundary, or proof against concurrent replacement after the check.
-Ambient Windows runtime/configuration and all sidecar files are not authenticated.
+The fixed probe requires no `.exe.config`; any entry at that path is rejected
+both during preparation and immediately before spawn. Only ENOENT means absent;
+other lookup errors fail closed. Tests cover a harmless XML file, late insertion,
+and a directory; rejected artifacts are retained under non-runtime names.
+Ambient Windows runtime/machine configuration and other sidecars are not
+authenticated, and the absence check does not close a concurrent insertion race.
+Reference: [Microsoft application configuration](https://learn.microsoft.com/en-us/dotnet/framework/configure-apps/).
 
 `signature-observation-worker.js` connects the existing bounded development
 runner to the signature adapter. A trusted parent supplies the spawn closure and
