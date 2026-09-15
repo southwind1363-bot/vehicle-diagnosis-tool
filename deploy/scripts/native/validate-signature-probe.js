@@ -4,8 +4,8 @@ import path from "node:path";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { spawn, spawnSync } from "node:child_process";
-import { createSignatureObservationWorker } from "./signature-observation-worker.js";
+import { spawnSync } from "node:child_process";
+import { createSignatureFixtureSupervisor } from "./signature-fixture-supervisor.js";
 import { convertNativeSignatureResult } from "./native-signature-result.js";
 import { createVendorFolderReview } from "./vendor-package-folder-review.js";
 
@@ -49,14 +49,29 @@ try {
     assert.equal(reviewed.entry_signature.observation_accepted, true);
     assert.equal(reviewed.publisher_verified, false);
     assert.equal(reviewed.execution_enabled, false); checks += 6;
-    const observeAsync = createSignatureObservationWorker({ expectedFileSha256: digest,
-      spawnWorker: () => spawn(probe, [fixture, digest], { cwd: root, windowsHide: true,
-        shell: false, stdio: ["ignore", "pipe", "pipe"] }) });
+    const descriptor = { root, architecture: platform, fixture_sha256: digest,
+      worker_sha256: createHash("sha256").update(fs.readFileSync(probe)).digest("hex") };
+    const observeAsync = createSignatureFixtureSupervisor(descriptor);
     const asyncResult = await observeAsync();
     assert.equal(asyncResult.execution_status, "worker_completed");
     assert.equal(asyncResult.worker_exited, true);
     assert.equal(asyncResult.parsed_result.signature_report, converted.signature_report);
     assert.equal((await observeAsync()).parsed_result, null); checks += 4;
+    const changed = createSignatureFixtureSupervisor(descriptor);
+    const original = fs.readFileSync(probe);
+    try {
+      fs.writeFileSync(probe, Buffer.alloc(original.length));
+      const blocked = await changed();
+      assert.equal(blocked.worker_started, false);
+      assert.equal(blocked.parsed_result, null);
+      assert.equal(blocked.errors[0], "worker_spawn_failed"); checks += 3;
+    } finally { fs.writeFileSync(probe, original); }
+    assert.equal((await changed()).errors[0], "signature_worker_already_attempted"); checks++;
+    for (const change of [{ fixture_sha256: "0".repeat(64) }, { worker_sha256: "0".repeat(64) },
+      { architecture: "arm64" }, { extra: true }, { root: path.join(root, "..") }]) {
+      assert.throws(() => createSignatureFixtureSupervisor({ ...descriptor, ...change }),
+        /signature_fixture_descriptor_invalid/); checks++;
+    }
     // Non-executable text only: never create or execute a replacement native DLL.
     const shadowFolder = path.join(root, `shadow-${platform}`);
     fs.mkdirSync(shadowFolder);

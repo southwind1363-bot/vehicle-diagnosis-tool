@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 署名fixture親の起動結合: 任意spawn closureだった検査を、専用temp直下・固定x86/x64名・build由来hashの親へ置換。通常単一link/file上限/canonical path/identity/hashを取得し起動前再照合、引数は対象path/hashのみ、shellなし・最小env。生成worker同サイズ書換えで起動0/結果なし、復元後も再試行拒否を確認。native134項目合格。一般vendor launcher/発行元認証/ACL隔離/検査直後の同時置換やsidecar全体の真正性は未解決で、本番利用可能とはしない。実vendor DLL/VCI/実車/公開entry/保存形式/599ZIP不変。
+
 2026-09-15 署名観測の非同期受渡し: 既存bounded development runnerへsignature adapterを結合。trusted親がspawn closure/期待hashを固定し、instance単発・4096bytes・stderr拒否・正常close後のみ報告採用。15秒timeout/終了確認1秒と未確認時不採用は既存runner規約を再利用し変更なし。生成未署名PE x86/x64で非同期結果一致を含むnative116項目、早期JSON/異常/終了未確認/遅延closeの人工eventを含む関連Node17テスト合格。worker真正性/production launcherは未実装、実OS終了不能processや署名済みvendor/VCI/実車は未検証。実DLL実行・公開entry・保存形式・599ZIP変更なし。
 
 2026-09-15 署名検査APIの検索先限定: 開発probe assemblyのP/Invoke検索先をSystem32だけに明示。x86/x64の検査exe隣接・作業folderへ実行不能なwintrust.dll名のtextを置いても未署名観測が不変、compiled attributeも確認。変更前もこのPCでは同名file検査が合格しており、脆弱性再現ではなく予防的限定。native108項目/関連Node13テスト合格。対象DLL実行・process全体policy・公開権限・保存形式・599ZIPは変更なし。署名済みvendor/別PC/VCI/実車は未検証。

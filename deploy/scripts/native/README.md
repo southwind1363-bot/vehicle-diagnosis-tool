@@ -2,6 +2,17 @@
 
 ## Native signature probe (development only)
 
+`signature-fixture-supervisor.js` supplies the generated-fixture parent: only a
+direct `signature-probe-*` temp directory, fixed architecture-specific filenames,
+and trusted build-harness digests are accepted. Regular single-link files are
+checked for size, canonical path, identity and hash again immediately before
+spawn. The command has exactly the target path and digest arguments, no shell,
+and a minimal Windows/temp environment (no inherited profiler/startup hooks).
+Changed worker bytes reject before spawn and restoring them does not reset the
+single attempt. This is not a general vendor launcher, publisher authentication,
+an ACL/sandbox boundary, or proof against concurrent replacement after the check.
+Ambient Windows runtime/configuration and all sidecar files are not authenticated.
+
 `signature-observation-worker.js` connects the existing bounded development
 runner to the signature adapter. A trusted parent supplies the spawn closure and
 expected file digest; executable identity, paths and spawn options remain that
