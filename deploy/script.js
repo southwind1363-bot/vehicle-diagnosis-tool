@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.596";
+const APP_VERSION = "3.13.597";
 const APP_LAST_UPDATED = "2026-09-14";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -13415,7 +13415,9 @@ function renderObdSimpleResultSummary(session = null) {
       : coverageItemById.dtc_snapshot?.status === "empty"
         ? "DTC読取の応答ではコード0件です。"
         : "DTC読取は未取得です。";
-  obdSimpleResultNote.textContent = dtcNote
+  const developmentSource = [session?.source, session?.source_type, dtcSnapshot?.source, dtcSnapshot?.source_type]
+    .includes("j2534_development_read");
+  obdSimpleResultNote.textContent = (developmentSource ? "J2534開発検証データ（実車読取ではありません）。 " : "") + dtcNote
     + (pendingIds.length ? " 未完了の主要読取は" + pendingIds.length + "項目です。" : "")
     + " 消去・作動系は実行しません。";
   obdSimpleResultSummary.hidden = false;
