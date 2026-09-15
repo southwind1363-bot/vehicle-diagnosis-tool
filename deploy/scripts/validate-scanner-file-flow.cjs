@@ -146,6 +146,55 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     });
     assert.deepEqual(firstImportExit, { idle: false, pending: true, retained: false, stopped: false, unchanged: true, released: true });
     console.log('First import: real window exit listener attaches while pending and detaches after cancellation; synthetic event, no native dialog claim');
+    if (process.argv.includes('--development-source')) {
+      const { createJ2534DtcResultConverter } = await import('./j2534-dtc-result-converter.js');
+      const { createJ2534FixtureSessionBuilder } = await import('./j2534-fixture-session-builder.js');
+      const sandbox = vm.createContext({ window: {}, navigator: {} });
+      vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), sandbox);
+      const api = sandbox.window.ObdReadOnly;
+      const convert = createJ2534DtcResultConverter(value => api.decodeObdDtcResponse(value));
+      // Artificial completed-worker data only. No DLL or worker is executed here.
+      const parsed = convert(JSON.stringify({ schema_version: 'j2534-dtc-read-v1',
+        worker_status: 'worker_completed', cleanup_confirmed: true, request_ecu: 0x7e0, service: 3,
+        read_result: { Status: 0, ReportedCount: 1, Messages: [{ ProtocolId: 6, RxStatus: 0,
+          TxFlags: 0, Timestamp: 0, ExtraDataIndex: 0, Data: [0, 0, 7, 0xe8, 0x43, 1, 0x71] }] } }));
+      const built = createJ2534FixtureSessionBuilder(value => api.buildDiagnosticScanSession(value))({
+        execution_status: 'worker_completed', worker_started: true, worker_exited: true,
+        termination_requested: false, termination_signal_sent: false, errors: [],
+        parsed_result: { fixture_only: true, vehicle_communication: false, ...parsed } });
+      assert.ok(built?.session);
+      const input = path.join(output, 'development-source.json');
+      fs.writeFileSync(input, JSON.stringify(api.buildBridgeSessionExportPayload(built.session)));
+      const checkSource = async file => {
+        await openFile(page.getByRole('button', { name: '保存した読取結果を開く', exact: true }), file);
+        await page.locator('#obdDetectedCodes').getByText('P0171', { exact: false }).first().waitFor();
+        assert.equal(await page.evaluate(() => obdDevSession.lastSession.source), 'j2534_development_read');
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      };
+      await checkSource(input);
+      const waiting = page.waitForEvent('download');
+      await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+      const saved = path.join(output, 'development-source-saved.json');
+      await (await waiting).saveAs(saved);
+      const restored = api.buildDiagnosticScanSessionFromJson(fs.readFileSync(saved, 'utf8'));
+      assert.equal(restored.source, 'j2534_development_read');
+      assert.equal(restored.dtcSnapshot.dtcs[0].code, 'P0171');
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await checkSource(saved);
+      await page.locator('[data-obd-stage="home"]').click();
+      await page.locator('#obdHomeView [data-obd-ui-mode="details"]').click();
+      await page.getByText('読取セッションの技術情報', { exact: true }).click();
+      assert.match(await page.locator('#obdDevSessionSummary').textContent(), /J2534開発検証データ（実車読取ではありません）/);
+      const sourceCard = page.locator('#obdDevSessionSummary > span').filter({ has: page.getByText('入力源', { exact: true }) });
+      await sourceCard.evaluate(node => node.scrollIntoView({ block: 'center' }));
+      await sourceCard.screenshot({ path: path.join(output, 'development-source-restored.png') });
+      assert.deepEqual(errors, []);
+      assert.deepEqual(blocked, []);
+      console.log(`Development source: converter/archive/file import/download/reload/reimport and detail label passed / Artifacts: ${output}`);
+      return;
+    }
     await openFile(page.getByRole('button', { name: '保存した読取結果を開く', exact: true }), path.join(__dirname, 'fixtures/native-elm327-scan-archive.json'));
     await page.locator('#obdDetectedCodes').getByText('P0300', { exact: false }).first().waitFor();
     assert.match(await page.locator('#obdDetectedCodes').innerText(), /P0420/);

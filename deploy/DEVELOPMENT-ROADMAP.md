@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 開発入力源の配布browser往復: 整合確認済み596を隔離Chromeへ供給し、人工completed-worker情報→実converter/session builder→archive→file取込→JSON download→reload→再取込でP0171/source保持を確認。開発・通信設定の技術情報を開き「J2534開発検証データ（実車読取ではありません）」をDOM/画像で確認。初回の不存在切替、次の閉じたdetails撮影を実HTML操作へ修正、固定nav被りは入力源card単体撮影へ変更。専用browser CLI不在で既存Playwright使用、console/pageerror/外部要求なし、終了時browser解放。--development-source追加（成果物obd-file-flow-zpMDg5）。通常結果画面で同警告が常時可視であることの確認ではない。実DLL/VCI/実車/別PCなし、本体/596ZIP/保存形式不変。
+
 2026-09-15 開発inventoryの列挙量制限: readdirSyncで全名を配列化してから512件制限を適用していた箇所を、opendirSync(bufferSize1)の逐次列挙へ変更。513件目で全体拒否しfinallyでdirectory handleを閉じる。実513fileのread/close回数観測を追加して旧実装の非対応を確認、修正後13テスト合格。正常範囲のsort・file hash・照合/実行無効は維持。巨大directoryでの負荷実測や悪意ある競合耐性の証明ではない。開発専用部品で本体/596ZIP/保存形式不変。c396b626 CI success確認。
 
 2026-09-15 配布起動引数検査の標準化: validate:packageで生成した実配布folderのcmdとJSを専用検査へ渡し、通常/template/生成cmdおよびsource/生成JSの23例を確認する工程を追加。旧595展開cmdはPATH無効下で拒否漏れを検出（server起動なし）。初回はfileURLToPath import漏れで失敗し修正後package490合格。公開script/cache/manifestの596・HTTP200とe02de7f8 CI success確認。本体/596ZIP/保存形式/通信権限は変更しない。実VCI/実車/別PC未検証。
