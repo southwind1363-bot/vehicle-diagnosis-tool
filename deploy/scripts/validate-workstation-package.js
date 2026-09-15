@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { execFile, execFileSync, spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { packageWorkstation, formatWorkstationPackageError } from "./package-workstation.js";
 import { createJ2534NativeQuarantineStore } from "./j2534-native-quarantine.js";
 import { verifyWorkstationPackage } from "./verify-workstation-package.js";
@@ -555,6 +556,14 @@ try {
   check(fs.readdirSync(competing.outputDirectory).length === 1, "Concurrent publication left locks or staging behind");
 
   const actual = packageWorkstation({ outputDirectory: path.join(root, "relocated") });
+  const startupArguments = spawnSync(process.execPath,
+    [fileURLToPath(new URL("./validate-workstation-start-arguments.js", import.meta.url))], {
+      cwd: os.tmpdir(), encoding: "utf8", windowsHide: true, shell: false, timeout: 60000,
+      env: { ...process.env, START_ARGUMENT_PACKAGE: path.join(actual.directory, "start-workstation.cmd") }
+    });
+  check(startupArguments.status === 0
+    && startupArguments.stdout.includes(`Workstation startup argument checks: ${process.platform === "win32" ? 23 : 8}`),
+  "Generated package launcher or JS starter accepted unsupported arguments");
   for (const args of [["C:/synthetic-missing-package"], ["--root", "synthetic-private-target"], [""]]) {
     const rejected = spawnSync(process.execPath, [path.join(actual.directory, "scripts/verify-workstation-package.js"), ...args],
       { cwd: os.tmpdir(), encoding: "utf8", windowsHide: true, shell: false, timeout: 10000 });
