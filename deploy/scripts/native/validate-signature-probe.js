@@ -4,7 +4,8 @@ import path from "node:path";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { createSignatureObservationWorker } from "./signature-observation-worker.js";
 import { convertNativeSignatureResult } from "./native-signature-result.js";
 import { createVendorFolderReview } from "./vendor-package-folder-review.js";
 
@@ -48,6 +49,14 @@ try {
     assert.equal(reviewed.entry_signature.observation_accepted, true);
     assert.equal(reviewed.publisher_verified, false);
     assert.equal(reviewed.execution_enabled, false); checks += 6;
+    const observeAsync = createSignatureObservationWorker({ expectedFileSha256: digest,
+      spawnWorker: () => spawn(probe, [fixture, digest], { cwd: root, windowsHide: true,
+        shell: false, stdio: ["ignore", "pipe", "pipe"] }) });
+    const asyncResult = await observeAsync();
+    assert.equal(asyncResult.execution_status, "worker_completed");
+    assert.equal(asyncResult.worker_exited, true);
+    assert.equal(asyncResult.parsed_result.signature_report, converted.signature_report);
+    assert.equal((await observeAsync()).parsed_result, null); checks += 4;
     // Non-executable text only: never create or execute a replacement native DLL.
     const shadowFolder = path.join(root, `shadow-${platform}`);
     fs.mkdirSync(shadowFolder);

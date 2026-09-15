@@ -2,6 +2,19 @@
 
 ## Native signature probe (development only)
 
+`signature-observation-worker.js` connects the existing bounded development
+runner to the signature adapter. A trusted parent supplies the spawn closure and
+expected file digest; executable identity, paths and spawn options remain that
+parent's responsibility. This is not a production launcher or worker authenticator.
+Each instance attempts once, limits combined output to 4096 bytes, rejects stderr,
+and accepts a report only after successful close. It inherits the runner's 15 s
+timeout and 1 s termination-confirmation deadline; unconfirmed exit discards the
+report and late close cannot revive it. No runner lifecycle policy was changed.
+Generated unsigned x86/x64 PE observations exercise the asynchronous integration.
+Artificial child events test early output, failure and unconfirmed termination;
+they do not demonstrate killing an unresponsive real driver process.
+Run `node --test scripts/native/signature-observation-worker.test.js` (about 16 s).
+
 The probe assembly explicitly restricts P/Invoke DLL search to `System32` via
 `DefaultDllImportSearchPaths`; this is not a process-wide policy or permission
 to load an inspected file. In x86/x64 tests, non-executable text named

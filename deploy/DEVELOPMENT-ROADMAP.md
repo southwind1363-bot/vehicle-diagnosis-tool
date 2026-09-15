@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 署名観測の非同期受渡し: 既存bounded development runnerへsignature adapterを結合。trusted親がspawn closure/期待hashを固定し、instance単発・4096bytes・stderr拒否・正常close後のみ報告採用。15秒timeout/終了確認1秒と未確認時不採用は既存runner規約を再利用し変更なし。生成未署名PE x86/x64で非同期結果一致を含むnative116項目、早期JSON/異常/終了未確認/遅延closeの人工eventを含む関連Node17テスト合格。worker真正性/production launcherは未実装、実OS終了不能processや署名済みvendor/VCI/実車は未検証。実DLL実行・公開entry・保存形式・599ZIP変更なし。
+
 2026-09-15 署名検査APIの検索先限定: 開発probe assemblyのP/Invoke検索先をSystem32だけに明示。x86/x64の検査exe隣接・作業folderへ実行不能なwintrust.dll名のtextを置いても未署名観測が不変、compiled attributeも確認。変更前もこのPCでは同名file検査が合格しており、脆弱性再現ではなく予防的限定。native108項目/関連Node13テスト合格。対象DLL実行・process全体policy・公開権限・保存形式・599ZIPは変更なし。署名済みvendor/別PC/VCI/実車は未検証。
 
 2026-09-15 native署名結果の配布照合接続: trusted親のspawnSync完了結果から既存署名観測JSONへ変換する内部adapterを追加。exit0/signal null/errorなし/stderr空/4096文字以内/厳密fields/embedded-file/cache-only必須。status0は証明書hash付きValid、TRUST_E_NOSIGNATUREは証明書なしNotSignedのみ対応し、不明statusや未完了・別file・権限混入は報告なし。実生成未署名PEのx86/x64 native→adapter→folder inventory再hash照合を100項目確認、関連Node13テスト合格。Validは人工JSONのみで署名済みOS実検証ではない。providerの真正性/production寿命管理/catalog/最新失効情報/メーカー承認は未実装。公開実行・診断保存形式・599ZIP不変、実DLL/VCI/実車未実行。
