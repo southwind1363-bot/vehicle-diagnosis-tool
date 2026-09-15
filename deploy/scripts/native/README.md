@@ -12,9 +12,20 @@ This module does not read files, authenticate a website/publisher, verify signat
 discover dependencies, or load anything. An HTTPS source string is provenance metadata,
 not evidence that the source is official. `metadata_match_only` never grants execution.
 No real manufacturer record is included; no loader, public route or package is connected.
-Next: obtain inventory from an explicitly selected development folder without loading
-code, using synthetic files first. Official-source review, signature verification and
-runtime dependency closure remain separate unresolved requirements.
+`vendor-package-inventory.js` now reads an explicitly selected absolute development
+folder, hashes regular single-link files in bounded chunks and returns frozen relative
+names/sizes/hashes. It rejects observed symlinks/junctions, aliases, empty files and
+over-limit trees (512 entries, depth 16, 64 MiB/file, 256 MiB total). File identity and
+timestamps are checked around reads and again with directory checkpoints at completion.
+Errors return no partial inventory or local path. Tests use temporary text files only:
+`node --test scripts/native/vendor-package-*.test.js`.
+
+This is a point-in-time development observation, not a locked filesystem snapshot:
+path checks cannot guarantee resistance to concurrent malicious replacement, and the
+returned inventory is not a capability to execute those files later. Do not connect it
+to a loader as authorization. Official-source review, signature verification and
+runtime dependency closure remain separate unresolved requirements. No UI, automatic
+scan, real vendor catalog entry or public/package runtime integration is included.
 
 ## Declared dependency rejection (2026-09-14 approval)
 

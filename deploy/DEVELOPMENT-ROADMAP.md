@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-15 開発folderの非実行inventory取得: 明示絶対folderから通常fileのsize/SHA256/相対名を取得し、前回metadata照合へ渡す部品を追加。リンク/別名/空file/上限超過を全体拒否、file保持中と終了時のidentity・時刻、およびdirectory変化を確認。人工text fileを.dll名で保存した実file検査とmetadata検査の計10テスト合格。実DLLロードなし。これは競合を完全排除したsnapshotや実行leaseではなく、悪意ある同時差替えへの保証にはしない。公式source/署名/依存完全性/実VCI/実車未検証。公開entry/実vendor登録/保存形式/594ZIP不変。
+
 2026-09-15 配布物照合の非実行部品: 利用者「続けて」で前回のコード開発範囲を再開。既定空catalogへ版/vendor/architecture/source URL/entryと全file名・size・SHA256を照合する開発専用部品を追加。欠落/追加/変更/重複・Windows別名を拒否、登録後の元object変更から分離。人工metadataの5テスト合格。実ファイルのhash取得・公式配布元/署名/依存関係の完全性確認ではなく、一致時もexecution_enabled/publisher_verified/dependency_closure_verified=false固定。実メーカー登録/loader接続/公開実行/保存形式/594ZIP不変。次は人工folderから非実行でinventory取得する結合。実DLL/VCI/実車未使用、購入まだ不要。
 
 2026-09-14 宣言ヘッダー領域の検査漏れ修正: SizeOfHeadersを0/1/uint最大/先頭raw+1に変更した候補が旧guardを通る負例を追加して失敗を確認。宣言headerがsection tableを包含しfile内に収まること、table RVAおよび全sectionの仮想/raw領域がheaderへ侵入しないことを確認する。最初の修正はtableを含むsectionだけに適用して再度失敗、生成fixtureの.text/.rdata配置から原因を切り分け全sectionへ修正。24候補のmemory/実LoadVerified拒否と正常native経路をx86/x64で確認、native7365/専用148/保存復元/pipe・構文/diff合格。OSが不正PEを実際に受理するかは試していない。実vendor DLL/VCI/実車/公開実行/保存形式/594ZIP不変。前回bbf61a3c CI success確認。
