@@ -2,6 +2,13 @@
 
 ## Native signature probe (development only)
 
+The existing bridge validator now runs `scripts/validate-vendor-review.js`, a
+fixed six-file Node test suite with a 60-second deadline and nonzero-exit failure
+propagation. This includes package/signature adapters and simulated lifecycle
+checks, not native compilation or vendor execution. Windows-only filesystem
+selection integration is explicitly skipped on other platforms; a skip is not
+hardware or Windows validation. Native generated-PE checks remain separate.
+
 `createDtcSelectedPackageReview` accepts the trusted host's existing registered
 DTC handoff. It prepares and consumes its expiring one-use ticket before passing
 only path/hash/size/architecture to folder review. It returns no private selection

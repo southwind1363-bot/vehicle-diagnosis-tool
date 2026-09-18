@@ -56,7 +56,7 @@ for (const mutate of [
   s.original.descriptorSource = "test_fixture_registry";
   assert.equal(s.api.prepare(s.descriptor, request), null); assert.equal(s.calls, 0); checks += 4;
 }
-{
+if (process.platform === "win32") {
   const s = setup(), root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "registered-review-")));
   const file = path.join(root, "driver.dll"); fs.writeFileSync(file, "abc");
   const hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
@@ -72,5 +72,5 @@ for (const mutate of [
   assert.equal(s.calls, 2); assert.ok(!JSON.stringify(value).includes(root));
   s.current.libraryPath = path.join(root, "other.dll");
   assert.equal(review.inspect(s.descriptor, request, root, metadata).reason, "selection_unavailable"); checks += 5;
-}
+} else console.log("Registered package filesystem integration: skipped (requires Windows paths)");
 console.log(`Registered DTC selection resolver: ${checks} checks / extracted bridge code, synthetic registry/store only / no DLL or vehicle I/O`);

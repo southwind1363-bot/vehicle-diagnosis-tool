@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-18 署名/配布回帰検査を既存CI入口へ組込み: validate-local-bridge-readonlyから固定6test fileの専用runnerを呼び、非zero/signal/timeoutを失敗へ伝播。新規26テスト＋bridge384合格、native compile/実registry/旧PS1は実行しない。登録resolverの実temp結合はWindows path専用なのでLinuxではskip明示する修正も追加。Windows39項目とplatform分岐模擬Linux34項目を確認（実Linux確認ではない）。workflow本体は編集せずdeploy内のみ。公開実行/保存形式/599ZIP不変、CI完了は別途確認が必要。
+
 2026-09-18 非同期署名完了の選択照合結合: inspectSupervisedCompletionと専用adapterを追加。worker started/exited/completed・停止要求/送信なし・errors空を必須とし、署名報告を選択hashへ再検証。同期exitを捏造して流用せず、nativeで対応済みのValid/AuthenticodeとNotSigned/Noneのみ。関連Node6、生成未署名PEの非同期→選択→inventoryを含むnative164、resolver39/handoff156合格。クライアントJSON認証ではなくtrusted親内部用、実vendor/VCI/実車/公開entry/保存形式/599ZIP不変。
 
 2026-09-18 native完了結果と選択配布確認の直結: private inspectNativeCompletionでtrusted親spawnSync結果を既存adapterへ渡し、消費済み選択hashと実inventoryの二段階で同一fileへ結合。未終了/非zero/signal/stderr/別hashは署名未確認、固定completion reasonを保持。生成未署名PE x86/x64を含むnative158、関連Node5、抽出resolver39/handoff156合格。生成以外の署名済み成功/production実行gateは未検証・未接続。実vendor/VCI/実車/公開entry/保存形式/599ZIP不変。
