@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-18 native完了結果と選択配布確認の直結: private inspectNativeCompletionでtrusted親spawnSync結果を既存adapterへ渡し、消費済み選択hashと実inventoryの二段階で同一fileへ結合。未終了/非zero/signal/stderr/別hashは署名未確認、固定completion reasonを保持。生成未署名PE x86/x64を含むnative158、関連Node5、抽出resolver39/handoff156合格。生成以外の署名済み成功/production実行gateは未検証・未接続。実vendor/VCI/実車/公開entry/保存形式/599ZIP不変。
+
 2026-09-18 内部配布確認の停止理由保持: selected-package reviewへexecution_status:blockedと凍結blocker一覧を追加。選択不成立/配布未登録/署名未確認/署名不適合を区別し、元の署名statusは維持。metadata一致＋人工Validでもpublisher/dependency/execution未承認を常に残し、許可分岐/loader callbackは追加しない。専用・folder9、抽出resolver39/handoff156合格。native gate/公開route未接続、実vendor/VCI/実車未検証、保存形式/599ZIP不変。
 
 2026-09-18 登録選択handoffと配布確認の内部結合: createDtcSelectedPackageReviewが既存handoffの期限付きticketをprepare/consumeし、path/hash/size/architectureだけをfolder照合へ渡す。期限切れ/再照合失敗は一覧読取前拒否、内部path/IDを結果へ出さない。専用・folder9テスト、既存bridge resolver抽出コード＋人工registry/実temp textの結合39項目、handoff156項目合格。live registry/実vendor/VCI/実車検証ではない。native gate/公開routeは未接続、権限false・599ZIP・保存形式不変。

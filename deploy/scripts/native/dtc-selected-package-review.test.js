@@ -34,6 +34,20 @@ test("existing one-use handoff feeds same-file review without exposing selection
   assert.equal(reads, 1);
   const matchedReview = createDtcSelectedPackageReview({ handoff, catalog: [{ ...metadata,
     files: [{ name: "driver.dll", size: 3, sha256: selected.sha256 }] }] });
+  const completed = { status: 0, signal: null, stderr: "", stdout: JSON.stringify({
+    observation_status: "observed_only", wintrust_status: "0x800B0100", file_sha256: selected.sha256,
+    signer_certificate_sha256: null, scope: "embedded_file", cache_only: true,
+    execution_enabled: false, publisher_verified: false, dependency_closure_verified: false }) };
+  const native = matchedReview.inspectNativeCompletion(descriptor, request, root, metadata, completed);
+  assert.equal(native.entry_signature.signature_status, "NotSigned");
+  assert.ok(native.execution_blockers.includes("signature_not_valid"));
+  for (const changed of [{ status: null }, { status: 1 }, { signal: "SIGTERM" }, { stderr: "secret" },
+    { stdout: completed.stdout.replace(selected.sha256, "C".repeat(64)) }]) {
+    const rejected = matchedReview.inspectNativeCompletion(descriptor, request, root, metadata, { ...completed, ...changed });
+    assert.equal(rejected.entry_signature.observation_accepted, false);
+    assert.ok(rejected.execution_blockers.includes("signature_unverified"));
+    assert.equal(rejected.execution_enabled, false);
+  }
   for (const status of ["Valid", "NotSigned", "NotTrusted"]) {
     const report = JSON.stringify({ observation_status: "observed_only", signature_status: status,
       signature_type: status === "NotSigned" ? "None" : "Authenticode",

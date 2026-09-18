@@ -8,6 +8,8 @@ import { spawnSync } from "node:child_process";
 import { createSignatureFixtureSupervisor } from "./signature-fixture-supervisor.js";
 import { convertNativeSignatureResult } from "./native-signature-result.js";
 import { createVendorFolderReview } from "./vendor-package-folder-review.js";
+import { createDtcSelectedPackageReview } from "./dtc-selected-package-review.js";
+import { createJ2534DtcSelectionHandoff } from "../j2534-dtc-selection-handoff.js";
 
 assert.equal(process.platform, "win32");
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "signature-probe-"));
@@ -64,6 +66,17 @@ try {
     assert.equal(selectedReview.selected_entry_matches, true);
     assert.equal(selectedReview.entry_signature.signature_status, "NotSigned");
     assert.equal(selectedReview.execution_enabled, false); checks += 3;
+    const privateDescriptor = Object.freeze({});
+    const resolve = item => item === privateDescriptor ? { selected_device_id: "j2534-0123456789abcdef",
+      path: fixture, sha256: digest, size: fs.statSync(fixture).size, architecture: platform } : null;
+    const handoff = createJ2534DtcSelectionHandoff({ resolveDescriptor: resolve, revalidateDescriptor: resolve,
+      now: () => performance.now() });
+    const completedReview = createDtcSelectedPackageReview({ handoff }).inspectNativeCompletion(privateDescriptor,
+      { request_ecu: 0x7e0, service: 3 }, root, { vendor: "Synthetic", version: "test-1", architecture: platform,
+        source_url: "https://example.invalid/unsigned.zip", entry: path.basename(fixture) }, observed);
+    assert.equal(completedReview.entry_signature.signature_status, "NotSigned");
+    assert.equal(completedReview.signature_completion_reason, "observation_only");
+    assert.equal(completedReview.execution_status, "blocked"); checks += 3;
     const changed = createSignatureFixtureSupervisor(descriptor);
     const original = fs.readFileSync(probe);
     try {

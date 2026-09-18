@@ -14,6 +14,13 @@ The composition now returns `execution_status: "blocked"` and frozen
 evidence remain distinct. Publisher, dependency-closure and execution-approval
 blockers always remain, including with matching metadata and an observed Valid
 signature. There is no approval branch, loader callback or persistent format change.
+`inspectNativeCompletion` additionally accepts a trusted parent's in-memory
+`spawnSync` completion, validates it with the existing native adapter against the
+consumed selection hash, then binds it to the actual inventory. Invalid/unfinished
+completion supplies no accepted signature; `signature_completion_reason` retains
+the adapter's sanitized reason. This does not authenticate serialized completion
+objects or launch a process. Generated unsigned PE tests exercise this full path;
+signed-vendor success and a production native execution gate remain unverified.
 
 Private folder `inspect` optionally takes a fourth argument containing exactly
 `path`, `sha256`, `size`, and `architecture` from a trusted selector. It binds

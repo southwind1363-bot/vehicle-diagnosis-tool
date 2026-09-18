@@ -1,4 +1,5 @@
 import { createVendorFolderReview } from "./vendor-package-folder-review.js";
+import { convertNativeSignatureResult } from "./native-signature-result.js";
 
 // This stage reports why execution remains blocked; it has no approval branch.
 // Even an observed Valid signature does not establish publisher/dependency trust.
@@ -24,16 +25,23 @@ export function createDtcSelectedPackageReview({ handoff, catalog = [] }) {
     throw new TypeError("selected_package_handoff_required");
   const prepare = handoff.prepare.bind(handoff), consume = handoff.consume.bind(handoff);
   const review = createVendorFolderReview(catalog);
-  return Object.freeze({
-    inspect(descriptor, request, root, metadata, signatureReport) {
+  function inspect(descriptor, request, root, metadata, signatureInput, nativeCompletion) {
       try {
         const ticket = prepare(descriptor, request);
         if (!ticket) return unavailable();
         const selection = consume(ticket);
         if (!selection) return unavailable();
-        return blocked(review.inspect(root, metadata, signatureReport, { path: selection.path,
-          sha256: selection.sha256, size: selection.size, architecture: selection.architecture }));
+        const converted = nativeCompletion ? convertNativeSignatureResult(signatureInput, selection.sha256) : null;
+        const signatureReport = nativeCompletion ? converted.signature_report : signatureInput;
+        const observation = review.inspect(root, metadata, signatureReport, { path: selection.path,
+          sha256: selection.sha256, size: selection.size, architecture: selection.architecture });
+        return blocked({ ...observation, ...(converted ? { signature_completion_reason: converted.reason } : {}) });
       } catch { return unavailable(); }
-    }
+  }
+  return Object.freeze({
+    inspect: (descriptor, request, root, metadata, report) => inspect(descriptor, request, root, metadata, report, false),
+    // Trusted parent's spawnSync completion only, never serialized client JSON.
+    inspectNativeCompletion: (descriptor, request, root, metadata, completion) =>
+      inspect(descriptor, request, root, metadata, completion, true)
   });
 }
