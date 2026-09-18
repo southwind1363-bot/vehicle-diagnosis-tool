@@ -77,6 +77,12 @@ try {
     assert.equal(completedReview.entry_signature.signature_status, "NotSigned");
     assert.equal(completedReview.signature_completion_reason, "observation_only");
     assert.equal(completedReview.execution_status, "blocked"); checks += 3;
+    const supervisedReview = createDtcSelectedPackageReview({ handoff }).inspectSupervisedCompletion(privateDescriptor,
+      { request_ecu: 0x7e0, service: 3 }, root, { vendor: "Synthetic", version: "test-1", architecture: platform,
+        source_url: "https://example.invalid/unsigned.zip", entry: path.basename(fixture) }, asyncResult);
+    assert.equal(supervisedReview.entry_signature.signature_status, "NotSigned");
+    assert.equal(supervisedReview.signature_completion_reason, "observation_only");
+    assert.equal(supervisedReview.execution_status, "blocked"); checks += 3;
     const changed = createSignatureFixtureSupervisor(descriptor);
     const original = fs.readFileSync(probe);
     try {

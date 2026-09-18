@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-18 非同期署名完了の選択照合結合: inspectSupervisedCompletionと専用adapterを追加。worker started/exited/completed・停止要求/送信なし・errors空を必須とし、署名報告を選択hashへ再検証。同期exitを捏造して流用せず、nativeで対応済みのValid/AuthenticodeとNotSigned/Noneのみ。関連Node6、生成未署名PEの非同期→選択→inventoryを含むnative164、resolver39/handoff156合格。クライアントJSON認証ではなくtrusted親内部用、実vendor/VCI/実車/公開entry/保存形式/599ZIP不変。
+
 2026-09-18 native完了結果と選択配布確認の直結: private inspectNativeCompletionでtrusted親spawnSync結果を既存adapterへ渡し、消費済み選択hashと実inventoryの二段階で同一fileへ結合。未終了/非zero/signal/stderr/別hashは署名未確認、固定completion reasonを保持。生成未署名PE x86/x64を含むnative158、関連Node5、抽出resolver39/handoff156合格。生成以外の署名済み成功/production実行gateは未検証・未接続。実vendor/VCI/実車/公開entry/保存形式/599ZIP不変。
 
 2026-09-18 内部配布確認の停止理由保持: selected-package reviewへexecution_status:blockedと凍結blocker一覧を追加。選択不成立/配布未登録/署名未確認/署名不適合を区別し、元の署名statusは維持。metadata一致＋人工Validでもpublisher/dependency/execution未承認を常に残し、許可分岐/loader callbackは追加しない。専用・folder9、抽出resolver39/handoff156合格。native gate/公開route未接続、実vendor/VCI/実車未検証、保存形式/599ZIP不変。

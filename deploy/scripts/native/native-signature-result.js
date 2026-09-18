@@ -5,6 +5,26 @@ const keys = ["observation_status", "wintrust_status", "file_sha256", "signer_ce
 const reject = reason => Object.freeze({ reason, signature_report: null,
   publisher_verified: false, dependency_closure_verified: false, execution_enabled: false });
 
+// Trusted bounded parent's in-memory result, not an authenticated wire format.
+export function convertSupervisedSignatureResult(completion, expectedFileSha256) {
+  try {
+    if (!completion || completion.execution_status !== "worker_completed"
+      || completion.worker_started !== true || completion.worker_exited !== true
+      || completion.termination_requested !== false || completion.termination_signal_sent !== false
+      || !Array.isArray(completion.errors) || completion.errors.length !== 0) return reject("worker_incomplete");
+    const parsed = completion.parsed_result;
+    if (!parsed || parsed.reason !== "observation_only" || parsed.execution_enabled !== false
+      || parsed.publisher_verified !== false || parsed.dependency_closure_verified !== false)
+      return reject("invalid_output");
+    const report = parsed.signature_report;
+    const checked = validateVendorSignatureResult(report, expectedFileSha256);
+    if (!checked.observation_accepted) return reject(checked.reason);
+    if (!((checked.signature_status === "Valid" && checked.signature_type === "Authenticode")
+      || (checked.signature_status === "NotSigned" && checked.signature_type === "None"))) return reject("invalid_output");
+    return Object.freeze({ ...reject("observation_only"), signature_report: report });
+  } catch { return reject("invalid_output"); }
+}
+
 // Private adapter for a trusted parent's completed spawnSync result. This is not
 // a process supervisor, worker authenticator, public JSON import or execution gate.
 export function convertNativeSignatureResult(completion, expectedFileSha256) {

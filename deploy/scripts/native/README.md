@@ -21,6 +21,12 @@ completion supplies no accepted signature; `signature_completion_reason` retains
 the adapter's sanitized reason. This does not authenticate serialized completion
 objects or launch a process. Generated unsigned PE tests exercise this full path;
 signed-vendor success and a production native execution gate remain unverified.
+`inspectSupervisedCompletion` handles the existing asynchronous bounded parent's
+result without fabricating a synchronous exit status. It requires started/exited,
+completed, no termination request/signal and no errors, then revalidates the
+reported signature against the consumed selection hash. It accepts only the
+native adapter's embedded Valid/Authenticode or NotSigned/None meanings. These
+in-memory parent results are not authenticated client or saved-data formats.
 
 Private folder `inspect` optionally takes a fourth argument containing exactly
 `path`, `sha256`, `size`, and `architecture` from a trusted selector. It binds

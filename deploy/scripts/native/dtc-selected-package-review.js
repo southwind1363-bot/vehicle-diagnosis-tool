@@ -1,5 +1,5 @@
 import { createVendorFolderReview } from "./vendor-package-folder-review.js";
-import { convertNativeSignatureResult } from "./native-signature-result.js";
+import { convertNativeSignatureResult, convertSupervisedSignatureResult } from "./native-signature-result.js";
 
 // This stage reports why execution remains blocked; it has no approval branch.
 // Even an observed Valid signature does not establish publisher/dependency trust.
@@ -31,7 +31,7 @@ export function createDtcSelectedPackageReview({ handoff, catalog = [] }) {
         if (!ticket) return unavailable();
         const selection = consume(ticket);
         if (!selection) return unavailable();
-        const converted = nativeCompletion ? convertNativeSignatureResult(signatureInput, selection.sha256) : null;
+        const converted = nativeCompletion ? nativeCompletion(signatureInput, selection.sha256) : null;
         const signatureReport = nativeCompletion ? converted.signature_report : signatureInput;
         const observation = review.inspect(root, metadata, signatureReport, { path: selection.path,
           sha256: selection.sha256, size: selection.size, architecture: selection.architecture });
@@ -42,6 +42,8 @@ export function createDtcSelectedPackageReview({ handoff, catalog = [] }) {
     inspect: (descriptor, request, root, metadata, report) => inspect(descriptor, request, root, metadata, report, false),
     // Trusted parent's spawnSync completion only, never serialized client JSON.
     inspectNativeCompletion: (descriptor, request, root, metadata, completion) =>
-      inspect(descriptor, request, root, metadata, completion, true)
+      inspect(descriptor, request, root, metadata, completion, convertNativeSignatureResult),
+    inspectSupervisedCompletion: (descriptor, request, root, metadata, completion) =>
+      inspect(descriptor, request, root, metadata, completion, convertSupervisedSignatureResult)
   });
 }
