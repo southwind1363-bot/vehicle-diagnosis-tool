@@ -9,6 +9,11 @@ and never invokes a loader. Extracted bridge-resolver tests use synthetic regist
 records and real temporary text files, not live registry discovery or a vendor DLL.
 This composes the existing resolver API; no public bridge route or packaged native
 execution gate is enabled by this module.
+The composition now returns `execution_status: "blocked"` and frozen
+`execution_blockers`: selection/package failures, missing or negative signature
+evidence remain distinct. Publisher, dependency-closure and execution-approval
+blockers always remain, including with matching metadata and an observed Valid
+signature. There is no approval branch, loader callback or persistent format change.
 
 Private folder `inspect` optionally takes a fourth argument containing exactly
 `path`, `sha256`, `size`, and `architecture` from a trusted selector. It binds
