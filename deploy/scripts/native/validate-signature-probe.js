@@ -57,6 +57,13 @@ try {
     assert.equal(asyncResult.worker_exited, true);
     assert.equal(asyncResult.parsed_result.signature_report, converted.signature_report);
     assert.equal((await observeAsync()).parsed_result, null); checks += 4;
+    const selectedReview = createVendorFolderReview().inspect(root, { vendor: "Synthetic", version: "test-1",
+      architecture: platform, source_url: "https://example.invalid/unsigned.zip", entry: path.basename(fixture) },
+      asyncResult.parsed_result.signature_report, { path: fixture, sha256: digest,
+        size: fs.statSync(fixture).size, architecture: platform });
+    assert.equal(selectedReview.selected_entry_matches, true);
+    assert.equal(selectedReview.entry_signature.signature_status, "NotSigned");
+    assert.equal(selectedReview.execution_enabled, false); checks += 3;
     const changed = createSignatureFixtureSupervisor(descriptor);
     const original = fs.readFileSync(probe);
     try {

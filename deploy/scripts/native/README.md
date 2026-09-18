@@ -2,6 +2,14 @@
 
 ## Native signature probe (development only)
 
+Private folder `inspect` optionally takes a fourth argument containing exactly
+`path`, `sha256`, `size`, and `architecture` from a trusted selector. It binds
+these to the same inventory entry used to check the signature observation.
+Mismatch returns no signature evidence; matching sets `selected_entry_matches`
+without publisher, dependency or execution authority. Existing three-argument
+calls and the CLI are unchanged. This is the non-executing evidence-binding
+step, not yet a registry resolver or native loader integration.
+
 `signature-fixture-supervisor.js` supplies the generated-fixture parent: only a
 direct `signature-probe-*` temp directory, fixed architecture-specific filenames,
 and trusted build-harness digests are accepted. Regular single-link files are

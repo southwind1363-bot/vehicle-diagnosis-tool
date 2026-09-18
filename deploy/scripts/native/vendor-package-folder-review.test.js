@@ -11,6 +11,31 @@ const metadata = { vendor: "Synthetic", version: "test-1", architecture: "x64",
   source_url: "https://example.invalid/package.zip", entry: "driver.dll" };
 const catalog = [{ ...metadata, files: [{ name: "driver.dll", size: 3,
   sha256: "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD" }] }];
+test("selected driver and signature bind to one observed inventory without granting execution", () => fixture(root => {
+  const review = createVendorFolderReview(catalog);
+  const selected = { path: path.join(root, "driver.dll"), size: 3, architecture: "x64",
+    sha256: catalog[0].files[0].sha256 };
+  const report = JSON.stringify({ observation_status: "observed_only", signature_status: "Valid",
+    signature_type: "Authenticode", signer_certificate_sha256: "A".repeat(64),
+    file_sha256: selected.sha256, publisher_verified: false, dependency_closure_verified: false, execution_enabled: false });
+  const result = review.inspect(root, metadata, report, selected);
+  assert.equal(result.selected_entry_matches, true);
+  assert.equal(result.entry_signature.observation_accepted, true);
+  assert.equal(result.status, "metadata_match_only");
+  for (const key of ["execution_enabled", "publisher_verified", "dependency_closure_verified"]) assert.equal(result[key], false);
+  assert.ok(!JSON.stringify(result).includes(root));
+  assert.equal(Object.hasOwn(review.inspect(root, metadata, report), "selected_entry_matches"), false);
+  for (const change of [{ path: path.join(root, "other.dll") }, { size: 4 }, { sha256: "B".repeat(64) },
+    { architecture: "x86" }, { extra: true }]) {
+    const refused = review.inspect(root, metadata, report, { ...selected, ...change });
+    assert.equal(refused.reason, "selection_mismatch");
+    assert.equal(Object.hasOwn(refused, "entry_signature"), false);
+    assert.equal(refused.execution_enabled, false);
+  }
+  fs.writeFileSync(selected.path, "abd");
+  assert.equal(review.inspect(root, metadata, report, selected).reason, "selection_mismatch");
+  assert.equal(review.inspect(root, metadata, report, null).reason, "selection_mismatch");
+}));
 function fixture(run) {
   const root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "vendor-review-")));
   try { fs.writeFileSync(path.join(root, "driver.dll"), "abc"); run(root); }

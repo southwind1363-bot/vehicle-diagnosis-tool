@@ -8,6 +8,7 @@ const metadataKeys = ["vendor", "version", "architecture", "source_url", "entry"
 const messages = Object.freeze({
   invalid_arguments: "引数の数または形式が不正です。フォルダーの検査は行っていません。実行は許可されません。",
   invalid_metadata: "宣言された配布物情報の形式が不正です。フォルダーの検査は行っていません。実行は許可されません。",
+  selection_mismatch: "選択されたドライバーと配布物の実ファイルが一致しません。実行は許可されません。",
   inventory_unavailable: "フォルダーの完全な一覧・ハッシュを確認できませんでした。パス、読取権限、対応形式・上限を確認してください。実行は許可されません。",
   catalog_empty: "ファイル一覧を取得しましたが、照合する登録情報がありません。実行は許可されません。",
   metadata_mismatch: "ファイル一覧を取得しましたが、宣言情報またはファイル構成・内容が登録情報と一致しません。実行は許可されません。",
@@ -22,8 +23,8 @@ export function createVendorFolderReview(catalog = []) {
   const review = createVendorPackageReview(catalog);
   const catalogEmpty = catalog.length === 0;
   return Object.freeze({
-    inspect(root, metadata, signatureReport = undefined) {
-      let copy;
+    inspect(root, metadata, signatureReport = undefined, selectedEntry = undefined) {
+      let copy, selected;
       try {
         if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)
           || Object.keys(metadata).length !== metadataKeys.length
@@ -33,21 +34,41 @@ export function createVendorFolderReview(catalog = []) {
         // placeholder validates shape only; it is never used as observed evidence.
         createVendorPackageReview([{ ...copy, files: [{ name: copy.entry, size: 1, sha256: "0".repeat(64) }] }]);
       } catch { return failure("invalid_metadata"); }
+      // Optional private selector evidence, never accepted from the CLI. Copy
+      // once, then bind against the SAME inventory used by signature review.
+      if (selectedEntry !== undefined) {
+        try {
+          const keys = ["path", "sha256", "size", "architecture"];
+          if (!selectedEntry || typeof selectedEntry !== "object" || Array.isArray(selectedEntry)
+            || Object.keys(selectedEntry).length !== keys.length || !keys.every(key => Object.hasOwn(selectedEntry, key)))
+            return failure("selection_mismatch");
+          selected = Object.fromEntries(keys.map(key => [key, selectedEntry[key]]));
+          if (typeof selected.path !== "string" || typeof root !== "string" || !path.isAbsolute(root)
+            || selected.path !== path.join(root, ...copy.entry.split("/"))
+            || selected.architecture !== copy.architecture || !Number.isSafeInteger(selected.size) || selected.size < 1
+            || typeof selected.sha256 !== "string" || !/^[a-fA-F0-9]{64}$/.test(selected.sha256))
+            return failure("selection_mismatch");
+        } catch { return failure("selection_mismatch"); }
+      }
       try {
         const files = collectVendorPackageInventory(root);
+        const entry = files.find(file => file.name.toLowerCase() === copy.entry.toLowerCase());
+        if (selected && (!entry || entry.size !== selected.size || entry.sha256 !== selected.sha256.toUpperCase()))
+          return failure("selection_mismatch");
         const result = review.compare({ ...copy, files });
         // Bind an optional main-DLL report to bytes observed in this inventory,
         // never to a hash supplied alongside the report. This does not execute
         // a signature provider, validate dependencies or grant publisher trust.
         const signature = signatureReport === undefined ? {} : {
           entry_signature: validateVendorSignatureResult(signatureReport,
-            files.find(file => file.name.toLowerCase() === copy.entry.toLowerCase())?.sha256)
+            entry?.sha256)
         };
         const reason = result.status === "metadata_match_only" ? "metadata_match_only"
           : catalogEmpty ? "catalog_empty" : "metadata_mismatch";
         return Object.freeze({ ...result, inventory_observed: true, file_count: files.length,
           total_bytes: files.reduce((total, file) => total + file.size, 0),
-          reason, message: messages[reason], ...signature });
+          reason, message: messages[reason], ...signature,
+          ...(selected ? { selected_entry_matches: true } : {}) });
       } catch { return failure("inventory_unavailable"); }
     }
   });

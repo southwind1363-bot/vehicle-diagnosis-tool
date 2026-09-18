@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-18 選択driverと配布署名観測の結合第一段: 前回確認へ利用者「続けて」。private folder reviewの任意第4引数で選択path/size/hash/architectureを一度コピーし、署名と同じ実inventoryのentryへ照合。不一致/変更/余分fieldは署名証拠を返さず拒否。既存3引数/CLIは不変、Valid人工報告でもpublisher/dependency/executionはfalse固定。Node19合格。登録descriptor resolverからの自動受渡しとnative実行前gateはまだ未結合で、実機通信/公開実行/保存形式/599ZIP不変。
+
 2026-09-15 署名fixture親の読取量制限: ハッシュ計算のreadFileSyncを廃止し、保持fdから64KiB単位・事前確認sizeまで読む処理へ変更。fd前後/終了pathのidentity・size・時刻・link数を照合し、途中切詰めは拒否してfinallyでclose。人工textの非実行2テストと生成未署名PE native146項目合格。検査後の同時置換を防ぐleaseではなく、実vendor/VCI/実車は未検証。公開entry/保存形式/599ZIP不変。
 
 2026-09-15 署名fixtureの構成file混入拒否: 固定probeには不要な隣接.exe.configを準備時/起動直前にlstatし、ENOENT以外は拒否。内容を解釈・採用せず、file/後から追加/directoryで起動を拒否し、退避後も同instance再試行なし。生成未署名PE x86/x64のnative146項目合格。人工XMLは起動されず、元artifactはtempへ保持。machine設定/他sidecar/同時追加raceの解消は未確認。実vendor/VCI/実車/公開entry/保存形式/599ZIPは変更なし。
