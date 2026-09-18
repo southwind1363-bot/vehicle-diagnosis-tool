@@ -2,6 +2,14 @@
 
 ## Native signature probe (development only)
 
+`createDtcSelectedPackageReview` accepts the trusted host's existing registered
+DTC handoff. It prepares and consumes its expiring one-use ticket before passing
+only path/hash/size/architecture to folder review. It returns no private selection
+and never invokes a loader. Extracted bridge-resolver tests use synthetic registry
+records and real temporary text files, not live registry discovery or a vendor DLL.
+This composes the existing resolver API; no public bridge route or packaged native
+execution gate is enabled by this module.
+
 Private folder `inspect` optionally takes a fourth argument containing exactly
 `path`, `sha256`, `size`, and `architecture` from a trusted selector. It binds
 these to the same inventory entry used to check the signature observation.

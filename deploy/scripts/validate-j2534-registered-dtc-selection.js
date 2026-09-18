@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
+import os from "node:os";
+import path from "node:path";
+import { createDtcSelectedPackageReview } from "./native/dtc-selected-package-review.js";
 import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
@@ -52,5 +55,22 @@ for (const mutate of [
   assert.equal(s.api.prepare({ ...s.descriptor }, request), null); assert.equal(s.calls, 0);
   s.original.descriptorSource = "test_fixture_registry";
   assert.equal(s.api.prepare(s.descriptor, request), null); assert.equal(s.calls, 0); checks += 4;
+}
+{
+  const s = setup(), root = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), "registered-review-")));
+  const file = path.join(root, "driver.dll"); fs.writeFileSync(file, "abc");
+  const hash = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+  for (const record of [s.original, s.current]) {
+    record.libraryPath = file; record.fingerprint.size = 3; record.fingerprint.sha256 = hash;
+  }
+  s.metadata.sha256 = hash; s.metadata.file_size = 3;
+  const review = createDtcSelectedPackageReview({ handoff: s.api });
+  const metadata = { vendor: "Synthetic", version: "test", architecture: "x64", entry: "driver.dll",
+    source_url: "https://example.invalid/package.zip" };
+  const value = review.inspect(s.descriptor, request, root, metadata);
+  assert.equal(value.selected_entry_matches, true); assert.equal(value.execution_enabled, false);
+  assert.equal(s.calls, 2); assert.ok(!JSON.stringify(value).includes(root));
+  s.current.libraryPath = path.join(root, "other.dll");
+  assert.equal(review.inspect(s.descriptor, request, root, metadata).reason, "selection_unavailable"); checks += 5;
 }
 console.log(`Registered DTC selection resolver: ${checks} checks / extracted bridge code, synthetic registry/store only / no DLL or vehicle I/O`);
