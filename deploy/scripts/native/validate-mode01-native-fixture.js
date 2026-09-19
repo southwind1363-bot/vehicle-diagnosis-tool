@@ -29,9 +29,41 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   const build = spawnSync(compiler, ["/nologo", "/warnaserror", `/platform:${arch}`, `/out:${exe}`,
     "/define:J2534_DTC_DEVELOPMENT;J2534_MODE01_DEVELOPMENT", source,
     ...["J2534IdentityNative.cs", "J2534ReadRequestNative.cs", "J2534ReceiveNative.cs", "J2534Mode01Exchange.cs",
+      "J2534DtcExecutionLease.cs", "J2534GlobalMutexLease.cs",
       "J2534Mode01Observation.cs", "J2534Mode01FixtureWorker.cs"].map(name => fileURLToPath(new URL(name, import.meta.url)))],
   { cwd: root, env, windowsHide: true, encoding: "utf8", timeout: 15000 });
   assert.equal(build.status, 0, build.stdout + build.stderr);
+  if (suffix === "") {
+    const holderExe = path.join(root, "lease-holder.exe");
+    const holderBuild = spawnSync(compiler, ["/nologo", "/warnaserror", `/platform:${arch}`, `/out:${holderExe}`,
+      "/define:J2534_DTC_DEVELOPMENT;NATIVE_RECEIVE_FIXTURE_TESTS",
+      ...["J2534DtcExecutionLease.cs", "J2534GlobalMutexLease.cs", "J2534DtcExecutionLeaseTests.cs"].map(name => fileURLToPath(new URL(name, import.meta.url)))],
+    { cwd: root, env, windowsHide: true, encoding: "utf8", timeout: 15000 });
+    assert.equal(holderBuild.status, 0, holderBuild.stdout + holderBuild.stderr);
+    const holder = spawn(holderExe, ["active"], { cwd: root, env, windowsHide: true, timeout: 10000,
+      killSignal: "SIGKILL", stdio: ["pipe", "pipe", "pipe"] });
+    const closed = new Promise(resolve => holder.once("close", (code, signal) => resolve({ code, signal })));
+    try {
+      await new Promise((resolve, reject) => {
+        let text = "";
+        const timer = setTimeout(() => reject(new Error("lease holder readiness timeout")), 5000);
+        holder.once("error", error => { clearTimeout(timer); reject(error); });
+        holder.once("exit", () => { clearTimeout(timer); reject(new Error("lease holder exited before readiness")); });
+        holder.stdout.on("data", chunk => {
+          text += chunk.toString();
+          if (text === "READY\r\n" || text === "READY\n") { clearTimeout(timer); resolve(); }
+        });
+      });
+      const blocked = spawnSync(exe, ["--generated-mode01"], { cwd: root, env, windowsHide: true,
+        encoding: "utf8", timeout: 15000, maxBuffer: 8192 });
+      assert.equal(blocked.status, 8);
+      assert.equal(blocked.stdout, "");
+      assert.equal(blocked.stderr, "");
+    } finally { holder.stdin.end("done\n"); }
+    const released = await closed;
+    assert.equal(released.code, 0); assert.equal(released.signal, null);
+    console.log(arch, "Mode01 shared lease busy refusal and holder shutdown: 5 checks passed");
+  }
   let exitCode;
   const run = createJ2534Mode01FixtureSupervisor({ expected: { request_ecu: 0x7e0, pid },
     decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,

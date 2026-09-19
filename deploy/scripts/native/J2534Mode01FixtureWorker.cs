@@ -50,7 +50,12 @@ internal static class J2534Mode01FixtureWorker
     internal static int Main(string[] args)
     {
         if (args.Length != 1 || (args[0] != "--generated-mode01" && args[0] != "--generated-mode01-out-of-order")) return 2;
+        J2534DtcExecutionLease lease = null;
+        bool cleanupConfirmed = false;
         try {
+            // Reuse the existing single-acquisition/uncertain-cleanup rules.
+            // Never load even the generated fixture while another owner holds it.
+            if (!J2534DtcExecutionLease.TryAcquire(out lease)) return 8;
             var library = new Library();
             using (var owner = new J2534IdentityNative(library)) {
                 uint device, channel;
@@ -70,10 +75,12 @@ internal static class J2534Mode01FixtureWorker
                     Bind<J2534ReadRequestNative.StartFilterFunction>(library, "PassThruStartMsgFilter"),
                     Bind<J2534ReadRequestNative.StopFilterFunction>(library, "PassThruStopMsgFilter"));
                 if (observation == null || !owner.ReferenceReleased) return 5;
+                cleanupConfirmed = true;
                 Console.Write(observation.ToFixtureJson());
             }
             return 0;
         } catch { return 1; }
+        finally { if (lease != null) lease.Complete(cleanupConfirmed); }
     }
 }
 #endif
