@@ -1309,7 +1309,11 @@ async function main() {
     && !distributionSources.includes("j2534-native-preflight-fixture-v1")
     && !distributionSources.includes("j2534-verified-identity-fixture-v1"), "Native preflight fixture reached a public or PC package manifest");
   total++;
-  console.log(`J2534 native binding checks: ${total} / generated identity, receive and read-request/filter native fixture ABI: tested / compiler-built C reference: not tested / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
+  // Run after the existing fixtures have completed and released their execution leases.
+  // Static imports would run before main's Windows guard and could overlap fixture work.
+  await import("./native/validate-mode01-exchange.js");
+  await import("./native/validate-mode01-native-fixture.js");
+  console.log(`J2534 native binding checks: ${total} / Mode01 suites: passed (counts reported above) / generated identity, receive and read-request/filter native fixture ABI: tested / compiler-built C reference: not tested / real VCI compatibility: not tested / vehicle communication: not performed / Errors: 0`);
 }
 
 main().catch(error => { console.error(error.message); process.exitCode = 1; });

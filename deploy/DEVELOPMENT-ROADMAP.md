@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-20 Mode01検査の通常入口への統合: 個別実行だけだった結果変換/保存復元/親終了確認/単発supervisor検査をvalidate:bridgeへ接続し、既存Ubuntu CIのbridge段階からも実行対象とした。Windowsのvalidate:j2534-nativeは既存検査とcleanup完了後にMode01 managed→生成DLL検査をawaitで順次実行し、排他leaseの同時競合を避ける。失敗は既存入口の非zero終了へ伝播。通常入口を実行しbridge384とMode01 Node97、既存native7365、Mode01 managed各450、生成DLL両architecture計112項目合格。新しい模擬ケース追加ではなく、既存検査の実行漏れ防止。Windows検査をGitHubのUbuntu jobで実行したとは扱わず、実vendor DLL/VCI/実車/別PCは未検証。本体/601ZIP/保存形式/公開通信権限は不変。
+
 2026-09-20 Mode01生成workerの既存実行lease結合: 9/13承認済みJ2534DtcExecutionLeaseをMode01検査workerのDLL読取前へ接続。取得はprocess内1回、正常owner.ReferenceReleased確認後だけcleanupConfirmedを立て、finallyのCompleteで既存の正常解放/不確実時process終了まで保持を再利用。部品のmutex名/abandoned規約/保持規約は変更せず、強制解除や再試行は追加しない。別の固定helperが既存global mutexを保持中はworkerがexit8/出力なし、helper正常終了後は通常fixture経路が合格することをx86/x64各5項目確認。水温/RPM/0/未対応/不正応答の既存生成DLL結合102も合格、合計112。実OS終了不能process・実vendor DLL/VCI/実車/別PCは未検証。一般driver選択との結合は未完了で、公開entry/保存形式/601ZIP・通信無効は不変。
 
 2026-09-20 Mode01回転数の生成DLL結合と拒否経路: 固定native fixtureへPID0C対応確認→回転数2000.25/0応答を追加し、workerの対象PIDをcompile時定数として親の期待値と一致させた。水温も含む正常3経路はowner終了→親監督→既存JSON保存復元を通過。未対応bit/別PID/不完全応答の3経路はworkerが明示exit5（クラッシュではない）、親session:null・出力不採用・同instance再実行不可。x86/x64各51項目（計102）、Mode01 Node30/36/19/12合格。変更前の全63種類の生成fixtureバイナリはbyte一致し、既存DTC生成内容を変更していない。実vendor DLL/VCI/実車/別PCは未検証。production driver選択・実行leaseとの結合は残り、公開entry/保存形式/601ZIP・通信無効は維持。
