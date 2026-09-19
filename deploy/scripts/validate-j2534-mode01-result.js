@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import { createJ2534Mode01ResultConverter } from "./j2534-mode01-result-converter.js";
+import { createJ2534Mode01SessionBuilder } from "./j2534-mode01-session-builder.js";
 const context = vm.createContext({ window: {}, navigator: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), context);
 const obd = context.window.ObdReadOnly;
@@ -38,3 +39,27 @@ for (const change of [{ status: 1 }, { status: null }, { signal: "SIGTERM" }, { 
 const zero = sample(); zero.value = 0; zero.value_read.Messages[0].Data[6] = 40;
 assert.equal(convert(completion(zero), { request_ecu: 2016, pid: 5 }).status, "decoded"); checks++;
 console.log(`Mode01 result checks: ${checks}; synthetic completions, no driver or vehicle`);
+
+let sessionCalls = 0;
+const buildSession = createJ2534Mode01SessionBuilder({ decodeLivePidResponse: obd.decodeLivePidResponse,
+  buildDiagnosticScanSession: input => { sessionCalls++; return obd.buildDiagnosticScanSession(input); } });
+for (const input of [sample(5), sample(12), zero]) {
+  const expected = { request_ecu: 2016, pid: input.pid };
+  const built = buildSession(completion(input), expected);
+  assert.equal(built.fixture_only, true);
+  assert.equal(built.vehicle_communication, false);
+  const archive = obd.buildBridgeSessionExportPayload(built.session);
+  const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
+  assert.equal(restored.source, "j2534_development_read");
+  assert.deepEqual(restored.livePidSnapshot.monitorValues, built.session.livePidSnapshot.monitorValues);
+  assert.equal(restored.livePidSnapshot.monitorValues.length, 1);
+  assert.notEqual(restored.dtcSnapshot.dtc_readout_status, "reported");
+  assert.notEqual(restored.dtcSnapshot.dtcReadoutStatus, "reported");
+  assert.equal(archive.vehicle_command_enabled, false);
+  assert.equal(archive.retained_raw_text, false);
+  const before = sessionCalls;
+  assert.equal(buildSession({ ...completion(input), status: 1 }, expected), null);
+  assert.equal(buildSession(completion(input), { ...expected, request_ecu: 2017 }), null);
+  assert.equal(sessionCalls, before);
+}
+console.log("Mode01 session handoff and existing JSON round trip: 36 checks passed");

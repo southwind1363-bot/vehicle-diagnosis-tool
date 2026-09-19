@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import vm from "node:vm";
 import { createJ2534Mode01ResultConverter } from "../j2534-mode01-result-converter.js";
+import { createJ2534Mode01SessionBuilder } from "../j2534-mode01-session-builder.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -13,6 +14,8 @@ vm.runInContext(fs.readFileSync(new URL("../../obd-readonly.js", import.meta.url
 const obd = context.window.ObdReadOnly;
 obd.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL("../../data/obd-monitor-definitions.json", import.meta.url), "utf8")));
 const convert = createJ2534Mode01ResultConverter(obd.decodeLivePidResponse);
+const buildSession = createJ2534Mode01SessionBuilder({ decodeLivePidResponse: obd.decodeLivePidResponse,
+  buildDiagnosticScanSession: obd.buildDiagnosticScanSession });
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "mode01-exchange-"));
 for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) {
   const compiler = path.join(process.env.SystemRoot || "C:\\Windows", "Microsoft.NET", framework, "v4.0.30319", "csc.exe");
@@ -44,5 +47,14 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   assert.equal(failed.stdout, completed.stdout);
   assert.equal(convert(failed, expected).snapshot, null);
   assert.equal(convert(completed, { request_ecu: 0x7e1, pid: 5 }).snapshot, null);
+  const built = buildSession(completed, expected);
+  const archive = obd.buildBridgeSessionExportPayload(built.session);
+  const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(archive));
+  assert.equal(restored.source, "j2534_development_read");
+  assert.deepEqual(restored.livePidSnapshot.monitorValues, built.session.livePidSnapshot.monitorValues);
+  assert.equal(restored.livePidSnapshot.monitorValues.length, 1);
+  assert.equal(archive.vehicle_command_enabled, false);
+  assert.equal(buildSession(failed, expected), null);
+  console.log(arch, "managed child -> session -> existing JSON restore: 5 checks passed");
   console.log(arch, "managed child output -> shared decoder: 11 checks passed (no native DLL)");
 }
