@@ -32,13 +32,12 @@ function payload(read, ecu) {
 
 export function createJ2534Mode01ResultConverter(decodeLivePidResponse) {
   if (typeof decodeLivePidResponse !== "function") throw new TypeError("live_decoder_required");
-  return function convert(completion, expected) {
+  function decodeOutput(stdout, expected) {
     try {
-      if (!completion || completion.status !== 0 || completion.signal !== null || completion.error
-        || completion.stderr !== "" || typeof completion.stdout !== "string" || completion.stdout.length > 8192
+      if (typeof stdout !== "string" || stdout.length > 8192
         || !exact(expected, ["request_ecu", "pid"]) || !uint(expected.request_ecu)
         || expected.request_ecu < 0x7e0 || expected.request_ecu > 0x7e7 || ![5, 12].includes(expected.pid)) return unavailable();
-      const input = JSON.parse(completion.stdout);
+      const input = JSON.parse(stdout);
       if (!exact(input, ["fixture_only", "cleanup_confirmed", "request_ecu", "pid", "value", "supported_read", "value_read"])
         || input.fixture_only !== true || input.cleanup_confirmed !== true
         || input.request_ecu !== expected.request_ecu || input.pid !== expected.pid) return unavailable();
@@ -59,5 +58,20 @@ export function createJ2534Mode01ResultConverter(decodeLivePidResponse) {
       snapshot.source = "j2534_development_read";
       return { status: "decoded", snapshot, evidence: input };
     } catch { return unavailable(); }
+  }
+  function convert(completion, expected) {
+    if (!completion || completion.status !== 0 || completion.signal !== null || completion.error
+      || completion.stderr !== "") return unavailable();
+    return decodeOutput(completion.stdout, expected);
+  }
+  // Only for results from the trusted bounded parent configured to reject stderr.
+  // Do not fabricate a synchronous exit status from asynchronous output.
+  convert.fromSupervisedCompletion = function (completion, expected) {
+    if (completion?.execution_status !== "worker_completed" || completion.worker_started !== true
+      || completion.worker_exited !== true || completion.termination_requested !== false
+      || completion.termination_signal_sent !== false || !Array.isArray(completion.errors)
+      || completion.errors.length !== 0 || !exact(completion.parsed_result, ["stdout"])) return unavailable();
+    return decodeOutput(completion.parsed_result.stdout, expected);
   };
+  return convert;
 }

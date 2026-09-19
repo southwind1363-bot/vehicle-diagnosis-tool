@@ -63,3 +63,16 @@ for (const input of [sample(5), sample(12), zero]) {
   assert.equal(sessionCalls, before);
 }
 console.log("Mode01 session handoff and existing JSON round trip: 36 checks passed");
+
+const supervised = () => ({ execution_status: "worker_completed", worker_started: true, worker_exited: true,
+  termination_requested: false, termination_signal_sent: false, errors: [], parsed_result: { stdout: JSON.stringify(sample()) } });
+assert.ok(buildSession.fromSupervisedCompletion(supervised(), { request_ecu: 2016, pid: 5 }));
+for (const mutate of [c => c.execution_status = "worker_failed", c => c.worker_started = false,
+  c => c.worker_exited = false, c => c.termination_requested = true, c => c.termination_signal_sent = true,
+  c => c.errors.push("worker_termination_unconfirmed"), c => c.parsed_result = null,
+  c => c.parsed_result.stdout = "{", c => c.parsed_result.extra = true]) {
+  const c = supervised(); mutate(c); const before = sessionCalls;
+  assert.equal(buildSession.fromSupervisedCompletion(c, { request_ecu: 2016, pid: 5 }), null);
+  assert.equal(sessionCalls, before);
+}
+console.log("Mode01 supervised completion handoff: 19 checks passed (artificial completion states)");

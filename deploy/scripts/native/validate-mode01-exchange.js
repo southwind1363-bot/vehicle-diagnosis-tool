@@ -3,7 +3,8 @@ import os from "node:os";
 import path from "node:path";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
-import { spawnSync } from "node:child_process";
+import { spawnSync, spawn } from "node:child_process";
+import { createBoundedFixtureWorker } from "../bounded-fixture-worker.js";
 import vm from "node:vm";
 import { createJ2534Mode01ResultConverter } from "../j2534-mode01-result-converter.js";
 import { createJ2534Mode01SessionBuilder } from "../j2534-mode01-session-builder.js";
@@ -55,6 +56,26 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   assert.equal(restored.livePidSnapshot.monitorValues.length, 1);
   assert.equal(archive.vehicle_command_enabled, false);
   assert.equal(buildSession(failed, expected), null);
+  for (const argument of ["--fixture-output", "--fixture-output-failed-exit"]) {
+    const worker = createBoundedFixtureWorker({
+      spawnWorker: () => spawn(exe, [argument], { cwd: root, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }),
+      parseOutput: stdout => ({ stdout }), outputLimit: 8192, rejectStderr: true
+    });
+    const supervised = await worker({ timeout: 15000 });
+    assert.equal(supervised.worker_started, true);
+    assert.equal(supervised.worker_exited, true);
+    const session = buildSession.fromSupervisedCompletion(supervised, expected);
+    if (argument === "--fixture-output") {
+      assert.equal(supervised.execution_status, "worker_completed");
+      const restoredAsync = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(session.session)));
+      assert.deepEqual(restoredAsync.livePidSnapshot.monitorValues, restored.livePidSnapshot.monitorValues);
+      assert.equal(restoredAsync.source, "j2534_development_read");
+    } else {
+      assert.equal(supervised.execution_status, "worker_failed");
+      assert.equal(session, null);
+    }
+  }
+  console.log(arch, "bounded asynchronous child -> session: 9 checks passed");
   console.log(arch, "managed child -> session -> existing JSON restore: 5 checks passed");
   console.log(arch, "managed child output -> shared decoder: 11 checks passed (no native DLL)");
 }

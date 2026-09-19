@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-20 Mode01非同期監督結果の保存結合: converter/session builderへtrusted bounded親専用fromSupervisedCompletionを追加。同期exit情報を捏造せず、started/exited/completed・停止要求なし・errors空を確認して同じ厳密応答変換へ渡す。既存bounded runnerを8192bytes/stderr拒否/15秒で使用し、x86/x64実managed子processの正常close→既存保存復元と非zero終了→不採用を各9項目確認。終了未確認/停止要求/壊れた出力等の人工状態19、既存変換30/保存36、各architecture415＋11＋5も合格。runner自体の期限/kill/保持規約は変更なし。一般driver launcherや子process真正性保証ではなく、生成native DLL経由Mode01 ABIと固定隔離workerは未結合。実vendor DLL/VCI/実車/公開entry/保存形式/601ZIPは変更なし。
+
 2026-09-20 Mode01保存用sessionへの内部結合: trusted親の実completionと期待ECU/PIDをconverterへ直接渡す開発専用session builderを追加。正常結果だけ既存livePidSnapshotへ渡し、既存JSON export/importで値と開発検証sourceを保持。異常終了/別ECUはsession生成前に拒否、未読取DTCをreportedにせず、新規保存項目や既存sessionとの自動mergeは追加しない。人工水温/回転数/取得ゼロの変換30＋保存受渡し36、x86/x64実managed子process各415＋結果11＋保存復元5項目合格。既存DTC148/保存往復/pipe、session export266（policy177/history369含む）も合格。利用者データや実vendor DLL/VCI/実車は未使用。生成native DLL経由Mode01 ABIと隔離workerへの結合は引き続き未完了。公開entry/通信権限/保存形式/601ZIPは不変。
 
 2026-09-19 Mode01実子process出力の結合: 開発専用Observationへ固定数値fieldと元応答全項目をJSON化するToFixtureJsonを追加。正常cleanup済みのmanaged callback観測をx86/x64検査exeから出力し、親の実spawnSync完了情報と期待ECU/PIDを既存converterへ渡して共通水温90度へ結合。fr-FR culture下でもJSON数値表現を固定し、同一stdoutでもexit1なら不採用、別ECU期待も不採用。各architectureで既存415＋結合11項目、converter人工30項目合格。これは実子processでのmanaged callback検査であり、生成native DLL経由Mode01 ABI・実vendor DLL/VCI/実車の検証ではない。生成DLL隔離workerと保存復元への結合は残る。公開entry/実行権限/保存形式/601ZIPは不変。
