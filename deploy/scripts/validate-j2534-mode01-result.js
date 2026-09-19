@@ -3,6 +3,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { createJ2534Mode01ResultConverter } from "./j2534-mode01-result-converter.js";
 import { createJ2534Mode01SessionBuilder } from "./j2534-mode01-session-builder.js";
+import { createJ2534Mode01FixtureSupervisor } from "./j2534-mode01-fixture-supervisor.js";
 const context = vm.createContext({ window: {}, navigator: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), context);
 const obd = context.window.ObdReadOnly;
@@ -76,3 +77,23 @@ for (const mutate of [c => c.execution_status = "worker_failed", c => c.worker_s
   assert.equal(sessionCalls, before);
 }
 console.log("Mode01 supervised completion handoff: 19 checks passed (artificial completion states)");
+
+let spawns = 0;
+const supervisorOptions = { expected: { request_ecu: 2016, pid: 5 }, decodeLivePidResponse: obd.decodeLivePidResponse,
+  buildDiagnosticScanSession: obd.buildDiagnosticScanSession, spawnWorker: () => { spawns++; throw new Error("fixture spawn failed"); } };
+const cancelled = createJ2534Mode01FixtureSupervisor(supervisorOptions);
+const abort = new AbortController(); abort.abort();
+assert.equal((await cancelled({ signal: abort.signal })).reason, "fixture_cancelled");
+assert.equal((await cancelled()).reason, "fixture_already_consumed");
+assert.equal(spawns, 0);
+const failedSpawn = createJ2534Mode01FixtureSupervisor(supervisorOptions);
+const failedOutcome = await failedSpawn();
+assert.equal(failedOutcome.session, null);
+assert.deepEqual(failedOutcome.completion.errors, ["worker_spawn_failed"]);
+assert.equal((await failedSpawn()).reason, "fixture_already_consumed");
+assert.equal(spawns, 1);
+for (const expected of [null, {}, { request_ecu: 2015, pid: 5 }, { request_ecu: 2016, pid: 4 },
+  { request_ecu: 2016, pid: 5, extra: true }]) {
+  assert.throws(() => createJ2534Mode01FixtureSupervisor({ ...supervisorOptions, expected }), /mode01_fixture_configuration_invalid/);
+}
+console.log("Mode01 supervisor cancellation/spawn failure/configuration: 12 checks passed; no process used");
