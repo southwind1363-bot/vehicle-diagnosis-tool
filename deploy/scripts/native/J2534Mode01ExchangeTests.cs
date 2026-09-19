@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 namespace VehicleDiagnosis.Native
 {
     internal static class J2534Mode01ExchangeTests
@@ -29,6 +30,7 @@ namespace VehicleDiagnosis.Native
         }
         private static void Main()
         {
+            CheckOwnedSupport();
             for (uint ecu = 0x7e0; ecu <= 0x7e7; ecu++) {
                 Check(Ready(ecu, 12).AcceptValueResponse(ecu + 8, new byte[] { 0x41, 12, 0x1f, 0x40 }) == 2000);
                 Check(Ready(ecu, 5).AcceptValueResponse(ecu + 8, new byte[] { 0x41, 5, 130 }) == 90);
@@ -55,6 +57,69 @@ namespace VehicleDiagnosis.Native
             Reject(delegate { new J2534Mode01Exchange(0x7e8, 5); });
             Reject(delegate { new J2534Mode01Exchange(0x7e0, 4); });
             Console.WriteLine("Mode01 pure exchange checks: " + checks);
+        }
+        private sealed class Library : IIdentityLibrary
+        {
+            private readonly J2534IdentityNative.OpenFunction open = delegate(IntPtr p, out uint id) { id = 10; return 0; };
+            private readonly J2534IdentityNative.ReadVersionFunction read = delegate { return 0; };
+            private readonly J2534IdentityNative.CloseFunction close = delegate { return 0; };
+            internal bool Released;
+            public IntPtr Resolve(string name)
+            {
+                if (name == "PassThruOpen") return Marshal.GetFunctionPointerForDelegate(open);
+                if (name == "PassThruReadVersion") return Marshal.GetFunctionPointerForDelegate(read);
+                if (name == "PassThruClose") return Marshal.GetFunctionPointerForDelegate(close);
+                throw new Exception("unexpected export");
+            }
+            public bool Release(bool allowed) { Released = allowed; return allowed; }
+        }
+        private static void CheckOwnedSupport()
+        {
+            foreach (int failure in new int[] { 0, 1, 2, 3 }) {
+                var library = new Library();
+                using (var owner = new J2534IdentityNative(library)) {
+                    uint device, channel, filter;
+                    Check(owner.Open(out device) == 0);
+                    Check(owner.Connect(device, 6, 0, 500000,
+                        delegate(uint d, uint p, uint f, uint b, IntPtr output) { Marshal.WriteInt32(output, 20); return 0; },
+                        delegate { return 0; }, out channel) == 0);
+                    int calls = 0;
+                    var request = new J2534ReadRequestNative(owner, device,
+                        delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                            calls++;
+                            byte[] actual = new byte[4152], expected = new byte[4152];
+                            Marshal.Copy(m, actual, 0, actual.Length);
+                            expected[0] = 6; expected[8] = 64; expected[16] = 6;
+                            expected[26] = 7; expected[27] = 224; expected[28] = 1;
+                            Check(Convert.ToBase64String(actual) == Convert.ToBase64String(expected));
+                            Check(c == channel && t == 0 && Marshal.ReadInt32(n) == 1);
+                            Reject(delegate { owner.Dispose(); });
+                            if (failure == 2) Marshal.WriteInt32(n, 0);
+                            if (failure == 3) throw new Exception("artificial failure");
+                            return failure == 1 ? 9 : 0;
+                        });
+                    Reject(delegate { request.DispatchMode01SupportedReadOnce(channel, 0x7df); });
+                    Reject(delegate { request.DispatchMode01SupportedReadOnce(channel, 0x7e0); });
+                    Check(calls == 0);
+                    Check(request.PrepareDtcFilterOnce(channel, 0x7e0,
+                        delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr id) { Marshal.WriteInt32(id, 30); return 0; },
+                        delegate { return 0; }, out filter) == 0);
+                    Reject(delegate { request.DispatchMode01SupportedReadOnce(channel + 1, 0x7e0); });
+                    if (failure >= 2) Reject(delegate { request.DispatchMode01SupportedReadOnce(channel, 0x7e0); });
+                    else Check(request.DispatchMode01SupportedReadOnce(channel, 0x7e0) == (failure == 1 ? 9 : 0));
+                    Reject(delegate { request.DispatchMode01SupportedReadOnce(channel, 0x7e0); });
+                    Check(calls == 1);
+                    if (failure == 0) {
+                        var receiver = new J2534ReceiveNative(owner, device, delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                            Check(c == channel && t == 1000); Marshal.WriteInt32(n, 0); return 9;
+                        });
+                        Check(receiver.ReadDtcResponseOnce(channel, 3).Messages.Length == 0);
+                        Check(owner.StopDtcReadFilter(device, channel, filter) == 0);
+                        Check(owner.Disconnect(device, channel) == 0 && owner.Close(device) == 0);
+                    }
+                }
+                Check(library.Released == (failure == 0));
+            }
         }
     }
 }

@@ -57,16 +57,30 @@ namespace VehicleDiagnosis.Native
             if (requestEcu < 0x7e0 || requestEcu > 0x7e7
                 || (service != 0x03 && service != 0x07 && service != 0x0a))
                 throw new InvalidOperationException("native_read_request_not_allowed");
+            return DispatchOnce(channel, requestEcu, service, null);
+        }
+#if J2534_DTC_DEVELOPMENT
+        // First Mode01 stage only. Value PIDs cannot bypass the support check.
+        internal int DispatchMode01SupportedReadOnce(uint channel, uint requestEcu)
+        {
+            if (requestEcu < 0x7e0 || requestEcu > 0x7e7)
+                throw new InvalidOperationException("native_read_request_not_allowed");
+            return DispatchOnce(channel, requestEcu, 1, 0);
+        }
+#endif
+        private int DispatchOnce(uint channel, uint requestEcu, byte service, byte? pid)
+        {
             return owner.RunOwnedReadRequest(device, channel, requestEcu, delegate {
                 using (var message = new RequestBuffer(4152))
                 using (var count = new RequestBuffer(4))
                 {
                     Marshal.WriteInt32(message.Data, 0, 6); // ISO15765
                     Marshal.WriteInt32(message.Data, 8, 0x40); // frame padding, 11-bit ID
-                    Marshal.WriteInt32(message.Data, 16, 5); // address DWORD + SID
+                    Marshal.WriteInt32(message.Data, 16, pid.HasValue ? 6 : 5);
                     Marshal.WriteByte(message.Data, 26, (byte)(requestEcu >> 8));
                     Marshal.WriteByte(message.Data, 27, (byte)requestEcu);
                     Marshal.WriteByte(message.Data, 28, service);
+                    if (pid.HasValue) Marshal.WriteByte(message.Data, 29, pid.Value);
                     Marshal.WriteInt32(count.Data, 1);
                     int status;
                     try { status = write(channel, message.Data, count.Data, 0); }

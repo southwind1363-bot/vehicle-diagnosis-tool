@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-19 Mode01対応確認のowner結合: 開発compileflag限定DispatchMode01SupportedReadOnceを既存RunOwnedReadRequestへ結合。PID00固定で、任意PIDや05/0Cの直接dispatchは未公開。既存DTC03/07/0Aは同じprivate buffer処理を再利用し許可範囲不変。人工managed callbackで全4152byte配置・所有channel/filter必須・一回dispatch・受信1000ms・正常cleanup解放・失敗保持をx86/x64各179項目確認。対応確認後の値読取は既存ownerが一回送受信のみのため未結合で、ラッチ解除や別ownerによる迂回は行わない。次は同承認範囲の二段階読取を既存DTC単発規約から分離した開発専用状態管理として検討する。実DLL/VCI/実車/公開実行/保存形式/601ZIPは不変。
+
 2026-09-19 Mode01読取の内部処理第一段: 直前の確認へ利用者「続けて」。開発compileflag限定のJ2534Mode01Exchangeを追加し、物理ECU7E0..7E7のPID00対応確認後だけPID05水温またはPID0C回転数の固定要求を生成。別ECU/不完全/別SID・PID/未対応はnull、消費済み応答の再採用と再試行を拒否、取得ゼロを欠落と区別する。x86/x64各119項目の純粋な要求・応答処理検査合格。DLL/VCI/実車は未使用。既存DTC owner/loader/workerへ未結合、既存結果/保存への結合も未完了で、実通信完成とはしない。次は同承認範囲でowner付き単発要求と受信の開発結合を進める。本体/601ZIP/保存形式/公開実行無効は不変。
 
 2026-09-19 preflight実processの終了/時間切れ検証: 実Node子processで正常exitは出力保持、異常exitと1500ms timeoutは出力破棄、実close確認を3経路で検証。native worker/DLL/registry/車両/永続隔離fileは使用せず、検査入口を既存bridge回帰へ接続。close未着の再現を狙った有限寿命の孫processへのstdio継承は、このWindowsで親exitとcloseが同時（約103ms）となり再現失敗。終了未確認/OS停止不能が実証されたとはせず、8人工event検査と区別する。同じ失敗は反復しない。本体/601ZIP・保存形式・実行権限は不変。
