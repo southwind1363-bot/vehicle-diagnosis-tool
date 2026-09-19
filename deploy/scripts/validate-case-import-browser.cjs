@@ -83,6 +83,40 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await page.getByRole('button', { name: '5. データ管理', exact: true }).click();
     const input = page.locator('#importJsonInput');
     const status = page.locator('#caseImportStatus');
+    if (process.argv.includes('--oversized-file')) {
+      const record = { id: 'size-bound-original', model: 'size-bound-test', symptom: '人工事例' };
+      await input.setInputFiles({ name: 'original.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([record])) });
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('JSONインポート完了'));
+      const before = await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1'));
+      // Observe the real API, do not replace file size or simulate FileReader.
+      await page.evaluate(() => {
+        window.caseFileReadCalls = 0;
+        const read = FileReader.prototype.readAsText;
+        FileReader.prototype.readAsText = function (...args) { window.caseFileReadCalls++; return read.apply(this, args); };
+      });
+      const largeFile = path.join(output, 'oversized-case.json');
+      const fd = fs.openSync(largeFile, 'wx');
+      try { fs.ftruncateSync(fd, 64 * 1024 * 1024 + 1); } finally { fs.closeSync(fd); }
+      await input.setInputFiles(largeFile);
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('64 MiB'));
+      assert.equal(await page.evaluate(() => window.caseFileReadCalls), 0);
+      assert.equal(await page.evaluate(() => localStorage.getItem('vehicle-diagnosis-cases-v1')), before);
+      assert.equal(await input.inputValue(), '');
+      assert.equal(await page.locator('#cancelCaseImportButton').isDisabled(), true);
+      await status.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: path.join(output, 'case-oversized-rejected.png') });
+      const next = { id: 'size-bound-next', model: 'normal-file-recovery', symptom: '人工事例' };
+      await input.setInputFiles({ name: 'next.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify([next])) });
+      await page.waitForFunction(() => document.querySelector('#caseImportStatus').textContent.includes('JSONインポート完了'));
+      assert.equal(await page.evaluate(() => window.caseFileReadCalls), 1);
+      assert.deepEqual(await page.evaluate(() => savedCases.map(item => item.id)), [record.id, next.id]);
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      assert.deepEqual(await page.evaluate(() => savedCases.map(item => item.id)), [record.id, next.id]);
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(JSON.stringify({ passed: true, flow: 'real oversized file rejected before read -> existing data retained -> normal file import -> reload retained', output }));
+      return;
+    }
     if (process.argv.includes('--field-boundaries')) {
       const records = [
         { id: 'boundary-a', maker: 'A|B', model: 'C', symptom: '試験専用' },

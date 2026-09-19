@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-19 601配布版の過大ファイル実ブラウザ確認: ブラウザーCLI不在のため既存Playwrightの隔離contextを使用。別展開601（847files整合済み）へ64 MiB+1 byteの実temp fileをfile inputから選択し、実FileReader.readAsText呼出0回、保存済み人工事例不変、input解除/中断button無効、通常JSONの手動再選択で1回読込、reload後2件保持を確認。390px画面の拒否案内を目視、console/page errorと外向き通信0。再現用--oversized-fileを既存browser検査へ追加。本体/ZIP/保存形式/通信権限変更なし。64MiBのJSON解析性能や実VCI/別PC適合を証明しない。前回c2d11cab CI success確認。
+
 3.13.601 整備事例JSONの過大読込防止: importCasesJsonには容量上限がなくFileReaderで全読込していたため、64 MiB超をreader生成前に拒否。切詰めや部分取込はせず、保存事例を保持して選び直しを案内する。旧読込の所有権失効・timer解除/abortを先に実施し、遅いcallbackを不採用とする既存規約は維持。人工file metadataで読込0回・境界含む受理・手動選び直し・保存不変を確認、case storage486と関連export等・offline183/構文合格。ZIP別展開847files/16,909,014bytes整合、script hash一致。ZIP2,669,418bytes/SHA256 4E9CCC3865A3D8352C0FF2C00DA183AE1BF880A44D3E9158FA23E3EF0703B1B0。64 MiB実ファイルのブラウザ負荷試験ではなく、実機/別PC未検証。保存形式・診断結果契約・通信権限不変。前回600のCI success確認。
 
 3.13.600 登録preflight終了管理修正のPC配布同梱: a31b983bの修正を新版へ含め、旧599フォルダー/ZIPを上書きせず生成。ZIPを新規tempへ別展開し、整合性847files/16,908,514bytes、runnerとsourceの全文一致、展開済みrunnerから抽出した終了管理8ケースを確認。offline183・構文検査合格。ZIP2,669,273bytes/SHA256 54A36D47903F6D4B6D4E27B64EB2FC973CB3CA92BFEA024993E5781CC4266482。前回a31b983b GitHub CI success確認。これは同一PCでの配布整合性と人工event検証で、別PC/実OS終了不能process/実vendor DLL/VCI/実車の検証ではない。保存形式/実機通信無効は不変。
