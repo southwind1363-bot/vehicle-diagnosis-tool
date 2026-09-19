@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.600 登録preflight終了管理修正のPC配布同梱: a31b983bの修正を新版へ含め、旧599フォルダー/ZIPを上書きせず生成。ZIPを新規tempへ別展開し、整合性847files/16,908,514bytes、runnerとsourceの全文一致、展開済みrunnerから抽出した終了管理8ケースを確認。offline183・構文検査合格。ZIP2,669,273bytes/SHA256 54A36D47903F6D4B6D4E27B64EB2FC973CB3CA92BFEA024993E5781CC4266482。前回a31b983b GitHub CI success確認。これは同一PCでの配布整合性と人工event検証で、別PC/実OS終了不能process/実vendor DLL/VCI/実車の検証ではない。保存形式/実機通信無効は不変。
+
 2026-09-19 登録preflightの終了通知待ち修正: 前回の確認へ利用者「続けて」。異常exit後や正常exit後のclose未着でも二次期限へ到達し、結果を破棄して終了未確認・隔離保持とする。遅延closeは返却済み凍結結果/禁止ラッチを変更せず、子参照だけ解放。kill失敗/未spawn/隔離記録例外も同じ拒否を保持。実関数を抽出した人工event・手動clockの8ケース、既存bridge384・署名配布26テスト合格。実OS終了不能process/実vendor DLL/VCI/実車は未検証。保存形式/公開通信権限不変。既存599ZIPは未更新のため本修正の同梱を主張しない。次は配布版への反映・別展開検証を進める。
 
 2026-09-18 署名/配布回帰検査を既存CI入口へ組込み: validate-local-bridge-readonlyから固定6test fileの専用runnerを呼び、非zero/signal/timeoutを失敗へ伝播。新規26テスト＋bridge384合格、native compile/実registry/旧PS1は実行しない。登録resolverの実temp結合はWindows path専用なのでLinuxではskip明示する修正も追加。Windows39項目とplatform分岐模擬Linux34項目を確認（実Linux確認ではない）。workflow本体は編集せずdeploy内のみ。公開実行/保存形式/599ZIP不変、CI完了は別途確認が必要。
