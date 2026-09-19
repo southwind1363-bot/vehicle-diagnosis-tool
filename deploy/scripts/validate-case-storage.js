@@ -85,6 +85,32 @@ function client(options = {}) {
 
 const removeButton = { dataset: { deleteCase: "existing" } };
 const removeEvent = { target: { closest: () => removeButton } };
+for (const replacePending of [false, true]) {
+  const c = client();
+  let previous, aborts = 0;
+  if (replacePending) {
+    c.context.importCasesJson({ target: { files: [{ size: 32 }] } });
+    previous = c.getReader();
+    previous.result = '[{"id":"stale","model":"stale"}]';
+    previous.abort = () => { aborts++; previous.onload(); };
+  }
+  c.context.importCasesJson({ target: { files: [{ size: 64 * 1024 * 1024 + 1 }] } });
+  assert.equal(c.getReader(), previous, "Oversized input must not construct a reader");
+  assert.equal(c.context.caseImportOperation, null);
+  assert.equal(c.timers.size, 0);
+  assert.equal(c.context.importJsonInput.value, "");
+  assert.equal(c.context.cancelCaseImportButton.disabled, true);
+  assert.match(c.context.caseStatus.textContent, /64 MiB.*変更していません/);
+  assert.equal(c.store.get(key), c.bytes); assert.equal(c.calls.writes.length, 0);
+  assert.equal(aborts, replacePending ? 1 : 0);
+  // Boundary remains inclusive; selection of a smaller file recovers manually.
+  c.context.importCasesJson({ target: { files: [{ size: 64 * 1024 * 1024 }] } });
+  assert.notEqual(c.getReader(), previous);
+  c.getReader().result = '[]'; c.getReader().onload();
+  assert.equal(c.context.caseImportOperation, null);
+  assert.match(c.context.caseStatus.textContent, /JSONインポート完了/);
+}
+console.log("Case import size bound: pre-read rejection, stale callback isolation and inclusive boundary passed");
 for (const action of ["timeout", "cancel", "replace", "success"]) {
   const c = client();
   c.context.importCasesJson({ target: { files: [{}] } });

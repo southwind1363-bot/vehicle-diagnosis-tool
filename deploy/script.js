@@ -228,7 +228,7 @@ const OBD_CORE_PROGRESS_SNAPSHOT = Object.freeze({
   recentMilestone: "対応PID在庫をネットワーク経路別に比較",
   scopeNote: "自動検証件数は実車確認済み車種数や完成率ではありません"
 });
-const APP_VERSION = "3.13.600";
+const APP_VERSION = "3.13.601";
 const APP_LAST_UPDATED = "2026-09-15";
 const OFFLINE_ASSET_MANIFEST = "offline-assets.json";
 const MY_GPT_URL = "https://chatgpt.com/g/g-6a0a54ba861481919e63d5e2b4bbbe8b-zheng-bei-xiang-tan-yong-gpt";
@@ -17002,6 +17002,15 @@ function importCasesJson(event) {
   // Invalidate first: abort may synchronously dispatch the old callback.
   clearTimeout(previous?.timeout);
   try { previous?.reader?.abort?.(); } catch (_) { /* Ownership still prevents stale results. */ }
+  // Bound file allocation before FileReader/JSON.parse. Never truncate a backup
+  // or commit a partial batch. This does not change the stored record format.
+  if (file.size > 64 * 1024 * 1024) {
+    caseImportOperation = null;
+    syncCaseImportControls();
+    importJsonInput.value = "";
+    setCaseImportStatus("JSONインポートは開始しませんでした。整備事例ファイルは64 MiB以下にしてください。保存済み事例は変更していません。");
+    return;
+  }
   setCaseImportStatus("JSONファイルを読み込んでいます。保存への反映はまだ完了していません。");
   const failRead = () => {
     if (caseImportOperation !== operation) return;

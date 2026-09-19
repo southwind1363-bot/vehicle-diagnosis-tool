@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+3.13.601 整備事例JSONの過大読込防止: importCasesJsonには容量上限がなくFileReaderで全読込していたため、64 MiB超をreader生成前に拒否。切詰めや部分取込はせず、保存事例を保持して選び直しを案内する。旧読込の所有権失効・timer解除/abortを先に実施し、遅いcallbackを不採用とする既存規約は維持。人工file metadataで読込0回・境界含む受理・手動選び直し・保存不変を確認、case storage486と関連export等・offline183/構文合格。ZIP別展開847files/16,909,014bytes整合、script hash一致。ZIP2,669,418bytes/SHA256 4E9CCC3865A3D8352C0FF2C00DA183AE1BF880A44D3E9158FA23E3EF0703B1B0。64 MiB実ファイルのブラウザ負荷試験ではなく、実機/別PC未検証。保存形式・診断結果契約・通信権限不変。前回600のCI success確認。
+
 3.13.600 登録preflight終了管理修正のPC配布同梱: a31b983bの修正を新版へ含め、旧599フォルダー/ZIPを上書きせず生成。ZIPを新規tempへ別展開し、整合性847files/16,908,514bytes、runnerとsourceの全文一致、展開済みrunnerから抽出した終了管理8ケースを確認。offline183・構文検査合格。ZIP2,669,273bytes/SHA256 54A36D47903F6D4B6D4E27B64EB2FC973CB3CA92BFEA024993E5781CC4266482。前回a31b983b GitHub CI success確認。これは同一PCでの配布整合性と人工event検証で、別PC/実OS終了不能process/実vendor DLL/VCI/実車の検証ではない。保存形式/実機通信無効は不変。
 
 2026-09-19 登録preflightの終了通知待ち修正: 前回の確認へ利用者「続けて」。異常exit後や正常exit後のclose未着でも二次期限へ到達し、結果を破棄して終了未確認・隔離保持とする。遅延closeは返却済み凍結結果/禁止ラッチを変更せず、子参照だけ解放。kill失敗/未spawn/隔離記録例外も同じ拒否を保持。実関数を抽出した人工event・手動clockの8ケース、既存bridge384・署名配布26テスト合格。実OS終了不能process/実vendor DLL/VCI/実車は未検証。保存形式/公開通信権限不変。既存599ZIPは未更新のため本修正の同梱を主張しない。次は配布版への反映・別展開検証を進める。
