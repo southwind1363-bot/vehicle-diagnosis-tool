@@ -29,6 +29,7 @@ const nativeDirectory = path.join(scriptsDirectory, "native");
 const quarantineStore = createJ2534NativeQuarantineStore(nativeDirectory);
 let active = false;
 let terminationUnconfirmed = false;
+const unconfirmedChildren = new Set();
 
 const exactKeys = (value, keys) => value && typeof value === "object" && !Array.isArray(value)
   && Object.keys(value).length === keys.length && keys.every(key => Object.hasOwn(value, key));
@@ -85,20 +86,32 @@ function runBoundedProcess(file, args, { cwd, input = null, timeout, outputLimit
   return new Promise(resolve => {
     const state = { started: false, exited: false, stdout: "", error: null, termination_unconfirmed: false };
     let child, timer, terminationTimer, abortSubscription, closed = false, settled = false, bytes = 0;
-    const resolveOnce = value => { if (!settled) { settled = true; resolve(value); } };
+    const resolveOnce = value => { if (!settled) { settled = true; resolve(Object.freeze({ ...value })); } };
+    const removeAbort = () => {
+      try { abortSubscription?.[Symbol.dispose](); } catch { /* listener removed below */ }
+      try { if (signal) EventTarget.prototype.removeEventListener.call(signal, "abort", cancel); }
+      catch { state.error ||= "native_preflight_process_failed"; }
+    };
     const finishError = code => {
-      if (state.error) return;
-      state.error = code;
-      if (child && child.exitCode === null && child.signalCode === null) {
+      if (closed || settled || terminationTimer !== undefined) return;
+      state.error ||= code;
+      state.stdout = "";
+      // Exit does not imply that stdio has closed. Always bound the remaining
+      // wait, including failed spawn and an exit observed before the timeout.
+      terminationTimer = setTimeout(() => {
+        if (closed || settled) return;
+        clearTimeout(timer); removeAbort();
+        state.termination_unconfirmed = true;
+        state.error = "native_preflight_termination_unconfirmed";
+        state.stdout = "";
+        terminationUnconfirmed = true;
+        unconfirmedChildren.add(child);
+        try { quarantineStore.mark("termination_unconfirmed"); }
+        catch { /* In-memory latch remains blocked if persistence fails. */ }
+        finally { resolveOnce(state); }
+      }, 2000);
+      if (Number.isInteger(child?.pid) && child.exitCode === null && child.signalCode === null) {
         try { child.kill("SIGKILL"); } catch { /* Secondary deadline retains busy ownership. */ }
-        terminationTimer = setTimeout(() => {
-          if (closed) return;
-          state.termination_unconfirmed = true;
-          state.error = "native_preflight_termination_unconfirmed";
-          terminationUnconfirmed = true;
-          quarantineStore.mark("termination_unconfirmed");
-          resolveOnce(state);
-        }, 2000);
       }
     };
     try {
@@ -106,27 +119,28 @@ function runBoundedProcess(file, args, { cwd, input = null, timeout, outputLimit
         stdio: [input === null ? "ignore" : "pipe", "pipe", "pipe"] });
     } catch { resolveOnce({ ...state, error: "native_preflight_process_failed" }); return; }
     const receive = (chunk, retain) => {
-      if (state.error) return;
+      if (settled || state.error) return;
       bytes += chunk.length;
       if (bytes > outputLimit) return finishError("native_preflight_output_limit");
       if (!retain && chunk.length) return finishError("native_preflight_stderr_detected");
       if (retain) state.stdout += chunk.toString("utf8");
       if (rejectOutput && chunk.length) finishError("native_preflight_compile_output");
     };
-    child.once("spawn", () => { state.started = true; });
+    child.once("spawn", () => { if (!settled) state.started = true; });
     child.on("error", () => finishError("native_preflight_process_failed"));
     child.stdout.on("data", chunk => receive(chunk, true));
     child.stderr.on("data", chunk => receive(chunk, false));
     child.stdin?.on("error", () => finishError("native_preflight_stream_error"));
     child.stdout.on("error", () => finishError("native_preflight_stream_error"));
     child.stderr.on("error", () => finishError("native_preflight_stream_error"));
-    child.once("exit", (code, signalName) => { if (code !== 0 || signalName) state.error ||= "native_preflight_process_failed"; });
+    child.once("exit", (code, signalName) => { if (code !== 0 || signalName) finishError("native_preflight_process_failed"); });
     child.once("close", (code, signalName) => {
-      closed = true; clearTimeout(timer); clearTimeout(terminationTimer); state.exited = state.started;
-      try { abortSubscription?.[Symbol.dispose](); } catch { /* listener removed below */ }
-      try { if (signal) EventTarget.prototype.removeEventListener.call(signal, "abort", cancel); } catch { state.error ||= "native_preflight_process_failed"; }
+      closed = true; clearTimeout(timer); clearTimeout(terminationTimer);
+      unconfirmedChildren.delete(child);
+      if (settled) return; // Late close cannot clear quarantine or revive results.
+      state.exited = state.started; removeAbort();
       if (code !== 0 || signalName) state.error ||= "native_preflight_process_failed";
-      if (terminationUnconfirmed) { terminationUnconfirmed = false; active = false; }
+      if (state.error) state.stdout = "";
       resolveOnce(state);
     });
     const cancel = () => finishError("native_preflight_cancelled");

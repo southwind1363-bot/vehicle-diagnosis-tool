@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-19 登録preflightの終了通知待ち修正: 前回の確認へ利用者「続けて」。異常exit後や正常exit後のclose未着でも二次期限へ到達し、結果を破棄して終了未確認・隔離保持とする。遅延closeは返却済み凍結結果/禁止ラッチを変更せず、子参照だけ解放。kill失敗/未spawn/隔離記録例外も同じ拒否を保持。実関数を抽出した人工event・手動clockの8ケース、既存bridge384・署名配布26テスト合格。実OS終了不能process/実vendor DLL/VCI/実車は未検証。保存形式/公開通信権限不変。既存599ZIPは未更新のため本修正の同梱を主張しない。次は配布版への反映・別展開検証を進める。
+
 2026-09-18 署名/配布回帰検査を既存CI入口へ組込み: validate-local-bridge-readonlyから固定6test fileの専用runnerを呼び、非zero/signal/timeoutを失敗へ伝播。新規26テスト＋bridge384合格、native compile/実registry/旧PS1は実行しない。登録resolverの実temp結合はWindows path専用なのでLinuxではskip明示する修正も追加。Windows39項目とplatform分岐模擬Linux34項目を確認（実Linux確認ではない）。workflow本体は編集せずdeploy内のみ。公開実行/保存形式/599ZIP不変、CI完了は別途確認が必要。
 
 2026-09-18 非同期署名完了の選択照合結合: inspectSupervisedCompletionと専用adapterを追加。worker started/exited/completed・停止要求/送信なし・errors空を必須とし、署名報告を選択hashへ再検証。同期exitを捏造して流用せず、nativeで対応済みのValid/AuthenticodeとNotSigned/Noneのみ。関連Node6、生成未署名PEの非同期→選択→inventoryを含むnative164、resolver39/handoff156合格。クライアントJSON認証ではなくtrusted親内部用、実vendor/VCI/実車/公開entry/保存形式/599ZIP不変。
