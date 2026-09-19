@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-19 Mode01親側結果変換: 開発専用converterで信頼済み親の正常終了status/signal/error/stderrと8192文字上限、期待ECU/PID、cleanup、二段階元応答の完全性/対応bit/計算値一致を照合し、既存decodeLivePidResponseへ結合。共通snapshotのsourceはj2534_development_readと明示し実車扱いしない。人工completion30項目合格（回転数2000/水温90/取得0、終了異常・未対応・別ECU・壊れた応答等）。これは親process観測の認証機構や公開importではなく内部部品。実worker出力/生成DLL経由Mode01/保存復元への実結合は未完了。公開entry/実vendor DLL/VCI/実車/保存形式/601ZIPは変更なし。
+
 2026-09-19 Mode01元応答の内部受渡し: 隔離worker結合の前提として、数値だけを返して失っていた対応確認/値読取のnative status・count・message全項目をJ2534Mode01Observationへ保持。ReadMode01ObservationAndFinishは正常cleanupとmodule解放確認後だけ観測を返し、9種類の成功/失敗条件を維持。コピー取得後の配列/メッセージ変更は内部証拠へ反映せず、元status9を保った応答で既存exchangeから同じ90度を再計算できることを確認。x86/x64各415項目合格。診断保存形式ではなく内部情報のみ、worker正常終了を示すものではない。生成DLL経由Mode01 ABI・親process終了後の採用・保存結合は引き続き未完了。実vendor DLL/VCI/実車/公開entry/601ZIPは不変。
 
 2026-09-19 Mode01終了確認と値の受渡し: 開発専用ReadMode01AndFinishを追加。要求検査→filter取得→二段階読取後、StopFilter/Disconnect/Close/Dispose/ReferenceReleasedを順に確認してから内部値を返す。途中失敗は後段cleanupを推測実行せずnull、例外でも値を返さない。既存fixtureを実wrapperへ切替え、読取失敗と4段階の終了失敗を含むx86/x64各410項目合格。callback検証であり生成DLL経由Mode01 ABIや親processの終了判定・保存結合は未完了。実vendor DLL/VCI/実車/公開entry/601ZIP/保存形式不変。次は生成DLL隔離workerへこのwrapperを接続し、親の正常終了確認前に診断値を公開しない構成を進める。
