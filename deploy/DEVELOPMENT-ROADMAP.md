@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-20 Mode01回転数の生成DLL結合と拒否経路: 固定native fixtureへPID0C対応確認→回転数2000.25/0応答を追加し、workerの対象PIDをcompile時定数として親の期待値と一致させた。水温も含む正常3経路はowner終了→親監督→既存JSON保存復元を通過。未対応bit/別PID/不完全応答の3経路はworkerが明示exit5（クラッシュではない）、親session:null・出力不採用・同instance再実行不可。x86/x64各51項目（計102）、Mode01 Node30/36/19/12合格。変更前の全63種類の生成fixtureバイナリはbyte一致し、既存DTC生成内容を変更していない。実vendor DLL/VCI/実車/別PCは未検証。production driver選択・実行leaseとの結合は残り、公開entry/保存形式/601ZIP・通信無効は維持。
+
 2026-09-20 Mode01水温の生成native DLL結合: 既存import-free PE生成器へ固定PID00→PID05の二段階応答を追加。非実行data領域の状態をOpen/Connect/Filter/Write00/Read00/Write05/Read05/Stop/Disconnect/Close順に進め、順序不一致を拒否。固定名・compile時SHA256照合・file保持の検査専用workerから既存owner付き読取/cleanupへ接続し、一回限りの親監督→共通結果→既存JSON保存復元までx86/x64各12項目合格（水温90、元status9、順序違反、hash改変拒否を含む）。既存native回帰7365、Mode01 Node30/36/19/12も合格。実vendor DLL/VCI/実車・別PCの確認ではない。回転数PID0Cと異常応答の生成DLL経路、production driver選択/実行leaseとの結合はまだ未完了。公開entry/通信権限/保存形式/601ZIPは変更なし。
 
 2026-09-20 Mode01一回実行の親処理統合: 開発専用createJ2534Mode01FixtureSupervisorで要求ECU/PIDのコピー凍結、既存bounded worker起動、正常終了後のsession生成を一つに統合。instanceは起動前に消費し、実行中/終了後の二重起動・事前中止/起動失敗後の再試行を拒否。8192bytes/stderr拒否/15秒と既存終了未確認管理は維持。x86/x64実managed子process各415＋親統合19＋変換11＋保存5、Node変換30/保存36/監督状態19/中止・設定・起動失敗12合格。実行file固定/真正性確認はtrusted呼出元の責務で、一般driver launcherや実行許可ではない。生成DLL側を調査したが現在の固定DTC応答はMode01二段階に未対応のため、このターンはnative DLL結合完了とはしない。実vendor DLL/VCI/実車/公開entry/保存形式/601ZIPは不変。

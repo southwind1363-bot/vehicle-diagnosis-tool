@@ -7,6 +7,8 @@ const SCENARIOS = new Set([
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
   "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent", "owned-dtc-data-last-ecu",
   "owned-dtc-mode01",
+  "owned-dtc-mode01-rpm", "owned-dtc-mode01-rpm-zero", "owned-dtc-mode01-unsupported",
+  "owned-dtc-mode01-wrong-pid", "owned-dtc-mode01-incomplete",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -117,7 +119,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   if (scenario === "decorated-open-only" && architecture !== "x86") throw new Error("native_fixture_option_rejected");
 
   const is64 = architecture === "x64";
-  const mode01 = scenario === "owned-dtc-mode01";
+  const mode01 = scenario.startsWith("owned-dtc-mode01");
   const dtcService = scenario === "owned-dtc-data-pending" ? 7 : scenario === "owned-dtc-data-permanent" ? 10 : 3;
   const requestEcu = scenario === "owned-dtc-data-last-ecu" ? 0x7e7 : 0x7e0;
   const code = scenario === "request-abi" ? requestCode(architecture) : scenarioCode(architecture, scenario);
@@ -153,7 +155,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
       } else code.disconnect = scenario === "owned-disconnect-crash" ? Buffer.from([0x0f, 0x0b]) : failure(4);
     }
   }
-  if (mode01) Object.assign(code, mode01Code(architecture, code));
+  if (mode01) Object.assign(code, mode01Code(architecture, code, scenario));
   const codeOffsets = {};
   let textLength = 0;
   for (const key of Object.keys(code)) {
@@ -326,9 +328,9 @@ function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = 
   return body;
 }
 
-// Fixed coolant-only two-stage DLL oracle. State is non-executable data;
+// Fixed coolant/RPM two-stage DLL oracle. State is non-executable data;
 // PIC uses volatile EDX/R10, no imports, entry point, TLS or hardware calls.
-function mode01Code(architecture, original) {
+function mode01Code(architecture, original, scenario) {
   const x86 = architecture === "x86";
   const pointer = () => Buffer.from(x86
     ? [0xe8, 0, 0, 0, 0, 0x5a, 0x81, 0xc2, ...int32(0x7abcdef0)]
@@ -341,13 +343,21 @@ function mode01Code(architecture, original) {
   };
   const choose = (state, first, second) => Buffer.concat([pointer(), compare(state), Buffer.from([0x0f, 0x85]), int32(first.length), first, second]);
   const support = requestCode(architecture, 1, 0x7e0, 0);
-  const value = requestCode(architecture, 1, 0x7e0, 5);
+  const rpm = scenario.includes("-rpm");
+  const pid = rpm ? 12 : 5;
+  const value = requestCode(architecture, 1, 0x7e0, pid);
   const receive = bytes => receiveCode(architecture, -517782169, 1000, true, false, 1, 0x7e8, bytes);
+  const supported = scenario.endsWith("-unsupported") ? [65, 0, 0, 0, 0, 0]
+    : rpm ? [65, 0, 0, 16, 0, 0] : [65, 0, 8, 0, 0, 0];
+  const measured = scenario.endsWith("-wrong-pid") ? [65, 12, 130]
+    : scenario.endsWith("-incomplete") ? [65, 5]
+    : scenario.endsWith("-rpm-zero") ? [65, 12, 0, 0]
+    : rpm ? [65, 12, 31, 65] : [65, 5, 130];
   return {
     open: wrap(0, original.open, 2), connect: wrap(1, original.connect, 5),
     start: wrap(2, support.start, 6),
     write: choose(3, wrap(3, support.write, 4), wrap(5, value.write, 4)),
-    read: choose(4, wrap(4, receive([65, 0, 8, 0, 0, 0]), 4), wrap(6, receive([65, 5, 130]), 4)),
+    read: choose(4, wrap(4, receive(supported), 4), wrap(6, receive(measured), 4)),
     stop: wrap(7, support.stop, 2), disconnect: wrap(8, original.disconnect, 1), close: wrap(9, original.close, 1)
   };
 }

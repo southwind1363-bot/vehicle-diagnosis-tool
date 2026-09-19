@@ -65,7 +65,7 @@ internal static class J2534Mode01FixtureWorker
                     return rejected == -8 ? 6 : 7;
                 }
                 var request = new J2534ReadRequestNative(owner, device, Bind<J2534ReadRequestNative.WriteFunction>(library, "PassThruWriteMsgs"));
-                var observation = request.ReadMode01ObservationAndFinish(channel, 0x7e0, 5,
+                var observation = request.ReadMode01ObservationAndFinish(channel, 0x7e0, Mode01FixtureDigest.Pid,
                     Bind<J2534ReceiveNative.ReadFunction>(library, "PassThruReadMsgs"),
                     Bind<J2534ReadRequestNative.StartFilterFunction>(library, "PassThruStartMsgFilter"),
                     Bind<J2534ReadRequestNative.StopFilterFunction>(library, "PassThruStopMsgFilter"));

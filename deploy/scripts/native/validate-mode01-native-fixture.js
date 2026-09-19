@@ -16,12 +16,14 @@ const obd = context.window.ObdReadOnly;
 obd.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL("../../data/obd-monitor-definitions.json", import.meta.url), "utf8")));
 const env = { SystemRoot: process.env.SystemRoot, TEMP: os.tmpdir(), TMP: os.tmpdir() };
 for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) {
+ for (const [suffix, pid, value] of [["", 5, 90], ["-rpm", 12, 2000.25], ["-rpm-zero", 12, 0],
+   ["-unsupported", 5, null], ["-wrong-pid", 5, null], ["-incomplete", 5, null]]) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mode01-native-"));
-  const dll = buildJ2534NativeFixture(arch, "owned-dtc-mode01");
+  const dll = buildJ2534NativeFixture(arch, `owned-dtc-mode01${suffix}`);
   fs.writeFileSync(path.join(root, "mode01.dll"), dll, { flag: "wx" });
   const digest = crypto.createHash("sha256").update(dll).digest("hex").toUpperCase();
   const source = path.join(root, "Digest.cs");
-  fs.writeFileSync(source, `internal static class Mode01FixtureDigest { internal const string Value = "${digest}"; }`, { flag: "wx" });
+  fs.writeFileSync(source, `internal static class Mode01FixtureDigest { internal const string Value = "${digest}"; internal const byte Pid = ${pid}; }`, { flag: "wx" });
   const exe = path.join(root, "mode01-worker.exe");
   const compiler = path.join(process.env.SystemRoot, "Microsoft.NET", framework, "v4.0.30319", "csc.exe");
   const build = spawnSync(compiler, ["/nologo", "/warnaserror", `/platform:${arch}`, `/out:${exe}`,
@@ -30,13 +32,27 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       "J2534Mode01Observation.cs", "J2534Mode01FixtureWorker.cs"].map(name => fileURLToPath(new URL(name, import.meta.url)))],
   { cwd: root, env, windowsHide: true, encoding: "utf8", timeout: 15000 });
   assert.equal(build.status, 0, build.stdout + build.stderr);
-  const run = createJ2534Mode01FixtureSupervisor({ expected: { request_ecu: 0x7e0, pid: 5 },
+  let exitCode;
+  const run = createJ2534Mode01FixtureSupervisor({ expected: { request_ecu: 0x7e0, pid },
     decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
-    spawnWorker: () => spawn(exe, ["--generated-mode01"], { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] }) });
+    spawnWorker: () => {
+      const child = spawn(exe, ["--generated-mode01"], { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+      child.once("exit", code => { exitCode = code; });
+      return child;
+    } });
   const result = await run();
+  if (value === null) {
+    assert.equal(exitCode, 5, "Invalid response must be rejected, not crash the worker");
+    assert.equal(result.status, "unavailable");
+    assert.equal(result.session, null);
+    assert.equal(result.completion.parsed_result, null);
+    assert.equal((await run()).reason, "fixture_already_consumed");
+    console.log(arch, suffix, "native rejection -> no session: 5 checks passed");
+    continue;
+  }
   assert.equal(result.status, "completed", JSON.stringify(result.completion));
   const output = JSON.parse(result.completion.parsed_result.stdout);
-  assert.equal(output.value, 90);
+  assert.equal(output.value, value);
   assert.equal(output.supported_read.Status, 9);
   assert.equal(output.value_read.Status, 9);
   const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)));
@@ -54,5 +70,6 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     encoding: "utf8", timeout: 15000, maxBuffer: 8192 });
   assert.equal(badDigest.status, 1);
   assert.equal(badDigest.stdout, "");
-  console.log(arch, "fixed native Mode01 DLL -> owner cleanup -> bounded child -> session restore: 12 checks passed; no vendor/VCI/vehicle");
+  console.log(arch, suffix || "-coolant", "fixed native Mode01 DLL -> owner cleanup -> bounded child -> session restore: 12 checks passed; no vendor/VCI/vehicle");
+ }
 }
