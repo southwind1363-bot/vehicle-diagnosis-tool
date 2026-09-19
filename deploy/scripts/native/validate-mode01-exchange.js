@@ -14,6 +14,7 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     encoding: "utf8", timeout: 15000, maxBuffer: 65536 });
   const build = run(compiler, ["/nologo", "/warnaserror", "/define:J2534_DTC_DEVELOPMENT;J2534_MODE01_DEVELOPMENT", `/platform:${arch}`, `/out:${exe}`,
     fileURLToPath(new URL("./J2534Mode01Exchange.cs", import.meta.url)),
+    fileURLToPath(new URL("./J2534Mode01Observation.cs", import.meta.url)),
     ...["J2534IdentityNative.cs", "J2534ReadRequestNative.cs", "J2534ReceiveNative.cs"].map(name => fileURLToPath(new URL(name, import.meta.url))),
     fileURLToPath(new URL("./J2534Mode01ExchangeTests.cs", import.meta.url))]);
   assert.equal(build.status, 0, build.stdout + build.stderr);

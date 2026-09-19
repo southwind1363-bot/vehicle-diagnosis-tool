@@ -80,32 +80,52 @@ namespace VehicleDiagnosis.Native
         internal double? ReadMode01AndFinish(uint channel, uint requestEcu, byte pid,
             J2534ReceiveNative.ReadFunction read, StartFilterFunction start, StopFilterFunction stop)
         {
+            var observation = ReadMode01ObservationAndFinish(channel, requestEcu, pid, read, start, stop);
+            return observation == null ? (double?)null : observation.Value;
+        }
+
+        internal J2534Mode01Observation ReadMode01ObservationAndFinish(uint channel, uint requestEcu, byte pid,
+            J2534ReceiveNative.ReadFunction read, StartFilterFunction start, StopFilterFunction stop)
+        {
             if (read == null || start == null || stop == null) throw new ArgumentNullException("mode01_binding");
             // Validate before acquiring a filter or invoking any callback.
             new J2534Mode01Exchange(requestEcu, pid);
             uint filter;
             if (PrepareDtcFilterOnce(channel, requestEcu, start, stop, out filter) != 0) return null;
-            double? captured = ReadMode01Once(channel, requestEcu, pid, read);
+            J2534ReceiveNative.Result supported, valueRead;
+            double? captured = ReadMode01Core(channel, requestEcu, pid, read, out supported, out valueRead);
             if (!captured.HasValue) return null;
             if (owner.StopDtcReadFilter(device, channel, filter) != 0) return null;
             if (owner.Disconnect(device, channel) != 0) return null;
             if (owner.Close(device) != 0) return null;
             owner.Dispose();
-            return owner.ReferenceReleased ? captured : null;
+            return owner.ReferenceReleased ? new J2534Mode01Observation(requestEcu, pid, captured.Value, supported, valueRead) : null;
         }
 
         internal double? ReadMode01Once(uint channel, uint requestEcu, byte pid, J2534ReceiveNative.ReadFunction read)
         {
+            J2534ReceiveNative.Result supported, valueRead;
+            return ReadMode01Core(channel, requestEcu, pid, read, out supported, out valueRead);
+        }
+
+        private double? ReadMode01Core(uint channel, uint requestEcu, byte pid, J2534ReceiveNative.ReadFunction read,
+            out J2534ReceiveNative.Result supportedRead, out J2534ReceiveNative.Result valueRead)
+        {
+            supportedRead = null; valueRead = null;
             if (read == null) throw new ArgumentNullException("read");
             var exchange = new J2534Mode01Exchange(requestEcu, pid);
-            return owner.RunOwnedMode01Acquisition(device, channel, requestEcu, delegate {
+            J2534ReceiveNative.Result supported = null, observed = null;
+            double? value = owner.RunOwnedMode01Acquisition(device, channel, requestEcu, delegate {
                 exchange.BeginSupportedRead();
                 if (WriteFixed(channel, requestEcu, 1, 0) != 0) return null;
-                var supported = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
+                supported = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
                 if (exchange.AcceptSupportedRead(supported) == null) return null;
                 if (WriteFixed(channel, requestEcu, 1, pid) != 0) return null;
-                return exchange.AcceptValueRead(new J2534ReceiveNative(read).ReadMode01StageOnce(channel));
+                observed = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
+                return exchange.AcceptValueRead(observed);
             });
+            if (value.HasValue) { supportedRead = supported; valueRead = observed; }
+            return value;
         }
 #endif
         private int WriteFixed(uint channel, uint requestEcu, byte service, byte? pid)

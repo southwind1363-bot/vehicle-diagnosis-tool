@@ -137,10 +137,23 @@ namespace VehicleDiagnosis.Native
                         Array.Copy(payload, 0, message, 28, payload.Length);
                         Marshal.Copy(message, 0, m, message.Length); Marshal.WriteInt32(n, 1); return 9;
                     };
-                    double? value = request.ReadMode01AndFinish(channel, 0x7e0, 5, read,
+                    var observation = request.ReadMode01ObservationAndFinish(channel, 0x7e0, 5, read,
                         delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr o) { Marshal.WriteInt32(o, 30); return 0; },
                         delegate { stops++; return fault == 5 ? 1 : 0; });
-                    Check(fault == 0 ? value == 90 : value == null);
+                    Check(fault == 0 ? observation != null && observation.Value == 90 : observation == null);
+                    if (observation != null) {
+                        Check(observation.RequestEcu == 0x7e0 && observation.Pid == 5);
+                        Check(observation.SupportedRead.Status == 9 && observation.ValueRead.Status == 9);
+                        var supportCopy = observation.SupportedRead;
+                        supportCopy.Status = 0; supportCopy.Messages[0].Data[4] = 0;
+                        var valueCopy = observation.ValueRead;
+                        valueCopy.Messages[0].Data[6] = 0; valueCopy.Messages = null;
+                        var replay = new J2534Mode01Exchange(observation.RequestEcu, observation.Pid);
+                        replay.BeginSupportedRead();
+                        Check(replay.AcceptSupportedRead(observation.SupportedRead)[5] == 5);
+                        Check(replay.AcceptValueRead(observation.ValueRead) == observation.Value);
+                        Check(observation.SupportedRead.Status == 9 && observation.ValueRead.Messages[0].Data[6] == 130);
+                    }
                     Check(writes == (fault == 1 || fault == 2 ? 1 : 2));
                     Check(reads == (fault == 1 ? 0 : fault == 2 || fault == 3 ? 1 : 2));
                     Reject(delegate { request.ReadMode01Once(channel, 0x7e0, 5, read); });
