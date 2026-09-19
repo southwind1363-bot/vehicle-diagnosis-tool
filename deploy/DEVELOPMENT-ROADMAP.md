@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-19 Mode01読取の内部処理第一段: 直前の確認へ利用者「続けて」。開発compileflag限定のJ2534Mode01Exchangeを追加し、物理ECU7E0..7E7のPID00対応確認後だけPID05水温またはPID0C回転数の固定要求を生成。別ECU/不完全/別SID・PID/未対応はnull、消費済み応答の再採用と再試行を拒否、取得ゼロを欠落と区別する。x86/x64各119項目の純粋な要求・応答処理検査合格。DLL/VCI/実車は未使用。既存DTC owner/loader/workerへ未結合、既存結果/保存への結合も未完了で、実通信完成とはしない。次は同承認範囲でowner付き単発要求と受信の開発結合を進める。本体/601ZIP/保存形式/公開実行無効は不変。
+
 2026-09-19 preflight実processの終了/時間切れ検証: 実Node子processで正常exitは出力保持、異常exitと1500ms timeoutは出力破棄、実close確認を3経路で検証。native worker/DLL/registry/車両/永続隔離fileは使用せず、検査入口を既存bridge回帰へ接続。close未着の再現を狙った有限寿命の孫processへのstdio継承は、このWindowsで親exitとcloseが同時（約103ms）となり再現失敗。終了未確認/OS停止不能が実証されたとはせず、8人工event検査と区別する。同じ失敗は反復しない。本体/601ZIP・保存形式・実行権限は不変。
 
 2026-09-19 601配布版の過大ファイル実ブラウザ確認: ブラウザーCLI不在のため既存Playwrightの隔離contextを使用。別展開601（847files整合済み）へ64 MiB+1 byteの実temp fileをfile inputから選択し、実FileReader.readAsText呼出0回、保存済み人工事例不変、input解除/中断button無効、通常JSONの手動再選択で1回読込、reload後2件保持を確認。390px画面の拒否案内を目視、console/page errorと外向き通信0。再現用--oversized-fileを既存browser検査へ追加。本体/ZIP/保存形式/通信権限変更なし。64MiBのJSON解析性能や実VCI/別PC適合を証明しない。前回c2d11cab CI success確認。
