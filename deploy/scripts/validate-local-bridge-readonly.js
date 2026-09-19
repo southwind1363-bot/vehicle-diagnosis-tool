@@ -5,6 +5,7 @@ import "./validate-preflight-termination.js";
 import "./validate-preflight-process-close.js";
 import "./validate-j2534-dtc-selection-handoff.js";
 import "./validate-j2534-mode01-result.js";
+import "./validate-j2534-mode01-selection-handoff.js";
 import { J2534_WORKER_CONTRACT_VERSION, buildJ2534UdsTransportResult, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import { getEventListeners } from "node:events";

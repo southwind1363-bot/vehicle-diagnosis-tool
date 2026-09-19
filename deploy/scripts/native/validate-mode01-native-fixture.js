@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { spawnSync, spawn } from "node:child_process";
 import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
 import { createJ2534Mode01FixtureSupervisor } from "../j2534-mode01-fixture-supervisor.js";
+import { createJ2534Mode01SelectionHandoff } from "../j2534-mode01-selection-handoff.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -64,8 +65,18 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     assert.equal(released.code, 0); assert.equal(released.signal, null);
     console.log(arch, "Mode01 shared lease busy refusal and holder shutdown: 5 checks passed");
   }
+  // Artificial private registration, pinned to this generated fixture only.
+  const descriptor = Object.freeze({});
+  const inspect = d => d === descriptor ? { selected_device_id: "j2534-0123456789abcdef",
+    path: path.join(root, "mode01.dll"), sha256: crypto.createHash("sha256").update(fs.readFileSync(path.join(root, "mode01.dll"))).digest("hex"),
+    size: fs.statSync(path.join(root, "mode01.dll")).size, architecture: arch } : null;
+  const handoff = createJ2534Mode01SelectionHandoff({ resolveDescriptor: inspect, revalidateDescriptor: inspect, now: Date.now });
+  const ticket = handoff.prepare(descriptor, { request_ecu: 0x7e0, pid });
+  const selection = handoff.consume(ticket);
+  assert.ok(selection); assert.equal(selection.sha256, digest); assert.equal(selection.service, 1);
+  assert.equal(handoff.consume(ticket), null);
   let exitCode;
-  const run = createJ2534Mode01FixtureSupervisor({ expected: { request_ecu: 0x7e0, pid },
+  const run = createJ2534Mode01FixtureSupervisor({ expected: { request_ecu: selection.request_ecu, pid: selection.pid },
     decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
     spawnWorker: () => {
       const child = spawn(exe, ["--generated-mode01"], { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
