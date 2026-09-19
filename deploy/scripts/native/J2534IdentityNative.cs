@@ -372,6 +372,22 @@ namespace VehicleDiagnosis.Native
         }
 
         // Queue acceptance is not evidence of vehicle I/O or diagnostic completion.
+#if J2534_DTC_DEVELOPMENT
+        // One acquisition owns the gate across both fixed Mode01 stages. Neither
+        // legacy latch is reset; DTC requests/receives cannot follow or interleave.
+        internal double? RunOwnedMode01Acquisition(uint deviceId, uint channelId, uint requestEcu,
+            Func<double?> acquisition)
+        {
+            if (acquisition == null) throw new ArgumentNullException("acquisition");
+            double? value = null;
+            RunOwnedReadRequest(deviceId, channelId, requestEcu, delegate {
+                receiveAttempted = true;
+                value = acquisition();
+                return value.HasValue ? 0 : 1;
+            });
+            return value;
+        }
+#endif
         internal int RunOwnedReadRequest(uint deviceId, uint channelId, uint requestEcu, Func<int> dispatch)
         {
             if (dispatch == null) throw new ArgumentNullException("dispatch");

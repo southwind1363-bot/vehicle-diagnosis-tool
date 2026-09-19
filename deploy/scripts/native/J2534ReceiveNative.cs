@@ -57,6 +57,15 @@ namespace VehicleDiagnosis.Native
             return owner.RunOwnedDtcResponseReceive(deviceId, channel,
                 delegate { return ReadOnceCore(channel, capacity, 1000); });
         }
+#if J2534_DTC_DEVELOPMENT
+        // Used only inside the owner-held two-stage acquisition, one receiver
+        // instance per stage. This does not acquire or release the owner itself.
+        internal Result ReadMode01StageOnce(uint channel)
+        {
+            if (owner != null) throw new InvalidOperationException("mode01_stage_owner_mismatch");
+            return ReadOnceCore(channel, 3, 1000);
+        }
+#endif
         private Result ReadOnceCore(uint channel, int capacity, uint timeout)
         {
             if (Interlocked.Exchange(ref consumed, 1) != 0)

@@ -71,6 +71,26 @@ namespace VehicleDiagnosis.Native
         private int DispatchOnce(uint channel, uint requestEcu, byte service, byte? pid)
         {
             return owner.RunOwnedReadRequest(device, channel, requestEcu, delegate {
+                return WriteFixed(channel, requestEcu, service, pid);
+            });
+        }
+#if J2534_DTC_DEVELOPMENT && J2534_MODE01_DEVELOPMENT
+        internal double? ReadMode01Once(uint channel, uint requestEcu, byte pid, J2534ReceiveNative.ReadFunction read)
+        {
+            if (read == null) throw new ArgumentNullException("read");
+            var exchange = new J2534Mode01Exchange(requestEcu, pid);
+            return owner.RunOwnedMode01Acquisition(device, channel, requestEcu, delegate {
+                exchange.BeginSupportedRead();
+                if (WriteFixed(channel, requestEcu, 1, 0) != 0) return null;
+                var supported = new J2534ReceiveNative(read).ReadMode01StageOnce(channel);
+                if (exchange.AcceptSupportedRead(supported) == null) return null;
+                if (WriteFixed(channel, requestEcu, 1, pid) != 0) return null;
+                return exchange.AcceptValueRead(new J2534ReceiveNative(read).ReadMode01StageOnce(channel));
+            });
+        }
+#endif
+        private int WriteFixed(uint channel, uint requestEcu, byte service, byte? pid)
+        {
                 using (var message = new RequestBuffer(4152))
                 using (var count = new RequestBuffer(4))
                 {
@@ -93,7 +113,6 @@ namespace VehicleDiagnosis.Native
                     // It must never be turned into a diagnostic completion.
                     return status;
                 }
-            });
         }
         private sealed class RequestBuffer : IDisposable
         {

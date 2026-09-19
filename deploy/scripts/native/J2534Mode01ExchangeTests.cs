@@ -31,6 +31,7 @@ namespace VehicleDiagnosis.Native
         private static void Main()
         {
             CheckOwnedSupport();
+            CheckAcquisition();
             CheckNativeResults();
             for (uint ecu = 0x7e0; ecu <= 0x7e7; ecu++) {
                 Check(Ready(ecu, 12).AcceptValueResponse(ecu + 8, new byte[] { 0x41, 12, 0x1f, 0x40 }) == 2000);
@@ -108,6 +109,49 @@ namespace VehicleDiagnosis.Native
             value.Messages[0].ExtraDataIndex = (uint)value.Messages[0].Data.Length;
             Check(exchange.AcceptValueRead(value) == 0);
             Check(Ready(0x7e0, 12).AcceptValueRead(null) == null);
+        }
+        private static void CheckAcquisition()
+        {
+            for (int fault = 0; fault < 5; fault++) {
+                var library = new Library();
+                using (var owner = new J2534IdentityNative(library)) {
+                    uint device, channel, filter; int writes = 0, reads = 0;
+                    owner.Open(out device);
+                    owner.Connect(device, 6, 0, 500000,
+                        delegate(uint d, uint p, uint f, uint b, IntPtr o) { Marshal.WriteInt32(o, 20); return 0; },
+                        delegate { return 0; }, out channel);
+                    var request = new J2534ReadRequestNative(owner, device, delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                        writes++;
+                        Check(Marshal.ReadByte(m, 28) == 1 && Marshal.ReadByte(m, 29) == (writes == 1 ? 0 : 5));
+                        Reject(delegate { owner.Dispose(); });
+                        return (fault == 1 && writes == 1) || (fault == 3 && writes == 2) ? 1 : 0;
+                    });
+                    request.PrepareDtcFilterOnce(channel, 0x7e0,
+                        delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr o) { Marshal.WriteInt32(o, 30); return 0; },
+                        delegate { return 0; }, out filter);
+                    J2534ReceiveNative.ReadFunction read = delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                        reads++; Check(t == 1000 && c == channel);
+                        Reject(delegate { request.DispatchMode01SupportedReadOnce(channel, 0x7e0); });
+                        byte[] payload = reads == 1 ? Support(5) : new byte[] { 0x41, 5, 130 };
+                        if (fault == 2) payload = new byte[] { 0x41, 0, 0, 0, 0, 0 };
+                        if (fault == 4 && reads == 2) payload[1] = 12;
+                        byte[] message = new byte[4152]; message[0] = 6;
+                        message[16] = (byte)(payload.Length + 4); message[26] = 7; message[27] = 232;
+                        Array.Copy(payload, 0, message, 28, payload.Length);
+                        Marshal.Copy(message, 0, m, message.Length); Marshal.WriteInt32(n, 1); return 9;
+                    };
+                    double? value = request.ReadMode01Once(channel, 0x7e0, 5, read);
+                    Check(fault == 0 ? value == 90 : value == null);
+                    Check(writes == (fault == 1 || fault == 2 ? 1 : 2));
+                    Check(reads == (fault == 1 ? 0 : fault == 2 || fault == 3 ? 1 : 2));
+                    Reject(delegate { request.ReadMode01Once(channel, 0x7e0, 5, read); });
+                    if (fault == 0) {
+                        Check(owner.StopDtcReadFilter(device, channel, filter) == 0);
+                        Check(owner.Disconnect(device, channel) == 0 && owner.Close(device) == 0);
+                    }
+                }
+                Check(library.Released == (fault == 0));
+            }
         }
         private sealed class Library : IIdentityLibrary
         {
