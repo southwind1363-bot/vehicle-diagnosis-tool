@@ -6,6 +6,7 @@ const SCENARIOS = new Set([
   "owned-dtc-start-failure", "owned-dtc-start-hang", "owned-dtc-read-hang",
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
   "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent", "owned-dtc-data-last-ecu",
+  "owned-dtc-mode01",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -116,6 +117,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   if (scenario === "decorated-open-only" && architecture !== "x86") throw new Error("native_fixture_option_rejected");
 
   const is64 = architecture === "x64";
+  const mode01 = scenario === "owned-dtc-mode01";
   const dtcService = scenario === "owned-dtc-data-pending" ? 7 : scenario === "owned-dtc-data-permanent" ? 10 : 3;
   const requestEcu = scenario === "owned-dtc-data-last-ecu" ? 0x7e7 : 0x7e0;
   const code = scenario === "request-abi" ? requestCode(architecture) : scenarioCode(architecture, scenario);
@@ -127,7 +129,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
     Object.assign(code, channelCode(architecture, scenario.startsWith("owned-dtc-") ? 0 : 0x100));
     if (scenario.startsWith("owned-dtc-")) {
       Object.assign(code, requestCode(architecture, dtcService, requestEcu));
-      if (scenario !== "owned-dtc-read" && scenario !== "owned-dtc-result-then-hang" && !scenario.startsWith("owned-dtc-data")) {
+      if (!mode01 && scenario !== "owned-dtc-read" && scenario !== "owned-dtc-result-then-hang" && !scenario.startsWith("owned-dtc-data")) {
         const fail = bytes => Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(is64 ? [0xc3] : [0xc2, bytes, 0])]);
         code.close = code.disconnect = Buffer.from([0x0f, 0x0b]);
         if (scenario === "owned-dtc-start-failure" || scenario === "owned-dtc-start-hang") {
@@ -151,13 +153,21 @@ export function buildJ2534NativeFixture(architecture, scenario) {
       } else code.disconnect = scenario === "owned-disconnect-crash" ? Buffer.from([0x0f, 0x0b]) : failure(4);
     }
   }
+  if (mode01) Object.assign(code, mode01Code(architecture, code));
   const codeOffsets = {};
   let textLength = 0;
   for (const key of Object.keys(code)) {
     textLength = align(textLength, 16); codeOffsets[key] = textLength; textLength += code[key].length;
   }
   // Only the combined nine-export fixture needs a second fixed text block.
-  if (textLength > (scenario.startsWith("owned-dtc-") ? 0x400 : 0x200)) throw new Error("native_fixture_text_section_overflow");
+  if (textLength > (mode01 ? 0x1000 : scenario.startsWith("owned-dtc-") ? 0x400 : 0x200)) throw new Error("native_fixture_text_section_overflow");
+  if (mode01) for (const key of Object.keys(code)) {
+    const marker = int32(0x7abcdef0);
+    for (let at = code[key].indexOf(marker); at >= 0; at = code[key].indexOf(marker, at + 4)) {
+      const next = 0x1000 + codeOffsets[key] + at + (is64 ? 4 : -3);
+      code[key].writeInt32LE(0x2ff0 - next, at);
+    }
+  }
   const text = Buffer.alloc(align(textLength, 0x200));
   for (const key of Object.keys(code)) code[key].copy(text, codeOffsets[key]);
 
@@ -169,7 +179,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
   let cursor = align(ordinalsOffset + exports.length * 2, 4);
   const dllNameOffset = cursor; cursor += ascii("j2534-native-fixture.dll").length;
   const nameOffsets = exports.map(item => { const offset = cursor; cursor += ascii(item.name).length; return offset; });
-  const rdata = Buffer.alloc(align(cursor, 0x200));
+  const rdata = Buffer.alloc(mode01 ? 0x1000 : align(cursor, 0x200));
   const rva = 0x2000;
   rdata.writeUInt32LE(rva + dllNameOffset, 12);
   rdata.writeUInt32LE(1, 16);
@@ -221,7 +231,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
     image.writeUInt32LE(rawSize, offset + 16); image.writeUInt32LE(rawOffset, offset + 20); image.writeUInt32LE(characteristics, offset + 36);
   };
   section(0, ".text", textLength, 0x1000, text.length, 0x200, 0x60000020);
-  section(1, ".rdata", cursor, 0x2000, rdata.length, rdataRaw, 0x40000040);
+  section(1, ".rdata", mode01 ? 0x1000 : cursor, 0x2000, rdata.length, rdataRaw, mode01 ? 0xc0000040 : 0x40000040);
   section(2, ".reloc", 12, 0x3000, reloc.length, relocRaw, 0x42000040);
   text.copy(image, 0x200); rdata.copy(image, rdataRaw); reloc.copy(image, relocRaw);
   return image;
@@ -230,7 +240,7 @@ export function buildJ2534NativeFixture(architecture, scenario) {
 // Fixed import-free v04.04 ABI oracle, not a driver. No caller-supplied code,
 // pointers in the image, entry point, or hardware APIs. Only volatile RAX/EAX
 // and flags are touched; x86 pops each exact StdCall argument list.
-function requestCode(architecture, service = 3, requestEcu = 0x7e0) {
+function requestCode(architecture, service = 3, requestEcu = 0x7e0, pid = null) {
   const requestAddress = ((requestEcu & 0xff) << 24) | ((requestEcu >>> 8) << 16);
   const responseAddress = (((requestEcu + 8) & 0xff) << 24) | (((requestEcu + 8) >>> 8) << 16);
   const x86 = architecture === "x86";
@@ -266,8 +276,9 @@ function requestCode(architecture, service = 3, requestEcu = 0x7e0) {
     write: build(4, ({ put, arg, scalar, field, unequal }) => {
       scalar(1, -517782169); scalar(4, 0);
       arg(3); field(0, 1);
-      arg(2); field(0, 6); field(8, 0x40); field(16, 5); field(24, requestAddress);
+      arg(2); field(0, 6); field(8, 0x40); field(16, pid === null ? 5 : 6); field(24, requestAddress);
       put(0x80, 0x78, 28, service); unequal();
+      if (pid !== null) { put(0x80, 0x78, 29, pid); unequal(); }
       // Report one queue-accepted message, not a diagnostic response.
       arg(3); put(0xc7, 0x00, 1, 0, 0, 0);
     }),
@@ -275,7 +286,7 @@ function requestCode(architecture, service = 3, requestEcu = 0x7e0) {
 }
 
 // Fixed, import-free receive ABI oracle. Not a driver and accepts no bytecode.
-function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = false, indicated = false, service = 3, responseEcu = 0x7e8) {
+function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = false, indicated = false, service = 3, responseEcu = 0x7e8, modePayload = null) {
   const responseAddress = ((responseEcu & 0xff) << 24) | ((responseEcu >>> 8) << 16);
   const x86 = architecture === "x86";
   const ret = x86 ? [0xc2, 0x10, 0x00] : [0xc3];
@@ -289,9 +300,12 @@ function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = 
     // x86: EAX = messages, ECX = count. x64: RDX/R8 are already pointers.
     Buffer.from(x86 ? [0x8b, 0x44, 0x24, 0x08, 0x8b, 0x4c, 0x24, 0x0c] : []),
     ...(indicated ? [...[6, 2, 0, 7, 4, 4].map((value, index) => write(index * 4, value)), write(24, responseAddress)] : []),
-    ...[6, 0, 0, -249346713, dtcData ? 7 : 4, dtcData ? 7 : 4].map((value, index) => write(dataOffset + index * 4, value)),
+    ...[6, 0, 0, -249346713, modePayload ? modePayload.length + 4 : dtcData ? 7 : 4, modePayload ? modePayload.length + 4 : dtcData ? 7 : 4].map((value, index) => write(dataOffset + index * 4, value)),
     write(dataOffset + 24, dtcData ? responseAddress : 0x04030201),
-    ...(dtcData ? [write(dataOffset + 28, 0x00710140 + service)]
+    ...(modePayload ? [0, 4].filter(offset => offset < modePayload.length).map(offset => {
+      const bytes = Buffer.alloc(4); Buffer.from(modePayload.slice(offset, offset + 4)).copy(bytes);
+      return write(dataOffset + 28 + offset, bytes.readInt32LE());
+    }) : dtcData ? [write(dataOffset + 28, 0x00710140 + service)]
       : [6, 2, 0, 7, 0, 0].map((value, index) => write(4152 + index * 4, value))),
     Buffer.from(x86 ? [0xc7, 0x01, count, 0, 0, 0] : [0x41, 0xc7, 0x00, count, 0, 0, 0]),
     // A single complete DTC message can accompany ERR_TIMEOUT when three
@@ -310,6 +324,32 @@ function receiveCode(architecture, channel = -249346713, timeout = 0, dtcData = 
   for (const compare of comparisons.reverse())
     body = Buffer.concat([Buffer.from([...compare, 0x0f, 0x85]), int32(body.length), body, failure]);
   return body;
+}
+
+// Fixed coolant-only two-stage DLL oracle. State is non-executable data;
+// PIC uses volatile EDX/R10, no imports, entry point, TLS or hardware calls.
+function mode01Code(architecture, original) {
+  const x86 = architecture === "x86";
+  const pointer = () => Buffer.from(x86
+    ? [0xe8, 0, 0, 0, 0, 0x5a, 0x81, 0xc2, ...int32(0x7abcdef0)]
+    : [0x4c, 0x8d, 0x15, ...int32(0x7abcdef0)]);
+  const compare = state => Buffer.from(x86 ? [0x83, 0x3a, state] : [0x41, 0x83, 0x3a, state]);
+  const wrap = (state, body, argc) => {
+    const increment = Buffer.from(x86 ? [0xff, 0x02] : [0x41, 0xff, 0x02]);
+    const fail = Buffer.from([0xb8, 0xf8, 0xff, 0xff, 0xff, ...(x86 ? [0xc2, argc * 4, 0] : [0xc3])]);
+    return Buffer.concat([pointer(), compare(state), Buffer.from([0x0f, 0x85]), int32(increment.length + body.length), increment, body, fail]);
+  };
+  const choose = (state, first, second) => Buffer.concat([pointer(), compare(state), Buffer.from([0x0f, 0x85]), int32(first.length), first, second]);
+  const support = requestCode(architecture, 1, 0x7e0, 0);
+  const value = requestCode(architecture, 1, 0x7e0, 5);
+  const receive = bytes => receiveCode(architecture, -517782169, 1000, true, false, 1, 0x7e8, bytes);
+  return {
+    open: wrap(0, original.open, 2), connect: wrap(1, original.connect, 5),
+    start: wrap(2, support.start, 6),
+    write: choose(3, wrap(3, support.write, 4), wrap(5, value.write, 4)),
+    read: choose(4, wrap(4, receive([65, 0, 8, 0, 0, 0]), 4), wrap(6, receive([65, 5, 130]), 4)),
+    stop: wrap(7, support.stop, 2), disconnect: wrap(8, original.disconnect, 1), close: wrap(9, original.close, 1)
+  };
 }
 
 // Fixed v04.04 channel ABI oracle. No imports, hardware access, or executable input.

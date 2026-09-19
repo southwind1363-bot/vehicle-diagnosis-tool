@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-20 Mode01水温の生成native DLL結合: 既存import-free PE生成器へ固定PID00→PID05の二段階応答を追加。非実行data領域の状態をOpen/Connect/Filter/Write00/Read00/Write05/Read05/Stop/Disconnect/Close順に進め、順序不一致を拒否。固定名・compile時SHA256照合・file保持の検査専用workerから既存owner付き読取/cleanupへ接続し、一回限りの親監督→共通結果→既存JSON保存復元までx86/x64各12項目合格（水温90、元status9、順序違反、hash改変拒否を含む）。既存native回帰7365、Mode01 Node30/36/19/12も合格。実vendor DLL/VCI/実車・別PCの確認ではない。回転数PID0Cと異常応答の生成DLL経路、production driver選択/実行leaseとの結合はまだ未完了。公開entry/通信権限/保存形式/601ZIPは変更なし。
+
 2026-09-20 Mode01一回実行の親処理統合: 開発専用createJ2534Mode01FixtureSupervisorで要求ECU/PIDのコピー凍結、既存bounded worker起動、正常終了後のsession生成を一つに統合。instanceは起動前に消費し、実行中/終了後の二重起動・事前中止/起動失敗後の再試行を拒否。8192bytes/stderr拒否/15秒と既存終了未確認管理は維持。x86/x64実managed子process各415＋親統合19＋変換11＋保存5、Node変換30/保存36/監督状態19/中止・設定・起動失敗12合格。実行file固定/真正性確認はtrusted呼出元の責務で、一般driver launcherや実行許可ではない。生成DLL側を調査したが現在の固定DTC応答はMode01二段階に未対応のため、このターンはnative DLL結合完了とはしない。実vendor DLL/VCI/実車/公開entry/保存形式/601ZIPは不変。
 
 2026-09-20 Mode01非同期監督結果の保存結合: converter/session builderへtrusted bounded親専用fromSupervisedCompletionを追加。同期exit情報を捏造せず、started/exited/completed・停止要求なし・errors空を確認して同じ厳密応答変換へ渡す。既存bounded runnerを8192bytes/stderr拒否/15秒で使用し、x86/x64実managed子processの正常close→既存保存復元と非zero終了→不採用を各9項目確認。終了未確認/停止要求/壊れた出力等の人工状態19、既存変換30/保存36、各architecture415＋11＋5も合格。runner自体の期限/kill/保持規約は変更なし。一般driver launcherや子process真正性保証ではなく、生成native DLL経由Mode01 ABIと固定隔離workerは未結合。実vendor DLL/VCI/実車/公開entry/保存形式/601ZIPは変更なし。
