@@ -5,6 +5,7 @@ namespace VehicleDiagnosis.Native
     internal static class J2534Mode01ExchangeTests
     {
         private static int checks;
+        private static J2534Mode01Observation completedObservation;
         private static void Check(bool ok) { checks++; if (!ok) throw new Exception("check " + checks); }
         private static void Reject(Action action)
         {
@@ -28,8 +29,18 @@ namespace VehicleDiagnosis.Native
             Reject(delegate { exchange.BeginSupportedRead(); });
             return exchange;
         }
-        private static void Main()
+        private static void Main(string[] args)
         {
+            if (args.Length != 0) {
+                if (args.Length != 1 || (args[0] != "--fixture-output" && args[0] != "--fixture-output-failed-exit"))
+                    throw new ArgumentException("fixture arguments");
+                System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("fr-FR");
+                CheckAcquisition();
+                Check(completedObservation != null);
+                Console.WriteLine(completedObservation.ToFixtureJson());
+                if (args[0] == "--fixture-output-failed-exit") Environment.ExitCode = 1;
+                return;
+            }
             CheckOwnedSupport();
             CheckAcquisition();
             CheckNativeResults();
@@ -161,6 +172,7 @@ namespace VehicleDiagnosis.Native
                     Check(disconnects == (fault >= 1 && fault <= 5 ? 0 : 1));
                     Check(library.CloseCalls == (fault >= 1 && fault <= 6 ? 0 : 1));
                     Check(owner.ReferenceReleased == (fault == 0));
+                    if (fault == 0) completedObservation = observation;
                 }
                 Check(library.Released == (fault == 0));
             }

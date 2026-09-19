@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-19 Mode01実子process出力の結合: 開発専用Observationへ固定数値fieldと元応答全項目をJSON化するToFixtureJsonを追加。正常cleanup済みのmanaged callback観測をx86/x64検査exeから出力し、親の実spawnSync完了情報と期待ECU/PIDを既存converterへ渡して共通水温90度へ結合。fr-FR culture下でもJSON数値表現を固定し、同一stdoutでもexit1なら不採用、別ECU期待も不採用。各architectureで既存415＋結合11項目、converter人工30項目合格。これは実子processでのmanaged callback検査であり、生成native DLL経由Mode01 ABI・実vendor DLL/VCI/実車の検証ではない。生成DLL隔離workerと保存復元への結合は残る。公開entry/実行権限/保存形式/601ZIPは不変。
+
 2026-09-19 Mode01親側結果変換: 開発専用converterで信頼済み親の正常終了status/signal/error/stderrと8192文字上限、期待ECU/PID、cleanup、二段階元応答の完全性/対応bit/計算値一致を照合し、既存decodeLivePidResponseへ結合。共通snapshotのsourceはj2534_development_readと明示し実車扱いしない。人工completion30項目合格（回転数2000/水温90/取得0、終了異常・未対応・別ECU・壊れた応答等）。これは親process観測の認証機構や公開importではなく内部部品。実worker出力/生成DLL経由Mode01/保存復元への実結合は未完了。公開entry/実vendor DLL/VCI/実車/保存形式/601ZIPは変更なし。
 
 2026-09-19 Mode01元応答の内部受渡し: 隔離worker結合の前提として、数値だけを返して失っていた対応確認/値読取のnative status・count・message全項目をJ2534Mode01Observationへ保持。ReadMode01ObservationAndFinishは正常cleanupとmodule解放確認後だけ観測を返し、9種類の成功/失敗条件を維持。コピー取得後の配列/メッセージ変更は内部証拠へ反映せず、元status9を保った応答で既存exchangeから同じ90度を再計算できることを確認。x86/x64各415項目合格。診断保存形式ではなく内部情報のみ、worker正常終了を示すものではない。生成DLL経由Mode01 ABI・親process終了後の採用・保存結合は引き続き未完了。実vendor DLL/VCI/実車/公開entry/601ZIPは不変。
