@@ -112,23 +112,20 @@ namespace VehicleDiagnosis.Native
         }
         private static void CheckAcquisition()
         {
-            for (int fault = 0; fault < 5; fault++) {
-                var library = new Library();
+            for (int fault = 0; fault < 9; fault++) {
+                var library = new Library { FailClose = fault == 7, FailRelease = fault == 8 };
                 using (var owner = new J2534IdentityNative(library)) {
-                    uint device, channel, filter; int writes = 0, reads = 0;
+                    uint device, channel; int writes = 0, reads = 0, stops = 0, disconnects = 0;
                     owner.Open(out device);
                     owner.Connect(device, 6, 0, 500000,
                         delegate(uint d, uint p, uint f, uint b, IntPtr o) { Marshal.WriteInt32(o, 20); return 0; },
-                        delegate { return 0; }, out channel);
+                        delegate { disconnects++; return fault == 6 ? 1 : 0; }, out channel);
                     var request = new J2534ReadRequestNative(owner, device, delegate(uint c, IntPtr m, IntPtr n, uint t) {
                         writes++;
                         Check(Marshal.ReadByte(m, 28) == 1 && Marshal.ReadByte(m, 29) == (writes == 1 ? 0 : 5));
                         Reject(delegate { owner.Dispose(); });
                         return (fault == 1 && writes == 1) || (fault == 3 && writes == 2) ? 1 : 0;
                     });
-                    request.PrepareDtcFilterOnce(channel, 0x7e0,
-                        delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr o) { Marshal.WriteInt32(o, 30); return 0; },
-                        delegate { return 0; }, out filter);
                     J2534ReceiveNative.ReadFunction read = delegate(uint c, IntPtr m, IntPtr n, uint t) {
                         reads++; Check(t == 1000 && c == channel);
                         Reject(delegate { request.DispatchMode01SupportedReadOnce(channel, 0x7e0); });
@@ -140,15 +137,17 @@ namespace VehicleDiagnosis.Native
                         Array.Copy(payload, 0, message, 28, payload.Length);
                         Marshal.Copy(message, 0, m, message.Length); Marshal.WriteInt32(n, 1); return 9;
                     };
-                    double? value = request.ReadMode01Once(channel, 0x7e0, 5, read);
+                    double? value = request.ReadMode01AndFinish(channel, 0x7e0, 5, read,
+                        delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr o) { Marshal.WriteInt32(o, 30); return 0; },
+                        delegate { stops++; return fault == 5 ? 1 : 0; });
                     Check(fault == 0 ? value == 90 : value == null);
                     Check(writes == (fault == 1 || fault == 2 ? 1 : 2));
                     Check(reads == (fault == 1 ? 0 : fault == 2 || fault == 3 ? 1 : 2));
                     Reject(delegate { request.ReadMode01Once(channel, 0x7e0, 5, read); });
-                    if (fault == 0) {
-                        Check(owner.StopDtcReadFilter(device, channel, filter) == 0);
-                        Check(owner.Disconnect(device, channel) == 0 && owner.Close(device) == 0);
-                    }
+                    Check(stops == (fault >= 1 && fault <= 4 ? 0 : 1));
+                    Check(disconnects == (fault >= 1 && fault <= 5 ? 0 : 1));
+                    Check(library.CloseCalls == (fault >= 1 && fault <= 6 ? 0 : 1));
+                    Check(owner.ReferenceReleased == (fault == 0));
                 }
                 Check(library.Released == (fault == 0));
             }
@@ -157,7 +156,10 @@ namespace VehicleDiagnosis.Native
         {
             private readonly J2534IdentityNative.OpenFunction open = delegate(IntPtr p, out uint id) { id = 10; return 0; };
             private readonly J2534IdentityNative.ReadVersionFunction read = delegate { return 0; };
-            private readonly J2534IdentityNative.CloseFunction close = delegate { return 0; };
+            private readonly J2534IdentityNative.CloseFunction close;
+            internal bool FailClose, FailRelease;
+            internal int CloseCalls;
+            internal Library() { close = delegate { CloseCalls++; return FailClose ? 1 : 0; }; }
             internal bool Released;
             public IntPtr Resolve(string name)
             {
@@ -166,7 +168,7 @@ namespace VehicleDiagnosis.Native
                 if (name == "PassThruClose") return Marshal.GetFunctionPointerForDelegate(close);
                 throw new Exception("unexpected export");
             }
-            public bool Release(bool allowed) { Released = allowed; return allowed; }
+            public bool Release(bool allowed) { Released = allowed && !FailRelease; return Released; }
         }
         private static void CheckOwnedSupport()
         {

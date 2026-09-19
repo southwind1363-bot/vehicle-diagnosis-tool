@@ -75,6 +75,25 @@ namespace VehicleDiagnosis.Native
             });
         }
 #if J2534_DTC_DEVELOPMENT && J2534_MODE01_DEVELOPMENT
+        // Internal result only: a supervising parent must still confirm normal
+        // worker exit. Any cleanup failure withholds the captured value.
+        internal double? ReadMode01AndFinish(uint channel, uint requestEcu, byte pid,
+            J2534ReceiveNative.ReadFunction read, StartFilterFunction start, StopFilterFunction stop)
+        {
+            if (read == null || start == null || stop == null) throw new ArgumentNullException("mode01_binding");
+            // Validate before acquiring a filter or invoking any callback.
+            new J2534Mode01Exchange(requestEcu, pid);
+            uint filter;
+            if (PrepareDtcFilterOnce(channel, requestEcu, start, stop, out filter) != 0) return null;
+            double? captured = ReadMode01Once(channel, requestEcu, pid, read);
+            if (!captured.HasValue) return null;
+            if (owner.StopDtcReadFilter(device, channel, filter) != 0) return null;
+            if (owner.Disconnect(device, channel) != 0) return null;
+            if (owner.Close(device) != 0) return null;
+            owner.Dispose();
+            return owner.ReferenceReleased ? captured : null;
+        }
+
         internal double? ReadMode01Once(uint channel, uint requestEcu, byte pid, J2534ReceiveNative.ReadFunction read)
         {
             if (read == null) throw new ArgumentNullException("read");

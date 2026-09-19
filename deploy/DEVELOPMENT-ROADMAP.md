@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-19 Mode01終了確認と値の受渡し: 開発専用ReadMode01AndFinishを追加。要求検査→filter取得→二段階読取後、StopFilter/Disconnect/Close/Dispose/ReferenceReleasedを順に確認してから内部値を返す。途中失敗は後段cleanupを推測実行せずnull、例外でも値を返さない。既存fixtureを実wrapperへ切替え、読取失敗と4段階の終了失敗を含むx86/x64各410項目合格。callback検証であり生成DLL経由Mode01 ABIや親processの終了判定・保存結合は未完了。実vendor DLL/VCI/実車/公開entry/601ZIP/保存形式不変。次は生成DLL隔離workerへこのwrapperを接続し、親の正常終了確認前に診断値を公開しない構成を進める。
+
 2026-09-19 Mode01二段階owner管理: 開発専用ReadMode01Onceを追加。同一ownerのlock/call-in-progress保持下でPID00 write/read→厳密対応確認→PID05または0C write/readを各1回実行するコード。既存request/receiveラッチを最初に消費し、解除せずDTC再要求や割込みを拒否。失敗/未対応/不正値はnullとし不確実時module保持、成功値もcleanup/worker正常終了確認前の内部観測に限定。追加J2534_MODE01_DEVELOPMENTフラグが必要で既存DTC workerには未搭載。人工managed callbackの正常90度、各段失敗、未対応、再入拒否を含むx86/x64各324項目合格。実vendor DLL/VCI/実車は未使用。次は生成DLL隔離workerと正常cleanup/終了後の結果受渡しへ結合する。本体/601ZIP/保存形式/公開実行無効は不変。
 
 2026-09-19 Mode01 native受信の結合: J2534Mode01Exchangeへ既存bounded receive Resultを直接受ける内部入口を追加。status0/9・count一致・ISO15765/11bit応答元・flags/extra・単一完全応答を検査し、任意の先頭受信開始通知1件だけ許容。欠落/重複/異常をnullとして試行消費、0値は保持。owner付き対応確認dispatch→人工native buffer受信→PID05要求生成を実受信部品経由で確認、x86/x64各269項目合格。後続値dispatch/二段階owner管理・worker正常終了後の結果保存結合は未完了。既存DTC ownerの一回制限や実行権限は変更なし。実vendor DLL/VCI/実車未使用、本体/601ZIP/保存形式不変。
