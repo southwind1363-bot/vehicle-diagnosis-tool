@@ -3,7 +3,8 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { createJ2534Mode01ResultConverter } from "./j2534-mode01-result-converter.js";
 import { createJ2534Mode01SessionBuilder } from "./j2534-mode01-session-builder.js";
-import { createJ2534Mode01FixtureSupervisor } from "./j2534-mode01-fixture-supervisor.js";
+import { createJ2534Mode01FixtureSupervisor, createJ2534SelectedMode01FixtureSupervisor } from "./j2534-mode01-fixture-supervisor.js";
+import { createJ2534Mode01SelectionHandoff } from "./j2534-mode01-selection-handoff.js";
 const context = vm.createContext({ window: {}, navigator: {} });
 vm.runInContext(fs.readFileSync(new URL("../obd-readonly.js", import.meta.url), "utf8"), context);
 const obd = context.window.ObdReadOnly;
@@ -97,3 +98,34 @@ for (const expected of [null, {}, { request_ecu: 2015, pid: 5 }, { request_ecu: 
   assert.throws(() => createJ2534Mode01FixtureSupervisor({ ...supervisorOptions, expected }), /mode01_fixture_configuration_invalid/);
 }
 console.log("Mode01 supervisor cancellation/spawn failure/configuration: 12 checks passed; no process used");
+for (const scenario of ["expired", "changed", "wrong_pin", "copied_pin", "cancelled"]) {
+  let time = 100, launches = 0, capturedArgs;
+  const descriptor = {};
+  const metadata = { selected_device_id: "j2534-0123456789abcdef", path: "C:\\fixture\\mode01.dll",
+    sha256: "A".repeat(64), size: 4096, architecture: "x64" };
+  const handoff = createJ2534Mode01SelectionHandoff({ now: () => time,
+    resolveDescriptor: d => d === descriptor ? metadata : null, revalidateDescriptor: () => metadata });
+  const pinned = { path: metadata.path, sha256: metadata.sha256, size: metadata.size, architecture: metadata.architecture,
+    request_ecu: 2016, pid: 5 };
+  if (scenario === "wrong_pin") pinned.sha256 = "B".repeat(64);
+  const run = createJ2534SelectedMode01FixtureSupervisor({ handoff, descriptor, pinned,
+    decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
+    spawnWorker: args => {
+      launches++; capturedArgs = args;
+      throw new Error("synthetic spawn failure");
+    } });
+  if (scenario === "expired") time = 5100;
+  if (scenario === "changed") metadata.size++;
+  if (scenario === "copied_pin") pinned.pid = 12;
+  const controller = new AbortController();
+  if (scenario === "cancelled") controller.abort();
+  const result = await run({ signal: controller.signal });
+  assert.equal(result.session, null);
+  assert.equal(launches, scenario === "copied_pin" ? 1 : 0);
+  if (scenario === "copied_pin") {
+    assert.ok(Object.isFrozen(capturedArgs));
+    assert.deepEqual(capturedArgs, ["--generated-mode01", metadata.path, metadata.sha256, "4096", "x64", "2016", "5"]);
+  }
+  assert.equal((await run()).reason, "fixture_already_consumed");
+}
+console.log("Mode01 selected supervisor: late expiry, changed identity, independent pin, copied configuration and cancellation passed; no process used");

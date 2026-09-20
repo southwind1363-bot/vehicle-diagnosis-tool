@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { spawnSync, spawn } from "node:child_process";
 import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
-import { createJ2534Mode01FixtureSupervisor } from "../j2534-mode01-fixture-supervisor.js";
+import { createJ2534SelectedMode01FixtureSupervisor } from "../j2534-mode01-fixture-supervisor.js";
 import { createJ2534Mode01SelectionHandoff } from "../j2534-mode01-selection-handoff.js";
 
 assert.equal(process.platform, "win32");
@@ -94,10 +94,12 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     console.log(arch, "Mode01 parent/worker selection mismatch: 27 checks passed");
   }
   let exitCode;
-  const run = createJ2534Mode01FixtureSupervisor({ expected: { request_ecu: selection.request_ecu, pid: selection.pid },
+  const run = createJ2534SelectedMode01FixtureSupervisor({ handoff, descriptor,
+    pinned: { path: path.join(root, "mode01.dll"), sha256: digest, size: dll.length, architecture: arch, request_ecu: 0x7e0, pid },
     decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
-    spawnWorker: () => {
-      const child = spawn(exe, ["--generated-mode01", ...selectionArgs], { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+    spawnWorker: args => {
+      assert.deepEqual(args, ["--generated-mode01", ...selectionArgs]);
+      const child = spawn(exe, args, { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
       child.once("exit", code => { exitCode = code; });
       return child;
     } });
