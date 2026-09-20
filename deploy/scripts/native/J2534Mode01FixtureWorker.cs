@@ -1,6 +1,7 @@
 #if J2534_DTC_DEVELOPMENT && J2534_MODE01_DEVELOPMENT
 using System;
 using System.IO;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using VehicleDiagnosis.Native;
@@ -23,6 +24,7 @@ internal static class J2534Mode01FixtureWorker
         {
             string path = WindowsIdentityLibrary.ValidatePath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mode01.dll"));
             file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+            if (file.Length != Mode01FixtureDigest.Size) throw new InvalidOperationException("fixture_size_rejected");
             using (var sha = SHA256.Create()) {
                 if (BitConverter.ToString(sha.ComputeHash(file)).Replace("-", "") != Mode01FixtureDigest.Value)
                     throw new InvalidOperationException("fixture_digest_rejected");
@@ -47,9 +49,24 @@ internal static class J2534Mode01FixtureWorker
     }
     private static T Bind<T>(Library library, string name) where T : class
     { return Marshal.GetDelegateForFunctionPointer(library.Resolve(name), typeof(T)) as T; }
+    private static bool MatchesSelection(string[] args)
+    {
+        // Arguments cannot select a new file or expand the compile-time request.
+        // Compare before acquiring a lease, opening a file or loading the fixture.
+        if (args == null || args.Length != 7
+            || (args[0] != "--generated-mode01" && args[0] != "--generated-mode01-out-of-order")) return false;
+        long size; uint ecu, pid;
+        return args[1] == Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "mode01.dll")
+            && String.Equals(args[2], Mode01FixtureDigest.Value, StringComparison.OrdinalIgnoreCase)
+            && Int64.TryParse(args[3], NumberStyles.None, CultureInfo.InvariantCulture, out size)
+            && size == Mode01FixtureDigest.Size
+            && args[4] == (IntPtr.Size == 8 ? "x64" : "x86")
+            && UInt32.TryParse(args[5], NumberStyles.None, CultureInfo.InvariantCulture, out ecu) && ecu == 0x7e0
+            && UInt32.TryParse(args[6], NumberStyles.None, CultureInfo.InvariantCulture, out pid) && pid == Mode01FixtureDigest.Pid;
+    }
     internal static int Main(string[] args)
     {
-        if (args.Length != 1 || (args[0] != "--generated-mode01" && args[0] != "--generated-mode01-out-of-order")) return 2;
+        if (!MatchesSelection(args)) return 2;
         J2534DtcExecutionLease lease = null;
         bool cleanupConfirmed = false;
         try {

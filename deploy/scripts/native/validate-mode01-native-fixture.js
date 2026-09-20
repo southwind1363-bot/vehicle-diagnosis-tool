@@ -24,7 +24,8 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   fs.writeFileSync(path.join(root, "mode01.dll"), dll, { flag: "wx" });
   const digest = crypto.createHash("sha256").update(dll).digest("hex").toUpperCase();
   const source = path.join(root, "Digest.cs");
-  fs.writeFileSync(source, `internal static class Mode01FixtureDigest { internal const string Value = "${digest}"; internal const byte Pid = ${pid}; }`, { flag: "wx" });
+  fs.writeFileSync(source, `internal static class Mode01FixtureDigest { internal const string Value = "${digest}"; internal const long Size = ${dll.length}; internal const byte Pid = ${pid}; }`, { flag: "wx" });
+  const pinnedArgs = [path.join(root, "mode01.dll"), digest, String(dll.length), arch, String(0x7e0), String(pid)];
   const exe = path.join(root, "mode01-worker.exe");
   const compiler = path.join(process.env.SystemRoot, "Microsoft.NET", framework, "v4.0.30319", "csc.exe");
   const build = spawnSync(compiler, ["/nologo", "/warnaserror", `/platform:${arch}`, `/out:${exe}`,
@@ -55,7 +56,7 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
           if (text === "READY\r\n" || text === "READY\n") { clearTimeout(timer); resolve(); }
         });
       });
-      const blocked = spawnSync(exe, ["--generated-mode01"], { cwd: root, env, windowsHide: true,
+      const blocked = spawnSync(exe, ["--generated-mode01", ...pinnedArgs], { cwd: root, env, windowsHide: true,
         encoding: "utf8", timeout: 15000, maxBuffer: 8192 });
       assert.equal(blocked.status, 8);
       assert.equal(blocked.stdout, "");
@@ -75,11 +76,28 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   const selection = handoff.consume(ticket);
   assert.ok(selection); assert.equal(selection.sha256, digest); assert.equal(selection.service, 1);
   assert.equal(handoff.consume(ticket), null);
+  const selectionArgs = [selection.path, selection.sha256, String(selection.size), selection.architecture,
+    String(selection.request_ecu), String(selection.pid)];
+  assert.deepEqual(selectionArgs, pinnedArgs);
+  if (suffix === "") {
+    const invalidArgs = [[], ["--generated-mode01"], ["--generated-mode01", ...selectionArgs, "extra"]];
+    for (const [index, wrong] of [[0, path.join(root, "other.dll")], [1, "0".repeat(64)], [2, String(dll.length + 1)],
+      [3, arch === "x64" ? "x86" : "x64"], [4, "2017"], [5, "12"]]) {
+      const changedArgs = [...selectionArgs]; changedArgs[index] = wrong;
+      invalidArgs.push(["--generated-mode01", ...changedArgs]);
+    }
+    for (const args of invalidArgs) {
+      const rejected = spawnSync(exe, args, { cwd: root, env, windowsHide: true, shell: false,
+        encoding: "utf8", timeout: 15000, maxBuffer: 8192 });
+      assert.equal(rejected.status, 2); assert.equal(rejected.stdout, ""); assert.equal(rejected.stderr, "");
+    }
+    console.log(arch, "Mode01 parent/worker selection mismatch: 27 checks passed");
+  }
   let exitCode;
   const run = createJ2534Mode01FixtureSupervisor({ expected: { request_ecu: selection.request_ecu, pid: selection.pid },
     decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
     spawnWorker: () => {
-      const child = spawn(exe, ["--generated-mode01"], { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+      const child = spawn(exe, ["--generated-mode01", ...selectionArgs], { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
       child.once("exit", code => { exitCode = code; });
       return child;
     } });
@@ -102,14 +120,14 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   assert.equal(restored.source, "j2534_development_read");
   assert.deepEqual(restored.livePidSnapshot.monitorValues, result.session.livePidSnapshot.monitorValues);
   assert.equal((await run()).reason, "fixture_already_consumed");
-  const wrongOrder = spawnSync(exe, ["--generated-mode01-out-of-order"], { cwd: root, env, windowsHide: true,
+  const wrongOrder = spawnSync(exe, ["--generated-mode01-out-of-order", ...selectionArgs], { cwd: root, env, windowsHide: true,
     encoding: "utf8", timeout: 15000, maxBuffer: 8192 });
   assert.equal(wrongOrder.status, 6);
   assert.equal(wrongOrder.stdout, "");
   assert.equal(wrongOrder.stderr, "");
   const changed = Buffer.from(dll); changed[0] ^= 1;
   fs.writeFileSync(path.join(root, "mode01.dll"), changed);
-  const badDigest = spawnSync(exe, ["--generated-mode01"], { cwd: root, env, windowsHide: true,
+  const badDigest = spawnSync(exe, ["--generated-mode01", ...selectionArgs], { cwd: root, env, windowsHide: true,
     encoding: "utf8", timeout: 15000, maxBuffer: 8192 });
   assert.equal(badDigest.status, 1);
   assert.equal(badDigest.stdout, "");
