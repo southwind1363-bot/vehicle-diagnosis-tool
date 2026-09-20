@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-20 Mode01選択対象と非実行配布物確認の結合: 開発専用createRegisteredMode01PackageReviewを追加。既存hostの秘密descriptor handoffを内部で生成して既存folder/signature確認へ接続し、UI/importからhandoffを差し替える入口は設けない。新規の署名判定・catalog許可規約・実行分岐は追加せず、全結果execution_status:blockedを維持。未発行descriptorの実factory拒否、実装抽出＋人工秘密store＋3byte人工fileで05/0Cの選択一致、PID不許可、fingerprint変更、private path非露出を確認。人工catalog一致＋人工Valid署名でもpublisher/dependency/executionの3阻害理由が残る。既存resolver46/39と署名配布26検査合格。実registry/vendor DLL/VCI/実車なし。native workerへの実行許可受渡しではなく、開発source限定で公開entry/601ZIP/保存形式不変。
+
 2026-09-20 Mode01親子選択情報の照合: 承認済み開発範囲で固定生成workerへ親のpath/hash/size/architecture/ECU/PIDを引数として渡す処理を結合。workerは独立した固定名/compile時digest・size・PID/ECU7E0/process bitnessと照合し、lease取得・file読取・DLLロード前に不一致をexit2/出力なしで拒否。引数から任意DLLや要求へ変更できず、実fileの長さも保持handle上で確認する。生成DLLの正常水温/RPM/0→終了→保存復元、異常応答不採用、排他拒否等の既存112項目と選択受渡しに加え、親子不一致/不足/余分引数をx86/x64各27項目確認。Nodeの選択/結果変換/保存/監督検査も合格。実registry/vendor DLL/VCI/実車/別PC未検証、公開entry/保存形式/601ZIPは不変。固定生成workerから一般選択driverへ拡張したものではない。次は選択情報と既存の非実行配布物確認のMode01側結合を確認し、未確認の依存関係や発行元を実行許可に格上げしない。
 
 2026-09-20 Mode01の登録秘密descriptor resolver結合: 前回承認の範囲で内部JS factory createJ2534RegisteredMode01SelectionHandoffを追加し、既存の秘密WeakMap/live registry由来/全file identity一致/readonly API準備/実行無効のresolverを再利用。prepareとconsumeで同じ再照合を行い、既存DTCのservice許可範囲は変更しない。HTTP route/worker起動/native loaderには接続せず、選択情報一致を実行許可と扱わない。実装抽出＋人工秘密storeの46項目、既存DTC39/156・bridge384・署名26等合格。bridgeのimport依存欠落を防ぐため非実行handoff部品だけ次回package対象へ追加し、package490合格。実registry/vendor DLL/VCI/実車未使用。既存601ZIPを上書きしていない。次は同承認範囲で親子のMode01選択情報照合を進め、一般driverを実行しない。公開通信無効・保存形式・依存信頼規約不変。

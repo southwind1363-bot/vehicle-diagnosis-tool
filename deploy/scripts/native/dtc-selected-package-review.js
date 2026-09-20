@@ -17,7 +17,7 @@ const unavailable = () => blocked({ status: "unverified", reason: "selection_una
   inventory_observed: false, execution_enabled: false, publisher_verified: false,
   dependency_closure_verified: false });
 
-// Internal composition only. Supply the existing registered DTC handoff from
+// Internal composition only. Supply the registered DTC or Mode01 handoff from
 // the trusted host; never a UI-provided selection or an imported descriptor.
 // Consumes its expiring, one-use ticket BEFORE any folder inspection.
 export function createDtcSelectedPackageReview({ handoff, catalog = [] }) {

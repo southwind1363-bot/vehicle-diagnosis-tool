@@ -6,6 +6,7 @@ import path from "node:path";
 import { createDtcSelectedPackageReview } from "./native/dtc-selected-package-review.js";
 import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
 import { createJ2534Mode01SelectionHandoff } from "./j2534-mode01-selection-handoff.js";
+import { createRegisteredMode01PackageReview } from "./native/mode01-selected-package-review.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
 const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff"];
@@ -33,6 +34,10 @@ function setup() {
   return state;
 }
 const request = { request_ecu: 0x7e0, service: 3 };
+// Actual host factory rejects an unissued clone before any registry/file work.
+const unissuedReview = createRegisteredMode01PackageReview().inspect({}, { request_ecu: 2016, pid: 5 }, null, null);
+assert.equal(unissuedReview.reason, "selection_unavailable");
+assert.equal(unissuedReview.execution_enabled, false);
 for (const pid of [5, 12]) {
   const s = setup(), intent = { request_ecu: 0x7e7, pid };
   const ticket = s.mode01.prepare(s.descriptor, intent);
@@ -99,5 +104,41 @@ if (process.platform === "win32") {
   assert.equal(s.calls, 2); assert.ok(!JSON.stringify(value).includes(root));
   s.current.libraryPath = path.join(root, "other.dll");
   assert.equal(review.inspect(s.descriptor, request, root, metadata).reason, "selection_unavailable"); checks += 5;
+
+  // Exercise the new composition with the extracted real resolver and an
+  // artificial secret store. No real registry or vendor files are consulted.
+  s.current.libraryPath = file;
+  const modeSource = fs.readFileSync(new URL("./native/mode01-selected-package-review.js", import.meta.url), "utf8");
+  const factory = modeSource.match(/export function createRegisteredMode01PackageReview[^]*?\n\}/)[0].replace(/^export /, "");
+  const modeContext = vm.createContext({ createDtcSelectedPackageReview,
+    createJ2534RegisteredMode01SelectionHandoff: () => s.mode01 });
+  vm.runInContext(factory, modeContext);
+  const modeReview = modeContext.createRegisteredMode01PackageReview();
+  for (const pid of [5, 12]) {
+    const observed = modeReview.inspect(s.descriptor, { request_ecu: 2016, pid }, root, metadata);
+    assert.equal(observed.selected_entry_matches, true);
+    assert.equal(observed.execution_status, "blocked");
+    assert.equal(observed.execution_enabled, false);
+    assert.equal(observed.publisher_verified, false);
+    assert.equal(observed.dependency_closure_verified, false);
+    assert.ok(!JSON.stringify(observed).includes(root));
+    assert.ok(observed.execution_blockers.includes("execution_not_authorized"));
+  }
+  const catalogReview = modeContext.createRegisteredMode01PackageReview({ catalog: [{ ...metadata,
+    files: [{ name: "driver.dll", size: 3, sha256: hash }] }] });
+  const syntheticValid = JSON.stringify({ observation_status: "observed_only", signature_status: "Valid",
+    signature_type: "Authenticode", signer_certificate_sha256: "A".repeat(64), file_sha256: hash,
+    publisher_verified: false, dependency_closure_verified: false, execution_enabled: false });
+  const matched = catalogReview.inspect(s.descriptor, { request_ecu: 2016, pid: 12 }, root, metadata, syntheticValid);
+  assert.equal(matched.status, "metadata_match_only");
+  assert.equal(matched.entry_signature.signature_status, "Valid");
+  assert.deepEqual(matched.execution_blockers, ["publisher_unverified", "dependency_closure_unverified", "execution_not_authorized"]);
+  assert.equal(matched.execution_enabled, false);
+  const beforeInvalid = s.calls;
+  assert.equal(modeReview.inspect(s.descriptor, { request_ecu: 2016, pid: 4 }, root, metadata).reason, "selection_unavailable");
+  assert.equal(s.calls, beforeInvalid);
+  s.current.fingerprint.sha256 = "changed";
+  assert.equal(modeReview.inspect(s.descriptor, { request_ecu: 2016, pid: 5 }, root, metadata).reason, "selection_unavailable");
+  console.log("Mode01 registered package composition: matched inventory remains blocked; invalid PID and changed identity rejected; private paths omitted");
 } else console.log("Registered package filesystem integration: skipped (requires Windows paths)");
 console.log(`Registered DTC selection resolver: ${checks} checks / extracted bridge code, synthetic registry/store only / no DLL or vehicle I/O`);
