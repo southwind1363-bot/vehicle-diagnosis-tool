@@ -7,6 +7,8 @@ import { createDtcSelectedPackageReview } from "./native/dtc-selected-package-re
 import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
 import { createJ2534Mode01SelectionHandoff } from "./j2534-mode01-selection-handoff.js";
 import { createRegisteredMode01PackageReview } from "./native/mode01-selected-package-review.js";
+import { createRegisteredMode01FixtureSupervisor } from "./native/mode01-registered-fixture-supervisor.js";
+import { createJ2534SelectedMode01FixtureSupervisor } from "./j2534-mode01-fixture-supervisor.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
 const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff"];
@@ -63,6 +65,41 @@ for (const mutate of [s => s.current = null, s => s.current.descriptorSource = "
   assert.equal(s.calls, 0);
 }
 console.log("Registered Mode01 resolver: 46 checks / synthetic private store only; no registry, DLL or vehicle access");
+// Compose the actual factory with the extracted host resolver and artificial
+// private store. The real factory is also exercised with an unissued descriptor.
+const fixtureSource = fs.readFileSync(new URL("./native/mode01-registered-fixture-supervisor.js", import.meta.url), "utf8");
+const fixtureFactory = fixtureSource.match(/export function createRegisteredMode01FixtureSupervisor[^]*?\n\}/)[0].replace(/^export /, "");
+for (const pid of [5, 12]) {
+  for (const scenario of ["matched", "expired", "changed", "wrong_pin", "unissued"]) {
+    const s = setup(); let launches = 0, args;
+    const context = vm.createContext({ createJ2534SelectedMode01FixtureSupervisor,
+      createJ2534RegisteredMode01SelectionHandoff: () => s.mode01 });
+    vm.runInContext(fixtureFactory, context);
+    const factory = scenario === "unissued" ? createRegisteredMode01FixtureSupervisor : context.createRegisteredMode01FixtureSupervisor;
+    const pinned = { path: s.original.libraryPath, sha256: (scenario === "wrong_pin" ? "B" : "A").repeat(64),
+      size: 4096, architecture: "x64", request_ecu: 2016, pid };
+    const run = factory({ descriptor: s.descriptor, pinned,
+      // Extra caller metadata must not replace the internal host handoff.
+      handoff: { prepare() { throw new Error("injected handoff"); } },
+      decodeLivePidResponse() { throw new Error("no response expected"); },
+      buildDiagnosticScanSession() { throw new Error("no session expected"); },
+      spawnWorker(value) { launches++; args = value; throw new Error("synthetic spawn failure"); } });
+    if (scenario === "expired") s.time += 5000;
+    if (scenario === "changed") s.current.fingerprint.inode++;
+    const result = await run();
+    assert.equal(result.session, null);
+    assert.equal(result.vehicle_communication, false);
+    assert.equal(launches, scenario === "matched" ? 1 : 0);
+    assert.equal(s.calls, scenario === "unissued" ? 0 : scenario === "expired" ? 1 : 2);
+    if (scenario === "matched") {
+      assert.ok(Object.isFrozen(args));
+      assert.deepEqual(args, ["--generated-mode01", pinned.path, pinned.sha256, "4096", "x64", "2016", String(pid)]);
+    }
+    assert.equal((await run()).reason, "fixture_already_consumed");
+    assert.ok(!JSON.stringify(result).includes(pinned.path));
+  }
+}
+console.log("Registered Mode01 fixed supervisor: 10 composition cases passed; synthetic store and spawn callback only, no process/registry/DLL/vehicle");
 {
   const s = setup(), ticket = s.api.prepare(s.descriptor, request);
   assert.equal(JSON.stringify(ticket), "{}"); assert.equal(s.calls, 1);
