@@ -82,6 +82,7 @@ function fixture() {
   fs.writeFileSync(path.join(sourceDirectory, "service-worker.js"), 'const CACHE_VERSION = "1.0.0";');
   fs.writeFileSync(path.join(sourceDirectory, "offline-assets.json"), JSON.stringify({ version: "1.0.0", asset_count: assets.length, assets }));
   for (const entry of ["start-workstation.cmd", "verify-workstation.cmd", "inspect-workstation-j2534.cmd", "scripts/inspect-workstation-j2534.js", "scripts/verify-workstation-package.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-dtc-selection-handoff.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) fs.writeFileSync(path.join(sourceDirectory, entry), "fixture");
+  fs.copyFileSync(new URL("./j2534-mode01-selection-handoff.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-mode01-selection-handoff.js"));
   fs.copyFileSync(new URL("./j2534-native-quarantine.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-native-quarantine.js"));
   fs.copyFileSync(new URL("./j2534-registered-driver-native-preflight.js", import.meta.url), path.join(sourceDirectory, "scripts", "j2534-registered-driver-native-preflight.js"));
   for (const name of ["J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs", "J2534GlobalMutexLease.cs", "J2534RegisteredDriverPreflightWorker.cs"])

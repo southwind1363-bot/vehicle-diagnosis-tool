@@ -5,9 +5,10 @@ import os from "node:os";
 import path from "node:path";
 import { createDtcSelectedPackageReview } from "./native/dtc-selected-package-review.js";
 import { createJ2534DtcSelectionHandoff } from "./j2534-dtc-selection-handoff.js";
+import { createJ2534Mode01SelectionHandoff } from "./j2534-mode01-selection-handoff.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
-const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff"];
+const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff"];
 const code = names.map(name => {
   const match = source.match(new RegExp(`(?:export )?function ${name}\\([^)]*\\) \\{[\\s\\S]*?\\r?\\n\\}`));
   assert.ok(match, `Missing ${name}`); return match[0].replace(/^export /, "");
@@ -20,7 +21,7 @@ function setup() {
   secrets.set(descriptor, original);
   const state = { time: 100, calls: 0, current: { ...original, fingerprint: { ...original.fingerprint } },
     metadata: { exact_readonly_api_ready: true, execution_enabled: false, sha256: "a".repeat(64), file_size: 4096, driver_architecture: "x64" } };
-  const context = vm.createContext({ j2534RegisteredDriverDescriptorSecrets: secrets, createJ2534DtcSelectionHandoff,
+  const context = vm.createContext({ j2534RegisteredDriverDescriptorSecrets: secrets, createJ2534DtcSelectionHandoff, createJ2534Mode01SelectionHandoff,
     performance: { now: () => state.time },
     createJ2534RegisteredDriverDescriptor(options) {
       state.calls++; assert.equal(options.enabled, true); assert.equal(options.selectedDeviceId, original.selectedDeviceId);
@@ -28,9 +29,35 @@ function setup() {
     } });
   vm.runInContext(code, context);
   state.api = context.createJ2534RegisteredDtcSelectionHandoff(); state.descriptor = descriptor; state.original = original;
+  state.mode01 = context.createJ2534RegisteredMode01SelectionHandoff();
   return state;
 }
 const request = { request_ecu: 0x7e0, service: 3 };
+for (const pid of [5, 12]) {
+  const s = setup(), intent = { request_ecu: 0x7e7, pid };
+  const ticket = s.mode01.prepare(s.descriptor, intent);
+  assert.equal(JSON.stringify(ticket), "{}");
+  assert.equal(s.mode01.prepare({ ...s.descriptor }, intent), null);
+  assert.equal(s.calls, 1);
+  const result = s.mode01.consume(ticket);
+  assert.equal(result.path, s.original.libraryPath); assert.equal(result.pid, pid);
+  assert.equal(result.request_ecu, 0x7e7); assert.equal(result.service, 1);
+  assert.equal(s.calls, 2); assert.equal(s.mode01.consume(ticket), null);
+  assert.ok(Object.isFrozen(result));
+}
+for (const mutate of [s => s.current = null, s => s.current.descriptorSource = "test_fixture_registry",
+  s => s.current.libraryPath += ".changed", s => s.metadata.execution_enabled = true,
+  s => s.metadata.exact_readonly_api_ready = false, s => s.time += 5000,
+  ...["device", "inode", "size", "mtime_ns", "ctime_ns", "sha256"].map(k => s => s.current.fingerprint[k] = "changed")]) {
+  const s = setup(), ticket = s.mode01.prepare(s.descriptor, { request_ecu: 0x7e0, pid: 5 });
+  mutate(s); assert.equal(s.mode01.consume(ticket), null); assert.equal(s.mode01.consume(ticket), null);
+}
+{
+  const s = setup(); s.original.descriptorSource = "test_fixture_registry";
+  assert.equal(s.mode01.prepare(s.descriptor, { request_ecu: 0x7e0, pid: 5 }), null);
+  assert.equal(s.calls, 0);
+}
+console.log("Registered Mode01 resolver: 46 checks / synthetic private store only; no registry, DLL or vehicle access");
 {
   const s = setup(), ticket = s.api.prepare(s.descriptor, request);
   assert.equal(JSON.stringify(ticket), "{}"); assert.equal(s.calls, 1);

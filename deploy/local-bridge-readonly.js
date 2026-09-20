@@ -8,6 +8,7 @@ import { runJ2534NativePreflight } from "./scripts/j2534-registered-driver-nativ
 import { createJ2534UdsTransportAdapterRequestBoundary } from "./scripts/j2534-uds-transport-adapter-request.js";
 import { verifyWorkstationPackage } from "./scripts/verify-workstation-package.js";
 import { createJ2534DtcSelectionHandoff } from "./scripts/j2534-dtc-selection-handoff.js";
+import { createJ2534Mode01SelectionHandoff } from "./scripts/j2534-mode01-selection-handoff.js";
 
 const DEFAULT_PORT = 8765;
 const API_VERSION = "v1";
@@ -1582,6 +1583,13 @@ function resolveJ2534RegisteredDtcSelection(descriptor) {
 // dependency trust and execution authorization are separate, mandatory stages.
 export function createJ2534RegisteredDtcSelectionHandoff() {
   return createJ2534DtcSelectionHandoff({ resolveDescriptor: resolveJ2534RegisteredDtcSelection,
+    revalidateDescriptor: resolveJ2534RegisteredDtcSelection, now: () => performance.now() });
+}
+
+// Private non-executing Mode01 metadata API. Reuse the same secret identity
+// checks, but keep the DTC service allowlist and all public routes unchanged.
+export function createJ2534RegisteredMode01SelectionHandoff() {
+  return createJ2534Mode01SelectionHandoff({ resolveDescriptor: resolveJ2534RegisteredDtcSelection,
     revalidateDescriptor: resolveJ2534RegisteredDtcSelection, now: () => performance.now() });
 }
 

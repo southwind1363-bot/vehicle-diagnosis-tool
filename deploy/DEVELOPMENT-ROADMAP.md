@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-20 Mode01の登録秘密descriptor resolver結合: 前回承認の範囲で内部JS factory createJ2534RegisteredMode01SelectionHandoffを追加し、既存の秘密WeakMap/live registry由来/全file identity一致/readonly API準備/実行無効のresolverを再利用。prepareとconsumeで同じ再照合を行い、既存DTCのservice許可範囲は変更しない。HTTP route/worker起動/native loaderには接続せず、選択情報一致を実行許可と扱わない。実装抽出＋人工秘密storeの46項目、既存DTC39/156・bridge384・署名26等合格。bridgeのimport依存欠落を防ぐため非実行handoff部品だけ次回package対象へ追加し、package490合格。実registry/vendor DLL/VCI/実車未使用。既存601ZIPを上書きしていない。次は同承認範囲で親子のMode01選択情報照合を進め、一般driverを実行しない。公開通信無効・保存形式・依存信頼規約不変。
+
 2026-09-20 Mode01選択情報の非実行受渡し: 直前の信頼境界確認に利用者「続けて」。判断待ち解除。既存DTC経路は変更せず、別の開発専用createJ2534Mode01SelectionHandoffを追加。ECU7E0..7E7/PID05・0Cのみをコピー凍結し、空のopaque ticket/5秒期限/一回消費/全metadata再照合/処理前後の時刻確認でprivate選択情報へ結ぶ。部品自体はfile/DLL/車両I/Oなし。人工登録情報の期限切れ/時計逆行/改変/例外/別instance/再利用拒否と既存DTC03/07/0A不変を検査。生成fixtureの実file hash/sizeから人工descriptorを作り、受渡し後のECU/PIDを親期待値へ接続しx86/x64の既存読取→終了→保存復元112項目と選択受渡し48項目合格。worker側は固定path/compile時digest/ECU/PIDを維持しており、実登録秘密store resolverや一般選択workerへの接続は未完了。次は同承認範囲でresolver結合と親子期待値の照合を進める。実vendor DLL/VCI/実車/公開entry/保存形式/依存信頼規約/601ZIP不変。自動継続を再開する。
 
 2026-09-20 Mode01選択情報結合の判断待ち: HEAD2a2a0be7。固定生成DLLのMode01読取→owner終了→親正常終了→既存保存復元と通常検査入口への結合は完了。次に必要な登録秘密descriptorからの要求受渡しは、createJ2534DtcSelectionHandoffとJ2534DtcReadSelectionがservice03/07/0Aのみを許容するため未接続。Mode01 workerは現在固定path/compile時digest/ECU7E0/PID定数に限定される。選択情報の期限/一回消費/再照合とMode01のECU/PIDを結ぶ別の開発専用経路は信頼境界に関わるため、利用者判断まで未実装・継続作業停止。提案範囲は人工登録情報と生成DLLによるコード開発のみ。既存DTC許可範囲、実vendor DLL/VCI/実車、公開entry、依存DLL信頼規約、保存形式、601ZIPは変更しない。同じ検査の反復で進捗扱いにしない。
