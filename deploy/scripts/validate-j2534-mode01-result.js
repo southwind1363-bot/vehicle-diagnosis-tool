@@ -66,6 +66,47 @@ for (const input of [sample(5), sample(12), zero]) {
 }
 console.log("Mode01 session handoff and existing JSON round trip: 36 checks passed");
 
+// The same successful two-read observation now carries page 00 into the
+// existing save contract. No other ECU/page/readout is inferred.
+for (const pid of [5, 12]) for (const status of [0, 9]) for (const ecu of [2016, 2023]) {
+  const input = sample(pid);
+  input.request_ecu = ecu;
+  input.supported_read.Status = status;
+  input.supported_read.Messages[0].Data[3] = ecu + 8 - 1792;
+  input.value_read.Messages[0].Data[3] = ecu + 8 - 1792;
+  input.supported_read.Messages[0].Data[9] = 1; // PID20 supported, NOT queried.
+  const expected = { request_ecu: ecu, pid };
+  const converted = convert(completion(input), expected);
+  assert.ok(Object.isFrozen(converted.supportedPidResponse));
+  assert.ok(Object.isFrozen(converted.supportedPidResponse.bytes));
+  converted.evidence.supported_read.Messages[0].Data[6] = 0;
+  assert.equal(converted.supportedPidResponse.bytes[2], 8);
+  const session = buildSession(completion(input), expected).session;
+  const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(session)));
+  for (const s of [session, restored]) {
+    const matrix = s.supportedPidMatrix;
+    assert.equal(matrix.source, "j2534_development_read");
+    assert.equal(matrix.supportedPidReadoutStatus, "reported");
+    assert.deepEqual(Array.from(matrix.supportedPids), ["05", "0C", "20"]);
+    assert.deepEqual(Array.from(matrix.supportedPidPageBases), ["00"]);
+    assert.equal(matrix.supportedPidEcuSnapshots.length, 1);
+    assert.equal(matrix.supportedPidEcuSnapshots[0].sourceEcu, (ecu + 8).toString(16).toUpperCase());
+    assert.deepEqual(Array.from(matrix.supportedPidEcuSnapshots[0].supportedPidPageBases), ["00"]);
+    assert.notEqual(s.dtcSnapshot.dtcReadoutStatus, "reported");
+    assert.equal(s.livePidSnapshot.monitorValues.length, 1);
+  }
+  for (const mutate of [x => x.supported_read.Messages[0].Data[5] = 32,
+    x => x.supported_read.Messages[0].Data.pop(),
+    x => x.supported_read.Messages[0].Data[3] ^= 1,
+    x => x.supported_read.Status = 16,
+    x => x.supported_read.Messages[0].Data[6] = x.supported_read.Messages[0].Data[7] = 0]) {
+    const bad = JSON.parse(JSON.stringify(input)); mutate(bad);
+    assert.equal(buildSession(completion(bad), expected), null);
+    assert.equal(convert(completion(bad), expected).supportedPidResponse, undefined);
+  }
+}
+console.log("Mode01 supported PID00 -> existing session/save: 248 checks passed; other pages remain unqueried");
+
 const supervised = () => ({ execution_status: "worker_completed", worker_started: true, worker_exited: true,
   termination_requested: false, termination_signal_sent: false, errors: [], parsed_result: { stdout: JSON.stringify(sample()) } });
 assert.ok(buildSession.fromSupervisedCompletion(supervised(), { request_ecu: 2016, pid: 5 }));

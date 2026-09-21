@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+2026-09-22 追加回帰: 既存supported-pid-display 94項目、supported-pid-roundtrip 668項目も合格。未取得/取得ゼロ件、ECU別拒否、取得ページ、繰返し保存復元の既存契約を維持。
+
+2026-09-22 Mode01対応PIDの結果・保存引継ぎ: 直前の判断待ちへ利用者「承認」。converterで厳密検査済みPID00のpayloadをコピー凍結し、同一ECU/開発source付きsupportedPidResponseとしてsession builderから既存共通decoderへ接続。保存形式の追加なし、取得ページは00のみ。PID20対応bitがあってもページ20取得済みにはせず、別ECU/不完全応答/未対応/異常終了は従来通りsessionなし。人工248項目（PID05/0C・ECU7E0/7E7・status0/9・保存往復）、bridge384等とx86/x64生成DLL全9シナリオ、新規native保存84項目合格。初回native検査はx64検査用exe改変時にEBUSYで停止。同じfileのロック解消を非変更openで確認し対象process不在確認後、一度の再実行で合格。CIM照会は権限拒否で使わず権限拡張なし。実Chromeのfilechooser→対応PID取得済み/2000.25rpm→download→ページreload→再取込で対応matrix全項目一致、DTC未取得/全体未完了を確認。agent-browser CLI不在のため既存Playwrightと画像確認を使用（obd-file-flow-M4rh7k、mode01-native-piJhRy）。公開entry/追加通信/実vendor DLL/VCI/実車/602ZIPは不変、別PC未検証。判断待ち解消、承認済み開発を継続する。
+
 2026-09-21 生成Mode01結果の実画面保存復元: native検査で正常終了したx64/PID0Cの既存形式sessionをtempへ出力し、scanner-file-flowへその限定artifactを開くオプションを追加。生成DLL→owner終了→親正常終了→実Chromeのfilechooser→2000.25 rpm/ECU7E8表示→JSONダウンロード→ページ再読込→再取込の連続経路が合格。元値・単位・ECU等の全monitorValuesと開発検証表示を照合し、DTC未取得/主要読取未完了も実画像で確認。実機通信・実パスワード・利用者データなし。初回検査は保存形式のsnake_caseをcamelCaseで直接読む検査誤り、次は辞書未設定によるscope/supportNote差で失敗したため、本体と同じ既存復元API/monitor辞書で期待値を作るよう修正後に合格。再起動後download既知障害の反復ではなく同一browser内ページ再読込のみ。agent-browser CLI未導入のため既存Playwright検査と画像確認を使用。Artifacts: obd-file-flow-Ao9yNp、生成archive: mode01-native-RKyZG5。本体/602ZIP/保存形式/公開entry不変。これでMode01のメモリ内保存往復だけだった確認を通常画面まで結合したが、別PC/実VCI/実車は未検証。
 
 2026-09-21 登録Mode01親の起動前失敗結合検証: 前回残した中止/期限/file変更を、親factory実装抽出＋人工handoff＋実固定起動部品＋生成exe/DLLで確認。PID05/0C・x86/x64で事前中止/5秒期限切れ/DLL同size改変は固定launcher到達前に拒否、exe同size改変/後置configはlauncherで拒否し、子process生成0・session:null・秘密path非露出・入力復元後も再実行不可となる160項目合格。期限は人工時計であり実時間待機ではない。正常読取/終了/保存復元と終了失敗不採用の全9生成シナリオも合格。前回実装の結合検証を完了したもので新しい読取機能や実接続成功ではない。実vendor DLL/VCI/実車/公開entry/保存形式/602ZIP不変。起動後の実OS終了不能や別PCは未検証。次回はこの起動前検査の反復を成果とせず、共通結果確認・保存復元の未完了箇所を優先して点検する。

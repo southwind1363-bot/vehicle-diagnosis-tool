@@ -56,7 +56,13 @@ export function createJ2534Mode01ResultConverter(decodeLivePidResponse) {
       // Explicit origin prevents the common decoder's local_bridge default from
       // presenting artificial observations as actual vehicle reads.
       snapshot.source = "j2534_development_read";
-      return { status: "decoded", snapshot, evidence: input };
+      // Only the validated PID00 payload, not the mutable raw evidence, crosses
+      // into the common supported-PID decoder. It proves page 00 for this ECU
+      // only; a continuation bit does not mean page 20 has been read.
+      const supportedPidResponse = Object.freeze({ bytes: Object.freeze([...supported]),
+        source: "j2534_development_read", protocol: "ISO15765",
+        source_ecu: (expected.request_ecu + 8).toString(16).toUpperCase() });
+      return { status: "decoded", snapshot, supportedPidResponse, evidence: input };
     } catch { return unavailable(); }
   }
   function convert(completion, expected) {

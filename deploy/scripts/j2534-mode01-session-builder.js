@@ -8,7 +8,8 @@ export function createJ2534Mode01SessionBuilder({ decodeLivePidResponse, buildDi
   function fromResult(result) {
     try {
       if (result.status !== "decoded") return null;
-      const session = buildDiagnosticScanSession({ source: "j2534_development_read", livePidSnapshot: result.snapshot });
+      const session = buildDiagnosticScanSession({ source: "j2534_development_read", livePidSnapshot: result.snapshot,
+        supportedPidResponse: result.supportedPidResponse });
       if (!session || session.source !== "j2534_development_read") return null;
       return { fixture_only: true, vehicle_communication: false, session };
     } catch { return null; }

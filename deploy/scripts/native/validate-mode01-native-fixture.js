@@ -229,6 +229,16 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)));
   assert.equal(restored.source, "j2534_development_read");
   assert.deepEqual(restored.livePidSnapshot.monitorValues, result.session.livePidSnapshot.monitorValues);
+  for (const session of [result.session, restored]) {
+    assert.equal(session.supportedPidMatrix.supportedPidReadoutStatus, "reported");
+    assert.equal(session.supportedPidMatrix.source, "j2534_development_read");
+    assert.deepEqual(Array.from(session.supportedPidMatrix.supportedPidPageBases), ["00"]);
+    assert.deepEqual(Array.from(session.supportedPidMatrix.supportedPids), [pid.toString(16).toUpperCase().padStart(2, "0")]);
+    assert.equal(session.supportedPidMatrix.supportedPidEcuSnapshots.length, 1);
+    assert.equal(session.supportedPidMatrix.supportedPidEcuSnapshots[0].sourceEcu, "7E8");
+    assert.notEqual(session.dtcSnapshot.dtcReadoutStatus, "reported");
+  }
+  console.log(arch, suffix || "-coolant", "native PID00 -> existing save: 14 checks passed");
   if (arch === "x64" && suffix === "-rpm") {
     const archive = path.join(root, "mode01-ui-session.json");
     fs.writeFileSync(archive, JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)), { flag: "wx" });
