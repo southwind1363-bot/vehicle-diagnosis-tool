@@ -45,12 +45,8 @@ internal static class J2534Mode01FixtureWorker
                         channel, IntPtr.Zero, IntPtr.Zero, 0);
                     return rejected == -8 ? 6 : 7;
                 }
-                var request = new J2534ReadRequestNative(owner, device, Bind<J2534ReadRequestNative.WriteFunction>(library, "PassThruWriteMsgs"));
-                var observation = request.ReadMode01ObservationAndFinish(channel, selection.RequestEcu, selection.Pid,
-                    Bind<J2534ReceiveNative.ReadFunction>(library, "PassThruReadMsgs"),
-                    Bind<J2534ReadRequestNative.StartFilterFunction>(library, "PassThruStartMsgFilter"),
-                    Bind<J2534ReadRequestNative.StopFilterFunction>(library, "PassThruStopMsgFilter"));
-                if (observation == null || !owner.ReferenceReleased) return 5;
+                J2534Mode01Observation observation;
+                if (!J2534Mode01ReadOperation.TryReadAndFinish(library, owner, device, channel, selection, out observation)) return 5;
                 cleanupConfirmed = true;
                 Console.Write(observation.ToFixtureJson());
             }

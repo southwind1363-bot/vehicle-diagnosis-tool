@@ -31,7 +31,7 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   const buildArgs = ["/nologo", "/warnaserror", `/platform:${arch}`, `/out:${exe}`,
     "/define:J2534_DTC_DEVELOPMENT;J2534_MODE01_DEVELOPMENT;PREFLIGHT_FIXTURE_TESTS", source,
     ...["J2534IdentityNative.cs", "J2534ReadRequestNative.cs", "J2534ReceiveNative.cs", "J2534Mode01Exchange.cs",
-      "J2534DtcExecutionLease.cs", "J2534GlobalMutexLease.cs", "J2534Mode01ReadSelection.cs",
+      "J2534DtcExecutionLease.cs", "J2534GlobalMutexLease.cs", "J2534Mode01ReadSelection.cs", "J2534Mode01ReadOperation.cs",
       "WindowsDtcReadLibrary.cs", "J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs",
       "J2534Mode01Observation.cs", "J2534Mode01FixtureWorker.cs"].map(name => fileURLToPath(new URL(name, import.meta.url)))];
   const buildOptions = { cwd: root, env, windowsHide: true, encoding: "utf8", timeout: 15000 };
