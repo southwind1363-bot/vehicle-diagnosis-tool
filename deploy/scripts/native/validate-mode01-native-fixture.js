@@ -28,12 +28,32 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   const pinnedArgs = [path.join(root, "mode01.dll"), digest, String(dll.length), arch, String(0x7e0), String(pid)];
   const exe = path.join(root, "mode01-worker.exe");
   const compiler = path.join(process.env.SystemRoot, "Microsoft.NET", framework, "v4.0.30319", "csc.exe");
-  const build = spawnSync(compiler, ["/nologo", "/warnaserror", `/platform:${arch}`, `/out:${exe}`,
-    "/define:J2534_DTC_DEVELOPMENT;J2534_MODE01_DEVELOPMENT", source,
+  const buildArgs = ["/nologo", "/warnaserror", `/platform:${arch}`, `/out:${exe}`,
+    "/define:J2534_DTC_DEVELOPMENT;J2534_MODE01_DEVELOPMENT;PREFLIGHT_FIXTURE_TESTS", source,
     ...["J2534IdentityNative.cs", "J2534ReadRequestNative.cs", "J2534ReceiveNative.cs", "J2534Mode01Exchange.cs",
-      "J2534DtcExecutionLease.cs", "J2534GlobalMutexLease.cs",
-      "J2534Mode01Observation.cs", "J2534Mode01FixtureWorker.cs"].map(name => fileURLToPath(new URL(name, import.meta.url)))],
-  { cwd: root, env, windowsHide: true, encoding: "utf8", timeout: 15000 });
+      "J2534DtcExecutionLease.cs", "J2534GlobalMutexLease.cs", "J2534Mode01ReadSelection.cs",
+      "WindowsDtcReadLibrary.cs", "J2534RegisteredDriverPreflight.cs", "J2534AuthenticodeVerifier.cs",
+      "J2534Mode01Observation.cs", "J2534Mode01FixtureWorker.cs"].map(name => fileURLToPath(new URL(name, import.meta.url)))];
+  const buildOptions = { cwd: root, env, windowsHide: true, encoding: "utf8", timeout: 15000 };
+  // Without the existing test-only signature stand-in, unsigned generated PE
+  // must be refused. This does not approve any publisher or vendor DLL.
+  if (suffix === "") {
+    const selectionExe = path.join(root, "mode01-selection-tests.exe");
+    const selectionBuild = spawnSync(compiler, [...buildArgs.map(arg => arg === `/out:${exe}` ? `/out:${selectionExe}` : arg),
+      "/main:J2534Mode01ReadSelectionTests", fileURLToPath(new URL("J2534Mode01ReadSelectionTests.cs", import.meta.url))], buildOptions);
+    assert.equal(selectionBuild.status, 0, selectionBuild.stdout + selectionBuild.stderr);
+    const selected = spawnSync(selectionExe, pinnedArgs, buildOptions);
+    assert.equal(selected.status, 0, selected.stdout + selected.stderr);
+    assert.equal(selected.stderr, ""); console.log(arch, selected.stdout.trim());
+    const strictExe = path.join(root, "mode01-unsigned-refusal.exe");
+    const strictBuild = spawnSync(compiler, buildArgs.map(arg => arg === `/out:${exe}` ? `/out:${strictExe}`
+      : arg.replace(";PREFLIGHT_FIXTURE_TESTS", "")), buildOptions);
+    assert.equal(strictBuild.status, 0, strictBuild.stdout + strictBuild.stderr);
+    const refused = spawnSync(strictExe, ["--generated-mode01", ...pinnedArgs], buildOptions);
+    assert.equal(refused.status, 1); assert.equal(refused.stdout, ""); assert.equal(refused.stderr, "");
+    console.log(arch, "unsigned fixture refused without signature stand-in: 3 checks passed");
+  }
+  const build = spawnSync(compiler, buildArgs, buildOptions);
   assert.equal(build.status, 0, build.stdout + build.stderr);
   if (suffix === "") {
     const holderExe = path.join(root, "lease-holder.exe");
