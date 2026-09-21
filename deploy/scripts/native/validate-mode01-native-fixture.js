@@ -18,7 +18,8 @@ obd.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL("../../data/o
 const env = { SystemRoot: process.env.SystemRoot, TEMP: os.tmpdir(), TMP: os.tmpdir() };
 for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) {
  for (const [suffix, pid, value] of [["", 5, 90], ["-rpm", 12, 2000.25], ["-rpm-zero", 12, 0],
-   ["-unsupported", 5, null], ["-wrong-pid", 5, null], ["-incomplete", 5, null]]) {
+   ["-unsupported", 5, null], ["-wrong-pid", 5, null], ["-incomplete", 5, null],
+   ["-stop-failure", 5, null], ["-disconnect-failure", 5, null], ["-close-failure", 5, null]]) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mode01-native-"));
   const dll = buildJ2534NativeFixture(arch, `owned-dtc-mode01${suffix}`);
   fs.writeFileSync(path.join(root, "mode01.dll"), dll, { flag: "wx" });

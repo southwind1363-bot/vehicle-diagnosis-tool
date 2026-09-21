@@ -9,6 +9,7 @@ const SCENARIOS = new Set([
   "owned-dtc-mode01",
   "owned-dtc-mode01-rpm", "owned-dtc-mode01-rpm-zero", "owned-dtc-mode01-unsupported",
   "owned-dtc-mode01-wrong-pid", "owned-dtc-mode01-incomplete",
+  "owned-dtc-mode01-stop-failure", "owned-dtc-mode01-disconnect-failure", "owned-dtc-mode01-close-failure",
 ]);
 
 function align(value, boundary) { return Math.ceil(value / boundary) * boundary; }
@@ -353,12 +354,18 @@ function mode01Code(architecture, original, scenario) {
     : scenario.endsWith("-incomplete") ? [65, 5]
     : scenario.endsWith("-rpm-zero") ? [65, 12, 0, 0]
     : rpm ? [65, 12, 31, 65] : [65, 5, 130];
+  // Fixed cleanup failures occur only after both valid responses. Do not accept
+  // bytecode/status from a caller or alter any existing fixture's instructions.
+  const cleanup = (name, state, body, argc) => scenario.endsWith(`-${name}-failure`)
+    ? wrap(state, Buffer.from([0xb8, 7, 0, 0, 0, ...(x86 ? [0xc2, argc * 4, 0] : [0xc3])]), argc)
+    : wrap(state, body, argc);
   return {
     open: wrap(0, original.open, 2), connect: wrap(1, original.connect, 5),
     start: wrap(2, support.start, 6),
     write: choose(3, wrap(3, support.write, 4), wrap(5, value.write, 4)),
     read: choose(4, wrap(4, receive(supported), 4), wrap(6, receive(measured), 4)),
-    stop: wrap(7, support.stop, 2), disconnect: wrap(8, original.disconnect, 1), close: wrap(9, original.close, 1)
+    stop: cleanup("stop", 7, support.stop, 2), disconnect: cleanup("disconnect", 8, original.disconnect, 1),
+    close: cleanup("close", 9, original.close, 1)
   };
 }
 

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-21 Mode01正常応答後の終了失敗検証: 既存固定PE生成器にStopMsgFilter/Disconnect/Closeがそれぞれstatus7を返す3種類だけを追加し、実際の生成DLL→選択loader→共通owner読取→隔離親をx86/x64で検証。対応確認と水温90の正常応答を受けても各終了失敗でworker exit5、親session:null/出力不採用/同instance再実行不可となる30項目が合格。正常水温/RPM/0と保存復元、既存異常応答・選択・未署名拒否も合格。実装の結果採用境界を変更せず、前回共通化の終了失敗経路を実native ABIで確認したもの。実vendor DLL/VCI/実車やOS終了不能の証明ではない。本体/602ZIP/保存形式/公開entry不変。次は未確認署名/依存関係を許可せず、承認済みMode01選択層の残る親子接続条件を点検する。
+
 2026-09-21 Mode01選択からowner読取の内部共通化: 9/21承認範囲で開発限定J2534Mode01ReadOperationを追加。固定worker内にあった選択ECU/PIDと固定4exportの結合を内部処理へ移し、既存PID00対応確認→05/0C一回読取→filter/channel/device終了→module解放確認後だけ観測を返す。新しいloader/launcher/再試行/許可判定は追加せず、workerの固定compile pinとprocess lease、親の正常終了確認は維持。x86/x64の生成DLL水温90/RPM2000.25/0と保存復元、未対応/不正PID/不完全応答拒否、未署名拒否・選択42項目等が合格。実vendor DLL/VCI/実車未使用、公開entry/保存形式/602ZIP不変。次はこの内部処理のcleanup失敗時に観測が漏れないことを既存生成fixture経路で検証し、実機実行へは進めない。
 
 2026-09-21 bridge回帰検査の実行順修正: 前回のtimeout誤検出を計測。process-close単体は合格するがbridge静的import経由ではfailed子のspawn通知1762ms、stdout/exit1が1768msとなり1500ms期限が先に処理された。top-level awaitを持つ検査と兄弟moduleの初期化が重なっており、検査入口の6つのside-effect importを順次await importへ変更。期限延長・本体runner・終了判定・再試行規約は変更しない。変更後は同じbridge通常入口で実Node正常/異常/timeout・署名26・Mode01結果/保存・bridge384がすべて合格。失敗時の固定event名/経過ms/codeだけをassertへ付け、再発時に秘密pathや実出力を表示せず切分け可能にした。前回のbridge全体未合格は解消。本体/602ZIP/保存形式/公開実行は不変、実vendor DLL/VCI/実車は未使用。次は承認済みMode01選択型とowner読取の共通処理化を進める。
