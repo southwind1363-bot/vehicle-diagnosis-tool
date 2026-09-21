@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+2026-09-22 公開OBD検査への出所保持追従: validate-obd-readonly.jsの旧source分類文字列チェックを、開発source優先と既存3分類すべての保持を要求する条件へ更新。更新後の通常入口を最後まで実行し、OBD安全検査7447項目/Errors0と関連検査すべて合格（ローカル約12分）。検査削除・件数変更・期限延長なし。本体/603ZIP不変。以下の「再検証中」は解消したが、公開CIの復旧はこの追従修正の送信後に別途確認する。
+
+2026-09-22 603配布のオフライン再起動確認: 既存603ZIPの別展開を隔離Chromeで検査し、人工事例保存→web/bridge server停止→browser process終了/再起動→offline再表示→事例検索/JSON backup一致が合格。初回注意・lock維持・外向き通信なし・package整合不変、390px保存事例画面を目視確認（packaged-browser-t6wyAz）。任意faviconのoffline失敗1件と補助CDP cache一覧のNo frame foundは分離記録。agent-browser CLI不在のため既存Playwrightを使用。実password正常login、OS再起動、別PC、実機は未検証。本体/603ZIP/保存形式/通信権限変更なし。公開b5435671のChromium CIはsuccessだがOBD contract CIはfailure。旧source分類の文字列表記を要求する検査を開発source優先＋既存3分類保持へ追従修正し、通常入口で再検証中。公開CI復旧済みとはまだ扱わない。
+
 2026-09-22 出所保持の最終回帰: 専用116項目・session export266・JSON policy177・メーカー履歴369・clipboard期限検査が合格。全派生summaryを戻す初版と代表ケース版の2実行を手動中断し、実画面と同じ明示readout受渡しへ修正した最終版で合格した。全データを再帰的に統合する性能を確認済みとはしない。印刷mediaの詳細画面画像でも「実車読取ではありません／整備判断に使用しない」を目視確認。
 
 2026-09-22 出所保持修正（3.13.603）: 直前の混合結果の注意消失への確認に利用者「承認」。共通bridge import/テキスト統合で、sessionまたは既知の読取snapshotにj2534_development_readがあれば既存source欄へ保持し、繰返し統合・保存復元でも実車由来と誤認させない注意判定を維持。通常入力のsource規約と値選択規則、保存schema、実通信無効は不変。実Chromeの人工DTC＋人工テキスト統合archive取込→画面注意→印刷media注意→download→reload→再取込と通常archive置換時の注意解除が合格（obd-file-flow-3bHp35）。印刷はmedia検査で実プリンター未使用。専用CLI不在のため既存Playwrightへfallback、画面注意画像を目視。bridge384/Mode01結果248等、offline183/印刷53/package490合格。603ZIPを新規作成し別展開848files/16913909bytes、共通core hash一致を確認。ZIP2671496bytes、SHA256 974DD1BDD8399568D91FE680A3DF2C69DBA659B80FA072BD122FA06DA3EC35A2。旧602維持。実DLL/VCI/実車/別PC未検証、公開実行有効化なし。追加保存検査の初版は全aliasごとに3往復する重複で長時間化したため手動中断し、aliasは入口網羅、全経路はroot/DTC/live/対応PIDの代表に絞った。判断待ちは解消。
