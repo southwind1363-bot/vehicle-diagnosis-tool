@@ -217,7 +217,12 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         parsed_result: { fixture_only: true, vehicle_communication: false, ...parsed } });
       assert.ok(built?.session);
       const input = path.join(output, 'development-source.json');
-      fs.writeFileSync(input, JSON.stringify(api.buildBridgeSessionExportPayload(built.session)));
+      const sourceSession = process.argv.includes('--mixed-development-source')
+        ? api.buildDiagnosticScanSession({ scan_session: api.mergeDiagnosticInputs({
+          scannerText: 'P0171', bridgeImport: api.buildBridgeDiagnosticImport(built.session)
+        }) }) : built.session;
+      assert.equal(sourceSession.source, 'j2534_development_read');
+      fs.writeFileSync(input, JSON.stringify(api.buildBridgeSessionExportPayload(sourceSession)));
       const replaceFile = async file => {
         await Promise.all([
           page.waitForEvent('dialog').then(async dialog => {

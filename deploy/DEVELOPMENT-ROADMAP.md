@@ -1,5 +1,9 @@
 # 診断機完成までの開発計画
 
+2026-09-22 出所保持の最終回帰: 専用116項目・session export266・JSON policy177・メーカー履歴369・clipboard期限検査が合格。全派生summaryを戻す初版と代表ケース版の2実行を手動中断し、実画面と同じ明示readout受渡しへ修正した最終版で合格した。全データを再帰的に統合する性能を確認済みとはしない。印刷mediaの詳細画面画像でも「実車読取ではありません／整備判断に使用しない」を目視確認。
+
+2026-09-22 出所保持修正（3.13.603）: 直前の混合結果の注意消失への確認に利用者「承認」。共通bridge import/テキスト統合で、sessionまたは既知の読取snapshotにj2534_development_readがあれば既存source欄へ保持し、繰返し統合・保存復元でも実車由来と誤認させない注意判定を維持。通常入力のsource規約と値選択規則、保存schema、実通信無効は不変。実Chromeの人工DTC＋人工テキスト統合archive取込→画面注意→印刷media注意→download→reload→再取込と通常archive置換時の注意解除が合格（obd-file-flow-3bHp35）。印刷はmedia検査で実プリンター未使用。専用CLI不在のため既存Playwrightへfallback、画面注意画像を目視。bridge384/Mode01結果248等、offline183/印刷53/package490合格。603ZIPを新規作成し別展開848files/16913909bytes、共通core hash一致を確認。ZIP2671496bytes、SHA256 974DD1BDD8399568D91FE680A3DF2C69DBA659B80FA072BD122FA06DA3EC35A2。旧602維持。実DLL/VCI/実車/別PC未検証、公開実行有効化なし。追加保存検査の初版は全aliasごとに3往復する重複で長時間化したため手動中断し、aliasは入口網羅、全経路はroot/DTC/live/対応PIDの代表に絞った。判断待ちは解消。
+
 2026-09-22 追加回帰: 既存supported-pid-display 94項目、supported-pid-roundtrip 668項目も合格。未取得/取得ゼロ件、ECU別拒否、取得ページ、繰返し保存復元の既存契約を維持。
 
 2026-09-22 Mode01対応PIDの結果・保存引継ぎ: 直前の判断待ちへ利用者「承認」。converterで厳密検査済みPID00のpayloadをコピー凍結し、同一ECU/開発source付きsupportedPidResponseとしてsession builderから既存共通decoderへ接続。保存形式の追加なし、取得ページは00のみ。PID20対応bitがあってもページ20取得済みにはせず、別ECU/不完全応答/未対応/異常終了は従来通りsessionなし。人工248項目（PID05/0C・ECU7E0/7E7・status0/9・保存往復）、bridge384等とx86/x64生成DLL全9シナリオ、新規native保存84項目合格。初回native検査はx64検査用exe改変時にEBUSYで停止。同じfileのロック解消を非変更openで確認し対象process不在確認後、一度の再実行で合格。CIM照会は権限拒否で使わず権限拡張なし。実Chromeのfilechooser→対応PID取得済み/2000.25rpm→download→ページreload→再取込で対応matrix全項目一致、DTC未取得/全体未完了を確認。agent-browser CLI不在のため既存Playwrightと画像確認を使用（obd-file-flow-M4rh7k、mode01-native-piJhRy）。公開entry/追加通信/実vendor DLL/VCI/実車/602ZIPは不変、別PC未検証。判断待ち解消、承認済み開発を継続する。

@@ -30276,6 +30276,19 @@
     return exportPayload;
   }
 
+  // A mixed result containing development observations must never lose its
+  // non-vehicle provenance. Use the existing source field, not a new schema.
+  function hasDevelopmentReadoutSource(input) {
+    if (!input || typeof input !== "object") return false;
+    const snapshots = [input];
+    for (const key of ["dtcSnapshot", "dtc_snapshot", "livePidSnapshot", "live_pid_snapshot",
+      "freezeFrameSnapshot", "freeze_frame_snapshot", "readinessSnapshot", "readiness_snapshot",
+      "ecuInfoSnapshot", "ecu_info_snapshot", "supportedPidMatrix", "supported_pid_matrix",
+      "onboardMonitorSnapshot", "onboard_monitor_snapshot"]) snapshots.push(input[key]);
+    return snapshots.some((item) => item?.source === "j2534_development_read"
+      || item?.source_type === "j2534_development_read");
+  }
+
   function buildBridgeDiagnosticImport(parts = {}) {
     const summary = resolveBridgeSummary(parts);
     const causeCandidateLog = normalizeCauseCandidateLog(summary.causeCandidateLog || summary.cause_candidate_log || null);
@@ -30578,7 +30591,8 @@
     );
 
     return {
-      source: "local_bridge",
+      source: [parts, summary, nestedBridgeSession].some(hasDevelopmentReadoutSource)
+        ? "j2534_development_read" : "local_bridge",
       importType: "bridge_diagnostic_snapshot",
       startedAt: summary.startedAt || null,
       endedAt: summary.endedAt || null,
@@ -31189,7 +31203,9 @@
       }
       : recalculatedMonitorValueSummary;
     const hasScannerPayload = Boolean(scannerTextInput.trim() || scannerAnalysis.codes.length || scannerAnalysis.monitorValues.length || scannerAnalysis.toolHints.length);
-    const source = bridgeImport
+    const source = [bridgeImport, bridgeSession].some(hasDevelopmentReadoutSource)
+      ? "j2534_development_read"
+      : bridgeImport
       ? hasScannerPayload
         ? "scanner_text_and_local_bridge"
         : "local_bridge"

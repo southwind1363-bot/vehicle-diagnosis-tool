@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
 import "./validate-session-json-policy.js";
+import "./validate-development-source-merge.js";
 import "./validate-manufacturer-history-export.js";
 import "./validate-clipboard-import-timeout.js";
 
