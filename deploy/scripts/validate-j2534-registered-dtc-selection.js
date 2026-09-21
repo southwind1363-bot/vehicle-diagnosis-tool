@@ -72,18 +72,23 @@ const fixtureFactory = fixtureSource.match(/export function createRegisteredMode
 for (const pid of [5, 12]) {
   for (const scenario of ["matched", "expired", "changed", "wrong_pin", "unissued"]) {
     const s = setup(); let launches = 0, args;
+    const spawnDescriptor = Object.freeze({ synthetic: true });
     const context = vm.createContext({ createJ2534SelectedMode01FixtureSupervisor,
+      createMode01FixtureSpawn(value) {
+        assert.equal(value, spawnDescriptor);
+        return value => { launches++; args = value; throw new Error("synthetic spawn failure"); };
+      },
       createJ2534RegisteredMode01SelectionHandoff: () => s.mode01 });
     vm.runInContext(fixtureFactory, context);
-    const factory = scenario === "unissued" ? createRegisteredMode01FixtureSupervisor : context.createRegisteredMode01FixtureSupervisor;
+    const factory = context.createRegisteredMode01FixtureSupervisor;
     const pinned = { path: s.original.libraryPath, sha256: (scenario === "wrong_pin" ? "B" : "A").repeat(64),
       size: 4096, architecture: "x64", request_ecu: 2016, pid };
-    const run = factory({ descriptor: s.descriptor, pinned,
+    const run = factory({ descriptor: scenario === "unissued" ? {} : s.descriptor, pinned, spawnDescriptor,
       // Extra caller metadata must not replace the internal host handoff.
       handoff: { prepare() { throw new Error("injected handoff"); } },
       decodeLivePidResponse() { throw new Error("no response expected"); },
       buildDiagnosticScanSession() { throw new Error("no session expected"); },
-      spawnWorker(value) { launches++; args = value; throw new Error("synthetic spawn failure"); } });
+      spawnWorker() { assert.fail("Caller launcher must not be used"); } });
     if (scenario === "expired") s.time += 5000;
     if (scenario === "changed") s.current.fingerprint.inode++;
     const result = await run();
@@ -99,7 +104,8 @@ for (const pid of [5, 12]) {
     assert.ok(!JSON.stringify(result).includes(pinned.path));
   }
 }
-console.log("Registered Mode01 fixed supervisor: 10 composition cases passed; synthetic store and spawn callback only, no process/registry/DLL/vehicle");
+assert.throws(() => createRegisteredMode01FixtureSupervisor({ descriptor: {}, spawnDescriptor: {} }), /descriptor_invalid/);
+console.log("Registered Mode01 fixed supervisor: 10 composition cases and invalid build pin passed; synthetic store/launcher only, no process/registry/DLL/vehicle");
 {
   const s = setup(), ticket = s.api.prepare(s.descriptor, request);
   assert.equal(JSON.stringify(ticket), "{}"); assert.equal(s.calls, 1);

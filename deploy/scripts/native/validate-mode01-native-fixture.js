@@ -10,6 +10,7 @@ import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
 import { createJ2534SelectedMode01FixtureSupervisor } from "../j2534-mode01-fixture-supervisor.js";
 import { createJ2534Mode01SelectionHandoff } from "../j2534-mode01-selection-handoff.js";
 import { createMode01FixtureSpawn } from "./mode01-fixture-spawn.js";
+import { createRegisteredMode01FixtureSupervisor } from "./mode01-registered-fixture-supervisor.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -17,6 +18,10 @@ vm.runInContext(fs.readFileSync(new URL("../../obd-readonly.js", import.meta.url
 const obd = context.window.ObdReadOnly;
 obd.configureMonitorDefinitions(JSON.parse(fs.readFileSync(new URL("../../data/obd-monitor-definitions.json", import.meta.url), "utf8")));
 const env = { SystemRoot: process.env.SystemRoot, TEMP: os.tmpdir(), TMP: os.tmpdir() };
+// Exercise the registered parent composition with an artificial handoff only.
+// Its real private-store resolver is separately covered by the bridge suite.
+const registeredSource = fs.readFileSync(new URL("./mode01-registered-fixture-supervisor.js", import.meta.url), "utf8");
+const registeredFactory = registeredSource.match(/export function createRegisteredMode01FixtureSupervisor[^]*?\n\}/)[0].replace(/^export /, "");
 for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) {
  for (const [suffix, pid, value] of [["", 5, 90], ["-rpm", 12, 2000.25], ["-rpm-zero", 12, 0],
    ["-unsupported", 5, null], ["-wrong-pid", 5, null], ["-incomplete", 5, null],
@@ -121,6 +126,13 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     worker_sha256: crypto.createHash("sha256").update(executable).digest("hex"), fixture_sha256: digest.toLowerCase() };
   if (suffix === "") {
     assert.throws(() => createMode01FixtureSpawn({ ...spawnDescriptor, worker_sha256: "0".repeat(64) }), /descriptor_invalid/);
+    const unissued = createRegisteredMode01FixtureSupervisor({ descriptor: {}, spawnDescriptor,
+      pinned: { path: path.join(root, "mode01.dll"), sha256: digest, size: dll.length, architecture: arch, request_ecu: 2016, pid },
+      decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession });
+    const denied = await unissued();
+    assert.equal(denied.status, "unavailable"); assert.equal(denied.session, null);
+    assert.equal((await unissued()).reason, "fixture_already_consumed");
+    console.log(arch, "real registered factory rejects unissued descriptor: 3 checks passed");
     const tamperedSpawn = createMode01FixtureSpawn(spawnDescriptor);
     const tampered = Buffer.from(executable); tampered[tampered.length - 1] ^= 1;
     fs.writeFileSync(exe, tampered);
@@ -138,16 +150,22 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     assert.throws(() => wrongArgs(["--generated-mode01", ...pinnedArgs]), /spawn_consumed/);
     console.log(arch, "fixed worker digest/configuration/arguments refused before spawn: 8 checks passed");
   }
-  const verifiedSpawn = createMode01FixtureSpawn(spawnDescriptor);
-  const run = createJ2534SelectedMode01FixtureSupervisor({ handoff, descriptor,
+  const registeredContext = vm.createContext({ createJ2534SelectedMode01FixtureSupervisor,
+    createJ2534RegisteredMode01SelectionHandoff: () => handoff,
+    createMode01FixtureSpawn(pin) {
+      const verifiedSpawn = createMode01FixtureSpawn(pin);
+      return args => {
+        assert.deepEqual(args, ["--generated-mode01", ...selectionArgs]);
+        const child = verifiedSpawn(args);
+        child.once("exit", code => { exitCode = code; });
+        return child;
+      };
+    } });
+  vm.runInContext(registeredFactory, registeredContext);
+  const run = registeredContext.createRegisteredMode01FixtureSupervisor({ descriptor, spawnDescriptor,
     pinned: { path: path.join(root, "mode01.dll"), sha256: digest, size: dll.length, architecture: arch, request_ecu: 0x7e0, pid },
     decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
-    spawnWorker: args => {
-      assert.deepEqual(args, ["--generated-mode01", ...selectionArgs]);
-      const child = verifiedSpawn(args);
-      child.once("exit", code => { exitCode = code; });
-      return child;
-    } });
+    spawnWorker() { assert.fail("Caller launcher must not be used"); } });
   const result = await run();
   if (value === null) {
     assert.equal(exitCode, 5, "Invalid response must be rejected, not crash the worker");
