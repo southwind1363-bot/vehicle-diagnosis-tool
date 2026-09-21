@@ -124,6 +124,51 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   const executable = fs.readFileSync(exe);
   const spawnDescriptor = { root, architecture: arch, pid,
     worker_sha256: crypto.createHash("sha256").update(executable).digest("hex"), fixture_sha256: digest.toLowerCase() };
+  if (suffix === "" || suffix === "-rpm") {
+    // Verify the joined parent, ticket and fixed launcher, not just each part.
+    for (const failure of ["cancelled", "expired", "dll_changed", "exe_changed", "config_added"]) {
+      let clock = 100, inspections = 0, launchAttempts = 0, children = 0;
+      const inspectOnce = d => { inspections++; return inspect(d); };
+      const selectedHandoff = createJ2534Mode01SelectionHandoff({ resolveDescriptor: inspectOnce,
+        revalidateDescriptor: inspectOnce, now: () => clock });
+      const joined = vm.createContext({ createJ2534SelectedMode01FixtureSupervisor,
+        createJ2534RegisteredMode01SelectionHandoff: () => selectedHandoff,
+        createMode01FixtureSpawn(pin) {
+          const fixedSpawn = createMode01FixtureSpawn(pin);
+          return args => { launchAttempts++; const child = fixedSpawn(args); children++; return child; };
+        } });
+      vm.runInContext(registeredFactory, joined);
+      const once = joined.createRegisteredMode01FixtureSupervisor({ descriptor, spawnDescriptor,
+        pinned: { path: path.join(root, "mode01.dll"), sha256: digest, size: dll.length,
+          architecture: arch, request_ecu: 2016, pid },
+        decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession });
+      const abort = new AbortController();
+      if (failure === "cancelled") abort.abort();
+      if (failure === "expired") clock += 5000;
+      if (failure === "dll_changed") {
+        const changed = Buffer.from(dll); changed[changed.length - 1] ^= 1;
+        fs.writeFileSync(path.join(root, "mode01.dll"), changed);
+      }
+      if (failure === "exe_changed") {
+        const changed = Buffer.from(executable); changed[changed.length - 1] ^= 1;
+        fs.writeFileSync(exe, changed);
+      }
+      if (failure === "config_added") fs.writeFileSync(`${exe}.config`, "<configuration/>", { flag: "wx" });
+      const refused = await once({ signal: abort.signal });
+      assert.equal(refused.status, "unavailable"); assert.equal(refused.session, null);
+      assert.equal(children, 0);
+      assert.equal(inspections, ["cancelled", "expired"].includes(failure) ? 1 : 2);
+      assert.equal(launchAttempts, ["exe_changed", "config_added"].includes(failure) ? 1 : 0);
+      assert.ok(!JSON.stringify(refused).includes(root));
+      if (failure === "dll_changed") fs.writeFileSync(path.join(root, "mode01.dll"), dll);
+      if (failure === "exe_changed") fs.writeFileSync(exe, executable);
+      if (failure === "config_added") fs.renameSync(`${exe}.config`, `${exe}.config.joined-rejected`);
+      clock = 100;
+      assert.equal((await once()).reason, "fixture_already_consumed");
+      assert.equal(children, 0);
+    }
+    console.log(arch, pid, "joined parent cancellation/expiry/file change: 40 checks, zero child processes; restored inputs cannot retry");
+  }
   if (suffix === "") {
     assert.throws(() => createMode01FixtureSpawn({ ...spawnDescriptor, worker_sha256: "0".repeat(64) }), /descriptor_invalid/);
     const unissued = createRegisteredMode01FixtureSupervisor({ descriptor: {}, spawnDescriptor,
