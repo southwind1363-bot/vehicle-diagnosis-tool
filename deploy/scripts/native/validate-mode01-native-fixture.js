@@ -229,6 +229,11 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
   const restored = obd.buildDiagnosticScanSessionFromJson(JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)));
   assert.equal(restored.source, "j2534_development_read");
   assert.deepEqual(restored.livePidSnapshot.monitorValues, result.session.livePidSnapshot.monitorValues);
+  if (arch === "x64" && suffix === "-rpm") {
+    const archive = path.join(root, "mode01-ui-session.json");
+    fs.writeFileSync(archive, JSON.stringify(obd.buildBridgeSessionExportPayload(result.session)), { flag: "wx" });
+    console.log(`Mode01 UI archive: ${archive}`);
+  }
   assert.equal((await run()).reason, "fixture_already_consumed");
   const wrongOrder = spawnSync(exe, ["--generated-mode01-out-of-order", ...selectionArgs], { cwd: root, env, windowsHide: true,
     encoding: "utf8", timeout: 15000, maxBuffer: 8192 });

@@ -146,6 +146,52 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     });
     assert.deepEqual(firstImportExit, { idle: false, pending: true, retained: false, stopped: false, unchanged: true, released: true });
     console.log('First import: real window exit listener attaches while pending and detaches after cancellation; synthetic event, no native dialog claim');
+    const mode01Archive = process.argv.find(arg => arg.startsWith('--mode01-session='))?.slice('--mode01-session='.length);
+    if (mode01Archive) {
+      // Only the generated native validator's artifact, never user saved data.
+      const archive = path.resolve(mode01Archive);
+      assert.equal(path.dirname(path.dirname(archive)), fs.realpathSync(os.tmpdir()));
+      assert.match(path.basename(path.dirname(archive)), /^mode01-native-[A-Za-z0-9]+$/);
+      assert.equal(path.basename(archive), 'mode01-ui-session.json');
+      const sandbox = vm.createContext({ window: {}, navigator: {} });
+      vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), sandbox);
+      const restore = text => sandbox.window.ObdReadOnly.buildDiagnosticScanSessionFromJson(text);
+      sandbox.window.ObdReadOnly.configureMonitorDefinitions(JSON.parse(fs.readFileSync(path.join(root, 'data/obd-monitor-definitions.json'), 'utf8')));
+      const original = restore(fs.readFileSync(archive, 'utf8'));
+      assert.equal(original.source, 'j2534_development_read');
+      const expected = JSON.parse(JSON.stringify(original.livePidSnapshot.monitorValues));
+      assert.ok(expected.some(item => item.value === 2000.25));
+      const check = async file => {
+        await openFile(page.locator('#obdHomeOpenSessionButton'), file);
+        await page.waitForFunction(() => obdDevSession.lastSession?.source === 'j2534_development_read');
+        assert.deepEqual(await page.evaluate(() => obdDevSession.lastSession.livePidSnapshot.monitorValues), expected);
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+        assert.match(await page.locator('#obdSimpleResultNote').innerText(), /^J2534開発検証データ（実車読取ではありません）。/);
+        await page.locator('.obd-simple-result-item').filter({ hasText: 'ライブデータ' }).click();
+        assert.equal(await page.locator('#obdMonitorGrid').isVisible(), true);
+        assert.match(await page.locator('#obdMonitorGrid').innerText(), /2,?000/);
+        assert.match(await page.locator('#obdMonitorGrid').innerText(), /rpm/);
+        await page.locator('#obdMonitorGrid').screenshot({ path: path.join(output, 'mode01-live-value.png') });
+        await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
+      };
+      await check(archive);
+      await page.screenshot({ path: path.join(output, 'mode01-result.png') });
+      const pending = page.waitForEvent('download');
+      await page.locator('#obdStageResultsView [data-obd-session-export]').click();
+      const saved = path.join(output, 'mode01-saved.json');
+      await (await pending).saveAs(saved);
+      const exported = restore(fs.readFileSync(saved, 'utf8'));
+      assert.equal(exported.source, 'j2534_development_read');
+      assert.deepEqual(JSON.parse(JSON.stringify(exported.livePidSnapshot.monitorValues)), expected);
+      await page.reload();
+      await page.getByText('登録済み整備データを読み込みました。', { exact: false }).waitFor();
+      await page.getByRole('button', { name: '7. OBD2車両読取', exact: true }).click();
+      await check(saved);
+      await page.screenshot({ path: path.join(output, 'mode01-restored.png') });
+      assert.deepEqual(errors, []); assert.deepEqual(blocked, []);
+      console.log(`Generated Mode01 native archive -> actual file picker -> result -> download -> reload -> restore passed; no vehicle / Artifacts: ${output}`);
+      return;
+    }
     if (process.argv.includes('--development-source')) {
       const { createJ2534DtcResultConverter } = await import('./j2534-dtc-result-converter.js');
       const { createJ2534FixtureSessionBuilder } = await import('./j2534-fixture-session-builder.js');
