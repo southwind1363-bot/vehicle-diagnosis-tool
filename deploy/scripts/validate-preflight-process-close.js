@@ -11,11 +11,18 @@ const source = fs.readFileSync(new URL("./j2534-registered-driver-native-preflig
 const body = source.slice(source.indexOf("function runBoundedProcess("), source.indexOf("function parseResponse("));
 const env = Object.fromEntries(["SystemRoot", "WINDIR", "TEMP", "TMP"].filter(key => process.env[key]).map(key => [key, process.env[key]]));
 async function verify(mode) {
+  const startedAt = performance.now(), events = [];
+  const record = (event, detail = null) => events.push({ event, ms: Math.round(performance.now() - startedAt), detail });
   let child, closeTimer, resultTimer, marks = 0, closed = false;
   let resolveClose;
   const closing = new Promise(resolve => { resolveClose = resolve; });
   const scope = { spawn: (...args) => {
     child = spawn(...args);
+    child.once("spawn", () => record("spawn"));
+    child.once("exit", (code, signal) => record("exit", { code, signal }));
+    child.once("error", error => record("error", error.code));
+    child.stdout.on("data", chunk => record("stdout", chunk.length));
+    child.stderr.on("data", chunk => record("stderr", chunk.length));
     child.once("close", () => { closed = true; resolveClose(); });
     return child;
   }, sanitizeEnvironment: () => env, setTimeout, clearTimeout, EventTarget, Symbol,
@@ -34,7 +41,7 @@ async function verify(mode) {
     assert.equal(closed, true);
     assert.equal(result.started, true); assert.equal(result.exited, true);
     assert.equal(result.error, mode === 'timeout' ? 'native_preflight_timeout'
-      : mode === 'failed' ? 'native_preflight_process_failed' : null);
+      : mode === 'failed' ? 'native_preflight_process_failed' : null, JSON.stringify({ mode, events }));
     assert.equal(result.stdout, mode === 'normal' ? 'result' : '');
     assert.equal(result.termination_unconfirmed, false); assert.equal(marks, 0);
     const snapshot = JSON.stringify(result);

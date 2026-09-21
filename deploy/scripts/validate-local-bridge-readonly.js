@@ -1,11 +1,5 @@
 import { buildJ2534IdentityProbeReadiness, createJ2534RegisteredDriverDescriptor, createJ2534RegisteredDriverFixtureDescriptor, createJ2534ProductionIdentityBoundUdsFixtureBoundary, createLocalBridgeApp, decodeReplayLog, getJ2534DiscoveryEnvironment, inspectJ2534LibraryFile, issueJ2534IdentityPreflightOperation, normalizeJ2534WorkerReviewProcessResult, buildUdsReadAdapterCompletionManifest, normalizeUdsReadAdapterCompletionManifest, parseJ2534RegistryDrivers, prepareJ2534WorkerReviewRequest, runJ2534IdentityPreflightOperation, runJ2534RegisteredDriverNativePreflight, runJ2534WorkerReview, verifyJ2534RegisteredDriverDescriptor } from "../local-bridge-readonly.js";
 import { createJ2534IdentityPreflightOperationController } from "./j2534-identity-preflight-operation.js";
-import "./validate-vendor-review.js";
-import "./validate-preflight-termination.js";
-import "./validate-preflight-process-close.js";
-import "./validate-j2534-dtc-selection-handoff.js";
-import "./validate-j2534-mode01-result.js";
-import "./validate-j2534-mode01-selection-handoff.js";
 import { J2534_WORKER_CONTRACT_VERSION, buildJ2534UdsTransportResult, reviewJ2534PassThruOpenRequest } from "./j2534-readonly-worker.js";
 import { spawnSync } from "node:child_process";
 import { getEventListeners } from "node:events";
@@ -13,6 +7,16 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+// Await each side-effect suite before starting the next. Static sibling imports
+// can run while another suite awaits child close; synchronous fixture work then
+// blocks its event loop past the real process deadline and fabricates a timeout.
+// Keep the production deadline and failure classifications unchanged.
+for (const suite of ["validate-vendor-review", "validate-preflight-termination",
+  "validate-preflight-process-close", "validate-j2534-dtc-selection-handoff",
+  "validate-j2534-mode01-result", "validate-j2534-mode01-selection-handoff"]) {
+  await import(`./${suite}.js`);
+}
 
 const failures = [];
 let checks = 0;
