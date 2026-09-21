@@ -9,6 +9,7 @@ import { spawnSync, spawn } from "node:child_process";
 import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
 import { createJ2534SelectedMode01FixtureSupervisor } from "../j2534-mode01-fixture-supervisor.js";
 import { createJ2534Mode01SelectionHandoff } from "../j2534-mode01-selection-handoff.js";
+import { createMode01FixtureSpawn } from "./mode01-fixture-spawn.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -115,12 +116,35 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     console.log(arch, "Mode01 parent/worker selection mismatch: 27 checks passed");
   }
   let exitCode;
+  const executable = fs.readFileSync(exe);
+  const spawnDescriptor = { root, architecture: arch, pid,
+    worker_sha256: crypto.createHash("sha256").update(executable).digest("hex"), fixture_sha256: digest.toLowerCase() };
+  if (suffix === "") {
+    assert.throws(() => createMode01FixtureSpawn({ ...spawnDescriptor, worker_sha256: "0".repeat(64) }), /descriptor_invalid/);
+    const tamperedSpawn = createMode01FixtureSpawn(spawnDescriptor);
+    const tampered = Buffer.from(executable); tampered[tampered.length - 1] ^= 1;
+    fs.writeFileSync(exe, tampered);
+    assert.throws(() => tamperedSpawn(["--generated-mode01", ...pinnedArgs]), /spawn_rejected/);
+    fs.writeFileSync(exe, executable);
+    assert.throws(() => tamperedSpawn(["--generated-mode01", ...pinnedArgs]), /spawn_consumed/);
+    const configuredSpawn = createMode01FixtureSpawn(spawnDescriptor);
+    fs.writeFileSync(`${exe}.config`, "<configuration/>", { flag: "wx" });
+    assert.throws(() => createMode01FixtureSpawn(spawnDescriptor), /descriptor_invalid/);
+    assert.throws(() => configuredSpawn(["--generated-mode01", ...pinnedArgs]), /spawn_rejected/);
+    fs.renameSync(`${exe}.config`, `${exe}.config.rejected-fixture`);
+    assert.throws(() => configuredSpawn(["--generated-mode01", ...pinnedArgs]), /spawn_consumed/);
+    const wrongArgs = createMode01FixtureSpawn(spawnDescriptor);
+    assert.throws(() => wrongArgs(["--generated-mode01", ...pinnedArgs, "extra"]), /spawn_rejected/);
+    assert.throws(() => wrongArgs(["--generated-mode01", ...pinnedArgs]), /spawn_consumed/);
+    console.log(arch, "fixed worker digest/configuration/arguments refused before spawn: 8 checks passed");
+  }
+  const verifiedSpawn = createMode01FixtureSpawn(spawnDescriptor);
   const run = createJ2534SelectedMode01FixtureSupervisor({ handoff, descriptor,
     pinned: { path: path.join(root, "mode01.dll"), sha256: digest, size: dll.length, architecture: arch, request_ecu: 0x7e0, pid },
     decodeLivePidResponse: obd.decodeLivePidResponse, buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
     spawnWorker: args => {
       assert.deepEqual(args, ["--generated-mode01", ...selectionArgs]);
-      const child = spawn(exe, args, { cwd: root, env, windowsHide: true, shell: false, stdio: ["ignore", "pipe", "pipe"] });
+      const child = verifiedSpawn(args);
       child.once("exit", code => { exitCode = code; });
       return child;
     } });
