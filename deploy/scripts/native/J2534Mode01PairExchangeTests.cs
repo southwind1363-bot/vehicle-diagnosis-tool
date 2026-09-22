@@ -5,6 +5,7 @@ namespace VehicleDiagnosis.Native
     internal static class J2534Mode01PairExchangeTests
     {
         private static int checks;
+        private static J2534Mode01PairObservation completed;
         private static void Check(bool ok) { checks++; if (!ok) throw new Exception("pair check " + checks); }
         private static void Reject(Action run)
         { bool rejected = false; try { run(); } catch (InvalidOperationException) { rejected = true; } Check(rejected); }
@@ -18,8 +19,16 @@ namespace VehicleDiagnosis.Native
         }
         private static J2534ReceiveNative.Result Support(uint ecu, int status)
         { return Read(ecu, status, 0x41, 0, 8, 16, 0, 0); }
-        private static void Main()
+        private static void Main(string[] args)
         {
+            if (args.Length != 0) {
+                if (args.Length != 1 || (args[0] != "--fixture-output" && args[0] != "--fixture-failed-exit" && args[0] != "--fixture-cleanup-failure"))
+                    throw new ArgumentException("fixture arguments");
+                CheckOwnedPair(args[0] == "--fixture-cleanup-failure" ? 9 : 0);
+                if (completed != null) Console.Write(completed.ToFixtureJson());
+                if (args[0] != "--fixture-output") Environment.ExitCode = 1;
+                return;
+            }
             CheckOwnedPair();
             var originalSupport = Support(0x7e8, 9);
             var originalCoolant = Read(0x7e8, 9, 0x41, 5, 130);
@@ -89,11 +98,12 @@ namespace VehicleDiagnosis.Native
             Reject(delegate { wrongOrder.BeginSupportedRead(); });
             Console.WriteLine("Mode01 fixed pair checks: " + checks + " / Errors: 0 (no driver I/O)");
         }
-        private static void CheckOwnedPair()
+        private static void CheckOwnedPair(int selectedFault = -1)
         {
             // 1..6: write/read failures at each stage; 7..10: cleanup/release;
             // 11: filter failure; 12: callback exception; 13: legitimate zeros.
             for (int fault = 0; fault <= 13; fault++) {
+                if (selectedFault >= 0 && fault != selectedFault) continue;
                 var library = new Library { FailClose = fault == 9, FailRelease = fault == 10 };
                 using (var owner = new J2534IdentityNative(library)) {
                     uint device, channel; int writes = 0, reads = 0, stops = 0, disconnects = 0;
@@ -133,6 +143,7 @@ namespace VehicleDiagnosis.Native
                         if (values != null) {
                             Check(values.Coolant.Value == (fault == 13 ? 0 : 90) && values.Rpm.Value == (fault == 13 ? 0 : 2000.25));
                             CheckObservation(values);
+                            completed = values;
                         }
                     }
                     int expectedWrites = fault == 11 ? 0 : fault == 12 ? 1 : fault >= 1 && fault <= 6 ? (fault + 1) / 2 : 3;

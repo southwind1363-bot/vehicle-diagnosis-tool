@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-23 固定pairの管理child/親結合: 内部pair観測を検査用JSONへ出力し、単発bounded親が同じ終了結果の下で既存単一PID converterを05/0Cそれぞれに適用する開発専用supervisorを追加。両結果の厳密検査と同一PID00生応答を要求し、片方欠落/順序違い/ECU違い/値不一致/cleanup不確認/応答不完全/支持応答のtimestamp違い/余分fieldを一括不採用。x86/x64各444と実managed childの正常/出力後異常終了/cleanup失敗、8変異envelope拒否、事前中止一回消費が合格。初回の共通decoder辞書未設定は本体と同じ辞書設定で解消。既存単一各415と親子/保存検査も合格。これは管理callbackの子processであり生成native DLLのpair通信は未結合。今回session保存契約は追加しない。次は固定生成DLL/選択pinのpair専用workerとの結合を進める。公開送信は審査拒否につき保留、実vendor DLL/VCI/実車/公開entry/本体/603ZIP不変。
+
 2026-09-23 固定水温/RPMの受信根拠保持: owner結合が値だけを返していた部分へReadMode01PairObservationAndFinishを追加。同一PID00応答と05/0C各応答の元status/件数/ECU/dataを、既存の深いコピーを持つ単一PID observation二つとして内部保持。両取得と全cleanup成功後だけ返し、入力元やgetter返却copyの改変から独立。従来の両値取得methodはこの処理を経由する。x86/x64各444項目、既存単一各415と親子19/保存5/decoder11、diff検査合格。管理callback検証であり生成DLLのpair動作や親正常終了、一括session/保存への接続はまだ未完了。次は固定生成workerへの結合を進める。保存schema/公開entry/実通信/本体/603ZIP不変。公開送信は既存の審査拒否により保留し、別経路で迂回しない。
 
 2026-09-23 固定水温/RPMのowner結合: 開発限定ReadMode01PairAndFinishを追加。既存単発owner gateの中でPID00→05→0Cを実行し、filter停止→Disconnect→Close→module解放の全成功後だけ両値を内部返却。失敗時は途中値なし、既存保持/再実行拒否を維持。管理callbackによるx86/x64各411項目、既存単一Mode01各415と親子/保存検査合格。初回は単発receiverを使い回して拒否されたため既存単一経路と同様に各段階のreceiverを個別生成し、latch解除や追加readは行わず修正。前回5df15065の公開CI success確認。今回の結合は生成DLL/worker/親正常終了/一括保存へ未接続であり実接続成功ではない。次は同承認範囲の固定生成workerへの結合と生応答保持を進める。実vendor DLL/VCI/実車/公開entry/保存形式/本体/603ZIPは不変。

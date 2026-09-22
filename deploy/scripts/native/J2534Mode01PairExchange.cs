@@ -55,6 +55,10 @@ namespace VehicleDiagnosis.Native
     internal sealed class J2534Mode01PairObservation
     {
         internal readonly J2534Mode01Observation Coolant, Rpm;
+        internal string ToFixtureJson()
+        {
+            return "{\"fixture_only\":true,\"observations\":[" + Coolant.ToFixtureJson() + "," + Rpm.ToFixtureJson() + "]}";
+        }
         internal J2534Mode01PairObservation(uint ecu, J2534Mode01PairExchange.Values values,
             J2534ReceiveNative.Result supported, J2534ReceiveNative.Result coolant, J2534ReceiveNative.Result rpm)
         {
