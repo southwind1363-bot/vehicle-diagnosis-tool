@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-22 固定水温/RPM一括読取の承認・第一段: 直前の判断待ちへ利用者「承認」。開発compileflag限定のJ2534Mode01PairExchangeを追加し、同じPID00応答で05/0C両対応を確認→05→0C各一回の純粋処理を実装。片方の失敗・不完全応答・順序違反は一括値なし、再使用不可。ゼロ値を未取得と区別し既存厳密応答検査を再利用。x86/x64各136項目、既存単一exchange各415と親子/保存検査合格。通常native検査入口へ追加。初回compiler入力のIdentityNative欠落を修正して合格。これは中間処理のみでowner/driver/worker/親正常終了/一括保存への結合は未実装。次は同承認範囲で所有接続への結合を進め、両取得とcleanup/正常終了が揃うまで採用しない。実DLL/VCI/実車/公開entry/保存形式/603ZIP/依存信頼規約は不変、判断待ちは解消。
+
 2026-09-22 公開OBD検査への出所保持追従: validate-obd-readonly.jsの旧source分類文字列チェックを、開発source優先と既存3分類すべての保持を要求する条件へ更新。更新後の通常入口を最後まで実行し、OBD安全検査7447項目/Errors0と関連検査すべて合格（ローカル約12分）。検査削除・件数変更・期限延長なし。本体/603ZIP不変。以下の「再検証中」は解消したが、公開CIの復旧はこの追従修正の送信後に別途確認する。
 
 2026-09-22 603配布のオフライン再起動確認: 既存603ZIPの別展開を隔離Chromeで検査し、人工事例保存→web/bridge server停止→browser process終了/再起動→offline再表示→事例検索/JSON backup一致が合格。初回注意・lock維持・外向き通信なし・package整合不変、390px保存事例画面を目視確認（packaged-browser-t6wyAz）。任意faviconのoffline失敗1件と補助CDP cache一覧のNo frame foundは分離記録。agent-browser CLI不在のため既存Playwrightを使用。実password正常login、OS再起動、別PC、実機は未検証。本体/603ZIP/保存形式/通信権限変更なし。公開b5435671のChromium CIはsuccessだがOBD contract CIはfailure。旧source分類の文字列表記を要求する検査を開発source優先＋既存3分類保持へ追従修正し、通常入口で再検証中。公開CI復旧済みとはまだ扱わない。
