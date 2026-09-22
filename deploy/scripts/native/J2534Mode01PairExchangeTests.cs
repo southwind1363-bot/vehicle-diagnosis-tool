@@ -21,6 +21,15 @@ namespace VehicleDiagnosis.Native
         private static void Main()
         {
             CheckOwnedPair();
+            var originalSupport = Support(0x7e8, 9);
+            var originalCoolant = Read(0x7e8, 9, 0x41, 5, 130);
+            var originalRpm = Read(0x7e8, 9, 0x41, 12, 0x1f, 0x41);
+            var retained = new J2534Mode01PairObservation(0x7e0,
+                new J2534Mode01PairExchange.Values(90, 2000.25), originalSupport, originalCoolant, originalRpm);
+            foreach (var original in new[] { originalSupport, originalCoolant, originalRpm }) {
+                original.Messages[0].Data[4] = 0; original.Messages = null; original.Status = 1;
+            }
+            CheckObservation(retained);
             foreach (int status in new[] { 0, 9 }) for (uint ecu = 0x7e0; ecu <= 0x7e7; ecu++) {
                 var pair = new J2534Mode01PairExchange(ecu);
                 byte[] request = pair.BeginSupportedRead();
@@ -112,8 +121,8 @@ namespace VehicleDiagnosis.Native
                         Array.Copy(payload, 0, message, 28, payload.Length);
                         Marshal.Copy(message, 0, m, message.Length); Marshal.WriteInt32(n, 1); return 9;
                     };
-                    Func<J2534Mode01PairExchange.Values> run = delegate {
-                        return request.ReadMode01PairAndFinish(channel, 0x7e0, read,
+                    Func<J2534Mode01PairObservation> run = delegate {
+                        return request.ReadMode01PairObservationAndFinish(channel, 0x7e0, read,
                             delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr o) { Marshal.WriteInt32(o, 30); return fault == 11 ? 1 : 0; },
                             delegate { stops++; return fault == 7 ? 1 : 0; });
                     };
@@ -121,7 +130,10 @@ namespace VehicleDiagnosis.Native
                     else {
                         var values = run();
                         Check(fault == 0 || fault == 13 ? values != null : values == null);
-                        if (values != null) Check(values.CoolantCelsius == (fault == 13 ? 0 : 90) && values.Rpm == (fault == 13 ? 0 : 2000.25));
+                        if (values != null) {
+                            Check(values.Coolant.Value == (fault == 13 ? 0 : 90) && values.Rpm.Value == (fault == 13 ? 0 : 2000.25));
+                            CheckObservation(values);
+                        }
                     }
                     int expectedWrites = fault == 11 ? 0 : fault == 12 ? 1 : fault >= 1 && fault <= 6 ? (fault + 1) / 2 : 3;
                     int expectedReads = fault == 12 ? 0 : expectedWrites - (fault >= 1 && fault <= 6 && fault % 2 == 1 ? 1 : 0);
@@ -135,6 +147,25 @@ namespace VehicleDiagnosis.Native
                     Check(owner.ReferenceReleased == (fault == 0 || fault == 13));
                 }
                 Check(library.Released == (fault == 0 || fault == 13));
+            }
+        }
+        private static void CheckObservation(J2534Mode01PairObservation pair)
+        {
+            Check(pair.Coolant.Pid == 5 && pair.Rpm.Pid == 12);
+            Check(pair.Coolant.RequestEcu == 0x7e0 && pair.Rpm.RequestEcu == 0x7e0);
+            Check(Convert.ToBase64String(pair.Coolant.SupportedRead.Messages[0].Data)
+                == Convert.ToBase64String(pair.Rpm.SupportedRead.Messages[0].Data));
+            foreach (var item in new[] { pair.Coolant, pair.Rpm }) {
+                Check(item.SupportedRead.Status == 9 && item.ValueRead.Status == 9);
+                var support = item.SupportedRead;
+                support.Messages[0].Data[4] = 0; support.Status = 0; support.Messages = null;
+                var value = item.ValueRead;
+                value.Messages[0].Data[6] = 255; value.ReportedCount = 0; value.Messages = null;
+                var replay = new J2534Mode01Exchange(item.RequestEcu, item.Pid);
+                replay.BeginSupportedRead();
+                Check(replay.AcceptSupportedRead(item.SupportedRead)[5] == item.Pid);
+                Check(replay.AcceptValueRead(item.ValueRead) == item.Value);
+                Check(item.SupportedRead.Status == 9 && item.ValueRead.Status == 9 && item.ValueRead.ReportedCount == 1);
             }
         }
         private sealed class Library : IIdentityLibrary
