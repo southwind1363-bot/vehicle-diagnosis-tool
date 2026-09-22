@@ -5,7 +5,7 @@ namespace VehicleDiagnosis.Native
 {
     // Disabled internal v04.04 building block. No loader, CLI, raw payload,
     // functional broadcast, write/service operation, or automatic retry API.
-    internal sealed class J2534ReadRequestNative
+    internal sealed partial class J2534ReadRequestNative
     {
         [UnmanagedFunctionPointer(CallingConvention.StdCall)]
         internal delegate int WriteFunction(uint channel, IntPtr messages, IntPtr count, uint timeout);

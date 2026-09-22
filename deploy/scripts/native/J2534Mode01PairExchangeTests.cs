@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.InteropServices;
 namespace VehicleDiagnosis.Native
 {
     internal static class J2534Mode01PairExchangeTests
@@ -19,6 +20,7 @@ namespace VehicleDiagnosis.Native
         { return Read(ecu, status, 0x41, 0, 8, 16, 0, 0); }
         private static void Main()
         {
+            CheckOwnedPair();
             foreach (int status in new[] { 0, 9 }) for (uint ecu = 0x7e0; ecu <= 0x7e7; ecu++) {
                 var pair = new J2534Mode01PairExchange(ecu);
                 byte[] request = pair.BeginSupportedRead();
@@ -77,6 +79,80 @@ namespace VehicleDiagnosis.Native
             Reject(delegate { wrongOrder.AcceptRpmRead(null); });
             Reject(delegate { wrongOrder.BeginSupportedRead(); });
             Console.WriteLine("Mode01 fixed pair checks: " + checks + " / Errors: 0 (no driver I/O)");
+        }
+        private static void CheckOwnedPair()
+        {
+            // 1..6: write/read failures at each stage; 7..10: cleanup/release;
+            // 11: filter failure; 12: callback exception; 13: legitimate zeros.
+            for (int fault = 0; fault <= 13; fault++) {
+                var library = new Library { FailClose = fault == 9, FailRelease = fault == 10 };
+                using (var owner = new J2534IdentityNative(library)) {
+                    uint device, channel; int writes = 0, reads = 0, stops = 0, disconnects = 0;
+                    owner.Open(out device);
+                    owner.Connect(device, 6, 0, 500000,
+                        delegate(uint d, uint p, uint f, uint b, IntPtr o) { Marshal.WriteInt32(o, 20); return 0; },
+                        delegate { disconnects++; return fault == 8 ? 1 : 0; }, out channel);
+                    var request = new J2534ReadRequestNative(owner, device, delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                        writes++;
+                        Check(c == channel && t == 0 && Marshal.ReadInt32(n) == 1);
+                        Check(Marshal.ReadByte(m, 28) == 1 && Marshal.ReadByte(m, 29) == (writes == 1 ? 0 : writes == 2 ? 5 : 12));
+                        Reject(delegate { owner.Dispose(); });
+                        if (fault == 12) throw new Exception("fixture");
+                        return fault == writes * 2 - 1 ? 1 : 0;
+                    });
+                    J2534ReceiveNative.ReadFunction read = delegate(uint c, IntPtr m, IntPtr n, uint t) {
+                        reads++; Check(c == channel && t == 1000);
+                        Reject(delegate { request.DispatchMode01SupportedReadOnce(channel, 0x7e0); });
+                        byte[] payload = reads == 1 ? new byte[] { 0x41, 0, 8, 16, 0, 0 }
+                            : reads == 2 ? new byte[] { 0x41, 5, (byte)(fault == 13 ? 40 : 130) }
+                            : new byte[] { 0x41, 12, (byte)(fault == 13 ? 0 : 0x1f), (byte)(fault == 13 ? 0 : 0x41) };
+                        if (fault == reads * 2) payload[1] = 255;
+                        byte[] message = new byte[4152]; message[0] = 6;
+                        message[16] = (byte)(payload.Length + 4); message[26] = 7; message[27] = 232;
+                        Array.Copy(payload, 0, message, 28, payload.Length);
+                        Marshal.Copy(message, 0, m, message.Length); Marshal.WriteInt32(n, 1); return 9;
+                    };
+                    Func<J2534Mode01PairExchange.Values> run = delegate {
+                        return request.ReadMode01PairAndFinish(channel, 0x7e0, read,
+                            delegate(uint c, uint t, IntPtr m, IntPtr p, IntPtr f, IntPtr o) { Marshal.WriteInt32(o, 30); return fault == 11 ? 1 : 0; },
+                            delegate { stops++; return fault == 7 ? 1 : 0; });
+                    };
+                    if (fault == 12) Reject(delegate { run(); });
+                    else {
+                        var values = run();
+                        Check(fault == 0 || fault == 13 ? values != null : values == null);
+                        if (values != null) Check(values.CoolantCelsius == (fault == 13 ? 0 : 90) && values.Rpm == (fault == 13 ? 0 : 2000.25));
+                    }
+                    int expectedWrites = fault == 11 ? 0 : fault == 12 ? 1 : fault >= 1 && fault <= 6 ? (fault + 1) / 2 : 3;
+                    int expectedReads = fault == 12 ? 0 : expectedWrites - (fault >= 1 && fault <= 6 && fault % 2 == 1 ? 1 : 0);
+                    Check(writes == expectedWrites && reads == expectedReads);
+                    Reject(delegate { run(); });
+                    Check(writes == expectedWrites && reads == expectedReads);
+                    bool reachedCleanup = fault == 0 || fault >= 7 && fault <= 10 || fault == 13;
+                    Check(stops == (reachedCleanup ? 1 : 0));
+                    Check(disconnects == (reachedCleanup && fault != 7 ? 1 : 0));
+                    Check(library.CloseCalls == (reachedCleanup && fault != 7 && fault != 8 ? 1 : 0));
+                    Check(owner.ReferenceReleased == (fault == 0 || fault == 13));
+                }
+                Check(library.Released == (fault == 0 || fault == 13));
+            }
+        }
+        private sealed class Library : IIdentityLibrary
+        {
+            private readonly J2534IdentityNative.OpenFunction open = delegate(IntPtr p, out uint id) { id = 10; return 0; };
+            private readonly J2534IdentityNative.ReadVersionFunction read = delegate { return 0; };
+            private readonly J2534IdentityNative.CloseFunction close;
+            internal bool FailClose, FailRelease, Released;
+            internal int CloseCalls;
+            internal Library() { close = delegate { CloseCalls++; return FailClose ? 1 : 0; }; }
+            public IntPtr Resolve(string name)
+            {
+                if (name == "PassThruOpen") return Marshal.GetFunctionPointerForDelegate(open);
+                if (name == "PassThruReadVersion") return Marshal.GetFunctionPointerForDelegate(read);
+                if (name == "PassThruClose") return Marshal.GetFunctionPointerForDelegate(close);
+                throw new Exception("unexpected export");
+            }
+            public bool Release(bool allowed) { Released = allowed && !FailRelease; return Released; }
         }
     }
 }
