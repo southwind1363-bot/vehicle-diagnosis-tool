@@ -7,6 +7,8 @@ const SCENARIOS = new Set([
   "owned-dtc-stop-crash", "owned-dtc-result-then-hang",
   "owned-dtc-data", "owned-dtc-data-hang", "owned-dtc-data-start", "owned-dtc-data-pending", "owned-dtc-data-permanent", "owned-dtc-data-last-ecu",
   "owned-dtc-mode01",
+  "owned-dtc-mode01-pair", "owned-dtc-mode01-pair-stop-failure",
+  "owned-dtc-mode01-pair-disconnect-failure", "owned-dtc-mode01-pair-close-failure",
   "owned-dtc-mode01-rpm", "owned-dtc-mode01-rpm-zero", "owned-dtc-mode01-unsupported",
   "owned-dtc-mode01-wrong-pid", "owned-dtc-mode01-incomplete",
   "owned-dtc-mode01-stop-failure", "owned-dtc-mode01-disconnect-failure", "owned-dtc-mode01-close-failure",
@@ -359,6 +361,19 @@ function mode01Code(architecture, original, scenario) {
   const cleanup = (name, state, body, argc) => scenario.endsWith(`-${name}-failure`)
     ? wrap(state, Buffer.from([0xb8, 7, 0, 0, 0, ...(x86 ? [0xc2, argc * 4, 0] : [0xc3])]), argc)
     : wrap(state, body, argc);
+  if (scenario.startsWith("owned-dtc-mode01-pair")) {
+    const coolant = requestCode(architecture, 1, 0x7e0, 5);
+    const rotation = requestCode(architecture, 1, 0x7e0, 12);
+    return {
+      open: wrap(0, original.open, 2), connect: wrap(1, original.connect, 5),
+      start: wrap(2, support.start, 6),
+      write: choose(3, wrap(3, support.write, 4), choose(5, wrap(5, coolant.write, 4), wrap(7, rotation.write, 4))),
+      read: choose(4, wrap(4, receive([65, 0, 8, 16, 0, 0]), 4),
+        choose(6, wrap(6, receive([65, 5, 130]), 4), wrap(8, receive([65, 12, 31, 65]), 4))),
+      stop: cleanup("stop", 9, support.stop, 2), disconnect: cleanup("disconnect", 10, original.disconnect, 1),
+      close: cleanup("close", 11, original.close, 1)
+    };
+  }
   return {
     open: wrap(0, original.open, 2), connect: wrap(1, original.connect, 5),
     start: wrap(2, support.start, 6),

@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-23 固定pair生成DLL/worker結合: 既存PE生成器へ固定00→05→0Cと3終了失敗scenarioを追加。新しい検査compileflag限定workerは固定mode01.dll/compile時hash・size/ECU7E0のみ、既存execution leaseと署名/依存preflightを維持し、両観測とcleanup成功後だけ出力。x86/x64各4シナリオで生成native ABI→owner→bounded親の両値90/2000.25採用とStop/Disconnect/Close失敗不採用が合格。署名代替なしの未署名拒否、同size DLL改変拒否、余分/不正argv拒否も確認。既存単一native全9シナリオ/選択/保存復元回帰合格。通常native検査入口へ追加したが巨大入口全体は今回未実行。登録選択のpair専用handoffや一般driver起動、一括session保存は未接続。次はこの固定生成結果を既存共通結果/保存へ渡す残作業を進める。実vendor DLL/VCI/実車/別PCの確認ではない。公開送信は保留、本体/603ZIP/保存形式/公開実行権限不変。
+
 2026-09-23 固定pairの管理child/親結合: 内部pair観測を検査用JSONへ出力し、単発bounded親が同じ終了結果の下で既存単一PID converterを05/0Cそれぞれに適用する開発専用supervisorを追加。両結果の厳密検査と同一PID00生応答を要求し、片方欠落/順序違い/ECU違い/値不一致/cleanup不確認/応答不完全/支持応答のtimestamp違い/余分fieldを一括不採用。x86/x64各444と実managed childの正常/出力後異常終了/cleanup失敗、8変異envelope拒否、事前中止一回消費が合格。初回の共通decoder辞書未設定は本体と同じ辞書設定で解消。既存単一各415と親子/保存検査も合格。これは管理callbackの子processであり生成native DLLのpair通信は未結合。今回session保存契約は追加しない。次は固定生成DLL/選択pinのpair専用workerとの結合を進める。公開送信は審査拒否につき保留、実vendor DLL/VCI/実車/公開entry/本体/603ZIP不変。
 
 2026-09-23 固定水温/RPMの受信根拠保持: owner結合が値だけを返していた部分へReadMode01PairObservationAndFinishを追加。同一PID00応答と05/0C各応答の元status/件数/ECU/dataを、既存の深いコピーを持つ単一PID observation二つとして内部保持。両取得と全cleanup成功後だけ返し、入力元やgetter返却copyの改変から独立。従来の両値取得methodはこの処理を経由する。x86/x64各444項目、既存単一各415と親子19/保存5/decoder11、diff検査合格。管理callback検証であり生成DLLのpair動作や親正常終了、一括session/保存への接続はまだ未完了。次は固定生成workerへの結合を進める。保存schema/公開entry/実通信/本体/603ZIP不変。公開送信は既存の審査拒否により保留し、別経路で迂回しない。
