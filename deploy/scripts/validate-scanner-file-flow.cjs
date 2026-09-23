@@ -152,7 +152,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const archive = path.resolve(mode01Archive);
       assert.equal(path.dirname(path.dirname(archive)), fs.realpathSync(os.tmpdir()));
       assert.match(path.basename(path.dirname(archive)), /^mode01-native-[A-Za-z0-9]+$/);
-      assert.equal(path.basename(archive), 'mode01-ui-session.json');
+      const pair = path.basename(archive) === 'mode01-pair-ui-session.json';
+      assert.ok(pair || path.basename(archive) === 'mode01-ui-session.json');
       const sandbox = vm.createContext({ window: {}, navigator: {} });
       vm.runInContext(fs.readFileSync(path.join(root, 'obd-readonly.js'), 'utf8'), sandbox);
       const restore = text => sandbox.window.ObdReadOnly.buildDiagnosticScanSessionFromJson(text);
@@ -163,7 +164,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       const expectedSupport = JSON.parse(JSON.stringify(original.supportedPidMatrix));
       assert.equal(expectedSupport.supportedPidReadoutStatus, 'reported');
       assert.deepEqual(expectedSupport.supportedPidPageBases, ['00']);
-      assert.deepEqual(expectedSupport.supportedPids, ['0C']);
+      assert.deepEqual(expectedSupport.supportedPids, pair ? ['05', '0C'] : ['0C']);
+      assert.equal(expected.length, pair ? 2 : 1);
+      if (pair) assert.ok(expected.some(item => item.value === 90));
       assert.ok(expected.some(item => item.value === 2000.25));
       const check = async file => {
         await openFile(page.locator('#obdHomeOpenSessionButton'), file);
@@ -177,6 +180,11 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
         assert.equal(await page.locator('#obdMonitorGrid').isVisible(), true);
         assert.match(await page.locator('#obdMonitorGrid').innerText(), /2,?000/);
         assert.match(await page.locator('#obdMonitorGrid').innerText(), /rpm/);
+        if (pair) {
+          assert.equal(await page.locator('#obdMonitorGrid > article').count(), 2);
+          assert.match(await page.locator('#obdMonitorGrid').innerText(), /90/);
+          assert.match(await page.locator('#obdMonitorGrid').innerText(), /冷却水/);
+        }
         await page.locator('#obdMonitorGrid').screenshot({ path: path.join(output, 'mode01-live-value.png') });
         await page.getByRole('button', { name: '基本読取結果へ戻る', exact: true }).click();
       };

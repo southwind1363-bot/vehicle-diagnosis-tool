@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-24 固定pairの実画面保存復元: 生成native検査へ任意の人工UI artifact出力を追加し、既存scanner-file-flowを単一RPMと固定水温/RPM両方の検査へ対応。x86/x64各4シナリオ合格後、正常x64 worker由来の既存形式JSONを隔離Chromeの実filechooserで取込。90℃/2000.25rpmの2カード、PID00対応05/0C、同一ECU7E8と全monitor値/対応matrixがdownload→ページreload→再取込で一致。画像でも開発検証注意・DTC未取得・主要読取未完了を確認（mode01-native-QL68pf、obd-file-flow-LJYusH）。専用CLIなし、初回playwright解決失敗は同梱runtimeの明示指定で解消し既存検査を使用。利用者データ/実password/実VCI/実車は未使用。ブラウザーprocess再起動・OS再起動・別PCは今回未検証。本体/603ZIP/保存形式/公開実行権限不変。公開送信保留を維持し、登録pair選択/一般driver起動は未接続。
+
 2026-09-23 上記pair保存結合の回帰検証: Session export266、JSON policy177、development source merge116、manufacturer history export369がすべてErrors0。クリップボード検査は人工入力のみ。node構文/diff検査合格。
 
 2026-09-23 固定pairの共通session受渡し: 開発専用pair session supervisorを追加。実際のbounded親が両応答/同一PID00/cleanup/正常終了を確認した後だけ、既存normalizerで両monitor値をまとめて既存sessionへ渡す。初回検査でnormalizerのlocal_bridge既定値への戻りを検出し、単一converterと同様に開発由来を明示保持して修正。x86/x64生成DLL各4シナリオ、両値90/2000.25とPID00/ECU7E8の既存JSON export→restore、終了失敗時sessionなし、builder例外/null/通信許可混入の一括拒否・再使用不可を確認。保存形式・本体/603ZIP・公開entryは変更なし。これは人工結果のシリアライズ往復であり実VCI/実車/別PCやブラウザー再起動検証ではない。登録pair選択と一般driver起動は未接続。公開送信保留は維持。

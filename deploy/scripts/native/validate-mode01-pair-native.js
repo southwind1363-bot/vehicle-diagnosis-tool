@@ -67,6 +67,11 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       assert.ok(outcome.results.every(item => item.snapshot.source === "j2534_development_read"
         && item.snapshot.vehicle_command_enabled === false && item.snapshot.would_transmit === false));
       const archive = JSON.stringify(obd.buildBridgeSessionExportPayload(outcome.session));
+      if (arch === "x64" && process.argv.includes("--ui-artifact")) {
+        const artifact = path.join(root, "mode01-pair-ui-session.json");
+        fs.writeFileSync(artifact, archive, { flag: "wx" });
+        console.log("Pair UI artifact:", artifact);
+      }
       const restored = obd.buildDiagnosticScanSessionFromJson(archive);
       assert.deepEqual(restored.livePidSnapshot.monitorValues, outcome.session.livePidSnapshot.monitorValues);
       for (const session of [outcome.session, restored]) {
