@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-24 次機能の判断待ち: HEAD6f4bfb6aで605配布/保存復元の残検証を完了。コード照合ではDTC fixture supervisorはscenarioにより03/07/0Aの一つを選択し、pair workerはPID00→05→0C専用で、両者を同一ECUの一巡へ統合する処理はない。次候補は開発専用の固定読取一巡（03/07/0Aと対応確認後05/0C）で、要求順序・途中失敗・終了確認と結果採用の境界に関わるため未実装で利用者判断待ちとする。提案は生成DLL/人工登録のみのコード開発、保存形式維持・実通信無効・再試行なし。実vendor DLL/VCI/実車/公開entry/信頼catalog許可は含めない。既存正常検査の反復や新しい版番号だけを進捗にせず、この境界を越える実装は回答まで行わない。公開送信の審査拒否保留も維持。自動実行設定は変更していない。
+
 2026-09-24 605配布の保存復元確認: ブラウザー検証スキルに従い、専用CLI不在のため既存Playwrightを使用。変更していない605別展開を空registry/隔離Chromeで起動し、人工事例取込→保存→両server停止→browser process再起動→offline検索→JSON再出力の全records一致が合格。初回注意/誤password拒否/lock保持/605全cache/配布integrity不変も確認、390px画像で605版と検索画面を目視（packaged-browser-VyzL6o）。補助CDP cache一覧のNo frame foundと任意favicon ERR_FAILEDは独立した既知観測として記録し、app失敗とは扱わない。実password正常login/OS再起動/別PC/実VCI/実車は未検証。605ZIPは上書きせず、保存形式・実通信権限・公開送信保留は変更なし。
 
 2026-09-24 ローカルPC配布3.13.605: 18f2ae65の配布verify中の同サイズ変更検出を通常生成器で新規605へ同梱。版3箇所同期、offline183/Errors0後に新規ZIP作成し別tempへ展開、同梱verifierで849files/16916494bytesの全hash一致と変更検出コード同梱を確認。空の人工registryで同梱起動moduleからweb/health HTTP200、vehicle_command_enabled:false/sample_readouts_enabled:falseを確認して両server終了。ZIP SHA256=580D72BB8C6F32C78EA0E04F2B98206F9F9E237B64179B8FBC48ABB6633C9D1F。展開先workstation-605-421eb58832c34d129a007c7102db463b。604と既存配布は上書きせず、保存形式・実通信無効・開発native worker配布除外を維持。605のブラウザー再起動/保存復元・別PC・実VCI/実車は未検証。公開送信は既存審査拒否による保留を維持し再試行していない。
