@@ -423,7 +423,8 @@ try {
       fs.writeFileSync(integrityPath, originalManifest);
     }
   }
-  for (const omitted of ["style.css", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js"]) {
+  for (const omitted of ["style.css", "local-bridge-readonly.js", "manifest.webmanifest", "service-worker.js", "scripts/start-local-workstation.js", "scripts/workstation-assets.js", "scripts/j2534-readonly-worker.js", "scripts/j2534-native-quarantine.js", "scripts/j2534-uds-readout-attempt-controller.js", "scripts/j2534-uds-transport-adapter-request.js", "scripts/j2534-uds-preparation-evidence.js",
+    "scripts/j2534-mode01-selection-handoff.js", "scripts/j2534-mode01-pair-selection-handoff.js"]) {
     const incomplete = JSON.parse(originalManifest);
     incomplete.files = incomplete.files.filter((entry) => entry.path !== omitted);
     const infoBytes = Buffer.from(JSON.stringify({ ...JSON.parse(originalInfo), fileCount: incomplete.files.length + 1 }));
