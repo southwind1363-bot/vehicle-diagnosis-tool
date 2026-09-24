@@ -10,6 +10,7 @@ import { buildJ2534NativeFixture } from "./build-j2534-native-fixture.js";
 import { createJ2534Mode01PairSessionSupervisor } from "../j2534-mode01-pair-session-supervisor.js";
 import { createJ2534SelectedMode01PairFixtureSupervisor } from "../j2534-selected-mode01-pair-fixture-supervisor.js";
 import { createJ2534Mode01PairSelectionHandoff } from "../j2534-mode01-pair-selection-handoff.js";
+import { createMode01PairFixtureSpawn } from "./mode01-fixture-spawn.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -74,13 +75,15 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     const handoff = createJ2534Mode01PairSelectionHandoff({ now: () => now,
       resolveDescriptor: d => d === descriptor ? current : null,
       revalidateDescriptor: d => d === descriptor ? current : null });
+    const spawnDescriptor = { root, architecture: arch, fixture_sha256: digest.toLowerCase(),
+      worker_sha256: crypto.createHash("sha256").update(fs.readFileSync(exe)).digest("hex") };
+    const fixedSpawn = createMode01PairFixtureSpawn(spawnDescriptor);
     const settings = { handoff, descriptor, pinned,
       buildDiagnosticScanSession: obd.buildDiagnosticScanSession,
       normalizeBridgeLivePidSnapshot: obd.normalizeBridgeLivePidSnapshot,
       decodeLivePidResponse: obd.decodeLivePidResponse,
       spawnWorker: argv => { launches++; assert.deepEqual(argv, selectedArgs); assert.ok(Object.isFrozen(argv));
-        return spawn(exe, argv, { cwd: root, env, shell: false,
-          windowsHide: true, stdio: ["ignore", "pipe", "pipe"] }); } };
+        return fixedSpawn(argv); } };
     for (const change of [() => { now += 5000; }, () => { current = { ...current, size: current.size + 1 }; },
       () => { current = { ...current, sha256: "F".repeat(64) }; }]) {
       const saved = current, savedNow = now;
@@ -109,6 +112,17 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
     pinned.path = "C:\\changed-after-prepare\\mode01.dll"; // Parent owns its independent copy.
     const outcome = await parent();
     assert.equal(launches, 1);
+    assert.throws(() => fixedSpawn(selectedArgs), /spawn_consumed/);
+    const badArguments = createMode01PairFixtureSpawn(spawnDescriptor);
+    assert.throws(() => badArguments([...selectedArgs.slice(0, 6), "12", "5"]), /spawn_rejected/);
+    assert.throws(() => badArguments(selectedArgs), /spawn_consumed/);
+    // Only artificial files under this generated temp root are touched.
+    const configGuard = createMode01PairFixtureSpawn(spawnDescriptor);
+    fs.writeFileSync(`${exe}.config`, "<configuration/>", { flag: "wx" });
+    try {
+      assert.throws(() => createMode01PairFixtureSpawn(spawnDescriptor), /descriptor_invalid/);
+      assert.throws(() => configGuard(selectedArgs), /spawn_rejected/);
+    } finally { fs.unlinkSync(`${exe}.config`); }
     assert.equal(outcome.completion.worker_exited, true);
     if (suffix === "") {
       assert.equal(outcome.status, "completed", JSON.stringify(outcome.completion));

@@ -32,18 +32,28 @@ function noConfig(file) {
 // build identity, not publisher approval. Rechecking is not an OS isolation
 // boundary or protection against every sidecar or a race after checking.
 export function createMode01FixtureSpawn({ root, worker_sha256, fixture_sha256, architecture, pid }) {
+  if (![5, 12].includes(pid)) throw new Error("mode01_fixture_descriptor_invalid");
+  return createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture }, "mode01-worker.exe", "--generated-mode01", [String(pid)]);
+}
+
+// Separate fixed pair entry; callers cannot replace executable name or command.
+export function createMode01PairFixtureSpawn({ root, worker_sha256, fixture_sha256, architecture }) {
+  return createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture }, "pair-worker.exe", "--selected-generated-mode01-pair", ["5", "12"]);
+}
+
+function createFixedSpawn({ root, worker_sha256, fixture_sha256, architecture }, workerName, command, pids) {
   try {
     if (process.platform !== "win32" || typeof root !== "string" || !["x86", "x64"].includes(architecture)
-      || ![5, 12].includes(pid) || ![worker_sha256, fixture_sha256].every(v => typeof v === "string" && /^[a-f0-9]{64}$/.test(v))
+      || ![worker_sha256, fixture_sha256].every(v => typeof v === "string" && /^[a-f0-9]{64}$/.test(v))
       || path.dirname(root) !== fs.realpathSync(os.tmpdir()) || !/^mode01-native-[A-Za-z0-9]+$/.test(path.basename(root))
       || fs.realpathSync(root) !== root) throw 0;
     const directory = fs.lstatSync(root);
     if (!directory.isDirectory() || directory.isSymbolicLink()) throw 0;
-    const worker = path.join(root, "mode01-worker.exe"), fixture = path.join(root, "mode01.dll");
+    const worker = path.join(root, workerName), fixture = path.join(root, "mode01.dll");
     const workerStat = inspect(worker, worker_sha256), fixtureStat = inspect(fixture, fixture_sha256);
     noConfig(worker);
-    const expected = Object.freeze(["--generated-mode01", fixture, fixture_sha256.toUpperCase(),
-      String(fixtureStat.size), architecture, "2016", String(pid)]);
+    const expected = Object.freeze([command, fixture, fixture_sha256.toUpperCase(),
+      String(fixtureStat.size), architecture, "2016", ...pids]);
     const windows = process.env.SystemRoot || "C:\\Windows";
     let consumed = false;
     return args => {
