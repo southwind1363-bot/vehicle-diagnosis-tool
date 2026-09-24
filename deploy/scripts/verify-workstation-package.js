@@ -41,7 +41,12 @@ function readPackageBytes(file, relative) {
       if (!count) break;
       size += count;
     }
-    if (size !== file.size || fs.fstatSync(descriptor).size !== file.size) fail("package_integrity_size_mismatch", relative);
+    const after = fs.fstatSync(descriptor);
+    if (size !== file.size || after.size !== file.size) fail("package_integrity_size_mismatch", relative);
+    // A same-length overwrite after reading can otherwise pass the old hash.
+    // Detect observable changes; this is not a filesystem snapshot or lock.
+    if (after.mtimeMs !== before.mtimeMs || after.ctimeMs !== before.ctimeMs)
+      fail("package_integrity_file_changed", relative);
     return bytes.subarray(0, size);
   } finally { fs.closeSync(descriptor); }
 }

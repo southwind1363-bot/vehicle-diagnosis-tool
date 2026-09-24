@@ -11,7 +11,7 @@ assert.ok(helper, "Production bounded reader missing");
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), "package-bounded-read-"));
 const target = path.join(directory, "synthetic.bin");
 try {
-  for (const scenario of ["normal", "short-reads", "grow-before-open", "grow-during-read", "shrink-during-read", "read-error"]) {
+  for (const scenario of ["normal", "short-reads", "grow-before-open", "grow-during-read", "shrink-during-read", "same-size-after-read", "read-error"]) {
     fs.writeFileSync(target, Buffer.from("original"));
     let closed = 0, bytesRead = 0, changed = false;
     const testFs = { ...fs,
@@ -27,6 +27,11 @@ try {
           if (scenario === "read-error") throw new Error("synthetic_read_failure");
         }
         const count = fs.readSync(fd, buffer, offset, scenario === "short-reads" ? Math.min(length, 2) : length, position);
+        if (scenario === "same-size-after-read" && bytesRead === 0) {
+          const previous = fs.statSync(target);
+          fs.writeFileSync(target, Buffer.from("modified"));
+          fs.utimesSync(target, previous.atime, new Date(previous.mtimeMs + 2000));
+        }
         bytesRead += count;
         return count;
       },
@@ -38,6 +43,8 @@ try {
     const invoke = () => read({ absolute: target, size: 8 }, "synthetic.bin");
     if (["normal", "short-reads"].includes(scenario)) assert.equal(invoke().toString(), "original");
     else if (scenario === "read-error") assert.throws(invoke, /synthetic_read_failure/);
+    else if (scenario === "same-size-after-read") assert.throws(invoke,
+      error => error.code === "package_integrity_file_changed" && error.file === "synthetic.bin");
     else assert.throws(invoke, error => error.code === "package_integrity_size_mismatch" && error.file === "synthetic.bin");
     assert.equal(closed, 1, `${scenario}: descriptor not closed`);
     assert.ok(bytesRead <= 9, `${scenario}: read exceeded inspected size plus one byte`);
