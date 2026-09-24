@@ -10,6 +10,8 @@ import { createJ2534Mode01PairSelectionHandoff } from "./j2534-mode01-pair-selec
 import { createRegisteredMode01PackageReview } from "./native/mode01-selected-package-review.js";
 import { createRegisteredMode01FixtureSupervisor } from "./native/mode01-registered-fixture-supervisor.js";
 import { createJ2534SelectedMode01FixtureSupervisor } from "./j2534-mode01-fixture-supervisor.js";
+import { createJ2534SelectedMode01PairFixtureSupervisor } from "./j2534-selected-mode01-pair-fixture-supervisor.js";
+import { createRegisteredMode01PairFixtureSupervisor } from "./native/mode01-pair-registered-fixture-supervisor.js";
 
 const source = fs.readFileSync(new URL("../local-bridge-readonly.js", import.meta.url), "utf8");
 const names = ["resolveJ2534RegisteredDtcSelection", "createJ2534RegisteredDtcSelectionHandoff", "createJ2534RegisteredMode01SelectionHandoff", "createJ2534RegisteredMode01PairSelectionHandoff"];
@@ -55,6 +57,43 @@ for (const mutate of [s => s.current = null, s => s.current.descriptorSource = "
   mutate(s); assert.equal(s.pair.consume(ticket), null); assert.equal(s.pair.consume(ticket), null);
 }
 console.log("Registered Mode01 pair resolver: matched and 12 refusal scenarios PASS (synthetic store only)");
+const pairFactorySource = fs.readFileSync(new URL("./native/mode01-pair-registered-fixture-supervisor.js", import.meta.url), "utf8");
+const pairFactory = pairFactorySource.match(/export function createRegisteredMode01PairFixtureSupervisor[^]*?\n\}/)[0].replace(/^export /, "");
+for (const scenario of ["matched", "expired", "changed", "wrong_pin", "unissued", "cancelled", "permission_changed"]) {
+  const s = setup(); let launches = 0, argv;
+  const spawnDescriptor = Object.freeze({ synthetic: true });
+  const context = vm.createContext({ createJ2534SelectedMode01PairFixtureSupervisor,
+    createJ2534RegisteredMode01PairSelectionHandoff: () => s.pair,
+    createMode01PairFixtureSpawn(value) {
+      assert.equal(value, spawnDescriptor);
+      return args => { launches++; argv = args; throw new Error("synthetic spawn failure"); };
+    } });
+  vm.runInContext(pairFactory, context);
+  const pinned = { path: s.original.libraryPath, sha256: (scenario === "wrong_pin" ? "B" : "A").repeat(64),
+    size: 4096, architecture: "x64", request_ecu: 2016 };
+  const run = context.createRegisteredMode01PairFixtureSupervisor({ descriptor: scenario === "unissued" ? {} : s.descriptor,
+    pinned, spawnDescriptor, handoff: { prepare() { assert.fail("Injected handoff"); } },
+    spawnWorker() { assert.fail("Injected launcher"); },
+    decodeLivePidResponse() { assert.fail("No evidence expected"); },
+    buildDiagnosticScanSession() { assert.fail("No session expected"); },
+    normalizeBridgeLivePidSnapshot() { assert.fail("No snapshot expected"); } });
+  if (scenario === "expired") s.time += 5000;
+  if (scenario === "changed") s.current.fingerprint.inode++;
+  if (scenario === "permission_changed") s.metadata.execution_enabled = true;
+  const result = await run(scenario === "cancelled" ? { signal: AbortSignal.abort() } : {});
+  assert.equal(result.status, "unavailable"); assert.equal(result.session, null); assert.equal(result.results, null);
+  assert.equal(result.vehicle_communication, false);
+  assert.equal(launches, scenario === "matched" ? 1 : 0);
+  assert.equal(s.calls, scenario === "unissued" ? 0 : ["expired", "cancelled"].includes(scenario) ? 1 : 2);
+  if (scenario === "matched") {
+    assert.ok(Object.isFrozen(argv));
+    assert.deepEqual(argv, ["--selected-generated-mode01-pair", pinned.path, pinned.sha256, "4096", "x64", "2016", "5", "12"]);
+  }
+  assert.equal((await run()).reason, "fixture_already_consumed");
+  assert.ok(!JSON.stringify(result).includes(pinned.path));
+}
+assert.throws(() => createRegisteredMode01PairFixtureSupervisor({ descriptor: {}, spawnDescriptor: {} }), /descriptor_invalid/);
+console.log("Registered Mode01 pair composition: 7 synthetic cases; no process/registry/DLL/vehicle");
 // Actual host factory rejects an unissued clone before any registry/file work.
 const unissuedReview = createRegisteredMode01PackageReview().inspect({}, { request_ecu: 2016, pid: 5 }, null, null);
 assert.equal(unissuedReview.reason, "selection_unavailable");

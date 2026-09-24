@@ -11,6 +11,7 @@ import { createJ2534Mode01PairSessionSupervisor } from "../j2534-mode01-pair-ses
 import { createJ2534SelectedMode01PairFixtureSupervisor } from "../j2534-selected-mode01-pair-fixture-supervisor.js";
 import { createJ2534Mode01PairSelectionHandoff } from "../j2534-mode01-pair-selection-handoff.js";
 import { createMode01PairFixtureSpawn } from "./mode01-fixture-spawn.js";
+import { createRegisteredMode01PairFixtureSupervisor } from "./mode01-pair-registered-fixture-supervisor.js";
 
 assert.equal(process.platform, "win32");
 const context = vm.createContext({ window: {}, navigator: {} });
@@ -84,6 +85,13 @@ for (const [arch, framework] of [["x86", "Framework"], ["x64", "Framework64"]]) 
       decodeLivePidResponse: obd.decodeLivePidResponse,
       spawnWorker: argv => { launches++; assert.deepEqual(argv, selectedArgs); assert.ok(Object.isFrozen(argv));
         return fixedSpawn(argv); } };
+    // The real composition must reject an unissued descriptor with valid fixed
+    // build files, before registry lookup or child creation. Injection is ignored.
+    const unissued = createRegisteredMode01PairFixtureSupervisor({ ...settings, descriptor: {}, spawnDescriptor });
+    const blocked = await unissued();
+    assert.equal(blocked.session, null); assert.equal(blocked.results, null);
+    assert.equal(blocked.completion.worker_started, false);
+    assert.equal((await unissued()).reason, "fixture_already_consumed");
     for (const change of [() => { now += 5000; }, () => { current = { ...current, size: current.size + 1 }; },
       () => { current = { ...current, sha256: "F".repeat(64) }; }]) {
       const saved = current, savedNow = now;
