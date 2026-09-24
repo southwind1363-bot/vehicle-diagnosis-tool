@@ -1,5 +1,7 @@
 # 診断機完成までの開発計画
 
+2026-09-24 604別展開のブラウザー保存復元: agent-browser/agent-browser-verify/verificationの画面・経路検証に従い、CLI不在のため既存Playwright検査を使用。604ZIP別展開から空registryで起動、隔離Chromeで人工事例JSON取込→両server停止→browser process終了/再起動→offline表示→事例検索→downloadしたJSONと保存全項目の一致が合格。初回注意・誤password拒否・lock保持・604全cache・外向き通信なし・同梱integrity不変も確認。390px画像で604表示/検索画面を目視（packaged-browser-ZzUR1g）。補助CDP cache一覧No frame foundと任意favicon ERR_FAILEDは独立記録し、保存復元失敗とは扱わない。実password正常login/OS再起動/別PC/実VCI/実車は未検証。既存ZIP・本体・保存形式・実通信権限変更なし、公開送信保留。
+
 2026-09-24 ローカルPC配布3.13.604: 単一/一括Mode01 metadata module同梱と必須整合確認を新規604へ反映。版3箇所を同期しoffline183/Errors0、通常生成器で849ファイル/68依存を新規作成。既存603ZIPは上書きせず604ZIPを別tempへ展開し、同梱verifierの全hash一致、同梱moduleから空の人工registryで起動、web HTTP200とvehicle_command_enabled:false/sample_readouts_enabled:falseを確認。ZIP SHA256=7FE8464AF32B3CED70D4887E63B818EA173EA48A2FC8D52B1DEBC2063EE98E84。展開先workstation-604-d05452368c84427a845c879e91004ae6。開発用pair native workerは配布対象外、保存形式・実通信無効維持。今回は同一PCの別展開/HTTP起動確認であり、604ブラウザー保存復元・別PC・実VCI/実車は未検証。公開送信は審査拒否による保留のままで、604を公開済みとは扱わない。
 
 2026-09-24 配布検査の必須module漏れ修正: 現bridgeが静的importし配布生成器も同梱する単一/一括Mode01 metadata handoff二つが、配布整合検査の必須一覧には未登録だった。manifestから項目が抜けた不完全な新規配布を検査合格にしないよう両moduleを必須化し、fileCount/hash整合を保った人工manifest欠落ケースを追加。通常package検査492/Errors0、diff検査合格。既存603ZIPとその同梱verifierは上書きせず、本体版・保存形式・実通信権限不変。新しいverifierは現生成器の同梱構成を対象とし、旧ZIPへの後付け置換はしていない。公開送信保留を維持し、次の通常版更新時に配布へ同梱する。
